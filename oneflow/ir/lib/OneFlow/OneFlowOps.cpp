@@ -18,6 +18,7 @@ limitations under the License.
 #include <string>
 #include "OneFlow/OneFlowDialect.h"
 #include "llvm/ADT/STLExtras.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LogicalResult.h"
@@ -120,6 +121,32 @@ struct ConcreteSystemOps : public mlir::OpRewritePattern<oneflow::SystemOp> {
 void SystemOp::getCanonicalizationPatterns(::mlir::OwningRewritePatternList &results,
                                            ::mlir::MLIRContext *context) {
   results.insert<ConcreteSystemOps>(context);
+}
+
+bool HaveIdenticalPlacement(mlir::Operation *op, mlir::Operation *argument_op) {
+  return op->hasAttr("placement") && argument_op->hasAttr("placement")
+         && (op->getAttrOfType<ArrayAttr>("placement")
+             == argument_op->getAttrOfType<ArrayAttr>("placement"));
+}
+
+OpFoldResult OpTrait::impl::foldIdempotentForIdenticalPlacement(Operation *op) {
+  auto *argument_op = op->getOperand(0).getDefiningOp();
+  if (argument_op && op->getName() == argument_op->getName()
+      && HaveIdenticalPlacement(op, argument_op)) {
+    return op->getOperand(0);
+  }
+
+  return {};
+}
+
+OpFoldResult OpTrait::impl::foldInvolutionForIdenticalPlacement(Operation *op) {
+  auto *argumentOp = op->getOperand(0).getDefiningOp();
+  if (argumentOp && op->getName() == argumentOp->getName()) {
+    // Replace the outer involutions output with inner's input.
+    return argumentOp->getOperand(0);
+  }
+
+  return {};
 }
 
 #include "OneFlow/OneFlowEnums.cpp.inc"

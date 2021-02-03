@@ -117,8 +117,10 @@ class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
 
 // Idempotent ops
 
+def OneFlow_Idempotent : NativeOpTrait<"IdempotentForIdenticalPlacement">;
+
 class OneFlow_IdempotentBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [Idempotent])> {
+        OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Idempotent])> {
 }
 
 def OneFlow_AbsOp : OneFlow_IdempotentBaseOp<"abs", []> {}
@@ -145,10 +147,13 @@ def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", []> {}
 def OneFlow_ZerosLikeOp : OneFlow_IdempotentBaseOp<"zeros_like", []> {}
 
 // Involution ops
+
+def OneFlow_Involution : NativeOpTrait<"InvolutionForIdenticalPlacement">;
+
 // TODO: add invert, logical_not when they are implemented in OneFlow
 
 class OneFlow_InvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
-        OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [Involution])> {
+        OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Involution])> {
 }
 
 def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", []> {}

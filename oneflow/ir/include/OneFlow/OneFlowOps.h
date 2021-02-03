@@ -25,6 +25,57 @@ limitations under the License.
 
 #include "OneFlow/OneFlowEnums.h.inc"
 
+namespace mlir {
+namespace OpTrait {
+
+namespace impl {
+OpFoldResult foldIdempotentForIdenticalPlacement(Operation *op);
+OpFoldResult foldInvolutionForIdenticalPlacement(Operation *op);
+}  // namespace impl
+
+template<typename ConcreteType>
+class IdempotentForIdenticalPlacement
+    : public TraitBase<ConcreteType, IdempotentForIdenticalPlacement> {
+ public:
+  static LogicalResult verifyTrait(Operation *op) {
+    static_assert(ConcreteType::template hasTrait<OneResult>(),
+                  "expected operation to produce one result");
+    static_assert(ConcreteType::template hasTrait<OneOperand>(),
+                  "expected operation to take one operand");
+    static_assert(ConcreteType::template hasTrait<SameOperandsAndResultType>(),
+                  "expected operation to preserve type");
+    return impl::verifyIsIdempotent(op);
+  }
+
+  static OpFoldResult foldTrait(Operation *op, ArrayRef<Attribute> operands) {
+    assert(op->hasAttr("placement"));
+    return impl::foldIdempotentForIdenticalPlacement(op);
+  }
+};
+
+template<typename ConcreteType>
+class InvolutionForIdenticalPlacement
+    : public TraitBase<ConcreteType, InvolutionForIdenticalPlacement> {
+ public:
+  static LogicalResult verifyTrait(Operation *op) {
+    static_assert(ConcreteType::template hasTrait<OneResult>(),
+                  "expected operation to produce one result");
+    static_assert(ConcreteType::template hasTrait<OneOperand>(),
+                  "expected operation to take one operand");
+    static_assert(ConcreteType::template hasTrait<SameOperandsAndResultType>(),
+                  "expected operation to preserve type");
+    return impl::verifyIsIdempotent(op);
+  }
+
+  static OpFoldResult foldTrait(Operation *op, ArrayRef<Attribute> operands) {
+    assert(op->hasAttr("placement"));
+    return impl::foldInvolutionForIdenticalPlacement(op);
+  }
+};
+
+}  // namespace OpTrait
+}  // namespace mlir
+
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.h.inc"
 
