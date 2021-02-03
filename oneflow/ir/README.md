@@ -22,7 +22,7 @@ there are some rules must be enforced for all the optimizers, importers, exporte
 Everything related to MLIR-OneFlow translation. [read more](oneflow-translate/README.md)
 
 - ### oneflow-opt
-Optimizations on OneFlow MLIR dialect. A CLI to optimize .mlir file.
+Optimizations on OneFlow MLIR dialect. A CLI to optimize .mlir file. [read more](oneflow-opt/README.md)
 
 - ### OneFlow dialect
 In the `include` and `lib` directories, there are definitions of MLIR OneFlow dialect and its operators.
