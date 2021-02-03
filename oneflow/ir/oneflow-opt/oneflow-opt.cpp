@@ -25,11 +25,25 @@ limitations under the License.
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "OneFlow/OneFlowDialect.h"
 
+namespace mlir {
+struct TestOneFlowTraitFolder : public PassWrapper<TestOneFlowTraitFolder, FunctionPass> {
+  void runOnFunction() override {
+    applyPatternsAndFoldGreedily(getFunction(), OwningRewritePatternList());
+  }
+};
+void registerTestOneFlowTraitsPass() {
+  PassRegistration<TestOneFlowTraitFolder>("test-oneflow-trait-folder", "Run trait folding");
+}
+}  // namespace mlir
+
 int main(int argc, char **argv) {
   mlir::registerAllPasses();
+  mlir::registerTestOneFlowTraitsPass();
   mlir::DialectRegistry registry;
   registry.insert<mlir::oneflow::OneFlowDialect>();
   registry.insert<mlir::StandardOpsDialect>();
