@@ -124,7 +124,10 @@ void SystemOp::getCanonicalizationPatterns(::mlir::OwningRewritePatternList &res
 }
 
 bool HaveIdenticalPlacement(mlir::Operation *op, mlir::Operation *argument_op) {
-  return op->hasAttr("placement") && argument_op->hasAttr("placement")
+  return op->hasAttr("device") && argument_op->hasAttr("device")
+         && (op->getAttrOfType<StringAttr>("device")
+             == argument_op->getAttrOfType<StringAttr>("device"))
+         && op->hasAttr("placement") && argument_op->hasAttr("placement")
          && (op->getAttrOfType<ArrayAttr>("placement")
              == argument_op->getAttrOfType<ArrayAttr>("placement"));
 }
