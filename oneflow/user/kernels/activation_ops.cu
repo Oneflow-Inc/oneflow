@@ -56,10 +56,11 @@ struct HardswishGradFunctor<half> {
   }
 };
 
-#define REGISTER_ACTIVATION_GPU_KERNEL(dtype)         \
-  REGISTER_ELU_KERNEL(DeviceType::kGPU, dtype);       \
-  REGISTER_HARDSWISH_KERNEL(DeviceType::kGPU, dtype); \
-  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kGPU, dtype);
+#define REGISTER_ACTIVATION_GPU_KERNEL(dtype)           \
+  REGISTER_ELU_KERNEL(DeviceType::kGPU, dtype);         \
+  REGISTER_HARDSWISH_KERNEL(DeviceType::kGPU, dtype);   \
+  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kGPU, dtype); \
+  REGISTER_HARDTANH_KERNEL(DeviceType::kGPU, dtype);
 
 REGISTER_ACTIVATION_GPU_KERNEL(half);
 REGISTER_ACTIVATION_GPU_KERNEL(float);
