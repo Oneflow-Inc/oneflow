@@ -1,4 +1,4 @@
-#include "oneflow/user/kernels/activation.h"
+#include "oneflow/user/kernels/activation_ops_util.h"
 #include "oneflow/user/kernels/elementwise_xpu_kernel.cuh"
 
 namespace oneflow {
@@ -38,29 +38,11 @@ struct HardswishGradFunctor<half> {
   }
 };
 
-#define INSTANTIATE_GPU_ACTIVATION_FORWARD_FUNCTORS(dtype) \
-  INSTANTIATE_UNARY_XPU_FUNCTOR(DeviceType::kGPU, EluFunctor, dtype); \
-  INSTANTIATE_UNARY_XPU_FUNCTOR(DeviceType::kGPU, HardswishFunctor, dtype);  
-
-#define INSTANTIATE_GPU_ACTIVATION_BACKWARD_FUNCTORS(dtype) \
-  INSTANTIATE_BINARY_XPU_FUNCTOR(DeviceType::kGPU, EluGradFunctor, dtype); \
-  INSTANTIATE_BINARY_XPU_FUNCTOR(DeviceType::kGPU, HardswishGradFunctor, dtype);
-
-
-#define INSTANTIATE_GPU_ACTIVATION_FUNCTORS(dtype)                           \
-  INSTANTIATE_GPU_ACTIVATION_FORWARD_FUNCTORS(dtype)                           \
-  INSTANTIATE_GPU_ACTIVATION_BACKWARD_FUNCTORS(dtype)                           
-  
-
-INSTANTIATE_GPU_ACTIVATION_FUNCTORS(half);
-INSTANTIATE_GPU_ACTIVATION_FUNCTORS(double);
-INSTANTIATE_GPU_ACTIVATION_FUNCTORS(float);
-
-
 #define REGISTER_ACTIVATION_GPU_KERNEL(dtype)   \
   REGISTER_ELU_KERNEL(DeviceType::kGPU, dtype); \
   REGISTER_HARDSWISH_KERNEL(DeviceType::kGPU, dtype);
 
+REGISTER_ACTIVATION_GPU_KERNEL(half);
 REGISTER_ACTIVATION_GPU_KERNEL(float);
 REGISTER_ACTIVATION_GPU_KERNEL(double);
 

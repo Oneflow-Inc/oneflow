@@ -1,4 +1,4 @@
-#include "oneflow/user/kernels/activation.h"
+#include "oneflow/user/kernels/activation_ops_util.h"
 
 namespace oneflow {
 

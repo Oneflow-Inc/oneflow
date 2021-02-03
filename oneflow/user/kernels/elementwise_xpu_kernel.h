@@ -45,12 +45,6 @@ struct BinaryElemwiseXpuFunctor<DeviceType::kCPU, FunctorT, T> final {
   }
 };
 
-#define INSTANTIATE_UNARY_XPU_FUNCTOR(device, functor, T) \
-  template struct UnaryElemwiseXpuFunctor<device, functor<T>, T>;
-
-#define INSTANTIATE_BINARY_XPU_FUNCTOR(device, functor, T) \
-  template struct BinaryElemwiseXpuFunctor<device, functor<T>, T>;
-
 template<DeviceType device_type, typename FunctorT, typename T>
 class UnaryElemwiseXpuKernel final : public user_op::OpKernel {
  public:

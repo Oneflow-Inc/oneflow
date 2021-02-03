@@ -20,28 +20,6 @@ struct EluGradFunctor {
   const float alpha;
 };
 
-#define REGISTER_ELU_KERNEL(device, dtype)                                              \
-  REGISTER_USER_KERNEL("elu")                                                           \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                              \
-        return new UnaryElemwiseXpuKernel<device, EluFunctor<dtype>, dtype>(            \
-            [](user_op::KernelComputeContext* ctx) {                                    \
-              return EluFunctor<dtype>(ctx->Attr<float>("alpha"));                     \
-            },                                                                          \
-            "out", "in");                                                               \
-      })                                                                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("elu_grad")                                                      \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                              \
-        return new BinaryElemwiseXpuKernel<device, EluGradFunctor<dtype>, dtype>(       \
-            [](user_op::KernelComputeContext* ctx) {                                    \
-              return EluGradFunctor<dtype>(ctx->Attr<float>("alpha"));                 \
-            },                                                                          \
-            "dx", "x", "dy");                                                           \
-      })                                                                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-
 template<typename T>
 struct HardswishFunctor {
   OF_DEVICE_FUNC T operator()(const T x) const {
@@ -67,6 +45,29 @@ struct HardswishGradFunctor {
     }
   }
 };
+
+#define REGISTER_ELU_KERNEL(device, dtype)                                              \
+  REGISTER_USER_KERNEL("elu")                                                           \
+      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                              \
+        return new UnaryElemwiseXpuKernel<device, EluFunctor<dtype>, dtype>(            \
+            [](user_op::KernelComputeContext* ctx) {                                    \
+              return EluFunctor<dtype>(ctx->Attr<float>("alpha"));                     \
+            },                                                                          \
+            "out", "in");                                                               \
+      })                                                                                \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("elu_grad")                                                      \
+      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                              \
+        return new BinaryElemwiseXpuKernel<device, EluGradFunctor<dtype>, dtype>(       \
+            [](user_op::KernelComputeContext* ctx) {                                    \
+              return EluGradFunctor<dtype>(ctx->Attr<float>("alpha"));                 \
+            },                                                                          \
+            "dx", "x", "dy");                                                           \
+      })                                                                                \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+
 
 #define REGISTER_HARDSWISH_KERNEL(device, dtype)                                              \
   REGISTER_USER_KERNEL("hardswish")                                                \
