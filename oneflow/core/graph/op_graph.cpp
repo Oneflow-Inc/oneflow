@@ -671,50 +671,6 @@ LogicalBlobId OpGraph::GetLogicalBlobIdKey(const std::string& op_name,
   }
 }
 
-std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc4ModelLbi() const {
-  HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2unparalleled_blob_desc;
-  DataType dtype = GlobalJobDesc().DefaultDataType();
-  TopoForEachNode([&](OpNode* op_node) {
-    ParallelContext parallel_ctx;
-    parallel_ctx.set_parallel_id(0);
-    parallel_ctx.set_parallel_num(1);
-    SbpSignature sbp_signature;
-    for (const auto& ibn : op_node->op().input_bns()) {
-      (*sbp_signature.mutable_bn_in_op2sbp_parallel())[ibn].mutable_split_parallel()->set_axis(0);
-    }
-    for (const auto& obn : op_node->op().output_bns()) {
-      (*sbp_signature.mutable_bn_in_op2sbp_parallel())[obn].mutable_split_parallel()->set_axis(0);
-    }
-    auto MutUnparalleledBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
-      const auto& lbi = op_node->op().BnInOp2Lbi(bn);
-      auto it = lbi2unparalleled_blob_desc.find(lbi);
-      if (it == lbi2unparalleled_blob_desc.end()) {
-        auto& blob_desc = lbi2unparalleled_blob_desc[lbi];
-        blob_desc.reset(new BlobDesc(dtype));
-        return blob_desc.get();
-      }
-      return it->second.get();
-    };
-    // the real important data we want to get is:
-    // a) model blobs' byte size;
-    // b) number of axes of blobs' body shape;
-    CHECK_JUST(op_node->op().InferOutBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx,
-                                                 &sbp_signature, [](OpContext*) {}));
-  });
-  auto model_lbi2blob_desc = std::make_shared<HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>>();
-  ForEachNode([&](OpNode* op_node) {
-    for (const std::string& tmp_bn : op_node->op().tmp_bns()) {
-      const auto& lbi = op_node->op().BnInOp2Lbi(tmp_bn);
-      const auto& iter = lbi2unparalleled_blob_desc.find(lbi);
-      if (iter == lbi2unparalleled_blob_desc.end()) { continue; }
-      CHECK(model_lbi2blob_desc->emplace(lbi, std::move(iter->second)).second);
-    }
-  });
-  return [model_lbi2blob_desc](const LogicalBlobId& model_lbi) -> const BlobDesc& {
-    return *model_lbi2blob_desc->at(model_lbi);
-  };
-}
-
 void OpGraph::ForEachDataAndCtrlInNode(OpNode* node,
                                        const std::function<void(OpNode*)>& Handler) const {
   node->ForEachNodeOnInEdge(Handler);

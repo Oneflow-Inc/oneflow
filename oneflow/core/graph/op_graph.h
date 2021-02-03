@@ -142,8 +142,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   const OpNode* OpNode4OpName(const std::string& name) const;
 
-  std::function<const BlobDesc&(const LogicalBlobId&)> MakeGetterBlobDesc4ModelLbi() const;
-
   int64_t GetParallelNum(const std::string& op_name) const;
   const SbpParallel& GetSbpParallel(const std::string& op_name, const LogicalBlobId& lbi) const;
   DataType GetBlobDataType(const LogicalBlobId& lbi) const;
