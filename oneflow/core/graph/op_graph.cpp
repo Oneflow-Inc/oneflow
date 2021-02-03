@@ -255,15 +255,6 @@ void OpNode::ConcatBlobDesc(const ParallelDesc& blob_parallel_desc,
   }
 }
 
-int64_t OpNode::GetAxisParallelNum(
-    const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo) const {
-  bool is_split = false;
-  int32_t axis = -1;
-  int64_t axis_parallel_num = 0;
-  GetAxisParallelInfo(&is_split, &axis, &axis_parallel_num);
-  return axis_parallel_num;
-}
-
 void OpNode::SplitLogicalInputBlobDesc() {
   for (const std::string& bn : op().input_bns()) {
     const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
@@ -611,30 +602,6 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
-}
-
-BalancedSplitter OpGraph::GetBalancedSplitter(const std::string& op_name,
-                                              const LogicalBlobId& lbi) const {
-  OpNode* op_node = op_name2op_node_.at(GetOpNameKey(op_name, lbi));
-  const SbpParallel& sbp_parallel = GetSbpParallel(op_name, lbi);
-  CHECK(sbp_parallel.has_split_parallel());
-  int64_t split_num = GetSplitNum(op_name, lbi);
-  CHECK_GE(split_num, op_node->parallel_desc().parallel_num());
-  return BalancedSplitter(split_num, op_node->parallel_desc().parallel_num());
-}
-
-int32_t OpGraph::GetModelSplitAxis(const std::string& op_name, const LogicalBlobId& lbi) const {
-  const SbpParallel& sbp_parallel = GetSbpParallel(op_name, lbi);
-  CHECK(sbp_parallel.has_split_parallel());
-  return sbp_parallel.split_parallel().axis();
-}
-
-int64_t OpGraph::GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const {
-  OpNode* op_node = op_name2op_node_.at(GetOpNameKey(op_name, lbi));
-  const LogicalBlobId& lbi_key = GetLogicalBlobIdKey(op_name, lbi);
-  const SbpParallel& sbp_parallel = op_node->SbpParallel4Lbi(lbi_key);
-  CHECK(sbp_parallel.has_split_parallel());
-  return op_node->LogicalBlobDesc4Lbi(lbi_key).shape().At(sbp_parallel.split_parallel().axis());
 }
 
 int64_t OpGraph::GetParallelNum(const std::string& op_name) const {
