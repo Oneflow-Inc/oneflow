@@ -139,8 +139,11 @@ OpFoldResult OpTrait::impl::foldIdempotentOfIdenticalPlacement(Operation *op) {
 }
 
 OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation *op) {
-  auto *argumentOp = op->getOperand(0).getDefiningOp();
-  if (argumentOp && op->getName() == argumentOp->getName()) { return argumentOp->getOperand(0); }
+  auto *argument_op = op->getOperand(0).getDefiningOp();
+  if (argument_op && op->getName() == argument_op->getName()
+      && HaveIdenticalPlacement(op, argument_op)) {
+    return argument_op->getOperand(0);
+  }
   return {};
 }
 
