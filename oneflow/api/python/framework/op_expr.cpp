@@ -19,25 +19,24 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_builder.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
-  py::class_<one::OpBuilder, std::shared_ptr<one::OpBuilder>>(m, "OpBuilder")
+  py::class_<one::OpExpr, std::shared_ptr<one::OpExpr>>(m, "OpExpr");
+
+  py::class_<one::BuiltinOpExpr, one::OpExpr, std::shared_ptr<one::BuiltinOpExpr>>(m,
+                                                                                   "BuiltinOpExpr")
+      .def_property_readonly("name", &one::BuiltinOpExpr::op_name);
+
+  py::class_<one::UserOpExpr, one::BuiltinOpExpr, std::shared_ptr<one::UserOpExpr>>(m, "UserOpExpr")
       .def(py::init<>())
-      .def(py::init<const std::string&>())
-      .def("Name", &one::OpBuilder::Name)
-      .def("Op", &one::OpBuilder::Op)
-      .def("Input", &one::OpBuilder::Input)
-      .def("Output",
-           [](const std::shared_ptr<one::OpBuilder>& builder, const std::string& output_name,
-              const int output_num) { builder->Output(output_name, output_num); })
-      .def("Attr", [](const std::shared_ptr<one::OpBuilder>& builder, const std::string& attr_name,
-                      const std::string& attr_value) { builder->Attr(attr_name, attr_value); })
-      .def("Build", &one::OpBuilder::Build);
+      .def(py::init<std::string>())
+      .def_property_readonly(
+          "proto", [](const one::UserOpExpr& op) { return PbMessage2TxtString(op.proto()); })
+      .def_property_readonly("indexed_input_names", &one::UserOpExpr::indexed_input_names);
 }
 
 }  // namespace oneflow
