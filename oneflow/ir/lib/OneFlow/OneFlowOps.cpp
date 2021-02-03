@@ -129,23 +129,18 @@ bool HaveIdenticalPlacement(mlir::Operation *op, mlir::Operation *argument_op) {
              == argument_op->getAttrOfType<ArrayAttr>("placement"));
 }
 
-OpFoldResult OpTrait::impl::foldIdempotentForIdenticalPlacement(Operation *op) {
+OpFoldResult OpTrait::impl::foldIdempotentOfIdenticalPlacement(Operation *op) {
   auto *argument_op = op->getOperand(0).getDefiningOp();
   if (argument_op && op->getName() == argument_op->getName()
       && HaveIdenticalPlacement(op, argument_op)) {
     return op->getOperand(0);
   }
-
   return {};
 }
 
-OpFoldResult OpTrait::impl::foldInvolutionForIdenticalPlacement(Operation *op) {
+OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation *op) {
   auto *argumentOp = op->getOperand(0).getDefiningOp();
-  if (argumentOp && op->getName() == argumentOp->getName()) {
-    // Replace the outer involutions output with inner's input.
-    return argumentOp->getOperand(0);
-  }
-
+  if (argumentOp && op->getName() == argumentOp->getName()) { return argumentOp->getOperand(0); }
   return {};
 }
 
