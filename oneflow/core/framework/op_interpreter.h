@@ -15,18 +15,24 @@ limitations under the License.
 */
 #include <vector>
 
-#include "oneflow/core/framework/operation.h"
+#include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/job/scope.h"
 
 namespace oneflow {
 namespace one {
+
+struct OpInterpreterContext {
+  Scope* scope;
+  bool is_mirrored_strategy_enabled;
+};
 
 class OpInterpreter {
  public:
   OpInterpreter() = default;
   virtual ~OpInterpreter() = default;
 
-  virtual std::vector<TensorRef> Interpret(const Operation& op,
-                                           const std::vector<TensorRef>& inputs) = 0;
+  virtual std::vector<TensorRef> Interpret(const OpExpr& op, const std::vector<TensorRef>& inputs,
+                                           OpInterpreterContext* ctx) = 0;
 };
 
 class LazyOpInterpreter : public OpInterpreter {
@@ -34,8 +40,8 @@ class LazyOpInterpreter : public OpInterpreter {
   LazyOpInterpreter() : OpInterpreter() {}
   ~LazyOpInterpreter() = default;
 
-  std::vector<TensorRef> Interpret(const Operation& op,
-                                   const std::vector<TensorRef>& inputs) override;
+  std::vector<TensorRef> Interpret(const OpExpr& op, const std::vector<TensorRef>& inputs,
+                                   OpInterpreterContext* ctx) override;
 };
 
 class EagerOpInterpreter : public OpInterpreter {
@@ -43,8 +49,8 @@ class EagerOpInterpreter : public OpInterpreter {
   EagerOpInterpreter() : OpInterpreter() {}
   ~EagerOpInterpreter() = default;
 
-  std::vector<TensorRef> Interpret(const Operation& op,
-                                   const std::vector<TensorRef>& inputs) override;
+  std::vector<TensorRef> Interpret(const OpExpr& op, const std::vector<TensorRef>& inputs,
+                                   OpInterpreterContext* ctx) override;
 };
 
 }  // namespace one

@@ -15,8 +15,8 @@ limitations under the License.
 */
 #include <glog/logging.h>
 
-#include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/op_builder.h"
 
 namespace oneflow {
 namespace one {
@@ -47,18 +47,18 @@ void TensorNameScope::Record(const TensorRef& tensor, const std::string& name) {
   tensor_names_.emplace(key, name);
 }
 
-OpBuilder::OpBuilder(const std::string& op_type_name) : operation_(new Operation) {
-  *(operation_->proto.mutable_op_type_name()) = op_type_name;
+OpBuilder::OpBuilder(const std::string& op_type_name) : operation_(new UserOpExpr) {
+  *(operation_->mutable_proto()->mutable_op_type_name()) = op_type_name;
 }
 
 OpBuilder& OpBuilder::Op(const std::string& op_type_name) {
-  *(operation_->proto.mutable_op_type_name()) = op_type_name;
+  *(operation_->mutable_proto()->mutable_op_type_name()) = op_type_name;
   return *this;
 }
 
 OpBuilder& OpBuilder::Input(const std::string& input_name, const std::vector<TensorRef>& input) {
   CHECK_GT(input.size(), 0);
-  auto& input_list = (*(operation_->proto.mutable_input()))[input_name];
+  auto& input_list = (*(operation_->mutable_proto()->mutable_input()))[input_name];
   for (const auto& tensor : input) {
     input_list.mutable_s()->Add()->assign(TensorNameScope::Global()->Lookup(tensor));
   }
@@ -71,8 +71,8 @@ OpBuilder& OpBuilder::Output(const std::string& output_name) {
 
 OpBuilder& OpBuilder::Output(const std::string& output_name, const int count) {
   CHECK_GT(count, 0);
-  auto& output_list = (*(operation_->proto.mutable_output()))[output_name];
-  const std::string& op_name = operation_->op_name;
+  auto& output_list = (*(operation_->mutable_proto()->mutable_output()))[output_name];
+  const std::string& op_name = operation_->op_name();
   for (int i = 0; i < count; ++i) {
     output_list.mutable_s()->Add()->assign(op_name + "/" + output_name + "_" + std::to_string(i));
   }
@@ -80,20 +80,20 @@ OpBuilder& OpBuilder::Output(const std::string& output_name, const int count) {
 }
 
 OpBuilder& OpBuilder::Attr(const std::string& attr_name, const AttrValue& attr_value) {
-  (*(operation_->proto.mutable_attr()))[attr_name] = attr_value;
+  (*(operation_->mutable_proto()->mutable_attr()))[attr_name] = attr_value;
   return *this;
 }
 
 OpBuilder& OpBuilder::Attr(const std::string& attr_name, const std::string& serialized_attr_value) {
   AttrValue attr_value;
   TxtString2PbMessage(serialized_attr_value, &attr_value);
-  (*(operation_->proto.mutable_attr()))[attr_name] = attr_value;
+  (*(operation_->mutable_proto()->mutable_attr()))[attr_name] = attr_value;
   return *this;
 }
 
-std::shared_ptr<Operation>&& OpBuilder::Build() {
-  for (const auto& it : operation_->proto.input()) {
-    for (const auto& input : it.second.s()) { operation_->indexed_input_names.push_back(input); }
+std::shared_ptr<UserOpExpr>&& OpBuilder::Build() {
+  for (const auto& it : operation_->proto().input()) {
+    for (const auto& input : it.second.s()) { operation_->indexed_input_names_.push_back(input); }
   }
   return std::move(operation_);
 }

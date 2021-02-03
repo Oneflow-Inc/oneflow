@@ -13,14 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/operation.h"
+#include "oneflow/core/framework/op_expr.h"
 
 #include <vector>
 
 namespace oneflow {
 namespace one {
 
-std::vector<TensorRef> Interpret(const Operation& op, const std::vector<TensorRef>& inputs);
+std::vector<TensorRef> Interpret(const OpExpr& op, const std::vector<TensorRef>& inputs);
 
 }  // namespace one
 }  // namespace oneflow

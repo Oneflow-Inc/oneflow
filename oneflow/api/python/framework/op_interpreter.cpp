@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-std::vector<TensorRef> Interpret(const Operation& op, const std::vector<TensorRef>& inputs) {
+std::vector<TensorRef> Interpret(const OpExpr& op, const std::vector<TensorRef>& inputs) {
   // TODO(): Execute the op by Autograd.
   return std::vector<TensorRef>{};
 }

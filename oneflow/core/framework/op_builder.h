@@ -19,7 +19,7 @@ limitations under the License.
 #include <string>
 #include <mutex>
 
-#include "oneflow/core/framework/operation.h"
+#include "oneflow/core/framework/op_expr.h"
 
 namespace oneflow {
 namespace one {
@@ -44,14 +44,15 @@ class TensorNameScope {
   std::unordered_map<uint64_t, std::string> tensor_names_;
 };
 
+// UserOp builder.
 class OpBuilder {
  public:
-  OpBuilder() : operation_(new Operation) {}
+  OpBuilder() : operation_(new UserOpExpr) {}
   explicit OpBuilder(const std::string& op_type_name);
   virtual ~OpBuilder() = default;
 
   OpBuilder& Name(const std::string& op_name) {
-    operation_->op_name = op_name;
+    operation_->set_op_name(op_name);
     return *this;
   }
 
@@ -69,10 +70,10 @@ class OpBuilder {
   // template <typename T>
   // OpBuilder& Attr(const std::string& attr_name, const T& attr_value);
 
-  std::shared_ptr<Operation>&& Build();
+  std::shared_ptr<UserOpExpr>&& Build();
 
  private:
-  std::shared_ptr<Operation> operation_;
+  std::shared_ptr<UserOpExpr> operation_;
 };
 
 }  // namespace one
