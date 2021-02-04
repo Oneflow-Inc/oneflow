@@ -15,25 +15,24 @@ limitations under the License.
 */
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/to_string.h"
+#include <map>
 
 namespace oneflow {
 
 Maybe<const char*> DeviceTag4DeviceType(DeviceType device_type) {
-  if (device_type == kCPU) { return "cpu"; }
-  if (device_type == kGPU) { return "gpu"; }
-  return Error::DeviceTagNotFoundError() << "invalid_device";
+  auto device_type_to_tag = DeviceRegistryMgr::Get().DeviceType4Tag();
+  if (device_type_to_tag.find(device_type) == device_type_to_tag.end()) {
+    UNIMPLEMENTED();
+  }
+  return device_type_to_tag[device_type].c_str();
 }
 
 Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
-  if (device_tag == "cpu") { return DeviceType::kCPU; }
-  if (device_tag == "gpu") { return DeviceType::kGPU; }
-  return Error::DeviceTagNotFoundError() << "device tag `" << device_tag << "' not found";
-}
-
-std::string GetDeviceString(DeviceType dev_type){
-  auto str_funcs = DeviceRegistryMgr::Get().StringFuncs();
-  if (str_funcs.find(dev_type) == str_funcs.end()) { UNIMPLEMENTED(); }
-  return str_funcs[dev_type]();
+  auto device_tag_to_type = DeviceRegistryMgr::Get().DeviceTag4Type();
+  if (device_tag_to_type.find(device_tag) == device_tag_to_type.end()) {
+    UNIMPLEMENTED();
+  }
+  return device_tag_to_type[device_tag];
 }
 
 }  // namespace oneflow

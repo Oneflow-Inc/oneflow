@@ -23,8 +23,9 @@ DeviceRegistry& DeviceRegistry::SetDumpVersionInfoFn(DumpVersionInfoFn func) {
   return *this;
 }
 
-DeviceRegistry& DeviceRegistry::SetGetStringFn(GetStringFn func) {
-  DeviceRegistryMgr::Get().StringFuncs()[dev_type_] = func;
+DeviceRegistry& DeviceRegistry::SetDeviceTag(std::string dev_tag) {
+  DeviceRegistryMgr::Get().DeviceType4Tag()[dev_type_] = dev_tag;
+  DeviceRegistryMgr::Get().DeviceTag4Type()[dev_tag] = dev_type_;
   return *this;
 }
 

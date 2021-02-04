@@ -19,5 +19,5 @@ limitations under the License.
 namespace oneflow {
 REGISTER_DEVICE(DeviceType::kCPU)
     .SetDumpVersionInfoFn([]() -> void {})
-    .SetGetStringFn([]() -> std::string { return "cpu"; });
+    .SetDeviceTag("cpu");
 }
