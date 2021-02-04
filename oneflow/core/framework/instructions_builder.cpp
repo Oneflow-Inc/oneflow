@@ -55,6 +55,69 @@ void SetMirroredOperand(vm::cfg::OperandProto* operand, int64_t object_id) {
   operand->mutable_current_global_device_id();
 }
 
+std::shared_ptr<vm::cfg::InstructionOperandProto> DelObjectOperand(int64_t object_id) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  SetAllMirroredOperand(operand->mutable_mut_operand(), object_id);
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> MutOperand(int64_t object_id) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  SetMirroredOperand(operand->mutable_mut_operand(), object_id);
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> Int64Operand(int64_t val) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  operand->set_int64_operand(val);
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> InitSymbolOperand(int64_t val) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  SetSoleMirroredOperand(operand->mutable_init_symbol_operand(), val);
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> SymbolOperand(int64_t val) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  SetSoleMirroredOperand(operand->mutable_symbol_operand(), val);
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> ConstOperand(int64_t val) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  SetMirroredOperand(operand->mutable_const_operand(), val);
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> OperandSeparator() {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  operand->mutable_separator();
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> Uint64Operand(int64_t val) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  operand->set_uint64_operand(val);
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> Mut2Operand(int64_t val) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  SetMirroredOperand(operand->mutable_mut2_operand(), val);
+  return operand;
+}
+
 Maybe<int64_t> NewSymbolId(vm::IdGenerator* id_generator,
                            vm::cfg::InstructionListProto* instruction_list) {
   int64_t symbol_id = JUST(id_generator->NewSymbolId());
@@ -1466,69 +1529,6 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
     mut2_operand_blob_objects.emplace_back(std::make_pair(obn_sym, out_blob_object));
   }
   return mut2_operand_blob_objects;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> DelObjectOperand(int64_t object_id) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  SetAllMirroredOperand(operand->mutable_mut_operand(), object_id);
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> MutOperand(int64_t object_id) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  SetMirroredOperand(operand->mutable_mut_operand(), object_id);
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> Int64Operand(int64_t val) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  operand->set_int64_operand(val);
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> InitSymbolOperand(int64_t val) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  SetSoleMirroredOperand(operand->mutable_init_symbol_operand(), val);
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> SymbolOperand(int64_t val) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  SetSoleMirroredOperand(operand->mutable_symbol_operand(), val);
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> ConstOperand(int64_t val) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  SetMirroredOperand(operand->mutable_const_operand(), val);
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> OperandSeparator() {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  operand->mutable_separator();
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> Uint64Operand(int64_t val) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  operand->set_uint64_operand(val);
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> Mut2Operand(int64_t val) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  SetMirroredOperand(operand->mutable_mut2_operand(), val);
-  return operand;
 }
 
 }  // namespace oneflow
