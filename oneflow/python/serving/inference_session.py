@@ -201,10 +201,8 @@ class InferenceSession(object):
         if self.status_ == self.SessionStatus.RUNNING:
             oneflow_api.StopLazyGlobalSession()
             oneflow_api.DestroyLazyGlobalSession()
-            oneflow_api.DestroyEnv()
         elif self.status_ == self.SessionStatus.OPEN:
             oneflow_api.DestroyLazyGlobalSession()
-            oneflow_api.DestroyEnv()
         else:
             pass
 
