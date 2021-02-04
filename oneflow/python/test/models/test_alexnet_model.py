@@ -37,7 +37,8 @@ class DLNetSpec(object):
         self.eval_dir = _DATA_DIR
         self.train_dir = _DATA_DIR
         self.model_save_dir = _MODEL_SAVE_DIR
-        self.model_load_dir = _MODEL_LOAD
+        #self.model_load_dir = _MODEL_LOAD
+        self.model_load_dir = None 
         self.num_nodes = 1
         self.node_list = None
         self.gpu_num_per_node = 1
@@ -111,75 +112,83 @@ def _data_load_layer(args, data_dir):
     return label, normal
 
 
-def alexnet(args, images, labels, trainable=True):
-    conv1 = _conv2d_layer(
-        args, "conv1", images, filters=64, kernel_size=11, strides=4, padding="VALID",
-    )
+class AlexNet(flow.nn.Model):
+    def __init__(self):
+        super().__init__()
+    
+    def forward(self, images, args, trainable=True):
+        conv1 = _conv2d_layer(
+            args, "conv1", images, filters=64, kernel_size=11, strides=4, padding="VALID",
+        )
 
-    pool1 = flow.nn.avg_pool2d(conv1, 3, 2, "VALID", "NCHW", name="pool1")
+        pool1 = flow.nn.avg_pool2d(conv1, 3, 2, "VALID", "NCHW", name="pool1")
 
-    conv2 = _conv2d_layer(args, "conv2", pool1, filters=192, kernel_size=5)
+        conv2 = _conv2d_layer(args, "conv2", pool1, filters=192, kernel_size=5)
 
-    pool2 = flow.nn.avg_pool2d(conv2, 3, 2, "VALID", "NCHW", name="pool2")
+        pool2 = flow.nn.avg_pool2d(conv2, 3, 2, "VALID", "NCHW", name="pool2")
 
-    conv3 = _conv2d_layer(args, "conv3", pool2, filters=384)
+        conv3 = _conv2d_layer(args, "conv3", pool2, filters=384)
 
-    conv4 = _conv2d_layer(args, "conv4", conv3, filters=384)
+        conv4 = _conv2d_layer(args, "conv4", conv3, filters=384)
 
-    conv5 = _conv2d_layer(args, "conv5", conv4, filters=256)
+        conv5 = _conv2d_layer(args, "conv5", conv4, filters=256)
 
-    pool5 = flow.nn.avg_pool2d(conv5, 3, 2, "VALID", "NCHW", name="pool5")
+        pool5 = flow.nn.avg_pool2d(conv5, 3, 2, "VALID", "NCHW", name="pool5")
 
-    def _get_initializer():
-        kernel_initializer = op_conf_util.InitializerConf()
-        kernel_initializer.truncated_normal_conf.std = 0.816496580927726
-        return kernel_initializer
+        def _get_initializer():
+            kernel_initializer = op_conf_util.InitializerConf()
+            kernel_initializer.truncated_normal_conf.std = 0.816496580927726
+            return kernel_initializer
 
-    if len(pool5.shape) > 2:
-        pool5 = flow.reshape(pool5, shape=(pool5.shape[0], -1))
+        if len(pool5.shape) > 2:
+            pool5 = flow.reshape(pool5, shape=(pool5.shape[0], -1))
 
-    fc1 = flow.layers.dense(
-        inputs=pool5,
-        units=4096,
-        activation=flow.math.relu,
-        use_bias=False,
-        kernel_initializer=_get_initializer(),
-        bias_initializer=False,
-        trainable=trainable,
-        name="fc1",
-    )
+        fc1 = flow.layers.dense(
+            inputs=pool5,
+            units=4096,
+            activation=flow.math.relu,
+            use_bias=False,
+            kernel_initializer=_get_initializer(),
+            bias_initializer=False,
+            trainable=trainable,
+            name="fc1",
+        )
 
-    dropout1 = fc1
+        dropout1 = fc1
 
-    fc2 = flow.layers.dense(
-        inputs=dropout1,
-        units=4096,
-        activation=flow.math.relu,
-        use_bias=False,
-        kernel_initializer=_get_initializer(),
-        bias_initializer=False,
-        trainable=trainable,
-        name="fc2",
-    )
+        fc2 = flow.layers.dense(
+            inputs=dropout1,
+            units=4096,
+            activation=flow.math.relu,
+            use_bias=False,
+            kernel_initializer=_get_initializer(),
+            bias_initializer=False,
+            trainable=trainable,
+            name="fc2",
+        )
 
-    dropout2 = fc2
+        dropout2 = fc2
 
-    fc3 = flow.layers.dense(
-        inputs=dropout2,
-        units=1001,
-        activation=None,
-        use_bias=False,
-        kernel_initializer=_get_initializer(),
-        bias_initializer=False,
-        trainable=trainable,
-        name="fc3",
-    )
+        fc3 = flow.layers.dense(
+            inputs=dropout2,
+            units=1001,
+            activation=None,
+            use_bias=False,
+            kernel_initializer=_get_initializer(),
+            bias_initializer=False,
+            trainable=trainable,
+            name="fc3",
+        )
 
-    loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
-        labels, fc3, name="softmax_loss"
-    )
+        return fc3
 
-    return loss
+    def training_step(self, batch, batch_idx, args, trainable=True):
+        images, labels = batch
+        fc3 = self.forward(images, args, trainable)
+        loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+            labels, fc3, name="softmax_loss"
+        )
+        return loss
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -209,6 +218,10 @@ def test_1n1c(test_case):
     func_config.cudnn_conv_force_bwd_filter_algo(1)
     func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 
+    alexnet_md = AlexNet()
+    def alexnet(args, images, labels, trainable=True):
+        loss = alexnet_md.training_step((images, labels), 1, args, trainable)
+
     @flow.global_function(type="train", function_config=func_config)
     def alexnet_train_job():
         (labels, images) = _data_load_layer(args, args.train_dir)
@@ -228,12 +241,6 @@ def test_1n1c(test_case):
         with flow.scope.consistent_view():
             (labels, images) = _data_load_layer(args, args.eval_dir)
             return alexnet(args, images, labels, False)
-
-    check_point = flow.train.CheckPoint()
-    if not args.model_load_dir:
-        check_point.init()
-    else:
-        check_point.load(args.model_load_dir)
 
     num_nodes = args.num_nodes
     print(
@@ -260,7 +267,7 @@ def test_1n1c(test_case):
             )
 
         if (i + 1) % 10 == 0:
-            check_point.save(_MODEL_SAVE_DIR + str(i))
+            flow.checkpoint.save(_MODEL_SAVE_DIR + str(i))
             print("Model {} saved to {}.".format(
                 i, _MODEL_SAVE_DIR + str(i)
             ))
