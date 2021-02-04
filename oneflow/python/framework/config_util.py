@@ -419,7 +419,7 @@ def api_collective_boxing_enable_reuse_mem(val: bool = False) -> None:
     Args:
         val (bool, optional): True or False. Defaults to False.
     """
-    return enable_if.unique([enable_fusion, do_nothing])(val=val)
+    return enable_if.unique([collective_boxing_enable_reuse_mem, do_nothing])(val=val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
