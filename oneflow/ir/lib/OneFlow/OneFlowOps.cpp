@@ -38,6 +38,27 @@ static mlir::ParseResult parseConstantOp(mlir::OpAsmParser &parser, mlir::Operat
 
 static mlir::LogicalResult verify(ConstantOp op) { return mlir::success(); }
 
+template<typename OpType>
+LogicalResult TrimRedundantCtrl(OpType op, PatternRewriter &rewriter) {
+  if (op.ctrl_output() && op.ctrl_output().use_empty()) {
+    const int32_t num_data_inputs =
+        op.result_segment_sizes().template getValue<IntegerAttr>({0}).getInt();
+    NamedAttrList attributes(op->getAttrDictionary());
+    attributes.erase("result_segment_sizes");
+    attributes.append("result_segment_sizes", rewriter.getI32VectorAttr({num_data_inputs, 0}));
+    if (auto sys = rewriter.create<oneflow::SystemOp>(
+            op->getLoc(), op.getResultTypes().take_front(op.data_output().size()),
+            op->getOperands(), attributes)) {
+      for (auto out : op.data_output()) {
+        out.replaceAllUsesWith(sys->getResult(out.getResultNumber()));
+      }
+      op->erase();
+      return success();
+    }
+  }
+  return failure();
+}
+
 struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
   ConcreteUserOps(mlir::MLIRContext *context)
       : OpRewritePattern<oneflow::UserOp>(context, /*benefit=*/1) {}
@@ -66,23 +87,8 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
           return success();
         }
       }
-    } else /* trim redundant control outputs */ {
-      if (op.ctrl_output() && op.ctrl_output().use_empty()) {
-        const int32_t num_data_inputs =
-            op.result_segment_sizes().getValue<IntegerAttr>({0}).getInt();
-        NamedAttrList attributes(op->getAttrDictionary());
-        attributes.erase("result_segment_sizes");
-        attributes.append("result_segment_sizes", rewriter.getI32VectorAttr({num_data_inputs, 0}));
-        if (auto sys = rewriter.create<oneflow::UserOp>(
-                op->getLoc(), op.getResultTypes().take_front(op.data_output().size()),
-                op->getOperands(), attributes)) {
-          for (auto out : op.data_output()) {
-            out.replaceAllUsesWith(sys->getResult(out.getResultNumber()));
-          }
-          op->erase();
-          return success();
-        }
-      }
+    } else {
+      return TrimRedundantCtrl(op, rewriter);
     }
     return failure();
   }
@@ -98,23 +104,7 @@ struct ConcreteSystemOps : public mlir::OpRewritePattern<oneflow::SystemOp> {
       : OpRewritePattern<oneflow::SystemOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(oneflow::SystemOp op,
                                       mlir::PatternRewriter &rewriter) const override {
-    // TODO: turn it into a template function with user op function
-    if (op.ctrl_output() && op.ctrl_output().use_empty()) {
-      const int32_t num_data_inputs = op.result_segment_sizes().getValue<IntegerAttr>({0}).getInt();
-      NamedAttrList attributes(op->getAttrDictionary());
-      attributes.erase("result_segment_sizes");
-      attributes.append("result_segment_sizes", rewriter.getI32VectorAttr({num_data_inputs, 0}));
-      if (auto sys = rewriter.create<oneflow::SystemOp>(
-              op->getLoc(), op.getResultTypes().take_front(op.data_output().size()),
-              op->getOperands(), attributes)) {
-        for (auto out : op.data_output()) {
-          out.replaceAllUsesWith(sys->getResult(out.getResultNumber()));
-        }
-        op->erase();
-        return success();
-      }
-    }
-    return failure();
+    return TrimRedundantCtrl(op, rewriter);
   }
 };
 
