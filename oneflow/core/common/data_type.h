@@ -20,6 +20,7 @@ limitations under the License.
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
 #endif
+#include "oneflow/core/common/fp16_data_type.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/record/record.pb.h"
@@ -60,10 +61,6 @@ struct IsIntegral : std::integral_constant<bool, false> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
-// Type Trait: IsFloat16
-template<typename T>
-struct IsFloat16 : std::integral_constant<bool, false> {};
-
 #define SPECIALIZE_TRUE_FLOAT16(type_cpp, type_proto) \
   template<>                                          \
   struct IsFloat16<type_cpp> : std::integral_constant<bool, true> {};
@@ -72,7 +69,7 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_FLOAT16, FLOAT16_DATA_TYPE_SEQ);
 
 // Type Trait: GetDataType
 
-template<typename T>
+template<typename T, typename T2=void>
 struct GetDataType;
 
 template<>
@@ -85,12 +82,8 @@ struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
-#ifdef WITH_CUDA
-
-template<>
-struct GetDataType<half> : std::integral_constant<DataType, DataType::kFloat16> {};
-
-#endif  // WITH_CUDA
+template<typename T>
+struct GetDataType<T, typename std::enable_if<IsFloat16<T>::value>::type> : std::integral_constant<DataType, DataType::kFloat16> {};
 
 template<DataType type>
 using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataType, type>{}));
