@@ -46,11 +46,11 @@ LogicalResult TrimRedundantCtrl(OpType op, PatternRewriter &rewriter) {
     NamedAttrList attributes(op->getAttrDictionary());
     attributes.erase("result_segment_sizes");
     attributes.append("result_segment_sizes", rewriter.getI32VectorAttr({num_data_inputs, 0}));
-    if (auto sys = rewriter.create<oneflow::SystemOp>(
+    if (auto created = rewriter.create<OpType>(
             op->getLoc(), op.getResultTypes().take_front(op.data_output().size()),
             op->getOperands(), attributes)) {
       for (auto out : op.data_output()) {
-        out.replaceAllUsesWith(sys->getResult(out.getResultNumber()));
+        out.replaceAllUsesWith(created->getResult(out.getResultNumber()));
       }
       op->erase();
       return success();

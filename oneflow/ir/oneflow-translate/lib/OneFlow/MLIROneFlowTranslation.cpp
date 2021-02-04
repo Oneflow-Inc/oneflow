@@ -27,6 +27,7 @@ limitations under the License.
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/UseDefLists.h"
 #include "mlir/IR/Value.h"
@@ -471,8 +472,8 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf &op) {
     out_types.append({t});
     AddOperandSegmentSizes(0, op.ctrl_in_op_name_size(), attr_vec);
     ArrayRef<NamedAttribute> named_attributes(attr_vec);
-    created_op =
-        builder_.create<oneflow::ConstantOp>(unknown_loc_, out_types, operands, named_attributes);
+    created_op = builder_.create<oneflow::ConstantOp>(
+        FileLineColLoc::get(op.name(), 0, 0, context_), out_types, operands, named_attributes);
   } else {
     auto out_types = llvm::SmallVector<Type, 8>();
     for (auto kv : op.user_conf().output()) {
@@ -482,7 +483,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf &op) {
     }
     AppendCtrlOutType(out_types);
     // OperationState state(unknownLoc, "oneflow." + op_type_name);
-    OperationState state(unknown_loc_, "oneflow.user");
+    OperationState state(FileLineColLoc::get(op.name(), 0, 0, context_), "oneflow.user");
     for (auto na : attr_vec) {
       if (na.first.str() == "input_lbn_segment_sizes") {
         int data_input_size = 0;
@@ -535,7 +536,7 @@ LogicalResult Importer::ProcessSystemOp(const ::oneflow::OperatorConf &op) {
   attr_vec.push_back(builder_.getNamedAttr(
       "output_lbns", builder_.getStrArrayAttr(
                          std::vector<llvm::StringRef>({output_lbns.begin(), output_lbns.end()}))));
-  OperationState state(unknown_loc_, "oneflow.system");
+  OperationState state(FileLineColLoc::get(op.name(), 0, 0, context_), "oneflow.system");
   attr_vec.push_back(
       builder_.getNamedAttr("op_type_case", builder_.getI32IntegerAttr(op.op_type_case())));
   AddOperandSegmentSizes(static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size(), attr_vec);
@@ -903,7 +904,6 @@ void RoundTripOneFlowJob(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, &context)));
   Importer imp(job_wrapper, &context, module.get());
   // TODO: Add flag in job desc
-  // const bool is_strict = std::getenv("ONEFLOW_MLIR_STRICT") != nullptr;
   const bool is_strict = true;
   if (succeeded(imp.ProcessJob())) {
     if (failed(applyRoundTripPatterns(&context, module,
