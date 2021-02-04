@@ -796,6 +796,53 @@ Maybe<void> InstructionsBuilder::InitOpConfSymbol(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InstructionsBuilder::InsertRemoveForeignCallbackInstruction(int64_t object_id,
+                                                                        int64_t callback_id) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("RemoveForeignCallback");
+  instruction.mutable_operand()->Add()->CopyFrom(*DelObjectOperand(object_id));
+  instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(callback_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::_FetchBlob(
+    const std::string& instruction_name,
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
+  vm::cfg::InstructionProto instruction;
+  const std::string& device_tag = blob_object->parallel_desc_symbol()->device_tag();
+  instruction.set_instr_type_name(device_tag + "." + instruction_name);
+  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*ConstOperand(blob_object->object_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(callback_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::FeedBlob(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
+  vm::cfg::InstructionProto instruction;
+  const std::string& device_tag = blob_object->parallel_desc_symbol()->device_tag();
+  instruction.set_instr_type_name(device_tag + "." + "FeedBlob");
+  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*Mut2Operand(blob_object->object_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(callback_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::FetchBlobHeader(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
+  JUST(_FetchBlob("FetchBlobHeader", blob_object, callback_id));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::FetchBlobBody(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
+  JUST(_FetchBlob("FetchBlobBody", blob_object, callback_id));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InstructionsBuilder::_TryClearObject(compatible_py::Object* blob_object) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("TryClearObject");
