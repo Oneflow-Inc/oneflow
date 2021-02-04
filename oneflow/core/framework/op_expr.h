@@ -25,13 +25,13 @@ class Tensor {};
 using TensorRef = std::shared_ptr<Tensor>;
 using TensorList = std::vector<TensorRef>;
 
-class OpExprEvaluator;
+class OpExprInterpreter;
 class OpExprEvalState;
 
 class OpExpr {
  public:
-  virtual TensorList evaluate(OpExprEvaluator* evaluator, const TensorList& inputs,
-                              const OpExprEvalState* state) = 0;
+  virtual void evaluate(OpExprInterpreter* evaluator, const TensorList& inputs, TensorList& outputs,
+                        const OpExprEvalState* state) = 0;
   // TODO(): Uncomment.
   // virtual FilterInputTensorsUsedByBackward(const TensorList& inputs) = 0;
   // virtual FilterOutputTensorsUsedByBackward(const TensorList& outputs) = 0;
@@ -59,8 +59,8 @@ class UserOpExpr : public BuiltinOpExpr {
   UserOpExpr() = default;
   explicit UserOpExpr(const std::string& op_name) : BuiltinOpExpr(op_name) {}
 
-  TensorList evaluate(OpExprEvaluator* evaluator, const TensorList& inputs,
-                      const OpExprEvalState* state) override;
+  void evaluate(OpExprInterpreter* evaluator, const TensorList& inputs, TensorList& outputs,
+                const OpExprEvalState* state) override;
 
   std::shared_ptr<OpExpr> GetBackwardOpExpr() override;
 
@@ -92,13 +92,13 @@ class OpExprEvalState {
   TensorList saved_tensors_;
 };
 
-class OpExprEvaluator {
+class OpExprInterpreter {
  public:
-  OpExprEvaluator() : self_state_(new OpExprEvalState) {}
-  virtual ~OpExprEvaluator() = default;
+  OpExprInterpreter() : self_state_(new OpExprEvalState) {}
+  virtual ~OpExprInterpreter() = default;
 
-  virtual TensorList apply(const OpExpr* op, const TensorList& inputs,
-                           const OpExprEvalState* state) = 0;
+  virtual void apply(const OpExpr* op, const TensorList& inputs, TensorList& outputs,
+                     const OpExprEvalState* state) = 0;
 
   std::shared_ptr<OpExprEvalState> state() const { return self_state_; }
 
@@ -106,20 +106,20 @@ class OpExprEvaluator {
   std::shared_ptr<OpExprEvalState> self_state_;
 };
 
-class NormalEvaluator : public OpExprEvaluator {
+class NormalInterpreter : public OpExprInterpreter {
  public:
-  NormalEvaluator() : OpExprEvaluator() {}
+  NormalInterpreter() : OpExprInterpreter() {}
 
-  TensorList apply(const OpExpr* fw_op_expr, const TensorList& inputs,
-                   const OpExprEvalState* state) override;
+  void apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
+             const OpExprEvalState* state) override;
 };
 
-class AutogradEvaluator : public OpExprEvaluator {
+class AutogradInterpreter : public OpExprInterpreter {
  public:
-  AutogradEvaluator() : OpExprEvaluator() {}
+  AutogradInterpreter() : OpExprInterpreter() {}
 
-  TensorList apply(const OpExpr* fw_op_expr, const TensorList& inputs,
-                   const OpExprEvalState* state) override;
+  void apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
+             const OpExprEvalState* state) override;
 };
 
 }  // namespace one

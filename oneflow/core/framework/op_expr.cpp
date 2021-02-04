@@ -18,10 +18,9 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-TensorList UserOpExpr::evaluate(OpExprEvaluator* evaluator, const TensorList& inputs,
-                                const OpExprEvalState* state) {
+void UserOpExpr::evaluate(OpExprInterpreter* evaluator, const TensorList& inputs,
+                          TensorList& outputs, const OpExprEvalState* state) {
   // TODO(hjchen2)
-  return TensorList{};
 }
 
 std::shared_ptr<OpExpr> UserOpExpr::GetBackwardOpExpr() {
@@ -29,16 +28,14 @@ std::shared_ptr<OpExpr> UserOpExpr::GetBackwardOpExpr() {
   return std::shared_ptr<OpExpr>(new UserOpExpr);
 }
 
-TensorList NormalEvaluator::apply(const OpExpr* fw_op_expr, const TensorList& inputs,
-                                  const OpExprEvalState* state) {
+void NormalInterpreter::apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
+                              const OpExprEvalState* state) {
   // TODO(hjchen2)
-  return TensorList{};
 }
 
-TensorList AutogradEvaluator::apply(const OpExpr* fw_op_expr, const TensorList& inputs,
-                                    const OpExprEvalState* state) {
+void AutogradInterpreter::apply(const OpExpr* op_expr, const TensorList& inputs,
+                                TensorList& outputs, const OpExprEvalState* state) {
   // TODO(hjchen2)
-  return TensorList{};
 }
 
 }  // namespace one
