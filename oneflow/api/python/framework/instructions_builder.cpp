@@ -29,15 +29,6 @@ namespace oneflow {
 
 namespace {
 
-int64_t NewObjectId(const std::shared_ptr<InstructionsBuilder>& x,
-                    const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
-  return x->NewObjectId(parallel_desc_sym).GetOrThrow();
-}
-
-int64_t NewSymbolId(const std::shared_ptr<InstructionsBuilder>& x) {
-  return x->NewSymbolId().GetOrThrow();
-}
-
 std::shared_ptr<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
     const std::shared_ptr<InstructionsBuilder>& x,
     std::vector<std::shared_ptr<compatible_py::BlobObject>> physical_blob_objects,
@@ -70,31 +61,6 @@ std::shared_ptr<Scope> GetScopeSymbol(const std::shared_ptr<InstructionsBuilder>
   return x->GetScopeSymbol(scope_proto).GetPtrOrThrow();
 }
 
-std::shared_ptr<OperatorConfSymbol> GetOpConfSymbol(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OperatorConf>& op_conf) {
-  return x->GetOpConfSymbol(op_conf).GetPtrOrThrow();
-}
-
-std::shared_ptr<OpNodeSignatureDesc> GetOpNodeSignatureSymbol(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute) {
-  return x->GetOpNodeSignatureSymbol(op_attribute).GetPtrOrThrow();
-}
-
-std::shared_ptr<compatible_py::BlobObject> NewBlobObject(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
-    const std::shared_ptr<compatible_py::OpArgBlobAttribute>& op_arg_blob_attr) {
-  return x->NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr).GetPtrOrThrow();
-}
-
-int64_t NewSymbolId4OpNodeSignature(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature_sym) {
-  return x->NewSymbolId4OpNodeSignature(op_node_signature_sym).GetOrThrow();
-}
-
 std::vector<std::shared_ptr<ParallelDesc>> GetPhysicalParallelDescSymbols(
     const std::shared_ptr<InstructionsBuilder>& x,
     const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
@@ -112,13 +78,6 @@ std::shared_ptr<compatible_py::BlobObject> MakeReferenceBlobObject(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr) {
   return x->MakeReferenceBlobObject(blob_object, op_arg_parallel_attr).GetPtrOrThrow();
-}
-
-void ReplaceMirrored(const std::shared_ptr<InstructionsBuilder>& x,
-                     const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
-                     std::vector<std::shared_ptr<compatible_py::BlobObject>> lhs_objects,
-                     std::vector<std::shared_ptr<compatible_py::BlobObject>> rhs_objects) {
-  return x->ReplaceMirrored(parallel_desc_sym, lhs_objects, rhs_objects).GetOrThrow();
 }
 
 std::shared_ptr<Scope> BuildInitialScope(const std::shared_ptr<InstructionsBuilder>& x,
@@ -191,12 +150,6 @@ std::shared_ptr<compatible_py::OpKernelObject> NewOpKernelObject(
   return x->NewOpKernelObject(op_conf).GetPtrOrThrow();
 }
 
-void LazyReference(const std::shared_ptr<InstructionsBuilder>& x,
-                   const std::shared_ptr<compatible_py::BlobObject>& blob_object,
-                   const std::string& interface_op_name) {
-  return x->LazyReference(blob_object, interface_op_name).GetOrThrow();
-}
-
 std::shared_ptr<compatible_py::BlobObject> MakeLazyRefBlobObject(
     const std::shared_ptr<InstructionsBuilder>& x, const std::string& interface_op_name,
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
@@ -213,57 +166,6 @@ std::shared_ptr<compatible_py::Object> GetSharedOpKernelObject4ParallelConfSymbo
 void DeleteObject(const std::shared_ptr<InstructionsBuilder>& x,
                   compatible_py::Object* blob_object) {
   return x->DeleteObject(blob_object).GetOrThrow();
-}
-
-std::vector<std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
-GetConstInputOperandBlobObjects(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-    const std::function<std::shared_ptr<compatible_py::BlobObject>(const std::string&)>&
-        blob_object4ibn) {
-  return *(x->GetConstInputOperandBlobObjects(op_attribute, blob_object4ibn).GetPtrOrThrow());
-}
-
-std::vector<std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
-GetMutableInputOperandBlobObjects(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-    const std::function<std::shared_ptr<compatible_py::BlobObject>(const std::string&)>&
-        blob_object4ibn) {
-  return *(x->GetMutableInputOperandBlobObjects(op_attribute, blob_object4ibn).GetPtrOrThrow());
-}
-
-std::vector<std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
-GetMut1OperandBlobObjects(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-    const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
-    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn_in_op2blob_object) {
-  return *(x->GetMut1OperandBlobObjects(op_attribute, parallel_desc_sym, bn_in_op2blob_object)
-               .GetPtrOrThrow());
-}
-
-void CheckRefInBlobObjectParallelDesc(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-    const std::shared_ptr<ParallelDesc>& op_parallel_desc_sym,
-    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn_in_op2blob_object) {
-  return x
-      ->CheckRefInBlobObjectParallelDesc(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object)
-      .GetOrThrow();
-}
-
-std::vector<std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
-GetMut2OperandBlobObjects(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-    const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
-    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn_in_op2blob_object) {
-  return *(x->GetMut2OperandBlobObjects(op_attribute, parallel_desc_sym, bn_in_op2blob_object)
-               .GetPtrOrThrow());
 }
 
 void InsertRemoveForeignCallbackInstruction(const std::shared_ptr<InstructionsBuilder>& x,
@@ -429,21 +331,14 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("instruction_list", &InstructionsBuilder::instruction_list)
       .def("eager_symbol_list", &InstructionsBuilder::eager_symbol_list)
       .def("object_releaser", &InstructionsBuilder::object_releaser)
-      .def("NewObjectId", &NewObjectId)
-      .def("NewSymbolId", &NewSymbolId)
       .def("PackPhysicalBlobsToLogicalBlob", &PackPhysicalBlobsToLogicalBlob)
       .def("GetSymbol4String", &GetSymbol4String)
       .def("GetJobConfSymbol", &GetJobConfSymbol)
       .def("GetParallelDescSymbol", &GetParallelDescSymbol)
       .def("GetScopeSymbol", &GetScopeSymbol)
-      .def("GetOpConfSymbol", &GetOpConfSymbol)
-      .def("GetOpNodeSignatureSymbol", &GetOpNodeSignatureSymbol)
-      .def("NewBlobObject", &NewBlobObject)
-      .def("NewSymbolId4OpNodeSignature", &NewSymbolId4OpNodeSignature)
       .def("GetPhysicalParallelDescSymbols", &GetPhysicalParallelDescSymbols)
       .def("UnpackLogicalBlobToPhysicalBlobs", &UnpackLogicalBlobToPhysicalBlobs)
       .def("MakeReferenceBlobObject", &MakeReferenceBlobObject)
-      .def("ReplaceMirrored", &ReplaceMirrored)
       .def("BuildInitialScope", &BuildInitialScope)
       .def("BuildScopeWithNewParallelDesc", &BuildScopeWithNewParallelDesc)
       .def("BuildScopeWithNewParallelConf", &BuildScopeWithNewParallelConf)
@@ -455,7 +350,6 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("CudaHostRegisterBlob", &CudaHostRegisterBlob)
       .def("CudaHostUnregisterBlob", &CudaHostUnregisterBlob)
       .def("NewOpKernelObject", &NewOpKernelObject)
-      .def("LazyReference", &LazyReference)
       .def("MakeLazyRefBlobObject", &MakeLazyRefBlobObject)
       .def("GetSharedOpKernelObject4ParallelConfSymbol",
            &GetSharedOpKernelObject4ParallelConfSymbol)
@@ -470,27 +364,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("NoBoxingCudaD2HStatelessCall", &NoBoxingCudaD2HStatelessCall)
       .def("NoBoxingCudaH2DStatelessCall", &NoBoxingCudaH2DStatelessCall)
       .def("RawStatelessCall", &RawStatelessCall)
-      .def("Build121To", &Build121To)
-      .def("GetConstInputOperandBlobObjects", &GetConstInputOperandBlobObjects)
-      .def("GetMutableInputOperandBlobObjects", &GetMutableInputOperandBlobObjects)
-      .def("GetMut1OperandBlobObjects", &GetMut1OperandBlobObjects)
-      .def("CheckRefInBlobObjectParallelDesc", &CheckRefInBlobObjectParallelDesc)
-      .def("GetMut2OperandBlobObjects", &GetMut2OperandBlobObjects);
-
-  // these API will be removed when InstructionsBuilder is refactor competely
-  py::module_ vm_sub_module = m.def_submodule("vm");
-
-  vm_sub_module.def("DelObjectOperand", &DelObjectOperand);
-  vm_sub_module.def("MutOperand", &MutOperand);
-  vm_sub_module.def("Int64Operand", &Int64Operand);
-
-  vm_sub_module.def("InitSymbolOperand", &InitSymbolOperand);
-  vm_sub_module.def("SymbolOperand", &SymbolOperand);
-  vm_sub_module.def("ConstOperand", &ConstOperand);
-
-  vm_sub_module.def("OperandSeparator", &OperandSeparator);
-  vm_sub_module.def("Uint64Operand", &Uint64Operand);
-  vm_sub_module.def("Mut2Operand", &Mut2Operand);
+      .def("Build121To", &Build121To);
 }
 
 }  // namespace oneflow
