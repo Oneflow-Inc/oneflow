@@ -678,7 +678,8 @@ Maybe<compatible_py::OpKernelObject> InstructionsBuilder::NewOpKernelObject(
 }
 
 Maybe<void> InstructionsBuilder::LazyReference(
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object, std::string interface_op_name) {
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+    const std::string& interface_op_name) {
   vm::cfg::InstructionProto instruction;
   std::string device_tag = blob_object->parallel_desc_symbol()->device_tag();
   instruction.set_instr_type_name(device_tag + ".LazyReference");
@@ -690,6 +691,24 @@ Maybe<void> InstructionsBuilder::LazyReference(
       *SymbolOperand(JUST(interface_op_name_sym->symbol_id())));
   instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
   return Maybe<void>::Ok();
+}
+
+Maybe<compatible_py::BlobObject> InstructionsBuilder::MakeLazyRefBlobObject(
+    const std::string& interface_op_name, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+  CHECK_EQ_OR_RETURN(op_attribute->output_bns().size(), 1);
+  std::string obn = op_attribute->output_bns().at(0);
+  std::shared_ptr<ParallelDesc> blob_parallel_desc_sym = JUST(GetParallelDescSymbol(parallel_conf));
+  OpAttribute pb_op_attribute;
+  op_attribute->ToProto(&pb_op_attribute);
+  std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr =
+      JUST(compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, pb_op_attribute, obn));
+  std::shared_ptr<compatible_py::OpArgBlobAttribute> op_arg_blob_attr =
+      JUST(compatible_py::GetOpArgBlobAttribute(pb_op_attribute, obn));
+  std::shared_ptr<compatible_py::BlobObject> blob_object =
+      JUST(NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr));
+  JUST(LazyReference(blob_object, interface_op_name));
+  return blob_object;
 }
 
 Maybe<compatible_py::Object> InstructionsBuilder::GetSharedOpKernelObject4ParallelConfSymbol(

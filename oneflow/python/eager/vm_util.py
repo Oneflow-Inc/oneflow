@@ -83,33 +83,6 @@ def _DefaultBlobObject4Ibn(ibn):
     raise NotImplementedError
 
 
-def MakeLazyRefBlobObject(self, interface_op_name):
-    sess = session_ctx.GetDefaultSession()
-    op_attribute = sess.OpAttribute4InterfaceOpName(interface_op_name)
-    assert len(op_attribute.output_bns) == 1
-    obn = op_attribute.output_bns[0]
-
-    parallel_conf = sess.ParallelConf4LazyInterfaceOpName(interface_op_name)
-    if not isinstance(
-        parallel_conf, oneflow_api.oneflow.core.job.placement.ParallelConf
-    ):
-        parallel_conf_cfg = placement_cfg.ParallelConf()
-        parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
-        for device_name in parallel_conf.device_name:
-            parallel_conf_cfg.add_device_name(device_name)
-        parallel_conf = parallel_conf_cfg
-    blob_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
-
-    op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
-        blob_parallel_desc_sym, str(op_attribute), obn
-    )
-    op_arg_blob_attr = oneflow_api.GetOpArgBlobAttribute(str(op_attribute), obn)
-
-    blob_object = self.NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr)
-    self.LazyReference(blob_object, interface_op_name)
-    return blob_object
-
-
 @contextmanager
 def CudaHostPinBlob(self, blob_object):
     self.CudaHostRegisterBlob(blob_object)
@@ -120,9 +93,6 @@ def CudaHostPinBlob(self, blob_object):
 
 
 def RegisterMethod4InstructionsBuilder():
-    oneflow_api.deprecated.InstructionsBuilder.MakeLazyRefBlobObject = (
-        MakeLazyRefBlobObject
-    )
     oneflow_api.deprecated.InstructionsBuilder.CudaHostPinBlob = CudaHostPinBlob
 
 

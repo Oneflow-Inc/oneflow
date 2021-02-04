@@ -193,8 +193,15 @@ std::shared_ptr<compatible_py::OpKernelObject> NewOpKernelObject(
 
 void LazyReference(const std::shared_ptr<InstructionsBuilder>& x,
                    const std::shared_ptr<compatible_py::BlobObject>& blob_object,
-                   std::string interface_op_name) {
+                   const std::string& interface_op_name) {
   return x->LazyReference(blob_object, interface_op_name).GetOrThrow();
+}
+
+std::shared_ptr<compatible_py::BlobObject> MakeLazyRefBlobObject(
+    const std::shared_ptr<InstructionsBuilder>& x, const std::string& interface_op_name,
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+  return x->MakeLazyRefBlobObject(interface_op_name, op_attribute, parallel_conf).GetPtrOrThrow();
 }
 
 std::shared_ptr<compatible_py::Object> GetSharedOpKernelObject4ParallelConfSymbol(
@@ -449,6 +456,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("CudaHostUnregisterBlob", &CudaHostUnregisterBlob)
       .def("NewOpKernelObject", &NewOpKernelObject)
       .def("LazyReference", &LazyReference)
+      .def("MakeLazyRefBlobObject", &MakeLazyRefBlobObject)
       .def("GetSharedOpKernelObject4ParallelConfSymbol",
            &GetSharedOpKernelObject4ParallelConfSymbol)
       .def("DeleteObject", &DeleteObject)

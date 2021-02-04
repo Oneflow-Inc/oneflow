@@ -164,7 +164,11 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<cfg::OperatorConf>& op_conf);
 
   Maybe<void> LazyReference(const std::shared_ptr<compatible_py::BlobObject>& blob_object,
-                            std::string interface_op_name);
+                            const std::string& interface_op_name);
+
+  Maybe<compatible_py::BlobObject> MakeLazyRefBlobObject(
+      const std::string& interface_op_name, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
 
   Maybe<compatible_py::Object> GetSharedOpKernelObject4ParallelConfSymbol(
       const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
