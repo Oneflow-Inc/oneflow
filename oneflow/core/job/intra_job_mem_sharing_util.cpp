@@ -72,6 +72,7 @@ struct MemoryChain {
   HashSet<RegstDescProto*> mem_reused_regsts;
   int64_t total_mem_reused_size = 0;
   Shape time_shape;
+  int64_t thrd_id = -1;
 };
 
 void InitMemoryChains(Plan* plan,
@@ -85,6 +86,14 @@ void InitMemoryChains(Plan* plan,
     int64_t device_unique_id = GenDeviceUniqueId(machine_id, device_id);
     MemoryChain* mem_chain =
         &((*device2chain2mem_chain)[device_unique_id][task->task_set_info().chain_id()]);
+
+    // same chain must in same thread
+    if (mem_chain->thrd_id < 0) {
+      mem_chain->thrd_id = task->thrd_id();
+    } else {
+      CHECK_EQ(mem_chain->thrd_id, task->thrd_id());
+    }
+
     mem_chain->sorted_tasks.push_back(task);
     for (auto& pair : *(task->mutable_produced_regst_desc())) {
       RegstDescProto* regst_desc = &pair.second;
@@ -135,7 +144,8 @@ bool TryMergeMemChain2MergedChains(
     return lhs->total_mem_reused_size > rhs->total_mem_reused_size;
   });
   for (MemoryChain* merged_chain : *merged_chains) {
-    if (merged_chain->time_shape == meta_shape && mem_chain->time_shape == meta_shape) {
+    if (merged_chain->time_shape == meta_shape && mem_chain->time_shape == meta_shape
+        && merged_chain->thrd_id == mem_chain->thrd_id) {
       if (IsStrictOrderL2R(merged_chain, mem_chain)) {
         merged_chain->sorted_tasks.insert(merged_chain->sorted_tasks.end(),
                                           mem_chain->sorted_tasks.begin(),
@@ -202,7 +212,8 @@ void GenMemChainTasksAndRegsts(
 }
 
 void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
-    const std::vector<TaskProto*>& sorted_tasks, const HashSet<RegstDescProto*>& mem_reused_regsts,
+    const HashMap<int64_t, TaskProto*>& task_id2proto, const std::vector<TaskProto*>& sorted_tasks,
+    const HashSet<RegstDescProto*>& mem_reused_regsts,
     const HashMap<int64_t, RegstDescProto*>& regst_desc_id2regst_desc,
     std::vector<HashSet<RegstDescProto*>>* alloc_regsts_timeline,
     std::vector<HashSet<RegstDescProto*>>* free_regsts_timeline,
@@ -219,6 +230,8 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
     CHECK(task_id2sorted_id.emplace(task->task_id(), i).second);
   }
 
+  int64_t last_order = sorted_tasks.at(sorted_tasks.size() - 1)->task_set_info().order_in_graph();
+
   auto FindLastFreeIndexInSortedTasks = [&](RegstDescProto* regst_desc) -> int64_t {
     // temp regst will set free index as same as alloc index
     int64_t free_index = task_id2sorted_id.at(regst_desc->producer_task_id());
@@ -227,6 +240,19 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
       int64_t this_sorted_index = sorted_tasks.size() - 1;
       if (task_id2sorted_id.find(consumer_task_id) != task_id2sorted_id.end()) {
         this_sorted_index = task_id2sorted_id.at(consumer_task_id);
+      } else {
+        CHECK(task_id2proto.find(consumer_task_id) != task_id2proto.end());
+        const TaskProto* consumer_task = task_id2proto.at(consumer_task_id);
+        int64_t this_order = consumer_task->task_set_info().order_in_graph();
+        if (this_order < last_order) {
+          // try find MIN order greater than this order
+          for (int64_t i = free_index; i < sorted_tasks.size(); ++i) {
+            if (sorted_tasks.at(i)->task_set_info().order_in_graph() > this_order) {
+              this_sorted_index = i;
+              break;
+            }
+          }
+        }
       }
       free_index = std::max(free_index, this_sorted_index);
     }
@@ -662,11 +688,17 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
       mem_chain2regst2mutual_exclusion_regsts;
   // info for inplace
   HashMap<int64_t, HashMap<RegstDescProto*, RegstDescProto*>> mem_chain2consumer2inplaced_regst;
+  // info for nccl reuse memory
+  HashMap<int64_t, TaskProto*> task_id2proto;
+  for (int64_t i = 0; i < plan->task_size(); ++i) {
+    TaskProto* task = plan->mutable_task(i);
+    CHECK(task_id2proto.emplace(task->task_id(), task).second);
+  }
 
   // step 1: generate regst alloc/free queue AND regst mutual exclusions
   for (const auto& pair : mem_chain2mem_reused_regsts) {
     GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
-        mem_chain2sorted_tasks.at(pair.first), pair.second, regst_desc_id2regst_desc,
+        task_id2proto, mem_chain2sorted_tasks.at(pair.first), pair.second, regst_desc_id2regst_desc,
         &mem_chain2task2alloc_regsts[pair.first], &mem_chain2task2free_regsts[pair.first],
         &mem_chain2regst2mutual_exclusion_regsts[pair.first],
         &mem_chain2consumer2inplaced_regst[pair.first]);

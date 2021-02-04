@@ -412,6 +412,23 @@ def enable_fusion(val=True):
     sess.config_proto.resource.collective_boxing_conf.enable_fusion = val
 
 
+@oneflow_export("config.collective_boxing.enable_reuse_mem")
+def api_collective_boxing_enable_reuse_mem(val: bool = False) -> None:
+    r"""Whether or not allow collective boxing nodes reuse memory
+
+    Args:
+        val (bool, optional): True or False. Defaults to False.
+    """
+    return enable_if.unique([enable_fusion, do_nothing])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def collective_boxing_enable_reuse_mem(val=False):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.collective_boxing_conf.enable_reuse_mem = val
+
+
 @oneflow_export("config.collective_boxing.num_callback_threads")
 def api_num_callback_threads(val: int) -> None:
     r"""Set up number of callback threads for boxing process.

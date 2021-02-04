@@ -29,7 +29,10 @@ void CollectiveBoxingGenericTaskNode::Init(int64_t machine_id, int64_t thrd_id, 
 void CollectiveBoxingGenericTaskNode::ProduceAllRegstsAndBindEdges() {
   if (boxing::collective::GenericOpHasOutput(
           op_conf_.collective_boxing_generic_conf().rank_desc())) {
-    std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
+    const CollectiveBoxingConf collective_boxing_conf =
+        Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
+    std::shared_ptr<RegstDesc> out_regst =
+        ProduceRegst("out", collective_boxing_conf.enable_reuse_mem(), 1, 1);
     this->ForEachOutDataEdge([&](TaskEdge* out_dege) { out_dege->AddRegst("out", out_regst); });
   }
 }
