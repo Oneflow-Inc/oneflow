@@ -238,6 +238,10 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("*"
                               "DistributeConcat",
                               &TaskGraph::BldSubTskGphByPartialInLbiConnect);
 
+REGISTER_BLD_SUB_TSK_GPH_MTHD("SrcSubsetTick"
+                              "*",
+                              &TaskGraph::BldSubTskGphBySubsetConnect);
+
 REGISTER_BLD_SUB_TSK_GPH_MTHD("DistributeSplit"
                               "*",
                               &TaskGraph::BldSubTskGphByPartialOutLbiConnect);

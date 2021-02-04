@@ -100,18 +100,48 @@ void BuildPartialTickOp7SinkTickOp(
   job_builder->MutOpsOnlyOnce({*sink_tick_op_conf});
 }
 
-void ConnectSourceTickAndOtherTick(JobBuilder* job_builder) {
+Maybe<void> BuildSrcSubsetTickOpAndParallelConf(OperatorConf* src_subset_tick_op,
+                                                JobBuilder* job_builder) {
+  src_subset_tick_op->set_name("System-AutoTick-SrcSubsetTick_" + NewUniqueId());
+  src_subset_tick_op->mutable_src_subset_tick_conf()->set_out("out");
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag("cpu");
+  int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
+  for (int64_t id = 0; id < num_machines; ++id) {
+    parallel_conf.add_device_name(std::to_string(id) + ":0");
+  }
+  JUST(job_builder->AddOp(parallel_conf, *src_subset_tick_op));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ConnectSourceTickAndSrcSubsetTick(const OperatorConf& src_tick_op,
+                                              OperatorConf* src_subset_tick_op,
+                                              JobBuilder* job_builder) {
+  src_subset_tick_op->mutable_src_subset_tick_conf()->set_in(
+      src_tick_op.name() + "/" + src_tick_op.source_tick_conf().out());
+  JUST(job_builder->MutOpOnlyOnce(*src_subset_tick_op));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ConnectSourceTickAndOtherTick(JobBuilder* job_builder) {
   OperatorConf src_tick_op;
   BuildSourceTickOpAndParallelConf(&src_tick_op, job_builder);
+  OperatorConf src_subset_tick_op;
+  JUST(BuildSrcSubsetTickOpAndParallelConf(&src_subset_tick_op, job_builder));
+  JUST(ConnectSourceTickAndSrcSubsetTick(src_tick_op, &src_subset_tick_op, job_builder));
 
+  const std::string& src_lbn =
+      src_subset_tick_op.name() + "/" + src_subset_tick_op.src_subset_tick_conf().out();
   job_builder->ForEachOperator([&](const Operator& op) {
-    if (op.op_name() != src_tick_op.name()) { CHECK(!op.op_conf().has_source_tick_conf()); }
+    if (op.op_name() != src_subset_tick_op.name()) {
+      CHECK(!op.op_conf().has_src_subset_tick_conf());
+    }
     auto mut_helper = NewMutOpConTickInputHelper(op.op_conf());
     if (!mut_helper) { return; }
     if (mut_helper->IsTickInputBound() == true) { return; }
-    job_builder->MutOpsOnlyOnce({mut_helper->NewTickInputBoundOpConf(
-        src_tick_op.name() + "/" + src_tick_op.source_tick_conf().out())});
+    job_builder->MutOpsOnlyOnce({mut_helper->NewTickInputBoundOpConf(src_lbn)});
   });
+  return Maybe<void>::Ok();
 }
 
 const OpNode* GetSrcTickOpNode(const OpGraph& op_graph) {
@@ -346,7 +376,7 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
 void AutoSourceTick(const OpGraph& op_graph, JobBuilder* job_builder) {
   GroupTickByParallelDesc(op_graph, job_builder);
   op_graph.ForEachNode([&](OpNode* node) { CHECK(!node->op().op_conf().has_source_tick_conf()); });
-  ConnectSourceTickAndOtherTick(job_builder);
+  CHECK_JUST(ConnectSourceTickAndOtherTick(job_builder));
 }
 
 void AddTickForTimeShape(const OpGraph& op_graph, JobBuilder* job_builder) {
