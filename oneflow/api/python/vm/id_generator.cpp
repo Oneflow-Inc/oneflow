@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
-#include <atomic>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/vm/id_generator.h"
 
@@ -23,19 +22,7 @@ namespace vm {
 
 namespace py = pybind11;
 
-namespace {
-
-uint64_t NewTokenId() {
-  static std::atomic<uint64_t> token_id(0);
-  token_id++;
-  return token_id;
-}
-
-}  // namespace
-
 ONEFLOW_API_PYBIND11_MODULE("vm", m) {
-  m.def("NewTokenId", &NewTokenId);
-
   py::class_<IdGenerator, std::shared_ptr<IdGenerator>>(m, "IdGenerator");
   py::class_<PhysicalIdGenerator, IdGenerator, std::shared_ptr<PhysicalIdGenerator>>(
       m, "PhysicalIdGenerator")
