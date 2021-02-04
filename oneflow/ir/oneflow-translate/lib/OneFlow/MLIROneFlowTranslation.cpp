@@ -857,7 +857,7 @@ LogicalResult Importer::TryToUpdateJob() {
   }
 }  // namespace
 
-void applyRoundTripPatterns(MLIRContext *context, OwningModuleRef &module, bool debug) {
+LogicalResult applyRoundTripPatterns(MLIRContext *context, OwningModuleRef &module, bool debug) {
   if (debug) {
     std::cout << "import:\n";
     module->dump();
@@ -865,12 +865,16 @@ void applyRoundTripPatterns(MLIRContext *context, OwningModuleRef &module, bool 
 
   mlir::PassManager pm(context);
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
-  if (mlir::failed(pm.run(*module))) { module->emitError("Failed to run canonicalizer pass"); }
+  if (mlir::failed(pm.run(*module))) {
+    module->emitError("Failed to run canonicalizer pass");
+    return failure();
+  }
 
   if (debug) {
     std::cout << "optimized:\n";
     module->dump();
   }
+  return success();
 }
 
 // Move this into another cpp which will be another target
@@ -898,10 +902,14 @@ void RoundTripOneFlowJob(
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, &context)));
   Importer imp(job_wrapper, &context, module.get());
-  const bool is_strict = std::getenv("ONEFLOW_MLIR_STRICT") != nullptr;
+  // TODO: Add flag in job desc
+  // const bool is_strict = std::getenv("ONEFLOW_MLIR_STRICT") != nullptr;
+  const bool is_strict = true;
   if (succeeded(imp.ProcessJob())) {
-    applyRoundTripPatterns(&context, module, std::getenv("ONEFLOW_DEBUG_MODE") != nullptr);
-
+    if (failed(applyRoundTripPatterns(&context, module,
+                                      std::getenv("ONEFLOW_DEBUG_MODE") != nullptr))) {
+      exit(EXIT_FAILURE);
+    }
     std::string mlir;
     llvm::raw_string_ostream os(mlir);
     module->print(os);
