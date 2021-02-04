@@ -29,7 +29,7 @@ namespace oneflow {
 
 #define PAD2D_DATA_TYPE_GPU_SEQ \
   FLOAT16_DATA_TYPE_SEQ                    \
-  REFLECTION_PAD2D_DATA_TYPE_CPU_SEQ
+  PAD2D_DATA_TYPE_CPU_SEQ
 
 namespace user_op {
 

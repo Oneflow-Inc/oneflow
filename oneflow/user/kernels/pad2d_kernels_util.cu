@@ -17,7 +17,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/user/kernels/pad2d_kernel_util.h"
+#include "oneflow/user/kernels/pad2d_kernels_util.h"
 
 namespace oneflow {
 namespace user_op {
@@ -198,7 +198,7 @@ void ReplicationPad2dGradFunctor<DeviceType::kGPU, float16>::operator()(
           src_num, dest_num, dy_height, dy_width, dx_height, dx_width, pad_left, pad_top);
 }
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICAION_PAD2D_FUNCTOR,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD2D_FUNCTOR,
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
                                  PAD2D_DATA_TYPE_GPU_SEQ);
 
