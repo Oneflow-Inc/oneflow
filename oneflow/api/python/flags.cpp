@@ -13,18 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/vm/id_util_api.h"
 
-namespace py = pybind11;
+namespace oneflow {
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("NewLogicalObjectId", &NewLogicalObjectId);
-  m.def("NewLogicalSymbolId", &NewLogicalSymbolId);
+ONEFLOW_API_PYBIND11_MODULE("flags", m) {
+  m.def("with_cuda", []() {
+#ifdef WITH_CUDA
+    return true;
+#else
+    return false;
+#endif  // WITH_CUDA
+  });
 
-  m.def("NewPhysicalObjectId", &NewPhysicalObjectId);
-  m.def("NewPhysicalSymbolId", &NewPhysicalSymbolId);
-
-  m.def("NewTokenId", &NewTokenId);
+  m.def("use_cxx11_abi", []() {
+#if _GLIBCXX_USE_CXX11_ABI == 1
+    return true;
+#else
+    return false;
+#endif  // _GLIBCXX_USE_CXX11_ABI
+  });
 }
+
+}  // namespace oneflow

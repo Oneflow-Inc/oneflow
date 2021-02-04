@@ -15,25 +15,23 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
-#include "oneflow/core/job/mirrored_parallel.cfg.h"
-#include "oneflow/core/job/mirrored_parallel.pb.h"
-#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/op_node_signature.cfg.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/job/mirrored_parallel.pb.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/mirrored_parallel.cfg.h"
-#include "oneflow/core/register/blob_desc.cfg.h"
 #include "oneflow/core/register/batch_axis_signature.cfg.h"
 #include "oneflow/core/job/parallel_signature.cfg.h"
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/register/blob_desc.cfg.h"
 #include "oneflow/core/register/blob_desc.pb.h"
-#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/eager/eager_symbol.pb.h"
+#include "oneflow/core/eager/eager_symbol.cfg.h"
 
 namespace py = pybind11;
 
@@ -57,12 +55,22 @@ Maybe<cfg::OpNodeSignature> MakeOpNodeSignatureFromSerializedOpAttribute(
   return op_node_signature;
 }
 
+Maybe<eager::cfg::EagerSymbol> MakeEagerSymbol(const std::string& serialized_str) {
+  eager::EagerSymbol eager_symbol;
+  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &eager_symbol))
+      << "eager_symbol parse failed";
+  return std::make_shared<eager::cfg::EagerSymbol>(eager_symbol);
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   m.def("MakeOpNodeSignatureFromSerializedOpAttribute", [](const std::string& str) {
     return MakeOpNodeSignatureFromSerializedOpAttribute(str).GetPtrOrThrow();
   });
+
+  m.def("MakeEagerSymbolByString",
+        [](const std::string& str) { return MakeEagerSymbol(str).GetPtrOrThrow(); });
 }
 
 }  // namespace oneflow
