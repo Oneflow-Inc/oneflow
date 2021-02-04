@@ -23,7 +23,7 @@ struct EluFunctor {
   OF_DEVICE_FUNC T operator()(T x) const {
     return (x > static_cast<T>(0)) ? x : static_cast<T>(alpha * (exp(x) - static_cast<T>(1)));
   }
-  const float alpha;
+  const T alpha;
 };
 
 template<typename T>
@@ -32,7 +32,7 @@ struct EluGradFunctor {
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
     return (x > static_cast<T>(0)) ? dy : static_cast<T>(dy * alpha * (exp(x)));
   }
-  const float alpha;
+  const T alpha;
 };
 
 template<typename T>
