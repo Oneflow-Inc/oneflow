@@ -20,17 +20,19 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<const char*> DeviceTag4DeviceType(DeviceType device_type) {
-  auto device_type_to_tag_pairs = DeviceRegistryMgr::Get().DeviceType2TagPair();
-  if (device_type_to_tag_pairs.find(device_type) == device_type_to_tag_pairs.end()) { UNIMPLEMENTED(); }
-  return device_type_to_tag_pairs[device_type].c_str();
+  auto device_type_to_tag = DeviceRegistryMgr::Get().DeviceType4Tag();
+  if (device_type_to_tag.find(device_type) == device_type_to_tag.end()) {
+    UNIMPLEMENTED();
+  }
+  return device_type_to_tag[device_type].c_str();
 }
 
 Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
-  auto device_tag_to_type_pairs = DeviceRegistryMgr::Get().DeviceTag2TypePair();
-  if (device_tag_to_type_pairs.find(device_tag) == device_tag_to_type_pairs.end()) { UNIMPLEMENTED(); }
-  return device_tag_to_type_pairs[device_tag];
+  auto device_tag_to_type = DeviceRegistryMgr::Get().DeviceTag4Type();
+  if (device_tag_to_type.find(device_tag) == device_tag_to_type.end()) {
+    UNIMPLEMENTED();
+  }
+  return device_tag_to_type[device_tag];
 }
-
-
 
 }  // namespace oneflow

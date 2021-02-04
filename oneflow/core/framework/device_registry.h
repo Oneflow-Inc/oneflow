@@ -28,7 +28,7 @@ class DeviceRegistry final {
  public:
   DeviceRegistry(DeviceType dev_type) : dev_type_(dev_type) {}
   DeviceRegistry& SetDumpVersionInfoFn(DumpVersionInfoFn func);
-  DeviceRegistry& SetDeviceTypeAndTagPair(std::string dev_tag);
+  DeviceRegistry& SetDeviceTag(std::string dev_tag);
 
  private:
   DeviceType dev_type_;

@@ -21,6 +21,9 @@ limitations under the License.
 
 namespace oneflow {
 
+template<typename Value>
+using DeviceTypeKeyMap = std::unordered_map<DeviceType, Value, std::hash<int>>;
+
 class DeviceRegistryMgr final {
  private:
   DeviceRegistryMgr() {}
@@ -30,14 +33,15 @@ class DeviceRegistryMgr final {
 
  public:
   static DeviceRegistryMgr& Get();
-  HashMap<DeviceType, DumpVersionInfoFn, std::hash<int>>& DumpVersionInfoFuncs();
-  HashMap<DeviceType, std::string, std::hash<int>>& DeviceType2TagPair();
-  HashMap<std::string, DeviceType, std::hash<std::string>>& DeviceTag2TypePair();
+
+  DeviceTypeKeyMap<DumpVersionInfoFn>& DumpVersionInfoFuncs();
+  DeviceTypeKeyMap<std::string>& DeviceType4Tag();
+  HashMap<std::string, DeviceType, std::hash<std::string>>& DeviceTag4Type();
 
  private:
-  HashMap<DeviceType, DumpVersionInfoFn, std::hash<int>> dump_version_info_funcs_;
-  HashMap<DeviceType, std::string, std::hash<int>> device_type_to_tag_pairs_;
-  HashMap<std::string, DeviceType, std::hash<std::string>> device_tag_to_type_pairs_;
+  DeviceTypeKeyMap<DumpVersionInfoFn> dump_version_info_funcs_;
+  DeviceTypeKeyMap<std::string> device_type_to_tag_;
+  HashMap<std::string, DeviceType, std::hash<std::string>> device_tag_to_type_;
 };
 
 #define REGISTER_DEVICE(device_type)                                           \
