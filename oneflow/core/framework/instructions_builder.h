@@ -169,6 +169,17 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<compatible_py::Object> GetSharedOpKernelObject4ParallelConfSymbol(
       const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
 
+  Maybe<void> InsertRemoveForeignCallbackInstruction(int64_t object_id, int64_t callback_id);
+
+  Maybe<void> FetchBlobHeader(const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+                              int64_t callback_id);
+
+  Maybe<void> FetchBlobBody(const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+                            int64_t callback_id);
+
+  Maybe<void> FeedBlob(const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+                       int64_t callback_id);
+
   using FindOrCreateDelegateBlobObjectFun =
       std::function<std::shared_ptr<compatible_py::BlobObject>(
           const std::shared_ptr<InstructionsBuilder>&,
@@ -386,6 +397,10 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
           const std::shared_ptr<compatible_py::BlobObject>&,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&
           get_delegate_blob_object);
+
+  Maybe<void> _FetchBlob(const std::string& instruction_name,
+                         const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+                         int64_t callback_id);
 
   template<typename T>
   Maybe<int64_t> CreateSymbolId(const T& conf) {
