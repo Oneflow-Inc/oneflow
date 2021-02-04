@@ -89,16 +89,6 @@ def OneFlow_ConstantOp : OneFlow_UserBaseOp<"constant", [AttrSizedOperandSegment
   let output = (outs AnyTypeOf<[F32Tensor, F64Tensor, I32Tensor, I64Tensor]>);
 }
 
-def OneFlow_ShardingOp : OneFlow_BaseOp<"sharding", [NoSideEffect, SameOperandsAndResultType]> {
-    let summary = "Sharding op for SBP";
-    let attrs = (ins
-      StrArrayAttr:$input_signature,
-      StrArrayAttr:$output_signature,
-      I64ArrayAttr:$shape
-    );
-    let output = (outs AnyType:$res);
-}
-
 def OneFlow_SystemOp : OneFlow_Op<"system", []> {
   let summary = "";
   let attrs = (ins
