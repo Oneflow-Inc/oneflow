@@ -82,6 +82,7 @@ class Importer {
   LogicalResult AppendCtrlInOperand(const ::oneflow::OperatorConf &op,
                                     std::vector<::mlir::Value> &operand_vec);
   LogicalResult AppendCtrlOutType(llvm::SmallVector<Type, 8> &out_types);
+  LogicalResult AddOpConf(const ::oneflow::OperatorConf &op, std::vector<NamedAttribute> &attr_vec);
   LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf &op,
                                              std::vector<NamedAttribute> &attr_vec);
   LogicalResult AddPlacement(const ::oneflow::OperatorConf &op,
@@ -423,6 +424,20 @@ LogicalResult Importer::AddPlacement(const ::oneflow::OperatorConf &op,
   return success();
 }
 
+LogicalResult Importer::AddOpConf(const ::oneflow::OperatorConf &op,
+                                  std::vector<NamedAttribute> &attr_vec) {
+  attr_vec.push_back(builder_.getNamedAttr("op_name", builder_.getStringAttr(op.name())));
+  if (op.has_trainable()) {
+    attr_vec.push_back(builder_.getNamedAttr("trainable", builder_.getBoolAttr(op.trainable())));
+  }
+  if (op.has_device_tag()) {
+    attr_vec.push_back(builder_.getNamedAttr("device", builder_.getStringAttr(op.device_tag())));
+  }
+  attr_vec.push_back(
+      builder_.getNamedAttr("scope_symbol_id", builder_.getI64IntegerAttr(op.scope_symbol_id())));
+  return success();
+}
+
 LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf &op) {
   if (op.has_user_conf() == false) {
     module_.emitError("Not a user op. op name: " + op.name());
@@ -432,17 +447,8 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf &op) {
   const std::string &op_type_name = user_conf.op_type_name();
 
   std::vector<NamedAttribute> attr_vec;
-  // TODO: exract function and handle these common attributes in system op
-  attr_vec.push_back(builder_.getNamedAttr("op_name", builder_.getStringAttr(op.name())));
-  if (op.has_trainable()) {
-    attr_vec.push_back(builder_.getNamedAttr("trainable", builder_.getBoolAttr(op.trainable())));
-  }
-  if (op.has_device_tag()) {
-    attr_vec.push_back(builder_.getNamedAttr("device", builder_.getStringAttr(op.device_tag())));
-  }
-  AddPlacement(op, attr_vec);
-  attr_vec.push_back(
-      builder_.getNamedAttr("scope_symbol_id", builder_.getI64IntegerAttr(op.scope_symbol_id())));
+  if (failed(AddOpConf(op, attr_vec))) { return failure(); }
+  if (failed(AddPlacement(op, attr_vec))) { return failure(); }
   attr_vec.push_back(
       builder_.getNamedAttr("op_type_name", builder_.getStringAttr(op.user_conf().op_type_name())));
   std::vector<::mlir::Value> operand_vec;
@@ -521,7 +527,8 @@ LogicalResult Importer::ProcessSystemOp(const ::oneflow::OperatorConf &op) {
   auto output_lbns = job_wrapper_.OutputLbns4OpName(op.name());
   job_wrapper_.OutputLbns4OpName(op.name());
   std::vector<NamedAttribute> attr_vec;
-  AddPlacement(op, attr_vec);
+  if (failed(AddOpConf(op, attr_vec))) { return failure(); }
+  if (failed(AddPlacement(op, attr_vec))) { return failure(); }
   attr_vec.push_back(builder_.getNamedAttr(
       "input_bns", builder_.getStrArrayAttr(
                        std::vector<llvm::StringRef>({input_bns.begin(), input_bns.end()}))));
@@ -531,7 +538,6 @@ LogicalResult Importer::ProcessSystemOp(const ::oneflow::OperatorConf &op) {
   OperationState state(unknown_loc_, "oneflow.system");
   attr_vec.push_back(
       builder_.getNamedAttr("op_type_case", builder_.getI32IntegerAttr(op.op_type_case())));
-  attr_vec.push_back(builder_.getNamedAttr("op_name", builder_.getStringAttr(op.name())));
   AddOperandSegmentSizes(static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size(), attr_vec);
   AddResultSegmentSizes(output_lbns.size(), attr_vec);
   state.addAttributes(attr_vec);
