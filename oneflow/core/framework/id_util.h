@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,13 +12,17 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from __future__ import absolute_import
+*/
+#ifndef ONEFLOW_CORE_FRAMEWORK_ID_UTIL_H_
 
-from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api
+#include <string>
+#include "oneflow/core/common/maybe.h"
 
+namespace oneflow {
 
-@oneflow_export("util.unique_str")
-def UniqueStr(prefix):
-    return oneflow_api.UniqueStr(prefix)
+Maybe<std::string> UniqueStr(const std::string& prefix);
+
+}  // namespace oneflow
+
+#define ONEFLOW_CORE_FRAMEWORK_ID_UTIL_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_ID_UTIL_H_

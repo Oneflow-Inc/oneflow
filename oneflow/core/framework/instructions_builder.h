@@ -49,7 +49,7 @@ struct CreateSymbolIdHelper {
 
 }  // namespace detail
 
-class InstructionsBuilder {
+class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuilder> {
  public:
   InstructionsBuilder(const InstructionsBuilder&) = delete;
   InstructionsBuilder(InstructionsBuilder&&) = delete;
@@ -185,6 +185,57 @@ class InstructionsBuilder {
       std::vector<
           std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
           mut2_operand_blob_objects);
+  using FindOrCreateDelegateBlobObjectFun =
+      std::function<std::shared_ptr<compatible_py::BlobObject>(
+          const std::shared_ptr<InstructionsBuilder>&,
+          const std::function<std::shared_ptr<compatible_py::BlobObject>(
+              const std::shared_ptr<compatible_py::BlobObject>&,
+              const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&,
+          const std::shared_ptr<compatible_py::BlobObject>&,
+          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>;
+
+  Maybe<void> StatelessCall(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
+      const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+          bn_in_op2blob_object,
+      const std::function<std::shared_ptr<compatible_py::BlobObject>(
+          const std::shared_ptr<InstructionsBuilder>&,
+          const std::shared_ptr<compatible_py::BlobObject>&,
+          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& boxing_to,
+      const FindOrCreateDelegateBlobObjectFun& find_or_creat_delegate_blob_object);
+
+  Maybe<void> NoBoxingStatelessCall(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
+      const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+          bn_in_op2blob_object,
+      const FindOrCreateDelegateBlobObjectFun& find_or_creat_delegate_blob_object);
+
+  Maybe<void> NoBoxingCudaD2HStatelessCall(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<cfg::ParallelConf>& in_parallel_conf,
+      const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+          bn_in_op2blob_object,
+      const std::function<std::shared_ptr<ParallelDesc>(
+          const std::shared_ptr<InstructionsBuilder>&, const std::shared_ptr<ParallelDesc>&,
+          const std::string&)>& try_replace_device_tag);
+
+  Maybe<void> NoBoxingCudaH2DStatelessCall(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<cfg::ParallelConf>& out_parallel_conf,
+      const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+          bn_in_op2blob_object);
+
+  Maybe<void> RawStatelessCall(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
+      const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+          bn_in_op2blob_object);
+
+  Maybe<compatible_py::BlobObject> Build121To(
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+      const std::shared_ptr<ParallelDesc>& parallel_desc_symbol);
 
   Maybe<void> _StatelessCall(
       const std::string& stream_tag, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
