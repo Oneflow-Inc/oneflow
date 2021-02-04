@@ -86,7 +86,7 @@ void DumpVersionInfo() {
 
 REGISTER_DEVICE(DeviceType::kGPU)
     .SetDumpVersionInfoFn(DumpVersionInfo)
-    .SetGetStringFn([]() -> std::string { return "gpu"; });
+    .SetDeviceTypeAndTagPair("gpu");
 
 }  // namespace oneflow
 #endif  // WITH_CUDA

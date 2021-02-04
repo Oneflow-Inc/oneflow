@@ -42,8 +42,6 @@ inline std::string ToString(const std::string& value) {
   return value;
 }
 
-std::string GetDeviceString(DeviceType dev_type);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_TO_STRING_H_

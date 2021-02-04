@@ -30,12 +30,14 @@ class DeviceRegistryMgr final {
 
  public:
   static DeviceRegistryMgr& Get();
-  HashMap<DeviceType, DumpVersionInfoFn>& DumpVersionInfoFuncs();
-  HashMap<DeviceType, GetStringFn>& StringFuncs();
+  HashMap<DeviceType, DumpVersionInfoFn, std::hash<int>>& DumpVersionInfoFuncs();
+  HashMap<DeviceType, std::string, std::hash<int>>& DeviceType2TagPair();
+  HashMap<std::string, DeviceType, std::hash<std::string>>& DeviceTag2TypePair();
 
  private:
-  HashMap<DeviceType, DumpVersionInfoFn> dump_version_info_funcs_;
-  HashMap<DeviceType, GetStringFn> get_string_funcs_;
+  HashMap<DeviceType, DumpVersionInfoFn, std::hash<int>> dump_version_info_funcs_;
+  HashMap<DeviceType, std::string, std::hash<int>> device_type_to_tag_pairs_;
+  HashMap<std::string, DeviceType, std::hash<std::string>> device_tag_to_type_pairs_;
 };
 
 #define REGISTER_DEVICE(device_type)                                           \

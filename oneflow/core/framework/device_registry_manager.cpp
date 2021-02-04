@@ -22,10 +22,16 @@ DeviceRegistryMgr& DeviceRegistryMgr::Get() {
   return mgr;
 }
 
-HashMap<DeviceType, DumpVersionInfoFn>& DeviceRegistryMgr::DumpVersionInfoFuncs() {
+HashMap<DeviceType, DumpVersionInfoFn, std::hash<int>>& DeviceRegistryMgr::DumpVersionInfoFuncs() {
   return dump_version_info_funcs_;
 }
 
-HashMap<DeviceType, GetStringFn>& DeviceRegistryMgr::StringFuncs() { return get_string_funcs_; }
+HashMap<DeviceType, std::string, std::hash<int>>& DeviceRegistryMgr::DeviceType2TagPair() {
+  return device_type_to_tag_pairs_; 
+}
+
+HashMap<std::string, DeviceType, std::hash<std::string>>& DeviceRegistryMgr::DeviceTag2TypePair() {
+  return device_tag_to_type_pairs_; 
+}
 
 }  // namespace oneflow
