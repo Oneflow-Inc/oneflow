@@ -525,13 +525,12 @@ void FilterOpName2ParallelBlobConf(
     JobBuilder job_builder(jobs.at(job_id).get());
     for (const OperatorConf& op_conf : jobs.at(job_id)->net().op()) {
       if (match.find(op_conf.op_type_case()) == match.end()) { continue; }
-      const auto& iter = op_name2parallel_blob_conf->find(op_conf.name());
+      ParallelBlobConf parallel_blob_conf;
+      GetMemSharingOpBlobInfo(job_builder, op_conf.name(), &parallel_blob_conf);
+      auto iter = op_name2parallel_blob_conf->find(op_conf.name());
       if (iter == op_name2parallel_blob_conf->end()) {
-        auto* first_op_parallel_blob_conf = &(*op_name2parallel_blob_conf)[op_conf.name()];
-        GetMemSharingOpBlobInfo(job_builder, op_conf.name(), first_op_parallel_blob_conf);
+        CHECK(op_name2parallel_blob_conf->emplace(op_conf.name(), parallel_blob_conf).second);
       } else {
-        ParallelBlobConf parallel_blob_conf;
-        GetMemSharingOpBlobInfo(job_builder, op_conf.name(), &parallel_blob_conf);
         CHECK(parallel_blob_conf == iter->second);
       }
     }

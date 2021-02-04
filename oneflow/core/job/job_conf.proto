@@ -8,7 +8,8 @@ import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/framework/user_op_attr.proto";
 import "oneflow/core/job/initializer_conf.proto";
 import "oneflow/core/job/learning_rate_schedule_conf.proto";
-
+import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/operator/interface_blob_conf.proto";
 
 message NaiveModelUpdateConf {
 }
@@ -157,6 +158,20 @@ message ParallelBlobConf {
   required OptInt64 batch_axis = 4;
 }
 
+message JobInputDef {
+  required LogicalBlobId lbi = 1;
+  required InterfaceBlobConf blob_conf = 2;
+}
+
+message JobOutputDef {
+  required LogicalBlobId lbi = 1;
+}
+
+message JobSignatureDef {
+  map<string, JobInputDef> inputs = 1;
+  map<string, JobOutputDef> outputs = 2;
+}
+
 message JobConfigProto {
   required string job_name = 1;
 
@@ -216,4 +231,6 @@ message JobConfigProto {
   map<string, AttrValue> flag_name2flag_value = 2000;
 
   optional int64 logical_object_id = 3000;
+
+  optional JobSignatureDef signature = 4000;
 }
