@@ -88,6 +88,20 @@ class MirroredTensor : public Tensor {
   ~MirroredTensor() = default;
 };
 
+class ConsistentTensor : public Tensor {
+ public:
+  ConsistentTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
+                 const std::shared_ptr<compatible_py::Distribute>& distribute, std::shared_ptr<cfg::ParallelConf>& parallel_conf);
+  ConsistentTensor(const std::shared_ptr<cfg::LogicalBlobId>& lbi, const std::string& job_name,
+                 const std::shared_ptr<compatible_py::Distribute>& distribute);
+  ConsistentTensor(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+                 const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+                 const std::shared_ptr<compatible_py::BlobRegister>& blob_register,
+                 const std::string& job_name,
+                 const std::shared_ptr<compatible_py::Distribute>& distribute);
+  ~ConsistentTensor() = default;
+};
+
 }  // namespace one
 
 namespace user_op {

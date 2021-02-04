@@ -70,34 +70,34 @@ Maybe<std::string> TensorImpl::Distribute2Str() const {
   return std::string("");
 }
 
-EagerTensorImpl::EagerTensorImpl(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+EagerBlob::EagerBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
                                  const std::string& job_name,
                                  const std::shared_ptr<compatible_py::Distribute>& distribute)
     : TensorImpl(lbi, job_name, distribute) {
   parallel_size_ = 0;
 }
 
-EagerTensorImpl::~EagerTensorImpl() {
+EagerBlob::~EagerBlob() {
   registered_blob_access_->blob_register()->CloseRegisteredBlobAccess(lbn_);
 }
 
-int64_t EagerTensorImpl::numpy_size() const {
+int64_t EagerBlob::numpy_size() const {
   return blob_object()->parallel_desc_symbol()->parallel_num();
 }
 
-int64_t EagerTensorImpl::numpy_list_size() const {
+int64_t EagerBlob::numpy_list_size() const {
   return blob_object()->parallel_desc_symbol()->parallel_num();
 }
 
-std::shared_ptr<Shape> EagerTensorImpl::shape() const {
+std::shared_ptr<Shape> EagerBlob::shape() const {
   return blob_object()->op_arg_blob_attr()->shape();
 }
 
-DataType EagerTensorImpl::dtype() const {
+DataType EagerBlob::dtype() const {
   return static_cast<DataType>(blob_object()->op_arg_blob_attr()->get_dtype());
 }
 
-int64_t EagerTensorImpl::batch_axis() const {
+int64_t EagerBlob::batch_axis() const {
   auto opt_batch_axis = blob_object()->op_arg_blob_attr()->batch_axis();
   if (opt_batch_axis->has_value()) {
     return opt_batch_axis->value();
@@ -106,7 +106,7 @@ int64_t EagerTensorImpl::batch_axis() const {
   }
 }
 
-int64_t EagerTensorImpl::split_axis() const {
+int64_t EagerBlob::split_axis() const {
   auto sbp_parallel = blob_object()->op_arg_parallel_attr()->sbp_parallel();
   if (sbp_parallel->has_split_parallel()) {
     return sbp_parallel->split_parallel().axis();
@@ -119,17 +119,17 @@ int64_t EagerTensorImpl::split_axis() const {
   }
 }
 
-bool EagerTensorImpl::is_dynamic() const { return blob_object()->op_arg_blob_attr()->is_dynamic(); }
+bool EagerBlob::is_dynamic() const { return blob_object()->op_arg_blob_attr()->is_dynamic(); }
 
-bool EagerTensorImpl::is_tensor_list() const {
+bool EagerBlob::is_tensor_list() const {
   return blob_object()->op_arg_blob_attr()->is_tensor_list();
 }
 
-std::shared_ptr<cfg::ParallelConf> EagerTensorImpl::parallel_conf() const {
+std::shared_ptr<cfg::ParallelConf> EagerBlob::parallel_conf() const {
   return blob_object()->parallel_desc_symbol()->cfg_parallel_conf();
 }
 
-int64_t EagerTensorImpl::parallel_size() {
+int64_t EagerBlob::parallel_size() {
   if (parallel_size_ == 0) {
     std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf = parallel_conf();
     ParallelConf proto_parallel_conf;
@@ -140,25 +140,25 @@ int64_t EagerTensorImpl::parallel_size() {
   return parallel_size_;
 }
 
-std::shared_ptr<compatible_py::BlobObject> EagerTensorImpl::blob_object() const {
+std::shared_ptr<compatible_py::BlobObject> EagerBlob::blob_object() const {
   return registered_blob_access_->blob_object();
 }
 
-void EagerTensorImpl::_Init(const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+void EagerBlob::_Init(const std::shared_ptr<compatible_py::BlobObject>& blob_object,
                             const std::shared_ptr<compatible_py::BlobRegister>& blob_register) {
   std::shared_ptr<compatible_py::RegisteredBlobAccess> access =
       blob_register->OpenRegisteredBlobAccess(lbn_, blob_object);
   registered_blob_access_ = access;
 }
 
-bool EagerTensorImpl::IdenticalTo(const std::shared_ptr<EagerTensorImpl>& rhs) const {
+bool EagerBlob::IdenticalTo(const std::shared_ptr<EagerBlob>& rhs) const {
   return (blob_object()->op_arg_blob_attr() == rhs->blob_object()->op_arg_blob_attr())
          && (blob_object()->op_arg_parallel_attr() == rhs->blob_object()->op_arg_parallel_attr());
 }
 
-std::string MirroredLazyBlobDesc::get_mirror_shape_log_warning() const { return std::string(""); }
+std::string MirroredLazyBlob::get_mirror_shape_log_warning() const { return std::string(""); }
 
-std::shared_ptr<Shape> MirroredLazyBlobDesc::shape() const {
+std::shared_ptr<Shape> MirroredLazyBlob::shape() const {
   const std::string& log_warning = get_mirror_shape_log_warning();
   if (!log_warning.empty()) { LOG(ERROR) << log_warning; }
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
@@ -166,47 +166,110 @@ std::shared_ptr<Shape> MirroredLazyBlobDesc::shape() const {
   return shape;
 }
 
-DataType MirroredLazyBlobDesc::dtype() const {
+DataType MirroredLazyBlob::dtype() const {
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
   return CHECK_JUST(ctx->MirroredBlobGetDataType(logical_blob_name()));
 }
 
-int64_t MirroredLazyBlobDesc::batch_axis() const {
+int64_t MirroredLazyBlob::batch_axis() const {
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
   auto opt_int64 = CHECK_JUST(ctx->MirroredBlobGetBatchAxis(logical_blob_name()));
   if (opt_int64->has_value()) { return opt_int64->value(); }
   return INVALID_BATCH_AXIS;
 }
 
-int64_t MirroredLazyBlobDesc::split_axis() const {
+int64_t MirroredLazyBlob::split_axis() const {
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
   auto opt_int64 = CHECK_JUST(ctx->MirroredBlobGetSplitAxisFromProducerView(logical_blob_name()));
   if (opt_int64->has_value()) { return opt_int64->value(); }
   return INVALID_SPLIT_AXIS;
 }
 
-bool MirroredLazyBlobDesc::is_dynamic() const {
+bool MirroredLazyBlob::is_dynamic() const {
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
   return CHECK_JUST(ctx->MirroredBlobIsDynamic(logical_blob_name()));
 }
 
-bool MirroredLazyBlobDesc::is_tensor_list() const {
+bool MirroredLazyBlob::is_tensor_list() const {
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
   return CHECK_JUST(ctx->MirroredBlobIsTensorList(logical_blob_name()));
 }
 
-std::shared_ptr<cfg::ParallelConf> MirroredLazyBlobDesc::parallel_conf() const {
+std::shared_ptr<cfg::ParallelConf> MirroredLazyBlob::parallel_conf() const {
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
   return CHECK_JUST(ctx->MirroredBlobGetParallelDescFromProducerView(logical_blob_name()))
       ->cfg_parallel_conf();
 }
 
-MirroredEagerBlobDesc::MirroredEagerBlobDesc(
+MirroredEagerBlob::MirroredEagerBlob(
     const std::shared_ptr<cfg::LogicalBlobId>& lbi,
     const std::shared_ptr<compatible_py::BlobObject>& blob_object,
     const std::shared_ptr<compatible_py::BlobRegister>& blob_register, const std::string& job_name,
     const std::shared_ptr<compatible_py::Distribute>& distribute)
-    : EagerTensorImpl(lbi, job_name, distribute) {
+    : EagerBlob(lbi, job_name, distribute) {
+  _Init(blob_object, blob_register);
+}
+
+ConsistentLazyBlob::ConsistentLazyBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+                                       const std::string& job_name,
+                                       const std::shared_ptr<compatible_py::Distribute>& distribute)
+    : LazyBlob(lbi, job_name, distribute) {}
+
+std::string ConsistentLazyBlob::get_lazy_shape_log_warning() const { return std::string(""); }
+
+std::shared_ptr<Shape> ConsistentLazyBlob::shape() const {
+  const std::string& log_warning = get_lazy_shape_log_warning();
+  if (!log_warning.empty()) { LOG(ERROR) << log_warning; }
+  auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
+  return CHECK_JUST(ctx->GetStaticShape(logical_blob_name()));
+}
+
+DataType ConsistentLazyBlob::dtype() const {
+  auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
+  return CHECK_JUST(ctx->GetDataType(logical_blob_name()));
+}
+
+int64_t ConsistentLazyBlob::batch_axis() const {
+  auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
+  auto opt_int64 = CHECK_JUST(ctx->GetBatchAxis(logical_blob_name()));
+  if (opt_int64->has_value()) { return opt_int64->value(); }
+  return INVALID_BATCH_AXIS;
+}
+
+int64_t ConsistentLazyBlob::split_axis() const {
+  auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
+  auto opt_int64 = CHECK_JUST(ctx->GetSplitAxisFromProducerView(logical_blob_name()));
+  if (opt_int64->has_value()) { return opt_int64->value(); }
+  return INVALID_SPLIT_AXIS;
+}
+
+bool ConsistentLazyBlob::is_dynamic() const {
+  auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
+  return CHECK_JUST(ctx->IsDynamic(logical_blob_name()));
+}
+
+bool ConsistentLazyBlob::is_tensor_list() const {
+  auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
+  return CHECK_JUST(ctx->IsTensorList(logical_blob_name()));
+}
+
+std::shared_ptr<cfg::ParallelConf> ConsistentLazyBlob::parallel_conf() const {
+  auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
+  return CHECK_JUST(ctx->GetParallelDescFromProducerView(logical_blob_name()))->cfg_parallel_conf();
+}
+
+bool ConsistentLazyBlob::IdenticalTo(const std::shared_ptr<ConsistentLazyBlob>& rhs) const {
+  return true && unique_name() == rhs->unique_name() && *shape() == *rhs->shape()
+         && batch_axis() == rhs->batch_axis() && split_axis() == rhs->split_axis()
+         && is_dynamic() == rhs->is_dynamic() && is_tensor_list() == rhs->is_tensor_list();
+}
+
+ConsistentEagerBlob::ConsistentEagerBlob(
+    const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+    const std::shared_ptr<compatible_py::BlobRegister>& blob_register, const std::string& job_name,
+    const std::shared_ptr<compatible_py::Distribute>& distribute)
+    : EagerBlob(lbi, job_name, distribute) {
   _Init(blob_object, blob_register);
 }
 
