@@ -122,6 +122,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/common/shape.proto
       oneflow/core/register/blob_desc.proto
       oneflow/core/register/pod.proto
+      oneflow/core/eager/eager_symbol.proto
   )
 
   foreach(FIL ${PYBIND11_FILE_CONVERT_PROTO})

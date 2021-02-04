@@ -15,29 +15,12 @@ limitations under the License.
 */
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
+#include "oneflow/core/job_rewriter/pass_util.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
 namespace {
-
-class OpConfCache {
-  std::map<std::string, OperatorConf> _op_confs_to_update;
-
- public:
-  OperatorConf GetLatest(const OperatorConf& op_conf) {
-    if (_op_confs_to_update.find(op_conf.name()) != _op_confs_to_update.end()) {
-      return _op_confs_to_update[op_conf.name()];
-    }
-    return op_conf;
-  }
-  void Put(const OperatorConf& op_conf) { _op_confs_to_update[op_conf.name()] = op_conf; }
-  std::vector<OperatorConf> op_confs() {
-    std::vector<OperatorConf> ret;
-    for (const auto& x : _op_confs_to_update) { ret.push_back(x.second); }
-    return ret;
-  }
-};
 
 class DoParallelCastBeforeWideningTypeCast final : public JobPass {
  public:
@@ -64,14 +47,17 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
     // find cast_fp16_to_fp32_or_double -> parallel_cast pattern
     const OperatorConf& parallel_cast_op_conf =
         op_conf_cache.GetLatest(parallel_cast_node->op().op_conf());
-    if (!parallel_cast_op_conf.has_parallel_cast_conf()) { return; }
+    if (!(parallel_cast_op_conf.has_user_conf()
+          && parallel_cast_op_conf.user_conf().op_type_name() == "parallel_cast")) {
+      return;
+    }
     auto* cast_node = parallel_cast_node->SoleInEdge()->src_node();
     if (cast_node->out_edges().size() != 1) { return; }
     auto cast_op_conf = op_conf_cache.GetLatest(cast_node->op().op_conf());
     if (!(cast_op_conf.has_user_conf() && cast_op_conf.user_conf().op_type_name() == "cast")) {
       return;
     }
-    const auto cast_conf_wrapper = user_op::UserOpConfWrapper(cast_op_conf);
+    user_op::UserOpConfWrapper cast_conf_wrapper(cast_op_conf);
     const auto cast_in_lbi = cast_node->SoleInEdge()->lbis().front();
     const auto cast_in_dtype = cast_node->LogicalBlobDesc4Lbi(cast_in_lbi).data_type();
     const auto cast_out_dtype = cast_conf_wrapper.attr<DataType>("dtype");
@@ -80,23 +66,22 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
       return;
     }
 
+    user_op::UserOpConfWrapper parallel_cast_conf_wrapper(parallel_cast_op_conf);
     // replace parallel_cast op input with cast op input
     {
-      auto new_parallel_cast_op_conf = parallel_cast_op_conf;
-      const std::string cast_input = cast_conf_wrapper.input("in", 0);
-      const std::string parallel_cast_input = parallel_cast_op_conf.parallel_cast_conf().in();
+      OperatorConf new_parallel_cast_op_conf(parallel_cast_op_conf);
+      const auto& cast_input = cast_conf_wrapper.input("in", 0);
+      const auto& parallel_cast_input = parallel_cast_conf_wrapper.input("in", 0);
       const auto& old_val =
-          ReplaceInputLbnInOpCustomizedConf(&new_parallel_cast_op_conf, "in", cast_input);
+          ReplaceInputLbnInOpCustomizedConf(&new_parallel_cast_op_conf, "in_0", cast_input);
       CHECK_EQ(parallel_cast_input, old_val);
-
       op_conf_cache.Put(new_parallel_cast_op_conf);
     }
     // replace cast op input with parallel_cast op output
     {
-      auto new_cast_op_conf = cast_op_conf;
-      const std::string parallel_cast_output =
-          parallel_cast_op_conf.name() + "/" + parallel_cast_op_conf.parallel_cast_conf().out();
-      const std::string cast_input = cast_conf_wrapper.input("in", 0);
+      OperatorConf new_cast_op_conf(cast_op_conf);
+      const auto& parallel_cast_output = parallel_cast_conf_wrapper.output("out", 0);
+      const auto& cast_input = cast_conf_wrapper.input("in", 0);
       const auto& old_val =
           ReplaceInputLbnInOpCustomizedConf(&new_cast_op_conf, "in_0", parallel_cast_output);
       CHECK_EQ(cast_input, old_val);
@@ -104,7 +89,7 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
     }
 
     // update all parallel_cast op consumers
-    const std::string cast_output = cast_conf_wrapper.output("out", 0);
+    const std::string& cast_output = cast_conf_wrapper.output("out", 0);
     for (OpEdge* edge : parallel_cast_node->out_edges()) {
       CHECK_EQ(1, edge->lbis().size());
       LogicalBlobId cur_lbi = edge->lbis().front();

@@ -33,9 +33,8 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/naive_b2p_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/b21_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/one_to_one_sub_task_graph_builder.h"
-#include "oneflow/core/graph/boxing/to_interface_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
-#include "oneflow/core/graph/boxing_identity_compute_task_node.h"
+#include "oneflow/core/graph/boxing_identity_task_node.h"
 
 namespace oneflow {
 
@@ -219,7 +218,6 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
-  builders.emplace_back(new ToInterfaceSubTskGphBuilder());
   builders.emplace_back(new OneToOneSubTskGphBuilder());
   builders.emplace_back(new B21SubTskGphBuilder());
   builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
@@ -228,8 +226,6 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   builders.emplace_back(new NaiveB2PSubTskGphBuilder());
   sub_tsk_gph_builder_.reset(new ChainSubTskGphBuilder(builders));
   HashMap<const LogicalNode*, std::vector<CompTaskNode*>> logical2sorted_comp_tasks;
-  HashMap<const LogicalNode*, std::vector<TaskNode*>> logical2sorted_in_box;
-  HashMap<const LogicalNode*, std::vector<TaskNode*>> logical2sorted_out_box;
   HashMap<CompTaskNode*, HashMap<int64_t, std::vector<TaskNode*>>> buf_task;
   auto MutBufTask = [&](CompTaskNode* task_node, int64_t machine_id, int32_t mem_zone_id) {
     auto& buf_vec = buf_task[task_node][machine_id];
@@ -265,8 +261,8 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
         GetMthdForBldSubTskGph(logical_edge->src_node(), logical_edge->dst_node());
     (this->*method)(logical_edge->src_node(), logical_edge->dst_node(),
                     logical2sorted_comp_tasks.at(logical_edge->src_node()),
-                    logical2sorted_comp_tasks.at(logical_edge->dst_node()), &logical2sorted_in_box,
-                    &logical2sorted_out_box, MutBufTask, AllocateCpuThrdIdEvenly);
+                    logical2sorted_comp_tasks.at(logical_edge->dst_node()), MutBufTask,
+                    AllocateCpuThrdIdEvenly);
     SetAreaIdForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
   logical_gph_->ForEachNecessaryCtrlEdge(
@@ -533,17 +529,20 @@ void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   const std::vector<LogicalBlobId> lbis = src_logical->GetLbisTo(dst_logical);
   for (const LogicalBlobId& lbi : lbis) {
-    std::vector<CompTaskNode*> src_nodes;
+    std::vector<TaskNode*> in_nodes;
     if (lbis.size() == 1) {
-      src_nodes = sorted_src_comp_tasks;
+      in_nodes.assign(sorted_src_comp_tasks.begin(), sorted_src_comp_tasks.end());
     } else {
       for (CompTaskNode* src_node : sorted_src_comp_tasks) {
-        auto* identity_node = NewNode<BoxingIdentityCompTaskNode>();
-        identity_node->Init(src_node, lbi);
+        auto* identity_node = NewNode<BoxingIdentityTaskNode>();
+        identity_node->Init(src_node->machine_id(), src_node->thrd_id(), src_node->area_id(), lbi);
         Connect<TaskNode>(src_node, NewEdge(), identity_node);
-        src_nodes.push_back(identity_node);
+        in_nodes.push_back(identity_node);
       }
     }
+    std::vector<TaskNode*> out_nodes;
+    out_nodes.reserve(sorted_dst_comp_tasks.size());
+    std::vector<std::vector<TaskNode*>> sorted_ctrl_tasks;
     const SbpParallel& src_sbp_parallel =
         Global<OpGraph>::Get()->GetSbpParallel(src_logical->SoleOp()->op_name(), lbi);
     const SbpParallel& dst_sbp_parallel =
@@ -552,9 +551,22 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
     auto status = CHECK_JUST(sub_tsk_gph_builder_->Build(
-        sub_tsk_gph_builder_ctx_.get(), src_nodes, sorted_dst_comp_tasks, *src_parallel_desc,
-        *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel));
-    boxing_logger_->Log(*status);
+        sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks,
+        *src_parallel_desc, *dst_parallel_desc, lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel,
+        *src_logical->out_blob_time_shape()));
+    boxing_logger_->Log(*status, src_logical->SoleOp()->op_name(), dst_logical->SoleOp()->op_name(),
+                        *src_parallel_desc, *dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
+                        lbi, blob_desc);
+    sub_tsk_gph_builder_ctx_->ConnectAll121(out_nodes, sorted_dst_comp_tasks);
+    if (!sorted_ctrl_tasks.empty()) {
+      CHECK_EQ(sorted_ctrl_tasks.size(), sorted_dst_comp_tasks.size());
+      FOR_RANGE(size_t, i, 0, sorted_dst_comp_tasks.size()) {
+        for (TaskNode* ctrl_node : sorted_ctrl_tasks.at(i)) {
+          Connect<TaskNode>(ctrl_node, NewEdge(), sorted_dst_comp_tasks.at(i));
+          ctrl_node->BuildCtrlRegstDesc(sorted_dst_comp_tasks.at(i));
+        }
+      }
+    }
   }
 }
 

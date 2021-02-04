@@ -61,9 +61,8 @@ inline Maybe<void> InitEnv(const std::string& env_proto_str) {
 
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  ClusterInstruction::MasterSendHalt();
-  // Global<EnvGlobalObjectsScope>::Delete();
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { ClusterInstruction::MasterSendHalt(); }
+  Global<EnvGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
 
