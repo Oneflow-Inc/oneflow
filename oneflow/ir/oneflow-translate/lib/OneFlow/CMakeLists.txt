@@ -1,4 +1,3 @@
-# TODO: add flag to control if it should be shared lib
 add_llvm_library(MLIROneFlowTranslation
         MLIROneFlowTranslation.cpp
 
