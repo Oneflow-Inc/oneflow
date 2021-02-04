@@ -208,30 +208,6 @@ void DeleteObject(const std::shared_ptr<InstructionsBuilder>& x,
   return x->DeleteObject(blob_object).GetOrThrow();
 }
 
-void _StatefulCallOpKernel(
-    const std::shared_ptr<InstructionsBuilder>& x, const std::string& instr_name,
-    const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
-    const std::shared_ptr<compatible_py::OpKernelObject> opkernel_object,
-    const std::shared_ptr<OpNodeSignatureDesc> op_node_signature_sym,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
-        const_input_operand_blob_objects,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
-        mutable_input_operand_blob_objects,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
-        mut1_operand_blob_objects,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
-        mut2_operand_blob_objects) {
-  return x
-      ->_StatefulCallOpKernel(instr_name, parallel_desc_sym, opkernel_object, op_node_signature_sym,
-                              const_input_operand_blob_objects, mutable_input_operand_blob_objects,
-                              mut1_operand_blob_objects, mut2_operand_blob_objects)
-      .GetOrThrow();
-}
-
 std::vector<std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
 GetConstInputOperandBlobObjects(
     const std::shared_ptr<InstructionsBuilder>& x,
@@ -290,6 +266,23 @@ using FindOrCreateDelegateBlobObjectFun = std::function<std::shared_ptr<compatib
         const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&,
     const std::shared_ptr<compatible_py::BlobObject>&,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>;
+
+void StatefulCall(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<compatible_py::OpKernelObject>& opkernel_object,
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object,
+    const std::function<std::shared_ptr<compatible_py::BlobObject>(
+        const std::shared_ptr<InstructionsBuilder>&,
+        const std::shared_ptr<compatible_py::BlobObject>&,
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& boxing_to,
+    const FindOrCreateDelegateBlobObjectFun& find_or_creat_delegate_blob_object) {
+  return x
+      ->StatefulCall(op_attribute, opkernel_object, bn_in_op2blob_object, boxing_to,
+                     find_or_creat_delegate_blob_object)
+      .GetOrThrow();
+}
 
 void StatelessCall(
     const std::shared_ptr<InstructionsBuilder>& x,
@@ -353,22 +346,6 @@ void RawStatelessCall(
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object) {
   return x->RawStatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object).GetOrThrow();
-}
-
-void _StatelessCall(
-    const std::shared_ptr<InstructionsBuilder>& x, const std::string& stream_tag,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-    std::shared_ptr<ParallelDesc> op_parallel_desc_sym,
-    const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym,
-    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn_in_op2blob_object,
-    const std::function<std::shared_ptr<compatible_py::BlobObject>(
-        const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& get_delegate_blob_object) {
-  return x
-      ->_StatelessCall(stream_tag, op_attribute, op_parallel_desc_sym, blob_parallel_desc_sym,
-                       bn_in_op2blob_object, get_delegate_blob_object)
-      .GetOrThrow();
 }
 
 std::shared_ptr<compatible_py::BlobObject> Build121To(
@@ -453,7 +430,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("GetSharedOpKernelObject4ParallelConfSymbol",
            &GetSharedOpKernelObject4ParallelConfSymbol)
       .def("DeleteObject", &DeleteObject)
-      .def("_StatefulCallOpKernel", &_StatefulCallOpKernel)
+      .def("StatefulCall", &StatefulCall)
       .def("StatelessCall", &StatelessCall)
       .def("NoBoxingStatelessCall", &NoBoxingStatelessCall)
       .def("NoBoxingCudaD2HStatelessCall", &NoBoxingCudaD2HStatelessCall)
