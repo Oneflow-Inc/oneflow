@@ -86,7 +86,7 @@ def OneFlow_ConstantOp : OneFlow_UserBaseOp<"constant", [AttrSizedOperandSegment
     OptionalAttr<F64Attr>:$floating_value,
     OptionalAttr<SI64Attr>:$integer_value
   );
-  let output = (outs F32Tensor);
+  let output = (outs AnyTypeOf<[F32Tensor, F64Tensor, I32Tensor, I64Tensor]>);
 }
 
 def OneFlow_ShardingOp : OneFlow_BaseOp<"sharding", [NoSideEffect, SameOperandsAndResultType]> {
