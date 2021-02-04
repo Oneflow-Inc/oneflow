@@ -84,16 +84,12 @@ def _DefaultBlobObject4Ibn(ibn):
 
 
 @contextmanager
-def CudaHostPinBlob(self, blob_object):
-    self.CudaHostRegisterBlob(blob_object)
+def CudaHostPinBlob(build, blob_object):
+    build.CudaHostRegisterBlob(blob_object)
     try:
         yield
     finally:
-        self.CudaHostUnregisterBlob(blob_object)
-
-
-def RegisterMethod4InstructionsBuilder():
-    oneflow_api.deprecated.InstructionsBuilder.CudaHostPinBlob = CudaHostPinBlob
+        build.CudaHostUnregisterBlob(blob_object)
 
 
 def _FindOrCreateDelegateBlobObject(
