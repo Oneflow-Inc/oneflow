@@ -966,6 +966,44 @@ using FindOrCreateDelegateBlobObjectFun = std::function<std::shared_ptr<compatib
     const std::shared_ptr<compatible_py::BlobObject>&,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>;
 
+Maybe<void> InstructionsBuilder::StatefulCall(
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<compatible_py::OpKernelObject>& opkernel_object,
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object,
+    const std::function<std::shared_ptr<compatible_py::BlobObject>(
+        const std::shared_ptr<InstructionsBuilder>&,
+        const std::shared_ptr<compatible_py::BlobObject>&,
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& boxing_to,
+    const FindOrCreateDelegateBlobObjectFun& find_or_creat_delegate_blob_object) {
+  std::shared_ptr<ParallelDesc> op_parallel_desc_sym = opkernel_object->parallel_desc_symbol();
+  const auto& parallel_sig = op_attribute->parallel_signature();
+  CHECK_OR_RETURN(parallel_sig.has_op_parallel_desc_symbol_id());
+  CHECK_OR_RETURN(JUST(op_parallel_desc_sym->symbol_id())
+                  == parallel_sig.op_parallel_desc_symbol_id());
+  JUST(CheckRefInBlobObjectParallelDesc(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object));
+  const auto FetchDelegateBlobObject =
+      [this, &boxing_to](
+          const std::shared_ptr<compatible_py::BlobObject>& x_blob_object,
+          const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
+      -> std::shared_ptr<compatible_py::BlobObject> {
+    return boxing_to(shared_from_this(), x_blob_object, op_arg_parallel_attr);
+  };
+
+  const auto GetDelegateBlobObject =
+      [this, find_or_creat_delegate_blob_object, &FetchDelegateBlobObject](
+          const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+          const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
+      -> std::shared_ptr<compatible_py::BlobObject> {
+    return find_or_creat_delegate_blob_object(shared_from_this(), FetchDelegateBlobObject,
+                                              blob_object, op_arg_parallel_attr);
+  };
+
+  JUST(_StatefulCall(op_attribute, opkernel_object, bn_in_op2blob_object, GetDelegateBlobObject));
+
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InstructionsBuilder::StatelessCall(
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
@@ -1105,6 +1143,56 @@ Maybe<void> InstructionsBuilder::RawStatelessCall(
 
   JUST(_StatelessCall("compute", op_attribute, op_parallel_desc_sym, op_parallel_desc_sym,
                       bn_in_op2blob_object, GetDirectBlobObject));
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::_StatefulCall(
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<compatible_py::OpKernelObject>& opkernel_object,
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object,
+    const std::function<std::shared_ptr<compatible_py::BlobObject>(
+        const std::shared_ptr<compatible_py::BlobObject>&,
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& get_delegate_blob_object) {
+  std::shared_ptr<ParallelDesc> op_parallel_desc_sym = opkernel_object->parallel_desc_symbol();
+
+  const auto DelegateBlobObject4Ibn = [&op_attribute, &bn_in_op2blob_object, &op_parallel_desc_sym,
+                                       &get_delegate_blob_object](const std::string& ibn) {
+    OpAttribute pb_op_attribute;
+    op_attribute->ToProto(&pb_op_attribute);
+    std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr = CHECK_JUST(
+        compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, pb_op_attribute, ibn));
+    return get_delegate_blob_object((*bn_in_op2blob_object)[ibn], op_arg_parallel_attr);
+  };
+
+  std::shared_ptr<OpNodeSignatureDesc> op_node_signature_sym =
+      JUST(GetOpNodeSignatureSymbol(op_attribute));
+
+  auto const_input_operand_blob_objects =
+      JUST(GetConstInputOperandBlobObjects(op_attribute, DelegateBlobObject4Ibn));
+  auto mutable_input_operand_blob_objects =
+      JUST(GetMutableInputOperandBlobObjects(op_attribute, DelegateBlobObject4Ibn));
+  auto mut1_operand_blob_objects =
+      JUST(GetMut1OperandBlobObjects(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object));
+  auto mut2_operand_blob_objects =
+      JUST(GetMut2OperandBlobObjects(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object));
+
+  std::string instruction_prefix;
+  {
+    bool is_user_op = op_attribute->op_conf().has_user_conf();
+    CHECK_OR_RETURN(is_user_op);
+    if (is_user_op) {
+      instruction_prefix = "";
+    } else {
+      instruction_prefix = "System";
+    }
+  }
+
+  JUST(_StatefulCallOpKernel(instruction_prefix + "CallOpKernel", op_parallel_desc_sym,
+                             opkernel_object, op_node_signature_sym,
+                             *const_input_operand_blob_objects, *mutable_input_operand_blob_objects,
+                             *mut1_operand_blob_objects, *mut2_operand_blob_objects));
 
   return Maybe<void>::Ok();
 }
