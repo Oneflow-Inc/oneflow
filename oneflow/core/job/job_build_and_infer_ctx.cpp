@@ -950,6 +950,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     JUST(DoPass("CompleteOfrecordDecoder"));
     JUST(DoPass("SetDefaultVariableConf"));
+    JUST(DoPass("AddInputOutputOpsPass"));
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
 #endif
@@ -1196,6 +1197,66 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
   json_pair["output_layers"] = output_op_names;
 
   return json_pair.dump();
+}
+
+Maybe<void> JobBuildAndInferCtx::Rebuild() {
+  // clear old state
+  lbi2logical_blob_desc_.clear();
+  lbi2sbp_parallel_from_producer_view_.clear();
+  lbi2parallel_desc_from_producer_view_.clear();
+  lbi2disable_boxing_.clear();
+  op_name2op_.clear();
+  parallel_desc2placement_group_.clear();
+  parallel_desc2blob_placement_group_.clear();
+  consistent_lbi2mirrored_lbi_.clear();
+  mirrored_lbi2sub_lbis_.clear();
+  mirrored_lbi2parallel_desc_.clear();
+  mirrored_lbi2sbp_parallel_.clear();
+  op_name2ancestors_need_no_grad_.clear();
+  // record op mirror view
+  HashMap<std::string, bool> op_name2is_mirrored;
+  CHECK_OR_RETURN(job_->has_job_parallel_view_conf());
+  for (const auto& op_conf : job_->net().op()) {
+    const auto& op_name = op_conf.name();
+    CHECK_OR_RETURN(op_name2is_mirrored.find(op_name) == op_name2is_mirrored.end());
+    op_name2is_mirrored[op_name] = false;
+    const auto& op_name2is_mirrored_parallel_view =
+        job_->job_parallel_view_conf().op_name2is_mirrored_parallel_view();
+    if (op_name2is_mirrored_parallel_view.find(op_name)
+        != op_name2is_mirrored_parallel_view.end()) {
+      if (op_name2is_mirrored_parallel_view.at(op_name)) { op_name2is_mirrored[op_name] = true; }
+    }
+  }
+  // build op graph
+  OpGraph op_graph;
+  if (Global<JobDesc>::Get()) {
+    op_graph.Init(*job_);
+  } else {
+    auto scope = std::make_unique<GlobalJobDescScope>(job_->job_conf(), job_id());
+    op_graph.Init(*job_);
+  }
+  // clear old job except job_conf
+  job_->mutable_net()->Clear();
+  job_->mutable_placement()->Clear();
+  job_->mutable_job_parallel_view_conf()->Clear();
+  job_->mutable_helper()->Clear();
+  // topo traverse op_graph to AddAndInferOp
+  op_graph.TopoForEachNode([&](OpNode* node) -> void {
+    const auto& op_conf = node->op().op_conf();
+    CHECK(op_name2is_mirrored.find(op_conf.name()) != op_name2is_mirrored.end());
+    bool is_mirrored = op_name2is_mirrored.at(op_conf.name());
+    if (is_mirrored) {
+      CHECK_JUST(AddAndInferMirroredOp(op_conf));
+    } else {
+      CHECK_JUST(AddAndInferConsistentOp(op_conf));
+    }
+  });
+  // updata job_helper
+  op_graph.DumpOpTimeShape(job_);
+  op_graph.DumpBatchAxisLbi(job_);
+  op_graph.DumpLogicalBlobDesc(job_);
+  op_graph.DumpSbpSignature(job_);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow
