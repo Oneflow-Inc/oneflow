@@ -14,15 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
-#include <string>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/vm/run_instruction.h"
+#include "oneflow/core/framework/session_util.h"
 
 namespace py = pybind11;
 
-ONEFLOW_API_PYBIND11_MODULE("vm", m) {
-  using namespace oneflow;
-  m.def("RunLogicalInstruction", &RunLogicalInstruction, py::call_guard<py::gil_scoped_release>());
-  m.def("RunPhysicalInstruction", &RunPhysicalInstruction,
-        py::call_guard<py::gil_scoped_release>());
+namespace oneflow {
+
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::class_<Session, std::shared_ptr<Session>>(m, "Session")
+      .def("instruction_list", &Session::instruction_list)
+      .def("eager_symbol_list", &Session::eager_symbol_list);
+
+  m.def("GetDefaultSession", []() { return GetDefaultSession().GetPtrOrThrow(); });
+  m.def("ResetDefaultSession", []() { return ResetDefaultSession().GetOrThrow(); });
 }
+
+}  // namespace oneflow
