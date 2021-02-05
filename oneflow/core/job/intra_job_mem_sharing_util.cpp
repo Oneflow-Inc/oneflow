@@ -230,7 +230,9 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
     CHECK(task_id2sorted_id.emplace(task->task_id(), i).second);
   }
 
-  int64_t last_order = sorted_tasks.at(sorted_tasks.size() - 1)->task_set_info().order_in_graph();
+  TaskProto* last_task = sorted_tasks.at(sorted_tasks.size() - 1);
+  int64_t last_order = last_task->task_set_info().order_in_graph();
+  bool is_collective_boxing_tasks = last_task->task_type() == TaskType::kCollectiveBoxingGeneric;
 
   auto FindLastFreeIndexInSortedTasks = [&](RegstDescProto* regst_desc) -> int64_t {
     // temp regst will set free index as same as alloc index
@@ -241,15 +243,19 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
       if (task_id2sorted_id.find(consumer_task_id) != task_id2sorted_id.end()) {
         this_sorted_index = task_id2sorted_id.at(consumer_task_id);
       } else {
-        CHECK(task_id2proto.find(consumer_task_id) != task_id2proto.end());
-        const TaskProto* consumer_task = task_id2proto.at(consumer_task_id);
-        int64_t this_order = consumer_task->task_set_info().order_in_graph();
-        if (this_order < last_order) {
-          // try find MIN order greater than this order
-          for (int64_t i = free_index; i < sorted_tasks.size(); ++i) {
-            if (sorted_tasks.at(i)->task_set_info().order_in_graph() > this_order) {
-              this_sorted_index = i;
-              break;
+        if (is_collective_boxing_tasks) {
+          // TODO(chengcheng) remove this trick.
+          // this trick ONLY work in NCCL mem chain
+          CHECK(task_id2proto.find(consumer_task_id) != task_id2proto.end());
+          const TaskProto* consumer_task = task_id2proto.at(consumer_task_id);
+          int64_t this_order = consumer_task->task_set_info().order_in_graph();
+          if (this_order < last_order) {
+            // try find MIN order greater than this order
+            for (int64_t i = free_index + 1; i < sorted_tasks.size(); ++i) {
+              if (sorted_tasks.at(i)->task_set_info().order_in_graph() > this_order) {
+                this_sorted_index = i;
+                break;
+              }
             }
           }
         }
