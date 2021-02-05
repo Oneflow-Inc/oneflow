@@ -365,7 +365,7 @@ def CreateEagerVariableBlob(op_attribute, job_name=""):
             vm_util._FindOrCreateDelegateBlobObject,
         )
 
-    vm_util.LogicalRun(BuildInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInstruction)
     lbi = lbi_util.LogicalBlobId()
     lbi.set_op_name(op_attribute.op_conf.name)
     lbi.set_blob_name(op_attribute.op_conf.variable_conf.out)

@@ -694,6 +694,15 @@ def _MakeCopyHdOpConfAndRetLbi():
     return op_conf, lbi
 
 
+@contextmanager
+def _CudaHostPinBlob(build, blob_object):
+    build.CudaHostRegisterBlob(blob_object)
+    try:
+        yield
+    finally:
+        build.CudaHostUnregisterBlob(blob_object)
+
+
 def _BuildCopyInstruction(builder, produced_blob_object, op_conf, to_device_tag):
     x_devices = produced_blob_object.parallel_desc_symbol.machine_id2device_id_list
     x_device_tag = produced_blob_object.parallel_desc_symbol.device_tag
@@ -712,7 +721,7 @@ def _BuildCopyInstruction(builder, produced_blob_object, op_conf, to_device_tag)
             builder, produced_blob_object.parallel_desc_symbol, to_device_tag
         )
         out_parallel_conf = out_parallel_desc_symbol.parallel_conf
-        with vm_util.CudaHostPinBlob(builder, produced_blob_object):
+        with _CudaHostPinBlob(builder, produced_blob_object):
             builder.NoBoxingCudaH2DStatelessCall(
                 cfg_op_attribute, out_parallel_conf, bn_in_op2blob_object,
             )
@@ -768,7 +777,7 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
             TryReplaceDeviceTag,
         )
     elif ref_device_tag == "gpu" and value_device_tag == "cpu":
-        with vm_util.CudaHostPinBlob(builder, value_blob_object):
+        with _CudaHostPinBlob(builder, value_blob_object):
             builder.NoBoxingCudaH2DStatelessCall(
                 cfg_op_attribute, ref_parallel_conf, bn_in_op2blob_object,
             )

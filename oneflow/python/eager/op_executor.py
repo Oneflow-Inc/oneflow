@@ -81,7 +81,7 @@ def OpKernelCall(opkernel_object, op_attribute, blob_register):
                 vm_util._FindOrCreateDelegateBlobObject,
             )
 
-    vm_util.LogicalRun(BuildInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInstruction)
 
 
 def MirroredCast(op_attribute, blob_register):
@@ -99,7 +99,7 @@ def MirroredCast(op_attribute, blob_register):
             )
             bn_in_op2blob_object["out"] = out_blob_object
 
-    vm_util.LogicalRun(BuildInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInstruction)
 
 
 def DistributeSplitOrClone(op_attribute, parallel_conf, blob_register):
@@ -125,7 +125,7 @@ def DistributeSplitOrClone(op_attribute, parallel_conf, blob_register):
             for i, blob_object in enumerate(physical_out_blob_objects):
                 bn_in_op2blob_object["out_%s" % i] = blob_object
 
-    vm_util.LogicalRun(BuildInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInstruction)
 
 
 def DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register):
@@ -163,7 +163,7 @@ def DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register):
                 in_blob_objects, op_arg_parallel_attr, op_arg_blob_attr
             )
 
-    vm_util.LogicalRun(BuildInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInstruction)
 
 
 def _FindOrCreateVarBlobObject(op_attribute, parallel_conf, blob_register):
@@ -221,7 +221,7 @@ def _NaiveInterpret(op_attribute, parallel_conf, blob_register):
                 vm_util._FindOrCreateDelegateBlobObject,
             )
 
-    vm_util.LogicalRun(BuildInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInstruction)
 
 
 def _MakeEagerLogicalBlob(op_attribute, obn, blob_register):
@@ -273,7 +273,7 @@ def _Assign(var_blob_object, value_blob_object):
         )
         boxing_util.Assign(builder, var_blob_object, tmp_blob_object)
 
-    vm_util.LogicalRun(BuildAssignInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildAssignInstruction)
 
 
 def _BuildNotMirroredScope(old_scope, builder):
@@ -304,7 +304,7 @@ def _EagerRunModelInit(var_op_conf):
 
     sess = session_ctx.GetDefaultSession()
     with scope_util.ScopeContext(scope_util.MakeScope(_BuildNotMirroredScope)):
-        vm_util.LogicalRun(BuildModelInitInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildModelInitInstruction)
 
     return bn_in_op2blob_object["out_0"]
 
@@ -380,9 +380,9 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
 
     sess = session_ctx.GetDefaultSession()
     with scope_util.ScopeContext(scope_util.MakeScope(_BuildNotMirroredScope)):
-        vm_util.LogicalRun(BuildModelIOPathInputInstruction)
-        vm_util.LogicalRun(BuildFeedPathInstruction)
-        vm_util.LogicalRun(BuildModelLoadInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildModelIOPathInputInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildFeedPathInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildModelLoadInstruction)
 
     return model_load_blob_objects["out_0"]
 
@@ -423,9 +423,9 @@ def _EagerRunModelSave(var_blobs, snapshot_path):
 
     sess = session_ctx.GetDefaultSession()
     with scope_util.ScopeContext(scope_util.MakeScope(_BuildNotMirroredScope)):
-        vm_util.LogicalRun(BuildModelIOPathInputInstruction)
-        vm_util.LogicalRun(BuildFeedPathInstruction)
-        vm_util.LogicalRun(BuildModelSaveInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildModelIOPathInputInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildFeedPathInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildModelSaveInstruction)
 
 
 def _GenModelInitOpConfAndRetLbi(var_op_conf):

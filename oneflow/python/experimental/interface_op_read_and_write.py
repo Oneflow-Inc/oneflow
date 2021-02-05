@@ -82,7 +82,7 @@ def GetEagerInterfaceBlob(op_name):
             Yield(remote_blob)
 
         def AsyncGetInterfaceBlob(Yield):
-            vm_util.LogicalRun(lambda builder: Build(builder, Yield))
+            oneflow_api.deprecated.LogicalRun(lambda builder: Build(builder, Yield))
 
         blob = async_util.Await(1, AsyncGetInterfaceBlob)[0]
         return blob
@@ -124,7 +124,7 @@ def GetInterfaceBlobValue(op_name):
                 value = remote_blob.numpy()
             Yield(value)
 
-        vm_util.LogicalRun(build)
+        oneflow_api.deprecated.LogicalRun(build)
 
     return async_util.Await(1, AsyncGetInterfaceBlobValue)[0]
 
@@ -150,7 +150,7 @@ def FeedValueToInterfaceBlobObject(blob_object, ndarray):
             )
         push_util.FeedValueToEagerBlob(blob_object, input_blob_def, ndarray)
 
-    vm_util.LogicalRun(build)
+    oneflow_api.deprecated.LogicalRun(build)
 
 
 @oneflow_export("experimental.set_interface_blob_value")
@@ -163,6 +163,6 @@ def FeedValueToInterfaceBlob(op_name, ndarray):
             FeedValueToInterfaceBlobObject(blob_object, ndarray)
             Yield()
 
-        vm_util.LogicalRun(build)
+        oneflow_api.deprecated.LogicalRun(build)
 
     async_util.Await(1, AsyncFeedValueToInterfaceBlob)

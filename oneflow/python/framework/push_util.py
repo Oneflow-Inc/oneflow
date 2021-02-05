@@ -162,7 +162,7 @@ def _MakeInputBlobObject(arg_blob_def):
             vm_util._FindOrCreateDelegateBlobObject,
         )
 
-    vm_util.LogicalRun(BuildInputInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInputInstruction)
     return bn_in_op2blob_object["out"], lbi
 
 
@@ -176,7 +176,7 @@ def _GetPhysicalBlobObjects(logical_blob_object, lbi):
             logical_blob_object
         )
 
-    vm_util.LogicalRun(BuildLogical2PhysicalInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildLogical2PhysicalInstruction)
     return physical_blob_objects
 
 
@@ -281,7 +281,7 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
             blob_object.object_id, python_callback.GetIdForRegisteredCallback(FeedBlob)
         )
 
-    vm_util.PhysicalRun(BuildFeedInstruction)
+    oneflow_api.deprecated.PhysicalRun(BuildFeedInstruction)
 
 
 def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):

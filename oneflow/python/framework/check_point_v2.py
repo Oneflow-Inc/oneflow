@@ -314,7 +314,7 @@ def _LogicalSlice(
             )
             Yield(bn_in_op2blob_object["y_0"])
 
-        vm_util.LogicalRun(build)
+        oneflow_api.deprecated.LogicalRun(build)
 
     lbi = lbi_util.LogicalBlobId()
     lbi.set_op_name(op_name)
@@ -411,7 +411,7 @@ def _LogicalSliceAssign(
             vm_util._FindOrCreateDelegateBlobObject,
         )
 
-    vm_util.LogicalRun(BuildAssignInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildAssignInstruction)
     blob_cache_util.TryDisableBlobCache(ref_blob_object)
 
 

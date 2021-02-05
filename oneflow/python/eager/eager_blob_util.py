@@ -58,7 +58,7 @@ def FetchTensorBlobAsNumpyList(parallel_size, blob_object):
                 python_callback.GetIdForRegisteredCallback(fetcher),
             )
 
-        vm_util.PhysicalRun(BuildFetchBlobBodyInstruction)
+        oneflow_api.deprecated.PhysicalRun(BuildFetchBlobBodyInstruction)
 
     return async_util.Await(parallel_size, AsyncFetchBlobBody)
 
@@ -86,7 +86,7 @@ def _FetchBlobHeader(blob_object):
                 python_callback.GetIdForRegisteredCallback(fetcher),
             )
 
-        vm_util.PhysicalRun(BuildFetchBlobHeaderInstruction)
+        oneflow_api.deprecated.PhysicalRun(BuildFetchBlobHeaderInstruction)
 
     return async_util.Await(1, AsyncFetchBlobHeader)[0]
 
