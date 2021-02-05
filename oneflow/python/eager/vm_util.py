@@ -47,36 +47,11 @@ import oneflow_api
 
 
 def PhysicalRun(build):
-    return _Run(
-        build,
-        oneflow_api.vm.PhysicalIdGenerator(),
-        oneflow_api.vm.RunPhysicalInstruction,
-        _ReleasePhysicalObject,
-    )
+    return oneflow_api.deprecated.PhysicalRun(build)
 
 
 def LogicalRun(build):
-    return _Run(
-        build,
-        oneflow_api.vm.LogicalIdGenerator(),
-        oneflow_api.vm.RunLogicalInstruction,
-        _ReleaseLogicalObject,
-    )
-
-
-def _Run(build, id_generator, run_api, release_object):
-    instruction_list = session_ctx.GetDefaultSession().instruction_list
-    eager_symbol_list = session_ctx.GetDefaultSession().eager_symbol_list
-    assert isinstance(instruction_list, instr_cfg.InstructionListProto)
-    assert isinstance(eager_symbol_list, eager_symbol_cfg.EagerSymbolList)
-    build(
-        oneflow_api.deprecated.InstructionsBuilder(
-            id_generator, instruction_list, eager_symbol_list, release_object
-        )
-    )
-    run_api(instruction_list, eager_symbol_list)
-    instruction_list.clear_instruction()
-    eager_symbol_list.clear_eager_symbol()
+    return oneflow_api.deprecated.LogicalRun(build)
 
 
 def _DefaultBlobObject4Ibn(ibn):
@@ -113,17 +88,3 @@ def _GetOpConfBlobNameAttr(pb_message, field):
     assert index >= 0
     assert index < len(repeated_field)
     return repeated_field[index]
-
-
-def _ReleaseLogicalObject(obj, is_shutting_down=python_interpreter_util.IsShuttingDown):
-    if is_shutting_down():
-        return
-    LogicalRun(lambda builder: builder.DeleteObject(obj))
-
-
-def _ReleasePhysicalObject(
-    obj, is_shutting_down=python_interpreter_util.IsShuttingDown
-):
-    if is_shutting_down():
-        return
-    PhysicalRun(lambda builder: builder.DeleteObject(obj))

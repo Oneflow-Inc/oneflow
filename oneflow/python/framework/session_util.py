@@ -84,8 +84,7 @@ class Session(object):
         self._UpdateFunctionFlagName2DefaultVal()
         self.scope_attr_name2default_val_ = {}
         self._UpdateScopeAttrName2DefaultVal()
-        self.instruction_list_ = instr_cfg.InstructionListProto()
-        self.eager_symbol_list_ = eager_symbol_cfg.EagerSymbolList()
+        self.sess_ = oneflow_api.GetDefaultSession()
         self.backward_blob_register_ = oneflow_api.BlobRegister(
             blob_cache_util.TryDisableBlobCache
         )
@@ -143,11 +142,11 @@ class Session(object):
 
     @property
     def instruction_list(self):
-        return self.instruction_list_
+        return self.sess_.instruction_list()
 
     @property
     def eager_symbol_list(self):
-        return self.eager_symbol_list_
+        return self.sess_.eager_symbol_list()
 
     @property
     def backward_blob_register(self):
@@ -256,6 +255,7 @@ class Session(object):
         self.resource_ = None
         if self.eager_config_proto_ctx_:
             del self.eager_config_proto_ctx_
+        oneflow_api.ResetDefaultSession()
 
     def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN

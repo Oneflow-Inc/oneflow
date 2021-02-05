@@ -423,6 +423,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   std::function<void(compatible_py::Object*)> release_object_;
 };
 
+Maybe<void> LogicalRun(
+    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& build);
+
+Maybe<void> PhysicalRun(
+    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& build);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
