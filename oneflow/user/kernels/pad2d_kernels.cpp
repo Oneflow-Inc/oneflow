@@ -182,8 +182,8 @@ private:
 
     IN_T *dest = y->mut_dptr<IN_T>();
     const IN_T *src = x->dptr<IN_T>();
-    DimVector dy_vector;
-    dy->shape().ToDimVector(&dy_vector);
+    DimVector y_vector;
+    y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
     ReplicationPad2dFunctor<device_type, IN_T>()(

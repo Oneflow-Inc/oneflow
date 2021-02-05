@@ -53,10 +53,10 @@ struct ReflectionPad2dGradFunctor<DeviceType::kCPU, IN_T> final {
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REFLECTION_PAD2D_FUNCTOR,
-                                 (DeviceType::kCPU), PADING_DATA_TYPE_CPU_SEQ);
+                                 (DeviceType::kCPU), PADDING_DATA_TYPE_CPU_SEQ);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REFLECTION_PAD2D_GRAD_FUNCTOR,
-                                 (DeviceType::kCPU), PADING_ATA_TYPE_CPU_SEQ);
+                                 (DeviceType::kCPU), PADDING_DATA_TYPE_CPU_SEQ);
 
 template <typename IN_T>
 struct ReplicationPad2dFunctor<DeviceType::kCPU, IN_T> final {
@@ -91,10 +91,10 @@ struct ReplicationPad2dGradFunctor<DeviceType::kCPU, IN_T> final {
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD2D_FUNCTOR,
-                                 (DeviceType::kCPU), PADING_DATA_TYPE_CPU_SEQ);
+                                 (DeviceType::kCPU), PADDING_DATA_TYPE_CPU_SEQ);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD2D_GRAD_FUNCTOR,
-                                 (DeviceType::kCPU), PADING_DATA_TYPE_CPU_SEQ);
+                                 (DeviceType::kCPU), PADDING_DATA_TYPE_CPU_SEQ);
 
 } // namespace user_op
 } // namespace oneflow

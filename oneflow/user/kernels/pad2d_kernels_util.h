@@ -23,13 +23,13 @@ limitations under the License.
 
 namespace oneflow {
 
-#define PADING_DATA_TYPE_CPU_SEQ                                                \
+#define PADDING_DATA_TYPE_CPU_SEQ                                                \
   FLOATING_DATA_TYPE_SEQ                                                       \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
-#define PADING_DATA_TYPE_GPU_SEQ                                                \
+#define PADDING_DATA_TYPE_GPU_SEQ                                                \
   FLOAT16_DATA_TYPE_SEQ                                                        \
-  PAD2D_DATA_TYPE_CPU_SEQ
+  PADDING_DATA_TYPE_CPU_SEQ
 
 namespace user_op {
 

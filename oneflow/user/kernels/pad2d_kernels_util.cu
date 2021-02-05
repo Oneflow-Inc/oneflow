@@ -121,11 +121,11 @@ operator()(DeviceCtx *ctx, const float16 *src, float16 *dest,
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REFLECTION_PAD2D_FUNCTOR,
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
-                                 PADING_DATA_TYPE_GPU_SEQ);
+                                 PADDING_DATA_TYPE_GPU_SEQ);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REFLECTION_PAD2D_GRAD_FUNCTOR,
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
-                                 PADING_DATA_TYPE_GPU_SEQ);
+                                 PADDING_DATA_TYPE_GPU_SEQ);
 
 template <typename IN_T>
 __global__ void
@@ -226,11 +226,11 @@ operator()(DeviceCtx *ctx, const float16 *src, float16 *dest,
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD2D_FUNCTOR,
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
-                                 PADING_DATA_TYPE_GPU_SEQ);
+                                 PADDING_DATA_TYPE_GPU_SEQ);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD2D_GRAD_FUNCTOR,
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
-                                 PADING_DATA_TYPE_GPU_SEQ);
+                                 PADDING_DATA_TYPE_GPU_SEQ);
 
 } // namespace user_op
 } // namespace oneflow
