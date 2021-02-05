@@ -46,25 +46,8 @@ from google.protobuf import text_format
 import oneflow_api
 
 
-def PhysicalRun(build):
-    return oneflow_api.deprecated.PhysicalRun(build)
-
-
-def LogicalRun(build):
-    return oneflow_api.deprecated.LogicalRun(build)
-
-
 def _DefaultBlobObject4Ibn(ibn):
     raise NotImplementedError
-
-
-@contextmanager
-def CudaHostPinBlob(build, blob_object):
-    build.CudaHostRegisterBlob(blob_object)
-    try:
-        yield
-    finally:
-        build.CudaHostUnregisterBlob(blob_object)
 
 
 def _FindOrCreateDelegateBlobObject(

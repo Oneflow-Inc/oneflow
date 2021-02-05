@@ -95,7 +95,7 @@ def EagerReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
                 vm_util._FindOrCreateDelegateBlobObject,
             )
 
-    vm_util.LogicalRun(BuildInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInstruction)
     return remote_blob_util.RemoteBlob(lbi)
 
 

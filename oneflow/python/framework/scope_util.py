@@ -77,7 +77,7 @@ def MakeScope(build_func):
         scope = build_func(old_scope, builder)
         assert scope is not None
 
-    vm_util.LogicalRun(BuildScope)
+    oneflow_api.deprecated.LogicalRun(BuildScope)
     return scope
 
 
@@ -91,7 +91,7 @@ def MakeInitialScope(job_conf, device_tag, machine_device_ids, is_mirrored):
             session_id, job_conf, device_tag, machine_device_ids, is_mirrored
         )
 
-    vm_util.LogicalRun(BuildInitialScope)
+    oneflow_api.deprecated.LogicalRun(BuildInitialScope)
     return scope
 
 

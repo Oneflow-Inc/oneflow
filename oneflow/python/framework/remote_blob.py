@@ -214,7 +214,7 @@ def _Numpy(self):
             if not blob_register.HasObject4BlobName(consistent_blob_name):
                 blob_register.SetObject4BlobName(consistent_blob_name, tmp_blob_object)
 
-        vm_util.LogicalRun(BoxingToSingleDevice)
+        oneflow_api.deprecated.LogicalRun(BoxingToSingleDevice)
         return oneflow_api.EagerPhysicalBlob(
             consistent_blob_name,
             blob_register,
@@ -248,7 +248,7 @@ def _NumpyMirroredList(self):
         )
 
     def FetchBlobNumpyMirroredList(blob_object):
-        vm_util.LogicalRun(UnpackLogicalBlobToPhysicalBlobs)
+        oneflow_api.deprecated.LogicalRun(UnpackLogicalBlobToPhysicalBlobs)
         return [
             GetPhyBlobNumpy(i, phy_blob_object)
             for i, phy_blob_object in enumerate(physical_blob_objects)
