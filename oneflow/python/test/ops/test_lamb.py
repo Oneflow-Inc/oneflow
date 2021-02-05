@@ -31,7 +31,7 @@ for gpu in gpus:
 
 
 def compare_with_tensorflow_addons_lamb(
-    test_case, device_type, x_shape, beta1, beta2, epsilon, learning_rate, train_iters
+    test_case, device_type, x_shape, beta1, beta2, epsilon, weight_decay, learning_rate, train_iters
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -56,6 +56,7 @@ def compare_with_tensorflow_addons_lamb(
                 beta1=beta1,
                 beta2=beta2,
                 epsilon=epsilon,
+                weight_decay=weight_decay,
             ).minimize(loss)
             return x
 
@@ -77,7 +78,7 @@ def compare_with_tensorflow_addons_lamb(
 
     var = tf.Variable(init_value)
     opt = tfa.optimizers.LAMB(
-        learning_rate=learning_rate, beta_1=beta1, beta_2=beta2, epsilon=epsilon
+        learning_rate=learning_rate, beta_1=beta1, beta_2=beta2, epsilon=epsilon, weight_decay_rate=weight_decay
     )
 
     var_list = []
@@ -91,7 +92,7 @@ def compare_with_tensorflow_addons_lamb(
         gradients = tape.gradient(loss, var)
         opt.apply_gradients(zip([gradients], [var]))
         var_list.append(var.numpy())
-    case = device_type, x_shape, beta1, beta2, epsilon, learning_rate, train_iters
+    case = device_type, x_shape, beta1, beta2, epsilon, weight_decay, learning_rate, train_iters
     test_case.assertTrue(len(x_list) == len(var_list))
     for (i, o, t) in zip(range(len(var_list)), x_list, var_list):
         diff = o - t
@@ -112,10 +113,11 @@ class TestLamb(flow.unittest.TestCase):
         arg_dict["test_case"] = [test_case]
         arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["x_shape"] = [(10,)]
-        arg_dict["beta1"] = [0.1]
-        arg_dict["beta2"] = [0.1]
-        arg_dict["epsilon"] = [1e-9]
-        arg_dict["learning_rate"] = [0.5]
+        arg_dict["beta1"] = [0.9]
+        arg_dict["beta2"] = [0.999]
+        arg_dict["epsilon"] = [1e-6]
+        arg_dict["weight_decay"] = [0.01]
+        arg_dict["learning_rate"] = [1e-4]
         arg_dict["train_iters"] = [10]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow_addons_lamb(*arg)
