@@ -54,13 +54,7 @@ void PlanToPhysicalGraphFile(const Plan& plan) {
     const OperatorConf& op_conf =
         task.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf();
     DeviceType device_type = Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task.thrd_id());
-    if (device_type == DeviceType::kGPU) {
-      node->set_device("gpu");
-    } else if (device_type == DeviceType::kCPU) {
-      node->set_device("cpu");
-    } else {
-      // do nothing
-    }
+    node->set_device(CHECK_JUST(DeviceTag4DeviceType(device_type)));
     if (op_conf.has_user_conf()) {
       const UserOpConf& user_op = op_conf.user_conf();
       node->set_op(user_op.op_type_name());
