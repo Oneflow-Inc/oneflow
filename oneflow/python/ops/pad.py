@@ -317,3 +317,84 @@ def reflection_pad2d(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("replication_pad2d")
+def replication_pad2d(
+    x: oneflow_api.BlobDesc,
+    padding: Union[int, tuple, list],
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    """Pads the input tensor using the replication of the input boundary. 
+
+    Args:
+        x (oneflow_api.BlobDesc): input blob, only support "NCHW" format.
+        padding (Union[int, oneflow_api.BlobDesc]): The size or bundary of padding, if is int uses the same padding in all dimension;
+        if 4-dims tuple, uses (\text{padding\_left}padding_left , \text{padding\_right}padding_right , \text{padding\_top}padding_top , \text{padding\_bottom}padding_bottom )
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: [description]
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np 
+
+
+        @flow.global_function()
+        def pad_Job(x: tp.Numpy.Placeholder((1, 2, 3, 3))
+        ) -> tp.Numpy:
+            return flow.reflection_pad2d(x, padding=[2, 2, 1, 1])
+
+
+        x = np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32)
+        out = pad_Job(x)
+
+        # out [[[[ 0.  0.  0.  1.  2.  2.  2.]
+        #    [ 0.  0.  0.  1.  2.  2.  2.]
+        #    [ 3.  3.  3.  4.  5.  5.  5.]
+        #    [ 6.  6.  6.  7.  8.  8.  8.]
+        #    [ 6.  6.  6.  7.  8.  8.  8.]]
+
+        #   [[9.  9.  9.  10.  11.  11.  11.]
+        #    [9.  9.  9.  10.  11.  11.  11.]
+        #    [12.  12.  12.  13.  14.  14.  14.]
+        #    [15.  15.  15.  16.  17.  17.  17.]
+        #    [15.  15.  15.  16.  17.  17.  17.]]]]
+
+    """
+    H, W = x.shape[2], x.shape[3]
+    if isinstance(padding, (tuple, list)):
+        assert len(padding) == len(x.shape), ValueError(
+            "padding boundry must be the same size of input dims"
+        )
+        assert (
+            padding[2] < H and padding[3] < H and padding[0] < W and padding[1] < W
+        ), ValueError(
+            "Padding size should be less than the corresponding input dimension!"
+        )
+        boundry = [padding[0], padding[1], padding[2], padding[3]]
+    elif isinstance(padding, int):
+        assert padding < H and padding < W, ValueError(
+            "Padding size should be less than the corresponding input dimension!"
+        )
+        boundry = [padding, padding, padding, padding]
+    else:
+        raise ValueError("padding must be in or list or tuple!")
+
+    return (
+        oneflow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Replication_Pad2d")
+        )
+        .Op("replication_pad2d")
+        .Input("x", [x])
+        .Output("y")
+        .Attr("padding", list(boundry))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )

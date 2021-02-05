@@ -77,6 +77,8 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
   CHECK_JUST(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature,
                                    [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); }));
   Global<OpGraph>::Get()->CheckBlobDescs(op_->op_name(), GetBlobDesc4BnInOp, parallel_ctx);
+  CHECK_JUST(op_->InferInplaceObn2IbnIf(&mut_inplace_obn2ibn_, &con_inplace_obn2ibn_,
+                                        GetBlobDesc4BnInOp, parallel_ctx, sbp_signature));
 }
 
 std::function<const BlobDesc&(const std::string&)> ExecNode::GetLogicalBlobDesc4BnInOpFunc() const {
