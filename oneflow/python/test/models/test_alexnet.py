@@ -1,3 +1,4 @@
+
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
@@ -16,20 +17,19 @@ limitations under the License.
 import argparse
 import os
 from datetime import datetime
-import unittest
 
 import numpy
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 
-
 _DATA_DIR = "/dataset/PNGS/PNG227/of_record_repeated"
 _MODEL_SAVE_DIR = "./model_save-{}".format(
     str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
 )
 _MODEL_LOAD = "/dataset/PNGS/cnns_model_for_test/alexnet/models/of_model_bk"
-_NODE_LIST = "192.168.1.12,192.168.1.14"
+NODE_LIST = "192.168.1.12,192.168.1.14"
+
 
 class DLNetSpec(object):
     def __init__(self):
@@ -40,9 +40,42 @@ class DLNetSpec(object):
         self.model_save_dir = _MODEL_SAVE_DIR
         self.model_load_dir = _MODEL_LOAD
         self.num_nodes = 1
-        self.node_list = None
         self.gpu_num_per_node = 1
         self.iter_num = 10
+
+
+parser = argparse.ArgumentParser(description="flags for multi-node and resource")
+parser.add_argument("-nn", "--num_nodes", type=str, default=1, required=False)
+parser.add_argument("-g", "--gpu_num_per_node", type=int, default=1, required=False)
+parser.add_argument("-i", "--iter_num", type=int, default=10, required=False)
+parser.add_argument(
+    "-m", "--multinode", default=False, action="store_true", required=False
+)
+parser.add_argument("-n", "--node_list", type=str, default=NODE_LIST, required=False)
+parser.add_argument(
+    "-s", "--skip_scp_binary", default=False, action="store_true", required=False
+)
+parser.add_argument(
+    "-c",
+    "--scp_binary_without_uuid",
+    default=False,
+    action="store_true",
+    required=False,
+)
+parser.add_argument(
+    "-r", "--remote_by_hand", default=False, action="store_true", required=False
+)
+parser.add_argument("-e", "--eval_dir", type=str, default=_DATA_DIR, required=False)
+parser.add_argument("-t", "--train_dir", type=str, default=_DATA_DIR, required=False)
+parser.add_argument(
+    "-load", "--model_load_dir", type=str, default=_MODEL_LOAD, required=False
+)
+parser.add_argument(
+    "-save", "--model_save_dir", type=str, default=_MODEL_SAVE_DIR, required=False
+)
+parser.add_argument("-dn", "--data_part_num", type=int, default=32, required=False)
+parser.add_argument("-b", "--batch_size", type=int, default=8, required=False)
+
 
 def _conv2d_layer(
     args,
@@ -100,7 +133,7 @@ def _data_load_layer(args, data_dir):
         color_space="RGB",
         name="decode",
     )
-    rsz = flow.image.resize(image, target_size=[227, 227], color_space="RGB")
+    rsz = flow.image.resize(image, resize_x=227, resize_y=227, color_space="RGB")
     normal = flow.image.crop_mirror_normalize(
         rsz,
         color_space="RGB",
@@ -111,115 +144,87 @@ def _data_load_layer(args, data_dir):
     return label, normal
 
 
-class AlexNet(flow.nn.Model):
-    def __init__(self):
-        super().__init__()
-    
-    def forward(self, images, args, trainable=True):
-        conv1 = _conv2d_layer(
-            args, "conv1", images, filters=64, kernel_size=11, strides=4, padding="VALID",
-        )
+def alexnet(args, images, labels, trainable=True):
+    conv1 = _conv2d_layer(
+        args, "conv1", images, filters=64, kernel_size=11, strides=4, padding="VALID",
+    )
 
-        pool1 = flow.nn.avg_pool2d(conv1, 3, 2, "VALID", "NCHW", name="pool1")
+    pool1 = flow.nn.avg_pool2d(conv1, 3, 2, "VALID", "NCHW", name="pool1")
 
-        conv2 = _conv2d_layer(args, "conv2", pool1, filters=192, kernel_size=5)
+    conv2 = _conv2d_layer(args, "conv2", pool1, filters=192, kernel_size=5)
 
-        pool2 = flow.nn.avg_pool2d(conv2, 3, 2, "VALID", "NCHW", name="pool2")
+    pool2 = flow.nn.avg_pool2d(conv2, 3, 2, "VALID", "NCHW", name="pool2")
 
-        conv3 = _conv2d_layer(args, "conv3", pool2, filters=384)
+    conv3 = _conv2d_layer(args, "conv3", pool2, filters=384)
 
-        conv4 = _conv2d_layer(args, "conv4", conv3, filters=384)
+    conv4 = _conv2d_layer(args, "conv4", conv3, filters=384)
 
-        conv5 = _conv2d_layer(args, "conv5", conv4, filters=256)
+    conv5 = _conv2d_layer(args, "conv5", conv4, filters=256)
 
-        pool5 = flow.nn.avg_pool2d(conv5, 3, 2, "VALID", "NCHW", name="pool5")
+    pool5 = flow.nn.avg_pool2d(conv5, 3, 2, "VALID", "NCHW", name="pool5")
 
-        def _get_initializer():
-            kernel_initializer = initializer_conf_util.InitializerConf()
-            kernel_initializer.truncated_normal_conf.std = 0.816496580927726
-            return kernel_initializer
+    def _get_initializer():
+        kernel_initializer = initializer_conf_util.InitializerConf()
+        kernel_initializer.truncated_normal_conf.std = 0.816496580927726
+        return kernel_initializer
 
-        if len(pool5.shape) > 2:
-            pool5 = flow.reshape(pool5, shape=(pool5.shape[0], -1))
+    if len(pool5.shape) > 2:
+        pool5 = flow.reshape(pool5, shape=(pool5.shape[0], -1))
 
-        fc1 = flow.layers.dense(
-            inputs=pool5,
-            units=4096,
-            activation=flow.math.relu,
-            use_bias=False,
-            kernel_initializer=_get_initializer(),
-            bias_initializer=False,
-            trainable=trainable,
-            name="fc1",
-        )
+    fc1 = flow.layers.dense(
+        inputs=pool5,
+        units=4096,
+        activation=flow.math.relu,
+        use_bias=False,
+        kernel_initializer=_get_initializer(),
+        bias_initializer=False,
+        trainable=trainable,
+        name="fc1",
+    )
 
-        dropout1 = fc1
+    dropout1 = fc1
 
-        fc2 = flow.layers.dense(
-            inputs=dropout1,
-            units=4096,
-            activation=flow.math.relu,
-            use_bias=False,
-            kernel_initializer=_get_initializer(),
-            bias_initializer=False,
-            trainable=trainable,
-            name="fc2",
-        )
+    fc2 = flow.layers.dense(
+        inputs=dropout1,
+        units=4096,
+        activation=flow.math.relu,
+        use_bias=False,
+        kernel_initializer=_get_initializer(),
+        bias_initializer=False,
+        trainable=trainable,
+        name="fc2",
+    )
 
-        dropout2 = fc2
+    dropout2 = fc2
 
-        fc3 = flow.layers.dense(
-            inputs=dropout2,
-            units=1001,
-            activation=None,
-            use_bias=False,
-            kernel_initializer=_get_initializer(),
-            bias_initializer=False,
-            trainable=trainable,
-            name="fc3",
-        )
+    fc3 = flow.layers.dense(
+        inputs=dropout2,
+        units=1001,
+        activation=None,
+        use_bias=False,
+        kernel_initializer=_get_initializer(),
+        bias_initializer=False,
+        trainable=trainable,
+        name="fc3",
+    )
 
-        return fc3
+    loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+        labels, fc3, name="softmax_loss"
+    )
 
-    def training_step(self, batch, batch_idx, args, trainable=True):
-        images, labels = batch
-        fc3 = self.forward(images, args, trainable)
-        loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
-            labels, fc3, name="softmax_loss"
-        )
-        return loss
+    return loss
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_1n1c(test_case):
-    print("test alexnet model")
-    args = DLNetSpec()
-
-    flow.env.ctrl_port(9788)
-    if args.num_nodes > 1: 
-        flow.env.ctrl_port(12138)
-        nodes = []
-        for n in args.node_list.strip().split(","):
-            addr_dict = {}
-            addr_dict["addr"] = n
-            nodes.append(addr_dict)
-
-        flow.env.machine(nodes)
-
+def main(args):
     flow.config.machine_num(args.num_nodes)
     flow.config.gpu_device_num(args.gpu_num_per_node)
 
-    # train
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.consistent_view())
     func_config.default_data_type(flow.float)
     func_config.cudnn_conv_force_fwd_algo(0)
     func_config.cudnn_conv_force_bwd_data_algo(1)
     func_config.cudnn_conv_force_bwd_filter_algo(1)
-
-    alexnet_md = AlexNet()
-    def alexnet(args, images, labels, trainable=True):
-        loss = alexnet_md.training_step((images, labels), 1, args, trainable)
 
     @flow.global_function(type="train", function_config=func_config)
     def alexnet_train_job():
@@ -230,7 +235,6 @@ def test_1n1c(test_case):
         ).minimize(loss)
         return loss
 
-    # eval
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
 
@@ -239,6 +243,12 @@ def test_1n1c(test_case):
         with flow.scope.consistent_view():
             (labels, images) = _data_load_layer(args, args.eval_dir)
             return alexnet(args, images, labels, False)
+
+    check_point = flow.train.CheckPoint()
+    if not args.model_load_dir:
+        check_point.init()
+    else:
+        check_point.load(args.model_load_dir)
 
     num_nodes = args.num_nodes
     print(
@@ -256,19 +266,15 @@ def test_1n1c(test_case):
         fmt_str = "{:>12}  {:>12}  {:>12.6f}"
         print(fmt_str.format(i, "train loss:", train_loss))
 
-        if (i + 1) % 5 == 0:
-            eval_loss = alexnet_eval_job().get().mean()
-            print(
-                fmt_str.format(
-                    i, "eval loss:", eval_loss
-                )
-            )
-
-        if (i + 1) % 10 == 0:
-            flow.checkpoint.save(_MODEL_SAVE_DIR + str(i))
-            print("Model {} saved to {}.".format(
-                i, _MODEL_SAVE_DIR + str(i)
-            ))
+        # if (i + 1) % 10 == 0:
+        #   eval_loss = alexnet_eval_job().get().mean()
+        # print(
+        #     fmt_str.format(
+        #         i, "eval loss:", eval_loss
+        #     )
+        # )
+        if (i + 1) % 100 == 0:
+            check_point.save(_MODEL_SAVE_DIR + str(i))
 
     # save loss to file
     loss_file = "{}n{}c.npy".format(
@@ -278,3 +284,20 @@ def test_1n1c(test_case):
     if not os.path.exists(loss_path):
         os.makedirs(loss_path)
     numpy.save(os.path.join(loss_path, loss_file), loss)
+
+
+if __name__ == "__main__":
+    args = parser.parse_args()
+    args.num_nodes = len(args.node_list.strip().split(",")) if args.multinode else 1
+    flow.env.ctrl_port(9788)
+    if args.multinode:
+        flow.env.ctrl_port(12138)
+        nodes = []
+        for n in args.node_list.strip().split(","):
+            addr_dict = {}
+            addr_dict["addr"] = n
+            nodes.append(addr_dict)
+
+        flow.env.machine(nodes)
+
+    main(args)

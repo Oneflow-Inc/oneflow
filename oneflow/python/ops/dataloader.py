@@ -38,7 +38,7 @@ class _DataLoaderIter(object):
 
     def _next_data(self):
         index = self._next_index()
-        data = self._dataset_fetcher.fetch(index)
+        #data = self._dataset_fetcher.fetch(index)
         return data
     
     def __next__(self):

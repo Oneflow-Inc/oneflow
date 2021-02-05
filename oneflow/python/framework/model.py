@@ -15,10 +15,12 @@ limitations under the License.
 """
 from __future__ import absolute_import
 from abc import ABC
+from typing import Optional
 
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.module import Module
 from oneflow.python.ops.optimizer import Optimizer
+from oneflow.python.ops.dataloader import DataLoader
 
 
 @oneflow_export("nn.Model")
@@ -76,7 +78,7 @@ class Model(
         max_epochs: int = 1000,
         train_dataloader: Optional[DataLoader] = None,
         val_dataloaders: Optional[DataLoader] = None,
-        default_checkpoint_dir:Optional[str] = None,
+        default_checkpoint_dir: Optional[str] = None,
     ):
         # TODO(strint): check config functions
         # 必须有training_step()/configure_optimizers()/train_dataloader
@@ -92,9 +94,9 @@ class Model(
         
         # prepare optimizer
         optim_conf = self.configure_optimizers()
-        if (isinstance(optim_conf, Optimizer))
+        if isinstance(optim_conf, Optimizer):
             self.optimizers = [optim_conf]
-        else if isinstance(optim_conf, (list, tuple)):
+        elif isinstance(optim_conf, (list, tuple)):
             self.optimizers = optim_conf
     
         self.max_epochs = max_epochs
@@ -109,7 +111,7 @@ class Model(
                 self.train()
                 for batch_idx, batch in enumerate(train_dataloader):
                     for opt_idx, optimizer in emunrate(self.optimizers()):
-                        result = self.training_step(batch, batch_idx, opt_idx):
+                        result = self.training_step(batch, batch_idx, opt_idx)
                         if self._context.is_eager:
                             # eager
                             result.backward()
