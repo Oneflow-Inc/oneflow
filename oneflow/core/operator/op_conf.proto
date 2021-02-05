@@ -554,16 +554,18 @@ message BoxingIdentityOpConf {
   required LogicalBlobId lbi = 1;
 }
 
-message BoxingS2SAll2AllPackOpConf {
+message CollectiveBoxingPackOpConf {
   required LogicalBlobId lbi = 1;
-  required int64 dst_split_axis = 2;
-  required int64 num_ranks = 3;
+  required SbpParallel src_sbp_parallel = 2;
+  required SbpParallel dst_sbp_parallel = 3;
+  required int64 num_ranks = 4;
+  required ShapeProto logical_shape = 5;
 }
 
-message BoxingS2SAll2AllUnpackOpConf {
+message CollectiveBoxingUnpackOpConf {
   required LogicalBlobId lbi = 1;
-  required int64 src_split_axis = 2;
-  required int64 dst_split_axis = 3;
+  required SbpParallel src_sbp_parallel = 2;
+  required SbpParallel dst_sbp_parallel = 3;
   required int64 num_ranks = 4;
   required ShapeProto logical_shape = 5;
 }
@@ -637,8 +639,8 @@ message OperatorConf {
     CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
     BoxingIdentityOpConf boxing_identity_conf = 171;
     TensorListSplitOpConf tensor_list_split_conf = 172;
-    BoxingS2SAll2AllPackOpConf boxing_s2s_all2all_pack_conf = 174;
-    BoxingS2SAll2AllUnpackOpConf boxing_s2s_all2all_unpack_conf = 175;
+    CollectiveBoxingPackOpConf collective_boxing_pack_conf = 174;
+    CollectiveBoxingUnpackOpConf collective_boxing_unpack_conf = 175;
     BoxingZerosOpConf boxing_zeros_conf = 176;
     UserOpConf user_conf = 199;
 

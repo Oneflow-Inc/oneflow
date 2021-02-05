@@ -262,28 +262,8 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python_gen"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/python_gen/__init__.py"
-    COMMAND echo "generated_compile_flags = []" > "${of_pyscript_dir}/oneflow/python_gen/sysconfig.py"
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python_gen/__export_symbols__.py")
-if (BUILD_CUDA)
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "with_cuda=True" >> "${of_pyscript_dir}/oneflow/python_gen/compatibility.py"
-        COMMAND echo "\"generated_compile_flags.append('-DWITH_CUDA')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
-        )
-else()
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "with_cuda=False" >> "${of_pyscript_dir}/oneflow/python_gen/compatibility.py")
-endif()
-
-if (USE_CXX11_ABI)
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "\"generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=1')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
-        )
-else()
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "\"generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=0')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
-        )
-endif()
 
 add_dependencies(of_pyscript_copy of_protoobj)
 add_custom_target(generate_api ALL
