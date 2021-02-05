@@ -34,13 +34,13 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-template <DeviceType device_type, typename IN_T>
+template<DeviceType device_type, typename IN_T>
 class ReflectionPad2dKernel final : public OpKernel {
-public:
+ public:
   ReflectionPad2dKernel() = default;
   ~ReflectionPad2dKernel() = default;
 
-private:
+ private:
   void Compute(user_op::KernelComputeContext *ctx) const override {
     const Tensor *x = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor *y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -68,20 +68,20 @@ private:
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
-    ReflectionPad2dFunctor<device_type, IN_T>()(
-        ctx->device_ctx(), src, dest, index_helper, n_batch, n_channel,
-        y_height, y_width, x_height, x_width, pad_left, pad_top);
+    ReflectionPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper, n_batch,
+                                                n_channel, y_height, y_width, x_height, x_width,
+                                                pad_left, pad_top);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template <DeviceType device_type, typename IN_T>
+template<DeviceType device_type, typename IN_T>
 class ReflectionPad2dGradKernel final : public OpKernel {
-public:
+ public:
   ReflectionPad2dGradKernel() = default;
   ~ReflectionPad2dGradKernel() = default;
 
-private:
+ private:
   void Compute(KernelComputeContext *ctx) const override {
     const Tensor *dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor *dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -109,32 +109,29 @@ private:
     dy->shape().ToDimVector(&dy_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
-    size_t out_bytes_size =
-        dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+    size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
 
-    ReflectionPad2dGradFunctor<device_type, IN_T>()(
-        ctx->device_ctx(), src, dest, index_helper, n_batch, n_channel,
-        dy_height, dy_width, dx_height, dx_width, pad_left, pad_top);
+    ReflectionPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
+                                                    n_batch, n_channel, dy_height, dy_width,
+                                                    dx_height, dx_width, pad_left, pad_top);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_REFLECTION_PAD2D_KERNELS(device, dtype)                       \
-  REGISTER_USER_KERNEL("reflection_pad2d")                                     \
-      .SetCreateFn<ReflectionPad2dKernel<device, dtype>>()                     \
-      .SetIsMatchedHob(                                                        \
-          (user_op::HobDeviceTag() == device) &                                \
-          (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));        \
-  REGISTER_USER_KERNEL("reflection_pad2d_grad")                                \
-      .SetCreateFn<ReflectionPad2dGradKernel<device, dtype>>()                 \
-      .SetIsMatchedHob(                                                        \
-          (user_op::HobDeviceTag() == device) &                                \
-          (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_REFLECTION_PAD2D_KERNELS(device, dtype)                               \
+  REGISTER_USER_KERNEL("reflection_pad2d")                                             \
+      .SetCreateFn<ReflectionPad2dKernel<device, dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("reflection_pad2d_grad")                                        \
+      .SetCreateFn<ReflectionPad2dGradKernel<device, dtype>>()                         \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-#define REGISTER_REFLECTION_PAD2D_WITH_DEVICE(device)                          \
-  REGISTER_REFLECTION_PAD2D_KERNELS(device, float)                             \
-  REGISTER_REFLECTION_PAD2D_KERNELS(device, double)                            \
+#define REGISTER_REFLECTION_PAD2D_WITH_DEVICE(device) \
+  REGISTER_REFLECTION_PAD2D_KERNELS(device, float)    \
+  REGISTER_REFLECTION_PAD2D_KERNELS(device, double)   \
   REGISTER_REFLECTION_PAD2D_KERNELS(device, int32_t)
 
 REGISTER_REFLECTION_PAD2D_WITH_DEVICE(DeviceType::kCPU)
@@ -143,13 +140,13 @@ REGISTER_REFLECTION_PAD2D_WITH_DEVICE(DeviceType::kGPU)
 REGISTER_REFLECTION_PAD2D_KERNELS(DeviceType::kGPU, float16)
 #endif
 
-template <DeviceType device_type, typename IN_T>
+template<DeviceType device_type, typename IN_T>
 class ReplicationPad2dKernel final : public OpKernel {
-public:
+ public:
   ReplicationPad2dKernel() = default;
   ~ReplicationPad2dKernel() = default;
 
-private:
+ private:
   void Compute(user_op::KernelComputeContext *ctx) const override {
     const Tensor *x = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor *y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -177,20 +174,20 @@ private:
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
-    ReplicationPad2dFunctor<device_type, IN_T>()(
-        ctx->device_ctx(), src, dest, index_helper, n_batch, n_channel,
-        y_height, y_width, x_height, x_width, pad_left, pad_top);
+    ReplicationPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
+                                                 n_batch, n_channel, y_height, y_width, x_height,
+                                                 x_width, pad_left, pad_top);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template <DeviceType device_type, typename IN_T>
+template<DeviceType device_type, typename IN_T>
 class ReplicationPad2dGradKernel final : public OpKernel {
-public:
+ public:
   ReplicationPad2dGradKernel() = default;
   ~ReplicationPad2dGradKernel() = default;
 
-private:
+ private:
   void Compute(KernelComputeContext *ctx) const override {
     const Tensor *dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor *dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -218,32 +215,29 @@ private:
     dy->shape().ToDimVector(&dy_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
-    size_t out_bytes_size =
-        dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+    size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
 
-    ReplicationPad2dGradFunctor<device_type, IN_T>()(
-        ctx->device_ctx(), src, dest, index_helper, n_batch, n_channel,
-        dy_height, dy_width, dx_height, dx_width, pad_left, pad_top);
+    ReplicationPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
+                                                     n_batch, n_channel, dy_height, dy_width,
+                                                     dx_height, dx_width, pad_left, pad_top);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_REPLICATION_PAD2D_KERNELS(device, dtype)                      \
-  REGISTER_USER_KERNEL("replication_pad2d")                                    \
-      .SetCreateFn<ReplicationPad2dKernel<device, dtype>>()                    \
-      .SetIsMatchedHob(                                                        \
-          (user_op::HobDeviceTag() == device) &                                \
-          (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));        \
-  REGISTER_USER_KERNEL("replication_pad2d_grad")                               \
-      .SetCreateFn<ReplicationPad2dGradKernel<device, dtype>>()                \
-      .SetIsMatchedHob(                                                        \
-          (user_op::HobDeviceTag() == device) &                                \
-          (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_REPLICATION_PAD2D_KERNELS(device, dtype)                              \
+  REGISTER_USER_KERNEL("replication_pad2d")                                            \
+      .SetCreateFn<ReplicationPad2dKernel<device, dtype>>()                            \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("replication_pad2d_grad")                                       \
+      .SetCreateFn<ReplicationPad2dGradKernel<device, dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-#define REGISTER_REPLICATION_PAD2D_WITH_DEVICE(device)                         \
-  REGISTER_REPLICATION_PAD2D_KERNELS(device, float)                            \
-  REGISTER_REPLICATION_PAD2D_KERNELS(device, double)                           \
+#define REGISTER_REPLICATION_PAD2D_WITH_DEVICE(device) \
+  REGISTER_REPLICATION_PAD2D_KERNELS(device, float)    \
+  REGISTER_REPLICATION_PAD2D_KERNELS(device, double)   \
   REGISTER_REPLICATION_PAD2D_KERNELS(device, int32_t)
 
 REGISTER_REPLICATION_PAD2D_WITH_DEVICE(DeviceType::kCPU)
@@ -252,5 +246,5 @@ REGISTER_REPLICATION_PAD2D_WITH_DEVICE(DeviceType::kGPU)
 REGISTER_REPLICATION_PAD2D_KERNELS(DeviceType::kGPU, float16)
 #endif
 
-} // namespace user_op
-} // namespace oneflow
+}  // namespace user_op
+}  // namespace oneflow
