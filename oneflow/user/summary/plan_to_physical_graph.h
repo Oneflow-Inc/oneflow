@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_USER_SUMMARY_PLAN_TO_PHYSICAL_GRAPH_H_
 
 #include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
 

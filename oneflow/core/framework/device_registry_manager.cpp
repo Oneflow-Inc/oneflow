@@ -22,15 +22,11 @@ DeviceRegistryMgr& DeviceRegistryMgr::Get() {
   return mgr;
 }
 
-
 DeviceTypeKeyMap<DumpVersionInfoFn>& DeviceRegistryMgr::DumpVersionInfoFuncs() {
   return dump_version_info_funcs_;
 }
 
-
-DeviceTypeKeyMap<std::string>& DeviceRegistryMgr::DeviceType4Tag() {
-  return device_type_to_tag_;
-}
+DeviceTypeKeyMap<std::string>& DeviceRegistryMgr::DeviceType4Tag() { return device_type_to_tag_; }
 
 HashMap<std::string, DeviceType, std::hash<std::string>>& DeviceRegistryMgr::DeviceTag4Type() {
   return device_tag_to_type_;

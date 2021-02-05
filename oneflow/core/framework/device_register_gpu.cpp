@@ -84,9 +84,7 @@ void DumpVersionInfo() {
 
 }  // namespace
 
-REGISTER_DEVICE(DeviceType::kGPU)
-    .SetDumpVersionInfoFn(DumpVersionInfo)
-    .SetDeviceTag("gpu");
+REGISTER_DEVICE(DeviceType::kGPU).SetDumpVersionInfoFn(DumpVersionInfo).SetDeviceTag("gpu");
 
 }  // namespace oneflow
 #endif  // WITH_CUDA
