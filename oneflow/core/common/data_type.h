@@ -94,7 +94,7 @@ using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataTyp
 #define OF_DEVICE_FUNC inline
 #endif
 
-template<typename T>
+template<typename T, typename T2=void>
 OF_DEVICE_FUNC T GetZeroVal() {
   return static_cast<T>(0);
 }
@@ -170,6 +170,12 @@ template<typename T>
 const T* GetOnePtr() {
   static const T ret = GetOneVal<T>();
   return &ret;
+}
+
+template<typename T, typename std::enable_if<IsFloat16<T>::value>::type* dummy = 0>
+OF_DEVICE_FUNC T GetZeroVal() {
+  uint16_t ret = 0x0;  // Decimal: 0; Binary: 0 00000 0000000000
+  return *(T*)&ret;
 }
 
 #if defined(WITH_CUDA)
