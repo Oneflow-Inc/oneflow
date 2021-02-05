@@ -191,7 +191,6 @@ void FeedBlob(const std::shared_ptr<InstructionsBuilder>& x,
 }
 
 using FindOrCreateDelegateBlobObjectFun = std::function<std::shared_ptr<compatible_py::BlobObject>(
-    const std::shared_ptr<InstructionsBuilder>&,
     const std::function<std::shared_ptr<compatible_py::BlobObject>(
         const std::shared_ptr<compatible_py::BlobObject>&,
         const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&,

@@ -163,7 +163,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   using FindOrCreateDelegateBlobObjectFun =
       std::function<std::shared_ptr<compatible_py::BlobObject>(
-          const std::shared_ptr<InstructionsBuilder>&,
           const std::function<std::shared_ptr<compatible_py::BlobObject>(
               const std::shared_ptr<compatible_py::BlobObject>&,
               const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&,
