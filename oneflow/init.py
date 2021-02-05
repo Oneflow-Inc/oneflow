@@ -68,6 +68,7 @@ INVALID_SPLIT_AXIS = oneflow_api.INVALID_SPLIT_AXIS
 
 register_class_method_util.RegisterMethod4Class()
 
+atexit.register(oneflow_api.deprecated.SetShuttingDown)
 atexit.register(oneflow_api.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 atexit.register(oneflow.python.framework.python_interpreter_util.SetShuttingDown)
