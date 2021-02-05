@@ -70,9 +70,8 @@ Maybe<std::string> TensorImpl::Distribute2Str() const {
   return std::string("");
 }
 
-EagerBlob::EagerBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
-                                 const std::string& job_name,
-                                 const std::shared_ptr<compatible_py::Distribute>& distribute)
+EagerBlob::EagerBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi, const std::string& job_name,
+                     const std::shared_ptr<compatible_py::Distribute>& distribute)
     : TensorImpl(lbi, job_name, distribute) {
   parallel_size_ = 0;
 }
@@ -145,7 +144,7 @@ std::shared_ptr<compatible_py::BlobObject> EagerBlob::blob_object() const {
 }
 
 void EagerBlob::_Init(const std::shared_ptr<compatible_py::BlobObject>& blob_object,
-                            const std::shared_ptr<compatible_py::BlobRegister>& blob_register) {
+                      const std::shared_ptr<compatible_py::BlobRegister>& blob_register) {
   std::shared_ptr<compatible_py::RegisteredBlobAccess> access =
       blob_register->OpenRegisteredBlobAccess(lbn_, blob_object);
   registered_blob_access_ = access;

@@ -70,6 +70,28 @@ class Tensor {
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const { return impl_->parallel_conf(); }
   bool is_lazy() const { return !EagerExecutionEnabled(); }
 
+  std::shared_ptr<cfg::LogicalBlobId> lbi() const { return impl_->lbi(); }
+  std::string logical_blob_name() const { return impl_->logical_blob_name(); }
+  std::string op_name() const { return impl_->op_name(); }
+  std::string blob_name() const { return impl_->blob_name(); }
+  std::string unique_name() const { return impl_->unique_name(); }
+  void set_distribute(const std::shared_ptr<compatible_py::Distribute> distribute) {
+    impl_->set_distribute(distribute);
+  }
+  std::shared_ptr<compatible_py::Distribute> distribute() const { return impl_->distribute(); }
+  bool has_batch_axis() const { return impl_->has_batch_axis(); }
+  std::string job_name() const { return impl_->job_name(); }
+
+  int64_t batch_axis() const { return impl_->batch_axis(); }
+  int64_t parallel_size() { return impl_->parallel_size(); }
+  void set_job_name(std::string job_name) { impl_->set_job_name(job_name); }
+  int64_t numpy_size() const { return impl_->numpy_size(); }
+  int64_t numpy_list_size() const { return impl_->numpy_list_size(); }
+  std::shared_ptr<compatible_py::BlobObject> blob_object() const { return impl_->blob_object(); }
+  int64_t split_axis() const { return impl_->split_axis(); }
+  bool is_dynamic() const { return impl_->is_dynamic(); }
+  bool is_tensor_list() const { return impl_->is_tensor_list(); }
+
  protected:
   std::shared_ptr<TensorImpl> impl_;
 };
@@ -91,14 +113,15 @@ class MirroredTensor : public Tensor {
 class ConsistentTensor : public Tensor {
  public:
   ConsistentTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
-                 const std::shared_ptr<compatible_py::Distribute>& distribute, std::shared_ptr<cfg::ParallelConf>& parallel_conf);
+                   const std::shared_ptr<compatible_py::Distribute>& distribute,
+                   std::shared_ptr<cfg::ParallelConf>& parallel_conf);
   ConsistentTensor(const std::shared_ptr<cfg::LogicalBlobId>& lbi, const std::string& job_name,
-                 const std::shared_ptr<compatible_py::Distribute>& distribute);
+                   const std::shared_ptr<compatible_py::Distribute>& distribute);
   ConsistentTensor(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
-                 const std::shared_ptr<compatible_py::BlobObject>& blob_object,
-                 const std::shared_ptr<compatible_py::BlobRegister>& blob_register,
-                 const std::string& job_name,
-                 const std::shared_ptr<compatible_py::Distribute>& distribute);
+                   const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+                   const std::shared_ptr<compatible_py::BlobRegister>& blob_register,
+                   const std::string& job_name,
+                   const std::shared_ptr<compatible_py::Distribute>& distribute);
   ~ConsistentTensor() = default;
 };
 
