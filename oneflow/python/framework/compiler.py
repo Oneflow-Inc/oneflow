@@ -32,7 +32,6 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.typing as oft
 import oneflow.python.framework.typing_util as oft_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
 import typing

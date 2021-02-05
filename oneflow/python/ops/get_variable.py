@@ -30,7 +30,7 @@ import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.dtype as dtype_util
-import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
@@ -362,7 +362,7 @@ def CreateEagerVariableBlob(op_attribute, job_name=""):
             parallel_conf,
             bn_in_op2blob_object,
             boxing_util.BoxingTo,
-            vm_util._FindOrCreateDelegateBlobObject,
+            blob_cache_util.FindOrCreateDelegateBlobObject,
         )
 
     oneflow_api.deprecated.LogicalRun(BuildInstruction)

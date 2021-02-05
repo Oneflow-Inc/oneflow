@@ -18,7 +18,6 @@ from __future__ import absolute_import
 import oneflow.python.framework.compile_context as compile_ctx
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.eager.gradient_util as gradient_util

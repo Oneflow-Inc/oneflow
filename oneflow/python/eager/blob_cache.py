@@ -32,6 +32,13 @@ def TryDisableBlobCache(blob_object):
     del object_id2blob_cache[blob_object.object_id]
 
 
+def FindOrCreateDelegateBlobObject(builder, Fetch, x_blob_object, op_arg_parallel_attr):
+    if x_blob_object.op_arg_parallel_attr == op_arg_parallel_attr:
+        return x_blob_object
+    blob_cache = FindOrCreateBlobCache(x_blob_object)
+    return blob_cache.GetCachedDelegateBlobObject(op_arg_parallel_attr, Fetch)
+
+
 class BlobCache(object):
     def __init__(self, blob_object):
         self.blob_object_ = blob_object
