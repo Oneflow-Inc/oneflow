@@ -19,9 +19,7 @@ namespace oneflow {
 
 namespace one {
 
-TensorList run_backward(const TensorList& outputs, const TensorList& intputs,
-                        const TensorList& out_grads, bool retain_graph, bool create_graph);
-
+// TODO: export
 TensorList backward(const TensorList& outputs, const TensorList& out_grads,
                     bool retain_graph = false, bool create_graph = false);
 
