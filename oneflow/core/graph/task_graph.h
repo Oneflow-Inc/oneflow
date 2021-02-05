@@ -53,7 +53,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySubsetConnect);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySrcSubsetConnect);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByDstSubsetConnect);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D);
 
  private:
@@ -77,9 +78,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
   Maybe<void> ConnectSrcSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
                                         const std::vector<CompTaskNode*>& dst_task_nodes);
-  Maybe<void> ConnectDstSubsetCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
-                                        const std::vector<CompTaskNode*>& dst_task_nodes,
-                                        int64_t ctrl_regst_num);
+  Maybe<void> ConnectDstSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
+                                        const std::vector<CompTaskNode*>& dst_task_nodes);
   void ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
                         const std::vector<CompTaskNode*>& dst_task_nodes, int64_t ctrl_regst_num);
 

@@ -286,9 +286,9 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
         const auto& src_task_nodes = logical2sorted_comp_tasks.at(src);
         const auto& dst_task_nodes = logical2sorted_comp_tasks.at(dst);
         if (src->SoleOp()->op_conf().has_src_subset_tick_conf()) {
-          ConnectSrcSubsetTickEdges(src_task_nodes, dst_task_nodes);
+          UNIMPLEMENTED();
         } else if (dst->SoleOp()->op_conf().has_dst_subset_tick_conf()) {
-          CHECK_JUST(ConnectDstSubsetCtrlEdges(src_task_nodes, dst_task_nodes, ctrl_regst_num));
+          UNIMPLEMENTED();
         } else {
           ConnectCtrlEdges(src_task_nodes, dst_task_nodes, ctrl_regst_num);
         }
@@ -298,24 +298,15 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
-Maybe<void> TaskGraph::ConnectDstSubsetCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
-                                                 const std::vector<CompTaskNode*>& dst_task_nodes,
-                                                 int64_t ctrl_regst_num) {
+Maybe<void> TaskGraph::ConnectDstSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
+                                                 const std::vector<CompTaskNode*>& dst_task_nodes) {
   std::function<Maybe<CompTaskNode*>(int64_t mchn_id, int64_t thrd_id)> TaskNode4MachineId7ThrdId;
   JUST(MakeGetterTaskNode4MachineId7ThrdId(dst_task_nodes, &TaskNode4MachineId7ThrdId));
   for (CompTaskNode* src_task_node : src_task_nodes) {
     CompTaskNode* dst_task_node =
-        JUST(TaskNode4MachineId7ThrdId(src_task_node->machine_id(), src_task_node->thrd_id()));
-    std::string regst_desc_name;
-    RegstDesc* ctrl_regst_desc = src_task_node->BuildCtrlRegstDesc(dst_task_node, &regst_desc_name);
-    ctrl_regst_desc->UpdtMinRegstNumIfNeed(ctrl_regst_num);
-    ctrl_regst_desc->UpdtMaxRegstNumIfNeed(ctrl_regst_num);
-    ctrl_regst_desc->mut_regst_desc_type()->mutable_ctrl_regst_desc()->set_returned_regst_num(
-        ctrl_regst_num);
-
+        JUST(TaskNode4MachineId7ThrdId(src_task_node->machine_id(), dst_task_node->thrd_id()));
     TaskEdge* edge = NewEdge();
     Connect<TaskNode>(src_task_node, edge, dst_task_node);
-    src_task_node->BindEdgeWithProducedRegst(edge, regst_desc_name);
   }
   return Maybe<void>::Ok();
 }
@@ -675,8 +666,12 @@ Maybe<void> TaskGraph::ConnectSrcSubsetTickEdges(const std::vector<CompTaskNode*
   return Maybe<void>::Ok();
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySubsetConnect) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySrcSubsetConnect) {
   CHECK_JUST(ConnectSrcSubsetTickEdges(sorted_src_comp_tasks, sorted_dst_comp_tasks));
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByDstSubsetConnect) {
+  CHECK_JUST(ConnectDstSubsetTickEdges(sorted_src_comp_tasks, sorted_dst_comp_tasks));
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D) {

@@ -79,25 +79,59 @@ void BuildPartialTickOp(OperatorConf* partial_tick_op, const ParallelConf& paral
   job_builder->AddOps(parallel_conf, {*partial_tick_op});
 }
 
+Maybe<const OperatorConf&> FindSrcSubsetTickOpConf(const Job& job) {
+  const OperatorConf* src_subset_tick_op_conf = nullptr;
+  for (const auto& op_conf : job.net().op()) {
+    if (!op_conf.has_src_subset_tick_conf()) { continue; }
+    CHECK_ISNULL_OR_RETURN(src_subset_tick_op_conf);
+    src_subset_tick_op_conf = &op_conf;
+  }
+  CHECK_NOTNULL_OR_RETURN(src_subset_tick_op_conf);
+  return *src_subset_tick_op_conf;
+}
+
+Maybe<void> BuildDstSubsetTickOpAndParallelConf(const HashSet<LogicalBlobId>& tick_lbis,
+                                                OperatorConf* dst_subset_tick_op,
+                                                JobBuilder* job_builder) {
+  dst_subset_tick_op->set_name("System-AutoTick-DstSubsetTick_" + NewUniqueId());
+  auto* dst_subset_tick_op_conf = dst_subset_tick_op->mutable_dst_subset_tick_conf();
+  dst_subset_tick_op_conf->set_out("out");
+  for (const LogicalBlobId& tick_lbi : tick_lbis) {
+    dst_subset_tick_op_conf->add_in(GenLogicalBlobName(tick_lbi));
+  }
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag("cpu");
+  int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
+  for (int64_t id = 0; id < num_machines; ++id) {
+    parallel_conf.add_device_name(std::to_string(id) + ":0");
+  }
+  JUST(job_builder->AddOp(parallel_conf, *dst_subset_tick_op));
+  return Maybe<void>::Ok();
+}
+
 void BuildPartialTickOp7SinkTickOp(
     OperatorConf* sink_tick_op_conf,
     const std::function<const ParallelConf*(const std::string&)>& ParallelConf4OpName,
     const HashSet<LogicalBlobId>& tick_lbis, JobBuilder* job_builder) {
   BuildSinkTickOpAndParallelConf(sink_tick_op_conf, job_builder);
-  for (const LogicalBlobId& tick_lbi : tick_lbis) {
-    OperatorConf partial_tick_op_conf;
-    {
-      const ParallelConf& parallel_conf = *ParallelConf4OpName(tick_lbi.op_name());
-      ParallelDesc pd(parallel_conf);
-      pd.set_device_type(DeviceType::kCPU);
-      BuildPartialTickOp(&partial_tick_op_conf, pd.parallel_conf(), job_builder);
-      partial_tick_op_conf.mutable_partial_tick_conf()->set_tick(GenLogicalBlobName(tick_lbi));
-      job_builder->MutOpsOnlyOnce({partial_tick_op_conf});
-    }
-    sink_tick_op_conf->mutable_sink_tick_conf()->add_tick(
-        partial_tick_op_conf.name() + "/" + partial_tick_op_conf.partial_tick_conf().out());
+  OperatorConf dst_subset_tick;
+  {
+    const auto& src_subset_tick = CHECK_JUST(FindSrcSubsetTickOpConf(job_builder->job()));
+    dst_subset_tick.mutable_dst_subset_tick_conf()->add_in(
+        src_subset_tick.name() + "/" + src_subset_tick.src_subset_tick_conf().out());
+    CHECK_JUST(BuildDstSubsetTickOpAndParallelConf(tick_lbis, &dst_subset_tick, job_builder));
   }
-  job_builder->MutOpsOnlyOnce({*sink_tick_op_conf});
+  OperatorConf partial_tick_op_conf;
+  {
+    const ParallelConf& parallel_conf = job_builder->ParallelConf4OpName(dst_subset_tick.name());
+    BuildPartialTickOp(&partial_tick_op_conf, parallel_conf, job_builder);
+    partial_tick_op_conf.mutable_partial_tick_conf()->set_tick(
+        dst_subset_tick.name() + "/" + dst_subset_tick.dst_subset_tick_conf().out());
+    CHECK_JUST(job_builder->MutOpOnlyOnce(partial_tick_op_conf));
+  }
+  sink_tick_op_conf->mutable_sink_tick_conf()->add_tick(
+      partial_tick_op_conf.name() + "/" + partial_tick_op_conf.partial_tick_conf().out());
+  CHECK_JUST(job_builder->MutOpOnlyOnce(*sink_tick_op_conf));
 }
 
 Maybe<void> BuildSrcSubsetTickOpAndParallelConf(OperatorConf* src_subset_tick_op,

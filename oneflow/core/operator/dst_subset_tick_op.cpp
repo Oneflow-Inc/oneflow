@@ -39,7 +39,7 @@ class DstSubsetTickOp final : public Operator {
 
 void DstSubsetTickOp::InitFromOpConf() {
   CHECK(op_conf().has_dst_subset_tick_conf());
-  if (op_conf().dst_subset_tick_conf().has_in()) { EnrollInputBn("in", false); }
+  EnrollRepeatedInputBn("in", false);
   EnrollOutputBn("out", false);
 }
 

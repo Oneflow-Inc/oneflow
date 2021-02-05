@@ -195,9 +195,15 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
           node->SoleOp()->op_conf().op_type_case());
     };
     if (IsTickNode(src_node) || IsTickNode(dst_node)) {
-      if (src_pd->parallel_num() > 1 && dst_pd->parallel_num() == 1
-          && src_node->SoleOp()->op_conf().has_partial_tick_conf()) {
-        CHECK(dst_node->SoleOp()->op_conf().has_sink_tick_conf());
+      const auto& src_op_conf = src_node->SoleOp()->op_conf();
+      const auto& dst_op_conf = dst_node->SoleOp()->op_conf();
+      if (src_op_conf.has_src_subset_tick_conf()) {
+        return &TaskGraph::BldSubTskGphBySrcSubsetConnect;
+      } else if (dst_op_conf.has_dst_subset_tick_conf()) {
+        return &TaskGraph::BldSubTskGphByDstSubsetConnect;
+      } else if (src_pd->parallel_num() > 1 && dst_pd->parallel_num() == 1
+                 && src_op_conf.has_partial_tick_conf()) {
+        CHECK(dst_op_conf.has_sink_tick_conf());
         return &TaskGraph::BldSubTskGphByBoxing;
       } else {
         if (IsTickNode(src_node) && IsTickNode(dst_node)) {
@@ -237,10 +243,6 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("RecordLoad"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("*"
                               "DistributeConcat",
                               &TaskGraph::BldSubTskGphByPartialInLbiConnect);
-
-REGISTER_BLD_SUB_TSK_GPH_MTHD("SrcSubsetTick"
-                              "*",
-                              &TaskGraph::BldSubTskGphBySubsetConnect);
 
 REGISTER_BLD_SUB_TSK_GPH_MTHD("DistributeSplit"
                               "*",
