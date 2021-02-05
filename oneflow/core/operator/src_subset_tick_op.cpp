@@ -13,10 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/operator/src_subset_tick_op.h"
+
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
+
+class SrcSubsetTickOp final : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SrcSubsetTickOp);
+  SrcSubsetTickOp() = default;
+  ~SrcSubsetTickOp() = default;
+
+  void InitFromOpConf() override;
+  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const override;
+  LogicalNode* NewProperLogicalNode() const override;
+
+ private:
+  Maybe<void> InferBatchAxis(
+      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+};
 
 void SrcSubsetTickOp::InitFromOpConf() {
   CHECK(op_conf().has_src_subset_tick_conf());
@@ -43,7 +62,10 @@ Maybe<void> SrcSubsetTickOp::InferBatchAxis(
 }
 
 Maybe<void> SrcSubsetTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder().Split(output_bns(), 0).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder()
+      .Broadcast(input_bns())
+      .Broadcast(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 

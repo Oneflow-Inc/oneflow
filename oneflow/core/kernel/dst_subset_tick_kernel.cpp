@@ -13,9 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/dst_subset_tick_kernel.h"
+
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
+
+class DstSubsetTickKernel final : public KernelIf<DeviceType::kCPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DstSubsetTickKernel);
+  DstSubsetTickKernel() = default;
+  ~DstSubsetTickKernel() = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
+  const PbMessage& GetCustomizedOpConf() const override {
+    return this->op_conf().dst_subset_tick_conf();
+  }
+};
 
 REGISTER_KERNEL(OperatorConf::kDstSubsetTickConf, DstSubsetTickKernel);
 
