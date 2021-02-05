@@ -24,7 +24,6 @@ import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -159,7 +158,7 @@ def _MakeInputBlobObject(arg_blob_def):
             parallel_conf,
             bn_in_op2blob_object,
             boxing_util.BoxingTo,
-            vm_util._FindOrCreateDelegateBlobObject,
+            blob_cache_util.FindOrCreateDelegateBlobObject,
         )
 
     oneflow_api.deprecated.LogicalRun(BuildInputInstruction)

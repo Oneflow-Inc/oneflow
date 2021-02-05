@@ -16,7 +16,6 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.vm_util as vm_util
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 import oneflow.python.framework.blob_trait as blob_trait
 import oneflow.python.framework.python_callback as python_callback

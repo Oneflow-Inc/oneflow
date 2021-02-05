@@ -19,7 +19,7 @@ import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.operator.interface_blob_conf_pb2 as inter_face_blob_conf_util
-import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.symbol_storage as symbol_storage
@@ -78,7 +78,7 @@ def OpKernelCall(opkernel_object, op_attribute, blob_register):
                 opkernel_object,
                 bn_in_op2blob_object,
                 boxing_util.BoxingTo,
-                vm_util._FindOrCreateDelegateBlobObject,
+                blob_cache_util.FindOrCreateDelegateBlobObject,
             )
 
     oneflow_api.deprecated.LogicalRun(BuildInstruction)
@@ -218,7 +218,7 @@ def _NaiveInterpret(op_attribute, parallel_conf, blob_register):
                 parallel_conf,
                 bn_in_op2blob_object,
                 boxing_util.BoxingTo,
-                vm_util._FindOrCreateDelegateBlobObject,
+                blob_cache_util.FindOrCreateDelegateBlobObject,
             )
 
     oneflow_api.deprecated.LogicalRun(BuildInstruction)
@@ -299,7 +299,7 @@ def _EagerRunModelInit(var_op_conf):
             parallel_conf,
             bn_in_op2blob_object,
             boxing_util.BoxingTo,
-            vm_util._FindOrCreateDelegateBlobObject,
+            blob_cache_util.FindOrCreateDelegateBlobObject,
         )
 
     sess = session_ctx.GetDefaultSession()
@@ -323,7 +323,7 @@ def _MakeModelIOPathInputBuilds(op_conf, path, bn_in_op2blob_object):
             parallel_conf,
             bn_in_op2blob_object,
             boxing_util.BoxingTo,
-            vm_util._FindOrCreateDelegateBlobObject,
+            blob_cache_util.FindOrCreateDelegateBlobObject,
         )
 
     def FeedPath(ofblob):
@@ -375,7 +375,7 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
             parallel_conf,
             model_load_blob_objects,
             boxing_util.BoxingTo,
-            vm_util._FindOrCreateDelegateBlobObject,
+            blob_cache_util.FindOrCreateDelegateBlobObject,
         )
 
     sess = session_ctx.GetDefaultSession()
@@ -418,7 +418,7 @@ def _EagerRunModelSave(var_blobs, snapshot_path):
             parallel_conf,
             model_save_blob_objects,
             boxing_util.BoxingTo,
-            vm_util._FindOrCreateDelegateBlobObject,
+            blob_cache_util.FindOrCreateDelegateBlobObject,
         )
 
     sess = session_ctx.GetDefaultSession()

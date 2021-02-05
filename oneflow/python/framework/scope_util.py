@@ -16,7 +16,6 @@ limitations under the License.
 import traceback
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.attr_util as attr_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow_api.oneflow.core.job.job_conf as job_conf_cfg
 from contextlib import contextmanager
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
