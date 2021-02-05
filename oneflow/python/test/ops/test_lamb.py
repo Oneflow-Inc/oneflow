@@ -31,7 +31,15 @@ for gpu in gpus:
 
 
 def compare_with_tensorflow_addons_lamb(
-    test_case, device_type, x_shape, beta1, beta2, epsilon, weight_decay, learning_rate, train_iters
+    test_case,
+    device_type,
+    x_shape,
+    beta1,
+    beta2,
+    epsilon,
+    weight_decay,
+    learning_rate,
+    train_iters,
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -78,7 +86,11 @@ def compare_with_tensorflow_addons_lamb(
 
     var = tf.Variable(init_value)
     opt = tfa.optimizers.LAMB(
-        learning_rate=learning_rate, beta_1=beta1, beta_2=beta2, epsilon=epsilon, weight_decay_rate=weight_decay
+        learning_rate=learning_rate,
+        beta_1=beta1,
+        beta_2=beta2,
+        epsilon=epsilon,
+        weight_decay_rate=weight_decay,
     )
 
     var_list = []
@@ -92,7 +104,16 @@ def compare_with_tensorflow_addons_lamb(
         gradients = tape.gradient(loss, var)
         opt.apply_gradients(zip([gradients], [var]))
         var_list.append(var.numpy())
-    case = device_type, x_shape, beta1, beta2, epsilon, weight_decay, learning_rate, train_iters
+    case = (
+        device_type,
+        x_shape,
+        beta1,
+        beta2,
+        epsilon,
+        weight_decay,
+        learning_rate,
+        train_iters,
+    )
     test_case.assertTrue(len(x_list) == len(var_list))
     for (i, o, t) in zip(range(len(var_list)), x_list, var_list):
         diff = o - t
