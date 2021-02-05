@@ -34,7 +34,11 @@ class UserOp final : public Operator {
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext*, const SbpSignature* sbp_signature,
                                 std::function<void(OpContext*)> EnrollOpCtx) const override;
-
+  Maybe<void> InferInplaceObn2Ibn(HashMap<std::string, std::string>* mut_inplace_obn2ibn,
+                                  HashMap<std::string, std::string>* con_inplace_obn2ibn,
+                                  std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                  const ParallelContext* parallel_ctx,
+                                  const SbpSignature* sbp_signature) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 
  private:
