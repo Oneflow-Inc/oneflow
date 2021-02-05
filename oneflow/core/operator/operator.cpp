@@ -172,6 +172,31 @@ Maybe<void> Operator::InferOutBlobDescs(
   return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx);
 }
 
+Maybe<void> Operator::InferInplaceObn2IbnIf(
+    HashMap<std::string, std::string>* mut_inplace_obn2ibn,
+    HashMap<std::string, std::string>* con_inplace_obn2ibn,
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  return InferInplaceObn2Ibn(mut_inplace_obn2ibn, con_inplace_obn2ibn, GetBlobDesc4BnInOp,
+                             parallel_ctx, sbp_signature);
+}
+
+Maybe<void> Operator::InferInplaceObn2Ibn(
+    HashMap<std::string, std::string>* mut_inplace_obn2ibn,
+    HashMap<std::string, std::string>* con_inplace_obn2ibn,
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  for (const std::string& obn : output_bns()) {
+    const auto& obn_modifier = OutputBlobModifier4Obn(obn);
+    if (obn_modifier.has_mutable_inplace_ibn()) {
+      mut_inplace_obn2ibn->emplace(obn, obn_modifier.mutable_inplace_ibn());
+    } else if (obn_modifier.has_const_inplace_ibn()) {
+      con_inplace_obn2ibn->emplace(obn, obn_modifier.const_inplace_ibn());
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> Operator::FillLogicalBlobDescSignature(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& BlobDesc4BnInOp) {
   auto* map = op_attribute_.mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc();
