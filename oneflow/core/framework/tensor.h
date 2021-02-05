@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/framework/tensor_impl.h"
-#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
 namespace oneflow {
 
@@ -64,11 +63,12 @@ class Device {
 
 class Tensor {
  public:
+  virtual ~Tensor() = default;
   std::shared_ptr<Shape> shape() const { return impl_->shape(); }
   DataType dtype() const { return impl_->dtype(); }
   std::shared_ptr<Device> device() const { return impl_->device(); }
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const { return impl_->parallel_conf(); }
-  bool is_lazy() const { return !EagerExecutionEnabled(); }
+  bool is_lazy() const;
 
   std::shared_ptr<cfg::LogicalBlobId> lbi() const { return impl_->lbi(); }
   std::string logical_blob_name() const { return impl_->logical_blob_name(); }

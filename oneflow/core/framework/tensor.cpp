@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
 namespace oneflow {
 
@@ -33,6 +34,8 @@ void Tensor::CheckDataType<half>() const {
 }  // namespace user_op
 
 namespace one {
+
+bool Tensor::is_lazy() const { return !EagerExecutionEnabled(); }
 
 MirroredTensor::MirroredTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
                                const std::shared_ptr<Device>& device) {
