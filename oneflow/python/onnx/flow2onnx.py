@@ -85,7 +85,7 @@ def FlowToOnnxNaive(graph, shape_override):
             ibns = handler.flow_op.ibn4op_type(get_op_type(node))
             if ibns is None:
                 assert (
-                    len(node.user_conf.input) == 1
+                    len(node.user_conf.input) <= 1
                 ), "Please set flow_ibns if input size > 1"
                 return list(
                     itertools.chain(*[x.s for x in node.user_conf.input.values()])
