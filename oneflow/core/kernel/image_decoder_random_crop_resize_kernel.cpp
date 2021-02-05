@@ -1,9 +1,12 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -262,24 +265,16 @@ void GpuDecodeHandle::Decode(const unsigned char* data, size_t length, unsigned 
 void GpuDecodeHandle::Resize(const unsigned char* src, int src_width, int src_height,
                              unsigned char* dst, int dst_width, int dst_height) {
   const NppiSize src_size{
-      .width = src_width,
-      .height = src_height,
+      .width = src_width, .height = src_height,
   };
   const NppiRect src_rect{
-      .x = 0,
-      .y = 0,
-      .width = src_width,
-      .height = src_height,
+      .x = 0, .y = 0, .width = src_width, .height = src_height,
   };
   const NppiSize dst_size{
-      .width = dst_width,
-      .height = dst_height,
+      .width = dst_width, .height = dst_height,
   };
   const NppiRect dst_rect{
-      .x = 0,
-      .y = 0,
-      .width = dst_width,
-      .height = dst_height,
+      .x = 0, .y = 0, .width = dst_width, .height = dst_height,
   };
   NppStatus status =
       nppiResize_8u_C3R_Ctx(src, src_width * kNumChannels, src_size, src_rect, dst, dst_width * 3,
@@ -397,12 +392,10 @@ void ImageDecoderRandomCropResizeKernel<device_type>::VirtualKernelInit() {
   std::vector<int> seeds(batch_size);
   seq.generate(seeds.begin(), seeds.end());
   AspectRatioRange aspect_ratio_range{
-      conf.random_aspect_ratio_min(),
-      conf.random_aspect_ratio_max(),
+      conf.random_aspect_ratio_min(), conf.random_aspect_ratio_max(),
   };
   AreaRange area_range{
-      conf.random_area_min(),
-      conf.random_area_max(),
+      conf.random_area_min(), conf.random_area_max(),
   };
   for (int64_t i = 0; i < batch_size; ++i) {
     random_crop_generators_.at(i).reset(
