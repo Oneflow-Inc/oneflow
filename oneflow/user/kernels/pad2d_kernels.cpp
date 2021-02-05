@@ -34,17 +34,6 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-// Fill ShapeView into dim vector
-DimVector ShapeViewToDimVector(const ShapeView &tensor_shape) {
-  int64_t ndims = tensor_shape.NumAxes();
-  DimVector shape_vec(ndims);
-  for (int64_t i = 0; i < ndims; ++i) {
-    shape_vec[i] = tensor_shape.At(i);
-  }
-  shape_vec[ndims - 1] = shape_vec[ndims - 1];
-  return shape_vec;
-}
-
 template <DeviceType device_type, typename IN_T>
 class ReflectionPad2dKernel final : public OpKernel {
 public:
@@ -75,7 +64,8 @@ private:
 
     IN_T *dest = y->mut_dptr<IN_T>();
     const IN_T *src = x->dptr<IN_T>();
-    DimVector y_vector = ShapeViewToDimVector(y->shape());
+    DimVector y_vector;
+    y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
     ReflectionPad2dFunctor<device_type, IN_T>()(
@@ -115,7 +105,8 @@ private:
 
     const IN_T *src = dy->dptr<IN_T>();
     IN_T *dest = dx->mut_dptr<IN_T>();
-    DimVector dy_vector = ShapeViewToDimVector(dy->shape());
+    DimVector dy_vector;
+    dy->shape().ToDimVector(&dy_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
     size_t out_bytes_size =
