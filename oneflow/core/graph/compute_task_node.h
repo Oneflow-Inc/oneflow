@@ -29,13 +29,18 @@ class CompTaskNode : public TaskNode {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
-  virtual CudaWorkType GetCudaWorkType() const {
-#ifdef WITH_CUDA
-    return CudaWorkType::kCompute;
-#else
-    UNIMPLEMENTED();
-#endif
+  virtual int64_t thread_id_by_device_type_and_id(const DeviceType dev_type,
+                                                  const int64_t dev_phy_id) {
+    if (dev_type == DeviceType::kGPU) {
+      const IDMgr* id_mgr = Global<IDMgr>::Get();
+      return id_mgr->GetGpuComputeThrdId(dev_phy_id);
+//  } else if (hanwuji)
+//    return xxxxx;
+    } else {
+      UNIMPLEMENTED();
+    }
   }
+
   virtual void ToProto(TaskProto*) override;
 
   // parallel_ctx_
