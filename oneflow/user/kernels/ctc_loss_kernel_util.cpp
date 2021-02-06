@@ -141,19 +141,18 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossBackward(
       for (IDX s = 0; s < 2 * target_length + 1; s++) { beta_ptr[beta_idx + s] = neginf; }
       beta_ptr[beta_idx + 2 * target_length] =
           log_probs_ptr[input_helper.NdIndexToOffset(input_length - 1, b, blank)];
-
-      int64_t alpha_beta_last_idx =
-          beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length);
       grad_ptr[input_helper.NdIndexToOffset(input_length - 1, b, blank)] =
-          alpha_ptr[alpha_beta_last_idx] + beta_ptr[alpha_beta_last_idx];
+          alpha_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length)]
+          + beta_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length)];
 
       if (target_length > 0) {
         int target =
             get_target_prime(targets_ptr, max_target_length, b, 2 * target_length - 1, blank);
-        beta_ptr[alpha_beta_last_idx - 1] =
+        beta_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length - 1)] =
             log_probs_ptr[input_helper.NdIndexToOffset(input_length - 1, b, target)];
         grad_ptr[input_helper.NdIndexToOffset(input_length - 1, b, target)] =
-            alpha_ptr[alpha_beta_last_idx - 1] + beta_ptr[alpha_beta_last_idx - 1];
+            alpha_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length - 1)]
+            + beta_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length - 1)];
       }
     }
 
@@ -196,12 +195,11 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossBackward(
       }
     }
 
-    T gr = grad_out_ptr[b];
     for (int32_t t = 0; t < input_length; t++) {
       for (int64_t c = 0; c < num_labels; c++) {
         T& res = grad_ptr[input_helper.NdIndexToOffset(t, b, c)];
         T lp = log_probs_ptr[input_helper.NdIndexToOffset(t, b, c)];
-        res = (std::exp(lp) - std::exp(res + nll - lp)) * gr;
+        res = (std::exp(lp) - std::exp(res + nll - lp)) * grad_out_ptr[b];
       }
     }
 
