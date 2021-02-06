@@ -47,9 +47,6 @@ class CtcLossKernel final : public user_op::OpKernel {
     CHECK_EQ(batch_size, target_lengths->shape().At(0));
     CHECK_GE(blank, 0);
     CHECK_LT(blank, num_labels);
-    // TODO
-    // FOR_RANGE(int64_t, b, 0, batch_size) { CHECK_GE(max_input_length, input_lengths_ptr[b]); }
-    // FOR_RANGE(int64_t, b, 0, batch_size) { CHECK_GE(max_target_length, target_lengths_ptr[b]); }
     NdIndexOffsetHelper<int64_t, 3> input_helper(max_input_length, batch_size, num_labels);
     NdIndexOffsetHelper<int64_t, 3> alpha_helper(batch_size, max_input_length,
                                                  2 * max_target_length + 1);
@@ -57,7 +54,8 @@ class CtcLossKernel final : public user_op::OpKernel {
     T* alpha_ptr = alpha->mut_dptr<T>();
     CtcLossKernelUtil<device_type, T, IDX>::CtcLossForward(
         ctx->device_ctx(), log_probs_ptr, targets_ptr, input_lengths_ptr, target_lengths_ptr,
-        alpha_ptr, loss_ptr, input_helper, alpha_helper, batch_size, max_target_length, blank);
+        alpha_ptr, loss_ptr, input_helper, alpha_helper, batch_size, max_input_length,
+        max_target_length, blank);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -109,9 +107,6 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     CHECK_LT(blank, num_labels);
     const int64_t max_input_length = log_probs->shape().At(0);
     const int64_t max_target_length = targets->shape().At(1);
-    // TODO
-    // FOR_RANGE(int64_t, b, 0, batch_size) { CHECK_GE(max_input_length, input_lengths_ptr[b]); }
-    // FOR_RANGE(int64_t, b, 0, batch_size) { CHECK_GE(max_target_length, target_lengths_ptr[b]); }
     NdIndexOffsetHelper<int64_t, 3> input_helper(max_input_length, batch_size, num_labels);
     NdIndexOffsetHelper<int64_t, 3> beta_helper(batch_size, max_input_length,
                                                 2 * max_target_length + 1);

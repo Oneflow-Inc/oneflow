@@ -34,8 +34,8 @@ struct CtcLossKernelUtil<DeviceType::kCPU, T, IDX> final {
                              T* alpha_ptr, T* loss_ptr,
                              NdIndexOffsetHelper<int64_t, 3>& input_helper,
                              NdIndexOffsetHelper<int64_t, 3>& alpha_helper,
-                             const int64_t batch_size, const int64_t max_target_length,
-                             const int blank);
+                             const int64_t batch_size, const int64_t max_input_length,
+                             const int64_t max_target_length, const int blank);
 
   static void CtcLossBackward(DeviceCtx* ctx, const T* grad_out_ptr, const T* loss_ptr,
                               const T* alpha_ptr, const T* log_probs_ptr, const int* targets_ptr,
@@ -53,8 +53,13 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossForward(
     DeviceCtx* ctx, const T* log_probs_ptr, const int* targets_ptr, const IDX* input_lengths_ptr,
     const IDX* target_lengths_ptr, T* alpha_ptr, T* loss_ptr,
     NdIndexOffsetHelper<int64_t, 3>& input_helper, NdIndexOffsetHelper<int64_t, 3>& alpha_helper,
-    const int64_t batch_size, const int64_t max_target_length, const int blank) {
+    const int64_t batch_size, const int64_t max_input_length, const int64_t max_target_length,
+    const int blank) {
   constexpr T neginf = -std::numeric_limits<T>::infinity();
+  FOR_RANGE(int64_t, b, 0, batch_size) {
+    CHECK_GE(max_input_length, input_lengths_ptr[b]);
+    CHECK_GE(max_target_length, target_lengths_ptr[b]);
+  }
   FOR_RANGE(int32_t, b, 0, batch_size) {
     IDX input_length = input_lengths_ptr[b];
     IDX target_length = target_lengths_ptr[b];

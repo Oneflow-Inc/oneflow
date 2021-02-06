@@ -34,11 +34,16 @@ __global__ void CtcLossGpu(const T* log_probs_ptr, const int* targets_ptr,
                            const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
                            T* alpha_ptr, T* loss_ptr, NdIndexOffsetHelper<int64_t, 3> input_helper,
                            NdIndexOffsetHelper<int64_t, 3> alpha_helper, const int64_t batch_size,
-                           const int64_t max_target_length, const int blank) {
+                           const int64_t max_input_length, const int64_t max_target_length,
+                           const int blank) {
   constexpr T neginf = -INFINITY;
   const int32_t bid = blockIdx.x;
   const int32_t tid = threadIdx.x;
-
+  for (int64_t b = bid; b < batch_size; b += gridDim.x) {
+    if (input_lengths_ptr[b] > max_input_length) __trap();
+    if (target_lengths_ptr[b] > max_target_length) __trap();
+  }
+  __syncthreads();
   for (int64_t b = bid; b < batch_size; b += gridDim.x) {
     IDX input_length = input_lengths_ptr[b];
     IDX target_length = target_lengths_ptr[b];
@@ -226,12 +231,12 @@ struct CtcLossKernelUtil<DeviceType::kGPU, T, IDX> {
                              T* alpha_ptr, T* loss_ptr,
                              NdIndexOffsetHelper<int64_t, 3>& input_helper,
                              NdIndexOffsetHelper<int64_t, 3>& alpha_helper,
-                             const int64_t batch_size, const int64_t max_target_length,
-                             const int blank) {
+                             const int64_t batch_size, const int64_t max_input_length,
+                             const int64_t max_target_length, const int blank) {
     int32_t thread_num = batch_size * kCudaThreadsNumPerBlock;
     RUN_CUDA_KERNEL((CtcLossGpu<T, IDX>), ctx, thread_num, log_probs_ptr, targets_ptr,
                     input_lengths_ptr, target_lengths_ptr, alpha_ptr, loss_ptr, input_helper,
-                    alpha_helper, batch_size, max_target_length, blank);
+                    alpha_helper, batch_size, max_input_length, max_target_length, blank);
   }
 
   static void CtcLossBackward(DeviceCtx* ctx, const T* grad_out_ptr, const T* loss_ptr,
