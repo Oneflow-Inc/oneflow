@@ -69,7 +69,7 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_FLOAT16, FLOAT16_DATA_TYPE_SEQ);
 
 // Type Trait: GetDataType
 
-template<typename T, typename T2=void>
+template<typename T, typename T2 = void>
 struct GetDataType;
 
 template<>
@@ -83,7 +83,8 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ FLOAT16_DATA_TY
 #undef SPECIALIZE_GET_DATA_TYPE
 
 template<typename T>
-struct GetDataType<T, typename std::enable_if<IsFloat16<T>::value>::type> : std::integral_constant<DataType, DataType::kFloat16> {};
+struct GetDataType<T, typename std::enable_if<IsFloat16<T>::value>::type>
+    : std::integral_constant<DataType, DataType::kFloat16> {};
 
 template<DataType type>
 using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataType, type>{}));
@@ -94,7 +95,7 @@ using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataTyp
 #define OF_DEVICE_FUNC inline
 #endif
 
-template<typename T, typename T2=void>
+template<typename T /*, typename T2=void*/>
 OF_DEVICE_FUNC T GetZeroVal() {
   return static_cast<T>(0);
 }
@@ -172,11 +173,11 @@ const T* GetOnePtr() {
   return &ret;
 }
 
-template<typename T, typename std::enable_if<IsFloat16<T>::value>::type* dummy = 0>
-OF_DEVICE_FUNC T GetZeroVal() {
-  uint16_t ret = 0x0;  // Decimal: 0; Binary: 0 00000 0000000000
-  return *(T*)&ret;
-}
+// template<typename T, typename std::enable_if<IsFloat16<T>::value>::type* dummy = 0>
+// OF_DEVICE_FUNC T GetZeroVal() {
+//   uint16_t ret = 0x0;  // Decimal: 0; Binary: 0 00000 0000000000
+//   return *(T*)&ret;
+// }
 
 #if defined(WITH_CUDA)
 template<>

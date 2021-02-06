@@ -17,7 +17,5 @@ limitations under the License.
 #include "oneflow/core/framework/device_registry_manager.h"
 
 namespace oneflow {
-REGISTER_DEVICE(DeviceType::kCPU)
-    .SetDumpVersionInfoFn([]() -> void {})
-    .SetDeviceTag("cpu");
+REGISTER_DEVICE(DeviceType::kCPU).SetDumpVersionInfoFn([]() -> void {}).SetDeviceTag("cpu");
 }
