@@ -2133,6 +2133,7 @@ def api_coco_reader(
     random_seed: Optional[int] = None,
     group_by_aspect_ratio: bool = True,
     stride_partition: bool = True,
+    remove_images_without_annotations: bool = True,
     name: str = None,
 ) -> oneflow_api.BlobDesc:
     assert name is not None
@@ -2145,6 +2146,7 @@ def api_coco_reader(
             shuffle=shuffle,
             random_seed=random_seed,
             group_by_aspect_ratio=group_by_aspect_ratio,
+            remove_images_without_annotations=remove_images_without_annotations,
             stride_partition=stride_partition,
             name=name,
         ),

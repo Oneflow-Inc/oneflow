@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/boxing/boxing_logger.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
 
@@ -22,20 +23,6 @@ namespace {
 #define OF_BOXING_LOGGER_CSV_COLNUM_NAME_FIELD                   \
   "src_op_name,dst_op_name,src_parallel_conf,dst_parallel_conf," \
   "src_sbp_conf,dst_sbp_conf,lbi,dtype,shape,builder,comment\n"
-
-std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
-  std::string serialized_sbp_parallel;
-  if (sbp_parallel.has_broadcast_parallel()) {
-    serialized_sbp_parallel = "B";
-  } else if (sbp_parallel.has_partial_sum_parallel()) {
-    serialized_sbp_parallel = "P";
-  } else if (sbp_parallel.has_split_parallel()) {
-    serialized_sbp_parallel = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
-  } else {
-    UNIMPLEMENTED();
-  }
-  return serialized_sbp_parallel;
-}
 
 std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   std::string serialized_parallel_desc;
@@ -71,17 +58,23 @@ std::string ShapeToString(const Shape& shape) {
   return shape_ss.str();
 }
 
-std::string SubTskGphBuilderStatusToCsvLine(const SubTskGphBuilderStatus& status) {
+std::string MakeBoxingLoggerCsvRow(const SubTskGphBuilderStatus& status,
+                                   const std::string& src_op_name, const std::string& dst_op_name,
+                                   const ParallelDesc& src_parallel_desc,
+                                   const ParallelDesc& dst_parallel_desc,
+                                   const SbpParallel& src_sbp_parallel,
+                                   const SbpParallel& dst_sbp_parallel, const LogicalBlobId& lbi,
+                                   const BlobDesc& logical_blob_desc) {
   std::string serialized_status;
-  serialized_status += status.src_op_name() + ",";
-  serialized_status += status.dst_op_name() + ",";
-  serialized_status += ParallelDescToString(status.src_parallel_desc()) + ",";
-  serialized_status += ParallelDescToString(status.dst_parallel_desc()) + ",";
-  serialized_status += SbpParallelToString(status.src_sbp_parallel()) + ",";
-  serialized_status += SbpParallelToString(status.dst_sbp_parallel()) + ",";
-  serialized_status += GenLogicalBlobName(status.lbi()) + ",";
-  serialized_status += DataType_Name(status.logical_blob_desc().data_type()) + ",";
-  serialized_status += ShapeToString(status.logical_blob_desc().shape()) + ",";
+  serialized_status += src_op_name + ",";
+  serialized_status += dst_op_name + ",";
+  serialized_status += ParallelDescToString(src_parallel_desc) + ",";
+  serialized_status += ParallelDescToString(dst_parallel_desc) + ",";
+  serialized_status += SbpParallelToString(src_sbp_parallel) + ",";
+  serialized_status += SbpParallelToString(dst_sbp_parallel) + ",";
+  serialized_status += GenLogicalBlobName(lbi) + ",";
+  serialized_status += DataType_Name(logical_blob_desc.data_type()) + ",";
+  serialized_status += ShapeToString(logical_blob_desc.shape()) + ",";
   serialized_status += status.builder_name() + ",";
   if (status.comment().empty()) {
     serialized_status += "-";
@@ -101,8 +94,14 @@ CsvBoxingLogger::CsvBoxingLogger(std::string path) {
 
 CsvBoxingLogger::~CsvBoxingLogger() { log_stream_->Flush(); }
 
-void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status) {
-  log_stream_ << SubTskGphBuilderStatusToCsvLine(status);
+void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status, const std::string& src_op_name,
+                          const std::string& dst_op_name, const ParallelDesc& src_parallel_desc,
+                          const ParallelDesc& dst_parallel_desc,
+                          const SbpParallel& src_sbp_parallel, const SbpParallel& dst_sbp_parallel,
+                          const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc) {
+  log_stream_ << MakeBoxingLoggerCsvRow(status, src_op_name, dst_op_name, src_parallel_desc,
+                                        dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi,
+                                        logical_blob_desc);
 }
 
 }  // namespace oneflow

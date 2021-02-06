@@ -22,6 +22,8 @@ limitations under the License.
 
 namespace oneflow {
 
+class StringSymbol;
+
 class ParallelDesc;
 class ParallelConf;
 
@@ -47,6 +49,11 @@ struct ConstructArgType4Symbol<OpNodeSignatureDesc> final {
 };
 
 template<>
+struct ConstructArgType4Symbol<StringSymbol> final {
+  using type = std::string;
+};
+
+template<>
 struct ConstructArgType4Symbol<ParallelDesc> final {
   using type = ParallelConf;
 };
@@ -67,6 +74,10 @@ template<typename T>
 Maybe<T> NewSymbol(int64_t symbol_id, const typename ConstructArgType4Symbol<T>::type& data) {
   return std::make_shared<T>(data);
 }
+
+template<>
+Maybe<StringSymbol> NewSymbol<StringSymbol>(
+    int64_t symbol_id, const typename ConstructArgType4Symbol<StringSymbol>::type& data);
 
 template<>
 Maybe<ParallelDesc> NewSymbol<ParallelDesc>(

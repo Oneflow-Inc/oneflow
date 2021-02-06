@@ -18,7 +18,6 @@ from __future__ import absolute_import
 import uuid
 from typing import Callable, Optional, Union
 
-import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_ctx

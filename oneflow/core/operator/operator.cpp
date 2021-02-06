@@ -172,6 +172,31 @@ Maybe<void> Operator::InferOutBlobDescs(
   return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx);
 }
 
+Maybe<void> Operator::InferInplaceObn2IbnIf(
+    HashMap<std::string, std::string>* mut_inplace_obn2ibn,
+    HashMap<std::string, std::string>* con_inplace_obn2ibn,
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  return InferInplaceObn2Ibn(mut_inplace_obn2ibn, con_inplace_obn2ibn, GetBlobDesc4BnInOp,
+                             parallel_ctx, sbp_signature);
+}
+
+Maybe<void> Operator::InferInplaceObn2Ibn(
+    HashMap<std::string, std::string>* mut_inplace_obn2ibn,
+    HashMap<std::string, std::string>* con_inplace_obn2ibn,
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  for (const std::string& obn : output_bns()) {
+    const auto& obn_modifier = OutputBlobModifier4Obn(obn);
+    if (obn_modifier.has_mutable_inplace_ibn()) {
+      mut_inplace_obn2ibn->emplace(obn, obn_modifier.mutable_inplace_ibn());
+    } else if (obn_modifier.has_const_inplace_ibn()) {
+      con_inplace_obn2ibn->emplace(obn, obn_modifier.const_inplace_ibn());
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> Operator::FillLogicalBlobDescSignature(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& BlobDesc4BnInOp) {
   auto* map = op_attribute_.mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc();
@@ -236,7 +261,6 @@ Maybe<void> Operator::GetSbpSignaturesIf(
 void Operator::ForEachBnInOp(std::function<void(const std::string&)> Handler) const {
   for (const std::string& bn_in_op : input_bns()) { Handler(bn_in_op); }
   for (const std::string& bn_in_op : output_bns()) { Handler(bn_in_op); }
-  for (const std::string& bn_in_op : const_buf_bns()) { Handler(bn_in_op); }
   for (const std::string& bn_in_op : tmp_bns()) { Handler(bn_in_op); }
 }
 
@@ -476,12 +500,6 @@ LogicalBlobId Operator::tbn2lbi(const std::string& tmp_bn) const {
   ret.set_blob_name(tmp_bn);
   return ret;
 }
-LogicalBlobId Operator::cbbn2lbi(const std::string& const_buf_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(const_buf_bn);
-  return ret;
-}
 
 void Operator::EnrollTmpBn(const std::string& tbn) {
   *(mut_tmp_bns()->Add()) = tbn;
@@ -592,11 +610,6 @@ void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num
 
 void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix) {
   EnrollRepeatedOutputBn(obn_prefix, true);
-}
-
-void Operator::EnrollConstBufBn(const std::string& cbbn) {
-  *(mut_const_buf_bns()->Add()) = cbbn;
-  CHECK(mut_bn_in_op2lbi()->insert({cbbn, cbbn2lbi(cbbn)}).second);
 }
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx) {

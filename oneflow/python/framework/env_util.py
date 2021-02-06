@@ -62,7 +62,10 @@ def env_init():
     assert len(default_env_proto.machine) > 0
     CompleteEnvProto(default_env_proto)
     c_api_util.InitEnv(default_env_proto)
-    scope_util.InitScopeStack()
+    if oneflow_api.CurrentMachineId() == 0:
+        scope_util.InitScopeStack()
+    else:
+        exit(0)
     return True
 
 

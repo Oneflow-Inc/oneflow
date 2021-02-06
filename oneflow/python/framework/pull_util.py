@@ -243,7 +243,7 @@ class EagerFutureRemoteBlobs(FutureRemoteBlobs):
             )
         elif isinstance(remote_blobs, dict):
             return {k: self._MakeRemoteBlobGetters(v) for k, v in remote_blobs.items()}
-        elif isinstance(remote_blobs, remote_blob_util.EagerBlobTrait):
+        elif isinstance(remote_blobs, oneflow_api.EagerBlobTrait):
             return _EagerBlobGetter(remote_blobs)
         else:
             raise NotImplementedError
@@ -253,7 +253,6 @@ class EagerFutureRemoteBlobs(FutureRemoteBlobs):
         if isinstance(getter, _EagerBlobGetter):
             return getter.result
         elif isinstance(getter, (list, tuple)):
-            print
             return type(getter)(self._GetResultLocalBlob(g) for g in getter)
         elif isinstance(getter, dict):
             return {k: self._GetResultLocalBlob(v) for k, v in getter.items()}
@@ -263,7 +262,7 @@ class EagerFutureRemoteBlobs(FutureRemoteBlobs):
 
 class _EagerBlobGetter(object):
     def __init__(self, eager_blob):
-        assert isinstance(eager_blob, remote_blob_util.EagerBlobTrait)
+        assert isinstance(eager_blob, oneflow_api.EagerBlobTrait)
         self.eager_blob_ = eager_blob
         self.local_tensor_ = None
 
