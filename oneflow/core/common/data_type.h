@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 
 #include <half.hpp>
+#include <type_traits>
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
 #endif
@@ -95,9 +96,20 @@ using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataTyp
 #define OF_DEVICE_FUNC inline
 #endif
 
-template<typename T /*, typename T2=void*/>
-OF_DEVICE_FUNC T GetZeroVal() {
+template<typename T>
+OF_DEVICE_FUNC T _GetZeroValImpl(std::false_type) {
   return static_cast<T>(0);
+}
+
+template<typename T>
+OF_DEVICE_FUNC T _GetZeroValImpl(std::true_type) {
+  uint16_t ret = 0x0;  // Decimal: 0; Binary: 0 00000 0000000000
+  return *(T*)&ret;
+}
+
+template<typename T>
+OF_DEVICE_FUNC T GetZeroVal() {
+  return _GetZeroValImpl<T>(typename IsFloat16<T>::type());
 }
 
 template<typename T>
@@ -173,19 +185,7 @@ const T* GetOnePtr() {
   return &ret;
 }
 
-// template<typename T, typename std::enable_if<IsFloat16<T>::value>::type* dummy = 0>
-// OF_DEVICE_FUNC T GetZeroVal() {
-//   uint16_t ret = 0x0;  // Decimal: 0; Binary: 0 00000 0000000000
-//   return *(T*)&ret;
-// }
-
 #if defined(WITH_CUDA)
-template<>
-OF_DEVICE_FUNC half GetZeroVal<half>() {
-  uint16_t ret = 0x0;  // Decimal: 0; Binary: 0 00000 0000000000
-  return *(half*)&ret;
-}
-
 template<>
 OF_DEVICE_FUNC half GetOneVal<half>() {
   uint16_t ret = 0x3c00;  // Decimal: 15360; Binary: 0 01111 0000000000
