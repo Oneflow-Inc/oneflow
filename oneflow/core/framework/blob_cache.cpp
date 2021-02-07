@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/blob_cache.h"
+#include "oneflow/core/framework/python_interpreter_util.h"
 
 namespace oneflow {
 
@@ -28,7 +29,9 @@ Maybe<HashMap<int64_t, std::shared_ptr<BlobCache>>*> GlobalObjectId2BlobCache() 
 
 }  // namespace
 
-BlobCache::~BlobCache() { delegate_blob_object_.clear(); }
+BlobCache::~BlobCache() {
+  if (!(CHECK_JUST(IsShuttingDown()))) { delegate_blob_object_.clear(); }
+}
 
 std::shared_ptr<EagerPhysicalBlobHeader> BlobCache::GetHeaderCache(
     std::function<std::shared_ptr<EagerPhysicalBlobHeader>(const std::shared_ptr<BlobObject>&)>&
