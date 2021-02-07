@@ -94,22 +94,23 @@ void TraverseConnectedSubGraph(const OpNode* this_node) {
 }
 */
 
-void FindMaxConnectedSubgraphForGpuExecOrder(HasSet<const OpNode*>* ret, const OpGraph& op_graph,
-    const std::vector<const OpNode*>& order) {
-  HasSet<const OpNode*> visited; 
+void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const OpGraph& op_graph,
+                                             const std::vector<const OpNode*>& order) {
+  HashSet<const OpNode*> visited;
 
-  for(const OpNode* seed_node : order) {
-    if(visited.find(seed_node) != visited.end()) { continue; }
+  for (const OpNode* seed_node : order) {
+    if (visited.find(seed_node) != visited.end()) { continue; }
     CHECK(visited.insert(seed_node).second);
     const ParallelDesc& seed_parallel_desc = seed_node->parallel_desc();
     // NOTE(chengcheng): ONLY consider GPU op.
-    if(seed_parallel_desc.device_type() != DeviceType::kGPU) { continue; }
+    if (seed_parallel_desc.device_type() != DeviceType::kGPU) { continue; }
     // NODE(chengcheng): Exclude op that change the time shape.
-    if(!seed_node->IsTimeShapeIdentity()) { continue; }
+    if (!seed_node->IsTimeShapeIdentity()) { continue; }
 
     HashSet<const OpNode*> this_subgraph;
-    std::queue<const OpNode*> queued_nodes{seed_node};
-    while(!queued_nodes.empty()) {
+    std::queue<const OpNode*> queued_nodes;
+    queued_nodes.push(seed_node);
+    while (!queued_nodes.empty()) {
       const OpNode* cur_node = queued_nodes.front();
       queued_nodes.pop();
 
@@ -117,44 +118,36 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HasSet<const OpNode*>* ret, const O
       CHECK(this_subgraph.insert(cur_node).second);
 
       cur_node->ForEachNodeOnInOutEdge([&](const OpNode* next_node) {
-        if (visited.find(next_node) == visited.end() && next_node->parallel_desc() == seed_parallel_desc
-          && next_node->IsTimeShapeIdentity()) {
+        if (visited.find(next_node) == visited.end()
+            && next_node->parallel_desc() == seed_parallel_desc
+            && next_node->IsTimeShapeIdentity()) {
           CHECK(visited.insert(next_node).second);
           queued_nodes.push(next_node);
         }
-          });
+      });
     }
 
-    if(this_subgraph.size() > ret->size()) {
-      ret->swap(this_subgraph);
-    }
+    if (this_subgraph.size() > ret->size()) { ret->swap(this_subgraph); }
   }
 }
 
 Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   std::vector<const OpNode*> ordered_op_nodes;
-  op_graph.TopoForEachNode([&](const OpNode* node) { 
-      ordered_op_nodes.push_back(node); 
-      });
+  op_graph.TopoForEachNode([&](const OpNode* node) { ordered_op_nodes.push_back(node); });
 
   HashSet<const OpNode*> subgraph;
   FindMaxConnectedSubgraphForGpuExecOrder(&subgraph, op_graph, ordered_op_nodes);
-  if(subgraph.size() <= 1) {
-    return Maybe<void>::Ok();
-  }
+  if (subgraph.size() <= 1) { return Maybe<void>::Ok(); }
 
   // LOG
   //
-  for(const OpNode* node : subgraph) {
-    std::cout << "cclog: " << node->op()->op_name() << std::endl;
+  for (const OpNode* node : subgraph) {
+    std::cout << "cclog: " << node->op().op_name() << std::endl;
   }
 
   TODO();
 
-  for (const OpNode* this_node : ordered_op_nodes) {
-
-    
-  }
+  for (const OpNode* this_node : ordered_op_nodes) {}
 
   return Maybe<void>::Ok();
 }
