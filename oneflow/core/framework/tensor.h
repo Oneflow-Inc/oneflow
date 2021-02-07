@@ -92,6 +92,15 @@ class Tensor {
   bool is_dynamic() const { return impl_->is_dynamic(); }
   bool is_tensor_list() const { return impl_->is_tensor_list(); }
 
+  std::shared_ptr<Blob> storage() const { return impl_->storage(); }
+  bool has_storage() const { return impl_->has_storage(); }
+
+  template<typename T = void>
+  const T* data() const { return impl_->data<T>(); }
+
+  template<typename T = void>
+  T* mutable_data() { return impl_->mutable_data<T>(); }
+
  protected:
   std::shared_ptr<TensorImpl> impl_;
 };
