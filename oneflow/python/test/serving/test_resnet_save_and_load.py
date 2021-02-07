@@ -130,7 +130,11 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
         input_names = sess.list_inputs()
         print("input names:", input_names)
         for input_name in input_names:
-            print('input "{}" info: {}'.format(input_name, sess.input_info(input_name, job_name)))
+            print(
+                'input "{}" info: {}'.format(
+                    input_name, sess.input_info(input_name, job_name)
+                )
+            )
 
         print("load saved resnet and inference result:")
         cmp_outputs = []
