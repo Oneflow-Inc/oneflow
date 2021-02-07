@@ -64,7 +64,7 @@ Maybe<void> ShapeElemCntOp::InferBlobDescs(
 
 void ShapeElemCntOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   int32_t num_axes = GetBlobDesc4BnInOp("x")->shape().NumAxes();
   const HashSet<int32_t>& inclusive_axis =
       GetInclusiveAxes(op_conf().shape_elem_cnt_conf(), num_axes);
