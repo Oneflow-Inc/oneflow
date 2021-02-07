@@ -183,22 +183,14 @@ class InferenceSession(object):
         self.status_ = self.SessionStatus.OPEN
 
     def close(self):
-        print("InferenceSession close")
         self.event_loop_.run_until_complete(self.wait_for_all_jobs_finished())
         self.event_loop_.close()
-        print("---> loop close")
 
-        print("prepare to close session")
         if self.status_ == self.SessionStatus.RUNNING:
-            print("---> RUNNING")
             oneflow_api.StopLazyGlobalSession()
-            print("---> StopLazyGlobalSession")
             oneflow_api.DestroyLazyGlobalSession()
-            print("---> DestroyLazyGlobalSession")
         elif self.status_ == self.SessionStatus.OPEN:
-            print("---> OPEN")
             oneflow_api.DestroyLazyGlobalSession()
-            print("---> DestroyLazyGlobalSession")
         else:
             pass
 
@@ -469,9 +461,7 @@ class InferenceSession(object):
         future = self.event_loop_.create_future()
 
         def job_finish_cb(_):
-            print("run_job finish post cb:", job_inst.job_name())
             self.event_loop_.call_soon_threadsafe(future.set_result, None)
-            print("future set")
 
         job_inst.AddPostFinishCallback(job_finish_cb)
         oneflow_api.LaunchJob(job_inst)
@@ -539,7 +529,6 @@ class InferenceSession(object):
             raise ValueError("checkpoint path not set")
 
         def copy_model_load_path(ofblob):
-            print("==> copy_model_load_path")
             ofblob.CopyFromNdarray(
                 np.frombuffer(self.checkpoint_path_.encode("ascii"), dtype=np.int8)
             )

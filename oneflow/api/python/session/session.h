@@ -81,7 +81,6 @@ inline Maybe<void> StartLazyGlobalSession() {
 }
 
 inline Maybe<void> StopLazyGlobalSession() {
-  std::cout << "StopLazyGlobalSession" << std::endl;
   if (Global<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());

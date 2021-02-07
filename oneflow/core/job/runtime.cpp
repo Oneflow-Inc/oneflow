@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/runtime.h"
-#include <iostream>
-#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -90,13 +88,9 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
 }
 
 Runtime::~Runtime() {
-  std::cout << "Runtime destruct begin" << std::endl;
   Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero("running_actor_cnt");
-  std::cout << "running_actor_cnt equal to 0" << std::endl;
   OF_SESSION_BARRIER();
-  std::cout << "pre to DeleteAllGlobal" << std::endl;
   DeleteAllGlobal();
-  std::cout << "Runtime destruct end" << std::endl;
 }
 
 void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
