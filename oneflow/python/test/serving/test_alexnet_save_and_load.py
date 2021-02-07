@@ -23,7 +23,7 @@ import oneflow as flow
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 
 from alexnet import load_data, alexnet
-from imagenet_record_dataset import ImageNetRecordDataset
+from ofrecord_dataset import ImageNetRecordDataset
 
 DEFAULT_BATCH_SIZE = 8
 DEFAULT_TRAIN_DATA_PATH = "/dataset/imagenet_227/train/32/"

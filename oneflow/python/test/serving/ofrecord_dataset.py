@@ -20,34 +20,15 @@ import cv2
 import numpy as np
 import oneflow.core.record.record_pb2 as record_pb
 
-from oneflow.python.oneflow_export import oneflow_export
 
-DEFAULT_BATCH_SIZE = 4
-DEFAULT_TRAIN_DATA_PATH = "/dataset/ImageNet/ofrecord/train"
-DEFAULT_TRAIN_DATA_PART_NUM = 256
-DEFAULT_TEST_DATA_PATH = "/dataset/ImageNet/ofrecord/validation"
-DEFAULT_TEST_DATA_PART_NUM = 256
-DEFAULT_IMAGE_SIZE = 224
-
-
-class ImageNetRecordDataset(object):
-    def __init__(
-        self,
-        data_dir=DEFAULT_TEST_DATA_PATH,
-        num_data_parts=DEFAULT_TEST_DATA_PART_NUM,
-        batch_size=DEFAULT_BATCH_SIZE,
-        shuffle_data_part=False,
-        image_resize_size=DEFAULT_IMAGE_SIZE,
-        data_format="NCHW",
-    ):
+class OFRecordDataset(object):
+    def __init__(self, data_dir, num_data_parts, batch_size, shuffle_data_part):
         self.data_dir_ = data_dir
         self.num_data_parts_ = num_data_parts
         self.batch_size_ = batch_size
         self.epoch_cnt_ = 0
         self.cur_data_part_idx_ = 0
         self.shuffle_data_part_ = shuffle_data_part
-        self.image_resize_size_ = image_resize_size
-        self.data_format_ = data_format
         self.reader_ = None
         self.num_read_batchs_ = 0
 
@@ -74,13 +55,6 @@ class ImageNetRecordDataset(object):
         while True:
             yield self._read_one_batch()
 
-    def reset(self):
-        self.epoch_cnt_ = 0
-        self.cur_data_part_idx_ = 0
-        if self.reader_ is not None:
-            self.reader_.close()
-        self.num_read_batchs_ = 0
-
     def load_batchs(self, num_batchs):
         image_list = []
         label_list = []
@@ -94,34 +68,18 @@ class ImageNetRecordDataset(object):
 
         return image_list, label_list
 
-    def _read_one_batch(self):
-        assert self.reader_ is not None
+    def parse_record(self, record):
+        raise NotImplementedError
 
-        image_list = []
-        label_list = []
+    def collate(self, batch):
+        raise NotImplementedError
 
-        for i in range(self.batch_size_):
-            record_head = self.reader_.read(8)
-            if record_head is None or len(record_head) != 8:
-                self._move_to_next_data_part()
-                break
-
-            record = record_pb.OFRecord()
-            record_byte_size = struct.unpack("q", record_head)[0]
-            record.ParseFromString(self.reader_.read(record_byte_size))
-
-            image_raw_bytes = record.feature["encoded"].bytes_list.value[0]
-            image = cv2.imdecode(
-                np.frombuffer(image_raw_bytes, np.uint8), cv2.IMREAD_COLOR
-            ).astype(np.float32)
-            image_list.append(self.preprocess_image(image))
-            label = record.feature["class/label"].int32_list.value[0]
-            label_list.append(label)
-
-        image_tensor = np.stack(image_list, axis=0)
-        label_tensor = np.array(label_list, dtype=np.int32)
-        self.num_read_batchs_ += 1
-        return image_tensor, label_tensor
+    def reset(self):
+        self.epoch_cnt_ = 0
+        self.cur_data_part_idx_ = 0
+        if self.reader_ is not None:
+            self.reader_.close()
+        self.num_read_batchs_ = 0
 
     def _move_to_next_data_part(self):
         self.cur_data_part_idx_ += 1
@@ -146,6 +104,53 @@ class ImageNetRecordDataset(object):
             self.data_dir_, self.data_part_seq_[self.cur_data_part_idx_]
         )
         self.reader_ = open(data_part_file_path, "rb")
+
+    def _read_one_batch(self):
+        assert self.reader_ is not None
+
+        batch = []
+        for i in range(self.batch_size_):
+            record_head = self.reader_.read(8)
+            if record_head is None or len(record_head) != 8:
+                self._move_to_next_data_part()
+                break
+
+            record = record_pb.OFRecord()
+            record_byte_size = struct.unpack("q", record_head)[0]
+            record.ParseFromString(self.reader_.read(record_byte_size))
+            batch.append(self.parse_record(record))
+
+        self.num_read_batchs_ += 1
+        return self.collate(batch)
+
+
+class ImageNetRecordDataset(OFRecordDataset):
+    def __init__(
+        self,
+        data_dir="/dataset/ImageNet/ofrecord/validation",
+        num_data_parts=256,
+        batch_size=4,
+        shuffle_data_part=False,
+        image_resize_size=224,
+        data_format="NCHW",
+    ):
+        super().__init__(data_dir, num_data_parts, batch_size, shuffle_data_part)
+        self.image_resize_size_ = image_resize_size
+        self.data_format_ = data_format
+
+    def parse_record(self, record):
+        image_raw_bytes = record.feature["encoded"].bytes_list.value[0]
+        image = cv2.imdecode(
+            np.frombuffer(image_raw_bytes, np.uint8), cv2.IMREAD_COLOR
+        ).astype(np.float32)
+        image = self.preprocess_image(image)
+        label = record.feature["class/label"].int32_list.value[0]
+        return (image, label)
+
+    def collate(self, batch):
+        batched_image = np.stack([data[0] for data in batch], axis=0)
+        batched_label = np.array([data[1] for data in batch], dtype=np.int32)
+        return batched_image, batched_label
 
     def preprocess_image(self, image):
         # resize
