@@ -48,7 +48,7 @@ class RegisteredBlobAccess {
 
 class BlobRegister : public std::enable_shared_from_this<BlobRegister> {
  public:
-  BlobRegister(const std::function<void(std::shared_ptr<BlobObject>)>& release);
+  BlobRegister();
   ~BlobRegister() = default;
 
   std::shared_ptr<RegisteredBlobAccess> OpenRegisteredBlobAccess(
@@ -75,8 +75,9 @@ class BlobRegister : public std::enable_shared_from_this<BlobRegister> {
  private:
   std::shared_ptr<std::map<std::string, std::shared_ptr<BlobObject>>> blob_name2object_;
   std::shared_ptr<std::map<std::string, std::shared_ptr<RegisteredBlobAccess>>> blob_name2access_;
-  std::function<void(std::shared_ptr<BlobObject>)> release_;
 };
+
+Maybe<BlobRegister> GetDefaultBlobRegister();
 
 }  // namespace compatible_py
 

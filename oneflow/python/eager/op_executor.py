@@ -41,7 +41,7 @@ import oneflow_api
 import numpy as np
 import os
 
-default_blob_register = blob_register_util.GetDefaultBlobRegister()
+default_blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 def Interpret(op_attribute, parallel_conf, blob_register):

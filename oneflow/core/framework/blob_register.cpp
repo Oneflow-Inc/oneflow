@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/blob_register.h"
+#include "oneflow/core/framework/blob_cache.h"
 
 namespace oneflow {
 
@@ -45,11 +46,10 @@ int64_t RegisteredBlobAccess::decrease_reference_counter() {
 
 std::shared_ptr<BlobRegister> RegisteredBlobAccess::blob_register() const { return blob_register_; }
 
-BlobRegister::BlobRegister(const std::function<void(std::shared_ptr<BlobObject>)>& release)
+BlobRegister::BlobRegister()
     : blob_name2object_(std::make_shared<std::map<std::string, std::shared_ptr<BlobObject>>>()),
       blob_name2access_(
-          std::make_shared<std::map<std::string, std::shared_ptr<RegisteredBlobAccess>>>()),
-      release_(release) {}
+          std::make_shared<std::map<std::string, std::shared_ptr<RegisteredBlobAccess>>>()) {}
 
 std::shared_ptr<RegisteredBlobAccess> BlobRegister::OpenRegisteredBlobAccess(
     const std::string& blob_name, const std::shared_ptr<BlobObject>& blob_object) {
@@ -99,7 +99,7 @@ void BlobRegister::TrySetObject4BlobName(const std::string& blob_name,
 
 void BlobRegister::ClearObject4BlobName(const std::string& blob_name) {
   CHECK(HasObject4BlobName(blob_name)) << "blob_name " << blob_name << " not found";
-  release_(blob_name2object_->at(blob_name));
+  CHECK_JUST(TryDisableBlobCache(blob_name2object_->at(blob_name)));
   blob_name2object_->erase(blob_name);
 }
 
@@ -112,6 +112,12 @@ void BlobRegister::ForceReleaseAll() {
     LOG(INFO) << "Forcely release blob " << (pair.first);
     pair.second->ForceReleaseAll();
   }
+}
+
+Maybe<BlobRegister> GetDefaultBlobRegister() {
+  static std::shared_ptr<BlobRegister> default_blob_register;
+  if (!default_blob_register) { default_blob_register = std::make_shared<BlobRegister>(); }
+  return default_blob_register;
 }
 
 }  // namespace compatible_py

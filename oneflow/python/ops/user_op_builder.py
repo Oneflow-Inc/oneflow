@@ -34,12 +34,11 @@ import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import random
 import oneflow.python.eager.gradient_util as gradient_util
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow as flow
 import oneflow_api
 import traceback
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 class UserOp(object):

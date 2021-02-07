@@ -16,7 +16,6 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.input_blob_def as input_blob_def
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.python_callback as python_callback
@@ -25,7 +24,6 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
@@ -33,7 +31,7 @@ import oneflow_api
 import numpy
 from functools import reduce
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 def AsyncPush(session, job_func, *arg):
@@ -162,7 +160,7 @@ def _MakeInputBlobObject(arg_blob_def):
 
 
 def _GetPhysicalBlobObjects(logical_blob_object, lbi):
-    blob_register = blob_register_util.GetDefaultBlobRegister()
+    blob_register = oneflow_api.GetDefaultBlobRegister()
     physical_blob_objects = None
 
     def BuildLogical2PhysicalInstruction(builder):
