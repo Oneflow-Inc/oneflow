@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/framework/blob_register.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
@@ -65,6 +66,21 @@ class TensorImpl {
   virtual int64_t split_axis() const { UNIMPLEMENTED(); }
   virtual bool is_dynamic() const { UNIMPLEMENTED(); }
   virtual bool is_tensor_list() const { UNIMPLEMENTED(); }
+
+  virtual std::shared_ptr<Blob> storage() const { UNIMPLEMENTED(); }
+  virtual bool has_storage() const { UNIMPLEMENTED(); }
+
+  template<typename T = void>
+  const T* data() const {
+    CHECK(has_storage());
+    return storage()->dptr<T>();
+  }
+
+  template<typename T = void>
+  T* mutable_data() {
+    CHECK(has_storage());
+    return storage()->mut_dptr<T>();
+  }
 
  protected:
   Maybe<std::string> Distribute2Str() const;
@@ -144,6 +160,11 @@ class MirroredLazyTensorImpl : public LazyTensorImpl {
                          const std::shared_ptr<Device>& device)
       : LazyTensorImpl(shape, dtype, device) {}
   ~MirroredLazyTensorImpl() = default;
+  std::shared_ptr<Blob> storage() const override { return storage_; }
+  bool has_storage() const override { return static_cast<bool>(storage_); }
+
+ private:
+  std::shared_ptr<Blob> storage_;
 };
 
 class MirroredEagerTensorImpl : public EagerTensorImpl {
@@ -151,6 +172,11 @@ class MirroredEagerTensorImpl : public EagerTensorImpl {
   MirroredEagerTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
                           const std::shared_ptr<Device>& device)
       : EagerTensorImpl(shape, dtype, device) {}
+  std::shared_ptr<Blob> storage() const override { return storage_; }
+  bool has_storage() const override { return static_cast<bool>(storage_); }
+
+ private:
+  std::shared_ptr<Blob> storage_;
 };
 
 class ConsistentLazyTensorImpl : public LazyTensorImpl {
