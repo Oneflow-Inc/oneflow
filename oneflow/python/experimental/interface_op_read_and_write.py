@@ -16,7 +16,6 @@ limitations under the License.
 import oneflow as flow
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.framework.input_blob_def as input_blob_def_util
 import oneflow.python.framework.dtype as dtype_util
@@ -29,7 +28,7 @@ import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow_api
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 def _GetInterfaceBlobObject(builder, op_name):

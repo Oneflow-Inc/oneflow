@@ -20,7 +20,6 @@ from google.protobuf import text_format
 
 import oneflow
 import oneflow_api
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.dtype as dtype_util
@@ -51,7 +50,7 @@ FAKE_JOB_NAME = "system_checkpoint"
 OP_PREFIX = "system_checkpoint"
 
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 class FileBackendVariableBlob:
