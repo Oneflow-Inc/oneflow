@@ -39,8 +39,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("TryDisableBlobCache", [](const std::shared_ptr<BlobObject>& blob_object) {
     return TryDisableBlobCache(blob_object).GetOrThrow();
   });
-
-  m.def("FindOrCreateDelegateBlobObject", &FindOrCreateDelegateBlobObject);
 }
 }  // namespace compatible_py
 

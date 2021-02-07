@@ -78,7 +78,6 @@ def OpKernelCall(opkernel_object, op_attribute, blob_register):
                 opkernel_object,
                 bn_in_op2blob_object,
                 boxing_util.BoxingTo,
-                oneflow_api.FindOrCreateDelegateBlobObject,
             )
 
     oneflow_api.deprecated.LogicalRun(BuildInstruction)
@@ -218,7 +217,6 @@ def _NaiveInterpret(op_attribute, parallel_conf, blob_register):
                 parallel_conf,
                 bn_in_op2blob_object,
                 boxing_util.BoxingTo,
-                oneflow_api.FindOrCreateDelegateBlobObject,
             )
 
     oneflow_api.deprecated.LogicalRun(BuildInstruction)
@@ -295,11 +293,7 @@ def _EagerRunModelInit(var_op_conf):
             str(op_attribute)
         )
         builder.StatelessCall(
-            cfg_op_attribute,
-            parallel_conf,
-            bn_in_op2blob_object,
-            boxing_util.BoxingTo,
-            oneflow_api.FindOrCreateDelegateBlobObject,
+            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo
         )
 
     sess = session_ctx.GetDefaultSession()
@@ -319,11 +313,7 @@ def _MakeModelIOPathInputBuilds(op_conf, path, bn_in_op2blob_object):
             str(op_attribute)
         )
         builder.StatelessCall(
-            cfg_op_attribute,
-            parallel_conf,
-            bn_in_op2blob_object,
-            boxing_util.BoxingTo,
-            oneflow_api.FindOrCreateDelegateBlobObject,
+            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
         )
 
     def FeedPath(ofblob):
@@ -375,7 +365,6 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
             parallel_conf,
             model_load_blob_objects,
             boxing_util.BoxingTo,
-            oneflow_api.FindOrCreateDelegateBlobObject,
         )
 
     sess = session_ctx.GetDefaultSession()
@@ -418,7 +407,6 @@ def _EagerRunModelSave(var_blobs, snapshot_path):
             parallel_conf,
             model_save_blob_objects,
             boxing_util.BoxingTo,
-            oneflow_api.FindOrCreateDelegateBlobObject,
         )
 
     sess = session_ctx.GetDefaultSession()

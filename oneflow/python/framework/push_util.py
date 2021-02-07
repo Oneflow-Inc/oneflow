@@ -154,11 +154,7 @@ def _MakeInputBlobObject(arg_blob_def):
             str(op_attribute)
         )
         builder.StatelessCall(
-            cfg_op_attribute,
-            parallel_conf,
-            bn_in_op2blob_object,
-            boxing_util.BoxingTo,
-            oneflow_api.FindOrCreateDelegateBlobObject,
+            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
         )
 
     oneflow_api.deprecated.LogicalRun(BuildInputInstruction)

@@ -368,10 +368,7 @@ def GpuNcclAllReduce(builder, produced_blob_object, consumer_op_arg_parallel_att
     op_attribute = _GetEagerNcclAllReduce(parallel_conf, bn_in_op2blob_object)
     cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
     builder.NoBoxingStatelessCall(
-        cfg_op_attribute,
-        parallel_conf,
-        bn_in_op2blob_object,
-        oneflow_api.FindOrCreateDelegateBlobObject,
+        cfg_op_attribute, parallel_conf, bn_in_op2blob_object,
     )
     y_blob_object = bn_in_op2blob_object["out_0"]
     y_blob_object.op_arg_parallel_attr.Assign(consumer_op_arg_parallel_attr)
@@ -552,7 +549,6 @@ def BuildNaiveCpuBoxing(
         cfg_op_attribute,
         boxing_parallel_desc_symbol.parallel_conf,
         bn_in_op2blob_object,
-        oneflow_api.FindOrCreateDelegateBlobObject,
     )
     return [bn_in_op2blob_object["out_%s" % i] for i in range(out_parallel_num)]
 
@@ -764,10 +760,7 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
     cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
     if ref_device_tag == value_device_tag:
         builder.NoBoxingStatelessCall(
-            cfg_op_attribute,
-            ref_parallel_conf,
-            bn_in_op2blob_object,
-            oneflow_api.FindOrCreateDelegateBlobObject,
+            cfg_op_attribute, ref_parallel_conf, bn_in_op2blob_object,
         )
     elif ref_device_tag == "cpu" and value_device_tag == "gpu":
         value_parallel_conf = value_blob_object.parallel_desc_symbol.parallel_conf
