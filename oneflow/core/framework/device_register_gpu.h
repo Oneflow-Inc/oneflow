@@ -24,11 +24,11 @@ limitations under the License.
 
 namespace oneflow {
 namespace {
-std::string GetCudaVersionString(int version) {
+inline std::string GetCudaVersionString(int version) {
   return std::to_string(version / 1000) + "." + std::to_string((version % 1000) / 10);
 }
 
-bool GetCudnnVersion(libraryPropertyType type, int* version) {
+inline bool GetCudnnVersion(libraryPropertyType type, int* version) {
   cudnnStatus_t status = cudnnGetProperty(type, version);
   if (status == CUDNN_STATUS_SUCCESS) {
     return true;
@@ -38,7 +38,7 @@ bool GetCudnnVersion(libraryPropertyType type, int* version) {
   }
 }
 
-bool GetCudnnVersionString(std::string* version) {
+inline bool GetCudnnVersionString(std::string* version) {
   int version_major;
   int version_minor;
   int version_patch;
@@ -50,7 +50,7 @@ bool GetCudnnVersionString(std::string* version) {
   return true;
 }
 
-void GpuDumpVersionInfo() {
+inline void GpuDumpVersionInfo() {
   {
     int cuda_runtime_version;
     cudaError_t err = cudaRuntimeGetVersion(&cuda_runtime_version);
