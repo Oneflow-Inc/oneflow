@@ -219,7 +219,9 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new OneToOneSubTskGphBuilder());
   builders.emplace_back(new B21SubTskGphBuilder());
-  builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
+  if (!Global<ResourceDesc, ForSession>::Get()->resource().enable_insert_nccl_logical_op_pass()) {
+    builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
+  }
   builders.emplace_back(new SliceBoxingSubTskGphBuilder());
   builders.emplace_back(new NaiveB2BSubTskGphBuilder());
   builders.emplace_back(new NaiveB2PSubTskGphBuilder());

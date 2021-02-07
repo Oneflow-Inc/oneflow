@@ -41,4 +41,7 @@ message Resource {
   optional bool enable_debug_mode = 18 [default = false];
   optional CollectiveBoxingConf collective_boxing_conf = 19;
   optional bool enable_tensor_float_32_compute = 20 [default = true];
+
+  // NOTE(chengcheng) to reuse nccl memory
+  optional bool enable_insert_nccl_logical_op_pass = 30 [default = false];
 }

@@ -25,12 +25,12 @@ namespace oneflow {
 
 namespace {
 
-// Do CheckpointingPass will use backward recomputation for sublinear memory cost.
-class CheckpointingPass final : public JobPass {
+// Do InsertNcclLogicalOpPass will use backward recomputation for sublinear memory cost.
+class InsertNcclLogicalOpPass final : public JobPass {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CheckpointingPass);
-  CheckpointingPass() = default;
-  ~CheckpointingPass() = default;
+  OF_DISALLOW_COPY_AND_MOVE(InsertNcclLogicalOpPass);
+  InsertNcclLogicalOpPass() = default;
+  ~InsertNcclLogicalOpPass() = default;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
@@ -46,8 +46,96 @@ class CheckpointingPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
 
-const std::string kCheckpointingFakeOpNamePrefix = "OneFlow-System-Checkpointing-Fake-Fw-Op_";
-const std::string kCheckpointingBadOpName = "OneFlow-System-CheckpointPassBadEndOpName";
+const std::string kNcclLogicalOpNamePrefix = "OneFlow-System-NCCL-logical-Op_";
+
+/*
+ *
+bool CanBeMergedInChain(const TaskNode* node) {
+  // ONLY the node which is NormalForward and in GPU and NOT variable can be merged.
+  if (IsTaskNodeProducedResgtHasMultiRegstNum(node)) { return false; }
+  const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
+  if (fw_comp_node == nullptr) { return false; }
+  if (fw_comp_node->logical_node()->op_vec().size() != 1) { return false; }
+  if (fw_comp_node->device_type() != DeviceType::kGPU) { return false; }
+  const Operator* op = fw_comp_node->logical_node()->SoleOp().get();
+  if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
+  return true;
+}
+
+void TraverseConnectedSubGraph(const OpNode* this_node) {
+  CHECK_NE(this_chain_id, -1);
+  CHECK_EQ(this_node->chain_id(), -1);
+  // bfs search all node can be merged in this chain
+  HashSet<TaskNode*> visited_nodes;
+  std::queue<TaskNode*> queued_nodes;
+  queued_nodes.push(this_node);
+  visited_nodes.insert(this_node);
+  while (!queued_nodes.empty()) {
+    TaskNode* cur_node = queued_nodes.front();
+    queued_nodes.pop();
+
+    CHECK_EQ(cur_node->chain_id(), -1);
+    cur_node->set_chain_id(this_chain_id);
+
+    cur_node->ForEachNodeOnInOutEdge([&](TaskNode* next_node) {
+      // NOTE(chengcheng): use area_id to not merge optimizer ops with fw/bw ops
+      if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
+          && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()
+          && this_node->area_id() == next_node->area_id()) {
+        if (next_node->chain_id() == -1) {
+          queued_nodes.push(next_node);
+          visited_nodes.insert(next_node);
+        } else {
+          CHECK_EQ(next_node->chain_id(), this_chain_id);
+        }
+      }
+    });
+  }
+}
+*/
+
+void FindMaxConnectedSubgraphForGpuExecOrder(HasSet<const OpNode*>* ret, const OpGraph& op_graph,
+    const std::vector<const OpNode*>& order) {
+  HasSet<const OpNode*> visited; 
+
+  for(const OpNode* seed_node : order) {
+    if(visited.find(seed_node) != visited.end()) { continue; }
+    CHECK(visited.insert(seed_node).second);
+    if(seed_node)
+
+    HashSet<const OpNode*> this_subgraph;
+    std::queue<const OpNode*> queued_nodes{seed_node};
+    while(!queued_nodes.empty()) {
+      const OpNode* cur_node = queued_nodes.front();
+      queued_nodes.pop();
+      CHECK(this_subgraph.insert().second);
+    }
+  }
+}
+
+Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  std::vector<const OpNode*> ordered_op_nodes;
+  op_graph.TopoForEachNode([&](const OpNode* node) { 
+      ordered_op_nodes.push_back(node); 
+      });
+
+  HashSet<const OpNode*> subgraph;
+  FindMaxConnectedSubgraphForGpuExecOrder(&subgraph, op_graph, ordered_op_nodes);
+  if(subgraph.empty()) {
+    return Maybe<void>::Ok();
+  }
+
+  TODO();
+
+  for (const OpNode* this_node : ordered_op_nodes) {
+
+    
+  }
+
+  return Maybe<void>::Ok();
+}
+
+/*
 
 const Scope& Scope4OpNode(const OpNode* op_node) {
   int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();
@@ -121,7 +209,7 @@ void GenConnectedCheckpointingSubgraphs(
   }
 }
 
-Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   // step 1. collect all checkpointing ops in forwardpass.
   HashMap<std::string, const OpNode*> checkpointing_op_name2op_node;
   CollectAllCheckpointingOpsInForwardPass(op_graph, &checkpointing_op_name2op_node);
@@ -290,9 +378,9 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
 
   return Maybe<void>::Ok();
 }
-
+*/
 }  // namespace
 
-REGISTER_JOB_PASS("CheckpointingPass", CheckpointingPass);
+REGISTER_JOB_PASS("InsertNcclLogicalOpPass", InsertNcclLogicalOpPass);
 
 }  // namespace oneflow
