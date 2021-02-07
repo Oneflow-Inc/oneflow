@@ -34,6 +34,7 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::UserOpExpr, one::BuiltinOpExpr, std::shared_ptr<one::UserOpExpr>>(m, "UserOpExpr")
       .def(py::init<>())
       .def(py::init<std::string>())
+      .def_property_readonly("type", &one::UserOpExpr::type)
       .def_property_readonly(
           "proto", [](const one::UserOpExpr& op) { return PbMessage2TxtString(op.proto()); })
       .def_property_readonly("indexed_input_names", &one::UserOpExpr::indexed_input_names);
