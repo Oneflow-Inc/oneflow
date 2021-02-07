@@ -620,23 +620,39 @@ void MakeMainJob(Job* main_job, std::vector<std::string>* identity_tick_op_names
     }
   }
   op_confs.push_back(cs_case_op_conf);
+  std::vector<std::string> snk_tick_op_names;
   FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
+    // There is no need to insert a source tick op
+    // identity tick
     OperatorConf identity_tick_op_conf;
-    std::string name_prefix = "System-Main-Tick_CriticalSection_";
-    identity_tick_op_conf.set_name(name_prefix + std::to_string(i));
-    auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
-    identity_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
-    identity_tick_conf->set_out("out");
-    identity_tick_op_names->push_back(identity_tick_op_conf.name());
-    op_confs.push_back(identity_tick_op_conf);
+    {
+      std::string name_prefix = "System-Main-Tick_CriticalSection_";
+      identity_tick_op_conf.set_name(name_prefix + std::to_string(i));
+      auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
+      identity_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
+      identity_tick_conf->set_out("out");
+      op_confs.push_back(identity_tick_op_conf);
+      identity_tick_op_names->push_back(identity_tick_op_conf.name());
+    }
+    // sink tick
+    OperatorConf snk_tick_op_conf;
+    {
+      std::string name_prefix = "System-Main-SinkTick_CriticalSection_";
+      snk_tick_op_conf.set_name(name_prefix + std::to_string(i));
+      auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
+      snk_tick_conf->add_tick(identity_tick_op_conf.name() + "/out");
+      snk_tick_conf->set_out("out");
+      op_confs.push_back(snk_tick_op_conf);
+      snk_tick_op_names.push_back(snk_tick_op_conf.name());
+    }
   }
   // critical section esac op conf
   OperatorConf cs_esac_op_conf;
   {
     cs_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
     auto* cs_esac_conf = cs_esac_op_conf.mutable_esac_conf();
-    for (const auto& identity_tick_op_name : *identity_tick_op_names) {
-      cs_esac_conf->add_in(identity_tick_op_name + "/out");
+    for (const auto& snk_tick_op_name : snk_tick_op_names) {
+      cs_esac_conf->add_in(snk_tick_op_name + "/out");
     }
     cs_esac_conf->set_out("out");
     cs_esac_conf->set_data_type(DataType::kInt32);

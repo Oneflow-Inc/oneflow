@@ -201,7 +201,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       const auto& src_op_conf = src_node->SoleOp()->op_conf();
       const auto& dst_op_conf = dst_node->SoleOp()->op_conf();
       if (dst_op_conf.has_sink_tick_conf()) {
-        CHECK(src_op_conf.has_tick_conf());
+        CHECK(src_op_conf.has_tick_conf() || src_op_conf.has_sink_tick_conf());
         CHECK_EQ(src_pd->parallel_num(), 1);
         CHECK_EQ(dst_pd->parallel_num(), 1);
         return &TaskGraph::BldSubTskGphByBoxing;
