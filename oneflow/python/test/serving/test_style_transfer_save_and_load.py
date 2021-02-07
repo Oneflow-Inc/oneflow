@@ -18,6 +18,7 @@ import cv2
 import unittest
 import sys
 import os
+import argparse
 
 import oneflow as flow
 import style_model
@@ -70,16 +71,18 @@ def recover_image(im):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSaveAndLoadModel(flow.unittest.TestCase):
-    INPUT_IMAGE_FILE = "/home/zhangwenxiao/repos/DeepLearningForFun/Oneflow-Python/FastNeuralStyle/images/content-images/amber.jpg"
-    OUTPUT_IMAGE_FILE = "amber_styled.jpg"
-    MODEL_PARAMS_DIR = "/home/zhangwenxiao/wksp/fast_neural_style/sketch_lr_0.001000_cw_10000.000000_sw_10000000000.000000_epoch_0_iter_4400_loss_3008.877197"
+    INPUT_IMAGE_FILE = (
+        "/dataset/model_zoo/fast_neural_style/images/content-images/amber.jpg"
+    )
+    OUTPUT_IMAGE_FILE = None
+    CHECKPOINT_DIR = "/dataset/model_zoo/fast_neural_style/sketch_lr_0.001000_cw_10000.000000_sw_10000000000.000000_epoch_0_iter_4400_loss_3008.877197"
 
     def test_style_model(self):
         init_env()
         input_image = load_image(self.INPUT_IMAGE_FILE)
         image_height, image_width = input_image.shape[2:]
         style_transfer = make_style_transfer(image_height, image_width)
-        flow.load_variables(flow.checkpoint.get(self.MODEL_PARAMS_DIR))
+        flow.load_variables(flow.checkpoint.get(self.CHECKPOINT_DIR))
         flow.clear_default_session()
 
         # save
@@ -123,12 +126,23 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
         outputs = sess.run(style_transfer.__name__, **input_dict)
         if self.OUTPUT_IMAGE_FILE is not None:
             cv2.imwrite(self.OUTPUT_IMAGE_FILE, recover_image(outputs[0]))
+            print("write styled output image to", self.OUTPUT_IMAGE_FILE)
 
         sess.close()
 
 
 if __name__ == "__main__":
-    # if len(sys.argv) > 1:
-    #     TestSaveAndLoadModel.INPUT_IMAGE_FILE = sys.argv.pop()
-    #     TestSaveAndLoadModel.MODEL_PARAMS_DIR = sys.argv.pop()
-    unittest.main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input-image-file")
+    parser.add_argument("--output-image-file")
+    parser.add_argument("--model-dir")
+    args, unknown = parser.parse_known_args()
+    if args.input_image_file is not None:
+        TestSaveAndLoadModel.INPUT_IMAGE_FILE = args.input_image_file
+    if args.output_image_file is not None:
+        TestSaveAndLoadModel.OUTPUT_IMAGE_FILE = args.output_image_file
+    if args.model_dir is not None:
+        TestSaveAndLoadModel.CHECKPOINT_DIR = args.model_dir
+
+    argv = sys.argv[0:1] + unknown
+    unittest.main(argv=argv)

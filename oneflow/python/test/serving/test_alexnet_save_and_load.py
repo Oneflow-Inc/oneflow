@@ -170,16 +170,17 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
         # sess.print_job_set()
         sess.launch()
 
+        job_name = sess.list_jobs()[0]
         input_names = sess.list_inputs()
         print("input names:", input_names)
         for input_name in input_names:
-            print('input "{}" info: {}'.format(input_name, sess.input_info(input_name)))
+            print('input "{}" info: {}'.format(input_name, sess.input_info(input_name, job_name)))
         output_names = sess.list_outputs()
         print("output names:", output_names)
         for output_name in output_names:
             print(
                 'output "{}" info: {}'.format(
-                    output_name, sess.output_info(output_name)
+                    output_name, sess.output_info(output_name, job_name)
                 )
             )
 
