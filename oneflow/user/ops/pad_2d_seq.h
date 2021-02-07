@@ -13,19 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OPERATOR_USER_OP_UTIL_H_
-#define ONEFLOW_CORE_OPERATOR_USER_OP_UTIL_H_
+#ifndef ONEFLOW_USER_OPS_PAD_2D_SEQ_H_
+#define ONEFLOW_USER_OPS_PAD_2D_SEQ_H_
 
-#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-struct UserOpCtx : public OpContext {
-  HashMap<std::string, std::string> mut_inplace_obn2ibn;
-  HashMap<std::string, std::string> con_inplace_obn2ibn;
-  SbpSignature sbp_sig;
-};
-
+#define PAD_2D_TYPE_SEQ                    \
+  OF_PP_MAKE_TUPLE_SEQ("reflection_pad2d") \
+  OF_PP_MAKE_TUPLE_SEQ("replication_pad2d")
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_USER_OP_UTIL_H_
+#endif  // ONEFLOW_USER_OPS_PAD_2D_SEQ_H_
