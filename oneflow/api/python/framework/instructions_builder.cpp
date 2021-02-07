@@ -376,8 +376,6 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
           return PhysicalRun(build).GetOrThrow();
         },
         py::call_guard<py::gil_scoped_release>());
-
-  m.def("SetShuttingDown", []() { return SetShuttingDown().GetOrThrow(); });
 }
 
 }  // namespace oneflow

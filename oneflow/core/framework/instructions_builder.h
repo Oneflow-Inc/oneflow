@@ -428,8 +428,6 @@ Maybe<void> LogicalRun(
 Maybe<void> PhysicalRun(
     const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& build);
 
-Maybe<void> SetShuttingDown();
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
