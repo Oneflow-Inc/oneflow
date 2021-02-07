@@ -30,7 +30,6 @@ from oneflow.python.framework.function_desc import FunctionDesc
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.typing_util as oft_util
 import oneflow.python.lib.core.pb_util as pb_util
 from oneflow.python.framework.function_desc import FunctionDesc
@@ -118,6 +117,7 @@ def api_oneflow_function(
         else:
             function_config.function_desc.job_config_proto.mutable_predict_conf()
     api = enable_if.unique([eager_oneflow_function, lazy_oneflow_function])
+    print(api)
     return api(function_config)
 
 

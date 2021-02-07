@@ -17,6 +17,7 @@ from __future__ import absolute_import
 from abc import ABC
 from typing import Optional
 
+from oneflow.python.framework.function_util import api_oneflow_function
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.module import Module
 from oneflow.python.ops.optimizer import Optimizer
@@ -72,6 +73,18 @@ class Model(
         """
         if self.context.rank == 0:
             print(*args, **kwargs)
+    
+    def data_loader(self):
+        raise NotImplementedError
+
+    def _lazy_train_job(self, job_type, job_func_conf, batch_idx, args):
+        @api_oneflow_function(type=job_type, function_config=job_func_conf)
+        def job():
+            batch = self.data_loader(args)
+            loss = self.training_step(batch, batch_idx, args, True)
+            self.optimizers[0].minimize(loss)
+            return loss
+        return job
 
     def fit(
         self,
@@ -79,13 +92,15 @@ class Model(
         train_dataloader: Optional[DataLoader] = None,
         val_dataloaders: Optional[DataLoader] = None,
         default_checkpoint_dir: Optional[str] = None,
+        model_config = None, # ToDo(strint): rm this here 
+        args = None, # ToDo(strint): rm this here
     ):
         # TODO(strint): check config functions
         # 必须有training_step()/configure_optimizers()/train_dataloader
     
-        self._has_optimizer_step = ...
-        self._has_train_data = ...
-        self._has_val_data = ...
+        self._has_optimizer_step = False
+        self._has_train_data = False
+        self._has_val_data = False
         
         if default_checkpoint_dir is None:
             self.checkpoint_dir = './'
@@ -102,34 +117,18 @@ class Model(
         self.max_epochs = max_epochs
     
         # is eager or lazy
-        self._context.is_eager = ...
+        # self._context.is_eager = False 
     
         try:
+            #train_job = self._lazy_train_job("train", model_config, 0, args)
             for epoch in range(0, self.max_epochs):
                 self.current_epoch = epoch
-                # train
-                self.train()
-                for batch_idx, batch in enumerate(train_dataloader):
-                    for opt_idx, optimizer in emunrate(self.optimizers()):
-                        result = self.training_step(batch, batch_idx, opt_idx)
-                        if self._context.is_eager:
-                            # eager
-                            result.backward()
-                            if self._has_optimizer_setp:
-                                self.optimizer_step(epoch, batch_idx, optimizer, opt_idx)
-                            else:
-                                self.optimizer.step()
-                                self.optimizer.zero_grad()
-                        else:
-                            # lazy
-                            self.optimizer.minimize(result)
-                # evaluate
-                if self._has_val_data:
-                    self.eval()
-                    for batch_idx, batch in enumrate(val_dataloader):
-                        output = self.validation_step(batch, batch_idx)
-                # model checkpoint
-                self.save_checkpoint(self.checkpoint_dir)
+                print("fit epoch : ", epoch)
+                loss = self._lazy_train_job("train", model_config, 0, args)().get().mean()
+                #loss = train_job().get().mean()
+                fmt_str = "{:>12}  {:>12}  {:>12.6f}"
+                print(fmt_str.format(epoch, "train loss:", loss))
+                # self.save_checkpoint(self.checkpoint_dir)
         finally:
             pass
     
