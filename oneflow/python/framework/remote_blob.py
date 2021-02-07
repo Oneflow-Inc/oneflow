@@ -220,7 +220,7 @@ def _Numpy(self):
             eager_blob_util._GetPhysicalBlobHeaderCache,
         ).numpy()
 
-    blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object)
+    blob_cache = oneflow_api.FindOrCreateBlobCache(self.blob_object)
     return blob_cache.GetCachedNumpy(FetchBlobNumpy)
 
 
@@ -253,7 +253,7 @@ def _NumpyMirroredList(self):
             for i, phy_blob_object in enumerate(physical_blob_objects)
         ]
 
-    blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object)
+    blob_cache = oneflow_api.FindOrCreateBlobCache(self.blob_object)
     return blob_cache.GetCachedNumpyMirroredList(FetchBlobNumpyMirroredList)
 
 

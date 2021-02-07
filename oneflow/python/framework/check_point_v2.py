@@ -309,7 +309,7 @@ def _LogicalSlice(
                 parallel_conf,
                 bn_in_op2blob_object,
                 boxing_util.BoxingTo,
-                blob_cache_util.FindOrCreateDelegateBlobObject,
+                oneflow_api.FindOrCreateDelegateBlobObject,
             )
             Yield(bn_in_op2blob_object["y_0"])
 
@@ -407,11 +407,11 @@ def _LogicalSliceAssign(
             parallel_conf,
             bn_in_op2blob_object,
             boxing_util.BoxingTo,
-            blob_cache_util.FindOrCreateDelegateBlobObject,
+            oneflow_api.FindOrCreateDelegateBlobObject,
         )
 
     oneflow_api.deprecated.LogicalRun(BuildAssignInstruction)
-    blob_cache_util.TryDisableBlobCache(ref_blob_object)
+    oneflow_api.TryDisableBlobCache(ref_blob_object)
 
 
 def _FeedValueToVariable(
