@@ -34,17 +34,6 @@ namespace oneflow {
 
 namespace {
 
-std::vector<bool>* GetShuttingDown() {
-  static std::vector<bool> shutting_down{false};
-  return &shutting_down;
-}
-
-bool IsShuttingDown() {
-  auto* shutting_down = GetShuttingDown();
-  CHECK(shutting_down->size() == 1);
-  return (*shutting_down)[0];
-}
-
 void SetSoleMirroredOperand(vm::cfg::OperandProto* operand, int64_t symbol_id) {
   operand->set_logical_object_id(symbol_id);
   operand->mutable_sole_mirrored_object();
@@ -252,13 +241,11 @@ Maybe<void> _Run(
 }
 
 void _ReleaseLogicalObject(compatible_py::Object* obj) {
-  if (IsShuttingDown()) { return; }
   CHECK_JUST(LogicalRun(
       [&obj](const std::shared_ptr<InstructionsBuilder>& build) { build->DeleteObject(obj); }));
 }
 
 void _ReleasePhysicalObject(compatible_py::Object* obj) {
-  if (IsShuttingDown()) { return; }
   CHECK_JUST(PhysicalRun(
       [&obj](const std::shared_ptr<InstructionsBuilder>& build) { build->DeleteObject(obj); }));
 }
@@ -1595,13 +1582,6 @@ Maybe<void> PhysicalRun(
     return Maybe<void>::Ok();
   };
   JUST(_Run(build, std::make_shared<vm::PhysicalIdGenerator>(), run_api, _ReleasePhysicalObject));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> SetShuttingDown() {
-  auto* shutting_down = GetShuttingDown();
-  CHECK_EQ_OR_RETURN(shutting_down->size(), 1);
-  (*shutting_down)[0] = true;
   return Maybe<void>::Ok();
 }
 
