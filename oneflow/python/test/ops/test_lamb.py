@@ -47,7 +47,7 @@ def compare_with_tensorflow_addons_lamb(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(type="train", function_config=flow.FunctionConfig())
-    def testAdam(
+    def testLAMB(
         random_mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
     ) -> flow.typing.Numpy:
         with flow.scope.placement(device_type, "0:0-0"):
@@ -79,7 +79,7 @@ def compare_with_tensorflow_addons_lamb(
     x_list = []
     init_value = None
     for i in range(train_iters + 1):
-        x = testAdam(random_masks_seq[i])
+        x = testLAMB(random_masks_seq[i])
         x_list.append(x)
         if i == 0:
             init_value = np.copy(x)
