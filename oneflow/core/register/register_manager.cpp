@@ -74,24 +74,25 @@ RegstMgr::RegstMgr(const Plan& plan) {
         zone_id2packed_chunk.emplace(zone_id, PackedChunkInfo(mem_block.mem_case()));
       }
       PackedChunkInfo* packed_chunk = &(zone_id2packed_chunk.at(zone_id));
-      std::vector<const MemBlockProto*>* sorted_blocks = &(packed_chunk->blocks);
-      auto it = std::lower_bound(sorted_blocks->begin(), sorted_blocks->end(), &mem_block,
-                                 [](const MemBlockProto* lhs, const MemBlockProto* rhs) {
-                                   if (lhs->thrd_id_hint() == rhs->thrd_id_hint()) {
-                                     return lhs->mem_block_id() < rhs->mem_block_id();
-                                   }
-                                   return lhs->thrd_id_hint() < rhs->thrd_id_hint();
-                                 });
-      packed_chunk->blocks.insert(it, &mem_block);
+      packed_chunk->blocks.push_back(&mem_block);
       packed_chunk->size += mem_block.mem_size();
       CHECK(packed_chunk->mem_case == mem_block.mem_case());
     }
   }
 
-  for (const auto& pair : zone_id2packed_chunk) {
-    const PackedChunkInfo* packed_chunk = &pair.second;
+  for (auto& pair : zone_id2packed_chunk) {
+    PackedChunkInfo* packed_chunk = &pair.second;
     char* ptr =
         Global<MemoryAllocator>::Get()->Allocate(packed_chunk->mem_case, packed_chunk->size);
+    // sort blocks as thrd id
+    std::vector<const MemBlockProto*>* blocks = &(packed_chunk->blocks);
+    std::sort(blocks->begin(), blocks->end(),
+              [](const MemBlockProto* lhs, const MemBlockProto* rhs) {
+                if (lhs->thrd_id_hint() == rhs->thrd_id_hint()) {
+                  return lhs->mem_block_id() < rhs->mem_block_id();
+                }
+                return lhs->thrd_id_hint() < rhs->thrd_id_hint();
+              });
     int64_t offset = 0;
     for (const MemBlockProto* block : packed_chunk->blocks) {
       CHECK(mem_block_id2ptr_.emplace(block->mem_block_id(), ptr + offset).second);
