@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/nn_util.h"
-#include "pad_2d_seq.h"
+#include "pad2d_seq.h"
 
 namespace oneflow {
 
@@ -51,6 +51,8 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext *ctx) {
       .Input("x")                                                                            \
       .Output("y")                                                                           \
       .Attr<std::vector<int64_t>>("padding")                                                 \
+      .Attr<double>("floating_value")                                                        \
+      .Attr<int64_t>("integral_value")                                                       \
       .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {                  \
         Shape *x_shape = ctx->Shape4ArgNameAndIndex("x", 0);                                 \
         const auto &padding = ctx->Attr<std::vector<int64_t>>("padding");                    \
@@ -89,6 +91,8 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext *ctx) {
       .Input("dy")                                                                           \
       .Output("dx")                                                                          \
       .Attr<std::vector<int64_t>>("padding")                                                 \
+      .Attr<double>("floating_value")                                                        \
+      .Attr<int64_t>("integral_value")                                                       \
       .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {                  \
         Shape *dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);                               \
         const auto &padding = ctx->Attr<std::vector<int64_t>>("padding");                    \
@@ -123,6 +127,8 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext *ctx) {
                   .Input("dy", op.GetGradTensorWithOpOutput("y", 0))                         \
                   .Output("dx")                                                              \
                   .Attr("padding", op.attr<std::vector<int64_t>>("padding"))                 \
+                  .Attr("floating_value", op.attr<double>("floating_value"))                 \
+                  .Attr("integral_value", op.attr<int64_t>("integral_value"))                \
                   .Build();                                                                  \
           op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);                     \
           AddOp(grad_op);                                                                    \
