@@ -77,10 +77,10 @@ RegstMgr::RegstMgr(const Plan& plan) {
       std::vector<const MemBlockProto*>* sorted_blocks = &(packed_chunk->blocks);
       auto it = std::lower_bound(sorted_blocks->begin(), sorted_blocks->end(), &mem_block,
                                  [](const MemBlockProto* lhs, const MemBlockProto* rhs) {
-                                   if (lhs->thrd_id() == rhs->thrd_id()) {
+                                   if (lhs->thrd_id_hint() == rhs->thrd_id_hint()) {
                                      return lhs->mem_block_id() < rhs->mem_block_id();
                                    }
-                                   return lhs->thrd_id() < rhs->thrd_id();
+                                   return lhs->thrd_id_hint() < rhs->thrd_id_hint();
                                  });
       packed_chunk->blocks.insert(it, &mem_block);
       packed_chunk->size += mem_block.mem_size();

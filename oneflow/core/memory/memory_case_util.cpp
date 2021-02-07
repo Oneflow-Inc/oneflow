@@ -52,8 +52,8 @@ MemoryCase MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(
 int64_t MemoryCaseUtil::GenMemZoneId(const MemoryCase& mem_case) {
   // [0, 127] = GPU device mem
   // [128] = CPU host mem
-  // [129, 255] = CPU host mem used by CUDA with device id
-  // [256, ...] Other Device
+  // [129, 256] = CPU host mem used by CUDA with device id
+  // [257, ...] Other Device
   if (mem_case.has_device_cuda_mem()) {
     return mem_case.device_cuda_mem().device_id();  // GPU device mem
   }
