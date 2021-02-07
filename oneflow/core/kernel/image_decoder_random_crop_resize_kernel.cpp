@@ -477,4 +477,3 @@ NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
 #endif
 
 }  // namespace oneflow
-
