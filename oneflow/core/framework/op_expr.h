@@ -25,44 +25,45 @@ class Tensor {};
 using TensorRef = std::shared_ptr<Tensor>;
 using TensorList = std::vector<TensorRef>;
 
-class OpExprInterpreter;
-class OpExprEvalState;
+#define DEFINE_DEFAULT_CONSTRUCTOR(class_type) \
+  class_type() = default;                      \
+  virtual ~class_type() = default;
 
 class OpExpr {
  public:
-  virtual void evaluate(OpExprInterpreter* evaluator, const TensorList& inputs, TensorList& outputs,
-                        const OpExprEvalState* state) = 0;
+  DEFINE_DEFAULT_CONSTRUCTOR(OpExpr);
+
   // TODO(): Uncomment.
   // virtual FilterInputTensorsUsedByBackward(const TensorList& inputs) = 0;
   // virtual FilterOutputTensorsUsedByBackward(const TensorList& outputs) = 0;
 
-  virtual std::shared_ptr<OpExpr> GetBackwardOpExpr() = 0;
+  virtual std::shared_ptr<OpExpr> GetBackwardOpExpr() const = 0;
+
+  virtual std::string type() const = 0;
 };
 
 class BuiltinOpExpr : public OpExpr {
  public:
-  BuiltinOpExpr() = default;
-  explicit BuiltinOpExpr(const std::string& op_name) : op_name_(op_name) {}
+  DEFINE_DEFAULT_CONSTRUCTOR(BuiltinOpExpr);
 
-  virtual ~BuiltinOpExpr() = default;
+  explicit BuiltinOpExpr(const std::string& op_name) : op_name_(op_name) {}
 
   const std::string& op_name() const { return op_name_; }
   void set_op_name(const std::string& op_name) { op_name_ = op_name; }
 
  private:
-  // The operation name.
   std::string op_name_;
 };
 
 class UserOpExpr : public BuiltinOpExpr {
  public:
-  UserOpExpr() = default;
+  DEFINE_DEFAULT_CONSTRUCTOR(UserOpExpr);
+
   explicit UserOpExpr(const std::string& op_name) : BuiltinOpExpr(op_name) {}
 
-  void evaluate(OpExprInterpreter* evaluator, const TensorList& inputs, TensorList& outputs,
-                const OpExprEvalState* state) override;
+  std::shared_ptr<OpExpr> GetBackwardOpExpr() const override;
 
-  std::shared_ptr<OpExpr> GetBackwardOpExpr() override;
+  std::string type() const override { return "UserOp"; }
 
   const UserOpConf& proto() const { return proto_; }
   UserOpConf* mutable_proto() { return &proto_; }
@@ -79,47 +80,14 @@ class UserOpExpr : public BuiltinOpExpr {
   std::vector<std::string> indexed_input_names_;
 };
 
-class OpExprEvalState {
+// TODO(): Finish the class definition of `FunctionOpExpr`.
+class FunctionOpExpr : public OpExpr {
  public:
-  OpExprEvalState() = default;
-  virtual ~OpExprEvalState() = default;
+  DEFINE_DEFAULT_CONSTRUCTOR(FunctionOpExpr);
 
-  const TensorList& SavedTensors() const { return saved_tensors_; }
+  std::shared_ptr<OpExpr> GetBackwardOpExpr() const override;
 
-  void SaveTensorForBackward(const TensorRef& tensor) { saved_tensors_.push_back(tensor); }
-
- private:
-  TensorList saved_tensors_;
-};
-
-class OpExprInterpreter {
- public:
-  OpExprInterpreter() : self_state_(new OpExprEvalState) {}
-  virtual ~OpExprInterpreter() = default;
-
-  virtual void apply(const OpExpr* op, const TensorList& inputs, TensorList& outputs,
-                     const OpExprEvalState* state) = 0;
-
-  std::shared_ptr<OpExprEvalState> state() const { return self_state_; }
-
- protected:
-  std::shared_ptr<OpExprEvalState> self_state_;
-};
-
-class NormalInterpreter : public OpExprInterpreter {
- public:
-  NormalInterpreter() : OpExprInterpreter() {}
-
-  void apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
-             const OpExprEvalState* state) override;
-};
-
-class AutogradInterpreter : public OpExprInterpreter {
- public:
-  AutogradInterpreter() : OpExprInterpreter() {}
-
-  void apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
-             const OpExprEvalState* state) override;
+  std::string type() const override { return "FunctionOp"; }
 };
 
 }  // namespace one
