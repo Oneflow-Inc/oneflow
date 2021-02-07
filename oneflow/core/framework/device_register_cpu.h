@@ -13,11 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <half.hpp>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/device_registry_manager.h"
 
 namespace oneflow {
-REGISTER_DEVICE(DeviceType::kCPU)
-    .SetDumpVersionInfoFn([]() -> void {})
-    .SetDeviceTag("cpu");
-}
+typedef half_float::half float16;
+
+template<typename T>
+struct IsFloat16;
+
+template<>
+struct IsFloat16<float16> : std::true_type {};
+
+REGISTER_DEVICE(DeviceType::kCPU).SetDumpVersionInfoFn([]() -> void {}).SetDeviceTag("cpu");
+}  // namespace oneflow

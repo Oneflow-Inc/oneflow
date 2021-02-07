@@ -21,17 +21,13 @@ namespace oneflow {
 
 Maybe<const char*> DeviceTag4DeviceType(DeviceType device_type) {
   auto device_type_to_tag = DeviceRegistryMgr::Get().DeviceType4Tag();
-  if (device_type_to_tag.find(device_type) == device_type_to_tag.end()) {
-    UNIMPLEMENTED();
-  }
+  if (device_type_to_tag.find(device_type) == device_type_to_tag.end()) { UNIMPLEMENTED(); }
   return device_type_to_tag[device_type].c_str();
 }
 
 Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
   auto device_tag_to_type = DeviceRegistryMgr::Get().DeviceTag4Type();
-  if (device_tag_to_type.find(device_tag) == device_tag_to_type.end()) {
-    UNIMPLEMENTED();
-  }
+  if (device_tag_to_type.find(device_tag) == device_tag_to_type.end()) { UNIMPLEMENTED(); }
   return device_tag_to_type[device_tag];
 }
 

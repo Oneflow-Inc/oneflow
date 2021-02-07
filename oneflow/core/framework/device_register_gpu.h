@@ -14,20 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #ifdef WITH_CUDA
+#include <type_traits>
 #include <cuda_runtime.h>
 #include <cudnn.h>
 #include <nccl.h>
+#include <cuda_fp16.h>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/device_registry_manager.h"
 
 namespace oneflow {
 namespace {
-
-std::string GetCudaVersionString(int version) {
+inline std::string GetCudaVersionString(int version) {
   return std::to_string(version / 1000) + "." + std::to_string((version % 1000) / 10);
 }
 
-bool GetCudnnVersion(libraryPropertyType type, int* version) {
+inline bool GetCudnnVersion(libraryPropertyType type, int* version) {
   cudnnStatus_t status = cudnnGetProperty(type, version);
   if (status == CUDNN_STATUS_SUCCESS) {
     return true;
@@ -37,7 +38,7 @@ bool GetCudnnVersion(libraryPropertyType type, int* version) {
   }
 }
 
-bool GetCudnnVersionString(std::string* version) {
+inline bool GetCudnnVersionString(std::string* version) {
   int version_major;
   int version_minor;
   int version_patch;
@@ -49,7 +50,7 @@ bool GetCudnnVersionString(std::string* version) {
   return true;
 }
 
-void DumpVersionInfo() {
+inline void GpuDumpVersionInfo() {
   {
     int cuda_runtime_version;
     cudaError_t err = cudaRuntimeGetVersion(&cuda_runtime_version);
@@ -84,9 +85,13 @@ void DumpVersionInfo() {
 
 }  // namespace
 
-REGISTER_DEVICE(DeviceType::kGPU)
-    .SetDumpVersionInfoFn(DumpVersionInfo)
-    .SetDeviceTag("gpu");
+template<typename T>
+struct IsFloat16;
+
+template<>
+struct IsFloat16<half> : std::true_type {};
+
+REGISTER_DEVICE(DeviceType::kGPU).SetDumpVersionInfoFn(GpuDumpVersionInfo).SetDeviceTag("gpu");
 
 }  // namespace oneflow
 #endif  // WITH_CUDA
