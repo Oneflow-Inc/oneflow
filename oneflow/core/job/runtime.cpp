@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/runtime.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
