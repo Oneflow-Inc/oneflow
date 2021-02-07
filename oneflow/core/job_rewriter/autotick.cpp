@@ -289,8 +289,8 @@ CriticalSection* AddGlobalCriticalSection(const std::string& src_tick_op_name,
   auto critical_sec = std::make_unique<CriticalSection>();
   CriticalSection* ret = critical_sec.get();
   critical_sec->set_job_id(GlobalJobDesc().job_id());
-  critical_sec->set_source_tick_op_name(src_tick_op_name);
-  critical_sec->set_sink_tick_op_name(sink_tick_op_name);
+  (*critical_sec->mutable_machine_id2source_tick_op_name())[0] = src_tick_op_name;
+  (*critical_sec->mutable_machine_id2sink_tick_op_name())[0] = sink_tick_op_name;
   Global<CriticalSectionDesc>::Get()->AddCriticalSection(std::move(critical_sec));
   return ret;
 }
