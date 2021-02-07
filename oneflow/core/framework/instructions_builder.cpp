@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/eager/eager_oneflow.h"
+#include "oneflow/core/framework/blob_cache.h"
 
 namespace oneflow {
 
@@ -1116,13 +1117,6 @@ Maybe<OpNodeSignatureDesc> InstructionsBuilder::GetOpNodeSignatureSymbol(
   return GetSymbol<cfg::OpNodeSignature, OpNodeSignatureDesc>(*op_node_signature);
 }
 
-using FindOrCreateDelegateBlobObjectFun = std::function<std::shared_ptr<compatible_py::BlobObject>(
-    const std::function<std::shared_ptr<compatible_py::BlobObject>(
-        const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&,
-    const std::shared_ptr<compatible_py::BlobObject>&,
-    const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>;
-
 Maybe<void> InstructionsBuilder::StatefulCall(
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<compatible_py::OpKernelObject>& opkernel_object,
@@ -1131,8 +1125,7 @@ Maybe<void> InstructionsBuilder::StatefulCall(
     const std::function<std::shared_ptr<compatible_py::BlobObject>(
         const std::shared_ptr<InstructionsBuilder>&,
         const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& boxing_to,
-    const FindOrCreateDelegateBlobObjectFun& find_or_creat_delegate_blob_object) {
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& boxing_to) {
   std::shared_ptr<ParallelDesc> op_parallel_desc_sym = opkernel_object->parallel_desc_symbol();
   const auto& parallel_sig = op_attribute->parallel_signature();
   CHECK_OR_RETURN(parallel_sig.has_op_parallel_desc_symbol_id());
@@ -1148,12 +1141,12 @@ Maybe<void> InstructionsBuilder::StatefulCall(
   };
 
   const auto GetDelegateBlobObject =
-      [this, find_or_creat_delegate_blob_object, &FetchDelegateBlobObject](
+      [this, &FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> std::shared_ptr<compatible_py::BlobObject> {
-    return find_or_creat_delegate_blob_object(FetchDelegateBlobObject, blob_object,
-                                              op_arg_parallel_attr);
+    return FindOrCreateDelegateBlobObject(FetchDelegateBlobObject, blob_object,
+                                          op_arg_parallel_attr);
   };
 
   JUST(_StatefulCall(op_attribute, opkernel_object, bn_in_op2blob_object, GetDelegateBlobObject));
@@ -1169,8 +1162,7 @@ Maybe<void> InstructionsBuilder::StatelessCall(
     const std::function<std::shared_ptr<compatible_py::BlobObject>(
         const std::shared_ptr<InstructionsBuilder>&,
         const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& boxing_to,
-    const FindOrCreateDelegateBlobObjectFun& find_or_creat_delegate_blob_object) {
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& boxing_to) {
   std::shared_ptr<ParallelDesc> op_parallel_desc_sym = JUST(GetParallelDescSymbol(parallel_conf));
   JUST(CheckRefInBlobObjectParallelDesc(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object));
 
@@ -1183,12 +1175,12 @@ Maybe<void> InstructionsBuilder::StatelessCall(
   };
 
   const auto GetDelegateBlobObject =
-      [this, find_or_creat_delegate_blob_object, &FetchDelegateBlobObject](
+      [this, &FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> std::shared_ptr<compatible_py::BlobObject> {
-    return find_or_creat_delegate_blob_object(FetchDelegateBlobObject, blob_object,
-                                              op_arg_parallel_attr);
+    return FindOrCreateDelegateBlobObject(FetchDelegateBlobObject, blob_object,
+                                          op_arg_parallel_attr);
   };
 
   JUST(_StatelessCall("compute", op_attribute, op_parallel_desc_sym, op_parallel_desc_sym,
@@ -1201,8 +1193,7 @@ Maybe<void> InstructionsBuilder::NoBoxingStatelessCall(
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn_in_op2blob_object,
-    const FindOrCreateDelegateBlobObjectFun& find_or_creat_delegate_blob_object) {
+        bn_in_op2blob_object) {
   std::shared_ptr<ParallelDesc> op_parallel_desc_sym = JUST(GetParallelDescSymbol(parallel_conf));
   JUST(CheckRefInBlobObjectParallelDesc(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object));
 
@@ -1228,12 +1219,12 @@ Maybe<void> InstructionsBuilder::NoBoxingStatelessCall(
   };
 
   const auto GetDirectOr121BlobObject =
-      [this, find_or_creat_delegate_blob_object, &FetchDelegateBlobObject](
+      [this, &FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> std::shared_ptr<compatible_py::BlobObject> {
-    return find_or_creat_delegate_blob_object(FetchDelegateBlobObject, blob_object,
-                                              op_arg_parallel_attr);
+    return FindOrCreateDelegateBlobObject(FetchDelegateBlobObject, blob_object,
+                                          op_arg_parallel_attr);
   };
   JUST(_StatelessCall("compute", op_attribute, op_parallel_desc_sym, op_parallel_desc_sym,
                       bn_in_op2blob_object, GetDirectOr121BlobObject));
