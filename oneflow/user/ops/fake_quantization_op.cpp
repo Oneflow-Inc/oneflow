@@ -36,8 +36,8 @@ REGISTER_USER_OP("fake_quantization")
 
       // NOTE(Liang Depeng): scale_shape->elem_cnt() > 1 means per-channel quantization for weights.
       if (scale_shape->elem_cnt() > 1) {
-        CHECK_OR_RETURN(scale_shape->elem_cnt() == in_shape->At(0));
-        CHECK_OR_RETURN(zero_point_shape->elem_cnt() == in_shape->At(0));
+        CHECK_EQ_OR_RETURN(scale_shape->elem_cnt(), in_shape->At(0));
+        CHECK_EQ_OR_RETURN(zero_point_shape->elem_cnt(), in_shape->At(0));
       }
 
       *ctx->Shape4ArgNameAndIndex("out", 0) = *in_shape;

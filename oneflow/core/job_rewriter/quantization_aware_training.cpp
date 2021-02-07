@@ -20,9 +20,11 @@ limitations under the License.
 
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job/scope.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/pass_util.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/vm/symbol_storage.h"
 
 namespace oneflow {
 
@@ -299,8 +301,7 @@ Maybe<void> ReplaceInputLbn4DstNodeOfEdge(OpEdge* edge, const std::string& new_l
 class QuantAwareTraining final : public JobPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(QuantAwareTraining);
-  QuantAwareTraining() : int8_list_(INT8_OP_TYPES), transparent_list_(TRANSPARENT_OP_TYPES) {}
-  ~QuantAwareTraining() = default;
+  QuantAwareTraining() = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const {
     return ctx.job_desc().job_conf().enable_quantization_aware_training();
@@ -310,28 +311,55 @@ class QuantAwareTraining final : public JobPass {
 
  private:
   Maybe<void> InsertFakeQuantOp(const QatConfig& qat_config, const OpGraph& op_graph,
-                                const OpTypeSet& int8_list, HashSet<OpNode*> downstream_white,
-                                Job* job) const;
-
-  const OpTypeSet& int8_list_;
-  const OpTypeSet& transparent_list_;
+                                const OpTypeSet& int8_list, const OpTypeSet& transparent_list,
+                                bool insert_quant_op_after_int8_ops,
+                                HashSet<OpNode*> downstream_white, Job* job) const;
 };
+
+bool IsNodeQuantizationEnabled(const OpNode& node) {
+  int64_t scope_symbol_id = node.op().op_conf().scope_symbol_id();
+  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
+  const Scope& scope = Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+  return scope.Bool("quantization_aware_training");
+}
 
 Maybe<void> QuantAwareTraining::Apply(Job* job, JobPassCtx* ctx) const {
   if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
   CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
 
-  VerifyQATList(int8_list_);
-  VerifyQATList(transparent_list_);
+  const auto qat_config = ctx->job_desc().job_conf().qat_config();
+
+  OpTypeSet int8_list;
+  OpTypeSet transparent_list;
+  // if `insert_quant_op_after_int8_ops` is false,
+  // always insert quant op before int8 ops.
+  // if `insert_quant_op_after_int8_ops` is true,
+  // always insert quant op after int8 ops
+  bool insert_quant_op_after_int8_ops;
+  const auto target_backend = qat_config.target_backend();
+  if (target_backend == "") {
+    int8_list = {"add_n", "matmul", "batch_matmul", "conv2d", "avg_pool_2d", "max_pool_2d"};
+    transparent_list = {"reshape"};
+    insert_quant_op_after_int8_ops = true;
+  } else if (target_backend == "cambricon") {
+    int8_list = {"conv2d", "matmul"};
+    transparent_list = {};
+    insert_quant_op_after_int8_ops = false;
+  } else {
+    UNIMPLEMENTED();
+  }
+
+  VerifyQATList(int8_list);
+  VerifyQATList(transparent_list);
 
   std::function<std::string(OpNode* const&)> OpName4Node = [](OpNode* const& node) {
     return node->op().op_name();
   };
   HashSet<OpNode*> white_set;
   DfsTopoGraphTraversal(op_graph, false,
-                        [this](OpNode* node) { return IsNodeInList(int8_list_, node); },
-                        [&](OpNode* node) { return IsNodeInList(transparent_list_, node); },
+                        [&int8_list](OpNode* node) { return IsNodeInList(int8_list, node); },
+                        [&](OpNode* node) { return IsNodeInList(transparent_list, node); },
                         [&](OpNode* node) { return IsKeyFound(white_set, node); },
                         [&](OpNode* node) {
                           INSERT_CHECK(white_set.insert(node));
@@ -360,14 +388,16 @@ Maybe<void> QuantAwareTraining::Apply(Job* job, JobPassCtx* ctx) const {
   VLOG(3) << "white_set include: "
           << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
 
-  JUST(InsertFakeQuantOp(ctx->job_desc().job_conf().qat_config(), op_graph, int8_list_, white_set,
-                         job));
+  JUST(InsertFakeQuantOp(ctx->job_desc().job_conf().qat_config(), op_graph, int8_list,
+                         transparent_list, insert_quant_op_after_int8_ops, white_set, job));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> QuantAwareTraining::InsertFakeQuantOp(const QatConfig& qat_config,
                                                   const OpGraph& op_graph,
                                                   const OpTypeSet& int8_list,
+                                                  const OpTypeSet& transparent_list,
+                                                  const bool insert_quant_op_after_int8_ops,
                                                   HashSet<OpNode*> white_set, Job* job) const {
   JobBuilder job_builder(job);
   HashSet<OpEdge*> white_set_edges;
@@ -402,12 +432,25 @@ Maybe<void> QuantAwareTraining::InsertFakeQuantOp(const QatConfig& qat_config,
     JUST(op_graph.MaybeForEachNode([&](OpNode* node) -> Maybe<void> {
       if (IsKeyFound(white_set, node)) {
         for (OpEdge* edge : node->in_edges()) {
-          if (!IsKeyFound(white_set, edge->src_node())) { JUST(AddWhiteSetEdge(edge)); }
+          if (IsKeyFound(white_set, edge->src_node())) { continue; }
+          if (IsNodeQuantizationEnabled(*edge->dst_node())) { JUST(AddWhiteSetEdge(edge)); }
         }
         if (IsNodeInList(int8_list, node)) {
-          OpNode* inference_node = JUST(GetInferenceOutputNode(op_graph, node));
-          for (OpEdge* edge : inference_node->out_edges()) { JUST(AddWhiteSetEdge(edge)); }
-        } else if (IsNodeInList(transparent_list_, node)) {
+          if (insert_quant_op_after_int8_ops) {
+            OpNode* inference_node = JUST(GetInferenceOutputNode(op_graph, node));
+            if (IsNodeQuantizationEnabled(*inference_node)) {
+              for (OpEdge* edge : inference_node->out_edges()) { JUST(AddWhiteSetEdge(edge)); }
+            }
+          } else {
+            if (IsNodeQuantizationEnabled(*node)) {
+              for (OpEdge* edge : node->in_edges()) {
+                if (white_set_edges.find(edge) == white_set_edges.end()) {
+                  JUST(AddWhiteSetEdge(edge));
+                }
+              }
+            }
+          }
+        } else if (IsNodeInList(transparent_list, node)) {
           JUST(PropagateScale(node));
         } else {
           // this is bias_add, relu or bn op in "conv -> bias_add -> bn -> relu" pattern,

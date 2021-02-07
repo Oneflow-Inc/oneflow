@@ -144,6 +144,7 @@ message QatConfig {
   optional bool symmetric = 2 [default = true];
   optional float moving_min_max_momentum = 3 [default = 0.95];
   optional float moving_min_max_stop_update_after_iters = 4;
+  optional string target_backend = 5 [default = ""];
 }
 
 message IndexedSlicesOptimizerConf {
