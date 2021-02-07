@@ -1003,12 +1003,14 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
 }
 
 Oneflow::~Oneflow() {
+  std::cout << "Oneflow destruct begin" << std::endl;
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { runtime_buffers_scope_.reset(); }
   runtime_.reset();
   if (Global<Profiler>::Get() != nullptr) {
     Global<Profiler>::Get()->Profile(
         plan_, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
   }
+  std::cout << "Oneflow destruct end" << std::endl;
 }
 
 }  // namespace oneflow
