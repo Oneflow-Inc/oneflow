@@ -33,10 +33,6 @@ limitations under the License.
 
 namespace oneflow {
 
-struct OpContext {
-  virtual ~OpContext() {}
-};
-
 class LogicalNode;
 class MirroredSigInferHint;
 class OpNodeSignature;
@@ -109,11 +105,7 @@ class Operator {
   // Read: shape of input_blobs
   // Write: shape of output_blobs
   Maybe<void> InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext*, const SbpSignature* sbp_signature,
-                               std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual Maybe<void> InferBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      const SbpSignature* sbp_signature, std::function<void(OpContext*)> EnrollOpCtx) const;
+                               const ParallelContext*, const SbpSignature* sbp_signature) const;
   virtual Maybe<void> InferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       const SbpSignature* sbp_signature) const;
@@ -122,12 +114,11 @@ class Operator {
       const ParallelContext*) const;
 
   Maybe<void> InferOutBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext*, const SbpSignature* sbp_signature,
-                                  std::function<void(OpContext*)> EnrollOpCtx) const;
+                                  const ParallelContext*, const SbpSignature* sbp_signature) const;
 
   virtual Maybe<void> InferOutBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      const SbpSignature* sbp_signature, std::function<void(OpContext*)> EnrollOpCtx) const;
+      const SbpSignature* sbp_signature) const;
 
   Maybe<void> InferInplaceObn2IbnIf(HashMap<std::string, std::string>* mut_inplace_obn2ibn,
                                     HashMap<std::string, std::string>* con_inplace_obn2ibn,
@@ -169,9 +160,9 @@ class Operator {
           MirroredSigInferHint4Ibn,
       bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc);
   void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                     const ParallelContext*, KernelConf*, const OpContext*,
+                     const ParallelContext*, KernelConf*,
                      std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
-                     const ParallelDesc* parallel_desc) const;
+                     const ParallelDesc* parallel_desc, const SbpSignature* sbp_signature) const;
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
   Maybe<const SbpParallel*> SbpParallel4BnInOp(const std::string& bn_in_op) const;
@@ -241,21 +232,21 @@ class Operator {
 
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      KernelConf*, const OpContext*,
-      std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
+      KernelConf*, std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
+      const ParallelDesc* parallel_desc, const SbpSignature* sbp_signature) const;
+
+  virtual void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      KernelConf*, std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
       const ParallelDesc* parallel_desc) const;
 
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      KernelConf*, const OpContext*,
-      std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const;
+      KernelConf*, std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const;
 
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      KernelConf*, const OpContext*) const;
-  virtual void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      KernelConf*) const {}
+      KernelConf*) const;
 
   virtual LogicalBlobId lbi4ibn(const std::string& input_bn) const;
   virtual LogicalBlobId lbi4obn(const std::string& output_bn) const;
