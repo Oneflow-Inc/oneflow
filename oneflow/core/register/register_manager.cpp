@@ -35,16 +35,11 @@ void CheckBlobInRegstNotDisabled(const RegstDescProto& regst_desc) {
 
 struct PackedChunkInfo {
   MemoryCase mem_case;
-  int64_t thrd_id;
   int64_t size;
-  int64_t offset;
-  char* ptr;
-  PackedChunkInfo(const MemoryCase& mem, int64_t thrd) {
+  std::vector<const MemBlockProto*> blocks;
+  PackedChunkInfo(const MemoryCase& mem) {
     mem_case = mem;
-    thrd_id = thrd;
     size = 0;
-    offset = 0;
-    ptr = nullptr;
   }
 };
 
@@ -62,90 +57,63 @@ RegstMgr::RegstMgr(const Plan& plan) {
   }
 
   HashSet<int64_t> all_block_ids;
-  HashMap<int64_t, const MemBlockProto*> separate_block_id2block;
+  HashMap<int64_t, PackedChunkInfo> zone_id2packed_chunk;
   for (const MemBlockProto& mem_block : plan.block_chunk_list().mem_block()) {
     if (mem_block.machine_id() != this_machine_id) { continue; }
     if (mem_block.mem_size() == 0) { continue; }
-    CHECK(all_block_ids.insert(mem_block.mem_block_id()).second);
+    const int64_t mem_block_id = mem_block.mem_block_id();
+    CHECK(all_block_ids.insert(mem_block_id).second);
     if (mem_block.has_chunk_id()) {
       CHECK(mem_block.has_chunk_offset());
       CHECK(chunk_id2ptr.find(mem_block.chunk_id()) != chunk_id2ptr.end());
       char* mem_block_ptr = chunk_id2ptr.at(mem_block.chunk_id()) + mem_block.chunk_offset();
-      CHECK(mem_block_id2ptr_.emplace(mem_block.mem_block_id(), mem_block_ptr).second);
+      CHECK(mem_block_id2ptr_.emplace(mem_block_id, mem_block_ptr).second);
     } else {
-      CHECK(separate_block_id2block.emplace(mem_block.mem_block_id(), &mem_block).second);
+      int64_t zone_id = MemoryCaseUtil::GenMemZoneId(mem_block.mem_case());
+      if (zone_id2packed_chunk.find(zone_id) == zone_id2packed_chunk.end()) {
+        zone_id2packed_chunk.emplace(zone_id, PackedChunkInfo(mem_block.mem_case()));
+      }
+      PackedChunkInfo* packed_chunk = &(zone_id2packed_chunk.at(zone_id));
+      std::vector<const MemBlockProto*>* sorted_blocks = &(packed_chunk->blocks);
+      auto it = std::lower_bound(sorted_blocks->begin(), sorted_blocks->end(), &mem_block,
+                                 [](const MemBlockProto* lhs, const MemBlockProto* rhs) {
+                                   if (lhs->thrd_id() == rhs->thrd_id()) {
+                                     return lhs->mem_block_id() < rhs->mem_block_id();
+                                   }
+                                   return lhs->thrd_id() < rhs->thrd_id();
+                                 });
+      packed_chunk->blocks.insert(it, &mem_block);
+      packed_chunk->size += mem_block.mem_size();
+      CHECK(packed_chunk->mem_case == mem_block.mem_case());
     }
   }
 
-  HashMap<int64_t, HashSet<int64_t>> mem_block_id2thrd_ids;
+  for (const auto& pair : zone_id2packed_chunk) {
+    const PackedChunkInfo* packed_chunk = &pair.second;
+    char* ptr =
+        Global<MemoryAllocator>::Get()->Allocate(packed_chunk->mem_case, packed_chunk->size);
+    int64_t offset = 0;
+    for (const MemBlockProto* block : packed_chunk->blocks) {
+      CHECK(mem_block_id2ptr_.emplace(block->mem_block_id(), ptr + offset).second);
+      offset += block->mem_size();
+    }
+    CHECK_EQ(offset, packed_chunk->size);
+  }
+
+  for (int64_t mem_block_id : all_block_ids) {
+    CHECK(mem_block_id2ptr_.find(mem_block_id) != mem_block_id2ptr_.end());
+  }
+
   for (const TaskProto& task : plan.task()) {
     if (task.machine_id() != this_machine_id) { continue; }
     for (const auto& pair : task.produced_regst_desc()) {
       const RegstDescProto& regst_desc = pair.second;
       const int64_t regst_desc_id = regst_desc.regst_desc_id();
-      // create empty regsts
       CHECK(regst_desc_id2rt_regst_desc_
                 .emplace(regst_desc_id, std::make_unique<const RtRegstDesc>(regst_desc))
                 .second);
       CHECK(regst_desc_id2parallel_ctx_.emplace(regst_desc_id, task.parallel_ctx()).second);
-
-      // collect thrd ids for speparated mem block
-      int64_t header_block_id = regst_desc.separated_header_mem_block_id();
-      if (header_block_id != -1) {
-        mem_block_id2thrd_ids[header_block_id].insert(task.thrd_id());
-        CHECK(separate_block_id2block.find(header_block_id) != separate_block_id2block.end());
-      }
-      int64_t body_block_id = regst_desc.mem_block_id();
-      if (separate_block_id2block.find(body_block_id) != separate_block_id2block.end()) {
-        mem_block_id2thrd_ids[body_block_id].insert(task.thrd_id());
-      }
     }
-  }
-
-  HashMap<int64_t, PackedChunkInfo> thrd_zone_id2packed_chunk;
-  HashMap<int64_t, int64_t> block_id2thrd_zone_id;
-  for (const auto& pair : mem_block_id2thrd_ids) {
-    const int64_t mem_block_id = pair.first;
-    const MemBlockProto* mem_block = separate_block_id2block.at(mem_block_id);
-    const MemoryCase& mem_case = mem_block->mem_case();
-    if (pair.second.size() > 1) {
-      // means this mem block is used by multi-thread, must allocate separated.
-      char* ptr = Global<MemoryAllocator>::Get()->Allocate(mem_case, mem_block->mem_size());
-      CHECK(mem_block_id2ptr_.emplace(mem_block_id, ptr).second);
-    } else {
-      const int64_t thrd_id = *(pair.second.begin());
-      const int64_t thrd_zone_id = MemoryCaseUtil::MergeThrdMemZoneId(thrd_id, mem_case);
-      CHECK(block_id2thrd_zone_id.emplace(mem_block_id, thrd_zone_id).second);
-      if (thrd_zone_id2packed_chunk.find(thrd_zone_id) == thrd_zone_id2packed_chunk.end()) {
-        thrd_zone_id2packed_chunk.emplace(thrd_zone_id, PackedChunkInfo(mem_case, thrd_id));
-      }
-      PackedChunkInfo* packed_chunk = &thrd_zone_id2packed_chunk.at(thrd_zone_id);
-      packed_chunk->size += mem_block->mem_size();
-      CHECK_EQ(thrd_id, packed_chunk->thrd_id);
-    }
-  }
-
-  for (auto& pair : thrd_zone_id2packed_chunk) {
-    pair.second.ptr =
-        Global<MemoryAllocator>::Get()->Allocate(pair.second.mem_case, pair.second.size);
-  }
-
-  for (const auto& pair : block_id2thrd_zone_id) {
-    const int64_t mem_block_id = pair.first;
-    const MemBlockProto* mem_block = separate_block_id2block.at(mem_block_id);
-    PackedChunkInfo* packed_chunk = &thrd_zone_id2packed_chunk.at(pair.second);
-    char* mem_block_ptr = packed_chunk->ptr + packed_chunk->offset;
-    packed_chunk->offset += mem_block->mem_size();
-    CHECK(mem_block_id2ptr_.emplace(mem_block_id, mem_block_ptr).second);
-    CHECK_LE(packed_chunk->offset, packed_chunk->size);
-  }
-
-  // Check valid
-  for (const auto& pair : thrd_zone_id2packed_chunk) {
-    CHECK_EQ(pair.second.size, pair.second.offset);
-  }
-  for (int64_t mem_block_id : all_block_ids) {
-    CHECK(mem_block_id2ptr_.find(mem_block_id) != mem_block_id2ptr_.end());
   }
 }
 

@@ -12,6 +12,7 @@ message MemBlockProto {
   optional int64 chunk_id = 6 [default = -1];
   optional int64 chunk_offset = 7 [default = -1];
   required int64 mem_size = 8;
+  required int64 thrd_id = 9;
 }
 
 message ChunkProto {
