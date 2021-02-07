@@ -80,6 +80,7 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
         image_height, image_width = input_image.shape[2:]
         style_transfer = make_style_transfer(image_height, image_width)
         flow.load_variables(flow.checkpoint.get(self.MODEL_PARAMS_DIR))
+        flow.clear_default_session()
 
         # save
         saved_model_path = "style_models"
@@ -95,7 +96,6 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
             saved_model_builder.Save()
 
         # load
-        flow.clear_default_session()
         sess = flow.serving.InferenceSession()
         sess.load_saved_model(saved_model_path)
         sess.launch()
@@ -119,10 +119,12 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
                 )
             )
 
-        # input_dict = {input_names[0]: input_image}
-        # outputs = sess.run(style_transfer.__name__, **input_dict)
-        # if self.OUTPUT_IMAGE_FILE is not None:
-        #     cv2.imwrite(self.OUTPUT_IMAGE_FILE, recover_image(outputs[0]))
+        input_dict = {input_names[0]: input_image}
+        outputs = sess.run(style_transfer.__name__, **input_dict)
+        if self.OUTPUT_IMAGE_FILE is not None:
+            cv2.imwrite(self.OUTPUT_IMAGE_FILE, recover_image(outputs[0]))
+
+        sess.close()
 
 
 if __name__ == "__main__":
