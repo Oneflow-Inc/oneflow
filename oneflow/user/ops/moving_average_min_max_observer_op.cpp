@@ -27,6 +27,8 @@ REGISTER_USER_OP("moving_average_min_max_observer")
     .Output("scale")
     .Output("zero_point")
     .Attr<bool>("training")
+    // NOTE(Liang Depeng): "google" or "cambricon"
+    .Attr<std::string>("quantization_formula", "google")
     .Attr<int64_t>("stop_update_after_iters")
     // NOTE(Liang Depeng): quantize from float32 to "quantization_bit" bit signed or unsigned
     // integer
@@ -101,6 +103,8 @@ REGISTER_USER_OP("moving_average_min_max_observer")
       int64_t stop_update_after_iters = op_conf.attr<int64_t>("stop_update_after_iters");
       CHECK_GT_OR_RETURN(stop_update_after_iters, 0);
 
+      std::string quantization_formula = op_conf.attr<std::string>("quantization_formula");
+      CHECK_OR_RETURN(quantization_formula == "google" || quantization_formula == "cambricon");
       return Maybe<void>::Ok();
     });
 
