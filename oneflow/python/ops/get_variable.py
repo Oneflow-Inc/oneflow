@@ -362,7 +362,7 @@ def CreateEagerVariableBlob(op_attribute, job_name=""):
             parallel_conf,
             bn_in_op2blob_object,
             boxing_util.BoxingTo,
-            blob_cache_util.FindOrCreateDelegateBlobObject,
+            oneflow_api.FindOrCreateDelegateBlobObject,
         )
 
     oneflow_api.deprecated.LogicalRun(BuildInstruction)

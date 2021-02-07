@@ -40,4 +40,4 @@ def BnInOp2BlobObjectScope(blob_register, op_attribute):
         )
 
 
-default_blob_register_ = oneflow_api.BlobRegister(blob_cache_util.TryDisableBlobCache)
+default_blob_register_ = oneflow_api.BlobRegister(oneflow_api.TryDisableBlobCache)

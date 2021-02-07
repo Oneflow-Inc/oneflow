@@ -113,7 +113,7 @@ def FeedValueToEagerBlob(blob_object, blob_def, ndarray):
     for i, physical_blob_object in enumerate(physical_blob_objects):
         feed_ctx.set_rank(i)
         _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, physical_blob_object)
-    blob_cache_util.TryDisableBlobCache(blob_object)
+    oneflow_api.TryDisableBlobCache(blob_object)
 
 
 def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
@@ -158,7 +158,7 @@ def _MakeInputBlobObject(arg_blob_def):
             parallel_conf,
             bn_in_op2blob_object,
             boxing_util.BoxingTo,
-            blob_cache_util.FindOrCreateDelegateBlobObject,
+            oneflow_api.FindOrCreateDelegateBlobObject,
         )
 
     oneflow_api.deprecated.LogicalRun(BuildInputInstruction)

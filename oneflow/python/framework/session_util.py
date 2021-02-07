@@ -86,7 +86,7 @@ class Session(object):
         self._UpdateScopeAttrName2DefaultVal()
         self.sess_ = oneflow_api.GetDefaultSession()
         self.backward_blob_register_ = oneflow_api.BlobRegister(
-            blob_cache_util.TryDisableBlobCache
+            oneflow_api.TryDisableBlobCache
         )
         self.snapshot_mgr_ = SnapshotManager()
         self.eager_config_proto_ctx_ = None
