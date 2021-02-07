@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_BOXING_IDENTITY_COMPUTE_TASK_NODE_H_
 
 #include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/graph/stream_index_getter_registry_manager.h"
 
 namespace oneflow {
 

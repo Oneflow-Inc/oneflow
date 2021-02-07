@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/framework/framework.h"
 
+
 namespace oneflow {
 
 class RepeatCompTaskNode final : public CompTaskNode {
@@ -76,5 +77,15 @@ void RepeatCompTaskNode::InferProducedDataRegstTimeShape() {
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("repeat", RepeatCompTaskNode);
 REGISTER_USER_OP_INDEPENDENT_AREA_ID("repeat");
+
+namespace {
+
+  int64_t StreamIndexGetter(int64_t dev_phy_id) {
+    return 0;
+  }
+  
+}  // namespace
+REGISTER_COMP_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kRepeat)
+  .SetStreamIndexGetterFn(StreamIndexGetter);
 
 }  // namespace oneflow
