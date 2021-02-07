@@ -3323,6 +3323,54 @@ def relu6(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.Bl
     return flow.nn.hardtanh(x, min_val=0.0, max_val=6.0, name=name)
 
 
+@oneflow_export("nn.silu")
+def silu(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
+    """The SiLU activation. 
+
+    The equation is: 
+
+    .. math:: 
+
+        & \sigma(x) = sigmoid(x)
+
+        & SiLU(x) = x*\sigma(x)
+
+    For example: 
+
+    .. code-block:: 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np
+
+
+        @flow.global_function()
+        def silu_job(x: tp.Numpy.Placeholder(shape=(2, 3), dtype=flow.float32))->tp.Numpy: 
+            out = flow.nn.silu(x)
+            return out
+
+        x = np.array([[-1, -0.5, 0.0], 
+                    [0.5, 6.0, -3]]).astype(np.float32)
+
+        out = silu_job(x)
+
+        # output [[-0.26894143 -0.18877034  0.        ]
+        #         [ 0.31122968  5.985164   -0.14227763]]
+
+    Args:
+        x (oneflow_api.BlobDesc): The input Tensor. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: The activated Tensor. 
+    """
+    if name is None:
+        name = id_util.UniqueStr("SiLU_")
+    return flow.math.multiply(
+        x, flow.math.sigmoid(x, name=name + "silu_sigmoid"), name=name + "mul"
+    )
+
+
 @oneflow_export("nn.L1Loss")
 def l1_loss(
     input: oneflow_api.BlobDesc,
