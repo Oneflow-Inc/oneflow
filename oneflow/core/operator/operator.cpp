@@ -475,9 +475,7 @@ void Operator::VirtualGenKernelConf(
 
 void Operator::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
-}
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {}
 
 std::string Operator::Bn2ConfName(const std::string& bn) const {
   return GetStrValInPbFdOrPbRpf(GetCustomizedConf(), bn);
