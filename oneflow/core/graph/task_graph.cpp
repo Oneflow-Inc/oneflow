@@ -303,7 +303,7 @@ Maybe<void> TaskGraph::ConnectDstSubsetTickEdges(const std::vector<CompTaskNode*
   JUST(MakeGetterTaskNode4MachineId7ThrdId(dst_task_nodes, &TaskNode4MachineId7ThrdId));
   for (CompTaskNode* src_task_node : src_task_nodes) {
     CompTaskNode* dst_task_node =
-        JUST(TaskNode4MachineId7ThrdId(src_task_node->machine_id(), dst_task_node->thrd_id()));
+        JUST(TaskNode4MachineId7ThrdId(src_task_node->machine_id(), src_task_node->thrd_id()));
     TaskEdge* edge = NewEdge();
     Connect<TaskNode>(src_task_node, edge, dst_task_node);
   }
