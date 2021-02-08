@@ -90,7 +90,7 @@ jobs:
     - name: Print Backtrace (distributed test)
       if: always()
       run: |
-        docker run --privileged --network host --shm-size=8g --rm -v $PWD:$PWD -v $HOME:$HOME -w $PWD ci/test/print_stack_from_core.sh python3 /home/caishenghang/oneflow/distributed-tmp
+        docker run --privileged --network host --shm-size=8g --rm -v $PWD:$PWD -v $HOME:$HOME -w $PWD ci/test/print_stack_from_core.sh python3 docker run --privileged --network host --shm-size=8g --rm -v $PWD:$PWD -w $PWD oneflow-test:$USER bash ci/test/print_stack_from_core.sh python3 distributed-tmp
     - name: Upload log (distributed test)
       if: always()
       uses: ./.github/actions/upload_oss
