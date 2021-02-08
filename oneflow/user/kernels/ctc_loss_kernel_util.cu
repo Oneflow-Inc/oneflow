@@ -40,10 +40,11 @@ __global__ void CtcLossGpu(const T* log_probs_ptr, const int* targets_ptr,
   const int32_t bid = blockIdx.x;
   const int32_t tid = threadIdx.x;
   for (int64_t b = bid; b < batch_size; b += gridDim.x) {
-    if (input_lengths_ptr[b] > max_input_length) __trap();
-    if (target_lengths_ptr[b] > max_target_length) __trap();
+    if (tid == 0) {
+      if (input_lengths_ptr[b] > max_input_length) __trap();
+      if (target_lengths_ptr[b] > max_target_length) __trap();
+    }
   }
-  __syncthreads();
   for (int64_t b = bid; b < batch_size; b += gridDim.x) {
     IDX input_length = input_lengths_ptr[b];
     IDX target_length = target_lengths_ptr[b];
@@ -51,18 +52,17 @@ __global__ void CtcLossGpu(const T* log_probs_ptr, const int* targets_ptr,
     for (IDX s = tid; s < 2 * target_length + 1; s += blockDim.x) {
       alpha_ptr[alpha_helper.NdIndexToOffset(b, 0, s)] = neginf;
     }
+    if (tid == 0) {
+      alpha_ptr[alpha_helper.NdIndexToOffset(b, 0, 0)] =
+          log_probs_ptr[input_helper.NdIndexToOffset(0, b, blank)];
+      if (target_length > 0) {
+        int target = get_target_prime(targets_ptr, max_target_length, b, 1, blank);
+        alpha_ptr[alpha_helper.NdIndexToOffset(b, 0, 1)] =
+            log_probs_ptr[input_helper.NdIndexToOffset(0, b, target)];
+      }
+    }
     __syncthreads();
     for (IDX t = 1; t < input_length; t++) {
-      if (tid == 0) {
-        alpha_ptr[alpha_helper.NdIndexToOffset(b, 0, 0)] =
-            log_probs_ptr[input_helper.NdIndexToOffset(0, b, blank)];
-        if (target_length > 0) {
-          int target = get_target_prime(targets_ptr, max_target_length, b, 1, blank);
-          alpha_ptr[alpha_helper.NdIndexToOffset(b, 0, 1)] =
-              log_probs_ptr[input_helper.NdIndexToOffset(0, b, target)];
-        }
-      }
-      __syncthreads();
       for (IDX s = tid; s < 2 * target_length + 1; s += blockDim.x) {
         int current_target_prime = get_target_prime(targets_ptr, max_target_length, b, s, blank);
         T la1 = alpha_ptr[alpha_helper.NdIndexToOffset(b, t - 1, s)];
@@ -88,8 +88,8 @@ __global__ void CtcLossGpu(const T* log_probs_ptr, const int* targets_ptr,
             log(exp(la1 - lamax) + exp(la2 - lamax) + exp(la3 - lamax)) + lamax
             + log_probs_ptr[input_helper.NdIndexToOffset(t, b, current_target_prime)];
       }
+      __syncthreads();
     }
-    __syncthreads();
     if (tid == 0) {
       if (target_length == 0) {
         int64_t idx = alpha_helper.NdIndexToOffset(b, input_length - 1, 0);
@@ -140,10 +140,7 @@ __global__ void CtcLossGradGpu(const T* grad_out_ptr, const T* loss_ptr, const T
       for (IDX s = tid; s < 2 * target_length + 1; s += blockDim.x) {
         beta_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, s)] = neginf;
       }
-      __syncthreads();
-    }
-    for (IDX t = input_length - 2; t >= 0; t--) {
-      if (tid == 0 && input_length > 0) {
+      if (tid == 0) {
         beta_ptr[beta_helper.NdIndexToOffset(b, input_length - 1, 2 * target_length)] =
             log_probs_ptr[input_helper.NdIndexToOffset(input_length - 1, b, blank)];
         if (target_length > 0) {
@@ -154,6 +151,8 @@ __global__ void CtcLossGradGpu(const T* grad_out_ptr, const T* loss_ptr, const T
         }
       }
       __syncthreads();
+    }
+    for (IDX t = input_length - 2; t >= 0; t--) {
       for (IDX s = tid; s < 2 * target_length + 1; s += blockDim.x) {
         int current_target_prime = get_target_prime(targets_ptr, max_target_length, b, s, blank);
         T lb1 = beta_ptr[beta_helper.NdIndexToOffset(b, t + 1, s)];
@@ -179,8 +178,8 @@ __global__ void CtcLossGradGpu(const T* grad_out_ptr, const T* loss_ptr, const T
             log(exp(lb1 - lbmax) + exp(lb2 - lbmax) + exp(lb3 - lbmax)) + lbmax
             + log_probs_ptr[input_helper.NdIndexToOffset(t, b, current_target_prime)];
       }
+      __syncthreads();
     }
-    __syncthreads();
     for (IDX t = tid; t < max_input_length; t += blockDim.x) {
       for (IDX c = 0; c < num_labels; c++) {
         grad_ptr[input_helper.NdIndexToOffset(t, b, c)] = t < input_length ? neginf : 0;
