@@ -83,7 +83,6 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
         image_height, image_width = input_image.shape[2:]
         style_transfer = make_style_transfer(image_height, image_width)
         flow.load_variables(flow.checkpoint.get(self.CHECKPOINT_DIR))
-        flow.clear_default_session()
 
         # save
         saved_model_path = "style_models"
@@ -97,6 +96,8 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
             )
             saved_model_builder.AddFunction(style_transfer).Finish()
             saved_model_builder.Save()
+
+        flow.clear_default_session()
 
         # load
         sess = flow.serving.InferenceSession()
