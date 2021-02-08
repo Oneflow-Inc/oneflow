@@ -30,8 +30,9 @@ class DynamicBinarySplitOp final : public Operator {
   Maybe<void> InferBatchAxis(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext*) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
@@ -45,9 +46,9 @@ void DynamicBinarySplitOp::InitFromOpConf() {
   });
 }
 
-Maybe<void> DynamicBinarySplitOp::InferBlobDescs(
+Maybe<void> DynamicBinarySplitOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const auto& in_blob_desc = *GetBlobDesc4BnInOp("in");
   CHECK_OR_RETURN(in_blob_desc.is_dynamic());
   CHECK_GE_OR_RETURN(output_bns().size(), 2);
@@ -112,8 +113,9 @@ class DynamicBinaryConcatOp final : public Operator {
   Maybe<void> InferBatchAxis(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext*) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
@@ -130,9 +132,9 @@ void DynamicBinaryConcatOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-Maybe<void> DynamicBinaryConcatOp::InferBlobDescs(
+Maybe<void> DynamicBinaryConcatOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const auto& conf = op_conf().dynamic_binary_concat_conf();
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *GetBlobDesc4BnInOp(input_bns().Get(0));

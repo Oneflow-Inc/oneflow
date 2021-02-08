@@ -30,9 +30,9 @@ void ForeignInputOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-Maybe<void> ForeignInputOp::InferBlobDescs(
+Maybe<void> ForeignInputOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   CheckOpConf(op_conf());
   const auto& conf = op_conf().foreign_input_conf().blob_conf();
