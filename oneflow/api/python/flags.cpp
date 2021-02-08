@@ -13,19 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OPERATOR_USER_OP_UTIL_H_
-#define ONEFLOW_CORE_OPERATOR_USER_OP_UTIL_H_
-
-#include "oneflow/core/operator/operator.h"
+#include "oneflow/api/python/of_api_registry.h"
 
 namespace oneflow {
 
-struct UserOpCtx : public OpContext {
-  HashMap<std::string, std::string> mut_inplace_obn2ibn;
-  HashMap<std::string, std::string> con_inplace_obn2ibn;
-  SbpSignature sbp_sig;
-};
+ONEFLOW_API_PYBIND11_MODULE("flags", m) {
+  m.def("with_cuda", []() {
+#ifdef WITH_CUDA
+    return true;
+#else
+    return false;
+#endif  // WITH_CUDA
+  });
+
+  m.def("use_cxx11_abi", []() {
+#if _GLIBCXX_USE_CXX11_ABI == 1
+    return true;
+#else
+    return false;
+#endif  // _GLIBCXX_USE_CXX11_ABI
+  });
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_OPERATOR_USER_OP_UTIL_H_

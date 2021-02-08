@@ -1736,9 +1736,17 @@ class LAMB(Optimizer):
         beta2 (float, optional): The exponential weighted average decay rate for the 2rd-moment estimates (:math:`\beta_2`). Defaults to 0.999.
         epsilon ([type], optional): A small float constant value for numerical stability (:math:`\epsilon`). Defaults to 1e-6.
         loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
+        weight_decay (Optional[float], optional): The weight decay factor (In the equation is :math:`\lambda`). Defaults to None.
+        weight_decay_includes (Optional[Union[Sequence[Text], Text]], optional): The name of the model parameters that use weight decay. Defaults to None.
+        weight_decay_excludes (Optional[Union[Sequence[Text], Text]], optional): The name of the model parameters that do not use weight decay. Defaults to None.
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
         loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
+
+    Note:
+
+        Only one of `weight_decay_includes` and `weight_decay_excludes` can be set. If both are None,
+        all the model parameters will use weight decay.
 
     """
 
@@ -1749,6 +1757,9 @@ class LAMB(Optimizer):
         beta2: float = 0.999,
         epsilon: float = 1e-6,
         loss_scale_factor: Optional[float] = None,
+        weight_decay: Optional[float] = None,
+        weight_decay_includes: Optional[Union[Sequence[Text], Text]] = None,
+        weight_decay_excludes: Optional[Union[Sequence[Text], Text]] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
@@ -1763,8 +1774,31 @@ class LAMB(Optimizer):
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
+        self.weight_decay = weight_decay
+        if isinstance(weight_decay_includes, str):
+            weight_decay_includes = [weight_decay_includes]
+        if isinstance(weight_decay_excludes, str):
+            weight_decay_excludes = [weight_decay_excludes]
+        self.weight_decay_includes = weight_decay_includes
+        self.weight_decay_excludes = weight_decay_excludes
 
     def _SetSpecificFieldsInTrainConf(self, train_conf):
         train_conf.model_update_conf.lamb_conf.beta1 = self.beta1
         train_conf.model_update_conf.lamb_conf.beta2 = self.beta2
         train_conf.model_update_conf.lamb_conf.epsilon = self.epsilon
+        if self.weight_decay is not None:
+            train_conf.model_update_conf.weight_decay_conf.weight_decay_rate = (
+                self.weight_decay
+            )
+            assert not (
+                self.weight_decay_excludes is not None
+                and self.weight_decay_includes is not None
+            )
+            if self.weight_decay_includes is not None:
+                train_conf.model_update_conf.weight_decay_conf.includes.pattern.extend(
+                    self.weight_decay_includes
+                )
+            elif self.weight_decay_excludes is not None:
+                train_conf.model_update_conf.weight_decay_conf.excludes.pattern.extend(
+                    self.weight_decay_excludes
+                )

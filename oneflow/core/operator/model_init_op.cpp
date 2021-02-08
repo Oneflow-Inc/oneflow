@@ -21,8 +21,9 @@ class ModelInitOp : public Operator {
  public:
   void InitFromOpConf() override;
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
 
  private:
   Maybe<void> InferBatchAxis(
@@ -38,9 +39,9 @@ void ModelInitOp::InitFromOpConf() {
   EnrollRepeatedOutputBn("out", false);
 }
 
-Maybe<void> ModelInitOp::InferBlobDescs(
+Maybe<void> ModelInitOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const int64_t num_out = op_conf().model_init_conf().out().size();
   FOR_RANGE(int64_t, i, 0, num_out) {
     const VariableOpConf& original_variable_conf =
