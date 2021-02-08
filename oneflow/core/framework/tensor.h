@@ -63,11 +63,18 @@ class Device {
 
 class Tensor {
  public:
+  Tensor() = default;
   virtual ~Tensor() = default;
   std::shared_ptr<Shape> shape() const { return impl_->shape(); }
+  void set_shape(const std::shared_ptr<Shape>& shape) { return impl_->set_shape(shape); }
   DataType dtype() const { return impl_->dtype(); }
+  void set_dtype(DataType dtype) { return impl_->set_dtype(dtype); }
   std::shared_ptr<Device> device() const { return impl_->device(); }
+  void set_device(const std::shared_ptr<Device>& device) { return impl_->set_device(device); }
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const { return impl_->parallel_conf(); }
+  void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+    impl_->set_parallel_conf(parallel_conf);
+  }
   bool is_lazy() const;
 
   std::shared_ptr<cfg::LogicalBlobId> lbi() const { return impl_->lbi(); }
@@ -96,10 +103,14 @@ class Tensor {
   bool has_storage() const { return impl_->has_storage(); }
 
   template<typename T = void>
-  const T* data() const { return impl_->data<T>(); }
+  const T* data() const {
+    return impl_->data<T>();
+  }
 
   template<typename T = void>
-  T* mutable_data() { return impl_->mutable_data<T>(); }
+  T* mutable_data() {
+    return impl_->mutable_data<T>();
+  }
 
  protected:
   std::shared_ptr<TensorImpl> impl_;
@@ -107,6 +118,7 @@ class Tensor {
 
 class MirroredTensor : public Tensor {
  public:
+  MirroredTensor() = default;
   MirroredTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
                  const std::shared_ptr<Device>& device);
   MirroredTensor(const std::shared_ptr<cfg::LogicalBlobId>& lbi, const std::string& job_name,
@@ -121,6 +133,7 @@ class MirroredTensor : public Tensor {
 
 class ConsistentTensor : public Tensor {
  public:
+  ConsistentTensor() = default;
   ConsistentTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
                    const std::shared_ptr<compatible_py::Distribute>& distribute,
                    std::shared_ptr<cfg::ParallelConf>& parallel_conf);

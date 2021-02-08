@@ -42,18 +42,24 @@ class TensorImpl {
   virtual ~TensorImpl() = default;
 
   virtual std::shared_ptr<Shape> shape() const { return shape_; }
+  virtual void set_shape(const std::shared_ptr<Shape>& shape) { shape_ = shape; }
   virtual DataType dtype() const { return dtype_; }
-  std::shared_ptr<Device> device() const { return device_; }
+  virtual void set_dtype(DataType dtype) { dtype_ = dtype; }
+  virtual std::shared_ptr<Device> device() const { return device_; }
+  virtual void set_device(const std::shared_ptr<Device>& device) { device_ = device; }
+  virtual void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+    parallel_conf_ = parallel_conf;
+  }
 
-  std::shared_ptr<cfg::LogicalBlobId> lbi() const;
-  std::string logical_blob_name() const;
-  std::string op_name() const;
-  std::string blob_name() const;
-  std::string unique_name() const;
-  void set_distribute(const std::shared_ptr<compatible_py::Distribute> distribute);
-  std::shared_ptr<compatible_py::Distribute> distribute() const;
-  bool has_batch_axis() const;
-  std::string job_name() const { return job_name_; }
+  virtual std::shared_ptr<cfg::LogicalBlobId> lbi() const;
+  virtual std::string logical_blob_name() const;
+  virtual std::string op_name() const;
+  virtual std::string blob_name() const;
+  virtual std::string unique_name() const;
+  virtual void set_distribute(const std::shared_ptr<compatible_py::Distribute> distribute);
+  virtual std::shared_ptr<compatible_py::Distribute> distribute() const;
+  virtual bool has_batch_axis() const;
+  virtual std::string job_name() const { return job_name_; }
 
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const { UNIMPLEMENTED(); }
 
