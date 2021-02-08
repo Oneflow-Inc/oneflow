@@ -21,8 +21,7 @@ namespace one {
 
 class FunctionNode {
  public:
-  // TODO: add contructor function
-  FunctionNode() = delete;
+  FunctionNode() = default;
   virtual ~FunctionNode() = default;
 
   virtual void Apply(bool create_graph) = 0;
@@ -51,3 +50,4 @@ class AutogradEngine {
 }  // namespace one
 
 }  // namespace oneflow
+
