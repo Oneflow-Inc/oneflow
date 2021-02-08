@@ -65,7 +65,7 @@ def make_insightface_resnet100_func(
 class TestSaveAndLoadModel(flow.unittest.TestCase):
     DATA_DIR = "/dataset/insightface/eval_ofrecord/lfw"
     NUM_DATA_PARTS = 1
-    MODEL_DIR = "/tmp/model_zoo/insightface/emore_r100_arcface"
+    MODEL_DIR = "/dataset/model_zoo/insightface/emore_r100_arcface"
     BATCH_SIZE = 1
     IMAGE_SIZE = 112
     NUM_ITER = 6
