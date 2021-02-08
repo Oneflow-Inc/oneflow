@@ -31,8 +31,8 @@ class TensorBufferToTensorListOp final : public Operator {
   }
 
   Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-                             std::function<void(OpContext*)> EnrollOpCtx) const override {
+                             const ParallelContext* parallel_ctx,
+                             const SbpSignature* sbp_signature) const override {
     const BlobDesc* in_desc = GetBlobDesc4BnInOp("in");
     CHECK_EQ_OR_RETURN(in_desc->data_type(), DataType::kTensorBuffer);
     CHECK_EQ_OR_RETURN(in_desc->shape().NumAxes(), 1);

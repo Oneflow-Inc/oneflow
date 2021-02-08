@@ -140,7 +140,16 @@ def _SendBinaryAndConfig2Worker(
         + ' 1>/dev/null 2>&1 </dev/null & "'
     )
     _SystemCall(ssh_prefix + oneflow_cmd)
-    _SystemCall(ssh_prefix + "ps aux")
+    proc = subprocess.Popen(
+        ssh_prefix + "ps aux",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding="utf-8",
+        shell=True,
+    )
+    outs, errs = proc.communicate(timeout=5)
+    print(outs)
+    assert "oneflow_worker" in str(outs), "fail to start oneflow_worker"
     print("oneflow worker initialized:", machine.addr, flush=True)
 
 

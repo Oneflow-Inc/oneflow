@@ -80,11 +80,10 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
     // replace cast op input with parallel_cast op output
     {
       OperatorConf new_cast_op_conf(cast_op_conf);
-      std::string parallel_cast_output_lbn =
-          parallel_cast_conf_wrapper.op_name() + "/" + parallel_cast_conf_wrapper.output("out", 0);
+      const auto& parallel_cast_output = parallel_cast_conf_wrapper.output("out", 0);
       const auto& cast_input = cast_conf_wrapper.input("in", 0);
       const auto& old_val =
-          ReplaceInputLbnInOpCustomizedConf(&new_cast_op_conf, "in_0", parallel_cast_output_lbn);
+          ReplaceInputLbnInOpCustomizedConf(&new_cast_op_conf, "in_0", parallel_cast_output);
       CHECK_EQ(cast_input, old_val);
       op_conf_cache.Put(new_cast_op_conf);
     }
