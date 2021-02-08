@@ -30,8 +30,9 @@ class DistributeConcatOp final : public Operator {
 
   void InitFromOpConf() override;
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext*) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
   LogicalNode* NewProperLogicalNode() const override { return new DistributeConcatLogicalNode; }
 
  private:
@@ -59,9 +60,9 @@ void DistributeConcatOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-Maybe<void> DistributeConcatOp::InferBlobDescs(
+Maybe<void> DistributeConcatOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   if (parallel_ctx->parallel_num() > 1) {
     const auto* in_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(parallel_ctx->parallel_id()));
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
