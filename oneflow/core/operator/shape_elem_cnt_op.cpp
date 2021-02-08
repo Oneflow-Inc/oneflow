@@ -54,9 +54,9 @@ void ShapeElemCntOp::InitFromOpConf() {
   EnrollOutputBn("y", false);
 }
 
-Maybe<void> ShapeElemCntOp::InferBlobDescs(
+Maybe<void> ShapeElemCntOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   GetBlobDesc4BnInOp("y")->set_data_type(op_conf().shape_elem_cnt_conf().data_type());
   GetBlobDesc4BnInOp("y")->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
