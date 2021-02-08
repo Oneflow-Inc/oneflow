@@ -25,9 +25,9 @@ void ReturnOp::InitFromOpConf() {
   EnrollOutputBn("out")->set_is_mutable(true);
 }
 
-Maybe<void> ReturnOp::InferBlobDescs(
+Maybe<void> ReturnOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
   return Maybe<void>::Ok();
 }

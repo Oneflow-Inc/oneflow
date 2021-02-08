@@ -35,8 +35,8 @@ enum TaskType {
   kCollectiveBoxingGeneric = 58;
   kBoxingIdentity = 59;
   kDecodeH2D = 60;
-  kBoxingS2SAll2AllPack = 61;
-  kBoxingS2SAll2AllUnpack = 62;
+  kCollectiveBoxingPack = 61;
+  kCollectiveBoxingUnpack = 62;
   kSspVariableProxy = 63;
   kBoxingZeros = 64;
 };
