@@ -13,25 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/tick_compute_actor.h"
+
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
-void TickComputeActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  piece_id_ = 0;
-  OF_SET_MSG_HANDLER(&TickComputeActor::HandlerNormal);
-}
+class SrcSubsetTickKernel final : public KernelIf<DeviceType::kCPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SrcSubsetTickKernel);
+  SrcSubsetTickKernel() = default;
+  ~SrcSubsetTickKernel() = default;
 
-void TickComputeActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  HandleProducedNaiveDataRegstToConsumer([&](Regst* out_regst) {
-    out_regst->set_piece_id(piece_id_++);
-    return true;
-  });
-}
+ private:
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
+  const PbMessage& GetCustomizedOpConf() const override {
+    return this->op_conf().src_subset_tick_conf();
+  }
+};
 
-REGISTER_ACTOR(kTick, TickComputeActor);
-REGISTER_ACTOR(kDeviceTick, TickComputeActor);
-REGISTER_ACTOR(kSrcSubsetTick, TickComputeActor);
-REGISTER_ACTOR(kDstSubsetTick, TickComputeActor);
+REGISTER_KERNEL(OperatorConf::kSrcSubsetTickConf, SrcSubsetTickKernel);
 
 }  // namespace oneflow
