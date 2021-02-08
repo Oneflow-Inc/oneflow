@@ -26,14 +26,12 @@ class SliceBoxingOp : public Operator {
   ~SliceBoxingOp() override = default;
 
   void InitFromOpConf() override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
 
  protected:
   virtual const SliceBoxingConf& GetCustomizedBoxingConf() const = 0;
-  virtual void VirtualInferBlobDescs(
-      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const {}
   virtual void VirtualInitFromOpConf(){};
 
  private:
@@ -65,8 +63,9 @@ class SliceBoxingAddOp final : public SliceBoxingOp {
     return op_conf().slice_boxing_add_conf().slice_boxing_conf();
   }
   void VirtualInitFromOpConf() override;
-  void VirtualInferBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferInternalBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 };
 
@@ -84,9 +83,9 @@ LogicalBlobId SliceBoxingOp::lbi4obn(const std::string& output_bn) const {
   return GetCustomizedBoxingConf().lbi();
 }
 
-Maybe<void> SliceBoxingOp::InferBlobDescs(
+Maybe<void> SliceBoxingOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const SliceBoxingConf& slice_boxing_conf = GetCustomizedBoxingConf();
   const PbRpf<TensorSliceViewProto>& in_slice_proto = slice_boxing_conf.in_slice();
   const TensorSliceViewProto& out_slice_proto = slice_boxing_conf.out_slice();
@@ -111,7 +110,6 @@ Maybe<void> SliceBoxingOp::InferBlobDescs(
   } else {
     out->mut_shape() = out_slice.shape();
   }
-  VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
   return Maybe<void>::Ok();
 }
 
@@ -127,10 +125,11 @@ Symbol<OperatorConf> SliceBoxingCopyOp::GetOpConfWithoutOpNameAndLbn() const {
 
 void SliceBoxingAddOp::VirtualInitFromOpConf() { EnrollTmpBn("buf"); }
 
-void SliceBoxingAddOp::VirtualInferBlobDescs(
-    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+Maybe<void> SliceBoxingAddOp::InferInternalBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   *GetBlobDesc4BnInOp("buf") = *GetBlobDesc4BnInOp("out");
+  return Maybe<void>::Ok();
 }
 
 Symbol<OperatorConf> SliceBoxingAddOp::GetOpConfWithoutOpNameAndLbn() const {
