@@ -24,8 +24,9 @@ void CaseOp::InitFromOpConf() {
   EnrollRepeatedOutputBn("out", false);
 }
 
-Maybe<void> CaseOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx) const {
+Maybe<void> CaseOp::InferOutBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   CHECK_EQ_OR_RETURN(in->shape().elem_cnt(), 1);
   const DataType data_type = in->data_type();
