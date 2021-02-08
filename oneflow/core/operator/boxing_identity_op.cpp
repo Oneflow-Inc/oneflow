@@ -26,14 +26,9 @@ class BoxingIdentityOp : public Operator {
   ~BoxingIdentityOp() override = default;
 
   void InitFromOpConf() override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
-
- protected:
-  virtual void VirtualInferBlobDescs(
-      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const {}
-  virtual void VirtualInitFromOpConf(){};
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
 
  private:
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
@@ -53,9 +48,9 @@ LogicalBlobId BoxingIdentityOp::lbi4obn(const std::string& output_bn) const {
   return this->op_conf().boxing_identity_conf().lbi();
 }
 
-Maybe<void> BoxingIdentityOp::InferBlobDescs(
+Maybe<void> BoxingIdentityOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
   return Maybe<void>::Ok();
 }

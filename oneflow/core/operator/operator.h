@@ -106,19 +106,13 @@ class Operator {
   // Write: shape of output_blobs
   Maybe<void> InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                const ParallelContext*, const SbpSignature* sbp_signature) const;
-  virtual Maybe<void> InferBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      const SbpSignature* sbp_signature) const;
-  virtual Maybe<void> InferBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*) const;
 
   Maybe<void> InferOutBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*, const SbpSignature* sbp_signature) const;
 
-  virtual Maybe<void> InferOutBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      const SbpSignature* sbp_signature) const;
+  Maybe<void> InferInternalBlobDescsIf(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const;
 
   Maybe<void> InferInplaceObn2IbnIf(HashMap<std::string, std::string>* mut_inplace_obn2ibn,
                                     HashMap<std::string, std::string>* con_inplace_obn2ibn,
@@ -195,6 +189,12 @@ class Operator {
 
  protected:
   virtual Maybe<void> InferParallelSignature();
+  virtual Maybe<void> InferOutBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      const SbpSignature* sbp_signature) const;
+  virtual Maybe<void> InferInternalBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const;
   virtual Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
