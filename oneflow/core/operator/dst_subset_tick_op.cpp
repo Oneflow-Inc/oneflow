@@ -27,8 +27,9 @@ class DstSubsetTickOp final : public Operator {
   ~DstSubsetTickOp() = default;
 
   void InitFromOpConf() override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature*) const override;
   LogicalNode* NewProperLogicalNode() const override;
 
  private:
@@ -47,9 +48,9 @@ LogicalNode* DstSubsetTickOp::NewProperLogicalNode() const {
   return new DstSubsetTickLogicalNode();
 }
 
-Maybe<void> DstSubsetTickOp::InferBlobDescs(
+Maybe<void> DstSubsetTickOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature*) const {
   GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
 }
