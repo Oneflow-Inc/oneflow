@@ -160,8 +160,10 @@ def _make_op_function(
 
 def gen_numpy_test_sample(input_shape, padding, is_float=True):
     c_idx, h_idx, w_idx = 1, 2, 3
-    pad_top = pad_bottom = padding[h_idx]
-    pad_left = pad_right = padding[w_idx]
+    pad_left = padding[0]
+    pad_right = padding[1]
+    pad_top = padding[2]
+    pad_bottom = padding[3]
     pad_shape = ((0, 0), (0, 0), (pad_top, pad_bottom), (pad_left, pad_right))
 
     def _np_reflection_pad2d(input, pad_shape):
@@ -261,9 +263,9 @@ def _gen_arg_dict(
     arg_dict = OrderedDict()
     arg_dict["device_type"] = [device_type]
     arg_dict["samples"] = []
-    arg_dict["samples"].append(gen_numpy_test_sample((2, 1, 2, 2), [0, 0, 1, 1]))
-    arg_dict["samples"].append(gen_numpy_test_sample((4, 2, 3, 3), [0, 0, 2, 2]))
-    arg_dict["samples"].append(gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 3]))
+    arg_dict["samples"].append(gen_numpy_test_sample((2, 1, 2, 2), [1, 1, 1, 1]))
+    arg_dict["samples"].append(gen_numpy_test_sample((4, 2, 3, 3), [2, 2, 2, 2]))
+    arg_dict["samples"].append(gen_numpy_test_sample((2, 3, 4, 5), [3, 2, 1, 2]))
     if value_type == "float":
         if device_type == "gpu":
             arg_dict["value_type"] = [
