@@ -87,6 +87,10 @@ jobs:
           --build_docker_img \
           --oneflow_wheel_path=${wheelhouse_dir} \
           --oneflow_worker_bin=${bin_dir}/oneflow_worker
+    - name: Print Backtrace (distributed test)
+      if: always()
+      run: |
+        docker run --privileged --network host --shm-size=8g --rm -v $PWD:$PWD -w $PWD oneflow-test:$USER bash ci/test/print_stack_from_core.sh python3 distributed-tmp
     - name: Upload log (distributed test)
       if: always()
       uses: ./.github/actions/upload_oss

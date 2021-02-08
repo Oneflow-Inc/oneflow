@@ -45,7 +45,9 @@ class JobBuilder final {
   const OperatorConf& OpConf4OpName(const std::string& op_name) const;
   OperatorConf* MutableOpConf4OpName(const std::string& op_name);
 
+  Maybe<void> AddOp(const ParallelConf& parallel_conf, const OperatorConf& op_conf);
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
+  Maybe<void> MutOpOnlyOnce(const OperatorConf& op_conf);
   void MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs);
   void MutParallelConfOnlyOnce(const std::string& op_name, const ParallelConf& parallel_conf);
   void AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
