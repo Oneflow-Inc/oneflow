@@ -30,7 +30,6 @@ limitations under the License.
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/framework/blob_cache.h"
-#include "oneflow/core/framework/python_interpreter_util.h"
 
 namespace oneflow {
 
@@ -243,17 +242,13 @@ Maybe<void> _Run(
 }
 
 void _ReleaseLogicalObject(compatible_py::Object* obj) {
-  if (!(CHECK_JUST(IsShuttingDown()))) {
-    CHECK_JUST(LogicalRun(
-        [&obj](const std::shared_ptr<InstructionsBuilder>& build) { build->DeleteObject(obj); }));
-  }
+  CHECK_JUST(LogicalRun(
+      [&obj](const std::shared_ptr<InstructionsBuilder>& build) { build->DeleteObject(obj); }));
 }
 
 void _ReleasePhysicalObject(compatible_py::Object* obj) {
-  if (!(CHECK_JUST(IsShuttingDown()))) {
-    CHECK_JUST(PhysicalRun(
-        [&obj](const std::shared_ptr<InstructionsBuilder>& build) { build->DeleteObject(obj); }));
-  }
+  CHECK_JUST(PhysicalRun(
+      [&obj](const std::shared_ptr<InstructionsBuilder>& build) { build->DeleteObject(obj); }));
 }
 
 }  // namespace

@@ -29,7 +29,7 @@ namespace compatible_py {
 class BlobCache {
  public:
   BlobCache(const std::shared_ptr<BlobObject>& blob_object) : blob_object_(blob_object) {}
-  ~BlobCache();
+  ~BlobCache() = default;
 
   std::shared_ptr<BlobObject> blob_object() const { return blob_object_; }
 
@@ -58,6 +58,8 @@ std::shared_ptr<BlobObject> FindOrCreateDelegateBlobObject(
         const std::shared_ptr<BlobObject>&, const std::shared_ptr<OpArgParallelAttribute>&)>& fetch,
     const std::shared_ptr<BlobObject>& x_blob_object,
     const std::shared_ptr<OpArgParallelAttribute>& op_arg_parallel_attr);
+
+Maybe<void> ClearAllBlobCache();
 
 }  // namespace compatible_py
 
