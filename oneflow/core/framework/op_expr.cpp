@@ -23,6 +23,12 @@ std::shared_ptr<OpExpr> UserOpExpr::GetBackwardOpExpr() const {
   return std::shared_ptr<OpExpr>(new UserOpExpr);
 }
 
+int UserOpExpr::output_num() const {
+  int count = 0;
+  for (const auto& it : proto_.output()) { count += it.second.s().size(); }
+  return count;
+}
+
 std::shared_ptr<OpExpr> FunctionOpExpr::GetBackwardOpExpr() const {
   // TODO(hjchen2)
   return std::shared_ptr<OpExpr>(new FunctionOpExpr);

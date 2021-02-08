@@ -51,6 +51,8 @@ class BuiltinOpExpr : public OpExpr {
   const std::string& op_name() const { return op_name_; }
   void set_op_name(const std::string& op_name) { op_name_ = op_name; }
 
+  virtual int output_num() const = 0;
+
  private:
   std::string op_name_;
 };
@@ -64,6 +66,8 @@ class UserOpExpr : public BuiltinOpExpr {
   std::shared_ptr<OpExpr> GetBackwardOpExpr() const override;
 
   std::string type() const override { return "UserOp"; }
+
+  int output_num() const override;
 
   const UserOpConf& proto() const { return proto_; }
   UserOpConf* mutable_proto() { return &proto_; }
