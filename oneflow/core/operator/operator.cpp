@@ -126,20 +126,12 @@ Maybe<void> Operator::InferLogicalOutBlobDescs(
   auto* map = sbp_signature.mutable_bn_in_op2sbp_parallel();
   for (const auto& ibn : input_bns()) { (*map)[ibn].mutable_split_parallel()->set_axis(0); }
   for (const auto& obn : output_bns()) { (*map)[obn].mutable_split_parallel()->set_axis(0); }
-  return InferOutBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &sbp_signature, [](OpContext*) {});
+  return InferOutBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &sbp_signature);
 }
 
 Maybe<void> Operator::InferBlobDescsIf(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    std::function<void(OpContext*)> EnrollOpCtx) const {
-  return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx);
-}
-
-Maybe<void> Operator::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    std::function<void(OpContext*)> EnrollOpCtx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature);
 }
 
@@ -158,18 +150,41 @@ Maybe<void> Operator::InferBlobDescs(
 
 Maybe<void> Operator::InferOutBlobDescsIf(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    std::function<void(OpContext*)> EnrollOpCtx) const {
-  return InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx);
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  return InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature);
 }
 
 Maybe<void> Operator::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    std::function<void(OpContext*)> EnrollOpCtx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   // TODO() separate InferOut and InferTmp
   // At present, only conv_op infer out blob separately
-  return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx);
+  return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature);
+}
+
+Maybe<void> Operator::InferInplaceObn2IbnIf(
+    HashMap<std::string, std::string>* mut_inplace_obn2ibn,
+    HashMap<std::string, std::string>* con_inplace_obn2ibn,
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  return InferInplaceObn2Ibn(mut_inplace_obn2ibn, con_inplace_obn2ibn, GetBlobDesc4BnInOp,
+                             parallel_ctx, sbp_signature);
+}
+
+Maybe<void> Operator::InferInplaceObn2Ibn(
+    HashMap<std::string, std::string>* mut_inplace_obn2ibn,
+    HashMap<std::string, std::string>* con_inplace_obn2ibn,
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  for (const std::string& obn : output_bns()) {
+    const auto& obn_modifier = OutputBlobModifier4Obn(obn);
+    if (obn_modifier.has_mutable_inplace_ibn()) {
+      mut_inplace_obn2ibn->emplace(obn, obn_modifier.mutable_inplace_ibn());
+    } else if (obn_modifier.has_const_inplace_ibn()) {
+      con_inplace_obn2ibn->emplace(obn, obn_modifier.const_inplace_ibn());
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::FillLogicalBlobDescSignature(
@@ -396,9 +411,9 @@ bool HasBlobDescWithField(std::function<const BlobDesc*(const std::string&)> Get
 
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
-    const ParallelDesc* parallel_desc) const {
+    const ParallelDesc* parallel_desc, const SbpSignature* sbp_signature) const {
   auto* dtype_signature = kernel_conf->mutable_dtype_signature();
   for (const std::string& ibn : input_bns()) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(ibn);
@@ -430,31 +445,37 @@ void Operator::GenKernelConf(
     kernel_conf->set_data_type(data_type);
   }
 
-  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx,
-                       LogicalBlobDesc4BnInOp, parallel_desc);
+  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, LogicalBlobDesc4BnInOp,
+                       parallel_desc, sbp_signature);
 }
 
 void Operator::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
+    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
+    const ParallelDesc* parallel_desc, const SbpSignature* sbp_signature) const {
+  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, LogicalBlobDesc4BnInOp,
+                       parallel_desc);
+}
+
+void Operator::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
     const ParallelDesc* parallel_desc) const {
-  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx,
-                       LogicalBlobDesc4BnInOp);
+  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, LogicalBlobDesc4BnInOp);
 }
 
 void Operator::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
-  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
-}
-
-void Operator::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
+
+void Operator::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {}
 
 std::string Operator::Bn2ConfName(const std::string& bn) const {
   return GetStrValInPbFdOrPbRpf(GetCustomizedConf(), bn);
