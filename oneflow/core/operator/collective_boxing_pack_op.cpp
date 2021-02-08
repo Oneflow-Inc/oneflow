@@ -19,43 +19,39 @@ limitations under the License.
 
 namespace oneflow {
 
-class BoxingS2SAll2AllPackOp : public Operator {
+class CollectiveBoxingPackOp : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingS2SAll2AllPackOp);
-  BoxingS2SAll2AllPackOp() = default;
-  ~BoxingS2SAll2AllPackOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingPackOp);
+  CollectiveBoxingPackOp() = default;
+  ~CollectiveBoxingPackOp() override = default;
 
   void InitFromOpConf() override;
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
-
- protected:
-  virtual void VirtualInferBlobDescs(
-      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const {}
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
 
  private:
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
 };
 
-void BoxingS2SAll2AllPackOp::InitFromOpConf() {
+void CollectiveBoxingPackOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   EnrollOutputBn("out", false);
 }
 
-LogicalBlobId BoxingS2SAll2AllPackOp::lbi4ibn(const std::string& input_bn) const {
-  return this->op_conf().boxing_s2s_all2all_pack_conf().lbi();
+LogicalBlobId CollectiveBoxingPackOp::lbi4ibn(const std::string& input_bn) const {
+  return this->op_conf().collective_boxing_pack_conf().lbi();
 }
 
-LogicalBlobId BoxingS2SAll2AllPackOp::lbi4obn(const std::string& output_bn) const {
-  return this->op_conf().boxing_s2s_all2all_pack_conf().lbi();
+LogicalBlobId CollectiveBoxingPackOp::lbi4obn(const std::string& output_bn) const {
+  return this->op_conf().collective_boxing_pack_conf().lbi();
 }
 
-Maybe<void> BoxingS2SAll2AllPackOp::InferBlobDescs(
+Maybe<void> CollectiveBoxingPackOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
@@ -63,6 +59,6 @@ Maybe<void> BoxingS2SAll2AllPackOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP(OperatorConf::kBoxingS2SAll2AllPackConf, BoxingS2SAll2AllPackOp);
+REGISTER_OP(OperatorConf::kCollectiveBoxingPackConf, CollectiveBoxingPackOp);
 
 }  // namespace oneflow
