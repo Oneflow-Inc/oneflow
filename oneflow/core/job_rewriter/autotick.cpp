@@ -284,13 +284,13 @@ OperatorConf AppendAccTick(const Shape& src_shape, const std::list<const OpNode*
   return last_device_tick_op_conf;
 }
 
-CriticalSection* AddGlobalCriticalSection(const std::string& src_tick_op_name,
+CriticalSection* AddGlobalCriticalSection(int64_t machine_id, const std::string& src_tick_op_name,
                                           const std::string& sink_tick_op_name) {
   auto critical_sec = std::make_unique<CriticalSection>();
   CriticalSection* ret = critical_sec.get();
   critical_sec->set_job_id(GlobalJobDesc().job_id());
-  (*critical_sec->mutable_machine_id2source_tick_op_name())[0] = src_tick_op_name;
-  (*critical_sec->mutable_machine_id2sink_tick_op_name())[0] = sink_tick_op_name;
+  (*critical_sec->mutable_machine_id2source_tick_op_name())[machine_id] = src_tick_op_name;
+  (*critical_sec->mutable_machine_id2sink_tick_op_name())[machine_id] = sink_tick_op_name;
   Global<CriticalSectionDesc>::Get()->AddCriticalSection(std::move(critical_sec));
   return ret;
 }
@@ -409,7 +409,7 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
   };
   OperatorConf sink_tick_op_conf;
   CHECK_JUST(BuildSinkTickOp(&sink_tick_op_conf, ParallelConf4OpName, tick_lbis, job_builder));
-  auto* io_cs = AddGlobalCriticalSection(src_tick_op_conf.name(), sink_tick_op_conf.name())
+  auto* io_cs = AddGlobalCriticalSection(0, src_tick_op_conf.name(), sink_tick_op_conf.name())
                     ->mutable_input_output_critical_section();
   *io_cs->mutable_lbi_producer_op_name() = {lbi_producer_op_names.begin(),
                                             lbi_producer_op_names.end()};
@@ -469,7 +469,7 @@ void AddGlobalTotalJobCriticalSection(const Job& job) {
   }
   CHECK_NOTNULL(src_tick_op_conf);
   CHECK_NOTNULL(sink_tick_op_conf);
-  AddGlobalCriticalSection(src_tick_op_conf->name(), sink_tick_op_conf->name())
+  AddGlobalCriticalSection(0, src_tick_op_conf->name(), sink_tick_op_conf->name())
       ->mutable_total_job_critical_section();
 }
 
