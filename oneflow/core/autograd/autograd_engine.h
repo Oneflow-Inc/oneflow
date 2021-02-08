@@ -39,7 +39,7 @@ class FunctionNode {
   std::vector<std::shared_ptr<TensorArg>> in_grads;
   std::vector<std::shared_ptr<TensorArg>> out_grads;
   // TODO: add parameters
-  std::shared_ptr<std::function<void()>> backward_fn_();
+  std::function<void()> backward_fn_();
 };
 
 class AutogradEngine {
