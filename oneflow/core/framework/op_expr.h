@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_
 
 #include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 namespace one {
@@ -51,6 +52,7 @@ class BuiltinOpExpr : public OpExpr {
   const std::string& op_name() const { return op_name_; }
   void set_op_name(const std::string& op_name) { op_name_ = op_name; }
 
+  virtual int input_num() const = 0;
   virtual int output_num() const = 0;
 
  private:
@@ -67,6 +69,7 @@ class UserOpExpr : public BuiltinOpExpr {
 
   std::string type() const override { return "UserOp"; }
 
+  int input_num() const override;
   int output_num() const override;
 
   const UserOpConf& proto() const { return proto_; }
@@ -83,6 +86,40 @@ class UserOpExpr : public BuiltinOpExpr {
   // The indexed input operand names.
   std::vector<std::string> indexed_input_names_;
 };
+
+#define DEFINE_BUILTIN_OPEXPR_CLASS_IMPL(name)                                  \
+  class name##Expr : public BuiltinOpExpr {                                     \
+   public:                                                                      \
+    name##Expr() = default;                                                     \
+    virtual ~name##Expr() = default;                                            \
+    explicit name##Expr(const std::string& op_name) : BuiltinOpExpr(op_name) {} \
+                                                                                \
+    std::shared_ptr<OpExpr> GetBackwardOpExpr() const override;                 \
+                                                                                \
+    std::string type() const override { return std::string(#name); }            \
+                                                                                \
+    int input_num() const override;                                             \
+    int output_num() const override;                                            \
+                                                                                \
+    const name##Conf& proto() const { return proto_; }                          \
+    name##Conf* mutable_proto() { return &proto_; }                             \
+                                                                                \
+   private:                                                                     \
+    name##Conf proto_;                                                          \
+  };
+
+#define DEFINE_BUILTIN_OPEXPR_CLASS(name, n_input, n_output)   \
+  DEFINE_BUILTIN_OPEXPR_CLASS_IMPL(name);                      \
+  inline int name##Expr::input_num() const { return n_input; } \
+  inline int name##Expr::output_num() const { return n_output; }
+
+DEFINE_BUILTIN_OPEXPR_CLASS(VariableOp, 0, 1);
+DEFINE_BUILTIN_OPEXPR_CLASS(CastToMirroredOp, 1, 1);
+DEFINE_BUILTIN_OPEXPR_CLASS(CastFromMirroredOp, 1, 1);
+DEFINE_BUILTIN_OPEXPR_CLASS(DistributeSplitOp, 1, 1);
+DEFINE_BUILTIN_OPEXPR_CLASS(DistributeCloneOp, 1, 1);
+DEFINE_BUILTIN_OPEXPR_CLASS(DistributeConcatOp, 1, 1);
+DEFINE_BUILTIN_OPEXPR_CLASS(DistributeAddOp, 1, 1);
 
 // TODO(): Finish the class definition of `FunctionOpExpr`.
 class FunctionOpExpr : public OpExpr {

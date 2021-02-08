@@ -23,10 +23,51 @@ std::shared_ptr<OpExpr> UserOpExpr::GetBackwardOpExpr() const {
   return std::shared_ptr<OpExpr>(new UserOpExpr);
 }
 
+int UserOpExpr::input_num() const {
+  int count = 0;
+  for (const auto& it : proto_.input()) { count += it.second.s().size(); }
+  return count;
+}
+
 int UserOpExpr::output_num() const {
   int count = 0;
   for (const auto& it : proto_.output()) { count += it.second.s().size(); }
   return count;
+}
+
+std::shared_ptr<OpExpr> VariableOpExpr::GetBackwardOpExpr() const {
+  // TODO(hjchen2)
+  return std::shared_ptr<OpExpr>(new VariableOpExpr);
+}
+
+std::shared_ptr<OpExpr> CastToMirroredOpExpr::GetBackwardOpExpr() const {
+  // TODO(hjchen2)
+  return std::shared_ptr<OpExpr>(new CastToMirroredOpExpr);
+}
+
+std::shared_ptr<OpExpr> CastFromMirroredOpExpr::GetBackwardOpExpr() const {
+  // TODO(hjchen2)
+  return std::shared_ptr<OpExpr>(new CastFromMirroredOpExpr);
+}
+
+std::shared_ptr<OpExpr> DistributeSplitOpExpr::GetBackwardOpExpr() const {
+  // TODO(hjchen2)
+  return std::shared_ptr<OpExpr>(new DistributeSplitOpExpr);
+}
+
+std::shared_ptr<OpExpr> DistributeCloneOpExpr::GetBackwardOpExpr() const {
+  // TODO(hjchen2)
+  return std::shared_ptr<OpExpr>(new DistributeCloneOpExpr);
+}
+
+std::shared_ptr<OpExpr> DistributeConcatOpExpr::GetBackwardOpExpr() const {
+  // TODO(hjchen2)
+  return std::shared_ptr<OpExpr>(new DistributeConcatOpExpr);
+}
+
+std::shared_ptr<OpExpr> DistributeAddOpExpr::GetBackwardOpExpr() const {
+  // TODO(hjchen2)
+  return std::shared_ptr<OpExpr>(new DistributeAddOpExpr);
 }
 
 std::shared_ptr<OpExpr> FunctionOpExpr::GetBackwardOpExpr() const {
