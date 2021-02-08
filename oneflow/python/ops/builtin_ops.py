@@ -75,7 +75,9 @@ class BuiltinOp(object):
         Returns:
             self
         """
-        assert isinstance(input_tensor_list, list)
+        assert isinstance(input_tensor_list, (tuple, list))
+        if isinstance(input_tensor_list, tuple):
+            input_tensor_list = list(input_tensor_list)
         self._inputs.extend(input_tensor_list)
         self._builder.Input(input_name, input_tensor_list)
         return self
