@@ -59,13 +59,13 @@ def api_get_variable(
     r"""Create a variable or retrieve an existing one.
 
     Args:
-        name: Name of this variable. One variable could be shared by multiple OneFlow functions. `None` by defauilt
-        shape: Shape of the variable. `None` by defauilt
-        dtype: Data type of the variable. `None` by defauilt
-        initializer: A initializer object. For instance, a :func:`~oneflow.ones_initializer`. `None` by defauilt
-        trainable: A `bool` to indicate if this variable is trainable. `True` by defauilt
-        model_name: A `string`. `'weight'` or `'bias'`. `None` by defauilt
-        random_seed: Random seed for random initializers. `None` by defauilt
+        name: Name of this variable. One variable could be shared by multiple OneFlow functions. `None` by default
+        shape: Shape of the variable. `None` by default
+        dtype: Data type of the variable. `None` by default
+        initializer: A initializer object. For instance, a :func:`~oneflow.ones_initializer`. `None` by default
+        trainable: A `bool` to indicate if this variable is trainable. `True` by default
+        model_name: A `string`. `'weight'` or `'bias'`. `None` by default
+        random_seed: Random seed for random initializers. `None` by default
 
     For example: 
 
@@ -141,7 +141,7 @@ def api_get_variable(
                         kernel_size=[3, 3],
                         strides=2,
                         padding='SAME',
-                        name="Convlayer")
+                        name="ConvLayer")
             return conv
 
 
@@ -191,7 +191,7 @@ def get_eager_variable(
 
     if reuse is False:
         assert job_var_blob is None, (
-            "varaible '{}' already exists, "
+            "variable '{}' already exists, "
             "getting the same variable is not allowed "
             "when reuse is False".format(name)
         )
@@ -252,7 +252,7 @@ def get_lazy_variable(
 
     if reuse is False:
         assert job_var_blob is None, (
-            "varaible '{}' already exists, "
+            "variable '{}' already exists, "
             "getting the same variable is not allowed "
             "when param reuse is False".format(name)
         )

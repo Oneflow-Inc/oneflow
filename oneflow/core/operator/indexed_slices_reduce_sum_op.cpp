@@ -26,8 +26,12 @@ class IndexedSlicesReduceSumOp final : public Operator {
   ~IndexedSlicesReduceSumOp() override = default;
 
   void InitFromOpConf() override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
+  Maybe<void> InferInternalBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
@@ -58,9 +62,9 @@ Maybe<void> IndexedSlicesReduceSumOp::InferBatchAxis(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> IndexedSlicesReduceSumOp::InferBlobDescs(
+Maybe<void> IndexedSlicesReduceSumOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const BlobDesc* x_indices = GetBlobDesc4BnInOp("x_indices");
   const BlobDesc* x_values = GetBlobDesc4BnInOp("x_values");
   CHECK_LT_OR_RETURN(x_indices->shape().NumAxes(), x_values->shape().NumAxes());
@@ -79,6 +83,21 @@ Maybe<void> IndexedSlicesReduceSumOp::InferBlobDescs(
   BlobDesc* num_unique = GetBlobDesc4BnInOp("num_unique");
   num_unique->mut_shape() = Shape({1});
   num_unique->set_data_type(DataType::kInt64);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> IndexedSlicesReduceSumOp::InferInternalBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  const BlobDesc* x_indices = GetBlobDesc4BnInOp("x_indices");
+  const BlobDesc* x_values = GetBlobDesc4BnInOp("x_values");
+  CHECK_LT_OR_RETURN(x_indices->shape().NumAxes(), x_values->shape().NumAxes());
+  FOR_RANGE(int64_t, i, 0, x_indices->shape().NumAxes()) {
+    CHECK_EQ_OR_RETURN(x_indices->shape().At(i), x_values->shape().At(i));
+  }
+  CHECK_OR_RETURN(IsIndexDataType(x_indices->data_type()));
+  const int64_t n = x_indices->shape().elem_cnt();
+  const int64_t m = x_values->shape().elem_cnt() / n;
   BlobDesc* workspace = GetBlobDesc4BnInOp("workspace");
   workspace->set_data_type(DataType::kChar);
   int64_t workspace_size_in_bytes;
