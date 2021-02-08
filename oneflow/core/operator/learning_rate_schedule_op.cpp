@@ -24,8 +24,9 @@ class LearningRateScheduleOp final : public Operator {
   ~LearningRateScheduleOp() override = default;
 
   void InitFromOpConf() override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
 
  private:
   Maybe<void> InferBatchAxis(
@@ -41,9 +42,9 @@ void LearningRateScheduleOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-Maybe<void> LearningRateScheduleOp::InferBlobDescs(
+Maybe<void> LearningRateScheduleOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const BlobDesc* train_step = GetBlobDesc4BnInOp("train_step");
   CHECK_EQ(train_step->shape().elem_cnt(), 1);
   CHECK_EQ(train_step->data_type(), DataType::kInt64);

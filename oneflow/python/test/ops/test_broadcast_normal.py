@@ -101,8 +101,8 @@ def compare_with_tensorflow_grad(
     input_maxval=10,
     out_rtol=1e-5,
     out_atol=1e-5,
-    diff_rtol=1e-5,
-    diff_atol=1e-5,
+    diff_rtol=1e-4,
+    diff_atol=1e-3,
 ):
     assert device_type in ["gpu", "cpu"]
 

@@ -47,7 +47,7 @@ void DecodeOFRecordOp::VirtualGenKernelConf(
   kernel_conf->mutable_decode_ofrecord_conf()->set_random_seed(NewRandomSeed());
 }
 
-Maybe<void> DecodeOFRecordOp::InferBlobDescs(
+Maybe<void> DecodeOFRecordOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   int64_t batch_size = op_conf().decode_ofrecord_conf().batch_size();
