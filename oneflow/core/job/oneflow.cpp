@@ -456,24 +456,28 @@ void LinkMainPlan(Plan* plan, const Plan& main_plan,
     CHECK(sole_tick_op_name2sole_task.emplace(op_name, task).second);
   }
   auto TaskProto4TaskId = PlanUtil::MakeGetterTaskProto4TaskId(*plan);
+  int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
   FOR_RANGE(int32_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
-    const CriticalSection& critical_section =
-        Global<CriticalSectionDesc>::Get()->GetCriticalSection(i);
-    TaskProto* identity_tick = sole_tick_op_name2sole_task.at(identity_tick_op_names.at(i).at(0));
-    LinkTickTaskProto(
-        identity_tick,
-        sole_tick_op_name2sole_task.at(critical_section.machine_id2source_tick_op_name().at(0)),
-        sole_tick_op_name2sole_task.at(critical_section.machine_id2sink_tick_op_name().at(0)));
-    FixRegstHostMemCase(identity_tick, TaskProto4TaskId);
+    const CriticalSection& cs = Global<CriticalSectionDesc>::Get()->GetCriticalSection(i);
+    for (int64_t machine_id = 0; machine_id < num_machines; ++machine_id) {
+      TaskProto* identity_tick =
+          sole_tick_op_name2sole_task.at(identity_tick_op_names.at(i).at(machine_id));
+      LinkTickTaskProto(
+          identity_tick,
+          sole_tick_op_name2sole_task.at(cs.machine_id2source_tick_op_name().at(machine_id)),
+          sole_tick_op_name2sole_task.at(cs.machine_id2sink_tick_op_name().at(machine_id)));
+      FixRegstHostMemCase(identity_tick, TaskProto4TaskId);
+    }
   }
   {
     // erase source_tick task_proto
     HashSet<std::string> source_tick_op_names;
     FOR_RANGE(int32_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
-      const CriticalSection& critical_section =
-          Global<CriticalSectionDesc>::Get()->GetCriticalSection(i);
-      CHECK(source_tick_op_names.emplace(critical_section.machine_id2source_tick_op_name().at(0))
-                .second);
+      const CriticalSection& cs = Global<CriticalSectionDesc>::Get()->GetCriticalSection(i);
+      for (int64_t machine_id = 0; machine_id < num_machines; ++machine_id) {
+        const auto& src_tick_op_name = cs.machine_id2source_tick_op_name().at(machine_id);
+        CHECK(source_tick_op_names.emplace(src_tick_op_name).second);
+      }
     }
     Erase<PbRpf<TaskProto>>(*plan->mutable_task(), [&](const TaskProto& task) {
       if (task.task_type() == TaskType::kSourceTick) {
@@ -623,19 +627,22 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
   }
   op_confs.push_back(cs_case_op_conf);
   std::vector<std::string> snk_tick_op_names;
+  int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
   FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
     // There is no need to insert a source tick op
     // identity tick
-    OperatorConf identity_tick_op_conf;
-    {
+    identity_tick_op_names->push_back(HashMap<int64_t, std::string>{{}});
+    auto* cur_id_tick_op_names = &identity_tick_op_names->at(identity_tick_op_names->size() - 1);
+    for (int64_t machine_id = 0; machine_id < num_machines; ++machine_id) {
+      OperatorConf identity_tick_op_conf;
       std::string name_prefix = "System-Main-Tick_CriticalSection_";
-      identity_tick_op_conf.set_name(name_prefix + std::to_string(i));
+      identity_tick_op_conf.set_name(name_prefix + std::to_string(i) + "_"
+                                     + std::to_string(machine_id));
       auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
       identity_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
       identity_tick_conf->set_out("out");
       op_confs.push_back(identity_tick_op_conf);
-      identity_tick_op_names->push_back(
-          HashMap<int64_t, std::string>{{0, identity_tick_op_conf.name()}});
+      CHECK(cur_id_tick_op_names->emplace(machine_id, identity_tick_op_conf.name()).second);
     }
     // sink tick
     OperatorConf snk_tick_op_conf;
@@ -643,7 +650,9 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
       std::string name_prefix = "System-Main-SinkTick_CriticalSection_";
       snk_tick_op_conf.set_name(name_prefix + std::to_string(i));
       auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
-      snk_tick_conf->add_tick(identity_tick_op_conf.name() + "/out");
+      for (const auto& pair : *cur_id_tick_op_names) {
+        snk_tick_conf->add_tick(pair.second + "/out");
+      }
       snk_tick_conf->set_out("out");
       op_confs.push_back(snk_tick_op_conf);
       snk_tick_op_names.push_back(snk_tick_op_conf.name());
@@ -667,7 +676,20 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
     auto* callback_notify_esac_conf = callback_notify_esac_op_conf.mutable_esac_conf();
     for (int64_t total_job_cs_id :
          Global<CriticalSectionDesc>::Get()->job_id2total_job_critical_section_id()) {
-      callback_notify_esac_conf->add_in(identity_tick_op_names->at(total_job_cs_id).at(0) + "/out");
+      OperatorConf snk_tick_op_conf;
+      {
+        std::string name_prefix = "System-Main-CallbackNotifier_CriticalSection_";
+        snk_tick_op_conf.set_name(name_prefix + std::to_string(total_job_cs_id));
+        auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
+        for (int64_t machine_id = 0; machine_id < num_machines; ++machine_id) {
+          const auto& id_tick_op_name = identity_tick_op_names->at(total_job_cs_id).at(machine_id);
+          snk_tick_conf->add_tick(id_tick_op_name + "/out");
+        }
+        snk_tick_conf->set_out("out");
+        op_confs.push_back(snk_tick_op_conf);
+        snk_tick_op_names.push_back(snk_tick_op_conf.name());
+      }
+      callback_notify_esac_conf->add_in(snk_tick_op_conf.name() + "/out");
     }
     callback_notify_esac_conf->set_out("out");
     callback_notify_esac_conf->set_data_type(DataType::kInt32);
