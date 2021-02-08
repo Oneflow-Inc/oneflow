@@ -22,9 +22,17 @@ import oneflow.core.record.record_pb2 as record_pb
 
 
 class OFRecordDataset(object):
-    def __init__(self, data_dir, num_data_parts, batch_size, shuffle_data_part):
+    def __init__(
+        self,
+        data_dir,
+        num_data_parts,
+        part_name_suffix_length,
+        batch_size,
+        shuffle_data_part,
+    ):
         self.data_dir_ = data_dir
         self.num_data_parts_ = num_data_parts
+        self.part_name_suffix_length_ = part_name_suffix_length
         self.batch_size_ = batch_size
         self.epoch_cnt_ = 0
         self.cur_data_part_idx_ = 0
@@ -90,8 +98,11 @@ class OFRecordDataset(object):
         self._open_data_part_file()
 
     def _gen_data_part_seq(self):
+        data_part_name_pattern = (
+            r"part-{:0" + str(self.part_name_suffix_length_) + r"d}"
+        )
         self.data_part_seq_ = [
-            "part-{:05d}".format(i) for i in range(self.num_data_parts_)
+            data_part_name_pattern.format(i) for i in range(self.num_data_parts_)
         ]
         if self.shuffle_data_part_:
             random.shuffle(self.data_part_seq_)
@@ -129,12 +140,19 @@ class ImageNetRecordDataset(OFRecordDataset):
         self,
         data_dir="/dataset/ImageNet/ofrecord/validation",
         num_data_parts=256,
+        part_name_suffix_length=5,
         batch_size=4,
         shuffle_data_part=False,
         image_resize_size=224,
         data_format="NCHW",
     ):
-        super().__init__(data_dir, num_data_parts, batch_size, shuffle_data_part)
+        super().__init__(
+            data_dir,
+            num_data_parts,
+            part_name_suffix_length,
+            batch_size,
+            shuffle_data_part,
+        )
         self.image_resize_size_ = image_resize_size
         self.data_format_ = data_format
 
@@ -171,3 +189,59 @@ class ImageNetRecordDataset(OFRecordDataset):
             raise ValueError("Unsupported image data format")
 
         return np.ascontiguousarray(image)
+
+
+class FaceEmoreRecordDataset(OFRecordDataset):
+    def __init__(
+        self,
+        data_dir="/dataset/insightface/train_ofrecord/faces_emore",
+        num_data_parts=256,
+        part_name_suffix_length=1,
+        batch_size=4,
+        shuffle_data_part=False,
+        image_width=112,
+        image_height=112,
+        color_space="RGB",
+        data_format="NCHW",
+    ):
+        super().__init__(
+            data_dir,
+            num_data_parts,
+            part_name_suffix_length,
+            batch_size,
+            shuffle_data_part,
+        )
+        self.image_width_ = image_width
+        self.image_height_ = image_height
+        self.color_space_ = color_space
+        self.data_format_ = data_format
+
+    def parse_record(self, record):
+        image_raw_bytes = record.feature["encoded"].bytes_list.value[0]
+        image = cv2.imdecode(
+            np.frombuffer(image_raw_bytes, np.uint8), cv2.IMREAD_COLOR
+        ).astype(np.float32)
+        image = self.preprocess_image(image)
+        issame = record.feature["issame"].int32_list.value[0]
+        return (image, issame)
+
+    def preprocess_image(self, image):
+        # resize
+        image = cv2.resize(image, (self.image_height_, self.image_width_))
+        # bgr to rgb (opencv decoded image is bgr format)
+        if self.color_space_ == "RGB":
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # NHWC to NCHW
+        if self.data_format_ == "NCHW":
+            assert image.shape[2] == 3
+            image = np.transpose(image, (2, 0, 1))
+        elif self.data_format_ == "NHWC":
+            assert image.shape[2] == 3
+        else:
+            raise ValueError("Unsupported image data format")
+        return image
+
+    def collate(self, batch):
+        image = np.stack([data[0] for data in batch], axis=0)
+        issame = np.array([data[1] for data in batch], dtype=np.int32)
+        return image, issame
