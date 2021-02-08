@@ -13,11 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/tensor.h"
+#include <vector>
+#include <memory>
+#include <functional>
 
 namespace oneflow {
 
 namespace one {
+
+class TensorArg;
+class Tensor;
+using TensorList = std::vector<std::shared_ptr<Tensor>>;
 
 class FunctionNode {
  public:
@@ -30,8 +36,8 @@ class FunctionNode {
  protected:
   TensorList inputs;
   TensorList outputs;
-  std::vector<std::shared_ptr<TensorRef>> in_grads;
-  std::vector<std::shared_ptr<TensorRef>> out_grads;
+  std::vector<std::shared_ptr<TensorArg>> in_grads;
+  std::vector<std::shared_ptr<TensorArg>> out_grads;
   // TODO: add parameters
   std::shared_ptr<std::function<void()>> backward_fn_();
 };
@@ -50,4 +56,3 @@ class AutogradEngine {
 }  // namespace one
 
 }  // namespace oneflow
-

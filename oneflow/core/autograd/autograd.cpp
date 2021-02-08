@@ -17,16 +17,20 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace one {
+namespace {
 
-TensorList _make_grads(const TensorList& outputs, const TensorList& out_grads) {
+TensorList MakeGrads(const TensorList& outputs, const TensorList& out_grads) {
   TensorList gradients;
   // TODO: check all out_grads and push default value for empty item
   return gradients;
 }
 
-TensorList run_backward(const TensorList& outputs, const TensorList& intputs,
-                        const TensorList& out_grads, bool retain_graph, bool create_graph) {
+}  // namespace
+
+namespace one {
+
+TensorList RunBackward(const TensorList& outputs, const TensorList& intputs,
+                       const TensorList& out_grads, bool retain_graph, bool create_graph) {
   if (create_graph) retain_graph = true;
   TensorList res_grads;
   // TODO: check could run backward or not
@@ -34,20 +38,20 @@ TensorList run_backward(const TensorList& outputs, const TensorList& intputs,
   return res_grads;
 }
 
-TensorList backward(const TensorList& outputs, const TensorList& out_grads, bool retain_graph,
+TensorList Backward(const TensorList& outputs, const TensorList& out_grads, bool retain_graph,
                     bool create_graph) {
-  TensorList gradients = _make_grads(outputs, out_grads);
-  TensorList res_grads = run_backward(outputs, {}, gradients, retain_graph, create_graph);
+  TensorList gradients = MakeGrads(outputs, out_grads);
+  TensorList res_grads = RunBackward(outputs, {}, gradients, retain_graph, create_graph);
   // TODO: bind res_grads to all inputs
   return {};
 }
 
-TensorList grad(const TensorList& outputs, const TensorList& inputs, const TensorList& out_grads,
+TensorList Grad(const TensorList& outputs, const TensorList& inputs, const TensorList& out_grads,
                 bool retain_graph, bool create_graph) {
-  if (inputs.empty()) return backward(outputs, out_grads, retain_graph, create_graph);
+  if (inputs.empty()) return Backward(outputs, out_grads, retain_graph, create_graph);
 
-  TensorList gradients = _make_grads(outputs, out_grads);
-  return run_backward(outputs, inputs, gradients, retain_graph, create_graph);
+  TensorList gradients = MakeGrads(outputs, out_grads);
+  return RunBackward(outputs, inputs, gradients, retain_graph, create_graph);
 }
 
 }  // namespace one

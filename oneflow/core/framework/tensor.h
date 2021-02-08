@@ -49,19 +49,26 @@ class Tensor {
 
 namespace one {
 
-using TensorRef = std::shared_ptr<Tensor>;
-using TensorList = std::vector<TensorRef>;
+class TensorArg {
+ public:
+  std::shared_ptr<Tensor> get_tensor_ptr() { return tensor_ptr_; }
+
+ private:
+  std::shared_ptr<Tensor> tensor_ptr_;
+};
+
+using TensorList = std::vector<std::shared_ptr<Tensor>>;
 
 class Tensor {
  public:
-  TensorRef acc_grad;
-  std::shared_ptr<TensorRef> now_grad;
+  std::shared_ptr<Tensor> acc_grad;
+  std::shared_ptr<TensorArg> now_grad;
   std::shared_ptr<FunctionNode> grad_fn_node;
   bool requires_grad;
   bool is_leaf;
   bool retain_grad;
 
-  TensorRef grad() { return acc_grad; }
+  std::shared_ptr<Tensor> grad() { return acc_grad; }
   std::shared_ptr<FunctionNode> grad_fn() { return grad_fn_node; }
 };
 

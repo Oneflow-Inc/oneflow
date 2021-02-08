@@ -13,17 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/tensor.h"
+#include <vector>
+#include <memory>
 
 namespace oneflow {
+
+class Tensor;
+using TensorList = std::vector<std::shared_ptr<Tensor>>;
 
 namespace one {
 
 // TODO: export
-TensorList backward(const TensorList& outputs, const TensorList& out_grads,
+TensorList Backward(const TensorList& outputs, const TensorList& out_grads,
                     bool retain_graph = false, bool create_graph = false);
 
-TensorList grad(const TensorList& outputs, const TensorList& inputs, const TensorList& out_grads,
+TensorList Grad(const TensorList& outputs, const TensorList& inputs, const TensorList& out_grads,
                 bool retain_graph = false, bool create_graph = false);
 
 }  // namespace one
