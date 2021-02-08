@@ -19,38 +19,45 @@ namespace oneflow {
 
 namespace {
 
-TensorList MakeGrads(const TensorList& outputs, const TensorList& out_grads) {
-  TensorList gradients;
+std::shared_ptr<TensorList> MakeGrads(std::shared_ptr<TensorList> outputs,
+                                      std::shared_ptr<TensorList> out_grads) {
+  std::shared_ptr<TensorList> gradients;
   // TODO: check all out_grads and push default value for empty item
   return gradients;
+}
+
+std::shared_ptr<TensorList> RunBackward(std::shared_ptr<TensorList> outputs,
+                                        std::shared_ptr<TensorList> intputs,
+                                        std::shared_ptr<TensorList> out_grads, bool retain_graph,
+                                        bool create_graph) {
+  if (create_graph) retain_graph = true;
+  std::shared_ptr<TensorList> res_grads;
+  // TODO: check could run backward or not
+  // TODO: add backward codes
+  return res_grads;
 }
 
 }  // namespace
 
 namespace one {
 
-TensorList RunBackward(const TensorList& outputs, const TensorList& intputs,
-                       const TensorList& out_grads, bool retain_graph, bool create_graph) {
-  if (create_graph) retain_graph = true;
-  TensorList res_grads;
-  // TODO: check could run backward or not
-  // TODO: add backward codes
-  return res_grads;
-}
-
-TensorList Backward(const TensorList& outputs, const TensorList& out_grads, bool retain_graph,
-                    bool create_graph) {
-  TensorList gradients = MakeGrads(outputs, out_grads);
-  TensorList res_grads = RunBackward(outputs, {}, gradients, retain_graph, create_graph);
+std::shared_ptr<TensorList> Backward(std::shared_ptr<TensorList> outputs,
+                                     std::shared_ptr<TensorList> out_grads, bool retain_graph,
+                                     bool create_graph) {
+  std::shared_ptr<TensorList> gradients = MakeGrads(outputs, out_grads);
+  std::shared_ptr<TensorList> res_grads =
+      RunBackward(outputs, {}, gradients, retain_graph, create_graph);
   // TODO: bind res_grads to all inputs
   return {};
 }
 
-TensorList Grad(const TensorList& outputs, const TensorList& inputs, const TensorList& out_grads,
-                bool retain_graph, bool create_graph) {
-  if (inputs.empty()) return Backward(outputs, out_grads, retain_graph, create_graph);
+std::shared_ptr<TensorList> Grad(std::shared_ptr<TensorList> outputs,
+                                 std::shared_ptr<TensorList> inputs,
+                                 std::shared_ptr<TensorList> out_grads, bool retain_graph,
+                                 bool create_graph) {
+  if (inputs->empty()) return Backward(outputs, out_grads, retain_graph, create_graph);
 
-  TensorList gradients = MakeGrads(outputs, out_grads);
+  std::shared_ptr<TensorList> gradients = MakeGrads(outputs, out_grads);
   return RunBackward(outputs, inputs, gradients, retain_graph, create_graph);
 }
 

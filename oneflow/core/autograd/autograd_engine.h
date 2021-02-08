@@ -39,7 +39,7 @@ class FunctionNode {
   std::vector<std::shared_ptr<TensorArg>> in_grads;
   std::vector<std::shared_ptr<TensorArg>> out_grads;
   // TODO: add parameters
-  std::function<void()> backward_fn_();
+  std::function<void()> backward_fn_;
 };
 
 class AutogradEngine {
@@ -47,8 +47,10 @@ class AutogradEngine {
   AutogradEngine() = default;
   virtual ~AutogradEngine() = default;
 
-  virtual TensorList Execute(const TensorList& outputs, const TensorList& inputs,
-                             const TensorList& out_grads, bool retain_graph, bool create_graph) = 0;
+  virtual std::shared_ptr<TensorList> Execute(std::shared_ptr<TensorList> outputs,
+                                              std::shared_ptr<TensorList> inputs,
+                                              std::shared_ptr<TensorList> out_grads,
+                                              bool retain_graph, bool create_graph) = 0;
   // TODO: add parameters
   virtual std::shared_ptr<FunctionNode> AddBackwardFuncPtr(std::function<void()>) = 0;
 };
