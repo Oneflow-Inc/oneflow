@@ -59,4 +59,10 @@ void BoxingZerosTaskNode::InferProducedDataRegstTimeShape() {
   GetProducedRegst("out")->mut_data_regst_time_shape()->reset(new Shape(time_shape_));
 }
 
+REGISTER_COMP_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kBoxingZeros)
+    .SetStreamIndexGetterFn([](int64_t dev_phy_id) -> int64_t {
+      const IDMgr* id_mgr = Global<IDMgr>::Get();
+      return id_mgr->GetGpuComputeThrdId(dev_phy_id);
+    });
+
 }  // namespace oneflow

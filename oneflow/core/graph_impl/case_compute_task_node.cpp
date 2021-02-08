@@ -61,5 +61,10 @@ void CaseCompTaskNode::BuildExecGphAndRegst() {
 void CaseCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kCase);
+REGISTER_COMP_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kCase)
+    .SetStreamIndexGetterFn([](int64_t dev_phy_id) -> int64_t {
+      const IDMgr* id_mgr = Global<IDMgr>::Get();
+      return id_mgr->GetGpuComputeThrdId(dev_phy_id);
+    });
 
 }  // namespace oneflow

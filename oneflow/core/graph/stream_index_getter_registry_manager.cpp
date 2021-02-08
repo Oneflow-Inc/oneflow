@@ -23,7 +23,7 @@ StreamIndexGetterRegistryManager& StreamIndexGetterRegistryManager::Get() {
 }
 
 StreamIndexKeyMap<StreamIndexGetterFn>& StreamIndexGetterRegistryManager::StreamIndexGetterFuncs() {
-  return stream_index_getter_funcs_
+  return stream_index_getter_funcs_;
 }
 
 }  // namespace oneflow

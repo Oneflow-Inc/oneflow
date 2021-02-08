@@ -17,12 +17,19 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_STREAM_INDEX_GETTER_REGISTRY_MANAGER_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/graph/stream_index_getter_registry.h"
 
 namespace oneflow {
 
+struct CustomHash {
+  std::size_t operator()(const std::pair<DeviceType, TaskType>& pair) const {
+    return (static_cast<std::size_t>(pair.first) << 10) + static_cast<std::size_t>(pair.second);
+  }
+};
+
 template<typename Value>
-using StreamIndexKeyMap = std::unordered_map<std::pair<DeviceType, TaskType>, Value, std::hash<std::pair<DeviceType, TaskType>>>;
+using StreamIndexKeyMap = std::unordered_map<std::pair<DeviceType, TaskType>, Value, CustomHash>;
 
 class StreamIndexGetterRegistryManager final {
  private:

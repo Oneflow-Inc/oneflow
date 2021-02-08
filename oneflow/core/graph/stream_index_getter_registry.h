@@ -16,6 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_STREAM_INDEX_GETTER_REGISTRY_H_
 #define ONEFLOW_CORE_GRAPH_STREAM_INDEX_GETTER_REGISTRY_H_
 
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/common/device_type.pb.h"
 
 namespace oneflow {
@@ -24,7 +27,8 @@ using StreamIndexGetterFn = std::function<int64_t(int64_t)>;
 
 class StreamIndexGetterRegistry final {
  public:
-  StreamIndexGetterRegistry(DeviceType dev_type, TaskType task_type) : dev_task_type_({dev_type, task_type}) {}
+  StreamIndexGetterRegistry(DeviceType dev_type, TaskType task_type)
+      : dev_task_type_(std::make_pair(dev_type, task_type)) {}
   StreamIndexGetterRegistry& SetStreamIndexGetterFn(StreamIndexGetterFn func);
 
  private:
