@@ -27,8 +27,9 @@ class ShapeElemCntOp final : public Operator {
   ~ShapeElemCntOp() override = default;
 
   void InitFromOpConf() override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
 
  private:
   Maybe<void> InferBatchAxis(
@@ -37,7 +38,7 @@ class ShapeElemCntOp final : public Operator {
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext*, KernelConf*, const OpContext*) const override;
+                            const ParallelContext*, KernelConf*) const override;
 };
 
 }  // namespace oneflow

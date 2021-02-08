@@ -54,7 +54,7 @@ class VirtualModule(object):
             for k, v in self._func_or_class_dict.items():
                 lines += include_export(k, v)
             lines = list(mod_set) + lines
-            f.write("\n".join(lines))
+            f.write("\n" + "\n".join(lines) + "\n")
 
     def submodule_names(self):
         return self._submodule_dict.keys()
