@@ -105,6 +105,7 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
     // NOTE(chengcheng): ONLY consider GPU op.
     if (seed_parallel_desc.device_type() != DeviceType::kGPU) { continue; }
     // NODE(chengcheng): Exclude op that change the time shape.
+    //   like pack/unpack, repeat/acc, etc.
     if (!seed_node->IsTimeShapeIdentity()) { continue; }
 
     HashSet<const OpNode*> this_subgraph;
@@ -131,6 +132,13 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
   }
 }
 
+bool IsDirectConnectedL2R(const OpNode* lhs, const OpNode* rhs) {
+  rhs->ForEachNodeOnInEdge([&](const OpNode* src_node) {
+    if (src_node == lhs) { return true; }
+  });
+  return false;
+}
+
 Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   std::vector<const OpNode*> ordered_op_nodes;
   op_graph.TopoForEachNode([&](const OpNode* node) { ordered_op_nodes.push_back(node); });
@@ -139,15 +147,51 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   FindMaxConnectedSubgraphForGpuExecOrder(&subgraph, op_graph, ordered_op_nodes);
   if (subgraph.size() <= 1) { return Maybe<void>::Ok(); }
 
+  std::vector<const OpNode*> subgraph_order;
+  for (const OpNode* this_node : ordered_op_nodes) {
+    if (subgraph.find(this_node) != subgraph.end()) { subgraph_order.push_back(this_node); }
+  }
+  CHECK_EQ(subgraph.size(), subgraph_order.size());
+
   // LOG
-  //
-  for (const OpNode* node : subgraph) {
-    std::cout << "cclog: " << node->op().op_name() << std::endl;
+  for (int32_t i = 0; i < subgraph_order.size(); ++i) {
+    const OpNode* node = subgraph_order.at(i);
+    std::cout << "cclog: i = " << i << ", op_name =  " << node->op().op_name() << std::endl;
   }
 
-  TODO();
+  const OpNode* first_node = subgraph_order.at(0);
+  ParallelConf parallel_conf = first_node->parallel_desc().parallel_conf();
+  HashMap<std::string, OperatorConf> subgraph_op_name2conf;
+  subgraph_op_name2conf.emplace(first_node->op().op_name(), first_node->op().op_conf());
+  for (int32_t i = 1; i < subgraph_order.size(); ++i) {
+    const OpNode* this_node = subgraph_order.at(i);
+    const OpNode* pre_node = subgraph_order.at(i - 1);
+    const std::string& this_op_name = this_node->op().op_name();
+    CHECK(subgraph_op_name2conf.emplace(this_op_name, this_node->op().op_conf()).second);
+    // build control edge if need.
+    if (!IsDirectConnectedL2R(pre_node, this_node)) {
+      subgraph_op_name2conf.at(this_op_name).add_ctrl_in_op_name(pre_node->op().op_name());
+    }
+  }
 
-  for (const OpNode* this_node : ordered_op_nodes) {}
+  std::vector<OperatorConf> nccl_op_confs;
+  for (const OpNode* src_node : subgraph_order) {
+    for (const OpEdge* op_edge : src_node->out_edges()) {
+      const OpNode* dst_node = op_edge->dst_node();
+      CHECK(src_node != dst_node);
+      if (subgraph_op_name2conf.find(dst_node->op().op_name()) == subgraph_op_name2conf.end()) {
+        // NOTE(chengcheng): child node is not in this subgraph.
+        continue;
+      }
+      for (const LogicalBlobId& lbi : op_edge->lbis()) {
+        const SbpParallel& src_sbp = src_node->SbpParallel4Lbi(lbi);
+        const SbpParallel& dst_sbp = dst_node->SbpParallel4Lbi(lbi);
+        // TODO(chengcheng).
+      }
+    }
+  }
+
+  // TODO
 
   return Maybe<void>::Ok();
 }
