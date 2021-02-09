@@ -19,6 +19,8 @@ enum TaskType {
   kUnpack = 32;
   kRepeat = 34;
   kAcc = 37;
+  kSrcSubsetTick = 38;
+  kDstSubsetTick = 39;
   kSourceTick = 40;
   kTick = 41;
   kAccTick = 42;
