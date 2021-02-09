@@ -20,6 +20,7 @@ from typing import Optional
 from oneflow.python.framework.function_util import api_oneflow_function
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.module import Module
+from oneflow.python.framework.check_point import CheckPoint
 from oneflow.python.ops.optimizer import Optimizer
 from oneflow.python.ops.dataloader import DataLoader
 
@@ -31,9 +32,11 @@ class Model(
 ):
     r"""A high level API for model training and validation.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, is_function_style=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._context = ...
+        self.is_function_style = is_function_style
+        print("is_functoin_style:", self.is_function_style)
 
     def forward(self, *args, **kwargs):
         r"""Same as `nn.Module.forward()`, here is to define the operations you want to use for prediction.
@@ -77,14 +80,24 @@ class Model(
     def data_loader(self):
         raise NotImplementedError
 
-    def _lazy_train_job(self, job_type, job_func_conf, batch_idx, args):
+    def eval_data_loader(self):
+        raise NotImplementedError
+
+    def _lazy_train_job(self, job_type, job_func_conf, batch_idx):
         @api_oneflow_function(type=job_type, function_config=job_func_conf)
         def job():
-            batch = self.data_loader(args)
-            loss = self.training_step(batch, batch_idx, args, True)
+            batch = self.data_loader()
+            loss = self.training_step(batch, batch_idx)
             self.optimizers[0].minimize(loss)
             return loss
         return job
+
+    def _lazy_eval_job(self, job_func_conf, batch_idx):
+        @api_oneflow_function(function_config=job_func_conf)
+        def eval_job():
+            batch = self.eval_data_loader()
+            return self.validation_step(batch, batch_idx)
+        return eval_job
 
     def fit(
         self,
@@ -92,8 +105,8 @@ class Model(
         train_dataloader: Optional[DataLoader] = None,
         val_dataloaders: Optional[DataLoader] = None,
         default_checkpoint_dir: Optional[str] = None,
-        model_config = None, # ToDo(strint): rm this here 
-        args = None, # ToDo(strint): rm this here
+        training_config = None, # ToDo(strint): rm this here 
+        eval_config = None, # ToDo(strint): rm this here 
     ):
         # TODO(strint): check config functions
         # 必须有training_step()/configure_optimizers()/train_dataloader
@@ -119,18 +132,28 @@ class Model(
         # is eager or lazy
         # self._context.is_eager = False 
     
-        try:
-            #train_job = self._lazy_train_job("train", model_config, 0, args)
-            for epoch in range(0, self.max_epochs):
-                self.current_epoch = epoch
-                print("fit epoch : ", epoch)
-                loss = self._lazy_train_job("train", model_config, 0, args)().get().mean()
-                #loss = train_job().get().mean()
-                fmt_str = "{:>12}  {:>12}  {:>12.6f}"
-                print(fmt_str.format(epoch, "train loss:", loss))
-                # self.save_checkpoint(self.checkpoint_dir)
-        finally:
-            pass
+        train_job = self._lazy_train_job("train", training_config, 0)
+        eval_job = self._lazy_eval_job(eval_config, 0)
+        check_point = CheckPoint()
+        if not self.args.model_load_dir:
+            check_point.init()
+        else:
+            check_point.load(self.args.model_load_dir)
+
+        for epoch in range(0, self.max_epochs):
+            self.current_epoch = epoch
+            print("fit epoch : ", epoch)
+            loss = train_job().get().mean()
+            fmt_str = "{:>12}  {:>12}  {:>12.6f}"
+            print(fmt_str.format(epoch, "train loss:", loss))
+            if (epoch + 1) % 10 == 0:
+                eval_loss = eval_job().get().mean()
+                print(
+                    fmt_str.format(
+                        epoch, "eval loss:", eval_loss
+                    )
+                )
+        self.save_checkpoint(self.checkpoint_dir)
     
     def save_checkpoint(
         self,

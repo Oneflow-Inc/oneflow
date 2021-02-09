@@ -39,7 +39,7 @@ import traceback
 import sys
 
 
-@oneflow_export("FunctionConfig", "function_config")
+@oneflow_export("FunctionConfig", "function_config", "ExecutionConfig")
 class FunctionConfig(object):
     r"""OneFlow function's configurations.
     """
@@ -117,7 +117,6 @@ def api_oneflow_function(
         else:
             function_config.function_desc.job_config_proto.mutable_predict_conf()
     api = enable_if.unique([eager_oneflow_function, lazy_oneflow_function])
-    print(api)
     return api(function_config)
 
 

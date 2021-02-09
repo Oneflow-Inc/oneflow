@@ -47,7 +47,6 @@ class DLNetSpec(object):
 global_args = DLNetSpec()
 
 def _conv2d_layer(
-    args,
     name,
     input,
     filters,
@@ -113,27 +112,27 @@ def _data_load_layer(args, data_dir):
     return (normal, label)
 
 
-
 class AlexNet(flow.nn.Model):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, args):
+        super().__init__(is_function_style=False)
+        self.args = args
     
-    def forward(self, images, args, trainable=True):
+    def forward(self, images, trainable=True):
         conv1 = _conv2d_layer(
-            args, "conv1", images, filters=64, kernel_size=11, strides=4, padding="VALID",
+            "conv1", images, filters=64, kernel_size=11, strides=4, padding="VALID",
         )
 
         pool1 = flow.nn.avg_pool2d(conv1, 3, 2, "VALID", "NCHW", name="pool1")
 
-        conv2 = _conv2d_layer(args, "conv2", pool1, filters=192, kernel_size=5)
+        conv2 = _conv2d_layer("conv2", pool1, filters=192, kernel_size=5)
 
         pool2 = flow.nn.avg_pool2d(conv2, 3, 2, "VALID", "NCHW", name="pool2")
 
-        conv3 = _conv2d_layer(args, "conv3", pool2, filters=384)
+        conv3 = _conv2d_layer("conv3", pool2, filters=384)
 
-        conv4 = _conv2d_layer(args, "conv4", conv3, filters=384)
+        conv4 = _conv2d_layer("conv4", conv3, filters=384)
 
-        conv5 = _conv2d_layer(args, "conv5", conv4, filters=256)
+        conv5 = _conv2d_layer("conv5", conv4, filters=256)
 
         pool5 = flow.nn.avg_pool2d(conv5, 3, 2, "VALID", "NCHW", name="pool5")
 
@@ -184,17 +183,17 @@ class AlexNet(flow.nn.Model):
 
         return fc3
 
-    def training_step(self, batch, batch_idx, args):
+    def training_step(self, batch, batch_idx):
         images, labels = batch
-        fc3 = self.forward(images, args, True)
+        fc3 = self.forward(images, True)
         loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
             labels, fc3, name="softmax_loss"
         )
         return loss
-
-    def validation_step(self, batch, batch_idx, args):
+    
+    def validation_step(self, batch, batch_idx):
         images, labels = batch
-        fc3 = self.forward(images, args, False)
+        fc3 = self.forward(images, False)
         loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
             labels, fc3, name="softmax_loss"
         )
@@ -205,11 +204,11 @@ class AlexNet(flow.nn.Model):
             flow.optimizer.PiecewiseConstantScheduler([], [0.00001]), momentum=0
         )
     
-    def data_loader(self, args):
-        return _data_load_layer(args, args.train_dir)
+    def data_loader(self):
+        return _data_load_layer(self.args, self.args.train_dir)
 
-    def eval_data_loader(self, args):
-        return _data_load_layer(args, args.eval_dir)
+    def eval_data_loader(self):
+        return _data_load_layer(self.args, self.args.eval_dir)
 
 
 
@@ -231,20 +230,6 @@ def test_1n1c(test_case):
     flow.config.machine_num(global_args.num_nodes)
     flow.config.gpu_device_num(global_args.gpu_num_per_node)
 
-    # train
-    func_config = flow.FunctionConfig()
-    func_config.default_logical_view(flow.scope.consistent_view())
-    func_config.default_data_type(flow.float)
-    func_config.cudnn_conv_force_fwd_algo(0)
-    func_config.cudnn_conv_force_bwd_data_algo(1)
-    func_config.cudnn_conv_force_bwd_filter_algo(1)
-
-    alexnet_md = AlexNet()
-
-    # eval
-    eval_func_config = flow.FunctionConfig()
-    eval_func_config.default_data_type(flow.float)
-
     num_nodes = global_args.num_nodes
     print(
         "Traning alexnet: num_gpu_per_node = {}, num_nodes = {}.".format(
@@ -255,11 +240,18 @@ def test_1n1c(test_case):
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
     loss = []
     
+    alexnet_md = AlexNet(global_args)
+
+    train_config = flow.ExecutionConfig()
+    train_config.default_logical_view(flow.scope.consistent_view())
+    train_config.default_data_type(flow.float)
+    eval_config = flow.ExecutionConfig()
+    eval_config.default_data_type(flow.float)
+
     alexnet_md.fit(
         max_epochs=10,
-        model_config=func_config,
-        model_eval_config=eval_func_config,
-        args=global_args
+        training_config=train_config,
+        eval_config=eval_config,
     )
 
     # save loss to file
