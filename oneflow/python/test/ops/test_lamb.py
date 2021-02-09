@@ -122,7 +122,7 @@ def compare_with_tensorflow_addons_lamb(
         )
     diff = x.flatten() - var.numpy().flatten()
     test_case.assertTrue(
-        np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-4, atol=1e-4),
+        np.allclose(x.flatten(), var.numpy().flatten(), rtol=1e-3, atol=1e-3),
         (case, diff),
     )
 
