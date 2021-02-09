@@ -32,8 +32,9 @@ class TensorListSplitOp final : public Operator {
     });
   }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override {
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override {
     const BlobDesc* in_desc = GetBlobDesc4BnInOp(SoleIbn());
     CHECK_OR_RETURN(in_desc->is_tensor_list());
     CHECK_GT_OR_RETURN(in_desc->shape().NumAxes(), 1);
