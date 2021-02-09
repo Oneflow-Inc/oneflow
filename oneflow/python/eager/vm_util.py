@@ -311,7 +311,7 @@ def NewOpKernelObject(self, op_conf):
     object_id = self._NewOpKernelObject(
         parallel_desc_symbol, scope_symbol.job_desc_symbol, op_conf_sym
     )
-    return oneflow_api.OpKernelObject(object_id, op_conf, self.object_releaser())
+    return oneflow_api.OpKernelObject(object_id, cfg_op_conf, self.object_releaser())
 
 
 def Build121To(self, blob_object, parallel_desc_symbol):
