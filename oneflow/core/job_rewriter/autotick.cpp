@@ -160,7 +160,7 @@ Maybe<void> ConnectSourceTickAndSrcSubsetTick(const OperatorConf& src_tick_op,
                                           + src_tick_op.source_tick_conf().out());
     tick_op.mutable_tick_conf()->set_out("out");
     JUST(job_builder->AddOp(parallel_conf, tick_op));
-    src_subset_tick_op->mutable_src_subset_tick_conf()->set_in(tick_op.name() + "/"
+    src_subset_tick_op->mutable_src_subset_tick_conf()->add_in(tick_op.name() + "/"
                                                                + tick_op.tick_conf().out());
   }
   JUST(job_builder->MutOpOnlyOnce(*src_subset_tick_op));
