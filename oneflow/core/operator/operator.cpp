@@ -132,19 +132,8 @@ Maybe<void> Operator::InferLogicalOutBlobDescs(
 Maybe<void> Operator::InferBlobDescsIf(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature);
-}
-
-Maybe<void> Operator::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
-}
-
-Maybe<void> Operator::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  UNIMPLEMENTED() << typeid(*this).name();
+  JUST(InferOutBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature));
+  JUST(InferInternalBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature));
   return Maybe<void>::Ok();
 }
 
@@ -157,9 +146,20 @@ Maybe<void> Operator::InferOutBlobDescsIf(
 Maybe<void> Operator::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  // TODO() separate InferOut and InferTmp
-  // At present, only conv_op infer out blob separately
-  return InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature);
+  UNIMPLEMENTED() << typeid(*this).name();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> Operator::InferInternalBlobDescsIf(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  return InferInternalBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature);
+}
+
+Maybe<void> Operator::InferInternalBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferInplaceObn2IbnIf(
