@@ -189,7 +189,7 @@ void LazyReference(const std::shared_ptr<InstructionsBuilder>& x,
 }
 
 void DeleteObject(const std::shared_ptr<InstructionsBuilder>& x,
-                  compatible_py::BlobObject* blob_object) {
+                  compatible_py::Object* blob_object) {
   return x->DeleteObject(blob_object).GetOrThrow();
 }
 
@@ -207,7 +207,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def(py::init([](const std::shared_ptr<vm::IdGenerator>& id_generator,
                        const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
                        const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list,
-                       const std::function<void(compatible_py::BlobObject*)>& release_object) {
+                       const std::function<void(compatible_py::Object*)>& release_object) {
         return std::make_shared<InstructionsBuilder>(id_generator, instruction_list, symbol_list,
                                                      release_object);
       }))

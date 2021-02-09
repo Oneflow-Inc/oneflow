@@ -17,6 +17,7 @@ limitations under the License.
 #include <pybind11/functional.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/object.h"
+#include "oneflow/core/framework/opkernel_object.h"
 
 namespace py = pybind11;
 
@@ -33,7 +34,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("object_id", &Object::object_id)
       .def_property_readonly("parallel_desc_symbol", &Object::parallel_desc_symbol);
 
-  py::class_<BlobObject, std::shared_ptr<BlobObject>>(m, "BlobObject")
+  py::class_<BlobObject, Object, std::shared_ptr<BlobObject>>(m, "BlobObject")
       .def(py::init([](int64_t object_id,
                        const std::shared_ptr<OpArgParallelAttribute>& op_arg_parallel_attr,
                        const std::shared_ptr<OpArgBlobAttribute>& op_arg_blob_attr) {
@@ -45,6 +46,16 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("op_arg_blob_attr", &BlobObject::op_arg_blob_attr)
       .def("add_releaser", &BlobObject::add_releaser)
       .def("ForceReleaseAll", &BlobObject::ForceReleaseAll);
+
+  py::class_<OpKernelObject, Object, std::shared_ptr<OpKernelObject>>(m, "OpKernelObject")
+      .def(py::init([](int64_t object_id, const std::shared_ptr<cfg::OperatorConf>& op_conf,
+                       const std::function<void(Object*)>& release) {
+        return std::make_shared<OpKernelObject>(object_id, op_conf, release);
+      }))
+      .def_property_readonly("object_id", &OpKernelObject::object_id)
+      .def_property_readonly("parallel_desc_symbol", &OpKernelObject::parallel_desc_symbol)
+      .def_property_readonly("op_conf", &OpKernelObject::op_conf)
+      .def_property_readonly("scope_symbol", &OpKernelObject::scope_symbol);
 }
 
 }  // namespace compatible_py
