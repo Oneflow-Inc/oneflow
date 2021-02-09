@@ -119,9 +119,12 @@ void JobCompleter::Complete(Job* job) const {
 #endif  // OF_WITH_XRT
   }
 
-  // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
-  JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx);
-
+  if (Global<ResourceDesc, ForSession>::Get()->resource().enable_insert_nccl_logical_op_pass()) {
+    // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
+    JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx);
+    // NOTE(chengcheng): Becasue insert new logical nccl op, MUST dump time shape, sbp again.
+    JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
+  }
   CheckOpGraph(OpGraph(*job));
 }
 

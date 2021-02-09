@@ -26,44 +26,6 @@ namespace oneflow {
 
 namespace {
 
-class SbpPairKey {
- public:
-  ~SbpPairKey() = default;
-  SbpPairKey(const SbpParallel& src, const SbpParallel& dst) : src_sbp_(src), dst_sbp_(dst) {}
-
-  bool operator==(const SbpPairKey& rhs) const {
-    return src_sbp_ == rhs.src_sbp_ && dst_sbp_ == rhs.dst_sbp_;
-  }
-
-  const SbpParallel& src_sbp() const { return src_sbp_; }
-  const SbpParallel& dst_sbp() const { return dst_sbp_; }
-
- private:
-  SbpParallel src_sbp_;
-  SbpParallel dst_sbp_;
-};
-
-}  // namespace
-
-}  // namespace oneflow
-
-namespace std {
-
-template<>
-struct hash<oneflow::SbpPairKey> {
-  size_t operator()(const oneflow::SbpPairKey& key) const {
-    std::string serialized_string = "src_sbp:" + oneflow::SbpParallelToString(key.src_sbp())
-                                    + "->dst_sbp:" + oneflow::SbpParallelToString(key.dst_sbp());
-    return std::hash<std::string>()(serialized_string);
-  }
-};
-
-}  // namespace std
-
-namespace oneflow {
-
-namespace {
-
 // Do InsertNcclLogicalOpPass will use backward recomputation for sublinear memory cost.
 class InsertNcclLogicalOpPass final : public JobPass {
  public:
@@ -89,7 +51,7 @@ class InsertNcclLogicalOpPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
 
-const std::string kNcclLogicalOpNamePrefix = "OneFlow-System-NCCL-logical-Op_";
+const std::string kNcclLogicalOpNamePrefix = "OneFlow-System-NCCL-logical-Op";
 const std::string kNoneNcclOpTypeName = "DoNotInsertNcclLogialOp";
 
 void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const OpGraph& op_graph,
@@ -132,18 +94,31 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
 }
 
 bool IsDirectConnectedL2R(const OpNode* lhs, const OpNode* rhs) {
-  rhs->ForEachNodeOnInEdge([&](const OpNode* src_node) {
-    if (src_node == lhs) { return true; }
-  });
+  for (const OpEdge* edge : rhs->in_edges()) {
+    if (lhs == edge->src_node()) { return true; }
+  }
   return false;
 }
 
 bool TryGetNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const OpNode* dst_node,
                              const LogicalBlobId& lbi) {
+  const int64_t scope_symbol_id = src_node->op().op_conf().scope_symbol_id();
+  const std::string lbn = GenLogicalBlobName(lbi);
   const SbpParallel& src_sbp = src_node->SbpParallel4Lbi(lbi);
   const SbpParallel& dst_sbp = dst_node->SbpParallel4Lbi(lbi);
-  // TODO
-  //
+  if (src_sbp.has_partial_sum_parallel() && dst_sbp.has_broadcast_parallel()) {
+    // P2B : AllReduce
+    user_op::UserOpConfWrapper nccl_op_wrapper =
+        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2B-" + NewUniqueId())
+            .Op("_nccl_logical_op_all_reduce")
+            .Input("in", lbn)
+            .Output("out")
+            .ScopeSymbolId(scope_symbol_id)
+            .Build();
+    *ret = nccl_op_wrapper.op_conf();
+    std::cout << "cclog: insert nccl op: " << ret->name() << std::endl;
+    return true;
+  }
   return false;
 }
 
@@ -207,8 +182,12 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
         // insert nccl op
         user_op::UserOpConfWrapper nccl_op_wrapper(nccl_op);
         for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
-          ReplaceInputLbnInOpCustomizedConf(&subgraph_op_name2conf.at(dst_op_name), ibn,
-                                            nccl_op_wrapper.output("out", 0));
+          std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
+              &subgraph_op_name2conf.at(dst_op_name), ibn, nccl_op_wrapper.output("out", 0));
+
+          std::cout << "cclog: replace dst_op_name = " << dst_op_name << " input blob name: " << ibn
+                    << " from " << old_lbn << "  to  " << nccl_op_wrapper.output("out", 0)
+                    << std::endl;
         }
 
         if (nccl_op_confs.size() >= 1) {
