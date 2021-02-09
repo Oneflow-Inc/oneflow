@@ -627,12 +627,12 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
   }
   op_confs.push_back(cs_case_op_conf);
   std::vector<std::string> snk_tick_op_names;
+  int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
+  identity_tick_op_names->resize(num_critial_sections);
   int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
-  FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
-    // There is no need to insert a source tick op
-    // identity tick
-    identity_tick_op_names->push_back(HashMap<int64_t, std::string>{{}});
-    auto* cur_id_tick_op_names = &identity_tick_op_names->at(identity_tick_op_names->size() - 1);
+  FOR_RANGE(int64_t, i, 0, num_critial_sections) {
+    // Insert identity tick ops. There is no need to insert a source tick op.
+    auto* cur_id_tick_op_names = &identity_tick_op_names->at(i);
     for (int64_t machine_id = 0; machine_id < num_machines; ++machine_id) {
       OperatorConf identity_tick_op_conf;
       std::string name_prefix = "System-Main-Tick_CriticalSection_";
