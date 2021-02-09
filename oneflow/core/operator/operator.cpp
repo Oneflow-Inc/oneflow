@@ -153,7 +153,7 @@ Maybe<const BlobDesc> GetLogicalBlobDesc(
   CHECK_OR_RETURN(bn2logical_blob_desc_ptr);
   const auto& it = bn2logical_blob_desc_ptr->find(bn);
   CHECK_OR_RETURN(it != bn2logical_blob_desc_ptr->cend());
-  return Maybe<const BlobDesc>(it->second);
+  return it->second;
 }
 
 // TODO(liujuncheng): move to ToOpAttribute
@@ -768,7 +768,7 @@ Maybe<void> FillBatchAxis(
       [&](const std::string& bn) -> Maybe<const OptInt64> {
         const OptInt64* batch_axis = JUST(BatchAxis4BnInOp(bn));
         CHECK_NOTNULL_OR_RETURN(batch_axis);
-        return Maybe<const OptInt64>(std::make_shared<const OptInt64>(*batch_axis));
+        return std::make_shared<const OptInt64>(*batch_axis);
       },
       bns, bn2batch_axis_ptr);
   return Maybe<void>::Ok();
@@ -781,7 +781,7 @@ Maybe<const OptInt64> GetBatchAxis(
   CHECK_OR_RETURN(bn2batch_axis_ptr);
   const auto& it = bn2batch_axis_ptr->find(bn);
   CHECK_OR_RETURN(it != bn2batch_axis_ptr->cend());
-  return Maybe<const OptInt64>(it->second);
+  return it->second;
 }
 
 }  // namespace
