@@ -584,6 +584,7 @@ void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>
 
 void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* identity_tick_op_names,
                  LogicalBlobId* critical_section_sink_lbi) {
+  JobBuilder job_builder(main_job);
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   std::vector<OperatorConf> op_confs;
   OperatorConf wait_and_send_ids_op_conf;
@@ -641,7 +642,10 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
       auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
       identity_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
       identity_tick_conf->set_out("out");
-      op_confs.push_back(identity_tick_op_conf);
+      ParallelConf machine_parallel_conf;
+      machine_parallel_conf.set_device_tag("cpu");
+      machine_parallel_conf.add_device_name(std::to_string(machine_id) + ":0");
+      CHECK_JUST(job_builder.AddOp(machine_parallel_conf, identity_tick_op_conf));
       CHECK(cur_id_tick_op_names->emplace(machine_id, identity_tick_op_conf.name()).second);
     }
     // sink tick
@@ -716,7 +720,7 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0");
-  JobBuilder(main_job).AddOps(parallel_conf, op_confs);
+  job_builder.AddOps(parallel_conf, op_confs);
   auto* job_conf = main_job->mutable_job_conf();
   job_conf->set_job_name("MainJob-unamed");
   job_conf->mutable_predict_conf();
