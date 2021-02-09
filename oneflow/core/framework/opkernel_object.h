@@ -29,7 +29,7 @@ namespace compatible_py {
 class OpKernelObject : public Object {
  public:
   OpKernelObject(int64_t object_id, const std::shared_ptr<cfg::OperatorConf>& op_conf,
-                 const std::function<void(OpKernelObject*)>& release);
+                 const std::function<void(Object*)>& release);
   ~OpKernelObject() override { ForceReleaseAll(); }
 
   std::shared_ptr<cfg::OperatorConf> op_conf() const { return op_conf_; }
@@ -40,7 +40,7 @@ class OpKernelObject : public Object {
 
   std::shared_ptr<cfg::OperatorConf> op_conf_;
   std::shared_ptr<Scope> scope_symbol_;
-  std::vector<std::function<void(OpKernelObject*)>> release_;
+  std::vector<std::function<void(Object*)>> release_;
 };
 
 }  // namespace compatible_py

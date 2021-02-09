@@ -40,7 +40,7 @@ std::shared_ptr<ParallelDesc> _GetOpParallelSymbol(
 }  // namespace
 
 OpKernelObject::OpKernelObject(int64_t object_id, const std::shared_ptr<cfg::OperatorConf>& op_conf,
-                               const std::function<void(OpKernelObject*)>& release)
+                               const std::function<void(Object*)>& release)
     : Object(object_id, _GetOpParallelSymbol(op_conf)),
       op_conf_(op_conf),
       scope_symbol_(_GetScopeSymbol(op_conf)) {
