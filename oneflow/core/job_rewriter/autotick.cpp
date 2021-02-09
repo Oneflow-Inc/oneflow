@@ -137,7 +137,7 @@ Maybe<void> CreateSourceTicksAndSrcSubsetTick(CriticalSection* critical_section,
     src_tick_op.set_name("System-AutoTick-SourceTick_" + NewUniqueId());
     src_tick_op.mutable_source_tick_conf()->set_out("out");
     JUST(job_builder->AddOp(parallel_conf, src_tick_op));
-    src_subset_tick_op->mutable_src_subset_tick_conf()->set_in(src_tick_op.name() + "/out");
+    src_subset_tick_op->mutable_src_subset_tick_conf()->add_in(src_tick_op.name() + "/out");
     (*map)[machine_id] = src_tick_op.name();
   }
   JUST(job_builder->MutOpOnlyOnce(*src_subset_tick_op));
