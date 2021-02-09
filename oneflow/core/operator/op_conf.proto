@@ -287,7 +287,7 @@ message ReentrantLockOpConf {
 }
 
 message SrcSubsetTickOpConf {
-  optional string in = 1;
+  repeated string in = 1;
   required string out = 2;
 }
 
