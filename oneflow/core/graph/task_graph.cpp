@@ -210,6 +210,22 @@ std::unique_ptr<BoxingLogger> CreateBoxingLogger() {
   }
 }
 
+Maybe<void> MakeGetterTaskNode4MachineId7ThrdId(
+    const std::vector<CompTaskNode*>& task_nodes,
+    std::function<Maybe<CompTaskNode*>(int64_t mchn_id, int64_t thrd_id)>* Getter) {
+  // ticks are shared within a machine/process
+  auto machine_id2task_node = std::make_shared<HashMap<int64_t, CompTaskNode*>>();
+  for (auto* task_node : task_nodes) {
+    machine_id2task_node->emplace(task_node->machine_id(), task_node);
+  }
+  *Getter = [machine_id2task_node](int64_t mchn_id, int64_t thrd_id) -> Maybe<CompTaskNode*> {
+    const auto& iter = machine_id2task_node->find(mchn_id);
+    CHECK_OR_RETURN(iter != machine_id2task_node->end());
+    return iter->second;
+  };
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
@@ -268,11 +284,30 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
       [&](const LogicalNode* src, const LogicalNode* dst, int64_t ctrl_regst_num) {
         const auto& src_task_nodes = logical2sorted_comp_tasks.at(src);
         const auto& dst_task_nodes = logical2sorted_comp_tasks.at(dst);
-        ConnectCtrlEdges(src_task_nodes, dst_task_nodes, ctrl_regst_num);
+        if (src->SoleOp()->op_conf().has_src_subset_tick_conf()) {
+          UNIMPLEMENTED();
+        } else if (dst->SoleOp()->op_conf().has_dst_subset_tick_conf()) {
+          UNIMPLEMENTED();
+        } else {
+          ConnectCtrlEdges(src_task_nodes, dst_task_nodes, ctrl_regst_num);
+        }
       });
 
   SetOrderInGraphForEachNode();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
+}
+
+Maybe<void> TaskGraph::ConnectDstSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
+                                                 const std::vector<CompTaskNode*>& dst_task_nodes) {
+  std::function<Maybe<CompTaskNode*>(int64_t mchn_id, int64_t thrd_id)> TaskNode4MachineId7ThrdId;
+  JUST(MakeGetterTaskNode4MachineId7ThrdId(dst_task_nodes, &TaskNode4MachineId7ThrdId));
+  for (CompTaskNode* src_task_node : src_task_nodes) {
+    CompTaskNode* dst_task_node =
+        JUST(TaskNode4MachineId7ThrdId(src_task_node->machine_id(), src_task_node->thrd_id()));
+    TaskEdge* edge = NewEdge();
+    Connect<TaskNode>(src_task_node, edge, dst_task_node);
+  }
+  return Maybe<void>::Ok();
 }
 
 void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
@@ -601,6 +636,27 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect) {
       BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(0), MutBufTask, true);
     }
   }
+}
+
+Maybe<void> TaskGraph::ConnectSrcSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
+                                                 const std::vector<CompTaskNode*>& dst_task_nodes) {
+  std::function<Maybe<CompTaskNode*>(int64_t mchn_id, int64_t thrd_id)> TaskNode4MachineId7ThrdId;
+  JUST(MakeGetterTaskNode4MachineId7ThrdId(src_task_nodes, &TaskNode4MachineId7ThrdId));
+  for (CompTaskNode* dst_task_node : dst_task_nodes) {
+    CompTaskNode* src_task_node =
+        JUST(TaskNode4MachineId7ThrdId(dst_task_node->machine_id(), dst_task_node->thrd_id()));
+    TaskEdge* edge = NewEdge();
+    Connect<TaskNode>(src_task_node, edge, dst_task_node);
+  }
+  return Maybe<void>::Ok();
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySrcSubsetConnect) {
+  CHECK_JUST(ConnectSrcSubsetTickEdges(sorted_src_comp_tasks, sorted_dst_comp_tasks));
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByDstSubsetConnect) {
+  CHECK_JUST(ConnectDstSubsetTickEdges(sorted_src_comp_tasks, sorted_dst_comp_tasks));
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D) {
