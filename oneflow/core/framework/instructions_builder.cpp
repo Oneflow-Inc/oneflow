@@ -310,7 +310,7 @@ Maybe<int64_t> InstructionsBuilder::NewSharedOpKernelObjectId4ParallelConfSymbol
   return NewObjectId(parallel_desc_sym);
 }
 
-Maybe<void> InstructionsBuilder::DeleteObject(compatible_py::BlobObject* blob_object) {
+Maybe<void> InstructionsBuilder::DeleteObject(compatible_py::Object* blob_object) {
   JUST(_TryClearObject(blob_object));
   JUST(_DeleteObject(blob_object));
   return Maybe<void>::Ok();
@@ -716,7 +716,7 @@ Maybe<void> InstructionsBuilder::InitOpConfSymbol(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::_TryClearObject(compatible_py::BlobObject* blob_object) {
+Maybe<void> InstructionsBuilder::_TryClearObject(compatible_py::Object* blob_object) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("TryClearObject");
   instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
@@ -725,7 +725,7 @@ Maybe<void> InstructionsBuilder::_TryClearObject(compatible_py::BlobObject* blob
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::_DeleteObject(compatible_py::BlobObject* blob_object) {
+Maybe<void> InstructionsBuilder::_DeleteObject(compatible_py::Object* blob_object) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("DeleteObject");
   instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));

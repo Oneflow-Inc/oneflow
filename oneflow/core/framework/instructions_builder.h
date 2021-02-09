@@ -52,11 +52,11 @@ class InstructionsBuilder {
       : id_generator_(id_generator),
         instruction_list_(std::make_shared<vm::cfg::InstructionListProto>()),
         eager_symbol_list_(std::make_shared<eager::cfg::EagerSymbolList>()),
-        release_object_([](compatible_py::BlobObject*) {}) {}
+        release_object_([](compatible_py::Object*) {}) {}
   InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
                       const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
                       const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list,
-                      const std::function<void(compatible_py::BlobObject*)>& release_object)
+                      const std::function<void(compatible_py::Object*)>& release_object)
       : id_generator_(id_generator),
         instruction_list_(instruction_list),
         eager_symbol_list_(symbol_list),
@@ -71,7 +71,7 @@ class InstructionsBuilder {
     return eager_symbol_list_;
   }
 
-  const std::function<void(compatible_py::BlobObject*)>& object_releaser() const {
+  const std::function<void(compatible_py::Object*)>& object_releaser() const {
     return release_object_;
   }
 
@@ -105,7 +105,7 @@ class InstructionsBuilder {
   Maybe<int64_t> NewSharedOpKernelObjectId4ParallelConfSymbolId(
       const std::shared_ptr<ParallelDesc>& parallel_desc_sym);
 
-  Maybe<void> DeleteObject(compatible_py::BlobObject* blob_object);
+  Maybe<void> DeleteObject(compatible_py::Object* blob_object);
 
   Maybe<std::vector<std::shared_ptr<ParallelDesc>>> GetPhysicalParallelDescSymbols(
       const std::shared_ptr<ParallelDesc>& parallel_desc_symbol);
@@ -213,9 +213,9 @@ class InstructionsBuilder {
   Maybe<void> InitOpConfSymbol(int64_t symbol_id,
                                const std::shared_ptr<cfg::OperatorConf>& op_conf);
 
-  Maybe<void> _TryClearObject(compatible_py::BlobObject* blob_object);
+  Maybe<void> _TryClearObject(compatible_py::Object* blob_object);
 
-  Maybe<void> _DeleteObject(compatible_py::BlobObject* blob_object);
+  Maybe<void> _DeleteObject(compatible_py::Object* blob_object);
 
   template<typename T>
   Maybe<int64_t> CreateSymbolId(const T& conf) {
@@ -231,7 +231,7 @@ class InstructionsBuilder {
   std::shared_ptr<vm::IdGenerator> id_generator_;
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list_;
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
-  std::function<void(compatible_py::BlobObject*)> release_object_;
+  std::function<void(compatible_py::Object*)> release_object_;
 };
 
 std::shared_ptr<vm::cfg::InstructionOperandProto> DelObjectOperand(int64_t object_id);
