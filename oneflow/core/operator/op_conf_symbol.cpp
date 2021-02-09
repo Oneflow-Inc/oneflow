@@ -13,25 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/tick_compute_actor.h"
+#include "oneflow/core/operator/op_conf_symbol.h"
 
 namespace oneflow {
 
-void TickComputeActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  piece_id_ = 0;
-  OF_SET_MSG_HANDLER(&TickComputeActor::HandlerNormal);
+OperatorConfSymbol::OperatorConfSymbol(int64_t symbol_id, const OperatorConf& op_conf)
+    : symbol_id_(symbol_id), op_conf_(op_conf) {
+  data_ = std::make_shared<cfg::OperatorConf>(op_conf);
 }
-
-void TickComputeActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  HandleProducedNaiveDataRegstToConsumer([&](Regst* out_regst) {
-    out_regst->set_piece_id(piece_id_++);
-    return true;
-  });
-}
-
-REGISTER_ACTOR(kTick, TickComputeActor);
-REGISTER_ACTOR(kDeviceTick, TickComputeActor);
-REGISTER_ACTOR(kSrcSubsetTick, TickComputeActor);
-REGISTER_ACTOR(kDstSubsetTick, TickComputeActor);
 
 }  // namespace oneflow

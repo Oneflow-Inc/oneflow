@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
+#include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 
@@ -51,7 +52,8 @@ Maybe<void> StorageAdd(const EagerSymbol& symbol) {
     JUST(Global<symbol::Storage<ParallelDesc>>::Get()->TryAdd(symbol_id,
                                                               symbol.parallel_conf_symbol()));
   } else if (symbol.has_op_conf_symbol()) {
-    JUST(Global<symbol::Storage<OperatorConf>>::Get()->Add(symbol_id, symbol.op_conf_symbol()));
+    JUST(Global<symbol::Storage<OperatorConfSymbol>>::Get()->TryAdd(symbol_id,
+                                                                    symbol.op_conf_symbol()));
   } else if (symbol.has_op_node_signature_symbol()) {
     JUST(Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->TryAdd(
         symbol_id, symbol.op_node_signature_symbol()));

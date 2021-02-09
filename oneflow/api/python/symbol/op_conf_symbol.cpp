@@ -13,25 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/tick_compute_actor.h"
+#include <pybind11/pybind11.h>
+#include <pybind11/operators.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/operator/op_conf_symbol.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 
-void TickComputeActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  piece_id_ = 0;
-  OF_SET_MSG_HANDLER(&TickComputeActor::HandlerNormal);
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::class_<OperatorConfSymbol, std::shared_ptr<OperatorConfSymbol>>(m, "OpConfSymbol")
+      .def_property_readonly("symbol_id",
+                             [](const OperatorConfSymbol& x) { return x.symbol_id().GetOrThrow(); })
+      .def_property_readonly("data", &OperatorConfSymbol::data);
 }
-
-void TickComputeActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  HandleProducedNaiveDataRegstToConsumer([&](Regst* out_regst) {
-    out_regst->set_piece_id(piece_id_++);
-    return true;
-  });
-}
-
-REGISTER_ACTOR(kTick, TickComputeActor);
-REGISTER_ACTOR(kDeviceTick, TickComputeActor);
-REGISTER_ACTOR(kSrcSubsetTick, TickComputeActor);
-REGISTER_ACTOR(kDstSubsetTick, TickComputeActor);
 
 }  // namespace oneflow

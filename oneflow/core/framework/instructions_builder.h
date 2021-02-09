@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/object.h"
+#include "oneflow/core/operator/op_conf_symbol.h"
 
 namespace oneflow {
 
@@ -91,6 +92,8 @@ class InstructionsBuilder {
       const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
 
   Maybe<Scope> GetScopeSymbol(const std::shared_ptr<cfg::ScopeProto>& scope_proto);
+
+  Maybe<OperatorConfSymbol> GetOpConfSymbol(const std::shared_ptr<cfg::OperatorConf>& op_conf);
 
   Maybe<compatible_py::BlobObject> NewBlobObject(
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
@@ -155,6 +158,10 @@ class InstructionsBuilder {
   Maybe<void> LazyReference(const std::shared_ptr<compatible_py::BlobObject>& blob_object,
                             std::string interface_op_name);
 
+  Maybe<int64_t> _NewOpKernelObject(const std::shared_ptr<ParallelDesc>& parallel_desc_symbol,
+                                    const std::shared_ptr<JobDesc>& job_desc_sym,
+                                    const std::shared_ptr<OperatorConfSymbol>& op_conf_sym);
+
   template<typename T>
   Maybe<int64_t> FindOrCreateSymbolId(const T& conf) {
     auto* id_cache = Global<symbol::IdCache<T>>::Get();
@@ -172,6 +179,8 @@ class InstructionsBuilder {
   Maybe<int64_t> NewSymbolId4ParallelConf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
 
   Maybe<int64_t> NewSymbolId4Scope(const std::shared_ptr<cfg::ScopeProto>& scope_proto);
+
+  Maybe<int64_t> NewSymbolId4OpConf(const std::shared_ptr<cfg::OperatorConf> op_conf);
 
   Maybe<void> InitStringSymbol(int64_t symbol_id, std::string str);
 
@@ -200,6 +209,9 @@ class InstructionsBuilder {
       const std::shared_ptr<ParallelDesc>& src_parallel_desc_symbol,
       const std::shared_ptr<compatible_py::BlobObject>& dst_blob_object,
       const std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>& token_ids);
+
+  Maybe<void> InitOpConfSymbol(int64_t symbol_id,
+                               const std::shared_ptr<cfg::OperatorConf>& op_conf);
 
   Maybe<void> _TryClearObject(compatible_py::BlobObject* blob_object);
 
