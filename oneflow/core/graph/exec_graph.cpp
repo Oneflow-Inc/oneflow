@@ -33,8 +33,8 @@ void ExecNode::AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_g
   BindBnsWithRegst(bns_getter, regst);
 }
 
-void ExecNode::BindBnWithOneOfTheRegsts(const std::string& bn,
-                                        const std::list<std::shared_ptr<RegstDesc>>& regsts) {
+bool ExecNode::TryBindBnWithOneOfTheRegsts(const std::string& bn,
+                                           const std::list<std::shared_ptr<RegstDesc>>& regsts) {
   const LogicalBlobId& lbi = op()->BnInOp2Lbi(bn);
   bool has_binded = false;
   for (std::shared_ptr<RegstDesc> regst : regsts) {
@@ -43,7 +43,12 @@ void ExecNode::BindBnWithOneOfTheRegsts(const std::string& bn,
     has_binded = true;
     break;
   }
-  CHECK(has_binded);
+  return has_binded;
+}
+
+void ExecNode::BindBnWithOneOfTheRegsts(const std::string& bn,
+                                        const std::list<std::shared_ptr<RegstDesc>>& regsts) {
+  CHECK(TryBindBnWithOneOfTheRegsts(bn, regsts));
 }
 
 void ExecNode::UnbindBnWithEmptyRegst() {

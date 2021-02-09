@@ -23,9 +23,9 @@ void ForeignWatchOp::InitFromOpConf() {
   EnrollInputBn("in");
 }
 
-Maybe<void> ForeignWatchOp::InferBlobDescs(
+Maybe<void> ForeignWatchOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   return Maybe<void>::Ok();
 }

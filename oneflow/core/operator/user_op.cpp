@@ -395,10 +395,9 @@ void UserOp::InitFromOpConf() {
   }
 }
 
-Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx,
-                                   const SbpSignature* sbp_signature) const {
-  JUST(InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature));
+Maybe<void> UserOp::InferInternalBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   // tmp buffer size must be inferred after out shape/dtype
   UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
                                GetBlobDesc4BnInOp);
