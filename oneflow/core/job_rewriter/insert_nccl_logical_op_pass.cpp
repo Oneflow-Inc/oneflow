@@ -16,10 +16,49 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
+
+namespace oneflow {
+
+namespace {
+
+class SbpPairKey {
+ public:
+  ~SbpPairKey() = default;
+  SbpPairKey(const SbpParallel& src, const SbpParallel& dst) : src_sbp_(src), dst_sbp_(dst) {}
+
+  bool operator==(const SbpPairKey& rhs) const {
+    return src_sbp_ == rhs.src_sbp_ && dst_sbp_ == rhs.dst_sbp_;
+  }
+
+  const SbpParallel& src_sbp() const { return src_sbp_; }
+  const SbpParallel& dst_sbp() const { return dst_sbp_; }
+
+ private:
+  SbpParallel src_sbp_;
+  SbpParallel dst_sbp_;
+};
+
+}  // namespace
+
+}  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::SbpPairKey> {
+  size_t operator()(const oneflow::SbpPairKey& key) const {
+    std::string serialized_string = "src_sbp:" + oneflow::SbpParallelToString(key.src_sbp())
+                                    + "->dst_sbp:" + oneflow::SbpParallelToString(key.dst_sbp());
+    return std::hash<std::string>()(serialized_string);
+  }
+};
+
+}  // namespace std
 
 namespace oneflow {
 
@@ -40,59 +79,18 @@ class InsertNcclLogicalOpPass final : public JobPass {
   }
 
   bool IsEnabled(const JobPassCtx& ctx) const {
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
     return Global<ResourceDesc, ForSession>::Get()->resource().enable_insert_nccl_logical_op_pass();
+#else
+    return false;
+#endif
   }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
 
 const std::string kNcclLogicalOpNamePrefix = "OneFlow-System-NCCL-logical-Op_";
-
-/*
- *
-bool CanBeMergedInChain(const TaskNode* node) {
-  // ONLY the node which is NormalForward and in GPU and NOT variable can be merged.
-  if (IsTaskNodeProducedResgtHasMultiRegstNum(node)) { return false; }
-  const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
-  if (fw_comp_node == nullptr) { return false; }
-  if (fw_comp_node->logical_node()->op_vec().size() != 1) { return false; }
-  if (fw_comp_node->device_type() != DeviceType::kGPU) { return false; }
-  const Operator* op = fw_comp_node->logical_node()->SoleOp().get();
-  if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
-  return true;
-}
-
-void TraverseConnectedSubGraph(const OpNode* this_node) {
-  CHECK_NE(this_chain_id, -1);
-  CHECK_EQ(this_node->chain_id(), -1);
-  // bfs search all node can be merged in this chain
-  HashSet<TaskNode*> visited_nodes;
-  std::queue<TaskNode*> queued_nodes;
-  queued_nodes.push(this_node);
-  visited_nodes.insert(this_node);
-  while (!queued_nodes.empty()) {
-    TaskNode* cur_node = queued_nodes.front();
-    queued_nodes.pop();
-
-    CHECK_EQ(cur_node->chain_id(), -1);
-    cur_node->set_chain_id(this_chain_id);
-
-    cur_node->ForEachNodeOnInOutEdge([&](TaskNode* next_node) {
-      // NOTE(chengcheng): use area_id to not merge optimizer ops with fw/bw ops
-      if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
-          && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()
-          && this_node->area_id() == next_node->area_id()) {
-        if (next_node->chain_id() == -1) {
-          queued_nodes.push(next_node);
-          visited_nodes.insert(next_node);
-        } else {
-          CHECK_EQ(next_node->chain_id(), this_chain_id);
-        }
-      }
-    });
-  }
-}
-*/
+const std::string kNoneNcclOpTypeName = "DoNotInsertNcclLogialOp";
 
 void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const OpGraph& op_graph,
                                              const std::vector<const OpNode*>& order) {
@@ -102,8 +100,9 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
     if (visited.find(seed_node) != visited.end()) { continue; }
     CHECK(visited.insert(seed_node).second);
     const ParallelDesc& seed_parallel_desc = seed_node->parallel_desc();
-    // NOTE(chengcheng): ONLY consider GPU op.
+    // NOTE(chengcheng): ONLY consider GPU op and parallel num > 1.
     if (seed_parallel_desc.device_type() != DeviceType::kGPU) { continue; }
+    if (seed_parallel_desc.parallel_num() <= 1) { continue; }
     // NODE(chengcheng): Exclude op that change the time shape.
     //   like pack/unpack, repeat/acc, etc.
     if (!seed_node->IsTimeShapeIdentity()) { continue; }
@@ -139,6 +138,15 @@ bool IsDirectConnectedL2R(const OpNode* lhs, const OpNode* rhs) {
   return false;
 }
 
+bool TryGetNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const OpNode* dst_node,
+                             const LogicalBlobId& lbi) {
+  const SbpParallel& src_sbp = src_node->SbpParallel4Lbi(lbi);
+  const SbpParallel& dst_sbp = dst_node->SbpParallel4Lbi(lbi);
+  // TODO
+  //
+  return false;
+}
+
 Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   std::vector<const OpNode*> ordered_op_nodes;
   op_graph.TopoForEachNode([&](const OpNode* node) { ordered_op_nodes.push_back(node); });
@@ -148,8 +156,12 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   if (subgraph.size() <= 1) { return Maybe<void>::Ok(); }
 
   std::vector<const OpNode*> subgraph_order;
+  HashMap<const OpNode*, int64_t> node2order;
   for (const OpNode* this_node : ordered_op_nodes) {
-    if (subgraph.find(this_node) != subgraph.end()) { subgraph_order.push_back(this_node); }
+    if (subgraph.find(this_node) != subgraph.end()) {
+      subgraph_order.push_back(this_node);
+      node2order.emplace(this_node, subgraph_order.size() - 1);
+    }
   }
   CHECK_EQ(subgraph.size(), subgraph_order.size());
 
@@ -159,8 +171,8 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     std::cout << "cclog: i = " << i << ", op_name =  " << node->op().op_name() << std::endl;
   }
 
+  HashSet<std::string> mut_op_names;
   const OpNode* first_node = subgraph_order.at(0);
-  ParallelConf parallel_conf = first_node->parallel_desc().parallel_conf();
   HashMap<std::string, OperatorConf> subgraph_op_name2conf;
   subgraph_op_name2conf.emplace(first_node->op().op_name(), first_node->op().op_conf());
   for (int32_t i = 1; i < subgraph_order.size(); ++i) {
@@ -171,6 +183,10 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     // build control edge if need.
     if (!IsDirectConnectedL2R(pre_node, this_node)) {
       subgraph_op_name2conf.at(this_op_name).add_ctrl_in_op_name(pre_node->op().op_name());
+      mut_op_names.insert(this_op_name);
+
+      std::cout << "cclog: add ctrl edge from  " << pre_node->op().op_name() << "  to  "
+                << this_op_name << std::endl;
     }
   }
 
@@ -178,26 +194,62 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   for (const OpNode* src_node : subgraph_order) {
     for (const OpEdge* op_edge : src_node->out_edges()) {
       const OpNode* dst_node = op_edge->dst_node();
+      const std::string& dst_op_name = dst_node->op().op_name();
       CHECK(src_node != dst_node);
-      if (subgraph_op_name2conf.find(dst_node->op().op_name()) == subgraph_op_name2conf.end()) {
+      if (subgraph_op_name2conf.find(dst_op_name) == subgraph_op_name2conf.end()) {
         // NOTE(chengcheng): child node is not in this subgraph.
         continue;
       }
       for (const LogicalBlobId& lbi : op_edge->lbis()) {
-        const SbpParallel& src_sbp = src_node->SbpParallel4Lbi(lbi);
-        const SbpParallel& dst_sbp = dst_node->SbpParallel4Lbi(lbi);
-        // TODO(chengcheng).
+        OperatorConf nccl_op;
+        if (!TryGetNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi)) { continue; }
+        mut_op_names.insert(dst_op_name);
+        // insert nccl op
+        user_op::UserOpConfWrapper nccl_op_wrapper(nccl_op);
+        for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
+          ReplaceInputLbnInOpCustomizedConf(&subgraph_op_name2conf.at(dst_op_name), ibn,
+                                            nccl_op_wrapper.output("out", 0));
+        }
+
+        if (nccl_op_confs.size() >= 1) {
+          // NOTE(chengcheng): MUST add ctrl edge between nccl ops for 1 src node insert multi-nccl
+          const std::string& pre_nccl_op_name = nccl_op_confs.at(nccl_op_confs.size() - 1).name();
+          nccl_op.add_ctrl_in_op_name(pre_nccl_op_name);
+
+          std::cout << "cclog: add ctrl edge from  " << pre_nccl_op_name << "  to  "
+                    << nccl_op.name() << std::endl;
+        }
+
+        // NOTE(chengcheng): src_node MUST not the last node in subgraph, find the next op
+        int64_t src_order = node2order.at(src_node);
+        CHECK(src_order + 1 < subgraph_order.size());
+        const std::string& next_op_name = subgraph_order.at(src_order + 1)->op().op_name();
+        if (dst_op_name != next_op_name) {
+          // NOTE(chengcheng): MUST add ctrl edge for strict exec order
+          subgraph_op_name2conf.at(next_op_name).add_ctrl_in_op_name(nccl_op.name());
+          mut_op_names.insert(next_op_name);
+
+          std::cout << "cclog: add ctrl edge from  " << nccl_op.name() << "  to  " << next_op_name
+                    << std::endl;
+        }
+
+        nccl_op_confs.push_back(nccl_op);
       }
     }
   }
 
-  // TODO
+  std::vector<OperatorConf> mut_op_confs;
+  for (const std::string& mut_op_name : mut_op_names) {
+    std::cout << "cclog: mut op name = " << mut_op_name << std::endl;
+    mut_op_confs.push_back(subgraph_op_name2conf.at(mut_op_name));
+  }
+  job_builder->MutOpsOnlyOnce(mut_op_confs);
+  job_builder->AddOps(first_node->parallel_desc().parallel_conf(), nccl_op_confs);
 
   return Maybe<void>::Ok();
 }
 
 /*
-
 const Scope& Scope4OpNode(const OpNode* op_node) {
   int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();
   CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
