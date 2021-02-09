@@ -266,13 +266,13 @@ def main(args):
         fmt_str = "{:>12}  {:>12}  {:>12.6f}"
         print(fmt_str.format(i, "train loss:", train_loss))
 
-        # if (i + 1) % 10 == 0:
-        #   eval_loss = alexnet_eval_job().get().mean()
-        # print(
-        #     fmt_str.format(
-        #         i, "eval loss:", eval_loss
-        #     )
-        # )
+        if (i + 1) % 10 == 0:
+            eval_loss = alexnet_eval_job().get().mean()
+            print(
+                fmt_str.format(
+                    i, "eval loss:", eval_loss
+                )
+            )
         if (i + 1) % 100 == 0:
             check_point.save(_MODEL_SAVE_DIR + str(i))
 

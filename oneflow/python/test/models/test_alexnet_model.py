@@ -44,6 +44,8 @@ class DLNetSpec(object):
         self.gpu_num_per_node = 1
         self.iter_num = 10
 
+global_args = DLNetSpec()
+
 def _conv2d_layer(
     args,
     name,
@@ -109,6 +111,7 @@ def _data_load_layer(args, data_dir):
         output_dtype=flow.float,
     )
     return (normal, label)
+
 
 
 class AlexNet(flow.nn.Model):
@@ -181,9 +184,17 @@ class AlexNet(flow.nn.Model):
 
         return fc3
 
-    def training_step(self, batch, batch_idx, args, trainable=True):
+    def training_step(self, batch, batch_idx, args):
         images, labels = batch
-        fc3 = self.forward(images, args, trainable)
+        fc3 = self.forward(images, args, True)
+        loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+            labels, fc3, name="softmax_loss"
+        )
+        return loss
+
+    def validation_step(self, batch, batch_idx, args):
+        images, labels = batch
+        fc3 = self.forward(images, args, False)
         loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
             labels, fc3, name="softmax_loss"
         )
@@ -197,26 +208,28 @@ class AlexNet(flow.nn.Model):
     def data_loader(self, args):
         return _data_load_layer(args, args.train_dir)
 
+    def eval_data_loader(self, args):
+        return _data_load_layer(args, args.eval_dir)
+
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n1c(test_case):
     print("test alexnet model")
-    args = DLNetSpec()
 
     flow.env.ctrl_port(9788)
-    if args.num_nodes > 1: 
+    if global_args.num_nodes > 1: 
         flow.env.ctrl_port(12138)
         nodes = []
-        for n in args.node_list.strip().split(","):
+        for n in global_args.node_list.strip().split(","):
             addr_dict = {}
             addr_dict["addr"] = n
             nodes.append(addr_dict)
 
         flow.env.machine(nodes)
 
-    flow.config.machine_num(args.num_nodes)
-    flow.config.gpu_device_num(args.gpu_num_per_node)
+    flow.config.machine_num(global_args.num_nodes)
+    flow.config.gpu_device_num(global_args.gpu_num_per_node)
 
     # train
     func_config = flow.FunctionConfig()
@@ -227,66 +240,31 @@ def test_1n1c(test_case):
     func_config.cudnn_conv_force_bwd_filter_algo(1)
 
     alexnet_md = AlexNet()
-    # def alexnet(args, images, labels, trainable=True):
-    #     loss = alexnet_md.training_step((images, labels), 1, args, trainable)
-    #     return loss
-
-    # @flow.global_function(type="train", function_config=func_config)
-    # def alexnet_train_job():
-    #     (labels, images) = _data_load_layer(args, args.train_dir)
-    #     loss = alexnet_md.training_step((images, labels), 1, args, True)
-    #     flow.optimizer.SGD(
-    #         flow.optimizer.PiecewiseConstantScheduler([], [0.00001]), momentum=0
-    #     ).minimize(loss)
-    #     return loss
 
     # eval
     eval_func_config = flow.FunctionConfig()
     eval_func_config.default_data_type(flow.float)
 
-    # @flow.global_function(function_config=eval_func_config)
-    # def alexnet_eval_job():
-    #     with flow.scope.consistent_view():
-    #         (labels, images) = _data_load_layer(args, args.eval_dir)
-    #         return alexnet(args, images, labels, False)
-
-    num_nodes = args.num_nodes
+    num_nodes = global_args.num_nodes
     print(
         "Traning alexnet: num_gpu_per_node = {}, num_nodes = {}.".format(
-            args.gpu_num_per_node, num_nodes
+            global_args.gpu_num_per_node, num_nodes
         )
     )
 
     print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
     loss = []
     
-    #alexnet_md.fit(max_epochs=args.iter_num, model_config=func_config, args=args)
-    alexnet_md.fit(max_epochs=1, model_config=func_config, args=args)
-
-    # for i in range(args.iter_num):
-    #     train_loss = alexnet_train_job().get().mean()
-    #     loss.append(train_loss)
-
-    #     fmt_str = "{:>12}  {:>12}  {:>12.6f}"
-    #     print(fmt_str.format(i, "train loss:", train_loss))
-
-    #     if (i + 1) % 5 == 0:
-    #         eval_loss = alexnet_eval_job().get().mean()
-    #         print(
-    #             fmt_str.format(
-    #                 i, "eval loss:", eval_loss
-    #             )
-    #         )
-
-    #     if (i + 1) % 10 == 0:
-    #         flow.checkpoint.save(_MODEL_SAVE_DIR + str(i))
-    #         print("Model {} saved to {}.".format(
-    #             i, _MODEL_SAVE_DIR + str(i)
-    #         ))
+    alexnet_md.fit(
+        max_epochs=10,
+        model_config=func_config,
+        model_eval_config=eval_func_config,
+        args=global_args
+    )
 
     # save loss to file
     loss_file = "{}n{}c.npy".format(
-        str(num_nodes), str(args.gpu_num_per_node * num_nodes)
+        str(num_nodes), str(global_args.gpu_num_per_node * num_nodes)
     )
     loss_path = "./of_loss/alexnet"
     if not os.path.exists(loss_path):
