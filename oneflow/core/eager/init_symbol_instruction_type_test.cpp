@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/op_conf_symbol.h"
 
 namespace oneflow {
 namespace eager {
@@ -68,7 +69,7 @@ TEST(InitSymbolInstructionType, job_desc) {
 
 TEST(InitSymbolInstructionType, operator_conf) {
   vm::TestResourceDescScope resource_scope(1, 1);
-  TestInitSymbolInstructionType<OperatorConf, OperatorConf>("InitOperatorConfSymbol");
+  TestInitSymbolInstructionType<OperatorConfSymbol, OperatorConf>("InitOperatorConfSymbol");
 }
 
 }  // namespace test
