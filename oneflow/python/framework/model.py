@@ -24,6 +24,12 @@ from oneflow.python.framework.check_point import CheckPoint
 from oneflow.python.ops.optimizer import Optimizer
 from oneflow.python.ops.dataloader import DataLoader
 
+@oneflow_export("nn.CheckpointConfig")
+class CheckpointConfig(object):
+    def __init__(self, load_path, save_path):
+        self.load_path = load_path
+        self.save_path = save_path
+
 
 @oneflow_export("nn.Model")
 class Model(
@@ -32,11 +38,28 @@ class Model(
 ):
     r"""A high level API for model training and validation.
     """
-    def __init__(self, is_function_style=False, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._context = ...
-        self.is_function_style = is_function_style
-        print("is_functoin_style:", self.is_function_style)
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.is_function_style = kwargs['is_function_style']
+        self.training_config = kwargs['training_config']
+        self.validation_config = kwargs['validation_config']
+        self.checkpoint_config = kwargs['checkpoint_config']
+
+        optim_conf = self.configure_optimizers()
+        if isinstance(optim_conf, Optimizer):
+            self.optimizers = [optim_conf]
+        elif isinstance(optim_conf, (list, tuple)):
+            self.optimizers = optim_conf
+    
+        self.train_job = self._lazy_train_job()
+        self.eval_job = self._lazy_eval_job()
+
+        self.check_point = CheckPoint()
+        if not self.checkpoint_config.load_path:
+            self.check_point.init()
+        else:
+            self.check_point.load(self.checkpoint_config.load_path)
+
 
     def forward(self, *args, **kwargs):
         r"""Same as `nn.Module.forward()`, here is to define the operations you want to use for prediction.
@@ -77,83 +100,50 @@ class Model(
         if self.context.rank == 0:
             print(*args, **kwargs)
     
-    def data_loader(self):
+    def training_data(self):
         raise NotImplementedError
 
-    def eval_data_loader(self):
+    def validation_data(self):
         raise NotImplementedError
 
-    def _lazy_train_job(self, job_type, job_func_conf, batch_idx):
-        @api_oneflow_function(type=job_type, function_config=job_func_conf)
+    def _lazy_train_job(self):
+        @api_oneflow_function(type="train", function_config=self.training_config)
         def job():
-            batch = self.data_loader()
-            loss = self.training_step(batch, batch_idx)
+            batch = self.training_data()
+            loss = self.training_step(batch, 0)
             self.optimizers[0].minimize(loss)
             return loss
         return job
 
-    def _lazy_eval_job(self, job_func_conf, batch_idx):
-        @api_oneflow_function(function_config=job_func_conf)
+    def _lazy_eval_job(self):
+        @api_oneflow_function(function_config=self.validation_config)
         def eval_job():
-            batch = self.eval_data_loader()
-            return self.validation_step(batch, batch_idx)
+            batch = self.validation_data()
+            return self.validation_step(batch, 0)
         return eval_job
 
     def fit(
         self,
         max_epochs: int = 1000,
-        train_dataloader: Optional[DataLoader] = None,
-        val_dataloaders: Optional[DataLoader] = None,
-        default_checkpoint_dir: Optional[str] = None,
-        training_config = None, # ToDo(strint): rm this here 
-        eval_config = None, # ToDo(strint): rm this here 
     ):
-        # TODO(strint): check config functions
-        # 必须有training_step()/configure_optimizers()/train_dataloader
-    
-        self._has_optimizer_step = False
-        self._has_train_data = False
-        self._has_val_data = False
-        
-        if default_checkpoint_dir is None:
-            self.checkpoint_dir = './'
-        else:
-            self.checkpoint_dir = default_checkpoint_dir
-        
-        # prepare optimizer
-        optim_conf = self.configure_optimizers()
-        if isinstance(optim_conf, Optimizer):
-            self.optimizers = [optim_conf]
-        elif isinstance(optim_conf, (list, tuple)):
-            self.optimizers = optim_conf
-    
         self.max_epochs = max_epochs
-    
-        # is eager or lazy
-        # self._context.is_eager = False 
-    
-        train_job = self._lazy_train_job("train", training_config, 0)
-        eval_job = self._lazy_eval_job(eval_config, 0)
-        check_point = CheckPoint()
-        if not self.args.model_load_dir:
-            check_point.init()
-        else:
-            check_point.load(self.args.model_load_dir)
 
         for epoch in range(0, self.max_epochs):
             self.current_epoch = epoch
             print("fit epoch : ", epoch)
-            loss = train_job().get().mean()
+            loss = self.train_job().get().mean()
             fmt_str = "{:>12}  {:>12}  {:>12.6f}"
             print(fmt_str.format(epoch, "train loss:", loss))
             if (epoch + 1) % 10 == 0:
-                eval_loss = eval_job().get().mean()
+                eval_loss = self.eval_job().get().mean()
                 print(
                     fmt_str.format(
                         epoch, "eval loss:", eval_loss
                     )
                 )
-        self.save_checkpoint(self.checkpoint_dir)
+        
+        self.check_point.save(self.checkpoint_config.save_path)
+
     
     def save_checkpoint(
         self,
