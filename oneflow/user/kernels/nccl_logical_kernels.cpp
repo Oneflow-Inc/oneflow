@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#if defined(WITH_CUDA)
+
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
@@ -131,3 +133,5 @@ REGISTER_USER_KERNEL("_nccl_logical_op_all_gather")
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 
 }  // namespace oneflow
+
+#endif  // WITH_CUDA
