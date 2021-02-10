@@ -27,8 +27,9 @@ class CollectiveBoxingUnpackOp : public Operator {
 
   void InitFromOpConf() override;
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
 
  protected:
   virtual void VirtualInferBlobDescs(
@@ -53,9 +54,9 @@ LogicalBlobId CollectiveBoxingUnpackOp::lbi4obn(const std::string& output_bn) co
   return this->op_conf().collective_boxing_unpack_conf().lbi();
 }
 
-Maybe<void> CollectiveBoxingUnpackOp::InferBlobDescs(
+Maybe<void> CollectiveBoxingUnpackOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const CollectiveBoxingUnpackOpConf& unpack_conf = this->op_conf().collective_boxing_unpack_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");

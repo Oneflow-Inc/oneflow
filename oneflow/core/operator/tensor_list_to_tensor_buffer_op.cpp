@@ -30,9 +30,9 @@ class TensorListToTensorBufferOp final : public Operator {
     EnrollOutputBn("out", false)->set_header_infered_before_compute(false);
   }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx,
-                             const SbpSignature* sbp_signature) const override {
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override {
     const BlobDesc* in_desc = GetBlobDesc4BnInOp("in");
     CHECK_OR_RETURN(in_desc->is_tensor_list());
     const int64_t N = in_desc->shape().At(0);
