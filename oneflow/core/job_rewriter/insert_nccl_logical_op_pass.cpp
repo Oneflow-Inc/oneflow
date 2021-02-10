@@ -135,6 +135,44 @@ bool TryGetNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const Op
     std::cout << "cclog: insert nccl op: " << ret->name() << std::endl;
     return true;
   }
+  if ((logical_blob_desc.shape().At(0) % parallel_desc.parallel_num() == 0)
+      && (src_sbp.has_split_parallel() && dst_sbp.has_broadcast_parallel())
+      && (src_sbp.split_parallel().axis() == 0)) {
+    // S2B : AllGather
+    user_op::UserOpConfWrapper nccl_op_wrapper =
+        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2B-" + NewUniqueId())
+            .Op("_nccl_logical_op_all_gather")
+            .Input("in", lbn)
+            .Output("out")
+            .ScopeSymbolId(scope_symbol_id)
+            .Build();
+    *ret = nccl_op_wrapper.op_conf();
+    std::cout << "cclog: insert nccl op: " << ret->name() << std::endl;
+    return true;
+  }
+  if ((src_sbp.has_split_parallel() && dst_sbp.has_split_parallel())
+      && (src_sbp.split_parallel().axis() != dst_sbp.split_parallel().axis())
+      && (logical_blob_desc.shape().At(src_sbp.split_parallel().axis())
+              % parallel_desc.parallel_num()
+          == 0)
+      && (logical_blob_desc.shape().At(dst_sbp.split_parallel().axis())
+              % parallel_desc.parallel_num()
+          == 0)) {
+    // S2S : All2All
+    /*
+     * TODO(chengcheng)
+    user_op::UserOpConfWrapper nccl_op_wrapper =
+        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2S-" + NewUniqueId())
+            .Op("_nccl_logical_op_all2all")
+            .Input("in", lbn)
+            .Output("out")
+            .ScopeSymbolId(scope_symbol_id)
+            .Build();
+    *ret = nccl_op_wrapper.op_conf();
+    */
+    std::cout << "cclog: need insert nccl all2all op BUT UNIMPLEMENTED()." << std::endl;
+    return false;
+  }
   return false;
 }
 

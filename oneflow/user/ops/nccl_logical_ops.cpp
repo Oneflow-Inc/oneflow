@@ -27,6 +27,7 @@ REGISTER_USER_OP("_nccl_logical_op_all_reduce")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
+      // P2B
       auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
       const SbpParallel& in_sbp_hint = ctx->SbpParallelHint4InputArgNameAndIndex("in", 0);
       CHECK(in_sbp_hint.has_partial_sum_parallel());
@@ -51,6 +52,7 @@ REGISTER_USER_OP("_nccl_logical_op_reduce_scatter")
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
+      // P2S
       auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
       const SbpParallel& in_sbp_hint = ctx->SbpParallelHint4InputArgNameAndIndex("in", 0);
       CHECK(in_sbp_hint.has_partial_sum_parallel());
@@ -60,8 +62,34 @@ REGISTER_USER_OP("_nccl_logical_op_reduce_scatter")
       in_p.mutable_partial_sum_parallel();
       (*bn2sbp)[ibn] = in_p;
 
+      SbpParallel out_s;
+      out_s.mutable_split_parallel()->set_axis(0);
+      (*bn2sbp)[obn] = out_s;
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("_nccl_logical_op_all_gather")
+    .Input("in")
+    .Output("out")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+    .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
+      // S2B
+      auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
+      const SbpParallel& in_sbp_hint = ctx->SbpParallelHint4InputArgNameAndIndex("in", 0);
+      CHECK(in_sbp_hint.has_split_parallel());
+      CHECK_EQ(in_sbp_hint.split_parallel().axis(), 0);
+      const std::string& ibn = GenRepeatedBn("in", 0);
+      const std::string& obn = GenRepeatedBn("out", 0);
+      SbpParallel in_s;
+      in_s.mutable_split_parallel()->set_axis(0);
+      (*bn2sbp)[ibn] = in_s;
+
       SbpParallel out_b;
-      out_b.mutable_split_parallel()->set_axis(0);
+      out_b.mutable_broadcast_parallel();
       (*bn2sbp)[obn] = out_b;
       return Maybe<void>::Ok();
     });
