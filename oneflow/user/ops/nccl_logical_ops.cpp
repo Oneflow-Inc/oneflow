@@ -47,7 +47,18 @@ REGISTER_USER_OP("_nccl_logical_op_reduce_scatter")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      *out_tensor = *in_tensor;
+      const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+      Shape* out_shape = out_tensor->mut_shape();
+      const Shape& in_shape = in_tensor->shape();
+      CHECK_GT(out_shape->NumAxes(), 0);
+      CHECK_GT(out_shape->elem_cnt(), 0);
+      CHECK_EQ(in_shape.At(0) % parallel_num, 0);
+      out_shape->Set(0, in_shape.At(0) / parallel_num);
+      CHECK_EQ(out_shape->At(0) * parallel_num, in_shape.At(0));
+      CHECK_EQ(out_shape->elem_cnt() * parallel_num, in_shape.elem_cnt());
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
@@ -72,7 +83,17 @@ REGISTER_USER_OP("_nccl_logical_op_all_gather")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      *out_tensor = *in_tensor;
+      const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+      Shape* out_shape = out_tensor->mut_shape();
+      const Shape& in_shape = in_tensor->shape();
+      CHECK_GT(out_shape->NumAxes(), 0);
+      CHECK_GT(out_shape->elem_cnt(), 0);
+      out_shape->Set(0, in_shape.At(0) * parallel_num);
+      CHECK_EQ(out_shape->At(0), in_shape.At(0) * parallel_num);
+      CHECK_EQ(out_shape->elem_cnt(), in_shape.elem_cnt() * parallel_num);
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
