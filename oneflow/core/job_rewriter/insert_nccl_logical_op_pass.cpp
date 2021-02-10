@@ -93,19 +93,20 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
   }
 }
 
-bool IsDirectConnectedL2R(const OpNode* lhs, const OpNode* rhs) {
-  for (const OpEdge* edge : rhs->in_edges()) {
-    if (lhs == edge->src_node()) { return true; }
-  }
-  return false;
-}
-
 bool TryGetNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const OpNode* dst_node,
                              const LogicalBlobId& lbi) {
   const int64_t scope_symbol_id = src_node->op().op_conf().scope_symbol_id();
   const std::string lbn = GenLogicalBlobName(lbi);
   const SbpParallel& src_sbp = src_node->SbpParallel4Lbi(lbi);
   const SbpParallel& dst_sbp = dst_node->SbpParallel4Lbi(lbi);
+  const BlobDesc& logical_blob_desc = src_node->LogicalBlobDesc4Lbi(lbi);
+  const ParallelDesc& parallel_desc = src_node->parallel_desc();
+
+  // NOTE(chengcheng): nccl donot support dynamic shape.
+  if (logical_blob_desc.is_dynamic()) { return false; }
+  CHECK_GT(logical_blob_desc.shape().elem_cnt(), 0);
+  CHECK_GT(logical_blob_desc.shape().NumAxes(), 0);
+  CHECK_GT(logical_blob_desc.shape().At(0), 0);
   if (src_sbp.has_partial_sum_parallel() && dst_sbp.has_broadcast_parallel()) {
     // P2B : AllReduce
     user_op::UserOpConfWrapper nccl_op_wrapper =
@@ -119,12 +120,38 @@ bool TryGetNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const Op
     std::cout << "cclog: insert nccl op: " << ret->name() << std::endl;
     return true;
   }
+  if ((logical_blob_desc.shape().At(0) % parallel_desc.parallel_num() == 0)
+      && (src_sbp.has_partial_sum_parallel() && dst_sbp.has_split_parallel())
+      && (dst_sbp.split_parallel().axis() == 0)) {
+    // P2S : ReduceScatter
+    user_op::UserOpConfWrapper nccl_op_wrapper =
+        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2S-" + NewUniqueId())
+            .Op("_nccl_logical_op_reduce_scatter")
+            .Input("in", lbn)
+            .Output("out")
+            .ScopeSymbolId(scope_symbol_id)
+            .Build();
+    *ret = nccl_op_wrapper.op_conf();
+    std::cout << "cclog: insert nccl op: " << ret->name() << std::endl;
+    return true;
+  }
   return false;
 }
 
 Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  auto OpGraphForEachInDataAndCtrlNode = [&](OpNode* node,
+                                             const std::function<void(OpNode*)>& Handler) {
+    op_graph.ForEachDataAndCtrlInNode(node, Handler);
+  };
+  auto OpGraphForEachOutDataAndCtrlNode = [&](OpNode* node,
+                                              const std::function<void(OpNode*)>& Handler) {
+    op_graph.ForEachDataAndCtrlOutNode(node, Handler);
+  };
+
   std::vector<const OpNode*> ordered_op_nodes;
-  op_graph.TopoForEachNode([&](const OpNode* node) { ordered_op_nodes.push_back(node); });
+  op_graph.TopoForEachNode(op_graph.DataOrCtrlSourceNodes(), OpGraphForEachInDataAndCtrlNode,
+                           OpGraphForEachOutDataAndCtrlNode,
+                           [&](const OpNode* node) { ordered_op_nodes.push_back(node); });
 
   HashSet<const OpNode*> subgraph;
   FindMaxConnectedSubgraphForGpuExecOrder(&subgraph, op_graph, ordered_op_nodes);
@@ -150,18 +177,20 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   const OpNode* first_node = subgraph_order.at(0);
   HashMap<std::string, OperatorConf> subgraph_op_name2conf;
   subgraph_op_name2conf.emplace(first_node->op().op_name(), first_node->op().op_conf());
+  auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
   for (int32_t i = 1; i < subgraph_order.size(); ++i) {
     const OpNode* this_node = subgraph_order.at(i);
     const OpNode* pre_node = subgraph_order.at(i - 1);
     const std::string& this_op_name = this_node->op().op_name();
+    const std::string& pre_op_name = pre_node->op().op_name();
     CHECK(subgraph_op_name2conf.emplace(this_op_name, this_node->op().op_conf()).second);
     // build control edge if need.
-    if (!IsDirectConnectedL2R(pre_node, this_node)) {
-      subgraph_op_name2conf.at(this_op_name).add_ctrl_in_op_name(pre_node->op().op_name());
+    if (!IsReachable(pre_op_name, this_op_name)) {
+      subgraph_op_name2conf.at(this_op_name).add_ctrl_in_op_name(pre_op_name);
       mut_op_names.insert(this_op_name);
 
-      std::cout << "cclog: add ctrl edge from  " << pre_node->op().op_name() << "  to  "
-                << this_op_name << std::endl;
+      std::cout << "cclog: add ctrl edge from  " << pre_op_name << "  to  " << this_op_name
+                << std::endl;
     }
   }
 

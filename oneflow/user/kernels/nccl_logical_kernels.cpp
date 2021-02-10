@@ -60,8 +60,33 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
     CHECK_EQ(in->shape(), out->shape());
     CHECK_EQ(in->data_type(), out->data_type());
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
-                                GetNcclDataType(in->data_type()), ncclSum, nccl_comm->comm(),
-                                ctx->device_ctx()->cuda_stream()));
+                                GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
+                                nccl_comm->comm(), ctx->device_ctx()->cuda_stream()));
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
+ public:
+  NcclLogicalReduceScatterKernel() = default;
+  ~NcclLogicalReduceScatterKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<NcclLogicalKernelCommState>(ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(in->data_type(), out->data_type());
+    const int64_t num_ranks = ctx->parallel_ctx().parallel_num();
+    CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt() * num_ranks);
+    OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
+                                    GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
+                                    nccl_comm->comm(), ctx->device_ctx()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -70,6 +95,10 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("_nccl_logical_op_all_reduce")
     .SetCreateFn<NcclLogicalAllReduceKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+
+REGISTER_USER_KERNEL("_nccl_logical_op_reduce_scatter")
+    .SetCreateFn<NcclLogicalReduceScatterKernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 
 }  // namespace oneflow
