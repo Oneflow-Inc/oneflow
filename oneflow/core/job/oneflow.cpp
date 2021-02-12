@@ -632,7 +632,17 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
   identity_tick_op_names->resize(num_critial_sections);
   int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
   FOR_RANGE(int64_t, i, 0, num_critial_sections) {
-    // Insert identity tick ops. There is no need to insert a source tick op.
+    // source tick
+    OperatorConf src_tick_op_conf;
+    {
+      std::string name_prefix = "System-Main-SourceTick_CriticalSection_";
+      src_tick_op_conf.set_name(name_prefix + std::to_string(i));
+      auto* src_tick_conf = src_tick_op_conf.mutable_tick_conf();
+      src_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
+      src_tick_conf->set_out("out");
+      op_confs.push_back(src_tick_op_conf);
+    }
+    // identity tick
     auto* cur_id_tick_op_names = &identity_tick_op_names->at(i);
     for (int64_t machine_id = 0; machine_id < num_machines; ++machine_id) {
       OperatorConf identity_tick_op_conf;
@@ -640,12 +650,9 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
       identity_tick_op_conf.set_name(name_prefix + std::to_string(i) + "_"
                                      + std::to_string(machine_id));
       auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
-      identity_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
+      identity_tick_conf->add_tick(src_tick_op_conf.name() + "/out");
       identity_tick_conf->set_out("out");
-      ParallelConf machine_parallel_conf;
-      machine_parallel_conf.set_device_tag("cpu");
-      machine_parallel_conf.add_device_name(std::to_string(machine_id) + ":0");
-      CHECK_JUST(job_builder.AddOp(machine_parallel_conf, identity_tick_op_conf));
+      op_confs.push_back(identity_tick_op_conf);
       CHECK(cur_id_tick_op_names->emplace(machine_id, identity_tick_op_conf.name()).second);
     }
     // sink tick

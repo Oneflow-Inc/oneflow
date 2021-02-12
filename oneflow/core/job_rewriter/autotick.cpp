@@ -94,17 +94,30 @@ Maybe<void> CreateDstSubsetTickAndSinkTicks(CriticalSection* critical_section,
   JUST(BuildDstSubsetTickOpAndParallelConf(tick_lbis, &dst_subset_tick, job_builder));
   int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
   auto* map = critical_section->mutable_machine_id2sink_tick_op_name();
+  ParallelConf cpu0_parallel_conf;
+  cpu0_parallel_conf.set_device_tag("cpu");
+  cpu0_parallel_conf.add_device_name("0:0");
   for (int64_t machine_id = 0; machine_id < num_machines; ++machine_id) {
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
     parallel_conf.add_device_name(std::to_string(machine_id) + ":0");
+    OperatorConf tick_op;
+    {
+      tick_op.set_name("System-AutoTick-Tick_" + NewUniqueId());
+      auto* tick_conf = tick_op.mutable_tick_conf();
+      tick_conf->add_tick(dst_subset_tick.name() + "/"
+                          + dst_subset_tick.dst_subset_tick_conf().out());
+      tick_conf->set_out("out");
+      JUST(job_builder->AddOp(parallel_conf, tick_op));
+    }
     OperatorConf sink_tick_op;
-    sink_tick_op.set_name("System-AutoTick-SinkTick_" + NewUniqueId());
-    auto* sink_tick_conf = sink_tick_op.mutable_sink_tick_conf();
-    sink_tick_conf->add_tick(dst_subset_tick.name() + "/"
-                             + dst_subset_tick.dst_subset_tick_conf().out());
-    sink_tick_conf->set_out("out");
-    JUST(job_builder->AddOp(parallel_conf, sink_tick_op));
+    {
+      sink_tick_op.set_name("System-AutoTick-SinkTick_" + NewUniqueId());
+      auto* sink_tick_conf = sink_tick_op.mutable_sink_tick_conf();
+      sink_tick_conf->add_tick(tick_op.name() + "/out");
+      sink_tick_conf->set_out("out");
+      JUST(job_builder->AddOp(cpu0_parallel_conf, sink_tick_op));
+    }
     (*map)[machine_id] = sink_tick_op.name();
   }
   return Maybe<void>::Ok();
@@ -129,16 +142,28 @@ Maybe<void> CreateSourceTicksAndSrcSubsetTick(CriticalSection* critical_section,
                                               JobBuilder* job_builder) {
   int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
   auto* map = critical_section->mutable_machine_id2source_tick_op_name();
+  ParallelConf cpu0_parallel_conf;
+  cpu0_parallel_conf.set_device_tag("cpu");
+  cpu0_parallel_conf.add_device_name("0:0");
   for (int64_t machine_id = 0; machine_id < num_machines; ++machine_id) {
-    ParallelConf parallel_conf;
-    parallel_conf.set_device_tag("cpu");
-    parallel_conf.add_device_name(std::to_string(machine_id) + ":0");
     OperatorConf src_tick_op;
-    src_tick_op.set_name("System-AutoTick-SourceTick_" + NewUniqueId());
-    src_tick_op.mutable_source_tick_conf()->set_out("out");
-    JUST(job_builder->AddOp(parallel_conf, src_tick_op));
-    src_subset_tick_op->mutable_src_subset_tick_conf()->add_in(src_tick_op.name() + "/out");
+    {
+      src_tick_op.set_name("System-AutoTick-SourceTick_" + NewUniqueId());
+      src_tick_op.mutable_source_tick_conf()->set_out("out");
+      JUST(job_builder->AddOp(cpu0_parallel_conf, src_tick_op));
+    }
     (*map)[machine_id] = src_tick_op.name();
+    OperatorConf tick_op;
+    {
+      tick_op.set_name("System-AutoTick-Tick_" + NewUniqueId());
+      tick_op.mutable_tick_conf()->add_tick(src_tick_op.name() + "/out");
+      tick_op.mutable_tick_conf()->set_out("out");
+      ParallelConf parallel_conf;
+      parallel_conf.set_device_tag("cpu");
+      parallel_conf.add_device_name(std::to_string(machine_id) + ":0");
+      JUST(job_builder->AddOp(parallel_conf, tick_op));
+    }
+    src_subset_tick_op->mutable_src_subset_tick_conf()->add_in(tick_op.name() + "/out");
   }
   JUST(job_builder->MutOpOnlyOnce(*src_subset_tick_op));
   return Maybe<void>::Ok();
