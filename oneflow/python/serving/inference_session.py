@@ -439,7 +439,6 @@ class InferenceSession(object):
         shape = c_api_util.JobBuildAndInferCtx_GetStaticShape(job_name, lbn)
         dtype = c_api_util.JobBuildAndInferCtx_GetDataType(job_name, lbn)
         dtype = dtype_util.convert_proto_dtype_to_oneflow_dtype(dtype)
-        # output_dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(output_dtype)
         # TODO: other info
         info = dict(shape=shape, dtype=dtype)
         self.inferface_name2info_[op_name] = info

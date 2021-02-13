@@ -23,10 +23,6 @@ import oneflow as flow
 from insightface_resnet100 import Resnet100
 from ofrecord_dataset import FaceEmoreRecordDataset
 
-DEFAULT_BATCH_SIZE = 4
-DEFAULT_CHECKPOINT_DIR = "/dataset/model_zoo/resnet_v15_of_best_model_val_top1_77318"
-DEFAULT_IMAGE_SIZE = 224
-
 
 def init_env():
     flow.env.init()
