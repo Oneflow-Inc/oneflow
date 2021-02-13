@@ -33,7 +33,7 @@ void SrcSubsetTickCompTaskNode::BuildExecGphAndRegst() {
   node->mut_op() = logical_node()->SoleOp();
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   for (const std::string& ibn : node->op()->input_bns()) {
-    node->BindBnWithOneOfTheRegsts(ibn, in_regsts);
+    node->TryBindBnWithOneOfTheRegsts(ibn, in_regsts);
   }
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   for (const std::string& obn : node->op()->output_bns()) {
