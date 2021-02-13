@@ -39,9 +39,7 @@ class CheckpointingPass final : public JobPass {
     return Apply(op_graph, &job_builder);
   }
 
-  bool IsEnabled(const JobPassCtx& ctx) const {
-    return Global<ResourceDesc, ForSession>::Get()->resource().enable_insert_nccl_logical_op_pass();
-  }
+  bool IsEnabled(const JobPassCtx& ctx) const { return ctx.job_desc().IsTrain(); }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
