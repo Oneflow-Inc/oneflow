@@ -15,9 +15,11 @@ limitations under the License.
 """
 
 import os
+import sys
 import numpy as np
 import shutil
 import unittest
+import argparse
 import oneflow as flow
 
 from insightface_resnet100 import Resnet100
@@ -144,4 +146,14 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data-dir")
+    parser.add_argument("--model-dir")
+    args, unknown = parser.parse_known_args()
+    if args.data_dir is not None:
+        TestSaveAndLoadModel.DATA_DIR = args.data_dir
+    if args.model_dir is not None:
+        TestSaveAndLoadModel.MODEL_DIR = args.model_dir
+
+    argv = sys.argv[0:1] + unknown
+    unittest.main(argv=argv)
