@@ -159,22 +159,21 @@ bool TryGetNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const Op
               % parallel_desc.parallel_num()
           == 0)) {
     // S2S : All2All
-    /*
-     * TODO(chengcheng)
     user_op::UserOpConfWrapper nccl_op_wrapper =
         user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2S-" + NewUniqueId())
             .Op("_nccl_logical_op_all2all")
             .Input("in", lbn)
             .Output("out")
+            .Attr<int64_t>("in_split_axis", src_sbp.split_parallel().axis())
+            .Attr<int64_t>("out_split_axis", dst_sbp.split_parallel().axis())
             .ScopeSymbolId(scope_symbol_id)
             .Build();
     *ret = nccl_op_wrapper.op_conf();
-    */
-    std::cout << "cc WARNING: Need insert nccl all2all op BUT UNIMPLEMENTED(). OpEdge : "
-              << src_node->op().op_name() << " -> " << dst_node->op().op_name()
-              << " And the logical shape elem cnt = : " << logical_blob_desc.shape().elem_cnt()
-              << std::endl;
-    return false;
+    std::cout << "cclog: insert nccl all2all op. OpEdge : " << src_node->op().op_name() << " -> "
+              << dst_node->op().op_name() << " SBP S(" << src_sbp.split_parallel().axis()
+              << ") -> S(" << dst_sbp.split_parallel().axis() << ")"
+              << " And the logical shape = : " << logical_blob_desc.shape().DebugStr() << std::endl;
+    return true;
   }
   return false;
 }

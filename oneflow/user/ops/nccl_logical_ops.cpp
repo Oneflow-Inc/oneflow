@@ -115,4 +115,51 @@ REGISTER_USER_OP("_nccl_logical_op_all_gather")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("_nccl_logical_op_all2all")
+    .Input("in")
+    .Output("out")
+    .Attr<int64_t>("in_split_axis", -1)
+    .Attr<int64_t>("out_split_axis", -1)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      *out_tensor = *in_tensor;
+      const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+      const int64_t in_split_axis = ctx->Attr<int64_t>("in_split_axis");
+      const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
+      CHECK_NE(in_split_axis, out_split_axis);
+      CHECK_NE(in_split_axis, -1);
+      CHECK_NE(out_split_axis, -1);
+      Shape* out_shape = out_tensor->mut_shape();
+      const Shape& in_shape = in_tensor->shape();
+      CHECK_GT(out_shape->NumAxes(), std::max(in_split_axis, out_split_axis));
+      CHECK_GT(out_shape->elem_cnt(), 0);
+      CHECK_EQ(in_shape.At(out_split_axis) % parallel_num, 0);
+
+      out_shape->Set(in_split_axis, in_shape.At(in_split_axis) * parallel_num);
+      out_shape->Set(out_split_axis, in_shape.At(out_split_axis) / parallel_num);
+      CHECK_EQ(out_shape->elem_cnt(), in_shape.elem_cnt());
+      return Maybe<void>::Ok();
+    })
+    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+    .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
+      // S2B
+      auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
+      const SbpParallel& in_sbp_hint = ctx->SbpParallelHint4InputArgNameAndIndex("in", 0);
+      CHECK(in_sbp_hint.has_split_parallel());
+      const int64_t in_split_axis = ctx->Attr<int64_t>("in_split_axis");
+      const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
+      CHECK_EQ(in_sbp_hint.split_parallel().axis(), in_split_axis);
+      const std::string& ibn = GenRepeatedBn("in", 0);
+      const std::string& obn = GenRepeatedBn("out", 0);
+      SbpParallel in_s;
+      in_s.mutable_split_parallel()->set_axis(in_split_axis);
+      (*bn2sbp)[ibn] = in_s;
+
+      SbpParallel out_s;
+      out_s.mutable_split_parallel()->set_axis(out_split_axis);
+      (*bn2sbp)[obn] = out_s;
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace oneflow
