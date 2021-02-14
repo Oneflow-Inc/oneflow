@@ -97,6 +97,12 @@ TaskType StreamId::task_type() const {
 }
 
 // TaskId methods
+TaskId::TaskId(uint64_t high, uint64_t low) {
+  bits_.reset();
+  bits_ |= bits_t(high) << 64;
+  bits_ |= bits_t(low);
+}
+
 TaskId::TaskId(ProcessId process_id, StreamId stream_id, uint32_t task_index) {
   bits_.reset();
   bits_ |= bits_t(static_cast<uint32_t>(process_id)) << (StreamId::kBits + kTaskIndexBits);
@@ -118,6 +124,15 @@ uint32_t TaskId::task_index() const {
   bits_t id =
       (bits_ << (ProcessId::kBits + StreamId::kBits)) >> (ProcessId::kBits + StreamId::kBits);
   return id.to_ulong();
+}
+
+uint64_t TaskId::high() const {
+  bits_t high_bits = bits_ << (kBits / 2);
+  return high_bits.to_ullong();
+}
+
+uint64_t TaskId::low() const {
+  return bits_.to_ullong();
 }
 
 // IDMgr methods

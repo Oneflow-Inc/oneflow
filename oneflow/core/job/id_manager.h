@@ -100,13 +100,18 @@ class StreamId {
 
 class TaskId {
  public:
-  using bits_t = std::bitset<128>;
+  
+  static const int kBits = 128;
   static const int kTaskIndexBits = 32;
+  using bits_t = std::bitset<kBits>;
 
+  TaskId(uint64_t high, uint64_t low);
   TaskId(ProcessId process_id, StreamId stream_id, uint32_t task_index);
   ProcessId process_id() const;
   StreamId stream_id() const;
   uint32_t task_index() const;
+  uint64_t high() const;
+  uint64_t low() const;
 
  private:
   bits_t bits_;
