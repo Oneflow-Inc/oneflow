@@ -20,13 +20,125 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/task.pb.h"
+#include <bitset>
 
 namespace oneflow {
+
+// ProcessId encode
+// | --------- 32 bit --------- |
+// | --- 20 --- | ---- 12 ----- |
+// | node_index | process_index |
+
+class ProcessId {
+ public:
+  static const int kBits = 32;
+  static const int kLeftPartBits = 20;
+  static const int kRightPartBits = 12;
+
+  explicit ProcessId(uint32_t val) : val_(val) {}
+  ProcessId(uint32_t node_index, uint32_t process_index);
+  operator uint32_t() const { return val_; }
+  operator uint64_t() const { return static_cast<uint64_t>(val_); }
+  uint32_t node_index() const;
+  uint32_t process_index() const;
+
+ private:
+  uint32_t val_;
+};
+
+// StreamId encode
+// | ----------------------- 32 bit ------------------------ |
+// | ------ 10 ------ | ------ 12 ------ | ------ 10 ------- |
+// |   stream_type    |   device_index   |   stream_index    |
+// | kCPUDevice       | [0, device_num)  |         0         |
+// | kCudaDevice      | [0, device_num)  | enum CudaWorkType |
+// | ---------------- | ---------------- | ----------------- |
+// |                  | this_node_index  |  peer_node_index  |
+// | kCommNet         | [0, node_num)    | [0, node_num)     |
+// | ---------------- | ---------------- | ----------------- |
+// | kTickTock        |        0         |         0         |
+// | ---------------- | ---------------- | ----------------- |
+// |                  |    task_type     |   stream_index    |
+// | kIndependent     | enum TaskType    | [0, task_num)     |
+
+enum class StreamType : int16_t {
+  kInvalid = 0,
+  kCPUDevice = 1,
+  kCudaDevice = 2,
+  kCommNet = 3,
+  kTickTock = 4,
+  kIndependent = 5,
+};
+
+class StreamId {
+ public:
+  static const int kBits = 32;
+  static const int kLeftPartBits = 10;
+  static const int kMiddlePartBits = 12;
+  static const int kRightPartBits = 10;
+  static const int kMiddleRightPartBits = kMiddlePartBits + kRightPartBits;
+
+  explicit StreamId(uint32_t val) : val_(val) {}
+  operator uint32_t() const { return val_; }
+  operator uint64_t() const { return static_cast<uint64_t>(val_); }
+  StreamType stream_type() const;
+  DeviceType device_type() const;
+  uint32_t device_index() const;
+  uint32_t stream_index() const;
+  TaskType task_type() const;
+
+ private:
+  uint32_t val_;
+};
+
+// TaskId encode
+// | ---------------- 128 bit ------------------- |
+// | -- 32 -- | -- 32 --- | -- 32 -- | --- 32 --- |
+// | reserved | ProcessId | StreamId | task_index |
+// |                   TaskId                     |
+
+class TaskId {
+ public:
+  using bits_t = std::bitset<128>;
+  static const int kTaskIndexBits = 32;
+
+  TaskId(ProcessId process_id, StreamId stream_id, uint32_t task_index);
+  ProcessId process_id() const;
+  StreamId stream_id() const;
+  uint32_t task_index() const;
+
+ private:
+  bits_t bits_;
+};
 
 class IDMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IDMgr);
   ~IDMgr() = default;
+
+  // device work type stream (cuda as demonstration)
+  StreamId GetDeviceComputeStreamId(DeviceType device_type, uint32_t device_index) const;
+  StreamId GetDeviceH2DStreamId(DeviceType device_type, uint32_t device_index) const;
+  StreamId GetDeviceD2HStreamId(DeviceType device_type, uint32_t device_index) const;
+  StreamId GetDeviceMixStreamId(DeviceType device_type, uint32_t device_index) const;
+  StreamId GetNcclStreamId(uint32_t device_index) const;
+  StreamId GetCudaDecodeH2DStreamId(uint32_t device_index) const;
+
+  // CPU device compute stream
+  StreamId GetCPUDeviceStreamId(uint32_t device_index) const;
+
+  // CommNet
+  StreamId GetCommNetStreamId(uint32_t this_node_index, uint32_t peer_node_index) const;
+
+  // TickTock
+  StreamId GetTickTockStreamId() const;
+
+  // Independent
+  StreamId GenerateIndependentStreamId(TaskType task_type);
+
+  // Task
+  TaskId GenerateTaskId(ProcessId process_id, StreamId stream_id);
 
   // Get ThrdId, TaskId, RegstDescId
   int64_t GetGpuComputeThrdId(int64_t dev_phy_id) const { return dev_phy_id; }
@@ -108,6 +220,11 @@ class IDMgr final {
   static const int64_t thread_id_bit_num_ = 11;
   static const int64_t local_work_stream_id_bit_num_ = 21;
   static const int64_t task_id_bit_num_ = 21;
+
+  // independent generator state: map of task_type to task_num
+  HashMap<TaskType, size_t, std::hash<int32_t>> independent_task_type2task_num_;
+  // task id generator state: map of process_stream to task_num
+  HashMap<uint64_t, uint32_t> process_stream2task_num_;
 };
 
 }  // namespace oneflow
