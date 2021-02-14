@@ -63,8 +63,9 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
 
   const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
   const int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
-  const int64_t thrd_id = Global<IDMgr>::Get()->GetGpuNcclThrdId(device_id);
-  node->Init(machine_id, thrd_id, NewAreaId(), op_conf);
+  ProcessId process_id(static_cast<uint32_t>(machine_id), 0);
+  StreamId stream_id = Global<IDMgr>::Get()->GetNcclStreamId(static_cast<uint32_t>(device_id));
+  node->Init(process_id, stream_id, NewAreaId(), op_conf);
 }
 
 int64_t FindRootParallelId(const ParallelDesc& multi_device, const ParallelDesc& sole_device) {
@@ -383,12 +384,14 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAll2All-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
         const int64_t machine_id = CHECK_JUST(in_parallel_desc.MachineId4ParallelId(i));
+        ProcessId process_id(static_cast<uint32_t>(machine_id), 0);
         const int64_t device_id = CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(i));
-        const int64_t thrd_id = Global<IDMgr>::Get()->GetGpuComputeThrdId(device_id);
+        StreamId stream_id = Global<IDMgr>::Get()->GetDeviceComputeStreamId(
+            DeviceType::kGPU, static_cast<uint32_t>(device_id));
         TaskNode* in_node = sorted_in_tasks.at(i);
         CollectiveBoxingPackTaskNode* pack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
-        pack_node->Init(machine_id, thrd_id, NewAreaId(), lbi, logical_blob_desc.shape(),
+        pack_node->Init(process_id, stream_id, NewAreaId(), lbi, logical_blob_desc.shape(),
                         in_sbp_parallel, out_sbp_parallel, in_parallel_desc.parallel_num());
         Connect<TaskNode>(in_node, ctx->task_graph()->NewEdge(), pack_node);
 
@@ -399,7 +402,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
 
         CollectiveBoxingUnpackTaskNode* unpack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingUnpackTaskNode>();
-        unpack_node->Init(machine_id, thrd_id, NewAreaId(), lbi, logical_blob_desc.shape(),
+        unpack_node->Init(process_id, stream_id, NewAreaId(), lbi, logical_blob_desc.shape(),
                           in_sbp_parallel, out_sbp_parallel, in_parallel_desc.parallel_num());
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
         sorted_out_tasks->push_back(unpack_node);
