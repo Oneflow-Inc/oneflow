@@ -63,12 +63,17 @@ message TaskSetInfo {
   required int64 order_in_graph = 5;
 }
 
+message TaskIdProto {
+  required uint64 low = 1;
+  required uint64 high = 2;
+}
+
 message TaskProto {
   // common
   required TaskType task_type = 1;
-  required int64 machine_id = 2;
-  required int64 thrd_id = 3;
-  required int64 task_id = 4;
+  required uint32 process_id = 2;
+  required uint32 stream_id = 3;
+  required TaskIdProto task_id = 4;
   required int64 job_id = 5;
   required TaskSetInfo task_set_info = 6;
   required ExecSequence exec_sequence = 7;
