@@ -430,7 +430,7 @@ void FixRegstHostMemCase(TaskProto* task_proto,
 }
 
 void LinkMainPlan(Plan* plan, const Plan& main_plan,
-                  const std::vector<std::string>& identity_tick_op_names) {
+                  const std::vector<HashMap<int64_t, std::string>>& identity_tick_op_names) {
   std::function<bool(const TaskProto*)> IsInterfaceTickTockTask;
   {
     auto task_ids = std::make_shared<HashSet<int64_t>>();
@@ -459,10 +459,11 @@ void LinkMainPlan(Plan* plan, const Plan& main_plan,
   FOR_RANGE(int32_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
     const CriticalSection& critical_section =
         Global<CriticalSectionDesc>::Get()->GetCriticalSection(i);
-    TaskProto* identity_tick = sole_tick_op_name2sole_task.at(identity_tick_op_names.at(i));
-    LinkTickTaskProto(identity_tick,
-                      sole_tick_op_name2sole_task.at(critical_section.source_tick_op_name()),
-                      sole_tick_op_name2sole_task.at(critical_section.sink_tick_op_name()));
+    TaskProto* identity_tick = sole_tick_op_name2sole_task.at(identity_tick_op_names.at(i).at(0));
+    LinkTickTaskProto(
+        identity_tick,
+        sole_tick_op_name2sole_task.at(critical_section.machine_id2source_tick_op_name().at(0)),
+        sole_tick_op_name2sole_task.at(critical_section.machine_id2sink_tick_op_name().at(0)));
     FixRegstHostMemCase(identity_tick, TaskProto4TaskId);
   }
   {
@@ -471,7 +472,8 @@ void LinkMainPlan(Plan* plan, const Plan& main_plan,
     FOR_RANGE(int32_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
       const CriticalSection& critical_section =
           Global<CriticalSectionDesc>::Get()->GetCriticalSection(i);
-      CHECK(source_tick_op_names.emplace(critical_section.source_tick_op_name()).second);
+      CHECK(source_tick_op_names.emplace(critical_section.machine_id2source_tick_op_name().at(0))
+                .second);
     }
     Erase<PbRpf<TaskProto>>(*plan->mutable_task(), [&](const TaskProto& task) {
       if (task.task_type() == TaskType::kSourceTick) {
@@ -576,7 +578,7 @@ void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>
   }
 }
 
-void MakeMainJob(Job* main_job, std::vector<std::string>* identity_tick_op_names,
+void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* identity_tick_op_names,
                  LogicalBlobId* critical_section_sink_lbi) {
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   std::vector<OperatorConf> op_confs;
@@ -620,23 +622,40 @@ void MakeMainJob(Job* main_job, std::vector<std::string>* identity_tick_op_names
     }
   }
   op_confs.push_back(cs_case_op_conf);
+  std::vector<std::string> snk_tick_op_names;
   FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
+    // There is no need to insert a source tick op
+    // identity tick
     OperatorConf identity_tick_op_conf;
-    std::string name_prefix = "System-Main-Tick_CriticalSection_";
-    identity_tick_op_conf.set_name(name_prefix + std::to_string(i));
-    auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
-    identity_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
-    identity_tick_conf->set_out("out");
-    identity_tick_op_names->push_back(identity_tick_op_conf.name());
-    op_confs.push_back(identity_tick_op_conf);
+    {
+      std::string name_prefix = "System-Main-Tick_CriticalSection_";
+      identity_tick_op_conf.set_name(name_prefix + std::to_string(i));
+      auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
+      identity_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
+      identity_tick_conf->set_out("out");
+      op_confs.push_back(identity_tick_op_conf);
+      identity_tick_op_names->push_back(
+          HashMap<int64_t, std::string>{{0, identity_tick_op_conf.name()}});
+    }
+    // sink tick
+    OperatorConf snk_tick_op_conf;
+    {
+      std::string name_prefix = "System-Main-SinkTick_CriticalSection_";
+      snk_tick_op_conf.set_name(name_prefix + std::to_string(i));
+      auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
+      snk_tick_conf->add_tick(identity_tick_op_conf.name() + "/out");
+      snk_tick_conf->set_out("out");
+      op_confs.push_back(snk_tick_op_conf);
+      snk_tick_op_names.push_back(snk_tick_op_conf.name());
+    }
   }
   // critical section esac op conf
   OperatorConf cs_esac_op_conf;
   {
     cs_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
     auto* cs_esac_conf = cs_esac_op_conf.mutable_esac_conf();
-    for (const auto& identity_tick_op_name : *identity_tick_op_names) {
-      cs_esac_conf->add_in(identity_tick_op_name + "/out");
+    for (const auto& snk_tick_op_name : snk_tick_op_names) {
+      cs_esac_conf->add_in(snk_tick_op_name + "/out");
     }
     cs_esac_conf->set_out("out");
     cs_esac_conf->set_data_type(DataType::kInt32);
@@ -648,7 +667,7 @@ void MakeMainJob(Job* main_job, std::vector<std::string>* identity_tick_op_names
     auto* callback_notify_esac_conf = callback_notify_esac_op_conf.mutable_esac_conf();
     for (int64_t total_job_cs_id :
          Global<CriticalSectionDesc>::Get()->job_id2total_job_critical_section_id()) {
-      callback_notify_esac_conf->add_in(identity_tick_op_names->at(total_job_cs_id) + "/out");
+      callback_notify_esac_conf->add_in(identity_tick_op_names->at(total_job_cs_id).at(0) + "/out");
     }
     callback_notify_esac_conf->set_out("out");
     callback_notify_esac_conf->set_data_type(DataType::kInt32);
@@ -960,7 +979,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     PlanUtil::SetForceInplaceMemBlock(plan);
     FinishGlobalCriticalSectionDesc(*plan, jobs.size());
     Plan main_plan;
-    std::vector<std::string> identity_tick_op_names;
+    std::vector<HashMap<int64_t, std::string>> identity_tick_op_names;
     {
       Job main_job;
       LogicalBlobId critical_section_sink_lbi;

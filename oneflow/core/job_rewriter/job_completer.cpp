@@ -102,10 +102,9 @@ void JobCompleter::Complete(Job* job) const {
   }
   WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp);
   // complete tick ops
-  WithOpGraphAndMutJobBuilder(job, &AutoSourceTick);
+  WithOpGraphAndMutJobBuilder(job, &AutoPrependTick);
   WithOpGraphAndMutJobBuilder(job, &AddTickForTimeShape);
-  WithOpGraphAndMutJobBuilder(job, &AutoSinkTick);
-  AddGlobalTotalJobCriticalSection(*job);
+  WithOpGraphAndMutJobBuilder(job, &AutoSourceAndSinkTick);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
   JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
