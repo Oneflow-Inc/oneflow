@@ -555,7 +555,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     } else {
       for (CompTaskNode* src_node : sorted_src_comp_tasks) {
         auto* identity_node = NewNode<BoxingIdentityTaskNode>();
-        identity_node->Init(src_node->machine_id(), src_node->thrd_id(), src_node->area_id(), lbi);
+        identity_node->Init(src_node->process_id(), src_node->stream_id(), src_node->area_id(),
+                            lbi);
         Connect<TaskNode>(src_node, NewEdge(), identity_node);
         in_nodes.push_back(identity_node);
       }
