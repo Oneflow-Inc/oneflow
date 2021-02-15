@@ -65,6 +65,11 @@ bool operator==(const ParallelBlobConf& lhs, const ParallelBlobConf& rhs) {
 
 namespace {
 
+struct ReentrantLockLinkPoint {
+  std::string reentrant_lock_op_name;
+  LogicalBlobId critical_section_sink_lbi;
+};
+
 std::string cluster_thrd_ids_key(const std::string& plan_name) {
   return plan_name + "_cluster_thrd_ids";
 }
@@ -583,12 +588,100 @@ void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>
   }
 }
 
-void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* identity_tick_op_names,
-                 LogicalBlobId* critical_section_sink_lbi) {
-  JobBuilder job_builder(main_job);
-  CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
+Maybe<ReentrantLockLinkPoint> MakeMainJobComponent(
+    const std::string& wait_and_send_ids_lbn, const Range& machine_id_range,
+    std::vector<OperatorConf>* op_confs_ptr,
+    std::vector<HashMap<int64_t, std::string>>* identity_tick_op_names) {
+  auto lock_link_point = std::make_shared<ReentrantLockLinkPoint>();
+  OperatorConf reentrant_lock_op_conf;
+  {
+    lock_link_point->reentrant_lock_op_name =
+        std::string("System-Main-ReentrantLock_") + NewUniqueId();
+    reentrant_lock_op_conf.set_name(lock_link_point->reentrant_lock_op_name);
+    auto* reentrant_lock_conf = reentrant_lock_op_conf.mutable_reentrant_lock_conf();
+    reentrant_lock_conf->set_start(wait_and_send_ids_lbn);
+    // ibn "end" is set after plan generated because we don't like cycle in job
+    reentrant_lock_conf->set_out("out");
+    Global<CriticalSectionDesc>::Get()->DumpCriticalSectionId2IntersectinIds(
+        reentrant_lock_conf->mutable_lock_id2intersecting_lock_ids());
+    op_confs_ptr->push_back(reentrant_lock_op_conf);
+  }
+  // critical section case op conf
+  OperatorConf cs_case_op_conf;
+  {
+    cs_case_op_conf.set_name(std::string("System-Main-Case_") + NewUniqueId());
+    auto* cs_case_conf = cs_case_op_conf.mutable_case_conf();
+    cs_case_conf->set_in(reentrant_lock_op_conf.name() + "/out");
+    FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
+      cs_case_conf->add_out(GenRepeatedBn("out", i));
+    }
+    op_confs_ptr->push_back(cs_case_op_conf);
+  }
   int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
+  identity_tick_op_names->resize(num_critial_sections);
+  std::vector<std::string> snk_tick_op_names;
+  FOR_RANGE(int64_t, i, 0, num_critial_sections) {
+    // source tick
+    OperatorConf src_tick_op_conf;
+    {
+      std::string name_prefix = "System-Main-SourceTick_CriticalSection_";
+      src_tick_op_conf.set_name(name_prefix + std::to_string(i) + "_" + NewUniqueId());
+      auto* src_tick_conf = src_tick_op_conf.mutable_tick_conf();
+      src_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
+      src_tick_conf->set_out("out");
+      op_confs_ptr->push_back(src_tick_op_conf);
+    }
+    // identity tick
+    auto* cur_id_tick_op_names = &identity_tick_op_names->at(i);
+    for (int64_t machine_id = machine_id_range.begin(); machine_id < machine_id_range.end();
+         ++machine_id) {
+      OperatorConf identity_tick_op_conf;
+      std::string name_prefix = "System-Main-Tick_CriticalSection_";
+      identity_tick_op_conf.set_name(name_prefix + std::to_string(i) + "_" + NewUniqueId());
+      auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
+      identity_tick_conf->add_tick(src_tick_op_conf.name() + "/out");
+      identity_tick_conf->set_out("out");
+      op_confs_ptr->push_back(identity_tick_op_conf);
+      CHECK_OR_RETURN(
+          cur_id_tick_op_names->emplace(machine_id, identity_tick_op_conf.name()).second);
+    }
+    // sink tick
+    OperatorConf snk_tick_op_conf;
+    {
+      std::string name_prefix = "System-Main-SinkTick_CriticalSection_";
+      snk_tick_op_conf.set_name(name_prefix + std::to_string(i) + NewUniqueId());
+      auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
+      for (const auto& pair : *cur_id_tick_op_names) {
+        snk_tick_conf->add_tick(pair.second + "/out");
+      }
+      snk_tick_conf->set_out("out");
+      op_confs_ptr->push_back(snk_tick_op_conf);
+      snk_tick_op_names.push_back(snk_tick_op_conf.name());
+    }
+  }
+  // critical section esac op conf
+  OperatorConf cs_esac_op_conf;
+  {
+    cs_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
+    auto* cs_esac_conf = cs_esac_op_conf.mutable_esac_conf();
+    for (const auto& snk_tick_op_name : snk_tick_op_names) {
+      cs_esac_conf->add_in(snk_tick_op_name + "/out");
+    }
+    cs_esac_conf->set_out("out");
+    cs_esac_conf->set_data_type(DataType::kInt32);
+    op_confs_ptr->push_back(cs_esac_op_conf);
+  }
+  lock_link_point->critical_section_sink_lbi.set_op_name(cs_esac_op_conf.name());
+  lock_link_point->critical_section_sink_lbi.set_blob_name("out");
+  return lock_link_point;
+}
+
+Maybe<void> MakeMainJob(Job* main_job,
+                        std::vector<HashMap<int64_t, std::string>>* identity_tick_op_names,
+                        std::vector<ReentrantLockLinkPoint>* lock_link_points) {
+  JobBuilder job_builder(main_job);
+  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
   Range machine_id_range(0, num_machines);
   std::vector<OperatorConf> op_confs;
   std::vector<OperatorConf>* op_confs_ptr = &op_confs;
@@ -604,92 +697,15 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
     HashSet<int64_t> unique_check;
     for (const auto& pair : *Global<JobName2JobId>::Get()) {
       int64_t job_id = pair.second;
-      CHECK(unique_check.insert(job_id).second);
+      CHECK_OR_RETURN(unique_check.insert(job_id).second);
       const auto& cs_idx = Global<CriticalSectionDesc>::Get()->CriticalSectionIds4JobId(job_id);
       *id_list->Mutable(job_id)->mutable_value() = {cs_idx.begin(), cs_idx.end()};
     }
     op_confs_ptr->push_back(wait_and_send_ids_op_conf);
   }
-  std::vector<std::string> snk_tick_op_names;
-  [&](const Range& machine_id_range, std::vector<OperatorConf>* op_confs_ptr, std::vector<std::string>* snk_tick_op_names) {
-    OperatorConf reentrant_lock_op_conf;
-    {
-      reentrant_lock_op_conf.set_name(std::string("System-Main-ReentrantLock_") + NewUniqueId());
-      auto* reentrant_lock_conf = reentrant_lock_op_conf.mutable_reentrant_lock_conf();
-      reentrant_lock_conf->set_start(wait_and_send_ids_op_conf.name() + "/out");
-      // ibn "end" is set after plan generated because we don't like cycle in job
-      reentrant_lock_conf->set_out("out");
-      Global<CriticalSectionDesc>::Get()->DumpCriticalSectionId2IntersectinIds(
-          reentrant_lock_conf->mutable_lock_id2intersecting_lock_ids());
-      op_confs_ptr->push_back(reentrant_lock_op_conf);
-    }
-    // critical section case op conf
-    OperatorConf cs_case_op_conf;
-    {
-      cs_case_op_conf.set_name(std::string("System-Main-Case_") + NewUniqueId());
-      auto* cs_case_conf = cs_case_op_conf.mutable_case_conf();
-      cs_case_conf->set_in(reentrant_lock_op_conf.name() + "/out");
-      FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
-        cs_case_conf->add_out(GenRepeatedBn("out", i));
-      }
-      op_confs_ptr->push_back(cs_case_op_conf);
-    }
-    int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
-    identity_tick_op_names->resize(num_critial_sections);
-    FOR_RANGE(int64_t, i, 0, num_critial_sections) {
-      // source tick
-      OperatorConf src_tick_op_conf;
-      {
-        std::string name_prefix = "System-Main-SourceTick_CriticalSection_";
-        src_tick_op_conf.set_name(name_prefix + std::to_string(i));
-        auto* src_tick_conf = src_tick_op_conf.mutable_tick_conf();
-        src_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
-        src_tick_conf->set_out("out");
-        op_confs_ptr->push_back(src_tick_op_conf);
-      }
-      // identity tick
-      auto* cur_id_tick_op_names = &identity_tick_op_names->at(i);
-      for (int64_t machine_id = machine_id_range.begin(); machine_id < machine_id_range.end();
-           ++machine_id) {
-        OperatorConf identity_tick_op_conf;
-        std::string name_prefix = "System-Main-Tick_CriticalSection_";
-        identity_tick_op_conf.set_name(name_prefix + std::to_string(i) + "_"
-                                       + std::to_string(machine_id));
-        auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
-        identity_tick_conf->add_tick(src_tick_op_conf.name() + "/out");
-        identity_tick_conf->set_out("out");
-        op_confs_ptr->push_back(identity_tick_op_conf);
-        CHECK(cur_id_tick_op_names->emplace(machine_id, identity_tick_op_conf.name()).second);
-      }
-      // sink tick
-      OperatorConf snk_tick_op_conf;
-      {
-        std::string name_prefix = "System-Main-SinkTick_CriticalSection_";
-        snk_tick_op_conf.set_name(name_prefix + std::to_string(i));
-        auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
-        for (const auto& pair : *cur_id_tick_op_names) {
-          snk_tick_conf->add_tick(pair.second + "/out");
-        }
-        snk_tick_conf->set_out("out");
-        op_confs_ptr->push_back(snk_tick_op_conf);
-        snk_tick_op_names.push_back(snk_tick_op_conf.name());
-      }
-    }
-    // critical section esac op conf
-    OperatorConf cs_esac_op_conf;
-    {
-      cs_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
-      auto* cs_esac_conf = cs_esac_op_conf.mutable_esac_conf();
-      for (const auto& snk_tick_op_name : snk_tick_op_names) {
-        cs_esac_conf->add_in(snk_tick_op_name + "/out");
-      }
-      cs_esac_conf->set_out("out");
-      cs_esac_conf->set_data_type(DataType::kInt32);
-      critical_section_sink_lbi->set_op_name(cs_esac_op_conf.name());
-      critical_section_sink_lbi->set_blob_name("out");
-      op_confs_ptr->push_back(cs_esac_op_conf);
-    }
-  }(machine_id_range, op_confs_ptr, &snk_tick_op_names);
+  lock_link_points->push_back(
+      *JUST(MakeMainJobComponent(wait_and_send_ids_op_conf.name() + "/out", machine_id_range,
+                                 op_confs_ptr, identity_tick_op_names)));
   OperatorConf callback_notify_esac_op_conf;
   {
     callback_notify_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
@@ -708,7 +724,6 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
         }
         snk_tick_conf->set_out("out");
         op_confs_ptr->push_back(snk_tick_op_conf);
-        snk_tick_op_names->push_back(snk_tick_op_conf.name());
       }
       callback_notify_esac_conf->add_in(snk_tick_op_conf.name() + "/out");
     }
@@ -739,28 +754,30 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
   job_conf->set_job_name("MainJob-unamed");
   job_conf->mutable_predict_conf();
   job_conf->set_default_data_type(DataType::kInt32);
+  return Maybe<void>::Ok();
 }
 
-void ConnectCriticalSectionEndToReentrantLockEnd(Plan* main_plan,
-                                                 const LogicalBlobId& critical_section_sink_lbi) {
+Maybe<void> ConnectCriticalSectionEndToReentrantLockEnd(
+    Plan* main_plan, const ReentrantLockLinkPoint& lock_link_point) {
   TaskProto* reentrant_lock_task = nullptr;
   TaskProto* cs_sink_task = nullptr;
   FOR_RANGE(int64_t, i, 0, main_plan->task_size()) {
     auto* task = main_plan->mutable_task(i);
-    CHECK_EQ(task->exec_sequence().exec_node_size(), 1);
-    if (task->task_type() == TaskType::kReentrantLock) {
-      CHECK_ISNULL(reentrant_lock_task);
+    CHECK_EQ_OR_RETURN(task->exec_sequence().exec_node_size(), 1);
+    const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
+    const auto& op_name = kernel_conf.op_attribute().op_conf().name();
+    if (op_name == lock_link_point.reentrant_lock_op_name) {
+      CHECK_ISNULL_OR_RETURN(reentrant_lock_task);
       reentrant_lock_task = task;
+    } else if (op_name == lock_link_point.critical_section_sink_lbi.op_name()) {
+      CHECK_ISNULL_OR_RETURN(cs_sink_task);
+      cs_sink_task = task;
     } else {
-      const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
-      if (critical_section_sink_lbi.op_name() == kernel_conf.op_attribute().op_conf().name()) {
-        CHECK_ISNULL(cs_sink_task);
-        cs_sink_task = task;
-      }
+      // do nothing
     }
   }
-  CHECK_NOTNULL(reentrant_lock_task);
-  CHECK_NOTNULL(cs_sink_task);
+  CHECK_NOTNULL_OR_RETURN(reentrant_lock_task);
+  CHECK_NOTNULL_OR_RETURN(cs_sink_task);
   RegstDescProto* cs_end_regst = PlanUtil::GetSoleProducedDataRegst(cs_sink_task);
   cs_end_regst->add_consumer_task_id(reentrant_lock_task->task_id());
   reentrant_lock_task->mutable_consumed_regst_desc_id()->at("in").add_regst_desc_id(
@@ -772,20 +789,24 @@ void ConnectCriticalSectionEndToReentrantLockEnd(Plan* main_plan,
   auto* op_attribute = reentrant_exec_node->mutable_kernel_conf()->mutable_op_attribute();
   op_attribute->add_input_bns("end");
   (*op_attribute->mutable_arg_signature()->mutable_bn_in_op2lbi())["end"] =
-      critical_section_sink_lbi;
+      lock_link_point.critical_section_sink_lbi;
 
   auto* reentrant_lock_conf = op_attribute->mutable_op_conf()->mutable_reentrant_lock_conf();
-  reentrant_lock_conf->set_end(GenLogicalBlobName(critical_section_sink_lbi));
+  reentrant_lock_conf->set_end(GenLogicalBlobName(lock_link_point.critical_section_sink_lbi));
+  return Maybe<void>::Ok();
 }
 
-Maybe<void> CompileMainJob(Job* main_job, const LogicalBlobId& critical_section_sink_lbi,
+Maybe<void> CompileMainJob(Job* main_job,
+                           const std::vector<ReentrantLockLinkPoint>& lock_link_points,
                            int64_t job_id, Plan* main_plan) {
-  CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   {
     auto scope = std::make_unique<GlobalJobDescScope>(main_job->job_conf(), job_id);
     JUST(CompileCurJobOnMaster(main_job, main_plan, false));
   }
-  ConnectCriticalSectionEndToReentrantLockEnd(main_plan, critical_section_sink_lbi);
+  for (const auto& lock_link_point : lock_link_points) {
+    JUST(ConnectCriticalSectionEndToReentrantLockEnd(main_plan, lock_link_point));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -1022,10 +1043,10 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     std::vector<HashMap<int64_t, std::string>> identity_tick_op_names;
     {
       Job main_job;
-      LogicalBlobId critical_section_sink_lbi;
-      MakeMainJob(&main_job, &identity_tick_op_names, &critical_section_sink_lbi);
+      std::vector<ReentrantLockLinkPoint> lock_link_points;
+      JUST(MakeMainJob(&main_job, &identity_tick_op_names, &lock_link_points));
       AddJobName2JobId(main_job.job_conf().job_name(), jobs.size());
-      JUST(CompileMainJob(&main_job, critical_section_sink_lbi, sub_plans.size(), &main_plan));
+      JUST(CompileMainJob(&main_job, lock_link_points, sub_plans.size(), &main_plan));
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
     PlanUtil::CleanUselessMemBlockAndCheckValid(plan);
