@@ -698,7 +698,6 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
         }
         snk_tick_conf->set_out("out");
         op_confs.push_back(snk_tick_op_conf);
-        snk_tick_op_names.push_back(snk_tick_op_conf.name());
       }
       callback_notify_esac_conf->add_in(snk_tick_op_conf.name() + "/out");
     }

@@ -27,11 +27,6 @@ void CaseCompTaskNode::ProduceAllRegstsAndBindEdges() {
   FOR_RANGE(int64_t, obn_id, 0, op->output_bns().size()) {
     CHECK(lbi2obn_id.emplace(op->BnInOp2Lbi(GenRepeatedBn("out", obn_id)), obn_id).second);
   }
-  const auto& GetOrProduceRegst = [&](const std::string& name) {
-    std::shared_ptr<RegstDesc> ptr = GetProducedRegst(name);
-    if (ptr) { return ptr; }
-    return ProduceRegst(name, false);
-  };
   ForEachOutDataEdge([&](TaskEdge* edge) {
     const LogicalNode* succ = GetOneSuccLogicalNodeOnEdge(edge);
     int64_t obn_id = -1;
@@ -44,7 +39,8 @@ void CaseCompTaskNode::ProduceAllRegstsAndBindEdges() {
     }
     CHECK_NE(obn_id, -1);
     std::string name = "out_" + std::to_string(obn_id);
-    edge->AddRegst("out", GetOrProduceRegst(name));
+    CHECK(GetProducedRegst(name) == nullptr);
+    edge->AddRegst("out", ProduceRegst(name, false));
   });
 }
 
