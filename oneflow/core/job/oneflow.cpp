@@ -617,8 +617,7 @@ Maybe<ReentrantLockLinkPoint> MakeMainJobComponent(
     }
     op_confs_ptr->push_back(cs_case_op_conf);
   }
-  int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
-  identity_tick_op_names->resize(num_critial_sections);
+  const int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
   std::vector<std::string> snk_tick_op_names;
   FOR_RANGE(int64_t, i, 0, num_critial_sections) {
     // source tick
@@ -676,13 +675,35 @@ Maybe<ReentrantLockLinkPoint> MakeMainJobComponent(
   return lock_link_point;
 }
 
+void MakeCallbackNotifierSinkTick(
+    const Range& machine_id_range,
+    const std::vector<HashMap<int64_t, std::string>>& identity_tick_op_names,
+    std::vector<OperatorConf>* op_confs_ptr,
+    const std::function<void(const std::string& lbn)>& DoEachSinkTickLbn) {
+  for (int64_t total_job_cs_id :
+       Global<CriticalSectionDesc>::Get()->job_id2total_job_critical_section_id()) {
+    OperatorConf snk_tick_op_conf;
+    {
+      std::string name_prefix = "System-Main-CallbackNotifier_CriticalSection_";
+      snk_tick_op_conf.set_name(name_prefix + std::to_string(total_job_cs_id));
+      auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
+      for (int64_t machine_id = machine_id_range.begin(); machine_id < machine_id_range.end();
+           ++machine_id) {
+        const auto& id_tick_op_name = identity_tick_op_names.at(total_job_cs_id).at(machine_id);
+        snk_tick_conf->add_tick(id_tick_op_name + "/out");
+      }
+      snk_tick_conf->set_out("out");
+      op_confs_ptr->push_back(snk_tick_op_conf);
+    }
+    DoEachSinkTickLbn(snk_tick_op_conf.name() + "/out");
+  }
+}
+
 Maybe<void> MakeMainJob(Job* main_job,
                         std::vector<HashMap<int64_t, std::string>>* identity_tick_op_names,
                         std::vector<ReentrantLockLinkPoint>* lock_link_points) {
   JobBuilder job_builder(main_job);
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
-  Range machine_id_range(0, num_machines);
   std::vector<OperatorConf> op_confs;
   std::vector<OperatorConf>* op_confs_ptr = &op_confs;
   OperatorConf wait_and_send_ids_op_conf;
@@ -703,30 +724,26 @@ Maybe<void> MakeMainJob(Job* main_job,
     }
     op_confs_ptr->push_back(wait_and_send_ids_op_conf);
   }
-  lock_link_points->push_back(
-      *JUST(MakeMainJobComponent(wait_and_send_ids_op_conf.name() + "/out", machine_id_range,
-                                 op_confs_ptr, identity_tick_op_names)));
+  const int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
+  identity_tick_op_names->resize(num_critial_sections);
+  const int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
+  const Range machine_id_range(0, num_machines);
+  JUST(machine_id_range.ForEachSubRange(num_machines, [&](const Range& sub_range) -> Maybe<void> {
+    lock_link_points->push_back(
+        *JUST(MakeMainJobComponent(wait_and_send_ids_op_conf.name() + "/out", sub_range,
+                                   op_confs_ptr, identity_tick_op_names)));
+    return Maybe<void>::Ok();
+  }));
   OperatorConf callback_notify_esac_op_conf;
   {
     callback_notify_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
     auto* callback_notify_esac_conf = callback_notify_esac_op_conf.mutable_esac_conf();
-    for (int64_t total_job_cs_id :
-         Global<CriticalSectionDesc>::Get()->job_id2total_job_critical_section_id()) {
-      OperatorConf snk_tick_op_conf;
-      {
-        std::string name_prefix = "System-Main-CallbackNotifier_CriticalSection_";
-        snk_tick_op_conf.set_name(name_prefix + std::to_string(total_job_cs_id));
-        auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
-        for (int64_t machine_id = machine_id_range.begin(); machine_id < machine_id_range.end();
-             ++machine_id) {
-          const auto& id_tick_op_name = identity_tick_op_names->at(total_job_cs_id).at(machine_id);
-          snk_tick_conf->add_tick(id_tick_op_name + "/out");
-        }
-        snk_tick_conf->set_out("out");
-        op_confs_ptr->push_back(snk_tick_op_conf);
-      }
-      callback_notify_esac_conf->add_in(snk_tick_op_conf.name() + "/out");
-    }
+    JUST(machine_id_range.ForEachSubRange(num_machines, [&](const Range& sub_range) -> Maybe<void> {
+      MakeCallbackNotifierSinkTick(
+          sub_range, *identity_tick_op_names, op_confs_ptr,
+          [&](const std::string& lbn) { callback_notify_esac_conf->add_in(lbn); });
+      return Maybe<void>::Ok();
+    }));
     callback_notify_esac_conf->set_out("out");
     callback_notify_esac_conf->set_data_type(DataType::kInt32);
     op_confs_ptr->push_back(callback_notify_esac_op_conf);
