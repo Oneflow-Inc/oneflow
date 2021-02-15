@@ -590,8 +590,10 @@ void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>
 
 Maybe<ReentrantLockLinkPoint> MakeMainJobComponent(
     const std::string& wait_and_send_ids_lbn, const Range& machine_id_range,
-    std::vector<OperatorConf>* op_confs_ptr,
-    std::vector<HashMap<int64_t, std::string>>* identity_tick_op_names) {
+    JobBuilder* job_builder, std::vector<HashMap<int64_t, std::string>>* identity_tick_op_names) {
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag("cpu");
+  parallel_conf.add_device_name(std::to_string(machine_id_range.begin()) + ":0");
   auto lock_link_point = std::make_shared<ReentrantLockLinkPoint>();
   OperatorConf reentrant_lock_op_conf;
   {
@@ -604,7 +606,7 @@ Maybe<ReentrantLockLinkPoint> MakeMainJobComponent(
     reentrant_lock_conf->set_out("out");
     Global<CriticalSectionDesc>::Get()->DumpCriticalSectionId2IntersectinIds(
         reentrant_lock_conf->mutable_lock_id2intersecting_lock_ids());
-    op_confs_ptr->push_back(reentrant_lock_op_conf);
+    JUST(job_builder->AddOp(parallel_conf, reentrant_lock_op_conf));
   }
   // critical section case op conf
   OperatorConf cs_case_op_conf;
@@ -615,7 +617,7 @@ Maybe<ReentrantLockLinkPoint> MakeMainJobComponent(
     FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
       cs_case_conf->add_out(GenRepeatedBn("out", i));
     }
-    op_confs_ptr->push_back(cs_case_op_conf);
+    JUST(job_builder->AddOp(parallel_conf, cs_case_op_conf));
   }
   const int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
   std::vector<std::string> snk_tick_op_names;
@@ -628,7 +630,7 @@ Maybe<ReentrantLockLinkPoint> MakeMainJobComponent(
       auto* src_tick_conf = src_tick_op_conf.mutable_tick_conf();
       src_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
       src_tick_conf->set_out("out");
-      op_confs_ptr->push_back(src_tick_op_conf);
+      JUST(job_builder->AddOp(parallel_conf, src_tick_op_conf));
     }
     // identity tick
     auto* cur_id_tick_op_names = &identity_tick_op_names->at(i);
@@ -640,7 +642,7 @@ Maybe<ReentrantLockLinkPoint> MakeMainJobComponent(
       auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
       identity_tick_conf->add_tick(src_tick_op_conf.name() + "/out");
       identity_tick_conf->set_out("out");
-      op_confs_ptr->push_back(identity_tick_op_conf);
+      JUST(job_builder->AddOp(parallel_conf, identity_tick_op_conf));
       CHECK_OR_RETURN(
           cur_id_tick_op_names->emplace(machine_id, identity_tick_op_conf.name()).second);
     }
@@ -654,7 +656,7 @@ Maybe<ReentrantLockLinkPoint> MakeMainJobComponent(
         snk_tick_conf->add_tick(pair.second + "/out");
       }
       snk_tick_conf->set_out("out");
-      op_confs_ptr->push_back(snk_tick_op_conf);
+      JUST(job_builder->AddOp(parallel_conf, snk_tick_op_conf));
       snk_tick_op_names.push_back(snk_tick_op_conf.name());
     }
   }
@@ -668,18 +670,20 @@ Maybe<ReentrantLockLinkPoint> MakeMainJobComponent(
     }
     cs_esac_conf->set_out("out");
     cs_esac_conf->set_data_type(DataType::kInt32);
-    op_confs_ptr->push_back(cs_esac_op_conf);
+    JUST(job_builder->AddOp(parallel_conf, cs_esac_op_conf));
   }
   lock_link_point->critical_section_sink_lbi.set_op_name(cs_esac_op_conf.name());
   lock_link_point->critical_section_sink_lbi.set_blob_name("out");
   return lock_link_point;
 }
 
-void MakeCallbackNotifierSinkTick(
+Maybe<void> MakeCallbackNotifierSinkTick(
     const Range& machine_id_range,
     const std::vector<HashMap<int64_t, std::string>>& identity_tick_op_names,
-    std::vector<OperatorConf>* op_confs_ptr,
-    const std::function<void(const std::string& lbn)>& DoEachSinkTickLbn) {
+    JobBuilder* job_builder, const std::function<void(const std::string& lbn)>& DoEachSinkTickLbn) {
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag("cpu");
+  parallel_conf.add_device_name(std::to_string(machine_id_range.begin()) + ":0");
   for (int64_t total_job_cs_id :
        Global<CriticalSectionDesc>::Get()->job_id2total_job_critical_section_id()) {
     OperatorConf snk_tick_op_conf;
@@ -693,10 +697,11 @@ void MakeCallbackNotifierSinkTick(
         snk_tick_conf->add_tick(id_tick_op_name + "/out");
       }
       snk_tick_conf->set_out("out");
-      op_confs_ptr->push_back(snk_tick_op_conf);
+      JUST(job_builder->AddOp(parallel_conf, snk_tick_op_conf));
     }
     DoEachSinkTickLbn(snk_tick_op_conf.name() + "/out");
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> MakeMainJob(Job* main_job,
@@ -704,8 +709,9 @@ Maybe<void> MakeMainJob(Job* main_job,
                         std::vector<ReentrantLockLinkPoint>* lock_link_points) {
   JobBuilder job_builder(main_job);
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  std::vector<OperatorConf> op_confs;
-  std::vector<OperatorConf>* op_confs_ptr = &op_confs;
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag("cpu");
+  parallel_conf.add_device_name("0:0");
   OperatorConf wait_and_send_ids_op_conf;
   {
     wait_and_send_ids_op_conf.set_name(std::string("System-Main-WaitAndSendIds_") + NewUniqueId());
@@ -722,7 +728,7 @@ Maybe<void> MakeMainJob(Job* main_job,
       const auto& cs_idx = Global<CriticalSectionDesc>::Get()->CriticalSectionIds4JobId(job_id);
       *id_list->Mutable(job_id)->mutable_value() = {cs_idx.begin(), cs_idx.end()};
     }
-    op_confs_ptr->push_back(wait_and_send_ids_op_conf);
+    JUST(job_builder.AddOp(parallel_conf, wait_and_send_ids_op_conf));
   }
   const int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
   identity_tick_op_names->resize(num_critial_sections);
@@ -731,7 +737,7 @@ Maybe<void> MakeMainJob(Job* main_job,
   JUST(machine_id_range.ForEachSubRange(num_machines, [&](const Range& sub_range) -> Maybe<void> {
     lock_link_points->push_back(
         *JUST(MakeMainJobComponent(wait_and_send_ids_op_conf.name() + "/out", sub_range,
-                                   op_confs_ptr, identity_tick_op_names)));
+                                   &job_builder, identity_tick_op_names)));
     return Maybe<void>::Ok();
   }));
   OperatorConf callback_notify_esac_op_conf;
@@ -739,14 +745,13 @@ Maybe<void> MakeMainJob(Job* main_job,
     callback_notify_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
     auto* callback_notify_esac_conf = callback_notify_esac_op_conf.mutable_esac_conf();
     JUST(machine_id_range.ForEachSubRange(num_machines, [&](const Range& sub_range) -> Maybe<void> {
-      MakeCallbackNotifierSinkTick(
-          sub_range, *identity_tick_op_names, op_confs_ptr,
+      return MakeCallbackNotifierSinkTick(
+          sub_range, *identity_tick_op_names, &job_builder,
           [&](const std::string& lbn) { callback_notify_esac_conf->add_in(lbn); });
-      return Maybe<void>::Ok();
     }));
     callback_notify_esac_conf->set_out("out");
     callback_notify_esac_conf->set_data_type(DataType::kInt32);
-    op_confs_ptr->push_back(callback_notify_esac_op_conf);
+    JUST(job_builder.AddOp(parallel_conf, callback_notify_esac_op_conf));
   }
   OperatorConf callback_notify_op_conf;
   {
@@ -760,13 +765,9 @@ Maybe<void> MakeMainJob(Job* main_job,
       const auto& buffer_name = GetCallbackNotifierBufferName(pair.first);
       *buffer_names->Mutable(job_id) = buffer_name;
     }
+    JUST(job_builder.AddOp(parallel_conf, callback_notify_op_conf));
   }
-  op_confs_ptr->push_back(callback_notify_op_conf);
 
-  ParallelConf parallel_conf;
-  parallel_conf.set_device_tag("cpu");
-  parallel_conf.add_device_name("0:0");
-  job_builder.AddOps(parallel_conf, op_confs);
   auto* job_conf = main_job->mutable_job_conf();
   job_conf->set_job_name("MainJob-unamed");
   job_conf->mutable_predict_conf();
