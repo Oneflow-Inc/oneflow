@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/range.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -586,7 +587,11 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
                  LogicalBlobId* critical_section_sink_lbi) {
   JobBuilder job_builder(main_job);
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
+  int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
+  Range machine_id_range(0, num_machines);
   std::vector<OperatorConf> op_confs;
+  std::vector<OperatorConf>* op_confs_ptr = &op_confs;
   OperatorConf wait_and_send_ids_op_conf;
   {
     wait_and_send_ids_op_conf.set_name(std::string("System-Main-WaitAndSendIds_") + NewUniqueId());
@@ -603,84 +608,88 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
       const auto& cs_idx = Global<CriticalSectionDesc>::Get()->CriticalSectionIds4JobId(job_id);
       *id_list->Mutable(job_id)->mutable_value() = {cs_idx.begin(), cs_idx.end()};
     }
+    op_confs_ptr->push_back(wait_and_send_ids_op_conf);
   }
-  op_confs.push_back(wait_and_send_ids_op_conf);
-  OperatorConf reentrant_lock_op_conf;
-  {
-    reentrant_lock_op_conf.set_name(std::string("System-Main-ReentrantLock_") + NewUniqueId());
-    auto* reentrant_lock_conf = reentrant_lock_op_conf.mutable_reentrant_lock_conf();
-    reentrant_lock_conf->set_start(wait_and_send_ids_op_conf.name() + "/out");
-    // ibn "end" is set after plan generated because we don't like cycle in job
-    reentrant_lock_conf->set_out("out");
-    Global<CriticalSectionDesc>::Get()->DumpCriticalSectionId2IntersectinIds(
-        reentrant_lock_conf->mutable_lock_id2intersecting_lock_ids());
-  }
-  op_confs.push_back(reentrant_lock_op_conf);
-  // critical section case op conf
-  OperatorConf cs_case_op_conf;
-  {
-    cs_case_op_conf.set_name(std::string("System-Main-Case_") + NewUniqueId());
-    auto* cs_case_conf = cs_case_op_conf.mutable_case_conf();
-    cs_case_conf->set_in(reentrant_lock_op_conf.name() + "/out");
-    FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
-      cs_case_conf->add_out(GenRepeatedBn("out", i));
-    }
-  }
-  op_confs.push_back(cs_case_op_conf);
   std::vector<std::string> snk_tick_op_names;
-  int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
-  identity_tick_op_names->resize(num_critial_sections);
-  int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
-  FOR_RANGE(int64_t, i, 0, num_critial_sections) {
-    // source tick
-    OperatorConf src_tick_op_conf;
+  [&](const Range& machine_id_range, std::vector<OperatorConf>* op_confs_ptr, std::vector<std::string>* snk_tick_op_names) {
+    OperatorConf reentrant_lock_op_conf;
     {
-      std::string name_prefix = "System-Main-SourceTick_CriticalSection_";
-      src_tick_op_conf.set_name(name_prefix + std::to_string(i));
-      auto* src_tick_conf = src_tick_op_conf.mutable_tick_conf();
-      src_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
-      src_tick_conf->set_out("out");
-      op_confs.push_back(src_tick_op_conf);
+      reentrant_lock_op_conf.set_name(std::string("System-Main-ReentrantLock_") + NewUniqueId());
+      auto* reentrant_lock_conf = reentrant_lock_op_conf.mutable_reentrant_lock_conf();
+      reentrant_lock_conf->set_start(wait_and_send_ids_op_conf.name() + "/out");
+      // ibn "end" is set after plan generated because we don't like cycle in job
+      reentrant_lock_conf->set_out("out");
+      Global<CriticalSectionDesc>::Get()->DumpCriticalSectionId2IntersectinIds(
+          reentrant_lock_conf->mutable_lock_id2intersecting_lock_ids());
+      op_confs_ptr->push_back(reentrant_lock_op_conf);
     }
-    // identity tick
-    auto* cur_id_tick_op_names = &identity_tick_op_names->at(i);
-    for (int64_t machine_id = 0; machine_id < num_machines; ++machine_id) {
-      OperatorConf identity_tick_op_conf;
-      std::string name_prefix = "System-Main-Tick_CriticalSection_";
-      identity_tick_op_conf.set_name(name_prefix + std::to_string(i) + "_"
-                                     + std::to_string(machine_id));
-      auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
-      identity_tick_conf->add_tick(src_tick_op_conf.name() + "/out");
-      identity_tick_conf->set_out("out");
-      op_confs.push_back(identity_tick_op_conf);
-      CHECK(cur_id_tick_op_names->emplace(machine_id, identity_tick_op_conf.name()).second);
-    }
-    // sink tick
-    OperatorConf snk_tick_op_conf;
+    // critical section case op conf
+    OperatorConf cs_case_op_conf;
     {
-      std::string name_prefix = "System-Main-SinkTick_CriticalSection_";
-      snk_tick_op_conf.set_name(name_prefix + std::to_string(i));
-      auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
-      for (const auto& pair : *cur_id_tick_op_names) {
-        snk_tick_conf->add_tick(pair.second + "/out");
+      cs_case_op_conf.set_name(std::string("System-Main-Case_") + NewUniqueId());
+      auto* cs_case_conf = cs_case_op_conf.mutable_case_conf();
+      cs_case_conf->set_in(reentrant_lock_op_conf.name() + "/out");
+      FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
+        cs_case_conf->add_out(GenRepeatedBn("out", i));
       }
-      snk_tick_conf->set_out("out");
-      op_confs.push_back(snk_tick_op_conf);
-      snk_tick_op_names.push_back(snk_tick_op_conf.name());
+      op_confs_ptr->push_back(cs_case_op_conf);
     }
-  }
-  // critical section esac op conf
-  OperatorConf cs_esac_op_conf;
-  {
-    cs_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
-    auto* cs_esac_conf = cs_esac_op_conf.mutable_esac_conf();
-    for (const auto& snk_tick_op_name : snk_tick_op_names) {
-      cs_esac_conf->add_in(snk_tick_op_name + "/out");
+    int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
+    identity_tick_op_names->resize(num_critial_sections);
+    FOR_RANGE(int64_t, i, 0, num_critial_sections) {
+      // source tick
+      OperatorConf src_tick_op_conf;
+      {
+        std::string name_prefix = "System-Main-SourceTick_CriticalSection_";
+        src_tick_op_conf.set_name(name_prefix + std::to_string(i));
+        auto* src_tick_conf = src_tick_op_conf.mutable_tick_conf();
+        src_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
+        src_tick_conf->set_out("out");
+        op_confs_ptr->push_back(src_tick_op_conf);
+      }
+      // identity tick
+      auto* cur_id_tick_op_names = &identity_tick_op_names->at(i);
+      for (int64_t machine_id = machine_id_range.begin(); machine_id < machine_id_range.end();
+           ++machine_id) {
+        OperatorConf identity_tick_op_conf;
+        std::string name_prefix = "System-Main-Tick_CriticalSection_";
+        identity_tick_op_conf.set_name(name_prefix + std::to_string(i) + "_"
+                                       + std::to_string(machine_id));
+        auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
+        identity_tick_conf->add_tick(src_tick_op_conf.name() + "/out");
+        identity_tick_conf->set_out("out");
+        op_confs_ptr->push_back(identity_tick_op_conf);
+        CHECK(cur_id_tick_op_names->emplace(machine_id, identity_tick_op_conf.name()).second);
+      }
+      // sink tick
+      OperatorConf snk_tick_op_conf;
+      {
+        std::string name_prefix = "System-Main-SinkTick_CriticalSection_";
+        snk_tick_op_conf.set_name(name_prefix + std::to_string(i));
+        auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
+        for (const auto& pair : *cur_id_tick_op_names) {
+          snk_tick_conf->add_tick(pair.second + "/out");
+        }
+        snk_tick_conf->set_out("out");
+        op_confs_ptr->push_back(snk_tick_op_conf);
+        snk_tick_op_names.push_back(snk_tick_op_conf.name());
+      }
     }
-    cs_esac_conf->set_out("out");
-    cs_esac_conf->set_data_type(DataType::kInt32);
-  }
-  op_confs.push_back(cs_esac_op_conf);
+    // critical section esac op conf
+    OperatorConf cs_esac_op_conf;
+    {
+      cs_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
+      auto* cs_esac_conf = cs_esac_op_conf.mutable_esac_conf();
+      for (const auto& snk_tick_op_name : snk_tick_op_names) {
+        cs_esac_conf->add_in(snk_tick_op_name + "/out");
+      }
+      cs_esac_conf->set_out("out");
+      cs_esac_conf->set_data_type(DataType::kInt32);
+      critical_section_sink_lbi->set_op_name(cs_esac_op_conf.name());
+      critical_section_sink_lbi->set_blob_name("out");
+      op_confs_ptr->push_back(cs_esac_op_conf);
+    }
+  }(machine_id_range, op_confs_ptr, &snk_tick_op_names);
   OperatorConf callback_notify_esac_op_conf;
   {
     callback_notify_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
@@ -692,20 +701,21 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
         std::string name_prefix = "System-Main-CallbackNotifier_CriticalSection_";
         snk_tick_op_conf.set_name(name_prefix + std::to_string(total_job_cs_id));
         auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
-        for (int64_t machine_id = 0; machine_id < num_machines; ++machine_id) {
+        for (int64_t machine_id = machine_id_range.begin(); machine_id < machine_id_range.end();
+             ++machine_id) {
           const auto& id_tick_op_name = identity_tick_op_names->at(total_job_cs_id).at(machine_id);
           snk_tick_conf->add_tick(id_tick_op_name + "/out");
         }
         snk_tick_conf->set_out("out");
-        op_confs.push_back(snk_tick_op_conf);
-        snk_tick_op_names.push_back(snk_tick_op_conf.name());
+        op_confs_ptr->push_back(snk_tick_op_conf);
+        snk_tick_op_names->push_back(snk_tick_op_conf.name());
       }
       callback_notify_esac_conf->add_in(snk_tick_op_conf.name() + "/out");
     }
     callback_notify_esac_conf->set_out("out");
     callback_notify_esac_conf->set_data_type(DataType::kInt32);
+    op_confs_ptr->push_back(callback_notify_esac_op_conf);
   }
-  op_confs.push_back(callback_notify_esac_op_conf);
   OperatorConf callback_notify_op_conf;
   {
     callback_notify_op_conf.set_name(std::string("System-Main-CallbackNotify_") + NewUniqueId());
@@ -719,10 +729,7 @@ void MakeMainJob(Job* main_job, std::vector<HashMap<int64_t, std::string>>* iden
       *buffer_names->Mutable(job_id) = buffer_name;
     }
   }
-  op_confs.push_back(callback_notify_op_conf);
-
-  critical_section_sink_lbi->set_op_name(cs_esac_op_conf.name());
-  critical_section_sink_lbi->set_blob_name("out");
+  op_confs_ptr->push_back(callback_notify_op_conf);
 
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
