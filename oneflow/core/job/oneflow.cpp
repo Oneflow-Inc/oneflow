@@ -65,9 +65,18 @@ bool operator==(const ParallelBlobConf& lhs, const ParallelBlobConf& rhs) {
 
 namespace {
 
-struct ReentrantLockLinkPoint {
-  std::string reentrant_lock_op_name;
-  LogicalBlobId critical_section_sink_lbi;
+// There are circles in MainJob.
+// A MainJob is a Job like:
+//
+// wait_and_send_ids_op -> reentrant_lock_op -> case_op -> identity_op -> esac_op ->
+//                                \________________________________________________/
+//
+// back edges esac_op -> reentrant_lock_op are linked by rewriting the plan instead of
+// compiling OpGraph to TaskGraph.
+// ReentrantLockBackEdge holds the key information of a back edge
+struct ReentrantLockBackEdge {
+  std::string reentrant_lock_op_name;       // back edge destination.
+  LogicalBlobId critical_section_sink_lbi;  // back edge source.
 };
 
 std::string cluster_thrd_ids_key(const std::string& plan_name) {
@@ -588,18 +597,18 @@ void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>
   }
 }
 
-Maybe<ReentrantLockLinkPoint> MakeMainJobComponent(
+Maybe<ReentrantLockBackEdge> MakeMainJobComponent(
     const std::string& wait_and_send_ids_lbn, const Range& machine_id_range,
     JobBuilder* job_builder, std::vector<HashMap<int64_t, std::string>>* identity_tick_op_names) {
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name(std::to_string(machine_id_range.begin()) + ":0");
-  auto lock_link_point = std::make_shared<ReentrantLockLinkPoint>();
+  auto lock_back_edge = std::make_shared<ReentrantLockBackEdge>();
   OperatorConf reentrant_lock_op_conf;
   {
-    lock_link_point->reentrant_lock_op_name =
+    lock_back_edge->reentrant_lock_op_name =
         std::string("System-Main-ReentrantLock_") + NewUniqueId();
-    reentrant_lock_op_conf.set_name(lock_link_point->reentrant_lock_op_name);
+    reentrant_lock_op_conf.set_name(lock_back_edge->reentrant_lock_op_name);
     auto* reentrant_lock_conf = reentrant_lock_op_conf.mutable_reentrant_lock_conf();
     reentrant_lock_conf->set_start(wait_and_send_ids_lbn);
     // ibn "end" is set after plan generated because we don't like cycle in job
@@ -672,9 +681,9 @@ Maybe<ReentrantLockLinkPoint> MakeMainJobComponent(
     cs_esac_conf->set_data_type(DataType::kInt32);
     JUST(job_builder->AddOp(parallel_conf, cs_esac_op_conf));
   }
-  lock_link_point->critical_section_sink_lbi.set_op_name(cs_esac_op_conf.name());
-  lock_link_point->critical_section_sink_lbi.set_blob_name("out");
-  return lock_link_point;
+  lock_back_edge->critical_section_sink_lbi.set_op_name(cs_esac_op_conf.name());
+  lock_back_edge->critical_section_sink_lbi.set_blob_name("out");
+  return lock_back_edge;
 }
 
 Maybe<void> MakeCallbackNotifierSinkTick(
@@ -706,7 +715,7 @@ Maybe<void> MakeCallbackNotifierSinkTick(
 
 Maybe<void> MakeMainJob(Job* main_job,
                         std::vector<HashMap<int64_t, std::string>>* identity_tick_op_names,
-                        std::vector<ReentrantLockLinkPoint>* lock_link_points) {
+                        std::vector<ReentrantLockBackEdge>* lock_back_edges) {
   JobBuilder job_builder(main_job);
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   ParallelConf parallel_conf;
@@ -735,7 +744,7 @@ Maybe<void> MakeMainJob(Job* main_job,
   const int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
   const Range machine_id_range(0, num_machines);
   JUST(machine_id_range.ForEachSubRange(num_machines, [&](const Range& sub_range) -> Maybe<void> {
-    lock_link_points->push_back(
+    lock_back_edges->push_back(
         *JUST(MakeMainJobComponent(wait_and_send_ids_op_conf.name() + "/out", sub_range,
                                    &job_builder, identity_tick_op_names)));
     return Maybe<void>::Ok();
@@ -776,7 +785,7 @@ Maybe<void> MakeMainJob(Job* main_job,
 }
 
 Maybe<void> ConnectCriticalSectionEndToReentrantLockEnd(
-    Plan* main_plan, const ReentrantLockLinkPoint& lock_link_point) {
+    Plan* main_plan, const ReentrantLockBackEdge& lock_back_edge) {
   TaskProto* reentrant_lock_task = nullptr;
   TaskProto* cs_sink_task = nullptr;
   FOR_RANGE(int64_t, i, 0, main_plan->task_size()) {
@@ -784,10 +793,10 @@ Maybe<void> ConnectCriticalSectionEndToReentrantLockEnd(
     CHECK_EQ_OR_RETURN(task->exec_sequence().exec_node_size(), 1);
     const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
     const auto& op_name = kernel_conf.op_attribute().op_conf().name();
-    if (op_name == lock_link_point.reentrant_lock_op_name) {
+    if (op_name == lock_back_edge.reentrant_lock_op_name) {
       CHECK_ISNULL_OR_RETURN(reentrant_lock_task);
       reentrant_lock_task = task;
-    } else if (op_name == lock_link_point.critical_section_sink_lbi.op_name()) {
+    } else if (op_name == lock_back_edge.critical_section_sink_lbi.op_name()) {
       CHECK_ISNULL_OR_RETURN(cs_sink_task);
       cs_sink_task = task;
     } else {
@@ -807,23 +816,22 @@ Maybe<void> ConnectCriticalSectionEndToReentrantLockEnd(
   auto* op_attribute = reentrant_exec_node->mutable_kernel_conf()->mutable_op_attribute();
   op_attribute->add_input_bns("end");
   (*op_attribute->mutable_arg_signature()->mutable_bn_in_op2lbi())["end"] =
-      lock_link_point.critical_section_sink_lbi;
+      lock_back_edge.critical_section_sink_lbi;
 
   auto* reentrant_lock_conf = op_attribute->mutable_op_conf()->mutable_reentrant_lock_conf();
-  reentrant_lock_conf->set_end(GenLogicalBlobName(lock_link_point.critical_section_sink_lbi));
+  reentrant_lock_conf->set_end(GenLogicalBlobName(lock_back_edge.critical_section_sink_lbi));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CompileMainJob(Job* main_job,
-                           const std::vector<ReentrantLockLinkPoint>& lock_link_points,
+Maybe<void> CompileMainJob(Job* main_job, const std::vector<ReentrantLockBackEdge>& lock_back_edges,
                            int64_t job_id, Plan* main_plan) {
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
   {
     auto scope = std::make_unique<GlobalJobDescScope>(main_job->job_conf(), job_id);
     JUST(CompileCurJobOnMaster(main_job, main_plan, false));
   }
-  for (const auto& lock_link_point : lock_link_points) {
-    JUST(ConnectCriticalSectionEndToReentrantLockEnd(main_plan, lock_link_point));
+  for (const auto& lock_back_edge : lock_back_edges) {
+    JUST(ConnectCriticalSectionEndToReentrantLockEnd(main_plan, lock_back_edge));
   }
   return Maybe<void>::Ok();
 }
@@ -1061,10 +1069,10 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     std::vector<HashMap<int64_t, std::string>> identity_tick_op_names;
     {
       Job main_job;
-      std::vector<ReentrantLockLinkPoint> lock_link_points;
-      JUST(MakeMainJob(&main_job, &identity_tick_op_names, &lock_link_points));
+      std::vector<ReentrantLockBackEdge> lock_back_edges;
+      JUST(MakeMainJob(&main_job, &identity_tick_op_names, &lock_back_edges));
       AddJobName2JobId(main_job.job_conf().job_name(), jobs.size());
-      JUST(CompileMainJob(&main_job, lock_link_points, sub_plans.size(), &main_plan));
+      JUST(CompileMainJob(&main_job, lock_back_edges, sub_plans.size(), &main_plan));
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
     PlanUtil::CleanUselessMemBlockAndCheckValid(plan);
