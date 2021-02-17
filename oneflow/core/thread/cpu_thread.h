@@ -26,7 +26,7 @@ class CpuThread final : public Thread {
   CpuThread() = delete;
   ~CpuThread() = default;
 
-  CpuThread(int64_t thrd_id);
+  CpuThread(uint32_t thrd_id);
 
  private:
 };

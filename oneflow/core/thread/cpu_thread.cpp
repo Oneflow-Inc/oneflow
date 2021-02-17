@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-CpuThread::CpuThread(int64_t thrd_id) {
+CpuThread::CpuThread(uint32_t thrd_id) {
   set_thrd_id(thrd_id);
   mut_actor_thread() = std::thread([this, thrd_id]() {
     OF_PROFILER_NAME_THIS_HOST_THREAD("CPU Actor : (" + std::to_string(thrd_id) + ")");
