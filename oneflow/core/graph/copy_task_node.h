@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_COPY_TASK_NODE_H_
 
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
@@ -45,18 +46,18 @@ class CopyHdTaskNode final : public CopyTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCopyHd; }
 
-  void Init(CopyHdOpConf::Type, int64_t machine_id, int64_t dev_phy_id);
+  void Init(CopyHdOpConf::Type copy_type, ProcessId process_id, uint32_t dev_phy_id);
 
   CopyHdOpConf::Type copy_type() const { return copy_type_; }
-  int64_t MemZoneId121() const override {
+  MemZoneId MemZoneId121() const override {
     if (copy_type_ == CopyHdOpConf::H2D) {
       return TaskNode::MemZoneId121();
     } else if (copy_type_ == CopyHdOpConf::D2H) {
-      return Global<IDMgr>::Get()->CpuMemZoneId();
+      return IdUtil::GetCpuMemZoneId();
     } else {
       UNIMPLEMENTED();
-      return -1;
     }
+    return MemZoneId(0);
   }
 
  private:
@@ -74,15 +75,15 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCopyCommNet; }
 
-  void Init(int64_t machine_id, int64_t src_machine_id);
-  int64_t AllocateLocalWorkStreamId() override;
-  int64_t peer_machine_id() const { return peer_machine_id_; }
+  void Init(ProcessId process_id, ProcessId peer_process_id);
+  ProcessId peer_process_id() const { return peer_process_id_; }
 
  private:
   void InitProducedRegstMemCase(MemoryCase*) override;
   void PinConsumedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
-  int64_t peer_machine_id_;
+
+  ProcessId peer_process_id_;
 };
 
 }  // namespace oneflow

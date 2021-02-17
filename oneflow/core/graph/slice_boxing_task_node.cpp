@@ -15,36 +15,36 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
 void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice,
-                               const SliceBoxingTaskMode mode, int64_t machine_id, int64_t thrd_id,
-                               int64_t mem_zone_id) {
+                               const SliceBoxingTaskMode mode, ProcessId process_id,
+                               StreamId stream_id, MemZoneId mem_zone_id) {
   lbi_ = lbi;
   out_slice_ = out_slice;
   out_shape_ = out_slice.shape();
   mode_ = mode;
   mem_zone_id_ = mem_zone_id;
-  set_machine_id(machine_id);
-  set_thrd_id(thrd_id);
+  set_process_id(process_id);
+  set_stream_id(stream_id);
   set_area_id(kMdUpdtArea);
 }
 
 void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice,
-                               const SliceBoxingTaskMode mode, int64_t machine_id,
-                               int64_t thrd_id) {
-  IDMgr* global_id_mgr = Global<IDMgr>::Get();
-  DeviceType device_type = global_id_mgr->GetDeviceTypeFromThrdId(thrd_id);
-  int64_t mem_zone_id;
+                               const SliceBoxingTaskMode mode, ProcessId process_id,
+                               StreamId stream_id) {
+  DeviceType device_type = stream_id.device_type();
+  MemZoneId mem_zone_id;
   if (device_type == DeviceType::kCPU) {
-    mem_zone_id = global_id_mgr->CpuMemZoneId();
+    mem_zone_id = IdUtil::GetCpuMemZoneId();
   } else if (device_type == DeviceType::kGPU) {
-    mem_zone_id = global_id_mgr->GpuMemZoneId(global_id_mgr->GetGpuPhyIdFromThrdId(thrd_id));
+    mem_zone_id = IdUtil::GetDeviceMemZoneId(device_type, stream_id.device_index());
   } else {
     UNIMPLEMENTED();
   }
-  Init(lbi, out_slice, mode, machine_id, thrd_id, mem_zone_id);
+  Init(lbi, out_slice, mode, process_id, stream_id, mem_zone_id);
 }
 
 void SliceBoxingTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -129,7 +129,7 @@ void SliceBoxingTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   if (Global<IDMgr>::Get()->IsCpuMemZone(mem_zone_id_)) {
     HostMemory* host_mem = mem_case->mutable_host_mem();
     if (device_type() == DeviceType::kGPU) {
-      host_mem->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
+      host_mem->mutable_cuda_pinned_mem()->set_device_id(GetCudaDeviceIndex());
     }
   } else if (Global<IDMgr>::Get()->IsGpuMemZone(mem_zone_id_)) {
     mem_case->mutable_device_cuda_mem()->set_device_id(

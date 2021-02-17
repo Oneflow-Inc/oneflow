@@ -37,13 +37,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   TaskNode();
   ~TaskNode() override = default;
 
-  // Getters
-  int64_t machine_id() const { return machine_id_; }
-  int64_t thrd_id() const { return thrd_id_; }
-  int64_t task_id() const { return task_id_; }
-  int64_t area_id() const { return area_id_; }
-  int64_t chain_id() const { return chain_id_; }
-  int64_t order_in_graph() const { return order_in_graph_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   const std::list<std::shared_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
@@ -56,14 +49,26 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   }
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
-  int64_t LocalWorkStreamId() const;
   int64_t GlobalWorkStreamId() const;
-  int64_t GpuPhyId() const { return Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_); }
+  int64_t GpuPhyId() const;
+  uint32_t GetCudaDeviceIndex() const;
   virtual int64_t AreaId4ChainMerge() const { return area_id(); }
 
-  // Setters
-  void set_machine_id(int64_t val);
-  void set_thrd_id(int64_t val);
+  ProcessId process_id() const;
+  StreamId stream_id() const;
+  TaskId task_id() const;
+
+  bool is_process_id_set() const { return is_process_id_set_; }
+  bool is_stream_id_set() const { return is_stream_id_set_; }
+  bool is_task_id_set() const { return is_task_id_set_; }
+
+  void set_process_id(ProcessId id);
+  void set_stream_id(StreamId id);
+
+  int64_t area_id() const { return area_id_; }
+  int64_t chain_id() const { return chain_id_; }
+  int64_t order_in_graph() const { return order_in_graph_; }
+
   void set_area_id(int64_t val);
   void set_chain_id(int64_t val);
   void set_order_in_graph(int64_t val);
@@ -91,7 +96,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void ToProto(TaskProto*);
   virtual bool IsIndependent() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
-  virtual int64_t MemZoneId121() const;
+  virtual MemZoneId MemZoneId121() const;
   void BuildCtrlRegstDescIfNeed(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name);
@@ -132,8 +137,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void LockRegsts();
   void FixRegisterNumRange();
 
-  virtual int64_t AllocateLocalWorkStreamId();
-
   virtual void InferProducedDataRegstTimeShape() = 0;
   void NaiveInferProducedDataRegstTimeShape();
 
@@ -145,9 +148,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
  private:
   void UpdateTaskId();
 
-  int64_t machine_id_;
-  int64_t thrd_id_;
-  int64_t task_id_;
+  ProcessId process_id_;
+  StreamId stream_id_;
+  TaskId task_id_;
+  bool is_process_id_set_;
+  bool is_stream_id_set_;
+  bool is_task_id_set_;
   int64_t area_id_;
   int64_t chain_id_;
   int64_t order_in_graph_;

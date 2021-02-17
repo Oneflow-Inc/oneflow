@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/job/thrd_id_generator.h"
@@ -55,13 +56,14 @@ void CopyTaskNode::BuildExecGphAndRegst() {
 
 void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
-void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int64_t dev_phy_id) {
+void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, ProcessId process_id,
+                          uint32_t device_index) {
   copy_type_ = copy_type;
-  set_machine_id(machine_id);
+  set_process_id(process_id);
   if (copy_type == CopyHdOpConf::H2D) {
-    set_thrd_id(Global<IDMgr>::Get()->GetGpuH2DThrdId(dev_phy_id));
+    set_stream_id(IdUtil::GetDeviceH2DStreamId(DeviceType::kGPU, device_index));
   } else if (copy_type == CopyHdOpConf::D2H) {
-    set_thrd_id(Global<IDMgr>::Get()->GetGpuD2HThrdId(dev_phy_id));
+    set_stream_id(IdUtil::GetDeviceD2HStreamId(DeviceType::kGPU, device_index));
   } else {
     UNIMPLEMENTED();
   }
@@ -71,7 +73,7 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   if (copy_type_ == CopyHdOpConf::H2D) {
     TaskNode::InitProducedRegstMemCase(mem_case);
   } else if (copy_type_ == CopyHdOpConf::D2H) {
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
+    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GetCudaDeviceIndex());
   } else {
     UNIMPLEMENTED();
   }
@@ -90,10 +92,10 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   return conf;
 }
 
-void CopyCommNetTaskNode::Init(int64_t machine_id, int64_t src_machine_id) {
-  set_machine_id(machine_id);
-  set_thrd_id(Global<IDMgr>::Get()->CommNetThrdId());
-  peer_machine_id_ = src_machine_id;
+void CopyCommNetTaskNode::Init(ProcessId process_id, ProcessId peer_process_id) {
+  set_process_id(process_id);
+  set_stream_id(IdUtil::GetCommNetStreamId(process_id.node_index(), peer_process_id.node_index()));
+  peer_process_id_ = peer_process_id;
 }
 
 namespace {
@@ -119,16 +121,6 @@ void InsertLocalStreamId4Connection(int64_t this_machine_id, int64_t peer_machin
 }
 
 }  // namespace
-
-int64_t CopyCommNetTaskNode::AllocateLocalWorkStreamId() {
-  int64_t this_machine_id = machine_id();
-  int64_t local_work_stream_id = GetLocalStreamId4Connection(this_machine_id, peer_machine_id_);
-  if (local_work_stream_id == -1) {
-    InsertLocalStreamId4Connection(this_machine_id, peer_machine_id_);
-    local_work_stream_id = GetLocalStreamId4Connection(this_machine_id, peer_machine_id_);
-  }
-  return local_work_stream_id;
-}
 
 void CopyCommNetTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   mem_case->mutable_host_mem()->set_used_by_network(true);

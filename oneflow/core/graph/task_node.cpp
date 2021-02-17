@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
@@ -38,9 +40,12 @@ void ForEachDataEdge(const std::unordered_set<TaskEdge*>& edges,
 }  // namespace
 
 TaskNode::TaskNode()
-    : machine_id_(-1),
-      thrd_id_(-1),
-      task_id_(-1),
+    : process_id_(~uint32_t{0}),
+      stream_id_(~uint32_t{0}),
+      task_id_(~uint64_t{0}, ~uint64_t{0}),
+      is_process_id_set_(false),
+      is_stream_id_set_(false),
+      is_task_id_set_(false),
       area_id_(0),
       chain_id_(-1),
       order_in_graph_(-1) {}
@@ -66,21 +71,50 @@ std::shared_ptr<RegstDesc> TaskNode::GetSoleConsumedRegst(const std::string& nam
   return vec.front();
 }
 
+int64_t TaskNode::GpuPhyId() const {
+  CHECK(is_stream_id_set());
+  CHECK_EQ(stream_id_.stream_type(), StreamType::kCudaDevice);
+  return static_cast<int64_t>(stream_id_.device_index());
+}
+
+uint32_t TaskNode::GetCudaDeviceIndex() const {
+  CHECK(is_stream_id_set());
+  CHECK_EQ(stream_id_.stream_type(), StreamType::kCudaDevice);
+  return stream_id_.device_index();
+}
+
 DeviceType TaskNode::device_type() const {
-  return Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(thrd_id_);
+  CHECK(is_stream_id_set());
+  return stream_id_.device_type();
 }
 
-void TaskNode::set_machine_id(int64_t val) {
-  CHECK_EQ(machine_id_, -1);
-  machine_id_ = val;
-  if (thrd_id_ != -1) { UpdateTaskId(); }
+ProcessId TaskNode::process_id() const {
+  CHECK(is_process_id_set());
+  return process_id_;
 }
 
-void TaskNode::set_thrd_id(int64_t val) {
-  CHECK_EQ(thrd_id_, -1);
-  thrd_id_ = val;
-  CHECK_GE(thrd_id_, 0);
-  if (machine_id_ != -1) { UpdateTaskId(); }
+StreamId TaskNode::stream_id() const {
+  CHECK(is_stream_id_set());
+  return stream_id_;
+}
+
+TaskId TaskNode::task_id() const {
+  CHECK(is_task_id_set());
+  return task_id_;
+}
+
+void TaskNode::set_process_id(ProcessId id) {
+  CHECK(!is_process_id_set());
+  process_id_ = id;
+  is_process_id_set_ = true;
+  if (is_stream_id_set()) { UpdateTaskId(); }
+}
+
+void TaskNode::set_stream_id(StreamId id) {
+  CHECK(!is_stream_id_set());
+  stream_id_ = id;
+  is_stream_id_set_ = true;
+  if (is_process_id_set()) { UpdateTaskId(); }
 }
 
 void TaskNode::set_area_id(int64_t val) {
@@ -205,8 +239,8 @@ void TaskNode::UnbindBnWithEmptyRegst() {
 std::string TaskNode::VisualStr() const {
   std::stringstream ss;
   ss << TaskType_Name(GetTaskType()) << "\\n"
-     << machine_id_ << ":" << thrd_id_ << "\\n"
-     << task_id_;
+     << static_cast<uint32_t>(process_id_) << ":" << static_cast<uint32_t>(stream_id_) << "\\n"
+     << task_id_.task_index();
   return ss.str();
 }
 
@@ -215,9 +249,8 @@ bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_reg
 void TaskNode::ToProto(TaskProto* task_proto) {
   CHECK_NE(chain_id_, -1);
   task_proto->set_task_type(GetTaskType());
-  task_proto->set_machine_id(machine_id_);
-  task_proto->set_thrd_id(thrd_id_);
-  task_proto->set_task_id(task_id_);
+  task_proto->mutable_task_id()->set_low(task_id_.low());
+  task_proto->mutable_task_id()->set_high(task_id_.high());
   task_proto->set_job_id(GlobalJobDesc().job_id());
   task_proto->mutable_task_set_info()->set_area_id(area_id_);
   task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
@@ -239,13 +272,16 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   }
 }
 
-int64_t TaskNode::MemZoneId121() const {
-  const IDMgr* id_mgr = Global<IDMgr>::Get();
+MemZoneId TaskNode::MemZoneId121() const {
   if (device_type() == DeviceType::kCPU) {
-    return id_mgr->CpuMemZoneId();
+    return IdUtil::GetCpuMemZoneId();
+  } else if (device_type() == DeviceType::kGPU) {
+    CHECK(is_stream_id_set());
+    return IdUtil::GetDeviceMemZoneId(DeviceType::kGPU, stream_id_.device_index());
   } else {
-    return id_mgr->GpuMemZoneId(id_mgr->GetGpuPhyIdFromThrdId(thrd_id_));
+    UNIMPLEMENTED();
   }
+  return MemZoneId(0);
 }
 
 void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
@@ -319,8 +355,8 @@ void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   if (device_type() == DeviceType::kCPU) {
     mem_case->mutable_host_mem();
   } else if (device_type() == DeviceType::kGPU) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(
-        Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_));
+    CHECK(is_stream_id_set());
+    mem_case->mutable_device_cuda_mem()->set_device_id(stream_id_.device_index());
   } else {
     UNIMPLEMENTED();
   }
@@ -382,26 +418,16 @@ void TaskNode::FixRegisterNumRange() {
   }
 }
 
-int64_t TaskNode::AllocateLocalWorkStreamId() {
-  CHECK_NE(machine_id_, -1);
-  CHECK_NE(thrd_id_, -1);
-  return 0;
-}
-
 void TaskNode::UpdateTaskId() {
-  CHECK_NE(machine_id_, -1);
-  CHECK_NE(thrd_id_, -1);
-  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_, AllocateLocalWorkStreamId());
-}
-
-int64_t TaskNode::LocalWorkStreamId() const {
-  CHECK_NE(task_id_, -1);
-  return Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task_id_);
+  CHECK(is_process_id_set());
+  CHECK(is_stream_id_set());
+  task_id_ = Global<IdUtil>::Get()->GenerateTaskId(process_id_, stream_id_);
+  is_task_id_set_ = true;
 }
 
 int64_t TaskNode::GlobalWorkStreamId() const {
-  CHECK_NE(task_id_, -1);
-  return Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task_id_);
+  CHECK(is_task_id_set());
+  return static_cast<int64_t>(task_id_.global_stream_index());
 }
 
 void TaskNode::EraseConsumedRegstsByName(const std::string& name) {
