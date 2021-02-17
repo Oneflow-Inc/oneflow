@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/register/register.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
@@ -38,15 +39,16 @@ class ActorMsg final {
   ~ActorMsg() = default;
 
   // Build Msg
-  static ActorMsg BuildRegstMsgToConsumer(int64_t producer, int64_t consumer, Regst*);
-  static ActorMsg BuildRegstMsgToProducer(int64_t consumer, int64_t producer, Regst*);
-  static ActorMsg BuildEordMsg(int64_t consumer, int64_t regst_desc_id);
-  static ActorMsg BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd);
+  static ActorMsg BuildRegstMsgToConsumer(TaskId producer, TaskId consumer, Regst*);
+  static ActorMsg BuildRegstMsgToProducer(TaskId consumer, TaskId producer, Regst*);
+  static ActorMsg BuildEordMsg(TaskId consumer, int64_t regst_desc_id);
+  static ActorMsg BuildCommandMsg(TaskId dst_actor_id, ActorCmd cmd);
 
   // Getters
   int64_t SrcMachineId() const;
-  int64_t src_actor_id() const { return src_actor_id_; }
-  int64_t dst_actor_id() const { return dst_actor_id_; }
+  ProcessId SrcProcessId() const;
+  TaskId src_actor_id() const { return src_actor_id_; }
+  TaskId dst_actor_id() const { return dst_actor_id_; }
   ActorMsgType msg_type() const { return msg_type_; }
   ActorCmd actor_cmd() const;
   Regst* regst() const;
@@ -75,8 +77,8 @@ class ActorMsg final {
     bool has_sole_empty_tensor_in_sole_tensor_list;
   };
 
-  int64_t src_actor_id_;
-  int64_t dst_actor_id_;
+  TaskId src_actor_id_;
+  TaskId dst_actor_id_;
   ActorMsgType msg_type_;
   union {
     ActorCmd actor_cmd_;

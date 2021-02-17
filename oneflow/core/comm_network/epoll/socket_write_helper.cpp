@@ -129,7 +129,7 @@ void SocketWriteHelper::SetStatusWhenRequestWriteMsgHeadDone() {
 }
 
 void SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone() {
-  const void* src_token = cur_msg_.request_read_msg.src_token;
+  const void* src_token = cur_msg_.msg.request_read_msg.src_token;
   auto src_mem_desc = static_cast<const SocketMemDesc*>(src_token);
   write_ptr_ = reinterpret_cast<const char*>(src_mem_desc->mem_ptr);
   write_size_ = src_mem_desc->byte_size;

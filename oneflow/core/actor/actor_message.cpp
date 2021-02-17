@@ -37,15 +37,13 @@ bool IsSoleBlobAndDynamicEmpty(Regst* regst) {
 
 }  // namespace
 
-ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
-                                           Regst* regst_raw_ptr) {
+ActorMsg ActorMsg::BuildRegstMsgToConsumer(TaskId producer, TaskId consumer, Regst* regst_raw_ptr) {
   ActorMsg msg;
   msg.src_actor_id_ = producer;
   msg.dst_actor_id_ = consumer;
   msg.msg_type_ = ActorMsgType::kRegstMsg;
   msg.regst_wrapper_.regst = regst_raw_ptr;
-  if (Global<IDMgr>::Get()->MachineId4ActorId(consumer)
-      == Global<MachineCtx>::Get()->this_machine_id()) {
+  if (consumer.process_id().node_index() == Global<MachineCtx>::Get()->this_machine_id()) {
     msg.regst_wrapper_.comm_net_token = nullptr;
   } else {
     msg.regst_wrapper_.comm_net_token = regst_raw_ptr->comm_net_token();
@@ -56,8 +54,7 @@ ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
   return msg;
 }
 
-ActorMsg ActorMsg::BuildRegstMsgToProducer(int64_t consumer, int64_t producer,
-                                           Regst* regst_raw_ptr) {
+ActorMsg ActorMsg::BuildRegstMsgToProducer(TaskId consumer, TaskId producer, Regst* regst_raw_ptr) {
   ActorMsg msg;
   msg.src_actor_id_ = consumer;
   msg.dst_actor_id_ = producer;
@@ -69,27 +66,27 @@ ActorMsg ActorMsg::BuildRegstMsgToProducer(int64_t consumer, int64_t producer,
   return msg;
 }
 
-ActorMsg ActorMsg::BuildEordMsg(int64_t consumer, int64_t regst_desc_id) {
+ActorMsg ActorMsg::BuildEordMsg(TaskId consumer, int64_t regst_desc_id) {
   ActorMsg msg;
-  msg.src_actor_id_ = -1;
+  msg.src_actor_id_ = TaskId();
   msg.dst_actor_id_ = consumer;
   msg.msg_type_ = ActorMsgType::kEordMsg;
   msg.eord_regst_desc_id_ = regst_desc_id;
   return msg;
 }
 
-ActorMsg ActorMsg::BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd) {
+ActorMsg ActorMsg::BuildCommandMsg(TaskId dst_actor_id, ActorCmd cmd) {
   ActorMsg msg;
-  msg.src_actor_id_ = -1;
+  msg.src_actor_id_ = TaskId();
   msg.dst_actor_id_ = dst_actor_id;
   msg.msg_type_ = ActorMsgType::kCmdMsg;
   msg.actor_cmd_ = cmd;
   return msg;
 }
 
-int64_t ActorMsg::SrcMachineId() const {
-  return Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_);
-}
+int64_t ActorMsg::SrcMachineId() const { return static_cast<int64_t>(SrcProcessId().node_index()); }
+
+ProcessId ActorMsg::SrcProcessId() const { return src_actor_id_.process_id(); }
 
 ActorCmd ActorMsg::actor_cmd() const {
   CHECK_EQ(msg_type_, ActorMsgType::kCmdMsg);
@@ -103,8 +100,7 @@ Regst* ActorMsg::regst() const {
 
 int64_t ActorMsg::regst_desc_id() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
-  if (Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_)
-      == Global<MachineCtx>::Get()->this_machine_id()) {
+  if (src_actor_id_.process_id().node_index() == Global<MachineCtx>::Get()->this_machine_id()) {
     return regst_wrapper_.regst->regst_desc_id();
   } else {
     return regst_wrapper_.regst_status.regst_desc_id;
