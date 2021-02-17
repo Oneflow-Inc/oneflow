@@ -189,6 +189,12 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   std::shared_ptr<const ParallelDesc> src_pd = src_node->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst_node->parallel_desc();
   if (src_node->op_vec().size() == 1 && dst_node->op_vec().size() == 1) {
+    if (src_node->SoleOp()->op_conf().has_wait_and_send_ids_conf()
+        && dst_node->SoleOp()->op_conf().has_reentrant_lock_conf()) {
+      CHECK_EQ(src_pd->parallel_num(), 1);
+      CHECK_EQ(dst_pd->parallel_num(), 1);
+      return &TaskGraph::BldSubTskGphByBoxing;
+    }
     if (src_node->SoleOp()->op_conf().has_record_load_conf()
         && dst_node->SoleOp()->op_conf().has_tick_conf()) {
       CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
