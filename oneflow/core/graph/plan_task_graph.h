@@ -37,7 +37,7 @@ class PlanTaskNode final : public Node<PlanTaskNode, PlanTaskEdge> {
   ~PlanTaskNode() = default;
 
   const TaskProto* task_proto() const { return task_proto_; }
-  int64_t task_id() const { return task_proto_->task_id(); }
+  TaskId task_id() const { return TaskId(task_proto_->task_id()); }
   int64_t area_id() const { return task_proto_->task_set_info().area_id(); }
   int64_t chain_id() const;
   int64_t order_in_graph() const { return task_proto_->task_set_info().order_in_graph(); }
@@ -53,10 +53,10 @@ class PlanTaskGraph final : public Graph<const PlanTaskNode, PlanTaskEdge> {
   ~PlanTaskGraph() = default;
 
   void ComputeLifetimeSameChainActorIds(const RegstDescProto* regst_desc,
-                                        HashSet<int64_t>* lifetime_same_chain_actor_ids) const;
-  bool IsReachable(int64_t src_task_id, int64_t dst_task_id) const;
+                                        HashSet<TaskId>* lifetime_same_chain_actor_ids) const;
+  bool IsReachable(TaskId src_task_id, TaskId dst_task_id) const;
 
-  const TaskProto* TaskProto4TaskId(int64_t task_id) const;
+  const TaskProto* TaskProto4TaskId(TaskId task_id) const;
   const Plan& plan() const { return *plan_; }
 
  private:
@@ -67,7 +67,7 @@ class PlanTaskGraph final : public Graph<const PlanTaskNode, PlanTaskEdge> {
   bool IsReachableToAncestor(const PlanTaskNode* node, const PlanTaskNode* ancestor) const;
 
   const Plan* plan_;
-  HashMap<int64_t, PlanTaskNode*> task_id2plan_task_node_;
+  HashMap<TaskId, PlanTaskNode*> task_id2plan_task_node_;
   HashMap<const PlanTaskNode*, HashSet<const PlanTaskNode*>> node2ancestors_;
   HashMap<int64_t, std::vector<const PlanTaskNode*>> chain_id2sorted_plan_task_nodes_;
 };

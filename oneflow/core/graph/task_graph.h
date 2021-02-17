@@ -61,16 +61,13 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
                               const std::function<void(TaskNode* node)>& Handler) const;
 
-  void BuildTaskPath(
-      CompTaskNode* src, CompTaskNode* dst,
-      std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
-          MutBufTask,
-      bool use_buf_task_node);
+  void BuildTaskPath(CompTaskNode* src, CompTaskNode* dst,
+                     std::function<TaskNode**(CompTaskNode*, ProcessId, MemZoneId)> MutBufTask,
+                     bool use_buf_task_node);
   TaskNode* BuildTaskStep(
-      TaskNode* cur_node, TaskNode* dst,
-      const std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)>& GetBufTask,
-      const std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)>&
-          SetBufTask,
+      TaskNode* cur_node, TaskNode* dst_node,
+      const std::function<TaskNode*(ProcessId, MemZoneId)>& GetBufTask,
+      const std::function<TaskNode*(ProcessId, MemZoneId, TaskNode*)>& SetBufTask,
       bool use_buf_task_node);
   TaskNode* TryAddCopyH2DTaskTo(TaskNode*);
   TaskNode* AddCopyD2HTaskFrom(TaskNode*);
@@ -89,7 +86,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void BuildCtrlRegstDescInSameChain();
 
   void GenerateIndependentThrdId(
-      const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);
+      const std::vector<std::pair<ProcessId, CompTaskNode*>>& persistence_nodes);
 
   // inplace
   void GetInplaceOpBlobArgList(

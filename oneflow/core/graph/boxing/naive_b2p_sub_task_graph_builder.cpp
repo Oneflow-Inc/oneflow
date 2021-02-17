@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/naive_b2p_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing_zeros_task_node.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
@@ -53,21 +54,23 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         sorted_out_tasks->push_back(proxy);
       } else {
         const int64_t out_machine_id = CHECK_JUST(out_parallel_desc.MachineId4ParallelId(out_id));
-        const int64_t out_dev_phy_id = CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(out_id));
-        int64_t thrd_id;
+        uint32_t device_index =
+            static_cast<uint32_t>(CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(out_id)));
+        ProcessId process_id(static_cast<uint32_t>(out_machine_id), 0);
+        StreamId stream_id(0);
         if (out_parallel_desc.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-          thrd_id = Global<IDMgr>::Get()->GetGpuComputeThrdId(out_dev_phy_id);
+          stream_id = IdUtil::GetDeviceComputeStreamId(DeviceType::kGPU, device_index);
 #else
           UNIMPLEMENTED();
 #endif
         } else if (out_parallel_desc.device_type() == DeviceType::kCPU) {
-          thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(out_machine_id);
+          stream_id = Global<IdUtil>::Get()->GenerateCPUDeviceStreamIdEvenly(process_id);
         } else {
           UNIMPLEMENTED();
         }
         auto* zeros_node = ctx->task_graph()->NewNode<BoxingZerosTaskNode>();
-        zeros_node->Init(out_machine_id, thrd_id, NewAreaId(), lbi, logical_blob_desc.shape(),
+        zeros_node->Init(process_id, stream_id, NewAreaId(), lbi, logical_blob_desc.shape(),
                          logical_blob_desc.data_type(), time_shape);
         nearest_in_node->BuildCtrlRegstDesc(zeros_node);
         Connect<TaskNode>(nearest_in_node, ctx->task_graph()->NewEdge(), zeros_node);

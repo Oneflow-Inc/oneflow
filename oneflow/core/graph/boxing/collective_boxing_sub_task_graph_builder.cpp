@@ -64,7 +64,7 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
   const int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
   ProcessId process_id(static_cast<uint32_t>(machine_id), 0);
-  StreamId stream_id = Global<IDMgr>::Get()->GetNcclStreamId(static_cast<uint32_t>(device_id));
+  StreamId stream_id = IdUtil::GetNcclStreamId(static_cast<uint32_t>(device_id));
   node->Init(process_id, stream_id, NewAreaId(), op_conf);
 }
 
@@ -276,9 +276,10 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
         TaskNode* in_node = sorted_in_tasks.at(nearest_in_parallel_id);
         SliceBoxingTaskNode* slice_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
         // slice on cpu
-        const auto in_machine_id = CHECK_JUST(in_parallel_desc.MachineId4ParallelId(0));
-        slice_node->Init(lbi, out_slice, kSliceBoxingTaskModeCopy, in_machine_id,
-                         Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id));
+        int64_t in_machine_id = CHECK_JUST(in_parallel_desc.MachineId4ParallelId(0));
+        ProcessId in_process_id(static_cast<uint32_t>(in_machine_id), 0);
+        slice_node->Init(lbi, out_slice, kSliceBoxingTaskModeCopy, in_process_id,
+                         Global<IdUtil>::Get()->GenerateCPUDeviceStreamIdEvenly(in_process_id));
         slice_node->ConnectToSrcNodeWithSlice(in_node, ctx->task_graph()->NewEdge(), in_slice);
         // copy to dst gpu
         TaskNode* slice_node_proxy =
@@ -386,8 +387,8 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         const int64_t machine_id = CHECK_JUST(in_parallel_desc.MachineId4ParallelId(i));
         ProcessId process_id(static_cast<uint32_t>(machine_id), 0);
         const int64_t device_id = CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(i));
-        StreamId stream_id = Global<IDMgr>::Get()->GetDeviceComputeStreamId(
-            DeviceType::kGPU, static_cast<uint32_t>(device_id));
+        StreamId stream_id =
+            IdUtil::GetDeviceComputeStreamId(DeviceType::kGPU, static_cast<uint32_t>(device_id));
         TaskNode* in_node = sorted_in_tasks.at(i);
         CollectiveBoxingPackTaskNode* pack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();

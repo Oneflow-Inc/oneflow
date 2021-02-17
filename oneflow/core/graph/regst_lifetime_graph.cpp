@@ -19,7 +19,7 @@ namespace oneflow {
 
 RegstLifetimeGraph::RegstLifetimeGraph(
     const std::vector<const RegstDescProto*>& regst_descs,
-    const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>& ComputeLifetimeActorIds) {
+    const std::function<void(const RegstDescProto*, HashSet<TaskId>*)>& ComputeLifetimeActorIds) {
   std::vector<RegstLifetimeNode*> nodes;
   InitNodes(regst_descs, ComputeLifetimeActorIds, &nodes);
   InitEdges(nodes);
@@ -27,10 +27,10 @@ RegstLifetimeGraph::RegstLifetimeGraph(
 
 void RegstLifetimeGraph::InitNodes(
     const std::vector<const RegstDescProto*>& regst_descs,
-    const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>& ComputeLifetimeActorIds,
+    const std::function<void(const RegstDescProto*, HashSet<TaskId>*)>& ComputeLifetimeActorIds,
     std::vector<RegstLifetimeNode*>* nodes) {
   for (const RegstDescProto* regst_desc : regst_descs) {
-    auto lifetime_actor_ids = std::make_unique<HashSet<int64_t>>();
+    auto lifetime_actor_ids = std::make_unique<HashSet<TaskId>>();
     ComputeLifetimeActorIds(regst_desc, lifetime_actor_ids.get());
     auto* node = new RegstLifetimeNode(regst_desc, std::move(lifetime_actor_ids));
     AddAllocatedNode(node);
@@ -39,9 +39,9 @@ void RegstLifetimeGraph::InitNodes(
 }
 
 void RegstLifetimeGraph::InitEdges(const std::vector<RegstLifetimeNode*>& nodes) {
-  HashMap<int64_t, HashSet<RegstLifetimeNode*>> task_id2intersected_nodes;
+  HashMap<TaskId, HashSet<RegstLifetimeNode*>> task_id2intersected_nodes;
   for (RegstLifetimeNode* node : nodes) {
-    for (int64_t task_id : node->lifetime_actor_ids()) {
+    for (const TaskId& task_id : node->lifetime_actor_ids()) {
       task_id2intersected_nodes[task_id].insert(node);
     }
   }

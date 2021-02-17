@@ -27,7 +27,7 @@ void PlanToPhysicalGraphFile(const Plan& plan) {
   GraphDef physical_graph;
   physical_graph.set_version(3);  // "compute graph version number = 3"
   HashMap<int64_t, std::string> regst_desc_id2produce_op_name;
-  HashMap<int64_t, std::string> task_id2op_name;
+  HashMap<TaskId, std::string> task_id2op_name;
   HashSet<int64_t> ctrl_regst_desc_id_set;
   for (const TaskProto& task : plan.task()) {
     std::string op_name = "";
@@ -36,7 +36,7 @@ void PlanToPhysicalGraphFile(const Plan& plan) {
       op_name += (exec_node.kernel_conf().op_attribute().op_conf().name());
     }
     if (op_name == "") { continue; }
-    task_id2op_name.insert({task.task_id(), op_name});
+    task_id2op_name.emplace(task.task_id(), op_name);
     for (const auto& pair : task.produced_regst_desc()) {
       const RegstDescProto& regst = pair.second;
       int64_t regst_desc_id = regst.regst_desc_id();
@@ -53,7 +53,7 @@ void PlanToPhysicalGraphFile(const Plan& plan) {
     node->set_name(task_id2op_name.at(task.task_id()));
     const OperatorConf& op_conf =
         task.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf();
-    DeviceType device_type = Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task.thrd_id());
+    DeviceType device_type = TaskId{task.task_id()}.stream_id().device_type();
     if (device_type == DeviceType::kGPU) {
       node->set_device("gpu");
     } else if (device_type == DeviceType::kCPU) {
