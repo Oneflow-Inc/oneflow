@@ -80,8 +80,8 @@ void CopyCommNetActor::Act() {
   // readable
   auto readable_it = piece_id2regst_ctx_.find(next_piece_id_);
   void* readable_token = readable_it->second.comm_net_token;
-  int64_t src_actor_id = readable_it->second.producer;
-  int64_t src_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id);
+  TaskId src_actor_id = readable_it->second.producer;
+  int64_t src_machine_id = src_actor_id.process_id().node_index();
   // writeable
   Regst* writeable_regst = GetNaiveCurWriteable("copy_out");
   if (readable_it->second.has_sole_empty_tensor_in_sole_tensor_list) {

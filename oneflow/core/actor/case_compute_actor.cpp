@@ -118,7 +118,7 @@ void CaseCompActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
   if (case_status_.cmd != kCaseCmdHandleOutput) { return; }
   const int64_t regst_desc_id = out_bn_id2regst_desc_id_.at(case_status_.cur_selected_id);
   Regst* const regst = regst_desc_id2produced_rs_.at(regst_desc_id).Front(regst_desc_id);
-  CHECK_GT(HandleRegstToConsumer(regst, [](int64_t) { return true; }), 0);
+  CHECK_GT(HandleRegstToConsumer(regst, [](TaskId) { return true; }), 0);
   regst_desc_id2produced_rs_.at(regst_desc_id).PopFrontRegsts({regst_desc_id});
 }
 
