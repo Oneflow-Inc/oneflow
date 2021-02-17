@@ -16,12 +16,16 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_ID_MANAGER_H_
 #define ONEFLOW_CORE_JOB_ID_MANAGER_H_
 
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/job/task_id.pb.h"
 #include <bitset>
+#include <cstdint>
+#include <functional>
 
 namespace oneflow {
 
@@ -36,12 +40,16 @@ class ProcessId {
   static const int kLeftPartBits = 20;
   static const int kRightPartBits = 12;
 
+  ProcessId() : val_(0) {}
   explicit ProcessId(uint32_t val) : val_(val) {}
   ProcessId(uint32_t node_index, uint32_t process_index);
-  operator uint32_t() const { return val_; }
-  operator uint64_t() const { return static_cast<uint64_t>(val_); }
+  ProcessId(const ProcessId& other) { val_ = other.val_; }
   uint32_t node_index() const;
   uint32_t process_index() const;
+  operator uint32_t() const { return val_; }
+  operator uint64_t() const { return static_cast<uint64_t>(val_); }
+  bool operator==(const ProcessId& rhs) const { return val_ == rhs.val_; }
+  bool operator!=(const ProcessId& rhs) const { return !(*this == rhs); }
 
  private:
   uint32_t val_;
@@ -79,14 +87,17 @@ class StreamId {
   static const int kRightPartBits = 10;
   static const int kMiddleRightPartBits = kMiddlePartBits + kRightPartBits;
 
+  StreamId() : val_(0) {}
   explicit StreamId(uint32_t val) : val_(val) {}
-  operator uint32_t() const { return val_; }
-  operator uint64_t() const { return static_cast<uint64_t>(val_); }
   StreamType stream_type() const;
   DeviceType device_type() const;
   uint32_t device_index() const;
   uint32_t stream_index() const;
   TaskType task_type() const;
+  operator uint32_t() const { return val_; }
+  operator uint64_t() const { return static_cast<uint64_t>(val_); }
+  bool operator==(const StreamId& rhs) const { return val_ == rhs.val_; }
+  bool operator!=(const StreamId& rhs) const { return !(*this == rhs); }
 
  private:
   uint32_t val_;
@@ -100,50 +111,110 @@ class StreamId {
 
 class TaskId {
  public:
-  
   static const int kBits = 128;
-  static const int kTaskIndexBits = 32;
+  static const int kQuarterBits = kBits / 4;
   using bits_t = std::bitset<kBits>;
 
-  TaskId(uint64_t high, uint64_t low);
+  TaskId() : low_(0), high_(0) {}
+  explicit TaskId(uint64_t low, uint64_t high) : low_(low), high_(high) {}
+  TaskId(const TaskIdProto& task_id) : TaskId(task_id.low(), task_id.high()) {}
   TaskId(ProcessId process_id, StreamId stream_id, uint32_t task_index);
-  ProcessId process_id() const;
-  StreamId stream_id() const;
-  uint32_t task_index() const;
-  uint64_t high() const;
-  uint64_t low() const;
+  ProcessId process_id() const { return ProcessId(static_cast<uint32_t>(high_)); }
+  StreamId stream_id() const { return StreamId(static_cast<uint32_t>(low_ >> kQuarterBits)); }
+  uint64_t global_stream_index() const { return (low_ >> kQuarterBits) | high_; }
+  uint32_t task_index() const { return ProcessId(static_cast<uint32_t>(low_)); }
+  uint64_t high() const { return high_; }
+  uint64_t low() const { return low_; }
+  bool operator==(const TaskId& rhs) const { return low_ == rhs.low_ && high_ == rhs.high_; }
+  bool operator!=(const TaskId& rhs) const { return !(*this == rhs); }
 
  private:
-  bits_t bits_;
+  uint64_t low_;
+  uint64_t high_;
+};
+
+// MemZoneId encode
+// | -------------- 32 bit --------------- |
+// | ---- 12 ---- | -- 8 -- | ---- 12 ---- |
+// | device_type  | usage   | device_index |
+
+class MemZoneId {
+ public:
+  static const int kUsageNormal = 0;
+  static const int kUsagePinnedByCuda = 1;
+  static const int kUsagePinnedByNetwork = 2;
+  static const int kBits = 32;
+
+  MemZoneId() : val_(0) {}
+  explicit MemZoneId(uint32_t val) : val_(val) {}
+  DeviceType device_type() const;
+  uint32_t device_index() const;
+  operator uint32_t() const { return val_; }
+  bool operator==(const MemZoneId& rhs) const { return val_ == rhs.val_; }
+  bool operator!=(const MemZoneId& rhs) const { return !(*this == rhs); }
+
+ private:
+  uint32_t val_;
+};
+
+// GlobalMemZoneId encode
+// | ------- 64 bit -------- |
+// | --- 32 --- | --- 32 --- |
+// | ProcessId  | MemZoneId  |
+
+class GlobalMemZoneId {};
+
+class IdUtil {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(IdUtil);
+
+  // StreamId & TaskId
+  // Non-cpu device stream id
+  static StreamId GetDeviceComputeStreamId(DeviceType device_type, uint32_t device_index);
+  static StreamId GetDeviceH2DStreamId(DeviceType device_type, uint32_t device_index);
+  static StreamId GetDeviceD2HStreamId(DeviceType device_type, uint32_t device_index);
+  static StreamId GetDeviceMixStreamId(DeviceType device_type, uint32_t device_index);
+  static StreamId GetNcclStreamId(uint32_t device_index);
+  static StreamId GetCudaDecodeH2DStreamId(uint32_t device_index);
+  // CPU device compute stream
+  static StreamId GetCPUDeviceStreamId(uint32_t device_index);
+  // CommNet
+  static StreamId GetCommNetStreamId(uint32_t this_node_index, uint32_t peer_node_index);
+  // TickTock
+  static StreamId GetTickTockStreamId();
+  // Independent
+  StreamId GenerateProcessTaskIndependentStreamId(ProcessId process_id, TaskType task_type);
+  // pick cpu stream id evenly
+  StreamId GenerateCPUDeviceStreamIdEvenly(ProcessId process_id);
+  // Task
+  TaskId GenerateTaskId(ProcessId process_id, StreamId stream_id);
+
+  // ProcessId
+  static bool IsProcessIdSameNode(ProcessId lhs, ProcessId rhs);
+
+  // MemZoneId
+  static MemZoneId GetCpuMemZoneId();
+  static bool IsCpuMemZoneId(MemZoneId mem_zone_id);
+  static MemZoneId GetDeviceMemZoneId(DeviceType device_type, uint32_t device_index);
+  static bool IsCudaMemZoneId(MemZoneId mem_zone_id);
+  static bool IsMemZoneIdSameDevice(MemZoneId lhs, MemZoneId rhs);
+  static bool IsMemZoneIdNormalUsage(MemZoneId mem_zone_id);
+
+ private:
+  // cfg
+  uint32_t cpu_device_num_;
+  // independent generator state: map of task_type to task_num
+  HashMap<std::pair<ProcessId, TaskType>, uint32_t> process_independent_task_type2task_num_;
+  // task id generator state: map of process_stream to task_num
+  HashMap<uint64_t, uint32_t> process_stream2task_num_;
+  // cpu device stream_id generator state: map of process_id to cpu device index
+  HashMap<ProcessId, uint32_t, std::hash<uint32_t>> process_id2cpu_device_index_;
 };
 
 class IDMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IDMgr);
   ~IDMgr() = default;
-
-  // device work type stream (cuda as demonstration)
-  StreamId GetDeviceComputeStreamId(DeviceType device_type, uint32_t device_index) const;
-  StreamId GetDeviceH2DStreamId(DeviceType device_type, uint32_t device_index) const;
-  StreamId GetDeviceD2HStreamId(DeviceType device_type, uint32_t device_index) const;
-  StreamId GetDeviceMixStreamId(DeviceType device_type, uint32_t device_index) const;
-  StreamId GetNcclStreamId(uint32_t device_index) const;
-  StreamId GetCudaDecodeH2DStreamId(uint32_t device_index) const;
-
-  // CPU device compute stream
-  StreamId GetCPUDeviceStreamId(uint32_t device_index) const;
-
-  // CommNet
-  StreamId GetCommNetStreamId(uint32_t this_node_index, uint32_t peer_node_index) const;
-
-  // TickTock
-  StreamId GetTickTockStreamId() const;
-
-  // Independent
-  StreamId GenerateIndependentStreamId(TaskType task_type);
-
-  // Task
-  TaskId GenerateTaskId(ProcessId process_id, StreamId stream_id);
 
   // Get ThrdId, TaskId, RegstDescId
   int64_t GetGpuComputeThrdId(int64_t dev_phy_id) const { return dev_phy_id; }
@@ -225,13 +296,42 @@ class IDMgr final {
   static const int64_t thread_id_bit_num_ = 11;
   static const int64_t local_work_stream_id_bit_num_ = 21;
   static const int64_t task_id_bit_num_ = 21;
-
-  // independent generator state: map of task_type to task_num
-  HashMap<TaskType, size_t, std::hash<int32_t>> independent_task_type2task_num_;
-  // task id generator state: map of process_stream to task_num
-  HashMap<uint64_t, uint32_t> process_stream2task_num_;
 };
 
 }  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::ProcessId> {
+  size_t operator()(const oneflow::ProcessId& process_id) const {
+    return std::hash<uint32_t>{}(static_cast<uint32_t>(process_id));
+  }
+};
+
+template<>
+struct hash<oneflow::StreamId> {
+  size_t operator()(const oneflow::StreamId& stream_id) const {
+    return std::hash<uint32_t>{}(static_cast<uint32_t>(stream_id));
+  }
+};
+
+template<>
+struct hash<oneflow::MemZoneId> {
+  size_t operator()(const oneflow::MemZoneId& mem_zone_id) const {
+    return std::hash<uint32_t>{}(static_cast<uint32_t>(mem_zone_id));
+  }
+};
+
+template<>
+struct hash<oneflow::TaskId> {
+  size_t operator()(const oneflow::TaskId& task_id) const {
+    auto high = std::hash<uint64_t>{}(task_id.high());
+    auto low = std::hash<uint64_t>{}(task_id.low());
+    return high ^ low;
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_JOB_ID_MANAGER_H_

@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/graph/task_node.h"
+#include <cstdint>
 #include <limits>
 
 namespace oneflow {
@@ -42,6 +43,9 @@ bool CheckValueInBitsRange(T val, int bits) {
 
 // ProcessId methods
 ProcessId::ProcessId(uint32_t node_index, uint32_t process_index) {
+  CHECK(CheckValueInBitsRange(node_index, StreamId::kLeftPartBits)) << "node_index is out of range";
+  CHECK(CheckValueInBitsRange(process_index, StreamId::kRightPartBits))
+      << "process_index is out of range";
   val_ = (node_index << kRightPartBits) | process_index;
 }
 
@@ -97,53 +101,23 @@ TaskType StreamId::task_type() const {
 }
 
 // TaskId methods
-TaskId::TaskId(uint64_t high, uint64_t low) {
-  bits_.reset();
-  bits_ |= bits_t(high) << 64;
-  bits_ |= bits_t(low);
-}
-
 TaskId::TaskId(ProcessId process_id, StreamId stream_id, uint32_t task_index) {
-  bits_.reset();
-  bits_ |= bits_t(static_cast<uint32_t>(process_id)) << (StreamId::kBits + kTaskIndexBits);
-  bits_ |= bits_t(static_cast<uint32_t>(stream_id)) << kTaskIndexBits;
-  bits_ |= bits_t(task_index);
+  low_ = 0;
+  low_ |= static_cast<uint64_t>(stream_id) << kQuarterBits;
+  low_ |= static_cast<uint64_t>(task_index);
+  high_ = 0;
+  high_ |= static_cast<uint64_t>(process_id);
 }
 
-ProcessId TaskId::process_id() const {
-  bits_t id = bits_ >> (StreamId::kBits + kTaskIndexBits);
-  return ProcessId(id.to_ulong());
-}
-
-StreamId TaskId::stream_id() const {
-  bits_t id = (bits_ << ProcessId::kBits) >> (StreamId::kBits + kTaskIndexBits);
-  return StreamId(id.to_ulong());
-}
-
-uint32_t TaskId::task_index() const {
-  bits_t id =
-      (bits_ << (ProcessId::kBits + StreamId::kBits)) >> (ProcessId::kBits + StreamId::kBits);
-  return id.to_ulong();
-}
-
-uint64_t TaskId::high() const {
-  bits_t high_bits = bits_ << (kBits / 2);
-  return high_bits.to_ullong();
-}
-
-uint64_t TaskId::low() const {
-  return bits_.to_ullong();
-}
-
-// IDMgr methods
-StreamId IDMgr::GetDeviceComputeStreamId(DeviceType device_type, uint32_t device_index) const {
+// IDUtil methods
+StreamId IdUtil::GetDeviceComputeStreamId(DeviceType device_type, uint32_t device_index) {
   StreamType stream_type = DeviceType2StreamType(device_type);
   uint32_t id = (static_cast<uint32_t>(stream_type) << StreamId::kMiddleRightPartBits)
                 | (device_index << StreamId::kRightPartBits);
   return StreamId(id);
 }
 
-StreamId IDMgr::GetDeviceH2DStreamId(DeviceType device_type, uint32_t device_index) const {
+StreamId IdUtil::GetDeviceH2DStreamId(DeviceType device_type, uint32_t device_index) {
   StreamType stream_type = DeviceType2StreamType(device_type);
   uint32_t id = ((static_cast<uint32_t>(stream_type) << StreamId::kMiddleRightPartBits)
                  | (device_index << StreamId::kRightPartBits))
@@ -151,7 +125,7 @@ StreamId IDMgr::GetDeviceH2DStreamId(DeviceType device_type, uint32_t device_ind
   return StreamId(id);
 }
 
-StreamId IDMgr::GetDeviceD2HStreamId(DeviceType device_type, uint32_t device_index) const {
+StreamId IdUtil::GetDeviceD2HStreamId(DeviceType device_type, uint32_t device_index) {
   StreamType stream_type = DeviceType2StreamType(device_type);
   uint32_t id = ((static_cast<uint32_t>(stream_type) << StreamId::kMiddleRightPartBits)
                  | (device_index << StreamId::kRightPartBits))
@@ -159,7 +133,7 @@ StreamId IDMgr::GetDeviceD2HStreamId(DeviceType device_type, uint32_t device_ind
   return StreamId(id);
 }
 
-StreamId IDMgr::GetDeviceMixStreamId(DeviceType device_type, uint32_t device_index) const {
+StreamId IdUtil::GetDeviceMixStreamId(DeviceType device_type, uint32_t device_index) {
   StreamType stream_type = DeviceType2StreamType(device_type);
   uint32_t id = ((static_cast<uint32_t>(stream_type) << StreamId::kMiddleRightPartBits)
                  | (device_index << StreamId::kRightPartBits))
@@ -167,27 +141,27 @@ StreamId IDMgr::GetDeviceMixStreamId(DeviceType device_type, uint32_t device_ind
   return StreamId(id);
 }
 
-StreamId IDMgr::GetNcclStreamId(uint32_t device_index) const {
+StreamId IdUtil::GetNcclStreamId(uint32_t device_index) {
   uint32_t id = ((static_cast<uint32_t>(StreamType::kCudaDevice) << StreamId::kMiddleRightPartBits)
                  | (device_index << StreamId::kRightPartBits))
                 + 4;
   return StreamId(id);
 }
 
-StreamId IDMgr::GetCudaDecodeH2DStreamId(uint32_t device_index) const {
+StreamId IdUtil::GetCudaDecodeH2DStreamId(uint32_t device_index) {
   int32_t id = ((static_cast<int32_t>(StreamType::kCudaDevice) << StreamId::kMiddleRightPartBits)
                 | (device_index << StreamId::kRightPartBits))
                + 5;
   return StreamId(id);
 }
 
-StreamId IDMgr::GetCPUDeviceStreamId(uint32_t device_index) const {
+StreamId IdUtil::GetCPUDeviceStreamId(uint32_t device_index) {
   uint32_t id = (static_cast<uint32_t>(StreamType::kCPUDevice) << StreamId::kMiddleRightPartBits)
                 | (device_index << StreamId::kRightPartBits);
   return StreamId(id);
 }
 
-StreamId IDMgr::GetCommNetStreamId(uint32_t this_node_index, uint32_t peer_node_index) const {
+StreamId IdUtil::GetCommNetStreamId(uint32_t this_node_index, uint32_t peer_node_index) {
   CHECK(CheckValueInBitsRange(this_node_index, StreamId::kMiddlePartBits))
       << "this_node_index is out of range";
   CHECK(CheckValueInBitsRange(peer_node_index, StreamId::kRightPartBits))
@@ -198,33 +172,37 @@ StreamId IDMgr::GetCommNetStreamId(uint32_t this_node_index, uint32_t peer_node_
   return StreamId(id);
 }
 
-StreamId IDMgr::GetTickTockStreamId() const {
+StreamId IdUtil::GetTickTockStreamId() {
   uint32_t id = static_cast<uint32_t>(StreamType::kTickTock) << StreamId::kMiddleRightPartBits;
   return StreamId(id);
 }
 
-StreamId IDMgr::GenerateIndependentStreamId(TaskType task_type) {
-  if (independent_task_type2task_num_.find(task_type) == independent_task_type2task_num_.end()) {
-    independent_task_type2task_num_[task_type] = 0;
+StreamId IdUtil::GenerateProcessTaskIndependentStreamId(ProcessId process_id, TaskType task_type) {
+  auto key = std::make_pair(process_id, task_type);
+  if (process_independent_task_type2task_num_.find(key)
+      == process_independent_task_type2task_num_.end()) {
+    process_independent_task_type2task_num_[key] = 0;
   }
-  independent_task_type2task_num_[task_type] += 1;
+  uint32_t& task_num = process_independent_task_type2task_num_[key];
+  task_num += 1;
   if (IsClassRegistered<int32_t, IndependentThreadNum4TaskType>(task_type)) {
     std::unique_ptr<IndependentThreadNum4TaskType> idp_thrd_num_ptr(
         NewObj<int32_t, IndependentThreadNum4TaskType>(task_type));
-    if (independent_task_type2task_num_[task_type] > *idp_thrd_num_ptr) {
-      independent_task_type2task_num_[task_type] %= *idp_thrd_num_ptr;
-    }
+    if (task_num > *idp_thrd_num_ptr) { task_num %= *idp_thrd_num_ptr; }
   }
-  CHECK(
-      CheckValueInBitsRange(independent_task_type2task_num_[task_type], StreamId::kRightPartBits));
-
+  CHECK(CheckValueInBitsRange(task_num, StreamId::kRightPartBits));
   uint32_t id = static_cast<uint32_t>(StreamType::kIndependent) << StreamId::kMiddleRightPartBits;
   id |= (static_cast<uint32_t>(task_type) << StreamId::kRightPartBits);
-  id |= static_cast<uint32_t>(independent_task_type2task_num_[task_type]);
+  id |= static_cast<uint32_t>(task_num);
   return StreamId(id);
 }
 
-TaskId IDMgr::GenerateTaskId(ProcessId process_id, StreamId stream_id) {
+StreamId IdUtil::GenerateCPUDeviceStreamIdEvenly(ProcessId process_id) {
+  uint32_t device_index = process_id2cpu_device_index_[process_id]++ % cpu_device_num_;
+  return GetCPUDeviceStreamId(device_index);
+}
+
+TaskId IdUtil::GenerateTaskId(ProcessId process_id, StreamId stream_id) {
   uint64_t process_stream_key =
       (static_cast<uint64_t>(process_id) << ProcessId::kBits) | static_cast<uint64_t>(stream_id);
   if (process_stream2task_num_.find(process_stream_key) == process_stream2task_num_.end()) {
