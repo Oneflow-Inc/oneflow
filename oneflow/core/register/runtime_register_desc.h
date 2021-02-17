@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/register/register_desc.pb.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
@@ -31,8 +32,8 @@ class RtRegstDesc {
   RtRegstDesc(const RegstDescProto& regst_desc_proto);
 
   int64_t regst_desc_id() const { return regst_desc_id_; }
-  int64_t producer_actor_id() const { return producer_actor_id_; }
-  const std::vector<int64_t>& consumers_actor_id() const { return consumers_actor_id_; }
+  TaskId producer_actor_id() const { return producer_actor_id_; }
+  const std::vector<TaskId>& consumers_actor_id() const { return consumers_actor_id_; }
   int64_t register_num() const { return register_num_; }
   const MemoryCase& mem_case() const { return mem_case_; }
   const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
@@ -57,8 +58,8 @@ class RtRegstDesc {
 
  private:
   int64_t regst_desc_id_;
-  int64_t producer_actor_id_;
-  std::vector<int64_t> consumers_actor_id_;
+  TaskId producer_actor_id_;
+  std::vector<TaskId> consumers_actor_id_;
   int64_t register_num_;
   RegstDescTypeProto regst_desc_type_;
   MemoryCase mem_case_;

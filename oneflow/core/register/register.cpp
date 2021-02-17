@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-const std::vector<int64_t>& Regst::consumers_actor_id() const {
+const std::vector<TaskId>& Regst::consumers_actor_id() const {
   return regst_desc_->consumers_actor_id();
 }
 
