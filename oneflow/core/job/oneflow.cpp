@@ -99,6 +99,15 @@ std::string block7chunk_key(const std::string& plan_name, int64_t machine_id) {
   return plan_name + "_" + std::to_string(machine_id) + "_block7chunk";
 }
 
+std::shared_ptr<OperatorConf> CreateSinkTickOpConf(const std::string& in_op_name) {
+  auto tick_op = std::make_shared<OperatorConf>();
+  tick_op->set_name("System-Main-CallbackNotifier_TmpSinkTick_" + NewUniqueId());
+  auto* tick_conf = tick_op->mutable_sink_tick_conf();
+  tick_conf->add_tick(in_op_name + "/out");
+  tick_conf->set_out("out");
+  return tick_op;
+}
+
 void PushPlan(const std::string& plan_name, const Plan& plan) {
   HashMap<int64_t, std::set<int64_t>> machine_id2thrd_id_set;
   HashMap<std::pair<int64_t, int64_t>, std::vector<TaskProto>> mchn_thrd_id2task_protos;
@@ -407,7 +416,7 @@ void UpdateSoleObnRegstDescId(TaskProto* task) {
 // return:
 //         op_A --> op_identity_tick --> op_C --> op_D --> op_E --> op_sink_tick --> op_B
 //                                        /
-//                        op_src_tick ---/
+//                        op_src_tick -->/
 //
 // note: after this function called, op_src_tick is illegal and need to be deleted from plan
 void LinkTickTaskProto(TaskProto* identity_tick, TaskProto* src_tick, TaskProto* sink_tick) {
@@ -445,7 +454,7 @@ void FixRegstHostMemCase(TaskProto* task_proto,
 }
 
 void LinkMainPlan(Plan* plan, const Plan& main_plan,
-                  const std::vector<HashMap<int64_t, std::string>>& identity_tick_op_names) {
+                  const std::vector<std::map<int64_t, std::string>>& identity_tick_op_names) {
   std::function<bool(const TaskProto*)> IsInterfaceTickTockTask;
   {
     auto task_ids = std::make_shared<HashSet<int64_t>>();
@@ -599,10 +608,11 @@ void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>
 
 Maybe<ReentrantLockBackEdge> MakeMainJobComponent(
     const std::string& wait_and_send_ids_lbn, const Range& machine_id_range,
-    JobBuilder* job_builder, std::vector<HashMap<int64_t, std::string>>* identity_tick_op_names) {
+    JobBuilder* job_builder, std::vector<std::map<int64_t, std::string>>* identity_tick_op_names,
+    std::vector<std::map<int64_t, std::string>>* cb_sink_tick_op_names) {
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
-  parallel_conf.add_device_name("0:0");
+  parallel_conf.add_device_name(std::to_string(machine_id_range.begin()) + ":0");
   auto lock_back_edge = std::make_shared<ReentrantLockBackEdge>();
   OperatorConf reentrant_lock_op_conf;
   {
@@ -642,26 +652,40 @@ Maybe<ReentrantLockBackEdge> MakeMainJobComponent(
       JUST(job_builder->AddOp(parallel_conf, src_tick_op_conf));
     }
     // identity tick
-    auto* cur_id_tick_op_names = &identity_tick_op_names->at(i);
+    auto* cur_cb_sink_tick_op_names = &cb_sink_tick_op_names->at(i);
     for (int64_t machine_id = machine_id_range.begin(); machine_id < machine_id_range.end();
          ++machine_id) {
       OperatorConf identity_tick_op_conf;
-      std::string name_prefix = "System-Main-Tick_CriticalSection_";
-      identity_tick_op_conf.set_name(name_prefix + std::to_string(i) + "_" + NewUniqueId());
-      auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
-      identity_tick_conf->add_tick(src_tick_op_conf.name() + "/out");
-      identity_tick_conf->set_out("out");
-      JUST(job_builder->AddOp(parallel_conf, identity_tick_op_conf));
-      CHECK_OR_RETURN(
-          cur_id_tick_op_names->emplace(machine_id, identity_tick_op_conf.name()).second);
+      {
+        std::string name_prefix = "System-Main-Tick_CriticalSection_";
+        identity_tick_op_conf.set_name(name_prefix + std::to_string(i) + "_" + NewUniqueId());
+        auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
+        identity_tick_conf->add_tick(src_tick_op_conf.name() + "/out");
+        identity_tick_conf->set_out("out");
+        JUST(job_builder->AddOp(parallel_conf, identity_tick_op_conf));
+        auto* cur_id_tick_op_names = &identity_tick_op_names->at(i);
+        CHECK_OR_RETURN(
+            cur_id_tick_op_names->emplace(machine_id, identity_tick_op_conf.name()).second);
+      }
+      {
+        OperatorConf cb_sink_tick_op_conf;
+        std::string name_prefix = "System-Main-CallbackSinkTick_";
+        cb_sink_tick_op_conf.set_name(name_prefix + std::to_string(i) + NewUniqueId());
+        auto* cb_sink_tick_conf = cb_sink_tick_op_conf.mutable_sink_tick_conf();
+        cb_sink_tick_conf->add_tick(identity_tick_op_conf.name() + "/out");
+        cb_sink_tick_conf->set_out("out");
+        JUST(job_builder->AddOp(parallel_conf, cb_sink_tick_op_conf));
+        CHECK_OR_RETURN(
+            cur_cb_sink_tick_op_names->emplace(machine_id, cb_sink_tick_op_conf.name()).second);
+      }
     }
     // sink tick
-    OperatorConf snk_tick_op_conf;
     {
+      OperatorConf snk_tick_op_conf;
       std::string name_prefix = "System-Main-SinkTick_CriticalSection_";
       snk_tick_op_conf.set_name(name_prefix + std::to_string(i) + NewUniqueId());
       auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
-      for (const auto& pair : *cur_id_tick_op_names) {
+      for (const auto& pair : *cur_cb_sink_tick_op_names) {
         snk_tick_conf->add_tick(pair.second + "/out");
       }
       snk_tick_conf->set_out("out");
@@ -688,19 +712,11 @@ Maybe<ReentrantLockBackEdge> MakeMainJobComponent(
 
 Maybe<void> MakeCallbackNotifierSinkTick(
     const Range& machine_id_range,
-    const std::vector<HashMap<int64_t, std::string>>& identity_tick_op_names,
+    const std::vector<std::map<int64_t, std::string>>& cb_sink_tick_op_names,
     JobBuilder* job_builder, const std::function<void(const std::string& lbn)>& DoEachSinkTickLbn) {
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0");
-  const auto& CreateTmpTick = [&](const std::string& in_op_name) {
-    auto tick_op = std::make_shared<OperatorConf>();
-    tick_op->set_name("System-Main-CallbackNotifier_TmpSinkTick_" + NewUniqueId());
-    auto* tick_conf = tick_op->mutable_sink_tick_conf();
-    tick_conf->add_tick(in_op_name + "/out");
-    tick_conf->set_out("out");
-    return tick_op;
-  };
   for (int64_t total_job_cs_id :
        Global<CriticalSectionDesc>::Get()->job_id2total_job_critical_section_id()) {
     OperatorConf snk_tick_op_conf;
@@ -710,21 +726,8 @@ Maybe<void> MakeCallbackNotifierSinkTick(
       auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
       for (int64_t machine_id = machine_id_range.begin(); machine_id < machine_id_range.end();
            ++machine_id) {
-        std::string tmp_tick_op_name_121_connected_id;
-        {
-          const auto& id_tick_op_name = identity_tick_op_names.at(total_job_cs_id).at(machine_id);
-          auto tmp_sink_tick_op = CreateTmpTick(id_tick_op_name);
-          const auto& id_parallel_conf = job_builder->ParallelConf4OpName(id_tick_op_name);
-          JUST(job_builder->AddOp(id_parallel_conf, *tmp_sink_tick_op));
-          tmp_tick_op_name_121_connected_id = tmp_sink_tick_op->name();
-        }
-        std::string tmp_tick_op_name_121_connected_sink;
-        {
-          auto tmp_sink_tick_op = CreateTmpTick(tmp_tick_op_name_121_connected_id);
-          JUST(job_builder->AddOp(parallel_conf, *tmp_sink_tick_op));
-          tmp_tick_op_name_121_connected_sink = tmp_sink_tick_op->name();
-        }
-        snk_tick_conf->add_tick(tmp_tick_op_name_121_connected_sink + "/out");
+        const auto& cb_sink_tick_op_name = cb_sink_tick_op_names.at(total_job_cs_id).at(machine_id);
+        snk_tick_conf->add_tick(cb_sink_tick_op_name + "/out");
       }
       snk_tick_conf->set_out("out");
       JUST(job_builder->AddOp(parallel_conf, snk_tick_op_conf));
@@ -735,7 +738,7 @@ Maybe<void> MakeCallbackNotifierSinkTick(
 }
 
 Maybe<void> MakeMainJob(Job* main_job,
-                        std::vector<HashMap<int64_t, std::string>>* identity_tick_op_names,
+                        std::vector<std::map<int64_t, std::string>>* identity_tick_op_names,
                         std::vector<ReentrantLockBackEdge>* lock_back_edges) {
   JobBuilder job_builder(main_job);
   CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
@@ -761,24 +764,24 @@ Maybe<void> MakeMainJob(Job* main_job,
     JUST(job_builder.AddOp(parallel_conf, wait_and_send_ids_op_conf));
   }
   const int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
+  std::vector<std::map<int64_t, std::string>> cb_sink_tick_op_names;
   identity_tick_op_names->resize(num_critial_sections);
+  cb_sink_tick_op_names.resize(num_critial_sections);
   const int64_t num_machines = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
   const Range machine_id_range(0, num_machines);
   JUST(machine_id_range.ForEachSubRange(1, [&](const Range& sub_range) -> Maybe<void> {
-    lock_back_edges->push_back(
-        *JUST(MakeMainJobComponent(wait_and_send_ids_op_conf.name() + "/out", sub_range,
-                                   &job_builder, identity_tick_op_names)));
+    const auto& in_lbn = wait_and_send_ids_op_conf.name() + "/out";
+    lock_back_edges->push_back(*JUST(MakeMainJobComponent(
+        in_lbn, sub_range, &job_builder, identity_tick_op_names, &cb_sink_tick_op_names)));
     return Maybe<void>::Ok();
   }));
   OperatorConf callback_notify_esac_op_conf;
   {
     callback_notify_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
     auto* callback_notify_esac_conf = callback_notify_esac_op_conf.mutable_esac_conf();
-    JUST(machine_id_range.ForEachSubRange(num_machines, [&](const Range& sub_range) -> Maybe<void> {
-      return MakeCallbackNotifierSinkTick(
-          sub_range, *identity_tick_op_names, &job_builder,
-          [&](const std::string& lbn) { callback_notify_esac_conf->add_in(lbn); });
-    }));
+    JUST(MakeCallbackNotifierSinkTick(
+        machine_id_range, cb_sink_tick_op_names, &job_builder,
+        [&](const std::string& lbn) { callback_notify_esac_conf->add_in(lbn); }));
     callback_notify_esac_conf->set_out("out");
     callback_notify_esac_conf->set_data_type(DataType::kInt32);
     JUST(job_builder.AddOp(parallel_conf, callback_notify_esac_op_conf));
@@ -1087,7 +1090,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     PlanUtil::SetForceInplaceMemBlock(plan);
     FinishGlobalCriticalSectionDesc(*plan, jobs.size());
     Plan main_plan;
-    std::vector<HashMap<int64_t, std::string>> identity_tick_op_names;
+    std::vector<std::map<int64_t, std::string>> identity_tick_op_names;
     {
       Job main_job;
       std::vector<ReentrantLockBackEdge> lock_back_edges;
