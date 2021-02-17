@@ -90,8 +90,11 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
   HashMap<int64_t, MemBlockAndChunkList> machine_id2block7chunk;
 
   for (const auto& task : plan.task()) {
-    machine_id2thrd_id_set[task.machine_id()].insert(task.thrd_id());
-    mchn_thrd_id2task_protos[std::make_pair(task.machine_id(), task.thrd_id())].emplace_back(task);
+    TaskId task_id(task.task_id());
+    int64_t machine_id = task_id.process_id().node_index();
+    int64_t thrd_id = static_cast<uint32_t>(task_id.stream_id());
+    machine_id2thrd_id_set[machine_id].insert(thrd_id);
+    mchn_thrd_id2task_protos[std::make_pair(machine_id, thrd_id)].emplace_back(task);
   }
 
   HashMap<int64_t, ThrdIds> machine_id2thrd_ids;
@@ -176,11 +179,11 @@ const boxing::collective::RankDesc& GetRankDesc(const TaskProto& task_proto) {
 }
 
 void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* device_desc) {
-  device_desc->set_machine_id(task_proto->machine_id());
-  const int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(task_proto->task_id());
-  device_desc->set_device_type(Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(thrd_id));
+  TaskId task_id(task_proto->task_id());
+  device_desc->set_machine_id(task_id.process_id().node_index());
+  device_desc->set_device_type(task_id.stream_id().device_type());
   if (device_desc->device_type() == DeviceType::kGPU) {
-    device_desc->set_device_id(Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id));
+    device_desc->set_device_id(task_id.stream_id().device_index());
   } else {
     UNIMPLEMENTED();
   }
@@ -406,7 +409,8 @@ void LinkTickTaskProto(TaskProto* identity_tick, TaskProto* src_tick, TaskProto*
   sink_tick_sole_regst->set_regst_desc_id(id_tick_sole_regst->regst_desc_id());
   *sink_tick_sole_regst->mutable_consumer_task_id() = id_tick_sole_regst->consumer_task_id();
   UpdateSoleObnRegstDescId(sink_tick);
-  CHECK_EQ(identity_tick->machine_id(), sink_tick->machine_id());
+  CHECK_EQ(TaskId{identity_tick->task_id()}.process_id().node_index(),
+           TaskId{sink_tick->task_id()}.process_id().node_index());
 
   id_tick_sole_regst->set_regst_desc_id(src_tick_sole_regst->regst_desc_id());
   *id_tick_sole_regst->mutable_consumer_task_id() = src_tick_sole_regst->consumer_task_id();
@@ -414,16 +418,17 @@ void LinkTickTaskProto(TaskProto* identity_tick, TaskProto* src_tick, TaskProto*
 }
 
 void FixRegstHostMemCase(TaskProto* task_proto,
-                         const std::function<const TaskProto*(int64_t)>& TaskProto4TaskId) {
+                         const std::function<const TaskProto*(TaskId)>& TaskProto4TaskId) {
   for (auto& pair : *task_proto->mutable_produced_regst_desc()) {
     auto* regst = &pair.second;
     CHECK(regst->mem_case().has_host_mem());
     CHECK_EQ(regst->mem_case().host_mem().has_cuda_pinned_mem(), false);
     bool used_by_network = false;
-    for (int64_t consumer_task_id : regst->consumer_task_id()) {
-      const auto* consumer_task_proto = TaskProto4TaskId(consumer_task_id);
-      used_by_network =
-          used_by_network || (task_proto->machine_id() != consumer_task_proto->machine_id());
+    for (TaskId consumer_task_id : regst->consumer_task_id()) {
+      if (TaskId{task_proto->task_id()}.process_id().node_index()
+          != consumer_task_id.process_id().node_index()) {
+        used_by_network = true;
+      }
     }
     regst->mutable_mem_case()->mutable_host_mem()->set_used_by_network(used_by_network);
   }
@@ -433,12 +438,14 @@ void LinkMainPlan(Plan* plan, const Plan& main_plan,
                   const std::vector<std::string>& identity_tick_op_names) {
   std::function<bool(const TaskProto*)> IsInterfaceTickTockTask;
   {
-    auto task_ids = std::make_shared<HashSet<int64_t>>();
+    auto tick_task_ids = std::make_shared<HashSet<TaskId>>();
     for (const auto& task : main_plan.task()) {
-      if (task.task_type() == TaskType::kTick) { CHECK(task_ids->emplace(task.task_id()).second); }
+      if (task.task_type() == TaskType::kTick) {
+        CHECK(tick_task_ids->emplace(task.task_id()).second);
+      }
     }
-    IsInterfaceTickTockTask = [task_ids](const TaskProto* task) {
-      if (task_ids->find(task->task_id()) != task_ids->end()) { return true; }
+    IsInterfaceTickTockTask = [tick_task_ids](const TaskProto* task) {
+      if (tick_task_ids->find(task->task_id()) != tick_task_ids->end()) { return true; }
       if (task->exec_sequence().exec_node_size() != 1) { return false; }
       const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
       OperatorConf::OpTypeCase op_type_case = kernel_conf.op_attribute().op_conf().op_type_case();
@@ -703,7 +710,7 @@ void ConnectCriticalSectionEndToReentrantLockEnd(Plan* main_plan,
   CHECK_NOTNULL(reentrant_lock_task);
   CHECK_NOTNULL(cs_sink_task);
   RegstDescProto* cs_end_regst = PlanUtil::GetSoleProducedDataRegst(cs_sink_task);
-  cs_end_regst->add_consumer_task_id(reentrant_lock_task->task_id());
+  cs_end_regst->add_consumer_task_id()->CopyFrom(reentrant_lock_task->task_id());
   reentrant_lock_task->mutable_consumed_regst_desc_id()->at("in").add_regst_desc_id(
       cs_end_regst->regst_desc_id());
 

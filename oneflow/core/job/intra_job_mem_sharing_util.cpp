@@ -75,21 +75,22 @@ struct MemoryChain {
 };
 
 void InitMemoryChains(Plan* plan,
-                      HashMap<int64_t, HashMap<int64_t, MemoryChain>>* device2chain2mem_chain) {
+                      HashMap<uint64_t, HashMap<int64_t, MemoryChain>>* device2chain2mem_chain) {
   for (int64_t i = 0; i < plan->task_size(); ++i) {
     TaskProto* task = plan->mutable_task(i);
-    int64_t machine_id = task->machine_id();
-    DeviceType device_type = Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task->thrd_id());
+    TaskId task_id(task->task_id());
+    // int64_t machine_id = task->machine_id();
+    DeviceType device_type = task_id.stream_id().device_type();
     if (device_type != DeviceType::kGPU) { continue; }
-    int64_t device_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task->thrd_id());
-    int64_t device_unique_id = GenDeviceUniqueId(machine_id, device_id);
+    uint32_t device_index = task_id.stream_id().device_index();
+    uint64_t global_stream_index = task_id.global_stream_index();
     MemoryChain* mem_chain =
-        &((*device2chain2mem_chain)[device_unique_id][task->task_set_info().chain_id()]);
+        &((*device2chain2mem_chain)[global_stream_index][task->task_set_info().chain_id()]);
     mem_chain->sorted_tasks.push_back(task);
     for (auto& pair : *(task->mutable_produced_regst_desc())) {
       RegstDescProto* regst_desc = &pair.second;
       if (regst_desc->mem_case().has_device_cuda_mem()
-          && regst_desc->mem_case().device_cuda_mem().device_id() == device_id
+          && regst_desc->mem_case().device_cuda_mem().device_id() == device_index
           && regst_desc->enable_reuse_mem() && regst_desc->register_num() == 1
           && regst_desc->mem_block_id() == -1 && regst_desc->mem_block_offset() == -1
           && regst_desc->regst_desc_type().has_data_regst_desc()) {
@@ -156,7 +157,7 @@ void GenMemChainTasksAndRegsts(
     HashMap<int64_t, HashSet<RegstDescProto*>>* mem_chain2mem_reused_regsts) {
   mem_chain2sorted_tasks->clear();
   mem_chain2mem_reused_regsts->clear();
-  HashMap<int64_t, HashMap<int64_t, MemoryChain>> device2chain2mem_chain;
+  HashMap<uint64_t, HashMap<int64_t, MemoryChain>> device2chain2mem_chain;
   InitMemoryChains(plan, &device2chain2mem_chain);
 
   auto IsStrictOrderL2R = [&](const MemoryChain* lhs, const MemoryChain* rhs) -> bool {
@@ -213,16 +214,18 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
   CHECK(consumer2inplaced_regst->empty());
   alloc_regsts_timeline->resize(sorted_tasks.size());
   free_regsts_timeline->resize(sorted_tasks.size());
-  HashMap<int64_t, int64_t> task_id2sorted_id;
-  for (int64_t i = 0; i < sorted_tasks.size(); ++i) {
+  HashMap<TaskId, int64_t> task_id2sorted_id;
+  for (size_t i = 0; i < sorted_tasks.size(); ++i) {
     TaskProto* task = sorted_tasks.at(i);
-    CHECK(task_id2sorted_id.emplace(task->task_id(), i).second);
+    CHECK(task_id2sorted_id.emplace(TaskId(task->task_id()), i).second);
   }
 
   auto FindLastFreeIndexInSortedTasks = [&](RegstDescProto* regst_desc) -> int64_t {
+    TaskId task_id(regst_desc->producer_task_id());
     // temp regst will set free index as same as alloc index
-    int64_t free_index = task_id2sorted_id.at(regst_desc->producer_task_id());
-    for (int64_t consumer_task_id : regst_desc->consumer_task_id()) {
+    int64_t free_index = task_id2sorted_id.at(task_id);
+    for (const TaskIdProto& consumer_task_id_proto : regst_desc->consumer_task_id()) {
+      TaskId consumer_task_id(consumer_task_id_proto);
       // if consumer is not in this mem chain, set free index = last index
       int64_t this_sorted_index = sorted_tasks.size() - 1;
       if (task_id2sorted_id.find(consumer_task_id) != task_id2sorted_id.end()) {
@@ -257,7 +260,7 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
       continue;
     }
 
-    CHECK(alloc_regsts_timeline->at(task_id2sorted_id.at(regst_desc->producer_task_id()))
+    CHECK(alloc_regsts_timeline->at(task_id2sorted_id.at(TaskId(regst_desc->producer_task_id())))
               .insert(regst_desc)
               .second);
     CHECK(regst_desc_id2free_index

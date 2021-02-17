@@ -45,7 +45,8 @@ void SendCmdMsg(const std::vector<const TaskProto*>& tasks, ActorCmd cmd) {
 
 void HandoutTasks(const std::vector<const TaskProto*>& tasks) {
   for (const TaskProto* task : tasks) {
-    Global<ThreadMgr>::Get()->GetThrd(task->thrd_id())->AddTask(*task);
+    TaskId task_id(task->task_id());
+    Global<ThreadMgr>::Get()->GetThrd(task_id.stream_id())->AddTask(*task);
   }
   SendCmdMsg(tasks, ActorCmd::kConstructActor);
 }
@@ -66,7 +67,10 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   std::vector<const TaskProto*> other_tasks;
   int64_t this_machine_task_num = 0;
   for (const TaskProto& task : plan.task()) {
-    if (task.machine_id() != Global<MachineCtx>::Get()->this_machine_id()) { continue; }
+    TaskId task_id(task.task_id());
+    if (task_id.process_id().node_index() != Global<MachineCtx>::Get()->this_machine_id()) {
+      continue;
+    }
     if (!HasNonCtrlConsumedRegstDescId(task)) {
       source_tasks.push_back(&task);
     } else {

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/task_id.pb.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
@@ -23,23 +24,26 @@ namespace oneflow {
 
 void Compiler::GenNetTopo(Plan* plan) const {
   HashMap<int64_t, int64_t> rid2mid;
-  HashMap<int64_t, int64_t> tid2mid;
+  HashMap<TaskId, int64_t> tid2mid;
   std::map<int64_t, std::set<int64_t>> net_topo;
 
   for (const TaskProto& task_proto : plan->task()) {
+    TaskId task_id(task_proto.task_id());
     for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
-      rid2mid.emplace(regst_desc_it.second.regst_desc_id(), task_proto.machine_id());
+      rid2mid.emplace(regst_desc_it.second.regst_desc_id(), task_id.process_id().node_index());
     }
-    CHECK(tid2mid.emplace(task_proto.task_id(), task_proto.machine_id()).second);
+    CHECK(tid2mid.emplace(task_proto.task_id(), task_id.process_id().node_index()).second);
   }
 
   for (const TaskProto& task_proto : plan->task()) {
+    TaskId task_id(task_proto.task_id());
     for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
       int64_t rid = regst_desc_it.second.regst_desc_id();
       auto rid2mid_it = rid2mid.find(rid);
       CHECK(rid2mid_it != rid2mid.end());
       int64_t producer_mid = rid2mid_it->second;
-      for (int64_t consumer_task_id : regst_desc_it.second.consumer_task_id()) {
+      for (const TaskIdProto& consumer_task_id_proto : regst_desc_it.second.consumer_task_id()) {
+        TaskId consumer_task_id(consumer_task_id_proto);
         auto tid2mid_it = tid2mid.find(consumer_task_id);
         CHECK(tid2mid_it != tid2mid.end());
         int64_t consumer_mid = tid2mid_it->second;

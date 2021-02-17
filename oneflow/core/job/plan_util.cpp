@@ -14,9 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/plan_util.h"
+#include <cstdint>
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/task_id.pb.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
@@ -28,14 +31,14 @@ namespace {
 std::vector<std::vector<std::string>> GenNodeRank(const Plan& plan) {
   std::vector<std::vector<std::string>> ret(7);
   for (const TaskProto& task_proto : plan.task()) {
-    if (task_proto.machine_id() != 0) { continue; }
-    if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
-      continue;
-    }
+    TaskId task_id(task_proto.task_id());
+    if (task_id.process_id().node_index() != 0) { continue; }
+    if (task_id.stream_id().device_type() == DeviceType::kGPU) { continue; }
     if (task_proto.exec_sequence().exec_node_size() != 1) { continue; }
     std::string op_name =
         task_proto.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf().name();
-    std::string node_name = "task" + std::to_string(task_proto.task_id());
+    std::string node_name = "task" + std::to_string(task_proto.task_id().low())
+                            + std::to_string(task_proto.task_id().high());
     if (op_name.find("WaitAndSendIds") != std::string::npos) {
       ret[0].push_back(node_name);
     } else if (op_name.find("ReentrantLock") != std::string::npos) {
@@ -71,12 +74,12 @@ RegstDescProto* PlanUtil::GetSoleProducedDataRegst(TaskProto* task_proto) {
   return ret;
 }
 
-std::function<const TaskProto*(int64_t)> PlanUtil::MakeGetterTaskProto4TaskId(const Plan& plan) {
-  auto task_id2task_proto = std::make_shared<HashMap<int64_t, const TaskProto*>>();
+std::function<const TaskProto*(TaskId)> PlanUtil::MakeGetterTaskProto4TaskId(const Plan& plan) {
+  auto task_id2task_proto = std::make_shared<HashMap<TaskId, const TaskProto*>>();
   for (const TaskProto& task_proto : plan.task()) {
     task_id2task_proto->emplace(task_proto.task_id(), &task_proto);
   }
-  return [task_id2task_proto](int64_t task_id) { return task_id2task_proto->at(task_id); };
+  return [task_id2task_proto](TaskId task_id) { return task_id2task_proto->at(task_id); };
 }
 
 void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
@@ -105,6 +108,7 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
 
   HashSet<int64_t> valid_mem_block_ids;
   for (const TaskProto& task : plan->task()) {
+    TaskId task_id(task.task_id());
     for (const auto& pair : task.produced_regst_desc()) {
       const RegstDescProto& regst = pair.second;
       RtRegstDesc rt_regst(regst);
@@ -112,7 +116,7 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
       CHECK(mem_block_id2mem_block.find(regst.mem_block_id()) != mem_block_id2mem_block.end());
       const MemBlockProto& mem_block = mem_block_id2mem_block.at(regst.mem_block_id());
       CHECK_GE(mem_block.mem_size(), regst.mem_block_offset() + regst_size);
-      CHECK_EQ(task.machine_id(), mem_block.machine_id());
+      CHECK_EQ(task_id.process_id().node_index(), mem_block.machine_id());
       CHECK_EQ(mem_block.enable_reuse_mem(), regst.enable_reuse_mem());
       CHECK(mem_block.mem_case() == regst.mem_case());
       const auto& job_ids = mem_block_id2job_ids[regst.mem_block_id()];
@@ -127,7 +131,7 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
         CHECK(mem_block_id2mem_block.find(header_block_id) != mem_block_id2mem_block.end());
         const MemBlockProto& header_mem_block = mem_block_id2mem_block.at(header_block_id);
         CHECK_EQ(header_mem_block.mem_size(), separated_header_mem_size);
-        CHECK_EQ(task.machine_id(), header_mem_block.machine_id());
+        CHECK_EQ(task_id.process_id().node_index(), header_mem_block.machine_id());
         CHECK(header_mem_block.mem_case()
               == MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(regst.mem_case()));
         CHECK(header_mem_block.enable_reuse_mem() == false);
@@ -179,15 +183,17 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   }
   std::vector<std::vector<std::string>> machine_id2host_node_list(machine_num);
   HashSet<int64_t> ctrl_regst_desc_ids;
-  HashMap<int64_t, HashMap<int64_t, std::string>> task_id2consumer_regst_id2name;
-  HashMap<int64_t, std::string> task_id2op_name;
+  HashMap<TaskId, HashMap<int64_t, std::string>> task_id2consumer_regst_id2name;
+  HashMap<TaskId, std::string> task_id2op_name;
 
   auto InsertNodeDefByTaskProto = [&](const TaskProto& task_proto, const std::string& node_def) {
-    if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
-      int64_t device_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_proto.thrd_id());
-      machine_id2device_id2node_list[task_proto.machine_id()][device_id].push_back(node_def);
+    TaskId task_id(task_proto.task_id());
+    uint32_t machine_index = task_id.process_id().node_index();
+    if (task_id.stream_id().device_type() == DeviceType::kGPU) {
+      uint32_t device_index = task_id.stream_id().device_index();
+      machine_id2device_id2node_list[machine_index][device_index].push_back(node_def);
     } else {
-      machine_id2host_node_list[task_proto.machine_id()].push_back(node_def);
+      machine_id2host_node_list[machine_index].push_back(node_def);
     }
   };
 
@@ -212,13 +218,15 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   auto log_stream = TeePersistentLogStream::Create(filepath);
   // task node
   for (const TaskProto& task_proto : plan.task()) {
-    std::string node_def = "task" + std::to_string(task_proto.task_id()) + "[label=\"{{";
+    TaskId task_id(task_proto.task_id());
+    std::string node_def =
+        "task" + std::to_string(task_id.low()) + std::to_string(task_id.high()) + "[label=\"{{";
     // node_def += "<task_node_" + std::to_string(task_proto.task_id()) + ">";
     std::string op_name = "";
     for (const ExecNodeProto& exec_node : task_proto.exec_sequence().exec_node()) {
       op_name += (exec_node.kernel_conf().op_attribute().op_conf().name());
     }
-    task_id2op_name[task_proto.task_id()] = op_name;
+    task_id2op_name[task_id] = op_name;
     node_def += op_name;
     size_t index = 0;
     for (const auto& pair : task_proto.produced_regst_desc()) {
@@ -233,13 +241,13 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
       ++index;
     }
     node_def += "}}";
-    node_def +=
-        ("\",tooltip=\"" + TaskType_Name(task_proto.task_type()) + "  "
-         + std::to_string(task_proto.task_id()) + "-" + std::to_string(task_proto.machine_id())
-         + ":" + std::to_string(task_proto.thrd_id()) + ":"
-         + std::to_string(task_proto.parallel_ctx().parallel_id())
-         + "\", shape=record, style=\"rounded,filled\""
-         + ",colorscheme=set312, fillcolor=" + std::to_string((task_proto.job_id() % 12) + 1));
+    node_def += ("\",tooltip=\"" + TaskType_Name(task_proto.task_type()) + "  "
+                 + std::to_string(task_id.low()) + std::to_string(task_id.high()) + "-"
+                 + std::to_string(static_cast<uint32_t>(task_id.process_id())) + ":"
+                 + std::to_string(static_cast<uint32_t>(task_id.stream_id())) + ":"
+                 + std::to_string(task_proto.parallel_ctx().parallel_id())
+                 + "\", shape=record, style=\"rounded,filled\"" + ",colorscheme=set312, fillcolor="
+                 + std::to_string((task_proto.job_id() % 12) + 1));
     if (IsEsacNode(op_name)) { node_def += ",width=5,height=1.5"; }
     node_def += "];\n";
     InsertNodeDefByTaskProto(task_proto, node_def);
@@ -292,18 +300,22 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
 
   // produce/consume edge
   for (const TaskProto& task_proto : plan.task()) {
+    TaskId task_id(task_proto.task_id());
     for (const auto& pair : task_proto.produced_regst_desc()) {
       const RegstDescProto& regst = pair.second;
-      std::string src_node = "task" + std::to_string(task_proto.task_id());
+      std::string src_node =
+          "task" + std::to_string(task_id.low()) + std::to_string(task_id.high());
       // src_node += ":regst_desc_" + std::to_string(regst.regst_desc_id());
-      for (int64_t consumer_task_id : regst.consumer_task_id()) {
-        std::string dst_node = "task" + std::to_string(consumer_task_id);
+      for (const TaskIdProto& consumer_task_id_proto : regst.consumer_task_id()) {
+        TaskId consumer_task_id(consumer_task_id_proto);
+        std::string dst_node = "task" + std::to_string(consumer_task_id.low())
+                               + std::to_string(consumer_task_id.high());
         // dst_node +=  ":task_node_" + std::to_string(consumer_task_id);
         std::string consumer_regst_name =
             task_id2consumer_regst_id2name[consumer_task_id][regst.regst_desc_id()];
         std::string consumer_op_name = task_id2op_name[consumer_task_id];
         std::string producer_regst_name = pair.first;
-        std::string producer_op_name = task_id2op_name[task_proto.task_id()];
+        std::string producer_op_name = task_id2op_name[task_id];
         std::string tooltip = producer_op_name + " : " + producer_regst_name + " -> "
                               + consumer_op_name + " : " + consumer_regst_name;
         if (IsEsac2ReentrantLockEdge(producer_op_name, consumer_op_name)) {
