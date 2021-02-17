@@ -74,10 +74,29 @@ enum class StreamType : int16_t {
   kInvalid = 0,
   kCPUDevice = 1,
   kCudaDevice = 2,
-  kCommNet = 3,
-  kTickTock = 4,
-  kIndependent = 5,
+  kCommNet = 10,
+  kTickTock = 11,
+  kIndependent = 100,
 };
+
+namespace StreamIndex {
+
+struct CPU {
+  static const uint32_t kCompute = 0;
+  static const uint32_t kMax = 1;
+};
+
+struct Cuda {
+  static const uint32_t kCompute = 0;
+  static const uint32_t kH2D = 1;
+  static const uint32_t kD2H = 2;
+  static const uint32_t kMix = 3;
+  static const uint32_t kNccl = 4;
+  static const uint32_t kDecodeH2D = 5;
+  static const uint32_t kMax = 6;
+};
+
+}  // namespace StreamIndex
 
 class StreamId {
  public:
@@ -170,6 +189,7 @@ class IdUtil {
 
   // StreamId & TaskId
   // Non-cpu device stream id
+  static StreamId GetStreamId(StreamType stream_type, uint32_t device_index, uint32_t stream_index);
   static StreamId GetDeviceComputeStreamId(DeviceType device_type, uint32_t device_index);
   static StreamId GetDeviceH2DStreamId(DeviceType device_type, uint32_t device_index);
   static StreamId GetDeviceD2HStreamId(DeviceType device_type, uint32_t device_index);

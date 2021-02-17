@@ -33,6 +33,26 @@ StreamType DeviceType2StreamType(DeviceType device_type) {
   return stream_type;
 }
 
+bool CheckStreamIndexValid(StreamType stream_type, uint32_t stream_index) {
+  bool valid = false;
+#define STREAM_INDEX_CHECK_CASE(case_type, index_max) \
+  case case_type: {                                   \
+    if (stream_index < index_max) { valid = true; }   \
+    break;                                            \
+  }
+
+  switch (stream_type) {
+    STREAM_INDEX_CHECK_CASE(StreamType::kCPUDevice, StreamIndex::CPU::kMax)
+    STREAM_INDEX_CHECK_CASE(StreamType::kCudaDevice, StreamIndex::Cuda::kMax)
+    STREAM_INDEX_CHECK_CASE(StreamType::kCommNet, 0)
+    STREAM_INDEX_CHECK_CASE(StreamType::kTickTock, 0)
+    STREAM_INDEX_CHECK_CASE(StreamType::kIndependent,
+                            (static_cast<uint32_t>(1) << StreamId::kRightPartBits))
+    default: { valid = false; }
+  }
+  return valid;
+}
+
 template<typename T>
 bool CheckValueInBitsRange(T val, int bits) {
   static_assert(std::numeric_limits<T>::is_integer, "");
@@ -110,6 +130,18 @@ TaskId::TaskId(ProcessId process_id, StreamId stream_id, uint32_t task_index) {
 }
 
 // IDUtil methods
+StreamId IdUtil::GetStreamId(StreamType stream_type, uint32_t device_index, uint32_t stream_index) {
+  CHECK(CheckStreamIndexValid(stream_type, stream_index))
+      << "invalid stream_index: " << stream_index << " under stream_type: " << stream_type;
+  CHECK(CheckValueInBitsRange(device_index, StreamId::kMiddlePartBits))
+      << "device_index is out of range: " << device_index;
+  uint32_t id = 0;
+  id |= static_cast<uint32_t>(stream_type) << StreamId::kMiddleRightPartBits;
+  id |= device_index << StreamId::kRightPartBits;
+  id |= stream_index;
+  return StreamId(id);
+}
+
 StreamId IdUtil::GetDeviceComputeStreamId(DeviceType device_type, uint32_t device_index) {
   StreamType stream_type = DeviceType2StreamType(device_type);
   uint32_t id = (static_cast<uint32_t>(stream_type) << StreamId::kMiddleRightPartBits)
