@@ -250,7 +250,7 @@ void ChainGraph::CheckNoCycle() const {
     const auto& chain_graph_filename = "job" + job_id + "_cycle_chain_graph.dot";
     ToDotWithFilePath(OnCycle, [](ChainEdge*) { return true; }, chain_graph_filename);
 
-    HashMap<int64_t, int32_t> task_id2color = {};
+    HashMap<TaskId, int32_t> task_id2color = {};
     int32_t chain_node_cnt = 0;
     for (ChainNode* chain_node : *ptr) {
       chain_node_cnt++;
@@ -297,8 +297,9 @@ void ChainGraph::CheckNoCycle() const {
 
 void ChainGraph::GroupTaskNodesByMachine(
     const TaskGraph& task_gph, HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks) const {
-  task_gph.AcyclicTopoForEachNode(
-      [&](TaskNode* node) { (*machine2tasks)[node->machine_id()].emplace_back(node); });
+  task_gph.AcyclicTopoForEachNode([&](TaskNode* node) {
+    (*machine2tasks)[node->process_id().node_index()].emplace_back(node);
+  });
 }
 
 void ChainGraph::CollectTaskNodeAncestors(const TaskGraph& task_gph,

@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_THREAD_THREAD_H_
 #define ONEFLOW_CORE_THREAD_THREAD_H_
 
+#include <cstdint>
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/util.h"
@@ -41,20 +42,20 @@ class Thread {
   Thread() = default;
   std::thread& mut_actor_thread() { return actor_thread_; }
   void PollMsgChannel(const ThreadCtx& thread_ctx);
-  void set_thrd_id(int64_t val) { thrd_id_ = val; }
+  void set_thrd_id(uint32_t val) { thrd_id_ = val; }
 
  private:
-  void ConstructActor(int64_t actor_id, const ThreadCtx& thread_ctx);
+  void ConstructActor(TaskId actor_id, const ThreadCtx& thread_ctx);
 
-  HashMap<int64_t, TaskProto> id2task_;
+  HashMap<TaskId, TaskProto> id2task_;
   std::mutex id2task_mtx_;
 
   std::thread actor_thread_;
   Channel<ActorMsg> msg_channel_;
-  HashMap<int64_t, std::unique_ptr<Actor>> id2actor_ptr_;
+  HashMap<TaskId, std::unique_ptr<Actor>> id2actor_ptr_;
   std::queue<ActorMsg> local_msg_queue_;
 
-  int64_t thrd_id_;
+  uint32_t thrd_id_;
 };
 
 }  // namespace oneflow

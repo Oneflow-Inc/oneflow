@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/thread/gpu_thread.h"
+#include <cstdint>
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/profiler/profiler.h"
 
@@ -21,21 +22,24 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
+GpuThread::GpuThread(uint32_t thrd_id) {
   set_thrd_id(thrd_id);
-  mut_actor_thread() = std::thread([this, dev_id, thrd_id]() {
-    OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(dev_id) + " Actor : ("
-                                      + std::to_string(thrd_id) + ")");
-    OF_CUDA_CHECK(cudaSetDevice(dev_id));
+  StreamId stream_id(thrd_id);
+  mut_actor_thread() = std::thread([this, stream_id]() {
+    OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(stream_id.device_index())
+                                      + " Actor : ("
+                                      + std::to_string(static_cast<uint32_t>(stream_id)) + ")");
+    OF_CUDA_CHECK(cudaSetDevice(stream_id.device_index()));
     ThreadCtx ctx;
     ctx.g_cuda_stream.reset(new CudaStreamHandle(&cb_event_chan_));
     ctx.cb_event_chan = &cb_event_chan_;
     PollMsgChannel(ctx);
   });
-  cb_event_poller_ = std::thread([this, dev_id, thrd_id]() {
-    OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(dev_id) + " Poller : ("
-                                      + std::to_string(thrd_id) + ")");
-    OF_CUDA_CHECK(cudaSetDevice(dev_id));
+  cb_event_poller_ = std::thread([this, stream_id]() {
+    OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(stream_id.device_index())
+                                      + " Poller : ("
+                                      + std::to_string(static_cast<uint32_t>(stream_id)) + ")");
+    OF_CUDA_CHECK(cudaSetDevice(stream_id.device_index()));
     CudaCBEvent cb_event;
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
       OF_CUDA_CHECK(cudaEventSynchronize(cb_event.event));

@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/thread/thread_pool.h"
 
@@ -31,15 +32,14 @@ class ThreadMgr final {
   ThreadMgr() = delete;
   ~ThreadMgr();
 
-  Thread* GetThrd(int64_t thrd_id);
+  Thread* GetThrd(uint32_t thrd_id);
 
  private:
   friend class Global<ThreadMgr>;
   explicit ThreadMgr(const Plan& plan);
+  void CreateIndependentThrd(const Plan& plan);
 
-  void CreatePersistenceThrd(const Plan& plan, int64_t thrd_id);
-
-  std::vector<Thread*> threads_;
+  HashMap<uint32_t, Thread*> threads_;
 };
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/plan_task_graph.h"
+#include "oneflow/core/job/task.pb.h"
 
 namespace oneflow {
 
@@ -23,7 +24,7 @@ int64_t PlanTaskNode::chain_id() const {
   return chain_id;
 }
 
-bool PlanTaskGraph::IsReachable(int64_t src_task_id, int64_t dst_task_id) const {
+bool PlanTaskGraph::IsReachable(TaskId src_task_id, TaskId dst_task_id) const {
   return IsReachableToAncestor(task_id2plan_task_node_.at(dst_task_id),
                                task_id2plan_task_node_.at(src_task_id));
 }
@@ -38,7 +39,7 @@ PlanTaskGraph::PlanTaskGraph(const Plan& plan) : plan_(&plan) {
 void PlanTaskGraph::InitNodes() {
   for (const auto& task : plan_->task()) {
     PlanTaskNode* plan_task_node = new PlanTaskNode(task);
-    task_id2plan_task_node_.insert({task.task_id(), plan_task_node});
+    task_id2plan_task_node_.emplace(task.task_id(), plan_task_node);
     AddAllocatedNode(plan_task_node);
   }
 }
@@ -47,7 +48,7 @@ void PlanTaskGraph::InitEdges() {
   for (const auto& task_id_and_plan_task_node : task_id2plan_task_node_) {
     PlanTaskNode* producer_node = task_id_and_plan_task_node.second;
     for (const auto& pair : producer_node->task_proto()->produced_regst_desc()) {
-      for (int64_t consumer_task_id : pair.second.consumer_task_id()) {
+      for (const TaskIdProto& consumer_task_id : pair.second.consumer_task_id()) {
         PlanTaskNode* consumer_node = task_id2plan_task_node_.at(consumer_task_id);
         Connect(producer_node, NewEdge(), consumer_node);
       }
@@ -81,17 +82,17 @@ bool PlanTaskGraph::IsReachableToAncestor(const PlanTaskNode* node,
   return node2ancestors_.at(node).find(ancestor) != node2ancestors_.at(node).end();
 }
 
-const TaskProto* PlanTaskGraph::TaskProto4TaskId(int64_t task_id) const {
+const TaskProto* PlanTaskGraph::TaskProto4TaskId(TaskId task_id) const {
   return task_id2plan_task_node_.at(task_id)->task_proto();
 }
 
 void PlanTaskGraph::ComputeLifetimeSameChainActorIds(
-    const RegstDescProto* regst_desc, HashSet<int64_t>* lifetime_same_chain_actor_ids) const {
+    const RegstDescProto* regst_desc, HashSet<TaskId>* lifetime_same_chain_actor_ids) const {
   const auto* producer_task_node = task_id2plan_task_node_.at(regst_desc->producer_task_id());
   int64_t chain_id = producer_task_node->chain_id();
   const auto& sorted_plan_task_node = chain_id2sorted_plan_task_nodes_.at(chain_id);
   const PlanTaskNode* last_consumer_task_node = nullptr;
-  for (int64_t consumer_task_id : regst_desc->consumer_task_id()) {
+  for (const TaskIdProto& consumer_task_id : regst_desc->consumer_task_id()) {
     const auto* consumer_task_node = task_id2plan_task_node_.at(consumer_task_id);
     CHECK_EQ(consumer_task_node->chain_id(), chain_id);
     if (last_consumer_task_node == nullptr

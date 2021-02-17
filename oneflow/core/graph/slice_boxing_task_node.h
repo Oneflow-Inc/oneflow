@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_SLICE_BOXING_TASK_NODE_H_
 
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 
 namespace oneflow {
@@ -34,9 +35,9 @@ class SliceBoxingTaskNode final : public TaskNode {
   ~SliceBoxingTaskNode() override = default;
 
   void Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice, SliceBoxingTaskMode mode,
-            int64_t machine_id, int64_t thrd_id, int64_t mem_zone_id);
+            ProcessId process_id, StreamId stream_id, MemZoneId mem_zone_id);
   void Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice, SliceBoxingTaskMode mode,
-            int64_t machine_id, int64_t thrd_id);
+            ProcessId process_id, StreamId stream_id);
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   TaskType GetTaskType() const override { return TaskType::kSliceBoxing; }
@@ -56,7 +57,7 @@ class SliceBoxingTaskNode final : public TaskNode {
   TensorSliceView out_slice_;
   Shape out_shape_;
   SliceBoxingTaskMode mode_ = kSliceBoxingTaskModeInvalid;
-  int64_t mem_zone_id_;
+  MemZoneId mem_zone_id_;
 };
 
 }  // namespace oneflow

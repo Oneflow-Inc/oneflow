@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/logical_node.h"
+#include <cstdint>
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
@@ -24,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
@@ -115,44 +117,49 @@ std::string LogicalNode::VisualStr() const {
 }
 
 void LogicalNode::GenSortedCompTaskNodes(
-    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
-    std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
+    std::function<StreamId(const TaskNode*)> AllocateCpuStreamIdEvenly,
+    std::vector<std::pair<ProcessId, CompTaskNode*>>* nodes,
     std::function<void(CompTaskNode*)> Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
   for (int64_t machine_id : parallel_desc_->sorted_machine_ids()) {
     for (int64_t dev_phy_id : parallel_desc_->sorted_dev_phy_ids(machine_id)) {
       CompTaskNode* comp_task_node = NewCompTaskNode();
-      comp_task_node->set_machine_id(machine_id);
+      comp_task_node->set_process_id(ProcessId(machine_id, 0));
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
-      const IDMgr* id_mgr = Global<IDMgr>::Get();
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
         switch (comp_task_node->GetCudaWorkType()) {
           case CudaWorkType::kCompute: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuComputeThrdId(dev_phy_id));
+            comp_task_node->set_stream_id(IdUtil::GetDeviceComputeStreamId(
+                DeviceType::kGPU, static_cast<uint32_t>(dev_phy_id)));
             break;
           }
           case CudaWorkType::kCopyH2D: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuH2DThrdId(dev_phy_id));
+            comp_task_node->set_stream_id(
+                IdUtil::GetDeviceH2DStreamId(DeviceType::kGPU, static_cast<uint32_t>(dev_phy_id)));
             break;
           }
           case CudaWorkType::kCopyD2H: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuD2HThrdId(dev_phy_id));
+            comp_task_node->set_stream_id(
+                IdUtil::GetDeviceD2HStreamId(DeviceType::kGPU, static_cast<uint32_t>(dev_phy_id)));
             break;
           }
           case CudaWorkType::kNccl: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuNcclThrdId(dev_phy_id));
+            comp_task_node->set_stream_id(
+                IdUtil::GetNcclStreamId(static_cast<uint32_t>(dev_phy_id)));
             break;
           }
           case CudaWorkType::kMix: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
+            comp_task_node->set_stream_id(
+                IdUtil::GetDeviceMixStreamId(DeviceType::kGPU, static_cast<uint32_t>(dev_phy_id)));
             break;
           }
           case CudaWorkType::kDecodeH2D: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuDecodeH2DThrdId(dev_phy_id));
+            comp_task_node->set_stream_id(
+                IdUtil::GetCudaDecodeH2DStreamId(static_cast<uint32_t>(dev_phy_id)));
             break;
           }
           default: UNIMPLEMENTED();
@@ -162,9 +169,10 @@ void LogicalNode::GenSortedCompTaskNodes(
 #endif
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
         if (comp_task_node->IsIndependent()) {
-          nodes->push_back({machine_id, comp_task_node});
+          ProcessId process_id(static_cast<uint32_t>(machine_id), 0);
+          nodes->emplace_back(process_id, comp_task_node);
         } else {
-          comp_task_node->set_thrd_id(AllocateCpuThrdIdEvenly(comp_task_node));
+          comp_task_node->set_stream_id(AllocateCpuStreamIdEvenly(comp_task_node));
         }
       } else {
         UNIMPLEMENTED();

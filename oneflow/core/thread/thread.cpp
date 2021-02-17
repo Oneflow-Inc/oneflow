@@ -59,12 +59,13 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
         // do nothing
       }
     }
-    int64_t actor_id = msg.dst_actor_id();
+    TaskId actor_id = msg.dst_actor_id();
     auto actor_it = id2actor_ptr_.find(actor_id);
     CHECK(actor_it != id2actor_ptr_.end());
     int process_msg_ret = actor_it->second->ProcessMsg(msg);
     if (process_msg_ret == 1) {
-      LOG(INFO) << "thread " << thrd_id_ << " deconstruct actor " << actor_id;
+      LOG(INFO) << "thread " << thrd_id_ << " deconstruct actor " << actor_id.low()
+                << actor_id.high();
       id2actor_ptr_.erase(actor_it);
       Global<RuntimeCtx>::Get()->DecreaseCounter("running_actor_cnt");
     } else {
@@ -73,8 +74,8 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
   }
 }
 
-void Thread::ConstructActor(int64_t actor_id, const ThreadCtx& thread_ctx) {
-  LOG(INFO) << "thread " << thrd_id_ << " construct actor " << actor_id;
+void Thread::ConstructActor(TaskId actor_id, const ThreadCtx& thread_ctx) {
+  LOG(INFO) << "thread " << thrd_id_ << " construct actor " << actor_id.low() << actor_id.high();
   std::unique_lock<std::mutex> lck(id2task_mtx_);
   auto task_it = id2task_.find(actor_id);
   CHECK(id2actor_ptr_.emplace(actor_id, NewActor(task_it->second, thread_ctx)).second);

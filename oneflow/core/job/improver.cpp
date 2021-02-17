@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/task_id.pb.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
@@ -42,10 +44,10 @@ bool IsSharableRegstWithoutConsumer(const RegstDescProto& regst_desc) {
 }
 
 bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
-                                       const std::function<int64_t(int64_t)>& ChainId4TaskId) {
+                                       const std::function<int64_t(TaskId)>& ChainId4TaskId) {
   int64_t producer_chain_id = ChainId4TaskId(regst_desc.producer_task_id());
-  for (int64_t consumer_task_id : regst_desc.consumer_task_id()) {
-    if (ChainId4TaskId(consumer_task_id) != producer_chain_id) { return false; }
+  for (const TaskIdProto& consumer_task_id_proto : regst_desc.consumer_task_id()) {
+    if (ChainId4TaskId(TaskId(consumer_task_id_proto)) != producer_chain_id) { return false; }
   }
   return true;
 }
@@ -55,10 +57,11 @@ void ForEachSharableStreamRegstDescsWithoutConsumer(
     const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
   HashMap<int64_t, std::vector<const RegstDescProto*>> global_work_stream_id2regst_descs;
   for (const auto& task : plan.task()) {
-    int64_t global_work_stream_id = Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task.task_id());
+    TaskId task_id(task.task_id());
+    uint64_t global_stream_index = task_id.global_stream_index();
     for (const auto& pair : task.produced_regst_desc()) {
       if (IsSharableRegstWithoutConsumer(pair.second)) {
-        global_work_stream_id2regst_descs[global_work_stream_id].push_back(&pair.second);
+        global_work_stream_id2regst_descs[global_stream_index].push_back(&pair.second);
       }
     }
   }
@@ -70,9 +73,9 @@ void ForEachSharableStreamRegstDescsWithoutConsumer(
 void ForEachSameColoredStreamRegstDescWithoutConsumer(
     const Plan& plan,
     const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
-  auto GetProducerTaskId = [](const RegstDescProto* regst_desc, HashSet<int64_t>* ret_actor_ids) {
+  auto GetProducerTaskId = [](const RegstDescProto* regst_desc, HashSet<TaskId>* ret_actor_ids) {
     CHECK(regst_desc->enable_reuse_mem());
-    ret_actor_ids->insert(regst_desc->producer_task_id());
+    ret_actor_ids->emplace(regst_desc->producer_task_id());
   };
   ForEachSharableStreamRegstDescsWithoutConsumer(
       plan, [&](const std::vector<const RegstDescProto*>& regst_descs) {
@@ -84,7 +87,7 @@ void ForEachSameColoredChainRegstDescs(
     const SharableMemBlockGraph& sharable_mem_block_gph,
     const std::function<std::vector<const RegstDescProto*>(
         const std::vector<const SharableMemBlockNode*>&)>& GetRegstDescs,
-    const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
+    const std::function<void(const RegstDescProto*, HashSet<TaskId>*)>&
         ComputeLifetimeSameChainActorIds,
     const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
   std::vector<std::vector<const SharableMemBlockNode*>> sharable_mem_blocks_vec;
@@ -120,7 +123,7 @@ void ForEachSameColoredChainRegstDescWithConsumer(
     const PlanTaskGraph& plan_task_graph,
     const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
   // construct SharableMemBlockGraph
-  auto ChainId4TaskId = [&](int64_t task_id) {
+  auto ChainId4TaskId = [&](TaskId task_id) -> int64_t {
     return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().chain_id();
   };
   auto IsSharableRegstWithConsumer = [&](const RegstDescProto& regst_desc) {
@@ -161,7 +164,7 @@ void ForEachSameColoredChainRegstDescWithConsumer(
     return ret;
   };
   auto ComputeLifetimeSameChainActorIds = [&](const RegstDescProto* regst_desc,
-                                              HashSet<int64_t>* ret_actor_ids) {
+                                              HashSet<TaskId>* ret_actor_ids) {
     CHECK(regst_desc->enable_reuse_mem());
     ret_actor_ids->clear();
     for (const RegstDescProto* member : header2members.at(regst_desc)) {
@@ -202,9 +205,9 @@ double CalcII(double regst_desc_duration, uint64_t regst_num, double ii_scale) {
 
 uint64_t CalcRegstNum(
     const RegstDescProto& regst_desc,
-    const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
+    const std::function<const HashMap<TaskId, double>&(int64_t)>& PathDurations4RegstDescId,
     double ii,
-    const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId) {
+    const std::function<const HashMap<TaskId, double>&(int64_t)>& PathIIScales4RegstDescId) {
   int64_t regst_desc_id = regst_desc.regst_desc_id();
   const auto& consumer_actor_id2duration = PathDurations4RegstDescId(regst_desc_id);
   const auto& consumer_actor_id2ii_scale = PathIIScales4RegstDescId(regst_desc_id);
@@ -222,8 +225,8 @@ uint64_t CalcRegstNum(
 
 uint64_t CalcMemoryConsumed(
     const std::list<const RegstDescProto*>& regst_descs,
-    const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
-    const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
+    const std::function<const HashMap<TaskId, double>&(int64_t)>& PathDurations4RegstDescId,
+    const std::function<const HashMap<TaskId, double>&(int64_t)>& PathIIScales4RegstDescId,
     double ii) {
   uint64_t mem_consuming = 0;
   HashMap<int64_t, uint64_t> mem_block_id2max_regst_desc_mem_bytes;
@@ -261,17 +264,17 @@ std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
   };
 }
 
-std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathDurations4RegstDescId(
+std::function<const HashMap<TaskId, double>&(int64_t)> MakeGetterPathDurations4RegstDescId(
     const ChainActGraph& graph) {
   auto regst_desc_id2consumer_id2duration =
-      std::make_shared<HashMap<int64_t, HashMap<int64_t, double>>>();
+      std::make_shared<HashMap<int64_t, HashMap<TaskId, double>>>();
   graph.ForEachRegstDescConsumerPathMeanDuration(
-      [&](int64_t regst_desc_id, int64_t consumer_actor_id, double time) {
+      [&](int64_t regst_desc_id, TaskId consumer_actor_id, double time) {
         (*regst_desc_id2consumer_id2duration)[regst_desc_id][consumer_actor_id] = time;
       });
-  auto empty = std::make_shared<const HashMap<int64_t, double>>();
+  auto empty = std::make_shared<const HashMap<TaskId, double>>();
   return [regst_desc_id2consumer_id2duration,
-          empty](int64_t regst_desc_id) -> const HashMap<int64_t, double>& {
+          empty](int64_t regst_desc_id) -> const HashMap<TaskId, double>& {
     const auto& it = regst_desc_id2consumer_id2duration->find(regst_desc_id);
     if (it == regst_desc_id2consumer_id2duration->end()) {
       return *empty;
@@ -281,17 +284,17 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathDurations4
   };
 }
 
-std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4RegstDescId(
+std::function<const HashMap<TaskId, double>&(int64_t)> MakeGetterPathIIScales4RegstDescId(
     const ChainActGraph& graph) {
   auto regst_desc_id2consumer_id2ii_scale =
-      std::make_shared<HashMap<int64_t, HashMap<int64_t, double>>>();
+      std::make_shared<HashMap<int64_t, HashMap<TaskId, double>>>();
   graph.ForEachRegstDescConsumerPathIIScale(
-      [&](int64_t regst_desc_id, int64_t consumer_actor_id, double ii_scale) {
+      [&](int64_t regst_desc_id, TaskId consumer_actor_id, double ii_scale) {
         (*regst_desc_id2consumer_id2ii_scale)[regst_desc_id][consumer_actor_id] = ii_scale;
       });
-  auto empty = std::make_shared<const HashMap<int64_t, double>>();
+  auto empty = std::make_shared<const HashMap<TaskId, double>>();
   return [regst_desc_id2consumer_id2ii_scale,
-          empty](int64_t regst_desc_id) -> const HashMap<int64_t, double>& {
+          empty](int64_t regst_desc_id) -> const HashMap<TaskId, double>& {
     const auto& it = regst_desc_id2consumer_id2ii_scale->find(regst_desc_id);
     if (it == regst_desc_id2consumer_id2ii_scale->end()) {
       return *empty;
@@ -304,9 +307,11 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
 void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* src_task_proto, TaskProto* dst_task_proto) {
   RegstDescProto* ctrl_regst_desc =
       FindOrCreateProducedCtrlRegstDesc(src_task_proto, "out_ctrl_shared_mem_safe_guard");
-  int64_t dst_task_id = dst_task_proto->task_id();
-  if (!IsInRepeatedField(ctrl_regst_desc->consumer_task_id(), dst_task_id)) {
-    ctrl_regst_desc->add_consumer_task_id(dst_task_id);
+  HashSet<TaskId> consumer_task_ids = {ctrl_regst_desc->consumer_task_id().begin(),
+                                       ctrl_regst_desc->consumer_task_id().end()};
+  TaskId dst_task_id(dst_task_proto->task_id());
+  if (consumer_task_ids.find(dst_task_id) == consumer_task_ids.end()) {
+    ctrl_regst_desc->mutable_consumer_task_id()->Add()->CopyFrom(dst_task_proto->task_id());
     int64_t ctrl_regst_desc_id = ctrl_regst_desc->regst_desc_id();
     RegstDescIdSet* consumed_ctrl_regst_desc_ids =
         FindOrCreateConsumedCtrlRegstDescIdSet(dst_task_proto, "in_ctrl");
@@ -316,32 +321,34 @@ void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* src_task_proto, TaskProt
 }
 
 void CollectTailRegstConsumerTaskIds(const std::vector<const RegstDescProto*>& shared_mem_regsts,
-                                     HashSet<int64_t>* task_ids) {
+                                     HashSet<TaskId>* task_ids) {
   for (const RegstDescProto* regst_proto : shared_mem_regsts) {
     if (regst_proto == shared_mem_regsts.front()) { continue; }
-    for (int64_t consumer_id : regst_proto->consumer_task_id()) { task_ids->insert(consumer_id); }
+    for (const TaskIdProto& consumer_id_proto : regst_proto->consumer_task_id()) {
+      task_ids->emplace(consumer_id_proto);
+    }
   }
 }
 
-void CollectSinkTaskIds(const HashSet<int64_t>& task_ids,
-                        const std::function<bool(int64_t, int64_t)>& IsReachable,
-                        std::list<int64_t>* sink_task_ids) {
-  auto IsReachableToAnyOtherTask = [&](int64_t src_task_id) -> bool {
-    for (int64_t dst_task_id : task_ids) {
+void CollectSinkTaskIds(const HashSet<TaskId>& task_ids,
+                        const std::function<bool(TaskId, TaskId)>& IsReachable,
+                        std::list<TaskId>* sink_task_ids) {
+  auto IsReachableToAnyOtherTask = [&](TaskId src_task_id) -> bool {
+    for (TaskId dst_task_id : task_ids) {
       if (src_task_id == dst_task_id) { continue; }
       if (IsReachable(src_task_id, dst_task_id)) { return true; }
     }
     return false;
   };
   sink_task_ids->clear();
-  for (int64_t src_task_id : task_ids) {
+  for (TaskId src_task_id : task_ids) {
     if (!IsReachableToAnyOtherTask(src_task_id)) { sink_task_ids->push_back(src_task_id); }
   }
 }
 
 std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrlRegst(
-    Plan* plan, const std::function<bool(int64_t, int64_t)>& IsReachable) {
-  auto task_id2task_proto = std::make_shared<HashMap<int64_t, TaskProto*>>();
+    Plan* plan, const std::function<bool(TaskId, TaskId)>& IsReachable) {
+  auto task_id2task_proto = std::make_shared<HashMap<TaskId, TaskProto*>>();
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task_proto = plan->mutable_task(i);
     CHECK(task_id2task_proto->emplace(task_proto->task_id(), task_proto).second);
@@ -349,13 +356,13 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
   return [task_id2task_proto,
           IsReachable](const std::vector<const RegstDescProto*>& shared_mem_regsts) {
     if (shared_mem_regsts.size() == 1) { return; }
-    int64_t header_task_id = shared_mem_regsts.front()->producer_task_id();
+    TaskId header_task_id(shared_mem_regsts.front()->producer_task_id());
     TaskProto* header_task_proto = task_id2task_proto->at(header_task_id);
-    HashSet<int64_t> tail_regsts_consumer_task_ids;
+    HashSet<TaskId> tail_regsts_consumer_task_ids;
     CollectTailRegstConsumerTaskIds(shared_mem_regsts, &tail_regsts_consumer_task_ids);
-    std::list<int64_t> sink_task_ids;
+    std::list<TaskId> sink_task_ids;
     CollectSinkTaskIds(tail_regsts_consumer_task_ids, IsReachable, &sink_task_ids);
-    for (int64_t sink_task_id : sink_task_ids) {
+    for (TaskId sink_task_id : sink_task_ids) {
       TaskProto* sink_task_proto = task_id2task_proto->at(sink_task_id);
       TryConnectWithMemSafeGuardCtrlRegstDesc(header_task_proto, sink_task_proto);
     }
@@ -422,8 +429,9 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
 
   auto GenMemBlock4RegstIfNeed = [&](RegstDescProto* regst_desc, const TaskProto* task) {
     const int64_t job_id = task->job_id();
-    const int64_t machine_id = task->machine_id();
-    const int64_t thrd_id = task->thrd_id();
+    TaskId task_id(task->task_id());
+    // const int64_t machine_id = task->machine_id();
+    // const int64_t thrd_id = task->thrd_id();
     int64_t mem_block_id = regst_desc->mem_block_id();
     int64_t mem_block_offset = regst_desc->mem_block_offset();
     CHECK_NE(mem_block_id, -1);
@@ -438,16 +446,16 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
       MemBlockProto mem_block;
       mem_block.set_mem_block_id(mem_block_id);
       mem_block.add_job_id(job_id);
-      mem_block.set_machine_id(machine_id);
+      mem_block.set_machine_id(task_id.process_id().node_index());
       *(mem_block.mutable_mem_case()) = regst_desc->mem_case();
       mem_block.set_enable_reuse_mem(regst_desc->enable_reuse_mem());
       mem_block.set_mem_size(regst_main_size + mem_block_offset);
-      mem_block.set_thrd_id_hint(thrd_id);
+      mem_block.set_thrd_id_hint(static_cast<uint32_t>(task_id.stream_id()));
       CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
     } else {
       MemBlockProto* mem_block = &(mem_block_id2mem_block.at(mem_block_id));
       CHECK_EQ(mem_block->job_id(0), job_id);
-      CHECK_EQ(mem_block->machine_id(), machine_id);
+      CHECK_EQ(mem_block->machine_id(), task_id.process_id().node_index());
       CHECK(mem_block->mem_case() == regst_desc->mem_case());
       CHECK_EQ(mem_block->enable_reuse_mem(), regst_desc->enable_reuse_mem());
       mem_block->set_mem_size(std::max(mem_block->mem_size(), regst_main_size + mem_block_offset));
@@ -459,12 +467,12 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
       MemBlockProto mem_block;
       mem_block.set_mem_block_id(separated_mem_block_id);
       mem_block.add_job_id(job_id);
-      mem_block.set_machine_id(machine_id);
+      mem_block.set_machine_id(task_id.process_id().node_index());
       *(mem_block.mutable_mem_case()) =
           MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
       mem_block.set_enable_reuse_mem(false);
       mem_block.set_mem_size(regst_separated_size);
-      mem_block.set_thrd_id_hint(thrd_id);
+      mem_block.set_thrd_id_hint(static_cast<uint32_t>(task_id.stream_id()));
       CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
     }
   };
@@ -542,17 +550,18 @@ void Improver::MakeMemZoneRegstDescs(const Plan& plan, MemZoneRegstDescs* mz2reg
     mz2regst_desc->at(machine_id).resize(amd_.machine_amd(machine_id).zone_size_size());
   }
   for (const auto& task : plan.task()) {
+    TaskId task_id(task.task_id());
     for (const auto& pair : task.produced_regst_desc()) {
       int64_t mem_zone_id = GetMemoryZoneId(pair.second.mem_case());
-      mz2regst_desc->at(task.machine_id()).at(mem_zone_id).push_back(&pair.second);
+      mz2regst_desc->at(task_id.process_id().node_index()).at(mem_zone_id).push_back(&pair.second);
     }
   }
 }
 
 Maybe<void> Improver::CheckAllZoneNotOOM(
     const MemZoneRegstDescs& mz_regst_descs,
-    const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
-    const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
+    const std::function<const HashMap<TaskId, double>&(int64_t)>& PathDurations4RegstDescId,
+    const std::function<const HashMap<TaskId, double>&(int64_t)>& PathIIScales4RegstDescId,
     double ii) const {
   FOR_RANGE(int64_t, machine_id, 0, mz_regst_descs.size()) {
     FOR_RANGE(int64_t, mem_zone_id, 0, mz_regst_descs[machine_id].size()) {
@@ -574,7 +583,7 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
 }
 
 double Improver::CalcMaxRegstDescDuration(
-    const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
+    const std::function<const HashMap<TaskId, double>&(int64_t)>& PathDurations4RegstDescId,
     const MemZoneRegstDescs& mz_regst_descs) const {
   double max_duration = 0;
   for (const auto& zone_regst_descs : mz_regst_descs) {
@@ -591,8 +600,8 @@ double Improver::CalcMaxRegstDescDuration(
 
 Maybe<double> Improver::BinarySearchII(
     double base_ii,
-    const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
-    const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
+    const std::function<const HashMap<TaskId, double>&(int64_t)>& PathDurations4RegstDescId,
+    const std::function<const HashMap<TaskId, double>&(int64_t)>& PathIIScales4RegstDescId,
     const MemZoneRegstDescs& mz_regst_descs) const {
   double max_duration = CalcMaxRegstDescDuration(PathDurations4RegstDescId, mz_regst_descs);
   JUST(CheckAllZoneNotOOM(mz_regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId,
@@ -619,8 +628,8 @@ Maybe<double> Improver::BinarySearchII(
 
 Maybe<void> Improver::ForEachImprovedRegstNum(
     const Plan& plan, bool is_memory_limited, double ii,
-    const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
-    const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
+    const std::function<const HashMap<TaskId, double>&(int64_t)>& PathDurations4RegstDescId,
+    const std::function<const HashMap<TaskId, double>&(int64_t)>& PathIIScales4RegstDescId,
     const std::function<void(int64_t, uint64_t)>& Handler) const {
   if (is_memory_limited) {
     MemZoneRegstDescs mz_regst_descs;
@@ -645,7 +654,7 @@ Maybe<void> Improver::ForEachImprovedRegstNum(
 }
 
 void Improver::ForEachInferredMemBlockCriticalSection(
-    const Plan& plan, const std::function<int64_t(int64_t)>& OrderInGraph4TaskId,
+    const Plan& plan, const std::function<int64_t(TaskId)>& OrderInGraph4TaskId,
     const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) const {
   HashMap<int32_t, std::vector<const RegstDescProto*>> mem_block_id2regst_descs;
   for (const auto& task : plan.task()) {
@@ -685,8 +694,8 @@ Maybe<Plan> Improver::GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd,
   // Check if there is any zone out of memory even though all register_num == 1
   MemZoneRegstDescs mz_regst_descs;
   MakeMemZoneRegstDescs(complete_plan, &mz_regst_descs);
-  HashMap<int64_t, double> zero2one{{0, 1}};
-  auto Zero2One = [&](int64_t) -> const HashMap<int64_t, double>& { return zero2one; };
+  HashMap<TaskId, double> zero2one{{TaskId(), 1}};
+  auto Zero2One = [&](int64_t) -> const HashMap<TaskId, double>& { return zero2one; };
   JUST(CheckAllZoneNotOOM(mz_regst_descs, Zero2One, Zero2One, 1));
   SetUniqueMemBlockId4UnreusedMemRegst(&complete_plan);
   GenMemBlockAndChunk4Plan(&complete_plan);
@@ -733,10 +742,10 @@ Plan Improver::GenAndInferMemBlockId(const Plan& naive_plan) const {
     SetInplaceConsumedRegstDescId(&plan, MutRegstDesc4Id);
   }
   {
-    auto OrderInGraph4TaskId = [&](int64_t task_id) {
+    auto OrderInGraph4TaskId = [&](TaskId task_id) -> int64_t {
       return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().order_in_graph();
     };
-    auto IsReachable = [&](int64_t src_task_id, int64_t dst_task_id) {
+    auto IsReachable = [&](TaskId src_task_id, TaskId dst_task_id) {
       return plan_task_graph.IsReachable(src_task_id, dst_task_id);
     };
     ForEachInferredMemBlockCriticalSection(plan, OrderInGraph4TaskId,

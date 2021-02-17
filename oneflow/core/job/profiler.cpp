@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/actor/act_event_logger.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
@@ -50,23 +51,23 @@ class ActorProfileInfo {
 }  // namespace
 
 void Profiler::Profile(const Plan& plan, const std::string& act_event_filepath) {
-  HashMap<int64_t, TaskType> task_id2task_type;
+  HashMap<TaskId, TaskType> task_id2task_type;
   for (const TaskProto& task : plan.task()) {
-    CHECK(task_id2task_type.emplace(task.task_id(), task.task_type()).second);
+    CHECK(task_id2task_type.emplace(TaskId(task.task_id()), task.task_type()).second);
   }
 
   std::list<std::unique_ptr<ActEvent>> act_events;
   ParseActEvents(act_event_filepath, &act_events);
 
-  HashMap<int64_t, std::vector<ActTimeInfo>> actor_id2act_time_info;
+  HashMap<TaskId, std::vector<ActTimeInfo>> actor_id2act_time_info;
   for (const auto& act_event : act_events) {
-    int64_t actor_id = act_event->actor_id();
+    TaskId actor_id = act_event->actor_id();
     ActTimeInfo act_time_info(
         {act_event->ready_time(), act_event->start_time(), act_event->stop_time()});
     actor_id2act_time_info[actor_id].emplace_back(act_time_info);
   }
 
-  using ProfileInfoPair = std::pair<int64_t, ActorProfileInfo>;
+  using ProfileInfoPair = std::pair<TaskId, ActorProfileInfo>;
   std::vector<ProfileInfoPair> profile_info_vec;
   for (auto& pair : actor_id2act_time_info) {
     std::vector<ActTimeInfo>& act_time_infos = pair.second;
@@ -101,8 +102,9 @@ void Profiler::Profile(const Plan& plan, const std::string& act_event_filepath) 
             });
   auto log_stream = TeePersistentLogStream::Create("oneflow.profile");
   for (const ProfileInfoPair& pair : profile_info_vec) {
-    log_stream << "actor_id:" << std::to_string(pair.first)
-               << " act_num: " << std::to_string(pair.second.act_num())
+    log_stream << "actor_id:" << std::to_string(pair.first.low()) << ","
+               << std::to_string(pair.first.high())
+               << " act_num:" << std::to_string(pair.second.act_num())
                << " avg_act_time:" << std::to_string(pair.second.avg_act_time())
                << " avg_act_interval:" << std::to_string(pair.second.avg_act_interval())
                << " bottleneck_score:" << std::to_string(pair.second.CalcBottleNeckScore())

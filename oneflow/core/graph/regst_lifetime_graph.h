@@ -35,7 +35,7 @@ class RegstLifetimeNode final : public Node<RegstLifetimeNode, RegstLifetimeEdge
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstLifetimeNode);
   RegstLifetimeNode(const RegstDescProto* regst_desc,
-                    std::unique_ptr<HashSet<int64_t>>&& lifetime_actor_ids)
+                    std::unique_ptr<HashSet<TaskId>>&& lifetime_actor_ids)
       : regst_desc_(regst_desc),
         lifetime_actor_ids_(std::move(lifetime_actor_ids)),
         byte_size_(RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst()) {
@@ -45,12 +45,12 @@ class RegstLifetimeNode final : public Node<RegstLifetimeNode, RegstLifetimeEdge
 
   int64_t regst_desc_id() const { return regst_desc().regst_desc_id(); }
   const RegstDescProto& regst_desc() const { return *regst_desc_; }
-  const HashSet<int64_t>& lifetime_actor_ids() const { return *lifetime_actor_ids_; }
+  const HashSet<TaskId>& lifetime_actor_ids() const { return *lifetime_actor_ids_; }
   size_t byte_size() const { return byte_size_; }
 
  private:
   const RegstDescProto* regst_desc_;
-  std::unique_ptr<HashSet<int64_t>> lifetime_actor_ids_;
+  std::unique_ptr<HashSet<TaskId>> lifetime_actor_ids_;
   size_t byte_size_;
 };
 
@@ -59,7 +59,7 @@ class RegstLifetimeGraph final : public Graph<const RegstLifetimeNode, RegstLife
   OF_DISALLOW_COPY_AND_MOVE(RegstLifetimeGraph);
   RegstLifetimeGraph(
       const std::vector<const RegstDescProto*>& regst_descs,
-      const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>& ComputeLifetimeActorIds);
+      const std::function<void(const RegstDescProto*, HashSet<TaskId>*)>& ComputeLifetimeActorIds);
   ~RegstLifetimeGraph() = default;
 
   void ForEachSameColoredRegstDescs(
@@ -68,7 +68,7 @@ class RegstLifetimeGraph final : public Graph<const RegstLifetimeNode, RegstLife
  private:
   void InitNodes(
       const std::vector<const RegstDescProto*>& regst_descs,
-      const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>& ComputeLifetimeActorIds,
+      const std::function<void(const RegstDescProto*, HashSet<TaskId>*)>& ComputeLifetimeActorIds,
       std::vector<RegstLifetimeNode*>* nodes);
   void InitEdges(const std::vector<RegstLifetimeNode*>& nodes);
 };

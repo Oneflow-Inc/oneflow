@@ -1,0 +1,7 @@
+syntax = "proto2";
+package oneflow;
+
+message TaskIdProto {
+  required uint64 low = 1;
+  required uint64 high = 2;
+}

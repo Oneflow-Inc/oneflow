@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_LOGICAL_NODE_H_
 
 #include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
 #include "oneflow/core/graph/foreign_input_compute_task_node.h"
@@ -69,8 +70,8 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   // util
   virtual std::string TypeName() const = 0;
   std::string VisualStr() const;
-  void GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
-                              std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
+  void GenSortedCompTaskNodes(std::function<StreamId(const TaskNode*)>,
+                              std::vector<std::pair<ProcessId, CompTaskNode*>>*,
                               std::function<void(CompTaskNode*)>) const;
 
   // other
@@ -91,13 +92,13 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::unique_ptr<const Shape> out_blob_time_shape_;
 };
 
-#define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
-  (const LogicalNode* src_logical, const LogicalNode* dst_logical,                        \
-   const std::vector<CompTaskNode*>& sorted_src_comp_tasks,                               \
-   const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,                               \
-   std::function<TaskNode**(CompTaskNode * src, int64_t machine_id, int32_t mem_zone_id)> \
-       MutBufTask,                                                                        \
-   std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly)
+#define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                           \
+  (const LogicalNode* src_logical, const LogicalNode* dst_logical,                            \
+   const std::vector<CompTaskNode*>& sorted_src_comp_tasks,                                   \
+   const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,                                   \
+   std::function<TaskNode**(CompTaskNode * src, ProcessId process_id, MemZoneId mem_zone_id)> \
+       MutBufTask,                                                                            \
+   std::function<StreamId(const TaskNode*)> AllocateCpuStreamIdEvenly)
 
 class TaskGraph;
 using BldSubTskGphMthd = void(TaskGraph::*) BLD_SUB_TSK_GPH_MTHD_ARGS();

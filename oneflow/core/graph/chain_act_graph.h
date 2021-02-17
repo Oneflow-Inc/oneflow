@@ -109,18 +109,20 @@ class ChainActSubGraph final : public Graph<const ChainActNode, const ChainActEd
   OF_DISALLOW_COPY_AND_MOVE(ChainActSubGraph);
   ChainActSubGraph() = delete;
   ~ChainActSubGraph() = default;
-  ChainActSubGraph(const HashMap<int64_t, const TaskProto&>& task_id2task_proto,
+  ChainActSubGraph(const HashMap<TaskId, const TaskProto&>& task_id2task_proto,
                    std::list<std::unique_ptr<ActEvent>>&& act_events);
   const char* TypeName() const override { return "ChainActSubGraph"; }
 
   // Getters
-  const TaskProto& GetTaskProto(int64_t actor_id) const { return task_id2task_proto_.at(actor_id); }
+  const TaskProto& GetTaskProto(const TaskId& actor_id) const {
+    return task_id2task_proto_.at(actor_id);
+  }
   bool IsActEventWithConsumer(const ActEvent* act_event) const;
 
   // ForEach
   void ForEachActEvent(const std::function<void(const ActEvent*)>& Handler) const;
   void ForEachRegstActConsumerPathDuration(
-      const std::function<void(int64_t, int64_t, double)>& Handler) const;
+      const std::function<void(int64_t, TaskId, double)>& Handler) const;
 
  private:
   std::function<int64_t(const ChainActNode*)> MakeGetterTopoOrderValue4Node() const;
@@ -142,7 +144,7 @@ class ChainActSubGraph final : public Graph<const ChainActNode, const ChainActEd
                                     const ChainActNode* node) const;
 
   HashSet<const ActEvent*> act_event_with_consumer_;
-  const HashMap<int64_t, const TaskProto&>& task_id2task_proto_;
+  const HashMap<TaskId, const TaskProto&>& task_id2task_proto_;
   HashMap<const ActEvent*, ChainActNode*> act_event2chain_node_;
 };
 
@@ -154,13 +156,15 @@ class ChainActGraph final {
   ChainActGraph(const Plan& plan, std::list<std::unique_ptr<ActEvent>>&& act_events);
 
   // Getter
-  const TaskProto& GetTaskProto(int64_t actor_id) const { return task_id2task_proto_.at(actor_id); }
+  const TaskProto& GetTaskProto(const TaskId& actor_id) const {
+    return task_id2task_proto_.at(actor_id);
+  }
 
   // ForEach
   void ForEachRegstDescConsumerPathMeanDuration(
-      const std::function<void(int64_t, int64_t, double)>& Handler) const;
+      const std::function<void(int64_t, TaskId, double)>& Handler) const;
   void ForEachRegstDescConsumerPathIIScale(
-      const std::function<void(int64_t, int64_t, double)>& Handler) const;
+      const std::function<void(int64_t, TaskId, double)>& Handler) const;
 
   double CalcBaseII() const;
 
@@ -174,7 +178,7 @@ class ChainActGraph final {
       HashMap<int64_t, std::list<std::unique_ptr<ActEvent>>>* act_id2act_event_group);
 
   const Plan* plan_;
-  HashMap<int64_t, const TaskProto&> task_id2task_proto_;
+  HashMap<TaskId, const TaskProto&> task_id2task_proto_;
   std::list<std::unique_ptr<ChainActSubGraph>> sub_graphs_;
 };
 

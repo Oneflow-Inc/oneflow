@@ -62,11 +62,12 @@ struct RequestReadMsg {
 
 struct SocketMsg {
   SocketMsgType msg_type;
-  union {
+  union Msg {
 #define MAKE_ENTRY(x, y) x##Msg y##_msg;
     OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ)
 #undef MAKE_ENTRY
-  };
+    Msg() {}
+  } msg;
 };
 
 using CallBackList = std::list<std::function<void()>>;

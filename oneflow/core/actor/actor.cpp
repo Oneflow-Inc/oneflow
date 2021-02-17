@@ -39,7 +39,7 @@ void CheckInplaceRegstDescId(const TaskProto& task_proto) {
 void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
                  const ThreadCtx& thread_ctx) {
   job_desc_ = job_desc;
-  actor_id_ = task_proto.task_id();
+  actor_id_ = TaskId(task_proto.task_id());
   act_id_ = -1;
   InitDeviceCtx(thread_ctx);
   if (task_proto.has_parallel_ctx()) {
@@ -207,9 +207,7 @@ void Actor::ForEachProducedRegst(const std::function<void(Regst*)>& Handler) con
   }
 }
 
-DeviceType Actor::GetDeviceType() const {
-  return Global<IDMgr>::Get()->GetDeviceTypeFromActorId(actor_id_);
-}
+DeviceType Actor::GetDeviceType() const { return actor_id_.stream_id().device_type(); }
 
 int64_t Actor::Name2SoleRegstDescId(const std::string& name) const {
   auto find_it = name2regst_desc_id_.find(name);
@@ -384,7 +382,7 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
   if (Global<RuntimeCtx>::Get()->is_experiment_phase() || NeedCollectActEvent()) {
     auto act_event = std::make_shared<ActEvent>();
     act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
-    act_event->set_actor_id(actor_id());
+    actor_id().to_proto(act_event->mutable_actor_id());
     act_event->set_work_stream_id(GetGlobalWorkStreamId());
     act_event->set_act_id(act_id_);
     act_event->set_ready_time(GetCurTime());
@@ -506,19 +504,19 @@ void Actor::AsyncSendProducedCtrlRegstMsgToConsumer() {
   tmp_regst_desc_id_vec_.clear();
   naive_produced_rs_.ForChosenFrontRegst(IsChosenRegstDescId, [&](Regst* regst) {
     CHECK(regst->regst_desc()->regst_desc_type().has_ctrl_regst_desc());
-    int64_t real_consumer_cnt = HandleRegstToConsumer(regst, [](int64_t) { return true; });
+    int64_t real_consumer_cnt = HandleRegstToConsumer(regst, [](TaskId) { return true; });
     if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id()); }
   });
   naive_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
 }
 
-int64_t Actor::HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor) {
+int64_t Actor::HandleRegstToConsumer(Regst* regst, std::function<bool(TaskId)> IsAllowedActor) {
   auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
   CHECK_EQ(regst_reading_cnt_it->second, 0);
   regst->set_act_id(act_id_);
 
   int64_t real_consumer_cnt = 0;
-  for (int64_t consumer : regst->consumers_actor_id()) {
+  for (const TaskId& consumer : regst->consumers_actor_id()) {
     if (!IsAllowedActor(consumer)) { continue; }
     EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
     real_consumer_cnt += 1;
@@ -570,7 +568,7 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
 }
 
 void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                                   std::function<bool(int64_t)> IsAllowedActor) {
+                                                   std::function<bool(TaskId)> IsAllowedActor) {
   tmp_regst_desc_id_vec_.clear();
   naive_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
@@ -583,10 +581,10 @@ void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> R
 }
 
 void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess) {
-  HandleProducedNaiveDataRegstToConsumer(RegstPreProcess, [](int64_t) { return true; });
+  HandleProducedNaiveDataRegstToConsumer(RegstPreProcess, [](TaskId) { return true; });
 }
 
-void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor) {
+void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(TaskId)> IsAllowedActor) {
   HandleProducedNaiveDataRegstToConsumer([](Regst*) { return true; }, IsAllowedActor);
 }
 
@@ -595,7 +593,7 @@ void Actor::HandleProducedNaiveDataRegstToConsumer() {
 }
 
 void Actor::HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                                     std::function<bool(int64_t)> IsAllowedActor) {
+                                                     std::function<bool(TaskId)> IsAllowedActor) {
   tmp_regst_desc_id_vec_.clear();
   inplace_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
     CHECK(regst->regst_desc()->regst_desc_type().has_data_regst_desc());
@@ -607,10 +605,10 @@ void Actor::HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)>
 }
 
 void Actor::HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess) {
-  HandleProducedInplaceDataRegstToConsumer(RegstPreProcess, [](int64_t) { return true; });
+  HandleProducedInplaceDataRegstToConsumer(RegstPreProcess, [](TaskId) { return true; });
 }
 
-void Actor::HandleProducedInplaceDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor) {
+void Actor::HandleProducedInplaceDataRegstToConsumer(std::function<bool(TaskId)> IsAllowedActor) {
   HandleProducedInplaceDataRegstToConsumer([](Regst*) { return true; }, IsAllowedActor);
 }
 
@@ -619,10 +617,10 @@ void Actor::HandleProducedInplaceDataRegstToConsumer() {
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(Regst* regst) {
-  AsyncSendRegstMsgToConsumer(regst, [](int64_t) { return true; });
+  AsyncSendRegstMsgToConsumer(regst, [](TaskId) { return true; });
 }
 
-void Actor::AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor) {
+void Actor::AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(TaskId)> IsAllowedActor) {
   int64_t real_consumer_cnt = HandleRegstToConsumer(regst, IsAllowedActor);
   if (real_consumer_cnt > 0) { naive_produced_rs_.TryPopFrontRegst(regst->regst_desc_id()); }
 }
@@ -646,7 +644,7 @@ void Actor::AsyncSendEORDMsgForAllProducedRegstDesc() {
     CHECK(!pair.second.empty());
     const RtRegstDesc* regst_desc = pair.second.front()->regst_desc();
     device_ctx_->AddCallBack([regst_desc]() {
-      for (int64_t consumer : regst_desc->consumers_actor_id()) {
+      for (const TaskId& consumer : regst_desc->consumers_actor_id()) {
         Global<ActorMsgBus>::Get()->SendMsg(
             ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
       }
@@ -658,7 +656,7 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
   AsyncSendRegstMsgToProducer(regst, regst->producer_actor_id());
 }
 
-void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
+void Actor::AsyncSendRegstMsgToProducer(Regst* regst, TaskId producer) {
   // must access regst before sending it to producer
   int64_t regst_desc_id = regst->regst_desc_id();
   EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst));
@@ -701,21 +699,16 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 
 void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
   if (is_kernel_launch_synchronized_
-      && GetGlobalWorkStreamId()
-             == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {
+      && GetGlobalWorkStreamId() == msg.dst_actor_id().global_stream_index()) {
     Global<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
     async_msg_queue_.push_back(msg);
   }
 }
 
-int64_t Actor::GetGlobalWorkStreamId() const {
-  return Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(actor_id_);
-}
+int64_t Actor::GetGlobalWorkStreamId() const { return actor_id_.global_stream_index(); }
 
-int64_t Actor::GetLocalWorkStreamId() const {
-  return Global<IDMgr>::Get()->LocalWorkStreamId4ActorId(actor_id_);
-}
+int64_t Actor::GetLocalWorkStreamId() const { return actor_id_.stream_id().stream_index(); }
 
 Regst* Actor::GetNaiveOrInplaceCurReadable(int64_t regst_desc_id) const {
   Regst* regst = naive_consumed_rs_.Front(regst_desc_id);

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/sharable_mem_block_graph.h"
+#include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/register/register_desc.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/graph/inplace_regst_graph.h"
@@ -24,11 +25,12 @@ namespace {
 
 bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
                                        const PlanTaskGraph& plan_task_graph) {
-  auto ChainId4TaskId = [&](int64_t task_id) {
+  auto ChainId4TaskId = [&](const TaskIdProto& task_id_proto) {
+    TaskId task_id(task_id_proto);
     return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().chain_id();
   };
   int64_t producer_chain_id = ChainId4TaskId(regst_desc.producer_task_id());
-  for (int64_t consumer_task_id : regst_desc.consumer_task_id()) {
+  for (const TaskIdProto& consumer_task_id : regst_desc.consumer_task_id()) {
     if (ChainId4TaskId(consumer_task_id) != producer_chain_id) { return false; }
   }
   return true;

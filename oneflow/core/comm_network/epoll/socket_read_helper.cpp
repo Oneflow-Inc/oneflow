@@ -83,7 +83,7 @@ void SocketReadHelper::SetStatusWhenMsgHeadDone() {
 
 void SocketReadHelper::SetStatusWhenMsgBodyDone() {
   if (cur_msg_.msg_type == SocketMsgType::kRequestRead) {
-    Global<EpollCommNet>::Get()->ReadDone(cur_msg_.request_read_msg.read_id);
+    Global<EpollCommNet>::Get()->ReadDone(cur_msg_.msg.request_read_msg.read_id);
   }
   SwitchToMsgHeadReadHandle();
 }
@@ -91,28 +91,28 @@ void SocketReadHelper::SetStatusWhenMsgBodyDone() {
 void SocketReadHelper::SetStatusWhenRequestWriteMsgHeadDone() {
   SocketMsg msg_to_send;
   msg_to_send.msg_type = SocketMsgType::kRequestRead;
-  msg_to_send.request_read_msg.src_token = cur_msg_.request_write_msg.src_token;
-  msg_to_send.request_read_msg.dst_token = cur_msg_.request_write_msg.dst_token;
-  msg_to_send.request_read_msg.read_id = cur_msg_.request_write_msg.read_id;
-  Global<EpollCommNet>::Get()->SendSocketMsg(cur_msg_.request_write_msg.dst_machine_id,
+  msg_to_send.msg.request_read_msg.src_token = cur_msg_.msg.request_write_msg.src_token;
+  msg_to_send.msg.request_read_msg.dst_token = cur_msg_.msg.request_write_msg.dst_token;
+  msg_to_send.msg.request_read_msg.read_id = cur_msg_.msg.request_write_msg.read_id;
+  Global<EpollCommNet>::Get()->SendSocketMsg(cur_msg_.msg.request_write_msg.dst_machine_id,
                                              msg_to_send);
   SwitchToMsgHeadReadHandle();
 }
 
 void SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone() {
-  auto mem_desc = static_cast<const SocketMemDesc*>(cur_msg_.request_read_msg.dst_token);
+  auto mem_desc = static_cast<const SocketMemDesc*>(cur_msg_.msg.request_read_msg.dst_token);
   read_ptr_ = reinterpret_cast<char*>(mem_desc->mem_ptr);
   read_size_ = mem_desc->byte_size;
   cur_read_handle_ = &SocketReadHelper::MsgBodyReadHandle;
 }
 
 void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
-  Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(cur_msg_.actor_msg);
+  Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(cur_msg_.msg.actor_msg);
   SwitchToMsgHeadReadHandle();
 }
 
 void SocketReadHelper::SetStatusWhenTransportMsgHeadDone() {
-  Global<Transport>::Get()->EnqueueTransportMsg(cur_msg_.transport_msg);
+  Global<Transport>::Get()->EnqueueTransportMsg(cur_msg_.msg.transport_msg);
   SwitchToMsgHeadReadHandle();
 }
 

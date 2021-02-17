@@ -15,14 +15,15 @@ limitations under the License.
 */
 #include "oneflow/core/graph/collective_boxing_task_node.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
-void CollectiveBoxingGenericTaskNode::Init(int64_t machine_id, int64_t thrd_id, int64_t area_id,
-                                           const OperatorConf& op_conf) {
+void CollectiveBoxingGenericTaskNode::Init(ProcessId process_id, StreamId stream_id,
+                                           int64_t area_id, const OperatorConf& op_conf) {
+  set_process_id(process_id);
+  set_stream_id(stream_id);
   set_area_id(area_id);
-  set_machine_id(machine_id);
-  set_thrd_id(thrd_id);
   op_conf_ = op_conf;
 }
 

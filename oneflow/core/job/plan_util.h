@@ -18,12 +18,13 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
 struct PlanUtil {
   static RegstDescProto* GetSoleProducedDataRegst(TaskProto* task_proto);
-  static std::function<const TaskProto*(int64_t)> MakeGetterTaskProto4TaskId(const Plan& plan);
+  static std::function<const TaskProto*(TaskId)> MakeGetterTaskProto4TaskId(const Plan& plan);
   static void CleanUselessMemBlockAndCheckValid(Plan* plan);
   static void ToDotFile(const Plan& plan, const std::string& filepath);
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);

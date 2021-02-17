@@ -43,9 +43,9 @@ class Actor {
   // 0: success, and actor not finish
   int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handler_)(msg); }
 
-  int64_t machine_id() const { return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_); }
-  int64_t thrd_id() const { return Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_); }
-  int64_t actor_id() const { return actor_id_; }
+  ProcessId process_id() const { return actor_id_.process_id(); }
+  StreamId stream_id() const { return actor_id_.stream_id(); }
+  TaskId actor_id() const { return actor_id_; }
 
  protected:
   struct BlobInfo {
@@ -86,10 +86,11 @@ class Actor {
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
-#define OF_SET_MSG_HANDLER(val)                                   \
-  do {                                                            \
-    LOG(INFO) << "actor " << actor_id() << " switch to " << #val; \
-    set_msg_handler(static_cast<MsgHandler>(val));                \
+#define OF_SET_MSG_HANDLER(val)                                                              \
+  do {                                                                                       \
+    LOG(INFO) << "actor (" << actor_id().low() << "," << actor_id().high() << ") switch to " \
+              << #val;                                                                       \
+    set_msg_handler(static_cast<MsgHandler>(val));                                           \
   } while (0)
 
   // Common Handlers and related virtual method
@@ -107,21 +108,21 @@ class Actor {
   // Util For Derived Actor to Send Msg
   void EnqueueAsyncMsg(const ActorMsg&);
   void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                              std::function<bool(int64_t)> IsAllowedActor);
+                                              std::function<bool(TaskId)> IsAllowedActor);
   void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
-  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
+  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(TaskId)> IsAllowedActor);
   void HandleProducedNaiveDataRegstToConsumer();
   void HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                                std::function<bool(int64_t)> IsAllowedActor);
+                                                std::function<bool(TaskId)> IsAllowedActor);
   void HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
-  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
+  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(TaskId)> IsAllowedActor);
   void HandleProducedInplaceDataRegstToConsumer();
   void AsyncSendRegstMsgToConsumer(Regst* regst);
-  void AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
+  void AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(TaskId)> IsAllowedActor);
 
   void HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst);
   void AsyncSendRegstMsgToProducer(Regst*);
-  void AsyncSendRegstMsgToProducer(Regst*, int64_t producer);
+  void AsyncSendRegstMsgToProducer(Regst*, TaskId producer);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
   void AsyncSendQueuedMsg();
 
@@ -144,7 +145,7 @@ class Actor {
   }
   Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) const;
   void ForEachProducedRegst(const std::function<void(Regst*)>&) const;
-  int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
+  int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(TaskId)> IsAllowedActor);
 
  protected:
   int64_t GetGlobalWorkStreamId() const;
@@ -219,7 +220,7 @@ class Actor {
   void AsyncRetInplaceConsumedRegstIfNoConsumer();
 
   const JobDesc* job_desc_;
-  int64_t actor_id_;
+  TaskId actor_id_;
   int64_t act_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;

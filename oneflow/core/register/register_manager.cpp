@@ -106,7 +106,7 @@ RegstMgr::RegstMgr(const Plan& plan) {
   }
 
   for (const TaskProto& task : plan.task()) {
-    if (task.machine_id() != this_machine_id) { continue; }
+    if (TaskId{task.task_id()}.process_id().node_index() != this_machine_id) { continue; }
     for (const auto& pair : task.produced_regst_desc()) {
       const RegstDescProto& regst_desc = pair.second;
       const int64_t regst_desc_id = regst_desc.regst_desc_id();

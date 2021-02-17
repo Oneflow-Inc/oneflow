@@ -306,7 +306,9 @@ void MergeSharedInterfaceMemBlock(const std::vector<std::shared_ptr<Job>>& jobs,
       const auto& task_protos = pair.second;
       CHECK_EQ(task_protos.size(), first_vec.size());
       FOR_RANGE(int64_t, i, 0, first_vec.size()) {
-        CHECK_EQ(task_protos.at(i)->machine_id(), first_vec.at(i)->machine_id());
+        TaskId task_id(task_protos.at(i)->task_id());
+        TaskId first_task_id(first_vec.at(i)->task_id());
+        CHECK(task_id.process_id() == first_task_id.process_id());
         RegstDescProto* first_regst_desc = PlanUtil::GetSoleProducedDataRegst(first_vec.at(i));
         RegstDescProto* regst_desc = PlanUtil::GetSoleProducedDataRegst(task_protos.at(i));
 

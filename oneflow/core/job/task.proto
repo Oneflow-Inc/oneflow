@@ -4,6 +4,7 @@ package oneflow;
 import "oneflow/core/graph/exec_sequence.proto";
 import "oneflow/core/register/register_desc.proto";
 import "oneflow/core/job/placement.proto";
+import "oneflow/core/job/task_id.proto";
 
 enum TaskType {
   kInvalid = 0;
@@ -66,9 +67,7 @@ message TaskSetInfo {
 message TaskProto {
   // common
   required TaskType task_type = 1;
-  required int64 machine_id = 2;
-  required int64 thrd_id = 3;
-  required int64 task_id = 4;
+  required TaskIdProto task_id = 4;
   required int64 job_id = 5;
   required TaskSetInfo task_set_info = 6;
   required ExecSequence exec_sequence = 7;

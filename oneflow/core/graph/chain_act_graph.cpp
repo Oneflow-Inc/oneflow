@@ -15,8 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/graph/chain_act_graph.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
@@ -30,7 +32,9 @@ std::string ChainActNode::VisualStr() const {
   std::stringstream ss;
   ss << "chain_id:" << chain_id() << "\\n";
   ss << "act_id:" << act_id() << "\\n";
-  ForEachActEvent([&](const ActEvent* act_event) { ss << act_event->actor_id() << "\\n"; });
+  ForEachActEvent([&](const ActEvent* act_event) {
+    ss << act_event->actor_id().high() << "," << act_event->actor_id().low() << "\\n";
+  });
   return ss.str();
 }
 
@@ -79,7 +83,7 @@ void ChainActNode::AddProducedRegstAct(std::unique_ptr<RegstAct>&& regst_act) {
 }
 
 void ChainActSubGraph::ForEachRegstActConsumerPathDuration(
-    const std::function<void(int64_t, int64_t, double)>& Handler) const {
+    const std::function<void(int64_t, TaskId, double)>& Handler) const {
   HashSet<std::shared_ptr<RegstActGroupCtx>> ctx_window;
   HashMap<const RegstAct*, std::shared_ptr<RegstActGroupCtx>> regst_act2ctx;
   TopoForEachChainActNode([&](const ChainActNode* cur_node) {
@@ -100,7 +104,7 @@ void ChainActSubGraph::ForEachRegstActConsumerPathDuration(
       for (const ActEvent* consumer : regst_act->consumer_act_events) {
         double path_duration =
             regst_act2ctx.at(regst_act)->node2duration_to_producer.at(Node4ActEvent(consumer));
-        Handler(regst_act->regst_desc_id, consumer->actor_id(),
+        Handler(regst_act->regst_desc_id, TaskId(consumer->actor_id()),
                 Duration4RegstActConsumerPath(producer, consumer, path_duration));
       }
       ctx_window.erase(regst_act2ctx.at(regst_act));
@@ -263,7 +267,7 @@ bool ChainActSubGraph::IsActEventWithConsumer(const ActEvent* act_event) const {
   return act_event_with_consumer_.find(act_event) != act_event_with_consumer_.end();
 }
 
-ChainActSubGraph::ChainActSubGraph(const HashMap<int64_t, const TaskProto&>& task_id2task_proto,
+ChainActSubGraph::ChainActSubGraph(const HashMap<TaskId, const TaskProto&>& task_id2task_proto,
                                    std::list<std::unique_ptr<ActEvent>>&& act_events)
     : task_id2task_proto_(task_id2task_proto) {
   HashMap<std::pair<int64_t, int64_t>, const ActEvent*> regst_uid2producer_act_event;
@@ -281,9 +285,9 @@ void ChainActGraph::ForEachChainActSubGraph(
 }
 
 void ChainActGraph::ForEachRegstDescConsumerPathIIScale(
-    const std::function<void(int64_t, int64_t, double)>& Handler) const {
-  std::map<std::pair<int64_t, int64_t>, uint64_t> regst_desc_id_consumed2used_cnt;
-  std::map<int64_t, uint64_t> regst_desc_id2produced_cnt;
+    const std::function<void(int64_t, TaskId, double)>& Handler) const {
+  HashMap<std::pair<int64_t, TaskId>, uint64_t> regst_desc_id_consumed2used_cnt;
+  HashMap<int64_t, uint64_t> regst_desc_id2produced_cnt;
   uint64_t max_cnt = 0;
   ForEachChainActSubGraph([&](const ChainActSubGraph* sub_graph) {
     sub_graph->ForEachNode([&](const ChainActNode* node) {
@@ -291,8 +295,8 @@ void ChainActGraph::ForEachRegstDescConsumerPathIIScale(
         int64_t produced_cnt = ++regst_desc_id2produced_cnt[regst_act->regst_desc_id];
         if (max_cnt < produced_cnt) { max_cnt = produced_cnt; }
         for (const ActEvent* act_event : regst_act->consumer_act_events) {
-          std::pair<int64_t, int64_t> regst_desc_id_consumed(regst_act->regst_desc_id,
-                                                             act_event->actor_id());
+          std::pair<int64_t, TaskId> regst_desc_id_consumed =
+              std::make_pair(regst_act->regst_desc_id, TaskId(act_event->actor_id()));
           int64_t used_cnt = ++regst_desc_id_consumed2used_cnt[regst_desc_id_consumed];
           if (max_cnt < used_cnt) { max_cnt = used_cnt; }
         }
@@ -307,13 +311,13 @@ void ChainActGraph::ForEachRegstDescConsumerPathIIScale(
 }
 
 void ChainActGraph::ForEachRegstDescConsumerPathMeanDuration(
-    const std::function<void(int64_t, int64_t, double)>& Handler) const {
-  std::map<std::pair<int64_t, int64_t>, double> regst_desc_id_consumed2duration;
-  std::map<std::pair<int64_t, int64_t>, int> regst_desc_id_consumed2cnt;
+    const std::function<void(int64_t, TaskId, double)>& Handler) const {
+  HashMap<std::pair<int64_t, TaskId>, double> regst_desc_id_consumed2duration;
+  HashMap<std::pair<int64_t, TaskId>, int> regst_desc_id_consumed2cnt;
   ForEachChainActSubGraph([&](const ChainActSubGraph* sub_graph) {
     sub_graph->ForEachRegstActConsumerPathDuration(
-        [&](int64_t regst_desc_id, int64_t consumer_actor_id, double duration) {
-          std::pair<int64_t, int64_t> regst_desc_id_consumed(regst_desc_id, consumer_actor_id);
+        [&](int64_t regst_desc_id, TaskId consumer_actor_id, double duration) {
+          std::pair<int64_t, TaskId> regst_desc_id_consumed(regst_desc_id, consumer_actor_id);
           regst_desc_id_consumed2duration[regst_desc_id_consumed] += duration;
           ++regst_desc_id_consumed2cnt[regst_desc_id_consumed];
         });
@@ -326,10 +330,10 @@ void ChainActGraph::ForEachRegstDescConsumerPathMeanDuration(
 
 double ChainActGraph::CalcBaseII() const {
   int64_t max_act_cnt = 0;
-  HashMap<int64_t, int64_t> actor_id2outputed_act_cnt;
+  HashMap<TaskId, int64_t> actor_id2outputed_act_cnt;
   ForEachChainActSubGraph([&](const ChainActSubGraph* sub_graph) {
     sub_graph->ForEachActEvent([&](const ActEvent* act_event) {
-      int64_t actor_id = act_event->actor_id();
+      TaskId actor_id(act_event->actor_id());
       if (sub_graph->IsActEventWithConsumer(act_event)) {
         ++actor_id2outputed_act_cnt[actor_id];
         max_act_cnt = std::max(max_act_cnt, actor_id2outputed_act_cnt[actor_id]);
@@ -339,7 +343,7 @@ double ChainActGraph::CalcBaseII() const {
   HashMap<int64_t, double> stream_id2total_calc_time;
   ForEachChainActSubGraph([&](const ChainActSubGraph* sub_graph) {
     sub_graph->ForEachActEvent([&](const ActEvent* act_event) {
-      int64_t actor_id = act_event->actor_id();
+      TaskId actor_id(act_event->actor_id());
       auto frequence_it = actor_id2outputed_act_cnt.find(actor_id);
       if (frequence_it == actor_id2outputed_act_cnt.end()) { return; }
       int64_t stream_id = act_event->work_stream_id();

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/actor/actor_message_bus.h"
+#include <cstdint>
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/thread/thread_manager.h"
@@ -22,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 void ActorMsgBus::SendMsg(const ActorMsg& msg) {
-  int64_t dst_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(msg.dst_actor_id());
+  int64_t dst_machine_id = msg.dst_actor_id().process_id().node_index();
   if (dst_machine_id == Global<MachineCtx>::Get()->this_machine_id()) {
     SendMsgWithoutCommNet(msg);
   } else {
@@ -31,10 +32,9 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
 }
 
 void ActorMsgBus::SendMsgWithoutCommNet(const ActorMsg& msg) {
-  CHECK_EQ(Global<IDMgr>::Get()->MachineId4ActorId(msg.dst_actor_id()),
-           Global<MachineCtx>::Get()->this_machine_id());
-  int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(msg.dst_actor_id());
-  Global<ThreadMgr>::Get()->GetThrd(thrd_id)->EnqueueActorMsg(msg);
+  int64_t dst_machine_id = msg.dst_actor_id().process_id().node_index();
+  CHECK_EQ(dst_machine_id, Global<MachineCtx>::Get()->this_machine_id());
+  Global<ThreadMgr>::Get()->GetThrd(msg.dst_actor_id().stream_id())->EnqueueActorMsg(msg);
 }
 
 }  // namespace oneflow

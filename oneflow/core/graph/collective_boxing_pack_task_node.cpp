@@ -18,14 +18,14 @@ limitations under the License.
 
 namespace oneflow {
 
-void CollectiveBoxingPackTaskNode::Init(int64_t machine_id, int64_t thrd_id, int64_t area_id,
+void CollectiveBoxingPackTaskNode::Init(ProcessId process_id, StreamId stream_id, int64_t area_id,
                                         const LogicalBlobId& lbi, const Shape& logical_shape,
                                         const SbpParallel& src_sbp_parallel,
                                         const SbpParallel& dst_sbp_parallel,
                                         const int64_t parallel_num) {
   lbi_ = lbi;
-  set_machine_id(machine_id);
-  set_thrd_id(thrd_id);
+  set_process_id(process_id);
+  set_stream_id(stream_id);
   set_area_id(area_id);
   logical_shape_ = logical_shape;
   parallel_num_ = parallel_num;

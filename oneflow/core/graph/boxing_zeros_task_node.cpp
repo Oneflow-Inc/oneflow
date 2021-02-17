@@ -15,15 +15,16 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/boxing_zeros_task_node.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
-void BoxingZerosTaskNode::Init(int64_t machine_id, int64_t thrd_id, int64_t area_id,
+void BoxingZerosTaskNode::Init(ProcessId process_id, StreamId stream_id, int64_t area_id,
                                const LogicalBlobId& lbi, const Shape& shape, DataType data_type,
                                const Shape& time_shape) {
   lbi_ = lbi;
-  set_machine_id(machine_id);
-  set_thrd_id(thrd_id);
+  set_process_id(process_id);
+  set_stream_id(stream_id);
   set_area_id(area_id);
   shape_ = shape;
   data_type_ = data_type;

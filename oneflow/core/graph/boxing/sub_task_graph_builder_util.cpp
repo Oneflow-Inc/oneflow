@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
@@ -65,8 +67,9 @@ bool SubTskGphBuilderUtil::HasEmptySliceIfSplit(int64_t parallel_num,
 }
 
 bool SubTskGphBuilderUtil::IsOnSameGPU(const TaskNode* lhs, const TaskNode* rhs) {
-  return lhs->machine_id() == rhs->machine_id() && lhs->device_type() == DeviceType::kGPU
-         && rhs->device_type() == DeviceType::kGPU && lhs->GpuPhyId() == rhs->GpuPhyId();
+  return IdUtil::IsProcessIdSameNode(lhs->process_id(), rhs->process_id())
+         && lhs->device_type() == DeviceType::kGPU && rhs->device_type() == DeviceType::kCPU
+         && lhs->GetCudaDeviceIndex() == rhs->GetCudaDeviceIndex();
 }
 
 bool SubTskGphBuilderUtil::IsBoxingS2S(const SbpParallel& src, const SbpParallel& dst) {
@@ -134,20 +137,22 @@ int64_t SubTskGphBuilderUtil::GetDistance(const ParallelDesc& src_parallel_desc,
 }
 
 int64_t SubTskGphBuilderUtil::GetDistance(const TaskNode* src, const TaskNode* dst) {
-  const auto GetDevPhyId = [](const DeviceType device_type, const int64_t thrd_id) -> int64_t {
-    if (device_type == DeviceType::kGPU) {
-      return Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id);
-    } else if (device_type == DeviceType::kCPU) {
+  const auto GetDevPhyId = [](const StreamId& stream_id) -> int64_t {
+    if (stream_id.device_type() == DeviceType::kGPU) {
+      return stream_id.device_index();
+    } else if (stream_id.device_type() == DeviceType::kCPU) {
       return 0;
     } else {
       UNIMPLEMENTED();
     }
   };
   const DeviceType src_device_type = src->device_type();
-  const int64_t src_dev_phy_id = GetDevPhyId(src_device_type, src->thrd_id());
+  const int64_t src_dev_phy_id = GetDevPhyId(src->stream_id());
   const DeviceType dst_device_type = dst->device_type();
-  const int64_t dst_dev_phy_id = GetDevPhyId(dst_device_type, dst->thrd_id());
-  return GetDistance(src->machine_id(), src_dev_phy_id, src_device_type, dst->machine_id(),
+  const int64_t dst_dev_phy_id = GetDevPhyId(dst->stream_id());
+  const int64_t src_machine_id = src->process_id().node_index();
+  const int64_t dst_machine_id = dst->process_id().node_index();
+  return GetDistance(src_machine_id, src_dev_phy_id, src_device_type, dst_machine_id,
                      dst_dev_phy_id, dst_device_type);
 }
 

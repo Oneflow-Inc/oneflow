@@ -97,14 +97,14 @@ void EpollCommNet::RegisterMemoryDone() {
 void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_msg) {
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kActor;
-  msg.actor_msg = actor_msg;
+  msg.msg.actor_msg = actor_msg;
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
 void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& transport_msg) {
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kTransport;
-  msg.transport_msg = transport_msg;
+  msg.msg.transport_msg = transport_msg;
   SendSocketMsg(dst_machine_id, msg);
 }
 
@@ -210,10 +210,10 @@ SocketHelper* EpollCommNet::GetSocketHelper(int64_t machine_id) {
 void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) {
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kRequestWrite;
-  msg.request_write_msg.src_token = src_token;
-  msg.request_write_msg.dst_machine_id = Global<MachineCtx>::Get()->this_machine_id();
-  msg.request_write_msg.dst_token = dst_token;
-  msg.request_write_msg.read_id = read_id;
+  msg.msg.request_write_msg.src_token = src_token;
+  msg.msg.request_write_msg.dst_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  msg.msg.request_write_msg.dst_token = dst_token;
+  msg.msg.request_write_msg.read_id = read_id;
   GetSocketHelper(src_machine_id)->AsyncWrite(msg);
 }
 

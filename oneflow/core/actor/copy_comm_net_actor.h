@@ -31,7 +31,7 @@ class CopyCommNetActor final : public Actor {
   struct RegstCtx {
     void* comm_net_token;
     Regst* regst_raw_ptr;
-    int64_t producer;
+    TaskId producer;
     int64_t act_id;
     bool has_sole_empty_tensor_in_sole_tensor_list;
   };

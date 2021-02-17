@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 
@@ -133,8 +134,10 @@ void RegstDesc::EraseZeroSizeBlob() {
 
 void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_regst_desc_id(regst_desc_id_);
-  ret->set_producer_task_id(producer_->task_id());
-  for (const TaskNode* consumer : consumers_) { ret->add_consumer_task_id(consumer->task_id()); }
+  producer_->task_id().to_proto(ret->mutable_producer_task_id());
+  for (const TaskNode* consumer : consumers_) {
+    consumer->task_id().to_proto(ret->add_consumer_task_id());
+  }
   *(ret->mutable_regst_desc_type()) = regst_desc_type_;
   if (regst_desc_type_.has_data_regst_desc()) {
     DataRegstDesc* data_regst_desc_proto =
@@ -185,10 +188,10 @@ bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
   return true;
 }
 
-void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_proto) {
+void InitCtrlRegstDesc(const TaskIdProto& producer_task_id, RegstDescProto* ctrl_regst_proto) {
   CHECK_NOTNULL(ctrl_regst_proto);
   ctrl_regst_proto->set_regst_desc_id(Global<IDMgr>::Get()->NewRegstDescId());
-  ctrl_regst_proto->set_producer_task_id(producer_task_id);
+  ctrl_regst_proto->mutable_producer_task_id()->CopyFrom(producer_task_id);
   ctrl_regst_proto->set_min_register_num(1);
   ctrl_regst_proto->set_max_register_num(1);
   ctrl_regst_proto->set_register_num(1);

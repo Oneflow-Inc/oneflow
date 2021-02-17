@@ -94,7 +94,7 @@ class SspVariableProxyCompActor final : public CompActor {
         CHECK_EQ(received_var_piece_id_, var_regst->piece_id());
         CHECK_EQ(value_regst, GetRingBufferValueRegst(received_var_piece_id_));
         value_regst->set_piece_id(received_var_piece_id_);
-        CHECK_GT(HandleRegstToConsumer(value_regst, [](int64_t) { return true; }), 0);
+        CHECK_GT(HandleRegstToConsumer(value_regst, [](TaskId) { return true; }), 0);
         produced_value_rs_.PopFrontRegsts({produced_value_regst_desc_id_});
       }
     }
@@ -105,7 +105,7 @@ class SspVariableProxyCompActor final : public CompActor {
         ++ack_msg_returned_ref_piece_id_;
       } else {
         ref_regst->set_piece_id(ack_msg_returned_ref_piece_id_ + 1);
-        CHECK_GT(HandleRegstToConsumer(ref_regst, [](int64_t) { return true; }), 0);
+        CHECK_GT(HandleRegstToConsumer(ref_regst, [](TaskId) { return true; }), 0);
         produced_ref_rs_.PopFrontRegsts({produced_ref_regst_desc_id_});
       }
     }
