@@ -1,6 +1,8 @@
 syntax = "proto2";
 package oneflow;
 
+import "oneflow/core/job/task_id.proto";
+
 message ReadableRegstInfo {
   required int64 regst_desc_id = 1;
   required int64 act_id = 2;
@@ -8,7 +10,7 @@ message ReadableRegstInfo {
 
 message ActEvent {
   required bool is_experiment_phase = 1;
-  required int64 actor_id = 2;
+  required TaskIdProto actor_id = 2;
   required int64 work_stream_id = 3;
   required int64 act_id = 4;
   required double ready_time = 5;
