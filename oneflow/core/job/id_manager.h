@@ -16,16 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_ID_MANAGER_H_
 #define ONEFLOW_CORE_JOB_ID_MANAGER_H_
 
-#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/job/task_id.pb.h"
-#include <bitset>
-#include <cstdint>
-#include <functional>
+#include "oneflow/core/job/task.pb.h"
 
 namespace oneflow {
 
@@ -104,6 +100,7 @@ class StreamId {
   static const int kLeftPartBits = 10;
   static const int kMiddlePartBits = 12;
   static const int kRightPartBits = 10;
+  static const int kLeftMiddlePartBits = kLeftPartBits + kMiddlePartBits;
   static const int kMiddleRightPartBits = kMiddlePartBits + kRightPartBits;
 
   StreamId() : val_(0) {}
@@ -132,18 +129,18 @@ class TaskId {
  public:
   static const int kBits = 128;
   static const int kQuarterBits = kBits / 4;
-  using bits_t = std::bitset<kBits>;
 
   TaskId() : low_(0), high_(0) {}
   explicit TaskId(uint64_t low, uint64_t high) : low_(low), high_(high) {}
   TaskId(const TaskIdProto& task_id) : TaskId(task_id.low(), task_id.high()) {}
   TaskId(ProcessId process_id, StreamId stream_id, uint32_t task_index);
-  ProcessId process_id() const { return ProcessId(static_cast<uint32_t>(high_)); }
-  StreamId stream_id() const { return StreamId(static_cast<uint32_t>(low_ >> kQuarterBits)); }
-  uint64_t global_stream_index() const { return (low_ >> kQuarterBits) | high_; }
-  uint32_t task_index() const { return ProcessId(static_cast<uint32_t>(low_)); }
+  ProcessId process_id() const;
+  StreamId stream_id() const;
+  uint64_t global_stream_index() const;
+  uint32_t task_index() const;
   uint64_t high() const { return high_; }
   uint64_t low() const { return low_; }
+  void to_proto(TaskIdProto* proto) const;
   bool operator==(const TaskId& rhs) const { return low_ == rhs.low_ && high_ == rhs.high_; }
   bool operator!=(const TaskId& rhs) const { return !(*this == rhs); }
 
@@ -162,7 +159,11 @@ class MemZoneId {
   static const int kUsageNormal = 0;
   static const int kUsagePinnedByCuda = 1;
   static const int kUsagePinnedByNetwork = 2;
-  static const int kBits = 32;
+  static const int kLeftPartBits = 10;
+  static const int kMiddlePartBits = 8;
+  static const int kRightPartBits = 12;
+  static const int kLeftMiddlePartBits = kLeftPartBits + kMiddlePartBits;
+  static const int kMiddleRightPartBits = kMiddlePartBits + kRightPartBits;
 
   MemZoneId() : val_(0) {}
   explicit MemZoneId(uint32_t val) : val_(val) {}
@@ -183,9 +184,48 @@ class MemZoneId {
 
 class GlobalMemZoneId {};
 
+}  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::ProcessId> {
+  size_t operator()(const oneflow::ProcessId& process_id) const {
+    return std::hash<uint32_t>{}(static_cast<uint32_t>(process_id));
+  }
+};
+
+template<>
+struct hash<oneflow::StreamId> {
+  size_t operator()(const oneflow::StreamId& stream_id) const {
+    return std::hash<uint32_t>{}(static_cast<uint32_t>(stream_id));
+  }
+};
+
+template<>
+struct hash<oneflow::MemZoneId> {
+  size_t operator()(const oneflow::MemZoneId& mem_zone_id) const {
+    return std::hash<uint32_t>{}(static_cast<uint32_t>(mem_zone_id));
+  }
+};
+
+template<>
+struct hash<oneflow::TaskId> {
+  size_t operator()(const oneflow::TaskId& task_id) const {
+    auto high = std::hash<uint64_t>{}(task_id.high());
+    auto low = std::hash<uint64_t>{}(task_id.low());
+    return high ^ low;
+  }
+};
+
+}  // namespace std
+
+namespace oneflow {
+
 class IdUtil {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IdUtil);
+  void Init();
 
   // StreamId & TaskId
   // Non-cpu device stream id
@@ -210,7 +250,9 @@ class IdUtil {
   TaskId GenerateTaskId(ProcessId process_id, StreamId stream_id);
 
   // ProcessId
-  static bool IsProcessIdSameNode(ProcessId lhs, ProcessId rhs);
+  static bool IsProcessIdSameNode(ProcessId lhs, ProcessId rhs) {
+    return lhs.node_index() == rhs.node_index();
+  }
 
   // MemZoneId
   static MemZoneId GetCpuMemZoneId();
@@ -221,14 +263,17 @@ class IdUtil {
   static bool IsMemZoneIdNormalUsage(MemZoneId mem_zone_id);
 
  private:
-  // cfg
+  friend class Global<IdUtil>;
+  IdUtil();
+  // cfg: device_num
+  // HashMap<DeviceType, uint32_t> device_type2device_num_;
   uint32_t cpu_device_num_;
   // independent generator state: map of task_type to task_num
   HashMap<std::pair<ProcessId, TaskType>, uint32_t> process_independent_task_type2task_num_;
   // task id generator state: map of process_stream to task_num
   HashMap<uint64_t, uint32_t> process_stream2task_num_;
   // cpu device stream_id generator state: map of process_id to cpu device index
-  HashMap<ProcessId, uint32_t, std::hash<uint32_t>> process_id2cpu_device_index_;
+  HashMap<ProcessId, uint32_t> process_id2cpu_device_index_;
 };
 
 class IDMgr final {
@@ -319,39 +364,5 @@ class IDMgr final {
 };
 
 }  // namespace oneflow
-
-namespace std {
-
-template<>
-struct hash<oneflow::ProcessId> {
-  size_t operator()(const oneflow::ProcessId& process_id) const {
-    return std::hash<uint32_t>{}(static_cast<uint32_t>(process_id));
-  }
-};
-
-template<>
-struct hash<oneflow::StreamId> {
-  size_t operator()(const oneflow::StreamId& stream_id) const {
-    return std::hash<uint32_t>{}(static_cast<uint32_t>(stream_id));
-  }
-};
-
-template<>
-struct hash<oneflow::MemZoneId> {
-  size_t operator()(const oneflow::MemZoneId& mem_zone_id) const {
-    return std::hash<uint32_t>{}(static_cast<uint32_t>(mem_zone_id));
-  }
-};
-
-template<>
-struct hash<oneflow::TaskId> {
-  size_t operator()(const oneflow::TaskId& task_id) const {
-    auto high = std::hash<uint64_t>{}(task_id.high());
-    auto low = std::hash<uint64_t>{}(task_id.low());
-    return high ^ low;
-  }
-};
-
-}  // namespace std
 
 #endif  // ONEFLOW_CORE_JOB_ID_MANAGER_H_

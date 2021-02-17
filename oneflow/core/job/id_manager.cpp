@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/graph/task_node.h"
-#include <cstdint>
 #include <limits>
 
 namespace oneflow {
@@ -127,6 +126,33 @@ TaskId::TaskId(ProcessId process_id, StreamId stream_id, uint32_t task_index) {
   low_ |= static_cast<uint64_t>(task_index);
   high_ = 0;
   high_ |= static_cast<uint64_t>(process_id);
+}
+
+void TaskId::to_proto(TaskIdProto* proto) const {
+  proto->set_low(low_);
+  proto->set_high(high_);
+}
+
+ProcessId TaskId::process_id() const { return ProcessId(static_cast<uint32_t>(high_)); }
+
+StreamId TaskId::stream_id() const { return StreamId(static_cast<uint32_t>(low_ >> kQuarterBits)); }
+
+uint64_t TaskId::global_stream_index() const {
+  return (low_ >> kQuarterBits) | (high_ << kQuarterBits);
+}
+
+uint32_t TaskId::task_index() const {
+  uint64_t id = (low_ << kQuarterBits) >> kQuarterBits;
+  return ProcessId(static_cast<uint32_t>(id));
+}
+
+// MemZoneId methods
+DeviceType MemZoneId::device_type() const {
+  return static_cast<DeviceType>(val_ >> kMiddleRightPartBits);
+}
+
+uint32_t MemZoneId::device_index() const {
+  return (val_ << kLeftMiddlePartBits) >> kLeftMiddlePartBits;
 }
 
 // IDUtil methods
@@ -245,6 +271,47 @@ TaskId IdUtil::GenerateTaskId(ProcessId process_id, StreamId stream_id) {
   return TaskId(process_id, stream_id, process_stream2task_num_[process_stream_key]);
 }
 
+MemZoneId IdUtil::GetCpuMemZoneId() {
+  return MemZoneId{static_cast<uint32_t>(DeviceType::kCPU) << MemZoneId::kMiddleRightPartBits};
+}
+
+bool IdUtil::IsCpuMemZoneId(MemZoneId mem_zone_id) {
+  return (static_cast<uint32_t>(mem_zone_id) >> MemZoneId::kMiddleRightPartBits)
+         == DeviceType::kCPU;
+}
+
+MemZoneId IdUtil::GetDeviceMemZoneId(DeviceType device_type, uint32_t device_index) {
+  CHECK(CheckValueInBitsRange(device_index, StreamId::kRightPartBits))
+      << "device_index is out of range";
+  uint32_t id = static_cast<uint32_t>(device_type) << MemZoneId::kMiddleRightPartBits;
+  id |= device_index;
+  return MemZoneId{id};
+}
+
+bool IdUtil::IsCudaMemZoneId(MemZoneId mem_zone_id) {
+  return (static_cast<uint32_t>(mem_zone_id) >> MemZoneId::kMiddleRightPartBits)
+         == DeviceType::kGPU;
+}
+
+bool IdUtil::IsMemZoneIdSameDevice(MemZoneId lhs, MemZoneId rhs) {
+  return lhs.device_type() == rhs.device_type() && lhs.device_index() == rhs.device_index();
+}
+
+bool IdUtil::IsMemZoneIdNormalUsage(MemZoneId mem_zone_id) {
+  uint32_t id = (static_cast<uint32_t>(mem_zone_id) << MemZoneId::kLeftPartBits)
+                >> MemZoneId::kMiddleRightPartBits;
+  return id == MemZoneId::kUsageNormal;
+}
+
+IdUtil::IdUtil() {
+  size_t machine_num = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
+  CHECK(CheckValueInBitsRange(machine_num, ProcessId::kLeftPartBits));
+  cpu_device_num_ = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
+  // regst_desc_id_count_ = 0;
+  // mem_block_id_count_ = 0;
+  // chunk_id_count_ = 0;
+}
+
 // old methods (deprecated)
 int64_t IDMgr::GetGpuH2DThrdId(int64_t dev_phy_id) const { return gpu_device_num_ + dev_phy_id; }
 int64_t IDMgr::GetGpuD2HThrdId(int64_t dev_phy_id) const {
@@ -354,7 +421,6 @@ IDMgr::IDMgr() {
   regst_desc_id_count_ = 0;
   mem_block_id_count_ = 0;
   chunk_id_count_ = 0;
-  base_independent_thrd_id_ = TickTockThrdId() + 1;
 }
 
 int64_t IDMgr::GetMachineThrdId(int64_t machine_id, int64_t thrd_id) {
