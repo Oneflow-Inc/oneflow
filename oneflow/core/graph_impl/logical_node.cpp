@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/id_util.h"
 
 namespace oneflow {
 
@@ -127,42 +128,46 @@ void LogicalNode::GenSortedCompTaskNodes(
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
-      const IDMgr* id_mgr = Global<IDMgr>::Get();
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
+        uint32_t stream_index = 0;
         switch (comp_task_node->GetCudaWorkType()) {
           case CudaWorkType::kCompute: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuComputeThrdId(dev_phy_id));
+            stream_index = StreamIndex::Cuda::kCompute;
             break;
           }
           case CudaWorkType::kCopyH2D: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuH2DThrdId(dev_phy_id));
+            stream_index = StreamIndex::Cuda::kH2D;
             break;
           }
           case CudaWorkType::kCopyD2H: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuD2HThrdId(dev_phy_id));
+            stream_index = StreamIndex::Cuda::kD2H;
             break;
           }
           case CudaWorkType::kNccl: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuNcclThrdId(dev_phy_id));
+            stream_index = StreamIndex::Cuda::kNccl;
             break;
           }
           case CudaWorkType::kMix: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
+            stream_index = StreamIndex::Cuda::kMix;
             break;
           }
           case CudaWorkType::kDecodeH2D: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuDecodeH2DThrdId(dev_phy_id));
+            stream_index = StreamIndex::Cuda::kDecodeH2D;
             break;
           }
           default: UNIMPLEMENTED();
         }
+        comp_task_node->set_thrd_id(IdUtil::GetStreamId(
+            StreamType::kCuda, static_cast<uint32_t>(dev_phy_id), stream_index));
 #else
         UNIMPLEMENTED();
 #endif
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
         if (comp_task_node->IsIndependent()) {
-          nodes->push_back({machine_id, comp_task_node});
+          StreamId stream_id = Global<IdUtil>::Get()->GenerateProcessTaskIndependentStreamId(
+              ProcessId{static_cast<uint32_t>(machine_id), 0}, comp_task_node->GetTaskType());
+          comp_task_node->set_thrd_id(static_cast<int64_t>(stream_id));
         } else {
           comp_task_node->set_thrd_id(AllocateCpuThrdIdEvenly(comp_task_node));
         }
