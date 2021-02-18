@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/one_to_one_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing_identity_task_node.h"
+#include "oneflow/core/common/id_util.h"
 
 namespace oneflow {
 
@@ -250,14 +251,11 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
     return &(buf_vec.at(mem_zone_id));
   };
 
-  std::vector<int64_t> cpu_device_offset(Global<ResourceDesc, ForSession>::Get()->TotalMachineNum(),
-                                         0);
-  auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) {
+  auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) -> int64_t {
     CHECK(!task_node->IsIndependent());
-    int64_t& offset = cpu_device_offset.at(task_node->machine_id());
-    int64_t ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
-    offset = (offset + 1) % Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
-    return ret;
+    StreamId stream_id = Global<IdUtil>::Get()->GenerateCPUComputeStreamIdEvenly(
+        ProcessId{static_cast<uint32_t>(task_node->machine_id()), 0});
+    return stream_id;
   };
 
   std::vector<std::pair<int64_t, CompTaskNode*>> machine_persistence_task_vec;
@@ -270,7 +268,6 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
         });
   });
 
-  GenerateIndependentThrdId(machine_persistence_task_vec);
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
     BldSubTskGphMthd method =
         GetMthdForBldSubTskGph(logical_edge->src_node(), logical_edge->dst_node());
