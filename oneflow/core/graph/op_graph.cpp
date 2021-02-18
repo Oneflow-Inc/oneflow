@@ -562,6 +562,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
       return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn));
     };
+    JUST(op_node->mut_op()->FillOpParallelDesc(op_node->parallel_desc()));
     JUST(op_node->mut_op()->FillLogicalInBlobDesc(LogicalBlobDesc4BnInOp));
     // Infer ParallelSignature
     JUST(op_node->mut_op()->InferParallelSignatureIf());

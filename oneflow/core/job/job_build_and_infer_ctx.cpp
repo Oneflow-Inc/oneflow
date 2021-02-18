@@ -538,6 +538,8 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   auto new_op_conf = JUST(DecodeLbiHintAndReturnNewOpConf(*op, &sbp_sig_conf, &ibn2disable_boxing));
   AddOpAndUpdateJobParallelViewConf(*new_op_conf, sbp_sig_conf, is_mirrored_parallel_view);
   auto parallel_conf = JUST(InferOpParallelConf(*op, origin_parallel_conf, ibn2disable_boxing));
+  ParallelDesc parallel_desc(*parallel_conf);
+  JUST(op->FillOpParallelDesc(parallel_desc));
   JUST(AddOpNameParallelConf2Placement(op_name, *parallel_conf));
   UpdateLbi2DisableBoxing(*op, ibn2disable_boxing);
   // infer batch_axis
@@ -557,7 +559,6 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   JUST(op->FillInBatchAxis(BatchAxis4Ibn));
   JUST(op->InferBatchAxisIf());
 
-  ParallelDesc parallel_desc(*parallel_conf);
   // infer mirrored signature
   JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
   // infer sbp signature

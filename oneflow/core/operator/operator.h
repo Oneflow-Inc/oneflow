@@ -89,8 +89,9 @@ class Operator {
 
   Maybe<void> InferParallelSignatureIf();
 
-  // Read: shape of input_blobs
-  // Write: shape of output_blobs
+  Maybe<void> FillOpParallelDesc(const ParallelDesc& parallel_desc);
+  Maybe<const ParallelDesc> GetOpParallelDesc() const;
+
   Maybe<void> FillLogicalInBlobDesc(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
   Maybe<void> FillLogicalInBlobDesc(
@@ -320,6 +321,7 @@ class Operator {
   OpAttribute op_attribute_;
   const JobDesc* job_desc_;
   HashMap<LogicalBlobId, std::string> lbi2obn_;
+  std::shared_ptr<const ParallelDesc> op_parallel_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> ibn2logical_blob_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> obn2logical_blob_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const OptInt64>>> ibn2batch_axis_;

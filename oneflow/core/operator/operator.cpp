@@ -115,6 +115,17 @@ Maybe<void> Operator::InferParallelSignature() {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> Operator::FillOpParallelDesc(const ParallelDesc& parallel_desc) {
+  CHECK_OR_RETURN(!op_parallel_desc_);
+  op_parallel_desc_.reset(new ParallelDesc(parallel_desc));
+  return Maybe<void>::Ok();
+}
+
+Maybe<const ParallelDesc> Operator::GetOpParallelDesc() const {
+  CHECK_OR_RETURN(op_parallel_desc_);
+  return op_parallel_desc_;
+}
+
 namespace {
 
 Maybe<void> FillLogicalBlobDesc(
@@ -1091,6 +1102,7 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
   bool is_mirrored = scope.opt_mirrored_parallel_conf().has_mirrored_parallel();
   const auto& op = ConstructOp(op_conf, JUST(scope.job_desc()));
   JUST(CheckOpInputSignature(*op, upstream_signature));
+  JUST(op->FillOpParallelDesc(parallel_desc));
   HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc;
   for (const auto& ibn : op->input_bns()) {
     const auto& map = upstream_signature.logical_blob_desc_signature().bn_in_op2blob_desc();
