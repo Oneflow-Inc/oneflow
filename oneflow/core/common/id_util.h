@@ -123,6 +123,12 @@ class StreamId {
 // | ProcessId  |  StreamId  | task_index |
 // |               TaskId                 |
 
+// chain_id encode (the same as TaskId with type int64_t)
+// | --------------- 64 bit --------------- |
+// | --- 23 --- | --- 20 --- | ---- 21 ---- |
+// | ProcessId  |  StreamId  | chain_index  |
+// |                TaskId                  |
+
 class TaskId {
  public:
   static const int kBits = 64;
@@ -236,12 +242,14 @@ class IdUtil {
   static bool IsMemZoneIdSameDevice(MemZoneId lhs, MemZoneId rhs);
   static bool IsMemZoneIdNormalUsage(MemZoneId mem_zone_id);
 
-  // Independent process task stream id
+  // independent process task stream id
   StreamId GenerateProcessTaskIndependentStreamId(ProcessId process_id, TaskType task_type);
   // pick cpu stream id evenly
   StreamId GenerateCPUComputeStreamIdEvenly(ProcessId process_id);
-  // Task
+  // task id
   TaskId GenerateTaskId(ProcessId process_id, StreamId stream_id);
+  // chain id
+  int64_t GenerateChainId(uint64_t global_stream_index);
 
  private:
   friend class Global<IdUtil>;
@@ -251,10 +259,12 @@ class IdUtil {
   uint32_t cpu_device_num_;
   // independent generator state: map of task_type to task_num
   HashMap<std::pair<ProcessId, TaskType>, uint32_t> process_independent_task_type2task_num_;
-  // task id generator state: map of process_stream to task_num
-  HashMap<uint64_t, uint32_t> process_stream2task_num_;
-  // cpu compute stream_id generator state: map of process_id to cpu device index
-  HashMap<ProcessId, uint32_t> process_id2cpu_device_index_;
+  // task id generator state: map of process stream to task_index counter
+  HashMap<uint64_t, uint32_t> process_stream2task_index_counter_;
+  // cpu compute stream_id generator state: map of process_id to cpu device_index counter
+  HashMap<ProcessId, uint32_t> process_id2cpu_device_index_counter_;
+  // chain id generator state: map of process stream to chain_index counter
+  HashMap<uint64_t, int64_t> process_stream2chain_index_counter_;
 };
 
 }  // namespace oneflow
