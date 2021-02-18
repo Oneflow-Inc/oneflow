@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/job/thrd_id_generator.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/common/id_util.h"
 
 namespace oneflow {
 
@@ -92,7 +93,7 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 
 void CopyCommNetTaskNode::Init(int64_t machine_id, int64_t src_machine_id) {
   set_machine_id(machine_id);
-  set_thrd_id(Global<IDMgr>::Get()->CommNetThrdId());
+  set_thrd_id(IdUtil::GetCommNetStreamId());
   peer_machine_id_ = src_machine_id;
 }
 
