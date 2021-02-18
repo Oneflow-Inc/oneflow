@@ -73,35 +73,29 @@ int64_t IDMgr::GetGpuPhyIdFromMemZoneId(int64_t mem_zone_id) const {
 }
 
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
-  if (thrd_id < GetCudaWorkTypeSize() * gpu_device_num_) {
-    return DeviceType::kGPU;
-  } else {
-    return DeviceType::kCPU;
-  }
+  return StreamId{static_cast<uint32_t>(thrd_id)}.device_type();
 }
 
 int64_t IDMgr::GetGpuPhyIdFromThrdId(int64_t thrd_id) const {
-  CHECK_LT(thrd_id, GetCudaWorkTypeSize() * gpu_device_num_);
-  return thrd_id % gpu_device_num_;
+  StreamId stream_id{static_cast<uint32_t>(thrd_id)};
+  CHECK_EQ(stream_id.device_type(), DeviceType::kGPU);
+  return stream_id.device_index();
 }
 
 DeviceType IDMgr::GetDeviceTypeFromActorId(int64_t actor_id) const {
-  int64_t thrd_id = ThrdId4ActorId(actor_id);
-  return GetDeviceTypeFromThrdId(thrd_id);
+  return TaskId{static_cast<uint64_t>(actor_id)}.stream_id().device_type();
 }
 
 int64_t IDMgr::MachineId4ActorId(int64_t actor_id) const {
-  return actor_id >> (63 - machine_id_bit_num_);
+  return TaskId{static_cast<uint64_t>(actor_id)}.process_id().node_index();
 }
 
 int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
-  int64_t tmp = (actor_id << machine_id_bit_num_);
-  tmp &= ~(static_cast<int64_t>(1) << 63);
-  return tmp >> (63 - thread_id_bit_num_);
+  return TaskId{static_cast<uint64_t>(actor_id)}.stream_id();
 }
 
 int64_t IDMgr::GlobalWorkStreamId4TaskId(int64_t task_id) const {
-  return (task_id >> task_id_bit_num_) << task_id_bit_num_;
+  return (task_id >> TaskId::kRightBits) << TaskId::kRightBits;
 }
 
 int64_t IDMgr::GlobalWorkStreamId4ActorId(int64_t actor_id) const {
@@ -109,18 +103,16 @@ int64_t IDMgr::GlobalWorkStreamId4ActorId(int64_t actor_id) const {
 }
 
 int64_t IDMgr::GlobalThrdId4TaskId(int64_t task_id) const {
-  int shift = local_work_stream_id_bit_num_ + task_id_bit_num_;
-  return (task_id >> shift) << shift;
+  return (task_id >> TaskId::kRightBits) << TaskId::kRightBits;
 }
 
 int64_t IDMgr::AllocateChainId(int64_t global_work_stream_id) {
-  CHECK_LT(stream_id2chain_cnt_[global_work_stream_id],
-           (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
-  return global_work_stream_id | (stream_id2chain_cnt_[global_work_stream_id]++);
+  return Global<IdUtil>::Get()->GenerateChainId(static_cast<uint64_t>(global_work_stream_id));
 }
 
 int64_t IDMgr::PickCpuThrdIdEvenly(int64_t machine_id) {
-  return GetCpuDeviceThrdId(machine_id2num_cpu_thrd_id_picked_[machine_id]++ % cpu_device_num_);
+  return Global<IdUtil>::Get()->GenerateCPUComputeStreamIdEvenly(
+      ProcessId{static_cast<uint32_t>(machine_id), 0});
 }
 
 IDMgr::IDMgr() {
