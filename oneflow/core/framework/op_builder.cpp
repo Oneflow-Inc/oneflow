@@ -26,9 +26,8 @@ namespace one {
   return &scope;
 }
 
-const std::string& TensorNameScope::Lookup(const TensorRef& tensor) const {
+const std::string& TensorNameScope::Lookup(const std::shared_ptr<Tensor>& tensor) const {
   std::lock_guard<std::mutex> lock(mutex_);
-
   uint64_t key = reinterpret_cast<uint64_t>(tensor.get());
   const auto& it = tensor_names_.find(key);
   if (it != tensor_names_.end()) {
@@ -38,29 +37,46 @@ const std::string& TensorNameScope::Lookup(const TensorRef& tensor) const {
   }
 }
 
-void TensorNameScope::Record(const TensorRef& tensor, const std::string& name) {
+void TensorNameScope::Record(const std::shared_ptr<Tensor>& tensor, const std::string& name) {
   std::lock_guard<std::mutex> lock(mutex_);
-
   uint64_t key = reinterpret_cast<uint64_t>(tensor.get());
   // We assume that the same tensor will only be recorded once.
   CHECK_EQ(tensor_names_.count(key), 0);
   tensor_names_.emplace(key, name);
 }
 
-OpBuilder::OpBuilder(const std::string& op_type_name) : operation_(new UserOpExpr) {
-  *(operation_->mutable_proto()->mutable_op_type_name()) = op_type_name;
+OpBuilder::OpBuilder(const std::string& op_type_name) {
+  *(proto_.mutable_op_type_name()) = op_type_name;
 }
 
 OpBuilder& OpBuilder::Op(const std::string& op_type_name) {
-  *(operation_->mutable_proto()->mutable_op_type_name()) = op_type_name;
+  *(proto_.mutable_op_type_name()) = op_type_name;
   return *this;
 }
 
-OpBuilder& OpBuilder::Input(const std::string& input_name, const std::vector<TensorRef>& input) {
+OpBuilder& OpBuilder::Input(const std::string& input_name,
+                            const std::vector<std::shared_ptr<Tensor>>& input) {
   CHECK_GT(input.size(), 0);
-  auto& input_list = (*(operation_->mutable_proto()->mutable_input()))[input_name];
+  CHECK_EQ(proto_.input().count(input_name), 0);
+  auto& input_list = (*(proto_.mutable_input()))[input_name];
   for (const auto& tensor : input) {
-    input_list.mutable_s()->Add()->assign(TensorNameScope::Global()->Lookup(tensor));
+    const std::string& tensor_name = TensorNameScope::Global()->Lookup(tensor);
+    input_list.mutable_s()->Add()->assign(tensor_name);
+    indexed_input_names_.push_back(tensor_name);
+  }
+  return *this;
+}
+
+OpBuilder& OpBuilder::Input(const std::string& input_name) { return this->Input(input_name, 1); }
+
+OpBuilder& OpBuilder::Input(const std::string& input_name, const int count) {
+  CHECK_GT(count, 0);
+  CHECK_EQ(proto_.input().count(input_name), 0);
+  auto& input_list = (*(proto_.mutable_input()))[input_name];
+  for (int i = 0; i < count; ++i) {
+    const std::string& tensor_name = "^#Position_" + std::to_string(i);
+    input_list.mutable_s()->Add()->assign(tensor_name);
+    indexed_input_names_.push_back(tensor_name);
   }
   return *this;
 }
@@ -71,31 +87,31 @@ OpBuilder& OpBuilder::Output(const std::string& output_name) {
 
 OpBuilder& OpBuilder::Output(const std::string& output_name, const int count) {
   CHECK_GT(count, 0);
-  auto& output_list = (*(operation_->mutable_proto()->mutable_output()))[output_name];
-  const std::string& op_name = operation_->op_name();
+  CHECK_EQ(proto_.output().count(output_name), 0);
+  auto& output_list = (*(proto_.mutable_output()))[output_name];
   for (int i = 0; i < count; ++i) {
-    output_list.mutable_s()->Add()->assign(op_name + "/" + output_name + "_" + std::to_string(i));
+    const std::string& tensor_name = op_name_ + "/" + output_name + "_" + std::to_string(i);
+    output_list.mutable_s()->Add()->assign(tensor_name);
+    indexed_output_names_.push_back(tensor_name);
   }
   return *this;
 }
 
 OpBuilder& OpBuilder::Attr(const std::string& attr_name, const AttrValue& attr_value) {
-  (*(operation_->mutable_proto()->mutable_attr()))[attr_name] = attr_value;
+  (*(proto_.mutable_attr()))[attr_name] = attr_value;
   return *this;
 }
 
 OpBuilder& OpBuilder::Attr(const std::string& attr_name, const std::string& serialized_attr_value) {
   AttrValue attr_value;
   TxtString2PbMessage(serialized_attr_value, &attr_value);
-  (*(operation_->mutable_proto()->mutable_attr()))[attr_name] = attr_value;
+  (*(proto_.mutable_attr()))[attr_name] = attr_value;
   return *this;
 }
 
-std::shared_ptr<UserOpExpr>&& OpBuilder::Build() {
-  for (const auto& it : operation_->proto().input()) {
-    for (const auto& input : it.second.s()) { operation_->indexed_input_names_.push_back(input); }
-  }
-  return std::move(operation_);
+std::shared_ptr<UserOpExpr> OpBuilder::Build() {
+  return std::make_shared<UserOpExpr>(op_name_, std::move(proto_), indexed_input_names_,
+                                      indexed_output_names_);
 }
 
 }  // namespace one

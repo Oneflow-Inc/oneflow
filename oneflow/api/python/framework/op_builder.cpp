@@ -31,7 +31,9 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def(py::init<const std::string&>())
       .def("Name", &one::OpBuilder::Name)
       .def("Op", &one::OpBuilder::Op)
-      .def("Input", &one::OpBuilder::Input)
+      .def("Input",
+           [](const std::shared_ptr<one::OpBuilder>& builder, const std::string& input_name,
+              const int input_num) { builder->Input(input_name, input_num); })
       .def("Output",
            [](const std::shared_ptr<one::OpBuilder>& builder, const std::string& output_name,
               const int output_num) { builder->Output(output_name, output_num); })

@@ -28,9 +28,9 @@ class TensorNameScope {
  public:
   static TensorNameScope* Global();
 
-  const std::string& Lookup(const TensorRef& tensor) const;
+  const std::string& Lookup(const std::shared_ptr<Tensor>& tensor) const;
 
-  void Record(const TensorRef& tensor, const std::string& name);
+  void Record(const std::shared_ptr<Tensor>& tensor, const std::string& name);
 
  private:
   TensorNameScope() = default;
@@ -47,18 +47,21 @@ class TensorNameScope {
 // UserOp builder.
 class OpBuilder {
  public:
-  OpBuilder() : operation_(new UserOpExpr) {}
+  OpBuilder() = default;
   explicit OpBuilder(const std::string& op_type_name);
   virtual ~OpBuilder() = default;
 
   OpBuilder& Name(const std::string& op_name) {
-    operation_->set_op_name(op_name);
+    op_name_ = op_name;
     return *this;
   }
 
   OpBuilder& Op(const std::string& op_type_name);
 
-  OpBuilder& Input(const std::string& input_name, const std::vector<TensorRef>& input);
+  OpBuilder& Input(const std::string& input_name,
+                   const std::vector<std::shared_ptr<Tensor>>& input);
+  OpBuilder& Input(const std::string& input_name);
+  OpBuilder& Input(const std::string& input_name, const int count);
 
   OpBuilder& Output(const std::string& output_name);
   OpBuilder& Output(const std::string& output_name, const int count);
@@ -70,10 +73,13 @@ class OpBuilder {
   // template <typename T>
   // OpBuilder& Attr(const std::string& attr_name, const T& attr_value);
 
-  std::shared_ptr<UserOpExpr>&& Build();
+  std::shared_ptr<UserOpExpr> Build();
 
  private:
-  std::shared_ptr<UserOpExpr> operation_;
+  std::string op_name_;
+  UserOpConf proto_;
+  std::vector<std::string> indexed_input_names_;
+  std::vector<std::string> indexed_output_names_;
 };
 
 }  // namespace one

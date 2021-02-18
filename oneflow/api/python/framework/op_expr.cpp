@@ -24,8 +24,19 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+std::vector<std::shared_ptr<one::Tensor>> Interpret(
+    const std::shared_ptr<one::OpExpr>& op,
+    const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
+  // TODO(): Execute the op by Autograd.
+  return std::vector<std::shared_ptr<one::Tensor>>{};
+}
+
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
-  py::class_<one::OpExpr, std::shared_ptr<one::OpExpr>>(m, "OpExpr");
+  py::class_<one::OpExpr, std::shared_ptr<one::OpExpr>>(m, "OpExpr")
+      .def("__call__", [](const std::shared_ptr<one::OpExpr>& op_expr,
+                          const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
+        return Interpret(op_expr, inputs);
+      });
 
   py::class_<one::BuiltinOpExpr, one::OpExpr, std::shared_ptr<one::BuiltinOpExpr>>(m,
                                                                                    "BuiltinOpExpr")
@@ -33,7 +44,11 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
 
   py::class_<one::UserOpExpr, one::BuiltinOpExpr, std::shared_ptr<one::UserOpExpr>>(m, "UserOpExpr")
       .def(py::init<>())
-      .def(py::init<std::string>())
+      .def(py::init([](const std::string& op_name, const std::string& serialized_proto) {
+        UserOpConf proto;
+        TxtString2PbMessage(serialized_proto, &proto);
+        return std::make_shared<one::UserOpExpr>(op_name, std::move(proto));
+      }))
       .def_property_readonly("type", &one::UserOpExpr::type)
       .def_property_readonly(
           "proto", [](const one::UserOpExpr& op) { return PbMessage2TxtString(op.proto()); })
