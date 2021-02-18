@@ -67,6 +67,12 @@ std::shared_ptr<Scope> GetScopeSymbol(const std::shared_ptr<InstructionsBuilder>
   return x->GetScopeSymbol(scope_proto).GetPtrOrThrow();
 }
 
+std::shared_ptr<OperatorConfSymbol> GetOpConfSymbol(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<cfg::OperatorConf>& op_conf) {
+  return x->GetOpConfSymbol(op_conf).GetPtrOrThrow();
+}
+
 std::shared_ptr<compatible_py::BlobObject> NewBlobObject(
     const std::shared_ptr<InstructionsBuilder>& x,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
@@ -110,6 +116,28 @@ void ReplaceMirrored(const std::shared_ptr<InstructionsBuilder>& x,
                      std::vector<std::shared_ptr<compatible_py::BlobObject>> lhs_objects,
                      std::vector<std::shared_ptr<compatible_py::BlobObject>> rhs_objects) {
   return x->ReplaceMirrored(parallel_desc_sym, lhs_objects, rhs_objects).GetOrThrow();
+}
+
+std::shared_ptr<Scope> BuildInitialScope(const std::shared_ptr<InstructionsBuilder>& x,
+                                         int64_t session_id,
+                                         const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+                                         const std::string& device_tag,
+                                         const std::vector<std::string>& machine_device_ids,
+                                         bool is_mirrored) {
+  return x->BuildInitialScope(session_id, job_conf, device_tag, machine_device_ids, is_mirrored)
+      .GetPtrOrThrow();
+}
+
+std::shared_ptr<Scope> BuildScopeWithNewParallelDesc(
+    const std::shared_ptr<InstructionsBuilder>& x, const std::shared_ptr<Scope>& scope,
+    const std::string& device_tag, const std::vector<std::string>& machine_device_ids) {
+  return x->BuildScopeWithNewParallelDesc(scope, device_tag, machine_device_ids).GetPtrOrThrow();
+}
+
+std::shared_ptr<Scope> BuildScopeWithNewParallelConf(
+    const std::shared_ptr<InstructionsBuilder>& x, const std::shared_ptr<Scope>& scope,
+    const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+  return x->BuildScopeWithNewParallelConf(scope, parallel_conf).GetPtrOrThrow();
 }
 
 std::shared_ptr<Scope> BuildScopeWithNewIsMirrored(const std::shared_ptr<InstructionsBuilder>& x,
@@ -161,8 +189,15 @@ void LazyReference(const std::shared_ptr<InstructionsBuilder>& x,
 }
 
 void DeleteObject(const std::shared_ptr<InstructionsBuilder>& x,
-                  compatible_py::BlobObject* blob_object) {
+                  compatible_py::Object* blob_object) {
   return x->DeleteObject(blob_object).GetOrThrow();
+}
+
+int64_t _NewOpKernelObject(const std::shared_ptr<InstructionsBuilder>& x,
+                           const std::shared_ptr<ParallelDesc>& parallel_desc_symbol,
+                           const std::shared_ptr<JobDesc>& job_desc_sym,
+                           const std::shared_ptr<OperatorConfSymbol>& op_conf_sym) {
+  return x->_NewOpKernelObject(parallel_desc_symbol, job_desc_sym, op_conf_sym).GetOrThrow();
 }
 
 }  // namespace
@@ -172,7 +207,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def(py::init([](const std::shared_ptr<vm::IdGenerator>& id_generator,
                        const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
                        const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list,
-                       const std::function<void(compatible_py::BlobObject*)>& release_object) {
+                       const std::function<void(compatible_py::Object*)>& release_object) {
         return std::make_shared<InstructionsBuilder>(id_generator, instruction_list, symbol_list,
                                                      release_object);
       }))
@@ -187,6 +222,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("GetJobConfSymbol", &GetJobConfSymbol)
       .def("GetParallelDescSymbol", &GetParallelDescSymbol)
       .def("GetScopeSymbol", &GetScopeSymbol)
+      .def("GetOpConfSymbol", &GetOpConfSymbol)
       .def("NewBlobObject", &NewBlobObject)
       .def("NewSymbolId4OpNodeSignature", &NewSymbolId4OpNodeSignature)
       .def("NewSharedOpKernelObjectId4ParallelConfSymbolId",
@@ -195,6 +231,9 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("UnpackLogicalBlobToPhysicalBlobs", &UnpackLogicalBlobToPhysicalBlobs)
       .def("MakeReferenceBlobObject", &MakeReferenceBlobObject)
       .def("ReplaceMirrored", &ReplaceMirrored)
+      .def("BuildInitialScope", &BuildInitialScope)
+      .def("BuildScopeWithNewParallelDesc", &BuildScopeWithNewParallelDesc)
+      .def("BuildScopeWithNewParallelConf", &BuildScopeWithNewParallelConf)
       .def("BuildScopeWithNewIsMirrored", &BuildScopeWithNewIsMirrored)
       .def("BuildScopeWithNewScopeName", &BuildScopeWithNewScopeName)
       .def("BuildScopeByProtoSetter", &BuildScopeByProtoSetter)
@@ -203,7 +242,8 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("CudaHostRegisterBlob", &CudaHostRegisterBlob)
       .def("CudaHostUnregisterBlob", &CudaHostUnregisterBlob)
       .def("LazyReference", &LazyReference)
-      .def("DeleteObject", &DeleteObject);
+      .def("DeleteObject", &DeleteObject)
+      .def("_NewOpKernelObject", &_NewOpKernelObject);
 
   // these API will be removed when InstructionsBuilder is refactor competely
   py::module_ vm_sub_module = m.def_submodule("vm");

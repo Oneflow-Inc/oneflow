@@ -28,3 +28,4 @@ compile_commands.json
 .cache
 /oneflow-src.zip
 /oneflow_temp
+/distributed-tmp

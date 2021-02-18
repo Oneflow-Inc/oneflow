@@ -19,7 +19,6 @@ from contextlib import contextmanager
 
 import inspect
 import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.hob as hob
@@ -44,7 +43,7 @@ import inspect
 
 def Compile(session, function_desc, config_proto):
     with InterpretScope(session, function_desc, config_proto):
-        _CompileJob(function_desc)
+        _CompileJob(session, function_desc)
         oneflow_api.CurJobBuildAndInferCtx_Complete()
 
 
@@ -83,7 +82,7 @@ def InterpretScope(session, function_desc, config_proto):
                 yield
 
 
-def _CompileJob(function_desc):
+def _CompileJob(session, function_desc):
     func = function_desc.job_func
     parameters = func.__oneflow_function_signature__.parameters
     if len(parameters) == 0:
@@ -105,6 +104,7 @@ def _CompileJob(function_desc):
     func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(
         ret, allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
     )
+    session.StashJob(func.__name__)
 
 
 def _InterpretGlobalFunction(function_desc, args):

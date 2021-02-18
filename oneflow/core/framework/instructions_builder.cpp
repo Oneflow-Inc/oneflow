@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/scope.cfg.h"
+#include "oneflow/core/framework/parallel_conf_util.h"
 
 namespace oneflow {
 
@@ -243,6 +244,16 @@ Maybe<Scope> InstructionsBuilder::GetScopeSymbol(
   return GetSymbol<cfg::ScopeProto, Scope>(*scope_proto);
 }
 
+Maybe<OperatorConfSymbol> InstructionsBuilder::GetOpConfSymbol(
+    const std::shared_ptr<cfg::OperatorConf>& op_conf) {
+  if (JUST(HasSymbol<cfg::OperatorConf>(*op_conf))) {
+    return GetSymbol<cfg::OperatorConf, OperatorConfSymbol>(*op_conf);
+  }
+  int64_t symbol_id = JUST(NewSymbolId4OpConf(op_conf));
+  JUST(AddSymbol<cfg::OperatorConf, OperatorConf, OperatorConfSymbol>(symbol_id, *op_conf));
+  return GetSymbol<cfg::OperatorConf, OperatorConfSymbol>(*op_conf);
+}
+
 Maybe<int64_t> InstructionsBuilder::NewSymbolId4String(std::string str) {
   int64_t symbol_id = JUST(NewSymbolId());
   JUST(InitStringSymbol(symbol_id, str));
@@ -270,6 +281,13 @@ Maybe<int64_t> InstructionsBuilder::NewSymbolId4Scope(
   return symbol_id;
 }
 
+Maybe<int64_t> InstructionsBuilder::NewSymbolId4OpConf(
+    const std::shared_ptr<cfg::OperatorConf> op_conf) {
+  int64_t symbol_id = JUST(NewSymbolId());
+  JUST(InitOpConfSymbol(symbol_id, op_conf));
+  return symbol_id;
+}
+
 Maybe<compatible_py::BlobObject> InstructionsBuilder::NewBlobObject(
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
     const std::shared_ptr<compatible_py::OpArgBlobAttribute>& op_arg_blob_attr) {
@@ -292,7 +310,7 @@ Maybe<int64_t> InstructionsBuilder::NewSharedOpKernelObjectId4ParallelConfSymbol
   return NewObjectId(parallel_desc_sym);
 }
 
-Maybe<void> InstructionsBuilder::DeleteObject(compatible_py::BlobObject* blob_object) {
+Maybe<void> InstructionsBuilder::DeleteObject(compatible_py::Object* blob_object) {
   JUST(_TryClearObject(blob_object));
   JUST(_DeleteObject(blob_object));
   return Maybe<void>::Ok();
@@ -397,6 +415,58 @@ Maybe<void> InstructionsBuilder::ReplaceMirrored(
   }
   instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
   return Maybe<void>::Ok();
+}
+
+Maybe<Scope> InstructionsBuilder::BuildInitialScope(
+    int64_t session_id, const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+    const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
+    bool is_mirrored) {
+  std::shared_ptr<cfg::ScopeProto> scope_proto = std::make_shared<cfg::ScopeProto>();
+  scope_proto->set_session_id(session_id);
+  std::shared_ptr<JobDesc> job_conf_sym = JUST(GetJobConfSymbol(job_conf));
+  scope_proto->set_job_desc_symbol_id(JUST(job_conf_sym->symbol_id()));
+  std::shared_ptr<cfg::ParallelConf> parallel_conf =
+      JUST(MakeParallelConf(device_tag, machine_device_ids));
+  std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
+      JUST(GetParallelDescSymbol(parallel_conf));
+  scope_proto->set_device_parallel_desc_symbol_id(JUST(device_parallel_desc_sym->symbol_id()));
+  parallel_conf = JUST(MakeParallelConf("cpu", machine_device_ids));
+  std::shared_ptr<ParallelDesc> host_parallel_desc_sym = JUST(GetParallelDescSymbol(parallel_conf));
+  scope_proto->set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
+  if (is_mirrored) {
+    scope_proto->mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
+  } else {
+    scope_proto->mutable_opt_mirrored_parallel_conf()->clear_mirrored_parallel();
+  }
+  return GetScopeSymbol(scope_proto);
+}
+
+Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
+    const std::shared_ptr<Scope>& scope, const std::string& device_tag,
+    const std::vector<std::string>& machine_device_ids) {
+  const auto SetScopeProto =
+      [this, &device_tag,
+       &machine_device_ids](const std::shared_ptr<cfg::ScopeProto>& scope_proto) -> Maybe<void> {
+    std::shared_ptr<cfg::ParallelConf> parallel_conf =
+        JUST(MakeParallelConf(device_tag, machine_device_ids));
+    std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
+        JUST(GetParallelDescSymbol(parallel_conf));
+    parallel_conf = JUST(MakeParallelConf("cpu", machine_device_ids));
+    std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
+        JUST(GetParallelDescSymbol(parallel_conf));
+    scope_proto->set_device_parallel_desc_symbol_id(JUST(device_parallel_desc_sym->symbol_id()));
+    scope_proto->set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
+    return Maybe<void>::Ok();
+  };
+
+  return BuildScopeByProtoSetter(scope, SetScopeProto);
+}
+
+Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelConf(
+    const std::shared_ptr<Scope>& scope, const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+  std::pair<std::string, std::vector<std::string>> tag_and_dev_ids =
+      *JUST(GetDeviceTagAndMachineDeviceIds(parallel_conf));
+  return BuildScopeWithNewParallelDesc(scope, tag_and_dev_ids.first, tag_and_dev_ids.second);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope,
@@ -605,6 +675,21 @@ Maybe<void> InstructionsBuilder::NewScopeSymbol(
   return Maybe<void>::Ok();
 }
 
+Maybe<int64_t> InstructionsBuilder::_NewOpKernelObject(
+    const std::shared_ptr<ParallelDesc>& parallel_desc_symbol,
+    const std::shared_ptr<JobDesc>& job_desc_sym,
+    const std::shared_ptr<OperatorConfSymbol>& op_conf_sym) {
+  int64_t object_id = JUST(NewObjectId(parallel_desc_symbol));
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("InitOpKernelObject");
+  instruction.set_parallel_desc_symbol_id(JUST(parallel_desc_symbol->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(job_desc_sym->symbol_id())));
+  instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(op_conf_sym->symbol_id())));
+  instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(object_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return object_id;
+}
+
 Maybe<void> InstructionsBuilder::InitOpNodeSignatureDescSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature_sym) {
   vm::cfg::InstructionProto instruction;
@@ -618,7 +703,20 @@ Maybe<void> InstructionsBuilder::InitOpNodeSignatureDescSymbol(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::_TryClearObject(compatible_py::BlobObject* blob_object) {
+Maybe<void> InstructionsBuilder::InitOpConfSymbol(
+    int64_t symbol_id, const std::shared_ptr<cfg::OperatorConf>& op_conf) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("InitOperatorConfSymbol");
+  instruction.mutable_operand()->Add()->CopyFrom(*InitSymbolOperand(symbol_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  eager::cfg::EagerSymbol eager_symbol;
+  eager_symbol.set_symbol_id(symbol_id);
+  eager_symbol.mutable_op_conf_symbol()->CopyFrom(*op_conf);
+  eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::_TryClearObject(compatible_py::Object* blob_object) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("TryClearObject");
   instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
@@ -627,7 +725,7 @@ Maybe<void> InstructionsBuilder::_TryClearObject(compatible_py::BlobObject* blob
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::_DeleteObject(compatible_py::BlobObject* blob_object) {
+Maybe<void> InstructionsBuilder::_DeleteObject(compatible_py::Object* blob_object) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("DeleteObject");
   instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
