@@ -80,10 +80,6 @@ int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
   return tmp >> (63 - thread_id_bit_num_);
 }
 
-int64_t IDMgr::AllocateLocalWorkStreamId(int64_t machine_id, int64_t thrd_id) {
-  return 100 + (machine_thrd_id2stream_id_cnt_[GetMachineThrdId(machine_id, thrd_id)]++);
-}
-
 int64_t IDMgr::GlobalWorkStreamId4TaskId(int64_t task_id) const {
   return (task_id >> task_id_bit_num_) << task_id_bit_num_;
 }
@@ -95,16 +91,6 @@ int64_t IDMgr::GlobalWorkStreamId4ActorId(int64_t actor_id) const {
 int64_t IDMgr::GlobalThrdId4TaskId(int64_t task_id) const {
   int shift = local_work_stream_id_bit_num_ + task_id_bit_num_;
   return (task_id >> shift) << shift;
-}
-
-int64_t IDMgr::LocalWorkStreamId4TaskId(int64_t task_id) const {
-  int64_t tmp = (task_id << (machine_id_bit_num_ + thread_id_bit_num_));
-  tmp &= ~(static_cast<int64_t>(1) << 63);
-  return tmp >> (63 - local_work_stream_id_bit_num_);
-}
-
-int64_t IDMgr::LocalWorkStreamId4ActorId(int64_t actor_id) const {
-  return LocalWorkStreamId4TaskId(actor_id);
 }
 
 int64_t IDMgr::AllocateChainId(int64_t global_work_stream_id) {
