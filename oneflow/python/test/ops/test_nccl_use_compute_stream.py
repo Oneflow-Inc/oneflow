@@ -23,9 +23,7 @@ import oneflow.typing as oft
 
 
 def _test_split_to_split_enable_all_to_all(
-    test_case,
-    src_axis,
-    dst_axis,
+    test_case, src_axis, dst_axis,
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(2)
@@ -47,8 +45,7 @@ def _test_split_to_split_enable_all_to_all(
 
 
 def _test_split_to_broadcast(
-    test_case,
-    src_axis,
+    test_case, src_axis,
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(2)
@@ -70,8 +67,7 @@ def _test_split_to_broadcast(
 
 
 def _test_partial_sum_to_split(
-    test_case,
-    dst_axis,
+    test_case, dst_axis,
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(2)
@@ -93,9 +89,7 @@ def _test_partial_sum_to_split(
     test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
 
 
-def _test_partial_sum_to_broadcast(
-    test_case
-):
+def _test_partial_sum_to_broadcast(test_case):
     flow.clear_default_session()
     flow.config.gpu_device_num(2)
     flow.config.nccl_use_compute_stream(True)
@@ -142,6 +136,7 @@ class TestNcclUseComputeStream(flow.unittest.TestCase):
 
     def test_partial_sum_to_broadcast(test_case):
         _test_partial_sum_to_broadcast(test_case)
+
 
 if __name__ == "__main__":
     unittest.main()
