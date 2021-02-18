@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/framework/framework.h"
+// #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/common/id_util.h"
 
 namespace oneflow {
@@ -165,8 +166,14 @@ void LogicalNode::GenSortedCompTaskNodes(
 #endif
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
         if (comp_task_node->IsIndependent()) {
-          StreamId stream_id = Global<IdUtil>::Get()->GenerateProcessTaskIndependentStreamId(
-              ProcessId{static_cast<uint32_t>(machine_id), 0}, comp_task_node->GetTaskType());
+          TaskType task_type = comp_task_node->GetTaskType();
+          StreamId stream_id;
+          if (IsClassRegistered<int32_t, TickTockTaskType>(task_type)) {
+            stream_id = IdUtil::GetTickTockStreamId();
+          } else {
+            stream_id = Global<IdUtil>::Get()->GenerateProcessTaskIndependentStreamId(
+                ProcessId{static_cast<uint32_t>(machine_id), 0}, task_type);
+          }
           comp_task_node->set_thrd_id(static_cast<int64_t>(stream_id));
         } else {
           comp_task_node->set_thrd_id(AllocateCpuThrdIdEvenly(comp_task_node));
