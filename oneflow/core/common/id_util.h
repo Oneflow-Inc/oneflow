@@ -23,18 +23,17 @@ limitations under the License.
 namespace oneflow {
 
 // ProcessId encode
-// | -------------- 32 bit --------------- |
-// | -- 16 -- | --- 10 --- | ----- 6 ----- |
-// | reserved | node_index | process_index |
+// | -------------- 32 bit ---------------- |
+// | --- 9 --- | --- 16 --- | ----- 7 ----- |
+// | reserved  | node_index | process_index |
 
 class ProcessId {
  public:
   static const int kBits = 32;
+  static const int kReservedBits = 9;
   static const int kLeftBits = 16;
-  static const int kMiddleBits = 10;
-  static const int kRightBits = 6;
-  static const int kLeftMiddleBits = kLeftBits + kMiddleBits;
-  static const int kMiddleRightBits = kMiddleBits + kRightBits;
+  static const int kRightBits = 7;
+  static const int kReservedLeftBits = kReservedBits + kLeftBits;
 
   ProcessId() : val_(0) {}
   explicit ProcessId(uint32_t val) : val_(val) {}
@@ -52,28 +51,13 @@ class ProcessId {
   uint32_t val_;
 };
 
-// StreamId encode
-// | ----------------------- 32 bit ------------------------ |
-// | ------ 10 ------ | ------ 12 ------ | ------ 10 ------- |
-// |   stream_type    |   device_index   |   stream_index    |
-// | kCPU             | [0, device_num)  |         0         |
-// | kCuda            | [0, device_num)  | enum CudaWorkType |
-// | ---------------- | ---------------- | ----------------- |
-// |                  | this_node_index  |  peer_node_index  |
-// | kCommNet         | [0, node_num)    | [0, node_num)     |
-// | ---------------- | ---------------- | ----------------- |
-// | kTickTock        |        0         |         0         |
-// | ---------------- | ---------------- | ----------------- |
-// |                  |    task_type     |   stream_index    |
-// | kIndependent     | enum TaskType    | [0, task_num)     |
-
 enum class StreamType : int16_t {
-  kInvalid = 0,
-  kCPU = 1,
-  kCuda = 2,
-  kCommNet = 10,
-  kTickTock = 11,
-  kIndependent = 100,
+  kInvalid = 0,        // DeviceType::kInvalidDevice
+  kCPU = 1,            // DeviceType::kCPU
+  kCuda = 2,           // DeviceType::kGPU
+  kCommNet = 20,       // DeviceType::kCPU
+  kTickTock = 21,      // DeviceType::kCPU
+  kIndependent = 100,  // DeviceType::kCPU
 };
 
 namespace StreamIndex {
@@ -95,15 +79,27 @@ struct Cuda {
 
 }  // namespace StreamIndex
 
+// StreamId encode
+// | --------------------------- 32 bit ----------------------------- |
+// | -- 12 -- | ------ 8 ------ | ------ 7 ------ | ------- 5 ------- |
+// | reserved |   stream_type   |   device_index  |   stream_index    |
+// |          | kCPU            | [0, device_num) | StreamIndex::CPU  |
+// |          | kCuda           | [0, device_num) | StreamIndex::Cuda |
+// |          | --------------- | --------------- | ----------------- |
+// |          | kCommNet        |        0        |         0         |
+// |          | --------------- | --------------- | ----------------- |
+// |          | kTickTock       |        0        |         0         |
+// |          | --------------- | --------------- | ----------------- |
+// |          |                 |    task_type    |   stream_index    |
+// |          | kIndependent    | enum TaskType   | [0, task_num)     |
+
 class StreamId {
  public:
   static const int kBits = 32;
-  static const int kLeftBits = 10;
-  static const int kMiddleBits = 12;
-  static const int kRightBits = 10;
-  static const int kLeftMiddleBits = kLeftBits + kMiddleBits;
-  static const int kMiddleRightBits = kMiddleBits + kRightBits;
-  static const int kLeftRightBits = kLeftBits + kRightBits;
+  static const int kReservedBits = 12;
+  static const int kLeftBits = 8;
+  static const int kMiddleBits = 7;
+  static const int kRightBits = 5;
 
   StreamId() : val_(0) {}
   explicit StreamId(uint32_t val) : val_(val) {}
@@ -123,17 +119,17 @@ class StreamId {
 };
 
 // TaskId encode (may be extended to 128 bit in future)
-// | ------------- 64 bit ------------- |
-// | --- 16 --- | -- 32 -- | --- 16 --- |
-// | ProcessId  | StreamId | task_index |
-// |              TaskId                |
+// | -------------- 64 bit -------------- |
+// | --- 23 --- | --- 20 --- | --- 21 --- |
+// | ProcessId  |  StreamId  | task_index |
+// |               TaskId                 |
 
 class TaskId {
  public:
   static const int kBits = 64;
-  static const int kLeftBits = 16;
-  static const int kMiddleBits = 32;
-  static const int kRightBits = 16;
+  static const int kLeftBits = 23;
+  static const int kMiddleBits = 20;
+  static const int kRightBits = 21;
   static const int kLeftMiddleBits = kLeftBits + kMiddleBits;
   static const int kMiddleRightBits = kMiddleBits + kRightBits;
   static const int kLeftRightBits = kLeftBits + kRightBits;
@@ -157,7 +153,7 @@ class TaskId {
 
 // MemZoneId encode
 // | -------------- 32 bit --------------- |
-// | ---- 12 ---- | -- 8 -- | ---- 21 ---- |
+// | ---- 12 ---- | -- 8 -- | ---- 12 ---- |
 // | device_type  | usage   | device_index |
 
 class MemZoneId {
@@ -165,7 +161,7 @@ class MemZoneId {
   static const int kUsageNormal = 0;
   static const int kUsagePinnedByCuda = 1;
   static const int kUsagePinnedByNetwork = 2;
-  static const int kLeftBits = 10;
+  static const int kLeftBits = 12;
   static const int kMiddleBits = 8;
   static const int kRightBits = 12;
   static const int kLeftMiddleBits = kLeftBits + kMiddleBits;
@@ -229,7 +225,7 @@ class IdUtil {
   // common stream id
   static StreamId GetStreamId(StreamType stream_type, uint32_t device_index, uint32_t stream_index);
   // CommNet stream id
-  static StreamId GetCommNetStreamId(uint32_t this_node_index, uint32_t peer_node_index);
+  static StreamId GetCommNetStreamId();
   // TickTock stream id
   static StreamId GetTickTockStreamId();
 
