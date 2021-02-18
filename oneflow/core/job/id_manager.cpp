@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/id_util.h"
 
 namespace oneflow {
 
@@ -48,6 +49,27 @@ int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id) {
   CHECK_LT(machine_thrd_id2num_of_tasks_[machine_thrd_id],
            (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
   return machine_thrd_id | (machine_thrd_id2num_of_tasks_[machine_thrd_id]++);
+}
+
+int64_t IDMgr::CpuMemZoneId() const { return IdUtil::GetCpuMemZoneId(); }
+
+bool IDMgr::IsCpuMemZone(int64_t mem_zone_id) const {
+  return IdUtil::IsCpuMemZoneId(MemZoneId{static_cast<uint32_t>(mem_zone_id)});
+}
+
+bool IDMgr::IsGpuMemZone(int64_t mem_zone_id) const {
+  return IdUtil::IsCudaMemZoneId(MemZoneId{static_cast<uint32_t>(mem_zone_id)});
+}
+
+int64_t IDMgr::GpuMemZoneId(int64_t dev_phy_id) const {
+  return IdUtil::GetDeviceMemZoneId(DeviceType::kGPU, static_cast<uint32_t>(dev_phy_id));
+  return dev_phy_id;
+}
+
+int64_t IDMgr::GetGpuPhyIdFromMemZoneId(int64_t mem_zone_id) const {
+  MemZoneId _mem_zone_id(static_cast<uint32_t>(mem_zone_id));
+  CHECK_EQ(_mem_zone_id.device_type(), DeviceType::kGPU);
+  return _mem_zone_id.device_index();
 }
 
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
