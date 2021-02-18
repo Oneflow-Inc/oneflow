@@ -34,10 +34,10 @@ class FunctionNode {
   virtual void Release() = 0;
 
  protected:
-  TensorList inputs;
-  TensorList outputs;
-  std::vector<std::shared_ptr<TensorArg>> in_grads;
-  std::vector<std::shared_ptr<TensorArg>> out_grads;
+  std::shared_ptr<TensorList> inputs_;
+  std::shared_ptr<TensorList> outputs_;
+  std::vector<std::shared_ptr<TensorArg>> in_grads_;
+  std::vector<std::shared_ptr<TensorArg>> out_grads_;
   // TODO: add parameters
   std::function<void()> backward_fn_;
 };
@@ -47,14 +47,46 @@ class AutogradEngine {
   AutogradEngine() = default;
   virtual ~AutogradEngine() = default;
 
-  virtual std::shared_ptr<TensorList> Execute(std::shared_ptr<TensorList> outputs,
-                                              std::shared_ptr<TensorList> inputs,
-                                              std::shared_ptr<TensorList> out_grads,
+  virtual std::shared_ptr<TensorList> Execute(const std::shared_ptr<TensorList>& outputs,
+                                              const std::shared_ptr<TensorList>& inputs,
+                                              const std::shared_ptr<TensorList>& out_grads,
                                               bool retain_graph, bool create_graph) = 0;
   // TODO: add parameters
-  virtual std::shared_ptr<FunctionNode> AddBackwardFuncPtr(std::function<void()>) = 0;
+  virtual std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
+      std::function<void()>, const std::shared_ptr<TensorList>& inputs,
+      const std::shared_ptr<TensorList>& outputs) = 0;
+};
+
+// Stack AutogradEngine
+class StackFunctionNode final : public FunctionNode {
+ public:
+  StackFunctionNode(std::function<void()> backward_fn, const std::shared_ptr<TensorList>& intputs,
+                    const std::shared_ptr<TensorList>& outputs);
+  ~StackFunctionNode() = default;
+
+  std::weak_ptr<StackFunctionNode> GetPrevNode() { return prev_node_; }
+  void Release() override;
+  void Apply(bool create_graph) override;
+
+ protected:
+  std::weak_ptr<StackFunctionNode> prev_node_;
+};
+
+class StackAutogradEngine final : public AutogradEngine {
+ public:
+  std::shared_ptr<TensorList> Execute(const std::shared_ptr<TensorList>& outputs,
+                                      const std::shared_ptr<TensorList>& inputs,
+                                      const std::shared_ptr<TensorList>& out_grads,
+                                      bool retain_graph, bool create_graph) override;
+  virtual std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
+      std::function<void()>, const std::shared_ptr<TensorList>& inputs,
+      const std::shared_ptr<TensorList>& outputs) override;
+
+ protected:
+  std::weak_ptr<StackFunctionNode> top_node_;
 };
 
 }  // namespace one
 
 }  // namespace oneflow
+
