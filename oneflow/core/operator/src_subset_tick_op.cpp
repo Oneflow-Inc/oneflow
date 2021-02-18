@@ -40,7 +40,7 @@ class SrcSubsetTickOp final : public Operator {
 
 void SrcSubsetTickOp::InitFromOpConf() {
   CHECK(op_conf().has_src_subset_tick_conf());
-  if (op_conf().src_subset_tick_conf().has_in()) { EnrollInputBn("in", false); }
+  EnrollRepeatedInputBn("in", false);
   EnrollOutputBn("out", false);
 }
 
