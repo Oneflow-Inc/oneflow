@@ -242,15 +242,18 @@ class LrScheduler:
         raise NotImplementedError()
 
     def SetLrFieldsInOptimizerConf(self, optimizer_conf) -> None:
-        if self.warmup_conf is not None:
-            optimizer_conf.warmup_conf.CopyFrom(self.warmup_conf)
         if self.lr_lbn is not None:
-            assert self.learning_rate_decay_conf is None
             assert self.base_lr is None
+            assert self.warmup is None
+            assert self.learning_rate_decay_conf is None
             optimizer_conf.learning_rate_lbn = self.lr_lbn
         else:
-            assert self.learning_rate_decay_conf is not None
-            optimizer_conf.learning_rate_decay.CopyFrom(self.learning_rate_decay_conf)
+            assert self.base_lr is not None
+            optimizer_conf.base_learning_rate = self.base_lr
+            if self.warmup_conf is not None:
+                optimizer_conf.warmup_conf.CopyFrom(self.warmup_conf)
+            if self.learning_rate_decay_conf is not None:
+                ptimizer_conf.learning_rate_decay.CopyFrom(self.learning_rate_decay_conf)
 
 
 @oneflow_export("optimizer.CosineScheduler")
