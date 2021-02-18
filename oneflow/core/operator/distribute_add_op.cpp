@@ -38,7 +38,6 @@ class DistributeAddOp final : public Operator {
  private:
   Maybe<void> InferParallelSignature() override;
   Maybe<void> InferBatchAxis(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
@@ -87,7 +86,6 @@ Maybe<void> DistributeAddOp::InferOutBlobDescs(
 }
 
 Maybe<void> DistributeAddOp::InferBatchAxis(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   FOR_RANGE(int32_t, i, 0, input_bns().size()) {
     CHECK_OR_RETURN(*BatchAxis4BnInOp(input_bns().Get(i)) == *BatchAxis4BnInOp(input_bns().Get(0)));
