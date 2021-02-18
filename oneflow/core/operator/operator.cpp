@@ -226,6 +226,22 @@ Maybe<const BlobDesc> Operator::GetLogicalBlobDesc4Obn(const std::string& obn) c
   return GetLogicalBlobDesc(obn, obn2logical_blob_desc_);
 }
 
+Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
+  HashMap<std::string, std::shared_ptr<BlobDesc>> bn2blob_desc;
+  for (const auto& ibn : input_bns()) {
+    bn2blob_desc[ibn].reset(new BlobDesc(*JUST(GetLogicalBlobDesc4Ibn(ibn))));
+  }
+  for (const auto& obn : output_bns()) {
+    bn2blob_desc[obn].reset(new BlobDesc(DataType::kInvalidDataType));
+  }
+  auto BlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
+    return bn2blob_desc.at(bn).get();
+  };
+  JUST(InferLogicalOutBlobDescs(BlobDesc4BnInOp, *JUST(GetOpParallelDesc())));
+  JUST(FillLogicalOutBlobDesc(BlobDesc4BnInOp));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> Operator::InferLogicalOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc& parallel_desc) const {
@@ -1127,15 +1143,8 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
   // iner sbp
   JUST(InferOpOutSbpParallel(op.get(), upstream_signature, ConstBlobDesc4Ibn, sbp_sig_conf,
                              parallel_desc));
-  const auto& BlobDesc4BnInOp = [&](const std::string& bn_in_op) -> BlobDesc* {
-    if (!bn_in_op2blob_desc[bn_in_op]) {
-      bn_in_op2blob_desc[bn_in_op].reset(new BlobDesc(DataType::kInvalidDataType));
-    }
-    return bn_in_op2blob_desc[bn_in_op].get();
-  };
   // infer logical blob_desc
-  JUST(op->InferLogicalOutBlobDescsIf(BlobDesc4BnInOp, parallel_desc));
-  JUST(op->FillLogicalOutBlobDesc(BlobDesc4BnInOp));
+  JUST(op->InferLogicalOutBlobDescsIf());
   return op;
 }
 
