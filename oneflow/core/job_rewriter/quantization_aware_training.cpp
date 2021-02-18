@@ -32,10 +32,6 @@ namespace {
 
 using OpTypeSet = HashSet<std::string>;
 
-OpTypeSet INT8_OP_TYPES = {"add_n",  "matmul",      "batch_matmul",
-                           "conv2d", "avg_pool_2d", "max_pool_2d"};
-OpTypeSet TRANSPARENT_OP_TYPES = {"reshape"};
-
 const std::string FAKE_QUANT_SUFFIX = "-fake-quant";
 const std::string ZP_SUFFIX = "-fake-quant-zp";
 const std::string MOVING_MAX_SUFFIX = "-fake-quant-moving-max";
@@ -162,6 +158,59 @@ Maybe<OpNode*> GetInferenceOutputNode(const OpGraph& op_graph, OpNode* node) {
   return cur_node;
 }
 
+bool PerLayerQuantizationAttr4Config(const QatConfig& qat_config) {
+  return !qat_config.per_channel_weight_quantization();
+}
+
+std::string QuantizationSchemeAttr4QatConfig(const QatConfig& qat_config) {
+  return qat_config.symmetric() ? "symmetric" : "affine";
+}
+
+// TODO: refactor the following 4 methods by registration
+std::string QuantizationFormulaAttr4QatConfig(const QatConfig& qat_config) {
+  const auto target_backend = qat_config.target_backend();
+  if (target_backend == "") {
+    return "google";
+  } else if (target_backend == "cambricon") {
+    return "cambricon";
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+OpTypeSet Int8List4QatConfig(const QatConfig& qat_config) {
+  const auto target_backend = qat_config.target_backend();
+  if (target_backend == "") {
+    return {"add_n", "matmul", "batch_matmul", "conv2d", "avg_pool_2d", "max_pool_2d"};
+  } else if (target_backend == "cambricon") {
+    return {"conv2d", "matmul"};
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+OpTypeSet TransparentList4QatConfig(const QatConfig& qat_config) {
+  const auto target_backend = qat_config.target_backend();
+  if (target_backend == "") {
+    return {"reshape"};
+  } else if (target_backend == "cambricon") {
+    return {};
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+bool InsertQuantOpAfterInt8Ops4QatConfig(const QatConfig& qat_config) {
+  const auto target_backend = qat_config.target_backend();
+  if (target_backend == "") {
+    return true;
+  } else if (target_backend == "cambricon") {
+    return false;
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 user_op::UserOpConfWrapper MultiplyOp(const std::string& name, const std::string& x,
                                       const std::string& y, const int64_t scope_symbol_id,
                                       OpConfMap* inserted_ops) {
@@ -177,7 +226,7 @@ user_op::UserOpConfWrapper MultiplyOp(const std::string& name, const std::string
 }
 
 user_op::UserOpConfWrapper MinMaxObserver(const std::string& name, const std::string& input,
-                                          bool symmetric, bool per_channel,
+                                          const QatConfig& qat_config,
                                           const int64_t scope_symbol_id, OpConfMap* inserted_ops) {
   const auto op_wrapper =
       user_op::UserOpConfWrapperBuilder(name)
@@ -185,8 +234,8 @@ user_op::UserOpConfWrapper MinMaxObserver(const std::string& name, const std::st
           .Input("in", input)
           .Output("scale")
           .Output("zero_point")
-          .Attr<std::string>("quantization_scheme", symmetric ? "symmetric" : "affine")
-          .Attr("per_layer_quantization", !per_channel)
+          .Attr<std::string>("quantization_scheme", QuantizationSchemeAttr4QatConfig(qat_config))
+          .Attr("per_layer_quantization", PerLayerQuantizationAttr4Config(qat_config))
           .ScopeSymbolId(scope_symbol_id)
           .Build();
   (*inserted_ops)[name] = op_wrapper.op_conf();
@@ -194,7 +243,8 @@ user_op::UserOpConfWrapper MinMaxObserver(const std::string& name, const std::st
 }
 
 user_op::UserOpConfWrapper MovingMinMaxObserver(const std::string& name, const std::string& input,
-                                                const std::string& train_step_lbn, bool symmetric,
+                                                const std::string& train_step_lbn,
+                                                const QatConfig& qat_config,
                                                 int64_t stop_update_after_iters, float momentum,
                                                 const int64_t scope_symbol_id,
                                                 OpConfMap* inserted_ops) {
@@ -217,7 +267,8 @@ user_op::UserOpConfWrapper MovingMinMaxObserver(const std::string& name, const s
           .Output("zero_point")
           .Attr("training", GlobalJobDesc().IsTrain())
           .Attr("stop_update_after_iters", stop_update_after_iters)
-          .Attr<std::string>("quantization_scheme", symmetric ? "symmetric" : "affine")
+          .Attr<std::string>("quantization_formula", QuantizationFormulaAttr4QatConfig(qat_config))
+          .Attr<std::string>("quantization_scheme", QuantizationSchemeAttr4QatConfig(qat_config))
           .Attr("momentum", momentum)
           .ScopeSymbolId(scope_symbol_id)
           .Build();
@@ -227,7 +278,7 @@ user_op::UserOpConfWrapper MovingMinMaxObserver(const std::string& name, const s
 
 user_op::UserOpConfWrapper FakeQuantOp(const std::string& name, const std::string& input,
                                        const std::string& scale, const std::string& zero_point,
-                                       bool symmetric, const int64_t scope_symbol_id,
+                                       const QatConfig& qat_config, const int64_t scope_symbol_id,
                                        OpConfMap* inserted_ops) {
   const auto op_wrapper =
       user_op::UserOpConfWrapperBuilder(name)
@@ -235,7 +286,8 @@ user_op::UserOpConfWrapper FakeQuantOp(const std::string& name, const std::strin
           .Input("in", input)
           .Input("scale", scale)
           .Input("zero_point", zero_point)
-          .Attr<std::string>("quantization_scheme", symmetric ? "symmetric" : "affine")
+          .Attr<std::string>("quantization_formula", QuantizationFormulaAttr4QatConfig(qat_config))
+          .Attr<std::string>("quantization_scheme", QuantizationSchemeAttr4QatConfig(qat_config))
           .Output("out")
           .ScopeSymbolId(scope_symbol_id)
           .Build();
@@ -267,15 +319,14 @@ Maybe<void> GetScaleAndZeroPointLbn4Edge(OpEdge* edge, const std::string train_s
   } else {
     const std::string observer_op_name = ReplaceSlashToDash4Lbn(lbn) + OBSERVER_SUFFIX;
     if (IsWeightEdge(edge)) {
-      const auto observer_op = MinMaxObserver(observer_op_name, lbn, qat_config.symmetric(),
-                                              qat_config.per_channel_weight_quantization(),
-                                              scope_symbol_id, inserted_ops);
+      const auto observer_op =
+          MinMaxObserver(observer_op_name, lbn, qat_config, scope_symbol_id, inserted_ops);
       *scale = observer_op.output("scale", 0);
       *zero_point = observer_op.output("zero_point", 0);
     } else {
       CHECK_OR_RETURN(qat_config.has_moving_min_max_stop_update_after_iters());
       const auto observer_op =
-          MovingMinMaxObserver(observer_op_name, lbn, train_step_lbn, qat_config.symmetric(),
+          MovingMinMaxObserver(observer_op_name, lbn, train_step_lbn, qat_config,
                                qat_config.moving_min_max_stop_update_after_iters(),
                                qat_config.moving_min_max_momentum(), scope_symbol_id, inserted_ops);
       *scale = observer_op.output("scale", 0);
@@ -330,25 +381,13 @@ Maybe<void> QuantAwareTraining::Apply(Job* job, JobPassCtx* ctx) const {
 
   const auto qat_config = ctx->job_desc().job_conf().qat_config();
 
-  OpTypeSet int8_list;
-  OpTypeSet transparent_list;
+  OpTypeSet int8_list = Int8List4QatConfig(qat_config);
+  OpTypeSet transparent_list = TransparentList4QatConfig(qat_config);
   // if `insert_quant_op_after_int8_ops` is false,
   // always insert quant op before int8 ops.
   // if `insert_quant_op_after_int8_ops` is true,
   // always insert quant op after int8 ops
-  bool insert_quant_op_after_int8_ops;
-  const auto target_backend = qat_config.target_backend();
-  if (target_backend == "") {
-    int8_list = {"add_n", "matmul", "batch_matmul", "conv2d", "avg_pool_2d", "max_pool_2d"};
-    transparent_list = {"reshape"};
-    insert_quant_op_after_int8_ops = true;
-  } else if (target_backend == "cambricon") {
-    int8_list = {"conv2d", "matmul"};
-    transparent_list = {};
-    insert_quant_op_after_int8_ops = false;
-  } else {
-    UNIMPLEMENTED();
-  }
+  bool insert_quant_op_after_int8_ops = InsertQuantOpAfterInt8Ops4QatConfig(qat_config);
 
   VerifyQATList(int8_list);
   VerifyQATList(transparent_list);
@@ -393,6 +432,7 @@ Maybe<void> QuantAwareTraining::Apply(Job* job, JobPassCtx* ctx) const {
   return Maybe<void>::Ok();
 }
 
+// TODO: remove int8_list, transparent_list and insert_quant_op_after_int8_ops arguments
 Maybe<void> QuantAwareTraining::InsertFakeQuantOp(const QatConfig& qat_config,
                                                   const OpGraph& op_graph,
                                                   const OpTypeSet& int8_list,
@@ -490,9 +530,8 @@ Maybe<void> QuantAwareTraining::InsertFakeQuantOp(const QatConfig& qat_config,
       JUST(GetScaleAndZeroPointLbn4Edge(edge, job->job_conf().train_conf().train_step_lbn(), &scale,
                                         &zero_point, qat_config, scope_symbol_id, &inserted_ops));
       const std::string fake_quant_op_name = ReplaceSlashToDash4Lbn(lbn) + FAKE_QUANT_SUFFIX;
-      const auto fake_quant_op =
-          FakeQuantOp(fake_quant_op_name, lbn, scale, zero_point, qat_config.symmetric(),
-                      scope_symbol_id, &inserted_ops);
+      const auto fake_quant_op = FakeQuantOp(fake_quant_op_name, lbn, scale, zero_point, qat_config,
+                                             scope_symbol_id, &inserted_ops);
 
       const std::string fake_quant_op_output_name = fake_quant_op.output("out", 0);
 
