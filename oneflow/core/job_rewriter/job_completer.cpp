@@ -118,7 +118,7 @@ void JobCompleter::Complete(Job* job) const {
 #endif  // OF_WITH_XRT
   }
 
-  if (Global<ResourceDesc, ForSession>::Get()->resource().enable_insert_nccl_logical_op_pass()) {
+  if (Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
     // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
     JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx);
     // NOTE(chengcheng): Becasue insert new logical nccl op, MUST dump time shape, sbp again.

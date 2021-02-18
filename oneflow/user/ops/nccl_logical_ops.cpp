@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("_nccl_logical_op_all_reduce")
+REGISTER_USER_OP("_nccl_logical_all_reduce")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -43,7 +43,7 @@ REGISTER_USER_OP("_nccl_logical_op_all_reduce")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("_nccl_logical_op_reduce_scatter")
+REGISTER_USER_OP("_nccl_logical_reduce_scatter")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -79,7 +79,7 @@ REGISTER_USER_OP("_nccl_logical_op_reduce_scatter")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("_nccl_logical_op_all_gather")
+REGISTER_USER_OP("_nccl_logical_all_gather")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -115,7 +115,7 @@ REGISTER_USER_OP("_nccl_logical_op_all_gather")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("_nccl_logical_op_all2all")
+REGISTER_USER_OP("_nccl_logical_all2all")
     .Input("in")
     .Output("out")
     .Attr<int64_t>("in_split_axis", -1)

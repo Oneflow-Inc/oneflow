@@ -447,21 +447,21 @@ def enable_tensor_float_32_compute(val=True):
     sess.config_proto.resource.enable_tensor_float_32_compute = val
 
 
-@oneflow_export("config.enable_insert_nccl_logical_op_pass")
-def api_enable_insert_nccl_logical_op_pass(val: bool = False) -> None:
-    r"""Whether or not to enable insert nccl logical op pass to reuse nccl memory
+@oneflow_export("config.nccl_use_compute_stream")
+def api_nccl_use_compute_stream(val: bool = False) -> None:
+    r"""Whether or not nccl use compute stream to reuse nccl memory and speedup
 
     Args:
         val (bool, optional): True or False. Defaults to False.
     """
-    return enable_if.unique([enable_insert_nccl_logical_op_pass, do_nothing])(val=val)
+    return enable_if.unique([nccl_use_compute_stream, do_nothing])(val=val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def enable_insert_nccl_logical_op_pass(val=False):
+def nccl_use_compute_stream(val=False):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
-    sess.config_proto.resource.enable_insert_nccl_logical_op_pass = val
+    sess.config_proto.resource.nccl_use_compute_stream = val
 
 
 @oneflow_export("config.collective_boxing.nccl_num_streams")

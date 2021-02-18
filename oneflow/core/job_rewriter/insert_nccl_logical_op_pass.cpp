@@ -41,18 +41,13 @@ class InsertNcclLogicalOpPass final : public JobPass {
   }
 
   bool IsEnabled(const JobPassCtx& ctx) const {
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
-    return Global<ResourceDesc, ForSession>::Get()->resource().enable_insert_nccl_logical_op_pass();
-#else
-    return false;
-#endif
+    return Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream();
   }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
 
-const std::string kNcclLogicalOpNamePrefix = "OneFlow-System-NCCL-logical-Op";
-const std::string kNoneNcclOpTypeName = "DoNotInsertNcclLogialOp";
+const std::string kNcclLogicalOpNamePrefix = "System-NCCL-Logical";
 
 void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const OpGraph& op_graph,
                                              const std::vector<const OpNode*>& order) {
@@ -93,8 +88,8 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
   }
 }
 
-bool TryGetNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const OpNode* dst_node,
-                             const LogicalBlobId& lbi) {
+bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const OpNode* dst_node,
+                               const LogicalBlobId& lbi) {
   const int64_t scope_symbol_id = src_node->op().op_conf().scope_symbol_id();
   const std::string lbn = GenLogicalBlobName(lbi);
   const SbpParallel& src_sbp = src_node->SbpParallel4Lbi(lbi);
@@ -111,7 +106,7 @@ bool TryGetNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const Op
     // P2B : AllReduce
     user_op::UserOpConfWrapper nccl_op_wrapper =
         user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2B-" + NewUniqueId())
-            .Op("_nccl_logical_op_all_reduce")
+            .Op("_nccl_logical_all_reduce")
             .Input("in", lbn)
             .Output("out")
             .ScopeSymbolId(scope_symbol_id)
@@ -126,7 +121,7 @@ bool TryGetNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const Op
     // P2S : ReduceScatter
     user_op::UserOpConfWrapper nccl_op_wrapper =
         user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2S-" + NewUniqueId())
-            .Op("_nccl_logical_op_reduce_scatter")
+            .Op("_nccl_logical_reduce_scatter")
             .Input("in", lbn)
             .Output("out")
             .ScopeSymbolId(scope_symbol_id)
@@ -141,7 +136,7 @@ bool TryGetNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const Op
     // S2B : AllGather
     user_op::UserOpConfWrapper nccl_op_wrapper =
         user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2B-" + NewUniqueId())
-            .Op("_nccl_logical_op_all_gather")
+            .Op("_nccl_logical_all_gather")
             .Input("in", lbn)
             .Output("out")
             .ScopeSymbolId(scope_symbol_id)
@@ -161,7 +156,7 @@ bool TryGetNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const Op
     // S2S : All2All
     user_op::UserOpConfWrapper nccl_op_wrapper =
         user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2S-" + NewUniqueId())
-            .Op("_nccl_logical_op_all2all")
+            .Op("_nccl_logical_all2all")
             .Input("in", lbn)
             .Output("out")
             .Attr<int64_t>("in_split_axis", src_sbp.split_parallel().axis())
@@ -250,7 +245,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
       }
       for (const LogicalBlobId& lbi : op_edge->lbis()) {
         OperatorConf nccl_op;
-        if (!TryGetNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi)) { continue; }
+        if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi)) { continue; }
         mut_op_names.insert(dst_op_name);
         // insert nccl op
         user_op::UserOpConfWrapper nccl_op_wrapper(nccl_op);

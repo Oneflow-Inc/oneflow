@@ -27,21 +27,27 @@ namespace {
 
 class NcclLogicalKernelCommState final : public user_op::OpKernelState {
  public:
-  NcclLogicalKernelCommState(user_op::KernelInitContext* ctx) {
-    std::set<std::pair<int64_t, int64_t>> device_set;
-    const ParallelDesc& parallel_desc = ctx->parallel_desc();
-    FOR_RANGE(int64_t, parallel_id, 0, parallel_desc.parallel_num()) {
-      int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
-      int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
-      device_set.emplace(std::make_pair(machine_id, device_id));
-    }
-    comm_ = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
-  }
+  NcclLogicalKernelCommState(user_op::KernelInitContext* ctx)
+      : is_init_(false), parallel_desc_(ctx->parallel_desc()) {}
   ~NcclLogicalKernelCommState() = default;
 
-  ncclComm_t comm() const { return comm_; }
+  ncclComm_t comm() {
+    if (!is_init_) {
+      std::set<std::pair<int64_t, int64_t>> device_set;
+      FOR_RANGE(int64_t, parallel_id, 0, parallel_desc_.parallel_num()) {
+        int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
+        int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
+        device_set.emplace(std::make_pair(machine_id, device_id));
+      }
+      comm_ = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
+      is_init_ = true;
+    }
+    return comm_;
+  }
 
  private:
+  bool is_init_;
+  ParallelDesc parallel_desc_;
   ncclComm_t comm_;
 };
 
@@ -253,20 +259,20 @@ size_t InferAll2AllKernelTmpBufferSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
-REGISTER_USER_KERNEL("_nccl_logical_op_all_reduce")
+REGISTER_USER_KERNEL("_nccl_logical_all_reduce")
     .SetCreateFn<NcclLogicalAllReduceKernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 
-REGISTER_USER_KERNEL("_nccl_logical_op_reduce_scatter")
+REGISTER_USER_KERNEL("_nccl_logical_reduce_scatter")
     .SetCreateFn<NcclLogicalReduceScatterKernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 
-REGISTER_USER_KERNEL("_nccl_logical_op_all_gather")
+REGISTER_USER_KERNEL("_nccl_logical_all_gather")
     .SetCreateFn<NcclLogicalAllGatherKernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 
 #define REGISTER_ALL2ALL_KERNEL(dtype)                                                  \
-  REGISTER_USER_KERNEL("_nccl_logical_op_all2all")                                      \
+  REGISTER_USER_KERNEL("_nccl_logical_all2all")                                         \
       .SetCreateFn<NcclLogicalAll2AllKernel<dtype>>()                                   \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                               \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
