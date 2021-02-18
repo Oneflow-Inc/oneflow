@@ -15,6 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/common/util.h"
+#ifdef WITH_CUDA
+#include <nccl.h>
+#endif
 
 namespace oneflow {
 
@@ -48,6 +51,14 @@ CollectiveBoxingConf ResourceDesc::collective_boxing_conf() const {
   } else {
     return CollectiveBoxingConf();
   }
+}
+
+bool ResourceDesc::nccl_use_compute_stream() const {
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+  return resource_.nccl_use_compute_stream();
+#else
+  return false;
+#endif
 }
 
 }  // namespace oneflow
