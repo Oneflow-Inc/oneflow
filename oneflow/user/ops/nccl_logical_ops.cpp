@@ -33,13 +33,8 @@ REGISTER_USER_OP("_nccl_logical_all_reduce")
       CHECK(in_sbp_hint.has_partial_sum_parallel());
       const std::string& ibn = GenRepeatedBn("in", 0);
       const std::string& obn = GenRepeatedBn("out", 0);
-      SbpParallel in_p;
-      in_p.mutable_partial_sum_parallel();
-      (*bn2sbp)[ibn] = in_p;
-
-      SbpParallel out_b;
-      out_b.mutable_broadcast_parallel();
-      (*bn2sbp)[obn] = out_b;
+      (*bn2sbp)[ibn].mutable_partial_sum_parallel();
+      (*bn2sbp)[obn].mutable_broadcast_parallel();
       return Maybe<void>::Ok();
     });
 
@@ -53,12 +48,10 @@ REGISTER_USER_OP("_nccl_logical_reduce_scatter")
       const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
       Shape* out_shape = out_tensor->mut_shape();
       const Shape& in_shape = in_tensor->shape();
-      CHECK_GT(out_shape->NumAxes(), 0);
-      CHECK_GT(out_shape->elem_cnt(), 0);
+      CHECK_GT(in_shape.NumAxes(), 0);
+      CHECK_GT(in_shape.elem_cnt(), 0);
       CHECK_EQ(in_shape.At(0) % parallel_num, 0);
       out_shape->Set(0, in_shape.At(0) / parallel_num);
-      CHECK_EQ(out_shape->At(0) * parallel_num, in_shape.At(0));
-      CHECK_EQ(out_shape->elem_cnt() * parallel_num, in_shape.elem_cnt());
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
@@ -69,13 +62,8 @@ REGISTER_USER_OP("_nccl_logical_reduce_scatter")
       CHECK(in_sbp_hint.has_partial_sum_parallel());
       const std::string& ibn = GenRepeatedBn("in", 0);
       const std::string& obn = GenRepeatedBn("out", 0);
-      SbpParallel in_p;
-      in_p.mutable_partial_sum_parallel();
-      (*bn2sbp)[ibn] = in_p;
-
-      SbpParallel out_s;
-      out_s.mutable_split_parallel()->set_axis(0);
-      (*bn2sbp)[obn] = out_s;
+      (*bn2sbp)[ibn].mutable_partial_sum_parallel();
+      (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0);
       return Maybe<void>::Ok();
     });
 
@@ -89,11 +77,9 @@ REGISTER_USER_OP("_nccl_logical_all_gather")
       const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
       Shape* out_shape = out_tensor->mut_shape();
       const Shape& in_shape = in_tensor->shape();
-      CHECK_GT(out_shape->NumAxes(), 0);
-      CHECK_GT(out_shape->elem_cnt(), 0);
+      CHECK_GT(in_shape.NumAxes(), 0);
+      CHECK_GT(in_shape.elem_cnt(), 0);
       out_shape->Set(0, in_shape.At(0) * parallel_num);
-      CHECK_EQ(out_shape->At(0), in_shape.At(0) * parallel_num);
-      CHECK_EQ(out_shape->elem_cnt(), in_shape.elem_cnt() * parallel_num);
       return Maybe<void>::Ok();
     })
     .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
@@ -105,17 +91,12 @@ REGISTER_USER_OP("_nccl_logical_all_gather")
       CHECK_EQ(in_sbp_hint.split_parallel().axis(), 0);
       const std::string& ibn = GenRepeatedBn("in", 0);
       const std::string& obn = GenRepeatedBn("out", 0);
-      SbpParallel in_s;
-      in_s.mutable_split_parallel()->set_axis(0);
-      (*bn2sbp)[ibn] = in_s;
-
-      SbpParallel out_b;
-      out_b.mutable_broadcast_parallel();
-      (*bn2sbp)[obn] = out_b;
+      (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0);
+      (*bn2sbp)[obn].mutable_broadcast_parallel();
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("_nccl_logical_all2all")
+REGISTER_USER_OP("_nccl_logical_s2s")
     .Input("in")
     .Output("out")
     .Attr<int64_t>("in_split_axis", -1)
@@ -132,10 +113,9 @@ REGISTER_USER_OP("_nccl_logical_all2all")
       CHECK_NE(out_split_axis, -1);
       Shape* out_shape = out_tensor->mut_shape();
       const Shape& in_shape = in_tensor->shape();
-      CHECK_GT(out_shape->NumAxes(), std::max(in_split_axis, out_split_axis));
-      CHECK_GT(out_shape->elem_cnt(), 0);
+      CHECK_GT(in_shape.NumAxes(), std::max(in_split_axis, out_split_axis));
+      CHECK_GT(in_shape.elem_cnt(), 0);
       CHECK_EQ(in_shape.At(out_split_axis) % parallel_num, 0);
-
       out_shape->Set(in_split_axis, in_shape.At(in_split_axis) * parallel_num);
       out_shape->Set(out_split_axis, in_shape.At(out_split_axis) / parallel_num);
       CHECK_EQ(out_shape->elem_cnt(), in_shape.elem_cnt());
@@ -152,13 +132,8 @@ REGISTER_USER_OP("_nccl_logical_all2all")
       CHECK_EQ(in_sbp_hint.split_parallel().axis(), in_split_axis);
       const std::string& ibn = GenRepeatedBn("in", 0);
       const std::string& obn = GenRepeatedBn("out", 0);
-      SbpParallel in_s;
-      in_s.mutable_split_parallel()->set_axis(in_split_axis);
-      (*bn2sbp)[ibn] = in_s;
-
-      SbpParallel out_s;
-      out_s.mutable_split_parallel()->set_axis(out_split_axis);
-      (*bn2sbp)[obn] = out_s;
+      (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(in_split_axis);
+      (*bn2sbp)[obn].mutable_split_parallel()->set_axis(out_split_axis);
       return Maybe<void>::Ok();
     });
 

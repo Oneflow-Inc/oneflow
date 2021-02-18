@@ -53,13 +53,7 @@ class ResourceDesc final {
   int32_t ComputeThreadPoolSize() const;
   bool enable_debug_mode() const;
   CollectiveBoxingConf collective_boxing_conf() const;
-  bool nccl_use_compute_stream() const {
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
-    return resource_.nccl_use_compute_stream();
-#else
-    return false;
-#endif
-  }
+  bool nccl_use_compute_stream() const;
 
   void SetMachineNum(int32_t val) { resource_.set_machine_num(val); }
   void SetCpuDeviceNum(int32_t val) { resource_.set_cpu_device_num(val); }

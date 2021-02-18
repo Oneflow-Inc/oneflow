@@ -64,6 +64,7 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
+    CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape(), out->shape());
@@ -88,6 +89,7 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
+    CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
@@ -113,6 +115,7 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
+    CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
@@ -126,10 +129,10 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class NcclLogicalAll2AllKernel final : public user_op::OpKernel {
+class NcclLogicalS2SKernel final : public user_op::OpKernel {
  public:
-  NcclLogicalAll2AllKernel() = default;
-  ~NcclLogicalAll2AllKernel() override = default;
+  NcclLogicalS2SKernel() = default;
+  ~NcclLogicalS2SKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -139,6 +142,7 @@ class NcclLogicalAll2AllKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
+    CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -198,7 +202,7 @@ class NcclLogicalAll2AllKernel final : public user_op::OpKernel {
     }
 
     {
-      // NOTE(chengcheng): Do ALL2ALL
+      // NOTE(chengcheng): Do S2S
       OF_NCCL_CHECK(ncclGroupStart());
       const int64_t elem_per_chunk = elem_cnt / num_ranks;
       const int64_t chunk_size = elem_per_chunk * dtype_size;
@@ -244,11 +248,14 @@ class NcclLogicalAll2AllKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-size_t InferAll2AllKernelTmpBufferSize(user_op::InferContext* ctx) {
+static const int32_t kNcclLogicalKernelTmpBufferAlignSize = 512;
+
+size_t InferS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
   size_t ret = 0;
   const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   size_t tensor_byte_size =
-      in_tensor->shape().elem_cnt() * GetSizeOfDataType(in_tensor->data_type());
+      RoundUp(in_tensor->shape().elem_cnt() * GetSizeOfDataType(in_tensor->data_type()),
+              kNcclLogicalKernelTmpBufferAlignSize);
   const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("in", 0);
   const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
   CHECK(in_sbp.has_split_parallel() && out_sbp.has_split_parallel());
@@ -271,20 +278,20 @@ REGISTER_USER_KERNEL("_nccl_logical_all_gather")
     .SetCreateFn<NcclLogicalAllGatherKernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 
-#define REGISTER_ALL2ALL_KERNEL(dtype)                                                  \
-  REGISTER_USER_KERNEL("_nccl_logical_all2all")                                         \
-      .SetCreateFn<NcclLogicalAll2AllKernel<dtype>>()                                   \
+#define REGISTER_S2S_KERNEL(dtype)                                                      \
+  REGISTER_USER_KERNEL("_nccl_logical_s2s")                                             \
+      .SetCreateFn<NcclLogicalS2SKernel<dtype>>()                                       \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                               \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(InferAll2AllKernelTmpBufferSize);
+      .SetInferTmpSizeFn(InferS2SKernelTmpBufferSize);
 
-REGISTER_ALL2ALL_KERNEL(int8_t)
-REGISTER_ALL2ALL_KERNEL(int32_t)
-REGISTER_ALL2ALL_KERNEL(int64_t)
-REGISTER_ALL2ALL_KERNEL(float)
-REGISTER_ALL2ALL_KERNEL(double)
-REGISTER_ALL2ALL_KERNEL(float16)
+REGISTER_S2S_KERNEL(int8_t)
+REGISTER_S2S_KERNEL(int32_t)
+REGISTER_S2S_KERNEL(int64_t)
+REGISTER_S2S_KERNEL(float)
+REGISTER_S2S_KERNEL(double)
+REGISTER_S2S_KERNEL(float16)
 
 }  // namespace oneflow
 

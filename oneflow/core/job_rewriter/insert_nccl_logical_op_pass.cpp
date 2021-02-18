@@ -101,73 +101,58 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   if (logical_blob_desc.is_dynamic()) { return false; }
   CHECK_GT(logical_blob_desc.shape().elem_cnt(), 0);
   CHECK_GT(logical_blob_desc.shape().NumAxes(), 0);
-  CHECK_GT(logical_blob_desc.shape().At(0), 0);
   if (src_sbp.has_partial_sum_parallel() && dst_sbp.has_broadcast_parallel()) {
     // P2B : AllReduce
-    user_op::UserOpConfWrapper nccl_op_wrapper =
-        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2B-" + NewUniqueId())
-            .Op("_nccl_logical_all_reduce")
-            .Input("in", lbn)
-            .Output("out")
-            .ScopeSymbolId(scope_symbol_id)
-            .Build();
-    *ret = nccl_op_wrapper.op_conf();
-    std::cout << "cclog: insert nccl op: " << ret->name() << std::endl;
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2B-" + NewUniqueId())
+               .Op("_nccl_logical_all_reduce")
+               .Input("in", lbn)
+               .Output("out")
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
     return true;
-  }
-  if ((logical_blob_desc.shape().At(0) % parallel_desc.parallel_num() == 0)
-      && (src_sbp.has_partial_sum_parallel() && dst_sbp.has_split_parallel())
-      && (dst_sbp.split_parallel().axis() == 0)) {
+  } else if ((logical_blob_desc.shape().At(0) % parallel_desc.parallel_num() == 0)
+             && (src_sbp.has_partial_sum_parallel() && dst_sbp.has_split_parallel())
+             && (dst_sbp.split_parallel().axis() == 0)) {
     // P2S : ReduceScatter
-    user_op::UserOpConfWrapper nccl_op_wrapper =
-        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2S-" + NewUniqueId())
-            .Op("_nccl_logical_reduce_scatter")
-            .Input("in", lbn)
-            .Output("out")
-            .ScopeSymbolId(scope_symbol_id)
-            .Build();
-    *ret = nccl_op_wrapper.op_conf();
-    std::cout << "cclog: insert nccl op: " << ret->name() << std::endl;
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2S-" + NewUniqueId())
+               .Op("_nccl_logical_reduce_scatter")
+               .Input("in", lbn)
+               .Output("out")
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
     return true;
-  }
-  if ((logical_blob_desc.shape().At(0) % parallel_desc.parallel_num() == 0)
-      && (src_sbp.has_split_parallel() && dst_sbp.has_broadcast_parallel())
-      && (src_sbp.split_parallel().axis() == 0)) {
+  } else if ((logical_blob_desc.shape().At(0) % parallel_desc.parallel_num() == 0)
+             && (src_sbp.has_split_parallel() && dst_sbp.has_broadcast_parallel())
+             && (src_sbp.split_parallel().axis() == 0)) {
     // S2B : AllGather
-    user_op::UserOpConfWrapper nccl_op_wrapper =
-        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2B-" + NewUniqueId())
-            .Op("_nccl_logical_all_gather")
-            .Input("in", lbn)
-            .Output("out")
-            .ScopeSymbolId(scope_symbol_id)
-            .Build();
-    *ret = nccl_op_wrapper.op_conf();
-    std::cout << "cclog: insert nccl op: " << ret->name() << std::endl;
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2B-" + NewUniqueId())
+               .Op("_nccl_logical_all_gather")
+               .Input("in", lbn)
+               .Output("out")
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
     return true;
-  }
-  if ((src_sbp.has_split_parallel() && dst_sbp.has_split_parallel())
-      && (src_sbp.split_parallel().axis() != dst_sbp.split_parallel().axis())
-      && (logical_blob_desc.shape().At(src_sbp.split_parallel().axis())
-              % parallel_desc.parallel_num()
-          == 0)
-      && (logical_blob_desc.shape().At(dst_sbp.split_parallel().axis())
-              % parallel_desc.parallel_num()
-          == 0)) {
+  } else if ((src_sbp.has_split_parallel() && dst_sbp.has_split_parallel())
+             && (src_sbp.split_parallel().axis() != dst_sbp.split_parallel().axis())
+             && (logical_blob_desc.shape().At(src_sbp.split_parallel().axis())
+                     % parallel_desc.parallel_num()
+                 == 0)
+             && (logical_blob_desc.shape().At(dst_sbp.split_parallel().axis())
+                     % parallel_desc.parallel_num()
+                 == 0)) {
     // S2S : All2All
-    user_op::UserOpConfWrapper nccl_op_wrapper =
-        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2S-" + NewUniqueId())
-            .Op("_nccl_logical_all2all")
-            .Input("in", lbn)
-            .Output("out")
-            .Attr<int64_t>("in_split_axis", src_sbp.split_parallel().axis())
-            .Attr<int64_t>("out_split_axis", dst_sbp.split_parallel().axis())
-            .ScopeSymbolId(scope_symbol_id)
-            .Build();
-    *ret = nccl_op_wrapper.op_conf();
-    std::cout << "cclog: insert nccl all2all op. OpEdge : " << src_node->op().op_name() << " -> "
-              << dst_node->op().op_name() << " SBP S(" << src_sbp.split_parallel().axis()
-              << ") -> S(" << dst_sbp.split_parallel().axis() << ")"
-              << " And the logical shape = : " << logical_blob_desc.shape().DebugStr() << std::endl;
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2S-" + NewUniqueId())
+               .Op("_nccl_logical_s2s")
+               .Input("in", lbn)
+               .Output("out")
+               .Attr<int64_t>("in_split_axis", src_sbp.split_parallel().axis())
+               .Attr<int64_t>("out_split_axis", dst_sbp.split_parallel().axis())
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
     return true;
   }
   return false;
@@ -202,14 +187,6 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   }
   CHECK_EQ(subgraph.size(), subgraph_order.size());
 
-  // LOG
-  /*
-  for (int32_t i = 0; i < subgraph_order.size(); ++i) {
-    const OpNode* node = subgraph_order.at(i);
-    std::cout << "cclog: i = " << i << ", op_name =  " << node->op().op_name() << std::endl;
-  }
-  */
-
   HashSet<std::string> mut_op_names;
   const OpNode* first_node = subgraph_order.at(0);
   HashMap<std::string, OperatorConf> subgraph_op_name2conf;
@@ -225,11 +202,6 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     if (!IsReachable(pre_op_name, this_op_name)) {
       subgraph_op_name2conf.at(this_op_name).add_ctrl_in_op_name(pre_op_name);
       mut_op_names.insert(this_op_name);
-
-      /*
-      std::cout << "cclog: add ctrl edge from  " << pre_op_name << "  to  " << this_op_name
-                << std::endl;
-      */
     }
   }
 
@@ -252,21 +224,12 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
         for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
           std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
               &subgraph_op_name2conf.at(dst_op_name), ibn, nccl_op_wrapper.output("out", 0));
-
-          std::cout << "cclog: replace dst_op_name = " << dst_op_name << " input blob name: " << ibn
-                    << " from " << old_lbn << "  to  " << nccl_op_wrapper.output("out", 0)
-                    << std::endl;
         }
 
         if (nccl_op_confs.size() >= 1) {
           // NOTE(chengcheng): MUST add ctrl edge between nccl ops for 1 src node insert multi-nccl
           const std::string& pre_nccl_op_name = nccl_op_confs.at(nccl_op_confs.size() - 1).name();
           nccl_op.add_ctrl_in_op_name(pre_nccl_op_name);
-
-          /*
-          std::cout << "cclog: add ctrl edge from  " << pre_nccl_op_name << "  to  "
-                    << nccl_op.name() << std::endl;
-          */
         }
 
         // NOTE(chengcheng): src_node MUST not the last node in subgraph, find the next op
@@ -277,11 +240,6 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
           // NOTE(chengcheng): MUST add ctrl edge for strict exec order
           subgraph_op_name2conf.at(next_op_name).add_ctrl_in_op_name(nccl_op.name());
           mut_op_names.insert(next_op_name);
-
-          /*
-          std::cout << "cclog: add ctrl edge from  " << nccl_op.name() << "  to  " << next_op_name
-                    << std::endl;
-                    */
         }
 
         nccl_op_confs.push_back(nccl_op);
@@ -291,7 +249,6 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
 
   std::vector<OperatorConf> mut_op_confs;
   for (const std::string& mut_op_name : mut_op_names) {
-    // std::cout << "cclog: mut op name = " << mut_op_name << std::endl;
     mut_op_confs.push_back(subgraph_op_name2conf.at(mut_op_name));
   }
   job_builder->MutOpsOnlyOnce(mut_op_confs);
