@@ -13,19 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OPERATOR_USER_OP_UTIL_H_
-#define ONEFLOW_CORE_OPERATOR_USER_OP_UTIL_H_
-
-#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/op_conf_symbol.h"
 
 namespace oneflow {
 
-struct UserOpCtx : public OpContext {
-  HashMap<std::string, std::string> mut_inplace_obn2ibn;
-  HashMap<std::string, std::string> con_inplace_obn2ibn;
-  SbpSignature sbp_sig;
-};
+OperatorConfSymbol::OperatorConfSymbol(int64_t symbol_id, const OperatorConf& op_conf)
+    : symbol_id_(symbol_id), op_conf_(op_conf) {
+  data_ = std::make_shared<cfg::OperatorConf>(op_conf);
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_OPERATOR_USER_OP_UTIL_H_

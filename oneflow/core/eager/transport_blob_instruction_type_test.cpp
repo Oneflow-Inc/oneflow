@@ -138,7 +138,7 @@ int64_t NewJobDescSymbol(InstructionMsgList* list,
 
 int64_t NewOpConfSymbol(InstructionMsgList* list, const std::shared_ptr<OperatorConf>& op_conf) {
   int64_t op_conf_id = vm::TestUtil::NewSymbol(list);
-  CHECK_JUST(Global<symbol::Storage<OperatorConf>>::Get()->Add(op_conf_id, *op_conf));
+  CHECK_JUST(Global<symbol::Storage<OperatorConfSymbol>>::Get()->Add(op_conf_id, *op_conf));
   list->EmplaceBack(
       vm::NewInstruction("InitOperatorConfSymbol")->add_init_symbol_operand(op_conf_id));
   return op_conf_id;
