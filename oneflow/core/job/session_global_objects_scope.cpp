@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/version.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/id_util.h"
 
 namespace oneflow {
 
@@ -78,6 +79,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   Global<const IOConf>::SessionNew(config_proto.session_id(), config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
   Global<IDMgr>::New();
+  Global<IdUtil>::New();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()
       && Global<const ProfilerConf>::Get()->collect_act_event()) {
     Global<Profiler>::New();
@@ -108,6 +110,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
     Global<AvailableMemDesc>::Delete();
   }
   if (Global<Profiler>::Get() != nullptr) { Global<Profiler>::Delete(); }
+  Global<IdUtil>::Delete();
   Global<IDMgr>::Delete();
   Global<const ProfilerConf>::Delete();
   Global<const IOConf>::Delete();
