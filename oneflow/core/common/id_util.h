@@ -38,7 +38,6 @@ class ProcessId {
   ProcessId() : val_(0) {}
   explicit ProcessId(uint32_t val) : val_(val) {}
   ProcessId(uint32_t node_index, uint32_t process_index);
-  // ProcessId(const ProcessId& other) { val_ = other.val_; }
   uint32_t node_index() const;
   uint32_t process_index() const;
   operator uint32_t() const { return val_; }

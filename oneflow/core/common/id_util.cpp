@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/common/id_util.h"
 #include "oneflow/core/graph/task_node.h"
-#include <cstdint>
 #include <limits>
 
 namespace oneflow {
