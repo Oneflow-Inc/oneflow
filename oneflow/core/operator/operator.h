@@ -317,10 +317,7 @@ class Operator {
   OpAttribute op_attribute_;
   const JobDesc* job_desc_;
   HashMap<LogicalBlobId, std::string> lbi2obn_;
-<<<<<<< HEAD
   std::shared_ptr<const ParallelDesc> op_parallel_desc_;
-=======
->>>>>>> master
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> ibn2logical_blob_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> obn2logical_blob_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const OptInt64>>> ibn2batch_axis_;
