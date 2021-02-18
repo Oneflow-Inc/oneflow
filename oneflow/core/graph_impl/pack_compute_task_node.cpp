@@ -69,5 +69,10 @@ void PackCompTaskNode::InferProducedDataRegstTimeShape() {
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("pack", PackCompTaskNode);
 REGISTER_USER_OP_INDEPENDENT_AREA_ID("pack")
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kPack)
+    .SetStreamIndexGetterFn([](int64_t dev_phy_id) -> int64_t {
+      const IDMgr* id_mgr = Global<IDMgr>::Get();
+      return id_mgr->GetGpuComputeThrdId(dev_phy_id);
+    });
 
 }  // namespace oneflow

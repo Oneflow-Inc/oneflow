@@ -44,4 +44,10 @@ void DecodeH2DCompTaskNode::InferProducedDataRegstTimeShape() {
   NaiveInferProducedDataRegstTimeShape();
 }
 
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDecodeH2D)
+    .SetStreamIndexGetterFn([](int64_t dev_phy_id) -> int64_t {
+      const IDMgr* id_mgr = Global<IDMgr>::Get();
+      return id_mgr->GetGpuDecodeH2DThrdId(dev_phy_id);
+    });
+
 }  // namespace oneflow

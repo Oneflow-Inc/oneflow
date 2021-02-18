@@ -43,4 +43,10 @@ void WaitAndSendIdsCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kWaitAndSendIds)
+    .SetStreamIndexGetterFn([](int64_t dev_phy_id) -> int64_t {
+      const IDMgr* id_mgr = Global<IDMgr>::Get();
+      return id_mgr->GetGpuComputeThrdId(dev_phy_id);
+    });
+
 }  // namespace oneflow

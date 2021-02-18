@@ -72,4 +72,10 @@ void DistributeSplitCompTaskNode::InferProducedDataRegstTimeShape() {
       GetSoleConsumedRegst("in")->data_regst_time_shape();
 }
 
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDistributeSplit)
+    .SetStreamIndexGetterFn([](int64_t dev_phy_id) -> int64_t {
+      const IDMgr* id_mgr = Global<IDMgr>::Get();
+      return id_mgr->GetGpuComputeThrdId(dev_phy_id);
+    });
+
 }  // namespace oneflow
