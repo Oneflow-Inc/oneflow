@@ -102,15 +102,7 @@ class Operator {
   Maybe<void> FillLogicalOutBlobDesc(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
   Maybe<const BlobDesc> GetLogicalBlobDesc4Obn(const std::string& obn) const;
-<<<<<<< HEAD
   Maybe<void> InferLogicalOutBlobDescsIf();
-=======
-  Maybe<void> InferLogicalOutBlobDescsIf(
-      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-      const ParallelDesc& parallel_desc) const {
-    return InferLogicalOutBlobDescs(BlobDesc4BnInOp, parallel_desc);
-  }
->>>>>>> master
   virtual Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const;
