@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/id_util.h"
 #include "oneflow/core/graph/task_node.h"
+#include <cstdint>
 #include <limits>
 
 namespace oneflow {
@@ -69,11 +70,13 @@ ProcessId::ProcessId(uint32_t node_index, uint32_t process_index) {
 
 uint32_t ProcessId::node_index() const { return val_ >> kRightBits; }
 
-uint32_t ProcessId::process_index() const { return (val_ << kLeftMiddleBits) >> kLeftMiddleBits; }
+uint32_t ProcessId::process_index() const {
+  return (val_ << kReservedLeftBits) >> kReservedLeftBits;
+}
 
 // StreamId methods
 StreamType StreamId::stream_type() const {
-  return static_cast<StreamType>(val_ >> kMiddleRightBits);
+  return static_cast<StreamType>(val_ >> (kMiddleBits + kRightBits));
 }
 
 DeviceType StreamId::device_type() const {
@@ -100,7 +103,7 @@ uint32_t StreamId::device_index() const {
   StreamType stream_type = this->stream_type();
   CHECK(stream_type == StreamType::kCPU || stream_type == StreamType::kCuda)
       << "Only kCPU and kCuda stream_type support device_index()";
-  return (val_ << kLeftBits) >> kLeftRightBits;
+  return (val_ << (kReservedBits + kLeftBits)) >> (kReservedBits + kLeftBits + kRightBits);
 }
 
 uint32_t StreamId::stream_index() const {
@@ -108,14 +111,16 @@ uint32_t StreamId::stream_index() const {
   CHECK(stream_type == StreamType::kCPU || stream_type == StreamType::kCuda
         || stream_type == StreamType::kIndependent)
       << "Only kCPU, kCuda, kIndependent stream_type support stream_index()";
-  return (val_ << kLeftMiddleBits) >> kLeftMiddleBits;
+  const int shift = kReservedBits + kLeftBits + kMiddleBits;
+  return (val_ << shift) >> shift;
 }
 
 TaskType StreamId::task_type() const {
   StreamType stream_type = this->stream_type();
   CHECK(stream_type == StreamType::kIndependent)
       << "Only kIndependent stream_type support task_type()";
-  return static_cast<TaskType>((val_ << kLeftBits) >> kLeftRightBits);
+  uint32_t id = (val_ << (kReservedBits + kLeftBits)) >> (kReservedBits + kLeftBits + kRightBits);
+  return static_cast<TaskType>(id);
 }
 
 // TaskId methods
@@ -161,26 +166,22 @@ StreamId IdUtil::GetStreamId(StreamType stream_type, uint32_t device_index, uint
   CHECK(CheckValueInBitsRange(device_index, StreamId::kMiddleBits))
       << "device_index is out of range: " << device_index;
   uint32_t id = 0;
-  id |= static_cast<uint32_t>(stream_type) << StreamId::kMiddleRightBits;
+  id |= static_cast<uint32_t>(stream_type) << (StreamId::kMiddleBits + StreamId::kRightBits);
   id |= device_index << StreamId::kRightBits;
   id |= stream_index;
-  return StreamId(id);
+  return StreamId{id};
 }
 
-StreamId IdUtil::GetCommNetStreamId(uint32_t this_node_index, uint32_t peer_node_index) {
-  CHECK(CheckValueInBitsRange(this_node_index, StreamId::kMiddleBits))
-      << "this_node_index is out of range";
-  CHECK(CheckValueInBitsRange(peer_node_index, StreamId::kRightBits))
-      << "peer_node_index is out of range";
-  uint32_t id = static_cast<uint32_t>(StreamType::kCommNet) << StreamId::kMiddleRightBits;
-  id |= (this_node_index << StreamId::kRightBits);
-  id |= peer_node_index;
-  return StreamId(id);
+StreamId IdUtil::GetCommNetStreamId() {
+  uint32_t id = static_cast<uint32_t>(StreamType::kCommNet)
+                << (StreamId::kMiddleBits + StreamId::kRightBits);
+  return StreamId{id};
 }
 
 StreamId IdUtil::GetTickTockStreamId() {
-  uint32_t id = static_cast<uint32_t>(StreamType::kTickTock) << StreamId::kMiddleRightBits;
-  return StreamId(id);
+  uint32_t id = static_cast<uint32_t>(StreamType::kTickTock)
+                << (StreamId::kMiddleBits + StreamId::kRightBits);
+  return StreamId{id};
 }
 
 MemZoneId IdUtil::GetCpuMemZoneId() {
@@ -214,6 +215,8 @@ bool IdUtil::IsMemZoneIdNormalUsage(MemZoneId mem_zone_id) {
 }
 
 StreamId IdUtil::GenerateProcessTaskIndependentStreamId(ProcessId process_id, TaskType task_type) {
+  CHECK(CheckValueInBitsRange(static_cast<uint32_t>(task_type), StreamId::kMiddleBits))
+      << "task_type is out of range";
   auto key = std::make_pair(process_id, task_type);
   if (process_independent_task_type2task_num_.find(key)
       == process_independent_task_type2task_num_.end()) {
@@ -227,7 +230,8 @@ StreamId IdUtil::GenerateProcessTaskIndependentStreamId(ProcessId process_id, Ta
     if (task_num > *idp_thrd_num_ptr) { task_num %= *idp_thrd_num_ptr; }
   }
   CHECK(CheckValueInBitsRange(task_num, StreamId::kRightBits));
-  uint32_t id = static_cast<uint32_t>(StreamType::kIndependent) << StreamId::kMiddleRightBits;
+  uint32_t id = static_cast<uint32_t>(StreamType::kIndependent)
+                << (StreamId::kMiddleBits + StreamId::kRightBits);
   id |= (static_cast<uint32_t>(task_type) << StreamId::kRightBits);
   id |= static_cast<uint32_t>(task_num);
   return StreamId{id};
@@ -250,9 +254,6 @@ IdUtil::IdUtil() {
   size_t machine_num = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
   CHECK(CheckValueInBitsRange(machine_num, ProcessId::kLeftBits)) << "machine_num is out of range";
   cpu_device_num_ = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
-  // regst_desc_id_count_ = 0;
-  // mem_block_id_count_ = 0;
-  // chunk_id_count_ = 0;
 }
 
 }  // namespace oneflow
