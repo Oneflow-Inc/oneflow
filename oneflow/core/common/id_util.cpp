@@ -237,16 +237,22 @@ StreamId IdUtil::GenerateProcessTaskIndependentStreamId(ProcessId process_id, Ta
 }
 
 StreamId IdUtil::GenerateCPUComputeStreamIdEvenly(ProcessId process_id) {
-  uint32_t device_index = process_id2cpu_device_index_[process_id]++ % cpu_device_num_;
+  uint32_t device_index = process_id2cpu_device_index_counter_[process_id]++ % cpu_device_num_;
   return GetStreamId(StreamType::kCPU, device_index, StreamIndex::CPU::kCompute);
 }
 
 TaskId IdUtil::GenerateTaskId(ProcessId process_id, StreamId stream_id) {
   uint64_t process_stream_key = static_cast<uint64_t>(process_id) << StreamId::kBits;
+  uint32_t& task_index_counter = process_stream2task_index_counter_[process_stream_key];
   process_stream_key |= static_cast<uint64_t>(stream_id);
-  CHECK_LT(process_stream2task_num_[process_stream_key]++, std::numeric_limits<uint32_t>::max())
-      << "task_index is out of range";
-  return TaskId(process_id, stream_id, process_stream2task_num_[process_stream_key]);
+  CHECK_LT(task_index_counter++, TaskId::kRightBits) << "task_index is out of range";
+  return TaskId(process_id, stream_id, task_index_counter);
+}
+
+int64_t IdUtil::GenerateChainId(uint64_t global_stream_index) {
+  int64_t& chain_index_counter = process_stream2chain_index_counter_[global_stream_index];
+  CHECK_LT(chain_index_counter++, TaskId::kRightBits) << "chain_index is out of range";
+  return static_cast<int64_t>(global_stream_index) | chain_index_counter;
 }
 
 IdUtil::IdUtil() {
