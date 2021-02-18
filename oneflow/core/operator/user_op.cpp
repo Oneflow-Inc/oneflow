@@ -506,10 +506,12 @@ LogicalBlobId UserOp::lbi4obn(const std::string& output_bn) const {
 }
 
 Maybe<void> UserOp::InferBatchAxis(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
+  auto LogicalBlobDesc4Ibn = [&](const std::string& bn) -> const BlobDesc& {
+    return *CHECK_JUST(GetLogicalBlobDesc4Ibn(bn));
+  };
   UserOpBatchAxisContext batch_axis_ctx(op_conf(), BatchAxis4BnInOp, LogicalBlobDesc4Ibn);
   JUST(val_->batch_axis_infer_fn(&batch_axis_ctx));
   return Maybe<void>::Ok();
