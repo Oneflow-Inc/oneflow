@@ -22,23 +22,12 @@ import oneflow_api
 import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
 from oneflow.python.oneflow_export import oneflow_export
 
-
-class Interpreter(object):
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def Interpret(op, inputs):
-        return oneflow_api.one.Interpret(op, inputs)
-
-
 @oneflow_export("builtin_op")
 class BuiltinOp(object):
     def __init__(self, op_type_name):
         self._builder = oneflow_api.one.OpBuilder(op_type_name)
         self._op = None
         self._op_type_name = op_type_name
-        self._inputs = []
 
     @property
     def op(self):
@@ -65,21 +54,30 @@ class BuiltinOp(object):
         self._builder.Op(self._op_type_name)
         return self
 
-    def Input(self, input_name, input_tensor_list):
-        r"""Set input blob of op
+    def Name(self, op_name):
+        r"""Set the op name.
 
         Args:
-            input_name (str): input name of blob
-            input_tensor_list : list of blobs
+            op_name (str): the name of the op.
 
         Returns:
             self
         """
-        assert isinstance(input_tensor_list, (tuple, list))
-        if isinstance(input_tensor_list, tuple):
-            input_tensor_list = list(input_tensor_list)
-        self._inputs.extend(input_tensor_list)
-        self._builder.Input(input_name, input_tensor_list)
+        self._builder.Name(op_name)
+        return self
+
+    def Input(self, input_name, num=1):
+        r"""Set input blob of op
+
+        Args:
+            input_name (str): input name of blob
+            num (int, optional) : Defaults to 1.
+
+        Returns:
+            self
+        """
+        assert isinstance(num, int) and num >= 1
+        self._builder.Input(input_name, num)
         return self
 
     def Output(self, output_name, num=1):
@@ -191,18 +189,6 @@ class BuiltinOp(object):
         self._builder.Attr(attr_name, serialized_attr_value)
         return self
 
-    def Name(self, op_name):
-        r"""Set the op name.
-
-        Args:
-            op_name (str): the name of the op.
-
-        Returns:
-            self
-        """
-        self._builder.Name(op_name)
-        return self
-
     def Build(self):
         r"""Explicitly complete the construction of the builtin op
         
@@ -212,11 +198,3 @@ class BuiltinOp(object):
         if self._op is None:
             self._op = self._builder.Build()
         return self._op
-
-    def Apply(self):
-        r"""Construct the builtin op and execute it.
-        
-        Returns:
-            the output tensors.
-        """
-        return Interpreter.Interpret(self.Build(), self._inputs)
