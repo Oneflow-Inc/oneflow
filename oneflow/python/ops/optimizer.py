@@ -230,32 +230,27 @@ class LrScheduler:
         self.warmup = warmup
 
     @property
+    def warmup_conf(self) -> learning_rate_schedule_conf_pb.WarmupConf:
+        if self.warmup is None:
+            return None
+        return self.warmup.warmup_conf
+
+    @property
     def learning_rate_decay_conf(
         self,
     ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
         raise NotImplementedError()
 
-    def SetLrFieldsInTrainConf(self, train_conf) -> None:
+    def SetLrFieldsInOptimizerConf(self, optimizer_conf) -> None:
         if self.warmup_conf is not None:
-            train_conf.model_update_conf.warmup_conf.CopyFrom(self.warmup_conf)
+            optimizer_conf.warmup_conf.CopyFrom(self.warmup_conf)
         if self.lr_lbn is not None:
             assert self.learning_rate_decay_conf is None
             assert self.base_lr is None
-            train_conf.primary_lr_lbn = self.lr_lbn
-            # primary_lr is a required field
-            train_conf.primary_lr = 0
+            optimizer_conf.learning_rate_lbn = self.lr_lbn
         else:
             assert self.learning_rate_decay_conf is not None
-            train_conf.model_update_conf.learning_rate_decay.CopyFrom(
-                self.learning_rate_decay_conf
-            )
-            train_conf.primary_lr = self.base_lr
-
-    @property
-    def warmup_conf(self) -> learning_rate_schedule_conf_pb.WarmupConf:
-        if self.warmup is None:
-            return None
-        return self.warmup.warmup_conf
+            optimizer_conf.learning_rate_decay.CopyFrom(self.learning_rate_decay_conf)
 
 
 @oneflow_export("optimizer.CosineScheduler")
@@ -982,9 +977,7 @@ class DynamicLossScalePolicy(LossScalePolicy):
 class Optimizer:
     def __init__(
         self,
-        lr_scheduler: LrScheduler,
         loss_scale_factor: Optional[int] = None,
-        grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
     ):
@@ -993,25 +986,19 @@ class Optimizer:
             self.loss_scale_policy = StaticLossScalePolicy(loss_scale_factor)
         else:
             self.loss_scale_policy = loss_scale_policy
-        self.lr_scheduler = lr_scheduler
-        self.grad_clipping = grad_clipping
         self.train_step_lbn = train_step_lbn
 
-    def _SetSpecificFieldsInTrainConf(self, train_conf):
+    def _AddOptimizerConfInTrainConf(self, train_conf: job_conf_pb.TrainConf) -> None:
         raise NotImplementedError()
 
     @property
     def train_conf(self) -> job_conf_pb.TrainConf:
         train_conf = job_conf_pb.TrainConf()
-        self.lr_scheduler.SetLrFieldsInTrainConf(train_conf)
-        update_conf = train_conf.model_update_conf
-        if self.grad_clipping is not None:
-            update_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
         if self.train_step_lbn is not None:
             train_conf.train_step_lbn = self.train_step_lbn
         if self.loss_scale_policy is not None:
             self.loss_scale_policy.SetLossScaleFieldsInTrainConf(train_conf)
-        self._SetSpecificFieldsInTrainConf(train_conf)
+        self._AddOptimizerConfInTrainConf(train_conf)
         return train_conf
 
     def minimize(
@@ -1086,21 +1073,30 @@ class SGD(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Text]
+        ] = flow.get_all_variables().keys(),
     ):
         super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            grad_clipping,
-            train_step_lbn,
-            loss_scale_policy,
+            loss_scale_factor, train_step_lbn, loss_scale_policy,
         )
+        self.lr_scheduler = lr_scheduler
+        self.grad_clipping = grad_clipping
         self.momentum = momentum
+        if not isinstance(variables, collections.abc.Sequence):
+            self.variables = [variables]
+        self.variables = list(variables)
 
-    def _SetSpecificFieldsInTrainConf(self, train_conf):
+    def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
+        optimizer_conf = train_conf.optimizer_conf.add()
+        self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
+        if self.grad_clipping is not None:
+            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
         if self.momentum == 0:
-            train_conf.model_update_conf.naive_conf.SetInParent()
+            optimizer_conf.naive_conf.SetInParent()
         else:
-            train_conf.model_update_conf.momentum_conf.beta = self.momentum
+            optimizer_conf.momentum_conf.beta = self.momentum
+        optimizer_conf.variables.extend(self.variables)
 
 
 @oneflow_export("optimizer.SGDW")
@@ -1176,14 +1172,15 @@ class SGDW(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Text]
+        ] = flow.get_all_variables().keys(),
     ):
         super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            grad_clipping,
-            train_step_lbn,
-            loss_scale_policy,
+            loss_scale_factor, train_step_lbn, loss_scale_policy,
         )
+        self.lr_scheduler = lr_scheduler
+        self.grad_clipping = grad_clipping
         self.momentum = momentum
         self.weight_decay = weight_decay
         if isinstance(weight_decay_includes, str):
@@ -1192,29 +1189,36 @@ class SGDW(Optimizer):
             weight_decay_excludes = [weight_decay_excludes]
         self.weight_decay_includes = weight_decay_includes
         self.weight_decay_excludes = weight_decay_excludes
+        if not isinstance(variables, collections.abc.Sequence):
+            self.variables = [variables]
+        self.variables = list(variables)
 
-    def _SetSpecificFieldsInTrainConf(self, train_conf):
+    def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
+        optimizer_conf = train_conf.optimizer_conf.add()
+        self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
+        if self.grad_clipping is not None:
+            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
         if self.momentum == 0:
-            train_conf.model_update_conf.naive_conf.SetInParent()
+            optimizer_conf.naive_conf.SetInParent()
         else:
-            train_conf.model_update_conf.momentum_conf.beta = self.momentum
+            optimizer_conf.momentum_conf.beta = self.momentum
 
         if self.weight_decay is not None:
-            train_conf.model_update_conf.weight_decay_conf.weight_decay_rate = (
-                self.weight_decay
-            )
+            optimizer_conf.weight_decay_conf.weight_decay_rate = self.weight_decay
             assert not (
                 self.weight_decay_excludes is not None
                 and self.weight_decay_includes is not None
             )
             if self.weight_decay_includes is not None:
-                train_conf.model_update_conf.weight_decay_conf.includes.pattern.extend(
+                optimizer_conf.weight_decay_conf.includes.pattern.extend(
                     self.weight_decay_includes
                 )
             elif self.weight_decay_excludes is not None:
-                train_conf.model_update_conf.weight_decay_conf.excludes.pattern.extend(
+                optimizer_conf.weight_decay_conf.excludes.pattern.extend(
                     self.weight_decay_excludes
                 )
+
+        optimizer_conf.variables.extend(self.variables)
 
 
 @oneflow_export("optimizer.Adam")
@@ -1303,26 +1307,33 @@ class Adam(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Text]
+        ] = flow.get_all_variables().keys(),
     ):
         super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            grad_clipping,
-            train_step_lbn,
-            loss_scale_policy,
+            loss_scale_factor, train_step_lbn, loss_scale_policy,
         )
+        self.lr_scheduler = lr_scheduler
+        self.grad_clipping = grad_clipping
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
         self.do_bias_correction = do_bias_correction
+        if not isinstance(variables, collections.abc.Sequence):
+            self.variables = [variables]
+        self.variables = list(variables)
 
-    def _SetSpecificFieldsInTrainConf(self, train_conf):
-        train_conf.model_update_conf.adam_conf.beta1 = self.beta1
-        train_conf.model_update_conf.adam_conf.beta2 = self.beta2
-        train_conf.model_update_conf.adam_conf.epsilon = self.epsilon
-        train_conf.model_update_conf.adam_conf.do_bias_correction = (
-            self.do_bias_correction
-        )
+    def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
+        optimizer_conf = train_conf.optimizer_conf.add()
+        self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
+        if self.grad_clipping is not None:
+            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
+        optimizer_conf.adam_conf.beta1 = self.beta1
+        optimizer_conf.adam_conf.beta2 = self.beta2
+        optimizer_conf.adam_conf.epsilon = self.epsilon
+        optimizer_conf.adam_conf.do_bias_correction = self.do_bias_correction
+        optimizer_conf.variables.extend(self.variables)
 
 
 @oneflow_export("optimizer.AdamW")
@@ -1426,14 +1437,15 @@ class AdamW(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Text]
+        ] = flow.get_all_variables().keys(),
     ):
         super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            grad_clipping,
-            train_step_lbn,
-            loss_scale_policy,
+            loss_scale_factor, train_step_lbn, loss_scale_policy,
         )
+        self.lr_scheduler = lr_scheduler
+        self.grad_clipping = grad_clipping
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
@@ -1445,30 +1457,35 @@ class AdamW(Optimizer):
             weight_decay_excludes = [weight_decay_excludes]
         self.weight_decay_includes = weight_decay_includes
         self.weight_decay_excludes = weight_decay_excludes
+        if not isinstance(variables, collections.abc.Sequence):
+            self.variables = [variables]
+        self.variables = list(variables)
 
-    def _SetSpecificFieldsInTrainConf(self, train_conf):
-        train_conf.model_update_conf.adam_conf.beta1 = self.beta1
-        train_conf.model_update_conf.adam_conf.beta2 = self.beta2
-        train_conf.model_update_conf.adam_conf.epsilon = self.epsilon
-        train_conf.model_update_conf.adam_conf.do_bias_correction = (
-            self.do_bias_correction
-        )
+    def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
+        optimizer_conf = train_conf.optimizer_conf.add()
+        self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
+        if self.grad_clipping is not None:
+            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
+        optimizer_conf.adam_conf.beta1 = self.beta1
+        optimizer_conf.adam_conf.beta2 = self.beta2
+        optimizer_conf.adam_conf.epsilon = self.epsilon
+        optimizer_conf.adam_conf.do_bias_correction = self.do_bias_correction
         if self.weight_decay is not None:
-            train_conf.model_update_conf.weight_decay_conf.weight_decay_rate = (
-                self.weight_decay
-            )
+            optimizer_conf.weight_decay_conf.weight_decay_rate = self.weight_decay
             assert not (
                 self.weight_decay_excludes is not None
                 and self.weight_decay_includes is not None
             )
             if self.weight_decay_includes is not None:
-                train_conf.model_update_conf.weight_decay_conf.includes.pattern.extend(
+                optimizer_conf.weight_decay_conf.includes.pattern.extend(
                     self.weight_decay_includes
                 )
             elif self.weight_decay_excludes is not None:
-                train_conf.model_update_conf.weight_decay_conf.excludes.pattern.extend(
+                optimizer_conf.weight_decay_conf.excludes.pattern.extend(
                     self.weight_decay_excludes
                 )
+
+        optimizer_conf.variables.extend(self.variables)
 
 
 @oneflow_export("optimizer.RMSProp")
@@ -1546,22 +1563,31 @@ class RMSProp(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Text]
+        ] = flow.get_all_variables().keys(),
     ):
         super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            grad_clipping,
-            train_step_lbn,
-            loss_scale_policy,
+            loss_scale_factor, train_step_lbn, loss_scale_policy,
         )
+        self.lr_scheduler = lr_scheduler
+        self.grad_clipping = grad_clipping
         self.decay_rate = decay_rate
         self.epsilon = epsilon
         self.centered = centered
+        if not isinstance(variables, collections.abc.Sequence):
+            self.variables = [variables]
+        self.variables = list(variables)
 
-    def _SetSpecificFieldsInTrainConf(self, train_conf):
-        train_conf.model_update_conf.rmsprop_conf.decay_rate = self.decay_rate
-        train_conf.model_update_conf.rmsprop_conf.epsilon = self.epsilon
-        train_conf.model_update_conf.rmsprop_conf.centered = self.centered
+    def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
+        optimizer_conf = train_conf.optimizer_conf.add()
+        self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
+        if self.grad_clipping is not None:
+            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
+        optimizer_conf.rmsprop_conf.decay_rate = self.decay_rate
+        optimizer_conf.rmsprop_conf.epsilon = self.epsilon
+        optimizer_conf.rmsprop_conf.centered = self.centered
+        optimizer_conf.variables.extend(self.variables)
 
 
 @oneflow_export("optimizer.LARS")
@@ -1624,22 +1650,31 @@ class LARS(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Text]
+        ] = flow.get_all_variables().keys(),
     ):
         super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            grad_clipping,
-            train_step_lbn,
-            loss_scale_policy,
+            loss_scale_factor, train_step_lbn, loss_scale_policy,
         )
+        self.lr_scheduler = lr_scheduler
+        self.grad_clipping = grad_clipping
         self.momentum_beta = momentum_beta
         self.epsilon = epsilon
         self.lars_coefficient = lars_coefficient
+        if not isinstance(variables, collections.abc.Sequence):
+            self.variables = [variables]
+        self.variables = list(variables)
 
-    def _SetSpecificFieldsInTrainConf(self, train_conf):
-        train_conf.model_update_conf.lars_conf.momentum_beta = self.momentum_beta
-        train_conf.model_update_conf.lars_conf.epsilon = self.epsilon
-        train_conf.model_update_conf.lars_conf.lars_coefficient = self.lars_coefficient
+    def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
+        optimizer_conf = train_conf.optimizer_conf.add()
+        self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
+        if self.grad_clipping is not None:
+            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
+        optimizer_conf.lars_conf.momentum_beta = self.momentum_beta
+        optimizer_conf.lars_conf.epsilon = self.epsilon
+        optimizer_conf.lars_conf.lars_coefficient = self.lars_coefficient
+        optimizer_conf.variables.extend(self.variables)
 
 
 @oneflow_export("optimizer.LazyAdam")
@@ -1707,22 +1742,31 @@ class LazyAdam(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Text]
+        ] = flow.get_all_variables().keys(),
     ):
         super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            grad_clipping,
-            train_step_lbn,
-            loss_scale_policy,
+            loss_scale_factor, train_step_lbn, loss_scale_policy,
         )
+        self.lr_scheduler = lr_scheduler
+        self.grad_clipping = grad_clipping
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
+        if not isinstance(variables, collections.abc.Sequence):
+            self.variables = [variables]
+        self.variables = list(variables)
 
-    def _SetSpecificFieldsInTrainConf(self, train_conf):
-        train_conf.model_update_conf.lazy_adam_conf.beta1 = self.beta1
-        train_conf.model_update_conf.lazy_adam_conf.beta2 = self.beta2
-        train_conf.model_update_conf.lazy_adam_conf.epsilon = self.epsilon
+    def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
+        optimizer_conf = train_conf.optimizer_conf.add()
+        self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
+        if self.grad_clipping is not None:
+            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
+        optimizer_conf.lazy_adam_conf.beta1 = self.beta1
+        optimizer_conf.lazy_adam_conf.beta2 = self.beta2
+        optimizer_conf.lazy_adam_conf.epsilon = self.epsilon
+        optimizer_conf.variables.extend(self.variables)
 
 
 @oneflow_export("optimizer.LAMB")
@@ -1752,19 +1796,72 @@ class LAMB(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
+        variables: Optional[
+            Union[Sequence[Text], Text]
+        ] = flow.get_all_variables().keys(),
     ):
         super().__init__(
-            lr_scheduler,
-            loss_scale_factor,
-            grad_clipping,
-            train_step_lbn,
-            loss_scale_policy,
+            loss_scale_factor, train_step_lbn, loss_scale_policy,
         )
+        self.lr_scheduler = lr_scheduler
+        self.grad_clipping = grad_clipping
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
+        if not isinstance(variables, collections.abc.Sequence):
+            self.variables = [variables]
+        self.variables = list(variables)
 
-    def _SetSpecificFieldsInTrainConf(self, train_conf):
-        train_conf.model_update_conf.lamb_conf.beta1 = self.beta1
-        train_conf.model_update_conf.lamb_conf.beta2 = self.beta2
-        train_conf.model_update_conf.lamb_conf.epsilon = self.epsilon
+    def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
+        optimizer_conf = train_conf.optimizer_conf.add()
+        self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
+        if self.grad_clipping is not None:
+            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
+        optimizer_conf.lamb_conf.beta1 = self.beta1
+        optimizer_conf.lamb_conf.beta2 = self.beta2
+        optimizer_conf.lamb_conf.epsilon = self.epsilon
+        optimizer_conf.variables.extend(self.variables)
+
+
+@oneflow_export("optimizer.CombinedOptimizer")
+class CombinedOptimizer(Optimizer):
+    def __init__(
+        self,
+        optimizers: Sequence[Optimizer],
+        loss_scale_factor: Optional[float] = None,
+        train_step_lbn: Optional[Text] = None,
+        loss_scale_policy: Optional[LossScalePolicy] = None,
+    ):
+        super().__init__(
+            loss_scale_factor, train_step_lbn, loss_scale_policy,
+        )
+        self.optimizers = optimizers
+        assert (
+            len(optimizers) >= 2
+        ), "Combined optimizer should only be used in multi-optimizer case, \
+            otherwise you should consider other optimizer interface"
+
+    def _SanityCheck(self):
+        for optimizer in self.optimizers:
+            assert (
+                optimizer.train_step_lbn is None
+            ), "Only one train step lbn among multi optimizers"
+            assert (
+                optimizer.loss_scale_policy is None
+            ), "Only one loss scale policy among multi optimizers"
+
+        all_variables = set(flow.get_all_variables())
+        union_set = {}
+        inter_set = all_variables
+        for optimizer in self.optimizers:
+            s = set(optimizer.variables)
+            union_set.union(s)
+            inter_set = inter_set.intersection(s)
+
+        assert union_set.issubset(all_variables)
+        assert len(inter_set) == 0
+
+    def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
+        self._SanityCheck()
+        for optimizer in self.optimizers:
+            optimizer._AddOptimizerConfInTrainConf(train_conf)
