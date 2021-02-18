@@ -45,7 +45,7 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
   auto AddScheduleOp = [&](const std::string& op_name, const float learning_rate) -> std::string {
     const class oneflow::OpNode* op_node =
         op_graph.OpNode4OpName(GenLogicalBlobId(train_conf.train_step_lbn()).op_name());
-    CHECK_OR_RETURN(op_node != nullptr) << "op node not fould in op graph, op name: " << op_name;
+    CHECK_OR_RETURN(op_node != nullptr) << "op node not found in op graph, op name: " << op_name;
     const ParallelConf& parallel_conf = op_node->parallel_desc().parallel_conf();
     const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
     if (model_update_conf.has_warmup_conf() || model_update_conf.has_learning_rate_decay()) {
