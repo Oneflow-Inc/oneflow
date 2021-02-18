@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/operator/user_op.h"
-#include "oneflow/core/operator/user_op_util.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
 
 namespace oneflow {
@@ -396,11 +395,9 @@ void UserOp::InitFromOpConf() {
   }
 }
 
-Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx,
-                                   const SbpSignature* sbp_signature,
-                                   std::function<void(OpContext*)> EnrollOpCtx) const {
-  JUST(InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature, EnrollOpCtx));
+Maybe<void> UserOp::InferInternalBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   // tmp buffer size must be inferred after out shape/dtype
   UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
                                GetBlobDesc4BnInOp);
@@ -418,19 +415,12 @@ Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     tmp_buffer_blob->set_data_type(DataType::kChar);
     tmp_buffer_blob->mut_shape() = Shape({static_cast<int64_t>(tmp_size)});
   }
-
-  // get inplace proposal in/out blob pair
-  UserOpCtx* op_ctx = new UserOpCtx();
-
-  op_ctx->sbp_sig = *sbp_signature;
-  EnrollOpCtx(op_ctx);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> UserOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature,
-    std::function<void(OpContext*)> EnrollOpCtx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
   // default method set output blob desc (such as Dtype, is_dynamic, is_tensor_list)
@@ -617,14 +607,12 @@ Symbol<OperatorConf> UserOp::GetOpConfWithoutOpNameAndLbn() const {
 
 void UserOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
-    const ParallelDesc* parallel_desc) const {
-  const auto* user_op_ctx = dynamic_cast<const UserOpCtx*>(op_ctx);
-  CHECK_NOTNULL(user_op_ctx);
+    const ParallelDesc* parallel_desc, const SbpSignature* sbp_signature) const {
   auto user_conf = kernel_conf->mutable_user_conf();
   *(user_conf->mutable_parallel_ctx()) = *parallel_ctx;
-  *(user_conf->mutable_sbp_sig()) = user_op_ctx->sbp_sig;
+  *(user_conf->mutable_sbp_sig()) = *sbp_signature;
 #define BLOB_DESCS_TO_PROTO(prefix, is_arg)                                                        \
   for (const auto& bn : prefix##_bns()) {                                                          \
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);                                            \
