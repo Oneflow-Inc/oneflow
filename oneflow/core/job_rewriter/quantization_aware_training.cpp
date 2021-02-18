@@ -234,6 +234,7 @@ user_op::UserOpConfWrapper MinMaxObserver(const std::string& name, const std::st
           .Input("in", input)
           .Output("scale")
           .Output("zero_point")
+          .Attr<std::string>("quantization_formula", QuantizationFormulaAttr4QatConfig(qat_config))
           .Attr<std::string>("quantization_scheme", QuantizationSchemeAttr4QatConfig(qat_config))
           .Attr("per_layer_quantization", PerLayerQuantizationAttr4Config(qat_config))
           .ScopeSymbolId(scope_symbol_id)
@@ -245,7 +246,6 @@ user_op::UserOpConfWrapper MinMaxObserver(const std::string& name, const std::st
 user_op::UserOpConfWrapper MovingMinMaxObserver(const std::string& name, const std::string& input,
                                                 const std::string& train_step_lbn,
                                                 const QatConfig& qat_config,
-                                                int64_t stop_update_after_iters, float momentum,
                                                 const int64_t scope_symbol_id,
                                                 OpConfMap* inserted_ops) {
   const std::string moving_max_name = name + MOVING_MAX_SUFFIX;
@@ -266,10 +266,10 @@ user_op::UserOpConfWrapper MovingMinMaxObserver(const std::string& name, const s
           .Output("scale")
           .Output("zero_point")
           .Attr("training", GlobalJobDesc().IsTrain())
-          .Attr("stop_update_after_iters", stop_update_after_iters)
+          .Attr("stop_update_after_iters", qat_config.moving_min_max_stop_update_after_iters())
           .Attr<std::string>("quantization_formula", QuantizationFormulaAttr4QatConfig(qat_config))
           .Attr<std::string>("quantization_scheme", QuantizationSchemeAttr4QatConfig(qat_config))
-          .Attr("momentum", momentum)
+          .Attr("momentum", qat_config.moving_min_max_momentum())
           .ScopeSymbolId(scope_symbol_id)
           .Build();
   (*inserted_ops)[name] = op_wrapper.op_conf();
@@ -325,10 +325,8 @@ Maybe<void> GetScaleAndZeroPointLbn4Edge(OpEdge* edge, const std::string train_s
       *zero_point = observer_op.output("zero_point", 0);
     } else {
       CHECK_OR_RETURN(qat_config.has_moving_min_max_stop_update_after_iters());
-      const auto observer_op =
-          MovingMinMaxObserver(observer_op_name, lbn, train_step_lbn, qat_config,
-                               qat_config.moving_min_max_stop_update_after_iters(),
-                               qat_config.moving_min_max_momentum(), scope_symbol_id, inserted_ops);
+      const auto observer_op = MovingMinMaxObserver(observer_op_name, lbn, train_step_lbn,
+                                                    qat_config, scope_symbol_id, inserted_ops);
       *scale = observer_op.output("scale", 0);
       *zero_point = observer_op.output("zero_point", 0);
     }
