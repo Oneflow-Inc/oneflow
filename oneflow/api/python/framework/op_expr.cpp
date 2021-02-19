@@ -33,8 +33,11 @@ std::vector<std::shared_ptr<one::Tensor>> Interpret(
 
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::OpExpr, std::shared_ptr<one::OpExpr>>(m, "OpExpr")
-      .def("__call__", [](const std::shared_ptr<one::OpExpr>& op_expr,
-                          const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
+      .def("__call__", [](const std::shared_ptr<one::OpExpr>& op_expr, py::args args) {
+        std::vector<std::shared_ptr<one::Tensor>> inputs(args.size());
+        for (int i = 0; i < args.size(); ++i) {
+          inputs[i] = py::cast<std::shared_ptr<one::Tensor>&>(args[i]);
+        }
         return Interpret(op_expr, inputs);
       });
 
