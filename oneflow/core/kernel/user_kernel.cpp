@@ -267,7 +267,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     const auto* op_reg_val = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(
         kernel_conf.op_attribute().op_conf().user_conf().op_type_name());
     CHECK_NOTNULL(op_reg_val);
-    tensor_desc_infer_fn_ = op_reg_val->tensor_desc_infer_fn;
+    tensor_desc_infer_fn_ = op_reg_val->logical_tensor_desc_infer_fn;
   }
   ~UserKernelInferContext() = default;
 

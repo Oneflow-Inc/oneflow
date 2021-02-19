@@ -194,7 +194,7 @@ OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
 }
 
 OpRegistry& OpRegistry::Finish() {
-  CHECK(result_.tensor_desc_infer_fn != nullptr)
+  CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
   if (result_.batch_axis_infer_fn == nullptr) {
