@@ -54,8 +54,9 @@ class BroadcastToCompatibleWithOp final : public Operator {
     EnrollOutputBn("y");
   }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override {
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override {
     int64_t num_compatibles = op_conf().broadcast_to_compatible_with_conf().compatible_size();
     const BlobDesc* x_desc = GetBlobDesc4BnInOp("x");
     Shape broadcasted_shape(x_desc->shape());

@@ -23,6 +23,8 @@ limitations under the License.
 #include "oneflow/core/graph/foreign_output_compute_task_node.h"
 #include "oneflow/core/graph/callback_notify_compute_task_node.h"
 #include "oneflow/core/graph/reentrant_lock_compute_task_node.h"
+#include "oneflow/core/graph/src_subset_tick_compute_task_node.h"
+#include "oneflow/core/graph/dst_subset_tick_compute_task_node.h"
 #include "oneflow/core/graph/source_tick_compute_task_node.h"
 #include "oneflow/core/graph/tick_compute_task_node.h"
 #include "oneflow/core/graph/device_tick_compute_task_node.h"
@@ -185,6 +187,8 @@ DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ForeignInput);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ForeignOutput);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(CallbackNotify);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ReentrantLock);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(SrcSubsetTick);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(DstSubsetTick);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(SourceTick);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(AccTick);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Tick);

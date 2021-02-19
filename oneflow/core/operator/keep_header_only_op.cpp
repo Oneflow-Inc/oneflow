@@ -26,9 +26,9 @@ void KeepHeaderOnlyOp::InitFromOpConf() {
   EnrollRepeatedOutputBn("out", false);
 }
 
-Maybe<void> KeepHeaderOnlyOp::InferBlobDescs(
+Maybe<void> KeepHeaderOnlyOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   size_t in_num = op_conf().keep_header_only_conf().in().size();
   for (size_t i = 0; i < in_num; ++i) {
     BlobDesc* out = GetBlobDesc4BnInOp(GenRepeatedBn("out", i));
