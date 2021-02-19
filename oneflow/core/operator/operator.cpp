@@ -274,7 +274,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& shape, const ParallelContext* paralle
     CHECK_GE_OR_RETURN(shape.At(axis), parallel_num);
     const BalancedSplitter bs(shape.At(axis), parallel_num);
     physical->Set(axis, bs.At(parallel_ctx->parallel_id()).size());
-  } else if (sbp_parallel.has_broadcast_parallel() && sbp_parallel.has_partial_sum_parallel()) {
+  } else if (sbp_parallel.has_broadcast_parallel() || sbp_parallel.has_partial_sum_parallel()) {
     // do nothing
   } else {
     UNIMPLEMENTED();
