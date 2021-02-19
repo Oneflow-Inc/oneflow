@@ -559,21 +559,21 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     oba2sbp_identical_obas[pair.second()].push_back(pair.first());
   }
   JUST(TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
+    auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
+      return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn));
+    };
+    JUST(op_node->mut_op()->FillLogicalInBlobDesc(LogicalBlobDesc4BnInOp));
     // Infer ParallelSignature
     JUST(op_node->mut_op()->InferParallelSignatureIf());
     // Infer batch_axis
-    const auto& BatchAxis4Ibn = [&](const std::string& ibn) -> Maybe<const OptInt64*> {
+    const auto& BatchAxis4Ibn = [&](const std::string& ibn) -> Maybe<const OptInt64> {
       const auto& lbi = op_node->op().BnInOp2Lbi(ibn);
       const auto* producer = op_node->MutSrcNode4InputLbi(lbi);
       CHECK_NOTNULL_OR_RETURN(producer);
-      return producer->op().BatchAxis4BnInOp(*JUST(producer->op().obn4lbi(lbi)));
+      return producer->op().GetBatchAxis4Obn(*JUST(producer->op().obn4lbi(lbi)));
     };
-    const auto& LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc& {
-      const auto& ibns = op_node->op().input_bns();
-      CHECK(std::find(ibns.begin(), ibns.end(), ibn) != ibns.end());
-      return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn));
-    };
-    JUST(op_node->mut_op()->InferBatchAxisIf(LogicalBlobDesc4Ibn, BatchAxis4Ibn));
+    JUST(op_node->mut_op()->FillInBatchAxis(BatchAxis4Ibn));
+    JUST(op_node->mut_op()->InferBatchAxisIf());
     // Infer mirrored_signature
     bool is_mirrored_conf = false;
     {
@@ -595,10 +595,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     // Infer logical_blob_desc
     JUST(InferOpNodeLogicalBlobDesc(op_node));
     // Fill logical blob_desc signature.
-    JUST(op_node->mut_op()->FillLogicalBlobDescSignature(
-        [&](const std::string& bn_in_op) -> Maybe<const BlobDesc&> {
-          return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
-        }));
+    JUST(op_node->mut_op()->FillLogicalOutBlobDesc(LogicalBlobDesc4BnInOp));
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
