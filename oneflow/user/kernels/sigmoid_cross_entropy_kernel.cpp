@@ -18,27 +18,38 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-template<template<typename> class Opt, typename T>
-struct ElemwiseSigmoidCrossEntropyGradFunctor<DeviceType::kCPU, Opt, T> final {
-  void operator()(DeviceCtx* ctx, int64_t n, T* prediction_diff, const T* prediction,
-                  const T* label) {
+template<template<typename, typename> class Opt, typename PredT, typename LabelT>
+struct ElemwiseSigmoidCrossEntropyGradFunctor<DeviceType::kCPU, Opt, PredT, LabelT> final {
+  void operator()(DeviceCtx* ctx, int64_t n, PredT* prediction_diff, const PredT* prediction,
+                  const LabelT* label) {
     XPU_1D_KERNEL_LOOP(index, n) {
-      prediction_diff[index] = Opt<T>()(prediction[index], label[index]);
+      prediction_diff[index] = Opt<PredT, LabelT>()(prediction[index], label[index]);
     }
   }
 };
 
-template<template<typename> class Opt, typename T>
-struct ElemwiseSigmoidCrossEntropyFunctor<DeviceType::kCPU, Opt, T> final {
-  void operator()(DeviceCtx* ctx, int64_t n, T* loss, const T* prediction, const T* label) {
-    XPU_1D_KERNEL_LOOP(index, n) { loss[index] = Opt<T>()(prediction[index], label[index]); }
+template<template<typename, typename> class Opt, typename PredT, typename LabelT>
+struct ElemwiseSigmoidCrossEntropyFunctor<DeviceType::kCPU, Opt, PredT, LabelT> final {
+  void operator()(DeviceCtx* ctx, int64_t n, PredT* loss, const PredT* prediction,
+                  const LabelT* label) {
+    XPU_1D_KERNEL_LOOP(index, n) {
+      loss[index] = Opt<PredT, LabelT>()(prediction[index], label[index]);
+    }
   }
 };
 }  // namespace
 
-REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCPU, float)
-REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCPU, double)
-REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCPU, float)
-REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCPU, double)
+REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCPU, float, int32_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCPU, double, int32_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCPU, float, int8_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCPU, double, int8_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCPU, float, float)
+REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCPU, double, double)
+REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCPU, float, int32_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCPU, double, int32_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCPU, float, int8_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCPU, double, int8_t)
+REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCPU, float, float)
+REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCPU, double, double)
 
 }  // namespace oneflow

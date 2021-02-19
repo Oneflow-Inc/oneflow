@@ -30,7 +30,6 @@ REGISTER_USER_OP("sigmoid_cross_entropy")
       const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
       const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
       CHECK_EQ_OR_RETURN(label_desc->shape(), prediction_desc->shape());
-      CHECK_EQ_OR_RETURN(label_desc->data_type(), prediction_desc->data_type());
       user_op::TensorDesc* loss_desc = ctx->TensorDesc4ArgNameAndIndex("loss", 0);
       *loss_desc = *prediction_desc;
       return Maybe<void>::Ok();
@@ -68,7 +67,6 @@ REGISTER_USER_OP("sigmoid_cross_entropy_grad")
       const user_op::TensorDesc* loss_diff_desc = ctx->TensorDesc4ArgNameAndIndex("loss_diff", 0);
       CHECK_EQ_OR_RETURN(label_desc->shape(), prediction_desc->shape());
       CHECK_EQ_OR_RETURN(loss_diff_desc->shape(), prediction_desc->shape());
-      CHECK_EQ_OR_RETURN(label_desc->data_type(), prediction_desc->data_type());
       *ctx->TensorDesc4ArgNameAndIndex("prediction_diff", 0) = *prediction_desc;
       return Maybe<void>::Ok();
     })
