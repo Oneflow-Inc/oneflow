@@ -18,24 +18,9 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto)
-    : BuiltinOpExpr(op_name), proto_(proto) {
-  for (const auto& it : proto_.input()) {
-    for (const auto& input : it.second.s()) { indexed_input_names_.push_back(input); }
-  }
-  for (const auto& it : proto_.output()) {
-    for (const auto& output : it.second.s()) { indexed_output_names_.push_back(output); }
-  }
-}
-
 std::shared_ptr<OpExpr> UserOpExpr::GetBackwardOpExpr() const {
   // TODO(hjchen2)
   return std::shared_ptr<OpExpr>(new UserOpExpr);
-}
-
-VariableOpExpr::VariableOpExpr(const std::string& op_name, VariableOpConf&& proto)
-    : BuiltinOpExpr(op_name), proto_(proto) {
-  indexed_output_names_.push_back(proto_.out());
 }
 
 std::shared_ptr<OpExpr> VariableOpExpr::GetBackwardOpExpr() const {
@@ -43,22 +28,9 @@ std::shared_ptr<OpExpr> VariableOpExpr::GetBackwardOpExpr() const {
   return std::shared_ptr<OpExpr>(new VariableOpExpr);
 }
 
-CastToMirroredOpExpr::CastToMirroredOpExpr(const std::string& op_name, CastToMirroredOpConf&& proto)
-    : BuiltinOpExpr(op_name), proto_(proto) {
-  indexed_input_names_.push_back(proto_.in());
-  indexed_output_names_.push_back(proto_.out());
-}
-
 std::shared_ptr<OpExpr> CastToMirroredOpExpr::GetBackwardOpExpr() const {
   // TODO(hjchen2)
   return std::shared_ptr<OpExpr>(new CastToMirroredOpExpr);
-}
-
-CastFromMirroredOpExpr::CastFromMirroredOpExpr(const std::string& op_name,
-                                               CastFromMirroredOpConf&& proto)
-    : BuiltinOpExpr(op_name), proto_(proto) {
-  indexed_input_names_.push_back(proto_.in());
-  indexed_output_names_.push_back(proto_.out());
 }
 
 std::shared_ptr<OpExpr> CastFromMirroredOpExpr::GetBackwardOpExpr() const {
@@ -66,23 +38,9 @@ std::shared_ptr<OpExpr> CastFromMirroredOpExpr::GetBackwardOpExpr() const {
   return std::shared_ptr<OpExpr>(new CastFromMirroredOpExpr);
 }
 
-DistributeSplitOpExpr::DistributeSplitOpExpr(const std::string& op_name,
-                                             DistributeSplitOpConf&& proto)
-    : BuiltinOpExpr(op_name), proto_(proto) {
-  indexed_input_names_.push_back(proto_.in());
-  for (const std::string& output : proto_.out()) { indexed_output_names_.push_back(output); }
-}
-
 std::shared_ptr<OpExpr> DistributeSplitOpExpr::GetBackwardOpExpr() const {
   // TODO(hjchen2)
   return std::shared_ptr<OpExpr>(new DistributeSplitOpExpr);
-}
-
-DistributeCloneOpExpr::DistributeCloneOpExpr(const std::string& op_name,
-                                             DistributeCloneOpConf&& proto)
-    : BuiltinOpExpr(op_name), proto_(proto) {
-  indexed_input_names_.push_back(proto_.in());
-  for (const std::string& output : proto_.out()) { indexed_output_names_.push_back(output); }
 }
 
 std::shared_ptr<OpExpr> DistributeCloneOpExpr::GetBackwardOpExpr() const {
@@ -90,22 +48,9 @@ std::shared_ptr<OpExpr> DistributeCloneOpExpr::GetBackwardOpExpr() const {
   return std::shared_ptr<OpExpr>(new DistributeCloneOpExpr);
 }
 
-DistributeConcatOpExpr::DistributeConcatOpExpr(const std::string& op_name,
-                                               DistributeConcatOpConf&& proto)
-    : BuiltinOpExpr(op_name), proto_(proto) {
-  for (const std::string& input : proto_.in()) { indexed_input_names_.push_back(input); }
-  indexed_output_names_.push_back(proto_.out());
-}
-
 std::shared_ptr<OpExpr> DistributeConcatOpExpr::GetBackwardOpExpr() const {
   // TODO(hjchen2)
   return std::shared_ptr<OpExpr>(new DistributeConcatOpExpr);
-}
-
-DistributeAddOpExpr::DistributeAddOpExpr(const std::string& op_name, DistributeAddOpConf&& proto)
-    : BuiltinOpExpr(op_name), proto_(proto) {
-  for (const std::string& input : proto_.in()) { indexed_input_names_.push_back(input); }
-  indexed_output_names_.push_back(proto_.out());
 }
 
 std::shared_ptr<OpExpr> DistributeAddOpExpr::GetBackwardOpExpr() const {

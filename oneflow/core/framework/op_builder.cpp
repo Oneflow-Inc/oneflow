@@ -40,9 +40,8 @@ const std::string& TensorNameScope::Lookup(const std::shared_ptr<Tensor>& tensor
 void TensorNameScope::Record(const std::shared_ptr<Tensor>& tensor, const std::string& name) {
   std::lock_guard<std::mutex> lock(mutex_);
   uint64_t key = reinterpret_cast<uint64_t>(tensor.get());
-  // We assume that the same tensor will only be recorded once.
-  CHECK_EQ(tensor_names_.count(key), 0);
-  tensor_names_.emplace(key, name);
+  // We assume that the name of the tensor will be update more than once.
+  tensor_names_[key] = name;
 }
 
 OpBuilder::OpBuilder(const std::string& op_type_name) {
@@ -54,27 +53,15 @@ OpBuilder& OpBuilder::Op(const std::string& op_type_name) {
   return *this;
 }
 
-OpBuilder& OpBuilder::Input(const std::string& input_name,
-                            const std::vector<std::shared_ptr<Tensor>>& input) {
-  CHECK_GT(input.size(), 0);
-  CHECK_EQ(proto_.input().count(input_name), 0);
-  auto& input_list = (*(proto_.mutable_input()))[input_name];
-  for (const auto& tensor : input) {
-    const std::string& tensor_name = TensorNameScope::Global()->Lookup(tensor);
-    input_list.mutable_s()->Add()->assign(tensor_name);
-    indexed_input_names_.push_back(tensor_name);
-  }
-  return *this;
-}
-
 OpBuilder& OpBuilder::Input(const std::string& input_name) { return this->Input(input_name, 1); }
 
 OpBuilder& OpBuilder::Input(const std::string& input_name, const int count) {
   CHECK_GT(count, 0);
-  CHECK_EQ(proto_.input().count(input_name), 0);
+  CHECK_EQ(proto_.input().count(input_name), 0)
+      << "The Input " << input_name << " has been specified more than once.";
   auto& input_list = (*(proto_.mutable_input()))[input_name];
   for (int i = 0; i < count; ++i) {
-    const std::string& tensor_name = "^#Position_" + std::to_string(i);
+    const std::string& tensor_name = "^#Position_" + std::to_string(input_pos_++);
     input_list.mutable_s()->Add()->assign(tensor_name);
     indexed_input_names_.push_back(tensor_name);
   }
@@ -87,7 +74,8 @@ OpBuilder& OpBuilder::Output(const std::string& output_name) {
 
 OpBuilder& OpBuilder::Output(const std::string& output_name, const int count) {
   CHECK_GT(count, 0);
-  CHECK_EQ(proto_.output().count(output_name), 0);
+  CHECK_EQ(proto_.output().count(output_name), 0)
+      << "The output " << output_name << " has been specified more than once.";
   auto& output_list = (*(proto_.mutable_output()))[output_name];
   for (int i = 0; i < count; ++i) {
     const std::string& tensor_name = op_name_ + "/" + output_name + "_" + std::to_string(i);

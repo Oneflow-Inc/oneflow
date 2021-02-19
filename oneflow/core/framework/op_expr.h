@@ -16,6 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_
 
+#include <functional>
+
+#include "oneflow/core/framework/bn_accessor.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
@@ -53,7 +56,6 @@ class BuiltinOpExpr : public OpExpr {
         indexed_output_names_(indexed_output_names) {}
 
   const std::string& op_name() const { return op_name_; }
-  void set_op_name(const std::string& op_name) { op_name_ = op_name; }
 
   int input_num() const { return indexed_input_names_.size(); }
   int output_num() const { return indexed_output_names_.size(); }
@@ -61,7 +63,8 @@ class BuiltinOpExpr : public OpExpr {
   const std::vector<std::string>& indexed_input_names() const { return indexed_input_names_; }
   const std::vector<std::string>& indexed_output_names() const { return indexed_output_names_; }
 
-  virtual void BuildOpConf(OperatorConf* op_conf) const = 0;
+  virtual void BuildOpConf(OperatorConf* op_conf,
+                           std::function<std::string(const std::string&)> mutator) const = 0;
 
  protected:
   std::string op_name_;
@@ -76,7 +79,6 @@ class BuiltinOpExpr : public OpExpr {
    public:                                                                                    \
     _op_name##Expr() = default;                                                               \
     virtual ~_op_name##Expr() = default;                                                      \
-    explicit _op_name##Expr(const std::string& op_name, _op_name##Conf&& proto);              \
     explicit _op_name##Expr(const std::string& op_name, _op_name##Conf&& proto,               \
                             const std::vector<std::string>& indexed_input_names,              \
                             const std::vector<std::string>& indexed_output_names)             \
@@ -89,9 +91,12 @@ class BuiltinOpExpr : public OpExpr {
     const _op_name##Conf& proto() const { return proto_; }                                    \
     _op_name##Conf* mutable_proto() { return &proto_; }                                       \
                                                                                               \
-    void BuildOpConf(OperatorConf* op_conf) const {                                           \
+    void BuildOpConf(OperatorConf* op_conf,                                                   \
+                     std::function<std::string(const std::string&)> mutator) const {          \
       *(op_conf->mutable_name()) = this->op_name_;                                            \
       *(op_conf->mutable_##_op_conf##_conf()) = proto_;                                       \
+      InOutbnAccessor<_op_name##Conf> io_accessor(op_conf->mutable_##_op_conf##_conf());      \
+      for (std::string * input : io_accessor.input()) { *input = mutator(*input); }           \
     }                                                                                         \
                                                                                               \
    private:                                                                                   \

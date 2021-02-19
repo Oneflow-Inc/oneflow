@@ -58,8 +58,6 @@ class OpBuilder {
 
   OpBuilder& Op(const std::string& op_type_name);
 
-  OpBuilder& Input(const std::string& input_name,
-                   const std::vector<std::shared_ptr<Tensor>>& input);
   OpBuilder& Input(const std::string& input_name);
   OpBuilder& Input(const std::string& input_name, const int count);
 
@@ -78,6 +76,8 @@ class OpBuilder {
  private:
   std::string op_name_;
   UserOpConf proto_;
+
+  int input_pos_ = 0;
   std::vector<std::string> indexed_input_names_;
   std::vector<std::string> indexed_output_names_;
 };
