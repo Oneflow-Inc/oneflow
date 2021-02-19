@@ -24,6 +24,17 @@ void EsacOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
+Maybe<void> EsacOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  BlobDesc* out = BlobDesc4BnInOp("out");
+  out->mut_shape() = Shape({1});
+  const DataType data_type = op_conf().esac_conf().data_type();
+  CHECK_OR_RETURN(IsIntegralDataType(data_type));
+  out->set_data_type(data_type);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> EsacOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {

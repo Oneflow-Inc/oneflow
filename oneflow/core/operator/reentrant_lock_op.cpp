@@ -25,6 +25,18 @@ void ReentrantLockOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
+Maybe<void> ReentrantLockOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), 1);
+  BlobDesc* out = BlobDesc4BnInOp("out");
+  out->mut_shape() = Shape({1});
+  const DataType data_type = BlobDesc4BnInOp("out")->data_type();
+  CHECK_OR_RETURN(IsIntegralDataType(data_type));
+  out->set_data_type(data_type);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> ReentrantLockOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
