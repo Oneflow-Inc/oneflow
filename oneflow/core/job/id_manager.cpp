@@ -53,12 +53,6 @@ int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work
          | (machine_thrd_id2num_of_tasks_[machine_thrd_id]++);
 }
 
-int64_t IDMgr::GetGpuPhyIdFromMemZoneId(int64_t mem_zone_id) const {
-  MemZoneId _mem_zone_id(static_cast<uint32_t>(mem_zone_id));
-  CHECK_EQ(_mem_zone_id.device_type(), DeviceType::kGPU);
-  return _mem_zone_id.device_index();
-}
-
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
   return StreamId{static_cast<uint32_t>(thrd_id)}.device_type();
 }
