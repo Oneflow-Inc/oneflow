@@ -41,7 +41,7 @@ class IDMgr final {
   int64_t BaseIndependentThrdId() const;
   void UpdateBaseIndependentThrdId(int64_t val);
 
-  int64_t NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id);
+  int64_t NewTaskId(int64_t machine_id, int64_t thrd_id);
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
   int64_t NewMemBlockId() { return mem_block_id_count_++; }
   int64_t NewChunkId() { return chunk_id_count_++; }

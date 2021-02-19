@@ -385,7 +385,7 @@ void TaskNode::FixRegisterNumRange() {
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_, 0);
+  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_);
 }
 
 int64_t TaskNode::GlobalWorkStreamId() const {

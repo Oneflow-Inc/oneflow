@@ -43,13 +43,11 @@ void IDMgr::UpdateBaseIndependentThrdId(int64_t val) {
   if (val >= base_independent_thrd_id_) { base_independent_thrd_id_ = val + 1; }
 }
 
-int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id) {
+int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id) {
   int64_t machine_thrd_id = GetMachineThrdId(machine_id, thrd_id);
   CHECK_LT(machine_thrd_id2num_of_tasks_[machine_thrd_id],
            (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
-  CHECK_LT(local_work_stream_id, static_cast<int64_t>(1) << local_work_stream_id_bit_num_);
-  return machine_thrd_id | (local_work_stream_id << task_id_bit_num_)
-         | (machine_thrd_id2num_of_tasks_[machine_thrd_id]++);
+  return machine_thrd_id | (machine_thrd_id2num_of_tasks_[machine_thrd_id]++);
 }
 
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
