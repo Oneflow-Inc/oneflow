@@ -283,15 +283,6 @@ def MakeLazyRefBlobObject(self, interface_op_name):
     return blob_object
 
 
-def GetSharedOpKernelObject4ParallelConfSymbol(self, parallel_desc_sym):
-    if oneflow_api.HasSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym):
-        return oneflow_api.GetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym)
-    object_id = self.NewSharedOpKernelObjectId4ParallelConfSymbolId(parallel_desc_sym)
-    obj = oneflow_api.Object(object_id, parallel_desc_sym)
-    oneflow_api.SetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym, obj)
-    return obj
-
-
 @contextmanager
 def CudaHostPinBlob(self, blob_object):
     self.CudaHostRegisterBlob(blob_object)
@@ -534,152 +525,6 @@ def _GetMut2OperandBlobObjects(
     return mut2_operand_blob_objects
 
 
-def _StatelessCallOpKernel(
-    self,
-    instr_name,
-    parallel_desc_sym,
-    job_desc_sym,
-    op_conf_sym,
-    op_node_signature_sym,
-    shared_opkernel_obj,
-    const_input_operand_blob_objects,
-    mutable_input_operand_blob_objects,
-    mut1_operand_blob_objects,
-    mut2_operand_blob_objects,
-):
-    instruction = instr_cfg.InstructionProto()
-    instruction.set_instr_type_name(
-        "%s.%s" % (parallel_desc_sym.device_tag, instr_name)
-    )
-    instruction.set_parallel_desc_symbol_id(parallel_desc_sym.symbol_id)
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.SymbolOperand(job_desc_sym.symbol_id)
-    )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.SymbolOperand(op_conf_sym.symbol_id)
-    )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.SymbolOperand(op_node_signature_sym.symbol_id)
-    )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.MutOperand(shared_opkernel_obj.object_id)
-    )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.OperandSeparator()
-    )
-    for ibn_sym, _ in const_input_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.SymbolOperand(ibn_sym.symbol_id)
-        )
-    for _, blob_object in const_input_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.ConstOperand(blob_object.object_id)
-        )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.OperandSeparator()
-    )
-    for ibn_sym, _ in mutable_input_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.SymbolOperand(ibn_sym.symbol_id)
-        )
-    for _, blob_object in mutable_input_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.MutOperand(blob_object.object_id)
-        )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.OperandSeparator()
-    )
-    for obn_sym, _ in mut1_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.SymbolOperand(obn_sym.symbol_id)
-        )
-    for _, blob_object in mut1_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.MutOperand(blob_object.object_id)
-        )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.OperandSeparator()
-    )
-    for obn_sym, _ in mut2_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.SymbolOperand(obn_sym.symbol_id)
-        )
-    for _, blob_object in mut2_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.Mut2Operand(blob_object.object_id)
-        )
-    self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-
-def _StatefulCallOpKernel(
-    self,
-    instr_name,
-    parallel_desc_sym,
-    opkernel_object,
-    op_node_signature_sym,
-    const_input_operand_blob_objects,
-    mutable_input_operand_blob_objects,
-    mut1_operand_blob_objects,
-    mut2_operand_blob_objects,
-):
-    instruction = instr_cfg.InstructionProto()
-    instruction.set_instr_type_name(
-        "%s.%s" % (parallel_desc_sym.device_tag, instr_name,)
-    )
-    instruction.set_parallel_desc_symbol_id(parallel_desc_sym.symbol_id)
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.MutOperand(opkernel_object.object_id)
-    )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.SymbolOperand(op_node_signature_sym.symbol_id)
-    )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.OperandSeparator()
-    )
-    for ibn_sym, _ in const_input_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.SymbolOperand(ibn_sym.symbol_id)
-        )
-    for _, blob_object in const_input_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.ConstOperand(blob_object.object_id)
-        )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.OperandSeparator()
-    )
-    for ibn_sym, _ in mutable_input_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.SymbolOperand(ibn_sym.symbol_id)
-        )
-    for _, blob_object in mutable_input_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.MutOperand(blob_object.object_id)
-        )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.OperandSeparator()
-    )
-    for obn_sym, _ in mut1_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.SymbolOperand(obn_sym.symbol_id)
-        )
-    for _, blob_object in mut1_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.MutOperand(blob_object.object_id)
-        )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.OperandSeparator()
-    )
-    for obn_sym, _ in mut2_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.SymbolOperand(obn_sym.symbol_id)
-        )
-    for _, blob_object in mut2_operand_blob_objects:
-        instruction.mutable_operand().Add().CopyFrom(
-            oneflow_api.deprecated.vm.Mut2Operand(blob_object.object_id)
-        )
-    self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-
 def _FetchBlob(self, instruction_name, blob_object, fetcher):
     unique_callback_id = python_callback.GetIdForRegisteredCallback(fetcher)
     instruction = instr_cfg.InstructionProto()
@@ -731,11 +576,7 @@ def RegisterMethod4InstructionsBuilder():
     oneflow_api.deprecated.InstructionsBuilder.MakeLazyRefBlobObject = (
         MakeLazyRefBlobObject
     )
-    oneflow_api.deprecated.InstructionsBuilder.GetSharedOpKernelObject4ParallelConfSymbol = (
-        GetSharedOpKernelObject4ParallelConfSymbol
-    )
     oneflow_api.deprecated.InstructionsBuilder.CudaHostPinBlob = CudaHostPinBlob
-    oneflow_api.deprecated.InstructionsBuilder.NewOpKernelObject = NewOpKernelObject
     oneflow_api.deprecated.InstructionsBuilder.Build121To = Build121To
     oneflow_api.deprecated.InstructionsBuilder._StatelessCall = _StatelessCall
     oneflow_api.deprecated.InstructionsBuilder._StatefulCall = _StatefulCall
@@ -756,12 +597,6 @@ def RegisterMethod4InstructionsBuilder():
     )
     oneflow_api.deprecated.InstructionsBuilder._GetMut2OperandBlobObjects = (
         _GetMut2OperandBlobObjects
-    )
-    oneflow_api.deprecated.InstructionsBuilder._StatelessCallOpKernel = (
-        _StatelessCallOpKernel
-    )
-    oneflow_api.deprecated.InstructionsBuilder._StatefulCallOpKernel = (
-        _StatefulCallOpKernel
     )
     oneflow_api.deprecated.InstructionsBuilder._FetchBlob = _FetchBlob
     oneflow_api.deprecated.InstructionsBuilder.FeedBlob = FeedBlob

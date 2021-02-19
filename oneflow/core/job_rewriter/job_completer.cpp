@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/autotick.h"
 #include "oneflow/core/job_rewriter/add_keep_header_only_op_conf.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/job_rewriter/xrt_compilation.h"
@@ -115,6 +116,13 @@ void JobCompleter::Complete(Job* job) const {
     LOG(WARNING) << "It will not use XLA or TensorRT since WITH_XLA or "
                     "WITH_TENSORRT was not enabled when compiling the project.";
 #endif  // OF_WITH_XRT
+  }
+
+  if (Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+    // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
+    JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx);
+    // NOTE(chengcheng): Becasue insert new logical nccl op, MUST dump time shape, sbp again.
+    JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
   }
   CheckOpGraph(OpGraph(*job));
 }
