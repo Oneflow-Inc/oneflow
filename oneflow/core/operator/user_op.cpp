@@ -434,7 +434,7 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
 
   UserOpInferContext infer_ctx(op_conf(), nullptr, nullptr, job_desc(), BlobDesc4BnInOp);
 
-  JUST(val_->tensor_desc_infer_fn(&infer_ctx));
+  JUST(val_->logical_tensor_desc_infer_fn(&infer_ctx));
   for (const auto& pair : infer_ctx.outputs()) {
     BlobDesc* out_blob_desc = BlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
     out_blob_desc->set_data_type(*(infer_ctx.Dtype4ArgNameAndIndex(pair.first, pair.second)));
@@ -451,28 +451,32 @@ Maybe<void> UserOp::InferOutBlobDescs(
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
-  // default method set output blob desc (such as Dtype, is_dynamic, is_tensor_list)
-  // set out blob desc attr as first input blob desc (if has)
-  BlobDesc* first_in_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, input_bns());
-  if (first_in_blob_desc) {
-    for (const std::string& obn : output_bns()) {
-      GetBlobDesc4BnInOp(obn)->CopyMetaFrom(*first_in_blob_desc);
+  if (!val_->physical_tensor_desc_infer_fn) {
+    return Operator::InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature);
+  } else {
+    // default method set output blob desc (such as Dtype, is_dynamic, is_tensor_list)
+    // set out blob desc attr as first input blob desc (if has)
+    BlobDesc* first_in_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, input_bns());
+    if (first_in_blob_desc) {
+      for (const std::string& obn : output_bns()) {
+        GetBlobDesc4BnInOp(obn)->CopyMetaFrom(*first_in_blob_desc);
+      }
     }
-  }
 
-  UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
-                               GetBlobDesc4BnInOp);
+    UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
+                                 GetBlobDesc4BnInOp);
 
-  JUST(val_->tensor_desc_infer_fn(&infer_ctx));
-  for (const auto& pair : infer_ctx.outputs()) {
-    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
-    out_blob_desc->set_data_type(*(infer_ctx.Dtype4ArgNameAndIndex(pair.first, pair.second)));
-    out_blob_desc->mut_shape() = *(infer_ctx.Shape4ArgNameAndIndex(pair.first, pair.second));
-    out_blob_desc->set_is_dynamic(*infer_ctx.IsDynamic4ArgNameAndIndex(pair.first, pair.second));
-    out_blob_desc->set_is_tensor_list(
-        *infer_ctx.IsTensorList4ArgNameAndIndex(pair.first, pair.second));
+    JUST(val_->physical_tensor_desc_infer_fn(&infer_ctx));
+    for (const auto& pair : infer_ctx.outputs()) {
+      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
+      out_blob_desc->set_data_type(*(infer_ctx.Dtype4ArgNameAndIndex(pair.first, pair.second)));
+      out_blob_desc->mut_shape() = *(infer_ctx.Shape4ArgNameAndIndex(pair.first, pair.second));
+      out_blob_desc->set_is_dynamic(*infer_ctx.IsDynamic4ArgNameAndIndex(pair.first, pair.second));
+      out_blob_desc->set_is_tensor_list(
+          *infer_ctx.IsTensorList4ArgNameAndIndex(pair.first, pair.second));
+    }
+    return Maybe<void>::Ok();
   }
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> UserOp::InferInplaceObn2Ibn(

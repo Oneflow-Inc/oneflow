@@ -142,7 +142,18 @@ OpRegistry& OpRegistry::DefaultedAttr(const std::string& name, AttrType type,
 }
 
 OpRegistry& OpRegistry::SetTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
-  result_.tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
+  SetLogicalTensorDescInferFn(tensor_desc_infer_fn);
+  SetPhysicalTensorDescInferFn(tensor_desc_infer_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetLogicalTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
+  result_.logical_tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetPhysicalTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
+  result_.physical_tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
   return *this;
 }
 

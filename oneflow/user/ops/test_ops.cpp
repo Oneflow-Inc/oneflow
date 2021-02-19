@@ -195,15 +195,10 @@ REGISTER_USER_OP("TestMultiOutputOrder")
 REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
     .Output("out")
     .Attr<int64_t>("out_num")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       int64_t out_num = ctx->Attr<int64_t>("out_num");
-      const ParallelContext& parallel_ctx = ctx->parallel_ctx();
-      BalancedSplitter bs(out_num, parallel_ctx.parallel_num());
-      *out_shape = Shape({bs.At(parallel_ctx.parallel_id()).size()});
-
-      const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-      CHECK(out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == 0);
+      *out_shape = Shape({out_num});
       *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     })
