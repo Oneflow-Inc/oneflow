@@ -305,11 +305,6 @@ message SinkTickOpConf {
   required string out = 2;
 }
 
-message KeepHeaderOnlyOpConf {
-  repeated string in = 1;
-  repeated string out = 2;
-}
-
 message TotalLossInstanceNumOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -619,7 +614,6 @@ message OperatorConf {
     AccumulateOpConf accumulate_conf = 117;
     VariableOpConf variable_conf = 122;
     TickOpConf tick_conf = 124;
-    KeepHeaderOnlyOpConf keep_header_only_conf = 125;
     TotalLossInstanceNumOpConf total_loss_instance_num_conf = 126;
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
     SrcSubsetTickOpConf src_subset_tick_conf = 133;
