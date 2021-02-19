@@ -29,8 +29,6 @@ namespace {
 
 void CheckBlobInRegstNotDisabled(const RegstDescProto& regst_desc) {
   CHECK(regst_desc.regst_desc_type().has_data_regst_desc());
-  CHECK(regst_desc.regst_desc_type().data_regst_desc().packed_blob_desc().is_body_disabled()
-        == false);
 }
 
 struct PackedChunkInfo {
@@ -188,7 +186,7 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
     regst->packed_blob_.reset(
         new Blob(regst->regst_desc()->mem_case(), packed_blob_desc, main_mem_ptr));
     cur_header_pointer = main_mem_ptr;
-    if (main_mem_ptr == nullptr || packed_blob_desc->is_body_disabled()) {
+    if (main_mem_ptr == nullptr) {
       cur_body_pointer = nullptr;
     } else {
       cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
@@ -199,11 +197,9 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
                                                     int64_t body_offset, int64_t header_offset) {
     std::unique_ptr<Blob> blob_ptr;
     if (cur_body_pointer == nullptr) {
-      CHECK(rt_regst_desc->is_body_disabled());
       blob_ptr.reset(new Blob(regst->regst_desc()->mem_case(), blob_desc,
                               cur_header_pointer + header_offset, nullptr));
     } else {
-      CHECK(rt_regst_desc->is_body_disabled() == false);
       blob_ptr.reset(new Blob(regst->regst_desc()->mem_case(), blob_desc,
                               cur_header_pointer + header_offset, cur_body_pointer + body_offset));
       InitNonPODTypeBlobIfNeed(Global<MemoryAllocator>::Get(), blob_ptr.get());

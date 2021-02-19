@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job_rewriter/autotick.h"
-#include "oneflow/core/job_rewriter/add_keep_header_only_op_conf.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
@@ -98,9 +97,6 @@ void JobCompleter::Complete(Job* job) const {
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
   WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
-  if (GlobalJobDesc().enable_keep_header_only()) {
-    WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
-  }
   WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp);
   // complete tick ops
   WithOpGraphAndMutJobBuilder(job, &AutoPrependTick);
