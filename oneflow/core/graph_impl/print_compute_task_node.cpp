@@ -21,11 +21,6 @@ namespace oneflow {
 REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kPrint, []() -> size_t {
   return Global<ResourceDesc, ForSession>::Get()->MaxMdSaveWorkerNum();
 });
-
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kPrint)
-    .SetStreamIndexGetterFn([](int64_t dev_phy_id) -> int64_t {
-      const IDMgr* id_mgr = Global<IDMgr>::Get();
-      return id_mgr->GetGpuComputeThrdId(dev_phy_id);
-    });
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER_GPU(TaskType::kPrint);
 
 }  // namespace oneflow

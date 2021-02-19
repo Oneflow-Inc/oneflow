@@ -116,10 +116,6 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("ssp_variable_proxy", SspVariableProxyCompTaskNode);
 REGISTER_USER_OP_INDEPENDENT_AREA_ID("ssp_variable_proxy");
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kSspVariableProxy)
-    .SetStreamIndexGetterFn([](int64_t dev_phy_id) -> int64_t {
-      const IDMgr* id_mgr = Global<IDMgr>::Get();
-      return id_mgr->GetGpuComputeThrdId(dev_phy_id);
-    });
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER_GPU(TaskType::kSspVariableProxy);
 
 }  // namespace oneflow

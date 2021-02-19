@@ -43,6 +43,8 @@ class StreamIndexGetterRegistryManager final {
 
   StreamIndexKeyMap<StreamIndexGetterFn>& StreamIndexGetterFuncs();
 
+  StreamIndexGetterFn GetStreamIndexGetterFunc(DeviceType dev_type, TaskType task_type);
+
  private:
   StreamIndexKeyMap<StreamIndexGetterFn> stream_index_getter_funcs_;
 };
@@ -50,6 +52,13 @@ class StreamIndexGetterRegistryManager final {
 #define REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(device_type, task_type)                    \
   static ::oneflow::StreamIndexGetterRegistry OF_PP_CAT(g_strm_index_get_registry, __COUNTER__) = \
       StreamIndexGetterRegistry(device_type, task_type)
+
+#define REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER_GPU(task_type)         \
+  REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, task_type) \
+    .SetStreamIndexGetterFn([](int64_t dev_phy_id) -> int64_t {               \
+      const IDMgr* id_mgr = Global<IDMgr>::Get();                             \
+      return id_mgr->GetGpuComputeThrdId(dev_phy_id);                         \
+    })
 
 }  // namespace oneflow
 

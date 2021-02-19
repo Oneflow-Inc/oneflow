@@ -42,10 +42,6 @@ void AccTickCompTaskNode::BuildExecGphAndRegst() {
   exec_node->InferBlobDescs(parallel_ctx());
 }
 
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kAccTick)
-    .SetStreamIndexGetterFn([](int64_t dev_phy_id) -> int64_t {
-      const IDMgr* id_mgr = Global<IDMgr>::Get();
-      return id_mgr->GetGpuComputeThrdId(dev_phy_id);
-    });
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER_GPU(TaskType::kAccTick);
 
 }  // namespace oneflow

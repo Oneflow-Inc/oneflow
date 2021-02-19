@@ -41,4 +41,12 @@ StreamIndexKeyMap<StreamIndexGetterFn>& StreamIndexGetterRegistryManager::Stream
   return stream_index_getter_funcs_;
 }
 
+StreamIndexGetterFn StreamIndexGetterRegistryManager::GetStreamIndexGetterFunc(DeviceType dev_type, TaskType task_type) {
+  auto strm_idx_getter = StreamIndexGetterRegistryManager::Get().StreamIndexGetterFuncs();
+  std::pair<DeviceType, TaskType> dev_task_type(dev_type, task_type);
+  if (strm_idx_getter.find(dev_task_type) == strm_idx_getter.end()) { UNIMPLEMENTED(); }
+
+  return strm_idx_getter[dev_task_type];
+}
+
 }  // namespace oneflow
