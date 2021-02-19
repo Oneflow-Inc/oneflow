@@ -40,7 +40,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
 }
 
 const AMPList& AutoMixedPrecisionLists::ClearList() {
-  // TODO(niuchong): identity, tuple_identity, keep_header_only?
+  // TODO(niuchong): identity, tuple_identity?
   static AMPList clear_list = {"gather",
                                "max_pool_1d",
                                "max_pool_2d",
