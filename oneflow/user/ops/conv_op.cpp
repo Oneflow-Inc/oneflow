@@ -306,12 +306,6 @@ REGISTER_USER_OP("conv_data_grad")
     .Attr<std::vector<int32_t>>("dilation_rate")
     .Attr<int32_t>("groups")
     .SetCheckAttrFn(CheckAttr<0>)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* x_like = GetInputArgModifierFn("x_like", 0);
-      CHECK_NOTNULL(x_like);
-      x_like->set_use_header_only(true);
-    })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const user_op::TensorDesc* x_like = ctx->TensorDesc4ArgNameAndIndex("x_like", 0);
