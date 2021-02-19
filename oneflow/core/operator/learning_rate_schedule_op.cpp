@@ -24,6 +24,9 @@ class LearningRateScheduleOp final : public Operator {
   ~LearningRateScheduleOp() override = default;
 
   void InitFromOpConf() override;
+  virtual Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override;
@@ -40,6 +43,18 @@ void LearningRateScheduleOp::InitFromOpConf() {
   CHECK(op_conf().has_learning_rate_schedule_conf());
   EnrollInputBn("train_step");
   EnrollOutputBn("out");
+}
+
+Maybe<void> LearningRateScheduleOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  const BlobDesc* train_step = BlobDesc4BnInOp("train_step");
+  CHECK_EQ(train_step->shape().elem_cnt(), 1);
+  CHECK_EQ(train_step->data_type(), DataType::kInt64);
+  BlobDesc* out = BlobDesc4BnInOp("out");
+  out->mut_shape() = Shape({1});
+  out->set_data_type(DataType::kFloat);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> LearningRateScheduleOp::InferOutBlobDescs(
