@@ -459,7 +459,7 @@ Maybe<void> UserOp::InferOutBlobDescs(
     BlobDesc* first_in_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, input_bns());
     if (first_in_blob_desc) {
       for (const std::string& obn : output_bns()) {
-        GetBlobDesc4BnInOp(obn)->CopyMetaFrom(*first_in_blob_desc);
+        GetBlobDesc4BnInOp(obn)->CopyFrom(*first_in_blob_desc);
       }
     }
 
