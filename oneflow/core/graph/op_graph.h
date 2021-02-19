@@ -142,6 +142,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   void ForEachDataAndCtrlInNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
   void ForEachDataAndCtrlOutNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
+  // NOTE(chengcheng): For topo for each with ctrl edges. OpEdge is ONLY data edge.
+  std::list<OpNode*> DataOrCtrlSourceNodes() const;
 
   void DumpLogicalBlobDesc(Job* job) const;
   void DumpSbpSignature(Job* job) const;
@@ -165,7 +167,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;
 
   std::function<bool(const OpNode*, const OpNode*)> MakePredicatorIsDataOrCtrlReachable() const;
-  std::list<OpNode*> DataOrCtrlSourceNodes() const;
 
   HashMap<std::string, OpNode*> op_name2op_node_;
   std::list<std::string> op_names_;

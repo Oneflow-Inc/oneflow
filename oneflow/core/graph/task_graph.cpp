@@ -58,8 +58,8 @@ bool IsConnectToTickOp(const TaskNode* node) {
 
 bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
   const OperatorConf& op_conf = op->op_conf();
-  if (op_conf.has_variable_conf() || op_conf.has_keep_header_only_conf() || op_conf.has_tick_conf()
-      || op_conf.has_device_tick_conf() || op_conf.has_partial_tick_conf()) {
+  if (op_conf.has_variable_conf() || op_conf.has_tick_conf() || op_conf.has_device_tick_conf()
+      || op_conf.has_partial_tick_conf()) {
     return true;
   }
   return false;
@@ -235,7 +235,9 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new OneToOneSubTskGphBuilder());
   builders.emplace_back(new B21SubTskGphBuilder());
-  builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
+  if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+    builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
+  }
   builders.emplace_back(new SliceBoxingSubTskGphBuilder());
   builders.emplace_back(new NaiveB2BSubTskGphBuilder());
   builders.emplace_back(new NaiveB2PSubTskGphBuilder());
