@@ -24,6 +24,13 @@ void DeviceTickOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
+Maybe<void> DeviceTickOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  BlobDesc4BnInOp("out")->mut_shape() = Shape({1});
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> DeviceTickOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
