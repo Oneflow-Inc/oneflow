@@ -16,11 +16,11 @@ limitations under the License.
 #include "oneflow/core/framework/device_register_gpu.h"
 
 namespace {
-inline std::string GetCudaVersionString(int version) {
+std::string GetCudaVersionString(int version) {
   return std::to_string(version / 1000) + "." + std::to_string((version % 1000) / 10);
 }
 
-inline bool GetCudnnVersion(libraryPropertyType type, int* version) {
+bool GetCudnnVersion(libraryPropertyType type, int* version) {
   cudnnStatus_t status = cudnnGetProperty(type, version);
   if (status == CUDNN_STATUS_SUCCESS) {
     return true;
