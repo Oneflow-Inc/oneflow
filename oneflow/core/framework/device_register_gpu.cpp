@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
 #include "oneflow/core/framework/device_register_gpu.h"
 
 namespace {
@@ -78,3 +79,4 @@ void GpuDumpVersionInfo() {
   }
 }
 }  // namespace oneflow
+#endif  // WITH_CUDA
