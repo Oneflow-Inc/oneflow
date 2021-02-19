@@ -64,7 +64,6 @@ void SetLikeArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
   FOR_RANGE(int32_t, i, 0, user_op_conf.input_size("like")) {
     user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", i);
     CHECK_NOTNULL(like_modifier);
-    like_modifier->set_use_header_only(true);
     like_modifier->set_requires_grad(false);
   }
 }

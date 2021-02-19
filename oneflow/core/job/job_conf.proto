@@ -225,8 +225,6 @@ message JobConfigProto {
   optional bool enable_auto_mixed_precision = 602 [default = false];
   optional bool enable_quantization_aware_training = 603 [default = false];
   
-  optional bool enable_keep_header_only = 700 [default = false];
-
   optional int64 concurrency_width = 1000 [default = 128];
 
   map<string, AttrValue> flag_name2flag_value = 2000;
