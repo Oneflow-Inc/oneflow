@@ -382,16 +382,10 @@ void TaskNode::FixRegisterNumRange() {
   }
 }
 
-int64_t TaskNode::AllocateLocalWorkStreamId() {
-  CHECK_NE(machine_id_, -1);
-  CHECK_NE(thrd_id_, -1);
-  return 0;
-}
-
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_, AllocateLocalWorkStreamId());
+  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_, 0);
 }
 
 int64_t TaskNode::GlobalWorkStreamId() const {
