@@ -31,6 +31,12 @@ class IdentityOpTpl final : public Operator {
     EnrollInputBn("in");
     EnrollOutputBn("out")->set_const_inplace_ibn("in");
   }
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    *BlobDesc4BnInOp("out") = *BlobDesc4BnInOp("in");
+    return Maybe<void>::Ok();
+  }
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override {
@@ -69,6 +75,12 @@ class MirroredCastOp : public Operator {
   void InitFromOpConf() override {
     EnrollInputBn("in");
     EnrollOutputBn("out")->set_const_inplace_ibn("in");
+  }
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    *BlobDesc4BnInOp("out") = *BlobDesc4BnInOp("in");
+    return Maybe<void>::Ok();
   }
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
