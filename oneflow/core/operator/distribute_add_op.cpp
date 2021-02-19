@@ -30,14 +30,14 @@ class DistributeAddOp final : public Operator {
 
   void InitFromOpConf() override;
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext*) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
   LogicalNode* NewProperLogicalNode() const override { return new DistributeConcatLogicalNode; }
 
  private:
   Maybe<void> InferParallelSignature() override;
   Maybe<void> InferBatchAxis(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
@@ -72,9 +72,9 @@ Maybe<void> DistributeAddOp::InferParallelSignature() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DistributeAddOp::InferBlobDescs(
+Maybe<void> DistributeAddOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const BlobDesc* first_blob_desc = nullptr;
   FOR_RANGE(int, i, 0, input_bns().size()) {
     first_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i));
@@ -86,7 +86,6 @@ Maybe<void> DistributeAddOp::InferBlobDescs(
 }
 
 Maybe<void> DistributeAddOp::InferBatchAxis(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   FOR_RANGE(int32_t, i, 0, input_bns().size()) {
     CHECK_OR_RETURN(*BatchAxis4BnInOp(input_bns().Get(i)) == *BatchAxis4BnInOp(input_bns().Get(0)));
