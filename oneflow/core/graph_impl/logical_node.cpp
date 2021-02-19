@@ -128,7 +128,8 @@ void LogicalNode::GenSortedCompTaskNodes(
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
-        auto strm_idx_getter = StreamIndexGetterRegistryManager::Get().GetStreamIndexGetterFunc(parallel_desc_->device_type(), comp_task_node->GetTaskType());
+        auto strm_idx_getter = StreamIndexGetterRegistryManager::Get().GetStreamIndexGetterFunc(
+            parallel_desc_->device_type(), comp_task_node->GetTaskType());
         comp_task_node->set_thrd_id(strm_idx_getter(dev_phy_id));
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
         if (comp_task_node->IsIndependent()) {
