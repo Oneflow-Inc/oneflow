@@ -23,9 +23,13 @@ import oneflow.typing as tp
 
 
 _counter = 0
-def get_var_helper():
+
+
+def get_var_helper(shape):
     global _counter
-    var = flow.get_variable("x_" + str(_counter), shape=(2, 3), initializer=flow.kaiming_initializer((2, 3)))
+    var = flow.get_variable(
+        "x_" + str(_counter), shape=shape, initializer=flow.kaiming_initializer(shape)
+    )
     _counter += 1
     return var
 
@@ -48,18 +52,37 @@ class TestModule(flow.unittest.TestCase):
 
     def test_forward_with_variable(test_case):
         class AddTo(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.w = flow.nn.Parameter((2, 3))
+
+            def forward(self, x):
+                return x + self.w()
+
+        @flow.global_function()
+        def job() -> Tuple[tp.Numpy, tp.Numpy]:
+            x = get_var_helper((2, 3))
+            m = AddTo()
+            return m(x), m.w() + x
+
+        res1, res2 = job()
+        test_case.assertTrue(np.array_equal(res1, res2))
+
+    def test_forward_with_sbp(test_case):
+        class AddTo(flow.nn.Module):
             def __init__(self, w):
                 super().__init__()
                 self.w = w
 
-            def forward(self, x):
+            def forward(self, x, *args):
                 return x + self.w
 
         @flow.global_function()
         def job() -> Tuple[tp.Numpy, tp.Numpy]:
-            w = get_var_helper()
-            x = get_var_helper()
+            w = get_var_helper((2, 3))
+            x = get_var_helper((2, 3))
             m = AddTo(w)
+            m.input_configs[0] = flow.distribute.split(0)
             return m(x), w + x
 
         res1, res2 = job()
@@ -80,8 +103,8 @@ class TestModule(flow.unittest.TestCase):
                 self.param1 = param1
                 self.param2 = param2
 
-        param0 = flow.nn.Parameter()
-        param1 = flow.nn.Parameter()
+        param0 = flow.nn.Parameter((2, 3))
+        param1 = flow.nn.Parameter((2, 3))
         param2 = CustomModule(param0, param1)
         m = CustomModule(param1, param2)
 
@@ -109,8 +132,8 @@ class TestModule(flow.unittest.TestCase):
                 self.param1 = param1
                 self.param2 = param2
 
-        param0 = flow.nn.Parameter()
-        param1 = flow.nn.Parameter()
+        param0 = flow.nn.Parameter((2, 3))
+        param1 = flow.nn.Parameter((2, 3))
         param2 = CustomModule(param0, param1)
         m = CustomModule(param1, param2)
 
@@ -118,6 +141,38 @@ class TestModule(flow.unittest.TestCase):
         print(state_dict)
         test_case.assertEqual(len(state_dict), 3)
 
+    def test_consistent_mirrored(test_case):
+        flow.config.gpu_device_num(flow.unittest.env.device_num())
+
+        @flow.global_function()
+        def job():
+            x1 = get_var_helper((4, 4))
+            x2 = get_var_helper((4, 4))
+            x3 = x1 + x2
+            x4 = flow.advanced.distribute_split(x3)
+            parallel_desc_symbol = flow.current_scope().device_parallel_desc_symbol
+            device_tag = parallel_desc_symbol.device_tag
+            x_list = []
+            parallel_id = 0
+            for (
+                machine_id,
+                device_ids,
+            ) in parallel_desc_symbol.machine_id2device_id_list.items():
+                for device_id in device_ids:
+                    with flow.scope.placement(
+                        device_tag, str(machine_id) + ":" + str(device_id)
+                    ):
+                        x5 = x4[parallel_id]
+                        if parallel_id == 1:
+                            x6 = x5 + 100
+                        else:
+                            x6 = flow.identity(x5)
+                        print(x6.numpy())
+                        x_list.append(x6)
+                        parallel_id += 1
+            x8 = flow.advanced.distribute_concat(x_list)
+            flow.watch(x8, lambda x: print(x.numpy()))
+        job()
 
     # TODO: add more tests about module api
 
