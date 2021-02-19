@@ -57,8 +57,8 @@ BlobDesc* RuntimeBlobShapeInferHelper::BlobDesc4BnInOp(const std::string& bn_in_
                                                        const RtBlobDesc& rt_blob_desc) {
   BlobDesc* blob_desc = bn_in_op2blob_desc_.at(bn_in_op).get();
   if (blob_desc != nullptr) { return blob_desc; }
-  blob_desc = new BlobDesc(rt_blob_desc.body(), rt_blob_desc.is_tensor_list(),
-                           rt_blob_desc.is_body_disabled(), rt_blob_desc.is_dynamic());
+  blob_desc =
+      new BlobDesc(rt_blob_desc.body(), rt_blob_desc.is_tensor_list(), rt_blob_desc.is_dynamic());
   bn_in_op2blob_desc_.at(bn_in_op).reset(blob_desc);
   return blob_desc;
 }
@@ -82,7 +82,6 @@ void RuntimeBlobShapeInferHelper::InferShape(std::function<Blob*(const std::stri
       if (blob == nullptr) { continue; }
       CHECK_EQ(blob->data_type(), blob_desc->data_type());
       CHECK_EQ(blob->blob_desc().is_dynamic(), blob_desc->is_dynamic());
-      CHECK_EQ(blob->blob_desc().is_body_disabled(), blob_desc->is_body_disabled());
     }
     return std::shared_ptr<const OpInferCacheValue>(ret);
   };

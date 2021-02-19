@@ -100,7 +100,7 @@ class DynamicReshapeLikeOp final : public Operator {
                                 const SbpSignature* sbp_signature) const override {
     CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("x")->shape().elem_cnt(),
                        GetBlobDesc4BnInOp("like")->shape().elem_cnt());
-    GetBlobDesc4BnInOp("y")->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
+    GetBlobDesc4BnInOp("y")->CopyFrom(*GetBlobDesc4BnInOp("like"));
     return Maybe<void>::Ok();
   }
 

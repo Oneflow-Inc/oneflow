@@ -742,17 +742,6 @@ def set_enable_auto_mixed_precision(func_desc, value=True):
     func_desc.job_config_proto.set_enable_auto_mixed_precision(value)
 
 
-@oneflow_function_config("enable_keep_header_only")
-def set_enable_keep_header_only(func_desc, value=True):
-    r"""Whether keep header only or not
-
-    Args:
-        func_desc ([type]): [description]
-        value (bool, optional): [description]. Defaults to True.
-    """
-    func_desc.job_config_proto.set_enable_keep_header_only(value)
-
-
 @oneflow_function_config("concurrency_width")
 def set_concurrency_width(func_desc, value):
     r"""Set up concurrency width

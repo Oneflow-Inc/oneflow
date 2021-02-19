@@ -65,7 +65,7 @@ class BroadcastToCompatibleWithOp final : public Operator {
       GetBroadcastShape(broadcasted_shape, compatible_i->shape(), &broadcasted_shape);
     }
     BlobDesc* y_desc = GetBlobDesc4BnInOp("y");
-    y_desc->CopyMetaFrom(*x_desc);
+    y_desc->CopyFrom(*x_desc);
     y_desc->mut_shape() = broadcasted_shape;
     return Maybe<void>::Ok();
   }
