@@ -80,21 +80,12 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
       return constant_op.output("out", 0);
     }
   };
-  if (!train_conf.has_primary_lr_lbn()) {
-    CHECK(train_conf.has_primary_lr());
-    const std::string lbn =
-        AddScheduleOp("System-Train-PrimaryLearningRate-Scheduler", train_conf.primary_lr());
+  for (const auto& optimizer_conf : train_conf.optimizer_conf()) {
+    CHECK(optimizer_conf.has_base_learning_rate());
+    // TODO: optimizer name?
+    const std::string lbn = AddScheduleOp("System-Train-PrimaryLearningRate-Scheduler",
+                                          optimizer_conf.base_learning_rate());
     job->mutable_job_conf()->mutable_train_conf()->set_primary_lr_lbn(lbn);
-  }
-  if (!train_conf.has_secondary_lr_lbn()) {
-    if (train_conf.has_secondary_lr()) {
-      const std::string lbn =
-          AddScheduleOp("System-Train-SecondaryLearningRate-Scheduler", train_conf.secondary_lr());
-      job->mutable_job_conf()->mutable_train_conf()->set_secondary_lr_lbn(lbn);
-    } else {
-      job->mutable_job_conf()->mutable_train_conf()->set_secondary_lr_lbn(
-          train_conf.primary_lr_lbn());
-    }
   }
   return Maybe<void>::Ok();
 }
