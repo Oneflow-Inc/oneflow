@@ -44,15 +44,11 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
 
   py::class_<one::UserOpExpr, one::BuiltinOpExpr, std::shared_ptr<one::UserOpExpr>>(m, "UserOpExpr")
       .def(py::init<>())
-      .def(py::init([](const std::string& op_name, const std::string& serialized_proto) {
-        UserOpConf proto;
-        TxtString2PbMessage(serialized_proto, &proto);
-        return std::make_shared<one::UserOpExpr>(op_name, std::move(proto));
-      }))
       .def_property_readonly("type", &one::UserOpExpr::type)
       .def_property_readonly(
           "proto", [](const one::UserOpExpr& op) { return PbMessage2TxtString(op.proto()); })
-      .def_property_readonly("indexed_input_names", &one::UserOpExpr::indexed_input_names);
+      .def_property_readonly("indexed_input_names", &one::UserOpExpr::indexed_input_names)
+      .def_property_readonly("indexed_output_names", &one::UserOpExpr::indexed_output_names);
 }
 
 }  // namespace oneflow
