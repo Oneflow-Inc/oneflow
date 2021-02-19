@@ -263,25 +263,52 @@ Maybe<void> Operator::InferOutBlobDescsIf(
   return InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature);
 }
 
+namespace {
+
+Maybe<Shape> GetPhysicalShape(const Shape& shape, const ParallelContext* parallel_ctx,
+                              const SbpParallel& sbp_parallel) {
+  std::shared_ptr<Shape> physical = std::make_shared<Shape>(shape);
+  if (sbp_parallel.has_split_parallel()) {
+    const int64_t axis = sbp_parallel.split_parallel().axis();
+    const int64_t parallel_num = parallel_ctx->parallel_num();
+    CHECK_GE_OR_RETURN(shape.At(axis), parallel_num);
+    const BalancedSplitter bs(shape.At(axis), parallel_num);
+    physical->Set(axis, bs.At(parallel_ctx->parallel_num()).size());
+  } else if (sbp_parallel.has_broadcast_parallel() && sbp_parallel.has_partial_sum_parallel()) {
+    // do nothing
+  } else {
+    UNIMPLEMENTED();
+  }
+  return physical;
+}
+
+}  // namespace
+
 Maybe<void> Operator::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  bool has_dynamic_output = false;
   for (const auto& bn : output_bns()) {
-    BlobDesc* desc = GetBlobDesc4BnInOp(bn);
-    *desc = *JUST(GetLogicalBlobDesc4Obn(bn));
-    if (parallel_ctx->parallel_num() > 1) {
+    if (JUST(GetLogicalBlobDesc4Obn(bn))->is_dynamic()) {
+      has_dynamic_output = true;
+      break;
+    }
+  }
+  if (parallel_ctx->parallel_num() == 1 && has_dynamic_output) {
+    JUST(InferLogicalOutBlobDescs(GetBlobDesc4BnInOp, *JUST(GetOpParallelDesc())));
+  } else {
+    for (const auto& bn : input_bns()) {
       const auto& sbp_parallel = sbp_signature->bn_in_op2sbp_parallel().at(bn);
-      if (sbp_parallel.has_split_parallel()) {
-        Shape* shape = &desc->mut_shape();
-        const int64_t axis = sbp_parallel.split_parallel().axis();
-        const int64_t parallel_num = parallel_ctx->parallel_num();
-        CHECK_GE_OR_RETURN(shape->At(axis), parallel_num);
-        const BalancedSplitter bs(shape->At(axis), parallel_num);
-        shape->Set(axis, bs.At(parallel_ctx->parallel_num()).size());
-      } else if (sbp_parallel.has_broadcast_parallel() && sbp_parallel.has_partial_sum_parallel()) {
-        // do nothing
-      } else {
-        UNIMPLEMENTED();
+      std::shared_ptr<const BlobDesc> in_logical = JUST(GetLogicalBlobDesc4Ibn(bn));
+      CHECK_OR_RETURN(*JUST(GetPhysicalShape(in_logical->shape(), parallel_ctx, sbp_parallel))
+                      == GetBlobDesc4BnInOp(bn)->shape());
+    }
+    for (const auto& bn : output_bns()) {
+      BlobDesc* desc = GetBlobDesc4BnInOp(bn);
+      *desc = *JUST(GetLogicalBlobDesc4Obn(bn));
+      if (parallel_ctx->parallel_num() > 1) {
+        const auto& sbp_parallel = sbp_signature->bn_in_op2sbp_parallel().at(bn);
+        desc->mut_shape() = *JUST(GetPhysicalShape(desc->shape(), parallel_ctx, sbp_parallel));
       }
     }
   }
