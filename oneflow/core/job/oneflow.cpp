@@ -866,8 +866,7 @@ void AddJobName2JobId(const std::string& job_name, int64_t job_id) {
 }
 
 bool NeedAllocateMemory(const RegstDescTypeProto& regst_desc_type) {
-  return regst_desc_type.has_data_regst_desc()
-         && regst_desc_type.data_regst_desc().packed_blob_desc().is_body_disabled() == false;
+  return regst_desc_type.has_data_regst_desc();
 }
 
 void FinishGlobalCriticalSectionDesc(const Plan& plan, int64_t job_size) {
