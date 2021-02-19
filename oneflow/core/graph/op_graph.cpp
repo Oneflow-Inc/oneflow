@@ -464,7 +464,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     op_node->InferBlobParallelDesc();
     for (const auto& bn : op_node->op().output_bns()) {
       *op_node->MutLogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn)) =
-          *JUST(op_node->op().GetLogicalBlobDesc4Obn(bn);
+          *JUST(op_node->op().GetLogicalBlobDesc4Obn(bn));
     }
     UpdateJobParallelViewConf(*op_node, oba2sbp_identical_obas, &job_parallel_view_conf);
     JUST(op_node->mut_op()->InferLogicalOutBlobDescsIf());
