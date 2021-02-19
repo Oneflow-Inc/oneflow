@@ -104,15 +104,28 @@ class GenerateBackwardAndOptimizerOpConfs final : public JobPass {
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
 };
 
-void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
-                            const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
-                            HashMap<LogicalBlobId, LogicalBlobId>* model_lbi2model_diff_lbi) {
+void FilterModelLbi2ModelDiffLbi(const OpGraph& op_graph,
+                                 const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
+                                 HashMap<LogicalBlobId, LogicalBlobId>* model_lbi2model_diff_lbi) {
   for (const auto& pair : lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     const LogicalBlobId& diff_lbi = pair.second;
     const OpNode* producer = op_graph.OpNode4OpName(lbi.op_name());
     if (producer->op().op_conf().has_variable_conf()) {
       (*model_lbi2model_diff_lbi)[lbi] = diff_lbi;
+    }
+  }
+}
+
+void FilterCurMaintainedModelLbi2ModelDiffLbi(
+    const RepeatedPtrField<std::string>& variables,
+    const HashMap<LogicalBlobId, LogicalBlobId>& model_lbi2model_diff_lbi,
+    HashMap<LogicalBlobId, LogicalBlobId>* cur_maintained_model_lbi2model_diff_lbi) {
+  cur_maintained_model_lbi2model_diff_lbi.clear();
+  for (const std::string& variable : variables) {
+    const LogicalBlobId lbi = GenLogicalBlobId(variable + "/out");
+    if (model_lbi2model_diff_lbi.find(lbi) != model_lbi2model_diff_lbi.end()) {
+      cur_maintained_model_lbi2model_diff_lbi[lbi] = model_lbi2model_diff_lbi[lbi]);
     }
   }
 }
@@ -185,7 +198,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     return Maybe<void>::Ok();
   }));
   HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
-  FilterModelLbi2DiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
+  FilterModelLbi2ModelDiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
   old_job_builder = job_builder.get();
   job_builder = JUST(WithCalculationPassScope(kOptimizerPass, job, [&]() -> Maybe<void> {
     CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
@@ -194,14 +207,17 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder.get(), &model_lbi2model_diff_lbi));
     ScaleModelDiffByLossScale(ctx, op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     JUST(CountNotFiniteIfNeeded(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi));
-    const NormalModelUpdateOpUserConf& model_update_conf =
-        job->job_conf().train_conf().model_update_conf();
     RegularizeGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
-    if (model_update_conf.has_clip_conf()) {
-      ClipGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi,
-                   model_update_conf.clip_conf());
+    HashMap<LogicallobId, LogicalBlobId> cur_maintained_model_lbi2model_diff_lbi;
+    for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
+      FilterCurMaintainedModelLbi2ModelDiffLbi(op_graph, model_lbi2model_diff_lbi,
+                                               cur_maintained_model_lbi2model_diff_lbi);
+      if (optimizer_conf.has_clip_conf()) {
+        ClipGradient(op_graph, job_builder.get(), &cur_maintained_model_lbi2model_diff_lbi,
+                     optimizer_conf.clip_conf());
+      }
+      AddOptimizerOpConf(ctx, op_graph, job_builder.get(), cur_maintained_model_lbi2model_diff_lbi);
     }
-    AddOptimizerOpConf(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi);
     return Maybe<void>::Ok();
   }));
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder.get());

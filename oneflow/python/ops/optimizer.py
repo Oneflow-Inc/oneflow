@@ -253,7 +253,9 @@ class LrScheduler:
             if self.warmup_conf is not None:
                 optimizer_conf.warmup_conf.CopyFrom(self.warmup_conf)
             if self.learning_rate_decay_conf is not None:
-                ptimizer_conf.learning_rate_decay.CopyFrom(self.learning_rate_decay_conf)
+                optimizer_conf.learning_rate_decay.CopyFrom(
+                    self.learning_rate_decay_conf
+                )
 
 
 @oneflow_export("optimizer.CosineScheduler")
