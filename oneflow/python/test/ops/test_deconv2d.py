@@ -23,6 +23,10 @@ import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def compare_with_tensorflow(device_type, params_case, dilations, data_format):
     input_shape, output_shape, padding, strides, kernel_size = params_case
