@@ -91,15 +91,23 @@ class Operator {
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs
+  Maybe<void> FillLogicalInBlobDesc(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
+  Maybe<void> FillLogicalInBlobDesc(
+      const std::function<const BlobDesc&(const std::string&)>& BlobDesc4BnInOp);
+  Maybe<const BlobDesc> GetLogicalBlobDesc4Ibn(const std::string& ibn) const;
+  Maybe<void> FillLogicalOutBlobDesc(
+      const std::function<const BlobDesc&(const std::string&)>& BlobDesc4BnInOp);
+  Maybe<void> FillLogicalOutBlobDesc(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
+  Maybe<const BlobDesc> GetLogicalBlobDesc4Obn(const std::string& obn) const;
   Maybe<void> InferLogicalOutBlobDescsIf(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-      const std::function<Maybe<const OptInt64*>(const std::string&)>& BatchAxis4Ibn,
       const ParallelDesc& parallel_desc) const {
-    return InferLogicalOutBlobDescs(BlobDesc4BnInOp, BatchAxis4Ibn, parallel_desc);
+    return InferLogicalOutBlobDescs(BlobDesc4BnInOp, parallel_desc);
   }
   virtual Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-      const std::function<Maybe<const OptInt64*>(const std::string&)>& BatchAxis4Ibn,
       const ParallelDesc& parallel_desc) const;
 
   // Read: shape of input_blobs
@@ -129,9 +137,17 @@ class Operator {
       std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&,
       const SbpSignature*) const;
 
-  Maybe<void> InferBatchAxisIf(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4Ibn);
+  Maybe<void> FillInBatchAxis(
+      const std::function<Maybe<const OptInt64*>(const std::string&)>& BatchAxis4BnInOp);
+  Maybe<void> FillOutBatchAxis(
+      const std::function<Maybe<const OptInt64*>(const std::string&)>& BatchAxis4BnInOp);
+  Maybe<void> FillInBatchAxis(
+      const std::function<Maybe<const OptInt64>(const std::string&)>& BatchAxis4BnInOp);
+  Maybe<void> FillOutBatchAxis(
+      const std::function<Maybe<const OptInt64>(const std::string&)>& BatchAxis4BnInOp);
+  Maybe<const OptInt64> GetBatchAxis4Ibn(const std::string& ibn) const;
+  Maybe<const OptInt64> GetBatchAxis4Obn(const std::string& obn) const;
+  Maybe<void> InferBatchAxisIf();
   Maybe<void> NaiveInferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const;
 
@@ -184,8 +200,6 @@ class Operator {
   BlobBackwardUsedSignature* mut_blob_backward_used_signature() {
     return op_attribute_.mutable_blob_backward_used_signature();
   }
-  Maybe<void> FillLogicalBlobDescSignature(
-      const std::function<Maybe<const BlobDesc&>(const std::string&)>& BlobDesc4BnInOp);
 
  protected:
   virtual Maybe<void> InferParallelSignature();
@@ -289,11 +303,6 @@ class Operator {
 
  private:
   virtual Maybe<void> InferBatchAxis(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-    return InferBatchAxis(BatchAxis4BnInOp);
-  }
-  virtual Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
     UNIMPLEMENTED() << " InferBatchAxis unimplemented, op name: " << op_name();
     return Maybe<void>::Ok();
@@ -311,6 +320,10 @@ class Operator {
   OpAttribute op_attribute_;
   const JobDesc* job_desc_;
   HashMap<LogicalBlobId, std::string> lbi2obn_;
+  std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> ibn2logical_blob_desc_;
+  std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> obn2logical_blob_desc_;
+  std::unique_ptr<HashMap<std::string, std::shared_ptr<const OptInt64>>> ibn2batch_axis_;
+  std::unique_ptr<HashMap<std::string, std::shared_ptr<const OptInt64>>> obn2batch_axis_;
 };
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
