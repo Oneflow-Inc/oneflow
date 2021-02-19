@@ -131,8 +131,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void LockRegsts();
   void FixRegisterNumRange();
 
-  virtual int64_t AllocateLocalWorkStreamId();
-
   virtual void InferProducedDataRegstTimeShape() = 0;
   void NaiveInferProducedDataRegstTimeShape();
 

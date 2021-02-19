@@ -752,7 +752,7 @@ TaskNode* TaskGraph::AddCopyD2HTaskFrom(TaskNode* task) {
 TaskNode* TaskGraph::AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst) {
   CHECK_NE(src->machine_id(), dst->machine_id());
   CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
-  copy_comm_net_task->Init(dst->machine_id(), src->machine_id());
+  copy_comm_net_task->Init(dst->machine_id());
   return copy_comm_net_task;
 }
 
