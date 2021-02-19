@@ -23,10 +23,10 @@ limitations under the License.
 
 namespace oneflow {
 
-class RPCClient {
+class RpcClient {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RPCClient);
-  virtual ~RPCClient();
+  OF_DISALLOW_COPY_AND_MOVE(RpcClient);
+  virtual ~RpcClient();
 
   void Barrier(const std::string& barrier_name);
   void Barrier(const std::string& barrier_name, int32_t barrier_num);
@@ -66,7 +66,7 @@ class RPCClient {
   void EraseCount(const std::string& k);
 
  protected:
-  RPCClient() = default;
+  RpcClient() = default;
   void LoadServer(const std::string& server_addr, CtrlService::Stub* stub);
   void PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter);
   void PullMasterKV(const std::string& k, std::function<void(const std::string&)> VGetter);

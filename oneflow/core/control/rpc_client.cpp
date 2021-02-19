@@ -47,7 +47,7 @@ class ClientCall final {
 
 }  // namespace
 
-RPCClient::~RPCClient() {
+RpcClient::~RpcClient() {
   {
     std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
     need_heartbeat_thread_stop_ = true;
@@ -55,18 +55,18 @@ RPCClient::~RPCClient() {
   heartbeat_thread_.join();
 }
 
-void RPCClient::Barrier(const std::string& barrier_name) {
+void RpcClient::Barrier(const std::string& barrier_name) {
   Barrier(barrier_name, Global<EnvDesc>::Get()->TotalMachineNum());
 }
 
-void RPCClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
+void RpcClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
   ClientCall<CtrlMethod::kBarrier> call;
   call.mut_request()->set_name(barrier_name);
   call.mut_request()->set_num(barrier_num);
   call(GetMasterStub());
 }
 
-TryLockResult RPCClient::TryLock(const std::string& name) {
+TryLockResult RpcClient::TryLock(const std::string& name) {
   {
     std::unique_lock<std::mutex> lck(done_names_mtx_);
     if (done_names_.find(name) != done_names_.end()) { return TryLockResult::kDone; }
@@ -81,64 +81,64 @@ TryLockResult RPCClient::TryLock(const std::string& name) {
   return call.response().result();
 }
 
-void RPCClient::NotifyDone(const std::string& name) {
+void RpcClient::NotifyDone(const std::string& name) {
   ClientCall<CtrlMethod::kNotifyDone> call;
   call.mut_request()->set_name(name);
   call(GetResponsibleStub(name));
 }
 
-void RPCClient::WaitUntilDone(const std::string& name) {
+void RpcClient::WaitUntilDone(const std::string& name) {
   ClientCall<CtrlMethod::kWaitUntilDone> call;
   call.mut_request()->set_name(name);
   call(GetResponsibleStub(name));
 }
 
-void RPCClient::PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {
+void RpcClient::PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {
   ClientCall<CtrlMethod::kPushKV> call;
   call.mut_request()->set_key(k);
   VSetter(call.mut_request()->mutable_val());
   call(GetResponsibleStub(k));
 }
 
-void RPCClient::PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter) {
+void RpcClient::PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter) {
   ClientCall<CtrlMethod::kPushKV> call;
   call.mut_request()->set_key(k);
   VSetter(call.mut_request()->mutable_val());
   call(GetMasterStub());
 }
 
-void RPCClient::PushKV(const std::string& k, const std::string& v) {
+void RpcClient::PushKV(const std::string& k, const std::string& v) {
   PushKV(k, [&](std::string* o) { *o = v; });
 }
 
-void RPCClient::PushKV(const std::string& k, const PbMessage& msg) {
+void RpcClient::PushKV(const std::string& k, const PbMessage& msg) {
   PushKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
 
-void RPCClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
+void RpcClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
   PushMasterKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
 
-void RPCClient::ClearKV(const std::string& k) {
+void RpcClient::ClearKV(const std::string& k) {
   ClientCall<CtrlMethod::kClearKV> call;
   call.mut_request()->set_key(k);
   call(GetResponsibleStub(k));
 }
 
-void RPCClient::ClearMasterKV(const std::string& k) {
+void RpcClient::ClearMasterKV(const std::string& k) {
   ClientCall<CtrlMethod::kClearKV> call;
   call.mut_request()->set_key(k);
   call(GetMasterStub());
 }
 
-void RPCClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
+void RpcClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
   ClientCall<CtrlMethod::kPullKV> call;
   call.mut_request()->set_key(k);
   call(GetResponsibleStub(k));
   VGetter(call.response().val());
 }
 
-void RPCClient::PullMasterKV(const std::string& k,
+void RpcClient::PullMasterKV(const std::string& k,
                              std::function<void(const std::string&)> VGetter) {
   ClientCall<CtrlMethod::kPullKV> call;
   call.mut_request()->set_key(k);
@@ -146,32 +146,32 @@ void RPCClient::PullMasterKV(const std::string& k,
   VGetter(call.response().val());
 }
 
-void RPCClient::PullKV(const std::string& k, std::string* v) {
+void RpcClient::PullKV(const std::string& k, std::string* v) {
   PullKV(k, [&](const std::string& i) { *v = i; });
 }
 
-void RPCClient::PullKV(const std::string& k, PbMessage* msg) {
+void RpcClient::PullKV(const std::string& k, PbMessage* msg) {
   PullKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
-void RPCClient::PullMasterKV(const std::string& k, PbMessage* msg) {
+void RpcClient::PullMasterKV(const std::string& k, PbMessage* msg) {
   PullMasterKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
-void RPCClient::PushActEvent(const ActEvent& act_event) {
+void RpcClient::PushActEvent(const ActEvent& act_event) {
   ClientCall<CtrlMethod::kPushActEvent> call;
   *(call.mut_request()->mutable_act_event()) = act_event;
   call(GetMasterStub());
 }
 
-void RPCClient::Clear() {
+void RpcClient::Clear() {
   ClientCall<CtrlMethod::kClear> call;
   call(GetThisStub());
   std::unique_lock<std::mutex> lck(done_names_mtx_);
   done_names_.clear();
 }
 
-int32_t RPCClient::IncreaseCount(const std::string& k, int32_t v) {
+int32_t RpcClient::IncreaseCount(const std::string& k, int32_t v) {
   ClientCall<CtrlMethod::kIncreaseCount> call;
   call.mut_request()->set_key(k);
   call.mut_request()->set_val(v);
@@ -179,13 +179,13 @@ int32_t RPCClient::IncreaseCount(const std::string& k, int32_t v) {
   return call.response().val();
 }
 
-void RPCClient::EraseCount(const std::string& k) {
+void RpcClient::EraseCount(const std::string& k) {
   ClientCall<CtrlMethod::kEraseCount> call;
   call.mut_request()->set_key(k);
   call(GetResponsibleStub(k));
 }
 
-void RPCClient::LoadServer(const std::string& server_addr, CtrlService::Stub* stub) {
+void RpcClient::LoadServer(const std::string& server_addr, CtrlService::Stub* stub) {
   int32_t retry_idx = 0;
   for (; retry_idx < max_retry_num; ++retry_idx) {
     grpc::ClientContext client_ctx;
@@ -208,11 +208,11 @@ void RPCClient::LoadServer(const std::string& server_addr, CtrlService::Stub* st
   CHECK_LT(retry_idx, max_retry_num);
 }
 
-CtrlService::Stub* RPCClient::GetThisStub() {
+CtrlService::Stub* RpcClient::GetThisStub() {
   return stubs_[Global<MachineCtx>::Get()->this_machine_id()].get();
 }
 
-CtrlService::Stub* RPCClient::GetResponsibleStub(const std::string& key) {
+CtrlService::Stub* RpcClient::GetResponsibleStub(const std::string& key) {
   int64_t machine_id = (std::hash<std::string>{}(key)) % Global<EnvDesc>::Get()->TotalMachineNum();
   return stubs_[machine_id].get();
 }

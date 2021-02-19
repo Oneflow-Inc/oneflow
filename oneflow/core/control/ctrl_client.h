@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class CtrlClient final : public RPCClient {
+class CtrlClient final : public RpcClient {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CtrlClient);
   ~CtrlClient() override = default;
