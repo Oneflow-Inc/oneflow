@@ -16,31 +16,29 @@ limitations under the License.
 #include "oneflow/user/kernels/sigmoid_cross_entropy_kernel.h"
 
 namespace oneflow {
-namespace user_op {
 
-template<typename T>
-struct CrossEntropyKernelUtil<DeviceType::kCPU, T> {
-  static void ComputeEntropy(DeviceCtx* ctx, const int64_t n, const T* prediction, const T* label,
-                             T* loss) {
-    FOR_RANGE(int64_t, index, 0, n) {
-      loss[index] =
-          -1.f * prediction[index] * (label[index] - (prediction[index] >= 0))
-          + logf(1 + expf(prediction[index] - 2 * prediction[index] * (prediction[index] >= 0)));
-    }
-  }
-
-  static void ComputeDiffWithSigmoid(DeviceCtx* ctx, int64_t n, const T* prediction, const T* label,
-                                     T* prediction_diff) {
-    FOR_RANGE(int64_t, index, 0, n) {
-      prediction_diff[index] = 1.f / (1.f + expf(-prediction[index])) - label[index];
+namespace {
+template<template<typename> class Opt, typename T>
+struct ElemwiseSigmoidCrossEntropyGradFunctor<DeviceType::kCPU, Opt, T> final {
+  void operator()(DeviceCtx* ctx, int64_t n, T* prediction_diff, const T* prediction,
+                  const T* label) {
+    XPU_1D_KERNEL_LOOP(index, n) {
+      prediction_diff[index] = Opt<T>()(prediction[index], label[index]);
     }
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ)
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ)
+template<template<typename> class Opt, typename T>
+struct ElemwiseSigmoidCrossEntropyFunctor<DeviceType::kCPU, Opt, T> final {
+  void operator()(DeviceCtx* ctx, int64_t n, T* loss, const T* prediction, const T* label) {
+    XPU_1D_KERNEL_LOOP(index, n) { loss[index] = Opt<T>()(prediction[index], label[index]); }
+  }
+};
+}  // namespace
 
-}  // namespace user_op
+REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCPU, float)
+REGISTER_SIGMOID_CROSS_ENTROPY_KERNEL(DeviceType::kCPU, double)
+REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCPU, float)
+REGISTER_SIGMOID_CROSS_ENTROPY_GRAD_KERNEL(DeviceType::kCPU, double)
+
 }  // namespace oneflow
