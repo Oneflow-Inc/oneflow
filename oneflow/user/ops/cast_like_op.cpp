@@ -34,7 +34,6 @@ REGISTER_USER_OP("cast_like")
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* dtype_like_modifier = GetInputArgModifierFn("dtype_like", 0);
       CHECK_NOTNULL(dtype_like_modifier);
-      dtype_like_modifier->set_use_header_only(true);
       dtype_like_modifier->set_requires_grad(false);
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {

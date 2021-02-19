@@ -47,10 +47,6 @@ class BroadcastToCompatibleWithOp final : public Operator {
     CHECK(op_conf().has_broadcast_to_compatible_with_conf());
     EnrollInputBn("x");
     EnrollRepeatedInputBn("compatible", false);
-    FOR_RANGE(int, i, 0, op_conf().broadcast_to_compatible_with_conf().compatible_size()) {
-      InputBlobModifier* modifer = MutInputBlobModifier4Ibn(GenRepeatedBn("compatible", i));
-      modifer->set_use_header_only(true);
-    }
     EnrollOutputBn("y");
   }
 

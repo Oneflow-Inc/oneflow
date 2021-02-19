@@ -93,7 +93,7 @@ class DynamicReshapeLikeOp final : public Operator {
     CHECK(op_conf().has_dynamic_reshape_like_conf());
     EnrollInputBn("x");
     EnrollOutputBn("y");
-    EnrollInputBn("like", false)->set_use_header_only(true);
+    EnrollInputBn("like", false);
   }
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
