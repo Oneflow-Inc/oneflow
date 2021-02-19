@@ -16,20 +16,15 @@ limitations under the License.
 from __future__ import absolute_import
 
 import collections.abc
+import traceback
+from typing import Optional, Union, Sequence, Text
 
 import oneflow as flow
 import oneflow.python.framework.c_api_util as c_api_util
-import oneflow.python.framework.hob as hob
-import oneflow.python.eager.gradient_util as gradient_util
-import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.job.learning_rate_schedule_conf_pb2 as learning_rate_schedule_conf_pb
 import oneflow_api
-from typing import Tuple, Optional, Union, Sequence, Text
-import traceback
 
 
 class ClipGradientConf:

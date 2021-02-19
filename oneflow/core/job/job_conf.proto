@@ -73,14 +73,13 @@ message WeightDecayConf {
 }
 
 message OptimizerConf {
-  optional string name = 1;
-  repeated string variables = 2;
-  optional float base_learning_rate = 3;
-  optional WarmupConf warmup_conf = 4;
-  optional LearningRateDecayConf learning_rate_decay = 5;
-  optional string learning_rate_lbn = 6;
-  optional ClipConf clip_conf = 7;
-  optional WeightDecayConf weight_decay_conf = 8ss;
+  repeated string variables = 1;
+  optional float base_learning_rate = 2;
+  optional WarmupConf warmup_conf = 3;
+  optional LearningRateDecayConf learning_rate_decay = 4;
+  optional string learning_rate_lbn = 5;
+  optional ClipConf clip_conf = 6;
+  optional WeightDecayConf weight_decay_conf = 7;
   oneof normal_mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
