@@ -83,7 +83,7 @@ void AddFuncForFindBldSubTskGphMthd(const std::string& k, BldSubTskGphMthd v) {
 
 }  // namespace
 
-std::shared_ptr<Operator> LogicalNode::SoleOp() const {
+std::shared_ptr<const Operator> LogicalNode::SoleOp() const {
   CHECK_EQ(op_vec_.size(), 1);
   return op_vec_.front();
 }

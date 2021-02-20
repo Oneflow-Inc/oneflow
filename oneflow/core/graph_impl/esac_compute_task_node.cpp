@@ -47,7 +47,7 @@ void EsacCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void EsacCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<Operator> sole_op = this->logical_node()->SoleOp();
+  std::shared_ptr<const Operator> sole_op = this->logical_node()->SoleOp();
   node->mut_op() = sole_op;
   FOR_RANGE(int64_t, ibn_id, 0, sole_op->input_bns().size()) {
     node->BindBnWithRegst(GenRepeatedBn("in", ibn_id),

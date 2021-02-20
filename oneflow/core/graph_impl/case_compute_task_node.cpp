@@ -46,7 +46,7 @@ void CaseCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void CaseCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<Operator> sole_op = this->logical_node()->SoleOp();
+  std::shared_ptr<const Operator> sole_op = this->logical_node()->SoleOp();
   node->mut_op() = sole_op;
   node->BindBnWithRegst("in", GetSoleConsumedRegst("in"));
   FOR_RANGE(int64_t, obn_id, 0, sole_op->output_bns().size()) {
