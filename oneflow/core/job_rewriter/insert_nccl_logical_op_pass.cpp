@@ -206,17 +206,19 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   }
 
   std::vector<OperatorConf> nccl_op_confs;
-  for (const OpNode* src_node : subgraph_order) {
-    for (const OpEdge* op_edge : src_node->out_edges()) {
-      const OpNode* dst_node = op_edge->dst_node();
-      const std::string& dst_op_name = dst_node->op().op_name();
+  for (const OpNode* dst_node : subgraph_order) {
+    const std::string& dst_op_name = dst_node->op().op_name();
+    for (const OpEdge* op_edge : dst_node->in_edges()) {
+      const OpNode* src_node = op_edge->src_node();
+      const std::string& src_op_name = src_node->op().op_name();
       CHECK(src_node != dst_node);
-      if (subgraph_op_name2conf.find(dst_op_name) == subgraph_op_name2conf.end()) {
-        // NOTE(chengcheng): child node is not in this subgraph.
+      if (subgraph_op_name2conf.find(src_op_name) == subgraph_op_name2conf.end()) {
+        // NOTE(chengcheng): parent node is not in this subgraph.
         continue;
       }
       for (const LogicalBlobId& lbi : op_edge->lbis()) {
         OperatorConf nccl_op;
+        // builde nccl op
         if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi)) { continue; }
         mut_op_names.insert(dst_op_name);
         // insert nccl op
@@ -224,22 +226,31 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
         for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
           std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
               &subgraph_op_name2conf.at(dst_op_name), ibn, nccl_op_wrapper.output("out", 0));
+          CHECK(old_lbn == GenLogicalBlobName(lbi));
+
+          std::cout << "cclog: change dst_op: " << dst_op_name << " input from : " << src_op_name
+                    << " and  lbn = " << old_lbn << " to " << nccl_op_wrapper.output("out", 0);
         }
 
+        // add necessary ctrl edge for strict order
         if (nccl_op_confs.size() >= 1) {
-          // NOTE(chengcheng): MUST add ctrl edge between nccl ops for 1 src node insert multi-nccl
+          // NOTE(chengcheng): MUST add ctrl edge between nccl ops for 1 dst node insert multi-nccl
           const std::string& pre_nccl_op_name = nccl_op_confs.at(nccl_op_confs.size() - 1).name();
           nccl_op.add_ctrl_in_op_name(pre_nccl_op_name);
+
+          std::cout << "cclog: add ctrl edge : " << pre_nccl_op_name << " -> " << nccl_op.name();
         }
 
-        // NOTE(chengcheng): src_node MUST not the last node in subgraph, find the next op
-        int64_t src_order = node2order.at(src_node);
-        CHECK(src_order + 1 < subgraph_order.size());
-        const std::string& next_op_name = subgraph_order.at(src_order + 1)->op().op_name();
-        if (dst_op_name != next_op_name) {
+        // NOTE(chengcheng): dst_node MUST not the first node in subgraph, find the Immediately
+        //   previous op of dst_node.
+        int64_t dst_order = node2order.at(dst_node);
+        CHECK_GT(dst_order, 0);
+        const std::string& pre_op_name = subgraph_order.at(dst_order - 1)->op().op_name();
+        if (src_op_name != pre_op_name) {
           // NOTE(chengcheng): MUST add ctrl edge for strict exec order
-          subgraph_op_name2conf.at(next_op_name).add_ctrl_in_op_name(nccl_op.name());
-          mut_op_names.insert(next_op_name);
+          nccl_op.add_ctrl_in_op_name(pre_op_name);
+
+          std::cout << "cclog: add ctrl edge : " << pre_op_name << " -> " << nccl_op.name();
         }
 
         nccl_op_confs.push_back(nccl_op);
