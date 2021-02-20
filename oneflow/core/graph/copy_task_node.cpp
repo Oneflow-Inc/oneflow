@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/copy_task_node.h"
-#include "oneflow/core/job/thrd_id_generator.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/id_util.h"
 

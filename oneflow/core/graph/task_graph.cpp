@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
-#include "oneflow/core/job/thrd_id_generator.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -324,20 +323,6 @@ void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_node
     TaskEdge* edge = NewEdge();
     Connect<TaskNode>(src_task_nodes.at(i), edge, dst_task_nodes.at(i));
     src_task_nodes.at(i)->BindEdgeWithProducedRegst(edge, regst_desc_name);
-  }
-}
-
-void TaskGraph::GenerateIndependentThrdId(
-    const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes) {
-  std::vector<std::pair<int64_t, TaskType>> machine_task_type_vec;
-  for (auto pair : persistence_nodes) {
-    machine_task_type_vec.emplace_back(std::make_pair(pair.first, pair.second->GetTaskType()));
-  }
-
-  ThrdIdGenerator generator(machine_task_type_vec, Global<IDMgr>::Get()->BaseIndependentThrdId());
-  for (const auto& pair : persistence_nodes) {
-    int64_t thrd_id = generator.GenerateThrdId(pair.first, pair.second->GetTaskType());
-    pair.second->set_thrd_id(thrd_id);
   }
 }
 
