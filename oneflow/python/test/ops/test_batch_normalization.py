@@ -24,6 +24,10 @@ from test_util import Args, GenArgDict, type_name_to_flow_type, type_name_to_np_
 import oneflow.typing as oft
 import unittest
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def TODO_test_train(test_case):
     flow.config.enable_debug_mode(True)
