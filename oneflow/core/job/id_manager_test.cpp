@@ -58,21 +58,6 @@ void Delete() {
 
 }  // namespace
 
-TEST(IDMgr, compile_task_id) {
-  New();
-  int64_t machine1thrd2 =
-      (static_cast<int64_t>(1) << machine_id_shl) + (static_cast<int64_t>(2) << thread_id_shl);
-  int64_t machine3thrd4 =
-      (static_cast<int64_t>(3) << machine_id_shl) + (static_cast<int64_t>(4) << thread_id_shl);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(1, 2), machine1thrd2 | 0);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(1, 2), machine1thrd2 | 1);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(1, 2), machine1thrd2 | 2);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(3, 4), machine3thrd4 | 0);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(3, 4), machine3thrd4 | 1);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(3, 4), machine3thrd4 | 2);
-  Delete();
-}
-
 TEST(IDMgr, compile_regst_desc_id) {
   New();
   ASSERT_EQ(Global<IDMgr>::Get()->NewRegstDescId(), 0);

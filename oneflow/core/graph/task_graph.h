@@ -88,9 +88,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void MergeChain();
   void BuildCtrlRegstDescInSameChain();
 
-  void GenerateIndependentThrdId(
-      const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);
-
   // inplace
   void GetInplaceOpBlobArgList(
       InplaceObasInfo* obas_info, const HashSet<TaskNode*>& dev_nodes,
