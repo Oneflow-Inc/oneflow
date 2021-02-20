@@ -346,6 +346,19 @@ foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
   copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 endforeach()
 
+set(DEVICE_REG_HEADERS "${PROJECT_SOURCE_DIR}/oneflow/core/framework/device_register_*.h")
+set(AUTO_GEN_DEV_REG_HEADER "${PROJECT_BINARY_DIR}/oneflow/core/framework/auto_gen_device_registry.h")
+
+message("auto generated header file: ${AUTO_GEN_DEV_REG_HEADER}")
+file(WRITE ${AUTO_GEN_DEV_REG_HEADER} "")
+file(GLOB_RECURSE DEVICE_REGISTER_HEADERS ${DEVICE_REG_HEADERS})
+foreach(item ${DEVICE_REGISTER_HEADERS})
+    string(REPLACE "${PROJECT_SOURCE_DIR}/" "" rel_item ${item})
+    message("device register header found: " ${rel_item})
+    file(APPEND ${AUTO_GEN_DEV_REG_HEADER} "#include \"${rel_item}\"\n")
+endforeach()
+file(APPEND ${AUTO_GEN_DEV_REG_HEADER} "\n")
+
 copy_files("${PROTO_HDRS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 copy_files("${CFG_HRCS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 

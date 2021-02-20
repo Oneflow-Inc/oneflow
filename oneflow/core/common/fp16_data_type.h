@@ -17,9 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_FP16_DATA_TYPE_H_
 #include <type_traits>
 
-// TODO: auto generated
-#include "oneflow/core/framework/device_register_gpu.h"
-#include "oneflow/core/framework/device_register_cpu.h"
+// auto generated header included
+#include "oneflow/core/framework/auto_gen_device_registry.h"
 
 namespace oneflow {
 // Type Trait: IsFloat16
