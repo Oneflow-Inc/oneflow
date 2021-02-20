@@ -194,4 +194,15 @@ struct TickTockTaskType final {};
 
 }  // namespace oneflow
 
+namespace std {
+
+template<>
+struct hash<oneflow::TaskType> {
+  std::size_t operator()(const oneflow::TaskType& task_type) const {
+    return std::hash<uint32_t>{}(static_cast<uint32_t>(task_type));
+  }
+};
+
+}  // namespace std
+
 #endif  // ONEFLOW_CORE_GRAPH_TASK_NODE_H_
