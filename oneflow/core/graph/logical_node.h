@@ -43,7 +43,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   virtual ~LogicalNode() = default;
 
   // op_vec_
-  std::shared_ptr<Operator> SoleOp() const;
+  std::shared_ptr<const Operator> SoleOp() const;
   const std::vector<std::shared_ptr<const Operator>>& op_vec() const { return op_vec_; }
   std::vector<std::shared_ptr<const Operator>>& mut_op_vec() { return op_vec_; }
 

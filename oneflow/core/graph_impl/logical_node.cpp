@@ -110,7 +110,7 @@ bool LogicalNode::IsDataLbiOnOutEdge(const LogicalBlobId& lbi) const {
 std::string LogicalNode::VisualStr() const {
   std::stringstream ss;
   ss << TypeName();
-  for (std::shared_ptr<Operator> op : op_vec_) { ss << "\\n" << op->op_name(); }
+  for (std::shared_ptr<const Operator> op : op_vec_) { ss << "\\n" << op->op_name(); }
   return ss.str();
 }
 
