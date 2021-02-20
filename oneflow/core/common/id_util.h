@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
