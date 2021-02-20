@@ -34,12 +34,12 @@ void InitConfFromEnvDesc(const EnvDesc& env_desc, CtrlConf* ctrl_conf) {
     addr.set_port(env_desc.ctrl_port());
     *(ctrl_conf->mutable_ctrl_addrs()->Add()) = addr;
     ctrl_conf->set_rank(this_machine_id);
-    rank2ctrl_conf.emplace(ctrl_conf->rank(), ctrl_conf);
+    CHECK(rank2ctrl_conf.emplace(ctrl_conf->rank(), ctrl_conf).second);
     for (int64_t machine_id = 1; machine_id < env_desc.TotalMachineNum(); ++machine_id) {
       std::string key = std::string("InitCtrlConf") + std::to_string(machine_id);
       std::shared_ptr<CtrlConf> ctrl_conf = std::make_shared<CtrlConf>();
       host_list_boot_strap_client->PullMasterKV(key, ctrl_conf.get());
-      rank2ctrl_conf.emplace(ctrl_conf->rank(), ctrl_conf);
+      CHECK(rank2ctrl_conf.emplace(ctrl_conf->rank(), ctrl_conf).second);
     }
   } else {
     std::string key = std::string("InitCtrlConf") + std::to_string(this_machine_id);
