@@ -227,9 +227,6 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
           std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
               &subgraph_op_name2conf.at(dst_op_name), ibn, nccl_op_wrapper.output("out", 0));
           CHECK(old_lbn == GenLogicalBlobName(lbi));
-
-          std::cout << "cclog: change dst_op: " << dst_op_name << " input from : " << src_op_name
-                    << " and  lbn = " << old_lbn << " to " << nccl_op_wrapper.output("out", 0);
         }
 
         // add necessary ctrl edge for strict order
@@ -237,8 +234,6 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
           // NOTE(chengcheng): MUST add ctrl edge between nccl ops for 1 dst node insert multi-nccl
           const std::string& pre_nccl_op_name = nccl_op_confs.at(nccl_op_confs.size() - 1).name();
           nccl_op.add_ctrl_in_op_name(pre_nccl_op_name);
-
-          std::cout << "cclog: add ctrl edge : " << pre_nccl_op_name << " -> " << nccl_op.name();
         }
 
         // NOTE(chengcheng): dst_node MUST not the first node in subgraph, find the Immediately
@@ -249,8 +244,6 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
         if (src_op_name != pre_op_name) {
           // NOTE(chengcheng): MUST add ctrl edge for strict exec order
           nccl_op.add_ctrl_in_op_name(pre_op_name);
-
-          std::cout << "cclog: add ctrl edge : " << pre_op_name << " -> " << nccl_op.name();
         }
 
         nccl_op_confs.push_back(nccl_op);
