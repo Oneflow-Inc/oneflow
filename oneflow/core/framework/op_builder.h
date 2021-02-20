@@ -78,8 +78,8 @@ class OpBuilder {
   UserOpConf proto_;
 
   int input_pos_ = 0;
-  std::vector<std::string> indexed_input_names_;
-  std::vector<std::string> indexed_output_names_;
+  std::vector<std::string> indexed_ibns_;
+  std::vector<std::string> indexed_obns_;
 };
 
 }  // namespace one
