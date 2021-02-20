@@ -159,13 +159,19 @@ class InferenceSession(object):
         self.output_name2future_ = {}
         self.job_futures_ = []
         self.status_ = None
-        self.event_loop_ = asyncio.get_event_loop()
 
+        self._init_event_loop()
         self.init()
 
     def __del__(self):
         if self.status_ != self.SessionStatus.CLOSED:
             self.close()
+
+    def _init_event_loop(self):
+        self.event_loop_ = asyncio.get_event_loop()
+        if self.event_loop_.is_closed():
+            asyncio.set_event_loop(asyncio.new_event_loop())
+            self.event_loop_ = asyncio.get_event_loop()
 
     def init(self):
         # env init
