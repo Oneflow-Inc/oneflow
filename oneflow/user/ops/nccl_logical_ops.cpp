@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
-
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
 
@@ -140,5 +138,3 @@ REGISTER_USER_OP("_nccl_logical_s2s")
     });
 
 }  // namespace oneflow
-
-#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
