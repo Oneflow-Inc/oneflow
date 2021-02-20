@@ -31,9 +31,12 @@ class ProcessId {
  public:
   static const int kBits = 32;
   static const int kReservedBits = 9;
+  static const int kUsedBits = 23;
   static const int kLeftBits = 16;
   static const int kRightBits = 7;
   static const int kReservedLeftBits = kReservedBits + kLeftBits;
+  static_assert(kBits == kReservedBits + kUsedBits, "ProcessId bits layout is invalid");
+  static_assert(kUsedBits == kLeftBits + kRightBits, "ProcessId bits layout is invalid");
 
   ProcessId() : val_(0) {}
   explicit ProcessId(uint32_t val) : val_(val) {}
@@ -54,8 +57,8 @@ enum class StreamType : int16_t {
   kInvalid = 0,        // DeviceType::kInvalidDevice
   kCPU = 1,            // DeviceType::kCPU
   kCuda = 2,           // DeviceType::kGPU
-  kCommNet = 20,       // DeviceType::kCPU
-  kTickTock = 21,      // DeviceType::kCPU
+  kCommNet = 90,       // DeviceType::kCPU
+  kTickTock = 91,      // DeviceType::kCPU
   kIndependent = 100,  // DeviceType::kCPU
 };
 
@@ -96,9 +99,13 @@ class StreamId {
  public:
   static const int kBits = 32;
   static const int kReservedBits = 12;
+  static const int kUsedBits = 20;
   static const int kLeftBits = 8;
   static const int kMiddleBits = 7;
   static const int kRightBits = 5;
+  static_assert(kBits == kReservedBits + kUsedBits, "StreamId bits layout is invalid");
+  static_assert(kUsedBits == kLeftBits + kMiddleBits + kRightBits,
+                "StreamId bits layout is invalid");
 
   StreamId() : val_(0) {}
   explicit StreamId(uint32_t val) : val_(val) {}
@@ -138,6 +145,9 @@ class TaskId {
   static const int kLeftMiddleBits = kLeftBits + kMiddleBits;
   static const int kMiddleRightBits = kMiddleBits + kRightBits;
   static const int kLeftRightBits = kLeftBits + kRightBits;
+  static_assert(kBits == kLeftBits + kMiddleBits + kRightBits, "TaskId bits layout is invalid");
+  static_assert(kLeftBits == ProcessId::kUsedBits, "TaskId bits layout is invalid");
+  static_assert(kMiddleBits == StreamId::kUsedBits, "TaskId bits layout is invalid");
 
   TaskId() : val_(static_cast<uint64_t>(-1)) {}
   explicit TaskId(uint64_t val) : val_(val) {}
@@ -166,11 +176,13 @@ class MemZoneId {
   static const int kUsageNormal = 0;
   static const int kUsagePinnedByCuda = 1;
   static const int kUsagePinnedByNetwork = 2;
+  static const int kBits = 32;
   static const int kLeftBits = 12;
   static const int kMiddleBits = 8;
   static const int kRightBits = 12;
   static const int kLeftMiddleBits = kLeftBits + kMiddleBits;
   static const int kMiddleRightBits = kMiddleBits + kRightBits;
+  static_assert(kBits == kLeftBits + kMiddleBits + kRightBits, "MemZoneId bits layout is invalid");
 
   MemZoneId() : val_(0) {}
   explicit MemZoneId(uint32_t val) : val_(val) {}
