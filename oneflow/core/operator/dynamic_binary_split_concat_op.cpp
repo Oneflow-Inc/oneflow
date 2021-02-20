@@ -28,7 +28,6 @@ class DynamicBinarySplitOp final : public Operator {
 
  private:
   Maybe<void> InferBatchAxis(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
@@ -77,7 +76,6 @@ Maybe<void> DynamicBinarySplitOp::InferOutBlobDescs(
 }
 
 Maybe<void> DynamicBinarySplitOp::InferBatchAxis(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   // out blob has NOT  batch axis
   FOR_RANGE(int32_t, i, 0, output_bns().size()) { BatchAxis4BnInOp(output_bns().Get(i)); }
@@ -111,7 +109,6 @@ class DynamicBinaryConcatOp final : public Operator {
 
  private:
   Maybe<void> InferBatchAxis(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
@@ -154,7 +151,6 @@ Maybe<void> DynamicBinaryConcatOp::InferOutBlobDescs(
 }
 
 Maybe<void> DynamicBinaryConcatOp::InferBatchAxis(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   *BatchAxis4BnInOp("out") = op_conf().dynamic_binary_concat_conf().out_batch_axis();
   return Maybe<void>::Ok();

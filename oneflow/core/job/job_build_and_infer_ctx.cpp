@@ -541,16 +541,21 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   JUST(AddOpNameParallelConf2Placement(op_name, *parallel_conf));
   UpdateLbi2DisableBoxing(*op, ibn2disable_boxing);
   // infer batch_axis
-  const auto& BatchAxis4Ibn = [&](const std::string& ibn) -> Maybe<const OptInt64*> {
+  const auto& BatchAxis4Ibn = [&](const std::string& ibn) -> Maybe<const OptInt64> {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
-    const auto& op = *JUST(Op4OpName(lbi.op_name()));
-    return op.BatchAxis4BnInOp(*JUST(op.obn4lbi(lbi)));
+    const auto& producer_op = *JUST(Op4OpName(lbi.op_name()));
+    return producer_op.GetBatchAxis4Obn(*JUST(producer_op.obn4lbi(lbi)));
   };
-  const auto& GetConstBlobDescBnInOp = [&](const std::string& bn) -> const BlobDesc& {
+  auto GetBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
-    return *(lbi2logical_blob_desc_[lbi].get());
+    if (lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end()) {
+      return lbi2logical_blob_desc_.at(lbi).get();
+    }
+    return nullptr;
   };
-  JUST(op->InferBatchAxisIf(GetConstBlobDescBnInOp, BatchAxis4Ibn));
+  JUST(op->FillLogicalInBlobDesc(GetBlobDesc4BnInOp));
+  JUST(op->FillInBatchAxis(BatchAxis4Ibn));
+  JUST(op->InferBatchAxisIf());
 
   ParallelDesc parallel_desc(*parallel_conf);
   // infer mirrored signature
@@ -560,20 +565,8 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
 
   // infer logical blob desc
   JUST(GenOpProducedEmptyLogicalBlobDesc(op));
-  auto GetBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
-    const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
-    if (lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end()) {
-      return lbi2logical_blob_desc_.at(lbi).get();
-    }
-    return nullptr;
-  };
-  JUST(op->InferLogicalOutBlobDescsIf(GetBlobDesc4BnInOp, BatchAxis4Ibn, parallel_desc));
-  // Fill logical blob_desc signature.
-  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc&> {
-    const auto* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
-    CHECK_NOTNULL_OR_RETURN(blob_desc);
-    return *blob_desc;
-  }));
+  JUST(op->InferLogicalOutBlobDescsIf(GetBlobDesc4BnInOp, parallel_desc));
+  JUST(op->FillLogicalOutBlobDesc(GetBlobDesc4BnInOp));
   // Infer ParallelDesc for output blobs.
   auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
     const auto& lbi = op->BnInOp2Lbi(obn);

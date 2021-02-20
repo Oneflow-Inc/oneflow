@@ -30,7 +30,7 @@ bool PyHasSharedOpKernelObject4ParallelConfSymbol(
 
 std::shared_ptr<compatible_py::Object> PyGetSharedOpKernelObject4ParallelConfSymbol(
     const std::shared_ptr<ParallelDesc>& parallel_conf_sym) {
-  return GetSharedOpKernelObject4ParallelConfSymbol(parallel_conf_sym).GetPtrOrThrow();
+  return GetOpKernelObject4ParallelConfSymbol(parallel_conf_sym).GetPtrOrThrow();
 }
 
 void PySetSharedOpKernelObject4ParallelConfSymbol(

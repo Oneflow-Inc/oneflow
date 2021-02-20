@@ -74,15 +74,12 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCopyCommNet; }
 
-  void Init(int64_t machine_id, int64_t src_machine_id);
-  int64_t AllocateLocalWorkStreamId() override;
-  int64_t peer_machine_id() const { return peer_machine_id_; }
+  void Init(int64_t machine_id);
 
  private:
   void InitProducedRegstMemCase(MemoryCase*) override;
   void PinConsumedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
-  int64_t peer_machine_id_;
 };
 
 }  // namespace oneflow

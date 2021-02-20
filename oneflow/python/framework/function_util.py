@@ -744,13 +744,13 @@ def set_enable_auto_mixed_precision(func_desc, value=True):
 
 @oneflow_function_config("enable_keep_header_only")
 def set_enable_keep_header_only(func_desc, value=True):
-    r"""Whether keep header only or not
+    r"""deprecated api.
 
     Args:
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_enable_keep_header_only(value)
+    print("Sorry! enable_keep_header_only is deprecated and it doesn't work.\n")
 
 
 @oneflow_function_config("concurrency_width")
