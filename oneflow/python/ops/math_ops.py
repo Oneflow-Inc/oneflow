@@ -78,7 +78,7 @@ def add(
         return scalar_add(y, x, name)
     elif isinstance(y, (int, float)):
         return scalar_add(x, y, name)
-    elif x.shape == y.shape:
+    elif x.shape == y.shape and x.is_dynamic == y.is_dynamic:
         return element_wise_add(x, y, name)
     elif x.shape == (1,):
         return scalar_add_by_tensor(y, x, name)
