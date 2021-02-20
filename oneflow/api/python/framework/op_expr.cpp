@@ -50,8 +50,8 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def_property_readonly("type", &one::UserOpExpr::type)
       .def_property_readonly(
           "proto", [](const one::UserOpExpr& op) { return PbMessage2TxtString(op.proto()); })
-      .def_property_readonly("indexed_input_names", &one::UserOpExpr::indexed_input_names)
-      .def_property_readonly("indexed_output_names", &one::UserOpExpr::indexed_output_names);
+      .def_property_readonly("indexed_ibns", &one::UserOpExpr::indexed_ibns)
+      .def_property_readonly("indexed_obns", &one::UserOpExpr::indexed_obns);
 }
 
 }  // namespace oneflow

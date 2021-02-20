@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <functional>
 
-#include "oneflow/core/framework/bn_accessor.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
@@ -49,58 +48,52 @@ class BuiltinOpExpr : public OpExpr {
   DEFINE_DEFAULT_CONSTRUCTOR(BuiltinOpExpr);
 
   explicit BuiltinOpExpr(const std::string& op_name) : op_name_(op_name) {}
-  BuiltinOpExpr(const std::string& op_name, const std::vector<std::string>& indexed_input_names,
-                const std::vector<std::string>& indexed_output_names)
-      : op_name_(op_name),
-        indexed_input_names_(indexed_input_names),
-        indexed_output_names_(indexed_output_names) {}
+  BuiltinOpExpr(const std::string& op_name, const std::vector<std::string>& indexed_ibns,
+                const std::vector<std::string>& indexed_obns)
+      : op_name_(op_name), indexed_ibns_(indexed_ibns), indexed_obns_(indexed_obns) {}
 
   const std::string& op_name() const { return op_name_; }
 
-  int input_num() const { return indexed_input_names_.size(); }
-  int output_num() const { return indexed_output_names_.size(); }
+  int input_num() const { return indexed_ibns_.size(); }
+  int output_num() const { return indexed_obns_.size(); }
 
-  const std::vector<std::string>& indexed_input_names() const { return indexed_input_names_; }
-  const std::vector<std::string>& indexed_output_names() const { return indexed_output_names_; }
+  const std::vector<std::string>& indexed_ibns() const { return indexed_ibns_; }
+  const std::vector<std::string>& indexed_obns() const { return indexed_obns_; }
 
-  virtual void BuildOpConf(OperatorConf* op_conf,
-                           std::function<std::string(const std::string&)> mutator) const = 0;
+  virtual void BuildOpConf(OperatorConf* op_conf) const = 0;
 
  protected:
   std::string op_name_;
-  // The indexed input operand names.
-  std::vector<std::string> indexed_input_names_;
-  // The indexed output operand names.
-  std::vector<std::string> indexed_output_names_;
+  // The indexed input blob names.
+  std::vector<std::string> indexed_ibns_;
+  // The indexed output blob names.
+  std::vector<std::string> indexed_obns_;
 };
 
-#define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name, _op_conf)                                       \
-  class _op_name##Expr : public BuiltinOpExpr {                                               \
-   public:                                                                                    \
-    _op_name##Expr() = default;                                                               \
-    virtual ~_op_name##Expr() = default;                                                      \
-    explicit _op_name##Expr(const std::string& op_name, _op_name##Conf&& proto,               \
-                            const std::vector<std::string>& indexed_input_names,              \
-                            const std::vector<std::string>& indexed_output_names)             \
-        : BuiltinOpExpr(op_name, indexed_input_names, indexed_output_names), proto_(proto) {} \
-                                                                                              \
-    std::shared_ptr<OpExpr> GetBackwardOpExpr() const override;                               \
-                                                                                              \
-    std::string type() const override { return std::string(#_op_name); }                      \
-                                                                                              \
-    const _op_name##Conf& proto() const { return proto_; }                                    \
-    _op_name##Conf* mutable_proto() { return &proto_; }                                       \
-                                                                                              \
-    void BuildOpConf(OperatorConf* op_conf,                                                   \
-                     std::function<std::string(const std::string&)> mutator) const {          \
-      *(op_conf->mutable_name()) = this->op_name_;                                            \
-      *(op_conf->mutable_##_op_conf##_conf()) = proto_;                                       \
-      InOutbnAccessor<_op_name##Conf> io_accessor(op_conf->mutable_##_op_conf##_conf());      \
-      for (std::string * input : io_accessor.input()) { *input = mutator(*input); }           \
-    }                                                                                         \
-                                                                                              \
-   private:                                                                                   \
-    _op_name##Conf proto_;                                                                    \
+#define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name, _op_conf)                         \
+  class _op_name##Expr : public BuiltinOpExpr {                                 \
+   public:                                                                      \
+    _op_name##Expr() = default;                                                 \
+    virtual ~_op_name##Expr() = default;                                        \
+    explicit _op_name##Expr(const std::string& op_name, _op_name##Conf&& proto, \
+                            const std::vector<std::string>& indexed_ibns,       \
+                            const std::vector<std::string>& indexed_obns)       \
+        : BuiltinOpExpr(op_name, indexed_ibns, indexed_obns), proto_(proto) {}  \
+                                                                                \
+    std::shared_ptr<OpExpr> GetBackwardOpExpr() const override;                 \
+                                                                                \
+    std::string type() const override { return std::string(#_op_name); }        \
+                                                                                \
+    const _op_name##Conf& proto() const { return proto_; }                      \
+    _op_name##Conf* mutable_proto() { return &proto_; }                         \
+                                                                                \
+    void BuildOpConf(OperatorConf* op_conf) const {                             \
+      *(op_conf->mutable_name()) = this->op_name_;                              \
+      *(op_conf->mutable_##_op_conf##_conf()) = proto_;                         \
+    }                                                                           \
+                                                                                \
+   private:                                                                     \
+    _op_name##Conf proto_;                                                      \
   };
 
 DEFINE_BUILTIN_OPEXPR_CLASS(UserOp, user);
