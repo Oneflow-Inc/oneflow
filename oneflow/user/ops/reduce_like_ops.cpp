@@ -33,10 +33,6 @@ REGISTER_USER_OP("reduce_sum_like")
       *y_tensor = *like_tensor;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       int32_t num_axes = 0;
       HashSet<int32_t> conf_axes;

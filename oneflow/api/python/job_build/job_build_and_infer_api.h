@@ -97,11 +97,6 @@ inline bool JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const 
   return oneflow::JobBuildAndInferCtx_IsTensorList(job_name, lbn).GetOrThrow();
 }
 
-inline std::string JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,
-                                                    const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_GetBatchAxis(job_name, lbn).GetOrThrow();
-}
-
 inline std::string JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& job_name,
                                                                     const std::string& lbn) {
   return oneflow::JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn).GetOrThrow();

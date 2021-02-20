@@ -74,12 +74,6 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
-    return Maybe<void>::Ok();
-  }
-
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override {

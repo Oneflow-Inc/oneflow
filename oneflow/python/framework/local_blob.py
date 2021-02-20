@@ -129,7 +129,7 @@ def MergeLocalBlobs(local_blob_list, mirrored_blob):
     return LocalMirroredTensor(
         [x.numpy_list()[0] for x in local_blob_list],
         is_dynamic=mirrored_blob.is_dynamic,
-        concat_axis=mirrored_blob.batch_axis,
+        concat_axis=mirrored_blob.split_axis,
     )
 
 
@@ -141,7 +141,7 @@ def MakeLocalBlob4EagerBlob(eager_blob):
         return LocalMirroredTensor(
             [eager_blob.numpy(i) for i in range(eager_blob.numpy_size())],
             is_dynamic=eager_blob.is_dynamic,
-            concat_axis=eager_blob.batch_axis,
+            concat_axis=eager_blob.split_axis,
         )
     elif isinstance(eager_blob, oneflow_api.EagerConsistentBlob):
         return LocalMirroredTensor(
