@@ -63,7 +63,7 @@ OpBuilder& OpBuilder::Input(const std::string& input_name, const int count) {
   for (int i = 0; i < count; ++i) {
     const std::string& tensor_name = "^#Position_" + std::to_string(input_pos_++);
     input_list.mutable_s()->Add()->assign(tensor_name);
-    indexed_input_names_.push_back(tensor_name);
+    indexed_ibns_.push_back(input_name + "_" + std::to_string(i));
   }
   return *this;
 }
@@ -80,7 +80,7 @@ OpBuilder& OpBuilder::Output(const std::string& output_name, const int count) {
   for (int i = 0; i < count; ++i) {
     const std::string& tensor_name = op_name_ + "/" + output_name + "_" + std::to_string(i);
     output_list.mutable_s()->Add()->assign(tensor_name);
-    indexed_output_names_.push_back(tensor_name);
+    indexed_obns_.push_back(output_name + "_" + std::to_string(i));
   }
   return *this;
 }
@@ -98,8 +98,7 @@ OpBuilder& OpBuilder::Attr(const std::string& attr_name, const std::string& seri
 }
 
 std::shared_ptr<UserOpExpr> OpBuilder::Build() {
-  return std::make_shared<UserOpExpr>(op_name_, std::move(proto_), indexed_input_names_,
-                                      indexed_output_names_);
+  return std::make_shared<UserOpExpr>(op_name_, std::move(proto_), indexed_ibns_, indexed_obns_);
 }
 
 }  // namespace one
