@@ -35,8 +35,8 @@ class ProcessId {
   static const int kLeftBits = 16;
   static const int kRightBits = 7;
   static const int kReservedLeftBits = kReservedBits + kLeftBits;
-  static_assert(kBits == kReservedBits + kUsedBits, "ProcessId bits layout is invalid");
-  static_assert(kUsedBits == kLeftBits + kRightBits, "ProcessId bits layout is invalid");
+  static_assert(kBits == kReservedBits + kUsedBits, "ProcessId bits layout is illegal");
+  static_assert(kUsedBits == kLeftBits + kRightBits, "ProcessId bits layout is illegal");
 
   ProcessId() : val_(0) {}
   explicit ProcessId(uint32_t val) : val_(val) {}
@@ -103,9 +103,9 @@ class StreamId {
   static const int kLeftBits = 8;
   static const int kMiddleBits = 7;
   static const int kRightBits = 5;
-  static_assert(kBits == kReservedBits + kUsedBits, "StreamId bits layout is invalid");
+  static_assert(kBits == kReservedBits + kUsedBits, "StreamId bits layout is illegal");
   static_assert(kUsedBits == kLeftBits + kMiddleBits + kRightBits,
-                "StreamId bits layout is invalid");
+                "StreamId bits layout is illegal");
 
   StreamId() : val_(0) {}
   explicit StreamId(uint32_t val) : val_(val) {}
@@ -145,9 +145,9 @@ class TaskId {
   static const int kLeftMiddleBits = kLeftBits + kMiddleBits;
   static const int kMiddleRightBits = kMiddleBits + kRightBits;
   static const int kLeftRightBits = kLeftBits + kRightBits;
-  static_assert(kBits == kLeftBits + kMiddleBits + kRightBits, "TaskId bits layout is invalid");
-  static_assert(kLeftBits == ProcessId::kUsedBits, "TaskId bits layout is invalid");
-  static_assert(kMiddleBits == StreamId::kUsedBits, "TaskId bits layout is invalid");
+  static_assert(kBits == kLeftBits + kMiddleBits + kRightBits, "TaskId bits layout is illegal");
+  static_assert(kLeftBits == ProcessId::kUsedBits, "TaskId bits layout is illegal");
+  static_assert(kMiddleBits == StreamId::kUsedBits, "TaskId bits layout is illegal");
 
   TaskId() : val_(static_cast<uint64_t>(-1)) {}
   explicit TaskId(uint64_t val) : val_(val) {}
@@ -182,7 +182,7 @@ class MemZoneId {
   static const int kRightBits = 12;
   static const int kLeftMiddleBits = kLeftBits + kMiddleBits;
   static const int kMiddleRightBits = kMiddleBits + kRightBits;
-  static_assert(kBits == kLeftBits + kMiddleBits + kRightBits, "MemZoneId bits layout is invalid");
+  static_assert(kBits == kLeftBits + kMiddleBits + kRightBits, "MemZoneId bits layout is illegal");
 
   MemZoneId() : val_(0) {}
   explicit MemZoneId(uint32_t val) : val_(val) {}
@@ -276,7 +276,7 @@ class IdUtil {
   // cpu compute stream_id generator state: map of process_id to cpu device_index counter
   HashMap<ProcessId, uint32_t> process_id2cpu_device_index_counter_;
   // chain id generator state: map of process stream to chain_index counter
-  HashMap<uint64_t, int64_t> process_stream2chain_index_counter_;
+  HashMap<uint64_t, uint32_t> process_stream2chain_index_counter_;
 };
 
 }  // namespace oneflow
