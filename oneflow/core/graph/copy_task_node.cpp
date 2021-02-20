@@ -90,44 +90,9 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   return conf;
 }
 
-void CopyCommNetTaskNode::Init(int64_t machine_id, int64_t src_machine_id) {
+void CopyCommNetTaskNode::Init(int64_t machine_id) {
   set_machine_id(machine_id);
   set_thrd_id(Global<IDMgr>::Get()->CommNetThrdId());
-  peer_machine_id_ = src_machine_id;
-}
-
-namespace {
-
-HashMap<int64_t, HashMap<int64_t, int64_t>>* GetConnection2LocalStreamIdMap() {
-  // this_machine_id -> {peer_machine_id, local_work_stream_id}
-  static HashMap<int64_t, HashMap<int64_t, int64_t>> connection2stream_id;
-  return &connection2stream_id;
-}
-
-int64_t GetLocalStreamId4Connection(int64_t this_machine_id, int64_t peer_machine_id) {
-  auto& dict = *GetConnection2LocalStreamIdMap();
-  auto this_machine_it = dict.find(this_machine_id);
-  if (this_machine_it == dict.end()) { return -1; }
-  auto peer_machine_it = this_machine_it->second.find(peer_machine_id);
-  if (peer_machine_it == this_machine_it->second.end()) { return -1; }
-  return peer_machine_it->second;
-}
-
-void InsertLocalStreamId4Connection(int64_t this_machine_id, int64_t peer_machine_id) {
-  auto& dict = *GetConnection2LocalStreamIdMap();
-  dict[this_machine_id][peer_machine_id] = dict[this_machine_id].size();
-}
-
-}  // namespace
-
-int64_t CopyCommNetTaskNode::AllocateLocalWorkStreamId() {
-  int64_t this_machine_id = machine_id();
-  int64_t local_work_stream_id = GetLocalStreamId4Connection(this_machine_id, peer_machine_id_);
-  if (local_work_stream_id == -1) {
-    InsertLocalStreamId4Connection(this_machine_id, peer_machine_id_);
-    local_work_stream_id = GetLocalStreamId4Connection(this_machine_id, peer_machine_id_);
-  }
-  return local_work_stream_id;
 }
 
 void CopyCommNetTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {

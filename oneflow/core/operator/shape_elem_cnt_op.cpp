@@ -50,7 +50,7 @@ HashSet<int32_t> GetInclusiveAxes(const ShapeElemCntOpConf& conf, int32_t num_ax
 }  // namespace
 
 void ShapeElemCntOp::InitFromOpConf() {
-  EnrollInputBn("x", false)->set_use_header_only(true);
+  EnrollInputBn("x", false);
   EnrollOutputBn("y", false);
 }
 

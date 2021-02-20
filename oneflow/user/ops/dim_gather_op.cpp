@@ -149,7 +149,6 @@ REGISTER_USER_OP("dim_scatter_add_like")
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_arg_modifier != nullptr);
-      like_arg_modifier->set_use_header_only(true);
       like_arg_modifier->set_requires_grad(false);
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
