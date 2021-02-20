@@ -29,10 +29,9 @@ void InitConfFromEnvDesc(const EnvDesc& env_desc, CtrlConf* ctrl_conf) {
   std::map<int64_t, std::shared_ptr<CtrlConf>> rank2ctrl_conf;
   if (this_machine_id == 0) {
     std::shared_ptr<CtrlConf> ctrl_conf = std::make_shared<CtrlConf>();
-    Address addr;
-    addr.set_host(host_list_boot_strap_server->this_machine_addr());
-    addr.set_port(env_desc.ctrl_port());
-    *(ctrl_conf->mutable_ctrl_addrs()->Add()) = addr;
+    auto* addr = ctrl_conf->mutable_ctrl_addrs()->Add();
+    addr->set_host(host_list_boot_strap_server->this_machine_addr());
+    addr->set_port(env_desc.ctrl_port());
     ctrl_conf->set_rank(this_machine_id);
     CHECK(rank2ctrl_conf.emplace(ctrl_conf->rank(), ctrl_conf).second);
     for (int64_t machine_id = 1; machine_id < env_desc.TotalMachineNum(); ++machine_id) {
@@ -44,10 +43,9 @@ void InitConfFromEnvDesc(const EnvDesc& env_desc, CtrlConf* ctrl_conf) {
   } else {
     std::string key = std::string("InitCtrlConf") + std::to_string(this_machine_id);
     std::shared_ptr<CtrlConf> ctrl_conf = std::make_shared<CtrlConf>();
-    Address addr;
-    addr.set_host(host_list_boot_strap_server->this_machine_addr());
-    addr.set_port(env_desc.ctrl_port());
-    *(ctrl_conf->mutable_ctrl_addrs()->Add()) = addr;
+    auto* addr = ctrl_conf->mutable_ctrl_addrs()->Add();
+    addr->set_host(host_list_boot_strap_server->this_machine_addr());
+    addr->set_port(env_desc.ctrl_port());
     ctrl_conf->set_rank(this_machine_id);
     host_list_boot_strap_client->PushMasterKV(key, *ctrl_conf);
   }
