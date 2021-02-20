@@ -125,6 +125,14 @@ class DynamicReshapeLikeOp final : public Operator {
     EnrollOutputBn("y");
     EnrollInputBn("like", false);
   }
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    CHECK_EQ_OR_RETURN(BlobDesc4BnInOp("x")->shape().elem_cnt(),
+                       BlobDesc4BnInOp("like")->shape().elem_cnt());
+    BlobDesc4BnInOp("y")->CopyFrom(*BlobDesc4BnInOp("like"));
+    return Maybe<void>::Ok();
+  }
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override {
