@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_SIGMOID_CROSS_ENTROPY_KERNEL_H_
 #define ONEFLOW_USER_KERNELS_SIGMOID_CROSS_ENTROPY_KERNEL_H_
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/user/kernels/math_unary_elementwise_func.h"
 
 namespace oneflow {
 
@@ -23,7 +24,8 @@ template<typename PredT, typename LabelT>
 struct SigmoidCrossEntropyFunctor {
   OF_DEVICE_FUNC PredT operator()(const PredT prediction, const LabelT label) const {
     return -1.f * prediction * (label - (prediction >= 0))
-           + logf(1 + expf(prediction - 2 * prediction * (prediction >= 0)));
+           + LogFunctor<PredT>::Forward(
+                 1 + ExpFunctor<PredT>::Forward(prediction - 2 * prediction * (prediction >= 0)));
   }
 };
 
@@ -31,7 +33,7 @@ template<typename PredT, typename LabelT>
 struct SigmoidCrossEntropyGradFunctor {
   OF_DEVICE_FUNC PredT operator()(const PredT prediction, const LabelT label,
                                   const PredT loss_diff) const {
-    return loss_diff * (1.f / (1.f + expf(-prediction)) - label);
+    return loss_diff * (1.f / (1.f + ExpFunctor<PredT>::Forward(-prediction)) - label);
   }
 };
 
