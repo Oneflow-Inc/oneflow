@@ -26,8 +26,6 @@ class HostListBootStrapClient final : public BootStrapClient {
   OF_DISALLOW_COPY_AND_MOVE(HostListBootStrapClient);
   ~HostListBootStrapClient() override = default;
 
- private:
-  friend class Global<HostListBootStrapClient>;
   HostListBootStrapClient(const EnvDesc& env_desc);
 };
 

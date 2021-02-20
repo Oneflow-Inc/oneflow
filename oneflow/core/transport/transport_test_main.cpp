@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/env.pb.h"
+#include "oneflow/core/control/ctrl_conf_util.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -293,6 +294,7 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
                                     const std::string& second_machine_ip, int32_t ctrl_port) {
   EnvProto env_proto = GetEnvProto(first_machine_ip, second_machine_ip, ctrl_port);
   Global<EnvDesc>::New(env_proto);
+  InitConfFromEnvDesc(*Global<EnvDesc>::Get());
   Global<CtrlServer>::New();
   Global<CtrlClient>::New();
   int64_t this_mchn_id =
@@ -327,6 +329,7 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForEnv>::Delete();
   Global<MachineCtx>::Delete();
+  Global<CtrlConf>::Delete();
   Global<CtrlClient>::Delete();
   Global<CtrlServer>::Delete();
   Global<EnvDesc>::Delete();
