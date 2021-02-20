@@ -16,16 +16,17 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CONTROL_HOST_LIST_BOOT_STRAP_SERVER_H_
 #define ONEFLOW_CORE_CONTROL_HOST_LIST_BOOT_STRAP_SERVER_H_
 
-#include "oneflow/core/control/rpc_server.h"
+#include "oneflow/core/control/boot_strap_server.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
-class HostListBootStrapServer final : public RpcServer {
+class HostListBootStrapServer final : public BootStrapServer {
  public:
   OF_DISALLOW_COPY_AND_MOVE(HostListBootStrapServer);
-  ~HostListBootStrapServer() override {}
+  ~HostListBootStrapServer() override = default;
 
-  HostListBootStrapServer();
+  HostListBootStrapServer(const EnvDesc& env_desc);
   const std::string& this_machine_addr() { return this_machine_addr_; }
 
  private:
