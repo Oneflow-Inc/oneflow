@@ -20,25 +20,25 @@ namespace oneflow {
 
 namespace {
 
-void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
-                             const ParallelConf& parallel_conf, JobBuilder* job_builder,
-                             const LogicalBlobId& diff_lbi_of_var_out) {
-  const auto& train_conf = job_builder->job().job_conf().train_conf();
-  const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
-  user_op::UserOpConfWrapperBuilder sgd_update_op_builder(op.op_name() + "_optimizer");
+void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
+                             const std::string& model_diff_lbn, const OptimizerConf& optimizer_conf,
+                             JobBuilder* job_builder) {
+  const VariableOp* var_op = dynamic_cast<const VariableOp*>(&var_op_node.op());
+  CHECK_NOTNULL(var_op);
+  user_op::UserOpConfWrapperBuilder sgd_update_op_builder(var_op->op_name() + "_optimizer");
   sgd_update_op_builder.OpTypeName("sgd_update")
-      .Input("model", GenLogicalBlobName(op.BnInOp2Lbi("out")))
-      .Input("model_diff", GenLogicalBlobName(diff_lbi_of_var_out))
-      .Input("learning_rate", train_conf.primary_lr_lbn())
-      .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
-      .ScopeSymbolId(op.op_conf().scope_symbol_id());
+      .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
+      .Input("model_diff", model_diff_lbn)
+      .Input("learning_rate", optimizer_conf.learning_rate_lbn())
+      .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
+      .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
   SetDynamicLossScaleSkipIf(ctx, &sgd_update_op_builder);
   user_op::UserOpConfWrapper sgd_update_op = sgd_update_op_builder.Build();
-  job_builder->AddOps(parallel_conf, {sgd_update_op.op_conf()});
+  job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {sgd_update_op.op_conf()});
 }
 
 }  // namespace
 
-REGISTER_OPTIMIZER(NormalModelUpdateOpUserConf::kNaiveConf, &GenerateOptimizerOpConf);
+REGISTER_OPTIMIZER(OptimizerConf::kNaiveConf, &GenerateOptimizerOpConf);
 
 }  // namespace oneflow

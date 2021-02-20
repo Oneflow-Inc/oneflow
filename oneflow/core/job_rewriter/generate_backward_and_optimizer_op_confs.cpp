@@ -118,14 +118,14 @@ void FilterModelLbi2ModelDiffLbi(const OpGraph& op_graph,
 }
 
 void FilterCurMaintainedModelLbi2ModelDiffLbi(
-    const RepeatedPtrField<std::string>& variables,
+    const ::google::protobuf::RepeatedPtrField<std::string>& variables,
     const HashMap<LogicalBlobId, LogicalBlobId>& model_lbi2model_diff_lbi,
     HashMap<LogicalBlobId, LogicalBlobId>* cur_maintained_model_lbi2model_diff_lbi) {
-  cur_maintained_model_lbi2model_diff_lbi.clear();
+  cur_maintained_model_lbi2model_diff_lbi->clear();
   for (const std::string& variable : variables) {
     const LogicalBlobId lbi = GenLogicalBlobId(variable + "/out");
     if (model_lbi2model_diff_lbi.find(lbi) != model_lbi2model_diff_lbi.end()) {
-      cur_maintained_model_lbi2model_diff_lbi[lbi] = model_lbi2model_diff_lbi[lbi]);
+      (*cur_maintained_model_lbi2model_diff_lbi)[lbi] = model_lbi2model_diff_lbi.at(lbi);
     }
   }
 }
@@ -201,22 +201,33 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
   FilterModelLbi2ModelDiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
   old_job_builder = job_builder.get();
   job_builder = JUST(WithCalculationPassScope(kOptimizerPass, job, [&]() -> Maybe<void> {
-    CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
+    CHECK_OR_RETURN(old_job_builder
+                    == job_builder.get());  // Check this lambda never been async called
     AddDiffStaticShapeCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     AddDiffParallelCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder.get(), &model_lbi2model_diff_lbi));
     ScaleModelDiffByLossScale(ctx, op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     JUST(CountNotFiniteIfNeeded(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi));
     RegularizeGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
-    HashMap<LogicallobId, LogicalBlobId> cur_maintained_model_lbi2model_diff_lbi;
+    HashMap<LogicalBlobId, LogicalBlobId> cur_maintained_model_lbi2model_diff_lbi;
     for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
-      FilterCurMaintainedModelLbi2ModelDiffLbi(op_graph, model_lbi2model_diff_lbi,
-                                               cur_maintained_model_lbi2model_diff_lbi);
+      FilterCurMaintainedModelLbi2ModelDiffLbi(optimizer_conf.variables(), model_lbi2model_diff_lbi,
+                                               &cur_maintained_model_lbi2model_diff_lbi);
       if (optimizer_conf.has_clip_conf()) {
         ClipGradient(op_graph, job_builder.get(), &cur_maintained_model_lbi2model_diff_lbi,
                      optimizer_conf.clip_conf());
       }
-      AddOptimizerOpConf(ctx, op_graph, job_builder.get(), cur_maintained_model_lbi2model_diff_lbi);
+      op_graph.ForEachNode([&](OpNode* op_node) {
+        const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
+        if (var_op == nullptr
+            || cur_maintained_model_lbi2model_diff_lbi.find(var_op->BnInOp2Lbi(var_op->SoleObn()))
+                   == lbi2diff_lbi.end()) {
+          return;
+        }
+        const std::string& model_diff_lbn = GenLogicalBlobName(
+            cur_maintained_model_lbi2model_diff_lbi.at(var_op->BnInOp2Lbi(var_op->SoleObn())));
+        AddOptimizerOp(ctx, *op_node, model_diff_lbn, optimizer_conf, job_builder.get());
+      });
     }
     return Maybe<void>::Ok();
   }));

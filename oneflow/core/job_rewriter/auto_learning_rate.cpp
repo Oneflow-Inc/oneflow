@@ -66,16 +66,17 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
       job_builder.AddOps(parallel_conf, {schedule_op_conf});
       return GenLogicalBlobName(op_name, schedule_conf->out());
     } else {
-      const auto constant_op = user_op::UserOpConfWrapperBuilder(op_name)
-                                   .Op("constant")
-                                   .Attr<double>("floating_value", optimizer_conf.base_learning_rate())
-                                   .Attr<int64_t>("integer_value", 0)
-                                   .Attr<bool>("is_floating_value", true)
-                                   .Attr<DataType>("dtype", DataType::kFloat)
-                                   .Attr<Shape>("shape", Shape({1}))
-                                   .Output("out")
-                                   .ScopeSymbolId(op_node->op().op_conf().scope_symbol_id())
-                                   .Build();
+      const auto constant_op =
+          user_op::UserOpConfWrapperBuilder(op_name)
+              .Op("constant")
+              .Attr<double>("floating_value", optimizer_conf.base_learning_rate())
+              .Attr<int64_t>("integer_value", 0)
+              .Attr<bool>("is_floating_value", true)
+              .Attr<DataType>("dtype", DataType::kFloat)
+              .Attr<Shape>("shape", Shape({1}))
+              .Output("out")
+              .ScopeSymbolId(op_node->op().op_conf().scope_symbol_id())
+              .Build();
       job_builder.AddOps(parallel_conf, {constant_op.op_conf()});
       return constant_op.output("out", 0);
     }
