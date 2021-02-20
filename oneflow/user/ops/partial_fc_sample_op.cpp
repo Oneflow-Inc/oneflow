@@ -25,7 +25,20 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
     .Output("sampled_weight")
     .Attr<int64_t>("num_sample")
     .Attr<int64_t>("seed", -1)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const int64_t num_sample = ctx->Attr<int64_t>("num_sample");
+      const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
+      const user_op::TensorDesc* label = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      user_op::TensorDesc* sampled_weight = ctx->TensorDesc4ArgNameAndIndex("sampled_weight", 0);
+      user_op::TensorDesc* sampled_label = ctx->TensorDesc4ArgNameAndIndex("sampled_label", 0);
+      *ctx->TensorDesc4ArgNameAndIndex("mapped_label", 0) = *label;
+      *sampled_weight = *weight;
+      sampled_weight->mut_shape()->Set(0, num_sample);
+      *sampled_label = *label;
+      sampled_label->mut_shape()->Set(0, num_sample);
+      return Maybe<void>::Ok();
+    })
+    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const int64_t num_sample = ctx->Attr<int64_t>("num_sample");
       const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
       CHECK_EQ_OR_RETURN(num_sample % parallel_num, 0);
