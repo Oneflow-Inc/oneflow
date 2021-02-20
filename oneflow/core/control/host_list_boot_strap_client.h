@@ -16,18 +16,19 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CONTROL_HOST_LIST_BOOT_STRAP_CLIENT_H_
 #define ONEFLOW_CORE_CONTROL_HOST_LIST_BOOT_STRAP_CLIENT_H_
 
-#include "oneflow/core/control/rpc_client.h"
+#include "oneflow/core/control/boot_strap_client.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
-class HostListBootStrapClient final : public RpcClient {
+class HostListBootStrapClient final : public BootStrapClient {
  public:
   OF_DISALLOW_COPY_AND_MOVE(HostListBootStrapClient);
   ~HostListBootStrapClient() override = default;
 
  private:
   friend class Global<HostListBootStrapClient>;
-  HostListBootStrapClient();
+  HostListBootStrapClient(const EnvDesc& env_desc);
 };
 
 }  // namespace oneflow

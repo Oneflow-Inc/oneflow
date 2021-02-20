@@ -16,15 +16,14 @@ limitations under the License.
 #include "oneflow/core/control/host_list_boot_strap_server.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/job/profiler.h"
-#include "oneflow/core/job/env_desc.h"
 #include "grpc/grpc_posix.h"
 
 namespace oneflow {
 
-HostListBootStrapServer::HostListBootStrapServer()
-    : RpcServer(), is_first_connect_(true), this_machine_addr_("") {
+HostListBootStrapServer::HostListBootStrapServer(const EnvDesc& env_desc)
+    : BootStrapServer(), is_first_connect_(true), this_machine_addr_("") {
   Init();
-  int port = Global<EnvDesc>::Get()->ctrl_port();
+  int port = env_desc.ctrl_port();
   grpc::ServerBuilder server_builder;
   server_builder.SetMaxMessageSize(INT_MAX);
   int bound_port = 0;

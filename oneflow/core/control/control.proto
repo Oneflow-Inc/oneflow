@@ -98,9 +98,13 @@ message EraseCountRequest {
 message EraseCountResponse {
 }
 
+message Address {
+  required string addr = 1;
+  required int64 port = 2;
+}
+
 message CtrlConf {
-  repeated string ctrl_hosts = 1;
-  map<int64, int64> rank2ctrl_ports = 2;
-  required int64 world_size = 3;
-  required int64 rank = 4;
+  repeated Address ctrl_addr = 1;
+  map<int64, Address> rank2ctrl_addr = 2;
+  required int64 rank = 3;
 }
