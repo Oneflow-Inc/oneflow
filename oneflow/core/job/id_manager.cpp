@@ -19,37 +19,44 @@ limitations under the License.
 
 namespace oneflow {
 
-int64_t IDMgr::GetGpuH2DThrdId(int64_t dev_phy_id) const { return gpu_device_num_ + dev_phy_id; }
-int64_t IDMgr::GetGpuD2HThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * 2 + dev_phy_id;
-}
-int64_t IDMgr::GetGpuNcclThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * 3 + dev_phy_id;
-}
-int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * 4 + dev_phy_id;
-}
-int64_t IDMgr::GetGpuDecodeH2DThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * 5 + dev_phy_id;
-}
-int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * GetCudaWorkTypeSize() + dev_phy_id;
-}
-int64_t IDMgr::CommNetThrdId() const {
-  return gpu_device_num_ * GetCudaWorkTypeSize() + cpu_device_num_;
-}
-int64_t IDMgr::TickTockThrdId() const { return CommNetThrdId() + 1; }
-int64_t IDMgr::BaseIndependentThrdId() const { return base_independent_thrd_id_; }
-void IDMgr::UpdateBaseIndependentThrdId(int64_t val) {
-  if (val >= base_independent_thrd_id_) { base_independent_thrd_id_ = val + 1; }
+int64_t IDMgr::GetGpuComputeThrdId(int64_t dev_phy_id) const {
+  return IdUtil::GetStreamId(StreamType::kCuda, static_cast<uint32_t>(dev_phy_id),
+                             StreamIndex::Cuda::kCompute);
 }
 
-int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id) {
-  int64_t machine_thrd_id = GetMachineThrdId(machine_id, thrd_id);
-  CHECK_LT(machine_thrd_id2num_of_tasks_[machine_thrd_id],
-           (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
-  return machine_thrd_id | (machine_thrd_id2num_of_tasks_[machine_thrd_id]++);
+int64_t IDMgr::GetGpuH2DThrdId(int64_t dev_phy_id) const {
+  return IdUtil::GetStreamId(StreamType::kCuda, static_cast<uint32_t>(dev_phy_id),
+                             StreamIndex::Cuda::kH2D);
 }
+
+int64_t IDMgr::GetGpuD2HThrdId(int64_t dev_phy_id) const {
+  return IdUtil::GetStreamId(StreamType::kCuda, static_cast<uint32_t>(dev_phy_id),
+                             StreamIndex::Cuda::kD2H);
+}
+
+int64_t IDMgr::GetGpuNcclThrdId(int64_t dev_phy_id) const {
+  return IdUtil::GetStreamId(StreamType::kCuda, static_cast<uint32_t>(dev_phy_id),
+                             StreamIndex::Cuda::kNccl);
+}
+
+int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
+  return IdUtil::GetStreamId(StreamType::kCuda, static_cast<uint32_t>(dev_phy_id),
+                             StreamIndex::Cuda::kMix);
+}
+
+int64_t IDMgr::GetGpuDecodeH2DThrdId(int64_t dev_phy_id) const {
+  return IdUtil::GetStreamId(StreamType::kCuda, static_cast<uint32_t>(dev_phy_id),
+                             StreamIndex::Cuda::kDecodeH2D);
+}
+
+int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
+  return IdUtil::GetStreamId(StreamType::kCPU, static_cast<uint32_t>(dev_phy_id),
+                             StreamIndex::CPU::kCompute);
+}
+
+int64_t IDMgr::CommNetThrdId() const { return IdUtil::GetCommNetStreamId(); }
+
+int64_t IDMgr::TickTockThrdId() const { return IdUtil::GetTickTockStreamId(); }
 
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
   return StreamId{static_cast<uint32_t>(thrd_id)}.device_type();
