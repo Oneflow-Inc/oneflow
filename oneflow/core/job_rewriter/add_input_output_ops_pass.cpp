@@ -96,6 +96,8 @@ Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
         RecordScopeSymbolId(src_lbi);
       } else if (traced_lbi.find(src_lbi) == traced_lbi.end()) {
         SearchConstSrcAndTrace(src_lbi);
+      } else {
+        UNIMPLEMENTED();
       }
     }
     return Maybe<void>::Ok();

@@ -40,8 +40,6 @@ import oneflow.python.framework.runtime_mode as runtime_mode
 import oneflow.python.framework.job_instance as job_instance_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.dtype as dtype_util
-import oneflow.python.framework.config_util as config_util
-import oneflow.python.framework.check_point_v2 as check_point_v2
 from oneflow.python.oneflow_export import oneflow_export
 
 
