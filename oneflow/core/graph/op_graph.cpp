@@ -242,11 +242,11 @@ void OpNode::ConcatBlobDesc(const ParallelDesc& blob_parallel_desc,
     FOR_RANGE(int64_t, i, 1, same_blob_descs.size()) {
       CHECK(*same_blob_descs.at(i) == *same_blob_descs.at(0));
     }
-    concatenated_blob_desc->CopyAllFrom(*same_blob_descs.at(0));
+    concatenated_blob_desc->CopyFrom(*same_blob_descs.at(0));
   } else {
     FOR_RANGE(int64_t, i, 1, blob_descs.size()) { CHECK(*blob_descs.at(i) == *blob_descs.at(0)); }
     // select first BlobDesc
-    concatenated_blob_desc->CopyAllFrom(*blob_descs.at(0));
+    concatenated_blob_desc->CopyFrom(*blob_descs.at(0));
   }
 }
 
