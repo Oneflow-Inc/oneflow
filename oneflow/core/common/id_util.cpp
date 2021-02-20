@@ -100,16 +100,16 @@ DeviceType StreamId::device_type() const {
 
 uint32_t StreamId::device_index() const {
   StreamType stream_type = this->stream_type();
-  CHECK(stream_type == StreamType::kCPU || stream_type == StreamType::kCuda)
-      << "Only kCPU and kCuda stream_type support device_index()";
+  CHECK(stream_type != StreamType::kCommNet && stream_type != StreamType::kTickTock
+        && stream_type != StreamType::kIndependent)
+      << "StreamType kCommNet, kTickTock and kIndependent don't support device_index()";
   return (val_ << (kReservedBits + kLeftBits)) >> (kReservedBits + kLeftBits + kRightBits);
 }
 
 uint32_t StreamId::stream_index() const {
   StreamType stream_type = this->stream_type();
-  CHECK(stream_type == StreamType::kCPU || stream_type == StreamType::kCuda
-        || stream_type == StreamType::kIndependent)
-      << "Only kCPU, kCuda, kIndependent stream_type support stream_index()";
+  CHECK(stream_type != StreamType::kCommNet && stream_type != StreamType::kTickTock)
+      << "StreamType kCommNet and kTickTock don't support stream_index()";
   const int shift = kReservedBits + kLeftBits + kMiddleBits;
   return (val_ << shift) >> shift;
 }
@@ -117,7 +117,7 @@ uint32_t StreamId::stream_index() const {
 TaskType StreamId::task_type() const {
   StreamType stream_type = this->stream_type();
   CHECK(stream_type == StreamType::kIndependent)
-      << "Only kIndependent stream_type support task_type()";
+      << "Only StreamType::kIndependent support task_type()";
   uint32_t id = (val_ << (kReservedBits + kLeftBits)) >> (kReservedBits + kLeftBits + kRightBits);
   return static_cast<TaskType>(id);
 }
