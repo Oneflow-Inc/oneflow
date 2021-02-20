@@ -95,6 +95,10 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
 def RunTensorFlowOp(tf_op, x, tf_args):
     import tensorflow as tf
 
+    gpus = tf.config.experimental.list_physical_devices("GPU")
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
+
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(x)
         y = tf_op(x, *tf_args)
