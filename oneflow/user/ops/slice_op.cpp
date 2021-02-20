@@ -37,16 +37,6 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
 
-  const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
-  if (ctx->parallel_ctx().parallel_num() != 1 && out_sbp.has_split_parallel()) {
-    FOR_RANGE(int, i, 0, ndim) {
-      if (out_sbp.split_parallel().axis() == i) {
-        CHECK_OR_RETURN(
-            IsFullSlice(start_vec.at(i), stop_vec.at(i), step_vec.at(i), x_shape->At(i)));
-      }
-    }
-  }
-
   DimVector dim_vec(ndim);
   FOR_RANGE(size_t, i, 0, dim_vec.size()) {
     const int64_t dim_size = x_shape->At(i);

@@ -30,11 +30,6 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(NDims, kernel_size.size());
   int32_t filters = ctx->Attr<int32_t>("filters");
   size_t idx_offset = IdxOffset(data_format);
-
-  // only support data parallel
-  CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
-                  || ctx->SbpParallel4ArgNameAndIndex("weight", 0).has_broadcast_parallel());
-
   {
     const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
     auto dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");

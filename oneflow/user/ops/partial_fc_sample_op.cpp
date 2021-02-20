@@ -31,10 +31,6 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
       CHECK_EQ_OR_RETURN(num_sample % parallel_num, 0);
       const int64_t num_sample_per_rank = num_sample / parallel_num;
       const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
-      const SbpParallel& weight_sbp = ctx->SbpParallel4ArgNameAndIndex("weight", 0);
-      CHECK_OR_RETURN(
-          parallel_num == 1
-          || (weight_sbp.has_split_parallel() && weight_sbp.split_parallel().axis() == 0));
       const user_op::TensorDesc* label = ctx->TensorDesc4ArgNameAndIndex("label", 0);
       user_op::TensorDesc* sampled_weight = ctx->TensorDesc4ArgNameAndIndex("sampled_weight", 0);
       user_op::TensorDesc* sampled_label = ctx->TensorDesc4ArgNameAndIndex("sampled_label", 0);
