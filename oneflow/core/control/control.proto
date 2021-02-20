@@ -99,11 +99,11 @@ message EraseCountResponse {
 }
 
 message Address {
-  required string addr = 1;
+  required string host = 1;
   required int64 port = 2;
 }
 
 message CtrlConf {
-  repeated Address ctrl_addr = 1;
+  repeated Address ctrl_addrs = 1;
   required int64 rank = 2;
 }

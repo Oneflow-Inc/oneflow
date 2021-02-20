@@ -19,6 +19,7 @@ limitations under the License.
 #include <thread>
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/control/ctrl_conf_util.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
@@ -80,6 +81,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitGlobalCudaDeviceProp();
 #endif
   Global<EnvDesc>::New(env_proto);
+  InitConfFromEnvDesc(*Global<EnvDesc>::Get());
   Global<CtrlServer>::New();
   Global<CtrlClient>::New();
   int64_t this_mchn_id =
@@ -114,6 +116,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   CHECK_NOTNULL(Global<CtrlServer>::Get());
   CHECK_NOTNULL(Global<EnvDesc>::Get());
   Global<MachineCtx>::Delete();
+  Global<CtrlConf>::Delete();
   Global<CtrlClient>::Delete();
   Global<CtrlServer>::Delete();
   Global<EnvDesc>::Delete();

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/env.pb.h"
+#include "oneflow/core/control/ctrl_conf_util.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_util.h"
@@ -58,6 +59,7 @@ TEST(CtrlServer, new_delete) {
   if (port == -1) { return; }
   EnvProto env_proto = GetEnvProto(port);
   Global<EnvDesc>::New(env_proto);
+  InitConfFromEnvDesc(*Global<EnvDesc>::Get());
   Global<CtrlServer>::New();
   Global<CtrlClient>::New();
   int64_t this_mchn_id =
@@ -72,6 +74,7 @@ TEST(CtrlServer, new_delete) {
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForEnv>::Delete();
   Global<MachineCtx>::Delete();
+  Global<CtrlConf>::Delete();
   Global<CtrlClient>::Delete();
   Global<CtrlServer>::Delete();
   Global<EnvDesc>::Delete();
