@@ -32,7 +32,6 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     }
     RtBlobDesc rt_blob_desc(*(pair.second));
     // CHECK(!rt_blob_desc.is_dynamic());
-    CHECK(!rt_blob_desc.is_body_disabled());
     body_byte_size += rt_blob_desc.AlignedByteSizeOfBlobBody();
     *opaque_header_pod_desc.MutStructField(NewFieldId(pair.first)) = rt_blob_desc.header_pod_desc();
   }
@@ -48,11 +47,7 @@ bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& r
 }
 
 BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
-    : body_(shape, dtype),
-      is_tensor_list_(false),
-      is_body_disabled_(false),
-      is_dynamic_(false),
-      opaque_header_() {}
+    : body_(shape, dtype), is_tensor_list_(false), is_dynamic_(false), opaque_header_() {}
 
 BlobDesc::BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
 
@@ -61,7 +56,6 @@ BlobDesc::BlobDesc(const BlobDesc& other) {
   // body_.set_data_type(other.body_.data_type());
   // header_ = other.header_;
   // is_tensor_list_ = other.is_tensor_list_;
-  // is_body_disabled_ = other.is_body_disabled_;
   BlobDescProto proto;
   other.ToProto(&proto);
   InitFromProto(proto);
@@ -70,7 +64,6 @@ BlobDesc::BlobDesc(const BlobDesc& other) {
 void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   body_.InitFromProto(proto.body());
   is_tensor_list_ = proto.is_tensor_list();
-  is_body_disabled_ = proto.is_body_disabled();
   is_dynamic_ = proto.is_dynamic();
   if (proto.header_is_opaque()) {
     opaque_header_.reset(new StructPodDesc(proto.header()));
@@ -82,7 +75,6 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   body_.ToProto(proto->mutable_body());
   proto->set_is_tensor_list(is_tensor_list_);
-  proto->set_is_body_disabled(is_body_disabled_);
   proto->set_is_dynamic(is_dynamic_);
 
   if (opaque_header_) {
@@ -113,7 +105,6 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& rhs) {
-  CHECK(rhs.is_body_disabled() == false);  // prevent from misuse
   this->CopyFrom(rhs);
   return *this;
 }
@@ -122,13 +113,6 @@ void BlobDesc::CopyFrom(const BlobDesc& other) {
   BlobDescProto proto;
   other.ToProto(&proto);
   this->InitFromProto(proto);
-}
-
-// TODO(niuchong) : remove is_body_disabled from blob into register
-void BlobDesc::CopyMetaFrom(const BlobDesc& other) {
-  bool tmp = is_body_disabled_;
-  CopyFrom(other);
-  is_body_disabled_ = tmp;
 }
 
 void BlobDesc::SetOpaqueHeader(const StructPodDesc& header_pod_desc) {
@@ -145,8 +129,7 @@ void BlobDesc::set_is_dynamic(bool is_dynamic) {
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
   return (body_ == rhs.body_) && (is_tensor_list_ == rhs.is_tensor_list_)
-         && (is_body_disabled_ == rhs.is_body_disabled_) && (is_dynamic_ == rhs.is_dynamic_)
-         && (opaque_header_ == rhs.opaque_header_);
+         && (is_dynamic_ == rhs.is_dynamic_) && (opaque_header_ == rhs.opaque_header_);
 }
 
 }  // namespace oneflow

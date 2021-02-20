@@ -23,6 +23,10 @@ import tensorflow as tf
 from test_util import GenArgList
 import oneflow.typing as tp
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def compare_broadcast_like_with_tf(
     device_type, input_shape, like_shape, broadcast_axes, rtol=1e-5, atol=1e-5
