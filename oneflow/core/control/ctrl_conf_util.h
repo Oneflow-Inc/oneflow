@@ -17,10 +17,11 @@ limitations under the License.
 #define ONEFLOW_CORE_CONTROL_CTRL_CONF_UTIL_H_
 
 #include "oneflow/core/job/env_desc.h"
+#include "oneflow/core/control/control.pb.h"
 
 namespace oneflow {
 
-void InitConfFromEnvDesc(const EnvDesc& env_desc);
+void InitConfFromEnvDesc(const EnvDesc& env_desc, CtrlConf* ctrl_conf);
 
 }  // namespace oneflow
 

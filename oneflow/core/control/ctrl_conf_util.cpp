@@ -20,15 +20,13 @@ limitations under the License.
 
 namespace oneflow {
 
-void InitConfFromEnvDesc(const EnvDesc& env_desc) {
+void InitConfFromEnvDesc(const EnvDesc& env_desc, CtrlConf* ctrl_conf) {
   std::shared_ptr<HostListBootStrapServer> host_list_boot_strap_server =
       std::make_shared<HostListBootStrapServer>(env_desc);
   std::shared_ptr<HostListBootStrapClient> host_list_boot_strap_client =
       std::make_shared<HostListBootStrapClient>(env_desc);
-
   int64_t this_machine_id = env_desc.GetMachineId(host_list_boot_strap_server->this_machine_addr());
   std::map<int64_t, std::shared_ptr<CtrlConf>> rank2ctrl_conf;
-
   if (this_machine_id == 0) {
     std::shared_ptr<CtrlConf> ctrl_conf = std::make_shared<CtrlConf>();
     Address addr;
@@ -53,29 +51,25 @@ void InitConfFromEnvDesc(const EnvDesc& env_desc) {
     ctrl_conf->set_rank(this_machine_id);
     host_list_boot_strap_client->PushMasterKV(key, *ctrl_conf);
   }
-
   host_list_boot_strap_client->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
-
-  Global<CtrlConf>::New();
-  Global<CtrlConf>::Get()->set_rank(this_machine_id);
+  ctrl_conf->set_rank(this_machine_id);
   for (const auto& pair : rank2ctrl_conf) {
-    Global<CtrlConf>::Get()->mutable_ctrl_addrs()->MergeFrom(pair.second->ctrl_addrs());
+    ctrl_conf->mutable_ctrl_addrs()->MergeFrom(pair.second->ctrl_addrs());
   }
-
   if (this_machine_id == 0) {
     for (int64_t machine_id = 1; machine_id < env_desc.TotalMachineNum(); ++machine_id) {
       std::string key = std::string("BroadcastCtrlConf") + std::to_string(machine_id);
-      host_list_boot_strap_client->PushMasterKV(key, *Global<CtrlConf>::Get());
+      host_list_boot_strap_client->PushMasterKV(key, *ctrl_conf);
     }
   } else {
     std::string key = std::string("BroadcastCtrlConf") + std::to_string(this_machine_id);
-    host_list_boot_strap_client->PullMasterKV(key, Global<CtrlConf>::Get());
-    Global<CtrlConf>::Get()->set_rank(this_machine_id);
+    host_list_boot_strap_client->PullMasterKV(key, ctrl_conf);
+    ctrl_conf->set_rank(this_machine_id);
   }
-
+  host_list_boot_strap_client->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
   if (this_machine_id == 0) {
     for (const auto& pair : rank2ctrl_conf) { LOG(ERROR) << pair.second->DebugString(); }
-    LOG(ERROR) << Global<CtrlConf>::Get()->DebugString();
+    LOG(ERROR) << ctrl_conf->DebugString();
   }
 
   host_list_boot_strap_client.reset();
