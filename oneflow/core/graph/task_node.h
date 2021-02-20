@@ -56,7 +56,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   }
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
-  int64_t LocalWorkStreamId() const;
   int64_t GlobalWorkStreamId() const;
   int64_t GpuPhyId() const { return Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_); }
   virtual int64_t AreaId4ChainMerge() const { return area_id(); }
@@ -131,8 +130,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();
   void FixRegisterNumRange();
-
-  virtual int64_t AllocateLocalWorkStreamId();
 
   virtual void InferProducedDataRegstTimeShape() = 0;
   void NaiveInferProducedDataRegstTimeShape();

@@ -165,15 +165,6 @@ bool NoOutRegstConsumedByBwNode(TaskNode* node) {
   return true;
 };
 
-bool IsNonSoleKeepHeaderOnlyEdge(TaskNode* src_task, TaskNode* dst_task) {
-  if (dst_task->in_edges().size() <= 1) { return false; }
-  const auto* src_comp_task = dynamic_cast<CompTaskNode*>(src_task);
-  if (src_comp_task == nullptr) { return false; }
-  if (src_comp_task->logical_node()->op_vec().size() != 1) { return false; }
-  const auto& src_op = *src_comp_task->logical_node()->SoleOp();
-  return src_op.op_conf().has_keep_header_only_conf();
-}
-
 void CollectIgnoreTaskEdgesInFirstMergedChains(const std::vector<std::vector<TaskNode*>>& chains,
                                                HashSet<TaskEdge*>* ignore_edges) {
   auto HasGpuVariableOpInChain = [&](const std::vector<TaskNode*>& chain) -> bool {
@@ -312,7 +303,6 @@ void ChainGraph::CollectTaskNodeAncestors(const TaskGraph& task_gph,
       if (ignore_edges && ignore_edges->find(in_edge) != ignore_edges->end()) { continue; }
       TaskNode* in_node = in_edge->src_node();
       if (in_node->GetTaskType() == TaskType::kTick) { continue; }
-      if (IsNonSoleKeepHeaderOnlyEdge(in_node, node)) { continue; }
       (*node2ancestors)[node].insert(in_node);
       (*node2ancestors)[node].insert((*node2ancestors)[in_node].begin(),
                                      (*node2ancestors)[in_node].end());

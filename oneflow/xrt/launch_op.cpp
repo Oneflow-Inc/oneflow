@@ -50,7 +50,7 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
     const LogicalBlobId &lbi = this->BnInOp2Lbi(bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     BlobDesc blob_desc(this->job_desc().DefaultDataType());
-    blob_desc.CopyMetaFrom(*GetBlobDesc4BnInOp(bn));
+    blob_desc.CopyFrom(*GetBlobDesc4BnInOp(bn));
 
     const std::string &mapping_input = io_mapping.at(blob_name);
     blob_descs.emplace(mapping_input, blob_desc);

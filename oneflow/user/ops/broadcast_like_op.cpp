@@ -89,7 +89,6 @@ REGISTER_USER_OP("broadcast_like")
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_modifier != nullptr);
-      like_modifier->set_use_header_only(true);
       like_modifier->set_requires_grad(false);
     })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
