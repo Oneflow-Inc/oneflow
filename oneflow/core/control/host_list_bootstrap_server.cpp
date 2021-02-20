@@ -13,15 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/control/host_list_boot_strap_server.h"
+#include "oneflow/core/control/host_list_bootstrap_server.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/job/profiler.h"
 #include "grpc/grpc_posix.h"
 
 namespace oneflow {
 
-HostListBootStrapServer::HostListBootStrapServer(const EnvDesc& env_desc)
-    : BootStrapServer(), is_first_connect_(true), this_machine_addr_("") {
+HostListBootstrapServer::HostListBootstrapServer(const EnvDesc& env_desc)
+    : BootstrapServer(), is_first_connect_(true), this_machine_addr_("") {
   Init();
   int port = env_desc.ctrl_port();
   grpc::ServerBuilder server_builder;
@@ -34,12 +34,12 @@ HostListBootStrapServer::HostListBootStrapServer(const EnvDesc& env_desc)
   cq_ = server_builder.AddCompletionQueue();
   grpc_server_ = server_builder.BuildAndStart();
   CHECK_EQ(port, bound_port) << "Port " << port << " is unavailable";
-  LOG(INFO) << "HostListBootStrapServer listening on "
+  LOG(INFO) << "HostListBootstrapServer listening on "
             << "0.0.0.0:" + std::to_string(port);
-  loop_thread_ = std::thread(&HostListBootStrapServer::HandleRpcs, this);
+  loop_thread_ = std::thread(&HostListBootstrapServer::HandleRpcs, this);
 }
 
-void HostListBootStrapServer::OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) {
+void HostListBootstrapServer::OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) {
   if (this->is_first_connect_) {
     this->this_machine_addr_ = call->request().addr();
     this->is_first_connect_ = false;

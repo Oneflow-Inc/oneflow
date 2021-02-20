@@ -13,21 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CONTROL_BOOT_STRAP_SERVER_H_
-#define ONEFLOW_CORE_CONTROL_BOOT_STRAP_SERVER_H_
+#ifndef ONEFLOW_CORE_CONTROL_CTRL_BOOTSTRAP_H_
+#define ONEFLOW_CORE_CONTROL_CTRL_BOOTSTRAP_H_
 
-#include "oneflow/core/control/rpc_server.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/job/env_desc.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
-class BootStrapServer : public RpcServer {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BootStrapServer);
-  BootStrapServer() = default;
-  virtual ~BootStrapServer() override = default;
-};
+class CtrlConf;
+
+Maybe<void> InitCtrlConfFromEnvDesc(const EnvDesc& env_desc, CtrlConf* ctrl_conf);
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CONTROL_BOOT_STRAP_SERVER_H_
+#endif  // ONEFLOW_CORE_CONTROL_CTRL_BOOTSTRAP_H_

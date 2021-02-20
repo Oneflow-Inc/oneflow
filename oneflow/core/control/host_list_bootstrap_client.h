@@ -13,22 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CONTROL_HOST_LIST_BOOT_STRAP_CLIENT_H_
-#define ONEFLOW_CORE_CONTROL_HOST_LIST_BOOT_STRAP_CLIENT_H_
+#ifndef ONEFLOW_CORE_CONTROL_HOST_LIST_BOOTSTRAP_CLIENT_H_
+#define ONEFLOW_CORE_CONTROL_HOST_LIST_BOOTSTRAP_CLIENT_H_
 
-#include "oneflow/core/control/boot_strap_client.h"
+#include "oneflow/core/control/bootstrap_client.h"
 #include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
-class HostListBootStrapClient final : public BootStrapClient {
+class HostListBootstrapClient final : public BootstrapClient {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(HostListBootStrapClient);
-  ~HostListBootStrapClient() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(HostListBootstrapClient);
+  ~HostListBootstrapClient() override = default;
 
-  HostListBootStrapClient(const EnvDesc& env_desc);
+  HostListBootstrapClient(const EnvDesc& env_desc);
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CONTROL_HOST_LIST_BOOT_STRAP_CLIENT_H_
+#endif  // ONEFLOW_CORE_CONTROL_HOST_LIST_BOOTSTRAP_CLIENT_H_

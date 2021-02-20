@@ -13,15 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CONTROL_CTRL_CONF_UTIL_H_
-#define ONEFLOW_CORE_CONTROL_CTRL_CONF_UTIL_H_
+#ifndef ONEFLOW_CORE_CONTROL_BOOTSTRAP_SERVER_H_
+#define ONEFLOW_CORE_CONTROL_BOOTSTRAP_SERVER_H_
 
+#include "oneflow/core/control/rpc_server.h"
 #include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
-void InitConfFromEnvDesc(const EnvDesc& env_desc);
+class BootstrapServer : public RpcServer {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BootstrapServer);
+  BootstrapServer() = default;
+  virtual ~BootstrapServer() override = default;
+};
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CONTROL_CTRL_CONF_UTIL_H_
+#endif  // ONEFLOW_CORE_CONTROL_BOOTSTRAP_SERVER_H_
