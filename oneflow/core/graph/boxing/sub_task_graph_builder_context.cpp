@@ -57,7 +57,7 @@ TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, int64_t src_mem_
             GetProxyNode(src_node, src_mem_zone_id, src_node->machine_id(),
                          Global<IDMgr>::Get()->CpuMemZoneId());
         CopyCommNetTaskNode* copy_comm_net_task = task_graph()->NewNode<CopyCommNetTaskNode>();
-        copy_comm_net_task->Init(dst_machine_id, proxy_on_src_host->machine_id());
+        copy_comm_net_task->Init(dst_machine_id);
         Connect<TaskNode>(proxy_on_src_host, task_graph()->NewEdge(), copy_comm_net_task);
         node2proxies_[src_node][key] = copy_comm_net_task;
         return copy_comm_net_task;
