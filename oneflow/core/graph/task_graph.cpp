@@ -58,8 +58,7 @@ bool IsConnectToTickOp(const TaskNode* node) {
 
 bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
   const OperatorConf& op_conf = op->op_conf();
-  if (op_conf.has_variable_conf() || op_conf.has_tick_conf() || op_conf.has_device_tick_conf()
-      || op_conf.has_partial_tick_conf()) {
+  if (op_conf.has_variable_conf() || op_conf.has_tick_conf() || op_conf.has_device_tick_conf()) {
     return true;
   }
   return false;
