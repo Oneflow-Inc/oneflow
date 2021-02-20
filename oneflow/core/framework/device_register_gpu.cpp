@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
 #include "oneflow/core/framework/device_register_gpu.h"
 
+#ifdef WITH_CUDA
 namespace {
 std::string GetCudaVersionString(int version) {
   return std::to_string(version / 1000) + "." + std::to_string((version % 1000) / 10);
@@ -42,7 +42,6 @@ bool GetCudnnVersionString(std::string* version) {
              + std::to_string(version_patch);
   return true;
 }
-
 }  // namespace
 
 namespace oneflow {
