@@ -981,12 +981,12 @@ class Optimizer:
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
     ):
+        self.train_step_lbn = train_step_lbn
         if loss_scale_factor is not None:
             assert loss_scale_policy is None
             self.loss_scale_policy = StaticLossScalePolicy(loss_scale_factor)
         else:
             self.loss_scale_policy = loss_scale_policy
-        self.train_step_lbn = train_step_lbn
 
     def _AddOptimizerConfInTrainConf(self, train_conf: job_conf_pb.TrainConf) -> None:
         raise NotImplementedError()
@@ -1073,9 +1073,7 @@ class SGD(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[
-            Union[Sequence[Text], Text]
-        ] = flow.get_all_variables().keys(),
+        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1083,8 +1081,6 @@ class SGD(Optimizer):
         self.lr_scheduler = lr_scheduler
         self.grad_clipping = grad_clipping
         self.momentum = momentum
-        if not isinstance(variables, collections.abc.Sequence):
-            self.variables = [variables]
         self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
@@ -1172,9 +1168,7 @@ class SGDW(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[
-            Union[Sequence[Text], Text]
-        ] = flow.get_all_variables().keys(),
+        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1189,8 +1183,6 @@ class SGDW(Optimizer):
             weight_decay_excludes = [weight_decay_excludes]
         self.weight_decay_includes = weight_decay_includes
         self.weight_decay_excludes = weight_decay_excludes
-        if not isinstance(variables, collections.abc.Sequence):
-            self.variables = [variables]
         self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
@@ -1202,7 +1194,6 @@ class SGDW(Optimizer):
             optimizer_conf.naive_conf.SetInParent()
         else:
             optimizer_conf.momentum_conf.beta = self.momentum
-
         if self.weight_decay is not None:
             optimizer_conf.weight_decay_conf.weight_decay_rate = self.weight_decay
             assert not (
@@ -1217,7 +1208,6 @@ class SGDW(Optimizer):
                 optimizer_conf.weight_decay_conf.excludes.pattern.extend(
                     self.weight_decay_excludes
                 )
-
         optimizer_conf.variables.extend(self.variables)
 
 
@@ -1307,9 +1297,7 @@ class Adam(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[
-            Union[Sequence[Text], Text]
-        ] = flow.get_all_variables().keys(),
+        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1320,8 +1308,6 @@ class Adam(Optimizer):
         self.beta2 = beta2
         self.epsilon = epsilon
         self.do_bias_correction = do_bias_correction
-        if not isinstance(variables, collections.abc.Sequence):
-            self.variables = [variables]
         self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
@@ -1437,9 +1423,7 @@ class AdamW(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[
-            Union[Sequence[Text], Text]
-        ] = flow.get_all_variables().keys(),
+        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1457,8 +1441,6 @@ class AdamW(Optimizer):
             weight_decay_excludes = [weight_decay_excludes]
         self.weight_decay_includes = weight_decay_includes
         self.weight_decay_excludes = weight_decay_excludes
-        if not isinstance(variables, collections.abc.Sequence):
-            self.variables = [variables]
         self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
@@ -1484,7 +1466,6 @@ class AdamW(Optimizer):
                 optimizer_conf.weight_decay_conf.excludes.pattern.extend(
                     self.weight_decay_excludes
                 )
-
         optimizer_conf.variables.extend(self.variables)
 
 
@@ -1563,9 +1544,7 @@ class RMSProp(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[
-            Union[Sequence[Text], Text]
-        ] = flow.get_all_variables().keys(),
+        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1575,8 +1554,6 @@ class RMSProp(Optimizer):
         self.decay_rate = decay_rate
         self.epsilon = epsilon
         self.centered = centered
-        if not isinstance(variables, collections.abc.Sequence):
-            self.variables = [variables]
         self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
@@ -1650,9 +1627,7 @@ class LARS(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[
-            Union[Sequence[Text], Text]
-        ] = flow.get_all_variables().keys(),
+        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1662,8 +1637,6 @@ class LARS(Optimizer):
         self.momentum_beta = momentum_beta
         self.epsilon = epsilon
         self.lars_coefficient = lars_coefficient
-        if not isinstance(variables, collections.abc.Sequence):
-            self.variables = [variables]
         self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
@@ -1742,9 +1715,7 @@ class LazyAdam(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[
-            Union[Sequence[Text], Text]
-        ] = flow.get_all_variables().keys(),
+        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1754,8 +1725,6 @@ class LazyAdam(Optimizer):
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
-        if not isinstance(variables, collections.abc.Sequence):
-            self.variables = [variables]
         self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
@@ -1796,9 +1765,7 @@ class LAMB(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[
-            Union[Sequence[Text], Text]
-        ] = flow.get_all_variables().keys(),
+        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1808,8 +1775,6 @@ class LAMB(Optimizer):
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
-        if not isinstance(variables, collections.abc.Sequence):
-            self.variables = [variables]
         self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
