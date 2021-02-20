@@ -21,9 +21,9 @@ namespace {
 template<template<typename, typename> class Opt, typename PredT, typename LabelT>
 struct ElemwiseSigmoidCrossEntropyGradFunctor<DeviceType::kCPU, Opt, PredT, LabelT> final {
   void operator()(DeviceCtx* ctx, int64_t n, PredT* prediction_diff, const PredT* prediction,
-                  const LabelT* label) {
-    XPU_1D_KERNEL_LOOP(index, n) {
-      prediction_diff[index] = Opt<PredT, LabelT>()(prediction[index], label[index]);
+                  const LabelT* label, const PredT* loss_diff) {
+    FOR_RANGE(int64_t, i, 0, n) {
+      prediction_diff[i] = Opt<PredT, LabelT>()(prediction[i], label[i], loss_diff[i]);
     }
   }
 };
@@ -32,9 +32,7 @@ template<template<typename, typename> class Opt, typename PredT, typename LabelT
 struct ElemwiseSigmoidCrossEntropyFunctor<DeviceType::kCPU, Opt, PredT, LabelT> final {
   void operator()(DeviceCtx* ctx, int64_t n, PredT* loss, const PredT* prediction,
                   const LabelT* label) {
-    XPU_1D_KERNEL_LOOP(index, n) {
-      loss[index] = Opt<PredT, LabelT>()(prediction[index], label[index]);
-    }
+    FOR_RANGE(int64_t, i, 0, n) { loss[i] = Opt<PredT, LabelT>()(prediction[i], label[i]); }
   }
 };
 }  // namespace

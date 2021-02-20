@@ -40,7 +40,7 @@ REGISTER_USER_OP("sigmoid_cross_entropy")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto num_out_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0).shape().NumAxes() - 1;
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0).shape().NumAxes();
       FOR_RANGE(int64_t, i, 0, num_out_axes) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("prediction", 0), i)

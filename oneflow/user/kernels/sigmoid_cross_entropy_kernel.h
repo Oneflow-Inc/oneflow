@@ -13,11 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef _ONEFLOW_USER_KERNELS_SIGMOID_CROSS_ENTROPY_KERNEL_H_
-#define _ONEFLOW_USER_KERNELS_SIGMOID_CROSS_ENTROPY_KERNEL_H_
+#ifndef ONEFLOW_USER_KERNELS_SIGMOID_CROSS_ENTROPY_KERNEL_H_
+#define ONEFLOW_USER_KERNELS_SIGMOID_CROSS_ENTROPY_KERNEL_H_
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/ndarray/xpu_util.h"
 
 namespace oneflow {
 
@@ -31,8 +29,9 @@ struct SigmoidCrossEntropyFunctor {
 
 template<typename PredT, typename LabelT>
 struct SigmoidCrossEntropyGradFunctor {
-  OF_DEVICE_FUNC PredT operator()(const PredT prediction, const LabelT label) const {
-    return 1.f / (1.f + expf(-prediction)) - label;
+  OF_DEVICE_FUNC PredT operator()(const PredT prediction, const LabelT label,
+                                  const PredT loss_diff) const {
+    return loss_diff * (1.f / (1.f + expf(-prediction)) - label);
   }
 };
 
@@ -41,7 +40,7 @@ template<DeviceType device_type, template<typename, typename> class Opt, typenam
          typename LabelT>
 struct ElemwiseSigmoidCrossEntropyGradFunctor final {
   void operator()(DeviceCtx* ctx, int64_t n, PredT* prediction_diff, const PredT* prediction,
-                  const LabelT* label);
+                  const LabelT* label, const PredT* loss_diff);
 };
 
 template<DeviceType device_type, template<typename, typename> class Opt, typename PredT,
@@ -96,10 +95,7 @@ class SigmoidCrossEntropyGradKernel final : public user_op::OpKernel {
     const int64_t n = prediction->shape().elem_cnt();
     ElemwiseSigmoidCrossEntropyGradFunctor<device_type, Opt, PredT, LabelT>()(
         ctx->device_ctx(), n, prediction_diff->mut_dptr<PredT>(), prediction->dptr<PredT>(),
-        label->dptr<LabelT>());
-    KernelUtil<device_type, PredT>::Mul(ctx->device_ctx(), n, prediction_diff->dptr<PredT>(),
-                                        loss_diff->dptr<PredT>(),
-                                        prediction_diff->mut_dptr<PredT>());
+        label->dptr<LabelT>(), loss_diff->dptr<PredT>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -114,4 +110,4 @@ class SigmoidCrossEntropyGradKernel final : public user_op::OpKernel {
           & (user_op::HobDataType("prediction_diff", 0) == GetDataType<dtype>::value));
 
 }  // namespace oneflow
-#endif  // _ONEFLOW_USER_KERNELS_SIGMOID_CROSS_ENTROPY_KERNEL_H_
+#endif  // ONEFLOW_USER_KERNELS_SIGMOID_CROSS_ENTROPY_KERNEL_H_

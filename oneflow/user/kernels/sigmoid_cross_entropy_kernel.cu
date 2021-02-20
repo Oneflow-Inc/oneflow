@@ -22,9 +22,9 @@ namespace {
 template<template<typename, typename> class Opt, typename PredT, typename LabelT>
 struct ElemwiseSigmoidCrossEntropyGradFunctor<DeviceType::kGPU, Opt, PredT, LabelT> final {
   void operator()(DeviceCtx* ctx, int64_t n, PredT* prediction_diff, const PredT* prediction,
-                  const LabelT* label) {
-    OF_CUDA_CHECK(cuda::elementwise::Binary(Opt<PredT, LabelT>(), n, prediction_diff, prediction,
-                                            label, ctx->cuda_stream()));
+                  const LabelT* label, const PredT* loss_diff) {
+    OF_CUDA_CHECK(cuda::elementwise::Ternary(Opt<PredT, LabelT>(), n, prediction_diff, prediction,
+                                             label, loss_diff, ctx->cuda_stream()));
   }
 };
 
