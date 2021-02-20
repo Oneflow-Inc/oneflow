@@ -217,12 +217,7 @@ StreamId IdUtil::GenerateProcessTaskIndependentStreamId(ProcessId process_id, Ta
   CHECK(CheckValueInBitsRange(static_cast<uint32_t>(task_type), StreamId::kMiddleBits))
       << "task_type is out of range";
   auto key = std::make_pair(process_id, task_type);
-  if (process_independent_task_type2task_num_.find(key)
-      == process_independent_task_type2task_num_.end()) {
-    process_independent_task_type2task_num_[key] = 0;
-  }
   uint32_t& task_num = process_independent_task_type2task_num_[key];
-  task_num += 1;
   if (IsClassRegistered<int32_t, IndependentThreadNum4TaskType>(task_type)) {
     std::unique_ptr<IndependentThreadNum4TaskType> idp_thrd_num_ptr(
         NewObj<int32_t, IndependentThreadNum4TaskType>(task_type));
@@ -233,6 +228,7 @@ StreamId IdUtil::GenerateProcessTaskIndependentStreamId(ProcessId process_id, Ta
                 << (StreamId::kMiddleBits + StreamId::kRightBits);
   id |= (static_cast<uint32_t>(task_type) << StreamId::kRightBits);
   id |= static_cast<uint32_t>(task_num);
+  task_num += 1;
   return StreamId{id};
 }
 
@@ -243,16 +239,18 @@ StreamId IdUtil::GenerateCPUComputeStreamIdEvenly(ProcessId process_id) {
 
 TaskId IdUtil::GenerateTaskId(ProcessId process_id, StreamId stream_id) {
   uint64_t process_stream_key = static_cast<uint64_t>(process_id) << StreamId::kBits;
-  uint32_t& task_index_counter = process_stream2task_index_counter_[process_stream_key];
   process_stream_key |= static_cast<uint64_t>(stream_id);
-  CHECK_LT(task_index_counter++, TaskId::kRightBits) << "task_index is out of range";
-  return TaskId(process_id, stream_id, task_index_counter);
+  uint32_t task_index = process_stream2task_index_counter_[process_stream_key]++;
+  CHECK_LT(task_index++, (static_cast<uint32_t>(1) << TaskId::kRightBits) - 1)
+      << "task_index is out of range";
+  return TaskId(process_id, stream_id, task_index);
 }
 
 int64_t IdUtil::GenerateChainId(uint64_t global_stream_index) {
-  int64_t& chain_index_counter = process_stream2chain_index_counter_[global_stream_index];
-  CHECK_LT(chain_index_counter++, TaskId::kRightBits) << "chain_index is out of range";
-  return static_cast<int64_t>(global_stream_index) | chain_index_counter;
+  uint32_t chain_index = process_stream2chain_index_counter_[global_stream_index]++;
+  CHECK_LT(chain_index, (static_cast<uint32_t>(1) << TaskId::kRightBits) - 1)
+      << "chain_index is out of range";
+  return static_cast<int64_t>(global_stream_index) | static_cast<int64_t>(chain_index);
 }
 
 IdUtil::IdUtil() {
