@@ -420,8 +420,10 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
   // mzuid = memory zone unique id
   HashMap<int64_t, ChunkProto> mzuid2chunk;
 
-  auto GenMemBlock4RegstIfNeed = [&](RegstDescProto* regst_desc, int64_t job_id,
-                                     int64_t machine_id) {
+  auto GenMemBlock4RegstIfNeed = [&](RegstDescProto* regst_desc, const TaskProto* task) {
+    const int64_t job_id = task->job_id();
+    const int64_t machine_id = task->machine_id();
+    const int64_t thrd_id = task->thrd_id();
     int64_t mem_block_id = regst_desc->mem_block_id();
     int64_t mem_block_offset = regst_desc->mem_block_offset();
     CHECK_NE(mem_block_id, -1);
@@ -440,6 +442,7 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
       *(mem_block.mutable_mem_case()) = regst_desc->mem_case();
       mem_block.set_enable_reuse_mem(regst_desc->enable_reuse_mem());
       mem_block.set_mem_size(regst_main_size + mem_block_offset);
+      mem_block.set_thrd_id_hint(thrd_id);
       CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
     } else {
       MemBlockProto* mem_block = &(mem_block_id2mem_block.at(mem_block_id));
@@ -461,6 +464,7 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
           MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
       mem_block.set_enable_reuse_mem(false);
       mem_block.set_mem_size(regst_separated_size);
+      mem_block.set_thrd_id_hint(thrd_id);
       CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
     }
   };
@@ -490,7 +494,7 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task = plan->mutable_task(i);
     for (auto& pair : *task->mutable_produced_regst_desc()) {
-      GenMemBlock4RegstIfNeed(&pair.second, task->job_id(), task->machine_id());
+      GenMemBlock4RegstIfNeed(&pair.second, task);
     }
   }
 

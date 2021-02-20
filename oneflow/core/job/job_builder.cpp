@@ -81,6 +81,20 @@ const ParallelConf& JobBuilder::ParallelConf4Lbi(const LogicalBlobId& lbi) const
   return ParallelConf4OpName(lbi.op_name());
 }
 
+Maybe<void> JobBuilder::AddOp(const ParallelConf& parallel_conf, const OperatorConf& op_conf) {
+  auto* placemnt_group = job_->mutable_placement()->add_placement_group();
+  *placemnt_group->mutable_parallel_conf() = parallel_conf;
+  CHECK_OR_RETURN(op_name2op_conf_.find(op_conf.name()) == op_name2op_conf_.end());
+  OperatorConf* mut_op_conf = job_->mutable_net()->add_op();
+  *mut_op_conf = op_conf;
+  CHECK_OR_RETURN(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
+  placemnt_group->mutable_op_set()->add_op_name(op_conf.name());
+  CHECK_OR_RETURN(
+      op_name2parallel_conf_.emplace(op_conf.name(), placemnt_group->mutable_parallel_conf())
+          .second);
+  return Maybe<void>::Ok();
+}
+
 void JobBuilder::AddOps(const ParallelConf& parallel_conf,
                         const std::vector<OperatorConf>& op_confs) {
   if (op_confs.empty()) { return; }
@@ -185,6 +199,12 @@ void JobBuilder::DelOps(const std::vector<OperatorConf>& op_confs) {
   std::unordered_set<std::string> removing_names;
   for (const auto& op_conf : op_confs) { removing_names.insert(op_conf.name()); }
   RemoveOpByName(removing_names);
+}
+
+Maybe<void> JobBuilder::MutOpOnlyOnce(const OperatorConf& op_conf) {
+  CHECK_OR_RETURN(modified_op_conf_op_names_.emplace(op_conf.name()).second);
+  op_name2op_conf_.at(op_conf.name())->CopyFrom(op_conf);
+  return Maybe<void>::Ok();
 }
 
 void JobBuilder::MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs) {
