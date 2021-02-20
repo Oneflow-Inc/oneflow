@@ -105,6 +105,5 @@ message Address {
 
 message CtrlConf {
   repeated Address ctrl_addr = 1;
-  map<int64, Address> rank2ctrl_addr = 2;
-  required int64 rank = 3;
+  required int64 rank = 2;
 }
