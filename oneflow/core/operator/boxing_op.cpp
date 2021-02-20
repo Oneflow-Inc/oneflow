@@ -73,7 +73,7 @@ Maybe<void> BoxingOp::InferLogicalOutBlobDescs(
   }
 
   DimVector data_tmp_blob_shape_vec = BlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
-  InferTmpBlobDesc(BlobDesc4BnInOp, &data_tmp_blob_shape_vec);
+  InferTmpBlobDesc(BlobDesc4BnInOp, &data_tmp_blob_shape_vec, true);
 
   if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
     const BoxSplitConf& split_conf = conf.split_box();
@@ -111,7 +111,7 @@ Maybe<void> BoxingOp::InferOutBlobDescs(
   }
 
   DimVector data_tmp_blob_shape_vec = GetBlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
-  InferTmpBlobDesc(GetBlobDesc4BnInOp, &data_tmp_blob_shape_vec);
+  InferTmpBlobDesc(GetBlobDesc4BnInOp, &data_tmp_blob_shape_vec, false);
 
   if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
     const BoxSplitConf& split_conf = conf.split_box();
@@ -137,8 +137,8 @@ Maybe<void> BoxingOp::InferOutBlobDescs(
 }
 
 Maybe<void> BoxingOp::InferTmpBlobDesc(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    DimVector* data_tmp_vec_ptr) const {
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, DimVector* data_tmp_vec_ptr,
+    bool is_logical) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   if (conf.in_box_case() == BoxingOpConf::kConcatBox) {
     int32_t concat_axis = conf.concat_box().axis();
@@ -160,9 +160,11 @@ Maybe<void> BoxingOp::InferTmpBlobDesc(
   CHECK_NE_OR_RETURN(conf.out_box_case(), BoxingOpConf::OUT_BOX_NOT_SET);
   if (conf.in_box_case() == BoxingOpConf::kAddBox
       && conf.out_box_case() == BoxingOpConf::kSplitBox) {
-    BlobDesc* data_tmp_blob_desc = GetBlobDesc4BnInOp(SoleTbn());
-    data_tmp_blob_desc->mut_shape() = Shape(*data_tmp_vec_ptr);
-    data_tmp_blob_desc->set_data_type(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type());
+    if (!is_logical) {
+      BlobDesc* data_tmp_blob_desc = GetBlobDesc4BnInOp(SoleTbn());
+      data_tmp_blob_desc->mut_shape() = Shape(*data_tmp_vec_ptr);
+      data_tmp_blob_desc->set_data_type(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type());
+    }
   }
   return Maybe<void>::Ok();
 }
