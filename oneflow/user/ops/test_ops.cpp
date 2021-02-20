@@ -154,6 +154,18 @@ REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
       *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     })
+    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      int64_t out_num = ctx->Attr<int64_t>("out_num");
+      const ParallelContext& parallel_ctx = ctx->parallel_ctx();
+      BalancedSplitter bs(out_num, parallel_ctx.parallel_num());
+      *out_shape = Shape({bs.At(parallel_ctx.parallel_id()).size()});
+
+      const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+      CHECK(out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == 0);
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
+      return Maybe<void>::Ok();
+    })
     .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
       ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
       return Maybe<void>::Ok();
