@@ -21,6 +21,9 @@ class ModelLoadOp : public Operator {
  public:
   void InitFromOpConf() override;
 
+  virtual Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override;
@@ -37,6 +40,20 @@ void ModelLoadOp::InitFromOpConf() {
   CHECK(op_conf().has_model_load_conf());
   EnrollInputBn("path", false);
   EnrollRepeatedOutputBn("out", false);
+}
+
+Maybe<void> ModelLoadOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  const int64_t num_out = op_conf().model_load_conf().out().size();
+  FOR_RANGE(int64_t, i, 0, num_out) {
+    const VariableOpConf& original_variable_conf =
+        op_conf().model_load_conf().original_variable_conf(i);
+    BlobDesc* out_i = BlobDesc4BnInOp(GenRepeatedBn("out", i));
+    out_i->mut_shape() = Shape(original_variable_conf.shape());
+    out_i->set_data_type(original_variable_conf.data_type());
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> ModelLoadOp::InferOutBlobDescs(
