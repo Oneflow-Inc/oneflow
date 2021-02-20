@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 
 void EsacCompTaskNode::ConsumeAllRegsts() {
-  const std::shared_ptr<Operator> op = logical_node()->SoleOp();
+  const std::shared_ptr<const Operator> op = logical_node()->SoleOp();
   HashMap<LogicalBlobId, int64_t> lbi2ibn_id;
   FOR_RANGE(int64_t, ibn_id, 0, op->input_bns().size()) {
     CHECK(lbi2ibn_id.emplace(op->BnInOp2Lbi(GenRepeatedBn("in", ibn_id)), ibn_id).second);
