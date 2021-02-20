@@ -73,6 +73,11 @@ void InitConfFromEnvDesc(const EnvDesc& env_desc) {
     Global<CtrlConf>::Get()->set_rank(this_machine_id);
   }
 
+  if (this_machine_id == 0) {
+    for (const auto& pair : rank2ctrl_conf) { LOG(ERROR) << pair.second->DebugString(); }
+    LOG(ERROR) << Global<CtrlConf>::Get()->DebugString();
+  }
+
   host_list_boot_strap_client.reset();
   host_list_boot_strap_server.reset();
 }
