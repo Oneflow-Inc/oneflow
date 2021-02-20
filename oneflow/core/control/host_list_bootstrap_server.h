@@ -13,20 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CONTROL_HOST_LIST_BOOT_STRAP_SERVER_H_
-#define ONEFLOW_CORE_CONTROL_HOST_LIST_BOOT_STRAP_SERVER_H_
+#ifndef ONEFLOW_CORE_CONTROL_HOST_LIST_BOOTSTRAP_SERVER_H_
+#define ONEFLOW_CORE_CONTROL_HOST_LIST_BOOTSTRAP_SERVER_H_
 
-#include "oneflow/core/control/boot_strap_server.h"
+#include "oneflow/core/control/bootstrap_server.h"
 #include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
-class HostListBootStrapServer final : public BootStrapServer {
+class HostListBootstrapServer final : public BootstrapServer {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(HostListBootStrapServer);
-  ~HostListBootStrapServer() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(HostListBootstrapServer);
+  ~HostListBootstrapServer() override = default;
 
-  HostListBootStrapServer(const EnvDesc& env_desc);
+  HostListBootstrapServer(const EnvDesc& env_desc);
   const std::string& this_machine_addr() { return this_machine_addr_; }
 
  private:
@@ -38,4 +38,4 @@ class HostListBootStrapServer final : public BootStrapServer {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CONTROL_HOST_LIST_BOOT_STRAP_SERVER_H_
+#endif  // ONEFLOW_CORE_CONTROL_HOST_LIST_BOOTSTRAP_SERVER_H_

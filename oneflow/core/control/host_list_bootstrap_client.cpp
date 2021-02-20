@@ -13,24 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CONTROL_BOOT_STRAP_CLIENT_H_
-#define ONEFLOW_CORE_CONTROL_BOOT_STRAP_CLIENT_H_
-
-#include "oneflow/core/control/rpc_client.h"
+#include "oneflow/core/control/host_list_bootstrap_client.h"
 #include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
-class BootStrapClient : public RpcClient {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BootStrapClient);
-  virtual ~BootStrapClient() override = default;
-
- protected:
-  friend class Global<BootStrapClient>;
-  BootStrapClient() = default;
-};
+HostListBootstrapClient::HostListBootstrapClient(const EnvDesc& env_desc) {
+  stubs_.reserve(env_desc.TotalMachineNum());
+  int32_t port = -1;
+  std::string addr = "";
+  for (int64_t i = 0; i < env_desc.TotalMachineNum(); ++i) {
+    const Machine& mchn = env_desc.machine(i);
+    port = (mchn.ctrl_port_agent() != -1) ? (mchn.ctrl_port_agent()) : env_desc.ctrl_port();
+    addr = mchn.addr() + ":" + std::to_string(port);
+    stubs_.push_back(CtrlService::NewStub(addr));
+    LoadServer(mchn.addr(), stubs_[i].get());
+  }
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_CONTROL_BOOT_STRAP_CLIENT_H_
