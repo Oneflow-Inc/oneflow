@@ -42,7 +42,6 @@ REGISTER_CPU_ONLY_USER_OP("OneRecReader")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int32_t batch_size = ctx->Attr<int32_t>("batch_size");
-      const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       *out_tensor->mut_shape() = Shape({batch_size});
       *out_tensor->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
