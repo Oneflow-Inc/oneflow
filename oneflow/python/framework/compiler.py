@@ -32,7 +32,6 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.typing as oft
 import oneflow.python.framework.typing_util as oft_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
 import typing
@@ -43,7 +42,7 @@ import inspect
 
 def Compile(session, function_desc, config_proto):
     with InterpretScope(session, function_desc, config_proto):
-        _CompileJob(function_desc)
+        _CompileJob(session, function_desc)
         oneflow_api.CurJobBuildAndInferCtx_Complete()
 
 
@@ -82,7 +81,7 @@ def InterpretScope(session, function_desc, config_proto):
                 yield
 
 
-def _CompileJob(function_desc):
+def _CompileJob(session, function_desc):
     func = function_desc.job_func
     parameters = func.__oneflow_function_signature__.parameters
     if len(parameters) == 0:
@@ -104,6 +103,7 @@ def _CompileJob(function_desc):
     func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(
         ret, allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
     )
+    session.StashJob(func.__name__)
 
 
 def _InterpretGlobalFunction(function_desc, args):
