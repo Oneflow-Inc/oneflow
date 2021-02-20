@@ -26,6 +26,9 @@ class UniqueWithCountsOp final : public Operator {
   ~UniqueWithCountsOp() override = default;
 
   void InitFromOpConf() override;
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override;
@@ -56,6 +59,27 @@ void UniqueWithCountsOp::InitFromOpConf() {
   EnrollOutputBn("count", false);
   EnrollOutputBn("num_unique", false);
   EnrollTmpBn("workspace");
+}
+
+Maybe<void> UniqueWithCountsOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  const BlobDesc* x = BlobDesc4BnInOp("x");
+  CHECK_EQ_OR_RETURN(x->shape().NumAxes(), 1);
+  BlobDesc* y = BlobDesc4BnInOp("y");
+  *y = *x;
+  const DataType idx_data_type = op_conf().unique_with_counts_conf().out_idx();
+  CHECK(IsIndexDataType(idx_data_type));
+  BlobDesc* idx = BlobDesc4BnInOp("idx");
+  *idx = *x;
+  idx->set_data_type(idx_data_type);
+  BlobDesc* count = BlobDesc4BnInOp("count");
+  *count = *x;
+  count->set_data_type(idx_data_type);
+  BlobDesc* num_unique = BlobDesc4BnInOp("num_unique");
+  num_unique->mut_shape() = Shape({1});
+  num_unique->set_data_type(idx_data_type);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> UniqueWithCountsOp::InferOutBlobDescs(
