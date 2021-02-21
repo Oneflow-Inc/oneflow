@@ -828,7 +828,16 @@ Maybe<void> InferOpSbpSignature(Operator* op, const SbpSignature& sbp_sig_conf,
     // NOTE(chengcheng): disable split when logical shape cannot split
     if (sbp_parallel.has_split_parallel()) {
       const int64_t axis = sbp_parallel.split_parallel().axis();
-      CHECK(axis >= 0 && axis < logical_shape.NumAxes());
+      if (axis >= logical_shape.NumAxes() || axis < 0) {
+        // NOTE(chengcheng): some Op's GetSbpSign is wrong. but there just ignore this err.
+        if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+          std::cout << "WARNING: The sbp sign is Error because of the split axis > shape num axes."
+                    << "\n In op: [" << op->op_name() << "] ibn: (" << ibn
+                    << ") the split axis is = " << axis
+                    << " . And the logical_shape = " << logical_shape.DebugStr() << "\n\n";
+        }
+        return 10000;
+      }
       if (logical_shape.At(axis) < parallel_desc.parallel_num()) {
         // NOTE(chengcheng): cannot split at this axis!
         return 10000;
