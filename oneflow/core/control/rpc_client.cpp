@@ -47,14 +47,6 @@ class ClientCall final {
 
 }  // namespace
 
-RpcClient::~RpcClient() {
-  {
-    std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
-    need_heartbeat_thread_stop_ = true;
-  }
-  heartbeat_thread_.join();
-}
-
 void RpcClient::Barrier(const std::string& barrier_name) {
   // TODO(hanbinbin): depend world_size of Global<CtrlConf>
   Barrier(barrier_name, Global<EnvDesc>::Get()->TotalMachineNum());
