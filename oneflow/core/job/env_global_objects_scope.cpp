@@ -19,7 +19,6 @@ limitations under the License.
 #include <thread>
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
@@ -117,7 +116,6 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
   Global<CtrlServer>::Delete();
-  Global<CtrlConf>::Delete();
   Global<EnvDesc>::Delete();
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();

@@ -82,7 +82,7 @@ Maybe<void> HostListCtrlBootstrap::InitCtrlConf(CtrlConf* ret_ctrl_conf) {
 
   bootstrap_client_->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
 
-  LOG(ERROR) << "\n" << ret_ctrl_conf->DebugString();
+  LOG(INFO) << "\n" << ret_ctrl_conf->DebugString();
   return Maybe<void>::Ok();
 }
 
