@@ -65,4 +65,5 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi",
         &JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi);
   m.def("JobBuildAndInferCtx_CheckLbnValidAndExist", &JobBuildAndInferCtx_CheckLbnValidAndExist);
+  m.def("JobBuildAndInferCtx_GetOpBlobLbn", &JobBuildAndInferCtx_GetOpBlobLbn);
 }
