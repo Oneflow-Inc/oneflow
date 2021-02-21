@@ -35,4 +35,4 @@ struct IsFloat16<half> : std::true_type {};
 REGISTER_DEVICE(DeviceType::kGPU).SetDumpVersionInfoFn(GpuDumpVersionInfo).SetDeviceTag("gpu");
 #endif  // WITH_CUDA
 }  // namespace oneflow
-#endif // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_GPU_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_GPU_H_
