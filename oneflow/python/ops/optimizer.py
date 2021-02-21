@@ -17,14 +17,29 @@ from __future__ import absolute_import
 
 import collections.abc
 import traceback
-from typing import Optional, Union, Sequence, Text
+from typing import Optional, Union, Sequence, Text, Callable
 
 import oneflow as flow
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.job.learning_rate_schedule_conf_pb2 as learning_rate_schedule_conf_pb
 import oneflow_api
+
+
+@oneflow_export("get_trainable_variables_for_job")
+def GetTrainableVariablesForJob(job_name: Text) -> Sequence[Text]:
+    sess = session_ctx.GetDefaultSession()
+    assert sess.status is session_ctx.SessionStatus.OPEN, "Wrong stage to call the API"
+    return sess.job_name2var_name2var_blob_[job_name].keys()
+
+
+@oneflow_export("get_trainable_variables_for_current_job")
+def GetTrainableVariablesForCurrentJob() -> Sequence[Text]:
+    return GetTrainableVariablesForJob(
+        oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+    )
 
 
 class ClipGradientConf:
@@ -1073,7 +1088,7 @@ class SGD(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
+        variables: Optional[Union[Sequence[Text], Callable]] = GetTrainableVariablesForCurrentJob,
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1081,7 +1096,10 @@ class SGD(Optimizer):
         self.lr_scheduler = lr_scheduler
         self.grad_clipping = grad_clipping
         self.momentum = momentum
-        self.variables = list(variables)
+        if variables is Callable:
+            self.variables = variables()
+        else:
+            self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1168,7 +1186,7 @@ class SGDW(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
+        variables: Optional[Union[Sequence[Text], Callable]] = GetTrainableVariablesForCurrentJob,
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1183,7 +1201,10 @@ class SGDW(Optimizer):
             weight_decay_excludes = [weight_decay_excludes]
         self.weight_decay_includes = weight_decay_includes
         self.weight_decay_excludes = weight_decay_excludes
-        self.variables = list(variables)
+        if variables is Callable:
+            self.variables = variables()
+        else:
+            self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1297,7 +1318,7 @@ class Adam(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
+            variables: Optional[Union[Sequence[Text], Callable]] = GetTrainableVariablesForCurrentJob,
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1308,7 +1329,11 @@ class Adam(Optimizer):
         self.beta2 = beta2
         self.epsilon = epsilon
         self.do_bias_correction = do_bias_correction
-        self.variables = list(variables)
+        if variables is Callable:
+            self.variables = variables()
+        else:
+            self.variables = list(variables)
+
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1423,7 +1448,7 @@ class AdamW(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
+        variables: Optional[Union[Sequence[Text], Callable]] = GetTrainableVariablesForCurrentJob,
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1441,7 +1466,11 @@ class AdamW(Optimizer):
             weight_decay_excludes = [weight_decay_excludes]
         self.weight_decay_includes = weight_decay_includes
         self.weight_decay_excludes = weight_decay_excludes
-        self.variables = list(variables)
+        if variables is Callable:
+            self.variables = variables()
+        else:
+            self.variables = list(variables)
+
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1544,7 +1573,7 @@ class RMSProp(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
+            variables: Optional[Union[Sequence[Text], Callable]] = GetTrainableVariablesForCurrentJob,
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1554,7 +1583,11 @@ class RMSProp(Optimizer):
         self.decay_rate = decay_rate
         self.epsilon = epsilon
         self.centered = centered
-        self.variables = list(variables)
+        if variables is Callable:
+            self.variables = variables()
+        else:
+            self.variables = list(variables)
+
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1627,7 +1660,7 @@ class LARS(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
+        variables: Optional[Union[Sequence[Text], Callable]] = GetTrainableVariablesForCurrentJob,
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1637,7 +1670,10 @@ class LARS(Optimizer):
         self.momentum_beta = momentum_beta
         self.epsilon = epsilon
         self.lars_coefficient = lars_coefficient
-        self.variables = list(variables)
+        if variables is Callable:
+            self.variables = variables()
+        else:
+            self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1715,7 +1751,7 @@ class LazyAdam(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
+        variables: Optional[Union[Sequence[Text], Callable]] = GetTrainableVariablesForCurrentJob,
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1725,7 +1761,10 @@ class LazyAdam(Optimizer):
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
-        self.variables = list(variables)
+        if variables is Callable:
+            self.variables = variables()
+        else:
+            self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1765,7 +1804,7 @@ class LAMB(Optimizer):
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
-        variables: Optional[Sequence[Text]] = flow.get_all_variables().keys(),
+        variables: Optional[Union[Sequence[Text], Callable]] = GetTrainableVariablesForCurrentJob,
     ):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
@@ -1775,7 +1814,11 @@ class LAMB(Optimizer):
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
-        self.variables = list(variables)
+        if variables is Callable:
+            self.variables = variables()
+        else:
+            self.variables = list(variables)
+
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1815,7 +1858,7 @@ class CombinedOptimizer(Optimizer):
                 optimizer.loss_scale_policy is None
             ), "Only one loss scale policy among multi optimizers"
 
-        all_variables = set(flow.get_all_variables())
+        all_variables = set(GetTrainableVariablesForCurrentJob())
         union_set = {}
         inter_set = all_variables
         for optimizer in self.optimizers:
