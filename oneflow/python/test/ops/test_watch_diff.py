@@ -19,7 +19,6 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
