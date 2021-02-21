@@ -20,25 +20,34 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> InitCtrlConfFromEnvDesc(const EnvDesc& env_desc, CtrlConf* ret_ctrl_conf) {
-  HostListBootstrapServer bootstrap_server(env_desc);
-  HostListBootstrapClient bootstrap_client(env_desc);
-  bootstrap_client.Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
-  int64_t this_machine_id = env_desc.GetMachineId(bootstrap_server.this_machine_addr());
+HostListCtrlBootstrap::~HostListCtrlBootstrap() {
+  bootstrap_client_.reset();
+  bootstrap_server_.reset();
+}
+
+HostListCtrlBootstrap::HostListCtrlBootstrap(const EnvDesc& env_desc)
+    : CtrlBootstrap(), env_desc_(env_desc.env_proto()) {
+  bootstrap_server_.reset(new HostListBootstrapServer(env_desc));
+  bootstrap_client_.reset(new HostListBootstrapClient(env_desc));
+}
+
+Maybe<void> HostListCtrlBootstrap::InitCtrlConf(CtrlConf* ret_ctrl_conf) {
+  bootstrap_client_->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
+  int64_t this_machine_id = env_desc_.GetMachineId(bootstrap_server_->this_machine_addr());
   std::vector<CtrlConf> rank2ctrl_conf;
   if (this_machine_id == 0) {
     CtrlConf ctrl_conf;
     {
       Address* addr = ctrl_conf.mutable_ctrl_addr()->Add();
-      addr->set_host(bootstrap_server.this_machine_addr());
-      addr->set_port(env_desc.ctrl_port());
+      addr->set_host(bootstrap_server_->this_machine_addr());
+      addr->set_port(env_desc_.ctrl_port());
       ctrl_conf.set_rank(this_machine_id);
       rank2ctrl_conf.push_back(ctrl_conf);
     }
-    for (int64_t machine_id = 1; machine_id < env_desc.TotalMachineNum(); ++machine_id) {
+    for (int64_t machine_id = 1; machine_id < env_desc_.TotalMachineNum(); ++machine_id) {
       std::string key = std::string("GetCtrlConf") + std::to_string(machine_id);
       CtrlConf cur_ctrl_conf;
-      bootstrap_client.PullMasterKV(key, &cur_ctrl_conf);
+      bootstrap_client_->PullMasterKV(key, &cur_ctrl_conf);
       CHECK_EQ_OR_RETURN(machine_id, rank2ctrl_conf.size());
       CHECK_EQ_OR_RETURN(machine_id, cur_ctrl_conf.rank());
       rank2ctrl_conf.push_back(cur_ctrl_conf);
@@ -48,12 +57,12 @@ Maybe<void> InitCtrlConfFromEnvDesc(const EnvDesc& env_desc, CtrlConf* ret_ctrl_
     CtrlConf cur_ctrl_conf;
     cur_ctrl_conf.set_rank(this_machine_id);
     Address* addr = cur_ctrl_conf.mutable_ctrl_addr()->Add();
-    addr->set_host(bootstrap_server.this_machine_addr());
-    addr->set_port(env_desc.ctrl_port());
-    bootstrap_client.PushMasterKV(key, cur_ctrl_conf);
+    addr->set_host(bootstrap_server_->this_machine_addr());
+    addr->set_port(env_desc_.ctrl_port());
+    bootstrap_client_->PushMasterKV(key, cur_ctrl_conf);
   }
 
-  bootstrap_client.Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
+  bootstrap_client_->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
 
   if (this_machine_id == 0) {
     ret_ctrl_conf->set_rank(this_machine_id);
@@ -61,17 +70,17 @@ Maybe<void> InitCtrlConfFromEnvDesc(const EnvDesc& env_desc, CtrlConf* ret_ctrl_
       CHECK_EQ_OR_RETURN(ctrl_conf.ctrl_addr_size(), 1);
       *ret_ctrl_conf->mutable_ctrl_addr()->Add() = ctrl_conf.ctrl_addr(0);
     }
-    for (int64_t machine_id = 1; machine_id < env_desc.TotalMachineNum(); ++machine_id) {
+    for (int64_t machine_id = 1; machine_id < env_desc_.TotalMachineNum(); ++machine_id) {
       std::string key = std::string("BroadcastCtrlConf") + std::to_string(machine_id);
-      bootstrap_client.PushMasterKV(key, *ret_ctrl_conf);
+      bootstrap_client_->PushMasterKV(key, *ret_ctrl_conf);
     }
   } else {
     std::string key = std::string("BroadcastCtrlConf") + std::to_string(this_machine_id);
-    bootstrap_client.PullMasterKV(key, ret_ctrl_conf);
+    bootstrap_client_->PullMasterKV(key, ret_ctrl_conf);
     ret_ctrl_conf->set_rank(this_machine_id);
   }
 
-  bootstrap_client.Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
+  bootstrap_client_->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
 
   LOG(ERROR) << "\n" << ret_ctrl_conf->DebugString();
   return Maybe<void>::Ok();
