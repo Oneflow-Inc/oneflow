@@ -358,6 +358,7 @@ foreach(item ${DEVICE_REGISTER_HEADERS})
     file(APPEND ${AUTO_GEN_DEV_REG_HEADER} "#include \"${rel_item}\"\n")
 endforeach()
 file(APPEND ${AUTO_GEN_DEV_REG_HEADER} "\n")
+list(APPEND PROTO_HDRS ${AUTO_GEN_DEV_REG_HEADER})
 
 copy_files("${PROTO_HDRS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 copy_files("${CFG_HRCS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
