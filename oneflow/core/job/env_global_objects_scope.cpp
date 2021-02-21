@@ -123,6 +123,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
   Global<CtrlServer>::Delete();
+  Global<CtrlConf>::Delete();
   Global<EnvDesc>::Delete();
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();
