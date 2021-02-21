@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/framework/device_registry_manager.h"
 
 namespace oneflow {
 

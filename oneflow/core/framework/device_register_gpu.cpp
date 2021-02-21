@@ -16,6 +16,9 @@ limitations under the License.
 #include "oneflow/core/framework/device_register_gpu.h"
 
 #ifdef WITH_CUDA
+#include <cuda_runtime.h>
+#include <cudnn.h>
+#include <nccl.h>
 namespace {
 std::string GetCudaVersionString(int version) {
   return std::to_string(version / 1000) + "." + std::to_string((version % 1000) / 10);
