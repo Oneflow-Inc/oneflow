@@ -27,7 +27,14 @@ for gpu in gpus:
 
 
 def compare_multi_optimizer_with_tensorflow(
-    device_type, x_shape, momentum, learning_rate, train_iters
+    device_type,
+    var1_shape,
+    var2_shape,
+    var3_shape,
+    sgd_opt_args,
+    rmsprop_opt_args,
+    adam_opt_args,
+    train_iters,
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -35,85 +42,120 @@ def compare_multi_optimizer_with_tensorflow(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(type="train", function_config=func_config)
-    def testMultiSGD():
+    def TestMultiOptimizerJob():
         with flow.scope.placement(device_type, "0:0-0"):
-            x = flow.get_variable(
-                name="x",
-                shape=x_shape,
+            var1 = flow.get_variable(
+                name="var1",
+                shape=var1_shape,
                 dtype=flow.float32,
                 initializer=flow.random_uniform_initializer(minval=0, maxval=100),
                 trainable=True,
             )
-            y = flow.get_variable(
-                name="y",
-                shape=x_shape,
+            var2 = flow.get_variable(
+                name="var2",
+                shape=var2_shape,
                 dtype=flow.float32,
                 initializer=flow.random_uniform_initializer(minval=0, maxval=100),
                 trainable=True,
             )
-            loss = flow.math.reduce_sum(x + y)
-            opt1 = flow.optimizer.SGD(
-                flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
-                momentum=momentum,
-                variables=["x"],
+            var3 = flow.get_variable(
+                name="var3",
+                shape=var3_shape,
+                dtype=flow.float32,
+                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
+                trainable=True,
             )
-            opt2 = flow.optimizer.SGD(
-                flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
-                momentum=momentum,
-                variables=["y"],
+            loss = flow.math.reduce_sum(var1 + var2 + var3)
+            sgd_opt = flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [sgd_opt_args["lr"]]),
+                momentum=sgd_opt_args["momentum"],
+                variables=["var1"],
             )
-            flow.optimizer.CombinedOptimizer([opt1, opt2]).minimize(loss)
-            return (x, y)
+            rmsprop_opt = flow.optimizer.RMSProp(
+                flow.optimizer.PiecewiseConstantScheduler([], [rmsprop_opt_args["lr"]]),
+                decay_rate=rmsprop_opt_args["decay_rate"],
+                epsilon=0,
+                centered=rmsprop_opt_args["centered"],
+                variables=["var2"],
+            )
+            adam_opt = flow.optimizer.Adam(
+                flow.optimizer.PiecewiseConstantScheduler([], [adam_opt_args["lr"]]),
+                beta1=adam_opt_args["beta1"],
+                beta2=adam_opt_args["beta2"],
+                epsilon=adam_opt_args["epsilon"],
+                do_bias_correction=True,
+                variables=["var3"],
+            )
+            flow.optimizer.CombinedOptimizer([sgd_opt, rmsprop_opt, adam_opt]).minimize(
+                loss
+            )
+            return (var1, var2, var3)
 
-    init_x = None
-    init_y = None
-    x = None
-    y = None
+    init_var1 = None
+    init_var2 = None
+    init_var3 = None
     for i in range(train_iters + 1):
-        x, y = testMultiSGD().get()
+        var1, var2, var3 = TestMultiOptimizerJob().get()
         if i == 0:
-            init_x = np.copy(x.numpy())
-            init_y = np.copy(y.numpy())
+            init_var1 = np.copy(var1.numpy())
+            init_var2 = np.copy(var2.numpy())
+            init_var3 = np.copy(var3.numpy())
 
-    var_x = tf.Variable(init_x)
-    var_y = tf.Variable(init_y)
-    opt1 = tf.keras.optimizers.SGD(
-        learning_rate=learning_rate, momentum=momentum, nesterov=False
+    tf_var1 = tf.Variable(init_var1)
+    tf_var2 = tf.Variable(init_var2)
+    tf_var3 = tf.Variable(init_var3)
+    tf_sgd_opt = tf.keras.optimizers.SGD(
+        learning_rate=sgd_opt_args["lr"],
+        momentum=sgd_opt_args["momentum"],
+        nesterov=False,
     )
-    opt2 = tf.keras.optimizers.SGD(
-        learning_rate=learning_rate, momentum=momentum, nesterov=False
+    tf_rmsprop_opt = tf.keras.optimizers.RMSprop(
+        learning_rate=rmsprop_opt_args["lr"],
+        rho=rmsprop_opt_args["decay_rate"],
+        momentum=0.0,
+        epsilon=0,
+        centered=rmsprop_opt_args["centered"],
+    )
+    tf_adam_opt = tf.keras.optimizers.Adam(
+        learning_rate=adam_opt_args["lr"],
+        beta_1=adam_opt_args["beta1"],
+        beta_2=adam_opt_args["beta2"],
+        epsilon=adam_opt_args["epsilon"],
+        amsgrad=False,
     )
 
     for i in range(train_iters):
         with tf.GradientTape(persistent=True) as tape:
-            loss = tf.math.reduce_sum(var_x + var_y)
+            loss = tf.math.reduce_sum(tf_var1 + tf_var2 + tf_var3)
 
-        grad_x = tape.gradient([loss], var_x)
-        grad_y = tape.gradient([loss], var_y)
+        tf_var1_grad = tape.gradient([loss], tf_var1)
+        tf_var2_grad = tape.gradient([loss], tf_var2)
+        tf_var3_grad = tape.gradient([loss], tf_var3)
 
-        opt1.apply_gradients([(grad_x, var_x)])
-        opt2.apply_gradients([(grad_y, var_y)])
+        tf_sgd_opt.apply_gradients([(tf_var1_grad, tf_var1)])
+        tf_rmsprop_opt.apply_gradients([(tf_var2_grad, tf_var2)])
+        tf_adam_opt.apply_gradients([(tf_var3_grad, tf_var3)])
 
-    print(x.numpy())
-    print(x.numpy())
-    print(var_x.numpy())
-    print(var_y.numpy())
-
-    print(x.flatten() - var_x.numpy().flatten())
-    print(y.flatten() - var_y.numpy().flatten())
-
-    assert np.allclose(x.flatten(), var_x.numpy().flatten(), rtol=1e-4, atol=1e-4,)
-    assert np.allclose(y.flatten(), var_y.numpy().flatten(), rtol=1e-4, atol=1e-4,)
+    assert np.allclose(var1.flatten(), tf_var1.numpy().flatten(), rtol=1e-4, atol=1e-4,)
+    assert np.allclose(var2.flatten(), tf_var2.numpy().flatten(), rtol=5e-3, atol=5e-3,)
+    assert np.allclose(var3.flatten(), tf_var3.numpy().flatten(), rtol=1e-4, atol=1e-4,)
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestOptimizers(flow.unittest.TestCase):
-    def test_multi_sgd(test_case):
+class TestMultiOptimizer(flow.unittest.TestCase):
+    def test_multi_optimizer(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["x_shape"] = [(10,)]
-        arg_dict["momentum"] = [0.0, 0.9]
-        arg_dict["learning_rate"] = [1]
+        arg_dict["var1_shape"] = [(10,)]
+        arg_dict["var2_shape"] = [(10,)]
+        arg_dict["var3_shape"] = [(10,)]
+        arg_dict["sgd_opt_args"] = [{"lr": 1, "momentum": 0.9}]
+        arg_dict["rmsprop_opt_args"] = [
+            {"lr": 0.5, "decay_rate": 0.9, "centered": False}
+        ]
+        arg_dict["adam_opt_args"] = [
+            {"lr": 2, "beta1": 0.9, "beta2": 0.99, "epsilon": 1e-9}
+        ]
         arg_dict["train_iters"] = [10]
         for arg in GenArgList(arg_dict):
             compare_multi_optimizer_with_tensorflow(*arg)
