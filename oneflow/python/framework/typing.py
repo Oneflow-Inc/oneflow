@@ -44,7 +44,7 @@ class Numpy(PyStructCompatibleToBlob):
 
     def Placeholder(shape: Sequence[int], dtype=dtype_util.float):
         """`Numpy.Placeholder` is a typing function for numpy input of a OneFlow global function.
-        A `numpy.ndarray` takes a `Numpy.Placeholder`'s place must have a identical shape.
+        A `numpy.ndarray` takes a `Numpy.Placeholder`'s place must have an identical shape.
         For instance::
 
             @oneflow.global_function()
