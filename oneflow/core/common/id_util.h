@@ -270,7 +270,7 @@ class IdUtil {
   // HashMap<DeviceType, uint32_t> device_type2device_num_;
   uint32_t cpu_device_num_;
   // independent generator state: map of task_type to task_num
-  HashMap<std::pair<ProcessId, TaskType>, uint32_t> process_independent_task_type2task_num_;
+  HashMap<std::pair<ProcessId, TaskType>, uint32_t> process_task_type2task_index_counter_;
   // task id generator state: map of process stream to task_index counter
   HashMap<uint64_t, uint32_t> process_stream2task_index_counter_;
   // cpu compute stream_id generator state: map of process_id to cpu device_index counter
