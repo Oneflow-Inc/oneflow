@@ -1024,6 +1024,7 @@ class Optimizer:
             flow.losses.add_loss(x)
         # TODO: remove later
         from google.protobuf import text_format
+
         f = open("/tmp/train_conf.txt", "w")
         f.write(text_format.MessageToString(self.train_conf))
         f.close()
