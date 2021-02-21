@@ -27,6 +27,7 @@ class EnvDesc final {
   explicit EnvDesc(const EnvProto& env_proto) : env_proto_(env_proto) {}
   ~EnvDesc() = default;
 
+  const EnvProto& env_proto() const { return env_proto_; }
   size_t TotalMachineNum() const { return env_proto_.machine().size(); }
   const Machine& machine(int32_t idx) const { return env_proto_.machine(idx); }
   int32_t ctrl_port() const { return env_proto_.ctrl_port(); }

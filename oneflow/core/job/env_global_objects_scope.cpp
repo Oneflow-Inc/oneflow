@@ -81,12 +81,6 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitGlobalCudaDeviceProp();
 #endif
   Global<EnvDesc>::New(env_proto);
-  {
-    EnvProto test_env_proto(env_proto);
-    test_env_proto.set_ctrl_port(test_env_proto.ctrl_port() + 1);
-    CtrlConf ctrl_conf;
-    JUST(InitCtrlConfFromEnvDesc(EnvDesc(test_env_proto), &ctrl_conf));
-  }
   Global<CtrlServer>::New();
   Global<CtrlClient>::New();
   int64_t this_mchn_id =

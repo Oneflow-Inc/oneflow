@@ -24,7 +24,31 @@ namespace oneflow {
 
 class CtrlConf;
 
-Maybe<void> InitCtrlConfFromEnvDesc(const EnvDesc& env_desc, CtrlConf* ctrl_conf);
+class CtrlBootstrap {
+ public:
+  virtual ~CtrlBootstrap() {}
+  virtual Maybe<void> InitCtrlConf(CtrlConf* ctrl_conf) = 0;
+
+ protected:
+  CtrlBootstrap() = default;
+};
+
+class HostListBootstrapServer;
+class HostListBootstrapClient;
+
+class HostListCtrlBootstrap final : public CtrlBootstrap {
+ public:
+  explicit HostListCtrlBootstrap(const EnvDesc& env_desc);
+  ~HostListCtrlBootstrap() override;
+
+  Maybe<void> InitCtrlConf(CtrlConf* ctrl_conf) override;
+
+ private:
+  const EnvDesc env_desc_;
+  // Uses shared_ptr and forward declaration to avoid `#include ...`
+  std::shared_ptr<HostListBootstrapServer> bootstrap_server_;
+  std::shared_ptr<HostListBootstrapClient> bootstrap_client_;
+};
 
 }  // namespace oneflow
 
