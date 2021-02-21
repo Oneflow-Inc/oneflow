@@ -61,9 +61,10 @@ bool CheckValueInBitsRange(T val, size_t bits) {
 
 // ProcessId methods
 ProcessId::ProcessId(uint32_t node_index, uint32_t process_index) {
-  CHECK(CheckValueInBitsRange(node_index, StreamId::kLeftBits)) << "node_index is out of range";
-  CHECK(CheckValueInBitsRange(process_index, StreamId::kRightBits))
-      << "process_index is out of range";
+  CHECK(CheckValueInBitsRange(node_index, kLeftBits))
+      << "node_index is out of range: " << node_index;
+  CHECK(CheckValueInBitsRange(process_index, kRightBits))
+      << "process_index is out of range: " << process_index;
   val_ = (node_index << kRightBits) | process_index;
 }
 
@@ -124,11 +125,12 @@ TaskType StreamId::task_type() const {
 
 // TaskId methods
 TaskId::TaskId(ProcessId process_id, StreamId stream_id, uint32_t task_index) {
-  CHECK(CheckValueInBitsRange(task_index, StreamId::kRightBits)) << "task_index is out of range";
-  CHECK(CheckValueInBitsRange(static_cast<uint32_t>(stream_id), StreamId::kMiddleBits))
-      << "stream_id is out of range";
-  CHECK(CheckValueInBitsRange(static_cast<uint32_t>(process_id), StreamId::kLeftBits))
-      << "process_id is out of range";
+  CHECK(CheckValueInBitsRange(task_index, kRightBits))
+      << "task_index is out of range: " << task_index;
+  CHECK(CheckValueInBitsRange(static_cast<uint32_t>(stream_id), kMiddleBits))
+      << "stream_id is out of range: " << static_cast<uint32_t>(stream_id);
+  CHECK(CheckValueInBitsRange(static_cast<uint32_t>(process_id), kLeftBits))
+      << "process_id is out of range: " << static_cast<uint32_t>(process_id);
   val_ = static_cast<uint64_t>(task_index);
   val_ |= static_cast<uint64_t>(stream_id) << kRightBits;
   val_ |= static_cast<uint64_t>(process_id) << kMiddleRightBits;
@@ -193,7 +195,7 @@ bool IdUtil::IsCpuMemZoneId(MemZoneId mem_zone_id) {
 
 MemZoneId IdUtil::GetDeviceMemZoneId(DeviceType device_type, uint32_t device_index) {
   CHECK(CheckValueInBitsRange(device_index, StreamId::kRightBits))
-      << "device_index is out of range";
+      << "device_index is out of range: " << device_index;
   uint32_t id = static_cast<uint32_t>(device_type) << MemZoneId::kMiddleRightBits;
   id |= device_index;
   return MemZoneId{id};
@@ -215,7 +217,7 @@ bool IdUtil::IsMemZoneIdNormalUsage(MemZoneId mem_zone_id) {
 
 StreamId IdUtil::GenerateProcessTaskIndependentStreamId(ProcessId process_id, TaskType task_type) {
   CHECK(CheckValueInBitsRange(static_cast<uint32_t>(task_type), StreamId::kMiddleBits))
-      << "task_type is out of range";
+      << "task_type is out of range: " << static_cast<uint32_t>(task_type);
   auto key = std::make_pair(process_id, task_type);
   uint32_t& task_index = process_task_type2task_index_counter_[key];
   if (IsClassRegistered<int32_t, IndependentThreadNum4TaskType>(task_type)) {
@@ -223,11 +225,12 @@ StreamId IdUtil::GenerateProcessTaskIndependentStreamId(ProcessId process_id, Ta
         NewObj<int32_t, IndependentThreadNum4TaskType>(task_type));
     if (task_index >= *task_idp_thrd_num_ptr) { task_index %= *task_idp_thrd_num_ptr; }
   }
-  CHECK(CheckValueInBitsRange(task_index, StreamId::kRightBits));
+  CHECK(CheckValueInBitsRange(task_index, StreamId::kRightBits))
+      << "task_index is out of range: " << task_index;
   uint32_t id = static_cast<uint32_t>(StreamType::kIndependent)
                 << (StreamId::kMiddleBits + StreamId::kRightBits);
   id |= (static_cast<uint32_t>(task_type) << StreamId::kRightBits);
-  id |= static_cast<uint32_t>(task_index);
+  id |= task_index;
   task_index += 1;
   return StreamId{id};
 }
@@ -238,24 +241,26 @@ StreamId IdUtil::GenerateCPUComputeStreamIdEvenly(ProcessId process_id) {
 }
 
 TaskId IdUtil::GenerateTaskId(ProcessId process_id, StreamId stream_id) {
-  uint64_t process_stream_key = static_cast<uint64_t>(process_id) << StreamId::kBits;
-  process_stream_key |= static_cast<uint64_t>(stream_id);
+  // low of uint64 indicate stream_id as high indicate process_id
+  uint64_t process_stream_key =
+      (static_cast<uint64_t>(process_id) << StreamId::kBits) | static_cast<uint64_t>(stream_id);
   uint32_t task_index = process_stream2task_index_counter_[process_stream_key]++;
-  CHECK_LT(task_index++, (static_cast<uint32_t>(1) << TaskId::kRightBits) - 1)
-      << "task_index is out of range";
+  CHECK_LT(task_index, (static_cast<uint32_t>(1) << TaskId::kRightBits) - 1)
+      << "task_index is out of range: " << task_index;
   return TaskId(process_id, stream_id, task_index);
 }
 
 int64_t IdUtil::GenerateChainId(uint64_t global_stream_index) {
   uint32_t chain_index = process_stream2chain_index_counter_[global_stream_index]++;
   CHECK_LT(chain_index, (static_cast<uint32_t>(1) << TaskId::kRightBits) - 1)
-      << "chain_index is out of range";
+      << "chain_index is out of range: " << chain_index;
   return static_cast<int64_t>(global_stream_index) | static_cast<int64_t>(chain_index);
 }
 
 IdUtil::IdUtil() {
   size_t machine_num = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
-  CHECK(CheckValueInBitsRange(machine_num, ProcessId::kLeftBits)) << "machine_num is out of range";
+  CHECK(CheckValueInBitsRange(machine_num, ProcessId::kLeftBits))
+      << "machine_num is out of range: " << machine_num;
   cpu_device_num_ = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
 }
 
