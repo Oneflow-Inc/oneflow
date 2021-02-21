@@ -217,18 +217,18 @@ StreamId IdUtil::GenerateProcessTaskIndependentStreamId(ProcessId process_id, Ta
   CHECK(CheckValueInBitsRange(static_cast<uint32_t>(task_type), StreamId::kMiddleBits))
       << "task_type is out of range";
   auto key = std::make_pair(process_id, task_type);
-  uint32_t& task_num = process_independent_task_type2task_num_[key];
+  uint32_t& task_index = process_task_type2task_index_counter_[key];
   if (IsClassRegistered<int32_t, IndependentThreadNum4TaskType>(task_type)) {
-    std::unique_ptr<IndependentThreadNum4TaskType> idp_thrd_num_ptr(
+    std::unique_ptr<IndependentThreadNum4TaskType> task_idp_thrd_num_ptr(
         NewObj<int32_t, IndependentThreadNum4TaskType>(task_type));
-    if (task_num > *idp_thrd_num_ptr) { task_num %= *idp_thrd_num_ptr; }
+    if (task_index >= *task_idp_thrd_num_ptr) { task_index %= *task_idp_thrd_num_ptr; }
   }
-  CHECK(CheckValueInBitsRange(task_num, StreamId::kRightBits));
+  CHECK(CheckValueInBitsRange(task_index, StreamId::kRightBits));
   uint32_t id = static_cast<uint32_t>(StreamType::kIndependent)
                 << (StreamId::kMiddleBits + StreamId::kRightBits);
   id |= (static_cast<uint32_t>(task_type) << StreamId::kRightBits);
-  id |= static_cast<uint32_t>(task_num);
-  task_num += 1;
+  id |= static_cast<uint32_t>(task_index);
+  task_index += 1;
   return StreamId{id};
 }
 
