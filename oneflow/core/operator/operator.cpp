@@ -821,6 +821,22 @@ Maybe<void> InferOpSbpSignature(Operator* op, const SbpSignature& sbp_sig_conf,
            * (hint->sbp_parallel() == sbp_parallel
               && hint->parallel_desc().parallel_num() == parallel_desc.parallel_num());
   };
+  auto OrderValue4SbpHintSplitInvalid = [&](const std::string& ibn,
+                                            const SbpParallel& sbp_parallel) -> int32_t {
+    const auto* hint = CHECK_JUST(SbpInferHint4Ibn(ibn));
+    const Shape& logical_shape = hint->logical_blob_desc().shape();
+    // NOTE(chengcheng): disable split when logical shape cannot split
+    if (sbp_parallel.has_split_parallel()) {
+      const int64_t axis = sbp_parallel.split_parallel().axis();
+      CHECK(axis >= 0 && axis < logical_shape.NumAxes());
+      if (logical_shape.At(axis) < parallel_desc.parallel_num()) {
+        // NOTE(chengcheng): cannot split at this axis!
+        return 10000;
+      }
+    }
+    return 0;
+  };
+
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
     CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
       int32_t order_value = 0;
@@ -828,6 +844,7 @@ Maybe<void> InferOpSbpSignature(Operator* op, const SbpSignature& sbp_sig_conf,
         const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
         CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
         order_value += OrderValue4SbpHint(ibn, sbp_parallel_it->second);
+        order_value += OrderValue4SbpHintSplitInvalid(ibn, sbp_parallel_it->second);
       }
       // NOTE(chengcheng): source op default split(0)
       for (const auto& obn : op->output_bns()) {
