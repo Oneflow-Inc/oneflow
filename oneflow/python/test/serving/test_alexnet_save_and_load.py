@@ -209,8 +209,8 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
             print("iter#{:<6} output:".format(i), outputs[0])
 
         cmp_outputs = np.array(cmp_outputs, dtype=np.float32)
-
         test_case.assertTrue(np.allclose(origin_outputs, cmp_outputs))
+        sess.close()
 
 
 if __name__ == "__main__":

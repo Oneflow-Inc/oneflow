@@ -97,7 +97,7 @@ Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
       } else if (traced_lbi.find(src_lbi) == traced_lbi.end()) {
         SearchConstSrcAndTrace(src_lbi);
       } else {
-        UNIMPLEMENTED();
+        // pass
       }
     }
     return Maybe<void>::Ok();
