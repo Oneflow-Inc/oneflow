@@ -116,6 +116,9 @@ class ArgBlobDef(object):
         interface_blob_conf.data_type = self.dtype_.oneflow_proto_dtype
         interface_blob_conf.is_dynamic = self.is_dynamic
         interface_blob_conf.is_tensor_list = self.is_tensor_list
+        # NOTE(chengcheng): rm batch_axis, so set split_axis always = 0 for safe. will support
+        #     set sbp in future, or will delete in multi-client
+        interface_blob_conf.split_axis.value = 0
         return interface_blob_conf
 
     def _Distribute2Str(self):
