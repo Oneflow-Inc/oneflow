@@ -125,6 +125,13 @@ Maybe<void> Operator::InferParallelSignatureIf() {
   return Maybe<void>::Ok();
 }
 
+Maybe<const ParallelDesc> Operator::GetParallelDesc4BnInOp(const std::string& bn) const {
+  CHECK_OR_RETURN(bn2parallel_desc_);
+  auto it = bn2parallel_desc_->find(bn);
+  CHECK_OR_RETURN(it != bn2parallel_desc_->end());
+  return it->second;
+}
+
 Maybe<void> Operator::FillBlobParallelDesc(
     const std::function<Maybe<const ParallelDesc>(const std::string&)>& ParallelDesc4Bn) {
   CHECK_OR_RETURN(!bn2parallel_desc_);
@@ -135,7 +142,7 @@ Maybe<void> Operator::FillBlobParallelDesc(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Operator::InferParallelSignature() {
+Maybe<void> Operator::InferBlobParallelDesc() {
   FillBlobParallelDesc(
       [&](const std::string& bn) -> Maybe<const ParallelDesc> { return GetOpParallelDesc(); });
   return Maybe<void>::Ok();

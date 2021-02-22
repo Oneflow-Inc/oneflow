@@ -89,10 +89,11 @@ class Operator {
 
   const PbRpf<std::string>& input_output_bns() const { return input_output_bns_; };
 
-  Maybe<void> InferParallelSignatureIf();
-
   Maybe<void> FillOpParallelDesc(const ParallelDesc& parallel_desc);
   Maybe<const ParallelDesc> GetOpParallelDesc() const;
+
+  Maybe<void> InferParallelSignatureIf();
+  Maybe<const ParallelDesc> GetParallelDesc4BnInOp(const std::string& bn) const;
 
   Maybe<void> FillLogicalInBlobDesc(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
@@ -203,7 +204,7 @@ class Operator {
  protected:
   Maybe<void> FillBlobParallelDesc(
       const std::function<Maybe<const ParallelDesc>(const std::string&)>& ParallelDesc4Bn);
-  virtual Maybe<void> InferParallelSignature();
+  virtual Maybe<void> InferBlobParallelDesc();
   virtual Maybe<void> InferOutBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       const SbpSignature* sbp_signature) const;

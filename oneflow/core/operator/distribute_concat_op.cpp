@@ -39,7 +39,7 @@ class DistributeConcatOp final : public Operator {
   LogicalNode* NewProperLogicalNode() const override { return new DistributeConcatLogicalNode; }
 
  private:
-  Maybe<void> InferParallelSignature() override;
+  Maybe<void> InferBlobParallelDesc() override;
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> InferSbpSignature(
@@ -129,7 +129,7 @@ Maybe<void> DistributeConcatOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DistributeConcatOp::InferParallelSignature() {
+Maybe<void> DistributeConcatOp::InferBlobParallelDesc() {
   HashMap<std::string, std::shared_ptr<const ParallelDesc>> bn2parallel_desc;
   const std::shared_ptr<const ParallelDesc> op_parallel_desc = JUST(GetOpParallelDesc());
   FOR_RANGE(int, i, 0, input_bns().size()) {

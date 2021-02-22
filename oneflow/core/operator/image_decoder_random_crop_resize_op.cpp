@@ -109,7 +109,7 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     }
   }
 
-  Maybe<void> InferParallelSignature() override {
+  Maybe<void> InferBlobParallelDesc() override {
     HashMap<std::string, std::shared_ptr<const ParallelDesc>> bn2parallel_desc;
     const std::shared_ptr<const ParallelDesc> op_parallel_desc = JUST(GetOpParallelDesc());
     bn2parallel_desc["out"] = op_parallel_desc;

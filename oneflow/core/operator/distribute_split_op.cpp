@@ -33,7 +33,7 @@ class DistributeSplitOp final : public Operator {
   LogicalNode* NewProperLogicalNode() const override { return new DistributeSplitLogicalNode; }
 
  private:
-  Maybe<void> InferParallelSignature() override;
+  Maybe<void> InferBlobParallelDesc() override;
   Maybe<void> InferBatchAxis(
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> InferSbpSignature(
@@ -125,7 +125,7 @@ Maybe<void> DistributeSplitOp::InferOutParallelDesc(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DistributeSplitOp::InferParallelSignature() {
+Maybe<void> DistributeSplitOp::InferBlobParallelDesc() {
   HashMap<std::string, std::shared_ptr<const ParallelDesc>> bn2parallel_desc;
   const std::shared_ptr<const ParallelDesc> op_parallel_desc = JUST(GetOpParallelDesc());
   bn2parallel_desc["in"] = op_parallel_desc;
