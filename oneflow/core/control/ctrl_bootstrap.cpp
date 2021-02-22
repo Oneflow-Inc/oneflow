@@ -20,28 +20,17 @@ limitations under the License.
 
 namespace oneflow {
 
-HostListCtrlBootstrap::~HostListCtrlBootstrap() {
-  bootstrap_client_.reset();
-  bootstrap_server_.reset();
-}
-
-HostListCtrlBootstrap::HostListCtrlBootstrap(const EnvDesc& env_desc) : CtrlBootstrap() {
-  bootstrap_server_.reset(new HostListBootstrapServer(env_desc));
-  bootstrap_client_.reset(new HostListBootstrapClient(env_desc));
-  bootstrap_client_->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
-  host_ = bootstrap_server_->this_machine_addr();
-  rank_ = env_desc.GetMachineId(host_);
-  world_size_ = env_desc.TotalMachineNum();
-}
-
-Maybe<void> HostListCtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_ctx) {
+Maybe<void> CtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_ctx,
+    const std::function<Maybe<void>(Address*, int64_t world_rank)>& SetHostByMaster,
+    const std::function<void(Address*)>& SetCurrentHostByMaster,
+    const std::function<void(Address*)>& SetCurrentHostByWorker) {
   std::vector<ProcessCtx> rank2process_ctx;
   if (rank() == 0) {
     ProcessCtx process_ctx;
     {
       process_ctx.set_rank(rank());
       Address* addr = process_ctx.mutable_ctrl_addr()->Add();
-      addr->set_host(host());
+      SetCurrentHostByMaster(addr);
       addr->set_port(port);
     }
     rank2process_ctx.push_back(process_ctx);
@@ -59,7 +48,7 @@ Maybe<void> HostListCtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_
     {
       cur_process_ctx.set_rank(rank());
       Address* addr = cur_process_ctx.mutable_ctrl_addr()->Add();
-      addr->set_host(host());
+      SetCurrentHostByWorker(addr);
       addr->set_port(port);
     }
     bootstrap_client_->PushMasterKV(key, cur_process_ctx);
@@ -72,7 +61,9 @@ Maybe<void> HostListCtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_
     ret_process_ctx->mutable_ctrl_addr()->Clear();
     for (const auto& process_ctx : rank2process_ctx) {
       CHECK_EQ_OR_RETURN(process_ctx.ctrl_addr_size(), 1);
-      *ret_process_ctx->mutable_ctrl_addr()->Add() = process_ctx.ctrl_addr(0);
+      Address* addr = ret_process_ctx->mutable_ctrl_addr()->Add();
+      *addr = process_ctx.ctrl_addr(0);
+      JUST(SetHostByMaster(addr, process_ctx.rank()));
     }
     bootstrap_client_->PushMasterKV("BroadcastProcessCtx", *ret_process_ctx);
   } else {
@@ -85,5 +76,61 @@ Maybe<void> HostListCtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_
   LOG(INFO) << "\n" << ret_process_ctx->DebugString();
   return Maybe<void>::Ok();
 }
+
+HostListCtrlBootstrap::HostListCtrlBootstrap(const EnvDesc& env_desc) : CtrlBootstrap() {
+  bootstrap_server_.reset(new HostListBootstrapServer(env_desc));
+  bootstrap_client_.reset(new HostListBootstrapClient(env_desc));
+  bootstrap_client_->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
+  host_ = bootstrap_server_->this_machine_addr();
+  rank_ = env_desc.GetMachineId(host_);
+  world_size_ = env_desc.TotalMachineNum();
+}
+
+HostListCtrlBootstrap::~HostListCtrlBootstrap() {
+  bootstrap_client_.reset();
+  bootstrap_server_.reset();
+}
+
+Maybe<void> HostListCtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_ctx) {
+  const auto& SetHostByMaster = [&](Address*, int64_t) { return Maybe<void>::Ok(); };
+  const auto& SetCurrentHostByMaster = [&](Address* addr) { addr->set_host(host()); };
+  const auto& SetCurrentHostByWorker = [&](Address* addr) { addr->set_host(host()); };
+  return InitProcessCtx(port, ret_process_ctx, SetHostByMaster, SetCurrentHostByMaster, SetCurrentHostByWorker);
+}
+
+RankInfoCtrlBootstrap::RankInfoCtrlBootstrap(const BootstrapConf& bootstrap_conf) : CtrlBootstrap() {
+  bootstrap_server_.reset(new RankInfoBootstrapServer(bootstrap_conf));
+  bootstrap_client_.reset(new RankInfoBootstrapClient(bootstrap_conf));
+  bootstrap_client_->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
+  master_host_ = bootstrap_conf.master_addr().host();
+  rank_ = bootstrap_conf.rank();
+  world_size_ = bootstrap_conf.world_size();
+}
+
+RankInfoCtrlBootstrap::~RankInfoCtrlBootstrap() {
+  bootstrap_client_.reset();
+  bootstrap_server_.reset();
+}
+
+Maybe<void> RankInfoCtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_ctx) {
+  const auto& SetHostByMaster = [&](Address* addr, int64_t world_rank) {
+    const auto& rank2host = JUST(bootstrap_server_.rank2host());
+    CHECK_EQ_OR_RETURN(rank2host, world_size());
+    CHECK_GT_OR_RETURN(world_rank, 0);
+    CHECK_LT_OR_RETURN(world_rank, rank2host.size());
+    addr->set_host(rank2host.at(world_rank));
+    return Maybe<void>::Ok();
+  };
+  const auto& SetCurrentHostByMaster = [&](Address* addr) {
+    CHECK_EQ(rank(), 0);
+    addr->set_host(master_host_);
+  };
+  const auto& SetCurrentHostByWorker = [&](Address* addr) {
+    CHECK_NE(rank(), 0);
+    // do nothing
+  };
+  return InitProcessCtx(port, ret_process_ctx, SetHostByMaster, SetCurrentHostByMaster, SetCurrentHostByWorker);
+}
+
 
 }  // namespace oneflow

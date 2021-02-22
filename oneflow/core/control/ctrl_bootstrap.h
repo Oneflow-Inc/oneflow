@@ -33,7 +33,10 @@ class CtrlBootstrap {
  protected:
   virtual int64_t rank() const = 0;
   virtual int64_t world_size() const = 0;
-  virtual std::string host() const = 0;
+  Maybe<void> InitProcessCtx(int64_t port, ProcessCtx* process_ctx,
+      const std::function<Maybe<void>(Address*, int64_t world_rank)>& SetHostByMaster,
+      const std::function<void(Address*)>& SetCurrentHostByMaster,
+      const std::function<void(Address*)>& SetCurrentHostByWorker);
 
   CtrlBootstrap() = default;
 };
@@ -49,15 +52,39 @@ class HostListCtrlBootstrap final : public CtrlBootstrap {
   Maybe<void> InitProcessCtx(int64_t port, ProcessCtx* process_ctx) override;
 
  private:
-  std::string host() const override { return host_; }
   int64_t rank() const override { return rank_; }
   int64_t world_size() const override { return world_size_; }
+
+  std::string host() const { return host_; }
 
   // Uses shared_ptr and forward declaration to avoid `#include ...`
   std::shared_ptr<HostListBootstrapServer> bootstrap_server_;
   std::shared_ptr<HostListBootstrapClient> bootstrap_client_;
 
   std::string host_;
+  int64_t rank_;
+  int64_t world_size_;
+};
+
+class RankInfoBootstrapServer;
+class RankInfoBootstrapClient;
+
+class RankInfoCtrlBootstrap final : public CtrlBootstrap {
+ public:
+  explicit RankInfoCtrlBootstrap(const BootstrapConf& bootstrap_conf);
+  ~RankInfoCtrlBootstrap() override;
+
+  Maybe<void> InitProcessCtx(int64_t port, ProcessCtx* process_ctx) override;
+
+ private:
+  int64_t rank() const override { return rank_; }
+  int64_t world_size() const override { return world_size_; }
+
+  // Uses shared_ptr and forward declaration to avoid `#include ...`
+  std::shared_ptr<RankInfoBootstrapServer> bootstrap_server_;
+  std::shared_ptr<RankInfoBootstrapClient> bootstrap_client_;
+
+  std::string master_host_;
   int64_t rank_;
   int64_t world_size_;
 };

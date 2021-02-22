@@ -85,6 +85,12 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<ProcessCtx>::New();
   JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
            .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+  {
+    ProcessCtx test_process_ctx;
+    JUST(RankInofCtrlBootstrap(MakeTestBootstrapConf(*Global<ProcessCtx>::Get()))
+            .InitProcessCtx(Global<CtrlServer>::Get()->port(), &test_process_ctx));
+    LOG(ERROR) << "\n" << test_process_ctx.DebugString();
+  }
   Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
   int64_t this_mchn_id = Global<ProcessCtx>::Get()->rank();
   Global<MachineCtx>::New(this_mchn_id);
