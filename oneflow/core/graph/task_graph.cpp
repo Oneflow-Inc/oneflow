@@ -251,21 +251,12 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
     return &(buf_vec.at(mem_zone_id));
   };
 
-  auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) -> int64_t {
-    CHECK(!task_node->IsIndependent());
-    StreamId stream_id = Global<IdUtil>::Get()->GenerateCPUComputeStreamIdEvenly(
-        ProcessId{static_cast<uint32_t>(task_node->machine_id()), 0});
-    return stream_id;
-  };
-
-  std::vector<std::pair<int64_t, CompTaskNode*>> machine_persistence_task_vec;
   logical_gph_->ForEachNode([&](const LogicalNode* logical_node) {
-    logical_node->GenSortedCompTaskNodes(
-        AllocateCpuThrdIdEvenly, &machine_persistence_task_vec, [&](CompTaskNode* comp_task_node) {
-          AddAllocatedNode(comp_task_node);
-          logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
-          comp_task_node->set_area_id(logical_node->GetAreaId());
-        });
+    logical_node->GenSortedCompTaskNodes([&](CompTaskNode* comp_task_node) {
+      AddAllocatedNode(comp_task_node);
+      logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
+      comp_task_node->set_area_id(logical_node->GetAreaId());
+    });
   });
 
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
@@ -273,8 +264,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
         GetMthdForBldSubTskGph(logical_edge->src_node(), logical_edge->dst_node());
     (this->*method)(logical_edge->src_node(), logical_edge->dst_node(),
                     logical2sorted_comp_tasks.at(logical_edge->src_node()),
-                    logical2sorted_comp_tasks.at(logical_edge->dst_node()), MutBufTask,
-                    AllocateCpuThrdIdEvenly);
+                    logical2sorted_comp_tasks.at(logical_edge->dst_node()), MutBufTask);
     SetAreaIdForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
   logical_gph_->ForEachNecessaryCtrlEdge(

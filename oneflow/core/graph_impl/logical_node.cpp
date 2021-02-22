@@ -115,10 +115,7 @@ std::string LogicalNode::VisualStr() const {
   return ss.str();
 }
 
-void LogicalNode::GenSortedCompTaskNodes(
-    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
-    std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
-    std::function<void(CompTaskNode*)> Handler) const {
+void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
   for (int64_t machine_id : parallel_desc_->sorted_machine_ids()) {
@@ -128,6 +125,8 @@ void LogicalNode::GenSortedCompTaskNodes(
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
+      ProcessId process_id{static_cast<uint32_t>(machine_id), 0};
+      StreamId stream_id;
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
         uint32_t stream_index = 0;
@@ -158,28 +157,27 @@ void LogicalNode::GenSortedCompTaskNodes(
           }
           default: UNIMPLEMENTED();
         }
-        comp_task_node->set_thrd_id(IdUtil::GetStreamId(
-            StreamType::kCuda, static_cast<uint32_t>(dev_phy_id), stream_index));
+        stream_id =
+            IdUtil::GetStreamId(StreamType::kCuda, static_cast<uint32_t>(dev_phy_id), stream_index);
 #else
         UNIMPLEMENTED();
 #endif
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
         if (comp_task_node->IsIndependent()) {
           TaskType task_type = comp_task_node->GetTaskType();
-          StreamId stream_id;
           if (IsClassRegistered<int32_t, TickTockTaskType>(task_type)) {
             stream_id = IdUtil::GetTickTockStreamId();
           } else {
-            stream_id = Global<IdUtil>::Get()->GenerateProcessTaskIndependentStreamId(
-                ProcessId{static_cast<uint32_t>(machine_id), 0}, task_type);
+            stream_id = Global<IdUtil>::Get()->GenerateProcessTaskIndependentStreamId(process_id,
+                                                                                      task_type);
           }
-          comp_task_node->set_thrd_id(static_cast<int64_t>(stream_id));
         } else {
-          comp_task_node->set_thrd_id(AllocateCpuThrdIdEvenly(comp_task_node));
+          stream_id = Global<IdUtil>::Get()->GenerateCPUComputeStreamIdEvenly(process_id);
         }
       } else {
         UNIMPLEMENTED();
       }
+      comp_task_node->set_thrd_id(static_cast<int64_t>(stream_id));
       comp_task_node->set_logical_node(this);
       Handler(comp_task_node);
     }
