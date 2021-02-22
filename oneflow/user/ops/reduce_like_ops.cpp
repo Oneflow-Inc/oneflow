@@ -66,11 +66,11 @@ REGISTER_USER_OP("reduce_sum_like")
               .Build();
           num_reduced_axes += 1;
         } else {
-          const int64_t out_axis = keep_dims ? i : i - num_reduced_axes;
+          const int64_t out_split_axis = keep_dims ? i : i - num_reduced_axes;
           ctx->NewBuilder()
               .Split(user_op::OpArg("x", 0), i)
-              .Split(user_op::OpArg("like", 0), out_axis)
-              .Split(user_op::OpArg("y", 0), out_axis)
+              .Split(user_op::OpArg("like", 0), out_split_axis)
+              .Split(user_op::OpArg("y", 0), out_split_axis)
               .Build();
         }
       }
