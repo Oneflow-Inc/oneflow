@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
+#include "oneflow/core/job/foreign_callback.h"
 
 namespace oneflow {
 
@@ -55,6 +56,9 @@ void Operator::Init(const OperatorConf& op_conf, const JobDesc* conf_job_desc) {
   *this_op_conf = op_conf;
   if (has_job_desc() && job_desc().IsPredict()) { this_op_conf->set_trainable(false); }
   InitFromOpConf();
+  input_output_bns_.Reserve(input_bns().size() + output_bns().size());
+  for (const auto& bn : input_bns()) { *input_output_bns_.Add() = bn; }
+  for (const auto& bn : output_bns()) { *input_output_bns_.Add() = bn; }
 }
 
 LogicalNode* Operator::NewProperLogicalNode() const { return new NormalForwardLogicalNode; }
@@ -98,20 +102,42 @@ Maybe<const std::string*> Operator::obn4lbi(const LogicalBlobId& lbi) const {
 }
 
 Maybe<void> Operator::InferParallelSignatureIf() {
+  JUST(InferParallelSignature());
   if (op_conf().scope_symbol_id() == 0) { return Maybe<void>::Ok(); }
-  return InferParallelSignature();
-}
-
-Maybe<void> Operator::InferParallelSignature() {
   const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
   const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
   int64_t parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
   auto* parallel_signature = op_attribute_.mutable_parallel_signature();
   parallel_signature->set_op_parallel_desc_symbol_id(parallel_desc_symbol_id);
   auto* map = parallel_signature->mutable_bn_in_op2parallel_desc_symbol_id();
-  for (const auto& ibn : input_bns()) { (*map)[ibn] = parallel_desc_symbol_id; }
-  for (const auto& obn : output_bns()) { (*map)[obn] = parallel_desc_symbol_id; }
+  CHECK_OR_RETURN(op_parallel_desc_);
+  CHECK_OR_RETURN(bn2parallel_desc_);
+  for (const auto& pair : *bn2parallel_desc_) {
+    if (*pair.second == *op_parallel_desc_) {
+      (*map)[pair.first] = parallel_desc_symbol_id;
+    } else {
+      (*map)[pair.first] = Global<ForeignCallback>::Get()->MakeParallelDescSymbol(
+          std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf()));
+    }
+  }
+  // TODO(liujuncheng): remove this
   for (const auto& tbn : tmp_bns()) { (*map)[tbn] = parallel_desc_symbol_id; }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> Operator::FillBlobParallelDesc(
+    const std::function<Maybe<const ParallelDesc>(const std::string&)>& ParallelDesc4Bn) {
+  CHECK_OR_RETURN(!bn2parallel_desc_);
+  bn2parallel_desc_.reset(new HashMap<std::string, std::shared_ptr<const ParallelDesc>>);
+  for (const auto& bn : input_output_bns()) {
+    CHECK(bn2parallel_desc_->emplace(bn, JUST(ParallelDesc4Bn(bn))).second);
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> Operator::InferParallelSignature() {
+  FillBlobParallelDesc(
+      [&](const std::string& bn) -> Maybe<const ParallelDesc> { return GetOpParallelDesc(); });
   return Maybe<void>::Ok();
 }
 

@@ -130,21 +130,18 @@ Maybe<void> DistributeConcatOp::InferOutBlobDescs(
 }
 
 Maybe<void> DistributeConcatOp::InferParallelSignature() {
-  const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
-  const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
-  int64_t op_parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
-  mut_parallel_signature()->set_op_parallel_desc_symbol_id(op_parallel_desc_symbol_id);
-  auto* map = mut_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id();
-  (*map)["out"] = op_parallel_desc_symbol_id;
-  const auto& op_parallel_desc = JUST(scope.GetParallelDesc(op_conf()));
-  CHECK_EQ(op_parallel_desc.parallel_num(), input_bns().size());
+  HashMap<std::string, std::shared_ptr<const ParallelDesc>> bn2parallel_desc;
+  const std::shared_ptr<const ParallelDesc> op_parallel_desc = JUST(GetOpParallelDesc());
   FOR_RANGE(int, i, 0, input_bns().size()) {
-    const auto& in_parallel_conf = op_parallel_desc.GetParallelIdOnlyParallelConf(i);
-    const std::shared_ptr<cfg::ParallelConf>& cfg_in_parallel_conf =
-        std::make_shared<cfg::ParallelConf>(in_parallel_conf);
-    (*map)[input_bns().Get(i)] =
-        Global<ForeignCallback>::Get()->MakeParallelDescSymbol(cfg_in_parallel_conf);
+    bn2parallel_desc[input_bns().Get(i)] =
+        std::make_shared<const ParallelDesc>(op_parallel_desc->GetParallelIdOnlyParallelConf(i));
   }
+  bn2parallel_desc["out"] = op_parallel_desc;
+  FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
+    auto it = bn2parallel_desc.find(bn);
+    CHECK_OR_RETURN(it != bn2parallel_desc.end());
+    return it->second;
+  });
   return Maybe<void>::Ok();
 }
 

@@ -87,6 +87,8 @@ class Operator {
 
 #undef DEFINE_BLOB_NAMES_GETTER
 
+  const PbRpf<std::string>& input_output_bns() const { return input_output_bns_; };
+
   Maybe<void> InferParallelSignatureIf();
 
   Maybe<void> FillOpParallelDesc(const ParallelDesc& parallel_desc);
@@ -199,6 +201,8 @@ class Operator {
   }
 
  protected:
+  Maybe<void> FillBlobParallelDesc(
+      const std::function<Maybe<const ParallelDesc>(const std::string&)>& ParallelDesc4Bn);
   virtual Maybe<void> InferParallelSignature();
   virtual Maybe<void> InferOutBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
@@ -318,10 +322,13 @@ class Operator {
   const JobDesc* job_desc_;
   HashMap<LogicalBlobId, std::string> lbi2obn_;
   std::shared_ptr<const ParallelDesc> op_parallel_desc_;
+  std::unique_ptr<HashMap<std::string, std::shared_ptr<const ParallelDesc>>> bn2parallel_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> ibn2logical_blob_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> obn2logical_blob_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const OptInt64>>> ibn2batch_axis_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const OptInt64>>> obn2batch_axis_;
+
+  PbRpf<std::string> input_output_bns_;
 };
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
