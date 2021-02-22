@@ -83,9 +83,8 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
   };
   FOR_RANGE(int64_t, i, 0, train_conf.optimizer_conf_size()) {
     const auto& optimizer_conf = train_conf.optimizer_conf(i);
-    CHECK(optimizer_conf.has_base_learning_rate());
-    const std::string lbn =
-        AddScheduleOp(optimizer_conf, "System-Train-LearningRate-Scheduler-" + NewUniqueId());
+    const std::string& lbn =
+        AddScheduleOp(optimizer_conf, "System-Train-LearningRate-Scheduler_" + NewUniqueId());
     job->mutable_job_conf()->mutable_train_conf()->mutable_optimizer_conf(i)->set_learning_rate_lbn(
         lbn);
   }

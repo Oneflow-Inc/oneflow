@@ -106,7 +106,8 @@ class AdamBiasCorrectionLearningRateState final : public JobPassState {
 };
 
 void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
-                             const std::string& model_diff_lbn, const OptimizerConf& optimizer_conf, JobBuilder* job_builder) {
+                             const std::string& model_diff_lbn, const OptimizerConf& optimizer_conf,
+                             JobBuilder* job_builder) {
   const VariableOp* var_op = dynamic_cast<const VariableOp*>(&var_op_node.op());
   CHECK_NOTNULL(var_op);
 
@@ -147,7 +148,8 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
     auto* state =
         CHECK_JUST(ctx->MutableState<AdamBiasCorrectionLearningRateState>(job_pass_state_key));
     ParallelConf bias_correction_parallel_conf;
-    const auto& lr_parallel_conf = job_builder->ParallelConf4Lbi(GenLogicalBlobId(learning_rate_lbn));
+    const auto& lr_parallel_conf =
+        job_builder->ParallelConf4Lbi(GenLogicalBlobId(learning_rate_lbn));
     const auto& train_step_parallel_conf =
         job_builder->ParallelConf4Lbi(GenLogicalBlobId(train_step_lbn));
     if (lr_parallel_conf == train_step_parallel_conf) {

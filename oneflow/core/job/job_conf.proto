@@ -74,7 +74,7 @@ message WeightDecayConf {
 
 message OptimizerConf {
   repeated string variables = 1;
-  required float base_learning_rate = 2;
+  optional float base_learning_rate = 2;
   optional WarmupConf warmup_conf = 3;
   optional LearningRateDecayConf learning_rate_decay = 4;
   optional string learning_rate_lbn = 5;

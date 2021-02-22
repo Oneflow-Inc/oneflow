@@ -121,9 +121,8 @@ void FilterCurMaintainedModelLbi2ModelDiffLbi(
     const ::google::protobuf::RepeatedPtrField<std::string>& variables,
     const HashMap<LogicalBlobId, LogicalBlobId>& model_lbi2model_diff_lbi,
     HashMap<LogicalBlobId, LogicalBlobId>* cur_maintained_model_lbi2model_diff_lbi) {
-  cur_maintained_model_lbi2model_diff_lbi->clear();
   for (const std::string& variable : variables) {
-    const LogicalBlobId lbi = GenLogicalBlobId(variable + "/out");
+    const LogicalBlobId& lbi = GenLogicalBlobId(variable + "/out");
     if (model_lbi2model_diff_lbi.find(lbi) != model_lbi2model_diff_lbi.end()) {
       (*cur_maintained_model_lbi2model_diff_lbi)[lbi] = model_lbi2model_diff_lbi.at(lbi);
     }
@@ -201,8 +200,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
   FilterModelLbi2ModelDiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
   old_job_builder = job_builder.get();
   job_builder = JUST(WithCalculationPassScope(kOptimizerPass, job, [&]() -> Maybe<void> {
-    CHECK_OR_RETURN(old_job_builder
-                    == job_builder.get());  // Check this lambda never been async called
+    CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
     AddDiffStaticShapeCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     AddDiffParallelCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder.get(), &model_lbi2model_diff_lbi));
@@ -211,6 +209,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     RegularizeGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     HashMap<LogicalBlobId, LogicalBlobId> cur_maintained_model_lbi2model_diff_lbi;
     for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
+      cur_maintained_model_lbi2model_diff_lbi->clear();
       FilterCurMaintainedModelLbi2ModelDiffLbi(optimizer_conf.variables(), model_lbi2model_diff_lbi,
                                                &cur_maintained_model_lbi2model_diff_lbi);
       if (optimizer_conf.has_clip_conf()) {
