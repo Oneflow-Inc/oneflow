@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/serving/saved_model.cfg.h"
 #include "oneflow/core/serving/saved_model.pb.h"
+#include "oneflow/core/eager/foreign_boxing_util.h"
 
 namespace oneflow {
 
@@ -48,6 +49,8 @@ inline Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
   Global<ForeignWatcher>::SetAllocated(watcher);
   return Maybe<void>::Ok();
 }
+
+Maybe<void> RegisterBoxingUtilOnlyOnce(const std::shared_ptr<ForeignBoxingUtil>& boxing_util);
 
 inline Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
