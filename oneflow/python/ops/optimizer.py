@@ -1521,19 +1521,19 @@ class RMSProp(Optimizer):
     This algorithm uses mean squared gradient to adjust the learning rate.
 
     The equation of parameters updating is:
-    
+
         if centered:
-    
+
             .. math::
-    
+
                 & mg_t = mg * \beta_1 + (1 - \beta_1) * grad
-    
+
                 & denom_t = S_t - mg_t * mg_t
-        
+
         else:
-    
+
             .. math::
-    
+
                 denom_t = S_t
 
         .. math::
@@ -1899,7 +1899,7 @@ class LAMB(Optimizer):
 @oneflow_export("optimizer.CombinedOptimizer")
 class CombinedOptimizer(Optimizer):
     r"""
-    Combined optimizer of the multi optimizer case.
+    Combined optimizer for multi optimizer case.
 
     Args:
         optimizers (Sequence[Optimizer]): optimizers to work together
