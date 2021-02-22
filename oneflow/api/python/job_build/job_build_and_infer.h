@@ -193,6 +193,13 @@ inline Maybe<void> JobBuildAndInferCtx_CheckLbnValidAndExist(const std::string& 
   return Maybe<void>::Ok();
 }
 
+inline Maybe<std::string> JobBuildAndInferCtx_GetOpBlobLbn(const std::string& job_name,
+                                                           const std::string& op_name,
+                                                           const std::string bn_in_op) {
+  const auto* job_ctx = JUST(GetJobBuildAndInferCtx(job_name));
+  return job_ctx->GetOpBlobLbn(op_name, bn_in_op);
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_H_
