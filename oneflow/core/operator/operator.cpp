@@ -314,7 +314,7 @@ Maybe<void> Operator::InferOutBlobDescs(
       std::shared_ptr<const BlobDesc> in_logical = JUST(GetLogicalBlobDesc4Ibn(bn));
       CHECK_OR_RETURN(
           *JUST(GetPhysicalShape(in_logical->shape(), sbp_parallel, parallel_ctx->parallel_num(),
-                                 parallel_ctx->parallel_num()))
+                                 parallel_ctx->parallel_id()))
           == GetBlobDesc4BnInOp(bn)->shape());
     }
     for (const auto& bn : output_bns()) {
