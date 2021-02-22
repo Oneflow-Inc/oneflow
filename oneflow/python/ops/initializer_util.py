@@ -1143,13 +1143,13 @@ def RandomUniformIntInitializerImpl(
 
 def RngTruncatedNormal(mean, std, length, rng):
     truncated_value = 2 * std
-    data = np.zeros(length)
+    data = np.empty(length)
     generated = 0
     ratio = 1.2
     while generated < length:
         remaining = length - generated
         norm = rng.normal(mean, std, size=int(remaining * ratio))
-        truncated = norm[np.where(np.abs(norm - mean) < truncated_value)][:remaining]
+        truncated = norm[np.abs(norm - mean) < truncated_value][:remaining]
         data[generated : generated + len(truncated)] = truncated
         generated += len(truncated)
     return data
