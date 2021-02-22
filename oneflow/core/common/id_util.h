@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/graph/task_node.h"
+#include <limits>
 
 namespace oneflow {
 
@@ -35,6 +36,7 @@ class ProcessId {
   static const int kLeftBits = 16;
   static const int kRightBits = 7;
   static const int kReservedLeftBits = kReservedBits + kLeftBits;
+  static_assert(kBits <= std::numeric_limits<uint32_t>::digits, "ProcessId bits layout is illegal");
   static_assert(kBits == kReservedBits + kUsedBits, "ProcessId bits layout is illegal");
   static_assert(kUsedBits == kLeftBits + kRightBits, "ProcessId bits layout is illegal");
 
@@ -103,6 +105,7 @@ class StreamId {
   static const int kLeftBits = 8;
   static const int kMiddleBits = 7;
   static const int kRightBits = 5;
+  static_assert(kBits <= std::numeric_limits<uint32_t>::digits, "StreamId bits layout is illegal");
   static_assert(kBits == kReservedBits + kUsedBits, "StreamId bits layout is illegal");
   static_assert(kUsedBits == kLeftBits + kMiddleBits + kRightBits,
                 "StreamId bits layout is illegal");
@@ -145,6 +148,7 @@ class TaskId {
   static const int kLeftMiddleBits = kLeftBits + kMiddleBits;
   static const int kMiddleRightBits = kMiddleBits + kRightBits;
   static const int kLeftRightBits = kLeftBits + kRightBits;
+  static_assert(kBits <= std::numeric_limits<uint64_t>::digits, "TaskId bits layout is illegal");
   static_assert(kBits == kLeftBits + kMiddleBits + kRightBits, "TaskId bits layout is illegal");
   static_assert(kLeftBits == ProcessId::kUsedBits, "TaskId bits layout is illegal");
   static_assert(kMiddleBits == StreamId::kUsedBits, "TaskId bits layout is illegal");
@@ -182,6 +186,7 @@ class MemZoneId {
   static const int kRightBits = 12;
   static const int kLeftMiddleBits = kLeftBits + kMiddleBits;
   static const int kMiddleRightBits = kMiddleBits + kRightBits;
+  static_assert(kBits <= std::numeric_limits<uint32_t>::digits, "MemZoneId bits layout is illegal");
   static_assert(kBits == kLeftBits + kMiddleBits + kRightBits, "MemZoneId bits layout is illegal");
 
   MemZoneId() : val_(0) {}
