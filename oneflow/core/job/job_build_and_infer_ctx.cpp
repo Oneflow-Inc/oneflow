@@ -1251,4 +1251,10 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
   return Maybe<void>::Ok();
 }
 
+Maybe<std::string> JobBuildAndInferCtx::GetOpBlobLbn(const std::string& op_name,
+                                                     const std::string& bn_in_op) const {
+  const auto& lbi = JUST(Op4OpName(op_name))->BnInOp2Lbi(bn_in_op);
+  return GenLogicalBlobName(lbi);
+}
+
 }  // namespace oneflow
