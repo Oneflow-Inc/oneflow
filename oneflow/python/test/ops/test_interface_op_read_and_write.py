@@ -47,6 +47,9 @@ class TestInterfaceOpReadAndWrite(flow.unittest.TestCase):
                 )
                 return flow.math.add_n([x, y])
 
+        # NOTE(chengcheng): Should retain for session init before set_interface_blob_value
+        flow.train.CheckPoint().init()
+
         x_value = np.random.random((2, 3)).astype(np.float32)
         y_value = np.random.random((2, 3)).astype(np.float32)
         flow.experimental.set_interface_blob_value("x", x_value)
