@@ -74,8 +74,6 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = ActivationJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:

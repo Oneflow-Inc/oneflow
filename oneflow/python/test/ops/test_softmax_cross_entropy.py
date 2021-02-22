@@ -93,8 +93,6 @@ def compare_with_tensorflow(device_type, data_type, shape):
         )
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = SoftmaxCrossEntropyWithLogitsJob(labels).get()
 
     # TensorFlow
