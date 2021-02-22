@@ -13,26 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_PARTIAL_TICK_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_PARTIAL_TICK_KERNEL_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTRY_H_
+#define ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTRY_H_
 
-#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/device_type.pb.h"
 
 namespace oneflow {
 
-template<DeviceType device_type>
-class PartialTickKernel final : public KernelIf<device_type> {
+using DumpVersionInfoFn = std::function<void()>;
+
+class DeviceRegistry final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(PartialTickKernel);
-  PartialTickKernel() = default;
-  ~PartialTickKernel() = default;
+  DeviceRegistry(DeviceType dev_type) : dev_type_(dev_type) {}
+  DeviceRegistry& SetDumpVersionInfoFn(DumpVersionInfoFn func);
+  DeviceRegistry& SetDeviceTag(std::string dev_tag);
 
  private:
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
-  const PbMessage& GetCustomizedOpConf() const override { return this->op_conf().tick_conf(); }
+  DeviceType dev_type_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_PARTIAL_TICK_KERNEL_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTRY_H_
