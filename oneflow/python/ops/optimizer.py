@@ -1909,6 +1909,7 @@ class CombinedOptimizer(Optimizer):
 
         Example: see test_multi_optimizer.py
     """
+
     def __init__(
         self,
         optimizers: Sequence[Optimizer],
