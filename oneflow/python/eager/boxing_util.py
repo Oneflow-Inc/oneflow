@@ -988,3 +988,13 @@ conditional_function_table = [
         OptionalBoxing(CopyH2D),
     ),
 ]
+
+class BoxingUtil(oneflow_api.deprecated.ForeignBoxingUtil):
+    def __init__(self):
+        oneflow_api.deprecated.ForeignBoxingUtil.__init__(self)
+
+    def BoxingTo(self, builder, blob_object, op_arg_parallel_attr):
+        return BoxingTo(builder, blob_object, op_arg_parallel_attr)
+
+_global_boxing_util = BoxingUtil()
+oneflow_api.RegisterBoxingUtilOnlyOnce(_global_boxing_util)
