@@ -16,6 +16,7 @@ limitations under the License.
 #include <vector>
 #include <memory>
 #include <functional>
+#include <list>
 
 namespace oneflow {
 
@@ -31,15 +32,20 @@ class FunctionNode {
   virtual ~FunctionNode() = default;
 
   virtual void Apply(bool create_graph) = 0;
-  virtual void Release() = 0;
+  virtual void ReleaseTensorGrads() = 0;
+
+  std::vector<std::weak_ptr<FunctionNode>> GetNextFunctions() { return next_functions_; }
+  std::string GetOpName() { return op_name_; }
 
  protected:
   std::shared_ptr<TensorList> inputs_;
-  std::shared_ptr<TensorList> outputs_;
   std::vector<std::shared_ptr<TensorArg>> in_grads_;
   std::vector<std::shared_ptr<TensorArg>> out_grads_;
   // TODO: add parameters
   std::function<void()> backward_fn_;
+
+  std::string op_name_;
+  std::vector<std::weak_ptr<FunctionNode>> next_functions_;
 };
 
 class AutogradEngine {
@@ -60,16 +66,12 @@ class AutogradEngine {
 // Stack AutogradEngine
 class StackFunctionNode final : public FunctionNode {
  public:
-  StackFunctionNode(std::function<void()> backward_fn, const std::shared_ptr<TensorList>& intputs,
+  StackFunctionNode(std::function<void()> backward_fn, const std::shared_ptr<TensorList>& inputs,
                     const std::shared_ptr<TensorList>& outputs);
   ~StackFunctionNode() = default;
 
-  std::weak_ptr<StackFunctionNode> GetPrevNode() { return prev_node_; }
-  void Release() override;
+  void ReleaseTensorGrads() override;
   void Apply(bool create_graph) override;
-
- protected:
-  std::weak_ptr<StackFunctionNode> prev_node_;
 };
 
 class StackAutogradEngine final : public AutogradEngine {
@@ -83,7 +85,11 @@ class StackAutogradEngine final : public AutogradEngine {
       const std::shared_ptr<TensorList>& outputs) override;
 
  protected:
-  std::weak_ptr<StackFunctionNode> top_node_;
+  /*
+   * StackFunctionNode must be saved in engine, because any node in list may be released at any
+   * moment.
+   */
+  std::list<std::weak_ptr<StackFunctionNode>> node_list_;
 };
 
 }  // namespace one
