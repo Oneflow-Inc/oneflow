@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
+#include "oneflow/core/eager/foreign_boxing_util.h"
 
 namespace oneflow {
 namespace one {
@@ -193,8 +194,8 @@ static std::shared_ptr<compatible_py::BlobObject> GetInBlobObject(
       compatible_py::GetOpArgParallelAttribute(in_op_parallel_desc_sym, op_attribute, ibn)
           .GetPtrOrThrow();
   auto origin_blob_object = bn2blob_object.at(ibn);
-  // TODO(hjchen2): Boxing origin blob object.
-  return std::shared_ptr<compatible_py::BlobObject>(nullptr);
+  return Global<ForeignBoxingUtil>::Get()->BoxingTo(builder, origin_blob_object,
+                                                    in_op_arg_parallel_attr);
 };
 
 static std::function<void(const std::shared_ptr<InstructionsBuilder>& builder)>
