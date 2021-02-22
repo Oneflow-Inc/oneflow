@@ -24,6 +24,10 @@ from test_util import Args, GenArgDict, type_name_to_flow_type, type_name_to_np_
 import oneflow.typing as oft
 import unittest
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def TODO_test_train(test_case):
     flow.config.enable_debug_mode(True)
@@ -49,10 +53,10 @@ def CompareNnBnWithTensorFlow(
     epsilon,
     input_minval=-10,
     input_maxval=10,
-    y_rtol=1e-5,
-    y_atol=1e-5,
-    x_diff_rtol=1e-5,
-    x_diff_atol=1e-5,
+    y_rtol=1e-4,
+    y_atol=1e-4,
+    x_diff_rtol=1e-4,
+    x_diff_atol=1e-4,
 ):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()

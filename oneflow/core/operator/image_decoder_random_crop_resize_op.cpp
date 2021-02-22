@@ -34,8 +34,9 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     EnrollTmpBn("tmp");
   }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override {
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override {
     const ImageDecoderRandomCropResizeOpConf& conf =
         this->op_conf().image_decoder_random_crop_resize_conf();
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
@@ -48,6 +49,14 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     out_dim_vec.push_back(conf.target_width());
     out_dim_vec.push_back(3);
     out->mut_shape() = Shape(out_dim_vec);
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> InferInternalBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const override {
+    const ImageDecoderRandomCropResizeOpConf& conf =
+        this->op_conf().image_decoder_random_crop_resize_conf();
     BlobDesc* tmp = GetBlobDesc4BnInOp("tmp");
     tmp->set_data_type(DataType::kUInt8);
     tmp->mut_shape() = Shape({conf.max_num_pixels() * 3 * conf.num_workers()});

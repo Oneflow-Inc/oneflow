@@ -17,6 +17,7 @@ from __future__ import absolute_import
 from typing import Optional, Sequence
 from oneflow.python.oneflow_export import oneflow_export
 
+import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -34,8 +35,11 @@ import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow
+import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow_api
 import os
+
+blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
 @oneflow_export("get_variable")
@@ -48,19 +52,19 @@ def api_get_variable(
     trainable: Optional[bool] = None,
     model_name: Optional[str] = None,
     random_seed: Optional[int] = None,
-    distribute: distribute_util.Distribute = distribute_util.broadcast(),
+    distribute: oneflow_api.distribute.Distribute = oneflow_api.distribute.broadcast(),
     reuse: bool = True,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""Create a variable or retrieve an existing one.
 
     Args:
-        name: Name of this variable. One variable could be shared by multiple OneFlow functions. `None` by defauilt
-        shape: Shape of the variable. `None` by defauilt
-        dtype: Data type of the variable. `None` by defauilt
-        initializer: A initializer object. For instance, a :func:`~oneflow.ones_initializer`. `None` by defauilt
-        trainable: A `bool` to indicate if this variable is trainable. `True` by defauilt
-        model_name: A `string`. `'weight'` or `'bias'`. `None` by defauilt
-        random_seed: Random seed for random initializers. `None` by defauilt
+        name: Name of this variable. One variable could be shared by multiple OneFlow functions. `None` by default
+        shape: Shape of the variable. `None` by default
+        dtype: Data type of the variable. `None` by default
+        initializer: A initializer object. For instance, a :func:`~oneflow.ones_initializer`. `None` by default
+        trainable: A `bool` to indicate if this variable is trainable. `True` by default
+        model_name: A `string`. `'weight'` or `'bias'`. `None` by default
+        random_seed: Random seed for random initializers. `None` by default
 
     For example: 
 
@@ -136,7 +140,7 @@ def api_get_variable(
                         kernel_size=[3, 3],
                         strides=2,
                         padding='SAME',
-                        name="Convlayer")
+                        name="ConvLayer")
             return conv
 
 
@@ -171,7 +175,7 @@ def get_eager_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=distribute_util.broadcast(),
+    distribute=oneflow_api.distribute.broadcast(),
     reuse=True,
 ):
     assert isinstance(name, str)
@@ -186,7 +190,7 @@ def get_eager_variable(
 
     if reuse is False:
         assert job_var_blob is None, (
-            "varaible '{}' already exists, "
+            "variable '{}' already exists, "
             "getting the same variable is not allowed "
             "when reuse is False".format(name)
         )
@@ -208,11 +212,11 @@ def get_eager_variable(
             var_blob = CreateEagerVariableBlob(op_attribute)
             op_executor.EagerInitVariableBlob(sess, op_conf, var_blob)
 
-        assert isinstance(var_blob, remote_blob_util.EagerConsistentBlob)
+        assert isinstance(var_blob, oneflow_api.EagerConsistentBlob)
         sess.StashVariableBlob4Job(job_name, op_conf.name, var_blob)
     else:
-        assert isinstance(job_var_blob, remote_blob_util.EagerConsistentBlob)
-        assert isinstance(var_blob, remote_blob_util.EagerConsistentBlob)
+        assert isinstance(job_var_blob, oneflow_api.EagerConsistentBlob)
+        assert isinstance(var_blob, oneflow_api.EagerConsistentBlob)
         assert var_blob.IdenticalTo(job_var_blob)
 
     bw_blob_register = gradient_util.GetDefaultBackwardBlobRegister()
@@ -232,7 +236,7 @@ def get_lazy_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=distribute_util.broadcast(),
+    distribute=oneflow_api.distribute.broadcast(),
     reuse=True,
 ):
     assert isinstance(name, str)
@@ -247,7 +251,7 @@ def get_lazy_variable(
 
     if reuse is False:
         assert job_var_blob is None, (
-            "varaible '{}' already exists, "
+            "variable '{}' already exists, "
             "getting the same variable is not allowed "
             "when param reuse is False".format(name)
         )
@@ -265,14 +269,14 @@ def get_lazy_variable(
             distribute=distribute,
         )
         job_var_blob = _CreateVariableBlob(op_conf)
-        assert isinstance(job_var_blob, remote_blob_util.LazyConsistentBlob)
+        assert isinstance(job_var_blob, oneflow_api.LazyConsistentBlob)
         sess.StashVariableBlob4Job(job_name, op_conf.name, job_var_blob)
         if var_blob is not None:
-            assert isinstance(var_blob, remote_blob_util.LazyConsistentBlob)
+            assert isinstance(var_blob, oneflow_api.LazyConsistentBlob)
             assert var_blob.IdenticalTo(job_var_blob)
     else:
-        assert isinstance(job_var_blob, remote_blob_util.LazyConsistentBlob)
-        assert isinstance(var_blob, remote_blob_util.LazyConsistentBlob)
+        assert isinstance(job_var_blob, oneflow_api.LazyConsistentBlob)
+        assert isinstance(var_blob, oneflow_api.LazyConsistentBlob)
         assert var_blob.IdenticalTo(job_var_blob)
 
     return job_var_blob
@@ -287,7 +291,7 @@ def GenerateVariableOpConf(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=distribute_util.broadcast(),
+    distribute=oneflow_api.distribute.broadcast(),
 ):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
@@ -322,7 +326,7 @@ def GenerateVariableOpConf(
     if model_name is not None:
         op_conf.variable_conf.model_name = model_name
 
-    if type(distribute) is distribute_util.SplitDistribute:
+    if type(distribute) is oneflow_api.distribute.SplitDistribute:
         op_conf.variable_conf.split_axis.value = distribute.axis
     else:
         op_conf.variable_conf.split_axis.ClearField("value")
@@ -342,7 +346,7 @@ def _CreateVariableBlob(op_conf):
     return remote_blob_util.RemoteBlob(lbi)
 
 
-def CreateEagerVariableBlob(op_attribute, job_name=None):
+def CreateEagerVariableBlob(op_attribute, job_name=""):
     bn_in_op2blob_object = {}
 
     def BuildInstruction(builder):
@@ -354,9 +358,17 @@ def CreateEagerVariableBlob(op_attribute, job_name=None):
         )
 
     vm_util.LogicalRun(BuildInstruction)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_attribute.op_conf.name
-    lbi.blob_name = op_attribute.op_conf.variable_conf.out
-    return remote_blob_util.EagerConsistentBlob(
-        lbi, blob_object=bn_in_op2blob_object["out"], job_name=job_name
+    lbi = lbi_util.LogicalBlobId()
+    lbi.set_op_name(op_attribute.op_conf.name)
+    lbi.set_blob_name(op_attribute.op_conf.variable_conf.out)
+    if not isinstance(lbi, lbi_util.LogicalBlobId):
+        cfg_lbi = lbi_util.LogicalBlobId()
+        cfg_lbi.set_op_name(lbi.op_name)
+        cfg_lbi.set_blob_name(lbi.blob_name)
+        lbi = cfg_lbi
+    return oneflow_api.EagerConsistentBlob(
+        lbi,
+        blob_object=bn_in_op2blob_object["out"],
+        blob_register=blob_register,
+        job_name=job_name,
     )

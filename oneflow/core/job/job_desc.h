@@ -60,9 +60,6 @@ class JobDesc final {
   bool enable_experiment_run() const;
   bool enable_reuse_mem() const { return job_conf_.enable_reuse_mem(); }
   bool enable_inplace() const { return job_conf_.enable_inplace(); }
-  bool enable_float_compute_for_half_gemm() const {
-    return job_conf_.enable_float_compute_for_half_gemm();
-  }
   bool enable_auto_mixed_precision() const { return job_conf_.enable_auto_mixed_precision(); }
   bool do_parallel_cast_before_widening_type_cast() const {
     return job_conf_.do_parallel_cast_before_widening_type_cast();
@@ -70,8 +67,6 @@ class JobDesc final {
   bool prune_parallel_cast_ops() const { return job_conf_.prune_parallel_cast_ops(); }
   bool prune_cast_to_static_shape_ops() const { return job_conf_.prune_cast_to_static_shape_ops(); }
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
-
-  bool enable_keep_header_only() const { return job_conf_.enable_keep_header_only(); }
 
   bool has_xrt_config() const { return job_conf_.has_xrt_config(); }
   const XrtConfig& xrt_config() const { return job_conf_.xrt_config(); }

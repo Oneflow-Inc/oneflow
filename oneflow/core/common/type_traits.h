@@ -15,6 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_CORE_COMMON_TYPE_TRAITS_H_
 #define ONEFLOW_CORE_COMMON_TYPE_TRAITS_H_
+#include <type_traits>
 
 namespace std {
 
@@ -95,5 +96,29 @@ class is_trivially_copyable<T*> : public true_type {};
 #endif
 
 }  // namespace std
+
+namespace oneflow {
+
+namespace detail {
+
+template<typename T, typename Enabled = void>
+struct ScalarOrConstRef;
+
+template<typename T>
+struct ScalarOrConstRef<T, typename std::enable_if<std::is_scalar<T>::value>::type> {
+  using type = T;
+};
+
+template<typename T>
+struct ScalarOrConstRef<T, typename std::enable_if<!std::is_scalar<T>::value>::type> {
+  using type = const T&;
+};
+
+}  // namespace detail
+
+template<typename T>
+using scalar_or_const_ref_t = typename detail::ScalarOrConstRef<T>::type;
+
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_TYPE_TRAITS_H_

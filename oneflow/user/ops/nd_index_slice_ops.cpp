@@ -240,7 +240,7 @@ REGISTER_USER_OP("scatter_nd_like")
             .Broadcast(user_op::OpArg("out", 0))
             .Build();
       }
-      const Shape& out_shape = ctx->Attr<Shape>("shape");
+      const Shape& out_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
       int64_t index_ndims = indices_tensor.shape().At(indices_num_axes - 1);
       int64_t slice_ndims = out_shape.NumAxes() - index_ndims;
       FOR_RANGE(int64_t, i, 0, slice_ndims) {
@@ -258,12 +258,6 @@ REGISTER_USER_OP("scatter_nd_like")
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
       return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
-      CHECK(like_arg_modifier != nullptr);
-      like_arg_modifier->set_use_header_only(true);
     });
 
 REGISTER_USER_OP("tensor_scatter_nd_update")

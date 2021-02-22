@@ -19,10 +19,15 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+import oneflow_api
 import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList
 import oneflow.typing as oft
+
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
 
 
 def compare_reduce_sum_with_tensorflow(
@@ -117,8 +122,8 @@ class TestReduceOpsV2(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_sum(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
+            test_case.assertTrue(y.batch_axis == flow.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 

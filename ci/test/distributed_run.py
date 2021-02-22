@@ -68,7 +68,7 @@ chmod 777 {dotssh_dir}/*
         f.write(bash_cmd)
         f.flush()
         subprocess.check_call(
-            f"docker run -v /tmp:/host/tmp -v {dotssh_dir}:{dotssh_dir} -w $PWD oneflow-test:$USER bash /host/{f_name}",
+            f"docker run --rm -v /tmp:/host/tmp -v {dotssh_dir}:{dotssh_dir} -w $PWD oneflow-test:$USER bash /host/{f_name}",
             shell=True,
         )
     config_content = """Host *
@@ -161,6 +161,7 @@ export ONEFLOW_TEST_SSH_PORT={ssh_port}
 export ONEFLOW_TEST_LOG_DIR={log_dir}
 export ONEFLOW_TEST_NODE_LIST="{this_host},{remote_host}"
 export ONEFLOW_WORKER_KEEP_LOG=1
+export ONEFLOW_TEST_TMP_DIR="./distributed-tmp"
 export NCCL_DEBUG=INFO
 """
     if oneflow_worker_bin:
