@@ -13,17 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/version.h"
 #include "oneflow/core/framework/device_registry_manager.h"
 
 namespace oneflow {
 
-void DumpVersionInfo() {
-#ifdef WITH_GIT_VERSION
-  LOG(INFO) << "OneFlow git version: " << GetOneFlowGitVersion();
-#endif  // WITH_GIT_VERSION
-  auto dump_info_funcs = DeviceRegistryMgr::Get().DumpVersionInfoFuncs();
-  for (auto dev_func_pair : dump_info_funcs) { dev_func_pair.second(); }
+DeviceRegistryMgr& DeviceRegistryMgr::Get() {
+  static DeviceRegistryMgr mgr;
+  return mgr;
+}
+
+DeviceTypeKeyMap<DumpVersionInfoFn>& DeviceRegistryMgr::DumpVersionInfoFuncs() {
+  return dump_version_info_funcs_;
+}
+
+DeviceTypeKeyMap<std::string>& DeviceRegistryMgr::DeviceType4Tag() { return device_type_to_tag_; }
+
+HashMap<std::string, DeviceType, std::hash<std::string>>& DeviceRegistryMgr::DeviceTag4Type() {
+  return device_tag_to_type_;
 }
 
 }  // namespace oneflow
