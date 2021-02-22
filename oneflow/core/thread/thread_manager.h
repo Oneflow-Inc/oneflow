@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/thread/thread_pool.h"
+#include "oneflow/core/common/id_util.h"
 
 namespace oneflow {
 
@@ -37,9 +38,7 @@ class ThreadMgr final {
   friend class Global<ThreadMgr>;
   explicit ThreadMgr(const Plan& plan);
 
-  void CreatePersistenceThrd(const Plan& plan, int64_t thrd_id);
-
-  std::vector<Thread*> threads_;
+  HashMap<StreamId, Thread*> threads_;
 };
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
