@@ -21,6 +21,14 @@ namespace oneflow {
 namespace {
 
 #define GRPC_CHECK(x) CHECK_EQ(x.error_code(), grpc::StatusCode::OK)
+}  // namespace oneflow
+
+CtrlClient::~CtrlClient() {
+  {
+    std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
+    need_heartbeat_thread_stop_ = true;
+  }
+  heartbeat_thread_.join();
 }
 
 CtrlClient::CtrlClient() {
