@@ -346,6 +346,21 @@ foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
   copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 endforeach()
 
+set(DEVICE_REG_HEADERS "${PROJECT_SOURCE_DIR}/oneflow/core/framework/device_register_*.h")
+set(AUTO_GEN_DEV_REG_HEADER "${PROJECT_BINARY_DIR}/oneflow/core/framework/auto_gen_device_registry.h")
+set(AUTO_GEN_DEV_REG_MACRO_ID "ONEFLOW_CORE_FRAMEWORK_AUTO_GEN_DEVICE_REGISTRY_H_")
+
+message(STATUS "auto generated header file: ${AUTO_GEN_DEV_REG_HEADER}")
+file(WRITE ${AUTO_GEN_DEV_REG_HEADER} "#ifndef ${AUTO_GEN_DEV_REG_MACRO_ID}\n#define ${AUTO_GEN_DEV_REG_MACRO_ID}\n")
+file(GLOB_RECURSE DEVICE_REGISTER_HEADERS ${DEVICE_REG_HEADERS})
+foreach(item ${DEVICE_REGISTER_HEADERS})
+    file(RELATIVE_PATH item ${PROJECT_SOURCE_DIR} ${item})
+    message(STATUS "device register header file found: " ${item})
+    file(APPEND ${AUTO_GEN_DEV_REG_HEADER} "#include \"${item}\"\n")
+endforeach()
+file(APPEND ${AUTO_GEN_DEV_REG_HEADER} "#endif //${AUTO_GEN_DEV_REG_MACRO_ID}\n\n")
+list(APPEND PROTO_HDRS ${AUTO_GEN_DEV_REG_HEADER})
+
 copy_files("${PROTO_HDRS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 copy_files("${CFG_HRCS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 
