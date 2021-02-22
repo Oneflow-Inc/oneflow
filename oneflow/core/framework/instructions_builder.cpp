@@ -924,7 +924,7 @@ Maybe<void> InstructionsBuilder::_StatelessCall(
     op_parallel_desc_sym = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(symbol_id));
   }
   CHECK_OR_RETURN(op_parallel_desc_sym);
-
+  // TODO(hanbinbin): use Maybe as return after StatefulCall is migrated
   const auto DelegateBlobObject4Ibn =
       [&op_attribute, &bn_in_op2blob_object, &get_delegate_blob_object,
        op_parallel_desc_sym](const std::string& ibn) -> std::shared_ptr<compatible_py::BlobObject> {
