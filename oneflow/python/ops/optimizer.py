@@ -1051,6 +1051,9 @@ class SGD(Optimizer):
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
         loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
+        variables(Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ]): maintained variables.
 
     For example:
 
@@ -1143,6 +1146,9 @@ class SGDW(Optimizer):
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
         loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
+        variables(Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ]): maintained variables.
 
     Note:
 
@@ -1282,6 +1288,9 @@ class Adam(Optimizer):
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
         loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
+        variables(Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ]): maintained variables.
 
     For example:
 
@@ -1403,6 +1412,9 @@ class AdamW(Optimizer):
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
         loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
+        variables(Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ]): maintained variables.
 
     Note:
 
@@ -1540,6 +1552,9 @@ class RMSProp(Optimizer):
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
         loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
+        variables(Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ]): maintained variables.
 
     For example:
 
@@ -1721,6 +1736,9 @@ class LazyAdam(Optimizer):
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
         loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
+        variables(Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ]): maintained variables.
 
     For example:
 
@@ -1803,6 +1821,9 @@ class LAMB(Optimizer):
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
         loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
+        variables(Optional[
+            Union[Sequence[Text], Callable[[], Sequence[Text]]]
+        ]): maintained variables.
 
     Note:
 
@@ -1877,6 +1898,17 @@ class LAMB(Optimizer):
 
 @oneflow_export("optimizer.CombinedOptimizer")
 class CombinedOptimizer(Optimizer):
+    r"""
+    Combined optimizer of the multi optimizer case.
+
+    Args:
+        optimizers (Sequence[Optimizer]): optimizers to work together
+        loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
+        train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
+        loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
+
+        Example: see test_multi_optimizer.py
+    """
     def __init__(
         self,
         optimizers: Sequence[Optimizer],

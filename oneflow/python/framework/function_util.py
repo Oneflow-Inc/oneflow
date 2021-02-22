@@ -844,7 +844,7 @@ def set_primary_lr(func_desc, value):
         value ([type]): [description]
     """
     print(
-        """WARNING: func_config.train.* has been deprecated, it does nothing now. Please replace it by the new optimizer api.
+        """WARNING: this API does nothing now. Please replace it by the new optimizer API.
         """
     )
 
@@ -858,7 +858,7 @@ def set_secondary_lr(func_desc, value):
         value ([type]): [description]
     """
     print(
-        """WARNING: func_config.train.* has been deprecated, it does nothing now. Please replace it by the new optimizer api.
+        """WARNING: this API does nothing now. Please replace it by the new optimizer API.
         """
     )
 
