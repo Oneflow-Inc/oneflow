@@ -109,8 +109,6 @@ def _run_test_min_max_observer(
             )
         return scale, zero_point
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     weight = (np.random.random(weight_shape) - 0.5).astype(type_name_to_np_type[dtype])
     scale, zero_point = QuantizeJob(weight).get()
     _check_min_max_observer(
@@ -237,9 +235,6 @@ def _run_test_moving_average_min_max_observer(
                 flow.optimizer.PiecewiseConstantScheduler([], [0.001]),
             ).minimize(loss)
         return scale, zero_point
-
-    check_point = flow.train.CheckPoint()
-    check_point.init()
 
     moving_max_np = np.zeros((1,))
     moving_min_np = np.zeros((1,))
@@ -380,9 +375,6 @@ def _run_test_fake_quantize(
             ).minimize(loss)
 
         return out
-
-    check_point = flow.train.CheckPoint()
-    check_point.init()
 
     input = (np.random.random(in_shape) - 0.5).astype(type_name_to_np_type[dtype])
     out = QuantizeJob(input).get()
