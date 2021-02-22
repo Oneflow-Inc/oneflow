@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
+#include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 
@@ -114,15 +115,29 @@ void EagerInterpreter::Apply(const OpExpr* op_expr, const TensorList& inputs, Te
              << " has not been supported in EagerInterpreter::Apply.";
 }
 
+static std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>
+MakeBn2BlobObjectMap(const BuiltinOpExpr* op_expr, const TensorList& inputs,
+                     const TensorList& outputs) {
+  using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
+  auto* bn2blob_object(new Bn2BlobObjectMap{});
+  for (int i = 0; i < inputs.size(); ++i) {
+    const auto& ibn = op_expr->indexed_ibns().at(i);
+    bn2blob_object->emplace(ibn, inputs[i]->blob_object());
+  }
+  for (int i = 0; i < outputs.size(); ++i) {
+    const auto& obn = op_expr->indexed_obns().at(i);
+    bn2blob_object->emplace(obn, outputs[i]->blob_object());
+  }
+  return std::shared_ptr<Bn2BlobObjectMap>(bn2blob_object);
+}
+
 void EagerInterpreter::Apply_(const UserOpExpr* op_expr, const TensorList& inputs,
                               TensorList& outputs, const OpExprInterpState* state) {
   auto op_attribute = AddOpAndInferOpAttribute(op_expr, context());
   auto parallel_conf = std::make_shared<cfg::ParallelConf>(
       context()->scope->device_parallel_desc_symbol()->parallel_conf());
   auto BuildInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    // TODO(hjchen2) Complete bn2blob_object.
-    std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>
-        bn2blob_object;
+    auto bn2blob_object = MakeBn2BlobObjectMap(op_expr, inputs, outputs);
     builder->NoBoxingStatelessCall(op_attribute, parallel_conf, bn2blob_object);
   };
   void(LogicalRun(BuildInstruction).GetOrThrow());
@@ -134,11 +149,11 @@ void EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const TensorList& i
 }
 
 static std::function<void(const std::shared_ptr<InstructionsBuilder>& builder)>
-BuildMirroredCastInstruction(const BuiltinOpExpr* op_expr, const OpExprInterpContext* ctx) {
+BuildMirroredCastInstruction(const BuiltinOpExpr* op_expr, const TensorList& inputs,
+                             TensorList& outputs, const OpExprInterpContext* ctx) {
   auto op_attribute = AddOpAndInferOpAttribute(op_expr, ctx);
   auto BuildInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>
-        bn2blob_object;
+    auto bn2blob_object = MakeBn2BlobObjectMap(op_expr, inputs, outputs);
     const auto& in_blob_object = (*bn2blob_object)["in"];
     const auto& parallel_desc_symbol = in_blob_object->parallel_desc_symbol();
     OpAttribute proto_op_attribute;
@@ -149,59 +164,115 @@ BuildMirroredCastInstruction(const BuiltinOpExpr* op_expr, const OpExprInterpCon
     auto out_blob_object = builder->MakeReferenceBlobObject(
         in_blob_object,
         std::make_shared<compatible_py::OpArgParallelAttribute>(op_arg_parallel_attr));
-    // (*bn2blob_object)["out"] = out_blob_object;
+    *((*bn2blob_object)["out"]) = out_blob_object.GetOrThrow();
   };
   return BuildInstruction;
 }
 
 void EagerInterpreter::Apply_(const CastToMirroredOpExpr* op_expr, const TensorList& inputs,
                               TensorList& outputs, const OpExprInterpState* state) {
-  auto BuildInstruction = BuildMirroredCastInstruction(op_expr, context());
+  auto BuildInstruction = BuildMirroredCastInstruction(op_expr, inputs, outputs, context());
   LogicalRun(BuildInstruction).GetOrThrow();
 }
 
 void EagerInterpreter::Apply_(const CastFromMirroredOpExpr* op_expr, const TensorList& inputs,
                               TensorList& outputs, const OpExprInterpState* state) {
-  auto BuildInstruction = BuildMirroredCastInstruction(op_expr, context());
+  auto BuildInstruction = BuildMirroredCastInstruction(op_expr, inputs, outputs, context());
   LogicalRun(BuildInstruction).GetOrThrow();
 }
 
-static std::function<void(const std::shared_ptr<InstructionsBuilder>& builder)>
-BuildDistributeSplitOrCloneInstruction(const BuiltinOpExpr* op_expr,
-                                       const OpExprInterpContext* ctx) {
-  auto op_attribute = AddOpAndInferOpAttribute(op_expr, ctx);
-  auto parallel_conf = std::make_shared<cfg::ParallelConf>(
-      ctx->scope->device_parallel_desc_symbol()->parallel_conf());
-  auto BuildInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+static std::shared_ptr<compatible_py::BlobObject> GetInBlobObject(
+    const std::shared_ptr<InstructionsBuilder>& builder, const OpAttribute& op_attribute,
+    const std::string& ibn,
+    const HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>& bn2blob_object) {
+  const auto& parallel_sig = op_attribute.parallel_signature().bn_in_op2parallel_desc_symbol_id();
+  int symbol_id = parallel_sig.at(ibn);
+  auto in_op_parallel_desc_sym =
+      GetSymbol<cfg::ParallelConf, ParallelDesc>(symbol_id).GetPtrOrThrow();
+  const auto& in_op_arg_parallel_attr =
+      compatible_py::GetOpArgParallelAttribute(in_op_parallel_desc_sym, op_attribute, ibn)
+          .GetPtrOrThrow();
+  auto origin_blob_object = bn2blob_object.at(ibn);
+  // TODO(hjchen2): Boxing origin blob object.
+  return std::shared_ptr<compatible_py::BlobObject>(nullptr);
+};
 
+static std::function<void(const std::shared_ptr<InstructionsBuilder>& builder)>
+BuildDistributeSplitOrCloneInstruction(const BuiltinOpExpr* op_expr, const TensorList& inputs,
+                                       TensorList& outputs, const OpExprInterpContext* ctx) {
+  auto op_attribute = AddOpAndInferOpAttribute(op_expr, ctx);
+  OpAttribute proto_op_attribute;
+  op_attribute->ToProto(&proto_op_attribute);
+  auto BuildInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+    auto bn2blob_object = MakeBn2BlobObjectMap(op_expr, inputs, outputs);
+    auto logical_in_blob_object =
+        GetInBlobObject(builder, proto_op_attribute, "in", *bn2blob_object);
+    auto physical_out_blob_objects =
+        builder->UnpackLogicalBlobToPhysicalBlobs(logical_in_blob_object).GetOrThrow();
+    for (int i = 0; i < physical_out_blob_objects.size(); ++i) {
+      *((*bn2blob_object)["out_" + std::to_string(i)]) = *(physical_out_blob_objects[i]);
+    }
   };
+  return BuildInstruction;
 }
 
 void EagerInterpreter::Apply_(const DistributeSplitOpExpr* op_expr, const TensorList& inputs,
                               TensorList& outputs, const OpExprInterpState* state) {
-  auto BuildInstruction = BuildDistributeSplitOrCloneInstruction(op_expr, context());
+  auto BuildInstruction =
+      BuildDistributeSplitOrCloneInstruction(op_expr, inputs, outputs, context());
   LogicalRun(BuildInstruction).GetOrThrow();
 }
 
 void EagerInterpreter::Apply_(const DistributeCloneOpExpr* op_expr, const TensorList& inputs,
                               TensorList& outputs, const OpExprInterpState* state) {
-  auto BuildInstruction = BuildDistributeSplitOrCloneInstruction(op_expr, context());
+  auto BuildInstruction =
+      BuildDistributeSplitOrCloneInstruction(op_expr, inputs, outputs, context());
   LogicalRun(BuildInstruction).GetOrThrow();
 }
 
 static std::function<void(const std::shared_ptr<InstructionsBuilder>& builder)>
-BuildDistributeConcatAndAddInstruction(const BuiltinOpExpr* op_expr,
-                                       const OpExprInterpContext* ctx) {}
+BuildDistributeConcatAndAddInstruction(const BuiltinOpExpr* op_expr, const TensorList& inputs,
+                                       TensorList& outputs, const OpExprInterpContext* ctx) {
+  auto op_attribute = AddOpAndInferOpAttribute(op_expr, ctx);
+  OpAttribute proto_op_attribute;
+  op_attribute->ToProto(&proto_op_attribute);
+  auto op_parallel_desc_sym =
+      GetSymbol<cfg::ParallelConf, ParallelDesc>(
+          proto_op_attribute.parallel_signature().op_parallel_desc_symbol_id())
+          .GetPtrOrThrow();
+  auto op_arg_parallel_attr =
+      compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, proto_op_attribute, "out")
+          .GetPtrOrThrow();
+  auto op_arg_blob_attr =
+      compatible_py::GetOpArgBlobAttribute(proto_op_attribute, "out").GetPtrOrThrow();
+  auto BuildInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+    int input_size = op_expr->indexed_ibns().size();
+    auto bn2blob_object = MakeBn2BlobObjectMap(op_expr, inputs, outputs);
+    std::vector<std::shared_ptr<compatible_py::BlobObject>> in_blob_objects(input_size);
+    for (int i = 0; i < input_size; ++i) {
+      in_blob_objects[i] =
+          GetInBlobObject(builder, proto_op_attribute, "in_" + std::to_string(i), *bn2blob_object);
+    }
+    auto physical_out_blob_object = builder
+                                        ->PackPhysicalBlobsToLogicalBlob(
+                                            in_blob_objects, op_arg_parallel_attr, op_arg_blob_attr)
+                                        .GetOrThrow();
+    *((*bn2blob_object)["out"]) = physical_out_blob_object;
+  };
+  return BuildInstruction;
+}
 
 void EagerInterpreter::Apply_(const DistributeConcatOpExpr* op_expr, const TensorList& inputs,
                               TensorList& outputs, const OpExprInterpState* state) {
-  auto BuildInstruction = BuildDistributeConcatAndAddInstruction(op_expr, context());
+  auto BuildInstruction =
+      BuildDistributeConcatAndAddInstruction(op_expr, inputs, outputs, context());
   LogicalRun(BuildInstruction).GetOrThrow();
 }
 
 void EagerInterpreter::Apply_(const DistributeAddOpExpr* op_expr, const TensorList& inputs,
                               TensorList& outputs, const OpExprInterpState* state) {
-  auto BuildInstruction = BuildDistributeConcatAndAddInstruction(op_expr, context());
+  auto BuildInstruction =
+      BuildDistributeConcatAndAddInstruction(op_expr, inputs, outputs, context());
   LogicalRun(BuildInstruction).GetOrThrow();
 }
 
