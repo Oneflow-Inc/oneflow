@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/framework/blob_register.h"
 #include "oneflow/core/framework/py_remote_blob.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
@@ -56,10 +57,10 @@ class TensorImpl {
   virtual void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
     parallel_conf_ = parallel_conf;
   }
+  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const { UNIMPLEMENTED(); }
   virtual std::shared_ptr<Device> device() { return device_; }
   virtual void set_device(const std::shared_ptr<Device>& device) { device_ = device; }
   virtual void set_blob_desc(const std::shared_ptr<compatible_py::BlobDesc>& blob) { blob_ = blob; }
-  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const { UNIMPLEMENTED(); }
   virtual void set_distribute(const std::shared_ptr<compatible_py::Distribute> distribute) {
     blob_->set_distribute(distribute);
   }
@@ -67,13 +68,27 @@ class TensorImpl {
     return blob_->distribute();
   }
   virtual int64_t parallel_size() { UNIMPLEMENTED(); }
-  virtual void set_job_name(std::string job_name) { UNIMPLEMENTED(); }
-  virtual std::string job_name() const { UNIMPLEMENTED(); }
   virtual int64_t numpy_size() const { UNIMPLEMENTED(); }
   virtual int64_t numpy_list_size() const { UNIMPLEMENTED(); }
   virtual std::shared_ptr<compatible_py::BlobObject> blob_object() const { UNIMPLEMENTED(); }
+  virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+    UNIMPLEMENTED();
+  };
+  virtual std::shared_ptr<Blob> storage() const { UNIMPLEMENTED(); }
+  virtual bool has_storage() const { UNIMPLEMENTED(); }
+  template<typename T = void>
+  const T* data() const {
+    CHECK(has_storage());
+    return storage()->dptr<T>();
+  }
 
-  // deprecated in the future
+  template<typename T = void>
+  T* mutable_data() {
+    CHECK(has_storage());
+    return storage()->mut_dptr<T>();
+  }
+
+  // Deprecated in the future
   virtual std::shared_ptr<cfg::LogicalBlobId> lbi() const { return blob_->lbi(); }
   virtual std::string logical_blob_name() const { return blob_->logical_blob_name(); }
   virtual std::string op_name() const { return blob_->op_name(); }
@@ -81,17 +96,89 @@ class TensorImpl {
   virtual std::string unique_name() const { return blob_->unique_name(); }
   virtual bool has_batch_axis() const { return blob_->has_batch_axis(); }
   virtual int64_t batch_axis() const { return blob_->batch_axis(); }
+  virtual void set_job_name(std::string job_name) { UNIMPLEMENTED(); }
+  virtual std::string job_name() const { UNIMPLEMENTED(); }
   virtual int64_t split_axis() const { UNIMPLEMENTED(); }
   virtual bool is_dynamic() const { return blob_->is_dynamic(); }
   virtual bool is_tensor_list() const { return blob_->is_tensor_list(); }
 
- private:
+ protected:
   std::shared_ptr<Shape> shape_;
   DataType dtype_;
   std::shared_ptr<Device> device_;
   std::shared_ptr<cfg::ParallelConf> parallel_conf_;
   std::shared_ptr<compatible_py::Distribute> distribute_;
   std::shared_ptr<compatible_py::BlobDesc> blob_;
+};
+
+class LazyTensorImpl : public TensorImpl {
+ public:
+  LazyTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
+                 const std::shared_ptr<Device>& device)
+      : TensorImpl(shape, dtype, device) {}
+  LazyTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
+                 const std::shared_ptr<compatible_py::Distribute>& distribute,
+                 const std::shared_ptr<cfg::ParallelConf>& parallel_conf)
+      : TensorImpl(shape, dtype, distribute, parallel_conf) {}
+  virtual ~LazyTensorImpl() = default;
+};
+
+class EagerTensorImpl : public TensorImpl {
+ public:
+  EagerTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
+                  const std::shared_ptr<Device>& device)
+      : TensorImpl(shape, dtype, device) {}
+  EagerTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
+                  const std::shared_ptr<compatible_py::Distribute>& distribute,
+                  const std::shared_ptr<cfg::ParallelConf>& parallel_conf)
+      : TensorImpl(shape, dtype, distribute, parallel_conf) {}
+  virtual ~EagerTensorImpl() = default;
+  void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
+    blob_object_ = blob_object;
+  }
+  std::shared_ptr<compatible_py::BlobObject> blob_object() const override { return blob_object_; }
+  int64_t numpy_size() const override;
+  int64_t numpy_list_size() const override;
+  // TODO
+  bool has_storage() const override {}
+  std::shared_ptr<Blob> storage() const override {}
+
+ protected:
+  std::shared_ptr<compatible_py::BlobObject> blob_object_;
+};
+
+class MirroredLazyTensorImpl : public LazyTensorImpl {
+ public:
+  MirroredLazyTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
+                         const std::shared_ptr<Device>& device)
+      : LazyTensorImpl(shape, dtype, device) {}
+  ~MirroredLazyTensorImpl() = default;
+};
+
+class MirroredEagerTensorImpl : public EagerTensorImpl {
+ public:
+  MirroredEagerTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
+                          const std::shared_ptr<Device>& device)
+      : EagerTensorImpl(shape, dtype, device) {}
+  ~MirroredEagerTensorImpl() = default;
+};
+
+class ConsistentLazyTensorImpl : public LazyTensorImpl {
+ public:
+  ConsistentLazyTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
+                           const std::shared_ptr<compatible_py::Distribute>& distribute,
+                           const std::shared_ptr<cfg::ParallelConf>& parallel_conf)
+      : LazyTensorImpl(shape, dtype, distribute, parallel_conf) {}
+  ~ConsistentLazyTensorImpl() = default;
+};
+
+class ConsistentEagerTensorImpl : public EagerTensorImpl {
+ public:
+  ConsistentEagerTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
+                            const std::shared_ptr<compatible_py::Distribute>& distribute,
+                            const std::shared_ptr<cfg::ParallelConf>& parallel_conf)
+      : EagerTensorImpl(shape, dtype, distribute, parallel_conf) {}
+  ~ConsistentEagerTensorImpl() = default;
 };
 
 class Tensor {
@@ -108,32 +195,42 @@ class Tensor {
   void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
     impl_->set_parallel_conf(parallel_conf);
   }
+  void set_distribute(const std::shared_ptr<compatible_py::Distribute> distribute) {
+    impl_->set_distribute(distribute);
+  }
+  std::shared_ptr<compatible_py::Distribute> distribute() const { return impl_->distribute(); }
+  void set_job_name(std::string job_name) { impl_->set_job_name(job_name); }
+  int64_t numpy_size() const { return impl_->numpy_size(); }
+  int64_t numpy_list_size() const { return impl_->numpy_list_size(); }
+  std::shared_ptr<compatible_py::BlobObject> blob_object() const { return impl_->blob_object(); }
+  void set_blob_desc(const std::shared_ptr<compatible_py::BlobDesc>& blob) {
+    impl_->set_blob_desc(blob);
+  }
   bool is_lazy() const;
+  bool has_storage() const { return impl_->has_storage(); }
+  std::shared_ptr<Blob> storage() const { return impl_->storage(); }
+  template<typename T = void>
+  const T* data() const {
+    return impl_->data<T>();
+  }
+  template<typename T = void>
+  T* mutable_data() {
+    return impl_->mutable_data<T>();
+  }
 
+  // Deprecated in the future
   std::shared_ptr<cfg::LogicalBlobId> lbi() const { return impl_->lbi(); }
   std::string logical_blob_name() const { return impl_->logical_blob_name(); }
   std::string op_name() const { return impl_->op_name(); }
   std::string blob_name() const { return impl_->blob_name(); }
   std::string unique_name() const { return impl_->unique_name(); }
-  void set_distribute(const std::shared_ptr<compatible_py::Distribute> distribute) {
-    impl_->set_distribute(distribute);
-  }
-  std::shared_ptr<compatible_py::Distribute> distribute() const { return impl_->distribute(); }
   bool has_batch_axis() const { return impl_->has_batch_axis(); }
   std::string job_name() const { return impl_->job_name(); }
-
   int64_t batch_axis() const { return impl_->batch_axis(); }
   int64_t parallel_size() { return impl_->parallel_size(); }
-  void set_job_name(std::string job_name) { impl_->set_job_name(job_name); }
-  int64_t numpy_size() const { return impl_->numpy_size(); }
-  int64_t numpy_list_size() const { return impl_->numpy_list_size(); }
-  std::shared_ptr<compatible_py::BlobObject> blob_object() const { return impl_->blob_object(); }
   int64_t split_axis() const { return impl_->split_axis(); }
   bool is_dynamic() const { return impl_->is_dynamic(); }
   bool is_tensor_list() const { return impl_->is_tensor_list(); }
-  void set_blob_desc(const std::shared_ptr<compatible_py::BlobDesc>& blob) {
-    impl_->set_blob_desc(blob);
-  }
 
  protected:
   std::shared_ptr<TensorImpl> impl_;
@@ -156,43 +253,6 @@ class ConsistentTensor : public Tensor {
   ~ConsistentTensor() = default;
 };
 
-class LazyTensorImpl : public TensorImpl {
- public:
-  LazyTensorImpl() = default;
-  virtual ~LazyTensorImpl() = default;
-};
-
-class EagerTensorImpl : public TensorImpl {
- public:
-  EagerTensorImpl() = default;
-  virtual ~EagerTensorImpl() = default;
-};
-
-class MirroredLazyTensorImpl : public LazyTensorImpl {
- public:
-  MirroredLazyTensorImpl() = default;
-  ~MirroredLazyTensorImpl();
-};
-
-class MirroredEagerTensorImpl : public EagerTensorImpl {
- public:
-  MirroredEagerTensorImpl() {}
-  ~MirroredEagerTensorImpl();
-};
-
-class ConsistentLazyTensorImpl : public LazyTensorImpl {
- public:
-  ConsistentLazyTensorImpl() {}
-  ~ConsistentLazyTensorImpl();
-};
-
-class ConsistentEagerTensorImpl : public EagerTensorImpl {
- public:
-  ConsistentEagerTensorImpl() {}
-  ~ConsistentEagerTensorImpl();
-};
-
 }  // namespace one
 
 }  // namespace oneflow
-
