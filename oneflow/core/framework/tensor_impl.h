@@ -165,7 +165,7 @@ class LazyTensorImpl : public TensorImpl {
 class EagerTensorImpl : public TensorImpl {
  public:
   EagerTensorImpl() = default;
-  virtual ~EagerTensorImpl();
+  virtual ~EagerTensorImpl() = default;
 };
 
 class MirroredLazyTensorImpl : public LazyTensorImpl {
@@ -195,3 +195,4 @@ class ConsistentEagerTensorImpl : public EagerTensorImpl {
 }  // namespace one
 
 }  // namespace oneflow
+
