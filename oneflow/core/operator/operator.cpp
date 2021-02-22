@@ -363,6 +363,36 @@ Maybe<void> Operator::InferSbpSignatureIf(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> Operator::FilterAndCheckValidSbpSignatureListByLogicalShape(
+    const SbpSignatureList& total_sbp_sig_list,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc, SbpSignatureList* valid_sbp_sig_list) const {
+  for (const auto& sbp_signature : total_sbp_sig_list.sbp_signature()) {
+    bool is_valid = true;
+    for (const auto& ibn : input_bns()) {
+      const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
+      CHECK_OR_RETURN(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
+      const SbpParallel& sbp_parallel = sbp_parallel_it->second;
+      const SbpInferHint* hint = JUST(SbpInferHint4Ibn(ibn));
+      const Shape& logical_shape = hint->logical_blob_desc().shape();
+      // NOTE(chengcheng): disable split when logical shape cannot split at this axis
+      if (sbp_parallel.has_split_parallel()) {
+        const int64_t axis = sbp_parallel.split_parallel().axis();
+        CHECK_OR_RETURN(axis >= 0 && axis < logical_shape.NumAxes())
+            << "The sbp sign is ERROR because of the split axis >= shape num axes. In op: ["
+            << op_name() << "] ibn: (" << ibn << ") the split axis is = " << axis
+            << " . And the logical_shape = " << logical_shape.DebugStr() << "\n";
+        if (logical_shape.At(axis) < parallel_desc.parallel_num()) {
+          // NOTE(chengcheng): cannot split at this axis!
+          is_valid = false;
+          break;
+        }
+      }
+    }
+    if (is_valid) { *valid_sbp_sig_list->mutable_sbp_signature()->Add() = sbp_signature; }
+  }
+}
+
 Maybe<void> Operator::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -373,11 +403,17 @@ Maybe<void> Operator::InferSbpSignature(
     const SbpInferHint* sbp_infer_hint = JUST(SbpInferHint4Ibn(ibn));
     return Maybe<const BlobDesc&>(sbp_infer_hint->logical_blob_desc());
   };
-  SbpSignatureList sbp_sig_list;
-  JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_list));
+  SbpSignatureList valid_sbp_sig_list;
+  {
+    SbpSignatureList total_sbp_sig_list;
+    JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &total_sbp_sig_list));
+    // filter sbp signatures by logical shape
+    JUST(FilterAndCheckValidSbpSignatureListByLogicalShape(total_sbp_sig_list, SbpInferHint4Ibn,
+                                                           parallel_desc, &valid_sbp_sig_list));
+  }
   // filter sbp signatures by sbp signature conf
   SbpSignatureList filtered_sbp_sigs_by_conf;
-  FilterSbpSignatureList(sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
+  FilterSbpSignatureList(valid_sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
   CHECK_GT_OR_RETURN(filtered_sbp_sigs_by_conf.sbp_signature_size(), 0);
   if (filtered_sbp_sigs_by_conf.sbp_signature_size() == 1) {
     *sbp_signature = *filtered_sbp_sigs_by_conf.sbp_signature().begin();
@@ -817,49 +853,29 @@ Maybe<void> InferOpSbpSignature(Operator* op, const SbpSignature& sbp_sig_conf,
                                 const SbpParallel& sbp_parallel) -> int32_t {
     const auto* hint = CHECK_JUST(SbpInferHint4Ibn(ibn));
     // NOTE(chengcheng): one to one connect.
-    return -100
+    return -10
            * (hint->sbp_parallel() == sbp_parallel
               && hint->parallel_desc().parallel_num() == parallel_desc.parallel_num());
-  };
-  auto OrderValue4SbpHintSplitInvalid = [&](const std::string& ibn,
-                                            const SbpParallel& sbp_parallel) -> int32_t {
-    const auto* hint = CHECK_JUST(SbpInferHint4Ibn(ibn));
-    const Shape& logical_shape = hint->logical_blob_desc().shape();
-    // NOTE(chengcheng): disable split when logical shape cannot split
-    if (sbp_parallel.has_split_parallel()) {
-      const int64_t axis = sbp_parallel.split_parallel().axis();
-      if (axis >= logical_shape.NumAxes() || axis < 0) {
-        // NOTE(chengcheng): some Op's GetSbpSign is wrong. but there just ignore this err.
-        if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          std::cout << "WARNING: The sbp sign is Error because of the split axis > shape num axes."
-                    << "\n In op: [" << op->op_name() << "] ibn: (" << ibn
-                    << ") the split axis is = " << axis
-                    << " . And the logical_shape = " << logical_shape.DebugStr() << "\n\n";
-        }
-        return 10000;
-      }
-      if (logical_shape.At(axis) < parallel_desc.parallel_num()) {
-        // NOTE(chengcheng): cannot split at this axis!
-        return 10000;
-      }
-    }
-    return 0;
   };
 
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
     CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
       int32_t order_value = 0;
-      for (const auto& ibn : op->input_bns()) {
-        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
-        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
-        order_value += OrderValue4SbpHint(ibn, sbp_parallel_it->second);
-        order_value += OrderValue4SbpHintSplitInvalid(ibn, sbp_parallel_it->second);
-      }
-      // NOTE(chengcheng): source op default split(0)
-      for (const auto& obn : op->output_bns()) {
-        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(obn);
-        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
-        order_value += OrderValue4SourceDefaultSplit0(obn, sbp_parallel_it->second);
+      if (op->input_bns().size() > 0) {
+        // NOTE(chengcheng): non-source op only ordered by input sbp match.
+        for (const auto& ibn : op->input_bns()) {
+          const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
+          CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
+          order_value += OrderValue4SbpHint(ibn, sbp_parallel_it->second);
+        }
+      } else {
+        // NOTE(chengcheng): source op default split(0)
+        //   ONLY data source op will consider order here. variable op sbp is set by user.
+        for (const auto& obn : op->output_bns()) {
+          const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(obn);
+          CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
+          order_value += OrderValue4SourceDefaultSplit0(obn, sbp_parallel_it->second);
+        }
       }
       return order_value;
     };

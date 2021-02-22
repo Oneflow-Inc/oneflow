@@ -287,6 +287,11 @@ class Operator {
   OptMirroredParallel* MutOptMirroredParallel(const std::string& bn_in_op);
 
  private:
+  Maybe<void> FilterAndCheckValidSbpSignatureListByLogicalShape(
+      const SbpSignatureList& total_sbp_sig_list,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc, SbpSignatureList* valid_sbp_sig_list) const;
+
   LogicalBlobId tbn2lbi(const std::string& data_tmp_bn) const;
   std::string Bn2ConfName(const std::string& bn) const;
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
