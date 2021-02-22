@@ -72,8 +72,6 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, dtype, axis):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = ConcatJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
@@ -156,8 +154,6 @@ def _of_dynamic_concat(
         flow.watch_diff(var_1, make_watch_diff_cb(1))
         return result
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     ret = dynamic_concat_job([inputs[0]], [inputs[1]]).get()
     return ret.numpy(0)
 

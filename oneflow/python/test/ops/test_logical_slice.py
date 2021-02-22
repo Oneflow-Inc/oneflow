@@ -43,9 +43,6 @@ def _test_logical_slice(
             ret = flow.experimental.logical_slice(var, slice_tuples)
             return ret
 
-    checkpoint = flow.train.CheckPoint()
-    checkpoint.init()
-
     of_res = slice_fn().get().numpy()
 
     var_np = test_global_storage.Get("var")
