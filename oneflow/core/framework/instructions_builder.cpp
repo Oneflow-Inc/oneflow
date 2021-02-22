@@ -1081,7 +1081,7 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
     const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object) {
-  const std::shared_ptr<std::vector<
+  std::shared_ptr<std::vector<
       std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
       mut2_operand_blob_objects = std::make_shared<std::vector<
           std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>();
