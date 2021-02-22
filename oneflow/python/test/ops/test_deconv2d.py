@@ -88,8 +88,6 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = DeconvJob().get()
     # Tensorflow
     if data_format == "NCHW":

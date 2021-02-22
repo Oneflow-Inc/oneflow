@@ -85,8 +85,6 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     y = FlowJob(x).get().numpy()
     x_diff = test_global_storage.Get("x_diff")
     return y, x_diff
