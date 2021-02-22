@@ -1867,6 +1867,9 @@ class CombinedOptimizer(Optimizer):
 
     def _SanityCheck(self):
         for optimizer in self.optimizers:
+            assert not isinstance(
+                optimizer, CombinedOptimizer
+            ), "Forbid constructing CombinedOptimizer recursively"
             assert (
                 optimizer.train_step_lbn is None
             ), "Only one train step lbn among multi optimizers"
