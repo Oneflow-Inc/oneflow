@@ -48,13 +48,8 @@ REGISTER_USER_OP("reduce_sum_like")
       }
       const auto& like_num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
-      bool keep_dims;
-      if (num_axes == like_num_axes) {
-        keep_dims = true;
-      } else {
-        keep_dims = false;
-        CHECK_EQ_OR_RETURN(conf_axes.size(), num_axes - like_num_axes);
-      }
+      const bool keep_dims = (num_axes == like_num_axes);
+      if (!keep_dims) { CHECK_EQ_OR_RETURN(conf_axes.size(), num_axes - like_num_axes); }
       auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
       int64_t num_reduced_axes = 0;
       FOR_RANGE(int64_t, i, 0, num_axes) {
@@ -71,18 +66,19 @@ REGISTER_USER_OP("reduce_sum_like")
               .Build();
           num_reduced_axes += 1;
         } else {
+          const int64_t out_axis = keep_dims ? i : i - num_reduced_axes;
           ctx->NewBuilder()
               .Split(user_op::OpArg("x", 0), i)
-              .Split(user_op::OpArg("like", 0), keep_dims ? i : i - num_reduced_axes)
-              .Split(user_op::OpArg("y", 0), keep_dims ? i : i - num_reduced_axes)
+              .Split(user_op::OpArg("like", 0), out_axis)
+              .Split(user_op::OpArg("y", 0), out_axis)
               .Build();
         }
-        ctx->NewBuilder()
-            .Broadcast(user_op::OpArg("x", 0))
-            .PartialSum(user_op::OpArg("like", 0))
-            .Broadcast(user_op::OpArg("y", 0))
-            .Build();
       }
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("x", 0))
+          .PartialSum(user_op::OpArg("like", 0))
+          .Broadcast(user_op::OpArg("y", 0))
+          .Build();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
