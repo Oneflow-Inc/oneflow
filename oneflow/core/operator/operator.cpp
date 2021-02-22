@@ -391,6 +391,7 @@ Maybe<void> Operator::FilterAndCheckValidSbpSignatureListByLogicalShape(
     }
     if (is_valid) { *valid_sbp_sig_list->mutable_sbp_signature()->Add() = sbp_signature; }
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferSbpSignature(
