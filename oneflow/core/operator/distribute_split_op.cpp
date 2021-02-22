@@ -47,10 +47,6 @@ class DistributeSplitOp final : public Operator {
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override;
-  Maybe<void> InferOutParallelDesc(
-      std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
-      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&,
-      const SbpSignature*) const override;
 
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -105,22 +101,6 @@ Maybe<void> DistributeSplitOp::InferOutBlobDescs(
   FOR_RANGE(int, i, 0, out_blob_descs.size()) {
     *out_blob_descs.at(i) = in_blob_desc;
     out_blob_descs.at(i)->mut_shape().Set(split_axis, bs.At(i).size());
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DistributeSplitOp::InferOutParallelDesc(
-    std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
-    std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
-    const ParallelDesc& op_parallel_desc, const SbpSignature*) const {
-  FOR_RANGE(int, i, 0, output_bns().size()) {
-    const auto& obn = output_bns().Get(i);
-    if (op_parallel_desc.parallel_num() > 1) {
-      CHECK_EQ(op_parallel_desc.parallel_num(), output_bns().size());
-      *ParallelDesc4Obn(obn) = ParallelDesc(op_parallel_desc.GetParallelIdOnlyParallelConf(i));
-    } else {
-      *ParallelDesc4Obn(obn) = op_parallel_desc;
-    }
   }
   return Maybe<void>::Ok();
 }

@@ -47,10 +47,6 @@ class DistributeCloneOp final : public Operator {
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override;
-  Maybe<void> InferOutParallelDesc(
-      std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
-      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&,
-      const SbpSignature*) const override;
 };
 
 void DistributeCloneOp::InitFromOpConf() {
@@ -86,22 +82,6 @@ Maybe<void> DistributeCloneOp::InferOutBlobDescs(
   FOR_RANGE(int, i, 0, output_bns().size()) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
     if (blob_desc != nullptr) { *blob_desc = in_blob_desc; }
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DistributeCloneOp::InferOutParallelDesc(
-    std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
-    std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
-    const ParallelDesc& op_parallel_desc, const SbpSignature*) const {
-  FOR_RANGE(int, i, 0, output_bns().size()) {
-    const auto& obn = output_bns().Get(i);
-    if (op_parallel_desc.parallel_num() > 1) {
-      CHECK_EQ_OR_RETURN(op_parallel_desc.parallel_num(), output_bns().size());
-      *ParallelDesc4Obn(obn) = ParallelDesc(op_parallel_desc.GetParallelIdOnlyParallelConf(i));
-    } else {
-      *ParallelDesc4Obn(obn) = op_parallel_desc;
-    }
   }
   return Maybe<void>::Ok();
 }

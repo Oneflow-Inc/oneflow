@@ -368,22 +368,6 @@ Maybe<void> Operator::InferInplaceObn2Ibn(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Operator::InferOutParallelDescIf(
-    std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
-    std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
-    const ParallelDesc& op_parallel_desc, const SbpSignature* sbp_signature) const {
-  return InferOutParallelDesc(ParallelDesc4Obn, LogicalBlobDesc4Ibn, op_parallel_desc,
-                              sbp_signature);
-}
-
-Maybe<void> Operator::InferOutParallelDesc(
-    std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
-    std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn,
-    const ParallelDesc& op_parallel_desc, const SbpSignature* sbp_signature) const {
-  for (const auto& obn : output_bns()) { *ParallelDesc4Obn(obn) = op_parallel_desc; }
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> Operator::InferOutputBlobTimeShapeIf(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
