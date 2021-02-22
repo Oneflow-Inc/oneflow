@@ -177,7 +177,7 @@ Maybe<int64_t> InstructionsBuilder::NewObjectId(
 }
 
 Maybe<compatible_py::BlobObject> InstructionsBuilder::PackPhysicalBlobsToLogicalBlob(
-    std::vector<std::shared_ptr<compatible_py::BlobObject>> physical_blob_objects,
+    const std::vector<std::shared_ptr<compatible_py::BlobObject>>& physical_blob_objects,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
     const std::shared_ptr<compatible_py::OpArgBlobAttribute>& op_arg_blob_attr) {
   std::shared_ptr<ParallelDesc> parallel_desc_symbol = op_arg_parallel_attr->parallel_desc_symbol();
@@ -404,8 +404,8 @@ Maybe<compatible_py::BlobObject> InstructionsBuilder::MakeReferenceBlobObject(
 
 Maybe<void> InstructionsBuilder::ReplaceMirrored(
     const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
-    std::vector<std::shared_ptr<compatible_py::BlobObject>> lhs_objects,
-    std::vector<std::shared_ptr<compatible_py::BlobObject>> rhs_objects) {
+    const std::vector<std::shared_ptr<compatible_py::BlobObject>>& lhs_objects,
+    const std::vector<std::shared_ptr<compatible_py::BlobObject>>& rhs_objects) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("ReplaceMirrored");
   instruction.set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
@@ -770,17 +770,17 @@ Maybe<void> InstructionsBuilder::_StatefulCallOpKernel(
     const std::string& instr_name, const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
     const std::shared_ptr<compatible_py::OpKernelObject> opkernel_object,
     const std::shared_ptr<OpNodeSignatureDesc> op_node_signature_sym,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+    const std::vector<
+        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
         const_input_operand_blob_objects,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+    const std::vector<
+        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
         mutable_input_operand_blob_objects,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+    const std::vector<
+        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
         mut1_operand_blob_objects,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+    const std::vector<
+        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
         mut2_operand_blob_objects) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name(parallel_desc_sym->device_tag() + "." + instr_name);
@@ -831,17 +831,17 @@ Maybe<void> InstructionsBuilder::_StatelessCallOpKernel(
     const std::shared_ptr<OperatorConfSymbol>& op_conf_sym,
     const std::shared_ptr<OpNodeSignatureDesc>& op_node_signature_sym,
     const std::shared_ptr<compatible_py::Object>& shared_opkernel_obj,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+    const std::vector<
+        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
         const_input_operand_blob_objects,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+    const std::vector<
+        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
         mutable_input_operand_blob_objects,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+    const std::vector<
+        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
         mut1_operand_blob_objects,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+    const std::vector<
+        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
         mut2_operand_blob_objects) {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name(parallel_desc_sym->device_tag() + "." + instr_name);
@@ -979,7 +979,7 @@ InstructionsBuilder::GetConstInputOperandBlobObjects(
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::function<std::shared_ptr<compatible_py::BlobObject>(const std::string&)>&
         blob_object4ibn) {
-  const std::shared_ptr<std::vector<
+  std::shared_ptr<std::vector<
       std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
       const_input_operand_blob_objects = std::make_shared<std::vector<
           std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>();
