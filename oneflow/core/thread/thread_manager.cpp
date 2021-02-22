@@ -25,45 +25,59 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Thread* NewThread(StreamId stream_id) {
+  Thread* thread = nullptr;
+  switch (stream_id.stream_type()) {
+#ifdef WITH_CUDA
+    case StreamType::kCuda: {
+      thread = new GpuThread(static_cast<int64_t>(stream_id),
+                             static_cast<int64_t>(stream_id.device_index()));
+      break;
+    }
+#endif
+    case StreamType::kCPU:
+    case StreamType::kCommNet:
+    case StreamType::kTickTock:
+    case StreamType::kIndependent: {
+      thread = new CpuThread(static_cast<int64_t>(stream_id));
+      break;
+    }
+    default: { UNIMPLEMENTED(); }
+  }
+  return thread;
+}
+
+}  // namespace
+
 ThreadMgr::~ThreadMgr() {
-  for (size_t i = 0; i < threads_.size(); ++i) {
+  for (const auto& pair : threads_) {
     ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
-    threads_[i]->GetMsgChannelPtr()->Send(msg);
-    delete threads_[i];
-    LOG(INFO) << "actor thread " << i << " finish";
+    Thread* thread = pair.second;
+    thread->GetMsgChannelPtr()->Send(msg);
+    delete thread;
+    LOG(INFO) << "actor thread " << static_cast<uint32_t>(pair.first) << " finish";
   }
 }
 
-Thread* ThreadMgr::GetThrd(int64_t thrd_id) { return threads_.at(thrd_id); }
+Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
+  StreamId stream_id{static_cast<uint32_t>(thrd_id)};
+  CHECK(threads_.find(stream_id) != threads_.end()) << "thread " << thrd_id << " not found";
+  return threads_.at(stream_id);
+}
 
 ThreadMgr::ThreadMgr(const Plan& plan) {
-  int64_t thrd_id = 0;
-
-#ifdef WITH_CUDA
-  FOR_RANGE(int64_t, i, 0, GetCudaWorkTypeSize()) {
-    FOR_RANGE(int64_t, dev_phy_id, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
-      threads_.push_back(new GpuThread(thrd_id++, dev_phy_id));
-    }
-  }
-#endif
-  FOR_RANGE(int64_t, i, 0, (Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum())) {
-    threads_.push_back(new CpuThread(thrd_id++));
-  }
-  threads_.push_back(new CpuThread(thrd_id++));  // comm_net
-  CreatePersistenceThrd(plan, thrd_id);
-}
-
-void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {
   const int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
-
-  int64_t max_thrd_id = 0;
   for (const TaskProto& task : plan.task()) {
-    if (task.machine_id() == this_machine_id) {
-      if (max_thrd_id < task.thrd_id()) { max_thrd_id = task.thrd_id(); }
-    }
+    TaskId task_id{static_cast<uint64_t>(task.task_id())};
+    if (task_id.process_id().node_index() != this_machine_id) { continue; }
+    StreamId stream_id = task_id.stream_id();
+    if (threads_.find(stream_id) != threads_.end()) { continue; }
+    Thread* thread = NewThread(stream_id);
+    CHECK_NOTNULL(thread);
+    CHECK(threads_.emplace(stream_id, thread).second);
   }
-
-  for (int64_t i = thrd_id; i <= max_thrd_id; i++) { threads_.push_back(new CpuThread(i)); }
 }
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
