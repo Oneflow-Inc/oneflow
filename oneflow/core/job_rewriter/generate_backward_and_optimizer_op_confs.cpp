@@ -209,7 +209,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     RegularizeGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     HashMap<LogicalBlobId, LogicalBlobId> cur_maintained_model_lbi2model_diff_lbi;
     for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
-      cur_maintained_model_lbi2model_diff_lbi->clear();
+      cur_maintained_model_lbi2model_diff_lbi.clear();
       FilterCurMaintainedModelLbi2ModelDiffLbi(optimizer_conf.variables(), model_lbi2model_diff_lbi,
                                                &cur_maintained_model_lbi2model_diff_lbi);
       if (optimizer_conf.has_clip_conf()) {
