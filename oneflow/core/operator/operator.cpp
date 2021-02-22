@@ -102,7 +102,7 @@ Maybe<const std::string*> Operator::obn4lbi(const LogicalBlobId& lbi) const {
 }
 
 Maybe<void> Operator::InferParallelSignatureIf() {
-  JUST(InferParallelSignature());
+  JUST(InferBlobParallelDesc());
   if (op_conf().scope_symbol_id() == 0) { return Maybe<void>::Ok(); }
   const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
   const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
