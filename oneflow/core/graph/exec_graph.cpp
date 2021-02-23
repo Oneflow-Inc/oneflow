@@ -84,10 +84,11 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
   if (parallel_ctx->parallel_num() > 1 && sbp_signature != nullptr) {
     for (const auto& ibn : op()->input_bns()) {
       if (*CHECK_JUST(op()->GetParallelDesc4BnInOp(ibn)) == *op_parallel_desc) {
-        CHECK_EQ(GetPhysicalShape(CHECK_JUST(op()->GetLogicalBlobDesc4Ibn(ibn))->shape(),
-                                  sbp_signature->bn_in_op2sbp_parallel().at(ibn),
-                                  parallel_ctx->parallel_num(), parallel_ctx->parallel_id()),
-                 GetBlobDesc4BnInOp(ibn));
+        CHECK_EQ(*CHECK_JUST(
+                     GetPhysicalShape(CHECK_JUST(op()->GetLogicalBlobDesc4Ibn(ibn))->shape(),
+                                      sbp_signature->bn_in_op2sbp_parallel().at(ibn),
+                                      parallel_ctx->parallel_num(), parallel_ctx->parallel_id())),
+                 *GetBlobDesc4BnInOp(ibn));
       }
     }
   }
@@ -95,10 +96,11 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
   if (parallel_ctx->parallel_num() > 1 && sbp_signature != nullptr) {
     for (const auto& obn : op()->output_bns()) {
       if (*CHECK_JUST(op()->GetParallelDesc4BnInOp(obn)) == *op_parallel_desc) {
-        CHECK_EQ(GetPhysicalShape(CHECK_JUST(op()->GetLogicalBlobDesc4Obn(obn))->shape(),
-                                  sbp_signature->bn_in_op2sbp_parallel().at(obn),
-                                  parallel_ctx->parallel_num(), parallel_ctx->parallel_id()),
-                 GetBlobDesc4BnInOp(obn));
+        CHECK_EQ(*CHECK_JUST(
+                     GetPhysicalShape(CHECK_JUST(op()->GetLogicalBlobDesc4Obn(obn))->shape(),
+                                      sbp_signature->bn_in_op2sbp_parallel().at(obn),
+                                      parallel_ctx->parallel_num(), parallel_ctx->parallel_id())),
+                 *GetBlobDesc4BnInOp(obn));
       }
     }
   }
