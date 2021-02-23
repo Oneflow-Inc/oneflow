@@ -19,6 +19,7 @@ import numpy as np
 import os
 import unittest
 
+
 class DCGAN(flow.Model):
     def __init__(self, gpu_num, batch_size, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -71,7 +72,7 @@ class DCGAN(flow.Model):
         )
         out = flow.math.tanh(out)
         return out
-    
+
     def discriminator(self, img, const_init=False, trainable=True, reuse=False):
         # (n, 1, 28, 28)
         h0 = layers.conv2d(
@@ -107,7 +108,7 @@ class DCGAN(flow.Model):
 
     def forward(self, batch, trainable=False):
         return self.generator(batch, trainable=trainable)
-    
+
     def training_step(self, batch, optimizer_idx):
         z, images, label1, label0 = batch
         if optimizer_idx == 0:
@@ -140,15 +141,16 @@ class DCGAN(flow.Model):
             )
             d_loss = d_loss_fake + d_loss_real
             return d_loss
-    
+
     def configure_optimizers(self):
         generator_opt = flow.optimizer.SGD(
             flow.optimizer.PiecewiseConstantScheduler([], [self.lr]), momentum=0
-            )
+        )
         discriminator_opt = flow.optimizer.SGD(
-                flow.optimizer.PiecewiseConstantScheduler([], [self.lr]), momentum=0
-            )
+            flow.optimizer.PiecewiseConstantScheduler([], [self.lr]), momentum=0
+        )
         return [generator_opt, discriminator_opt]
+
 
 class LossMoniter(flow.Callback):
     def on_training_step_end(self, step_idx, outputs, optimizer_idx):
@@ -173,9 +175,10 @@ class NumpyTrainData(flow.nn.NumpyModule):
         self.label1 = np.ones((batch_size, 1)).astype(np.float32)
         self.label0 = np.zeros((batch_size, 1)).astype(np.float32)
 
-    def forward(self, step_idx): 
+    def forward(self, step_idx):
         print("step_idx :", step_idx)
         return (self.z, self.images, self.label1, self.label0)
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n1c(test_case):
@@ -202,7 +205,7 @@ class DCGANCompare:
 
         # g_loss = test_generator(z, label1).get()
         # d_loss = test_discriminator(z, imgs, label1, label0).get()
-        
+
         batch_size = 32
 
         flow.config.gpu_device_num(gpu_num)
@@ -211,7 +214,13 @@ class DCGANCompare:
         train_config.default_data_type(flow.float)
         train_config.default_logical_view(flow.scope.consistent_view())
         loss_monitor = LossMoniter()
-        dcgan_md = DCGAN(gpu_num, batch_size, is_function_style=True, training_config=train_config, callbacks=[loss_monitor])
+        dcgan_md = DCGAN(
+            gpu_num,
+            batch_size,
+            is_function_style=True,
+            training_config=train_config,
+            callbacks=[loss_monitor],
+        )
 
         train_data = NumpyTrainData(result_dir, batch_size)
         dcgan_md.fit(max_steps=1, training_data=train_data)

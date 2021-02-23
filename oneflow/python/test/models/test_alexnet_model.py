@@ -48,7 +48,6 @@ class DLNetSpec(object):
 global_specs = DLNetSpec()
 
 
-
 class TrainData(flow.nn.Module):
     def __init__(self, specs):
         super().__init__()
@@ -138,7 +137,8 @@ class AlexNet(flow.Model):
 
         return fc3
 
-    def training_step(self, batch):
+    def training_step(self, batch, optimizer_idx):
+        assert optimizer_idx == 0
         images, labels = batch
         fc3 = self(images, True)
         loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
@@ -161,7 +161,8 @@ class AlexNet(flow.Model):
 
 
 class LossMoniter(flow.ModelCallback):
-    def on_training_step_end(self, step_idx, outputs):
+    def on_training_step_end(self, step_idx, outputs, optimizer_idx):
+        assert optimizer_idx == 0
         loss = outputs.mean()
         fmt_str = "{:>12}  {:>12}  {:>12.6f}"
         print(fmt_str.format(step_idx, "train loss:", loss))
@@ -212,6 +213,7 @@ def test_1n1c(test_case):
         checkpoint_config=ck_config,
         max_steps=20,
     )
+
 
 def _conv2d_layer(
     name,

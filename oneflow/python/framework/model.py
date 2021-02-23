@@ -43,11 +43,12 @@ class Callback(ABC):
     r""" Abstract base class used to build new callbacks.
     """
 
-    def on_training_step_end(self, step_idx, outputs):
+    def on_training_step_end(self, step_idx, outputs, optimizer_idx):
         pass
 
     def on_validation_step_end(self, step_idx, outputs):
         pass
+
 
 @oneflow_export("nn.NumpyModule")
 class NumpyDataModule(Module):
@@ -65,9 +66,18 @@ class Model(
     def __init__(self, *args, **kwargs):
         super().__init__()
 
-        self.is_function_style = kwargs["is_function_style"] if "is_function_style" in kwargs else False
-        self.training_config = kwargs["training_config"] if "training_config" in kwargs else None
-        self.validation_config = kwargs["validation_config"] if "validation_config" in kwargs else None
+        self.is_function_style = (
+            kwargs["is_function_style"] if "is_function_style" in kwargs else False
+        )
+        if not self.is_function_style:
+            raise NotImplementedError
+
+        self.training_config = (
+            kwargs["training_config"] if "training_config" in kwargs else None
+        )
+        self.validation_config = (
+            kwargs["validation_config"] if "validation_config" in kwargs else None
+        )
         self.callbacks = kwargs["callbacks"] if "callbacks" in kwargs else []
 
         self.need_training = False
@@ -94,23 +104,39 @@ class Model(
         """
         raise NotImplementedError()
 
-    def _func_train_job(self):
-        @api_oneflow_function(type="train", function_config=self.training_config)
+    def _func_train_job(self, optimizer_idx=0):
+        deco = api_oneflow_function(type="train", function_config=self.training_config)
+
         def job():
             batch = self.training_data()
-            loss = self.training_step(batch)
-            self.optimizers[0].minimize(loss)
+            loss = self.training_step(batch=batch, optimizer_idx=optimizer_idx)
+            self.optimizers[optimizer_idx].minimize(loss)
             return loss
 
-        return job
+        job.__name__ = (
+            self.__class__.__name__ + "_Model_train_job_" + str(optimizer_idx)
+        )
+
+        return deco(job)
 
     def _func_eval_job(self):
-        @api_oneflow_function(function_config=self.validation_config)
-        def eval_job():
+        deco = api_oneflow_function(function_config=self.validation_config)
+
+        def job():
             batch = self.validation_data()
             return self.validation_step(batch)
 
-        return eval_job
+        job.__name__ = self.__class__.__name__ + "_Model_eval_job"
+
+        return deco(job)
+
+    def _method_overrided(self, method_name: str = None) -> bool:
+        return getattr(self.__class__, method_name) != getattr(Model, method_name)
+
+    def _method_callback(self, method_name: str = None, *args, **kwargs):
+        for cb in self.callbacks:
+            method = getattr(cb, method_name)
+            method(*args, **kwargs)
 
     def fit(
         self,
@@ -128,8 +154,9 @@ class Model(
         self.validation_interval = validation_interval
         self.checkpoint_config = checkpoint_config
 
-
-        self.is_numpy_input = True if isinstance(self.training_data, NumpyDataModule) else False
+        self.is_numpy_input = (
+            True if isinstance(self.training_data, NumpyDataModule) else False
+        )
 
         optim_conf = self.configure_optimizers()
         if isinstance(optim_conf, Optimizer):
@@ -137,14 +164,17 @@ class Model(
         elif isinstance(optim_conf, (list, tuple)):
             self.optimizers = optim_conf
 
+        self.train_jobs = []
+
         # construct training job
         if self._method_overrided("training_step") and self.training_data is not None:
+            self.need_training = True
             if not self.is_numpy_input:
                 if len(self.optimizers) == 1:
-                    self.need_training = True
-                    self.train_job = self._func_train_job()
+                    self.train_jobs.append(self._func_train_job(0))
                 else:
-                    raise NotImplementedError
+                    for optimizer_idx in range(0, len(self.optimizers)):
+                        self.train_jobs.append(self._func_train_job(optimizer_idx))
             else:
                 raise NotImplementedError
 
@@ -154,54 +184,55 @@ class Model(
             and self.validation_data is not None
         ):
             if not self.is_numpy_input:
-                if len(self.optimizers) == 1:
-                    self.need_validation = True
-                    self.eval_job = self._func_eval_job()
-                else:
-                    raise NotImplementedError
+                self.need_validation = True
+                self.eval_job = self._func_eval_job()
             else:
                 raise NotImplementedError
 
-        return True
+        # return True
 
         if self.checkpoint_config.load_dirpath is not None:
-            self.load_checkpoint(dirpath=self.checkpoint_config.load_dirpath)
+            self._load_checkpoint(dirpath=self.checkpoint_config.load_dirpath)
 
         if self.checkpoint_config.save_dirpath is not None:
             self.need_checkpoint = True
 
         for step_idx in range(0, self.max_steps):
             if self.need_training:
-                loss = self.train_job().get()
-                self._method_callback("on_training_step_end", step_idx, loss)
+                for optimizer_idx in range(0, len(self.optimizers)):
+                    loss = self.train_jobs[optimizer_idx]().get()
+                    self._method_callback(
+                        "on_training_step_end",
+                        step_idx=step_idx,
+                        outputs=loss,
+                        optimizer_idx=optimizer_idx,
+                    )
+
             if self.need_validation:
                 if (step_idx + 1) % self.validation_interval == 0:
                     eval_loss = self.eval_job().get()
-                    self._method_callback("on_validation_step_end", step_idx, eval_loss)
-            if self.need_checkpoint:
-                if (step_idx + 1) % self.checkpoint_config.save_interval == 0:
-                    self.save_checkpoint(
-                        dirpath=self.checkpoint_config.save_dirpath + "-" + str(step_idx)
+                    self._method_callback(
+                        "on_validation_step_end", step_idx=step_idx, outputs=eval_loss
                     )
 
-    def save_checkpoint(
+            if self.need_checkpoint:
+                if (step_idx + 1) % self.checkpoint_config.save_interval == 0:
+                    self._save_checkpoint(
+                        dirpath=self.checkpoint_config.save_dirpath
+                        + "-"
+                        + str(step_idx)
+                    )
+
+    def _save_checkpoint(
         self, dirpath,
     ):
         r"""Save model states as a checkpoint.
         """
         SaveVarDict(path=dirpath)
 
-    def load_checkpoint(
+    def _load_checkpoint(
         self, dirpath,
     ):
         r"""Load model states from a checkpoint.
         """
         LoadVariables(GetCheckpoint(path=dirpath))
-
-    def _method_overrided(self, method_name: str = None) -> bool:
-        return getattr(self.__class__, method_name) != getattr(Model, method_name)
-
-    def _method_callback(self, method_name: str = None, *args, **kwargs):
-        for cb in self.callbacks:
-            method = getattr(cb, method_name)
-            method(*args, **kwargs)
