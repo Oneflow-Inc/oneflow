@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/actor/actor.h"
+#include "oneflow/core/control/global_precess_rank_info.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
-#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
@@ -307,7 +307,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       NormalProcessCustomizedEordMsg(msg);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (msg.SrcMachineId() == Global<MachineCtx>::Get()->this_machine_id()) {
+    if (msg.SrcMachineId() == GlobalProcessRankInfo::ThisMachineId()) {
       Regst* regst = msg.regst();
       if (naive_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
         CHECK_EQ(0, naive_consumed_rs_.TryPushBackRegst(regst));

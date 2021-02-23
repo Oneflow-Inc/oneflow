@@ -13,19 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/virtual_machine_scope.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
-#include "oneflow/core/vm/oneflow_vm.h"
-#include "oneflow/core/control/global_precess_rank_info.h"
+#ifndef ONEFLOW_CORE_CONTROL_CTRL_GLOBAL_PROCESS_RANK_INFO_H_
+#define ONEFLOW_CORE_CONTROL_CTRL_GLOBAL_PROCESS_RANK_INFO_H_
+
+#include <string>
 
 namespace oneflow {
-namespace vm {
 
-VirtualMachineScope::VirtualMachineScope(const Resource& resource) {
-  Global<OneflowVM>::New(resource, GlobalProcessRankInfo::ThisMachineId());
-}
+struct GlobalProcessRankInfo {
+  static int64_t ThisMachineId();
+  static bool IsThisMachineMaster();
+  static size_t TotalMachineNum();
+  static std::string GetCtrlAddr(int64_t machine_id);
+  static std::string GetThisCtrlAddr();
+  static std::string GetMasterCtrlAddr();
+  static std::string PersistentPathPrefix();
+};
 
-VirtualMachineScope::~VirtualMachineScope() { Global<OneflowVM>::Delete(); }
-
-}  // namespace vm
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_CONTROL_CTRL_GLOBAL_PROCESS_RANK_INFO_H_

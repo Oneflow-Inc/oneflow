@@ -13,14 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/control/global_precess_rank_info.h"
 #include "oneflow/core/transport/transport.h"
-#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
 Transport::Transport() {
   comm_net_ = Global<EpollCommNet>::Get();
-  this_machine_id_ = Global<MachineCtx>::Get()->this_machine_id();
+  this_machine_id_ = GlobalProcessRankInfo::ThisMachineId();
   CHECK(comm_net_ != nullptr);
   // maybe need new read id for each dst machine id, maybe need 2 * machine num read ids
   read_id_ = comm_net_->NewActorReadId();
