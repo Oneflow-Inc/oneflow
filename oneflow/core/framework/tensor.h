@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/framework/tensor_impl.h"
 
 namespace oneflow {
 
@@ -45,6 +46,72 @@ class Tensor {
   virtual DataType dtype() const = 0;
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
 };
+
+namespace compatible_py {
+class Distribute;
+}
+
+namespace one {
+
+class Device;
+
+class Tensor {
+ public:
+  Tensor() = default;
+  virtual ~Tensor() = default;
+  virtual std::shared_ptr<Shape> shape() const = 0;
+  virtual void set_shape(const std::shared_ptr<Shape>& shape) = 0;
+  virtual DataType dtype() const = 0;
+  virtual void set_dtype(DataType dtype) = 0;
+  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
+  virtual void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) = 0;
+  bool is_lazy() const ;
+};
+
+class MirroredTensor : public Tensor {
+ public:
+  MirroredTensor() = default;
+  MirroredTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
+                 const std::shared_ptr<Device>& device);
+  ~MirroredTensor() = default;
+  std::shared_ptr<Shape> shape() const override { return impl_->shape(); }
+  void set_shape(const std::shared_ptr<Shape>& shape) override { return impl_->set_shape(shape); }
+  DataType dtype() const override { return impl_->dtype(); }
+  void set_dtype(DataType dtype) override { return impl_->set_dtype(dtype); }
+  std::shared_ptr<cfg::ParallelConf> parallel_conf() const override { return impl_->parallel_conf(); }
+  void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) override {
+    impl_->set_parallel_conf(parallel_conf);
+  }
+  std::shared_ptr<Device> device() const;
+  void set_device(const std::shared_ptr<Device>& device);
+
+ private:
+  std::shared_ptr<MirroredTensorImpl> impl_;
+};
+
+class ConsistentTensor : public Tensor {
+ public:
+  ConsistentTensor() = default;
+  ConsistentTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
+                   const std::shared_ptr<compatible_py::Distribute>& distribute,
+                   std::shared_ptr<cfg::ParallelConf>& parallel_conf);
+  ~ConsistentTensor() = default;
+  std::shared_ptr<Shape> shape() const override { return impl_->shape(); }
+  void set_shape(const std::shared_ptr<Shape>& shape) override { return impl_->set_shape(shape); }
+  DataType dtype() const override { return impl_->dtype(); }
+  void set_dtype(DataType dtype) override { return impl_->set_dtype(dtype); }
+  std::shared_ptr<cfg::ParallelConf> parallel_conf() const override { return impl_->parallel_conf(); }
+  void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) override {
+    impl_->set_parallel_conf(parallel_conf);
+  }
+  std::shared_ptr<compatible_py::Distribute> device() const;
+  void set_device(const std::shared_ptr<compatible_py::Distribute>& device);
+
+ private:
+  std::shared_ptr<ConsistentTensorImpl> impl_;
+};
+
+}
 
 namespace user_op {
 
