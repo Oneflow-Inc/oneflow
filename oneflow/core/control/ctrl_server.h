@@ -28,7 +28,6 @@ class CtrlServer final : public RpcServer {
   ~CtrlServer() override {}
 
   CtrlServer();
-  CtrlServer(int port);
   CtrlServer(const BootstrapConf&);
 
   int64_t port() const { return port_; }
