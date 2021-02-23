@@ -481,7 +481,7 @@ def constant_pad2d(
 
     return (
         oneflow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Replication_Pad2d")
+            name if name is not None else id_util.UniqueStr("Constant_Pad2d")
         )
         .Op("constant_pad2d")
         .Input("x", [x])
