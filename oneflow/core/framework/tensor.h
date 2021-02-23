@@ -80,7 +80,7 @@ class Tensor {
   virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 };
 
-class MirroredTensor : public Tensor {
+class MirroredTensor final : public Tensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
   MirroredTensor() = default;
@@ -119,7 +119,7 @@ class MirroredTensor : public Tensor {
   std::shared_ptr<MirroredTensorImpl> impl_;
 };
 
-class ConsistentTensor : public Tensor {
+class ConsistentTensor final : public Tensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConsistentTensor);
   ConsistentTensor() = default;
