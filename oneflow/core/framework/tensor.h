@@ -50,7 +50,6 @@ class Tensor {
 namespace compatible_py {
 
 class Distribute;
-
 }
 
 class Device;
@@ -74,7 +73,7 @@ class Tensor {
   virtual void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) = 0;
 
   // Getters to be deprecated
-  const virtual std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
+  virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
 
   // Setters to be deprecated
   virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
@@ -132,7 +131,9 @@ class ConsistentTensor final : public Tensor {
   const std::shared_ptr<cfg::ParallelConf>& parallel_conf() const override {
     return impl_->parallel_conf();
   }
-  const std::shared_ptr<compatible_py::Distribute>& distribute() const { return impl_->distribute(); }
+  const std::shared_ptr<compatible_py::Distribute>& distribute() const {
+    return impl_->distribute();
+  }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
 
@@ -142,7 +143,9 @@ class ConsistentTensor final : public Tensor {
   void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) override {
     impl_->set_parallel_conf(parallel_conf);
   }
-  void set_distribute(const std::shared_ptr<compatible_py::Distribute>& distribute) { impl_->set_distribute(distribute); }
+  void set_distribute(const std::shared_ptr<compatible_py::Distribute>& distribute) {
+    impl_->set_distribute(distribute);
+  }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {

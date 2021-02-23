@@ -22,8 +22,7 @@ namespace oneflow {
 
 class Device final {
  public:
-  Device(const std::string& type, int64_t device_id)
-      : type_(type), device_id_(device_id) {}
+  Device(const std::string& type, int64_t device_id) : type_(type), device_id_(device_id) {}
   Device(const Device&) = default;
   Device(Device&&) = default;
   ~Device() = default;
@@ -37,5 +36,5 @@ class Device final {
 
 }  // namespace oneflow
 
-#endif
+#endif // ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
 

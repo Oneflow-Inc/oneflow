@@ -28,7 +28,6 @@ namespace oneflow {
 namespace compatible_py {
 
 class Distribute;
-
 }
 
 class Device;
@@ -90,7 +89,9 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   // Getters
   const std::shared_ptr<Shape>& shape() const override { return shape_; }
   DataType dtype() const override { return dtype_; }
-  const std::shared_ptr<cfg::ParallelConf>& parallel_conf() const override { return parallel_conf_; }
+  const std::shared_ptr<cfg::ParallelConf>& parallel_conf() const override {
+    return parallel_conf_;
+  }
   const std::shared_ptr<Device>& device() const override { return device_; }
   bool is_lazy() const override { return true; }
 
@@ -103,7 +104,9 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   void set_device(const std::shared_ptr<Device>& device) override { device_ = device; }
 
   // Getters to be deprecated
-  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override { UNIMPLEMENTED(); }
+  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
+    UNIMPLEMENTED();
+  }
 
   // Setters to be deprecated
   void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
@@ -128,7 +131,9 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   // Getters
   const std::shared_ptr<Shape>& shape() const override { return shape_; }
   DataType dtype() const override { return dtype_; }
-  const std::shared_ptr<cfg::ParallelConf>& parallel_conf() const override { return parallel_conf_; }
+  const std::shared_ptr<cfg::ParallelConf>& parallel_conf() const override {
+    return parallel_conf_;
+  }
   const std::shared_ptr<Device>& device() const override { return device_; }
   bool is_lazy() const override { return false; }
 
@@ -141,7 +146,9 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   void set_device(const std::shared_ptr<Device>& device) override { device_ = device; }
 
   // Getters to be deprecated
-  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override { return blob_object_; }
+  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
+    return blob_object_;
+  }
 
   // Setters to be deprecated
   void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
@@ -164,12 +171,16 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
                            const std::shared_ptr<cfg::ParallelConf>& parallel_conf)
       : shape_(shape), dtype_(dtype), parallel_conf_(parallel_conf), distribute_(distribute) {}
   ~LazyConsistentTensorImpl() = default;
-  
+
   // Getters
   const std::shared_ptr<Shape>& shape() const override { return shape_; }
   DataType dtype() const override { return dtype_; }
-  const std::shared_ptr<cfg::ParallelConf>& parallel_conf() const override { return parallel_conf_; }
-  const std::shared_ptr<compatible_py::Distribute>& distribute() const override { return distribute_; }
+  const std::shared_ptr<cfg::ParallelConf>& parallel_conf() const override {
+    return parallel_conf_;
+  }
+  const std::shared_ptr<compatible_py::Distribute>& distribute() const override {
+    return distribute_;
+  }
   bool is_lazy() const override { return true; }
 
   // Setters
@@ -183,7 +194,9 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
   }
 
   // Getters to be deprecated
-  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override { UNIMPLEMENTED(); }
+  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
+    UNIMPLEMENTED();
+  }
 
   // Setters to be deprecated
   void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
@@ -205,12 +218,16 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
                             const std::shared_ptr<cfg::ParallelConf>& parallel_conf)
       : shape_(shape), dtype_(dtype), parallel_conf_(parallel_conf), distribute_(distribute) {}
   ~EagerConsistentTensorImpl() = default;
-  
+
   // Getters
   const std::shared_ptr<Shape>& shape() const override { return shape_; }
   DataType dtype() const override { return dtype_; }
-  const std::shared_ptr<cfg::ParallelConf>& parallel_conf() const override { return parallel_conf_; }
-  const std::shared_ptr<compatible_py::Distribute>& distribute() const override { return distribute_; }
+  const std::shared_ptr<cfg::ParallelConf>& parallel_conf() const override {
+    return parallel_conf_;
+  }
+  const std::shared_ptr<compatible_py::Distribute>& distribute() const override {
+    return distribute_;
+  }
   bool is_lazy() const override { return false; }
 
   // Setters
@@ -224,7 +241,9 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   }
 
   // Getters to be deprecated
-  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override { return blob_object_; }
+  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
+    return blob_object_;
+  }
 
   // Setters to be deprecated
   void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
@@ -243,5 +262,4 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
 
 }  // namespace oneflow
 
-#endif
-
+#endif // ONEFLOW_CORE_FRAMEWORK_TENSOR_IMPL_H_
