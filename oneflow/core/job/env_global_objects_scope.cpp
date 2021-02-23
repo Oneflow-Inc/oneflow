@@ -73,15 +73,6 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
   return resource;
 }
 
-BootstrapConf MakeTestBootstrapConf(const ProcessCtx& process_ctx) {
-  BootstrapConf bootstrap_conf;
-  bootstrap_conf.mutable_master_addr()->CopyFrom(process_ctx.ctrl_addr(0));
-  bootstrap_conf.mutable_master_addr()->set_port(process_ctx.ctrl_addr(0).port() + 1);
-  bootstrap_conf.set_rank(process_ctx.rank());
-  bootstrap_conf.set_world_size(process_ctx.ctrl_addr().size());
-  return bootstrap_conf;
-}
-
 }  // namespace
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
@@ -92,7 +83,8 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New();
   Global<ProcessCtx>::New();
-  // avoid dead lock with multi nodes;
+  // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
+  // ~CtrlBootstrap.
   CHECK_JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
                  .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
   Global<CtrlClient>::New(*Global<ProcessCtx>::Get());

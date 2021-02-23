@@ -20,8 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class BootstrapConf;
-
 class CtrlServer final : public RpcServer {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CtrlServer);
