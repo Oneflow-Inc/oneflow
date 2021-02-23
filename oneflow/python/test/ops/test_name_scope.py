@@ -45,8 +45,6 @@ class TestNameScope(flow.unittest.TestCase):
             var3 = get_var("backbone-branch-var")
             return var1, var2, var3
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         var1, var2, var3 = test_name_scope_job().get()
         test_case.assertTrue(np.array_equal(var1.numpy(), var2.numpy()))
         test_case.assertTrue(np.array_equal(var1.numpy(), var3.numpy()))
