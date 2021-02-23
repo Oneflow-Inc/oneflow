@@ -31,41 +31,28 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(
-    device_type, data_type, label_type, num_classes, batch_size
-):
+def compare_with_tensorflow(device_type, data_type, shape):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
-    flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
+
+    dtype = type_name_to_flow_type[data_type]
+
+    def np_sigmoid(x):
+        return 1 / (1 + np.exp(-x))
 
     @flow.global_function(type="train", function_config=func_config)
-    def SparseSoftmaxCrossEntropyWithLogitsJob(
-        labels: oft.Numpy.Placeholder(
-            (batch_size,), dtype=type_name_to_flow_type[label_type]
-        )
-    ):
+    def SigmoidCrossEntropyWithLogitsJob(labels: oft.Numpy.Placeholder(shape, dtype)):
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
-                shape=(batch_size, num_classes),
+                shape=shape,
                 dtype=type_name_to_flow_type[data_type],
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
+            loss = flow.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=x)
 
-        with flow.scope.placement(device_type, "0:0-3"):
-            lebels_distribute = flow.distribute.broadcast()
-            logits_distribute = flow.distribute.split(len(x.shape) - 1)
-            loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
-                labels=labels.with_distribute(lebels_distribute),
-                logits=x.with_distribute(logits_distribute),
-            )
-            loss = flow.math.square(loss)
-
-        with flow.scope.placement(device_type, "0:0"):
-            loss = flow.identity(loss)
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(loss)
@@ -77,40 +64,44 @@ def compare_with_tensorflow(
             return loss
 
     # fake labels
-    labels = np.random.randint(0, num_classes, size=(batch_size,)).astype(
-        type_name_to_np_type[label_type]
+    labels = np_sigmoid(np.random.randint(0, 10, size=shape)).astype(
+        type_name_to_np_type[data_type]
     )
 
     # OneFlow
-    of_out = SparseSoftmaxCrossEntropyWithLogitsJob(labels).get()
+    check_point = flow.train.CheckPoint()
+    check_point.init()
+    of_out = SigmoidCrossEntropyWithLogitsJob(labels).get()
 
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(test_global_storage.Get("x"))
-        tf_out = tf.nn.sparse_softmax_cross_entropy_with_logits(labels, x)
-        tf_out = tf.math.square(tf_out)
-    loss_diff = test_global_storage.Get("loss_diff")
-    tf_x_diff = tape.gradient(tf_out, x, loss_diff)
+        tf_out = tf.nn.sigmoid_cross_entropy_with_logits(labels, x)
 
-    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+        loss_diff = test_global_storage.Get("loss_diff")
+        tf_x_diff = tape.gradient(tf_out, x, loss_diff)
+
+    tolerance = 1e-5
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=tolerance, atol=tolerance)
     assert np.allclose(
-        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        test_global_storage.Get("x_diff"),
+        tf_x_diff.numpy(),
+        rtol=tolerance,
+        atol=tolerance,
     )
     flow.clear_default_session()
 
 
-@flow.unittest.skip_unless_1n4d()
-class TestSparseSoftmaxCrossEntropyMs(flow.unittest.TestCase):
-    def test_sparse_softmax_cross_entropy_with_logits(test_case):
+@flow.unittest.skip_unless_1n1d()
+class TestSigmoidCrossEntropy(flow.unittest.TestCase):
+    def test_sigmoid_cross_entropy_with_logits(test_case):
         if flow.eager_execution_enabled():
             print("\nSkip under erger mode!")
             return
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
-        arg_dict["data_type"] = ["float32", "double"]
-        arg_dict["label_type"] = ["int32", "int64"]
-        arg_dict["num_classes"] = [1000]
-        arg_dict["batch_size"] = [64]
+        arg_dict["data_type"] = ["double", "float32"]
+        arg_dict["shape"] = [(64, 1000), (5, 5, 1000)]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
