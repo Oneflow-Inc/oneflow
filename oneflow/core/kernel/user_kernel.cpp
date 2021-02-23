@@ -234,6 +234,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
     }
   }
 
+  int64_t parallel_num() const override { return parallel_ctx_.parallel_num(); }
+
  private:
   const JobDesc& job_desc_;
   ArgVec inputs_;

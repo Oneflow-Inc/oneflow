@@ -174,6 +174,8 @@ class UserOpInferContext : public user_op::InferContext {
     return sbp_signature_->bn_in_op2sbp_parallel().at(bn);
   }
 
+  int64_t parallel_num() const override {}
+
  private:
   ArgVec inputs_;
   ArgVec outputs_;
