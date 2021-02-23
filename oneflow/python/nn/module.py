@@ -23,7 +23,6 @@ import itertools
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.ops import parallel_cast
 from oneflow.python.ops.get_variable import api_get_variable as get_variable
-from oneflow.python.advanced import distributed_ops
 from oneflow.python.ops import initializer_util
 
 
@@ -97,8 +96,7 @@ class Module(object):
         raise NotImplementedError()
 
     def __call__(self, *args):
-        for hook in itertools.chain(
-                self._forward_pre_hooks.values()):
+        for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args)
             if result is not None:
                 if not isinstance(result, tuple):
@@ -106,8 +104,10 @@ class Module(object):
                 args = result
 
         if self.consistent:
-            is_force_mirrored_overloaded = Module.__dict__[
-                'force_mirrored_forward'] != self.__class__.__dict__['force_mirrored_forward']
+            is_force_mirrored_overloaded = (
+                Module.__dict__["force_mirrored_forward"]
+                != self.__class__.__dict__["force_mirrored_forward"]
+            )
             if is_force_mirrored_overloaded:
                 return self.force_mirrored_forward(*args)
             else:
@@ -123,8 +123,7 @@ class Module(object):
         self, name: str, tensor: Optional[Tensor], persistent: bool = True
     ) -> None:
         if "_buffers" not in self.__dict__:
-            raise AttributeError(
-                "cannot assign buffer before Module.__init__() call")
+            raise AttributeError("cannot assign buffer before Module.__init__() call")
         # elif not isinstance(name, torch._six.string_classes):
         #     raise TypeError("buffer name should be a string. "
         #                     "Got {}".format(torch.typename(name)))
@@ -178,21 +177,22 @@ class Module(object):
         else:
             self._parameters[name] = param
 
-    def __getattr__(self, name: str) -> Union[Tensor, 'Module']:
-        if '_parameters' in self.__dict__:
-            _parameters = self.__dict__['_parameters']
+    def __getattr__(self, name: str) -> Union[Tensor, "Module"]:
+        if "_parameters" in self.__dict__:
+            _parameters = self.__dict__["_parameters"]
             if name in _parameters:
                 return _parameters[name]
-        if '_buffers' in self.__dict__:
-            _buffers = self.__dict__['_buffers']
+        if "_buffers" in self.__dict__:
+            _buffers = self.__dict__["_buffers"]
             if name in _buffers:
                 return _buffers[name]
-        if '_modules' in self.__dict__:
-            modules = self.__dict__['_modules']
+        if "_modules" in self.__dict__:
+            modules = self.__dict__["_modules"]
             if name in modules:
                 return modules[name]
-        raise AttributeError("'{}' object has no attribute '{}'".format(
-            type(self).__name__, name))
+        raise AttributeError(
+            "'{}' object has no attribute '{}'".format(type(self).__name__, name)
+        )
 
     def __setattr__(self, name: str, value: Union[Tensor, "Module"]) -> None:
         def remove_from(*dicts_or_sets):
@@ -250,8 +250,7 @@ class Module(object):
                     if value is not None and not isinstance(value, Tensor):
                         raise TypeError(
                             "cannot assign '{}' as buffer '{}' "
-                            "(Tensor or None expected)".format(
-                                type(value), name)
+                            "(Tensor or None expected)".format(type(value), name)
                         )
                     buffers[name] = value
                 else:
@@ -259,8 +258,7 @@ class Module(object):
 
     def _named_members(self, get_members_fn, prefix="", recurse=True):
         memo = set()
-        modules = self.named_modules(prefix=prefix) if recurse else [
-            (prefix, self)]
+        modules = self.named_modules(prefix=prefix) if recurse else [(prefix, self)]
         for module_prefix, module in modules:
             members = get_members_fn(module)
             for k, v in members:
@@ -356,8 +354,7 @@ class Module(object):
         self._save_to_state_dict(destination, prefix, keep_vars)
         for name, module in self._modules.items():
             if module is not None:
-                module.state_dict(destination, prefix +
-                                  name + ".", keep_vars=keep_vars)
+                module.state_dict(destination, prefix + name + ".", keep_vars=keep_vars)
         for hook in self._state_dict_hooks.values():
             # hook_result = hook(self, destination, prefix, local_metadata)
             hook_result = hook(self, destination, prefix)
@@ -367,14 +364,6 @@ class Module(object):
 
     def register_forward_pre_hook(self, hook: Callable[..., None]) -> None:
         self._forward_pre_hooks[len(self._forward_pre_hooks)] = hook
-
-
-def consistentize(module: Module):
-    module.consistent = True
-    for child in self.children():
-        consistentize(child)
-    module.register_forward_pre_hook(lambda x: distributed_ops.distribute_concat())
-    return self
 
 
 # placeholder
