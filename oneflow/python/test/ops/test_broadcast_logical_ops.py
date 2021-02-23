@@ -153,6 +153,5 @@ class TestBroadcastLogicalOps(flow.unittest.TestCase):
             GenerateTest(*arg)
 
 
-
 if __name__ == "__main__":
     unittest.main()

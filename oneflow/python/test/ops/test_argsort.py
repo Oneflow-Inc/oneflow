@@ -82,6 +82,7 @@ class TestArgsort(flow.unittest.TestCase):
     def test_argsort(test_case):
         for arg in gen_arg_list():
             compare_with_tensorflow(*arg)
+
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_argsort_gpu(test_case):
         for arg in gen_arg_list_for_test_axis():

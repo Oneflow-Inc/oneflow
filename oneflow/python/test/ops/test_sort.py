@@ -71,7 +71,7 @@ def gen_arg_list_for_test_axis():
     arg_dict["in_shape"] = [(10, 10, 20)]
     arg_dict["axis"] = [-2, -1, 0, 2]
     arg_dict["direction"] = ["ASCENDING", "DESCENDING"]
-    arg_dict["data_type"] = ["float32","int32"]
+    arg_dict["data_type"] = ["float32", "int32"]
 
     return GenArgList(arg_dict)
 
