@@ -1878,9 +1878,7 @@ class LAMB(Optimizer):
         optimizer_conf.lamb_conf.beta2 = self.beta2
         optimizer_conf.lamb_conf.epsilon = self.epsilon
         if self.weight_decay is not None:
-            optimizer_conf.weight_decay_conf.weight_decay_rate = (
-                self.weight_decay
-            )
+            optimizer_conf.weight_decay_conf.weight_decay_rate = self.weight_decay
             assert not (
                 self.weight_decay_excludes is not None
                 and self.weight_decay_includes is not None
