@@ -28,12 +28,12 @@ class CtrlServer final : public RpcServer {
   ~CtrlServer() override {}
 
   CtrlServer();
-  CtrlServer(const BootstrapConf&);
+  // port may be configured in bootstrap_conf
+  CtrlServer(int ctrl_port);
 
   int64_t port() const { return port_; }
 
  private:
-  void StartPort();
   void OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) override;
   int port_;
 };
