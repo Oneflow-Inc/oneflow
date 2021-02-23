@@ -23,6 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 class ProcessCtx;
+class WorkerProcessInfo;
 class BootstrapServer;
 class BootstrapClient;
 
@@ -30,14 +31,14 @@ class CtrlBootstrap {
  public:
   virtual ~CtrlBootstrap() {}
 
-  virtual Maybe<void> InitProcessCtx(int64_t port, ProcessCtx* process_ctx);
+  Maybe<void> InitProcessCtx(int64_t port, ProcessCtx* process_ctx);
 
  protected:
   virtual int64_t rank() const = 0;
   virtual int64_t world_size() const = 0;
   virtual Maybe<void> SetHostByMaster(Address*, int64_t world_rank) const = 0;
   virtual Maybe<void> SetCurrentHostByMaster(Address*) const = 0;
-  virtual Maybe<void> SetCurrentHostByWorker(Address*) const = 0;
+  virtual Maybe<void> SetCurrentHostByWorker(WorkerProcessInfo*) const = 0;
 
   virtual BootstrapServer* mut_bootstrap_server() = 0;
   virtual BootstrapClient* mut_bootstrap_client() = 0;
@@ -61,7 +62,7 @@ class HostListCtrlBootstrap final : public CtrlBootstrap {
 
   Maybe<void> SetHostByMaster(Address*, int64_t world_rank) const override;
   Maybe<void> SetCurrentHostByMaster(Address*) const override;
-  Maybe<void> SetCurrentHostByWorker(Address*) const override;
+  Maybe<void> SetCurrentHostByWorker(WorkerProcessInfo*) const override;
 
   BootstrapServer* mut_bootstrap_server() override;
   BootstrapClient* mut_bootstrap_client() override;
@@ -89,7 +90,7 @@ class RankInfoCtrlBootstrap final : public CtrlBootstrap {
 
   Maybe<void> SetHostByMaster(Address*, int64_t world_rank) const override;
   Maybe<void> SetCurrentHostByMaster(Address*) const override;
-  Maybe<void> SetCurrentHostByWorker(Address*) const override;
+  Maybe<void> SetCurrentHostByWorker(WorkerProcessInfo*) const override;
 
   BootstrapServer* mut_bootstrap_server() override;
   BootstrapClient* mut_bootstrap_client() override;
