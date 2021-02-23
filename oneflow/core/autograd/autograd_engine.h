@@ -111,5 +111,4 @@ class StackAutogradEngine final : public AutogradEngine {
 }  // namespace one
 
 }  // namespace oneflow
-#endif
-
+#endif  // ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_ENGINE_H_

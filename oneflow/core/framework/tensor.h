@@ -54,7 +54,9 @@ class TensorArg {
   std::shared_ptr<Tensor> get_tensor_ptr() { return tensor_ptr_; }
   void reset() { tensor_ptr_.reset(); }
   bool empty() { return !tensor_ptr_; }
-  void init_zeros_like(std::shared_ptr<Tensor> other);
+  void init_zeros_like(std::shared_ptr<Tensor> other) {
+    // TODO: Init tensor with zeros_like(other)
+  }
   void set_tensor_ptr(std::shared_ptr<Tensor> other) { tensor_ptr_ = other; }
 
  private:

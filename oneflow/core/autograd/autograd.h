@@ -27,18 +27,23 @@ using TensorList = std::vector<std::shared_ptr<Tensor>>;
 
 namespace one {
 
-// TODO: export
-std::shared_ptr<TensorList> Backward(const std::shared_ptr<TensorList>& outputs,
-                                     const std::shared_ptr<TensorList>& out_grads,
-                                     bool retain_graph = false, bool create_graph = false);
+struct AutoGradUtil final {
+    // Export to python as autograd.backward()
+    std::shared_ptr<TensorList> Backward(const std::shared_ptr<TensorList>& outputs,
+                                         const std::shared_ptr<TensorList>& out_grads,
+                                         bool retain_graph, bool create_graph);
 
-std::shared_ptr<TensorList> Grad(const std::shared_ptr<TensorList>& outputs,
-                                 const std::shared_ptr<TensorList>& inputs,
-                                 const std::shared_ptr<TensorList>& out_grads, bool retain_graph = false,
-                                 bool create_graph = false);
+    // Export to python as autograd.grad()
+    std::shared_ptr<TensorList> Grad(const std::shared_ptr<TensorList>& outputs,
+                                     const std::shared_ptr<TensorList>& inputs,
+                                     const std::shared_ptr<TensorList>& out_grads,
+                                     bool retain_graph, bool create_graph);
+};
+
 
 }  // namespace one
 
 }  // namespace oneflow
-#endif
+
+#endif  // ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_H_
 
