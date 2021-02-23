@@ -20,19 +20,19 @@ namespace oneflow {
 
 namespace {
 
-template<template<typename> class UnaryFunctor, typename T>
-__global__ void MathUnaryElementwiseForwardGpu(const int n, const T* x, T* y) {
+template<template<typename> class UnaryFunctor, typename T, typename K>
+__global__ void MathUnaryElementwiseForwardGpu(const int n, const T* x, K* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
 }
 
-template<template<typename> class UnaryFunctor, typename T>
-__global__ void MathUnaryElementwiseBackwardGpu(const int n, const T* x, const T* dy, T* dx) {
+template<template<typename> class UnaryFunctor, typename T, typename K>
+__global__ void MathUnaryElementwiseBackwardGpu(const int n, const T* x, const K* dy, T* dx) {
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = UnaryFunctor<T>::Backward(x[i], dy[i]); }
 }
 
 }  // namespace
 
-template<template<typename> class UnaryFunctor, typename T>
+template<template<typename> class UnaryFunctor, typename T, typename K>
 class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
  public:
   MathUnaryElementwiseGpuKernel() = default;
@@ -43,17 +43,17 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const T* x = tensor_x->dptr<T>();
-    T* y = tensor_y->mut_dptr<T>();
+    K* y = tensor_y->mut_dptr<K>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
+    MathUnaryElementwiseForwardGpu<UnaryFunctor, T, K>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<template<typename> class UnaryFunctor, typename T>
+template<template<typename> class UnaryFunctor, typename T, typename K>
 class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
  public:
   MathUnaryElementwiseGradGpuKernel() = default;
@@ -66,35 +66,37 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
     const T* x = tensor_x->dptr<T>();
-    const T* dy = tensor_dy->dptr<T>();
+    const K* dy = tensor_dy->dptr<K>();
     T* dx = tensor_dx->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    MathUnaryElementwiseBackwardGpu<UnaryFunctor, T>
+    MathUnaryElementwiseBackwardGpu<UnaryFunctor, T, K>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, dy, dx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD(math_type_pair, data_type_pair)        \
+#define REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD(math_type_pair, data_type_pair, output_type_pair)        \
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                           \
       .SetCreateFn<                                                                                \
           MathUnaryElementwiseGpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),     \
-                                        OF_PP_PAIR_FIRST(data_type_pair)>>()                       \
+                                        OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(output_type_pair)>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))       \
-                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair)));     \
+                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(output_type_pair)));     \
                                                                                                    \
   REGISTER_USER_KERNEL((std::string("") + OF_PP_PAIR_FIRST(math_type_pair) + "_grad"))             \
       .SetCreateFn<                                                                                \
           MathUnaryElementwiseGradGpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor), \
-                                            OF_PP_PAIR_FIRST(data_type_pair)>>()                   \
+                                            OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(output_type_pair)>>()                   \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
                        & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD,
-                                 MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
+                                 MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD,
+                                 MATH_UNARY_ELEMENTWISE_LOGICAL_FUNC_SEQ, ARITHMETIC_DATA_TYPE_SEQ, LOGICAL_DATA_TYPE_SEQ)          
 
 template<template<typename> class UnaryFunctor>
 class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel {

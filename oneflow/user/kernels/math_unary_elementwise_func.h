@@ -654,6 +654,13 @@ struct TanhFunctor<double> {
   }
 };
 
+template<typename T>
+struct LogicalNotFunctor {
+  static OF_DEVICE_FUNC const int8_t Forward(const T x) { return (T(0) == x); }
+
+  static OF_DEVICE_FUNC const T Backward(const T x, const int8_t dy) { return T(0); }
+};
+
 #if defined(__CUDACC__)
 // half version
 
