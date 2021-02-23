@@ -26,7 +26,7 @@ class Device final {
   Device(const Device&) = default;
   Device(Device&&) = default;
   ~Device() = default;
-  std::string type() const { return type_; }
+  const std::string& type() const { return type_; }
   int64_t device_id() const { return device_id_; }
 
  private:

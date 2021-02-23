@@ -77,6 +77,9 @@ class Tensor {
 
   // Setters to be deprecated
   virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
+
+ protected:
+  Tensor() = default;
 };
 
 class MirroredTensor final : public Tensor {
