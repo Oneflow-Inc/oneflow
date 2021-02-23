@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/oneflow.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/env.pb.h"
