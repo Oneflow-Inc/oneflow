@@ -54,6 +54,9 @@ class TensorImpl {
 
   // Setters to be deprecated
   virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
+
+ protected:
+  TensorImpl() = default;
 };
 
 class MirroredTensorImpl : public TensorImpl {
@@ -65,6 +68,9 @@ class MirroredTensorImpl : public TensorImpl {
 
   // Setters
   virtual void set_device(const std::shared_ptr<Device>& device) = 0;
+ 
+ protected:
+  MirroredTensorImpl() = default;
 };
 
 class ConsistentTensorImpl : public TensorImpl {
@@ -76,6 +82,9 @@ class ConsistentTensorImpl : public TensorImpl {
 
   // Setters
   virtual void set_distribute(const std::shared_ptr<compatible_py::Distribute>& distribute) = 0;
+ 
+ protected:
+  ConsistentTensorImpl() = default;
 };
 
 class LazyMirroredTensorImpl final : public MirroredTensorImpl {
