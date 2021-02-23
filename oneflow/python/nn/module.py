@@ -94,7 +94,7 @@ class InputConfigs:
 class Module(object):
     def __init__(self):
         self.training = True
-        self.consistent = False
+        self._consistent = False
         self._parameters = OrderedDict()
         self._buffers = OrderedDict()
         self._non_persistent_buffers_set = set()
@@ -106,6 +106,10 @@ class Module(object):
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
         self.input_configs = InputConfigs()
+
+    @property
+    def consistent(self):
+        return self._consistent
 
     def forward(self, *args):
         raise NotImplementedError()
@@ -145,9 +149,9 @@ class Module(object):
     ) -> None:
         if "_buffers" not in self.__dict__:
             raise AttributeError("cannot assign buffer before Module.__init__() call")
-        # elif not isinstance(name, torch._six.string_classes):
-        #     raise TypeError("buffer name should be a string. "
-        #                     "Got {}".format(torch.typename(name)))
+        elif not isinstance(name, str):
+            raise TypeError("buffer name should be a string. "
+                            "Got {}".format(type(name)))
         elif "." in name:
             raise KeyError('buffer name can\'t contain "."')
         elif name == "":
@@ -171,10 +175,9 @@ class Module(object):
             raise AttributeError(
                 "cannot assign parameter before Module.__init__() call"
             )
-
-        # elif not isinstance(name, torch._six.string_classes):
-        #     raise TypeError("parameter name should be a string. "
-        #                     "Got {}".format(torch.typename(name)))
+        elif not isinstance(name, str):
+            raise TypeError("parameter name should be a string. "
+                            "Got {}".format(type(name)))
         elif "." in name:
             raise KeyError('parameter name can\'t contain "."')
         elif name == "":
