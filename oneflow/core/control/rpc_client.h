@@ -68,6 +68,7 @@ class RpcClient {
  protected:
   RpcClient() = default;
   void LoadServer(const std::string& server_addr, CtrlService::Stub* stub);
+  void LoadServer(const LoadServerRequest& request, CtrlService::Stub* stub);
   void PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter);
   void PullMasterKV(const std::string& k, std::function<void(const std::string&)> VGetter);
   CtrlService::Stub* GetMasterStub() { return stubs_[0].get(); }
