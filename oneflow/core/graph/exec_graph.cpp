@@ -88,7 +88,7 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
                      GetPhysicalShape(CHECK_JUST(op()->GetLogicalBlobDesc4Ibn(ibn))->shape(),
                                       sbp_signature->bn_in_op2sbp_parallel().at(ibn),
                                       parallel_ctx->parallel_num(), parallel_ctx->parallel_id())),
-                 *GetBlobDesc4BnInOp(ibn));
+                 GetBlobDesc4BnInOp(ibn)->shape());
       }
     }
   }
@@ -100,7 +100,7 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
                      GetPhysicalShape(CHECK_JUST(op()->GetLogicalBlobDesc4Obn(obn))->shape(),
                                       sbp_signature->bn_in_op2sbp_parallel().at(obn),
                                       parallel_ctx->parallel_num(), parallel_ctx->parallel_id())),
-                 *GetBlobDesc4BnInOp(obn));
+                 GetBlobDesc4BnInOp(obn)->shape());
       }
     }
   }
