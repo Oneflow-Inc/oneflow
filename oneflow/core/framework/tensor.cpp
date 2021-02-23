@@ -35,25 +35,6 @@ void Tensor::CheckDataType<half>() const {
 
 namespace one {
 
-MirroredTensor::MirroredTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
-                               const std::shared_ptr<Device>& device) {
-  if (is_lazy_) {
-    impl_ = std::make_shared<MirroredLazyTensorImpl>(shape, dtype, device);
-  } else {
-    impl_ = std::make_shared<MirroredEagerTensorImpl>(shape, dtype, device);
-  }
-}
-
-ConsistentTensor::ConsistentTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
-                                   const std::shared_ptr<compatible_py::Distribute>& distribute,
-                                   std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
-  if (is_lazy_) {
-    impl_ = std::make_shared<ConsistentLazyTensorImpl>(shape, dtype, distribute, parallel_conf);
-  } else {
-    impl_ = std::make_shared<ConsistentEagerTensorImpl>(shape, dtype, distribute, parallel_conf);
-  }
-}
-
-}  // namespace one
+} // namespace one
 
 }  // namespace oneflow
