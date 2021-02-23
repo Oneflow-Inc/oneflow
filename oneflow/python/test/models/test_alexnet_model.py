@@ -48,71 +48,6 @@ class DLNetSpec(object):
 global_specs = DLNetSpec()
 
 
-def _conv2d_layer(
-    name,
-    input,
-    filters,
-    kernel_size=3,
-    strides=1,
-    padding="SAME",
-    data_format="NCHW",
-    dilation_rate=1,
-    activation=op_conf_util.kRelu,
-    use_bias=False,
-    weight_initializer=flow.random_uniform_initializer(),
-    bias_initializer=flow.random_uniform_initializer(),
-):
-    weight_shape = (filters, input.shape[1], kernel_size, kernel_size)
-    weight = flow.get_variable(
-        name + "-weight",
-        shape=weight_shape,
-        dtype=input.dtype,
-        initializer=weight_initializer,
-    )
-    output = flow.nn.conv2d(
-        input, weight, strides, padding, data_format, dilation_rate, name=name
-    )
-    if use_bias:
-        bias = flow.get_variable(
-            name + "-bias",
-            shape=(filters,),
-            dtype=input.dtype,
-            initializer=bias_initializer,
-        )
-        output = flow.nn.bias_add(output, bias, data_format)
-
-    if activation is not None:
-        if activation == op_conf_util.kRelu:
-            output = flow.nn.relu(output)
-        else:
-            raise NotImplementedError
-
-    return output
-
-
-def _data_load_layer(args, data_dir):
-    node_num = args.num_nodes
-    total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
-    rgb_mean = [123.68, 116.78, 103.94]
-    (image, label) = flow.data.ofrecord_image_classification_reader(
-        data_dir,
-        batch_size=total_batch_size,
-        data_part_num=args.data_part_num,
-        image_feature_name="encoded",
-        label_feature_name="class/label",
-        color_space="RGB",
-        name="decode",
-    )
-    rsz = flow.image.resize(image, target_size=[227, 227], color_space="RGB")
-    normal = flow.image.crop_mirror_normalize(
-        rsz,
-        color_space="RGB",
-        output_layout="NCHW",
-        mean=rgb_mean,
-        output_dtype=flow.float,
-    )
-    return (normal, label)
-
 
 class TrainData(flow.nn.Module):
     def __init__(self, specs):
@@ -226,15 +161,15 @@ class AlexNet(flow.Model):
 
 
 class LossMoniter(flow.ModelCallback):
-    def on_training_step_end(self, step, outputs):
+    def on_training_step_end(self, step_idx, outputs):
         loss = outputs.mean()
         fmt_str = "{:>12}  {:>12}  {:>12.6f}"
-        print(fmt_str.format(step, "train loss:", loss))
+        print(fmt_str.format(step_idx, "train loss:", loss))
 
-    def on_validation_step_end(self, step, outputs):
+    def on_validation_step_end(self, step_idx, outputs):
         loss = outputs.mean()
         fmt_str = "{:>12}  {:>12}  {:>12.6f}"
-        print(fmt_str.format(step, "validation loss:", loss))
+        print(fmt_str.format(step_idx, "validation loss:", loss))
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -277,3 +212,68 @@ def test_1n1c(test_case):
         checkpoint_config=ck_config,
         max_steps=20,
     )
+
+def _conv2d_layer(
+    name,
+    input,
+    filters,
+    kernel_size=3,
+    strides=1,
+    padding="SAME",
+    data_format="NCHW",
+    dilation_rate=1,
+    activation=op_conf_util.kRelu,
+    use_bias=False,
+    weight_initializer=flow.random_uniform_initializer(),
+    bias_initializer=flow.random_uniform_initializer(),
+):
+    weight_shape = (filters, input.shape[1], kernel_size, kernel_size)
+    weight = flow.get_variable(
+        name + "-weight",
+        shape=weight_shape,
+        dtype=input.dtype,
+        initializer=weight_initializer,
+    )
+    output = flow.nn.conv2d(
+        input, weight, strides, padding, data_format, dilation_rate, name=name
+    )
+    if use_bias:
+        bias = flow.get_variable(
+            name + "-bias",
+            shape=(filters,),
+            dtype=input.dtype,
+            initializer=bias_initializer,
+        )
+        output = flow.nn.bias_add(output, bias, data_format)
+
+    if activation is not None:
+        if activation == op_conf_util.kRelu:
+            output = flow.nn.relu(output)
+        else:
+            raise NotImplementedError
+
+    return output
+
+
+def _data_load_layer(args, data_dir):
+    node_num = args.num_nodes
+    total_batch_size = args.batch_size * args.gpu_num_per_node * node_num
+    rgb_mean = [123.68, 116.78, 103.94]
+    (image, label) = flow.data.ofrecord_image_classification_reader(
+        data_dir,
+        batch_size=total_batch_size,
+        data_part_num=args.data_part_num,
+        image_feature_name="encoded",
+        label_feature_name="class/label",
+        color_space="RGB",
+        name="decode",
+    )
+    rsz = flow.image.resize(image, target_size=[227, 227], color_space="RGB")
+    normal = flow.image.crop_mirror_normalize(
+        rsz,
+        color_space="RGB",
+        output_layout="NCHW",
+        mean=rgb_mean,
+        output_dtype=flow.float,
+    )
+    return (normal, label)

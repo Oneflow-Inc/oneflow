@@ -43,10 +43,15 @@ class Callback(ABC):
     r""" Abstract base class used to build new callbacks.
     """
 
-    def on_training_step_end(self, step, outputs):
+    def on_training_step_end(self, step_idx, outputs):
         pass
 
-    def on_validation_step_end(self, step, outputs):
+    def on_validation_step_end(self, step_idx, outputs):
+        pass
+
+@oneflow_export("nn.NumpyModule")
+class NumpyDataModule(Module):
+    def forward(self, step_idx):
         pass
 
 
@@ -60,16 +65,10 @@ class Model(
     def __init__(self, *args, **kwargs):
         super().__init__()
 
-        self.is_function_style = kwargs["is_function_style"]
-        self.training_config = kwargs["training_config"]
-        self.validation_config = kwargs["validation_config"]
-        self.callbacks = kwargs["callbacks"]
-
-        optim_conf = self.configure_optimizers()
-        if isinstance(optim_conf, Optimizer):
-            self.optimizers = [optim_conf]
-        elif isinstance(optim_conf, (list, tuple)):
-            self.optimizers = optim_conf
+        self.is_function_style = kwargs["is_function_style"] if "is_function_style" in kwargs else False
+        self.training_config = kwargs["training_config"] if "training_config" in kwargs else None
+        self.validation_config = kwargs["validation_config"] if "validation_config" in kwargs else None
+        self.callbacks = kwargs["callbacks"] if "callbacks" in kwargs else []
 
         self.need_training = False
         self.need_validation = False
@@ -94,16 +93,6 @@ class Model(
         Normally you'd need one. But in the case of GANs or similar you might have multiple.
         """
         raise NotImplementedError()
-
-    def optimizer_step(
-        self,
-        epoch: int = None,
-        batch_idx: int = None,
-        optimizer: Optimizer = None,
-        optimizer_idx: int = None,
-    ) -> None:
-        r"""Customized optimizer action.
-        """
 
     def _func_train_job(self):
         @api_oneflow_function(type="train", function_config=self.training_config)
@@ -139,16 +128,41 @@ class Model(
         self.validation_interval = validation_interval
         self.checkpoint_config = checkpoint_config
 
-        if self._method_overrided("training_step") and self.training_data is not None:
-            self.need_training = True
-            self.train_job = self._func_train_job()
 
+        self.is_numpy_input = True if isinstance(self.training_data, NumpyDataModule) else False
+
+        optim_conf = self.configure_optimizers()
+        if isinstance(optim_conf, Optimizer):
+            self.optimizers = [optim_conf]
+        elif isinstance(optim_conf, (list, tuple)):
+            self.optimizers = optim_conf
+
+        # construct training job
+        if self._method_overrided("training_step") and self.training_data is not None:
+            if not self.is_numpy_input:
+                if len(self.optimizers) == 1:
+                    self.need_training = True
+                    self.train_job = self._func_train_job()
+                else:
+                    raise NotImplementedError
+            else:
+                raise NotImplementedError
+
+        # construct validation job
         if (
             self._method_overrided("validation_step")
             and self.validation_data is not None
         ):
-            self.need_validation = True
-            self.eval_job = self._func_eval_job()
+            if not self.is_numpy_input:
+                if len(self.optimizers) == 1:
+                    self.need_validation = True
+                    self.eval_job = self._func_eval_job()
+                else:
+                    raise NotImplementedError
+            else:
+                raise NotImplementedError
+
+        return True
 
         if self.checkpoint_config.load_dirpath is not None:
             self.load_checkpoint(dirpath=self.checkpoint_config.load_dirpath)
@@ -156,18 +170,18 @@ class Model(
         if self.checkpoint_config.save_dirpath is not None:
             self.need_checkpoint = True
 
-        for step in range(0, self.max_steps):
+        for step_idx in range(0, self.max_steps):
             if self.need_training:
                 loss = self.train_job().get()
-                self._method_callback("on_training_step_end", step, loss)
+                self._method_callback("on_training_step_end", step_idx, loss)
             if self.need_validation:
-                if (step + 1) % self.validation_interval == 0:
+                if (step_idx + 1) % self.validation_interval == 0:
                     eval_loss = self.eval_job().get()
-                    self._method_callback("on_validation_step_end", step, eval_loss)
+                    self._method_callback("on_validation_step_end", step_idx, eval_loss)
             if self.need_checkpoint:
-                if (step + 1) % self.checkpoint_config.save_interval == 0:
+                if (step_idx + 1) % self.checkpoint_config.save_interval == 0:
                     self.save_checkpoint(
-                        dirpath=self.checkpoint_config.save_dirpath + "-" + str(step)
+                        dirpath=self.checkpoint_config.save_dirpath + "-" + str(step_idx)
                     )
 
     def save_checkpoint(
