@@ -25,64 +25,64 @@ HostListCtrlBootstrap::~HostListCtrlBootstrap() {
   bootstrap_server_.reset();
 }
 
-HostListCtrlBootstrap::HostListCtrlBootstrap(const EnvDesc& env_desc)
-    : CtrlBootstrap(), env_desc_(env_desc.env_proto()) {
+HostListCtrlBootstrap::HostListCtrlBootstrap(const EnvDesc& env_desc) : CtrlBootstrap() {
   bootstrap_server_.reset(new HostListBootstrapServer(env_desc));
   bootstrap_client_.reset(new HostListBootstrapClient(env_desc));
+  bootstrap_client_->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
+  host_ = bootstrap_server_->this_machine_addr();
+  rank_ = env_desc.GetMachineId(host_);
+  world_size_ = env_desc.TotalMachineNum();
 }
 
-Maybe<void> HostListCtrlBootstrap::InitCtrlConf(CtrlConf* ret_ctrl_conf) {
-  bootstrap_client_->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
-  int64_t this_machine_id = env_desc_.GetMachineId(bootstrap_server_->this_machine_addr());
-  std::vector<CtrlConf> rank2ctrl_conf;
-  if (this_machine_id == 0) {
-    CtrlConf ctrl_conf;
+Maybe<void> HostListCtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_ctx) {
+  std::vector<ProcessCtx> rank2process_ctx;
+  if (rank() == 0) {
+    ProcessCtx process_ctx;
     {
-      Address* addr = ctrl_conf.mutable_ctrl_addr()->Add();
-      addr->set_host(bootstrap_server_->this_machine_addr());
-      addr->set_port(env_desc_.ctrl_port());
-      ctrl_conf.set_rank(this_machine_id);
-      rank2ctrl_conf.push_back(ctrl_conf);
+      process_ctx.set_rank(rank());
+      Address* addr = process_ctx.mutable_ctrl_addr()->Add();
+      addr->set_host(host());
+      addr->set_port(port);
     }
-    for (int64_t machine_id = 1; machine_id < env_desc_.TotalMachineNum(); ++machine_id) {
-      std::string key = std::string("GetCtrlConf") + std::to_string(machine_id);
-      CtrlConf cur_ctrl_conf;
-      bootstrap_client_->PullMasterKV(key, &cur_ctrl_conf);
-      CHECK_EQ_OR_RETURN(machine_id, rank2ctrl_conf.size());
-      CHECK_EQ_OR_RETURN(machine_id, cur_ctrl_conf.rank());
-      rank2ctrl_conf.push_back(cur_ctrl_conf);
+    rank2process_ctx.push_back(process_ctx);
+    for (int64_t world_rank = 1; world_rank < world_size(); ++world_rank) {
+      std::string key = std::string("GetProcessCtx") + std::to_string(world_rank);
+      ProcessCtx cur_process_ctx;
+      bootstrap_client_->PullMasterKV(key, &cur_process_ctx);
+      CHECK_EQ_OR_RETURN(world_rank, rank2process_ctx.size());
+      CHECK_EQ_OR_RETURN(world_rank, cur_process_ctx.rank());
+      rank2process_ctx.push_back(cur_process_ctx);
     }
   } else {
-    std::string key = std::string("GetCtrlConf") + std::to_string(this_machine_id);
-    CtrlConf cur_ctrl_conf;
-    cur_ctrl_conf.set_rank(this_machine_id);
-    Address* addr = cur_ctrl_conf.mutable_ctrl_addr()->Add();
-    addr->set_host(bootstrap_server_->this_machine_addr());
-    addr->set_port(env_desc_.ctrl_port());
-    bootstrap_client_->PushMasterKV(key, cur_ctrl_conf);
+    std::string key = std::string("GetProcessCtx") + std::to_string(rank());
+    ProcessCtx cur_process_ctx;
+    {
+      cur_process_ctx.set_rank(rank());
+      Address* addr = cur_process_ctx.mutable_ctrl_addr()->Add();
+      addr->set_host(host());
+      addr->set_port(port);
+    }
+    bootstrap_client_->PushMasterKV(key, cur_process_ctx);
   }
 
   bootstrap_client_->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
 
-  if (this_machine_id == 0) {
-    ret_ctrl_conf->set_rank(this_machine_id);
-    for (const auto& ctrl_conf : rank2ctrl_conf) {
-      CHECK_EQ_OR_RETURN(ctrl_conf.ctrl_addr_size(), 1);
-      *ret_ctrl_conf->mutable_ctrl_addr()->Add() = ctrl_conf.ctrl_addr(0);
+  if (rank() == 0) {
+    ret_process_ctx->set_rank(rank());
+    ret_process_ctx->mutable_ctrl_addr()->Clear();
+    for (const auto& process_ctx : rank2process_ctx) {
+      CHECK_EQ_OR_RETURN(process_ctx.ctrl_addr_size(), 1);
+      *ret_process_ctx->mutable_ctrl_addr()->Add() = process_ctx.ctrl_addr(0);
     }
-    for (int64_t machine_id = 1; machine_id < env_desc_.TotalMachineNum(); ++machine_id) {
-      std::string key = std::string("BroadcastCtrlConf") + std::to_string(machine_id);
-      bootstrap_client_->PushMasterKV(key, *ret_ctrl_conf);
-    }
+    bootstrap_client_->PushMasterKV("BroadcastProcessCtx", *ret_process_ctx);
   } else {
-    std::string key = std::string("BroadcastCtrlConf") + std::to_string(this_machine_id);
-    bootstrap_client_->PullMasterKV(key, ret_ctrl_conf);
-    ret_ctrl_conf->set_rank(this_machine_id);
+    bootstrap_client_->PullMasterKV("BroadcastProcessCtx", ret_process_ctx);
+    ret_process_ctx->set_rank(rank());
   }
 
   bootstrap_client_->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
 
-  LOG(INFO) << "\n" << ret_ctrl_conf->DebugString();
+  LOG(INFO) << "\n" << ret_process_ctx->DebugString();
   return Maybe<void>::Ok();
 }
 
