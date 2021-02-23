@@ -100,8 +100,6 @@ def _of_where(
         ):
             return do_where(condition_def, x_def, y_def)
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         return where_fn([condition], [x], [y]).get().numpy_list()[0]
 
     else:
@@ -118,8 +116,6 @@ def _of_where(
         ):
             return do_where(condition_def, x_def, y_def)
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         return where_fn(condition, x, y).get().numpy()
 
 

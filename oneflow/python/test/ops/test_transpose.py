@@ -24,6 +24,10 @@ import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def compare_with_tensorflow(device_type, input_shape, perm):
     assert device_type in ["gpu", "cpu"]
@@ -56,8 +60,6 @@ def compare_with_tensorflow(device_type, input_shape, perm):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = TransposeJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:

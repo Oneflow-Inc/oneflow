@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/framework/device_registry_manager.h"
 
 namespace oneflow {
 
@@ -99,14 +100,8 @@ std::string OpNode::VisualStr() const {
   std::string str = op().op_name();
   {
     for (int64_t machine_id : parallel_desc().sorted_machine_ids()) {
-      std::string dev_type;
-      if (parallel_desc().device_type() == DeviceType::kCPU) {
-        dev_type = "cpu";
-      } else if (parallel_desc().device_type() == DeviceType::kGPU) {
-        dev_type = "gpu";
-      } else {
-        UNIMPLEMENTED();
-      }
+      const char* dev_type = CHECK_JUST(DeviceTag4DeviceType(parallel_desc().device_type()));
+
       std::string parallel_desc_str = std::to_string(machine_id) + ":" + dev_type + ":";
       const auto& dev_phy_ids = parallel_desc().sorted_dev_phy_ids(machine_id);
       parallel_desc_str += std::to_string(dev_phy_ids.front());
@@ -306,18 +301,9 @@ const ParallelDesc& OpNode::BlobParallelDesc4Obn(const std::string& obn) const {
 }
 
 void OpNode::InferBlobParallelDesc() {
-  auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
-    auto iter = obn2blob_parallel_desc_.find(obn);
-    if (iter == obn2blob_parallel_desc_.end()) {
-      iter = obn2blob_parallel_desc_.emplace(obn, parallel_desc()).first;
-    }
-    return &iter->second;
-  };
-  auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc* {
-    return &LogicalBlobDesc4Lbi(op().BnInOp2Lbi(ibn));
-  };
-  CHECK_JUST(op().InferOutParallelDescIf(ParallelDesc4Obn, LogicalBlobDesc4Ibn, parallel_desc(),
-                                         &sbp_signature()));
+  for (const auto& bn : op().output_bns()) {
+    obn2blob_parallel_desc_.emplace(bn, *CHECK_JUST(op().GetParallelDesc4BnInOp(bn)));
+  }
 }
 
 void OpNode::InitLbi2SourceNode() {
@@ -562,6 +548,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
       return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn));
     };
+    JUST(op_node->mut_op()->FillOpParallelDesc(op_node->parallel_desc()));
     JUST(op_node->mut_op()->FillLogicalInBlobDesc(LogicalBlobDesc4BnInOp));
     // Infer ParallelSignature
     JUST(op_node->mut_op()->InferParallelSignatureIf());
