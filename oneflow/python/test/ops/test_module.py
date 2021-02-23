@@ -172,6 +172,7 @@ class TestModule(flow.unittest.TestCase):
                         parallel_id += 1
             x8 = flow.advanced.distribute_concat(x_list)
             flow.watch(x8, lambda x: print(x.numpy()))
+
         job()
 
     # TODO: add more tests about module api
