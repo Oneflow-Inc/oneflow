@@ -46,9 +46,7 @@ MirroredTensor::MirroredTensor(const std::shared_ptr<Shape>& shape, DataType dty
   }
 }
 
-std::shared_ptr<Device> MirroredTensor::device() const {
-  return impl_->device(); 
-}
+std::shared_ptr<Device> MirroredTensor::device() const { return impl_->device(); }
 
 void MirroredTensor::set_device(const std::shared_ptr<Device>& device) {
   impl_->set_device(device);
@@ -64,7 +62,15 @@ ConsistentTensor::ConsistentTensor(const std::shared_ptr<Shape>& shape, DataType
   }
 }
 
+std::shared_ptr<compatible_py::Distribute> ConsistentTensor::distribute() const {
+  return impl_->distribute();
 }
 
-}  // namespace oneflow
+void ConsistentTensor::set_distribute(
+    const std::shared_ptr<compatible_py::Distribute>& distribute) {
+  impl_->set_distribute(distribute);
+}
 
+}  // namespace one
+
+}  // namespace oneflow

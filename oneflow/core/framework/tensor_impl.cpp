@@ -18,8 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace one {
-
-}  // namespace one
+namespace one {}  // namespace one
 
 }  // namespace oneflow

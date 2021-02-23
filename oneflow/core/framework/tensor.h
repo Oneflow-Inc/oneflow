@@ -57,7 +57,6 @@ class Device;
 
 class Tensor {
  public:
-  Tensor() = default;
   virtual ~Tensor() = default;
   virtual std::shared_ptr<Shape> shape() const = 0;
   virtual void set_shape(const std::shared_ptr<Shape>& shape) = 0;
@@ -65,7 +64,7 @@ class Tensor {
   virtual void set_dtype(DataType dtype) = 0;
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
   virtual void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) = 0;
-  bool is_lazy() const ;
+  bool is_lazy() const;
 };
 
 class MirroredTensor : public Tensor {
@@ -78,7 +77,9 @@ class MirroredTensor : public Tensor {
   void set_shape(const std::shared_ptr<Shape>& shape) override { return impl_->set_shape(shape); }
   DataType dtype() const override { return impl_->dtype(); }
   void set_dtype(DataType dtype) override { return impl_->set_dtype(dtype); }
-  std::shared_ptr<cfg::ParallelConf> parallel_conf() const override { return impl_->parallel_conf(); }
+  std::shared_ptr<cfg::ParallelConf> parallel_conf() const override {
+    return impl_->parallel_conf();
+  }
   void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) override {
     impl_->set_parallel_conf(parallel_conf);
   }
@@ -100,18 +101,20 @@ class ConsistentTensor : public Tensor {
   void set_shape(const std::shared_ptr<Shape>& shape) override { return impl_->set_shape(shape); }
   DataType dtype() const override { return impl_->dtype(); }
   void set_dtype(DataType dtype) override { return impl_->set_dtype(dtype); }
-  std::shared_ptr<cfg::ParallelConf> parallel_conf() const override { return impl_->parallel_conf(); }
+  std::shared_ptr<cfg::ParallelConf> parallel_conf() const override {
+    return impl_->parallel_conf();
+  }
   void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) override {
     impl_->set_parallel_conf(parallel_conf);
   }
-  std::shared_ptr<compatible_py::Distribute> device() const;
-  void set_device(const std::shared_ptr<compatible_py::Distribute>& device);
+  std::shared_ptr<compatible_py::Distribute> distribute() const;
+  void set_distribute(const std::shared_ptr<compatible_py::Distribute>& distribute);
 
  private:
   std::shared_ptr<ConsistentTensorImpl> impl_;
 };
 
-}
+}  // namespace one
 
 namespace user_op {
 

@@ -40,7 +40,7 @@ class TensorImpl {
   virtual void set_shape(const std::shared_ptr<Shape>& shape) = 0;
   virtual DataType dtype() const = 0;
   virtual void set_dtype(DataType dtype) = 0;
-  virtual void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf)  = 0;
+  virtual void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) = 0;
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
 };
 
@@ -127,11 +127,9 @@ class ConsistentLazyTensorImpl : public ConsistentTensorImpl {
     parallel_conf_ = parallel_conf;
   }
   void set_distribute(const std::shared_ptr<compatible_py::Distribute>& distribute) override {
-   distribute_ = distribute;
+    distribute_ = distribute;
   }
-  std::shared_ptr<compatible_py::Distribute> distribute() const override {
-    return distribute_;
-  }
+  std::shared_ptr<compatible_py::Distribute> distribute() const override { return distribute_; }
 
  private:
   std::shared_ptr<Shape> shape_;
@@ -156,11 +154,9 @@ class ConsistentEagerTensorImpl : public ConsistentTensorImpl {
     parallel_conf_ = parallel_conf;
   }
   void set_distribute(const std::shared_ptr<compatible_py::Distribute>& distribute) override {
-   distribute_ = distribute;
+    distribute_ = distribute;
   }
-  std::shared_ptr<compatible_py::Distribute> distribute() const override {
-    return distribute_;
-  }
+  std::shared_ptr<compatible_py::Distribute> distribute() const override { return distribute_; }
   void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
     blob_object_ = blob_object;
   }
@@ -174,9 +170,7 @@ class ConsistentEagerTensorImpl : public ConsistentTensorImpl {
   std::shared_ptr<compatible_py::BlobObject> blob_object_;
 };
 
-
 }  // namespace one
 
 }  // namespace oneflow
 #endif
-
