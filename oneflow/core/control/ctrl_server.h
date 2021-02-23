@@ -20,16 +20,21 @@ limitations under the License.
 
 namespace oneflow {
 
+class BootstrapConf;
+
 class CtrlServer final : public RpcServer {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CtrlServer);
   ~CtrlServer() override {}
 
   CtrlServer();
+  CtrlServer(int port);
+  CtrlServer(const BootstrapConf&);
 
   int64_t port() const { return port_; }
 
  private:
+  void StartPort();
   void OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) override;
   int port_;
 };

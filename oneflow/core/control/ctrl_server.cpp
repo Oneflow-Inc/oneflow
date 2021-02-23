@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/env_desc.h"
@@ -21,16 +22,34 @@ limitations under the License.
 
 namespace oneflow {
 
+CtrlServer::CtrlServer(const BootstrapConf& boot_strap_conf) : RpcServer(), port_(0) {
+  Init();
+  if (boot_strap_conf.has_ctrl_port()) { port_ = boot_strap_conf.ctrl_port(); }
+  StartPort();
+}
+
 CtrlServer::CtrlServer() : RpcServer(), port_(0) {
   Init();
+  StartPort();
+}
+
+void CtrlServer::StartPort() {
   grpc::ServerBuilder server_builder;
   server_builder.SetMaxMessageSize(INT_MAX);
-  server_builder.AddListeningPort("0.0.0.0:0", grpc::InsecureServerCredentials(), &port_);
+  int bound_port = 0;
+  server_builder.AddListeningPort("0.0.0.0:" + std::to_string(port_),
+                                  grpc::InsecureServerCredentials(), &bound_port);
   grpc_service_.reset(new CtrlService::AsyncService);
   server_builder.RegisterService(grpc_service_.get());
   cq_ = server_builder.AddCompletionQueue();
   grpc_server_ = server_builder.BuildAndStart();
-  CHECK_NE(port(), 0);
+  if (port() != 0) {
+    CHECK_EQ(port(), bound_port) << "Port " << port() << " is unavailable";
+  } else {
+    port_ = bound_port;
+    CHECK_NE(port(), 0);
+  }
+
   LOG(INFO) << "CtrlServer listening on "
             << "0.0.0.0:" + std::to_string(port());
   loop_thread_ = std::thread(&CtrlServer::HandleRpcs, this);
