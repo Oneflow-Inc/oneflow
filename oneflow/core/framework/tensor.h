@@ -49,14 +49,12 @@ class Tensor {
 
 namespace one {
 
-std::shared_ptr<Tensor> zeros_like(std::shared_ptr<Tensor> other);
-
 class TensorArg {
  public:
   std::shared_ptr<Tensor> get_tensor_ptr() { return tensor_ptr_; }
   void reset() { tensor_ptr_.reset(); }
   bool empty() { return !tensor_ptr_; }
-  void init_zeros_like(std::shared_ptr<Tensor> other) { tensor_ptr_ = zeros_like(other); }
+  void init_zeros_like(std::shared_ptr<Tensor> other);
   void set_tensor_ptr(std::shared_ptr<Tensor> other) { tensor_ptr_ = other; }
 
  private:

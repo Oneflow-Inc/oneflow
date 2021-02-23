@@ -35,23 +35,8 @@ class FunctionNode {
   virtual void ReleaseTensorGrads() = 0;
   virtual void ReleaseGraph() = 0;
 
-  std::vector<std::weak_ptr<FunctionNode>> GetNextFunctions() { return next_functions_; }
-  std::string GetOpName() { return op_name_; }
-
- protected:
-  /*
-   * FunctionNode shares tensor_impl with `inputs_`, and only shares blob pointer with `outputs_`.
-   * The reference link is `output tensors -> node -> inputs_/input tensors`.
-   */
-  std::shared_ptr<TensorList> inputs_;
-  std::shared_ptr<TensorList> outputs_;
-  std::vector<std::shared_ptr<TensorArg>> in_grads_;
-  std::vector<std::shared_ptr<TensorArg>> out_grads_;
-  // TODO: add parameters
-  std::shared_ptr<std::function<void()>> backward_fn_;
-
-  std::string op_name_;
-  std::vector<std::weak_ptr<FunctionNode>> next_functions_;
+  virtual std::vector<std::weak_ptr<FunctionNode>> GetNextFunctions() = 0;
+  virtual std::string GetOpName() = 0;
 };
 
 class AutogradEngine {
@@ -75,11 +60,28 @@ class StackFunctionNode final : public FunctionNode {
   // TODO: update constructor according to op_builder interface
   StackFunctionNode(std::function<void()> backward_fn, const std::shared_ptr<TensorList>& inputs,
                     const std::shared_ptr<TensorList>& outputs);
-  ~StackFunctionNode() = default;
+
+  std::vector<std::weak_ptr<FunctionNode>> GetNextFunctions() override { return next_functions_; }
+  std::string GetOpName() override { return op_name_; }
 
   void ReleaseTensorGrads() override;
   void ReleaseGraph() override;
   void Apply(bool create_graph) override;
+
+ private:
+  /*
+   * FunctionNode shares tensor_impl with `inputs_`, and only shares blob pointer with `outputs_`.
+   * The reference link is `output tensors -> node -> inputs_/input tensors`.
+   */
+  std::shared_ptr<TensorList> inputs_;
+  std::shared_ptr<TensorList> outputs_;
+  std::vector<std::shared_ptr<TensorArg>> in_grads_;
+  std::vector<std::shared_ptr<TensorArg>> out_grads_;
+  // TODO: add parameters
+  std::shared_ptr<std::function<void()>> backward_fn_;
+
+  std::string op_name_;
+  std::vector<std::weak_ptr<FunctionNode>> next_functions_;
 };
 
 class StackAutogradEngine final : public AutogradEngine {

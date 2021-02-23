@@ -61,7 +61,7 @@ std::shared_ptr<TensorList> StackAutogradEngine::Execute(
   auto capture_tensors = std::make_shared<TensorList>(inputs->size());
   bool retain_grad_for_leaf = inputs->empty();
   for (int i = 0; i < outputs->size(); i++) {
-    outputs->at(i)->now_grad.lock()->set_tensor_ptr(out_grads->at(i));
+    outputs->at(i)->now_grad->set_tensor_ptr(out_grads->at(i));
   }
   auto it = node_list_.begin();
   while (it != node_list_.end()) {
@@ -81,6 +81,8 @@ std::shared_ptr<TensorList> StackAutogradEngine::Execute(
   }
   return capture_tensors;
 }
+
+// TODO: std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(...) {}
 
 }  // namespace one
 
