@@ -63,7 +63,7 @@ class TestSmoothL1Loss(flow.unittest.TestCase):
             (100,),
             (10, 10),
         ]
-        arg_dict["data_type"] = ["float32", "double"]
+        arg_dict["data_type"] = ["float32"]
         arg_dict["beta"] = [0, 0.5, 1]
 
         for case in GenArgList(arg_dict):

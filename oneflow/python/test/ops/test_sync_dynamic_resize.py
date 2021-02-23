@@ -29,12 +29,10 @@ class TestSyncDynamicResize(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["x_shape"] = [
             (100,),
-            (100, 1),
             (1000, 10),
-            (10, 10, 200),
         ]
-        arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
-        arg_dict["size_type"] = ["int32", "int64"]
+        arg_dict["data_type"] = ["float32", "int32"]
+        arg_dict["size_type"] = ["int32"]
 
         for device_type, x_shape, data_type, size_type in GenArgList(arg_dict):
             flow.clear_default_session()

@@ -140,8 +140,8 @@ class TestInstanceNormND1n1d(flow.unittest.TestCase):
 class TestInstanceNormND1n2d(flow.unittest.TestCase):
     def test_instance_norm(test_case):
         arg_dict = OrderedDict()
-        arg_dict["input_shape"] = [(4, 2, 32), (4, 2, 32, 32), (4, 2, 32, 32, 32)]
-        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["input_shape"] = [(4, 2, 32), (4, 2, 32, 32)]
+        arg_dict["device_type"] = ["gpu"]
         arg_dict["machine_ids"] = ["0:0-1"]
         arg_dict["device_counts"] = [2]
         arg_dict["eps"] = [1e-3]

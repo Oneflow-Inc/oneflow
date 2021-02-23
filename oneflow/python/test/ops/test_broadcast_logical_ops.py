@@ -20,6 +20,7 @@ import numpy as np
 import oneflow as flow
 from test_util import GenArgList, type_name_to_flow_type
 import oneflow.typing as oft
+import os
 
 
 def func_equal(a, b):
@@ -46,8 +47,8 @@ def func_less_equal(a, b):
     return a <= b
 
 
-# def func_logical_and(a, b):
-#    return a & b
+def func_logical_and(a, b):
+    return a & b
 
 
 def np_array(dtype, shape):
@@ -66,7 +67,7 @@ def np_array(dtype, shape):
 
 
 def GenerateTest(
-    test_case, func, a_shape, b_shape, dtype=flow.int32, device_type="cpu"
+    test_case, func, a_shape, b_shape, dtype=flow.int32, device_type="gpu"
 ):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(dtype)
@@ -98,37 +99,7 @@ def GenerateTest(
 
 @flow.unittest.skip_unless_1n1d()
 class TestBroadcastLogicalOps(flow.unittest.TestCase):
-    def test_naive(test_case):
-        func_config = flow.FunctionConfig()
-        func_config.default_data_type(flow.float)
-
-        @flow.global_function(function_config=func_config)
-        def ModJob(a: oft.Numpy.Placeholder((5, 2)), b: oft.Numpy.Placeholder((5, 2))):
-            return a == b
-
-        x = np.random.rand(5, 2).astype(np.float32)
-        y = np.random.rand(5, 2).astype(np.float32)
-        z = ModJob(x, y).get().numpy()
-        r = func_equal(x, y)
-        test_case.assertTrue(np.array_equal(z, x == y))
-        flow.clear_default_session()
-
-    def test_broadcast(test_case):
-        func_config = flow.FunctionConfig()
-        func_config.default_data_type(flow.float)
-
-        @flow.global_function(function_config=func_config)
-        def ModJob(a: oft.Numpy.Placeholder((5, 2)), b: oft.Numpy.Placeholder((1, 2))):
-            return a == b
-
-        x = np.random.rand(5, 2).astype(np.float32)
-        y = np.random.rand(1, 2).astype(np.float32)
-        z = None
-        z = ModJob(x, y).get().numpy()
-        test_case.assertTrue(np.array_equal(z, x == y))
-        flow.clear_default_session()
-
-    def test_broadcast_logical(test_case):
+    def test_broadcast_logical_cpu(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
         arg_dict["func"] = [
@@ -137,37 +108,50 @@ class TestBroadcastLogicalOps(flow.unittest.TestCase):
             func_greater_than,
             func_greater_equal,
             func_less_than,
-            func_less_than,
+            func_less_equal,
+            func_logical_and,
         ]
-        arg_dict["a_shape"] = [(64, 64), (64, 64, 64)]
-        arg_dict["b_shape"] = [(1, 64), (64, 1), (64, 1, 64), (1, 64, 1)]
+        arg_dict["a_shape"] = [(64, 64)]
+        arg_dict["b_shape"] = [(1, 64)]
         arg_dict["data_type"] = [
-            flow.int8,
             flow.int32,
-            flow.int64,
             flow.float,
-            flow.double,
         ]
-        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["device_type"] = ["cpu"]
 
         for arg in GenArgList(arg_dict):
-            if arg[5] == "cpu" and arg[4] == "float16":
-                continue
             if len(arg[2]) < len(arg[3]):
                 continue
             GenerateTest(*arg)
 
-    def test_xy_mod_x1(test_case):
-        GenerateTest(test_case, func_less_than, (64, 64), (64, 1), flow.int8)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_broadcast_logical_gpu(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_case"] = [test_case]
+        arg_dict["func"] = [
+            func_equal,
+            func_not_equal,
+            func_greater_than,
+            func_greater_equal,
+            func_less_than,
+            func_less_equal,
+            func_logical_and,
+        ]
+        arg_dict["a_shape"] = [(64, 64), (64, 64, 64)]
+        arg_dict["b_shape"] = [(1, 64), (1, 64, 1)]
+        arg_dict["data_type"] = [
+            flow.int8,
+            flow.int32,
+            flow.float,
+            flow.float16,
+        ]
+        arg_dict["device_type"] = ["gpu"]
 
-    def test_xy_mod_1y(test_case):
-        GenerateTest(test_case, func_greater_than, (64, 64), (1, 64))
+        for arg in GenArgList(arg_dict):
+            if len(arg[2]) < len(arg[3]):
+                continue
+            GenerateTest(*arg)
 
-    def test_xyz_mod_x1z(test_case):
-        GenerateTest(test_case, func_equal, (64, 64, 64), (64, 1, 64))
-
-    def test_xyz_mod_1y1(test_case):
-        GenerateTest(test_case, func_not_equal, (64, 64, 64), (1, 64, 1))
 
 
 if __name__ == "__main__":

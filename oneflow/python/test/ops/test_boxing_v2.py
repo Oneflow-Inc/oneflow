@@ -20,6 +20,7 @@ import numpy as np
 import oneflow as flow
 from test_util import GenArgList
 import oneflow.typing as oft
+import os
 
 
 def _test_split_to_split(
@@ -240,6 +241,7 @@ def _test_multi_lbi(
 
 @flow.unittest.skip_unless_1n4d()
 class TestBoxingV2(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_split_to_split(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]
@@ -251,20 +253,22 @@ class TestBoxingV2(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_split_to_split(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_split_to_split_all_to_all(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["gpu"]
         arg_dict["dst_device_type"] = ["gpu"]
         arg_dict["src_device_num"] = [4]
         arg_dict["dst_device_num"] = [4]
-        arg_dict["src_axis"] = [0, 1, 2, 3]
-        arg_dict["dst_axis"] = [0, 1, 2, 3]
+        arg_dict["src_axis"] = [0, 1, 3]
+        arg_dict["dst_axis"] = [0, 1, 2]
         for arg in GenArgList(arg_dict):
             (_, _, _, _, src_axis, dst_axis) = arg
             if src_axis == dst_axis:
                 continue
             _test_split_to_split_enable_all_to_all(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_split_to_broadcast(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]
@@ -275,6 +279,7 @@ class TestBoxingV2(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_split_to_broadcast(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_broadcast_to_split(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]
@@ -285,6 +290,7 @@ class TestBoxingV2(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_broadcast_to_split(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_partial_sum_to_split(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]
@@ -295,6 +301,7 @@ class TestBoxingV2(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_partial_sum_to_split(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_partial_sum_to_broadcast(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]
@@ -304,6 +311,7 @@ class TestBoxingV2(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_partial_sum_to_broadcast(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_broadcast_to_broadcast(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]
@@ -314,11 +322,12 @@ class TestBoxingV2(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_broadcast_to_broadcast(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_multi_lbi(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]
         arg_dict["dst_device_type"] = ["cpu", "gpu"]
-        arg_dict["src_device_num"] = [1, 2, 3]
+        arg_dict["src_device_num"] = [1, 3]
         arg_dict["dst_device_num"] = [1, 2, 3]
         for arg in GenArgList(arg_dict):
             _test_multi_lbi(test_case, *arg)

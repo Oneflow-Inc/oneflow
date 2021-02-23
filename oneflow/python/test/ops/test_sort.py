@@ -60,7 +60,7 @@ def gen_arg_list():
     arg_dict["in_shape"] = [(100,), (100, 100), (10, 10, 200)]
     arg_dict["axis"] = [-1]
     arg_dict["direction"] = ["ASCENDING", "DESCENDING"]
-    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+    arg_dict["data_type"] = ["float32", "int32"]
 
     return GenArgList(arg_dict)
 
@@ -69,9 +69,9 @@ def gen_arg_list_for_test_axis():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["in_shape"] = [(10, 10, 20)]
-    arg_dict["axis"] = [-2, -1, 0, 1, 2]
+    arg_dict["axis"] = [-2, -1, 0, 2]
     arg_dict["direction"] = ["ASCENDING", "DESCENDING"]
-    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+    arg_dict["data_type"] = ["float32","int32"]
 
     return GenArgList(arg_dict)
 

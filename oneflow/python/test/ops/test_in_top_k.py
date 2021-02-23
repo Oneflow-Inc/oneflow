@@ -73,7 +73,7 @@ def gen_arg_list():
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["target_dtype"] = ["int32", "int64"]
     arg_dict["predictions_shape"] = [(10, 5)]
-    arg_dict["k"] = [1, 2, 3, 4, 5]
+    arg_dict["k"] = [1, 2, 5]
     arg_dict["with_finite"] = [False, True]
     return GenArgList(arg_dict)
 

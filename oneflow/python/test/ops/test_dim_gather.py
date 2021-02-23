@@ -213,14 +213,13 @@ def _gen_arg_dict(
         arg_dict["value_type"] = [
             # (np.float32, flow.float16), #TODO:(YaoChi) float16 only works fine on ARCH > 700 CUDA > 10000
             (np.float32, flow.float32),
-            (np.float64, flow.float64),
         ]
     elif value_type == "int":
         arg_dict["value_type"] = [(np.float32, flow.int32)]
     else:
         raise "float or int for value type only"
 
-    arg_dict["index_type"] = [(np.int32, flow.int32), (np.int64, flow.int64)]
+    arg_dict["index_type"] = [(np.int32, flow.int32)]
     arg_dict["machine_ids"] = [machine_ids]
     arg_dict["device_count"] = [device_count]
     return arg_dict

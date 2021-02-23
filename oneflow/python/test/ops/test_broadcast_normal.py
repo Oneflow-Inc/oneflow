@@ -189,7 +189,7 @@ class TestBroadcastNormal(flow.unittest.TestCase):
         arg_dict["tf_op"] = [tf.math.add]
         arg_dict["x_shape"] = [(3, 1, 4, 1)]
         arg_dict["y_shape"] = [(4, 1, 6)]
-        arg_dict["data_type"] = ["float32", "double"]
+        arg_dict["data_type"] = ["float32"]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow_grad(*arg)
 
@@ -200,7 +200,7 @@ class TestBroadcastNormal(flow.unittest.TestCase):
         arg_dict["tf_op"] = [tf.math.subtract]
         arg_dict["x_shape"] = [(3, 1, 4, 1)]
         arg_dict["y_shape"] = [(4, 1, 6)]
-        arg_dict["data_type"] = ["float32", "double"]
+        arg_dict["data_type"] = ["float32"]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
@@ -211,7 +211,7 @@ class TestBroadcastNormal(flow.unittest.TestCase):
         arg_dict["tf_op"] = [tf.math.multiply]
         arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
         arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
-        arg_dict["data_type"] = ["float32", "double"]
+        arg_dict["data_type"] = ["float32"]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow_grad(*arg)
 
@@ -222,7 +222,7 @@ class TestBroadcastNormal(flow.unittest.TestCase):
         arg_dict["tf_op"] = [tf.math.divide]
         arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
         arg_dict["y_shape"] = [(3, 4, 1, 1, 5)]
-        arg_dict["data_type"] = ["float32", "double"]
+        arg_dict["data_type"] = ["float32"]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow_grad(*arg)
 
@@ -233,7 +233,7 @@ class TestBroadcastNormal(flow.unittest.TestCase):
         arg_dict["tf_op"] = [tf.math.floormod]
         arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
         arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
-        arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+        arg_dict["data_type"] = ["float32", "int32"]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
@@ -244,7 +244,7 @@ class TestBroadcastNormal(flow.unittest.TestCase):
         arg_dict["tf_op"] = [tf.math.maximum]
         arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
         arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
-        arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+        arg_dict["data_type"] = ["float32", "int32"]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
@@ -255,7 +255,7 @@ class TestBroadcastNormal(flow.unittest.TestCase):
         arg_dict["tf_op"] = [tf.math.minimum]
         arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
         arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
-        arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+        arg_dict["data_type"] = ["float32", "int32"]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 

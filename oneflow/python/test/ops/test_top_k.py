@@ -66,10 +66,10 @@ def compare_with_tensorflow(device_type, in_shape, axis, k, data_type, sorted):
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["in_shape"] = [(100,), (100, 100), (10, 500), (10, 10, 500)]
+    arg_dict["in_shape"] = [(100,), (10, 500), (10, 10, 500)]
     arg_dict["axis"] = [-1]
-    arg_dict["k"] = [1, 50, 200]
-    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+    arg_dict["k"] = [1, 50]
+    arg_dict["data_type"] = ["float32", "int32"]
     arg_dict["sorted"] = [True]
 
     return GenArgList(arg_dict)
@@ -79,9 +79,9 @@ def gen_arg_list_for_test_axis():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["in_shape"] = [(10, 10, 500)]
-    arg_dict["axis"] = [-2, -1, 0, 1, 2]
-    arg_dict["k"] = [1, 50, 200]
-    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+    arg_dict["axis"] = [-2, -1, 0, 2]
+    arg_dict["k"] = [1, 50]
+    arg_dict["data_type"] = ["float32", "int32"]
     arg_dict["sorted"] = [True]
 
     return GenArgList(arg_dict)
