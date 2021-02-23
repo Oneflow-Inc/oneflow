@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class Device {
+class Device final {
  public:
   Device(const std::string& type, int64_t device_id)
       : type_(type), device_id_(device_id) {}
@@ -36,5 +36,6 @@ class Device {
 };
 
 }  // namespace oneflow
+
 #endif
 

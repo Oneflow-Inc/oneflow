@@ -33,8 +33,4 @@ void Tensor::CheckDataType<half>() const {
 
 }  // namespace user_op
 
-namespace one {
-
-} // namespace one
-
 }  // namespace oneflow
