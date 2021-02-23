@@ -132,7 +132,7 @@ class ValData(flow.nn.Module):
         return _data_load_layer(self.specs, self.specs.eval_dir)
 
 
-class AlexNet(flow.nn.Model):
+class AlexNet(flow.Model):
     def __init__(self, specs, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.specs = specs
@@ -225,7 +225,7 @@ class AlexNet(flow.nn.Model):
         )
 
 
-class LossMoniter(flow.nn.Callback):
+class LossMoniter(flow.ModelCallback):
     def on_training_step_end(self, step, outputs):
         loss = outputs.mean()
         fmt_str = "{:>12}  {:>12}  {:>12.6f}"
@@ -251,7 +251,7 @@ def test_1n1c(test_case):
     val_config = flow.ExecutionConfig()
     val_config.default_data_type(flow.float)
 
-    ck_config = flow.nn.CheckpointConfig(
+    ck_config = flow.ModelCheckpointConfig(
         load_dirpath=global_specs.model_load_dir,
         save_dirpath=global_specs.model_save_dir,
         save_interval=10,

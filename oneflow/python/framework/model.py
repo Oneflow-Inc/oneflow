@@ -25,7 +25,7 @@ from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.ops.optimizer import Optimizer
 
 
-@oneflow_export("nn.CheckpointConfig")
+@oneflow_export("ModelCheckpointConfig")
 class CheckpointConfig(object):
     def __init__(
         self,
@@ -38,7 +38,7 @@ class CheckpointConfig(object):
         self.save_interval = save_interval
 
 
-@oneflow_export("nn.Callback")
+@oneflow_export("ModelCallback")
 class Callback(ABC):
     r""" Abstract base class used to build new callbacks.
     """
@@ -50,7 +50,7 @@ class Callback(ABC):
         pass
 
 
-@oneflow_export("nn.Model")
+@oneflow_export("Model")
 class Model(
     ABC, Module,
 ):
