@@ -399,6 +399,7 @@ def replication_pad2d(
         .RemoteBlobList()[0]
     )
 
+
 @oneflow_export("constant_pad2d")
 def constant_pad2d(
     x: oneflow_api.BlobDesc,
@@ -467,7 +468,7 @@ def constant_pad2d(
         boundry = [padding, padding, padding, padding]
     else:
         raise ValueError("padding must be in or list or tuple!")
-    
+
     if x.dtype in [
         dtype_util.float32,
         dtype_util.float16,

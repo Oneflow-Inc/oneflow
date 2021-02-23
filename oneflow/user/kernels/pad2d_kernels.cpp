@@ -296,7 +296,7 @@ class ConstantPad2dKernel final : public OpKernel {
     Tensor *y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto &padding = ctx->Attr<std::vector<int64_t>>("padding");
     const IN_T constant_value = GetDtypeMatchedValue<IN_T>(ctx->Attr<double>("floating_value"),
-                                                     ctx->Attr<int64_t>("integral_value"));
+                                                           ctx->Attr<int64_t>("integral_value"));
     const int64_t ndims = x->shape().NumAxes();
     CHECK_EQ(padding.size(), ndims);
     const int64_t n_idx = 0;
@@ -320,9 +320,9 @@ class ConstantPad2dKernel final : public OpKernel {
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
-    ConstantPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
-                                                 n_batch, n_channel, y_height, y_width, x_height,
-                                                 x_width, pad_left, pad_top, constant_value);
+    ConstantPad2dFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper, n_batch,
+                                              n_channel, y_height, y_width, x_height, x_width,
+                                              pad_left, pad_top, constant_value);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -365,8 +365,8 @@ class ConstantPad2dGradKernel final : public OpKernel {
     Memset<device_type>(ctx->device_ctx(), dest, 0, out_bytes_size);
 
     ConstantPad2dGradFunctor<device_type, IN_T>()(ctx->device_ctx(), src, dest, index_helper,
-                                                     n_batch, n_channel, dy_height, dy_width,
-                                                     dx_height, dx_width, pad_left, pad_top);
+                                                  n_batch, n_channel, dy_height, dy_width,
+                                                  dx_height, dx_width, pad_left, pad_top);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

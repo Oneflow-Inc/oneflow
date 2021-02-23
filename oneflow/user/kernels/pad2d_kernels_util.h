@@ -259,10 +259,11 @@ struct ConstantPad2dGradFunctor final {
 
 template<typename IN_T>
 OF_DEVICE_FUNC void DoConstantPad2d(const IN_T *src, IN_T *dest,
-                                       const NdIndexOffsetHelper<int64_t, 4> &index_helper,
-                                       int64_t elem_num, int64_t src_num, int64_t dest_num,
-                                       int64_t y_height, int64_t y_width, int64_t x_height,
-                                       int64_t x_width, int64_t pad_left, int64_t pad_top, IN_T constant_value) {
+                                    const NdIndexOffsetHelper<int64_t, 4> &index_helper,
+                                    int64_t elem_num, int64_t src_num, int64_t dest_num,
+                                    int64_t y_height, int64_t y_width, int64_t x_height,
+                                    int64_t x_width, int64_t pad_left, int64_t pad_top,
+                                    IN_T constant_value) {
   XPU_1D_KERNEL_LOOP(k, elem_num) {
     int64_t n, c, i, j;
     int64_t coord_y[4];
@@ -279,20 +280,18 @@ OF_DEVICE_FUNC void DoConstantPad2d(const IN_T *src, IN_T *dest,
 
       int64_t src_index = n * src_num + c * x_width * x_height + ip_y * x_width + ip_x;
       dest[dest_index] = src[src_index];
-    }
-    else
-    {
+    } else {
       dest[dest_index] = constant_value;
-    }    
+    }
   }
 }
 
 template<typename IN_T>
 OF_DEVICE_FUNC void DoConstantPad2dGrad(const IN_T *src, IN_T *dest,
-                                           const NdIndexOffsetHelper<int64_t, 4> &index_helper,
-                                           int64_t elem_num, int64_t src_num, int64_t dest_num,
-                                           int64_t dy_height, int64_t dy_width, int64_t dx_height,
-                                           int64_t dx_width, int64_t pad_left, int64_t pad_top) {
+                                        const NdIndexOffsetHelper<int64_t, 4> &index_helper,
+                                        int64_t elem_num, int64_t src_num, int64_t dest_num,
+                                        int64_t dy_height, int64_t dy_width, int64_t dx_height,
+                                        int64_t dx_width, int64_t pad_left, int64_t pad_top) {
   XPU_1D_KERNEL_LOOP(k, elem_num) {
     int64_t n, c, i, j;
     int64_t coord[4];
@@ -304,7 +303,7 @@ OF_DEVICE_FUNC void DoConstantPad2dGrad(const IN_T *src, IN_T *dest,
     if (j >= pad_left && j < dx_width + pad_left && i >= pad_top && i < dx_height + pad_top) {
       int64_t ip_x = j - pad_left;
       int64_t ip_y = i - pad_top;
-      
+
       int64_t src_index = n * src_num + c * dy_width * dy_height + i * dy_width + j;
       int64_t dest_index = n * dest_num + c * dx_width * dx_height + ip_y * dx_width + ip_x;
       DeviceAdd<IN_T>::Invoke(src + src_index, dest + dest_index);

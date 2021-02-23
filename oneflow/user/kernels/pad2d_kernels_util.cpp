@@ -97,8 +97,8 @@ struct ConstantPad2dFunctor<DeviceType::kCPU, IN_T> final {
     int64_t dest_num = n_channel * y_height * y_width;
     int64_t src_num = n_channel * x_height * x_width;
     int64_t elem_num = n_batch * dest_num;
-    DoConstantPad2d<IN_T>(src, dest, index_helper, elem_num, src_num, dest_num, y_height,
-                             y_width, x_height, x_width, pad_left, pad_top, constant_value);
+    DoConstantPad2d<IN_T>(src, dest, index_helper, elem_num, src_num, dest_num, y_height, y_width,
+                          x_height, x_width, pad_left, pad_top, constant_value);
   }
 };
 
@@ -112,7 +112,7 @@ struct ConstantPad2dGradFunctor<DeviceType::kCPU, IN_T> final {
     int64_t src_num = n_channel * dy_height * dy_width;
     int64_t elem_num = n_batch * src_num;
     DoConstantPad2dGrad<IN_T>(src, dest, index_helper, elem_num, src_num, dest_num, dy_height,
-                                 dy_width, dx_height, dx_width, pad_left, pad_top);
+                              dy_width, dx_height, dx_width, pad_left, pad_top);
   }
 };
 

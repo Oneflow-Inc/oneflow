@@ -169,7 +169,9 @@ def gen_numpy_test_sample(input_shape, padding, constant_value, is_float=True):
     pad_shape = ((0, 0), (0, 0), (pad_top, pad_bottom), (pad_left, pad_right))
 
     def _np_constant_pad2d(input, pad_shape, constant_value):
-        numpy_constant = np.pad(input, pad_shape, "constant", constant_values=constant_value)
+        numpy_constant = np.pad(
+            input, pad_shape, "constant", constant_values=constant_value
+        )
         return numpy_constant
 
     def _np_constant_pad2d_grad(src, dest):
@@ -188,7 +190,12 @@ def gen_numpy_test_sample(input_shape, padding, constant_value, is_float=True):
             coords = index2coordinate(iter_n, src.shape)
             n, c, i, j = coords[0], coords[c_idx], coords[h_idx], coords[w_idx]
             ip_x = ip_y = 0
-            if j >= pad_left and j < (dx_width + pad_left) and i >= pad_top and i < (dx_height + pad_top):
+            if (
+                j >= pad_left
+                and j < (dx_width + pad_left)
+                and i >= pad_top
+                and i < (dx_height + pad_top)
+            ):
                 ip_x = j - pad_left
                 ip_y = i - pad_top
                 src_index = n * src_num + c * dy_width * dy_height + i * dy_width + j
