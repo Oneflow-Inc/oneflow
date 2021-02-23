@@ -29,7 +29,6 @@ _MODEL_SAVE_DIR = "./model_save-{}".format(
     str(datetime.now().strftime("%Y-%m-%d-%H:%M:%S"))
 )
 _MODEL_LOAD = "/dataset/PNGS/cnns_model_for_test/alexnet/models/of_model_bk"
-_NODE_LIST = "192.168.1.12,192.168.1.14"
 
 class DLNetSpec(object):
     def __init__(self):
@@ -111,11 +110,28 @@ def _data_load_layer(args, data_dir):
     )
     return (normal, label)
 
+class TrainData(flow.nn.Module):
+    def __init__(self, specs):
+        super().__init__()
+        self.specs = specs
+
+    def forward(self):
+        return _data_load_layer(self.specs, self.specs.train_dir)
+
+
+class ValData(flow.nn.Module):
+    def __init__(self, specs):
+        super().__init__()
+        self.specs = specs
+
+    def forward(self):
+        return _data_load_layer(self.specs, self.specs.eval_dir)
+
 
 class AlexNet(flow.nn.Model):
     def __init__(self, specs, *args, **kwargs):
-        self.specs = specs
         super().__init__(*args, **kwargs)
+        self.specs = specs
     
     def forward(self, images, trainable=False):
         conv1 = _conv2d_layer(
@@ -183,7 +199,7 @@ class AlexNet(flow.nn.Model):
 
         return fc3
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch):
         images, labels = batch
         fc3 = self(images, True)
         loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
@@ -191,7 +207,7 @@ class AlexNet(flow.nn.Model):
         )
         return loss
     
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch):
         images, labels = batch
         fc3 = self(images, False)
         loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
@@ -203,42 +219,25 @@ class AlexNet(flow.nn.Model):
         return flow.optimizer.SGD(
             flow.optimizer.PiecewiseConstantScheduler([], [0.00001]), momentum=0
         )
-    
-    def training_data(self):
-        return _data_load_layer(self.specs, self.specs.train_dir)
 
-    def validation_data(self):
-        return _data_load_layer(self.specs, self.specs.eval_dir)
+class LossMoniter(flow.nn.Callback):
+    def on_training_step_end(self, step, outputs):
+        loss = outputs.mean()
+        fmt_str = "{:>12}  {:>12}  {:>12.6f}"
+        print(fmt_str.format(step, "train loss:", loss))
 
+    def on_validation_step_end(self, step, outputs):
+        loss = outputs.mean()
+        fmt_str = "{:>12}  {:>12}  {:>12.6f}"
+        print(fmt_str.format(step, "validation loss:", loss))
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def test_1n1c(test_case):
-    print("test alexnet model")
 
     flow.env.ctrl_port(9788)
-    if global_specs.num_nodes > 1: 
-        flow.env.ctrl_port(12138)
-        nodes = []
-        for n in global_specs.node_list.strip().split(","):
-            addr_dict = {}
-            addr_dict["addr"] = n
-            nodes.append(addr_dict)
-
-        flow.env.machine(nodes)
-
     flow.config.machine_num(global_specs.num_nodes)
     flow.config.gpu_device_num(global_specs.gpu_num_per_node)
-
-    num_nodes = global_specs.num_nodes
-    print(
-        "Traning alexnet: num_gpu_per_node = {}, num_nodes = {}.".format(
-            global_specs.gpu_num_per_node, num_nodes
-        )
-    )
-
-    print("{:>12}  {:>12}  {:>12}".format("iter", "loss type", "loss value"))
-    loss = []
     
     train_config = flow.ExecutionConfig()
     train_config.default_logical_view(flow.scope.consistent_view())
@@ -248,25 +247,28 @@ def test_1n1c(test_case):
     val_config.default_data_type(flow.float)
 
     ck_config = flow.nn.CheckpointConfig(
-        load_path=global_specs.model_load_dir,
-        save_path=global_specs.model_save_dir
+        load_dirpath=global_specs.model_load_dir,
+        save_dirpath=global_specs.model_save_dir,
+        save_interval=10,
     )
+
+    loss_monitor = LossMoniter()
 
     alexnet_md = AlexNet(
         global_specs,
         is_function_style=True,
         training_config=train_config,
         validation_config=val_config,
-        checkpoint_config=ck_config
+        callbacks=[loss_monitor]
     )
+    
+    train_data = TrainData(global_specs)
+    val_data = ValData(global_specs)
 
-    alexnet_md.fit(max_epochs=10)
-
-    # save loss to file
-    loss_file = "{}n{}c.npy".format(
-        str(num_nodes), str(global_specs.gpu_num_per_node * num_nodes)
+    alexnet_md.fit(
+        training_data=train_data,
+        validation_data=val_data,
+        validation_interval=10,
+        checkpoint_config=ck_config,
+        max_steps=20,
     )
-    loss_path = "./of_loss/alexnet"
-    if not os.path.exists(loss_path):
-        os.makedirs(loss_path)
-    numpy.save(os.path.join(loss_path, loss_file), loss)

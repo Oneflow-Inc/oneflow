@@ -17,18 +17,35 @@ from __future__ import absolute_import
 from abc import ABC
 from typing import Optional
 
+from oneflow.python.framework.check_point_v2 import * 
 from oneflow.python.framework.function_util import api_oneflow_function
-from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.module import Module
-from oneflow.python.framework.check_point import CheckPoint
+from oneflow.python.framework.session_util import api_clear_default_session
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.ops.optimizer import Optimizer
-from oneflow.python.ops.dataloader import DataLoader
 
 @oneflow_export("nn.CheckpointConfig")
 class CheckpointConfig(object):
-    def __init__(self, load_path, save_path):
-        self.load_path = load_path
-        self.save_path = save_path
+    def __init__(
+        self,
+        load_dirpath: str = None,
+        save_dirpath: str = None,
+        save_interval: int = 1,
+    ):
+        self.load_dirpath = load_dirpath
+        self.save_dirpath = save_dirpath
+        self.save_interval = save_interval
+
+
+@oneflow_export("nn.Callback")
+class Callback(ABC):
+    r""" Abstract base class used to build new callbacks.
+    """
+    def on_training_step_end(self, step, outputs):
+        pass
+
+    def on_validation_step_end(self, step, outputs):
+        pass
 
 
 @oneflow_export("nn.Model")
@@ -40,26 +57,22 @@ class Model(
     """
     def __init__(self, *args, **kwargs):
         super().__init__()
+
         self.is_function_style = kwargs['is_function_style']
         self.training_config = kwargs['training_config']
         self.validation_config = kwargs['validation_config']
-        self.checkpoint_config = kwargs['checkpoint_config']
+        self.callbacks = kwargs['callbacks']
 
         optim_conf = self.configure_optimizers()
         if isinstance(optim_conf, Optimizer):
             self.optimizers = [optim_conf]
         elif isinstance(optim_conf, (list, tuple)):
             self.optimizers = optim_conf
+        
+        self.need_training = False
+        self.need_validation = False
+        self.need_checkpoint = False
     
-        self.train_job = self._lazy_train_job()
-        self.eval_job = self._lazy_eval_job()
-
-        self.check_point = CheckPoint()
-        if not self.checkpoint_config.load_path:
-            self.check_point.init()
-        else:
-            self.check_point.load(self.checkpoint_config.load_path)
-
 
     def forward(self, *args, **kwargs):
         r"""Same as `nn.Module.forward()`, here is to define the operations you want to use for prediction.
@@ -90,74 +103,89 @@ class Model(
     ) -> None:
         r"""Customized optimizer action.
         """
-        # TODO(strint): consider lazy
-        optimizer.step()
-        optimizer.zero_grad()
     
-    def print(self, *args, **kwargs) -> None:
-        r"""Only print from root process.
-        """
-        if self.context.rank == 0:
-            print(*args, **kwargs)
-    
-    def training_data(self):
-        raise NotImplementedError
-
-    def validation_data(self):
-        raise NotImplementedError
-
-    def _lazy_train_job(self):
+    def _func_train_job(self):
         @api_oneflow_function(type="train", function_config=self.training_config)
         def job():
             batch = self.training_data()
-            loss = self.training_step(batch, 0)
+            loss = self.training_step(batch)
             self.optimizers[0].minimize(loss)
             return loss
         return job
 
-    def _lazy_eval_job(self):
+    def _func_eval_job(self):
         @api_oneflow_function(function_config=self.validation_config)
         def eval_job():
             batch = self.validation_data()
-            return self.validation_step(batch, 0)
+            return self.validation_step(batch)
         return eval_job
 
     def fit(
         self,
-        max_epochs: int = 1000,
+        training_data = None,
+        validation_data = None,
+        validation_interval: int = 1,
+        checkpoint_config = None,
+        max_steps: int = 100,
     ):
-        self.max_epochs = max_epochs
+        api_clear_default_session()
 
-        for epoch in range(0, self.max_epochs):
-            self.current_epoch = epoch
-            print("fit epoch : ", epoch)
-            loss = self.train_job().get().mean()
-            fmt_str = "{:>12}  {:>12}  {:>12.6f}"
-            print(fmt_str.format(epoch, "train loss:", loss))
-            if (epoch + 1) % 10 == 0:
-                eval_loss = self.eval_job().get().mean()
-                print(
-                    fmt_str.format(
-                        epoch, "eval loss:", eval_loss
-                    )
-                )
-        
-        self.check_point.save(self.checkpoint_config.save_path)
+        self.max_steps = max_steps 
+        self.training_data = training_data
+        self.validation_data = validation_data
+        self.validation_interval = validation_interval
+        self.checkpoint_config = checkpoint_config
+
+        if self._method_overrided("training_step") and self.training_data is not None:
+            self.need_training = True
+            self.train_job = self._func_train_job()
+
+        if self._method_overrided("validation_step") and self.validation_data is not None:
+            self.need_validation = True
+            self.eval_job = self._func_eval_job()
+
+        if self.checkpoint_config.load_dirpath is not None:
+            self.load_checkpoint(dirpath=self.checkpoint_config.load_dirpath)
+
+        if self.checkpoint_config.save_dirpath is not None:
+            self.need_checkpoint = True
+
+        for step in range(0, self.max_steps):
+            if self.need_training:
+                loss = self.train_job().get()
+                self._method_callback("on_training_step_end", step, loss)
+            if self.need_validation:
+                if (step + 1) % self.validation_interval == 0:
+                    eval_loss = self.eval_job().get()
+                    self._method_callback("on_validation_step_end", step, eval_loss)
+            if self.need_checkpoint:
+                if (step + 1) % self.checkpoint_config.save_interval == 0:
+                    self.save_checkpoint(dirpath=self.checkpoint_config.save_dirpath + '-' + str(step))
 
     
     def save_checkpoint(
         self,
-        filepath,
+        dirpath,
     ):
         r"""Save model states as a checkpoint.
         """
-        pass
+        SaveVarDict(path=dirpath)
 
 
     def load_checkpoint(
         self,
-        filepath,
+        dirpath,
     ):
         r"""Load model states from a checkpoint.
         """
-        pass
+        LoadVariables(GetCheckpoint(path=dirpath))
+
+    def _method_overrided(self, method_name: str = None) -> bool:
+        return getattr(self.__class__, method_name) != getattr(Model, method_name)
+    
+    def _method_callback(self, method_name: str = None, *args, **kwargs):
+        for cb in self.callbacks:
+            method = getattr(cb, method_name)
+            method(*args, **kwargs)
+
+
