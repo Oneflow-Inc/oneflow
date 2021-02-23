@@ -220,6 +220,7 @@ class Session(object):
             for job_name, func_desc in self.job_name2function_desc_.items():
                 compiler.Compile(self, func_desc, self.config_proto)
                 self.existed_module_names_ = set()
+            self.job_name2var_name2var_blob_ = dict()
             assert len(self.job_name2function_desc_.items()) > 0
             oneflow_api.StartLazyGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
@@ -245,6 +246,7 @@ class Session(object):
     def Close(self):
         assert self.status_ is SessionStatus.RUNNING
         self.Sync()
+        assert len(self.job_name2var_name2var_blob_) == 0
         del self.var_name2var_blob_
         del self.job_name2module_name2module_
         self.ReleaseLazyRefBlob()
@@ -406,11 +408,13 @@ class Session(object):
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):
         assert len(self.backward_blob_register.blob_name2object) == 0
+        assert len(self.job_name2var_name2var_blob_) == 0
         self.eager_global_function_desc_stack_.insert(0, function_desc)
         try:
             yield
         finally:
             self.existed_module_names_ = set()
+            self.job_name2var_name2var_blob_ = dict()
             self.eager_global_function_desc_stack_.pop(0)
             keys = list(dict(self.backward_blob_register.blob_name2object).keys())
             for key in keys:
