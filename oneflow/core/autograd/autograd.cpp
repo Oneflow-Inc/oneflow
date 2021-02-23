@@ -13,23 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #include "oneflow/core/autograd/autograd.h"
 
 namespace oneflow {
 
 namespace {
 
-std::shared_ptr<TensorList> MakeGrads(std::shared_ptr<TensorList> outputs,
-                                      std::shared_ptr<TensorList> out_grads) {
-  std::shared_ptr<TensorList> gradients;
+// check and set default value for initial gradients based on out_grads
+std::shared_ptr<TensorList> MakeGrads(const std::shared_ptr<TensorList>& outputs,
+                                      const std::shared_ptr<TensorList>& out_grads) {
+  auto gradients = std::make_shared<TensorList>(out_grads->size());
   // TODO: check all out_grads and push default value for empty item
   return gradients;
 }
 
-std::shared_ptr<TensorList> RunBackward(std::shared_ptr<TensorList> outputs,
-                                        std::shared_ptr<TensorList> intputs,
-                                        std::shared_ptr<TensorList> out_grads, bool retain_graph,
-                                        bool create_graph) {
+// call AutogradEngine.Execute() to calculate gradients
+std::shared_ptr<TensorList> RunBackward(const std::shared_ptr<TensorList>& outputs,
+                                        const std::shared_ptr<TensorList>& intputs,
+                                        const std::shared_ptr<TensorList>& out_grads,
+                                        bool retain_graph, bool create_graph) {
   if (create_graph) retain_graph = true;
   std::shared_ptr<TensorList> res_grads;
   // TODO: check could run backward or not
@@ -41,21 +44,25 @@ std::shared_ptr<TensorList> RunBackward(std::shared_ptr<TensorList> outputs,
 
 namespace one {
 
-std::shared_ptr<TensorList> Backward(std::shared_ptr<TensorList> outputs,
-                                     std::shared_ptr<TensorList> out_grads, bool retain_graph,
-                                     bool create_graph) {
+// export to python as autograd.backward()
+std::shared_ptr<TensorList> Backward(const std::shared_ptr<TensorList>& outputs,
+                                     const std::shared_ptr<TensorList>& out_grads,
+                                     bool retain_graph, bool create_graph) {
   std::shared_ptr<TensorList> gradients = MakeGrads(outputs, out_grads);
+  auto inputs = std::make_shared<TensorList>(0);
   std::shared_ptr<TensorList> res_grads =
-      RunBackward(outputs, {}, gradients, retain_graph, create_graph);
-  // TODO: bind res_grads to all inputs
-  return {};
+      RunBackward(outputs, inputs, gradients, retain_graph, create_graph);
+  return std::make_shared<TensorList>(0);
 }
 
-std::shared_ptr<TensorList> Grad(std::shared_ptr<TensorList> outputs,
-                                 std::shared_ptr<TensorList> inputs,
-                                 std::shared_ptr<TensorList> out_grads, bool retain_graph,
-                                 bool create_graph) {
-  if (inputs->empty()) return Backward(outputs, out_grads, retain_graph, create_graph);
+// export to python as autograd.grad()
+std::shared_ptr<TensorList> Grad(const std::shared_ptr<TensorList>& outputs,
+                                 const std::shared_ptr<TensorList>& inputs,
+                                 const std::shared_ptr<TensorList>& out_grads,
+                                 bool retain_graph, bool create_graph) {
+  if (inputs->empty()) {
+      return Backward(outputs, out_grads, retain_graph, create_graph);
+  }
 
   std::shared_ptr<TensorList> gradients = MakeGrads(outputs, out_grads);
   return RunBackward(outputs, inputs, gradients, retain_graph, create_graph);

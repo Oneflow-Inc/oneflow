@@ -37,10 +37,12 @@ class FunctionNode {
 
   virtual void Apply(bool create_graph) = 0;
   virtual void ReleaseTensorGrads() = 0;
+  // Release backward_fn_ if retain_graph=False to avoid call Apply in second time
   virtual void ReleaseGraph() = 0;
 
+  // Getters
   virtual std::vector<std::weak_ptr<FunctionNode>> GetNextFunctions() = 0;
-  virtual std::string GetOpName() = 0;
+  virtual const std::string& GetOpName() = 0;
 };
 
 class AutogradEngine {
@@ -66,7 +68,7 @@ class StackFunctionNode final : public FunctionNode {
                     const std::shared_ptr<TensorList>& outputs);
 
   std::vector<std::weak_ptr<FunctionNode>> GetNextFunctions() override { return next_functions_; }
-  std::string GetOpName() override { return op_name_; }
+  const std::string& GetOpName() override { return op_name_; }
 
   void ReleaseTensorGrads() override;
   void ReleaseGraph() override;
@@ -84,7 +86,7 @@ class StackFunctionNode final : public FunctionNode {
   // TODO: add parameters
   std::shared_ptr<std::function<void()>> backward_fn_;
 
-  std::string op_name_;
+  const std::string op_name_;
   std::vector<std::weak_ptr<FunctionNode>> next_functions_;
 };
 

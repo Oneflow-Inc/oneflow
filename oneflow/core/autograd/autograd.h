@@ -28,13 +28,13 @@ using TensorList = std::vector<std::shared_ptr<Tensor>>;
 namespace one {
 
 // TODO: export
-std::shared_ptr<TensorList> Backward(std::shared_ptr<TensorList> outputs,
-                                     std::shared_ptr<TensorList> out_grads,
+std::shared_ptr<TensorList> Backward(const std::shared_ptr<TensorList>& outputs,
+                                     const std::shared_ptr<TensorList>& out_grads,
                                      bool retain_graph = false, bool create_graph = false);
 
-std::shared_ptr<TensorList> Grad(std::shared_ptr<TensorList> outputs,
-                                 std::shared_ptr<TensorList> inputs,
-                                 std::shared_ptr<TensorList> out_grads, bool retain_graph = false,
+std::shared_ptr<TensorList> Grad(const std::shared_ptr<TensorList>& outputs,
+                                 const std::shared_ptr<TensorList>& inputs,
+                                 const std::shared_ptr<TensorList>& out_grads, bool retain_graph = false,
                                  bool create_graph = false);
 
 }  // namespace one
