@@ -103,25 +103,21 @@ Maybe<void> HostListCtrlBootstrap::SetCurrentHostByWorker(Address* addr) const {
   return Maybe<void>::Ok();
 }
 
-BootstrapServer* HostListCtrlBootstrap::mut_bootstrap_server() const {
+BootstrapServer* HostListCtrlBootstrap::mut_bootstrap_server() {
   return bootstrap_server_.get();
 }
-BootstrapClient* HostListCtrlBootstrap::mut_bootstrap_client() const {
+BootstrapClient* HostListCtrlBootstrap::mut_bootstrap_client() {
   return bootstrap_client_.get();
 }
 
 RankInfoCtrlBootstrap::RankInfoCtrlBootstrap(const BootstrapConf& bootstrap_conf)
-    : CtrlBootstrap(), host_("") {
+    : CtrlBootstrap(), bootstrap_conf_(bootstrap_conf) {
   bootstrap_server_.reset(new RankInfoBootstrapServer(bootstrap_conf));
   bootstrap_client_.reset(new RankInfoBootstrapClient(bootstrap_conf));
   bootstrap_client_->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
   master_host_ = bootstrap_conf.master_addr().host();
   rank_ = bootstrap_conf.rank();
   world_size_ = bootstrap_conf.world_size();
-  if (bootstrap_conf.has_host()) {
-    CHECK(bootstrap_conf.host().has_host());
-    host_ = bootstrap_conf.host().host();
-  }
 }
 
 RankInfoCtrlBootstrap::~RankInfoCtrlBootstrap() {
@@ -140,8 +136,9 @@ Maybe<void> RankInfoCtrlBootstrap::SetHostByMaster(Address* addr, int64_t world_
 
 Maybe<void> RankInfoCtrlBootstrap::SetCurrentHostByMaster(Address* addr) const {
   CHECK_EQ_OR_RETURN(rank(), 0);
-  if (host() != "") {
-    addr->set_host(host());
+  if (bootstrap_conf_.has_host()) {
+    CHECK(bootstrap_conf_.host().has_host());
+    addr->set_host(bootstrap_conf_.host().host());
   } else {
     addr->set_host(master_host_);
   }
@@ -154,10 +151,10 @@ Maybe<void> RankInfoCtrlBootstrap::SetCurrentHostByWorker(Address* addr) const {
   return Maybe<void>::Ok();
 }
 
-BootstrapServer* RankInfoCtrlBootstrap::mut_bootstrap_server() const {
+BootstrapServer* RankInfoCtrlBootstrap::mut_bootstrap_server() {
   return bootstrap_server_.get();
 }
-BootstrapClient* RankInfoCtrlBootstrap::mut_bootstrap_client() const {
+BootstrapClient* RankInfoCtrlBootstrap::mut_bootstrap_client() {
   return bootstrap_client_.get();
 }
 
