@@ -41,7 +41,6 @@ class CtrlBootstrap {
 
   virtual BootstrapServer* mut_bootstrap_server() = 0;
   virtual BootstrapClient* mut_bootstrap_client() = 0;
-  virtual std::string host() const = 0;
 
   CtrlBootstrap() = default;
 };
@@ -66,13 +65,6 @@ class HostListCtrlBootstrap final : public CtrlBootstrap {
 
   BootstrapServer* mut_bootstrap_server() override;
   BootstrapClient* mut_bootstrap_client() override;
-
-  Maybe<void> InitProcessCtx(int64_t port, ProcessCtx* process_ctx) override;
-
- private:
-  std::string host() const override { return host_; }
-  int64_t rank() const override { return rank_; }
-  int64_t world_size() const override { return world_size_; }
 
   // Uses shared_ptr and forward declaration to avoid `#include ...`
   std::shared_ptr<HostListBootstrapServer> bootstrap_server_;

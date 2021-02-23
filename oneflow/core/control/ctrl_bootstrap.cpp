@@ -62,8 +62,7 @@ Maybe<void> CtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_
       CHECK_EQ_OR_RETURN(process_ctx.ctrl_addr_size(), 1);
       Address* addr = ret_process_ctx->mutable_ctrl_addr()->Add();
       *addr = process_ctx.ctrl_addr(0);
-      if (!addr->has_host()) { JUST(SetHostByMaster(addr, process_ctx.rank())); }
-      CHECK_OR_RETURN(addr->has_host());
+      JUST(SetHostByMaster(addr, process_ctx.rank()));
     }
     mut_bootstrap_client()->PushMasterKV("BroadcastProcessCtx", *ret_process_ctx);
   } else {
@@ -103,12 +102,8 @@ Maybe<void> HostListCtrlBootstrap::SetCurrentHostByWorker(Address* addr) const {
   return Maybe<void>::Ok();
 }
 
-BootstrapServer* HostListCtrlBootstrap::mut_bootstrap_server() {
-  return bootstrap_server_.get();
-}
-BootstrapClient* HostListCtrlBootstrap::mut_bootstrap_client() {
-  return bootstrap_client_.get();
-}
+BootstrapServer* HostListCtrlBootstrap::mut_bootstrap_server() { return bootstrap_server_.get(); }
+BootstrapClient* HostListCtrlBootstrap::mut_bootstrap_client() { return bootstrap_client_.get(); }
 
 RankInfoCtrlBootstrap::RankInfoCtrlBootstrap(const BootstrapConf& bootstrap_conf)
     : CtrlBootstrap(), bootstrap_conf_(bootstrap_conf) {
@@ -126,6 +121,7 @@ RankInfoCtrlBootstrap::~RankInfoCtrlBootstrap() {
 }
 
 Maybe<void> RankInfoCtrlBootstrap::SetHostByMaster(Address* addr, int64_t world_rank) const {
+  if (addr->has_host()) { return Maybe<void>::Ok(); }
   const auto& rank2host = JUST(bootstrap_server_->rank2host());
   CHECK_EQ_OR_RETURN(rank2host.size(), world_size());
   CHECK_GE_OR_RETURN(world_rank, 0);
@@ -147,15 +143,14 @@ Maybe<void> RankInfoCtrlBootstrap::SetCurrentHostByMaster(Address* addr) const {
 
 Maybe<void> RankInfoCtrlBootstrap::SetCurrentHostByWorker(Address* addr) const {
   CHECK_NE_OR_RETURN(rank(), 0);
-  if (host() != "") { addr->set_host(host()); }
+  if (bootstrap_conf_.has_host()) {
+    CHECK(bootstrap_conf_.host().has_host());
+    addr->set_host(bootstrap_conf_.host().host());
+  }
   return Maybe<void>::Ok();
 }
 
-BootstrapServer* RankInfoCtrlBootstrap::mut_bootstrap_server() {
-  return bootstrap_server_.get();
-}
-BootstrapClient* RankInfoCtrlBootstrap::mut_bootstrap_client() {
-  return bootstrap_client_.get();
-}
+BootstrapServer* RankInfoCtrlBootstrap::mut_bootstrap_server() { return bootstrap_server_.get(); }
+BootstrapClient* RankInfoCtrlBootstrap::mut_bootstrap_client() { return bootstrap_client_.get(); }
 
 }  // namespace oneflow
