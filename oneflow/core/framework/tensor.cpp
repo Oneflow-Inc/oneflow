@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
 namespace oneflow {
 
