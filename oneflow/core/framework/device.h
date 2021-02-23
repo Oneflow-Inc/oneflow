@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
 #define ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
 
-#include "oneflow/core/common/device_type.pb.h"
+#include <string>
 
 namespace oneflow {
 
