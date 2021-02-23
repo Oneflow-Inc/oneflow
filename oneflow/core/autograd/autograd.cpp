@@ -21,8 +21,9 @@ namespace oneflow {
 namespace {
 
 // Checks and sets default value for initial gradients based on out_grads
-// If output is a tensor, out_grad's shape must be the same as output's
-// If output is a constant, out_grad will be a constant or empty(will be inited to 1).
+// If output is the tensor whose size is greater than 1, out_grad's shape must be same as output's.
+// If output is a scaler tensor, out_grad will also be a scaler or empty(will be inited to
+// `flow.ones([1])`).
 std::shared_ptr<TensorList> CheckAndInitOutGrads(const std::shared_ptr<TensorList>& outputs,
                                                  const std::shared_ptr<TensorList>& out_grads) {
   auto gradients = std::make_shared<TensorList>(out_grads->size());
@@ -44,8 +45,6 @@ std::shared_ptr<TensorList> RunBackward(const std::shared_ptr<TensorList>& outpu
 
 }  // namespace
 
-namespace one {
-
 std::shared_ptr<TensorList> AutoGradUtil::Backward(const std::shared_ptr<TensorList>& outputs,
                                                    const std::shared_ptr<TensorList>& out_grads,
                                                    bool retain_graph, bool create_graph) {
@@ -64,7 +63,6 @@ std::shared_ptr<TensorList> AutoGradUtil::Grad(const std::shared_ptr<TensorList>
 
   std::shared_ptr<TensorList> gradients = CheckAndInitOutGrads(outputs, out_grads);
   return RunBackward(outputs, inputs, gradients, retain_graph, create_graph);
-}
 
 }  // namespace one
 
