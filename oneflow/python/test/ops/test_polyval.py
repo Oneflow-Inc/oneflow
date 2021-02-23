@@ -69,8 +69,6 @@ def compare_with_numpy(device_type, device_num, in_shape, data_type, coeffs):
 
         return out
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = PolyValJob(x).get().numpy()
     np_out = np.polyval(coeffs, x)
     assert np.allclose(of_out, np_out, rtol=1e-5, atol=1e-5)
