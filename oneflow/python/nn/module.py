@@ -16,7 +16,7 @@ limitations under the License.
 
 from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
-from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List
+from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
 from inspect import signature
 import itertools
 
@@ -47,8 +47,29 @@ def new_counter():
 counter = new_counter()
 
 
+# NOTE: temp workaround. Remove when flow.Tensor is ready
+class TensorInternal:
+    def __init__(self, shape):
+        self._shape = shape
+
+
+@oneflow_export("Tensor")
 class Tensor:
-    pass
+    def __init__(self, shape_or_internal):
+        if isinstance(shape_or_internal, TensorInternal):
+            self._internal = shape_or_internal
+        else:
+            self._internal = TensorInternal(shape_or_internal)
+
+    @property
+    def shape(self):
+        return self._internal._shape
+
+
+@oneflow_export("nn.Parameter")
+class Parameter(Tensor):
+    def __init__(self, data):
+        super().__init__(data._internal)
 
 
 class InputConfigs:
@@ -364,24 +385,3 @@ class Module(object):
 
     def register_forward_pre_hook(self, hook: Callable[..., None]) -> None:
         self._forward_pre_hooks[len(self._forward_pre_hooks)] = hook
-
-
-# placeholder
-@oneflow_export("nn.Variable")
-class Variable(Module):
-    def __init__(self, shape):
-        super().__init__()
-        self.var_name = str(next(counter))
-        self.shape = shape
-
-    def forward(self):
-        return get_variable(
-            self.var_name, self.shape, initializer=initializer_util.ones_initializer()
-        )
-
-
-# placeholder
-@oneflow_export("nn.Parameter")
-class Parameter(Variable):
-    def __init__(self, shape):
-        super().__init__(shape)

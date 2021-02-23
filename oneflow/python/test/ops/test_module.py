@@ -35,6 +35,13 @@ def get_var_helper(shape):
 
 
 class TestModule(flow.unittest.TestCase):
+    def test_parameter(test_case):
+        shape = (3, 4)
+        t = flow.Tensor(shape)
+        p = flow.nn.Parameter(t)
+        test_case.assertEqual(type(p), flow.nn.Parameter)
+        test_case.assertEqual(p.shape, shape)
+
     def test_module_forward(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self, w):
@@ -50,23 +57,23 @@ class TestModule(flow.unittest.TestCase):
         m = CustomModule(4)
         test_case.assertEqual(m(3), 7)
 
-    def test_forward_with_variable(test_case):
-        class AddTo(flow.nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.w = flow.nn.Parameter((2, 3))
-
-            def forward(self, x):
-                return x + self.w()
-
-        @flow.global_function()
-        def job() -> Tuple[tp.Numpy, tp.Numpy]:
-            x = get_var_helper((2, 3))
-            m = AddTo()
-            return m(x), m.w() + x
-
-        res1, res2 = job()
-        test_case.assertTrue(np.array_equal(res1, res2))
+    # def test_forward_with_variable(test_case):
+    #     class AddTo(flow.nn.Module):
+    #         def __init__(self):
+    #             super().__init__()
+    #             self.w = flow.nn.Parameter(flow.Tensor(2, 3))
+    #
+    #         def forward(self, x):
+    #             return x + self.w()
+    #
+    #     @flow.global_function()
+    #     def job() -> Tuple[tp.Numpy, tp.Numpy]:
+    #         x = get_var_helper((2, 3))
+    #         m = AddTo()
+    #         return m(x), m.w() + x
+    #
+    #     res1, res2 = job()
+    #     test_case.assertTrue(np.array_equal(res1, res2))
 
     def test_forward_with_sbp(test_case):
         class AddTo(flow.nn.Module):
