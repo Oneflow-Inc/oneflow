@@ -32,13 +32,30 @@ class PyForeignBoxingUtil : public ForeignBoxingUtil {
     PYBIND11_OVERRIDE(std::shared_ptr<compatible_py::BlobObject>, ForeignBoxingUtil, BoxingTo,
                       builder, blob_object, op_arg_parallel_attr);
   }
+
+  std::shared_ptr<ParallelDesc> TryReplaceDeviceTag(
+      const std::shared_ptr<InstructionsBuilder>& builder,
+      const std::shared_ptr<ParallelDesc>& parallel_desc_symbol,
+      const std::string& device_tag) const override {
+    PYBIND11_OVERRIDE(std::shared_ptr<ParallelDesc>, ForeignBoxingUtil, TryReplaceDeviceTag,
+                      builder, parallel_desc_symbol, device_tag);
+  }
+
+  void Assign(const std::shared_ptr<InstructionsBuilder>& builder,
+              std::shared_ptr<compatible_py::BlobObject>& target_blob_object,
+              const std::shared_ptr<compatible_py::BlobObject>& source_blob_object) const override {
+    PYBIND11_OVERRIDE(void, ForeignBoxingUtil, Assign, builder, target_blob_object,
+                      source_blob_object);
+  }
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   using namespace oneflow;
   py::class_<ForeignBoxingUtil, PyForeignBoxingUtil>(m, "ForeignBoxingUtil")
       .def(py::init<>())
-      .def("BoxingTo", &ForeignBoxingUtil::BoxingTo);
+      .def("BoxingTo", &ForeignBoxingUtil::BoxingTo)
+      .def("TryReplaceDeviceTag", &ForeignBoxingUtil::TryReplaceDeviceTag)
+      .def("Assign", &ForeignBoxingUtil::Assign);
 }
 
 }  // namespace oneflow

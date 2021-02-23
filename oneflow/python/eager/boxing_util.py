@@ -991,5 +991,11 @@ class BoxingUtil(oneflow_api.ForeignBoxingUtil):
     def BoxingTo(self, builder, blob_object, op_arg_parallel_attr):
         return BoxingTo(builder, blob_object, op_arg_parallel_attr)
 
+    def TryReplaceDeviceTag(self, builder, parallel_desc_symbol, device_tag):
+        return TryReplaceDeviceTag(builder, parallel_desc_symbol, device_tag)
+
+    def Assign(self, builder, target_blob_object, source_blob_object):
+        return Assign(builder, target_blob_object, source_blob_object)
+
 _global_boxing_util = BoxingUtil()
 oneflow_api.RegisterBoxingUtilOnlyOnce(_global_boxing_util)
