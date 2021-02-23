@@ -24,6 +24,10 @@ import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def fused_cast_scale(x, scalar, name):
     return (
@@ -83,8 +87,6 @@ def compare_with_tensorflow(
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = FusedCastScaleJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:

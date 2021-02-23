@@ -2326,21 +2326,18 @@ def sigmoid_cross_entropy_with_logits(
     """
     assert labels is not None
     assert logits is not None
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("SigmoidCrossEntropy_"),
+
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SigmoidCrossEntropy_")
+        )
+        .Op("sigmoid_cross_entropy")
+        .Input("prediction", [logits])
+        .Input("label", [labels])
+        .Output("loss")
+        .Build()
     )
-    op_conf.sigmoid_cross_entropy_conf.prediction = logits.unique_name
-    op_conf.sigmoid_cross_entropy_conf.label = labels.unique_name
-    op_conf.sigmoid_cross_entropy_conf.loss = "loss"
-    op_conf.sigmoid_cross_entropy_conf.label_type = labels.dtype.oneflow_proto_dtype
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "loss"
-    return remote_blob_util.RemoteBlob(lbi)
+    return op.InferAndTryRun().RemoteBlobList()[0]
 
 
 def _GetSequence(value, n, name):

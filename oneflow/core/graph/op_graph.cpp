@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/framework/device_registry_manager.h"
 
 namespace oneflow {
 
@@ -99,14 +100,8 @@ std::string OpNode::VisualStr() const {
   std::string str = op().op_name();
   {
     for (int64_t machine_id : parallel_desc().sorted_machine_ids()) {
-      std::string dev_type;
-      if (parallel_desc().device_type() == DeviceType::kCPU) {
-        dev_type = "cpu";
-      } else if (parallel_desc().device_type() == DeviceType::kGPU) {
-        dev_type = "gpu";
-      } else {
-        UNIMPLEMENTED();
-      }
+      const char* dev_type = CHECK_JUST(DeviceTag4DeviceType(parallel_desc().device_type()));
+
       std::string parallel_desc_str = std::to_string(machine_id) + ":" + dev_type + ":";
       const auto& dev_phy_ids = parallel_desc().sorted_dev_phy_ids(machine_id);
       parallel_desc_str += std::to_string(dev_phy_ids.front());
@@ -247,11 +242,11 @@ void OpNode::ConcatBlobDesc(const ParallelDesc& blob_parallel_desc,
     FOR_RANGE(int64_t, i, 1, same_blob_descs.size()) {
       CHECK(*same_blob_descs.at(i) == *same_blob_descs.at(0));
     }
-    concatenated_blob_desc->CopyAllFrom(*same_blob_descs.at(0));
+    concatenated_blob_desc->CopyFrom(*same_blob_descs.at(0));
   } else {
     FOR_RANGE(int64_t, i, 1, blob_descs.size()) { CHECK(*blob_descs.at(i) == *blob_descs.at(0)); }
     // select first BlobDesc
-    concatenated_blob_desc->CopyAllFrom(*blob_descs.at(0));
+    concatenated_blob_desc->CopyFrom(*blob_descs.at(0));
   }
 }
 

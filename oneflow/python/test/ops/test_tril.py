@@ -64,8 +64,6 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal, fill_value):
             flow.watch_diff(out, test_global_storage.Setter("out_diff"))
             return out
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     x = np.random.randint(low=0, high=100, size=shape)
     test_tril_fw_bw_job(x.astype(np_type)).get()
 
