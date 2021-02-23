@@ -90,8 +90,8 @@ class MirroredTensor : public Tensor {
   void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
     impl_->set_blob_object(blob_object);
   }
-  std::shared_ptr<Device> device() const;
-  void set_device(const std::shared_ptr<Device>& device);
+  std::shared_ptr<Device> device() const { return impl_->device(); }
+  void set_device(const std::shared_ptr<Device>& device) { impl_->set_device(device); }
 
  private:
   bool is_lazy_;
@@ -115,8 +115,8 @@ class ConsistentTensor : public Tensor {
   void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) override {
     impl_->set_parallel_conf(parallel_conf);
   }
-  std::shared_ptr<compatible_py::Distribute> distribute() const;
-  void set_distribute(const std::shared_ptr<compatible_py::Distribute>& distribute);
+  std::shared_ptr<compatible_py::Distribute> distribute() const { return impl_->distribute(); }
+  void set_distribute(const std::shared_ptr<compatible_py::Distribute>& distribute) { impl_->set_distribute(distribute); }
   std::shared_ptr<compatible_py::BlobObject> blob_object() const override {
     return impl_->blob_object();
   }
