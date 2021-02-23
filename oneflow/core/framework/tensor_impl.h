@@ -79,7 +79,7 @@ class ConsistentTensorImpl : public TensorImpl {
   virtual void set_distribute(const std::shared_ptr<compatible_py::Distribute>& distribute) = 0;
 };
 
-class LazyMirroredTensorImpl : public MirroredTensorImpl {
+class LazyMirroredTensorImpl final : public MirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LazyMirroredTensorImpl);
   LazyMirroredTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
@@ -117,7 +117,7 @@ class LazyMirroredTensorImpl : public MirroredTensorImpl {
   std::shared_ptr<cfg::ParallelConf> parallel_conf_;
 };
 
-class EagerMirroredTensorImpl : public MirroredTensorImpl {
+class EagerMirroredTensorImpl final : public MirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerMirroredTensorImpl);
   EagerMirroredTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
@@ -156,7 +156,7 @@ class EagerMirroredTensorImpl : public MirroredTensorImpl {
   std::shared_ptr<compatible_py::BlobObject> blob_object_;
 };
 
-class LazyConsistentTensorImpl : public ConsistentTensorImpl {
+class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LazyConsistentTensorImpl);
   LazyConsistentTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
@@ -197,7 +197,7 @@ class LazyConsistentTensorImpl : public ConsistentTensorImpl {
   std::shared_ptr<compatible_py::Distribute> distribute_;
 };
 
-class EagerConsistentTensorImpl : public ConsistentTensorImpl {
+class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerConsistentTensorImpl);
   EagerConsistentTensorImpl(const std::shared_ptr<Shape>& shape, DataType dtype,
