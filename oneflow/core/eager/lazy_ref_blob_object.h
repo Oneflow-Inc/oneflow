@@ -28,8 +28,8 @@ class LazyRefBlobObject : public BlobObject {
   LazyRefBlobObject(Blob* blob)
       : BlobObject(std::make_shared<MemoryCase>(blob->mem_case()), blob->data_type()) {
     const auto& rt_blob_desc = blob->blob_desc();
-    blob_desc_ = BlobDesc(rt_blob_desc.body(), rt_blob_desc.is_tensor_list(),
-                          rt_blob_desc.is_body_disabled(), rt_blob_desc.is_dynamic());
+    blob_desc_ =
+        BlobDesc(rt_blob_desc.body(), rt_blob_desc.is_tensor_list(), rt_blob_desc.is_dynamic());
     ref_blob_ = blob;
   }
   virtual ~LazyRefBlobObject() override = default;

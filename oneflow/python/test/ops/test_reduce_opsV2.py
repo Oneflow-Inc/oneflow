@@ -25,6 +25,10 @@ import test_global_storage
 from test_util import GenArgList
 import oneflow.typing as oft
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def compare_reduce_sum_with_tensorflow(
     device_type, input_shape, axis, keepdims, rtol=1e-5, atol=1e-5
@@ -56,8 +60,6 @@ def compare_reduce_sum_with_tensorflow(
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = ReduceSumJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:

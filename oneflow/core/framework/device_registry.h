@@ -13,18 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_REWRITER_ADD_KEEP_HEADER_ONLY_H_
-#define ONEFLOW_CORE_JOB_REWRITER_ADD_KEEP_HEADER_ONLY_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTRY_H_
+#define ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTRY_H_
 
-#include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/device_type.pb.h"
 
 namespace oneflow {
 
-class OpGraph;
-class Job;
+using DumpVersionInfoFn = std::function<void()>;
 
-void AddKeepHeaderOnlyOp(const OpGraph& op_graph, JobBuilder* job_builder);
+class DeviceRegistry final {
+ public:
+  DeviceRegistry(DeviceType dev_type) : dev_type_(dev_type) {}
+  DeviceRegistry& SetDumpVersionInfoFn(DumpVersionInfoFn func);
+  DeviceRegistry& SetDeviceTag(std::string dev_tag);
+
+ private:
+  DeviceType dev_type_;
+};
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_REWRITER_ADD_KEEP_HEADER_ONLY_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTRY_H_

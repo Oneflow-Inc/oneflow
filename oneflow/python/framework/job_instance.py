@@ -109,7 +109,7 @@ class JobInstance(oneflow_api.ForeignJobInstance):
 
     def sole_output_op_name_in_user_job(self):
         try:
-            return ret.sole_output_op_name_in_user_job_
+            return self.sole_output_op_name_in_user_job_
         except Exception as e:
             print(traceback.format_exc())
             raise e

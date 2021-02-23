@@ -13,23 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/register/blob.h"
+#ifndef ONEFLOW_CORE_CONTROL_BOOTSTRAP_CLIENT_H_
+#define ONEFLOW_CORE_CONTROL_BOOTSTRAP_CLIENT_H_
+
+#include "oneflow/core/control/rpc_client.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
-namespace user_op {
+class BootstrapClient : public RpcClient {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BootstrapClient);
+  virtual ~BootstrapClient() override = default;
 
-#ifdef WITH_CUDA
-
-template<>
-void Tensor::CheckDataType<half>() const {
-  LOG_IF(FATAL, data_type() != DataType::kFloat16)
-      << "tensor data_type mismatched. value: kFloat16, template T: half";
-}
-
-#endif  // WITH_CUDA
-
-}  // namespace user_op
+ protected:
+  friend class Global<BootstrapClient>;
+  BootstrapClient() = default;
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_CONTROL_BOOTSTRAP_CLIENT_H_

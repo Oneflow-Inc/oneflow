@@ -154,7 +154,6 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
       segment_ids_modifier->set_requires_grad(false);
       user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
       CHECK_NOTNULL(like_modifier);
-      like_modifier->set_use_header_only(true);
       like_modifier->set_requires_grad(false);
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

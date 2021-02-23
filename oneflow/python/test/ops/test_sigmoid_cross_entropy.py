@@ -15,50 +15,44 @@ limitations under the License.
 """
 import unittest
 import os
+import numpy as np
+import tensorflow as tf
+import oneflow as flow
+import oneflow.typing as oft
 from collections import OrderedDict
 
-import numpy as np
-import oneflow as flow
-import tensorflow as tf
-import test_global_storage
 from test_util import GenArgList
+import test_global_storage
+from test_util import type_name_to_flow_type
+from test_util import type_name_to_np_type
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def TestReshape(x, shape, name):
-    return (
-        flow.user_op_builder(name)
-        .Op("TestReshape4KeepHeaderOnly")
-        .Input("in", [x])
-        .Output("out")
-        .Attr("shape", shape)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
-
-
-def compare_with_tensorflow(device_type, input_shape, output_shape):
+def compare_with_tensorflow(device_type, data_type, shape):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
-
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
+
+    dtype = type_name_to_flow_type[data_type]
+
+    def np_sigmoid(x):
+        return 1 / (1 + np.exp(-x))
 
     @flow.global_function(type="train", function_config=func_config)
-    def ReshapeJob():
+    def SigmoidCrossEntropyWithLogitsJob(labels: oft.Numpy.Placeholder(shape, dtype)):
         with flow.scope.placement(device_type, "0:0"):
             x = flow.get_variable(
                 "x",
-                shape=input_shape,
-                dtype=flow.float,
+                shape=shape,
+                dtype=type_name_to_flow_type[data_type],
                 initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
                 trainable=True,
             )
-            loss = TestReshape(x, output_shape, "my_test_reshape")
+            loss = flow.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=x)
+
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(loss)
@@ -67,33 +61,47 @@ def compare_with_tensorflow(device_type, input_shape, output_shape):
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
             flow.watch(loss, test_global_storage.Setter("loss"))
             flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
-
             return loss
+
+    # fake labels
+    labels = np_sigmoid(np.random.randint(0, 10, size=shape)).astype(
+        type_name_to_np_type[data_type]
+    )
 
     # OneFlow
     check_point = flow.train.CheckPoint()
     check_point.init()
-    of_out = ReshapeJob().get()
+    of_out = SigmoidCrossEntropyWithLogitsJob(labels).get()
+
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(test_global_storage.Get("x"))
-        tf_out = tf.reshape(x, output_shape)
-    loss_diff = test_global_storage.Get("loss_diff")
-    tf_x_diff = tape.gradient(tf_out, x, loss_diff)
+        tf_out = tf.nn.sigmoid_cross_entropy_with_logits(labels, x)
 
-    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+        loss_diff = test_global_storage.Get("loss_diff")
+        tf_x_diff = tape.gradient(tf_out, x, loss_diff)
+
+    tolerance = 1e-5
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=tolerance, atol=tolerance)
     assert np.allclose(
-        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        test_global_storage.Get("x_diff"),
+        tf_x_diff.numpy(),
+        rtol=tolerance,
+        atol=tolerance,
     )
+    flow.clear_default_session()
 
 
 @flow.unittest.skip_unless_1n1d()
-class Test_TestReshape4KeepHeaderOnly(flow.unittest.TestCase):
-    def test_TestReshape_train_keep_header_only_grad(test_case):
+class TestSigmoidCrossEntropy(flow.unittest.TestCase):
+    def test_sigmoid_cross_entropy_with_logits(test_case):
+        if flow.eager_execution_enabled():
+            print("\nSkip under erger mode!")
+            return
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["gpu"]
-        arg_dict["input_shape"] = [(10, 10, 10)]
-        arg_dict["output_shape"] = [(100, 10), (10, 100), (5, 20, 10)]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["data_type"] = ["double", "float32"]
+        arg_dict["shape"] = [(64, 1000), (5, 5, 1000)]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
