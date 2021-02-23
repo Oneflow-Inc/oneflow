@@ -72,6 +72,18 @@ Maybe<void> DistributeAddOp::InferBlobParallelDesc() {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> DistributeAddOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  const BlobDesc* in_0 = BlobDesc4BnInOp(input_bns().Get(0));
+  FOR_RANGE(int, i, 1, output_bns().size()) {
+    const BlobDesc* in_i = BlobDesc4BnInOp(input_bns().Get(i));
+    CHECK_OR_RETURN(*in_i == *in_0);
+  }
+  *BlobDesc4BnInOp("out") = *in_0;
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> DistributeAddOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
