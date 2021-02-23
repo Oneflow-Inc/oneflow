@@ -14,10 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor_impl.h"
-#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
 namespace oneflow {
 
-namespace one {}  // namespace one
-
 }  // namespace oneflow
+
