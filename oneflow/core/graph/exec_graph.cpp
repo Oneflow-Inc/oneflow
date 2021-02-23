@@ -75,13 +75,14 @@ void ExecNode::ToProto(const ParallelContext* parallel_ctx, ExecNodeProto* ret) 
 
 void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
   auto GetBlobDesc4BnInOp = GetBlobDesc4BnInOpFunc();
+  const OpNode* op_node = Global<OpGraph>::Get()->OpNode4OpName(op()->op_name());
   const SbpSignature* sbp_signature = nullptr;
-  {
-    const OpNode* op_node = Global<OpGraph>::Get()->OpNode4OpName(op()->op_name());
-    if (op_node != nullptr) { sbp_signature = &op_node->sbp_signature(); }
+  std::shared_ptr<const ParallelDesc> op_parallel_desc;
+  if (op_node != nullptr) {
+    sbp_signature = &op_node->sbp_signature();
+    op_parallel_desc = CHECK_JUST(op()->GetOpParallelDesc());
   }
-  std::shared_ptr<const ParallelDesc> op_parallel_desc = CHECK_JUST(op()->GetOpParallelDesc());
-  if (parallel_ctx->parallel_num() > 1 && sbp_signature != nullptr) {
+  if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && sbp_signature != nullptr) {
     for (const auto& ibn : op()->input_bns()) {
       if (*CHECK_JUST(op()->GetParallelDesc4BnInOp(ibn)) == *op_parallel_desc) {
         CHECK_EQ(*CHECK_JUST(
@@ -93,7 +94,7 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
     }
   }
   CHECK_JUST(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature));
-  if (parallel_ctx->parallel_num() > 1 && sbp_signature != nullptr) {
+  if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && sbp_signature != nullptr) {
     for (const auto& obn : op()->output_bns()) {
       if (*CHECK_JUST(op()->GetParallelDesc4BnInOp(obn)) == *op_parallel_desc) {
         CHECK_EQ(*CHECK_JUST(
