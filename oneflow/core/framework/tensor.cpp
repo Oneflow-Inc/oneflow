@@ -35,11 +35,9 @@ void Tensor::CheckDataType<half>() const {
 
 namespace one {
 
-bool Tensor::is_lazy() const { return !EagerExecutionEnabled(); }
-
 MirroredTensor::MirroredTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
                                const std::shared_ptr<Device>& device) {
-  if (is_lazy()) {
+  if (is_lazy_) {
     impl_ = std::make_shared<MirroredLazyTensorImpl>(shape, dtype, device);
   } else {
     impl_ = std::make_shared<MirroredEagerTensorImpl>(shape, dtype, device);
@@ -55,7 +53,7 @@ void MirroredTensor::set_device(const std::shared_ptr<Device>& device) {
 ConsistentTensor::ConsistentTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
                                    const std::shared_ptr<compatible_py::Distribute>& distribute,
                                    std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
-  if (is_lazy()) {
+  if (is_lazy_) {
     impl_ = std::make_shared<ConsistentLazyTensorImpl>(shape, dtype, distribute, parallel_conf);
   } else {
     impl_ = std::make_shared<ConsistentEagerTensorImpl>(shape, dtype, distribute, parallel_conf);

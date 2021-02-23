@@ -66,7 +66,6 @@ class Tensor {
   virtual void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) = 0;
   virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
   virtual std::shared_ptr<compatible_py::BlobObject> blob_object() const = 0;
-  bool is_lazy() const;
 };
 
 class MirroredTensor : public Tensor {
@@ -95,6 +94,7 @@ class MirroredTensor : public Tensor {
   void set_device(const std::shared_ptr<Device>& device);
 
  private:
+  bool is_lazy_;
   std::shared_ptr<MirroredTensorImpl> impl_;
 };
 
@@ -125,6 +125,7 @@ class ConsistentTensor : public Tensor {
   }
 
  private:
+  bool is_lazy_;
   std::shared_ptr<ConsistentTensorImpl> impl_;
 };
 

@@ -22,15 +22,16 @@ namespace oneflow {
 namespace one {
 class Device {
  public:
-  Device(DeviceType device_type, int64_t device_id)
-      : device_type_(device_type), device_id_(device_id) {}
-  DeviceType device_type() const { return device_type_; }
+  Device(const std::string& type, int64_t device_id)
+      : type_(type), device_id_(device_id) {}
+  std::string type() const { return type_; }
   int64_t device_id() const { return device_id_; }
 
  private:
-  DeviceType device_type_;
+  std::string type_;
   int64_t device_id_;
 };
 }  // namespace one
 }  // namespace oneflow
 #endif
+
