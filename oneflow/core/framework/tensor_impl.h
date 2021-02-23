@@ -42,6 +42,8 @@ class TensorImpl {
   virtual void set_dtype(DataType dtype) = 0;
   virtual void set_parallel_conf(const std::shared_ptr<cfg::ParallelConf>& parallel_conf) = 0;
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
+  virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
+  virtual std::shared_ptr<compatible_py::BlobObject> blob_object() const = 0;
 };
 
 class MirroredTensorImpl : public TensorImpl {
@@ -74,6 +76,10 @@ class MirroredLazyTensorImpl : public MirroredTensorImpl {
   }
   std::shared_ptr<Device> device() const override { return device_; }
   void set_device(const std::shared_ptr<Device>& device) override { device_ = device; }
+  void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
+    UNIMPLEMENTED();
+  }
+  std::shared_ptr<compatible_py::BlobObject> blob_object() const override { UNIMPLEMENTED(); }
 
  private:
   std::shared_ptr<Shape> shape_;
@@ -97,10 +103,10 @@ class MirroredEagerTensorImpl : public MirroredTensorImpl {
     parallel_conf_ = parallel_conf;
   }
   std::shared_ptr<Device> device() const override { return device_; }
-  void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+  void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
     blob_object_ = blob_object;
   }
-  std::shared_ptr<compatible_py::BlobObject> blob_object() const { return blob_object_; }
+  std::shared_ptr<compatible_py::BlobObject> blob_object() const override { return blob_object_; }
   void set_device(const std::shared_ptr<Device>& device) override { device_ = device; }
 
  private:
@@ -130,6 +136,10 @@ class ConsistentLazyTensorImpl : public ConsistentTensorImpl {
     distribute_ = distribute;
   }
   std::shared_ptr<compatible_py::Distribute> distribute() const override { return distribute_; }
+  void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
+    UNIMPLEMENTED();
+  }
+  std::shared_ptr<compatible_py::BlobObject> blob_object() const override { UNIMPLEMENTED(); }
 
  private:
   std::shared_ptr<Shape> shape_;
@@ -157,10 +167,10 @@ class ConsistentEagerTensorImpl : public ConsistentTensorImpl {
     distribute_ = distribute;
   }
   std::shared_ptr<compatible_py::Distribute> distribute() const override { return distribute_; }
-  void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+  void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
     blob_object_ = blob_object;
   }
-  std::shared_ptr<compatible_py::BlobObject> blob_object() const { return blob_object_; }
+  std::shared_ptr<compatible_py::BlobObject> blob_object() const override { return blob_object_; }
 
  private:
   std::shared_ptr<Shape> shape_;
