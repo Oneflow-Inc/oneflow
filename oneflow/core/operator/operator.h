@@ -87,7 +87,13 @@ class Operator {
 
 #undef DEFINE_BLOB_NAMES_GETTER
 
+  const PbRpf<std::string>& input_output_bns() const { return input_output_bns_; };
+
+  Maybe<void> FillOpParallelDesc(const ParallelDesc& parallel_desc);
+  Maybe<const ParallelDesc> GetOpParallelDesc() const;
+
   Maybe<void> InferParallelSignatureIf();
+  Maybe<const ParallelDesc> GetParallelDesc4BnInOp(const std::string& bn) const;
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs
@@ -127,15 +133,6 @@ class Operator {
                                     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx,
                                     const SbpSignature* sbp_signature) const;
-
-  Maybe<void> InferOutParallelDescIf(
-      std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
-      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&,
-      const SbpSignature*) const;
-  virtual Maybe<void> InferOutParallelDesc(
-      std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
-      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&,
-      const SbpSignature*) const;
 
   // Infer out blob's time shape
   Maybe<void> InferOutputBlobTimeShapeIf(
@@ -187,7 +184,9 @@ class Operator {
   }
 
  protected:
-  virtual Maybe<void> InferParallelSignature();
+  Maybe<void> FillBlobParallelDesc(
+      const std::function<Maybe<const ParallelDesc>(const std::string&)>& ParallelDesc4Bn);
+  virtual Maybe<void> InferBlobParallelDesc();
   virtual Maybe<void> InferOutBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       const SbpSignature* sbp_signature) const;
@@ -304,8 +303,11 @@ class Operator {
   OpAttribute op_attribute_;
   const JobDesc* job_desc_;
   HashMap<LogicalBlobId, std::string> lbi2obn_;
+  std::shared_ptr<const ParallelDesc> op_parallel_desc_;
+  std::unique_ptr<HashMap<std::string, std::shared_ptr<const ParallelDesc>>> bn2parallel_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> ibn2logical_blob_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> obn2logical_blob_desc_;
+  PbRpf<std::string> input_output_bns_;
 };
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);

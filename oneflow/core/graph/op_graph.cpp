@@ -296,18 +296,9 @@ const ParallelDesc& OpNode::BlobParallelDesc4Obn(const std::string& obn) const {
 }
 
 void OpNode::InferBlobParallelDesc() {
-  auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
-    auto iter = obn2blob_parallel_desc_.find(obn);
-    if (iter == obn2blob_parallel_desc_.end()) {
-      iter = obn2blob_parallel_desc_.emplace(obn, parallel_desc()).first;
-    }
-    return &iter->second;
-  };
-  auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc* {
-    return &LogicalBlobDesc4Lbi(op().BnInOp2Lbi(ibn));
-  };
-  CHECK_JUST(op().InferOutParallelDescIf(ParallelDesc4Obn, LogicalBlobDesc4Ibn, parallel_desc(),
-                                         &sbp_signature()));
+  for (const auto& bn : op().output_bns()) {
+    obn2blob_parallel_desc_.emplace(bn, *CHECK_JUST(op().GetParallelDesc4BnInOp(bn)));
+  }
 }
 
 void OpNode::InitLbi2SourceNode() {
@@ -547,6 +538,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
       return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn));
     };
+    JUST(op_node->mut_op()->FillOpParallelDesc(op_node->parallel_desc()));
     JUST(op_node->mut_op()->FillLogicalInBlobDesc(LogicalBlobDesc4BnInOp));
     // Infer ParallelSignature
     JUST(op_node->mut_op()->InferParallelSignatureIf());
