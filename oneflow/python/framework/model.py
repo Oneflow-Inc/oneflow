@@ -17,12 +17,13 @@ from __future__ import absolute_import
 from abc import ABC
 from typing import Optional
 
-from oneflow.python.framework.check_point_v2 import * 
+from oneflow.python.framework.check_point_v2 import *
 from oneflow.python.framework.function_util import api_oneflow_function
 from oneflow.python.framework.module import Module
 from oneflow.python.framework.session_util import api_clear_default_session
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.ops.optimizer import Optimizer
+
 
 @oneflow_export("nn.CheckpointConfig")
 class CheckpointConfig(object):
@@ -41,6 +42,7 @@ class CheckpointConfig(object):
 class Callback(ABC):
     r""" Abstract base class used to build new callbacks.
     """
+
     def on_training_step_end(self, step, outputs):
         pass
 
@@ -50,35 +52,34 @@ class Callback(ABC):
 
 @oneflow_export("nn.Model")
 class Model(
-    ABC,
-    Module,
+    ABC, Module,
 ):
     r"""A high level API for model training and validation.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__()
 
-        self.is_function_style = kwargs['is_function_style']
-        self.training_config = kwargs['training_config']
-        self.validation_config = kwargs['validation_config']
-        self.callbacks = kwargs['callbacks']
+        self.is_function_style = kwargs["is_function_style"]
+        self.training_config = kwargs["training_config"]
+        self.validation_config = kwargs["validation_config"]
+        self.callbacks = kwargs["callbacks"]
 
         optim_conf = self.configure_optimizers()
         if isinstance(optim_conf, Optimizer):
             self.optimizers = [optim_conf]
         elif isinstance(optim_conf, (list, tuple)):
             self.optimizers = optim_conf
-        
+
         self.need_training = False
         self.need_validation = False
         self.need_checkpoint = False
-    
 
     def forward(self, *args, **kwargs):
         r"""Same as `nn.Module.forward()`, here is to define the operations you want to use for prediction.
         """
         return super().forward(*args, **kwargs)
-    
+
     def training_step(self, *args, **kwargs):
         r"""Operates on a single batch of data from the training set and return loss.
         """
@@ -86,24 +87,24 @@ class Model(
 
     def validation_step(self, *args, **kwargs):
         r"""Operates on a single batch of data from the validation set.
-        """ 
-    
+        """
+
     def configure_optimizers(self):
         r"""Choose what optimizers and learning-rate schedulers to use in your optimization.
         Normally you'd need one. But in the case of GANs or similar you might have multiple.
         """
         raise NotImplementedError()
-    
+
     def optimizer_step(
         self,
         epoch: int = None,
         batch_idx: int = None,
         optimizer: Optimizer = None,
-        optimizer_idx: int = None
+        optimizer_idx: int = None,
     ) -> None:
         r"""Customized optimizer action.
         """
-    
+
     def _func_train_job(self):
         @api_oneflow_function(type="train", function_config=self.training_config)
         def job():
@@ -111,6 +112,7 @@ class Model(
             loss = self.training_step(batch)
             self.optimizers[0].minimize(loss)
             return loss
+
         return job
 
     def _func_eval_job(self):
@@ -118,19 +120,20 @@ class Model(
         def eval_job():
             batch = self.validation_data()
             return self.validation_step(batch)
+
         return eval_job
 
     def fit(
         self,
-        training_data = None,
-        validation_data = None,
+        training_data=None,
+        validation_data=None,
         validation_interval: int = 1,
-        checkpoint_config = None,
+        checkpoint_config=None,
         max_steps: int = 100,
     ):
         api_clear_default_session()
 
-        self.max_steps = max_steps 
+        self.max_steps = max_steps
         self.training_data = training_data
         self.validation_data = validation_data
         self.validation_interval = validation_interval
@@ -140,7 +143,10 @@ class Model(
             self.need_training = True
             self.train_job = self._func_train_job()
 
-        if self._method_overrided("validation_step") and self.validation_data is not None:
+        if (
+            self._method_overrided("validation_step")
+            and self.validation_data is not None
+        ):
             self.need_validation = True
             self.eval_job = self._func_eval_job()
 
@@ -160,21 +166,19 @@ class Model(
                     self._method_callback("on_validation_step_end", step, eval_loss)
             if self.need_checkpoint:
                 if (step + 1) % self.checkpoint_config.save_interval == 0:
-                    self.save_checkpoint(dirpath=self.checkpoint_config.save_dirpath + '-' + str(step))
+                    self.save_checkpoint(
+                        dirpath=self.checkpoint_config.save_dirpath + "-" + str(step)
+                    )
 
-    
     def save_checkpoint(
-        self,
-        dirpath,
+        self, dirpath,
     ):
         r"""Save model states as a checkpoint.
         """
         SaveVarDict(path=dirpath)
 
-
     def load_checkpoint(
-        self,
-        dirpath,
+        self, dirpath,
     ):
         r"""Load model states from a checkpoint.
         """
@@ -182,10 +186,8 @@ class Model(
 
     def _method_overrided(self, method_name: str = None) -> bool:
         return getattr(self.__class__, method_name) != getattr(Model, method_name)
-    
+
     def _method_callback(self, method_name: str = None, *args, **kwargs):
         for cb in self.callbacks:
             method = getattr(cb, method_name)
             method(*args, **kwargs)
-
-

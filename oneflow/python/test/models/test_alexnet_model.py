@@ -30,6 +30,7 @@ _MODEL_SAVE_DIR = "./model_save-{}".format(
 )
 _MODEL_LOAD = "/dataset/PNGS/cnns_model_for_test/alexnet/models/of_model_bk"
 
+
 class DLNetSpec(object):
     def __init__(self):
         self.batch_size = 8
@@ -43,7 +44,9 @@ class DLNetSpec(object):
         self.gpu_num_per_node = 1
         self.iter_num = 10
 
+
 global_specs = DLNetSpec()
+
 
 def _conv2d_layer(
     name,
@@ -110,6 +113,7 @@ def _data_load_layer(args, data_dir):
     )
     return (normal, label)
 
+
 class TrainData(flow.nn.Module):
     def __init__(self, specs):
         super().__init__()
@@ -132,7 +136,7 @@ class AlexNet(flow.nn.Model):
     def __init__(self, specs, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.specs = specs
-    
+
     def forward(self, images, trainable=False):
         conv1 = _conv2d_layer(
             "conv1", images, filters=64, kernel_size=11, strides=4, padding="VALID",
@@ -206,7 +210,7 @@ class AlexNet(flow.nn.Model):
             labels, fc3, name="softmax_loss"
         )
         return loss
-    
+
     def validation_step(self, batch):
         images, labels = batch
         fc3 = self(images, False)
@@ -214,11 +218,12 @@ class AlexNet(flow.nn.Model):
             labels, fc3, name="softmax_loss"
         )
         return loss
-    
+
     def configure_optimizers(self):
         return flow.optimizer.SGD(
             flow.optimizer.PiecewiseConstantScheduler([], [0.00001]), momentum=0
         )
+
 
 class LossMoniter(flow.nn.Callback):
     def on_training_step_end(self, step, outputs):
@@ -238,7 +243,7 @@ def test_1n1c(test_case):
     flow.env.ctrl_port(9788)
     flow.config.machine_num(global_specs.num_nodes)
     flow.config.gpu_device_num(global_specs.gpu_num_per_node)
-    
+
     train_config = flow.ExecutionConfig()
     train_config.default_logical_view(flow.scope.consistent_view())
     train_config.default_data_type(flow.float)
@@ -259,9 +264,9 @@ def test_1n1c(test_case):
         is_function_style=True,
         training_config=train_config,
         validation_config=val_config,
-        callbacks=[loss_monitor]
+        callbacks=[loss_monitor],
     )
-    
+
     train_data = TrainData(global_specs)
     val_data = ValData(global_specs)
 
