@@ -13,29 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CONTROL_CTRL_SERVER_H_
-#define ONEFLOW_CORE_CONTROL_CTRL_SERVER_H_
+#ifndef ONEFLOW_CORE_CONTROL_RANK_INFO_BOOTSTRAP_CLIENT_H_
+#define ONEFLOW_CORE_CONTROL_RANK_INFO_BOOTSTRAP_CLIENT_H_
 
-#include "oneflow/core/control/rpc_server.h"
+#include "oneflow/core/control/bootstrap_client.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
-class CtrlServer final : public RpcServer {
+class RankInfoBootstrapClient final : public BootstrapClient {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CtrlServer);
-  ~CtrlServer() override {}
+  OF_DISALLOW_COPY_AND_MOVE(RankInfoBootstrapClient);
+  ~RankInfoBootstrapClient() override = default;
 
-  CtrlServer();
-  // port may be configured in bootstrap_conf
-  CtrlServer(int ctrl_port);
-
-  int64_t port() const { return port_; }
-
- private:
-  void OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) override;
-  int port_;
+  RankInfoBootstrapClient(const BootstrapConf& bootstrap_conf);
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CONTROL_CTRL_SERVER_H_
+#endif  // ONEFLOW_CORE_CONTROL_RANK_INFO_BOOTSTRAP_CLIENT_H_
