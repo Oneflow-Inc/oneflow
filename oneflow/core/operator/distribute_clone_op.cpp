@@ -35,15 +35,15 @@ class DistributeCloneOp final : public Operator {
  private:
   Maybe<void> InferParallelSignature() override;
   Maybe<void> InferBatchAxis(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext*) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
   Maybe<void> InferOutParallelDesc(
       std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
       std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&,
@@ -59,9 +59,9 @@ void DistributeCloneOp::InitFromOpConf() {
   });
 }
 
-Maybe<void> DistributeCloneOp::InferBlobDescs(
+Maybe<void> DistributeCloneOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const auto& in_blob_desc = *GetBlobDesc4BnInOp("in");
   if (parallel_ctx->parallel_num() > 1) {
     CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), output_bns().size());
@@ -112,7 +112,6 @@ Maybe<void> DistributeCloneOp::InferParallelSignature() {
 }
 
 Maybe<void> DistributeCloneOp::InferBatchAxis(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   FOR_RANGE(int32_t, i, 0, output_bns().size()) {
     *BatchAxis4BnInOp(output_bns().Get(i)) = *BatchAxis4BnInOp("in");

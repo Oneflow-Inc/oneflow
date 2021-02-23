@@ -16,10 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 #define ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 
-#include <half.hpp>
+#include <type_traits>
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
 #endif
+#include "oneflow/core/common/fp16_data_type.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/record/record.pb.h"
@@ -35,8 +36,6 @@ namespace oneflow {
 #else
 #define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
 #endif
-
-typedef half_float::half float16;
 
 // Type Trait: IsFloating
 
@@ -60,19 +59,9 @@ struct IsIntegral : std::integral_constant<bool, false> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
-// Type Trait: IsFloat16
-template<typename T>
-struct IsFloat16 : std::integral_constant<bool, false> {};
-
-#define SPECIALIZE_TRUE_FLOAT16(type_cpp, type_proto) \
-  template<>                                          \
-  struct IsFloat16<type_cpp> : std::integral_constant<bool, true> {};
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_FLOAT16, FLOAT16_DATA_TYPE_SEQ);
-#undef SPECIALIZE_TRUE_FLOAT16
-
 // Type Trait: GetDataType
 
-template<typename T>
+template<typename T, typename T2 = void>
 struct GetDataType;
 
 template<>
@@ -85,12 +74,9 @@ struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
-#ifdef WITH_CUDA
-
-template<>
-struct GetDataType<half> : std::integral_constant<DataType, DataType::kFloat16> {};
-
-#endif  // WITH_CUDA
+template<typename T>
+struct GetDataType<T, typename std::enable_if<IsFloat16<T>::value>::type>
+    : std::integral_constant<DataType, DataType::kFloat16> {};
 
 template<DataType type>
 using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataType, type>{}));
@@ -101,20 +87,20 @@ using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataTyp
 #define OF_DEVICE_FUNC inline
 #endif
 
-template<typename T>
+template<typename T, typename std::enable_if<!IsFloat16<T>::value>::type* = nullptr>
 OF_DEVICE_FUNC T GetZeroVal() {
   return static_cast<T>(0);
 }
 
-template<typename T>
+template<typename T, typename std::enable_if<!IsFloat16<T>::value>::type* = nullptr>
 OF_DEVICE_FUNC T GetOneVal() {
   return static_cast<T>(1);
 }
 
-template<typename T>
+template<typename T, typename std::enable_if<!IsFloat16<T>::value>::type* = nullptr>
 OF_DEVICE_FUNC T GetMinVal();
 
-template<typename T>
+template<typename T, typename std::enable_if<!IsFloat16<T>::value>::type* = nullptr>
 OF_DEVICE_FUNC T GetMaxVal();
 
 #define MAX_VAL_SEQ                          \
@@ -157,16 +143,6 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_MAX_VAL, MAX_VAL_SEQ);
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_MIN_VAL, MIN_VAL_SEQ);
 #undef SPECIALIZE_MIN_VAL
 
-template<>
-inline float16 GetMaxVal<float16>() {
-  return std::numeric_limits<float16>::max();
-}
-
-template<>
-inline float16 GetMinVal<float16>() {
-  return std::numeric_limits<float16>::lowest();
-}
-
 template<typename T>
 const T* GetZeroPtr() {
   static const T ret = GetZeroVal<T>();
@@ -179,32 +155,29 @@ const T* GetOnePtr() {
   return &ret;
 }
 
-#if defined(WITH_CUDA)
-template<>
-OF_DEVICE_FUNC half GetZeroVal<half>() {
+template<typename T, typename std::enable_if<IsFloat16<T>::value>::type* = nullptr>
+OF_DEVICE_FUNC T GetZeroVal() {
   uint16_t ret = 0x0;  // Decimal: 0; Binary: 0 00000 0000000000
-  return *(half*)&ret;
+  return *(T*)&ret;
 }
 
-template<>
-OF_DEVICE_FUNC half GetOneVal<half>() {
+template<typename T, typename std::enable_if<IsFloat16<T>::value>::type* = nullptr>
+OF_DEVICE_FUNC T GetOneVal() {
   uint16_t ret = 0x3c00;  // Decimal: 15360; Binary: 0 01111 0000000000
-  return *(half*)&ret;
+  return *(T*)&ret;
 }
 
-template<>
-OF_DEVICE_FUNC half GetMaxVal<half>() {
+template<typename T, typename std::enable_if<IsFloat16<T>::value>::type* = nullptr>
+OF_DEVICE_FUNC T GetMaxVal() {
   uint16_t ret = 0x7bff;  // Decimal: 31743; Binary: 0 11110 1111111111
-  return *(half*)&ret;
+  return *(T*)&ret;
 }
 
-template<>
-OF_DEVICE_FUNC half GetMinVal<half>() {
+template<typename T, typename std::enable_if<IsFloat16<T>::value>::type* = nullptr>
+OF_DEVICE_FUNC T GetMinVal() {
   uint16_t ret = 0xfbff;  // Decimal: 64511; Binary: 1 11110 1111111111
-  return *(half*)&ret;
+  return *(T*)&ret;
 }
-
-#endif
 
 template<DeviceType, typename T>
 struct DevDType {
