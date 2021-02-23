@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_CONTROL_RANK_INFO_BOOTSTRAP_CLIENT_H_
 
 #include "oneflow/core/control/bootstrap_client.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
