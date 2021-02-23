@@ -19,31 +19,23 @@ limitations under the License.
 
 #include <vector>
 #include <memory>
+#include "oneflow/core/framework/tensor_list.h"
 
 namespace oneflow {
 
-class Tensor;
-using TensorList = std::vector<std::shared_ptr<Tensor>>;
-
-namespace one {
-
 struct AutoGradUtil final {
-    // Export to python as autograd.backward()
-    std::shared_ptr<TensorList> Backward(const std::shared_ptr<TensorList>& outputs,
-                                         const std::shared_ptr<TensorList>& out_grads,
-                                         bool retain_graph, bool create_graph);
+  // Export to python interface as flow.autograd.backward()
+  std::shared_ptr<TensorList> Backward(const std::shared_ptr<TensorList>& outputs,
+                                       const std::shared_ptr<TensorList>& out_grads,
+                                       bool retain_graph, bool create_graph);
 
-    // Export to python as autograd.grad()
-    std::shared_ptr<TensorList> Grad(const std::shared_ptr<TensorList>& outputs,
-                                     const std::shared_ptr<TensorList>& inputs,
-                                     const std::shared_ptr<TensorList>& out_grads,
-                                     bool retain_graph, bool create_graph);
+  // Export to python interface as flow.autograd.grad()
+  std::shared_ptr<TensorList> Grad(const std::shared_ptr<TensorList>& outputs,
+                                   const std::shared_ptr<TensorList>& inputs,
+                                   const std::shared_ptr<TensorList>& out_grads, bool retain_graph,
+                                   bool create_graph);
 };
-
-
-}  // namespace one
 
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_H_
-

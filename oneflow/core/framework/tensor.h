@@ -63,8 +63,6 @@ class TensorArg {
   std::shared_ptr<Tensor> tensor_ptr_;
 };
 
-using TensorList = std::vector<std::shared_ptr<Tensor>>;
-
 class Tensor {
  public:
   std::shared_ptr<Tensor> acc_grad;

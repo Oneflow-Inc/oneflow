@@ -21,16 +21,16 @@ namespace oneflow {
 namespace {
 
 // Checks and sets default value for initial gradients based on out_grads
-// If output is a tensor, out_grad will be a tensor with same shape.
+// If output is a tensor, out_grad's shape must be the same as output's
 // If output is a constant, out_grad will be a constant or empty(will be inited to 1).
 std::shared_ptr<TensorList> CheckAndInitOutGrads(const std::shared_ptr<TensorList>& outputs,
-                                      const std::shared_ptr<TensorList>& out_grads) {
+                                                 const std::shared_ptr<TensorList>& out_grads) {
   auto gradients = std::make_shared<TensorList>(out_grads->size());
   // TODO: check all out_grads and push default value for empty item
   return gradients;
 }
 
-// Calls AutogradEngine.Execute() to calculate gradients
+// Calculates gradients for each input by launching AutogradEngine
 std::shared_ptr<TensorList> RunBackward(const std::shared_ptr<TensorList>& outputs,
                                         const std::shared_ptr<TensorList>& intputs,
                                         const std::shared_ptr<TensorList>& out_grads,
@@ -47,8 +47,8 @@ std::shared_ptr<TensorList> RunBackward(const std::shared_ptr<TensorList>& outpu
 namespace one {
 
 std::shared_ptr<TensorList> AutoGradUtil::Backward(const std::shared_ptr<TensorList>& outputs,
-                                     const std::shared_ptr<TensorList>& out_grads,
-                                     bool retain_graph, bool create_graph) {
+                                                   const std::shared_ptr<TensorList>& out_grads,
+                                                   bool retain_graph, bool create_graph) {
   std::shared_ptr<TensorList> gradients = CheckAndInitOutGrads(outputs, out_grads);
   auto inputs = std::make_shared<TensorList>(0);
   std::shared_ptr<TensorList> res_grads =
@@ -57,9 +57,9 @@ std::shared_ptr<TensorList> AutoGradUtil::Backward(const std::shared_ptr<TensorL
 }
 
 std::shared_ptr<TensorList> AutoGradUtil::Grad(const std::shared_ptr<TensorList>& outputs,
-                                 const std::shared_ptr<TensorList>& inputs,
-                                 const std::shared_ptr<TensorList>& out_grads, bool retain_graph,
-                                 bool create_graph) {
+                                               const std::shared_ptr<TensorList>& inputs,
+                                               const std::shared_ptr<TensorList>& out_grads,
+                                               bool retain_graph, bool create_graph) {
   if (inputs->empty()) { return Backward(outputs, out_grads, retain_graph, create_graph); }
 
   std::shared_ptr<TensorList> gradients = CheckAndInitOutGrads(outputs, out_grads);

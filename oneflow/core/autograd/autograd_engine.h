@@ -17,10 +17,11 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_ENGINE_H_
 #define ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_ENGINE_H_
 
+#include <list>
 #include <vector>
 #include <memory>
 #include <functional>
-#include <list>
+#include "oneflow/core/framework/tensor_list.h"
 
 namespace oneflow {
 
@@ -28,7 +29,6 @@ namespace one {
 
 class TensorArg;
 class Tensor;
-using TensorList = std::vector<std::shared_ptr<Tensor>>;
 
 class FunctionNode {
  public:
@@ -37,7 +37,8 @@ class FunctionNode {
 
   virtual void Apply(bool create_graph) = 0;
   virtual void ReleaseTensorGrads() = 0;
-  // Release backward_fn_ if retain_graph=False to avoid call Apply in second time
+  // Releases the eventual c++ std::function for backward if retain_graph=False to avoid calling
+  // `Apply` in second time
   virtual void ReleaseGraph() = 0;
 
   // Getters
