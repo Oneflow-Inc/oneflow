@@ -23,42 +23,26 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-Maybe<ProcessCtx> MakeProcessCtxFromWorkerProcessInfo(const WorkerProcessInfo& work_process_info) {
-  CHECK_OR_RETURN(work_process_info.has_rank());
-  CHECK_OR_RETURN(work_process_info.has_port());
-  std::shared_ptr<ProcessCtx> process_ctx = std::make_shared<ProcessCtx>();
-  process_ctx->set_rank(work_process_info.rank());
-  Address* addr = process_ctx->mutable_ctrl_addr()->Add();
-  addr->set_port(work_process_info.port());
-  if (work_process_info.has_host()) { addr->set_host(work_process_info.host()); }
-  return process_ctx;
-}
-
-}  // namespace
-
 Maybe<void> CtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_ctx) {
-  std::vector<ProcessCtx> rank2process_ctx;
+  std::vector<WorkerProcessInfo> worker_process_info_list;
   if (rank() == 0) {
-    ProcessCtx process_ctx;
+    WorkerProcessInfo worker_process_info;
     {
-      process_ctx.set_rank(rank());
-      Address* addr = process_ctx.mutable_ctrl_addr()->Add();
-      JUST(SetCurrentHostByMaster(addr));
-      addr->set_port(port);
+      worker_process_info.set_rank(rank());
+      worker_process_info.set_port(port);
+      JUST(SetCurrentHostByMaster(&worker_process_info));
     }
-    rank2process_ctx.push_back(process_ctx);
+    worker_process_info_list.push_back(worker_process_info);
     for (int64_t world_rank = 1; world_rank < world_size(); ++world_rank) {
-      std::string key = std::string("GetProcessCtx") + std::to_string(world_rank);
+      std::string key = std::string("GetWorkerProcessInfo") + std::to_string(world_rank);
       WorkerProcessInfo cur_work_process_info;
       mut_bootstrap_client()->PullMasterKV(key, &cur_work_process_info);
-      CHECK_EQ_OR_RETURN(world_rank, rank2process_ctx.size());
+      CHECK_EQ_OR_RETURN(world_rank, worker_process_info_list.size());
       CHECK_EQ_OR_RETURN(world_rank, cur_work_process_info.rank());
-      rank2process_ctx.push_back(*JUST(MakeProcessCtxFromWorkerProcessInfo(cur_work_process_info)));
+      worker_process_info_list.push_back(cur_work_process_info);
     }
   } else {
-    std::string key = std::string("GetProcessCtx") + std::to_string(rank());
+    std::string key = std::string("GetWorkerProcessInfo") + std::to_string(rank());
     WorkerProcessInfo cur_work_process_info;
     {
       cur_work_process_info.set_rank(rank());
@@ -73,11 +57,11 @@ Maybe<void> CtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_
   if (rank() == 0) {
     ret_process_ctx->set_rank(rank());
     ret_process_ctx->mutable_ctrl_addr()->Clear();
-    for (const auto& process_ctx : rank2process_ctx) {
-      CHECK_EQ_OR_RETURN(process_ctx.ctrl_addr_size(), 1);
+    for (const auto& worker_process_info : worker_process_info_list) {
       Address* addr = ret_process_ctx->mutable_ctrl_addr()->Add();
-      *addr = process_ctx.ctrl_addr(0);
-      JUST(SetHostByMaster(addr, process_ctx.rank()));
+      if (worker_process_info.has_host()) { addr->set_host(worker_process_info.host()); }
+      addr->set_port(worker_process_info.port());
+      JUST(SetHostByMaster(addr, worker_process_info.rank()));
     }
     mut_bootstrap_client()->PushMasterKV("BroadcastProcessCtx", *ret_process_ctx);
   } else {
@@ -109,14 +93,15 @@ Maybe<void> HostListCtrlBootstrap::SetHostByMaster(Address* addr, int64_t world_
   return Maybe<void>::Ok();
 }
 
-Maybe<void> HostListCtrlBootstrap::SetCurrentHostByMaster(Address* addr) const {
-  addr->set_host(host());
+Maybe<void> HostListCtrlBootstrap::SetCurrentHostByMaster(
+    WorkerProcessInfo* worker_process_info) const {
+  worker_process_info->set_host(host());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> HostListCtrlBootstrap::SetCurrentHostByWorker(
-    WorkerProcessInfo* work_process_info) const {
-  work_process_info->set_host(host());
+    WorkerProcessInfo* worker_process_info) const {
+  worker_process_info->set_host(host());
   return Maybe<void>::Ok();
 }
 
@@ -148,20 +133,21 @@ Maybe<void> RankInfoCtrlBootstrap::SetHostByMaster(Address* addr, int64_t world_
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RankInfoCtrlBootstrap::SetCurrentHostByMaster(Address* addr) const {
+Maybe<void> RankInfoCtrlBootstrap::SetCurrentHostByMaster(
+    WorkerProcessInfo* worker_process_info) const {
   CHECK_EQ_OR_RETURN(rank(), 0);
   if (bootstrap_conf_.has_host()) {
-    addr->set_host(bootstrap_conf_.host());
+    worker_process_info->set_host(bootstrap_conf_.host());
   } else {
-    addr->set_host(master_host_);
+    worker_process_info->set_host(master_host_);
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> RankInfoCtrlBootstrap::SetCurrentHostByWorker(
-    WorkerProcessInfo* work_process_info) const {
+    WorkerProcessInfo* worker_process_info) const {
   CHECK_NE_OR_RETURN(rank(), 0);
-  if (bootstrap_conf_.has_host()) { work_process_info->set_host(bootstrap_conf_.host()); }
+  if (bootstrap_conf_.has_host()) { worker_process_info->set_host(bootstrap_conf_.host()); }
   return Maybe<void>::Ok();
 }
 
