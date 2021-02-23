@@ -13,6 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#ifndef ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_ENGINE_H_
+#define ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_ENGINE_H_
+
 #include <vector>
 #include <memory>
 #include <functional>
@@ -105,3 +109,5 @@ class StackAutogradEngine final : public AutogradEngine {
 }  // namespace one
 
 }  // namespace oneflow
+#endif
+
