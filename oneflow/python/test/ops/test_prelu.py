@@ -92,8 +92,6 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
 
             return loss
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     x = (np.random.random(x_shape) - 1).astype(type_name_to_np_type[dtype])
     y = PreluJob(x).get()
     _check(test_case, x, y.numpy(), shared_axes)

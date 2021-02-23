@@ -24,21 +24,6 @@ enum ActivationType {
   kRelu = 3;
 }
 
-message SigmoidCrossEntropyOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string loss = 3;
-  required DataType label_type = 4;
-}
-
-message SigmoidCrossEntropyGradOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string prediction_diff = 3;
-  required string loss_diff = 4;
-  required DataType label_type = 5;
-}
-
 message DistributeConcatOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -646,7 +631,6 @@ message OperatorConf {
 
     // domain op
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-    SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
@@ -656,7 +640,6 @@ message OperatorConf {
     ModelSaveOpConf model_save_conf = 297;
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
     ModelLoadOpConf model_load_conf = 301;
-    SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 317;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
