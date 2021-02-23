@@ -32,6 +32,8 @@ limitations under the License.
 #include "oneflow/core/register/blob_desc.pb.h"
 #include "oneflow/core/eager/eager_symbol.pb.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
+#include "oneflow/core/operator/op_conf.cfg.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace py = pybind11;
 
@@ -62,6 +64,12 @@ Maybe<eager::cfg::EagerSymbol> MakeEagerSymbol(const std::string& serialized_str
   return std::make_shared<eager::cfg::EagerSymbol>(eager_symbol);
 }
 
+Maybe<cfg::OperatorConf> MakeOpConf(const std::string& serialized_str) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &op_conf)) << "op_conf parse failed";
+  return std::make_shared<cfg::OperatorConf>(op_conf);
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
@@ -71,6 +79,9 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
 
   m.def("MakeEagerSymbolByString",
         [](const std::string& str) { return MakeEagerSymbol(str).GetPtrOrThrow(); });
+
+  m.def("MakeOpConfByString",
+        [](const std::string& str) { return MakeOpConf(str).GetPtrOrThrow(); });
 }
 
 }  // namespace oneflow

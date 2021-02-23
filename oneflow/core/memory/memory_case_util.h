@@ -45,6 +45,10 @@ struct MemoryCaseUtil {
 
   static int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case);
 
+  static int64_t GenMemZoneId(const MemoryCase& mem_case);
+
+  static int64_t MergeThrdMemZoneId(int64_t thrd_id, const MemoryCase& mem_case);
+
   static bool IsHostUnPinnedMemoryCase(const MemoryCase& mem_case);
 };
 

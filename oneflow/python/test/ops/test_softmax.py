@@ -72,8 +72,6 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = SoftmaxJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:

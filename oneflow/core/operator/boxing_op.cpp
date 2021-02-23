@@ -60,9 +60,9 @@ Symbol<OperatorConf> BoxingOp::GetOpConfWithoutOpNameAndLbn() const {
   return SymbolOf(op_conf);
 }
 
-Maybe<void> BoxingOp::InferBlobDescs(
+Maybe<void> BoxingOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
   if (conf.in_box_case() == BoxingOpConf::kAddBox) {
