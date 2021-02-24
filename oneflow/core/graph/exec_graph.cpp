@@ -106,7 +106,7 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
     }
   }
   CHECK_JUST(op_->InferInplaceObn2IbnIf(&mut_inplace_obn2ibn_, &con_inplace_obn2ibn_,
-                                        GetBlobDesc4BnInOp, parallel_ctx, sbp_signature));
+                                        GetBlobDesc4BnInOp, parallel_ctx));
 }
 
 std::function<const BlobDesc&(const std::string&)> ExecNode::GetLogicalBlobDesc4BnInOpFunc() const {

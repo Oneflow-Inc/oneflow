@@ -347,16 +347,16 @@ Maybe<void> Operator::InferInplaceObn2IbnIf(
     HashMap<std::string, std::string>* mut_inplace_obn2ibn,
     HashMap<std::string, std::string>* con_inplace_obn2ibn,
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   return InferInplaceObn2Ibn(mut_inplace_obn2ibn, con_inplace_obn2ibn, GetBlobDesc4BnInOp,
-                             parallel_ctx, sbp_signature);
+                             parallel_ctx);
 }
 
 Maybe<void> Operator::InferInplaceObn2Ibn(
     HashMap<std::string, std::string>* mut_inplace_obn2ibn,
     HashMap<std::string, std::string>* con_inplace_obn2ibn,
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   for (const std::string& obn : output_bns()) {
     const auto& obn_modifier = OutputBlobModifier4Obn(obn);
     if (obn_modifier.has_mutable_inplace_ibn()) {
