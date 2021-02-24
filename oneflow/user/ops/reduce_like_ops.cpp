@@ -44,7 +44,7 @@ REGISTER_USER_OP("reduce_sum_like")
         const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
         num_axes = in_tensor.shape().NumAxes();
         const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
-        conf_axes = {reduced_axes.begin(), reduced_axes.end()};
+        ReduceSbpUtil::GetRegularAxes(num_axes, reduced_axes, &conf_axes);
       }
       const auto& like_num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();

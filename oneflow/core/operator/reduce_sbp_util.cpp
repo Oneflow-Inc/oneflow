@@ -36,4 +36,9 @@ std::function<bool(int32_t)> ReduceSbpUtil::MakePredicatorIsReducedAxis(
   return [axis_set](int32_t axis) -> bool { return axis_set->find(axis) != axis_set->end(); };
 }
 
+void ReduceSbpUtil::GetRegularAxes(int64_t num_axes, const std::vector<int32_t>& reduce_axes,
+                                   HashSet<int32_t>* axes) {
+  for (auto axis : reduce_axes) { axes->insert(ShiftNegativeAxis(axis, num_axes)); }
+}
+
 }  // namespace oneflow

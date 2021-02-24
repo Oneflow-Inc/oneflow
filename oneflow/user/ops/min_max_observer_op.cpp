@@ -23,6 +23,8 @@ REGISTER_USER_OP("min_max_observer")
     .Input("in")
     .Output("scale")
     .Output("zero_point")
+    // NOTE(Liang Depeng): "google" or "cambricon"
+    .Attr<std::string>("quantization_formula", "google")
     // NOTE(Liang Depeng): quantize from float32 to "quantization_bit" bit signed or unsigned
     // integer
     .Attr<int32_t>("quantization_bit", 8)
@@ -33,13 +35,18 @@ REGISTER_USER_OP("min_max_observer")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
 
-      if (ctx->Attr<bool>("per_layer_quantization") == true) {
+      if (ctx->Attr<std::string>("quantization_formula") == "google") {
+        if (ctx->Attr<bool>("per_layer_quantization") == true) {
+          *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({1});
+          *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({1});
+        } else {
+          // NOTE(Liang Depeng): For now per-channel quantization only support axis 0
+          *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({in_shape->At(0)});
+          *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({in_shape->At(0)});
+        }
+      } else {  // quantization_formula == "cambricon"
         *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({1});
         *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({1});
-      } else {
-        // NOTE(Liang Depeng): For now per-channel quantization only support axis 0
-        *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({in_shape->At(0)});
-        *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({in_shape->At(0)});
       }
 
       *ctx->Dtype4ArgNameAndIndex("scale", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
@@ -75,6 +82,9 @@ REGISTER_USER_OP("min_max_observer")
 
       std::string quantization_scheme = op_conf.attr<std::string>("quantization_scheme");
       CHECK_OR_RETURN(quantization_scheme == "symmetric" || quantization_scheme == "affine");
+
+      std::string quantization_formula = op_conf.attr<std::string>("quantization_formula");
+      CHECK_OR_RETURN(quantization_formula == "google" || quantization_formula == "cambricon");
       return Maybe<void>::Ok();
     });
 
