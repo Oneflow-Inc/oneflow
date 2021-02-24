@@ -81,11 +81,6 @@ bool OpEdge::CalcIsStrict121Connected() const {
   return true;
 }
 
-Maybe<const OptInt64*> OpNode::BatchAxis4Lbi(const LogicalBlobId& lbi) const {
-  const auto& op = ProducerOpNode4Lbi(lbi).op();
-  return op.BatchAxis4BnInOp(*JUST(op.obn4lbi(lbi)));
-}
-
 const SbpParallel& OpNode::SbpParallel4BnInOp(const std::string& bn_in_op) const {
   return *CHECK_JUST(op().SbpParallel4BnInOp(bn_in_op));
 }
@@ -301,18 +296,9 @@ const ParallelDesc& OpNode::BlobParallelDesc4Obn(const std::string& obn) const {
 }
 
 void OpNode::InferBlobParallelDesc() {
-  auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
-    auto iter = obn2blob_parallel_desc_.find(obn);
-    if (iter == obn2blob_parallel_desc_.end()) {
-      iter = obn2blob_parallel_desc_.emplace(obn, parallel_desc()).first;
-    }
-    return &iter->second;
-  };
-  auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc* {
-    return &LogicalBlobDesc4Lbi(op().BnInOp2Lbi(ibn));
-  };
-  CHECK_JUST(op().InferOutParallelDescIf(ParallelDesc4Obn, LogicalBlobDesc4Ibn, parallel_desc(),
-                                         &sbp_signature()));
+  for (const auto& bn : op().output_bns()) {
+    obn2blob_parallel_desc_.emplace(bn, *CHECK_JUST(op().GetParallelDesc4BnInOp(bn)));
+  }
 }
 
 void OpNode::InitLbi2SourceNode() {
@@ -475,15 +461,10 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
     const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
     const SbpParallel* sbp = &producer->SbpParallel4Lbi(lbi);
-    const OptInt64* batch_axis = CHECK_JUST(producer->BatchAxis4Lbi(lbi));
-    ibn2sbp_infer_hint.emplace(ibn,
-                               SbpInferHint(parallel_desc, logical_blob_desc, sbp, batch_axis));
+    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(parallel_desc, logical_blob_desc, sbp));
   }
-  const auto& BatchAxis4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const OptInt64*> {
-    return op_node->op().BatchAxis4BnInOp(bn_in_op);
-  };
   CHECK_JUST(InferOpSbpSignature(op_node->mut_op(), sbp_sig_conf, op_node->parallel_desc(),
-                                 ibn2sbp_infer_hint, BatchAxis4BnInOp));
+                                 ibn2sbp_infer_hint));
   op_node->InitLbi2SbpParallel();
 }
 
@@ -557,18 +538,10 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
       return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn));
     };
+    JUST(op_node->mut_op()->FillOpParallelDesc(op_node->parallel_desc()));
     JUST(op_node->mut_op()->FillLogicalInBlobDesc(LogicalBlobDesc4BnInOp));
     // Infer ParallelSignature
     JUST(op_node->mut_op()->InferParallelSignatureIf());
-    // Infer batch_axis
-    const auto& BatchAxis4Ibn = [&](const std::string& ibn) -> Maybe<const OptInt64> {
-      const auto& lbi = op_node->op().BnInOp2Lbi(ibn);
-      const auto* producer = op_node->MutSrcNode4InputLbi(lbi);
-      CHECK_NOTNULL_OR_RETURN(producer);
-      return producer->op().GetBatchAxis4Obn(*JUST(producer->op().obn4lbi(lbi)));
-    };
-    JUST(op_node->mut_op()->FillInBatchAxis(BatchAxis4Ibn));
-    JUST(op_node->mut_op()->InferBatchAxisIf());
     // Infer mirrored_signature
     bool is_mirrored_conf = false;
     {
@@ -615,12 +588,6 @@ DataType OpGraph::GetBlobDataType(const LogicalBlobId& lbi) const {
 const BlobDesc& OpGraph::GetLogicalBlobDesc(const LogicalBlobId& lbi) const {
   return op_name2op_node_.at(lbi.op_name())
       ->LogicalBlobDesc4Lbi(GetLogicalBlobIdKey(lbi.op_name(), lbi));
-}
-
-bool OpGraph::IsBatchAxisBlob(const std::string& op_name, const LogicalBlobId& lbi) const {
-  const auto& op = *op_name2op_node_.at(GetOpNameKey(op_name, lbi));
-  const auto& opt_int64 = *CHECK_JUST(op.BatchAxis4Lbi(GetLogicalBlobIdKey(op_name, lbi)));
-  return opt_int64.has_value();
 }
 
 void OpGraph::CheckBlobDescs(const std::string& op_name,
@@ -741,19 +708,6 @@ void OpGraph::DumpOpTimeShape(Job* job) const {
     const auto* in_blob_fastest_time_shape = op_node->GetInputBlobFastestTimeShape();
     if (in_blob_fastest_time_shape != nullptr) {
       in_blob_fastest_time_shape->ToProto(op_time_shape->mutable_in_blob_fastest_time_shape());
-    }
-  });
-}
-
-void OpGraph::DumpBatchAxisLbi(Job* job) const {
-  auto* lbn2batch_axis = job->mutable_helper()->mutable_lbn2batch_axis();
-  ForEachNode([&](OpNode* op_node) {
-    for (const auto& obn : op_node->op().output_bns()) {
-      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(obn);
-      const auto& lbn = GenLogicalBlobName(lbi);
-      const auto& batch_axis = *CHECK_JUST(op_node->BatchAxis4Lbi(lbi));
-      const auto& pair = PbMapPair<std::string, OptInt64>(lbn, batch_axis);
-      CHECK(lbn2batch_axis->insert(pair).first->second == batch_axis);
     }
   });
 }

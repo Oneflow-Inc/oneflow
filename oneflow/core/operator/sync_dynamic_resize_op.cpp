@@ -44,12 +44,6 @@ class SyncDynamicResizeOp : public Operator {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
