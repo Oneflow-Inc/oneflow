@@ -96,8 +96,6 @@ Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
     if (cur_node->op().output_bns().size() != 1) { break; }
     const std::string& sole_obn = cur_node->op().SoleObn();
     if (!cur_node->SbpParallel4BnInOp(sole_obn).has_broadcast_parallel()) { break; }
-    const auto& lbi = cur_node->op().BnInOp2Lbi(sole_obn);
-    if (JUST(cur_node->BatchAxis4Lbi(lbi))->has_value()) { break; }
     out->push_back(cur_node);
     if (cur_node->out_edges().size() == 1) {
       cur_node = cur_node->SoleOutEdge()->dst_node();

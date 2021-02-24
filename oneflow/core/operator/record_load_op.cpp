@@ -45,12 +45,6 @@ void RecordLoadOp::VirtualGenKernelConf(
   kernel_conf->mutable_record_load_conf()->set_parallel_num(parallel_ctx->parallel_num());
 }
 
-Maybe<void> RecordLoadOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("out")->set_value(0);
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> RecordLoadOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())

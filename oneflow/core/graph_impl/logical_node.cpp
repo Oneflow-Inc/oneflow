@@ -86,7 +86,7 @@ void AddFuncForFindBldSubTskGphMthd(const std::string& k, BldSubTskGphMthd v) {
 
 }  // namespace
 
-std::shared_ptr<Operator> LogicalNode::SoleOp() const {
+std::shared_ptr<const Operator> LogicalNode::SoleOp() const {
   CHECK_EQ(op_vec_.size(), 1);
   return op_vec_.front();
 }
@@ -113,7 +113,7 @@ bool LogicalNode::IsDataLbiOnOutEdge(const LogicalBlobId& lbi) const {
 std::string LogicalNode::VisualStr() const {
   std::stringstream ss;
   ss << TypeName();
-  for (std::shared_ptr<Operator> op : op_vec_) { ss << "\\n" << op->op_name(); }
+  for (std::shared_ptr<const Operator> op : op_vec_) { ss << "\\n" << op->op_name(); }
   return ss.str();
 }
 

@@ -24,15 +24,6 @@ Maybe<void> GetSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-std::function<Maybe<void>(user_op::BatchAxisContext* ctx)> MakeInferBatchAxisFn(
-    const std::string& input_arg_name) {
-  return [input_arg_name](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-    CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex(input_arg_name, 0)->value(), 0);
-    ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
-    return Maybe<void>::Ok();
-  };
-}
-
 }  // namespace
 
 REGISTER_CPU_ONLY_USER_OP("image_flip")
@@ -53,8 +44,7 @@ REGISTER_CPU_ONLY_USER_OP("image_flip")
       *out_desc = *in_desc;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn(GetSbp)
-    .SetBatchAxisInferFn(MakeInferBatchAxisFn("in"));
+    .SetGetSbpFn(GetSbp);
 
 REGISTER_CPU_ONLY_USER_OP("object_bbox_flip")
     .Input("bbox")
@@ -79,8 +69,7 @@ REGISTER_CPU_ONLY_USER_OP("object_bbox_flip")
       *out_desc = *bbox_desc;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn(GetSbp)
-    .SetBatchAxisInferFn(MakeInferBatchAxisFn("bbox"));
+    .SetGetSbpFn(GetSbp);
 
 REGISTER_CPU_ONLY_USER_OP("object_bbox_scale")
     .Input("bbox")
@@ -100,8 +89,7 @@ REGISTER_CPU_ONLY_USER_OP("object_bbox_scale")
       *out_desc = *bbox_desc;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn(GetSbp)
-    .SetBatchAxisInferFn(MakeInferBatchAxisFn("bbox"));
+    .SetGetSbpFn(GetSbp);
 
 REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_flip")
     .Input("poly")
@@ -126,8 +114,7 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_flip")
       *out_desc = *poly_desc;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn(GetSbp)
-    .SetBatchAxisInferFn(MakeInferBatchAxisFn("poly"));
+    .SetGetSbpFn(GetSbp);
 
 REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_scale")
     .Input("poly")
@@ -147,8 +134,7 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_scale")
       *out_desc = *poly_desc;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn(GetSbp)
-    .SetBatchAxisInferFn(MakeInferBatchAxisFn("poly"));
+    .SetGetSbpFn(GetSbp);
 
 REGISTER_CPU_ONLY_USER_OP("image_normalize")
     .Input("in")
@@ -163,8 +149,7 @@ REGISTER_CPU_ONLY_USER_OP("image_normalize")
       *out_desc = *in_desc;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn(GetSbp)
-    .SetBatchAxisInferFn(MakeInferBatchAxisFn("in"));
+    .SetGetSbpFn(GetSbp);
 
 REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_to_mask")
     .Input("poly")
@@ -190,7 +175,6 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_to_mask")
       *out_desc = *poly_desc;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn(GetSbp)
-    .SetBatchAxisInferFn(MakeInferBatchAxisFn("poly"));
+    .SetGetSbpFn(GetSbp);
 
 }  // namespace oneflow
