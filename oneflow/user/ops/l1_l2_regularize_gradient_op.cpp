@@ -45,7 +45,6 @@ REGISTER_USER_OP("l1_l2_regularize_gradient")
     .Attr<float>("l1", 0)
     .Attr<float>("l2", 0)
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn(GetSbpSignatures);
 
 }  // namespace oneflow

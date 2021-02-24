@@ -68,13 +68,6 @@ void SetLikeArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
   }
 }
 
-Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
-  FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
-    *ctx->BatchAxis4ArgNameAndIndex("out", i) = *ctx->BatchAxis4ArgNameAndIndex("like", i);
-  }
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
   const auto axis = ctx->Attr<int64_t>("axis");
   const int64_t in_num_axes =
@@ -162,7 +155,6 @@ REGISTER_USER_OP("split_like")
     .Attr<int64_t>("axis")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn(SetLikeArgModifier)
-    .SetBatchAxisInferFn(InferBatchAxis)
     .SetGetSbpFn(GetSbpSignature);
 
 REGISTER_USER_OP_GRAD("split_like").SetGenBackwardOpConfFn(GenGradOp);
