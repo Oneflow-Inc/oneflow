@@ -407,10 +407,6 @@ Maybe<void> Operator::FilterAndCheckValidSbpSignatureListByLogicalShape(
     }
     return ret;
   };
-  for (const auto& ibn : input_bns()) {
-    // check ibn to hint valid
-    JUST(SbpInferHint4Ibn(ibn));
-  }
   for (const auto& sbp_signature : total_sbp_sig_list.sbp_signature()) {
     bool is_valid = true;
 
