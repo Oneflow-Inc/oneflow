@@ -71,8 +71,6 @@ def _test_fused_scale_tril_fw_bw(
             flow.watch_diff(out, test_global_storage.Setter("out_diff"))
             return out
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     x = np.random.randint(low=0, high=100, size=shape)
     test_fused_scale_tril_fw_bw_job(x.astype(np_type)).get()
 

@@ -46,6 +46,18 @@ void GenQuantScaleAffine(const T *in_ptr, const int32_t quantization_bit,
 }
 
 template<typename T>
+void GenQuantScaleCambricon(const T *in_ptr, const int32_t quantization_bit,
+                            const int64_t num_elements, T *scale, T *zero_point) {
+  T in_max = *std::max_element(in_ptr, in_ptr + num_elements);
+  T in_min = *std::min_element(in_ptr, in_ptr + num_elements);
+
+  in_max = std::max(std::abs(in_max), std::abs(in_min));
+
+  *scale = std::floor(std::log2(in_max)) - (quantization_bit - 2);
+  *zero_point = 0;
+}
+
+template<typename T>
 class CpuMinMaxObserverKernel final : public user_op::OpKernel {
  public:
   CpuMinMaxObserverKernel() = default;
@@ -60,33 +72,41 @@ class CpuMinMaxObserverKernel final : public user_op::OpKernel {
     const std::string quantization_scheme = ctx->Attr<std::string>("quantization_scheme");
     const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
     const bool per_layer_quantization = ctx->Attr<bool>("per_layer_quantization");
+    const std::string quantization_formula = ctx->Attr<std::string>("quantization_formula");
 
     const T *in_ptr = in->dptr<T>();
     T *scale_ptr = scale->mut_dptr<T>();
     T *zero_point_ptr = zero_point->mut_dptr<T>();
 
-    // NOTE(Liang Depeng): per-layer quantization by default
-    int64_t outer_num = 1;
-    int64_t inner_num = in->shape().elem_cnt();
-    if (!per_layer_quantization) {  // per-channel quantization
-      outer_num = in->shape().At(0);
-      inner_num = in->shape().Count(1);
-    }
+    if (quantization_formula == "google") {
+      // NOTE(Liang Depeng): per-layer quantization by default
+      int64_t outer_num = 1;
+      int64_t inner_num = in->shape().elem_cnt();
+      if (!per_layer_quantization) {  // per-channel quantization
+        outer_num = in->shape().At(0);
+        inner_num = in->shape().Count(1);
+      }
 
-    if (quantization_scheme == "symmetric") {
-      FOR_RANGE(int64_t, c, 0, outer_num) {
-        GenQuantScaleSymmetric(in_ptr, quantization_bit, inner_num, scale_ptr, zero_point_ptr);
-        in_ptr += inner_num;
-        scale_ptr += 1;
-        zero_point_ptr += 1;
+      if (quantization_scheme == "symmetric") {
+        FOR_RANGE(int64_t, c, 0, outer_num) {
+          GenQuantScaleSymmetric(in_ptr, quantization_bit, inner_num, scale_ptr, zero_point_ptr);
+          in_ptr += inner_num;
+          scale_ptr += 1;
+          zero_point_ptr += 1;
+        }
+      } else {  // quantization_scheme == "affine"
+        FOR_RANGE(int64_t, c, 0, outer_num) {
+          GenQuantScaleAffine(in_ptr, quantization_bit, inner_num, scale_ptr, zero_point_ptr);
+          in_ptr += inner_num;
+          scale_ptr += 1;
+          zero_point_ptr += 1;
+        }
       }
-    } else {  // quantization_scheme == "affine"
-      FOR_RANGE(int64_t, c, 0, outer_num) {
-        GenQuantScaleAffine(in_ptr, quantization_bit, inner_num, scale_ptr, zero_point_ptr);
-        in_ptr += inner_num;
-        scale_ptr += 1;
-        zero_point_ptr += 1;
-      }
+    } else if (quantization_formula == "cambricon") {
+      GenQuantScaleCambricon(in_ptr, quantization_bit, in->shape().elem_cnt(), scale_ptr,
+                             zero_point_ptr);
+    } else {
+      UNIMPLEMENTED();
     }
   }
 

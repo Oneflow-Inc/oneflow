@@ -61,8 +61,6 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axes):
             return (m, v)
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = MomentsJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
