@@ -897,8 +897,6 @@ Maybe<OpNodeSignatureDesc> InstructionsBuilder::GetOpNodeSignatureSymbol(
     op_node_signature->mutable_mirrored_signature()->CopyFrom(op_attribute->mirrored_signature());
     op_node_signature->mutable_logical_blob_desc_signature()->CopyFrom(
         op_attribute->logical_blob_desc_signature());
-    op_node_signature->mutable_batch_axis_signature()->CopyFrom(
-        op_attribute->batch_axis_signature());
     op_node_signature->mutable_parallel_signature()->CopyFrom(op_attribute->parallel_signature());
   }
   if (JUST(HasSymbol<cfg::OpNodeSignature>(*op_node_signature))) {
