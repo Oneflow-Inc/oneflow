@@ -437,8 +437,8 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
     }
   }
 
-  UserOpInferContext infer_ctx(op_conf(), nullptr, nullptr, job_desc(), BlobDesc4BnInOp,
-                               parallel_desc.parallel_num());
+  UserOpInferContext infer_ctx(op_conf(), nullptr, CHECK_JUST(sbp_signature()), job_desc(),
+                               BlobDesc4BnInOp, parallel_desc.parallel_num());
 
   JUST(val_->logical_tensor_desc_infer_fn(&infer_ctx));
   for (const auto& pair : infer_ctx.outputs()) {
