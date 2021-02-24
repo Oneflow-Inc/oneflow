@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/id_util.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/device/cpu_stream_index.h"
+#include "oneflow/core/device/cuda_stream_index.h"
 
 namespace oneflow {
 
@@ -60,13 +61,19 @@ void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataReg
 void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int64_t dev_phy_id) {
   copy_type_ = copy_type;
   set_machine_id(machine_id);
+  ProcessId process_id{static_cast<uint32_t>(machine_id), 0};
+  DeviceId device_id{DeviceType::kCPU, 0};
+  auto* stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
+      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id, device_id));
+  uint32_t stream_index = 0;
   if (copy_type == CopyHdOpConf::H2D) {
-    set_thrd_id(Global<IDMgr>::Get()->GetGpuH2DThrdId(dev_phy_id));
+    stream_index = stream_index_generator->GenerateH2DStreamIndex();
   } else if (copy_type == CopyHdOpConf::D2H) {
-    set_thrd_id(Global<IDMgr>::Get()->GetGpuD2HThrdId(dev_phy_id));
+    stream_index = stream_index_generator->GenerateD2HStreamIndex();
   } else {
     UNIMPLEMENTED();
   }
+  set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
 }
 
 void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
