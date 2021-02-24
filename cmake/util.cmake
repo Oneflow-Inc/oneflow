@@ -6,10 +6,14 @@ function(SHOW_VARIABLES)
 endfunction()
 
 macro(write_file_if_different file_path content)
-  file(READ ${file_path} current_content)
-  # NOTE: it seems a cmake bug that "content" in this macro is not
-  # treated as a variable
-  if (NOT (current_content STREQUAL ${content}))
+  if (EXISTS ${file_path})
+    file(READ ${file_path} current_content)
+    # NOTE: it seems a cmake bug that "content" in this macro is not
+    # treated as a variable
+    if (NOT (current_content STREQUAL ${content}))
+      file(WRITE ${file_path} ${content})
+    endif()
+  else()
     file(WRITE ${file_path} ${content})
   endif()
 endmacro()

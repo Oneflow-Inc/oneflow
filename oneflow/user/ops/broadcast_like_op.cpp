@@ -23,7 +23,8 @@ namespace {
 Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   int32_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
   const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
-  HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
+  HashSet<int32_t> conf_axes;
+  ReduceSbpUtil::GetRegularAxes(num_axes, reduced_axes, &conf_axes);
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
   int32_t num_reduced_axis = 0;
   FOR_RANGE(int64_t, i, 0, num_axes) {

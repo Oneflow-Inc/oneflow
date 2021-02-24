@@ -731,6 +731,11 @@ def set_qat_moving_min_max_momentum(func_desc, value: float):
     )
 
 
+@oneflow_function_config("qat.target_backend")
+def set_qat_symmetric(func_desc, value: str):
+    func_desc.job_config_proto.mutable_qat_config().set_target_backend(value)
+
+
 @oneflow_function_config("enable_auto_mixed_precision")
 def set_enable_auto_mixed_precision(func_desc, value=True):
     r"""If true, then job will use mixed precision mode, it means use both float16 and float32 during model training.
