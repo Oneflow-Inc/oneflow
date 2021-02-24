@@ -28,8 +28,8 @@ std::vector<std::shared_ptr<Scope>>* GlobalScopeStack() {
 }  // namespace
 
 std::mutex* GlobalScopeStackMutex() {
-  static std::mutex mutex;
-  return &mutex;
+  static std::mutex global_scope_stack_mutex;
+  return &global_scope_stack_mutex;
 }
 
 Maybe<Scope> GetCurrentScope() {
@@ -40,7 +40,7 @@ Maybe<Scope> GetCurrentScope() {
 }
 
 Maybe<void> InitGlobalScopeStack(const std::shared_ptr<Scope>& scope) {
-  std::unique_lock<std::mutex> lock(*GlobalScopeStackMutex);
+  std::unique_lock<std::mutex> lock(*GlobalScopeStackMutex());
   auto* scope_stack = GlobalScopeStack();
   scope_stack->clear();
   scope_stack->emplace_back(scope);
