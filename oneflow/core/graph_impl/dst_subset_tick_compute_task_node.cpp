@@ -56,4 +56,22 @@ void DstSubsetTickCompTaskNode::InferProducedDataRegstTimeShape() {
 
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kDstSubsetTick);
 
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDstSubsetTick)                        \
+  .SetStreamIndexGetterFn([](const CompTaskNode* comp_task_node,                                                  \
+                             std::function<uint32_t(int task_type)> Counter,                                      \
+                             std::function<uint32_t(const TaskNode*)> AllocateCpuStreamIndexEvenly) -> uint32_t { \
+      return CudaStreamIndex::kCompute;                                                                           \
+  });
+
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kDstSubsetTick)                        \
+  .SetStreamIndexGetterFn([](const CompTaskNode* comp_task_node,                                                  \
+                             std::function<uint32_t(int task_type)> Counter,                                      \
+                             std::function<uint32_t(const TaskNode*)> AllocateCpuStreamIndexEvenly) -> uint32_t { \
+    if (comp_task_node->IsIndependent()) {                                                                        \
+      return StreamIndex::Independent(TaskType::kDstSubsetTick, Counter);                                         \
+    } else {                                                                                                      \
+      return AllocateCpuStreamIndexEvenly(comp_task_node);                                                        \
+    }                                                                                                             \
+  });
+
 }  // namespace oneflow

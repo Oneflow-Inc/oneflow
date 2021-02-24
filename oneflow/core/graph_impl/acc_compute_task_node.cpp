@@ -62,6 +62,23 @@ void AccCompTaskNode::BuildExecGphAndRegst() {
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("acc", AccCompTaskNode);
 REGISTER_USER_OP_INDEPENDENT_AREA_ID("acc")
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER_GPU(TaskType::kAcc);
+
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kAcc)                                  \
+  .SetStreamIndexGetterFn([](const CompTaskNode* comp_task_node,                                                  \
+                             std::function<uint32_t(int task_type)> Counter,                                      \
+                             std::function<uint32_t(const TaskNode*)> AllocateCpuStreamIndexEvenly) -> uint32_t { \
+      return CudaStreamIndex::kCompute;                                                                           \
+  });
+
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kAcc)                                  \
+  .SetStreamIndexGetterFn([](const CompTaskNode* comp_task_node,                                                  \
+                             std::function<uint32_t(int task_type)> Counter,                                      \
+                             std::function<uint32_t(const TaskNode*)> AllocateCpuStreamIndexEvenly) -> uint32_t { \
+    if (comp_task_node->IsIndependent()) {                                                                        \
+      return StreamIndex::Independent(TaskType::kAcc, Counter);                                                   \
+    } else {                                                                                                      \
+      return AllocateCpuStreamIndexEvenly(comp_task_node);                                                        \
+    }                                                                                                             \
+  });
 
 }  // namespace oneflow

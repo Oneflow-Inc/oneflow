@@ -116,6 +116,23 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("ssp_variable_proxy", SspVariableProxyCompTaskNode);
 REGISTER_USER_OP_INDEPENDENT_AREA_ID("ssp_variable_proxy");
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER_GPU(TaskType::kSspVariableProxy);
+
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kSspVariableProxy)                     \
+  .SetStreamIndexGetterFn([](const CompTaskNode* comp_task_node,                                                  \
+                             std::function<uint32_t(int task_type)> Counter,                                      \
+                             std::function<uint32_t(const TaskNode*)> AllocateCpuStreamIndexEvenly) -> uint32_t { \
+      return CudaStreamIndex::kCompute;                                                                           \
+  });
+
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kSspVariableProxy)                     \
+  .SetStreamIndexGetterFn([](const CompTaskNode* comp_task_node,                                                  \
+                             std::function<uint32_t(int task_type)> Counter,                                      \
+                             std::function<uint32_t(const TaskNode*)> AllocateCpuStreamIndexEvenly) -> uint32_t { \
+    if (comp_task_node->IsIndependent()) {                                                                        \
+      return StreamIndex::Independent(TaskType::kSspVariableProxy, Counter);                                      \
+    } else {                                                                                                      \
+      return AllocateCpuStreamIndexEvenly(comp_task_node);                                                        \
+    }                                                                                                             \
+  });
 
 }  // namespace oneflow

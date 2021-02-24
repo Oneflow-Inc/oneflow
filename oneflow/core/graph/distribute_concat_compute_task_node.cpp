@@ -81,6 +81,22 @@ void DistributeConcatCompTaskNode::InferProducedDataRegstTimeShape() {
       GetSoleConsumedRegst("in")->data_regst_time_shape();
 }
 
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER_GPU(TaskType::kDistributeConcat);
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDistributeConcat)                     \
+  .SetStreamIndexGetterFn([](const CompTaskNode* comp_task_node,                                                  \
+                             std::function<uint32_t(int task_type)> Counter,                                      \
+                             std::function<uint32_t(const TaskNode*)> AllocateCpuStreamIndexEvenly) -> uint32_t { \
+      return CudaStreamIndex::kCompute;                                                                           \
+  });
+
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kDistributeConcat)                     \
+  .SetStreamIndexGetterFn([](const CompTaskNode* comp_task_node,                                                  \
+                             std::function<uint32_t(int task_type)> Counter,                                      \
+                             std::function<uint32_t(const TaskNode*)> AllocateCpuStreamIndexEvenly) -> uint32_t { \
+    if (comp_task_node->IsIndependent()) {                                                                        \
+      return StreamIndex::Independent(TaskType::kDistributeConcat, Counter);                                      \
+    } else {                                                                                                      \
+      return AllocateCpuStreamIndexEvenly(comp_task_node);                                                        \
+    }                                                                                                             \
+  });
 
 }  // namespace oneflow

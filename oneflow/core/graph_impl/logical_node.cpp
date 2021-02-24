@@ -127,10 +127,39 @@ void LogicalNode::GenSortedCompTaskNodes(
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
+      const IDMgr* id_mgr = Global<IDMgr>::Get();
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
-        auto strm_idx_getter = StreamIndexGetterRegistryManager::Get().GetStreamIndexGetterFunc(
-            parallel_desc_->device_type(), comp_task_node->GetTaskType());
-        comp_task_node->set_thrd_id(strm_idx_getter(dev_phy_id));
+#ifdef WITH_CUDA
+        switch (comp_task_node->GetCudaWorkType()) {
+          case CudaWorkType::kCompute: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuComputeThrdId(dev_phy_id));
+            break;
+          }
+          case CudaWorkType::kCopyH2D: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuH2DThrdId(dev_phy_id));
+            break;
+          }
+          case CudaWorkType::kCopyD2H: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuD2HThrdId(dev_phy_id));
+            break;
+          }
+          case CudaWorkType::kNccl: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuNcclThrdId(dev_phy_id));
+            break;
+          }
+          case CudaWorkType::kMix: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
+            break;
+          }
+          case CudaWorkType::kDecodeH2D: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuDecodeH2DThrdId(dev_phy_id));
+            break;
+          }
+          default: UNIMPLEMENTED();
+        }
+#else
+        UNIMPLEMENTED();
+#endif
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
         if (comp_task_node->IsIndependent()) {
           nodes->push_back({machine_id, comp_task_node});

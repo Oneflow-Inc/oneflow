@@ -23,7 +23,8 @@ limitations under the License.
 
 namespace oneflow {
 
-using StreamIndexGetterFn = std::function<int64_t(int64_t)>;
+class CompTaskNode;
+using StreamIndexGetterFn = std::function<int64_t(const CompTaskNode*, std::function<uint32_t(int task_type)>, std::function<uint32_t(const TaskNode*)>)>;
 
 class StreamIndexGetterRegistry final {
  public:
