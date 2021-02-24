@@ -62,12 +62,6 @@ class ModelInitV2Op : public Operator {
   }
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    BatchAxis4BnInOp("out")->set_value(0);
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -110,12 +104,6 @@ class ModelLoadV2Op : public Operator {
   }
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    BatchAxis4BnInOp("out")->set_value(0);
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -163,12 +151,6 @@ class ModelSaveV2Op final : public Operator {
   }
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    BatchAxis4BnInOp("out")->set_value(0);
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
