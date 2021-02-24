@@ -77,12 +77,6 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_to_fixed")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
-      ctx->BatchAxis4ArgNameAndIndex("scale", 0)->set_value(0);
-      return Maybe<void>::Ok();
     });
 
 REGISTER_CPU_ONLY_USER_OP("image_resize_keep_aspect_ratio")
@@ -133,13 +127,6 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_keep_aspect_ratio")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
-      ctx->BatchAxis4ArgNameAndIndex("size", 0)->set_value(0);
-      ctx->BatchAxis4ArgNameAndIndex("scale", 0)->set_value(0);
       return Maybe<void>::Ok();
     });
 

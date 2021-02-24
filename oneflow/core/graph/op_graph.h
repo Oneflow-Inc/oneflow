@@ -49,7 +49,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
-  Maybe<const OptInt64*> BatchAxis4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& SrcNode4Ibn(const std::string& bn_in_op) const;
   const ParallelDesc& BlobParallelDesc4Obn(const std::string& obn) const;
@@ -165,7 +164,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void DumpLogicalBlobDesc(Job* job) const;
   void DumpSbpSignature(Job* job) const;
   void DumpOpTimeShape(Job* job) const;
-  void DumpBatchAxisLbi(Job* job) const;
 
   Maybe<void> Init(const Job& job);
 
@@ -180,7 +178,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   Maybe<void> InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const;
   Maybe<void> InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
   Maybe<void> InferLogicalBlobDesc(const Job& job) const;
-  bool IsBatchAxisBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;
 

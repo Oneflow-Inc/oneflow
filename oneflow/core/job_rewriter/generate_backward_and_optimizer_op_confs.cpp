@@ -104,9 +104,9 @@ class GenerateBackwardAndOptimizerOpConfs final : public JobPass {
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
 };
 
-void FilterModelLbi2ModelDiffLbiByOpConf(const OpGraph& op_graph,
-                                 const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
-                                 HashMap<LogicalBlobId, LogicalBlobId>* model_lbi2model_diff_lbi) {
+void FilterModelLbi2ModelDiffLbiByOpConf(
+    const OpGraph& op_graph, const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
+    HashMap<LogicalBlobId, LogicalBlobId>* model_lbi2model_diff_lbi) {
   for (const auto& pair : lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     const LogicalBlobId& diff_lbi = pair.second;

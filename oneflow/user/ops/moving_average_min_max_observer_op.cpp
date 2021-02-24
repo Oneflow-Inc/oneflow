@@ -76,16 +76,6 @@ REGISTER_USER_OP("moving_average_min_max_observer")
       moving_min->set_requires_grad(false);
       moving_min->set_is_mutable(true);
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      const auto ClearBatchAxis = [ctx](const std::string& name) {
-        if (ctx->user_op_conf().has_output(name, 0)) {
-          ctx->BatchAxis4ArgNameAndIndex(name, 0)->clear_value();
-        }
-      };
-      ClearBatchAxis("scale");
-      ClearBatchAxis("zero_point");
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       // NOTE(Liang Depeng): all inputs need to be broadcast in order to accuratly calculate the
       // global scale and zero_point
