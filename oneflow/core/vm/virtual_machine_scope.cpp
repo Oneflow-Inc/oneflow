@@ -16,13 +16,13 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine_scope.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/oneflow_vm.h"
-#include "oneflow/core/control/global_precess_rank_info.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 namespace vm {
 
 VirtualMachineScope::VirtualMachineScope(const Resource& resource) {
-  Global<OneflowVM>::New(resource, GlobalProcessRankInfo::ThisMachineId());
+  Global<OneflowVM>::New(resource, GlobalProcessCtx::ThisProcessId());
 }
 
 VirtualMachineScope::~VirtualMachineScope() { Global<OneflowVM>::Delete(); }

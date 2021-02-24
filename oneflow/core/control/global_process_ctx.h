@@ -20,11 +20,11 @@ limitations under the License.
 
 namespace oneflow {
 
-struct GlobalProcessRankInfo {
-  static int64_t ThisMachineId();
-  static bool IsThisMachineMaster();
-  static size_t TotalMachineNum();
-  static std::string GetCtrlAddr(int64_t machine_id);
+struct GlobalProcessCtx {
+  static int64_t ThisProcessId();
+  static bool IsThisProcessMaster();
+  static size_t TotalProcessNum();
+  static std::string GetCtrlAddr(int64_t process_id);
   static std::string GetThisCtrlAddr();
   static std::string GetMasterCtrlAddr();
   static std::string PersistentPathPrefix();

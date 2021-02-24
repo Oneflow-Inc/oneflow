@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/control/global_precess_rank_info.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/eager/eager_symbol.pb.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
@@ -92,7 +92,7 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(
 Maybe<void> EagerOneflow::RunLogicalInstruction(
     const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction) {
   CHECK(cluster_instruction->has_eager_instruction());
-  CHECK(GlobalProcessRankInfo::IsThisMachineMaster());
+  CHECK(GlobalProcessCtx::IsThisProcessMaster());
   ClusterInstruction::MasterSendEagerInstruction(*cluster_instruction);
   return RunPhysicalInstruction(cluster_instruction);
 }
