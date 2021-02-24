@@ -24,40 +24,41 @@ class CPUStreamIndexGenerator final : public StreamIndexGenerator {
   bool IsD2HStreamIndex(stream_index_t index) const override { UNIMPLEMENTED(); }
   bool IsCommNetStreamIndex(stream_index_t index) const;
   bool IsTickTockStreamIndex(stream_index_t index) const;
-  bool IsIndependentTaskStreamIndex(stream_index_t index) const;
 
  private:
-  static const stream_index_t kComputeEnd = 250;
-  static const stream_index_t kCommNetOffset = 1;
-  static const stream_index_t kTickTockOffset = 2;
-  static const stream_index_t kIndependentStart = 256;
-
-  // for GenerateComputeStreamIndex
+  stream_index_t next_stream_index_;
+  stream_index_t compute_stream_index_begin_;
   stream_index_t compute_stream_num_;
-  stream_index_t compute_stream_counter_;
+  stream_index_t comm_net_stream_index_;
+  stream_index_t tick_tock_stream_index_;
+  // for GenerateComputeStreamIndex
+  stream_index_t compute_stream_index_counter_;
   // for GenerateIndependentStreamIndex
   HashMap<TaskType, stream_index_t> task_type2max_stream_num_;
   HashMap<TaskType, std::vector<stream_index_t>> task_type2allocated_stream_index_vec_;
   HashMap<TaskType, size_t> task_type2allocated_stream_index_vec_index_;
-  HashMap<TaskType, stream_index_t> task_type2stream_index_counter_;
 };
 
-CPUStreamIndexGenerator::CPUStreamIndexGenerator() {
+CPUStreamIndexGenerator::CPUStreamIndexGenerator()
+    : next_stream_index_(0), compute_stream_index_counter_(0) {
+  compute_stream_index_begin_ = next_stream_index_;
   // TODO: It will not be specified by cpu_device_num in future
   compute_stream_num_ = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
-  compute_stream_counter_ = 0;
+  next_stream_index_ += compute_stream_num_;
+  comm_net_stream_index_ = next_stream_index_++;
+  tick_tock_stream_index_ = next_stream_index_++;
 }
 
 stream_index_t CPUStreamIndexGenerator::GenerateComputeStreamIndex() {
-  return compute_stream_counter_++ % compute_stream_num_;
+  return compute_stream_index_counter_++ % compute_stream_num_;
 }
 
 stream_index_t CPUStreamIndexGenerator::GenerateCommNetStreamIndex() {
-  return kComputeEnd + kCommNetOffset;
+  return comm_net_stream_index_;
 }
 
 stream_index_t CPUStreamIndexGenerator::GenerateTickTockStreamIndex() {
-  return kComputeEnd + kTickTockOffset;
+  return tick_tock_stream_index_;
 }
 
 stream_index_t CPUStreamIndexGenerator::GenerateIndependentTaskStreamIndex(TaskType task_type) {
@@ -77,25 +78,22 @@ stream_index_t CPUStreamIndexGenerator::GenerateIndependentTaskStreamIndex(TaskT
     }
   }
 
-  stream_index_t index = task_type2stream_index_counter_[task_type]++;
+  stream_index_t index = next_stream_index_;
   if (max_num_iter != task_type2max_stream_num_.end()) {
     auto& allocated_stream_index_vec = task_type2allocated_stream_index_vec_[task_type];
     if (allocated_stream_index_vec.size() < max_num_iter->second) {
       allocated_stream_index_vec.push_back(index);
+      next_stream_index_++;
     } else {
       CHECK_EQ(allocated_stream_index_vec.size(), max_num_iter->second);
-      auto iter = task_type2allocated_stream_index_vec_index_.find(task_type);
-      if (iter == task_type2allocated_stream_index_vec_index_.end()) {
-        iter = task_type2allocated_stream_index_vec_index_.emplace(task_type, 0).first;
-      }
-      CHECK_LT(iter->second, allocated_stream_index_vec.size());
-      index = allocated_stream_index_vec[iter->second];
-      task_type2allocated_stream_index_vec_index_[task_type] =
-          (iter->second + 1) % allocated_stream_index_vec.size();
+      auto& next = task_type2allocated_stream_index_vec_index_[task_type];
+      index = allocated_stream_index_vec[next++];
+      next %= allocated_stream_index_vec.size();
     }
+  } else {
+    next_stream_index_++;
   }
-
-  return index + kIndependentStart;
+  return index;
 }
 
 bool CPUStreamIndexGenerator::IsComputeStreamIndex(stream_index_t index) const {
@@ -103,15 +101,11 @@ bool CPUStreamIndexGenerator::IsComputeStreamIndex(stream_index_t index) const {
 }
 
 bool CPUStreamIndexGenerator::IsCommNetStreamIndex(stream_index_t index) const {
-  return index == kComputeEnd + kCommNetOffset;
+  return index == comm_net_stream_index_;
 }
 
 bool CPUStreamIndexGenerator::IsTickTockStreamIndex(stream_index_t index) const {
-  return index == kComputeEnd + kTickTockOffset;
-}
-
-bool CPUStreamIndexGenerator::IsIndependentTaskStreamIndex(stream_index_t index) const {
-  return index >= kIndependentStart;
+  return index == tick_tock_stream_index_;
 }
 
 REGISTER_STREAM_INDEX_GENERATOR(DeviceType::kCPU, CPUStreamIndexGenerator);

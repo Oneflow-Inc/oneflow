@@ -6,6 +6,7 @@
 namespace oneflow {
 
 class CudaStreamIndexGenerator final : public StreamIndexGenerator {
+ public:
   stream_index_t GenerateComputeStreamIndex() override { return kCompute; }
   stream_index_t GenerateH2DStreamIndex() override { return kH2D; }
   stream_index_t GenerateD2HStreamIndex() override { return kD2H; }
