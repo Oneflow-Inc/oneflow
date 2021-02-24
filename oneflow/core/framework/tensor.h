@@ -81,7 +81,7 @@ class Tensor {
   virtual void set_dtype(DataType dtype) = 0;
   virtual void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) = 0;
   virtual void set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
-  virtual void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) = 0;
+  virtual void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) = 0;
   virtual void set_requires_grad(bool requires_grad) = 0;
   virtual void set_retain_grad(bool retain_grad) = 0;
 
@@ -129,7 +129,7 @@ class MirroredTensor final : public Tensor {
   }
   void set_device(const std::shared_ptr<const Device>& device) { impl_->set_device(device); }
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
-  void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
+  void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) override {
     grad_fn_node_ = grad_fn_node;
   }
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
@@ -188,7 +188,7 @@ class ConsistentTensor final : public Tensor {
     impl_->set_distribute(distribute);
   }
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
-  void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
+  void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) override {
     grad_fn_node_ = grad_fn_node;
   }
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
