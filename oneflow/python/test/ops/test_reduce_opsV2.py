@@ -60,8 +60,6 @@ def compare_reduce_sum_with_tensorflow(
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = ReduceSumJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:

@@ -60,9 +60,6 @@ def _compare_zeros_with_np(input_shape, device_type, machine_ids, device_counts)
 
         return of_zeros
 
-    check = flow.train.CheckPoint()
-    check.init()
-
     of_out_zeros = oneflow_zeros()
     assert np.allclose(of_out_zeros, np_out_zeros)
 
