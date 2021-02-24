@@ -70,7 +70,8 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   int64_t num_axes = in_tensor.shape().NumAxes();
   bool keep_dims = ctx->Attr<bool>("keepdims");
   const auto& reduce_axes = ctx->Attr<std::vector<int32_t>>("axis");
-  HashSet<int32_t> conf_axes = {reduce_axes.begin(), reduce_axes.end()};
+  HashSet<int32_t> conf_axes;
+  ReduceSbpUtil::GetRegularAxes(num_axes, reduce_axes, &conf_axes);
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
   int32_t num_reduced_axes = 0;
   FOR_RANGE(int64_t, i, 0, num_axes) {
