@@ -23,7 +23,7 @@ import oneflow as flow
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 
 from resnet_model import resnet50
-from imagenet_record_dataset import ImageNetRecordDataset
+from ofrecord_dataset import ImageNetRecordDataset
 
 DEFAULT_BATCH_SIZE = 4
 DEFAULT_CHECKPOINT_DIR = "/dataset/model_zoo/resnet_v15_of_best_model_val_top1_77318"
@@ -126,10 +126,15 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
         # sess.print_job_set()
         sess.launch()
 
+        job_name = sess.list_jobs()[0]
         input_names = sess.list_inputs()
         print("input names:", input_names)
         for input_name in input_names:
-            print('input "{}" info: {}'.format(input_name, sess.input_info(input_name)))
+            print(
+                'input "{}" info: {}'.format(
+                    input_name, sess.input_info(input_name, job_name)
+                )
+            )
 
         print("load saved resnet and inference result:")
         cmp_outputs = []
@@ -140,8 +145,8 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
             print("iter#{:<6} output:".format(i), arg_max, "label: ", label)
 
         cmp_outputs = np.array(cmp_outputs, dtype=np.float32)
-
         test_case.assertTrue(np.allclose(origin_outputs, cmp_outputs))
+        sess.close()
 
 
 if __name__ == "__main__":

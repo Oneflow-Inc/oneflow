@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
 #include "oneflow/core/operator/op_attribute.cfg.h"
+
 #include "oneflow/core/operator/op_conf.cfg.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 

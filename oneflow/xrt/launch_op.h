@@ -39,9 +39,6 @@ class XrtLaunchOp : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
-
   typedef std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4IbnFunc;
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,

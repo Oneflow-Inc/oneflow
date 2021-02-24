@@ -50,7 +50,7 @@ HashSet<int32_t> GetInclusiveAxes(const ShapeElemCntOpConf& conf, int32_t num_ax
 }  // namespace
 
 void ShapeElemCntOp::InitFromOpConf() {
-  EnrollInputBn("x", false)->set_use_header_only(true);
+  EnrollInputBn("x", false);
   EnrollOutputBn("y", false);
 }
 
@@ -70,12 +70,6 @@ void ShapeElemCntOp::VirtualGenKernelConf(
       GetInclusiveAxes(op_conf().shape_elem_cnt_conf(), num_axes);
   *kernel_conf->mutable_shape_elem_cnt_conf()->mutable_axis() = {inclusive_axis.begin(),
                                                                  inclusive_axis.end()};
-}
-
-Maybe<void> ShapeElemCntOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("y")->clear_value();
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> ShapeElemCntOp::GetSbpSignatures(

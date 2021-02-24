@@ -74,6 +74,27 @@ __global__ void FakeQuantizationAffine(const T *in_ptr, const T *scale_ptr, cons
   }
 }
 
+template<typename T>
+__global__ void FakeQuantizationCambricon(const T *in_ptr, const T *shift, const int64_t scale_size,
+                                          const int64_t elements, const int64_t panel_size,
+                                          const double quantization_bit, T *out_ptr) {
+  int64_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
+  int64_t step = gridDim.x * blockDim.x;
+
+  T upper_bound = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
+  T lower_bound = -upper_bound;
+
+  T scale = static_cast<T>(pow(2.0, static_cast<int32_t>(shift[0])));
+
+  while (gid < elements) {
+    T out = round(in_ptr[gid] / scale);
+    out = out > upper_bound ? upper_bound : out;
+    out = out < lower_bound ? lower_bound : out;
+    out_ptr[gid] = out * scale;
+    gid += step;
+  }
+}
+
 }  // namespace
 
 template<typename T>
@@ -91,19 +112,28 @@ class GpuFakeQuantizationKernel final : public user_op::OpKernel {
 
     const std::string quantization_scheme = ctx->Attr<std::string>("quantization_scheme");
     const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
+    const std::string quantization_formula = ctx->Attr<std::string>("quantization_formula");
 
     const int64_t elements = in->shape().elem_cnt();
     const int64_t panel_size = in->shape().Count(1);
     const int64_t scale_size = scale->shape().elem_cnt();
 
-    if (quantization_scheme == "symmetric") {
-      RUN_CUDA_KERNEL((FakeQuantizationSymmetric<T>), ctx->device_ctx(), elements, in->dptr<T>(),
+    if (quantization_formula == "google") {
+      if (quantization_scheme == "symmetric") {
+        RUN_CUDA_KERNEL((FakeQuantizationSymmetric<T>), ctx->device_ctx(), elements, in->dptr<T>(),
+                        scale->dptr<T>(), scale_size, elements, panel_size, quantization_bit,
+                        out->mut_dptr<T>());
+      } else {  // quantization_scheme == "affine"
+        RUN_CUDA_KERNEL((FakeQuantizationAffine<T>), ctx->device_ctx(), elements, in->dptr<T>(),
+                        scale->dptr<T>(), zero_point->dptr<T>(), scale_size, elements, panel_size,
+                        quantization_bit, out->mut_dptr<T>());
+      }
+    } else if (quantization_formula == "cambricon") {
+      RUN_CUDA_KERNEL((FakeQuantizationCambricon<T>), ctx->device_ctx(), elements, in->dptr<T>(),
                       scale->dptr<T>(), scale_size, elements, panel_size, quantization_bit,
                       out->mut_dptr<T>());
-    } else {  // quantization_scheme == "affine"
-      RUN_CUDA_KERNEL((FakeQuantizationAffine<T>), ctx->device_ctx(), elements, in->dptr<T>(),
-                      scale->dptr<T>(), zero_point->dptr<T>(), scale_size, elements, panel_size,
-                      quantization_bit, out->mut_dptr<T>());
+    } else {
+      UNIMPLEMENTED();
     }
   }
 
