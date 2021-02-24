@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
@@ -31,24 +32,6 @@ bool GlobalProcessCtx::IsThisProcessMaster() {
 size_t GlobalProcessCtx::WorldSize() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->ctrl_addr().size();
-}
-
-const Address& GlobalProcessCtx::GetCtrlAddr(int64_t rank) {
-  CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  const auto& process_ctx = *Global<ProcessCtx>::Get();
-  const auto& addr = process_ctx.ctrl_addr(rank);
-  CHECK(addr.has_host());
-  return addr;
-}
-
-const Address& GlobalProcessCtx::GetThisCtrlAddr() {
-  CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  return GetCtrlAddr(Global<ProcessCtx>::Get()->rank());
-}
-
-const Address& GlobalProcessCtx::GetMasterCtrlAddr() {
-  CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  return GetCtrlAddr(0);
 }
 
 std::string GlobalProcessCtx::LogDirEntry() {

@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
 
 #include <string>
-#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 
 namespace oneflow {
 
@@ -25,9 +24,6 @@ struct GlobalProcessCtx {
   static int64_t Rank();
   static bool IsThisProcessMaster();
   static size_t WorldSize();
-  static const Address& GetCtrlAddr(int64_t rank);
-  static const Address& GetThisCtrlAddr();
-  static const Address& GetMasterCtrlAddr();
   static std::string LogDirEntry();
 };
 
