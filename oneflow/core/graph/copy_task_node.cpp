@@ -17,6 +17,8 @@ limitations under the License.
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/id_util.h"
+#include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/device/cpu_stream_index.h"
 
 namespace oneflow {
 
@@ -92,7 +94,12 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 
 void CopyCommNetTaskNode::Init(int64_t machine_id) {
   set_machine_id(machine_id);
-  set_thrd_id(IdUtil::GetCommNetStreamId());
+  ProcessId process_id{static_cast<uint32_t>(machine_id), 0};
+  DeviceId device_id{DeviceType::kCPU, 0};
+  auto* generator = dynamic_cast<CPUStreamIndexGenerator*>(
+      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id, device_id));
+  StreamId stream_id{device_id, generator->GenerateCommNetStreamIndex()};
+  set_thrd_id(SerializeStreamIdToInt64(stream_id));
 }
 
 void CopyCommNetTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
