@@ -21,7 +21,9 @@ limitations under the License.
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 #include "oneflow/core/graph/collective_boxing_pack_task_node.h"
 #include "oneflow/core/graph/collective_boxing_unpack_task_node.h"
+#include "oneflow/core/common/id_util.h"
 #ifdef WITH_CUDA
+#include "oneflow/core/device/cuda_stream_index.h"
 #include <nccl.h>
 #endif
 
@@ -383,8 +385,14 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAll2All-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
         const int64_t machine_id = CHECK_JUST(in_parallel_desc.MachineId4ParallelId(i));
-        const int64_t device_id = CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(i));
-        const int64_t thrd_id = Global<IDMgr>::Get()->GetGpuComputeThrdId(device_id);
+        const int64_t device_index = CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(i));
+        ProcessId process_id{static_cast<uint32_t>(machine_id), 0};
+        DeviceId device_id{DeviceType::kGPU, static_cast<uint32_t>(device_index)};
+        auto* stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
+            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
+                                                                                 device_id));
+        uint32_t stream_index = stream_index_generator->GenerateComputeStreamIndex();
+        const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
         TaskNode* in_node = sorted_in_tasks.at(i);
         CollectiveBoxingPackTaskNode* pack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
