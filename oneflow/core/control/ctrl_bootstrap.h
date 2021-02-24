@@ -22,14 +22,19 @@ limitations under the License.
 
 namespace oneflow {
 
-class CtrlConf;
+class ProcessCtx;
 
 class CtrlBootstrap {
  public:
   virtual ~CtrlBootstrap() {}
-  virtual Maybe<void> InitCtrlConf(CtrlConf* ctrl_conf) = 0;
+
+  virtual Maybe<void> InitProcessCtx(int64_t port, ProcessCtx* process_ctx) = 0;
 
  protected:
+  virtual int64_t rank() const = 0;
+  virtual int64_t world_size() const = 0;
+  virtual std::string host() const = 0;
+
   CtrlBootstrap() = default;
 };
 
@@ -41,13 +46,20 @@ class HostListCtrlBootstrap final : public CtrlBootstrap {
   explicit HostListCtrlBootstrap(const EnvDesc& env_desc);
   ~HostListCtrlBootstrap() override;
 
-  Maybe<void> InitCtrlConf(CtrlConf* ctrl_conf) override;
+  Maybe<void> InitProcessCtx(int64_t port, ProcessCtx* process_ctx) override;
 
  private:
-  const EnvDesc env_desc_;
+  std::string host() const override { return host_; }
+  int64_t rank() const override { return rank_; }
+  int64_t world_size() const override { return world_size_; }
+
   // Uses shared_ptr and forward declaration to avoid `#include ...`
   std::shared_ptr<HostListBootstrapServer> bootstrap_server_;
   std::shared_ptr<HostListBootstrapClient> bootstrap_client_;
+
+  std::string host_;
+  int64_t rank_;
+  int64_t world_size_;
 };
 
 }  // namespace oneflow
