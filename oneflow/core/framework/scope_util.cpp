@@ -18,7 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 
-std::mutex GLOBAL_SCOPE_STACK_MUTEX;
 namespace {
 
 std::vector<std::shared_ptr<Scope>>* GlobalScopeStack() {
@@ -28,15 +27,20 @@ std::vector<std::shared_ptr<Scope>>* GlobalScopeStack() {
 
 }  // namespace
 
+std::mutex* GlobalScopeStackMutex() {
+  static std::mutex mutex;
+  return &mutex;
+}
+
 Maybe<Scope> GetCurrentScope() {
-  std::unique_lock<std::mutex> lock(GLOBAL_SCOPE_STACK_MUTEX);
+  std::unique_lock<std::mutex> lock(*GlobalScopeStackMutex());
   auto* scope_stack = GlobalScopeStack();
   CHECK_GT_OR_RETURN(scope_stack->size(), 0);
   return scope_stack->back();
 }
 
 Maybe<void> InitGlobalScopeStack(const std::shared_ptr<Scope>& scope) {
-  std::unique_lock<std::mutex> lock(GLOBAL_SCOPE_STACK_MUTEX);
+  std::unique_lock<std::mutex> lock(*GlobalScopeStackMutex);
   auto* scope_stack = GlobalScopeStack();
   scope_stack->clear();
   scope_stack->emplace_back(scope);
@@ -44,14 +48,14 @@ Maybe<void> InitGlobalScopeStack(const std::shared_ptr<Scope>& scope) {
 }
 
 Maybe<void> GlobalScopeStackPush(const std::shared_ptr<Scope>& scope) {
-  std::unique_lock<std::mutex> lock(GLOBAL_SCOPE_STACK_MUTEX);
+  std::unique_lock<std::mutex> lock(*GlobalScopeStackMutex());
   auto* scope_stack = GlobalScopeStack();
   scope_stack->emplace_back(scope);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> GlobalScopeStackPop() {
-  std::unique_lock<std::mutex> lock(GLOBAL_SCOPE_STACK_MUTEX);
+  std::unique_lock<std::mutex> lock(*GlobalScopeStackMutex());
   auto* scope_stack = GlobalScopeStack();
   scope_stack->pop_back();
   return Maybe<void>::Ok();
