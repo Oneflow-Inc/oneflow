@@ -132,7 +132,7 @@ void TestCorrectness() {
   }
   total_mib = (total_bytes * 1.0 / 1000000.0);
 
-  int64_t this_machine_id = GlobalProcessCtx::ThisProcessId();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
   if (this_machine_id == 0) {
     std::cout << "I'm first machine!" << std::endl;
 
@@ -188,7 +188,7 @@ void TestCorrectnessOnLocalMachine() {
   }
   total_mib = (total_bytes * 1.0 / 1000000.0);
 
-  int64_t this_machine_id = GlobalProcessCtx::ThisProcessId();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
 
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   BlockingCounter bc(test_num * 2);
@@ -235,7 +235,7 @@ void TestCorrectnessOnLocalMachine() {
 
 void TestThroughputWithBytes(uint64_t bytes, uint64_t first_token) {
   int32_t total_iteration = 1000;
-  int64_t this_machine_id = GlobalProcessCtx::ThisProcessId();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
   std::vector<std::chrono::steady_clock::time_point> time_points(1010,
                                                                  std::chrono::steady_clock::now());
   std::size_t size = bytes;

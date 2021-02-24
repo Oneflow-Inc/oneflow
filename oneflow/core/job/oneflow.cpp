@@ -158,7 +158,7 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   PrintProtoToTextFile(cluster_thrd_ids, JoinPath(FLAGS_log_dir, cluster_thrd_ids_key(plan_name)));
   HashMap<int64_t, ThrdIds> machine_id2thrd_ids;
   machine_id2thrd_ids = PbMap2HashMap(cluster_thrd_ids.machine_id2thrd_ids());
-  int64_t machine_id = GlobalProcessCtx::ThisProcessId();
+  int64_t machine_id = GlobalProcessCtx::Rank();
   auto thrd_ids_it = machine_id2thrd_ids.find(machine_id);
   CHECK(thrd_ids_it != machine_id2thrd_ids.end());
   std::vector<int64_t> thrd_id_vec = PbRf2StdVec(thrd_ids_it->second.thrd_id());

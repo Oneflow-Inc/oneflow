@@ -66,7 +66,7 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   std::vector<const TaskProto*> other_tasks;
   int64_t this_machine_task_num = 0;
   for (const TaskProto& task : plan.task()) {
-    if (task.machine_id() != GlobalProcessCtx::ThisProcessId()) { continue; }
+    if (task.machine_id() != GlobalProcessCtx::Rank()) { continue; }
     if (!HasNonCtrlConsumedRegstDescId(task)) {
       source_tasks.push_back(&task);
     } else {

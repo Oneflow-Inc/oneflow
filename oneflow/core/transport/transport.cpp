@@ -20,7 +20,7 @@ namespace oneflow {
 
 Transport::Transport() {
   comm_net_ = Global<EpollCommNet>::Get();
-  this_machine_id_ = GlobalProcessCtx::ThisProcessId();
+  this_machine_id_ = GlobalProcessCtx::Rank();
   CHECK(comm_net_ != nullptr);
   // maybe need new read id for each dst machine id, maybe need 2 * machine num read ids
   read_id_ = comm_net_->NewActorReadId();

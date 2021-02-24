@@ -51,7 +51,7 @@ IBVerbsCommNet::~IBVerbsCommNet() {
 }
 
 void IBVerbsCommNet::RegisterMemoryDone() {
-  int64_t this_machine_id = GlobalProcessCtx::ThisProcessId();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
   IBVerbsTokensMsg this_tokens_msg;
   for (IBVerbsMemDesc* mem_desc : mem_descs()) {
     this_tokens_msg.mutable_token2mem_desc()->insert(
@@ -96,7 +96,7 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
   CHECK_EQ(ibv_query_port(context_, 1, &port_attr), 0);
   ibv_gid gid;
   CHECK_EQ(ibv_query_gid(context_, 1, 0, &gid), 0);
-  int64_t this_machine_id = GlobalProcessCtx::ThisProcessId();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
   qp_vec_.assign(Global<ResourceDesc, ForSession>::Get()->TotalMachineNum(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
     IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, cq_, cq_);

@@ -22,7 +22,7 @@ namespace oneflow {
 
 PersistentOutStream::PersistentOutStream(fs::FileSystem* fs, const std::string& file_path) {
   std::string file_dir = Dirname(file_path);
-  OfCallOnce(GlobalProcessCtx::PersistentPathPrefix() + "/" + file_dir, fs,
+  OfCallOnce(GlobalProcessCtx::LogDirEntry() + "/" + file_dir, fs,
              &fs::FileSystem::RecursivelyCreateDirIfNotExist, file_dir);
   fs->NewWritableFile(file_path, &file_);
 }

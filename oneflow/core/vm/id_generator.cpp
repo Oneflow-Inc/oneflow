@@ -31,11 +31,11 @@ Maybe<int64_t> LogicalIdGenerator::NewObjectId() {
 }
 
 Maybe<int64_t> PhysicalIdGenerator::NewSymbolId() {
-  return IdUtil::NewPhysicalSymbolId(GlobalProcessCtx::ThisProcessId());
+  return IdUtil::NewPhysicalSymbolId(GlobalProcessCtx::Rank());
 }
 
 Maybe<int64_t> PhysicalIdGenerator::NewObjectId() {
-  return IdUtil::NewPhysicalObjectId(GlobalProcessCtx::ThisProcessId());
+  return IdUtil::NewPhysicalObjectId(GlobalProcessCtx::Rank());
 }
 
 }  // namespace vm

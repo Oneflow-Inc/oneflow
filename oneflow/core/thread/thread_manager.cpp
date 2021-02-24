@@ -54,7 +54,7 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
 }
 
 void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {
-  const int64_t this_machine_id = GlobalProcessCtx::ThisProcessId();
+  const int64_t this_machine_id = GlobalProcessCtx::Rank();
 
   int64_t max_thrd_id = 0;
   for (const TaskProto& task : plan.task()) {

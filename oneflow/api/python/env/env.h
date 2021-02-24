@@ -66,7 +66,7 @@ inline Maybe<void> DestroyEnv() {
   return Maybe<void>::Ok();
 }
 
-inline Maybe<long long> CurrentMachineId() { return GlobalProcessCtx::ThisProcessId(); }
+inline Maybe<long long> CurrentMachineId() { return GlobalProcessCtx::Rank(); }
 
 }  // namespace oneflow
 

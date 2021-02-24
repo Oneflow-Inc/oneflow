@@ -52,8 +52,7 @@ void PushAvailableMemDescOfThisMachine() {
   }
 #endif
   this_machine_mem_desc.add_zone_size(GetAvailableCpuMemSize());
-  Global<CtrlClient>::Get()->PushKV(GetAmdCtrlKey(GlobalProcessCtx::ThisProcessId()),
-                                    this_machine_mem_desc);
+  Global<CtrlClient>::Get()->PushKV(GetAmdCtrlKey(GlobalProcessCtx::Rank()), this_machine_mem_desc);
 }
 
 AvailableMemDesc PullAvailableMemDesc() {
