@@ -22,6 +22,10 @@ class StreamIndexGenerator {
 
 class StreamIndexGeneratorManager final {
  public:
+  StreamIndexGeneratorManager() = default;
+  OF_DISALLOW_COPY_AND_MOVE(StreamIndexGeneratorManager);
+  ~StreamIndexGeneratorManager() = default;
+
   StreamIndexGenerator* GetGenerator(ProcessId process_id, DeviceId device_id);
 
  private:
