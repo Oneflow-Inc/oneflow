@@ -159,6 +159,7 @@ DeviceType MemZoneId::device_type() const {
 
 uint32_t MemZoneId::device_index() const { return (val_ << kLeftMiddleBits) >> kLeftMiddleBits; }
 
+/*
 // IDUtil methods
 StreamId IdUtil::GetStreamId(StreamType stream_type, uint32_t device_index, uint32_t stream_index) {
   CHECK(CheckStreamIndexValid(stream_type, stream_index))
@@ -262,5 +263,6 @@ IdUtil::IdUtil() {
       << "machine_num is out of range: " << machine_num;
   cpu_device_num_ = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
 }
+*/
 
 }  // namespace oneflow
