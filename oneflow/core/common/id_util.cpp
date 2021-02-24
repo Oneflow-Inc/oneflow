@@ -18,6 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
+/*
+
 namespace {
 
 StreamType DeviceType2StreamType(DeviceType device_type) {
@@ -158,6 +160,8 @@ DeviceType MemZoneId::device_type() const {
 }
 
 uint32_t MemZoneId::device_index() const { return (val_ << kLeftMiddleBits) >> kLeftMiddleBits; }
+
+*/
 
 /*
 // IDUtil methods

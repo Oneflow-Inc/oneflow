@@ -139,7 +139,10 @@ class TaskId {
                 "TaskId bits layout is illegal");
 };
 
-int64_t SerializeStreamId2Int64(StreamId);
+int64_t SerializeStreamIdToInt64(StreamId);
+StreamId DeserializeStreamIdFromInt64(int64_t);
+
+int64_t SerializeTaskIdToInt64(TaskId);
 
 }  // namespace oneflow
 
@@ -149,6 +152,13 @@ template<>
 struct hash<oneflow::ProcessId> {
   size_t operator()(const oneflow::ProcessId& process_id) const {
     return std::hash<uint32_t>{}(static_cast<uint32_t>(process_id));
+  }
+};
+
+template<>
+struct hash<oneflow::DeviceId> {
+  size_t operator()(const oneflow::DeviceId& device_id) const {
+    return std::hash<uint32_t>{}(static_cast<uint32_t>(device_id));
   }
 };
 
