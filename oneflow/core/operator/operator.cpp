@@ -411,21 +411,30 @@ void Operator::ForEachBnInOp(std::function<void(const std::string&)> Handler) co
   for (const std::string& bn_in_op : tmp_bns()) { Handler(bn_in_op); }
 }
 
+Maybe<void> Operator::FillSbpSignature(const SbpSignature& sbp_signature) {
+  CHECK_OR_RETURN(!sbp_signature_);
+  sbp_signature_.reset(new SbpSignature(sbp_signature));
+  *op_attribute_.mutable_sbp_signature() = sbp_signature;
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> Operator::InferSbpSignatureIf(
     const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) {
+  SbpSignature signature;
   if (parallel_desc.parallel_num() == 1) {
-    auto* bn2sbp = mut_sbp_signature()->mutable_bn_in_op2sbp_parallel();
+    auto* bn2sbp = signature.mutable_bn_in_op2sbp_parallel();
     for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0); }
     for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0); }
   } else if (parallel_desc.parallel_num() > 1) {
-    return InferSbpSignature(mut_sbp_signature(), sbp_sig_conf, CalcOrderValue4SbpSig,
-                             SbpInferHint4Ibn, parallel_desc);
+    return InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
+                             parallel_desc);
   } else {
     UNIMPLEMENTED();
   }
+  FillSbpSignature(signature);
   return Maybe<void>::Ok();
 }
 
@@ -516,13 +525,13 @@ Maybe<void> Operator::InferMirroredSignature(
 }
 
 Maybe<const SbpSignature*> Operator::sbp_signature() const {
-  CHECK_OR_RETURN(op_attribute_.has_sbp_signature()) << "sbp signature not infered";
-  return &op_attribute_.sbp_signature();
+  CHECK_OR_RETURN(sbp_signature_) << "sbp signature not infered";
+  return sbp_signature_.get();
 }
 
 Maybe<const SbpParallel*> Operator::SbpParallel4BnInOp(const std::string& bn_in_op) const {
-  CHECK_OR_RETURN(op_attribute_.has_sbp_signature()) << "sbp signature not infered";
-  const auto& map = op_attribute_.sbp_signature().bn_in_op2sbp_parallel();
+  CHECK_OR_RETURN(sbp_signature_) << "sbp signature not infered";
+  const auto& map = sbp_signature_->bn_in_op2sbp_parallel();
   const auto& iter = map.find(bn_in_op);
   CHECK_OR_RETURN(iter != map.end()) << "blob_name " << bn_in_op << " not found in sbp signature";
   return &iter->second;
