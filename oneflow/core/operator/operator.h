@@ -122,10 +122,11 @@ class Operator {
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const;
 
-  Maybe<void> InferInplaceObn2IbnIf(HashMap<std::string, std::string>* mut_inplace_obn2ibn,
-                                    HashMap<std::string, std::string>* con_inplace_obn2ibn,
-                                    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx) const;
+  Maybe<void> InferInplaceObn2IbnIf(
+      HashMap<std::string, std::string>* mut_inplace_obn2ibn,
+      HashMap<std::string, std::string>* con_inplace_obn2ibn,
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const;
 
   Maybe<void> FillInBatchAxis(
       const std::function<Maybe<const OptInt64*>(const std::string&)>& BatchAxis4BnInOp);
@@ -233,7 +234,7 @@ class Operator {
   virtual Maybe<void> InferInplaceObn2Ibn(
       HashMap<std::string, std::string>* mut_inplace_obn2ibn,
       HashMap<std::string, std::string>* con_inplace_obn2ibn,
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const;
 
   virtual void VirtualGenKernelConf(
