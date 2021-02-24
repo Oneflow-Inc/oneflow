@@ -13,29 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CONTROL_CTRL_SERVER_H_
-#define ONEFLOW_CORE_CONTROL_CTRL_SERVER_H_
-
-#include "oneflow/core/control/rpc_server.h"
+#include "oneflow/core/control/rank_info_bootstrap_client.h"
 
 namespace oneflow {
 
-class CtrlServer final : public RpcServer {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CtrlServer);
-  ~CtrlServer() override {}
-
-  CtrlServer();
-  // port may be configured in bootstrap_conf
-  CtrlServer(int ctrl_port);
-
-  int64_t port() const { return port_; }
-
- private:
-  void OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) override;
-  int port_;
-};
+RankInfoBootstrapClient::RankInfoBootstrapClient(const BootstrapConf& bootstrap_conf) {
+  stubs_.reserve(bootstrap_conf.world_size());
+  const auto& master_addr = bootstrap_conf.master_addr();
+  const std::string& host = master_addr.host() + ":" + std::to_string(master_addr.port());
+  stubs_.push_back(CtrlService::NewStub(host));
+  LoadServerRequest request;
+  request.set_addr(master_addr.host());
+  request.set_rank(bootstrap_conf.rank());
+  LoadServer(request, stubs_[0].get());
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_CONTROL_CTRL_SERVER_H_
