@@ -15,44 +15,44 @@ limitations under the License.
 */
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
-#include "oneflow/core/control/global_precess_rank_info.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
-int64_t GlobalProcessRankInfo::ThisMachineId() {
+int64_t GlobalProcessCtx::ThisProcessId() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->rank();
 }
 
-bool GlobalProcessRankInfo::IsThisMachineMaster() {
+bool GlobalProcessCtx::IsThisProcessMaster() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->rank() == 0;
 }
 
-size_t GlobalProcessRankInfo::TotalMachineNum() {
+size_t GlobalProcessCtx::TotalProcessNum() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->ctrl_addr().size();
 }
 
-std::string GlobalProcessRankInfo::GetCtrlAddr(int64_t machine_id) {
+std::string GlobalProcessCtx::GetCtrlAddr(int64_t process_id) {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   const auto& process_ctx = *Global<ProcessCtx>::Get();
-  const auto& addr = process_ctx.ctrl_addr(machine_id);
+  const auto& addr = process_ctx.ctrl_addr(process_id);
   CHECK(addr.has_host());
   return addr.host() + ":" + std::to_string(addr.port());
 }
 
-std::string GlobalProcessRankInfo::GetThisCtrlAddr() {
+std::string GlobalProcessCtx::GetThisCtrlAddr() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return GetCtrlAddr(Global<ProcessCtx>::Get()->rank());
 }
 
-std::string GlobalProcessRankInfo::GetMasterCtrlAddr() {
+std::string GlobalProcessCtx::GetMasterCtrlAddr() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return GetCtrlAddr(0);
 }
 
-std::string GlobalProcessRankInfo::PersistentPathPrefix() {
+std::string GlobalProcessCtx::PersistentPathPrefix() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   const auto& process_ctx = *Global<ProcessCtx>::Get();
   const auto& addr = process_ctx.ctrl_addr(process_ctx.rank());

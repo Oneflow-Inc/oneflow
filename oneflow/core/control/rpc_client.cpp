@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/rpc_client.h"
-#include "oneflow/core/control/global_precess_rank_info.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
@@ -206,8 +206,7 @@ void RpcClient::LoadServer(const LoadServerRequest& request, CtrlService::Stub* 
 }
 
 CtrlService::Stub* RpcClient::GetThisStub() {
-  // TODO(hanbinbin): depend rank_id of Global<ProcessCtx>
-  return stubs_[GlobalProcessRankInfo::ThisMachineId()].get();
+  return stubs_[GlobalProcessCtx::ThisProcessId()].get();
 }
 
 CtrlService::Stub* RpcClient::GetResponsibleStub(const std::string& key) {

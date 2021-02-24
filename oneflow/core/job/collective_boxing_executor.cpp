@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/control/global_precess_rank_info.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_pool.h"
@@ -51,7 +51,7 @@ void SortRequestsByOrder(std::vector<const RequestDesc*>* requests) {
 }
 
 bool IsDeviceOnThisMachine(const DeviceDesc& device_desc) {
-  return device_desc.machine_id() == GlobalProcessRankInfo::ThisMachineId();
+  return device_desc.machine_id() == GlobalProcessCtx::ThisProcessId();
 }
 
 bool HasDeviceOnThisMachine(const DeviceSet& device_set) {

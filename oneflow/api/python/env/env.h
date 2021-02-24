@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/core/control/global_precess_rank_info.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -55,18 +55,18 @@ inline Maybe<void> InitEnv(const std::string& env_proto_str) {
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
   JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
-  if (!GlobalProcessRankInfo::IsThisMachineMaster()) { CHECK_JUST(Cluster::WorkerLoop()); }
+  if (!GlobalProcessCtx::IsThisProcessMaster()) { CHECK_JUST(Cluster::WorkerLoop()); }
   return Maybe<void>::Ok();
 }
 
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  if (GlobalProcessRankInfo::IsThisMachineMaster()) { ClusterInstruction::MasterSendHalt(); }
+  if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
   Global<EnvGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
 
-inline Maybe<long long> CurrentMachineId() { return GlobalProcessRankInfo::ThisMachineId(); }
+inline Maybe<long long> CurrentMachineId() { return GlobalProcessCtx::ThisProcessId(); }
 
 }  // namespace oneflow
 

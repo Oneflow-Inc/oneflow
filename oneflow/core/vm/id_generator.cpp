@@ -15,27 +15,27 @@ limitations under the License.
 */
 #include "oneflow/core/vm/id_generator.h"
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/control/global_precess_rank_info.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 namespace vm {
 
 Maybe<int64_t> LogicalIdGenerator::NewSymbolId() {
-  CHECK_OR_RETURN(GlobalProcessRankInfo::IsThisMachineMaster());
+  CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   return IdUtil::NewLogicalSymbolId();
 }
 
 Maybe<int64_t> LogicalIdGenerator::NewObjectId() {
-  CHECK_OR_RETURN(GlobalProcessRankInfo::IsThisMachineMaster());
+  CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   return IdUtil::NewLogicalObjectId();
 }
 
 Maybe<int64_t> PhysicalIdGenerator::NewSymbolId() {
-  return IdUtil::NewPhysicalSymbolId(GlobalProcessRankInfo::ThisMachineId());
+  return IdUtil::NewPhysicalSymbolId(GlobalProcessCtx::ThisProcessId());
 }
 
 Maybe<int64_t> PhysicalIdGenerator::NewObjectId() {
-  return IdUtil::NewPhysicalObjectId(GlobalProcessRankInfo::ThisMachineId());
+  return IdUtil::NewPhysicalObjectId(GlobalProcessCtx::ThisProcessId());
 }
 
 }  // namespace vm

@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/interpreter.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/control/global_precess_rank_info.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/job/resource_desc.h"
