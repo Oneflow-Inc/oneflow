@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_ID_UTIL_H_
 #define ONEFLOW_CORE_COMMON_ID_UTIL_H_
 
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/task.pb.h"
@@ -23,139 +24,96 @@ limitations under the License.
 
 namespace oneflow {
 
-// ProcessId encode
-// | -------------- 32 bit ---------------- |
-// | --- 9 --- | --- 16 --- | ----- 7 ----- |
-// | reserved  | node_index | process_index |
+// TaskId encode (may be extended to 128 bit in future)
+// | ----------------------------------- 64 bit ----------------------------------------- |
+// | ----------- 19 ----------- | ------------------- 24 ------------------- | --- 21 --- |
+// |         ProcessId          |                  StreamId                  |            |
+// | --- 12 --- | ----- 7 ----- | ---- 5 ---- | ----- 7 ----- | ---- 12 ---- | --- 21 --- |
+// | node_index | process_index | device_type | device_index  | stream_index | task_index |
+// |                                      TaskId                                          |
 
 class ProcessId {
  public:
-  static const int kBits = 32;
-  static const int kReservedBits = 9;
-  static const int kUsedBits = 23;
-  static const int kLeftBits = 16;
-  static const int kRightBits = 7;
-  static const int kReservedLeftBits = kReservedBits + kLeftBits;
-  static_assert(kBits <= std::numeric_limits<uint32_t>::digits, "ProcessId bits layout is illegal");
-  static_assert(kBits == kReservedBits + kUsedBits, "ProcessId bits layout is illegal");
-  static_assert(kUsedBits == kLeftBits + kRightBits, "ProcessId bits layout is illegal");
-
-  ProcessId() : val_(0) {}
-  explicit ProcessId(uint32_t val) : val_(val) {}
   ProcessId(uint32_t node_index, uint32_t process_index);
   uint32_t node_index() const;
   uint32_t process_index() const;
-  operator uint32_t() const { return val_; }
-  operator uint64_t() const { return static_cast<uint64_t>(val_); }
-  operator int64_t() const { return static_cast<int64_t>(val_); }
   bool operator==(const ProcessId& rhs) const { return val_ == rhs.val_; }
   bool operator!=(const ProcessId& rhs) const { return !(*this == rhs); }
 
+  // remove type cast operator in future
+  operator uint32_t() const { return val_; }
+
+  static const int kBits = 19;
+
  private:
   uint32_t val_;
+
+  static const int kFullBits = 32;
+  static_assert(kFullBits <= std::numeric_limits<uint32_t>::digits,
+                "ProcessId bits layout is illegal");
+  static_assert(kBits <= kFullBits, "ProcessId bits layout is illegal");
+  static const int kReservedBits = kFullBits - kBits;
+  static const int kNodeIndexBits = 12;
+  static const int kProcessIndexBits = 7;
+  static_assert(kNodeIndexBits + kProcessIndexBits == kBits, "ProcessId bits layout is illegal");
 };
 
-enum class StreamType : int16_t {
-  kInvalid = 0,        // DeviceType::kInvalidDevice
-  kCPU = 1,            // DeviceType::kCPU
-  kCuda = 2,           // DeviceType::kGPU
-  kCommNet = 90,       // DeviceType::kCPU
-  kTickTock = 91,      // DeviceType::kCPU
-  kIndependent = 100,  // DeviceType::kCPU
+class DeviceId {
+ public:
+  DeviceId(DeviceType device_type, uint32_t device_index);
+  DeviceType device_type() const;
+  uint32_t device_index() const;
+
+  // remove type cast operator in future
+  operator uint32_t() const { return val_; }
+
+  static const int kBits = 12;
+
+ private:
+  uint32_t val_;
+
+  static const int kFullBits = 32;
+  static_assert(kFullBits <= std::numeric_limits<uint32_t>::digits,
+                "DeviceId bits layout is illegal");
+  static_assert(kBits <= kFullBits, "DeviceId bits layout is illegal");
+  static const int kReservedBits = kFullBits - kBits;
+  static const int kDeviceTypeBits = 5;
+  static const int kDeviceIndexBits = 7;
+  static_assert(kDeviceTypeBits + kDeviceIndexBits == kBits, "DeviceId bits layout is illegal");
 };
-
-namespace StreamIndex {
-
-struct CPU {
-  static const uint32_t kCompute = 0;
-  static const uint32_t kMax = 1;
-};
-
-struct Cuda {
-  static const uint32_t kCompute = 0;
-  static const uint32_t kH2D = 1;
-  static const uint32_t kD2H = 2;
-  static const uint32_t kMix = 3;
-  static const uint32_t kNccl = 4;
-  static const uint32_t kDecodeH2D = 5;
-  static const uint32_t kMax = 6;
-};
-
-}  // namespace StreamIndex
-
-// StreamId encode
-// | --------------------------- 32 bit ----------------------------- |
-// | -- 12 -- | ------ 8 ------ | ------ 7 ------ | ------- 5 ------- |
-// | reserved |   stream_type   |   device_index  |   stream_index    |
-// |          | kCPU            | [0, device_num) | StreamIndex::CPU  |
-// |          | kCuda           | [0, device_num) | StreamIndex::Cuda |
-// |          | --------------- | --------------- | ----------------- |
-// |          | kCommNet        |        0        |         0         |
-// |          | --------------- | --------------- | ----------------- |
-// |          | kTickTock       |        0        |         0         |
-// |          | --------------- | --------------- | ----------------- |
-// |          |                 |    task_type    |   stream_index    |
-// |          | kIndependent    | enum TaskType   | [0, task_num)     |
 
 class StreamId {
  public:
-  static const int kBits = 32;
-  static const int kReservedBits = 12;
-  static const int kUsedBits = 20;
-  static const int kLeftBits = 8;
-  static const int kMiddleBits = 7;
-  static const int kRightBits = 5;
-  static_assert(kBits <= std::numeric_limits<uint32_t>::digits, "StreamId bits layout is illegal");
-  static_assert(kBits == kReservedBits + kUsedBits, "StreamId bits layout is illegal");
-  static_assert(kUsedBits == kLeftBits + kMiddleBits + kRightBits,
-                "StreamId bits layout is illegal");
-
-  StreamId() : val_(0) {}
-  explicit StreamId(uint32_t val) : val_(val) {}
-  StreamType stream_type() const;
+  StreamId(DeviceId device_id, uint32_t stream_index);
+  StreamId(DeviceType device_type, uint32_t device_index, uint32_t stream_index);
+  DeviceId device_id() const;
   DeviceType device_type() const;
   uint32_t device_index() const;
   uint32_t stream_index() const;
-  TaskType task_type() const;
-  operator uint32_t() const { return val_; }
-  operator uint64_t() const { return static_cast<uint64_t>(val_); }
-  operator int64_t() const { return static_cast<int64_t>(val_); }
   bool operator==(const StreamId& rhs) const { return val_ == rhs.val_; }
   bool operator!=(const StreamId& rhs) const { return !(*this == rhs); }
 
+  // remove type cast operator in future
+  operator uint32_t() const { return val_; }
+
+  static const int kBits = 24;
+
  private:
   uint32_t val_;
+
+  static const int kFullBits = 32;
+  static_assert(kFullBits <= std::numeric_limits<uint32_t>::digits,
+                "StreamId bits layout is illegal");
+  static_assert(kBits <= kFullBits, "StreamId bits layout is illegal");
+  static const int kReservedBits = kFullBits - kBits;
+  static const int kDeviceIdBits = 12;
+  static_assert(kDeviceIdBits == DeviceId::kBits, "StreamId bits layout is illegal");
+  static const int kStreamIndexBits = 12;
+  static_assert(kDeviceIdBits + kStreamIndexBits == kBits, "StreamId bits layout is illegal");
 };
-
-// TaskId encode (may be extended to 128 bit in future)
-// | -------------- 64 bit -------------- |
-// | --- 23 --- | --- 20 --- | --- 21 --- |
-// | ProcessId  |  StreamId  | task_index |
-// |               TaskId                 |
-
-// chain_id encode (the same as TaskId with type int64_t)
-// | --------------- 64 bit --------------- |
-// | --- 23 --- | --- 20 --- | ---- 21 ---- |
-// | ProcessId  |  StreamId  | chain_index  |
-// |                TaskId                  |
 
 class TaskId {
  public:
-  static const int kBits = 64;
-  static const int kLeftBits = 23;
-  static const int kMiddleBits = 20;
-  static const int kRightBits = 21;
-  static const int kLeftMiddleBits = kLeftBits + kMiddleBits;
-  static const int kMiddleRightBits = kMiddleBits + kRightBits;
-  static const int kLeftRightBits = kLeftBits + kRightBits;
-  static_assert(kBits <= std::numeric_limits<uint64_t>::digits, "TaskId bits layout is illegal");
-  static_assert(kBits == kLeftBits + kMiddleBits + kRightBits, "TaskId bits layout is illegal");
-  static_assert(kLeftBits == ProcessId::kUsedBits, "TaskId bits layout is illegal");
-  static_assert(kMiddleBits == StreamId::kUsedBits, "TaskId bits layout is illegal");
-
-  TaskId() : val_(static_cast<uint64_t>(-1)) {}
-  explicit TaskId(uint64_t val) : val_(val) {}
-  TaskId(int64_t val) : TaskId(static_cast<uint64_t>(val)) {}
   TaskId(ProcessId process_id, StreamId stream_id, uint32_t task_index);
   ProcessId process_id() const;
   StreamId stream_id() const;
@@ -168,39 +126,20 @@ class TaskId {
 
  private:
   uint64_t val_;
+
+  static const int kFullBits = 64;
+  static_assert(kFullBits <= std::numeric_limits<uint64_t>::digits,
+                "TaskId bits layout is illegal");
+  static const int kProcessIdBits = 19;
+  static_assert(kProcessIdBits == ProcessId::kBits, "TaskId bits layout is illegal");
+  static const int kStreamIdBits = 24;
+  static_assert(kStreamIdBits == StreamId::kBits, "TaskId bits layout is illegal");
+  static const int kTaskIndexBits = 21;
+  static_assert(kProcessIdBits + kStreamIdBits + kTaskIndexBits == kFullBits,
+                "TaskId bits layout is illegal");
 };
 
-// MemZoneId encode
-// | -------------- 32 bit --------------- |
-// | ---- 12 ---- | -- 8 -- | ---- 12 ---- |
-// | device_type  | usage   | device_index |
-
-class MemZoneId {
- public:
-  static const int kUsageNormal = 0;
-  static const int kUsagePinnedByCuda = 1;
-  static const int kUsagePinnedByNetwork = 2;
-  static const int kBits = 32;
-  static const int kLeftBits = 12;
-  static const int kMiddleBits = 8;
-  static const int kRightBits = 12;
-  static const int kLeftMiddleBits = kLeftBits + kMiddleBits;
-  static const int kMiddleRightBits = kMiddleBits + kRightBits;
-  static_assert(kBits <= std::numeric_limits<uint32_t>::digits, "MemZoneId bits layout is illegal");
-  static_assert(kBits == kLeftBits + kMiddleBits + kRightBits, "MemZoneId bits layout is illegal");
-
-  MemZoneId() : val_(0) {}
-  explicit MemZoneId(uint32_t val) : val_(val) {}
-  DeviceType device_type() const;
-  uint32_t device_index() const;
-  operator uint32_t() const { return val_; }
-  operator int64_t() const { return static_cast<int64_t>(val_); }
-  bool operator==(const MemZoneId& rhs) const { return val_ == rhs.val_; }
-  bool operator!=(const MemZoneId& rhs) const { return !(*this == rhs); }
-
- private:
-  uint32_t val_;
-};
+int64_t SerializeStreamId2Int64(StreamId);
 
 }  // namespace oneflow
 
@@ -221,13 +160,6 @@ struct hash<oneflow::StreamId> {
 };
 
 template<>
-struct hash<oneflow::MemZoneId> {
-  size_t operator()(const oneflow::MemZoneId& mem_zone_id) const {
-    return std::hash<uint32_t>{}(static_cast<uint32_t>(mem_zone_id));
-  }
-};
-
-template<>
 struct hash<oneflow::TaskId> {
   size_t operator()(const oneflow::TaskId& task_id) const {
     return std::hash<uint64_t>{}(static_cast<uint64_t>(task_id));
@@ -243,6 +175,7 @@ struct hash<oneflow::TaskType> {
 
 }  // namespace std
 
+/*
 namespace oneflow {
 
 class IdUtil {
@@ -292,5 +225,6 @@ class IdUtil {
 };
 
 }  // namespace oneflow
+*/
 
 #endif  // ONEFLOW_CORE_COMMON_ID_UTIL_H_
