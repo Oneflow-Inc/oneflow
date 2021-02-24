@@ -70,7 +70,8 @@ class Tensor {
   virtual bool is_consistent() const = 0;
   virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
   virtual const std::shared_ptr<TensorArg>& now_grad() const = 0;
-  virtual const std::shared_ptr<FunctionNode>& grad_fn_node() const = 0;
+  virtual const std::shared_ptr<const FunctionNode>& grad_fn_node() const = 0;
+  virtual FunctionNode* mut_grad_fn_node() = 0;
   virtual bool requires_grad() const = 0;
   virtual bool is_leaf() const = 0;
   virtual bool retain_grad() const = 0;
@@ -112,7 +113,8 @@ class MirroredTensor final : public Tensor {
   bool is_consistent() const override { return false; }
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
   const std::shared_ptr<TensorArg>& now_grad() const override { return impl_->now_grad(); }
-  const std::shared_ptr<FunctionNode>& grad_fn_node() const override { return grad_fn_node_; }
+  const std::shared_ptr<const FunctionNode>& grad_fn_node() const override { return grad_fn_node_; }
+  FunctionNode* mut_grad_fn_node() override { return const_cast<FunctionNode*>(grad_fn_node_.get()); }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
@@ -145,7 +147,7 @@ class MirroredTensor final : public Tensor {
 
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
-  std::shared_ptr<FunctionNode> grad_fn_node_;
+  std::shared_ptr<const FunctionNode> grad_fn_node_;
 };
 
 class ConsistentTensor final : public Tensor {
@@ -168,7 +170,8 @@ class ConsistentTensor final : public Tensor {
   bool is_consistent() const override { return true; }
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
   const std::shared_ptr<TensorArg>& now_grad() const override { return impl_->now_grad(); }
-  const std::shared_ptr<FunctionNode>& grad_fn_node() const override { return grad_fn_node_; }
+  const std::shared_ptr<const FunctionNode>& grad_fn_node() const override { return grad_fn_node_; }
+  FunctionNode* mut_grad_fn_node() override { return const_cast<FunctionNode*>(grad_fn_node_.get()); }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
@@ -203,7 +206,7 @@ class ConsistentTensor final : public Tensor {
 
  private:
   std::shared_ptr<ConsistentTensorImpl> impl_;
-  std::shared_ptr<FunctionNode> grad_fn_node_;
+  std::shared_ptr<const FunctionNode> grad_fn_node_;
 };
 
 }  // namespace one
