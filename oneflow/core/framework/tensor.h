@@ -25,7 +25,6 @@ limitations under the License.
 namespace oneflow {
 
 class Blob;
-class FunctionNode;
 
 namespace cfg {
 
@@ -46,37 +45,6 @@ class Tensor {
   virtual DataType dtype() const = 0;
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
 };
-
-namespace one {
-
-class TensorArg {
- public:
-  std::shared_ptr<Tensor> get_tensor_ptr() { return tensor_ptr_; }
-  void reset() { tensor_ptr_.reset(); }
-  bool empty() { return !tensor_ptr_; }
-  void init_zeros_like(std::shared_ptr<Tensor> other) {
-    // TODO: Init tensor with zeros_like(other)
-  }
-  void set_tensor_ptr(std::shared_ptr<Tensor> other) { tensor_ptr_ = other; }
-
- private:
-  std::shared_ptr<Tensor> tensor_ptr_;
-};
-
-class Tensor {
- public:
-  std::shared_ptr<Tensor> acc_grad;
-  std::shared_ptr<TensorArg> now_grad;
-  std::shared_ptr<FunctionNode> grad_fn_node;
-  bool requires_grad;
-  bool is_leaf;
-  bool retain_grad;
-
-  std::shared_ptr<Tensor> grad() { return acc_grad; }
-  std::shared_ptr<FunctionNode> grad_fn() { return grad_fn_node; }
-};
-
-}  // namespace one
 
 namespace user_op {
 
