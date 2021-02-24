@@ -110,9 +110,9 @@ class DCGAN(flow.Model):
         return self.generator(batch, trainable=trainable)
 
     def training_step(self, batch, optimizer_idx):
-        z, images, label1, label0 = batch
         if optimizer_idx == 0:
             # generator
+            z, = batch
             g_out = self.generator(z, trainable=True, const_init=True)
             g_logits = self.discriminator(g_out, trainable=False, const_init=True)
             g_loss = flow.nn.sigmoid_cross_entropy_with_logits(
@@ -123,6 +123,7 @@ class DCGAN(flow.Model):
             return g_loss
         elif optimizer_idx == 1:
             # discriminator
+            z, images = batch
             g_out = self.generator(z, trainable=False, const_init=True)
             g_logits = self.discriminator(g_out, trainable=True, const_init=True)
             d_loss_fake = flow.nn.sigmoid_cross_entropy_with_logits(
@@ -170,14 +171,16 @@ class LossMoniter(flow.Callback):
 
 class NumpyTrainData(flow.nn.NumpyModule):
     def __init__(self, result_dir, batch_size):
+        super().__init__()
         self.z = np.load(os.path.join(result_dir, "z.npy"))
-        self.imgs = np.load(os.path.join(result_dir, "img.npy")).transpose(0, 3, 1, 2)
-        self.label1 = np.ones((batch_size, 1)).astype(np.float32)
-        self.label0 = np.zeros((batch_size, 1)).astype(np.float32)
+        self.images = np.load(os.path.join(result_dir, "img.npy")).transpose(0, 3, 1, 2)
 
-    def forward(self, step_idx):
-        print("step_idx :", step_idx)
-        return (self.z, self.images, self.label1, self.label0)
+    def forward(self, step_idx, optimizer_idx):
+        print("step_idx {}, opt_idx {}:".format(step_idx, optimizer_idx))
+        if optimizer_idx == 0:
+            return (self.z,)
+        else:
+            return (self.z, self.images)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

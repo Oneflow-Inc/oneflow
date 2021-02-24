@@ -16,6 +16,8 @@ limitations under the License.
 from __future__ import absolute_import
 from abc import ABC
 from typing import Optional
+import numpy as np
+import inspect
 
 from oneflow.python.framework.check_point_v2 import *
 from oneflow.python.framework.function_util import api_oneflow_function
@@ -23,6 +25,8 @@ from oneflow.python.framework.module import Module
 from oneflow.python.framework.session_util import api_clear_default_session
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.ops.optimizer import Optimizer
+import oneflow.python.framework.typing as oft
+import oneflow.python.framework.dtype as dtype_util
 
 
 @oneflow_export("ModelCheckpointConfig")
@@ -43,16 +47,16 @@ class Callback(ABC):
     r""" Abstract base class used to build new callbacks.
     """
 
-    def on_training_step_end(self, step_idx, outputs, optimizer_idx):
+    def on_training_step_end(self, outputs, step_idx, optimizer_idx):
         pass
 
-    def on_validation_step_end(self, step_idx, outputs):
+    def on_validation_step_end(self, outputs, step_idx):
         pass
 
 
 @oneflow_export("nn.NumpyModule")
 class NumpyDataModule(Module):
-    def forward(self, step_idx):
+    def forward(self, step_idx, optimizer_idx):
         pass
 
 
@@ -129,6 +133,30 @@ class Model(
         job.__name__ = self.__class__.__name__ + "_Model_eval_job"
 
         return deco(job)
+    
+    def _construct_numpy_input_train_job(self, optimizer_idx, job_func_para_annotations):
+        for i in range(len(job_func_para_annotations)):
+            print(inspect.Parameter("para_" + str(i), inspect.Parameter.POSITIONAL_ONLY))
+
+        deco = api_oneflow_function(type="train", function_config=self.training_config)
+
+        def job(batch):
+            loss = self.training_step(batch=batch, optimizer_idx=optimizer_idx)
+            self.optimizers[optimizer_idx].minimize(loss)
+            return loss
+        
+        print(job.__annotations__)
+        sig = inspect.signature(job)
+        print(sig)
+        
+        return True
+
+        job.__name__ = (
+            self.__class__.__name__ + "_Model_train_job_" + str(optimizer_idx)
+        )
+
+        train_job = deco(job)
+        self.train_jobs[optimizer_idx] = train_job
 
     def _method_overrided(self, method_name: str = None) -> bool:
         return getattr(self.__class__, method_name) != getattr(Model, method_name)
@@ -176,7 +204,7 @@ class Model(
                     for optimizer_idx in range(0, len(self.optimizers)):
                         self.train_jobs.append(self._func_train_job(optimizer_idx))
             else:
-                raise NotImplementedError
+                print("TODO(strint): numpy input job")
 
         # construct validation job
         if (
@@ -189,24 +217,46 @@ class Model(
             else:
                 raise NotImplementedError
 
-        # return True
-
-        if self.checkpoint_config.load_dirpath is not None:
+        if self.checkpoint_config is not None and self.checkpoint_config.load_dirpath is not None:
             self._load_checkpoint(dirpath=self.checkpoint_config.load_dirpath)
 
-        if self.checkpoint_config.save_dirpath is not None:
+        if self.checkpoint_config is not None and self.checkpoint_config.save_dirpath is not None:
             self.need_checkpoint = True
 
         for step_idx in range(0, self.max_steps):
             if self.need_training:
                 for optimizer_idx in range(0, len(self.optimizers)):
-                    loss = self.train_jobs[optimizer_idx]().get()
-                    self._method_callback(
-                        "on_training_step_end",
-                        step_idx=step_idx,
-                        outputs=loss,
-                        optimizer_idx=optimizer_idx,
-                    )
+                    if not self.is_numpy_input:
+                        loss = self.train_jobs[optimizer_idx]().get()
+                        self._method_callback(
+                            "on_training_step_end",
+                            outputs=loss,
+                            step_idx=step_idx,
+                            optimizer_idx=optimizer_idx,
+                        )
+                    else:
+                        # numpy input
+                        batch = self.training_data(step_idx, optimizer_idx)
+                        assert isinstance(batch, tuple), "nn.NumpyModule training_data for optimizer_idx {} must return a tuple".format(optimizer_idx)
+                        if step_idx == 0:
+                            job_func_para_annotations = []
+                            for item in batch:
+                                assert isinstance(item, np.ndarray)
+                                of_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(item.dtype)
+                                numpy_placeholder = oft.Numpy.Placeholder(shape=item.shape, dtype=of_dtype)
+                                job_func_para_annotations.append(numpy_placeholder)
+                            self._construct_numpy_input_train_job(optimizer_idx, job_func_para_annotations)
+
+                        return True
+
+                        # call job
+                        loss = self.train_jobs[optimizer_idx](*batch)
+                        self._method_callback(
+                            "on_training_step_end",
+                            outputs=loss,
+                            step_idx=step_idx,
+                            optimizer_idx=optimizer_idx,
+                        )
 
             if self.need_validation:
                 if (step_idx + 1) % self.validation_interval == 0:
