@@ -35,7 +35,7 @@ void AsyncRunLazyJobSet(ThreadPool* lazy_runtime_thread) {
     Global<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
     int32_t machine_num = config_proto.resource().machine_num();
     // do nothing if it's not my business
-    if (GlobalProcessCtx::ThisProcessId() >= machine_num) { return; }
+    if (GlobalProcessCtx::Rank() >= machine_num) { return; }
     Global<SessionGlobalObjectsScope>::New();
     CHECK_JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
     JobSet job_set;

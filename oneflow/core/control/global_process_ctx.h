@@ -13,23 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CONTROL_CTRL_GLOBAL_PROCESS_RANK_INFO_H_
-#define ONEFLOW_CORE_CONTROL_CTRL_GLOBAL_PROCESS_RANK_INFO_H_
+#ifndef ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
+#define ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
 
 #include <string>
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 
 namespace oneflow {
 
 struct GlobalProcessCtx {
-  static int64_t ThisProcessId();
+  static int64_t Rank();
   static bool IsThisProcessMaster();
-  static size_t TotalProcessNum();
-  static std::string GetCtrlAddr(int64_t process_id);
-  static std::string GetThisCtrlAddr();
-  static std::string GetMasterCtrlAddr();
-  static std::string PersistentPathPrefix();
+  static size_t WorldSize();
+  static const Address& GetCtrlAddr(int64_t rank);
+  static const Address& GetThisCtrlAddr();
+  static const Address& GetMasterCtrlAddr();
+  static std::string LogDirEntry();
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CONTROL_CTRL_GLOBAL_PROCESS_RANK_INFO_H_
+#endif  // ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_

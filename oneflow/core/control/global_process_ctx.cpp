@@ -14,12 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/global.h"
-#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
-int64_t GlobalProcessCtx::ThisProcessId() {
+int64_t GlobalProcessCtx::Rank() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->rank();
 }
@@ -29,30 +28,30 @@ bool GlobalProcessCtx::IsThisProcessMaster() {
   return Global<ProcessCtx>::Get()->rank() == 0;
 }
 
-size_t GlobalProcessCtx::TotalProcessNum() {
+size_t GlobalProcessCtx::WorldSize() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->ctrl_addr().size();
 }
 
-std::string GlobalProcessCtx::GetCtrlAddr(int64_t process_id) {
+const Address& GlobalProcessCtx::GetCtrlAddr(int64_t rank) {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   const auto& process_ctx = *Global<ProcessCtx>::Get();
-  const auto& addr = process_ctx.ctrl_addr(process_id);
+  const auto& addr = process_ctx.ctrl_addr(rank);
   CHECK(addr.has_host());
-  return addr.host() + ":" + std::to_string(addr.port());
+  return addr;
 }
 
-std::string GlobalProcessCtx::GetThisCtrlAddr() {
+const Address& GlobalProcessCtx::GetThisCtrlAddr() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return GetCtrlAddr(Global<ProcessCtx>::Get()->rank());
 }
 
-std::string GlobalProcessCtx::GetMasterCtrlAddr() {
+const Address& GlobalProcessCtx::GetMasterCtrlAddr() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return GetCtrlAddr(0);
 }
 
-std::string GlobalProcessCtx::PersistentPathPrefix() {
+std::string GlobalProcessCtx::LogDirEntry() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   const auto& process_ctx = *Global<ProcessCtx>::Get();
   const auto& addr = process_ctx.ctrl_addr(process_ctx.rank());

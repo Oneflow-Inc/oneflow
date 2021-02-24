@@ -22,7 +22,7 @@ namespace oneflow {
 namespace vm {
 
 VirtualMachineScope::VirtualMachineScope(const Resource& resource) {
-  Global<OneflowVM>::New(resource, GlobalProcessCtx::ThisProcessId());
+  Global<OneflowVM>::New(resource, GlobalProcessCtx::Rank());
 }
 
 VirtualMachineScope::~VirtualMachineScope() { Global<OneflowVM>::Delete(); }

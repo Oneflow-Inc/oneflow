@@ -51,7 +51,7 @@ void SortRequestsByOrder(std::vector<const RequestDesc*>* requests) {
 }
 
 bool IsDeviceOnThisMachine(const DeviceDesc& device_desc) {
-  return device_desc.machine_id() == GlobalProcessCtx::ThisProcessId();
+  return device_desc.machine_id() == GlobalProcessCtx::Rank();
 }
 
 bool HasDeviceOnThisMachine(const DeviceSet& device_set) {

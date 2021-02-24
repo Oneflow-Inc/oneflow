@@ -44,7 +44,7 @@ struct PackedChunkInfo {
 }  // namespace
 
 RegstMgr::RegstMgr(const Plan& plan) {
-  int64_t this_machine_id = GlobalProcessCtx::ThisProcessId();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
 
   HashMap<int64_t, char*> chunk_id2ptr;
   for (const ChunkProto& chunk : plan.block_chunk_list().chunk()) {

@@ -307,7 +307,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       NormalProcessCustomizedEordMsg(msg);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (msg.SrcMachineId() == GlobalProcessCtx::ThisProcessId()) {
+    if (msg.SrcMachineId() == GlobalProcessCtx::Rank()) {
       Regst* regst = msg.regst();
       if (naive_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
         CHECK_EQ(0, naive_consumed_rs_.TryPushBackRegst(regst));

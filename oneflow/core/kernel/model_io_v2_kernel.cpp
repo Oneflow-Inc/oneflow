@@ -218,8 +218,8 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
     std::shared_ptr<OnDemandHostBlob> logical_blob;
     if (original_variable_conf.has_initializer()) {
       const std::string blob_cache_key = "ModelInitBlobCache-" + var_lbn + "-Machine-"
-                                         + std::to_string(GlobalProcessCtx::ThisProcessId())
-                                         + "-Counter-" + std::to_string(*counter_);
+                                         + std::to_string(GlobalProcessCtx::Rank()) + "-Counter-"
+                                         + std::to_string(*counter_);
       const std::string barrier_key =
           "ModelInitBarrier-" + var_lbn + "-Counter-" + std::to_string(*counter_);
       OfCallOnce(blob_cache_key, [&]() {
