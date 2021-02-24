@@ -1918,10 +1918,6 @@ class CombinedOptimizer(Optimizer):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
         )
-        assert len(optimizers) >= 2, (
-            "Combined optimizer should only be used in multi-optimizer case,"
-            "otherwise you should consider other optimizer interface"
-        )
         self.optimizers = optimizers
         self.variables = []
         for optimizer in self.optimizers:
