@@ -538,28 +538,16 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   auto new_op_conf = JUST(DecodeLbiHintAndReturnNewOpConf(*op, &sbp_sig_conf, &ibn2disable_boxing));
   AddOpAndUpdateJobParallelViewConf(*new_op_conf, sbp_sig_conf, is_mirrored_parallel_view);
   auto parallel_conf = JUST(InferOpParallelConf(*op, origin_parallel_conf, ibn2disable_boxing));
+  ParallelDesc parallel_desc(*parallel_conf);
+  JUST(op->FillOpParallelDesc(parallel_desc));
   JUST(AddOpNameParallelConf2Placement(op_name, *parallel_conf));
   UpdateLbi2DisableBoxing(*op, ibn2disable_boxing);
   // infer batch_axis
-  const auto& BatchAxis4Ibn = [&](const std::string& ibn) -> Maybe<const OptInt64*> {
+  const auto& BatchAxis4Ibn = [&](const std::string& ibn) -> Maybe<const OptInt64> {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
-    const auto& op = *JUST(Op4OpName(lbi.op_name()));
-    return op.BatchAxis4BnInOp(*JUST(op.obn4lbi(lbi)));
+    const auto& producer_op = *JUST(Op4OpName(lbi.op_name()));
+    return producer_op.GetBatchAxis4Obn(*JUST(producer_op.obn4lbi(lbi)));
   };
-  const auto& GetConstBlobDescBnInOp = [&](const std::string& bn) -> const BlobDesc& {
-    const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
-    return *(lbi2logical_blob_desc_[lbi].get());
-  };
-  JUST(op->InferBatchAxisIf(GetConstBlobDescBnInOp, BatchAxis4Ibn));
-
-  ParallelDesc parallel_desc(*parallel_conf);
-  // infer mirrored signature
-  JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
-  // infer sbp signature
-  JUST(InferOpOutSbpParallel(op, sbp_sig_conf, parallel_desc));
-
-  // infer logical blob desc
-  JUST(GenOpProducedEmptyLogicalBlobDesc(op));
   auto GetBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
     if (lbi2logical_blob_desc_.find(lbi) != lbi2logical_blob_desc_.end()) {
@@ -567,13 +555,19 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
     }
     return nullptr;
   };
-  JUST(op->InferLogicalOutBlobDescsIf(GetBlobDesc4BnInOp, BatchAxis4Ibn, parallel_desc));
-  // Fill logical blob_desc signature.
-  JUST(op->FillLogicalBlobDescSignature([&](const std::string& bn_in_op) -> Maybe<const BlobDesc&> {
-    const auto* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
-    CHECK_NOTNULL_OR_RETURN(blob_desc);
-    return *blob_desc;
-  }));
+  JUST(op->FillLogicalInBlobDesc(GetBlobDesc4BnInOp));
+  JUST(op->FillInBatchAxis(BatchAxis4Ibn));
+  JUST(op->InferBatchAxisIf());
+
+  // infer mirrored signature
+  JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
+  // infer sbp signature
+  JUST(InferOpOutSbpParallel(op, sbp_sig_conf, parallel_desc));
+
+  // infer logical blob desc
+  JUST(GenOpProducedEmptyLogicalBlobDesc(op));
+  JUST(op->InferLogicalOutBlobDescsIf(GetBlobDesc4BnInOp, parallel_desc));
+  JUST(op->FillLogicalOutBlobDesc(GetBlobDesc4BnInOp));
   // Infer ParallelDesc for output blobs.
   auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
     const auto& lbi = op->BnInOp2Lbi(obn);
@@ -583,10 +577,11 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
     }
     return &iter->second;
   };
-  JUST(op->InferOutParallelDescIf(ParallelDesc4Obn, GetBlobDesc4BnInOp, parallel_desc,
-                                  JUST(op->sbp_signature())));
-  // TODO(lixinqi): replace lbi2parallel_desc_from_producer_view_  with ParallelSignature
   JUST(op->InferParallelSignatureIf());
+  for (const auto& bn : op->output_bns()) {
+    lbi2parallel_desc_from_producer_view_.emplace(op->BnInOp2Lbi(bn),
+                                                  *JUST(op->GetParallelDesc4BnInOp(bn)));
+  }
   JUST(AddLbiParallelConf2BlobPlacement(op, ParallelDesc4Obn));
   // Infer whether input/output blobs are backward used
   InferBlobBackwardSignature(op);
@@ -1257,6 +1252,12 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
   op_graph.DumpLogicalBlobDesc(job_);
   op_graph.DumpSbpSignature(job_);
   return Maybe<void>::Ok();
+}
+
+Maybe<std::string> JobBuildAndInferCtx::GetOpBlobLbn(const std::string& op_name,
+                                                     const std::string& bn_in_op) const {
+  const auto& lbi = JUST(Op4OpName(op_name))->BnInOp2Lbi(bn_in_op);
+  return GenLogicalBlobName(lbi);
 }
 
 }  // namespace oneflow

@@ -258,12 +258,6 @@ REGISTER_USER_OP("scatter_nd_like")
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
       return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
-      CHECK(like_arg_modifier != nullptr);
-      like_arg_modifier->set_use_header_only(true);
     });
 
 REGISTER_USER_OP("tensor_scatter_nd_update")

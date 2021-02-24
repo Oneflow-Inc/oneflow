@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/transport/transport.h"
@@ -294,9 +295,11 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   EnvProto env_proto = GetEnvProto(first_machine_ip, second_machine_ip, ctrl_port);
   Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New();
-  Global<CtrlClient>::New();
-  int64_t this_mchn_id =
-      Global<EnvDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
+  Global<ProcessCtx>::New();
+  JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
+           .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+  Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
+  int64_t this_mchn_id = Global<ProcessCtx>::Get()->rank();
   Global<MachineCtx>::New(this_mchn_id);
   Global<ResourceDesc, ForEnv>::New(GetResource());
   Global<ResourceDesc, ForSession>::New(GetResource());
@@ -328,6 +331,7 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   Global<ResourceDesc, ForEnv>::Delete();
   Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
+  Global<ProcessCtx>::Delete();
   Global<CtrlServer>::Delete();
   Global<EnvDesc>::Delete();
   std::cout << "All Done!" << std::endl;

@@ -395,10 +395,9 @@ void UserOp::InitFromOpConf() {
   }
 }
 
-Maybe<void> UserOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx,
-                                   const SbpSignature* sbp_signature) const {
-  JUST(InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature));
+Maybe<void> UserOp::InferInternalBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   // tmp buffer size must be inferred after out shape/dtype
   UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
                                GetBlobDesc4BnInOp);
@@ -429,7 +428,7 @@ Maybe<void> UserOp::InferOutBlobDescs(
   BlobDesc* first_in_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, input_bns());
   if (first_in_blob_desc) {
     for (const std::string& obn : output_bns()) {
-      GetBlobDesc4BnInOp(obn)->CopyMetaFrom(*first_in_blob_desc);
+      GetBlobDesc4BnInOp(obn)->CopyFrom(*first_in_blob_desc);
     }
   }
 
@@ -507,10 +506,12 @@ LogicalBlobId UserOp::lbi4obn(const std::string& output_bn) const {
 }
 
 Maybe<void> UserOp::InferBatchAxis(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
+  auto LogicalBlobDesc4Ibn = [&](const std::string& bn) -> const BlobDesc& {
+    return *CHECK_JUST(GetLogicalBlobDesc4Ibn(bn));
+  };
   UserOpBatchAxisContext batch_axis_ctx(op_conf(), BatchAxis4BnInOp, LogicalBlobDesc4Ibn);
   JUST(val_->batch_axis_infer_fn(&batch_axis_ctx));
   return Maybe<void>::Ok();
