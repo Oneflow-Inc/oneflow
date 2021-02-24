@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/common/id_util.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
@@ -386,8 +387,10 @@ void TaskNode::FixRegisterNumRange() {
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  task_id_ = Global<IdUtil>::Get()->GenerateTaskId(ProcessId{static_cast<uint32_t>(machine_id_), 0},
-                                                   StreamId{static_cast<uint32_t>(thrd_id_)});
+  ProcessId process_id{static_cast<uint32_t>(machine_id_), 0};
+  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
+  TaskId task_id = Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(process_id, stream_id);
+  task_id_ = SerializeTaskIdToInt64(task_id);
 }
 
 int64_t TaskNode::GlobalWorkStreamId() const {

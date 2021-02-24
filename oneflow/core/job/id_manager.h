@@ -20,6 +20,8 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/device/stream_index.h"
+#include "oneflow/core/graph/task_id_generator.h"
 
 namespace oneflow {
 
@@ -74,6 +76,9 @@ class IDMgr final {
   int64_t AllocateChainId(int64_t global_work_stream_id);
   int64_t PickCpuThrdIdEvenly(int64_t machine_id);
 
+  StreamIndexGeneratorManager* GetStreamIndexGeneratorManager() { return &stream_index_gen_mgr_; }
+  TaskIdGenerator* GetTaskIdGenerator() { return &task_id_gen_; }
+
  private:
   friend class Global<IDMgr>;
   IDMgr();
@@ -89,6 +94,9 @@ class IDMgr final {
   HashMap<int64_t, int64_t> stream_id2chain_cnt_;
   int64_t base_independent_thrd_id_;
   HashMap<int64_t, int64_t> machine_id2num_cpu_thrd_id_picked_;
+
+  StreamIndexGeneratorManager stream_index_gen_mgr_;
+  TaskIdGenerator task_id_gen_;
 
   //  64 bit id design:
   //   sign | machine | thread | local_work_stream | task
