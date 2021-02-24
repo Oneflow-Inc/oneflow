@@ -18,6 +18,7 @@ import numpy as np
 import oneflow as flow
 from scipy.special import erf, erfc, gammaln
 import oneflow.typing as oft
+import os
 
 
 @flow.unittest.skip_unless_1n2d()
@@ -35,6 +36,7 @@ class TestUnaryElementwiseOps(flow.unittest.TestCase):
         y = AbsJob(x).get().numpy()
         test_case.assertTrue(np.array_equal(y, np.absolute(x)))
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_1n2c_mirror_dynamic_abs(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
@@ -64,6 +66,7 @@ class TestUnaryElementwiseOps(flow.unittest.TestCase):
         y = AcosJob(x).get().numpy()
         test_case.assertTrue(np.allclose(y, np.arccos(x)))
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_acos_consistent_1n2c(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
@@ -105,6 +108,7 @@ class TestUnaryElementwiseOps(flow.unittest.TestCase):
         y = AcosJob(x).get().numpy()
         test_case.assertTrue(np.allclose(y, np.arccos(x)))
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_1n2c_mirror_dynamic_acos(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
@@ -557,6 +561,7 @@ class TestUnaryElementwiseOps(flow.unittest.TestCase):
         y = SignJob(x).get().numpy()
         test_case.assertTrue(np.allclose(y, np.sign(x), equal_nan=True))
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_sign_double_consistent_1n2c(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
