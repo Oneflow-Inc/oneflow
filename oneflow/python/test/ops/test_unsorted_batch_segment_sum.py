@@ -101,8 +101,6 @@ def _run_test(test_case, device, out_shape, num_segments, segment_ids_shape):
     out_ndarray = unsorted_batch_segment_sum_out.numpy()
     grad_in_ndarray = test_global_storage.Get("x_diff")
     grad_out_ndarray = test_global_storage.Get("loss_diff")
-    check_point = flow.train.CheckPoint()
-    check_point.init()
 
     _check(test_case, data, segment_ids, out_shape, out_ndarray)
     _check_bw(

@@ -60,8 +60,6 @@ def compare_with_tensorflow(device_type, input_shape, perm):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = TransposeJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
@@ -101,21 +99,6 @@ class TestTranspose(flow.unittest.TestCase):
         arg_dict["perm"] = [(1, 0), (0, 1)]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
-
-    def test_transpose4(test_case):
-        # Test the param "batch_axis_non_change"
-
-        @flow.global_function()
-        def transpose_batchaxis_non_change_job(
-            x: tp.Numpy.Placeholder((3, 3), dtype=flow.float, batch_axis=0),
-        ) -> None:
-            pre_batch_axis = x.batch_axis
-            transpose_blob = flow.transpose(x, perm=[1, 0], batch_axis_non_change=True)
-            tranposed_batch_axis = transpose_blob.batch_axis
-            test_case.assertTrue(np.array_equal(pre_batch_axis, tranposed_batch_axis))
-
-        x = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]]).astype(np.float32)
-        transpose_batchaxis_non_change_job(x)
 
     def test_transpose_dim6(test_case):
         arg_dict = OrderedDict()

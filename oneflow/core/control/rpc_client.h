@@ -26,7 +26,7 @@ namespace oneflow {
 class RpcClient {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RpcClient);
-  virtual ~RpcClient();
+  virtual ~RpcClient() = default;
 
   void Barrier(const std::string& barrier_name);
   void Barrier(const std::string& barrier_name, int32_t barrier_num);
@@ -68,6 +68,7 @@ class RpcClient {
  protected:
   RpcClient() = default;
   void LoadServer(const std::string& server_addr, CtrlService::Stub* stub);
+  void LoadServer(const LoadServerRequest& request, CtrlService::Stub* stub);
   void PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter);
   void PullMasterKV(const std::string& k, std::function<void(const std::string&)> VGetter);
   CtrlService::Stub* GetMasterStub() { return stubs_[0].get(); }
@@ -77,10 +78,6 @@ class RpcClient {
   std::vector<std::unique_ptr<CtrlService::Stub>> stubs_;
   std::mutex done_names_mtx_;
   HashSet<std::string> done_names_;
-
-  bool need_heartbeat_thread_stop_;
-  std::mutex need_heartbeat_thread_stop_mtx_;
-  std::thread heartbeat_thread_;
 };
 
 }  // namespace oneflow
