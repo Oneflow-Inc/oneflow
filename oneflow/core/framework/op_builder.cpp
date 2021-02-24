@@ -21,6 +21,8 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+static constexpr char _PositionalPlaceholderPrefix[] = "#^Placeholder_";
+
 /*static*/ TensorNameScope* TensorNameScope::Global() {
   static TensorNameScope scope;
   return &scope;
@@ -61,7 +63,7 @@ OpBuilder& OpBuilder::Input(const std::string& input_name, const int count) {
       << "The Input " << input_name << " has been specified more than once.";
   auto& input_list = (*(proto_.mutable_input()))[input_name];
   for (int i = 0; i < count; ++i) {
-    const std::string& tensor_name = "^#Position_" + std::to_string(input_pos_++);
+    const std::string& tensor_name = _PositionalPlaceholderPrefix + std::to_string(input_pos_++);
     input_list.mutable_s()->Add()->assign(tensor_name);
     indexed_ibns_.push_back(input_name + "_" + std::to_string(i));
   }
