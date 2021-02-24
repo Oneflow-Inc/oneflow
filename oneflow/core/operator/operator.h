@@ -258,8 +258,6 @@ class Operator {
   virtual LogicalBlobId lbi4ibn(const std::string& input_bn) const;
   virtual LogicalBlobId lbi4obn(const std::string& output_bn) const;
 
-  OperatorConf* mut_op_conf() { return op_attribute_.mutable_op_conf(); }
-
   // enroll data blobs
   void EnrollTmpBn(const std::string& dtbn);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff);
