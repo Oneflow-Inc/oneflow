@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
+#include "oneflow/core/framework/snapshot_manager.h"
 
 namespace oneflow {
 
@@ -34,10 +35,13 @@ class Session {
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list() const;
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list() const;
 
+  const std::shared_ptr<SnapshotManager>& snapshot_mgr() const { return snapshot_mgr_; }
+
  private:
   int64_t id_;
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list_;
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
+  std::shared_ptr<SnapshotManager> snapshot_mgr_;
 };
 
 Maybe<int64_t> GetDefaultSessionId();
