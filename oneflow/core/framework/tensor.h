@@ -206,3 +206,4 @@ class Tensor {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_H_
+

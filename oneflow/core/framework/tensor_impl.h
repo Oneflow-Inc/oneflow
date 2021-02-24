@@ -260,3 +260,4 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_IMPL_H_
+
