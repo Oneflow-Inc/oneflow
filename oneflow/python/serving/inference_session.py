@@ -111,11 +111,6 @@ def _inferface_blob_conf_proto_to_cfg(
         split_axis.set_value(inferface_blob_conf_proto.split_axis.value)
     mut_inferface_blob_conf_cfg.mutable_split_axis().CopyFrom(split_axis)
 
-    batch_axis = dtype_proto_cfg.OptInt64()
-    if inferface_blob_conf_proto.batch_axis.HasField("value"):
-        batch_axis.set_value(inferface_blob_conf_proto.batch_axis.value)
-    mut_inferface_blob_conf_cfg.mutable_batch_axis().CopyFrom(batch_axis)
-
     mut_inferface_blob_conf_cfg.set_is_dynamic(inferface_blob_conf_proto.is_dynamic)
     mut_inferface_blob_conf_cfg.set_is_tensor_list(
         inferface_blob_conf_proto.is_tensor_list
@@ -245,14 +240,8 @@ class InferenceSession(object):
         self._check_status(self.SessionStatus.OPEN)
         job_conf = self._get_job_conf(job_name)
         for _, mut_input_def in job_conf.mutable_signature().mutable_inputs().items():
-            if not mut_input_def.blob_conf().has_batch_axis():
-                continue
-            batch_axis = mut_input_def.blob_conf().batch_axis()
-            if not batch_axis.has_value():
-                continue
-            batch_axis = batch_axis.value()
             mut_shape = mut_input_def.mutable_blob_conf().mutable_shape()
-            mut_shape.mutable_dim()[batch_axis] = batch_size
+            mut_shape.mutable_dim()[0] = batch_size
 
     def _get_job_conf(self, job_name):
         if job_name in self.job_name2job_conf_:

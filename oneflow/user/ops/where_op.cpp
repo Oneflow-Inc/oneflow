@@ -60,7 +60,6 @@ REGISTER_USER_OP("where")
     .Input("y")
     .Output("out")
     .SetTensorDescInferFn(InferWhereTensorDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("condition", 0);
