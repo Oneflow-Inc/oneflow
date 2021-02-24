@@ -45,12 +45,6 @@ Maybe<void> DecodeRandomOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DecodeRandomOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("out")->set_value(0);
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> DecodeRandomOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())

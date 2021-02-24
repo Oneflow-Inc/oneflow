@@ -32,7 +32,6 @@ REGISTER_USER_OP("multiply")
       if (x->is_dynamic() || y->is_dynamic()) { *out->mut_is_dynamic() = true; }
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       FOR_RANGE(int64_t, i, 0, x.shape().NumAxes()) {

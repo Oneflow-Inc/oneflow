@@ -77,8 +77,6 @@ class Test_TestMultiInputGrad(flow.unittest.TestCase):
                 flow.watch_diff(x2, test_global_storage.Setter("x2_diff"))
                 return loss
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         out = TestMultiInputJob().get()
         x1_diff = test_global_storage.Get("x1_diff")
         x2_diff = test_global_storage.Get("x2_diff")

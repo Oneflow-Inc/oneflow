@@ -324,6 +324,19 @@ def CudaHostPinBlob(self, blob_object):
         self.CudaHostUnregisterBlob(blob_object)
 
 
+def NewOpKernelObject(self, op_conf):
+    assert op_conf.HasField("scope_symbol_id")
+    scope_symbol = oneflow_api.GetScopeSymbol(op_conf.scope_symbol_id)
+    cfg_op_conf = oneflow_api.deprecated.MakeOpConfByString(str(op_conf))
+    op_conf_sym = self.GetOpConfSymbol(cfg_op_conf)
+    parallel_desc_sym_id = c_api_util.GetOpParallelSymbolId(op_conf)
+    parallel_desc_symbol = oneflow_api.GetPlacementSymbol(parallel_desc_sym_id)
+    object_id = self._NewOpKernelObject(
+        parallel_desc_symbol, scope_symbol.job_desc_symbol, op_conf_sym
+    )
+    return oneflow_api.OpKernelObject(object_id, cfg_op_conf, self.object_releaser())
+
+
 def Build121To(self, blob_object, parallel_desc_symbol):
     ref_blob_object = _MakeNewBlobObjectLike(self, blob_object, parallel_desc_symbol)
     self.Build121AssignInstruction(ref_blob_object, blob_object)
