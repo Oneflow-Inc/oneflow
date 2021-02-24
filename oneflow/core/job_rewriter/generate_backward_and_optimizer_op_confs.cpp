@@ -104,9 +104,9 @@ class GenerateBackwardAndOptimizerOpConfs final : public JobPass {
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
 };
 
-void FilterModelLbi2ModelDiffLbiByOpConf(const OpGraph& op_graph,
-                                 const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
-                                 HashMap<LogicalBlobId, LogicalBlobId>* model_lbi2model_diff_lbi) {
+void FilterModelLbi2ModelDiffLbiByOpConf(
+    const OpGraph& op_graph, const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
+    HashMap<LogicalBlobId, LogicalBlobId>* model_lbi2model_diff_lbi) {
   for (const auto& pair : lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     const LogicalBlobId& diff_lbi = pair.second;
@@ -210,7 +210,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
       HashMap<LogicalBlobId, LogicalBlobId> cur_model_lbi2model_diff_lbi;
       FilterCurModelLbi2ModelDiffLbiByName(optimizer_conf.variables(), model_lbi2model_diff_lbi,
-                                        &cur_model_lbi2model_diff_lbi);
+                                           &cur_model_lbi2model_diff_lbi);
       if (optimizer_conf.has_clip_conf()) {
         ClipGradient(op_graph, job_builder.get(), &cur_model_lbi2model_diff_lbi,
                      optimizer_conf.clip_conf());
