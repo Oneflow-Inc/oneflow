@@ -16,4 +16,3 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_impl.h"
 
 namespace oneflow {}  // namespace oneflow
-

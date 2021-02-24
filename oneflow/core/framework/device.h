@@ -37,4 +37,3 @@ class Device final {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
-
