@@ -159,6 +159,7 @@ def _dynamic_multi_iter_compare(
 
 @flow.unittest.skip_unless_1n1d()
 class TestArgwhere(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_argwhere(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
@@ -170,6 +171,7 @@ class TestArgwhere(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_argwhere_multi_iter(test_case):
         arg_dict = OrderedDict()
         arg_dict["iter_num"] = [2]
@@ -184,6 +186,7 @@ class TestArgwhere(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n4d()
 class TestArgwhere4D(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_argwhere(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(10, 5)]

@@ -113,7 +113,7 @@ class TestFusedScaleTril(flow.unittest.TestCase):
         ]
         arg_dict["shape"] = [(3, 6, 8)]
         arg_dict["diagonal"] = [-8, -1, 0, 8]
-        arg_dict["fill_value"] = [1.0]
+        arg_dict["fill_value"] = [1.0, 0]
         arg_dict["scale"] = [5.0, 3]
         for arg in GenArgDict(arg_dict):
             if isinstance(arg["fill_value"], float) and arg_dict["type_name"] not in [

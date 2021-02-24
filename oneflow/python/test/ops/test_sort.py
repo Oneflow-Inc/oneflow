@@ -58,7 +58,7 @@ def compare_with_tensorflow(device_type, in_shape, axis, direction, data_type):
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["in_shape"] = [(100,), (10, 10, 200)]
+    arg_dict["in_shape"] = [(10,), (10, 10, 20)]
     arg_dict["axis"] = [-1]
     arg_dict["direction"] = ["ASCENDING", "DESCENDING"]
     arg_dict["data_type"] = ["float32", "double"]
@@ -70,7 +70,7 @@ def gen_arg_list_for_test_axis():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["in_shape"] = [(10, 10, 20)]
-    arg_dict["axis"] = [-2, -1, 0, 2]
+    arg_dict["axis"] = [-2, 0, 2]
     arg_dict["direction"] = ["ASCENDING", "DESCENDING"]
     arg_dict["data_type"] = ["int32", "int64"]
 

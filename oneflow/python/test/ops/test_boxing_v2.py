@@ -32,7 +32,7 @@ def _test_split_to_split(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    def for_each_src_dst_device_num(input_blob, src_device_num, dst_device_num):
+    def build_s2s(input_blob, src_device_num, dst_device_num):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(
                 input_blob.with_distribute(flow.distribute.split(src_axis))
@@ -43,30 +43,16 @@ def _test_split_to_split(
 
     @flow.global_function(function_config=func_config)
     def split_to_split_job(input_blob: oft.Numpy.Placeholder((96, 96))):
-        out11 = for_each_src_dst_device_num(input_blob, 1, 1)
-        out12 = for_each_src_dst_device_num(input_blob, 1, 2)
-        out13 = for_each_src_dst_device_num(input_blob, 1, 3)
-        out21 = for_each_src_dst_device_num(input_blob, 2, 1)
-        out22 = for_each_src_dst_device_num(input_blob, 2, 2)
-        out23 = for_each_src_dst_device_num(input_blob, 2, 3)
-        out31 = for_each_src_dst_device_num(input_blob, 3, 1)
-        out32 = for_each_src_dst_device_num(input_blob, 3, 2)
-        out33 = for_each_src_dst_device_num(input_blob, 3, 3)
-        return out11, out12, out13, out21, out22, out23, out31, out32, out33
+        result_list = []
+        for i in (1, 2, 3):
+            for j in (1, 2, 3):
+                result_list.append(build_s2s(input_blob, i, j))
+        return tuple(result_list)
 
     x = np.random.rand(96, 96).astype(np.float32)
-    out11, out12, out13, out21, out22, out23, out31, out32, out33 = split_to_split_job(
-        x
-    ).get()
-    test_case.assertTrue(np.array_equal(x, out11.numpy()))
-    test_case.assertTrue(np.array_equal(x, out12.numpy()))
-    test_case.assertTrue(np.array_equal(x, out13.numpy()))
-    test_case.assertTrue(np.array_equal(x, out21.numpy()))
-    test_case.assertTrue(np.array_equal(x, out22.numpy()))
-    test_case.assertTrue(np.array_equal(x, out23.numpy()))
-    test_case.assertTrue(np.array_equal(x, out31.numpy()))
-    test_case.assertTrue(np.array_equal(x, out32.numpy()))
-    test_case.assertTrue(np.array_equal(x, out33.numpy()))
+    result_tuple = split_to_split_job(x).get()
+    for out in result_tuple:
+        test_case.assertTrue(np.array_equal(x, out.numpy()))
 
 
 def _test_split_to_split_enable_all_to_all(
@@ -79,7 +65,7 @@ def _test_split_to_split_enable_all_to_all(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    def for_each_src_dst_axis(input_blob, src_axis, dst_axis):
+    def build_s2s_all2all(input_blob, src_axis, dst_axis):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(
                 input_blob.with_distribute(flow.distribute.split(src_axis))
@@ -89,61 +75,19 @@ def _test_split_to_split_enable_all_to_all(
         return dst
 
     @flow.global_function(function_config=func_config)
-    def split_to_split_job(input_blob: oft.Numpy.Placeholder((32, 16, 64, 48))):
-        out01 = for_each_src_dst_axis(input_blob, 0, 1)
-        out02 = for_each_src_dst_axis(input_blob, 0, 2)
-        out03 = for_each_src_dst_axis(input_blob, 0, 3)
-        out10 = for_each_src_dst_axis(input_blob, 1, 0)
-        out12 = for_each_src_dst_axis(input_blob, 1, 2)
-        out13 = for_each_src_dst_axis(input_blob, 1, 3)
-        out20 = for_each_src_dst_axis(input_blob, 2, 0)
-        out21 = for_each_src_dst_axis(input_blob, 2, 1)
-        out23 = for_each_src_dst_axis(input_blob, 2, 3)
-        out30 = for_each_src_dst_axis(input_blob, 3, 0)
-        out31 = for_each_src_dst_axis(input_blob, 3, 1)
-        out32 = for_each_src_dst_axis(input_blob, 3, 2)
-        return (
-            out01,
-            out02,
-            out03,
-            out10,
-            out12,
-            out13,
-            out20,
-            out21,
-            out23,
-            out30,
-            out31,
-            out32,
-        )
+    def split_to_split_all2all_job(input_blob: oft.Numpy.Placeholder((32, 16, 64, 48))):
+        result_list = []
+        for i in (0, 1, 2, 3):
+            for j in (0, 1, 2, 3):
+                if i == j:
+                    continue
+                result_list.append(build_s2s_all2all(input_blob, i, j))
+        return tuple(result_list)
 
     x = np.random.rand(32, 16, 64, 48).astype(np.float32)
-    (
-        out01,
-        out02,
-        out03,
-        out10,
-        out12,
-        out13,
-        out20,
-        out21,
-        out23,
-        out30,
-        out31,
-        out32,
-    ) = split_to_split_job(x).get()
-    test_case.assertTrue(np.array_equal(x, out01.numpy()))
-    test_case.assertTrue(np.array_equal(x, out02.numpy()))
-    test_case.assertTrue(np.array_equal(x, out03.numpy()))
-    test_case.assertTrue(np.array_equal(x, out10.numpy()))
-    test_case.assertTrue(np.array_equal(x, out12.numpy()))
-    test_case.assertTrue(np.array_equal(x, out13.numpy()))
-    test_case.assertTrue(np.array_equal(x, out20.numpy()))
-    test_case.assertTrue(np.array_equal(x, out21.numpy()))
-    test_case.assertTrue(np.array_equal(x, out23.numpy()))
-    test_case.assertTrue(np.array_equal(x, out30.numpy()))
-    test_case.assertTrue(np.array_equal(x, out31.numpy()))
-    test_case.assertTrue(np.array_equal(x, out32.numpy()))
+    result_tuple = split_to_split_all2all_job(x).get()
+    for out in result_tuple:
+        test_case.assertTrue(np.array_equal(x, out.numpy()))
 
 
 def _test_split_to_broadcast(
@@ -155,7 +99,7 @@ def _test_split_to_broadcast(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    def for_each_src_dst_device_num(input_blob, src_device_num, dst_device_num):
+    def build_s2b(input_blob, src_device_num, dst_device_num):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(
                 input_blob.with_distribute(flow.distribute.split(src_axis))
@@ -166,38 +110,16 @@ def _test_split_to_broadcast(
 
     @flow.global_function(function_config=func_config)
     def split_to_broadcast_job(input_blob: oft.Numpy.Placeholder((96, 96))):
-        out11 = for_each_src_dst_device_num(input_blob, 1, 1)
-        out12 = for_each_src_dst_device_num(input_blob, 1, 2)
-        out13 = for_each_src_dst_device_num(input_blob, 1, 3)
-        out21 = for_each_src_dst_device_num(input_blob, 2, 1)
-        out22 = for_each_src_dst_device_num(input_blob, 2, 2)
-        out23 = for_each_src_dst_device_num(input_blob, 2, 3)
-        out31 = for_each_src_dst_device_num(input_blob, 3, 1)
-        out32 = for_each_src_dst_device_num(input_blob, 3, 2)
-        out33 = for_each_src_dst_device_num(input_blob, 3, 3)
-        return out11, out12, out13, out21, out22, out23, out31, out32, out33
+        result_list = []
+        for i in (1, 2, 3):
+            for j in (1, 2, 3):
+                result_list.append(build_s2b(input_blob, i, j))
+        return tuple(result_list)
 
     x = np.random.rand(96, 96).astype(np.float32)
-    (
-        out11,
-        out12,
-        out13,
-        out21,
-        out22,
-        out23,
-        out31,
-        out32,
-        out33,
-    ) = split_to_broadcast_job(x).get()
-    test_case.assertTrue(np.array_equal(x, out11.numpy()))
-    test_case.assertTrue(np.array_equal(x, out12.numpy()))
-    test_case.assertTrue(np.array_equal(x, out13.numpy()))
-    test_case.assertTrue(np.array_equal(x, out21.numpy()))
-    test_case.assertTrue(np.array_equal(x, out22.numpy()))
-    test_case.assertTrue(np.array_equal(x, out23.numpy()))
-    test_case.assertTrue(np.array_equal(x, out31.numpy()))
-    test_case.assertTrue(np.array_equal(x, out32.numpy()))
-    test_case.assertTrue(np.array_equal(x, out33.numpy()))
+    result_tuple = split_to_broadcast_job(x).get()
+    for out in result_tuple:
+        test_case.assertTrue(np.array_equal(x, out.numpy()))
 
 
 def _test_broadcast_to_split(
@@ -209,7 +131,7 @@ def _test_broadcast_to_split(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    def for_each_src_dst_device_num(input_blob, src_device_num, dst_device_num):
+    def build_b2s(input_blob, src_device_num, dst_device_num):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(input_blob.with_distribute(flow.distribute.broadcast()))
         with flow.scope.placement(dst_device_type, "0:0-" + str(dst_device_num - 1)):
@@ -218,38 +140,16 @@ def _test_broadcast_to_split(
 
     @flow.global_function(function_config=func_config)
     def broadcast_to_split_job(input_blob: oft.Numpy.Placeholder((96, 96))):
-        out11 = for_each_src_dst_device_num(input_blob, 1, 1)
-        out12 = for_each_src_dst_device_num(input_blob, 1, 2)
-        out13 = for_each_src_dst_device_num(input_blob, 1, 3)
-        out21 = for_each_src_dst_device_num(input_blob, 2, 1)
-        out22 = for_each_src_dst_device_num(input_blob, 2, 2)
-        out23 = for_each_src_dst_device_num(input_blob, 2, 3)
-        out31 = for_each_src_dst_device_num(input_blob, 3, 1)
-        out32 = for_each_src_dst_device_num(input_blob, 3, 2)
-        out33 = for_each_src_dst_device_num(input_blob, 3, 3)
-        return out11, out12, out13, out21, out22, out23, out31, out32, out33
+        result_list = []
+        for i in (1, 2, 3):
+            for j in (1, 2, 3):
+                result_list.append(build_b2s(input_blob, i, j))
+        return tuple(result_list)
 
     x = np.random.rand(96, 96).astype(np.float32)
-    (
-        out11,
-        out12,
-        out13,
-        out21,
-        out22,
-        out23,
-        out31,
-        out32,
-        out33,
-    ) = broadcast_to_split_job(x).get()
-    test_case.assertTrue(np.array_equal(x, out11.numpy()))
-    test_case.assertTrue(np.array_equal(x, out12.numpy()))
-    test_case.assertTrue(np.array_equal(x, out13.numpy()))
-    test_case.assertTrue(np.array_equal(x, out21.numpy()))
-    test_case.assertTrue(np.array_equal(x, out22.numpy()))
-    test_case.assertTrue(np.array_equal(x, out23.numpy()))
-    test_case.assertTrue(np.array_equal(x, out31.numpy()))
-    test_case.assertTrue(np.array_equal(x, out32.numpy()))
-    test_case.assertTrue(np.array_equal(x, out33.numpy()))
+    result_tuple = broadcast_to_split_job(x).get()
+    for out in result_tuple:
+        test_case.assertTrue(np.array_equal(x, out.numpy()))
 
 
 def _test_partial_sum_to_split(
@@ -261,7 +161,7 @@ def _test_partial_sum_to_split(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    def for_each_src_dst_device_num(input_blob, src_device_num, dst_device_num):
+    def build_p2s(input_blob, src_device_num, dst_device_num):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(input_blob.with_distribute(flow.distribute.split(0)))
             src = flow.math.reduce_sum(src, axis=0)
@@ -271,22 +171,16 @@ def _test_partial_sum_to_split(
 
     @flow.global_function(function_config=func_config)
     def partial_sum_to_split_job(input_blob: oft.Numpy.Placeholder((96, 96, 96))):
-        out21 = for_each_src_dst_device_num(input_blob, 2, 1)
-        out22 = for_each_src_dst_device_num(input_blob, 2, 2)
-        out23 = for_each_src_dst_device_num(input_blob, 2, 3)
-        out31 = for_each_src_dst_device_num(input_blob, 3, 1)
-        out32 = for_each_src_dst_device_num(input_blob, 3, 2)
-        out33 = for_each_src_dst_device_num(input_blob, 3, 3)
-        return out21, out22, out23, out31, out32, out33
+        result_list = []
+        for i in (2, 3):
+            for j in (1, 2, 3):
+                result_list.append(build_p2s(input_blob, i, j))
+        return tuple(result_list)
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
-    out21, out22, out23, out31, out32, out33 = partial_sum_to_split_job(x).get()
-    test_case.assertTrue(np.allclose(np.sum(x, axis=0), out21.numpy()))
-    test_case.assertTrue(np.allclose(np.sum(x, axis=0), out22.numpy()))
-    test_case.assertTrue(np.allclose(np.sum(x, axis=0), out23.numpy()))
-    test_case.assertTrue(np.allclose(np.sum(x, axis=0), out31.numpy()))
-    test_case.assertTrue(np.allclose(np.sum(x, axis=0), out32.numpy()))
-    test_case.assertTrue(np.allclose(np.sum(x, axis=0), out33.numpy()))
+    result_tuple = partial_sum_to_split_job(x).get()
+    for out in result_tuple:
+        test_case.assertTrue(np.allclose(np.sum(x, axis=0), out.numpy()))
 
 
 def _test_partial_sum_to_broadcast(test_case, src_device_type, dst_device_type):
@@ -296,7 +190,7 @@ def _test_partial_sum_to_broadcast(test_case, src_device_type, dst_device_type):
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    def for_each_src_dst_device_num(input_blob, src_device_num, dst_device_num):
+    def build_p2b(input_blob, src_device_num, dst_device_num):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(input_blob.with_distribute(flow.distribute.split(0)))
             src = flow.math.reduce_sum(src, axis=0)
@@ -306,22 +200,16 @@ def _test_partial_sum_to_broadcast(test_case, src_device_type, dst_device_type):
 
     @flow.global_function(function_config=func_config)
     def partial_sum_to_broadcast_job(input_blob: oft.Numpy.Placeholder((96, 96, 96))):
-        out21 = for_each_src_dst_device_num(input_blob, 2, 1)
-        out22 = for_each_src_dst_device_num(input_blob, 2, 2)
-        out23 = for_each_src_dst_device_num(input_blob, 2, 3)
-        out31 = for_each_src_dst_device_num(input_blob, 3, 1)
-        out32 = for_each_src_dst_device_num(input_blob, 3, 2)
-        out33 = for_each_src_dst_device_num(input_blob, 3, 3)
-        return out21, out22, out23, out31, out32, out33
+        result_list = []
+        for i in (2, 3):
+            for j in (1, 2, 3):
+                result_list.append(build_p2b(input_blob, i, j))
+        return tuple(result_list)
 
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
-    out21, out22, out23, out31, out32, out33 = partial_sum_to_broadcast_job(x).get()
-    test_case.assertTrue(np.allclose(np.sum(x, axis=0), out21.numpy()))
-    test_case.assertTrue(np.allclose(np.sum(x, axis=0), out22.numpy()))
-    test_case.assertTrue(np.allclose(np.sum(x, axis=0), out23.numpy()))
-    test_case.assertTrue(np.allclose(np.sum(x, axis=0), out31.numpy()))
-    test_case.assertTrue(np.allclose(np.sum(x, axis=0), out32.numpy()))
-    test_case.assertTrue(np.allclose(np.sum(x, axis=0), out33.numpy()))
+    result_tuple = partial_sum_to_broadcast_job(x).get()
+    for out in result_tuple:
+        test_case.assertTrue(np.allclose(np.sum(x, axis=0), out.numpy()))
 
 
 def _test_broadcast_to_broadcast(test_case, src_device_type, dst_device_type):
@@ -331,7 +219,7 @@ def _test_broadcast_to_broadcast(test_case, src_device_type, dst_device_type):
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    def for_each_src_dst_device_num(input_blob, src_device_num, dst_device_num):
+    def build_b2b(input_blob, src_device_num, dst_device_num):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
             src = flow.identity(input_blob.with_distribute(flow.distribute.broadcast()))
         with flow.scope.placement(dst_device_type, "0:0-" + str(dst_device_num - 1)):
@@ -339,39 +227,17 @@ def _test_broadcast_to_broadcast(test_case, src_device_type, dst_device_type):
         return dst
 
     @flow.global_function(function_config=func_config)
-    def broadcast_to_broadcast_job(input_blob: oft.Numpy.Placeholder((96, 96, 96))):
-        out11 = for_each_src_dst_device_num(input_blob, 1, 1)
-        out12 = for_each_src_dst_device_num(input_blob, 1, 2)
-        out13 = for_each_src_dst_device_num(input_blob, 1, 3)
-        out21 = for_each_src_dst_device_num(input_blob, 2, 1)
-        out22 = for_each_src_dst_device_num(input_blob, 2, 2)
-        out23 = for_each_src_dst_device_num(input_blob, 2, 3)
-        out31 = for_each_src_dst_device_num(input_blob, 3, 1)
-        out32 = for_each_src_dst_device_num(input_blob, 3, 2)
-        out33 = for_each_src_dst_device_num(input_blob, 3, 3)
-        return out11, out12, out13, out21, out22, out23, out31, out32, out33
+    def broadcast_to_broadcast_job(input_blob: oft.Numpy.Placeholder((96, 96))):
+        result_list = []
+        for i in (1, 2, 3):
+            for j in (1, 2, 3):
+                result_list.append(build_b2b(input_blob, i, j))
+        return tuple(result_list)
 
-    x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
-    (
-        out11,
-        out12,
-        out13,
-        out21,
-        out22,
-        out23,
-        out31,
-        out32,
-        out33,
-    ) = broadcast_to_broadcast_job(x).get()
-    test_case.assertTrue(np.array_equal(x, out11.numpy()))
-    test_case.assertTrue(np.array_equal(x, out12.numpy()))
-    test_case.assertTrue(np.array_equal(x, out13.numpy()))
-    test_case.assertTrue(np.array_equal(x, out21.numpy()))
-    test_case.assertTrue(np.array_equal(x, out22.numpy()))
-    test_case.assertTrue(np.array_equal(x, out23.numpy()))
-    test_case.assertTrue(np.array_equal(x, out31.numpy()))
-    test_case.assertTrue(np.array_equal(x, out32.numpy()))
-    test_case.assertTrue(np.array_equal(x, out33.numpy()))
+    x = np.random.rand(96, 96).astype(np.float32)
+    result_tuple = broadcast_to_broadcast_job(x).get()
+    for out in result_tuple:
+        test_case.assertTrue(np.array_equal(x, out.numpy()))
 
 
 def _test_multi_lbi(

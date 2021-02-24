@@ -106,7 +106,7 @@ class TestPrelu(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["dtype"] = ["float32"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
-        arg_dict["shared_axes"] = [(2,), (1, 2, 3)]
+        arg_dict["shared_axes"] = [(2,), (1, 2), (0, 2), (1, 2, 3)]
 
         for arg in GenArgList(arg_dict):
             _run_test(*arg)

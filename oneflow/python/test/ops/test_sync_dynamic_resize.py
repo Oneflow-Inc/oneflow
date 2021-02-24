@@ -34,7 +34,7 @@ class TestSyncDynamicResize(flow.unittest.TestCase):
             (1000, 10),
         ]
         arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
-        arg_dict["size_type"] = ["int32"]
+        arg_dict["size_type"] = ["int32", "int64"]
 
         for device_type, x_shape, data_type, size_type in GenArgList(arg_dict):
             flow.clear_default_session()

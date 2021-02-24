@@ -101,7 +101,7 @@ class TestTril(flow.unittest.TestCase):
         arg_dict["type_name"] = ["float32", "float16", "double", "int32", "int64"]
         arg_dict["shape"] = [(3, 6, 8)]
         arg_dict["diagonal"] = [-8, -1, 0, 8]
-        arg_dict["fill_value"] = [1.0]
+        arg_dict["fill_value"] = [1.0, 0]
         for arg in GenArgDict(arg_dict):
             if arg["device"] == "cpu" and arg["type_name"] == "float16":
                 continue

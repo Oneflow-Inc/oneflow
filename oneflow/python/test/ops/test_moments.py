@@ -84,7 +84,7 @@ class TestMoments(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["x_shape"] = [(10, 20, 30), (20,)]
         arg_dict["data_type"] = ["float32"]
-        arg_dict["axes"] = [[0], [0, 1]]
+        arg_dict["axes"] = [[0], [0, 2], [0, 1]]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
