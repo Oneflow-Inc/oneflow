@@ -78,6 +78,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axes):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMoments(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_moments(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

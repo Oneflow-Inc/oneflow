@@ -95,6 +95,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSoftmax(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_softmax_shape(test_case):
         if flow.eager_execution_enabled():
             print("\nSkip under erger mode!")
@@ -103,12 +104,20 @@ class TestSoftmax(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["x_shape"] = [
             (10, 10, 20, 30),
+            (10, 20, 13),
+            (10, 20, 30),
+            (10, 20),
+            (10, 60),
             (32, 12, 128),
+            (10, 960),
+            (12, 2001),
+            (10, 4096),
+            (10, 8092),
             (256, 1001),
             (100, 65536),
             (10, 65535),
         ]
-        arg_dict["data_type"] = ["float32", "float16"]
+        arg_dict["data_type"] = ["float32", "double", "float16"]
         arg_dict["axis"] = [-1]
         for arg in GenArgList(arg_dict):
             if arg[0] == "cpu" and arg[2] == "float16":
@@ -121,9 +130,9 @@ class TestSoftmax(flow.unittest.TestCase):
             return
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
-        arg_dict["x_shape"] = [(10, 20, 30)]
-        arg_dict["data_type"] = ["float32", "float16"]
-        arg_dict["axis"] = [-3, -1, 0, 1, 2]
+        arg_dict["x_shape"] = [(10, 20, 30, 40)]
+        arg_dict["data_type"] = ["float32", "double", "float16"]
+        arg_dict["axis"] = [-4, -3, -2, -1, 0, 1, 2, 3]
         for arg in GenArgList(arg_dict):
             if arg[0] == "cpu" and arg[2] == "float16":
                 continue

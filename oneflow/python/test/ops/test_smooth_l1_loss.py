@@ -17,6 +17,7 @@ import unittest
 import uuid
 from collections import OrderedDict
 
+import os
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
@@ -56,6 +57,7 @@ def gen_numpy_data(prediction, label, beta=1.0):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSmoothL1Loss(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_smooth_l1_loss(_):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
@@ -63,7 +65,7 @@ class TestSmoothL1Loss(flow.unittest.TestCase):
             (100,),
             (10, 10),
         ]
-        arg_dict["data_type"] = ["float32"]
+        arg_dict["data_type"] = ["float32", "double"]
         arg_dict["beta"] = [0, 0.5, 1]
 
         for case in GenArgList(arg_dict):

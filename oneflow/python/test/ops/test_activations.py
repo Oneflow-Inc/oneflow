@@ -94,7 +94,7 @@ class TestActivations(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["activation_type"] = ["relu", "sigmoid", "tanh"]
         arg_dict["shape"] = [(64, 64)]
-        arg_dict["data_type"] = [flow.float]
+        arg_dict["data_type"] = [flow.float, flow.double]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 

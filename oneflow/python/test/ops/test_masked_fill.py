@@ -130,8 +130,10 @@ class TestMaskedFill(flow.unittest.TestCase):
         arg_dict["type_name"] = [
             "float32",
             "float16",
+            "double",
             "int8",
             "int32",
+            "int64",
         ]
         arg_dict["device"] = ["gpu", "cpu"]
         arg_dict["x_shape"] = [

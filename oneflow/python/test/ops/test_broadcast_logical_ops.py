@@ -47,10 +47,6 @@ def func_less_equal(a, b):
     return a <= b
 
 
-def func_logical_and(a, b):
-    return a & b
-
-
 def np_array(dtype, shape):
     if dtype == flow.int8:
         return np.random.randint(0, 127, shape).astype(np.int8)
@@ -66,33 +62,52 @@ def np_array(dtype, shape):
         assert False
 
 
-def GenerateTest(
-    test_case, func, a_shape, b_shape, dtype=flow.int32, device_type="gpu"
-):
+def GenerateTest(test_case, a_shape, b_shape, dtype=flow.int32, device_type="gpu"):
     func_config = flow.FunctionConfig()
     func_config.default_data_type(dtype)
 
     @flow.global_function(function_config=func_config)
-    def ModJob1(a: oft.Numpy.Placeholder(a_shape, dtype=dtype)):
-        with flow.scope.placement(device_type, "0:0"):
-            return func(a, a)
-
-    @flow.global_function(function_config=func_config)
-    def ModJob2(
+    def MyTestJob(
         a: oft.Numpy.Placeholder(a_shape, dtype=dtype),
         b: oft.Numpy.Placeholder(b_shape, dtype=dtype),
     ):
         with flow.scope.placement(device_type, "0:0"):
-            return func(a, b)
+            equal_out = func_equal(a, b)
+            not_equal_out = func_not_equal(a, b)
+            greater_than_out = func_greater_than(a, b)
+            greater_equal_out = func_greater_equal(a, b)
+            less_than_out = func_less_than(a, b)
+            less_equal_out = func_less_equal(a, b)
+            return (
+                equal_out,
+                not_equal_out,
+                greater_than_out,
+                greater_equal_out,
+                less_than_out,
+                less_equal_out,
+            )
 
     a = np_array(dtype, a_shape)
     b = np_array(dtype, b_shape)
 
-    y = ModJob1(a).get().numpy()
-    test_case.assertTrue(np.array_equal(y, func(a, a)))
-
-    y = ModJob2(a, b).get().numpy()
-    test_case.assertTrue(np.array_equal(y, func(a, b)))
+    (
+        equal_out,
+        not_equal_out,
+        greater_than_out,
+        greater_equal_out,
+        less_than_out,
+        less_equal_out,
+    ) = MyTestJob(a, b).get()
+    test_case.assertTrue(np.array_equal(equal_out.numpy(), func_equal(a, b)))
+    test_case.assertTrue(np.array_equal(not_equal_out.numpy(), func_not_equal(a, b)))
+    test_case.assertTrue(
+        np.array_equal(greater_than_out.numpy(), func_greater_than(a, b))
+    )
+    test_case.assertTrue(
+        np.array_equal(greater_equal_out.numpy(), func_greater_equal(a, b))
+    )
+    test_case.assertTrue(np.array_equal(less_than_out.numpy(), func_less_than(a, b)))
+    test_case.assertTrue(np.array_equal(less_equal_out.numpy(), func_less_equal(a, b)))
 
     flow.clear_default_session()
 
@@ -102,15 +117,6 @@ class TestBroadcastLogicalOps(flow.unittest.TestCase):
     def test_broadcast_logical_cpu(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
-        arg_dict["func"] = [
-            func_equal,
-            func_not_equal,
-            func_greater_than,
-            func_greater_equal,
-            func_less_than,
-            func_less_equal,
-            func_logical_and,
-        ]
         arg_dict["a_shape"] = [(64, 64)]
         arg_dict["b_shape"] = [(1, 64)]
         arg_dict["data_type"] = [
@@ -120,7 +126,7 @@ class TestBroadcastLogicalOps(flow.unittest.TestCase):
         arg_dict["device_type"] = ["cpu"]
 
         for arg in GenArgList(arg_dict):
-            if len(arg[2]) < len(arg[3]):
+            if len(arg[1]) < len(arg[2]):
                 continue
             GenerateTest(*arg)
 
@@ -128,27 +134,19 @@ class TestBroadcastLogicalOps(flow.unittest.TestCase):
     def test_broadcast_logical_gpu(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
-        arg_dict["func"] = [
-            func_equal,
-            func_not_equal,
-            func_greater_than,
-            func_greater_equal,
-            func_less_than,
-            func_less_equal,
-            func_logical_and,
-        ]
         arg_dict["a_shape"] = [(64, 64), (64, 64, 64)]
         arg_dict["b_shape"] = [(1, 64), (1, 64, 1)]
         arg_dict["data_type"] = [
             flow.int8,
             flow.int32,
+            flow.int64,
             flow.float,
-            flow.float16,
+            flow.double,
         ]
         arg_dict["device_type"] = ["gpu"]
 
         for arg in GenArgList(arg_dict):
-            if len(arg[2]) < len(arg[3]):
+            if len(arg[1]) < len(arg[2]):
                 continue
             GenerateTest(*arg)
 

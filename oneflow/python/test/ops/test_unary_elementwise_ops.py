@@ -18,6 +18,7 @@ import numpy as np
 import oneflow as flow
 from scipy.special import erf, erfc, gammaln
 import oneflow.typing as oft
+import os
 
 
 @flow.unittest.skip_unless_1n2d()

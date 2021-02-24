@@ -545,6 +545,7 @@ class TestBatchNormalization(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             CompareBnWithTensorFlow(test_case, **arg, training=False, trainable=False)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_layer_batchnorm_trainable_without_training(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
@@ -562,6 +563,7 @@ class TestBatchNormalization(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             CompareBnWithTensorFlow(test_case, **arg, training=False, trainable=True)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_nn_batchnorm(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]

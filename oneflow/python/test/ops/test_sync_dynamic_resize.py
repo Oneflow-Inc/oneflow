@@ -16,6 +16,7 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 
+import os
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
@@ -24,6 +25,7 @@ from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 @flow.unittest.skip_unless_1n1d()
 class TestSyncDynamicResize(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_sync_dynamic_resize(_):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
@@ -31,7 +33,7 @@ class TestSyncDynamicResize(flow.unittest.TestCase):
             (100,),
             (1000, 10),
         ]
-        arg_dict["data_type"] = ["float32", "int32"]
+        arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
         arg_dict["size_type"] = ["int32"]
 
         for device_type, x_shape, data_type, size_type in GenArgList(arg_dict):

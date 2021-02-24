@@ -15,6 +15,7 @@ limitations under the License.
 """
 from collections import OrderedDict
 
+import os
 import unittest
 import numpy as np
 import oneflow as flow
@@ -80,6 +81,7 @@ def gen_arg_list():
 
 @flow.unittest.skip_unless_1n1d()
 class TestInTopk(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_in_top_K(test_case):
         for arg in gen_arg_list():
             compare_with_tensorflow(*arg)
