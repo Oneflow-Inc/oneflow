@@ -67,7 +67,7 @@ class Tensor {
   virtual DataType dtype() const = 0;
   virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
   virtual bool is_lazy() const = 0;
-  virtual std::shared_ptr<DeterminedTensor> DeterminizeAndDestorySelf() = 0;
+  virtual std::shared_ptr<DeterminedTensor> DeterminizeAndDestroySelf() = 0;
 
  protected:
   Tensor() = default;
@@ -80,8 +80,8 @@ class NonDeterminedTensor final : public Tensor {
  public:
   virtual ~NonDeterminedTensor() = default;
   NonDeterminedTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
-                      const std::shared_ptr<Device>& device)
-      : shape_(shape), dtype_(dtype) {}
+                      const std::shared_ptr<const ParallelDesc>& parallel_desc)
+      : shape_(shape), dtype_(dtype), parallel_desc_(parallel_desc) {}
 
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   void set_shape(const std::shared_ptr<const Shape>& shape) { shape_ = shape; }
@@ -110,7 +110,7 @@ class NonDeterminedTensor final : public Tensor {
     return false;
   }
 
-  std::shared_ptr<DeterminedTensor> DeterminizeAndDestorySelf() override {
+  std::shared_ptr<DeterminedTensor> DeterminizeAndDestroySelf() override {
     // TODO: replace these fake functions
     auto is_consistent_mode_now = []() { return false; };
     auto is_parameter = []() { return false; };
@@ -140,7 +140,7 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
   // Setters to be deprecated
   virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 
-  std::shared_ptr<DeterminedTensor> DeterminizeAndDestorySelf() override {
+  std::shared_ptr<DeterminedTensor> DeterminizeAndDestroySelf() override {
     return shared_from_this();
   }
 };
