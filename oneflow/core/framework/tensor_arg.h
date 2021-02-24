@@ -33,9 +33,9 @@ class TensorArg {
 
   void Release() { partial_sum_tensors_.clear(); }
   // Lazily accumulates `partial_sum_tensors_` to one tensor and return
-  std::shared_ptr<Tensor> GetTensor();
+  const std::shared_ptr<Tensor>& GetTensor();
   // Builds a new tensor like `other` and returns its pointer
-  std::shared_ptr<Tensor> GetNextTensorPtrLike(const std::shared_ptr<Tensor>& other);
+  const std::shared_ptr<Tensor>& GetNextTensorPtrLike(const std::shared_ptr<Tensor>& other);
 
  private:
   std::vector<std::shared_ptr<Tensor>> partial_sum_tensors_;
