@@ -42,7 +42,7 @@ class PyForeignBoxingUtil : public ForeignBoxingUtil {
   }
 
   void Assign(const std::shared_ptr<InstructionsBuilder>& builder,
-              std::shared_ptr<compatible_py::BlobObject>& target_blob_object,
+              const std::shared_ptr<compatible_py::BlobObject>& target_blob_object,
               const std::shared_ptr<compatible_py::BlobObject>& source_blob_object) const override {
     PYBIND11_OVERRIDE(void, ForeignBoxingUtil, Assign, builder, target_blob_object,
                       source_blob_object);

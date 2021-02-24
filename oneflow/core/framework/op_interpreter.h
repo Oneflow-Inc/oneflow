@@ -37,7 +37,7 @@ class OpExprInterpState {
 };
 
 typedef struct OpExprInterpContext {
-  const Scope* scope;
+  // const Scope* scope;
   bool is_mirrored_strategy_enabled;
 } OpExprInterpContext, *OpExprInterpContextPtr;
 
