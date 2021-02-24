@@ -161,6 +161,47 @@ __global__ void CalFreezeScaleZeroPointAffine(const int64_t elements, const doub
   }
 }
 
+template<typename T>
+__global__ void CalScaleZeroPointCambricon(const int64_t elements, const double quantization_bit,
+                                           const float momentum, const T *max_ptr, const T *min_ptr,
+                                           T *moving_max_ptr, T *moving_min_ptr, T *scale,
+                                           T *zero_point) {
+  int64_t tid = threadIdx.x;
+  int64_t gid = (blockDim.x * blockIdx.x) + tid;
+
+  while (gid < elements) {
+    T activation_max = max(fabs(max_ptr[gid]), fabs(min_ptr[gid]));
+
+    if (moving_max_ptr[gid] == 0)
+      moving_max_ptr[gid] = activation_max;
+    else
+      moving_max_ptr[gid] = moving_max_ptr[gid] * momentum + activation_max * (1 - momentum);
+
+    // NOTE(Liang Depeng): cambricon quantization only use moving_max to calculate the scale
+    moving_min_ptr[gid] = moving_max_ptr[gid];
+
+    scale[gid] = floor(log2(moving_max_ptr[gid])) - (quantization_bit - 2);
+    zero_point[gid] = 0;
+    gid += gridDim.x * blockDim.x;
+  }
+}
+
+template<typename T>
+__global__ void CalFreezeScaleZeroPointCambricon(const int64_t elements,
+                                                 const double quantization_bit,
+                                                 const float momentum, const T *moving_max_ptr,
+                                                 T *scale, T *zero_point) {
+  int64_t tid = threadIdx.x;
+  int64_t gid = (blockDim.x * blockIdx.x) + tid;
+
+  while (gid < elements) {
+    T denominator = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
+    scale[gid] = floor(log2(moving_max_ptr[gid])) - (quantization_bit - 2);
+    zero_point[gid] = 0;
+    gid += gridDim.x * blockDim.x;
+  }
+}
+
 }  // namespace
 
 #define LAUNCH_CUDA_KERNEL(func, device_ctx_ptr, thread_num, shared_mem_size, ...)     \
@@ -189,6 +230,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     const std::string quantization_scheme = ctx->Attr<std::string>("quantization_scheme");
     const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
     const float momentum = ctx->Attr<float>("momentum");
+    const std::string quantization_formula = ctx->Attr<std::string>("quantization_formula");
 
     int64_t elements = in->shape().elem_cnt();
     T *max_ptr = tmp_buffer->mut_dptr<T>();
@@ -206,28 +248,44 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
                          min_ptr);
     }
 
-    if (quantization_scheme == "symmetric") {
+    if (quantization_formula == "google") {
+      if (quantization_scheme == "symmetric") {
+        if (*host_current_train_step_ptr <= stop_update_after_iters) {
+          LAUNCH_CUDA_KERNEL((CalScaleZeroPointSymmetric<T>), ctx->device_ctx(), 1, 0, 1,
+                             static_cast<double>(quantization_bit), momentum, max_ptr, min_ptr,
+                             moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(),
+                             scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
+        } else {
+          LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointSymmetric<T>), ctx->device_ctx(), 1, 0, 1,
+                             static_cast<double>(quantization_bit), momentum, moving_max->dptr<T>(),
+                             scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
+        }
+      } else {  // quantization_scheme == "affine"
+        if (*host_current_train_step_ptr <= stop_update_after_iters) {
+          LAUNCH_CUDA_KERNEL((CalScaleZeroPointAffine<T>), ctx->device_ctx(), 1, 0, 1,
+                             static_cast<double>(quantization_bit), momentum, max_ptr, min_ptr,
+                             moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(),
+                             scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
+        } else {
+          LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointAffine<T>), ctx->device_ctx(), 1, 0, 1,
+                             static_cast<double>(quantization_bit), momentum, moving_max->dptr<T>(),
+                             moving_min->dptr<T>(), scale->mut_dptr<T>(),
+                             zero_point->mut_dptr<T>());
+        }
+      }
+    } else if (quantization_formula == "cambricon") {
       if (*host_current_train_step_ptr <= stop_update_after_iters) {
-        LAUNCH_CUDA_KERNEL((CalScaleZeroPointSymmetric<T>), ctx->device_ctx(), 1, 0, 1,
+        LAUNCH_CUDA_KERNEL((CalScaleZeroPointCambricon<T>), ctx->device_ctx(), 1, 0, 1,
                            static_cast<double>(quantization_bit), momentum, max_ptr, min_ptr,
                            moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(),
                            scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
       } else {
-        LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointSymmetric<T>), ctx->device_ctx(), 1, 0, 1,
+        LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointCambricon<T>), ctx->device_ctx(), 1, 0, 1,
                            static_cast<double>(quantization_bit), momentum, moving_max->dptr<T>(),
                            scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
       }
-    } else {  // quantization_scheme == "affine"
-      if (*host_current_train_step_ptr <= stop_update_after_iters) {
-        LAUNCH_CUDA_KERNEL((CalScaleZeroPointAffine<T>), ctx->device_ctx(), 1, 0, 1,
-                           static_cast<double>(quantization_bit), momentum, max_ptr, min_ptr,
-                           moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(),
-                           scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
-      } else {
-        LAUNCH_CUDA_KERNEL((CalFreezeScaleZeroPointAffine<T>), ctx->device_ctx(), 1, 0, 1,
-                           static_cast<double>(quantization_bit), momentum, moving_max->dptr<T>(),
-                           moving_min->dptr<T>(), scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
-      }
+    } else {
+      UNIMPLEMENTED();
     }
 
     delete[] host_current_train_step_ptr;
