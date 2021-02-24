@@ -23,6 +23,13 @@ Maybe<void> OpKernelObject::ResetOpAndKernel(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc* parallel_desc) {
   auto op = ConstructOp(op_conf_, device_type_, job_desc_.get());
+  JUST(op->FillOpParallelDesc(*parallel_desc));
+  const auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
+    return CHECK_JUST(op_node_signature.LogicalBlobDesc4BnInOp(bn));
+  };
+  JUST(op->FillLogicalInBlobDesc(LogicalBlobDesc4BnInOp));
+  JUST(op->FillLogicalOutBlobDesc(LogicalBlobDesc4BnInOp));
+  JUST(op->FillSbpSignature(op_node_signature.sbp_signature()));
   JUST(InferBlobDescs(*op, BlobDesc4BnInOp, &op_node_signature.sbp_signature(), parallel_ctx));
   NewPartialInitializedKernel(*op, BlobDesc4BnInOp, op_node_signature, parallel_ctx, parallel_desc);
   return Maybe<void>::Ok();
@@ -55,6 +62,7 @@ Maybe<void> SystemOpKernelObject::ResetKernel(
   };
   JUST(op->FillLogicalInBlobDesc(LogicalBlobDesc4BnInOp));
   JUST(op->FillLogicalOutBlobDesc(LogicalBlobDesc4BnInOp));
+  JUST(op->FillSbpSignature(op_node_signature.sbp_signature()));
   JUST(InferBlobDescs(*op, BlobDesc4BnInOp, &op_node_signature.sbp_signature(), parallel_ctx));
   ResetKernel(*op, BlobDesc4BnInOp, op_node_signature, parallel_ctx, parallel_desc);
   return Maybe<void>::Ok();
