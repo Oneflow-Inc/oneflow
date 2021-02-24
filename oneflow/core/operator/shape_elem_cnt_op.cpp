@@ -72,12 +72,6 @@ void ShapeElemCntOp::VirtualGenKernelConf(
                                                                  inclusive_axis.end()};
 }
 
-Maybe<void> ShapeElemCntOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("y")->clear_value();
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> ShapeElemCntOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
