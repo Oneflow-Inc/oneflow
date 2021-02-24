@@ -10,6 +10,7 @@ namespace oneflow {
 class CPUStreamIndexGenerator final : public StreamIndexGenerator {
  public:
   CPUStreamIndexGenerator();
+  OF_DISALLOW_COPY_AND_MOVE(CPUStreamIndexGenerator);
   ~CPUStreamIndexGenerator() = default;
 
   stream_index_t GenerateComputeStreamIndex() override;
@@ -34,7 +35,7 @@ class CPUStreamIndexGenerator final : public StreamIndexGenerator {
   // for GenerateComputeStreamIndex
   stream_index_t compute_stream_index_counter_;
   // for GenerateIndependentStreamIndex
-  HashMap<TaskType, stream_index_t> task_type2max_stream_num_;
+  HashMap<TaskType, size_t> task_type2max_stream_num_;
   HashMap<TaskType, std::vector<stream_index_t>> task_type2allocated_stream_index_vec_;
   HashMap<TaskType, size_t> task_type2allocated_stream_index_vec_index_;
 };
@@ -66,13 +67,14 @@ stream_index_t CPUStreamIndexGenerator::GenerateIndependentTaskStreamIndex(TaskT
   if (IsClassRegistered<int32_t, IndependentThreadNum4TaskType>(task_type)) {
     std::unique_ptr<IndependentThreadNum4TaskType> thread_num_ptr(
         NewObj<int32_t, IndependentThreadNum4TaskType>(task_type));
+    const size_t max_num = static_cast<size_t>(*thread_num_ptr.get());
     auto max_num_iter = task_type2max_stream_num_.find(task_type);
     if (max_num_iter == task_type2max_stream_num_.end()) {
-      task_type2max_stream_num_.emplace(task_type, static_cast<size_t>(*thread_num_ptr));
+      task_type2max_stream_num_.emplace(task_type, max_num);
       CHECK(task_type2allocated_stream_index_vec_.emplace(task_type, std::vector<stream_index_t>{})
                 .second);
     } else {
-      CHECK_EQ(max_num_iter->second, *thread_num_ptr);
+      CHECK_EQ(max_num_iter->second, max_num);
       CHECK(task_type2allocated_stream_index_vec_.find(task_type)
             != task_type2allocated_stream_index_vec_.end());
     }
