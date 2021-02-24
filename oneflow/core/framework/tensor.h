@@ -63,21 +63,20 @@ class Tensor {
   // Getters
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual DataType dtype() const = 0;
-  virtual const std::shared_ptr<const cfg::ParallelConf>& parallel_conf() const = 0;
+  virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
   virtual bool is_lazy() const = 0;
   virtual bool is_consistent() const = 0;
 
   // Setters
   virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
   virtual void set_dtype(DataType dtype) = 0;
-  virtual void set_parallel_conf(const std::shared_ptr<const cfg::ParallelConf>& parallel_conf) = 0;
+  virtual void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) = 0;
 
   // Getters to be deprecated
-  virtual const std::shared_ptr<const compatible_py::BlobObject>& blob_object() const = 0;
+  virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
 
   // Setters to be deprecated
-  virtual void set_blob_object(
-      const std::shared_ptr<const compatible_py::BlobObject>& blob_object) = 0;
+  virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 
  protected:
   Tensor() = default;
@@ -93,8 +92,8 @@ class MirroredTensor final : public Tensor {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   DataType dtype() const override { return impl_->dtype(); }
-  const std::shared_ptr<const cfg::ParallelConf>& parallel_conf() const override {
-    return impl_->parallel_conf();
+  const std::shared_ptr<const ParallelDesc>& parallel_desc() const override {
+    return impl_->parallel_desc();
   }
   const std::shared_ptr<const Device>& device() const { return impl_->device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
@@ -105,19 +104,18 @@ class MirroredTensor final : public Tensor {
     return impl_->set_shape(shape);
   }
   void set_dtype(DataType dtype) override { return impl_->set_dtype(dtype); }
-  void set_parallel_conf(const std::shared_ptr<const cfg::ParallelConf>& parallel_conf) override {
-    impl_->set_parallel_conf(parallel_conf);
+  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override {
+    impl_->set_parallel_desc(parallel_desc);
   }
   void set_device(const std::shared_ptr<const Device>& device) { impl_->set_device(device); }
 
   // Getters to be deprecated
-  const std::shared_ptr<const compatible_py::BlobObject>& blob_object() const override {
+  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
     return impl_->blob_object();
   }
 
   // Setters to be deprecated
-  void set_blob_object(
-      const std::shared_ptr<const compatible_py::BlobObject>& blob_object) override {
+  void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
     impl_->set_blob_object(blob_object);
   }
 
@@ -135,8 +133,8 @@ class ConsistentTensor final : public Tensor {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   DataType dtype() const override { return impl_->dtype(); }
-  const std::shared_ptr<const cfg::ParallelConf>& parallel_conf() const override {
-    return impl_->parallel_conf();
+  const std::shared_ptr<const ParallelDesc>& parallel_desc() const override {
+    return impl_->parallel_desc();
   }
   const std::shared_ptr<const compatible_py::Distribute>& distribute() const {
     return impl_->distribute();
@@ -149,21 +147,20 @@ class ConsistentTensor final : public Tensor {
     return impl_->set_shape(shape);
   }
   void set_dtype(DataType dtype) override { return impl_->set_dtype(dtype); }
-  void set_parallel_conf(const std::shared_ptr<const cfg::ParallelConf>& parallel_conf) override {
-    impl_->set_parallel_conf(parallel_conf);
+  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override {
+    impl_->set_parallel_desc(parallel_desc);
   }
   void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) {
     impl_->set_distribute(distribute);
   }
 
   // Getters to be deprecated
-  const std::shared_ptr<const compatible_py::BlobObject>& blob_object() const override {
+  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
     return impl_->blob_object();
   }
 
   // Setters to be deprecated
-  void set_blob_object(
-      const std::shared_ptr<const compatible_py::BlobObject>& blob_object) override {
+  void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
     impl_->set_blob_object(blob_object);
   }
 
