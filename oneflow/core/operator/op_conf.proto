@@ -24,21 +24,6 @@ enum ActivationType {
   kRelu = 3;
 }
 
-message SigmoidCrossEntropyOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string loss = 3;
-  required DataType label_type = 4;
-}
-
-message SigmoidCrossEntropyGradOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string prediction_diff = 3;
-  required string loss_diff = 4;
-  required DataType label_type = 5;
-}
-
 message DistributeConcatOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -386,11 +371,6 @@ message EsacOpConf {
   optional DataType data_type = 3 [default=kInt32];
 }
 
-message PartialTickOpConf {
-  required string tick = 1;
-  required string out = 2;
-}
-
 message AssignOpConf {
   required string ref = 1;
   required string value = 2;
@@ -629,7 +609,6 @@ message OperatorConf {
     ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
     ReturnOpConf return_conf = 146;
-    PartialTickOpConf partial_tick_conf = 149;
     ForeignWatchOpConf foreign_watch_conf = 151;
     DistributeConcatOpConf distribute_concat_conf = 155;
     DistributeSplitOpConf distribute_split_conf = 156;
@@ -652,7 +631,6 @@ message OperatorConf {
 
     // domain op
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-    SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
@@ -662,7 +640,6 @@ message OperatorConf {
     ModelSaveOpConf model_save_conf = 297;
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
     ModelLoadOpConf model_load_conf = 301;
-    SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 317;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;

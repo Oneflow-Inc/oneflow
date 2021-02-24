@@ -538,6 +538,8 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   auto new_op_conf = JUST(DecodeLbiHintAndReturnNewOpConf(*op, &sbp_sig_conf, &ibn2disable_boxing));
   AddOpAndUpdateJobParallelViewConf(*new_op_conf, sbp_sig_conf, is_mirrored_parallel_view);
   auto parallel_conf = JUST(InferOpParallelConf(*op, origin_parallel_conf, ibn2disable_boxing));
+  ParallelDesc parallel_desc(*parallel_conf);
+  JUST(op->FillOpParallelDesc(parallel_desc));
   JUST(AddOpNameParallelConf2Placement(op_name, *parallel_conf));
   UpdateLbi2DisableBoxing(*op, ibn2disable_boxing);
   // infer batch_axis
@@ -557,7 +559,6 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   JUST(op->FillInBatchAxis(BatchAxis4Ibn));
   JUST(op->InferBatchAxisIf());
 
-  ParallelDesc parallel_desc(*parallel_conf);
   // infer mirrored signature
   JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
   // infer sbp signature
@@ -576,10 +577,11 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
     }
     return &iter->second;
   };
-  JUST(op->InferOutParallelDescIf(ParallelDesc4Obn, GetBlobDesc4BnInOp, parallel_desc,
-                                  JUST(op->sbp_signature())));
-  // TODO(lixinqi): replace lbi2parallel_desc_from_producer_view_  with ParallelSignature
   JUST(op->InferParallelSignatureIf());
+  for (const auto& bn : op->output_bns()) {
+    lbi2parallel_desc_from_producer_view_.emplace(op->BnInOp2Lbi(bn),
+                                                  *JUST(op->GetParallelDesc4BnInOp(bn)));
+  }
   JUST(AddLbiParallelConf2BlobPlacement(op, ParallelDesc4Obn));
   // Infer whether input/output blobs are backward used
   InferBlobBackwardSignature(op);
@@ -1250,6 +1252,12 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
   op_graph.DumpLogicalBlobDesc(job_);
   op_graph.DumpSbpSignature(job_);
   return Maybe<void>::Ok();
+}
+
+Maybe<std::string> JobBuildAndInferCtx::GetOpBlobLbn(const std::string& op_name,
+                                                     const std::string& bn_in_op) const {
+  const auto& lbi = JUST(Op4OpName(op_name))->BnInOp2Lbi(bn_in_op);
+  return GenLogicalBlobName(lbi);
 }
 
 }  // namespace oneflow

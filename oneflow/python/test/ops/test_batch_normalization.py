@@ -109,8 +109,6 @@ def CompareNnBnWithTensorFlow(
             flow.watch_diff(x_full_precision, test_global_storage.Setter("x_diff"))
             return y
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_y = FlowNnBnJob(x, mean, variance, offset, scale).get().numpy()
     of_x_diff = test_global_storage.Get("x_diff")
 
@@ -212,8 +210,6 @@ def RunOneflowLayerBn(
 
             return y
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     y = FlowJob(x).get().numpy()
     if trainable:
         x_diff = test_global_storage.Get("x_diff")
@@ -406,9 +402,6 @@ def _test_batchnorm_add_relu(test_case, input_shape, axis, data_type):
 
         return loss
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-
     x = np.random.rand(*input_shape).astype(np.float32)
     addend = np.random.rand(*input_shape).astype(np.float32)
 
@@ -472,9 +465,6 @@ def _test_batchnorm_relu(test_case, input_shape, axis, data_type):
         ).minimize(flow.math.reduce_sum(loss))
 
         return loss
-
-    check_point = flow.train.CheckPoint()
-    check_point.init()
 
     x = np.random.rand(*input_shape).astype(np.float32)
 

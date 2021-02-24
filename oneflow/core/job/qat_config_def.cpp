@@ -13,23 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/register/blob.h"
+#include "oneflow/core/framework/config_def.h"
 
 namespace oneflow {
 
-namespace user_op {
+namespace {
 
-#ifdef WITH_CUDA
+REGISTER_SCOPE_CONFIG_DEF().Bool("quantization_aware_training", true,
+                                 "enable quantization aware training");
 
-template<>
-void Tensor::CheckDataType<half>() const {
-  LOG_IF(FATAL, data_type() != DataType::kFloat16)
-      << "tensor data_type mismatched. value: kFloat16, template T: half";
-}
-
-#endif  // WITH_CUDA
-
-}  // namespace user_op
+}  // namespace
 
 }  // namespace oneflow
