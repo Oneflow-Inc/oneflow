@@ -618,10 +618,8 @@ bool HasBlobDescWithField(std::function<const BlobDesc*(const std::string&)> Get
 }  // namespace
 
 void Operator::GenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
-    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
-    const ParallelDesc* parallel_desc, const SbpSignature* sbp_signature) const {
+    const std::function<const BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   auto* dtype_signature = kernel_conf->mutable_dtype_signature();
   for (const std::string& ibn : input_bns()) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(ibn);
@@ -653,31 +651,6 @@ void Operator::GenKernelConf(
     kernel_conf->set_data_type(data_type);
   }
 
-  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, LogicalBlobDesc4BnInOp,
-                       parallel_desc, sbp_signature);
-}
-
-void Operator::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
-    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
-    const ParallelDesc* parallel_desc, const SbpSignature* sbp_signature) const {
-  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, LogicalBlobDesc4BnInOp,
-                       parallel_desc);
-}
-
-void Operator::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
-    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
-    const ParallelDesc* parallel_desc) const {
-  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, LogicalBlobDesc4BnInOp);
-}
-
-void Operator::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
-    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const {
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 

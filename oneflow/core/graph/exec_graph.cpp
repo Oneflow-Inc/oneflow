@@ -59,11 +59,7 @@ void ExecNode::UnbindBnWithEmptyRegst() {
 }
 
 void ExecNode::ToProto(const ParallelContext* parallel_ctx, ExecNodeProto* ret) const {
-  const OpNode* op_node = Global<OpGraph>::Get()->OpNode4OpName(op_->op_name());
-  const ParallelDesc* parallel_desc = op_node == nullptr ? nullptr : &op_node->parallel_desc();
-  const SbpSignature* sbp_signature = op_node == nullptr ? nullptr : &op_node->sbp_signature();
-  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx, ret->mutable_kernel_conf(),
-                     GetLogicalBlobDesc4BnInOpFunc(), parallel_desc, sbp_signature);
+  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx, ret->mutable_kernel_conf());
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
     auto regst = bn_regst.second;
