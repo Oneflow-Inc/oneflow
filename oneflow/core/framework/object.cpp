@@ -40,7 +40,7 @@ std::shared_ptr<OpArgBlobAttribute> BlobObject::op_arg_blob_attr() const {
   return op_arg_blob_attr_;
 }
 
-void BlobObject::add_releaser(std::function<void(Object*)> release) {
+void BlobObject::add_releaser(const std::function<void(Object*)>& release) {
   release_.emplace_back(release);
 }
 
