@@ -20,7 +20,7 @@ namespace oneflow {
 namespace {
 
 #define GRPC_CHECK(x) CHECK_EQ(x.error_code(), grpc::StatusCode::OK)
-}  // namespace oneflow
+}  // namespace
 
 CtrlClient::~CtrlClient() {
   {
