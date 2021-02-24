@@ -1113,7 +1113,7 @@ class SGD(Optimizer):
             optimizer_conf.naive_conf.SetInParent()
         else:
             optimizer_conf.momentum_conf.beta = self.momentum
-        optimizer_conf.variables.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.variables)
 
 
 @oneflow_export("optimizer.SGDW")
@@ -1237,7 +1237,7 @@ class SGDW(Optimizer):
                 optimizer_conf.weight_decay_conf.excludes.pattern.extend(
                     self.weight_decay_excludes
                 )
-        optimizer_conf.variables.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.variables)
 
 
 @oneflow_export("optimizer.Adam")
@@ -1356,7 +1356,7 @@ class Adam(Optimizer):
         optimizer_conf.adam_conf.beta2 = self.beta2
         optimizer_conf.adam_conf.epsilon = self.epsilon
         optimizer_conf.adam_conf.do_bias_correction = self.do_bias_correction
-        optimizer_conf.variables.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.variables)
 
 
 @oneflow_export("optimizer.AdamW")
@@ -1511,7 +1511,7 @@ class AdamW(Optimizer):
                 optimizer_conf.weight_decay_conf.excludes.pattern.extend(
                     self.weight_decay_excludes
                 )
-        optimizer_conf.variables.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.variables)
 
 
 @oneflow_export("optimizer.RMSProp")
@@ -1617,7 +1617,7 @@ class RMSProp(Optimizer):
         optimizer_conf.rmsprop_conf.decay_rate = self.decay_rate
         optimizer_conf.rmsprop_conf.epsilon = self.epsilon
         optimizer_conf.rmsprop_conf.centered = self.centered
-        optimizer_conf.variables.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.variables)
 
 
 @oneflow_export("optimizer.LARS")
@@ -1705,7 +1705,7 @@ class LARS(Optimizer):
         optimizer_conf.lars_conf.momentum_beta = self.momentum_beta
         optimizer_conf.lars_conf.epsilon = self.epsilon
         optimizer_conf.lars_conf.lars_coefficient = self.lars_coefficient
-        optimizer_conf.variables.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.variables)
 
 
 @oneflow_export("optimizer.LazyAdam")
@@ -1801,7 +1801,7 @@ class LazyAdam(Optimizer):
         optimizer_conf.lazy_adam_conf.beta1 = self.beta1
         optimizer_conf.lazy_adam_conf.beta2 = self.beta2
         optimizer_conf.lazy_adam_conf.epsilon = self.epsilon
-        optimizer_conf.variables.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.variables)
 
 
 @oneflow_export("optimizer.LAMB")
@@ -1891,7 +1891,7 @@ class LAMB(Optimizer):
                 optimizer_conf.weight_decay_conf.excludes.pattern.extend(
                     self.weight_decay_excludes
                 )
-        optimizer_conf.variables.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.variables)
 
 
 @oneflow_export("optimizer.CombinedOptimizer")
