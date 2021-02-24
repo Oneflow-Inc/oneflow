@@ -19,23 +19,23 @@ limitations under the License.
 
 #include <memory>
 #include <vector>
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace one {
 
 class Tensor;
 
-// This class will be used in TensorImpl and Autograd. It will share datas with different
+// This class will be used in TensorImpl and Autograd. It will share data with different
 // FunctionNodes.
-class TensorArg {
+class TensorArg final {
  public:
-  bool Empty() const { return partial_sum_tensors_.empty(); }
+  OF_DISALLOW_COPY_AND_MOVE(TensorArg);
+  TensorArg() = default;
+  ~TensorArg() = default;
 
+  bool Empty() const { return partial_sum_tensors_.empty(); }
   void Release() { partial_sum_tensors_.clear(); }
-  // Lazily accumulates `partial_sum_tensors_` to one tensor and return
-  const std::shared_ptr<Tensor>& GetTensor();
-  // Builds a new tensor like `other` and returns its pointer
-  const std::shared_ptr<Tensor>& GetNextTensorPtrLike(const std::shared_ptr<Tensor>& other);
 
  private:
   std::vector<std::shared_ptr<Tensor>> partial_sum_tensors_;

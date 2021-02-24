@@ -56,6 +56,8 @@ class Device;
 
 namespace one {
 
+class FunctionNode;
+
 class Tensor {
  public:
   virtual ~Tensor() = default;
@@ -110,9 +112,7 @@ class MirroredTensor final : public Tensor {
   bool is_consistent() const override { return false; }
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
   const std::shared_ptr<TensorArg>& now_grad() const override { return impl_->now_grad(); }
-  const std::shared_ptr<FunctionNode>& grad_fn_node() const override {
-    return impl_->grad_fn_node();
-  }
+  const std::shared_ptr<FunctionNode>& grad_fn_node() const override { return grad_fn_node_; }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
@@ -128,7 +128,7 @@ class MirroredTensor final : public Tensor {
   void set_device(const std::shared_ptr<const Device>& device) { impl_->set_device(device); }
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
-    impl_->set_grad_fn_node(grad_fn_node);
+    grad_fn_node_ = grad_fn_node;
   }
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
   void set_retain_grad(bool retain_grad) override { impl_->set_requires_grad(retain_grad); }
@@ -145,6 +145,7 @@ class MirroredTensor final : public Tensor {
 
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
+  std::shared_ptr<FunctionNode> grad_fn_node_;
 };
 
 class ConsistentTensor final : public Tensor {
@@ -167,9 +168,7 @@ class ConsistentTensor final : public Tensor {
   bool is_consistent() const override { return true; }
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
   const std::shared_ptr<TensorArg>& now_grad() const override { return impl_->now_grad(); }
-  const std::shared_ptr<FunctionNode>& grad_fn_node() const override {
-    return impl_->grad_fn_node();
-  }
+  const std::shared_ptr<FunctionNode>& grad_fn_node() const override { return grad_fn_node_; }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
@@ -187,7 +186,7 @@ class ConsistentTensor final : public Tensor {
   }
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
-    impl_->set_grad_fn_node(grad_fn_node);
+    grad_fn_node_ = grad_fn_node;
   }
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
   void set_retain_grad(bool retain_grad) override { impl_->set_requires_grad(retain_grad); }
@@ -204,6 +203,7 @@ class ConsistentTensor final : public Tensor {
 
  private:
   std::shared_ptr<ConsistentTensorImpl> impl_;
+  std::shared_ptr<FunctionNode> grad_fn_node_;
 };
 
 }  // namespace one
