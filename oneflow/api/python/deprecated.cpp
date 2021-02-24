@@ -24,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/job/mirrored_parallel.pb.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/mirrored_parallel.cfg.h"
-#include "oneflow/core/register/batch_axis_signature.cfg.h"
 #include "oneflow/core/job/parallel_signature.cfg.h"
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -51,8 +50,6 @@ Maybe<cfg::OpNodeSignature> MakeOpNodeSignatureFromSerializedOpAttribute(
   op_node_signature->mutable_mirrored_signature()->InitFromProto(op_attribute.mirrored_signature());
   op_node_signature->mutable_logical_blob_desc_signature()->InitFromProto(
       op_attribute.logical_blob_desc_signature());
-  op_node_signature->mutable_batch_axis_signature()->InitFromProto(
-      op_attribute.batch_axis_signature());
   op_node_signature->mutable_parallel_signature()->InitFromProto(op_attribute.parallel_signature());
   return op_node_signature;
 }

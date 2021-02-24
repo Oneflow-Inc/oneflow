@@ -23,16 +23,14 @@ namespace oneflow {
       .Input("x")                                                                             \
       .Output("y")                                                                            \
       .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)                        \
-      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)                                   \
-      .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);               \
+      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis);                                  \
                                                                                               \
   REGISTER_USER_OP((std::string("") + math_unary_elementwise_type + "_grad"))                 \
       .Input("x")                                                                             \
       .Input("dy")                                                                            \
       .Output("dx")                                                                           \
       .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)                        \
-      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)                                   \
-      .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);               \
+      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis);                                  \
                                                                                               \
   REGISTER_USER_OP_GRAD(math_unary_elementwise_type)                                          \
       .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {  \

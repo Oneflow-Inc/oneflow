@@ -62,27 +62,6 @@ REGISTER_USER_OP("squeeze")
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      const auto& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
-      AxisVector fixed_axes_vec;
-      TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"),
-                                      in_desc.shape().NumAxes(), &fixed_axes_vec);
-
-      const int32_t in_batch_axis_value = static_cast<int32_t>(in_batch_axis->value());
-      if (in_batch_axis->has_value()
-          && std::find(fixed_axes_vec.begin(), fixed_axes_vec.end(), in_batch_axis_value)
-                 == fixed_axes_vec.end()) {
-        DimVector dim_vec = in_desc.shape().dim_vec();
-        CheckAndLabelAxesToSqueezeMinusOne(fixed_axes_vec, &dim_vec);
-        const int32_t cnt = std::count(dim_vec.begin(), dim_vec.begin() + in_batch_axis_value, -1);
-        out_batch_axis->set_value(in_batch_axis_value - cnt);
-      } else {
-        out_batch_axis->clear_value();
-      }
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       AxisVector fixed_axes_vec;

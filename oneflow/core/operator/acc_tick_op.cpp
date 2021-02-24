@@ -41,12 +41,6 @@ Maybe<void> AccTickOp::InferOutputBlobTimeShape(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AccTickOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("acc")->clear_value();
-  return Maybe<void>::Ok();
-}
-
 REGISTER_OP(OperatorConf::kAccTickConf, AccTickOp);
 REGISTER_TICK_TOCK_OP(OperatorConf::kAccTickConf);
 

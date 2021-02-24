@@ -102,7 +102,6 @@ REGISTER_USER_OP("concat")
     .Attr<int64_t>("axis")
     .Attr<int64_t>("max_dim_size")
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn(GetSbpSignature);
 
 REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn(GenGrapOp);
