@@ -26,7 +26,6 @@ REGISTER_USER_OP("broadcast_div_grad")
       *ctx->TensorDesc4ArgNameAndIndex("dy", 0) = *ctx->TensorDesc4ArgNameAndIndex("y", 0);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
       const Shape& z_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("z", 0).shape();

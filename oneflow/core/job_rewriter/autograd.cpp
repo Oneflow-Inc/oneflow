@@ -782,7 +782,7 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
       CHECK(!cur_blob_desc->is_dynamic());
       const DataType loss_data_type = cur_blob_desc->data_type();
       const int64_t time_shape_elem_cnt = pair.second->out_blob_time_shape()->elem_cnt();
-      // TODO: consider batch_axis or sbp
+      // TODO: consider sbp
       const int64_t loss_elem_cnt =
           cur_blob_desc->shape().elem_cnt() * time_shape_elem_cnt / source_time_shape_elem_cnt;
       if (blob_desc) {

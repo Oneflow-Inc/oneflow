@@ -28,10 +28,6 @@ REGISTER_USER_OP("cast_to_static_shape")
       output_desc->set_is_dynamic(false);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("output", 0) = *ctx->BatchAxis4ArgNameAndIndex("input", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& input_desc =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0);

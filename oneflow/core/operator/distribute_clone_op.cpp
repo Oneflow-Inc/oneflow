@@ -34,8 +34,6 @@ class DistributeCloneOp final : public Operator {
 
  private:
   Maybe<void> InferBlobParallelDesc() override;
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -99,14 +97,6 @@ Maybe<void> DistributeCloneOp::InferBlobParallelDesc() {
     CHECK_OR_RETURN(it != bn2parallel_desc.end());
     return it->second;
   });
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DistributeCloneOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  FOR_RANGE(int32_t, i, 0, output_bns().size()) {
-    *BatchAxis4BnInOp(output_bns().Get(i)) = *BatchAxis4BnInOp("in");
-  }
   return Maybe<void>::Ok();
 }
 
