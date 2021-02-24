@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter_util.h"
+
+#include "oneflow/core/common/file_system.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
@@ -36,7 +38,7 @@ typedef HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>> Bn2Blob
   return std::make_shared<cfg::OpAttribute>(*op_attribute);
 }
 
-/*static*/ std::shared_ptr<cfg::OpAttribute> AddBuiltinOpAndInferOpAttribute(
+/*static*/ std::shared_ptr<cfg::OpAttribute> OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
     const BuiltinOpExpr* op_expr, const std::shared_ptr<Scope>& scope,
     const bool is_mirrored_strategy_enabled) {
   OperatorConf&& op_conf = OpInterpUtil::GenBuiltinOpConf(op_expr);
@@ -115,7 +117,7 @@ OpInterpUtil::BuildFeedPathInstruction(const std::shared_ptr<Bn2BlobObjectMap>& 
 /*static*/ std::shared_ptr<compatible_py::BlobObject> OpInterpUtil::EagerRunModelLoad(
     const OperatorConf& op_conf, const std::string& snapshot_path) {
   using namespace std::placeholders;
-  Path path(snapshot_path);
+  file_system::Path path(snapshot_path);
   CHECK(path.basename() == "out");
   CHECK(path.dirname() == op_conf.name());
 
@@ -168,7 +170,7 @@ OpInterpUtil::BuildFeedPathInstruction(const std::shared_ptr<Bn2BlobObjectMap>& 
                                                      const std::shared_ptr<Tensor>& output,
                                                      const OpAttribute& op_attribute) {
   const auto& op_conf = op_attribute.op_conf();
-  const auto& snapshot_path = session->snapshot_mgr()->get_snapshot_path(op_conf.name());
+  const auto& snapshot_path = session->snapshot_mgr()->GetSnapshotPath(op_conf.name());
 
   std::shared_ptr<compatible_py::BlobObject> temp_blob_object;
   if (snapshot_path.empty()) {
