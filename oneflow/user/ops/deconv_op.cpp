@@ -79,11 +79,6 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferBatchAxis4DeConv(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> GetSbpSignatures4DeConv(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("in", 0), 0)
@@ -208,7 +203,6 @@ REGISTER_USER_OP("deconv1d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<1>)
     .SetTensorDescInferFn(InferTensorDesc4DeConv<1>)
-    .SetBatchAxisInferFn(InferBatchAxis4DeConv)
     .SetGetSbpFn(GetSbpSignatures4DeConv);
 
 REGISTER_USER_OP("deconv2d")
@@ -225,7 +219,6 @@ REGISTER_USER_OP("deconv2d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<2>)
     .SetTensorDescInferFn(InferTensorDesc4DeConv<2>)
-    .SetBatchAxisInferFn(InferBatchAxis4DeConv)
     .SetGetSbpFn(GetSbpSignatures4DeConv);
 
 REGISTER_USER_OP("deconv3d")
@@ -242,7 +235,6 @@ REGISTER_USER_OP("deconv3d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<3>)
     .SetTensorDescInferFn(InferTensorDesc4DeConv<3>)
-    .SetBatchAxisInferFn(InferBatchAxis4DeConv)
     .SetGetSbpFn(GetSbpSignatures4DeConv);
 
 REGISTER_USER_OP_GRAD("deconv1d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);

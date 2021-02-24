@@ -39,12 +39,6 @@ Maybe<void> CaseOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CaseOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  for (const std::string& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp("in"); }
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> CaseOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {

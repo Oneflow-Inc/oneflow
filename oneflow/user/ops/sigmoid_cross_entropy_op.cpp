@@ -34,10 +34,6 @@ REGISTER_USER_OP("sigmoid_cross_entropy")
       *loss_desc = *prediction_desc;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("loss", 0) = *ctx->BatchAxis4ArgNameAndIndex("label", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto num_out_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0).shape().NumAxes();
@@ -68,11 +64,6 @@ REGISTER_USER_OP("sigmoid_cross_entropy_grad")
       CHECK_EQ_OR_RETURN(label_desc->shape(), prediction_desc->shape());
       CHECK_EQ_OR_RETURN(loss_diff_desc->shape(), prediction_desc->shape());
       *ctx->TensorDesc4ArgNameAndIndex("prediction_diff", 0) = *prediction_desc;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("prediction_diff", 0) =
-          *ctx->BatchAxis4ArgNameAndIndex("prediction", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
