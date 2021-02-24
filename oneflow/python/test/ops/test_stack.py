@@ -55,18 +55,13 @@ def _compare_stack_with_np(input_shape, axis, device_type, machine_ids, device_c
     def assert_prediction_grad(blob: tp.Numpy):
         assert np.allclose(blob, _np_grad)
 
-    # if the stack axis is 0, the batch axis will be change to 1
-    _batch_axis = 0
-    if axis + len(input_shape) + 1 == 0 or axis == 0:
-        _batch_axis = 1
-
     @flow.global_function(
         type="train", function_config=func_config,
     )
     def oneflow_stack(
         of_input_1: tp.Numpy.Placeholder(shape=input_1.shape),
         of_input_2: tp.Numpy.Placeholder(shape=input_2.shape),
-        of_mul: tp.Numpy.Placeholder(shape=np_random_mul.shape, batch_axis=_batch_axis),
+        of_mul: tp.Numpy.Placeholder(shape=np_random_mul.shape),
     ) -> tp.Numpy:
         with flow.scope.placement(device_type, "0:0"):
             v = flow.get_variable(
