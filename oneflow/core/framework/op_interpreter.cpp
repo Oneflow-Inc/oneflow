@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter.h"
+#include "oneflow/core/framework/op_interpreter_util.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
@@ -26,30 +27,6 @@ limitations under the License.
 
 namespace oneflow {
 namespace one {
-
-static std::shared_ptr<cfg::OpAttribute> AddOpAndInferOpAttribute(
-    const BuiltinOpExpr* op_expr, const OpExprInterpContext* ctx,
-    const std::unordered_map<std::string, std::string>& ibn2tensor_names = {}) {
-  OperatorConf op_conf;
-  op_expr->BuildOpConf(&op_conf);
-  for (const auto& it : ibn2tensor_names) {
-    ReplaceInputLbnInOpCustomizedConf(&op_conf, it.first, it.second);
-  }
-  int64_t symbol_id = ctx->scope->symbol_id().GetOrThrow();
-  op_conf.set_scope_symbol_id(symbol_id);
-  if (!op_conf.has_device_tag()) {
-    op_conf.set_device_tag(ctx->scope->device_parallel_desc_symbol()->device_tag());
-  }
-  OpAttribute op_attribute = [&]() {
-    auto infer_ctx = GetCurInferCtx().GetOrThrow();
-    if (ctx->is_mirrored_strategy_enabled) {
-      return infer_ctx->AddAndInferMirroredOp(op_conf).GetOrThrow();
-    } else {
-      return infer_ctx->AddAndInferConsistentOp(op_conf).GetOrThrow();
-    }
-  }();
-  return std::make_shared<cfg::OpAttribute>(op_attribute);
-}
 
 void OpExprInterpreter::ResetSelfState() { self_state_.reset(new OpExprInterpState); }
 
@@ -73,12 +50,20 @@ void LazyInterpreter::Apply(const OpExpr* op_expr, const TensorList& inputs, Ten
 void LazyInterpreter::Apply_(const BuiltinOpExpr* op_expr, const TensorList& inputs,
                              TensorList& outputs, const OpExprInterpState* state) {
   CHECK_EQ(inputs.size(), op_expr->input_num());
-  std::unordered_map<std::string, std::string> ibn2tensor_names;
+  auto scope = GetCurrentScope().GetPtrOrThrow();
+  OperatorConf&& op_conf = OpInterpUtil::GenBuiltinOpConf(op_expr);
+  int64_t symbol_id = scope->symbol_id().GetOrThrow();
+  op_conf.set_scope_symbol_id(symbol_id);
+  if (!op_conf.has_device_tag()) {
+    op_conf.set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
+  }
   for (int i = 0; i < inputs.size(); ++i) {
     const std::string& ibn = op_expr->indexed_ibns().at(i);
-    ibn2tensor_names[ibn] = TensorNameScope::Global()->Lookup(inputs[i]);
+    const std::string& tensor_name = TensorNameScope::Global()->Lookup(inputs[i]);
+    ReplaceInputLbnInOpCustomizedConf(&op_conf, ibn, tensor_name);
   }
-  auto op_attribute = AddOpAndInferOpAttribute(op_expr, context(), ibn2tensor_names);
+  auto op_attribute = OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
+      op_conf, context()->is_mirrored_strategy_enabled);
   OpAttribute proto_op_attribute;
   op_attribute->ToProto(&proto_op_attribute);
 
@@ -126,8 +111,7 @@ void EagerInterpreter::Apply(const OpExpr* op_expr, const TensorList& inputs, Te
 static std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>
 MakeBn2BlobObjectMap(const BuiltinOpExpr* op_expr, const TensorList& inputs,
                      const TensorList& outputs) {
-  using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
-  auto* bn2blob_object(new Bn2BlobObjectMap{});
+  auto* bn2blob_object(new HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>{});
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& ibn = op_expr->indexed_ibns().at(i);
     bn2blob_object->emplace(ibn, inputs[i]->blob_object());
@@ -136,7 +120,8 @@ MakeBn2BlobObjectMap(const BuiltinOpExpr* op_expr, const TensorList& inputs,
     const auto& obn = op_expr->indexed_obns().at(i);
     bn2blob_object->emplace(obn, outputs[i]->blob_object());
   }
-  return std::shared_ptr<Bn2BlobObjectMap>(bn2blob_object);
+  return std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>(
+      bn2blob_object);
 }
 
 static void NaiveInterpret(const BuiltinOpExpr* op_expr, const TensorList& inputs,
@@ -152,154 +137,12 @@ static void NaiveInterpret(const BuiltinOpExpr* op_expr, const TensorList& input
 
 void EagerInterpreter::Apply_(const UserOpExpr* op_expr, const TensorList& inputs,
                               TensorList& outputs, const OpExprInterpState* state) {
-  auto op_attribute = AddOpAndInferOpAttribute(op_expr, context());
-  auto parallel_conf = std::make_shared<cfg::ParallelConf>(
-      context()->scope->device_parallel_desc_symbol()->parallel_conf());
+  auto scope = GetCurrentScope().GetPtrOrThrow();
+  auto op_attribute = OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
+      op_expr, scope, context()->is_mirrored_strategy_enabled);
+  auto parallel_conf =
+      std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
   NaiveInterpret(op_expr, inputs, outputs, op_attribute, parallel_conf);
-}
-
-static std::string GetJobNameScopePrefix(const Session* session, const std::string& job_name) {
-  // TODO
-  return std::string("");
-}
-
-static OperatorConf&& GenModelInitOpConf(const OperatorConf& variable_conf) {
-  OperatorConf model_init_op_conf;
-  return std::move(model_init_op_conf);
-}
-
-static OperatorConf&& GenModelIOPathInputOpConf() {
-  OperatorConf path_input_op_conf;
-  return std::move(path_input_op_conf);
-}
-
-static OperatorConf&& GenModelLoadOpConf() {
-  OperatorConf model_load_op_conf;
-  return std::move(model_load_op_conf);
-}
-
-static std::shared_ptr<cfg::OpAttribute> InferOpAttribute(
-    const std::shared_ptr<Scope>& scope, OperatorConf& op_conf,
-    const HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>& ibn2blob_object) {
-  op_conf.set_scope_symbol_id(scope->symbol_id().GetOrThrow());
-  OpNodeSignature upstream_signature;
-  if (ibn2blob_object.size()) {
-    std::shared_ptr<cfg::OpNodeSignature> cfg_upstream_signature(new cfg::OpNodeSignature);
-    for (const auto& it : ibn2blob_object) {
-      it.second->op_arg_parallel_attr()->DumpToOpNodeSignature(it.first, cfg_upstream_signature);
-      it.second->op_arg_blob_attr()->DumpToOpNodeSignature(it.first, cfg_upstream_signature);
-    }
-    cfg_upstream_signature->ToProto(&upstream_signature);
-  }
-  const auto&& op = ConstructAndInferOp(op_conf, upstream_signature, *scope).GetPtrOrThrow();
-  const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
-  return std::make_shared<cfg::OpAttribute>(*op_attribute);
-}
-
-static std::function<void(const std::shared_ptr<InstructionsBuilder>&)>
-BuildModelInitOrIOPathInputInstruction(
-    OperatorConf& op_conf,
-    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn2blob_object) {
-  using namespace std::placeholders;
-  return [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    auto&& scope = GetCurrentScope().GetPtrOrThrow();
-    auto op_attribute = InferOpAttribute(scope, op_conf, {});
-    auto parallel_conf =
-        std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
-    const auto* boxing_util = Global<ForeignBoxingUtil>::Get();
-    builder->StatelessCall(op_attribute, parallel_conf, bn2blob_object,
-                           std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util, _1, _2, _3));
-  };
-}
-
-static std::function<void(const std::shared_ptr<InstructionsBuilder>&)> BuildFeedPathInstruction(
-    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn2blob_object) {
-  // TODO
-  int callback_id = -1;
-  return [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    const auto& blob_object = bn2blob_object->at("out");
-    builder->FeedBlob(blob_object, callback_id);
-    builder->InsertRemoveForeignCallbackInstruction(blob_object->object_id(), callback_id);
-  };
-}
-
-static std::shared_ptr<compatible_py::BlobObject> EagerRunModelInit(const OperatorConf& op_conf) {
-  using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
-  auto&& model_init_conf = GenModelInitOpConf(op_conf);
-  std::shared_ptr<Bn2BlobObjectMap> bn2blob_object(new Bn2BlobObjectMap{});
-
-  auto BuildModelInitInstruction =
-      BuildModelInitOrIOPathInputInstruction(model_init_conf, bn2blob_object);
-  LogicalRun(BuildModelInitInstruction).GetOrThrow();
-  return bn2blob_object->at("out_0");
-}
-
-static std::shared_ptr<compatible_py::BlobObject> EagerRunModelLoad(
-    const OperatorConf& op_conf, const std::string& snapshot_path) {
-  using namespace std::placeholders;
-  using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
-  Path path(snapshot_path);
-  CHECK(path.basename() == "out");
-  CHECK(path.dirname() == op_conf.name());
-
-  auto&& path_input_op_conf = GenModelIOPathInputOpConf();
-
-  std::shared_ptr<Bn2BlobObjectMap> bn2blob_object(new Bn2BlobObjectMap{});
-  auto BuildModelIOPathInputInstruction =
-      BuildModelInitOrIOPathInputInstruction(path_input_op_conf, bn2blob_object);
-  auto _BuildFeedPathInstruction = BuildFeedPathInstruction(bn2blob_object);
-
-  std::shared_ptr<Bn2BlobObjectMap> model_load_blob_objects(new Bn2BlobObjectMap{});
-  auto&& model_load_op_conf = GenModelLoadOpConf();
-  auto BuildModelLoadInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    auto&& scope = GetCurrentScope().GetPtrOrThrow();
-    const auto& blob_object = bn2blob_object->at("out");
-    (*model_load_blob_objects)["path"] = blob_object;
-    auto op_attribute = InferOpAttribute(scope, model_load_op_conf, *model_load_blob_objects);
-    auto parallel_conf =
-        std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
-    const auto* boxing_util = Global<ForeignBoxingUtil>::Get();
-    builder->StatelessCall(op_attribute, parallel_conf, model_load_blob_objects,
-                           std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util, _1, _2, _3));
-  };
-
-  LogicalRun(BuildModelIOPathInputInstruction).GetOrThrow();
-  LogicalRun(_BuildFeedPathInstruction).GetOrThrow();
-  LogicalRun(BuildModelLoadInstruction).GetOrThrow();
-  return model_load_blob_objects->at("out_0");
-}
-
-static void Assign(std::shared_ptr<compatible_py::BlobObject>& target_blob_object,
-                   const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  auto BuildAssignInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    const auto* boxing_util = Global<ForeignBoxingUtil>::Get();
-    auto new_parallel_desc_symbol = boxing_util->TryReplaceDeviceTag(
-        builder, target_blob_object->parallel_desc_symbol(), "cpu");
-    auto consumer_op_arg_parallel_attr = std::make_shared<compatible_py::OpArgParallelAttribute>(
-        new_parallel_desc_symbol, target_blob_object->op_arg_parallel_attr()->sbp_parallel(),
-        target_blob_object->op_arg_parallel_attr()->opt_mirrored_parallel());
-    auto tmp_blob_object =
-        boxing_util->BoxingTo(builder, blob_object, consumer_op_arg_parallel_attr);
-    boxing_util->Assign(builder, target_blob_object, tmp_blob_object);
-  };
-  LogicalRun(BuildAssignInstruction).GetOrThrow();
-}
-
-static void InitVariableOutputBlob(const Session* session, const std::shared_ptr<Tensor>& output,
-                                   const OpAttribute& op_attribute) {
-  const auto& op_conf = op_attribute.op_conf();
-  const auto& snapshot_path = session->snapshot_mgr()->get_snapshot_path(op_conf.name());
-
-  std::shared_ptr<compatible_py::BlobObject> temp_blob_object;
-  if (snapshot_path.empty()) {
-    temp_blob_object = EagerRunModelInit(op_conf);
-  } else {
-    temp_blob_object = EagerRunModelLoad(op_conf, snapshot_path);
-  }
-  auto target_blob_object = output->blob_object();
-  Assign(target_blob_object, temp_blob_object);
 }
 
 void EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const TensorList& inputs,
@@ -309,12 +152,14 @@ void EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const TensorList& i
   const std::string job_name = JobBuildAndInferCtx_GetCurrentJobName().GetOrThrow();
   auto session = GetDefaultSession().GetPtrOrThrow();
   const std::string variable_name =
-      GetJobNameScopePrefix(session.get(), job_name) + op_expr->op_name();
+      OpInterpUtil::GetJobNameScopePrefix(session, job_name) + op_expr->op_name();
 
   // TODO(hjchen2)
-  auto op_attribute = AddOpAndInferOpAttribute(op_expr, context());
-  auto parallel_conf = std::make_shared<cfg::ParallelConf>(
-      context()->scope->device_parallel_desc_symbol()->parallel_conf());
+  auto scope = GetCurrentScope().GetPtrOrThrow();
+  auto op_attribute = OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
+      op_expr, scope, context()->is_mirrored_strategy_enabled);
+  auto parallel_conf =
+      std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
   NaiveInterpret(op_expr, inputs, outputs, op_attribute, parallel_conf);
   OpAttribute proto_op_attribute;
   op_attribute->ToProto(&proto_op_attribute);
@@ -326,13 +171,15 @@ void EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const TensorList& i
   } else {
     // outputs[0].reset(new EagerConsistentTensor(...));
   }
-  InitVariableOutputBlob(session.get(), outputs[0], proto_op_attribute);
+  OpInterpUtil::InitVariableOutputBlob(session, outputs[0], proto_op_attribute);
 }
 
 static std::function<void(const std::shared_ptr<InstructionsBuilder>& builder)>
 BuildMirroredCastInstruction(const BuiltinOpExpr* op_expr, const TensorList& inputs,
                              TensorList& outputs, const OpExprInterpContext* ctx) {
-  auto op_attribute = AddOpAndInferOpAttribute(op_expr, ctx);
+  auto scope = GetCurrentScope().GetPtrOrThrow();
+  auto op_attribute = OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
+      op_expr, scope, ctx->is_mirrored_strategy_enabled);
   auto BuildInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
     auto bn2blob_object = MakeBn2BlobObjectMap(op_expr, inputs, outputs);
     const auto& in_blob_object = (*bn2blob_object)["in"];
@@ -381,7 +228,9 @@ static std::shared_ptr<compatible_py::BlobObject> GetInBlobObject(
 static std::function<void(const std::shared_ptr<InstructionsBuilder>& builder)>
 BuildDistributeSplitOrCloneInstruction(const BuiltinOpExpr* op_expr, const TensorList& inputs,
                                        TensorList& outputs, const OpExprInterpContext* ctx) {
-  auto op_attribute = AddOpAndInferOpAttribute(op_expr, ctx);
+  auto scope = GetCurrentScope().GetPtrOrThrow();
+  auto op_attribute = OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
+      op_expr, scope, ctx->is_mirrored_strategy_enabled);
   OpAttribute proto_op_attribute;
   op_attribute->ToProto(&proto_op_attribute);
   auto BuildInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
@@ -414,7 +263,9 @@ void EagerInterpreter::Apply_(const DistributeCloneOpExpr* op_expr, const Tensor
 static std::function<void(const std::shared_ptr<InstructionsBuilder>& builder)>
 BuildDistributeConcatAndAddInstruction(const BuiltinOpExpr* op_expr, const TensorList& inputs,
                                        TensorList& outputs, const OpExprInterpContext* ctx) {
-  auto op_attribute = AddOpAndInferOpAttribute(op_expr, ctx);
+  auto scope = GetCurrentScope().GetPtrOrThrow();
+  auto op_attribute = OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
+      op_expr, scope, ctx->is_mirrored_strategy_enabled);
   OpAttribute proto_op_attribute;
   op_attribute->ToProto(&proto_op_attribute);
   auto op_parallel_desc_sym =

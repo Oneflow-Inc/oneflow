@@ -42,7 +42,7 @@ class ForeignBoxingUtil {
   }
 
   virtual void Assign(const std::shared_ptr<InstructionsBuilder>& builder,
-                      std::shared_ptr<compatible_py::BlobObject>& target_blob_object,
+                      const std::shared_ptr<compatible_py::BlobObject>& target_blob_object,
                       const std::shared_ptr<compatible_py::BlobObject>& source_blob_object) const {
     UNIMPLEMENTED();
   }
