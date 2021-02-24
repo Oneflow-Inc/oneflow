@@ -134,27 +134,6 @@ REGISTER_USER_OP("matmul")
     .Attr<bool>("transpose_a", false)
     .Attr<bool>("transpose_b", false)
     .SetTensorDescInferFn(InferTensorDesc4Matmul)
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      auto BatchAxis4BnInOp = [&ctx](const std::string& arg_name) -> OptInt64* {
-        return ctx->BatchAxis4ArgNameAndIndex(arg_name, 0);
-      };
-      OptInt64 a_batch_axis(*BatchAxis4BnInOp("a"));
-      if (a_batch_axis.has_value() && ctx->Attr<bool>("transpose_a")) {
-        a_batch_axis.set_value(1 - a_batch_axis.value());
-      }
-      OptInt64 b_batch_axis(*BatchAxis4BnInOp("b"));
-      if (b_batch_axis.has_value() && ctx->Attr<bool>("transpose_b")) {
-        b_batch_axis.set_value(1 - b_batch_axis.value());
-      }
-      if (a_batch_axis.has_value() && a_batch_axis.value() == 0) {
-        *BatchAxis4BnInOp("out") = a_batch_axis;
-      } else if (b_batch_axis.has_value() && b_batch_axis.value() == 1) {
-        *BatchAxis4BnInOp("out") = b_batch_axis;
-      } else {
-        BatchAxis4BnInOp("out")->clear_value();
-      }
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       // (m, k_a) * (k_b, n) where k_a == k_b
       int32_t m_axis = -1;
@@ -221,19 +200,6 @@ REGISTER_USER_OP("batch_matmul")
     .Attr<bool>("transpose_a", false)
     .Attr<bool>("transpose_b", false)
     .SetTensorDescInferFn(InferTensorDesc4Matmul)
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      auto BatchAxis4BnInOp = [&ctx](const std::string& arg_name) -> OptInt64* {
-        return ctx->BatchAxis4ArgNameAndIndex(arg_name, 0);
-      };
-      if (BatchAxis4BnInOp("a")->has_value()) {
-        *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("a");
-      } else if (BatchAxis4BnInOp("b")->has_value()) {
-        *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("b");
-      } else {
-        BatchAxis4BnInOp("out")->clear_value();
-      }
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& a_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0);
       std::vector<user_op::OpArg> out_and_add_to_output_args;

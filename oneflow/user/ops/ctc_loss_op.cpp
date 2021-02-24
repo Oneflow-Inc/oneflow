@@ -45,13 +45,6 @@ REGISTER_USER_OP("ctc_loss")
           Shape({batch_size, log_probs->shape().At(0), 2 * targets->shape().At(1) + 1});
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("loss", 0) =
-          *ctx->BatchAxis4ArgNameAndIndex("input_lengths", 0);
-      *ctx->BatchAxis4ArgNameAndIndex("alpha", 0) =
-          *ctx->BatchAxis4ArgNameAndIndex("input_lengths", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .Split(user_op::OpArg("log_probs", 0), 1)  // `log_probs` batch axis is 1
@@ -89,10 +82,6 @@ REGISTER_USER_OP("ctc_loss_grad")
       CHECK_GE_OR_RETURN(ctx->Attr<int>("blank"), 0);
       *ctx->Dtype4ArgNameAndIndex("grad", 0) = *ctx->Dtype4ArgNameAndIndex("log_probs", 0);
       *ctx->Shape4ArgNameAndIndex("grad", 0) = log_probs->shape();
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("grad", 0) = *ctx->BatchAxis4ArgNameAndIndex("log_probs", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
