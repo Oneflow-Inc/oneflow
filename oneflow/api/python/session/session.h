@@ -20,10 +20,10 @@ limitations under the License.
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/cluster_instruction.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/framework/config_def.h"
@@ -40,7 +40,7 @@ inline void FixCpuDeviceNum(ConfigProto* config_proto) {
 
 inline Maybe<void> InitLazyGlobalSession(const std::string& config_proto_str) {
   CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get()) << "env not found";
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
 
   ClusterInstruction::MasterSendSessionStart();
 
@@ -59,14 +59,14 @@ inline Maybe<void> InitLazyGlobalSession(const std::string& config_proto_str) {
 
 inline Maybe<void> DestroyLazyGlobalSession() {
   if (Global<SessionGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   Global<SessionGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
 
 inline Maybe<void> StartLazyGlobalSession() {
   CHECK_NOTNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   const JobSet& job_set = Global<LazyJobBuildAndInferCtxMgr>::Get()->job_set();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
@@ -82,7 +82,7 @@ inline Maybe<void> StartLazyGlobalSession() {
 
 inline Maybe<void> StopLazyGlobalSession() {
   if (Global<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
   Global<Oneflow>::Delete();
   Global<const InterJobReuseMemStrategy>::Delete();

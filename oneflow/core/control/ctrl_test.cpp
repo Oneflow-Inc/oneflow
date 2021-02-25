@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/control/ctrl_util.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 
@@ -64,8 +64,6 @@ TEST(CtrlServer, new_delete) {
   CHECK_JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
                  .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
   Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
-  int64_t this_mchn_id = Global<ProcessCtx>::Get()->rank();
-  Global<MachineCtx>::New(this_mchn_id);
   Global<ResourceDesc, ForEnv>::New(GetResource());
   Global<ResourceDesc, ForSession>::New(GetResource());
 
@@ -74,7 +72,6 @@ TEST(CtrlServer, new_delete) {
 
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForEnv>::Delete();
-  Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
   Global<ProcessCtx>::Delete();
   Global<CtrlServer>::Delete();
