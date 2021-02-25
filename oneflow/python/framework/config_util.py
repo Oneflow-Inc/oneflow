@@ -447,6 +447,40 @@ def enable_tensor_float_32_compute(val=True):
     sess.config_proto.resource.enable_tensor_float_32_compute = val
 
 
+@oneflow_export("config.nccl_use_compute_stream")
+def api_nccl_use_compute_stream(val: bool = False) -> None:
+    r"""Whether or not nccl use compute stream to reuse nccl memory and speedup
+
+    Args:
+        val (bool, optional): True or False. Defaults to False.
+    """
+    return enable_if.unique([nccl_use_compute_stream, do_nothing])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def nccl_use_compute_stream(val=False):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.nccl_use_compute_stream = val
+
+
+@oneflow_export("config.disable_group_boxing_by_dst_parallel")
+def api_disable_group_boxing_by_dst_parallel(val: bool = False) -> None:
+    r"""Whether or not disable group boxing by dst parallel pass to reduce boxing memory life cycle.
+
+    Args:
+        val (bool, optional): True or False. Defaults to False.
+    """
+    return enable_if.unique([disable_group_boxing_by_dst_parallel, do_nothing])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def disable_group_boxing_by_dst_parallel(val=False):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.disable_group_boxing_by_dst_parallel = val
+
+
 @oneflow_export("config.collective_boxing.nccl_num_streams")
 def api_nccl_num_streams(val: int) -> None:
     r"""Set up the number of nccl parallel streams while use boxing

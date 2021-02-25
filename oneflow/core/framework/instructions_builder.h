@@ -83,7 +83,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<int64_t> NewSymbolId();
 
   Maybe<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
-      std::vector<std::shared_ptr<compatible_py::BlobObject>> physical_blob_objects,
+      const std::vector<std::shared_ptr<compatible_py::BlobObject>>& physical_blob_objects,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
       const std::shared_ptr<compatible_py::OpArgBlobAttribute>& op_arg_blob_attr);
 
@@ -122,9 +122,10 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<compatible_py::BlobObject>& blob_object,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr);
 
-  Maybe<void> ReplaceMirrored(const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
-                              std::vector<std::shared_ptr<compatible_py::BlobObject>> lhs_objects,
-                              std::vector<std::shared_ptr<compatible_py::BlobObject>> rhs_objects);
+  Maybe<void> ReplaceMirrored(
+      const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+      const std::vector<std::shared_ptr<compatible_py::BlobObject>>& lhs_objects,
+      const std::vector<std::shared_ptr<compatible_py::BlobObject>>& rhs_objects);
 
   Maybe<Scope> BuildInitialScope(int64_t session_id,
                                  const std::shared_ptr<cfg::JobConfigProto>& job_conf,
@@ -173,17 +174,17 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::string& instr_name, const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
       const std::shared_ptr<compatible_py::OpKernelObject> opkernel_object,
       const std::shared_ptr<OpNodeSignatureDesc> op_node_signature_sym,
-      std::vector<
-          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+      const std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
           const_input_operand_blob_objects,
-      std::vector<
-          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+      const std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
           mutable_input_operand_blob_objects,
-      std::vector<
-          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+      const std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
           mut1_operand_blob_objects,
-      std::vector<
-          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+      const std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
           mut2_operand_blob_objects);
   using FindOrCreateDelegateBlobObjectFun =
       std::function<std::shared_ptr<compatible_py::BlobObject>(
@@ -352,17 +353,17 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<OperatorConfSymbol>& op_conf_sym,
       const std::shared_ptr<OpNodeSignatureDesc>& op_node_signature_sym,
       const std::shared_ptr<compatible_py::Object>& shared_opkernel_obj,
-      std::vector<
-          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+      const std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
           const_input_operand_blob_objects,
-      std::vector<
-          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+      const std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
           mutable_input_operand_blob_objects,
-      std::vector<
-          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+      const std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
           mut1_operand_blob_objects,
-      std::vector<
-          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+      const std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
           mut2_operand_blob_objects);
 
   template<typename T>

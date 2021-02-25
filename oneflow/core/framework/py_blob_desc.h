@@ -28,7 +28,6 @@ namespace oneflow {
 
 namespace compatible_py {
 
-static int64_t INVALID_BATCH_AXIS = -22;
 static int64_t INVALID_SPLIT_AXIS = -22;
 
 class BlobDesc : public Tensor {
@@ -47,8 +46,6 @@ class BlobDesc : public Tensor {
   virtual DataType dtype() const override;
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const override;
 
-  virtual int64_t batch_axis() const;
-  virtual bool has_batch_axis() const;
   virtual bool is_dynamic() const;
   virtual bool is_tensor_list() const;
   virtual std::shared_ptr<Distribute> distribute() const;

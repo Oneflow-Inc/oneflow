@@ -37,18 +37,16 @@ class Numpy(PyStructCompatibleToBlob):
         def foo() -> oneflow.typing.Numpy:
             loss = ... # your network
             return loss
-        
+
         loss = foo() # get a numpy.ndarray
         print(loss)
     """
 
-    def Placeholder(
-        shape: Sequence[int], dtype=dtype_util.float, batch_axis: Optional[int] = 0
-    ):
-        """`Numpy.Placeholder` is a typing function for numpy input of a OneFlow global function. 
-        A `numpy.ndarray` takes a `Numpy.Placeholder`'s place must have a identical shape.
+    def Placeholder(shape: Sequence[int], dtype=dtype_util.float):
+        """`Numpy.Placeholder` is a typing function for numpy input of a OneFlow global function.
+        A `numpy.ndarray` takes a `Numpy.Placeholder`'s place must have an identical shape.
         For instance::
-            
+
             @oneflow.global_function()
             def foo(
                 image_blob: oneflow.typing.Numpy.Placeholder(
@@ -56,16 +54,12 @@ class Numpy(PyStructCompatibleToBlob):
                 )
             ):
                 # your network
-            
+
             foo(np.random.randn(2, 255, 255, 3).astype(np.float32))
-            
+
         """
         assert type(shape) is tuple, "shape should be a tuple. %s found" % shape
-        return type(
-            "Numpy.Placeholder",
-            (NumpyDef,),
-            dict(shape=shape, dtype=dtype, batch_axis=batch_axis),
-        )
+        return type("Numpy.Placeholder", (NumpyDef,), dict(shape=shape, dtype=dtype),)
 
 
 @oneflow_export("typing.ListNumpy")
@@ -77,19 +71,17 @@ class ListNumpy(PyStructCompatibleToBlob):
         def foo() -> oneflow.typing.ListNumpy:
             mirrored_tensors = ... # your network
             return mirrored_tensors
-        
+
         mirrored_tensors = foo() # get a list of numpy.ndarray
         for tensor in mirrored_tensors:
             print(mirrored_tensors)
     """
 
-    def Placeholder(
-        shape: Sequence[int], dtype=dtype_util.float, batch_axis: Optional[int] = 0
-    ):
-        """`ListNumpy.Placeholder` is a typing function for numpy input of a OneFlow global function. 
+    def Placeholder(shape: Sequence[int], dtype=dtype_util.float):
+        """`ListNumpy.Placeholder` is a typing function for numpy input of a OneFlow global function.
         A `list` of `numpy.ndarray` takes a `ListNumpy.Placeholder`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
         For instance::
-            
+
             @oneflow.global_function()
             def foo(
                 image_blob: oneflow.typing.ListNumpy.Placeholder(
@@ -97,7 +89,7 @@ class ListNumpy(PyStructCompatibleToBlob):
                 )
             ):
                 # your network
-            
+
             input1 = np.random.randn(2, 255, 255, 3).astype(np.float32)
             input2 = np.random.randn(2, 251, 251, 3).astype(np.float32)
             foo([input1])
@@ -106,9 +98,7 @@ class ListNumpy(PyStructCompatibleToBlob):
         """
         assert type(shape) is tuple, "shape should be a tuple. %s found" % shape
         return type(
-            "ListNumpy.Placeholder",
-            (ListOfNumpyDef,),
-            dict(shape=shape, dtype=dtype, batch_axis=batch_axis),
+            "ListNumpy.Placeholder", (ListOfNumpyDef,), dict(shape=shape, dtype=dtype),
         )
 
 
@@ -121,20 +111,18 @@ class ListListNumpy(PyStructCompatibleToBlob):
         def foo() -> oneflow.typing.ListListNumpy:
             mirrored_tensor_lists = ... # your network
             return mirrored_tensor_lists
-        
+
         mirrored_tensor_lists = foo() # get a list of list of numpy.ndarray
         for tensor_list in mirrored_tensor_lists:
             for tensor in tensor_list:
                 print(mirrored_tensors)
     """
 
-    def Placeholder(
-        shape: Sequence[int], dtype=dtype_util.float, batch_axis: Optional[int] = 0
-    ):
-        """`ListListNumpy.Placeholder` is a typing function for numpy input of a OneFlow global function. 
+    def Placeholder(shape: Sequence[int], dtype=dtype_util.float):
+        """`ListListNumpy.Placeholder` is a typing function for numpy input of a OneFlow global function.
         A `list` of `list` of `numpy.ndarray` takes a `ListListNumpy.Placeholder`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
         For instance::
-            
+
             @oneflow.global_function()
             def foo(
                 image_blob: oneflow.typing.ListListNumpy.Placeholder(
@@ -142,7 +130,7 @@ class ListListNumpy(PyStructCompatibleToBlob):
                 )
             ):
                 # your network
-            
+
             input1 = np.random.randn(2, 255, 255, 3).astype(np.float32)
             input2 = np.random.randn(2, 251, 251, 3).astype(np.float32)
             foo([[input1]])
@@ -153,7 +141,7 @@ class ListListNumpy(PyStructCompatibleToBlob):
         return type(
             "ListListNumpy.Placeholder",
             (ListOfListOfNumpyDef,),
-            dict(shape=shape, dtype=dtype, batch_axis=batch_axis),
+            dict(shape=shape, dtype=dtype),
         )
 
 
@@ -166,24 +154,20 @@ class OneflowNumpyDef(object):
 class NumpyDef(OneflowNumpyDef):
     @classmethod
     def NewInputBlobDef(subclass):
-        return input_blob_def.FixedTensorDef(
-            subclass.shape, dtype=subclass.dtype, batch_axis=subclass.batch_axis
-        )
+        return input_blob_def.FixedTensorDef(subclass.shape, dtype=subclass.dtype)
 
 
 class ListOfNumpyDef(OneflowNumpyDef):
     @classmethod
     def NewInputBlobDef(subclass):
-        return input_blob_def.MirroredTensorDef(
-            subclass.shape, dtype=subclass.dtype, batch_axis=subclass.batch_axis
-        )
+        return input_blob_def.MirroredTensorDef(subclass.shape, dtype=subclass.dtype)
 
 
 class ListOfListOfNumpyDef(OneflowNumpyDef):
     @classmethod
     def NewInputBlobDef(subclass):
         return input_blob_def.MirroredTensorListDef(
-            subclass.shape, dtype=subclass.dtype, batch_axis=subclass.batch_axis
+            subclass.shape, dtype=subclass.dtype
         )
 
 
