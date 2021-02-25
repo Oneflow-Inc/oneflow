@@ -36,9 +36,6 @@ class OpInterpUtil {
       const BuiltinOpExpr* op_expr, const std::shared_ptr<Scope>& scope,
       const bool is_mirrored_strategy_enabled);
 
-  static std::string GetJobNameScopePrefix(const std::shared_ptr<Session>& session,
-                                           const std::string& job_name);
-
   static void InitVariableOutputBlob(const std::shared_ptr<Session>& session,
                                      const std::shared_ptr<Tensor>& output,
                                      const OpAttribute& op_attribute);
@@ -46,7 +43,8 @@ class OpInterpUtil {
  private:
   static OperatorConf&& GenModelInitOpConf(const OperatorConf& variable_conf);
   static OperatorConf&& GenModelIOPathInputOpConf();
-  static OperatorConf&& GenModelLoadOpConf();
+  static OperatorConf&& GenModelLoadOpConf(const OperatorConf& variable_conf,
+                                           const OperatorConf& path_input_op_conf);
 
   using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
 

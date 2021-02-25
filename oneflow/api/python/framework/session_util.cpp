@@ -37,6 +37,10 @@ class PySession : public Session {
     using P = std::pair<std::shared_ptr<one::Tensor>, std::shared_ptr<one::Tensor>>;
     PYBIND11_OVERRIDE(P, Session, TryGetVariableBlobOfJobFromStash, job_name, variable_name);
   }
+
+  std::string GetJobNameScopePrefix(const std::string& job_name) const override {
+    PYBIND11_OVERRIDE(std::string, Session, GetJobNameScopePrefix, job_name);
+  }
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
@@ -46,7 +50,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("instruction_list", &Session::instruction_list)
       .def("eager_symbol_list", &Session::eager_symbol_list)
       .def("snapshot_mgr", &Session::snapshot_mgr)
-      .def("TryGetVariableBlobOfJobFromStash", &Session::TryGetVariableBlobOfJobFromStash);
+      .def("TryGetVariableBlobOfJobFromStash", &Session::TryGetVariableBlobOfJobFromStash)
+      .def("GetJobNameScopePrefix", &Session::GetJobNameScopePrefix);
 
   m.def("GetDefaultSessionId", []() {
     int64_t default_sess_id = *GetDefaultSessionId().GetOrThrow();

@@ -151,8 +151,7 @@ void EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const TensorList& i
   CHECK_EQ(outputs.size(), 1);
   const std::string job_name = JobBuildAndInferCtx_GetCurrentJobName().GetOrThrow();
   auto session = GetDefaultSession().GetPtrOrThrow();
-  const std::string variable_name =
-      OpInterpUtil::GetJobNameScopePrefix(session, job_name) + op_expr->op_name();
+  const std::string variable_name = session->GetJobNameScopePrefix(job_name) + op_expr->op_name();
 
   std::shared_ptr<Tensor> global_blob, job_blob;
   std::tie(global_blob, job_blob) =
