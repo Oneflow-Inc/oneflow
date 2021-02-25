@@ -397,7 +397,6 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         auto* stream_index_generator =
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
                                                                                  device_id);
-        CHECK_NOTNULL(stream_index_generator);
         uint32_t stream_index = stream_index_generator->GenerateComputeStreamIndex();
         const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
         TaskNode* in_node = sorted_in_tasks.at(i);

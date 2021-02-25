@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.pb.h"
-#include <limits>
+#include <climits>
 
 namespace oneflow {
 
@@ -39,22 +39,20 @@ class ProcessId {
   bool operator!=(const ProcessId& rhs) const { return !(*this == rhs); }
 
  private:
-  static const int kBits = 19;
-  static const int kFullBits = 32;
-  static_assert(kFullBits <= std::numeric_limits<uint32_t>::digits,
-                "ProcessId bits layout is illegal");
+  using underlying_t = uint32_t;
+  constexpr static int kNodeIndexBits = 12;
+  constexpr static int kProcessIndexBits = 7;
+  constexpr static int kBits = kNodeIndexBits + kProcessIndexBits;
+  constexpr static int kFullBits = sizeof(underlying_t) * CHAR_BIT;
   static_assert(kBits <= kFullBits, "ProcessId bits layout is illegal");
-  static const int kReservedBits = kFullBits - kBits;
-  static const int kNodeIndexBits = 12;
-  static const int kProcessIndexBits = 7;
-  static_assert(kNodeIndexBits + kProcessIndexBits == kBits, "ProcessId bits layout is illegal");
+  constexpr static int kReservedBits = kFullBits - kBits;
 
   friend class TaskId;
   friend class std::hash<ProcessId>;
-  explicit ProcessId(uint32_t val) : val_(val) {}
+  explicit ProcessId(underlying_t val) : val_(val) {}
   operator uint32_t() const { return val_; }
 
-  uint32_t val_;
+  underlying_t val_;
 };
 
 class DeviceId {
@@ -66,22 +64,20 @@ class DeviceId {
   bool operator!=(const DeviceId& rhs) const { return !(*this == rhs); }
 
  private:
-  static const int kBits = 12;
-  static const int kFullBits = 32;
-  static_assert(kFullBits <= std::numeric_limits<uint32_t>::digits,
-                "DeviceId bits layout is illegal");
+  using underlying_t = uint32_t;
+  constexpr static int kDeviceTypeBits = 5;
+  constexpr static int kDeviceIndexBits = 7;
+  constexpr static int kBits = kDeviceTypeBits + kDeviceIndexBits;
+  constexpr static int kFullBits = sizeof(underlying_t) * CHAR_BIT;
   static_assert(kBits <= kFullBits, "DeviceId bits layout is illegal");
-  static const int kReservedBits = kFullBits - kBits;
-  static const int kDeviceTypeBits = 5;
-  static const int kDeviceIndexBits = 7;
-  static_assert(kDeviceTypeBits + kDeviceIndexBits == kBits, "DeviceId bits layout is illegal");
+  constexpr static int kReservedBits = kFullBits - kBits;
 
   friend class StreamId;
   friend class std::hash<DeviceId>;
-  explicit DeviceId(uint32_t val) : val_(val) {}
-  operator uint32_t() const { return val_; }
+  explicit DeviceId(underlying_t val) : val_(val) {}
+  operator underlying_t() const { return val_; }
 
-  uint32_t val_;
+  underlying_t val_;
 };
 
 class StreamId {
@@ -96,25 +92,22 @@ class StreamId {
   bool operator!=(const StreamId& rhs) const { return !(*this == rhs); }
 
  private:
-  static const int kBits = 24;
-  static const int kFullBits = 32;
-  static_assert(kFullBits <= std::numeric_limits<uint32_t>::digits,
-                "StreamId bits layout is illegal");
+  using underlying_t = uint32_t;
+  constexpr static int kDeviceIdBits = DeviceId::kBits;
+  constexpr static int kStreamIndexBits = 12;
+  constexpr static int kBits = kDeviceIdBits + kStreamIndexBits;
+  constexpr static int kFullBits = sizeof(underlying_t) * CHAR_BIT;
   static_assert(kBits <= kFullBits, "StreamId bits layout is illegal");
-  static const int kReservedBits = kFullBits - kBits;
-  static const int kDeviceIdBits = 12;
-  static_assert(kDeviceIdBits == DeviceId::kBits, "StreamId bits layout is illegal");
-  static const int kStreamIndexBits = 12;
-  static_assert(kDeviceIdBits + kStreamIndexBits == kBits, "StreamId bits layout is illegal");
+  constexpr static int kReservedBits = kFullBits - kBits;
 
   friend class TaskId;
   friend int64_t SerializeStreamIdToInt64(StreamId);
   friend StreamId DeserializeStreamIdFromInt64(int64_t);
   friend class std::hash<StreamId>;
-  explicit StreamId(uint32_t val) : val_(val) {}
-  operator uint32_t() const { return val_; }
+  explicit StreamId(underlying_t val) : val_(val) {}
+  operator underlying_t() const { return val_; }
 
-  uint32_t val_;
+  underlying_t val_;
 };
 
 class TaskId {
@@ -129,24 +122,21 @@ class TaskId {
   bool operator!=(const TaskId& rhs) const { return !(*this == rhs); }
 
  private:
-  static const int kFullBits = 64;
-  static_assert(kFullBits <= std::numeric_limits<uint64_t>::digits,
-                "TaskId bits layout is illegal");
-  static const int kProcessIdBits = 19;
-  static_assert(kProcessIdBits == ProcessId::kBits, "TaskId bits layout is illegal");
-  static const int kStreamIdBits = 24;
-  static_assert(kStreamIdBits == StreamId::kBits, "TaskId bits layout is illegal");
-  static const int kTaskIndexBits = 21;
-  static_assert(kProcessIdBits + kStreamIdBits + kTaskIndexBits == kFullBits,
-                "TaskId bits layout is illegal");
+  using underlying_t = uint64_t;
+  const static int kProcessIdBits = ProcessId::kBits;
+  const static int kStreamIdBits = StreamId::kBits;
+  const static int kTaskIndexBits = 21;
+  const static int kBits = kProcessIdBits + kStreamIdBits + kTaskIndexBits;
+  const static int kFullBits = sizeof(underlying_t) * CHAR_BIT;
+  static_assert(kBits == kFullBits, "TaskId bits layout is illegal");
 
   friend int64_t SerializeTaskIdToInt64(TaskId);
   friend TaskId DeserializeTaskIdFromInt64(int64_t);
   friend class std::hash<TaskId>;
-  explicit TaskId(uint64_t val) : val_(val) {}
-  operator uint64_t() const { return val_; }
+  explicit TaskId(underlying_t val) : val_(val) {}
+  operator underlying_t() const { return val_; }
 
-  uint64_t val_;
+  underlying_t val_;
 };
 
 int64_t SerializeStreamIdToInt64(StreamId);
