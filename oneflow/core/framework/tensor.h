@@ -20,9 +20,9 @@ limitations under the License.
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/framework/tensor_impl.h"
+#include "oneflow/core/common/error.h"
 
 namespace oneflow {
 
@@ -66,10 +66,10 @@ class Tensor {
   // Getters
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual DataType dtype() const = 0;
-  virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
-  virtual bool is_consistent() const = 0;
+  virtual const Maybe<const ParallelDesc> parallel_desc() const = 0;
+  virtual const Maybe<bool> is_consistent() const = 0;
   virtual bool is_lazy() const = 0;
-  virtual std::shared_ptr<DeterminedTensor> DetermineAndDestroySelf() = 0;
+  virtual Maybe<DeterminedTensor> DetermineAndDestroySelf() = 0;
 
  protected:
   Tensor() = default;
@@ -81,46 +81,46 @@ class MirroredTensor;
 class UndeterminedTensor final : public Tensor {
  public:
   virtual ~UndeterminedTensor() = default;
-  UndeterminedTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
-                     const std::shared_ptr<const ParallelDesc>& parallel_desc)
-      : shape_(shape), dtype_(dtype), parallel_desc_(parallel_desc) {}
+  UndeterminedTensor(const std::shared_ptr<Shape>& shape, DataType dtype, bool lazy)
+      : shape_(shape),
+        dtype_(dtype),
+        lazy_(lazy),
+        consistent_(Error::ValueError("Consistent/Mirrored undetermined")) {}
 
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   void set_shape(const std::shared_ptr<const Shape>& shape) { shape_ = shape; }
 
-  bool is_consistent() const override { return consistent_; }
-  void set_consistent(const bool consistent) { consistent_ = consistent; }
+  const Maybe<bool> is_consistent() const override { return consistent_; }
+  void set_consistent(bool consistent) { consistent_ = consistent; }
 
   DataType dtype() const override { return dtype_; }
   void set_dtype(const DataType& dtype) { dtype_ = dtype; }
 
-  std::shared_ptr<const compatible_py::Distribute> distribute() const { return distribute_; }
-  const std::shared_ptr<const compatible_py::Distribute>& set_distribute(
-      const std::shared_ptr<const compatible_py::Distribute>& distribute) {
-    return distribute_ = distribute;
+  const Maybe<const compatible_py::Distribute> distribute() const;
+  const void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) {
+    distribute_ = distribute;
   }
 
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const override {
-    return parallel_desc_;
-  }
+  const Maybe<const ParallelDesc> parallel_desc() const override;
   void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
     parallel_desc_ = parallel_desc;
   }
 
-  const std::shared_ptr<const Device>& device() const { return device_; }
+  const Maybe<const Device> device() const;
   void set_device(const std::shared_ptr<const Device>& device) { device_ = device; }
 
-  bool is_lazy() const override { return !(*Global<bool, EagerExecution>::Get()); }
+  bool is_lazy() const override { return lazy_; }
 
-  std::shared_ptr<DeterminedTensor> DetermineAndDestroySelf() override;
+  Maybe<DeterminedTensor> DetermineAndDestroySelf() override;
 
  private:
   std::shared_ptr<const Shape> shape_;
   DataType dtype_;
-  std::shared_ptr<const ParallelDesc> parallel_desc_;
-  std::shared_ptr<const Device> device_;
-  std::shared_ptr<const compatible_py::Distribute> distribute_;
-  bool consistent_;
+  bool lazy_;
+  std::shared_ptr<const ParallelDesc> parallel_desc_ = nullptr;
+  std::shared_ptr<const Device> device_ = nullptr;
+  std::shared_ptr<const compatible_py::Distribute> distribute_ = nullptr;
+  Maybe<bool> consistent_;
 };
 
 class DeterminedTensor : public Tensor, public std::enable_shared_from_this<DeterminedTensor> {
@@ -130,9 +130,7 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
   // Setters to be deprecated
   virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 
-  std::shared_ptr<DeterminedTensor> DetermineAndDestroySelf() override {
-    return shared_from_this();
-  }
+  Maybe<DeterminedTensor> DetermineAndDestroySelf() override { return shared_from_this(); }
 };
 
 class MirroredTensor final : public DeterminedTensor {
@@ -147,12 +145,10 @@ class MirroredTensor final : public DeterminedTensor {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   DataType dtype() const override { return impl_->dtype(); }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const override {
-    return impl_->parallel_desc();
-  }
+  const Maybe<const ParallelDesc> parallel_desc() const override { return impl_->parallel_desc(); }
   const std::shared_ptr<const Device>& device() const { return impl_->device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
-  bool is_consistent() const override { return false; }
+  const Maybe<bool> is_consistent() const override { return false; }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
@@ -180,14 +176,12 @@ class ConsistentTensor final : public DeterminedTensor {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   DataType dtype() const override { return impl_->dtype(); }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const override {
-    return impl_->parallel_desc();
-  }
+  const Maybe<const ParallelDesc> parallel_desc() const override { return impl_->parallel_desc(); }
   const std::shared_ptr<const compatible_py::Distribute>& distribute() const {
     return impl_->distribute();
   }
   bool is_lazy() const override { return impl_->is_lazy(); }
-  bool is_consistent() const override { return true; }
+  const Maybe<bool> is_consistent() const override { return true; }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {

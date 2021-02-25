@@ -18,23 +18,38 @@ limitations under the License.
 namespace oneflow {
 
 namespace one {
-std::shared_ptr<DeterminedTensor> UndeterminedTensor::DetermineAndDestroySelf() {
-  if (is_consistent()) {
+const Maybe<const compatible_py::Distribute> UndeterminedTensor::distribute() const {
+  CHECK_OR_RETURN(distribute_) << Error::ValueError("distribute is not determined.");
+  return distribute_;
+}
+
+const Maybe<const ParallelDesc> UndeterminedTensor::parallel_desc() const {
+  CHECK_OR_RETURN(parallel_desc_) << Error::ValueError("Parallel_desc undetermined");
+  return parallel_desc_;
+}
+
+const Maybe<const Device> UndeterminedTensor::device() const {
+  CHECK_OR_RETURN(device_) << Error::ValueError("Device undetermined.");
+  return device_;
+}
+
+Maybe<DeterminedTensor> UndeterminedTensor::DetermineAndDestroySelf() {
+  if (JUST(is_consistent())) {
     std::shared_ptr<ConsistentTensorImpl> impl;
     if (is_lazy()) {
-      impl = std::make_shared<LazyConsistentTensorImpl>(shape(), dtype(), distribute(),
-                                                        parallel_desc());
+      impl = std::make_shared<LazyConsistentTensorImpl>(shape(), dtype(), JUST(distribute()),
+                                                        JUST(parallel_desc()));
     } else {
-      impl = std::make_shared<EagerConsistentTensorImpl>(shape(), dtype(), distribute(),
-                                                         parallel_desc());
+      impl = std::make_shared<EagerConsistentTensorImpl>(shape(), dtype(), JUST(distribute()),
+                                                         JUST(parallel_desc()));
     }
     return std::static_pointer_cast<DeterminedTensor>(std::make_shared<ConsistentTensor>(impl));
   } else {
     std::shared_ptr<MirroredTensorImpl> impl;
     if (is_lazy()) {
-      impl = std::make_shared<LazyMirroredTensorImpl>(shape(), dtype(), device());
+      impl = std::make_shared<LazyMirroredTensorImpl>(shape(), dtype(), JUST(device()));
     } else {
-      impl = std::make_shared<EagerMirroredTensorImpl>(shape(), dtype(), device());
+      impl = std::make_shared<EagerMirroredTensorImpl>(shape(), dtype(), JUST(device()));
     }
     return std::static_pointer_cast<DeterminedTensor>(std::make_shared<MirroredTensor>(impl));
   }
