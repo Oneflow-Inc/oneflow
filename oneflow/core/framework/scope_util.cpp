@@ -13,50 +13,41 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <mutex>
+#include <list>
 #include "oneflow/core/framework/scope_util.h"
 
 namespace oneflow {
 
 namespace {
 
-std::vector<std::shared_ptr<Scope>>* GlobalScopeStack() {
-  static std::vector<std::shared_ptr<Scope>> scope_stack;
+std::list<std::shared_ptr<Scope>>* ThreadLocalScopeStack() {
+  thread_local static std::list<std::shared_ptr<Scope>> scope_stack;
   return &scope_stack;
 }
 
 }  // namespace
 
-std::mutex* GlobalScopeStackMutex() {
-  static std::mutex global_scope_stack_mutex;
-  return &global_scope_stack_mutex;
-}
-
 Maybe<Scope> GetCurrentScope() {
-  std::unique_lock<std::mutex> lock(*GlobalScopeStackMutex());
-  auto* scope_stack = GlobalScopeStack();
+  auto* scope_stack = ThreadLocalScopeStack();
   CHECK_GT_OR_RETURN(scope_stack->size(), 0);
   return scope_stack->back();
 }
 
-Maybe<void> InitGlobalScopeStack(const std::shared_ptr<Scope>& scope) {
-  std::unique_lock<std::mutex> lock(*GlobalScopeStackMutex());
-  auto* scope_stack = GlobalScopeStack();
+Maybe<void> InitThreadLocalScopeStack(const std::shared_ptr<Scope>& scope) {
+  auto* scope_stack = ThreadLocalScopeStack();
   scope_stack->clear();
   scope_stack->emplace_back(scope);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GlobalScopeStackPush(const std::shared_ptr<Scope>& scope) {
-  std::unique_lock<std::mutex> lock(*GlobalScopeStackMutex());
-  auto* scope_stack = GlobalScopeStack();
+Maybe<void> ThreadLocalScopeStackPush(const std::shared_ptr<Scope>& scope) {
+  auto* scope_stack = ThreadLocalScopeStack();
   scope_stack->emplace_back(scope);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GlobalScopeStackPop() {
-  std::unique_lock<std::mutex> lock(*GlobalScopeStackMutex());
-  auto* scope_stack = GlobalScopeStack();
+Maybe<void> ThreadLocalScopeStackPop() {
+  auto* scope_stack = ThreadLocalScopeStack();
   scope_stack->pop_back();
   return Maybe<void>::Ok();
 }
