@@ -135,6 +135,7 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
         auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
                                                                                  device_id));
+        CHECK_NOTNULL(cuda_stream_index_generator);
         switch (comp_task_node->GetCudaWorkType()) {
           case CudaWorkType::kCompute: {
             stream_index = cuda_stream_index_generator->GenerateComputeStreamIndex();
@@ -171,6 +172,7 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
         auto* stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
                                                                                  device_id));
+        CHECK_NOTNULL(stream_index_generator);
         uint32_t stream_index = 0;
         if (comp_task_node->IsIndependent()) {
           TaskType task_type = comp_task_node->GetTaskType();
