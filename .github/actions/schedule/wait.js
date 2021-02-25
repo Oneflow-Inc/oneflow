@@ -1,6 +1,11 @@
-const { Octokit } = require("@octokit/core");
-const { time } = require("console");
-const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+octokit = undefined
+if (process.env.GITHUB_ACTION) {
+    const { Octokit } = require("@octokit/action");
+    octokit = new Octokit();
+} else {
+    const { Octokit } = require("@octokit/core");
+    octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+}
 
 const owner = 'Oneflow-Inc';
 const repo = 'oneflow';
