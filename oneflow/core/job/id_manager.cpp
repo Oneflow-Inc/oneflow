@@ -99,7 +99,8 @@ int64_t IDMgr::GlobalThrdId4TaskId(int64_t task_id) const {
 }
 
 int64_t IDMgr::AllocateChainId(int64_t global_work_stream_id) {
-  return chain_id_gen_.Generate(static_cast<uint64_t>(global_work_stream_id));
+  chain_id_t chain_id = chain_id_gen_.Generate(static_cast<uint64_t>(global_work_stream_id));
+  return SerializeChainIdToInt64(chain_id);
 }
 
 int64_t IDMgr::PickCpuThrdIdEvenly(int64_t machine_id) {

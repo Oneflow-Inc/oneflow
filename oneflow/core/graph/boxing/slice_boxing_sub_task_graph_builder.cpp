@@ -423,11 +423,6 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
             machine_id7out_parallel_ids.first, Global<IDMgr>::Get()->CpuMemZoneId());
       } else {
         auto* add_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
-        ProcessId process_id{static_cast<uint32_t>(machine_id7out_parallel_ids.first), 0};
-        DeviceId device_id{DeviceType::kCPU, 0};
-        auto* stream_index_generator =
-            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
-                                                                                 device_id);
         add_node->Init(lbi, slice, kSliceBoxingTaskModeAdd, machine_id7out_parallel_ids.first,
                        Global<IDMgr>::Get()->PickCpuThrdIdEvenly(machine_id7out_parallel_ids.first),
                        Global<IDMgr>::Get()->CpuMemZoneId());
