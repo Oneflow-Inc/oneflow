@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/session_util.h"
 
@@ -21,18 +22,45 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+class PySession : public Session {
+ public:
+  using Session::Session;
+  PySession(int64_t id)
+      : Session(id, std::make_shared<vm::cfg::InstructionListProto>(),
+                std::make_shared<eager::cfg::EagerSymbolList>()) {}
+
+  virtual ~PySession() {}
+
+  std::pair<std::shared_ptr<compatible_py::BlobObject>, std::shared_ptr<compatible_py::BlobObject>>
+  TryGetVariableBlobOfJobFromStash(const std::string& job_name,
+                                   const std::string& variable_name) const override {
+    using P = std::pair<std::shared_ptr<compatible_py::BlobObject>,
+                        std::shared_ptr<compatible_py::BlobObject>>;
+    PYBIND11_OVERRIDE(P, Session, TryGetVariableBlobOfJobFromStash, job_name, variable_name);
+  }
+};
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<Session, std::shared_ptr<Session>>(m, "Session")
+  py::class_<Session, PySession>(m, "Session")
+      .def(py::init<int64_t>())
       .def_property_readonly("id", &Session::id)
       .def("instruction_list", &Session::instruction_list)
-      .def("eager_symbol_list", &Session::eager_symbol_list);
+      .def("eager_symbol_list", &Session::eager_symbol_list)
+      .def("snapshot_mgr", &Session::snapshot_mgr)
+      .def("TryGetVariableBlobOfJobFromStash", &Session::TryGetVariableBlobOfJobFromStash);
 
   m.def("GetDefaultSessionId", []() {
     int64_t default_sess_id = *GetDefaultSessionId().GetOrThrow();
     return default_sess_id;
   });
   m.def("SetDefaultSessionId", [](int64_t val) { return SetDefaultSessionId(val).GetOrThrow(); });
-  m.def("RegsiterSession", [](int64_t id) { return RegsiterSession(id).GetPtrOrThrow(); });
+  m.def("RegsiterSession", [](int64_t id, py::object object) {
+    /*object.inc_ref();*/
+    Session* sess = object.cast<Session*>();
+    RegsiterSession(
+        id, std::shared_ptr<Session>(sess, [/*object*/](Session* p) { /*object.dec_ref();*/ }))
+        .GetOrThrow();
+  });
 
   m.def("GetDefaultSession", []() { return GetDefaultSession().GetPtrOrThrow(); });
   m.def("ClearDefaultSession", []() { return ClearDefaultSession().GetOrThrow(); });

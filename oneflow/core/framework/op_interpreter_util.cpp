@@ -117,9 +117,8 @@ OpInterpUtil::BuildFeedPathInstruction(const std::shared_ptr<Bn2BlobObjectMap>& 
 /*static*/ std::shared_ptr<compatible_py::BlobObject> OpInterpUtil::EagerRunModelLoad(
     const OperatorConf& op_conf, const std::string& snapshot_path) {
   using namespace std::placeholders;
-  file_system::Path path(snapshot_path);
-  CHECK(path.basename() == "out");
-  CHECK(path.dirname() == op_conf.name());
+  CHECK(file_system::basename(snapshot_path) == "out");
+  CHECK(file_system::dirname(snapshot_path) == op_conf.name());
 
   auto&& path_input_op_conf = GenModelIOPathInputOpConf();
 
@@ -185,6 +184,7 @@ OpInterpUtil::BuildFeedPathInstruction(const std::shared_ptr<Bn2BlobObjectMap>& 
 /*static*/ std::shared_ptr<cfg::OpAttribute> OpInterpUtil::InferOpAttribute(
     const OperatorConf& op_conf, const std::shared_ptr<Scope>& scope,
     const Bn2BlobObjectMap& ibn2blob_object) {
+  // TODO(): Remove const_cast.
   auto& mutable_op_conf = const_cast<OperatorConf&>(op_conf);
   mutable_op_conf.set_scope_symbol_id(scope->symbol_id().GetOrThrow());
   OpNodeSignature upstream_signature;
