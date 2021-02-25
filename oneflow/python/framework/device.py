@@ -16,4 +16,5 @@ limitations under the License.
 import oneflow_api
 from oneflow.python.oneflow_export import oneflow_export
 
-oneflow_export("device", oneflow_api.device)
+oneflow_export("device")(oneflow_api.device)
+
