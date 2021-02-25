@@ -154,7 +154,13 @@ void EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const TensorList& i
   const std::string variable_name =
       OpInterpUtil::GetJobNameScopePrefix(session, job_name) + op_expr->op_name();
 
-  // TODO(hjchen2)
+  std::shared_ptr<Tensor> global_blob, job_blob;
+  std::tie(global_blob, job_blob) =
+      session->TryGetVariableBlobOfJobFromStash(job_name, variable_name);
+  if (global_blob.get()) {
+    outputs[0] = global_blob;
+    return;
+  }
   auto scope = GetCurrentScope().GetPtrOrThrow();
   auto op_attribute = OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
       op_expr, scope, context()->is_mirrored_strategy_enabled);
@@ -167,8 +173,10 @@ void EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const TensorList& i
   const auto& mirrored_sig_map =
       proto_op_attribute.mirrored_signature().bn_in_op2opt_mirrored_parallel();
   if (mirrored_sig_map.at("out").has_mirrored_parallel()) {
+    // TODO
     // outputs[0].reset(new EagerMirroredTensor(...));
   } else {
+    // TODO
     // outputs[0].reset(new EagerConsistentTensor(...));
   }
   OpInterpUtil::InitVariableOutputBlob(session, outputs[0], proto_op_attribute);

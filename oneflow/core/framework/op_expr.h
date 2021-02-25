@@ -18,19 +18,13 @@ limitations under the License.
 
 #include <functional>
 
-#include "oneflow/core/framework/object.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 namespace one {
 
-class Tensor {
- public:
-  std::shared_ptr<compatible_py::BlobObject> blob_object() const {
-    return std::shared_ptr<compatible_py::BlobObject>();
-  }
-};
 using TensorList = std::vector<std::shared_ptr<Tensor>>;
 
 #define DEFINE_DEFAULT_CONSTRUCTOR(class_type) \
