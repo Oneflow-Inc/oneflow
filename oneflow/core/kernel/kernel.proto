@@ -83,7 +83,6 @@ message KernelConf {
     DecodeRandomKernelConf decode_random_conf = 103;
     DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
     XrtLaunchKernelConf xrt_launch_conf = 353;
-    UniqueWithCountsKernelConf unique_with_counts_conf = 354;
     IndexedSlicesReduceSumKernelConf indexed_slices_reduce_sum_conf = 355;
     SyncDynamicResizeKernelConf sync_dynamic_resize_conf = 360;
 
