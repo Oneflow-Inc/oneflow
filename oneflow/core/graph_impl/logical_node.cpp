@@ -181,7 +181,8 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
           if (IsClassRegistered<int32_t, TickTockTaskType>(task_type)) {
             stream_index = cpu_stream_index_generator->GenerateTickTockStreamIndex();
           } else {
-            stream_index = cpu_stream_index_generator->GenerateIndependentTaskStreamIndex(task_type);
+            stream_index =
+                cpu_stream_index_generator->GenerateIndependentTaskStreamIndex(task_type);
           }
         } else {
           stream_index = cpu_stream_index_generator->GenerateComputeStreamIndex();
