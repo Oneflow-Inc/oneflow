@@ -116,7 +116,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   LazyMirroredTensorImpl(const std::shared_ptr<const Shape>& shape, DataType dtype,
                          const std::shared_ptr<const Device>& device)
       : shape_(shape), dtype_(dtype), device_(device) {}
-  ~LazyMirroredTensorImpl() = default;
+  ~LazyMirroredTensorImpl() override = default;
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
@@ -158,7 +158,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape, DataType dtype,
                           const std::shared_ptr<const Device>& device)
       : shape_(shape), dtype_(dtype), device_(device) {}
-  ~EagerMirroredTensorImpl() = default;
+  ~EagerMirroredTensorImpl() override = default;
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
@@ -202,7 +202,7 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
                            const std::shared_ptr<const compatible_py::Distribute>& distribute,
                            const std::shared_ptr<const ParallelDesc>& parallel_desc)
       : shape_(shape), dtype_(dtype), parallel_desc_(parallel_desc), distribute_(distribute) {}
-  ~LazyConsistentTensorImpl() = default;
+  ~LazyConsistentTensorImpl() override = default;
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
@@ -249,7 +249,7 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
                             const std::shared_ptr<const compatible_py::Distribute>& distribute,
                             const std::shared_ptr<const ParallelDesc>& parallel_desc)
       : shape_(shape), dtype_(dtype), parallel_desc_(parallel_desc), distribute_(distribute) {}
-  ~EagerConsistentTensorImpl() = default;
+  ~EagerConsistentTensorImpl() override = default;
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
