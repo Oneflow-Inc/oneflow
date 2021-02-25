@@ -111,11 +111,6 @@ def _inferface_blob_conf_proto_to_cfg(
         split_axis.set_value(inferface_blob_conf_proto.split_axis.value)
     mut_inferface_blob_conf_cfg.mutable_split_axis().CopyFrom(split_axis)
 
-    batch_axis = dtype_proto_cfg.OptInt64()
-    if inferface_blob_conf_proto.batch_axis.HasField("value"):
-        batch_axis.set_value(inferface_blob_conf_proto.batch_axis.value)
-    mut_inferface_blob_conf_cfg.mutable_batch_axis().CopyFrom(batch_axis)
-
     mut_inferface_blob_conf_cfg.set_is_dynamic(inferface_blob_conf_proto.is_dynamic)
     mut_inferface_blob_conf_cfg.set_is_tensor_list(
         inferface_blob_conf_proto.is_tensor_list
@@ -154,17 +149,24 @@ class InferenceSession(object):
         self.config_proto_ = None
         self.job_name2job_conf_ = {}
         self.inter_user_job_info_ = None
-        self.inferface_name2job_name_ = {}
-        self.inferface_name2lbn_ = {}
+        self.cur_job_name_ = None
         self.inferface_name2info_ = {}
         self.output_name2future_ = {}
         self.job_futures_ = []
         self.status_ = None
 
+        self._init_event_loop()
         self.init()
 
     def __del__(self):
-        self.close()
+        if self.status_ != self.SessionStatus.CLOSED:
+            self.close()
+
+    def _init_event_loop(self):
+        self.event_loop_ = asyncio.get_event_loop()
+        if self.event_loop_.is_closed():
+            asyncio.set_event_loop(asyncio.new_event_loop())
+            self.event_loop_ = asyncio.get_event_loop()
 
     def init(self):
         # env init
@@ -179,25 +181,10 @@ class InferenceSession(object):
 
         self.status_ = self.SessionStatus.OPEN
 
-    def _make_config_proto(self):
-        if self.config_proto_ is None:
-            self.config_proto_ = session_util._GetDefaultConfigProto()
-
-        if self.option_.device_tag == "gpu":
-            self.config_proto_.resource.gpu_device_num = self.option_.device_num
-        elif self.option_.device_tag == "cpu":
-            self.config_proto_.resource.cpu_device_num = self.option_.device_num
-            self.config_proto_.resource.gpu_device_num = 0
-        else:
-            raise NotImplementedError(
-                "not supported device tag {}".format(self.option_.device_tag)
-            )
-
-        self.config_proto_.io_conf.enable_legacy_model_io = True
-
     def close(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.wait_for_all_jobs_finished())
+        self.event_loop_.run_until_complete(self.wait_for_all_jobs_finished())
+        self.event_loop_.close()
+
         if self.status_ == self.SessionStatus.RUNNING:
             oneflow_api.StopLazyGlobalSession()
             oneflow_api.DestroyLazyGlobalSession()
@@ -224,6 +211,22 @@ class InferenceSession(object):
                 )
             )
 
+    def _make_config_proto(self):
+        if self.config_proto_ is None:
+            self.config_proto_ = session_util._GetDefaultConfigProto()
+
+        if self.option_.device_tag == "gpu":
+            self.config_proto_.resource.gpu_device_num = self.option_.device_num
+        elif self.option_.device_tag == "cpu":
+            self.config_proto_.resource.cpu_device_num = self.option_.device_num
+            self.config_proto_.resource.gpu_device_num = 0
+        else:
+            raise NotImplementedError(
+                "not supported device tag {}".format(self.option_.device_tag)
+            )
+
+        self.config_proto_.io_conf.enable_legacy_model_io = True
+
     def set_checkpoint_path(self, checkpoint_path):
         self._check_status(self.SessionStatus.OPEN)
         self.checkpoint_path_ = checkpoint_path
@@ -233,30 +236,12 @@ class InferenceSession(object):
         job_conf = self._get_job_conf(job_name)
         _signature_proto_to_cfg(signature, job_conf.mutable_signature())
 
-        for input_name, input_def in signature.inputs.items():
-            self.inferface_name2job_name_[input_name] = job_name
-            self.inferface_name2lbn_[input_name] = "{}/{}".format(
-                input_def.lbi.op_name, input_def.lbi.blob_name
-            )
-
-        for output_name, output_def in signature.outputs.items():
-            self.inferface_name2job_name_[output_name] = job_name
-            self.inferface_name2lbn_[output_name] = "{}/{}".format(
-                output_def.lbi.op_name, output_def.lbi.blob_name
-            )
-
     def set_job_batch_size(self, job_name, batch_size):
         self._check_status(self.SessionStatus.OPEN)
         job_conf = self._get_job_conf(job_name)
         for _, mut_input_def in job_conf.mutable_signature().mutable_inputs().items():
-            if not mut_input_def.blob_conf().has_batch_axis():
-                continue
-            batch_axis = mut_input_def.blob_conf().batch_axis()
-            if not batch_axis.has_value():
-                continue
-            batch_axis = batch_axis.value()
             mut_shape = mut_input_def.mutable_blob_conf().mutable_shape()
-            mut_shape.mutable_dim()[batch_axis] = batch_size
+            mut_shape.mutable_dim()[0] = batch_size
 
     def _get_job_conf(self, job_name):
         if job_name in self.job_name2job_conf_:
@@ -268,13 +253,16 @@ class InferenceSession(object):
             return job_conf
 
     @contextlib.contextmanager
-    def open(self, job_name, signature, batch_size=None):
+    def open(self, job_name, signature=None, batch_size=None):
         self._check_status(self.SessionStatus.OPEN)
         c_api_util.JobBuildAndInferCtx_Open(job_name)
 
-        self.set_job_signature(job_name, signature)
+        if signature is not None:
+            self.set_job_signature(job_name, signature)
+
         if isinstance(batch_size, int):
             self.set_job_batch_size(job_name, batch_size)
+
         job_conf = self._get_job_conf(job_name)
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
 
@@ -287,7 +275,9 @@ class InferenceSession(object):
 
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
             with scope_util.ScopeContext(scope):
+                self.cur_job_name_ = job_name
                 yield self
+                self.cur_job_name_ = None
 
         oneflow_api.JobBuildAndInferCtx_Close()
 
@@ -367,24 +357,30 @@ class InferenceSession(object):
                     saved_model_meta_file_basename, saved_model_path
                 )
             )
-
+        # set checkpoint
         self.set_checkpoint_path(
             os.path.join(saved_model_path, saved_model_proto.checkpoint_dir)
         )
+        # get signature
+        signature = None
         if graph_name is None:
             graph_name = saved_model_proto.default_graph_name
-        if graph_name not in saved_model_proto.graphs:
-            raise ValueError("graph {} do not exist".format(graph_name))
+        else:
+            if graph_name not in saved_model_proto.graphs:
+                raise ValueError("graph {} do not exist".format(graph_name))
         graph_def = saved_model_proto.graphs[graph_name]
-        if signature_name is None:
+        if signature_name is None and graph_def.HasField("default_signature_name"):
             signature_name = graph_def.default_signature_name
-        if signature_name not in graph_def.signatures:
-            raise ValueError("signature {} do not exist".format(signature_name))
-        signature_def = graph_def.signatures[signature_name]
-        with self.open(graph_name, signature_def):
+        if signature_name is not None:
+            if signature_name not in graph_def.signatures:
+                raise ValueError("signature {} do not exist".format(signature_name))
+            else:
+                signature = graph_def.signatures[signature_name]
+
+        # compile job
+        with self.open(graph_name, signature):
             self.compile(graph_def.op_list)
 
-    # TODO: list jobs
     def print_job_set(self):
         self._check_status(self.SessionStatus.OPEN, self.SessionStatus.RUNNING)
         job_set = c_api_util.GetJobSet()
@@ -392,6 +388,10 @@ class InferenceSession(object):
             print("job_name:", job.job_conf.job_name)
             for op_conf in job.net.op:
                 print("\top_name:", op_conf.name)
+
+    def list_jobs(self):
+        self._check_status(self.SessionStatus.RUNNING)
+        return list(self.job_name2job_conf_.keys())
 
     def list_inputs(self):
         self._check_status(self.SessionStatus.RUNNING)
@@ -413,65 +413,47 @@ class InferenceSession(object):
             output_names.append(output_name)
         return tuple(output_names)
 
-    def input_info(self, input_name):
-        self._check_status(self.SessionStatus.RUNNING)
-        if input_name in self.inferface_name2info_:
-            return self.inferface_name2info_[input_name]
+    def input_info(self, input_name, job_name=None):
+        return self._get_op_blob_info(job_name, input_name, "out")
 
-        input_lbn = "{}/out".format(input_name)
-        if input_name not in self.inferface_name2job_name_:
-            raise ValueError('can not find input with name "{}"'.format(input_name))
+    def output_info(self, output_name, job_name=None):
+        return self._get_op_blob_info(job_name, output_name, "in")
 
-        job_name = self.inferface_name2job_name_[input_name]
-        input_shape = c_api_util.JobBuildAndInferCtx_GetStaticShape(job_name, input_lbn)
-        input_dtype = c_api_util.JobBuildAndInferCtx_GetDataType(job_name, input_lbn)
-        input_dtype = dtype_util.convert_proto_dtype_to_oneflow_dtype(input_dtype)
-        # input_dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(input_dtype)
+    def _get_op_blob_info(self, job_name, op_name, blob_name):
+        self._check_status(self.SessionStatus.OPEN, self.SessionStatus.RUNNING)
+        if op_name in self.inferface_name2info_:
+            return self.inferface_name2info_[op_name]
+
+        job_name = job_name or self.cur_job_name_
+        if job_name is None:
+            raise ValueError("please specify job_name")
+
+        lbn = oneflow_api.JobBuildAndInferCtx_GetOpBlobLbn(job_name, op_name, blob_name)
+        shape = c_api_util.JobBuildAndInferCtx_GetStaticShape(job_name, lbn)
+        dtype = c_api_util.JobBuildAndInferCtx_GetDataType(job_name, lbn)
+        dtype = dtype_util.convert_proto_dtype_to_oneflow_dtype(dtype)
         # TODO: other info
-        input_info = dict(shape=input_shape, dtype=input_dtype)
-        self.inferface_name2info_[input_name] = input_info
-        return input_info
-
-    def output_info(self, output_name):
-        self._check_status(self.SessionStatus.RUNNING)
-        if output_name in self.inferface_name2info_:
-            return self.inferface_name2info_[output_name]
-
-        output_lbn = "{}/out".format(output_name)
-        if output_name not in self.inferface_name2job_name_:
-            raise ValueError('can not find output with name "{}"'.format(output_name))
-
-        job_name = self.inferface_name2job_name_[output_name]
-        output_shape = c_api_util.JobBuildAndInferCtx_GetStaticShape(
-            job_name, output_lbn
-        )
-        output_dtype = c_api_util.JobBuildAndInferCtx_GetDataType(job_name, output_lbn)
-        output_dtype = dtype_util.convert_proto_dtype_to_oneflow_dtype(output_dtype)
-        # output_dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(output_dtype)
-        # TODO: other info
-        output_info = dict(shape=output_shape, dtype=output_dtype)
-        self.inferface_name2info_[output_name] = output_info
-        return output_info
+        info = dict(shape=shape, dtype=dtype)
+        self.inferface_name2info_[op_name] = info
+        return info
 
     def run(self, job_name, **kwargs):
         self._check_status(self.SessionStatus.RUNNING)
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.async_run(job_name, **kwargs))
+        return self.event_loop_.run_until_complete(self.async_run(job_name, **kwargs))
 
     async def async_run(self, job_name, **kwargs):
         self._check_status(self.SessionStatus.RUNNING)
         self._run_push_jobs(**kwargs)
         job_inst = job_instance_util.MakeUserJobInstance(job_name)
         self._run_job(job_inst)
-        output_futures = tuple(self._run_pull_jobs().values())
+        output_futures = tuple(self._run_pull_jobs(job_name).values())
         return await asyncio.gather(*output_futures)
 
     def _run_job(self, job_inst):
-        loop = asyncio.get_event_loop()
-        future = loop.create_future()
+        future = self.event_loop_.create_future()
 
         def job_finish_cb(_):
-            loop.call_soon_threadsafe(future.set_result, None)
+            self.event_loop_.call_soon_threadsafe(future.set_result, None)
 
         job_inst.AddPostFinishCallback(job_finish_cb)
         oneflow_api.LaunchJob(job_inst)
@@ -495,15 +477,14 @@ class InferenceSession(object):
             )
             self._run_job(push_job_inst)
 
-    def _run_pull_jobs(self):
-        loop = asyncio.get_event_loop()
+    def _run_pull_jobs(self, user_job_name):
         output_futures = {}
         for (
             output_name,
             pull_job_name,
         ) in self.inter_user_job_info_.output_or_var_op_name2pull_job_name.items():
-            future = loop.create_future()
-            pull_fn = self._make_pull_job_cb(output_name, future)
+            future = self.event_loop_.create_future()
+            pull_fn = self._make_pull_job_cb(output_name, user_job_name, future)
             pull_job_inst = job_instance_util.MakePullJobInstance(
                 pull_job_name, output_name, pull_fn
             )
@@ -512,24 +493,26 @@ class InferenceSession(object):
 
         return output_futures
 
-    def _make_pull_job_cb(self, output_name, future):
-        output_lbn = self.inferface_name2lbn_[output_name]
-        job_name = self.inferface_name2job_name_[output_name]
-        split_axis = c_api_util.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
-            job_name, output_lbn
+    def _make_pull_job_cb(self, output_name, user_job_name, future):
+        output_lbn = oneflow_api.JobBuildAndInferCtx_GetOpBlobLbn(
+            user_job_name, output_name, "out"
         )
-        loop = asyncio.get_event_loop()
+        split_axis = c_api_util.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
+            user_job_name, output_lbn
+        )
 
         def pull_fn(ofblob):
             ndarray_lists = ofblob.CopyToNdarrayLists()
             assert len(ndarray_lists) == 1
             ndarray_list = ndarray_lists[0]
             if len(ndarray_list) == 1:
-                loop.call_soon_threadsafe(future.set_result, ndarray_list[0])
+                self.event_loop_.call_soon_threadsafe(
+                    future.set_result, ndarray_list[0]
+                )
             else:
                 assert split_axis is not None
                 pull_result = np.concatenate(ndarray_list, axis=split_axis)
-                loop.call_soon_threadsafe(future.set_result, pull_result)
+                self.event_loop_.call_soon_threadsafe(future.set_result, pull_result)
 
         return pull_fn
 
@@ -545,11 +528,9 @@ class InferenceSession(object):
         load_checkpoint_job_inst = job_instance_util.MakeJobInstance(
             self.inter_user_job_info_.global_model_load_job_name,
             push_cb=copy_model_load_path,
-            finish_cb=lambda: None,
         )
         self._run_job(load_checkpoint_job_inst)
 
     async def wait_for_all_jobs_finished(self):
-        if len(self.job_futures_) > 0:
-            await asyncio.gather(*self.job_futures_)
-            self.job_futures_ = []
+        await asyncio.gather(*self.job_futures_)
+        self.job_futures_ = []

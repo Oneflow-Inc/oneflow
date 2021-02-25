@@ -43,9 +43,9 @@ void VariableOp::InitFromOpConf() {
   EnrollOutputBn("out", is_trainable)->set_is_mutable(true);
 }
 
-Maybe<void> VariableOp::InferBlobDescs(
+Maybe<void> VariableOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();
   CHECK_OR_RETURN(job_desc().job_conf().has_default_initializer_conf()
                   || job_desc().job_conf().has_default_initialize_with_snapshot_path()
@@ -62,12 +62,6 @@ Maybe<void> VariableOp::InferBlobDescs(
     BalancedSplitter bs(split_dim_num, parallel_ctx->parallel_num());
     out_blob_desc->mut_shape().Set(model_split_axis, bs.At(parallel_ctx->parallel_id()).size());
   }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> VariableOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 

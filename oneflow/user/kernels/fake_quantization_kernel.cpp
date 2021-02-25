@@ -48,6 +48,21 @@ void FakeQuantizationPerLayerAffine(const T *in_ptr, const T scale, const T zero
 }
 
 template<typename T>
+void FakeQuantizationPerLayerCambricon(const T *in_ptr, const T shift,
+                                       const int32_t quantization_bit, const int64_t num_elements,
+                                       T *out_ptr) {
+  T upper_bound = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
+  T lower_bound = -upper_bound;
+  T scale = static_cast<T>(pow(2.0, static_cast<int32_t>(shift)));
+  FOR_RANGE(int64_t, i, 0, num_elements) {
+    T out = std::round(in_ptr[i] / scale);
+    out = out > upper_bound ? upper_bound : out;
+    out = out < lower_bound ? lower_bound : out;
+    out_ptr[i] = out * scale;
+  }
+}
+
+template<typename T>
 class CpuFakeQuantizationKernel final : public user_op::OpKernel {
  public:
   CpuFakeQuantizationKernel() = default;
@@ -62,33 +77,41 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
 
     const std::string quantization_scheme = ctx->Attr<std::string>("quantization_scheme");
     const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
+    const std::string quantization_formula = ctx->Attr<std::string>("quantization_formula");
 
     const T *in_ptr = in->dptr<T>();
     const T *scale_ptr = scale->dptr<T>();
     T *out_ptr = out->mut_dptr<T>();
 
-    int64_t outer_num = 1;
-    int64_t inner_num = in->shape().elem_cnt();
-    if (scale->shape().elem_cnt() > 1) {  // per-channel quantization
-      outer_num = in->shape().At(0);
-      inner_num = in->shape().Count(1);
-    }
+    if (quantization_formula == "google") {
+      int64_t outer_num = 1;
+      int64_t inner_num = in->shape().elem_cnt();
+      if (scale->shape().elem_cnt() > 1) {  // per-channel quantization
+        outer_num = in->shape().At(0);
+        inner_num = in->shape().Count(1);
+      }
 
-    if (quantization_scheme == "symmetric") {
-      FOR_RANGE(int64_t, c, 0, outer_num) {
-        FakeQuantizationPerLayerSymmetric(in_ptr, scale_ptr[c], quantization_bit, inner_num,
-                                          out_ptr);
-        in_ptr += inner_num;
-        out_ptr += inner_num;
+      if (quantization_scheme == "symmetric") {
+        FOR_RANGE(int64_t, c, 0, outer_num) {
+          FakeQuantizationPerLayerSymmetric(in_ptr, scale_ptr[c], quantization_bit, inner_num,
+                                            out_ptr);
+          in_ptr += inner_num;
+          out_ptr += inner_num;
+        }
+      } else {  // quantization_scheme == "affine"
+        const T *zero_point_ptr = zero_point->dptr<T>();
+        FOR_RANGE(int64_t, c, 0, outer_num) {
+          FakeQuantizationPerLayerAffine(in_ptr, scale_ptr[c], zero_point_ptr[c], quantization_bit,
+                                         inner_num, out_ptr);
+          in_ptr += inner_num;
+          out_ptr += inner_num;
+        }
       }
-    } else {  // quantization_scheme == "affine"
-      const T *zero_point_ptr = zero_point->dptr<T>();
-      FOR_RANGE(int64_t, c, 0, outer_num) {
-        FakeQuantizationPerLayerAffine(in_ptr, scale_ptr[c], zero_point_ptr[c], quantization_bit,
-                                       inner_num, out_ptr);
-        in_ptr += inner_num;
-        out_ptr += inner_num;
-      }
+    } else if (quantization_formula == "cambricon") {
+      FakeQuantizationPerLayerCambricon(in_ptr, scale_ptr[0], quantization_bit,
+                                        in->shape().elem_cnt(), out_ptr);
+    } else {
+      UNIMPLEMENTED();
     }
   }
 

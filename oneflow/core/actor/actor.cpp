@@ -259,14 +259,12 @@ int64_t Actor::GetPieceId4NaiveOrInplaceCurReadableDataRegst() const {
 void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
-      CHECK_EQ(GetLocalWorkStreamId(), 0);
       device_ctx_.reset(new CpuDeviceCtx());
       break;
     }
 #ifdef WITH_CUDA
     case DeviceType::kGPU: {
       CudaStreamHandle* cuda_handle = nullptr;
-      CHECK_EQ(GetLocalWorkStreamId(), 0);
       cuda_handle = thread_ctx.g_cuda_stream.get();
       device_ctx_.reset(new CudaDeviceCtx(cuda_handle));
       break;
@@ -711,10 +709,6 @@ void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
 
 int64_t Actor::GetGlobalWorkStreamId() const {
   return Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(actor_id_);
-}
-
-int64_t Actor::GetLocalWorkStreamId() const {
-  return Global<IDMgr>::Get()->LocalWorkStreamId4ActorId(actor_id_);
 }
 
 Regst* Actor::GetNaiveOrInplaceCurReadable(int64_t regst_desc_id) const {

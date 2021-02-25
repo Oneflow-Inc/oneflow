@@ -29,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/register/blob_desc.cfg.h"
 #include "oneflow/core/operator/op_node_signature.cfg.h"
 #include "oneflow/core/job/parallel_signature.cfg.h"
-#include "oneflow/core/register/batch_axis_signature.cfg.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
 #include "oneflow/core/common/protobuf.h"
 
@@ -39,8 +38,7 @@ namespace compatible_py {
 
 class OpArgBlobAttribute {
  public:
-  OpArgBlobAttribute(const std::shared_ptr<cfg::OptInt64>& batch_axis,
-                     const std::shared_ptr<cfg::BlobDescProto>& blob_desc,
+  OpArgBlobAttribute(const std::shared_ptr<cfg::BlobDescProto>& blob_desc,
                      const std::string& logical_blob_name);
 
   OpArgBlobAttribute(const OpArgBlobAttribute& op_arg_blob_attr) = default;
@@ -53,8 +51,6 @@ class OpArgBlobAttribute {
   std::string logical_blob_name() const;
 
   cfg::DataType get_dtype() const;
-
-  std::shared_ptr<cfg::OptInt64> batch_axis() const;
 
   bool is_tensor_list() const;
 
@@ -72,7 +68,6 @@ class OpArgBlobAttribute {
                              std::shared_ptr<cfg::OpNodeSignature> op_node_signature) const;
 
  private:
-  std::shared_ptr<cfg::OptInt64> batch_axis_;
   std::shared_ptr<cfg::BlobDescProto> blob_desc_;
   std::string logical_blob_name_;
   std::shared_ptr<Shape> shape_;

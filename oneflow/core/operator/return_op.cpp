@@ -25,16 +25,10 @@ void ReturnOp::InitFromOpConf() {
   EnrollOutputBn("out")->set_is_mutable(true);
 }
 
-Maybe<void> ReturnOp::InferBlobDescs(
+Maybe<void> ReturnOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> ReturnOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
   return Maybe<void>::Ok();
 }
 

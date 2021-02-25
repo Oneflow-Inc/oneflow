@@ -62,12 +62,10 @@ Maybe<cfg::BlobDescProto> MakeBlobDescProto(const std::string& serialized_str) {
   return std::make_shared<cfg::BlobDescProto>(blob_desc);
 }
 
-Maybe<OpArgBlobAttribute> CreatOpArgBlobAttribute(const std::string& batch_axis_str,
-                                                  const std::string& blob_desc_str,
+Maybe<OpArgBlobAttribute> CreatOpArgBlobAttribute(const std::string& blob_desc_str,
                                                   const std::string& logical_blob_name) {
-  const std::shared_ptr<cfg::OptInt64>& batch_axis = JUST(MakeOptInt64(batch_axis_str));
   const std::shared_ptr<cfg::BlobDescProto>& blob_desc = JUST(MakeBlobDescProto(blob_desc_str));
-  return std::make_shared<OpArgBlobAttribute>(batch_axis, blob_desc, logical_blob_name);
+  return std::make_shared<OpArgBlobAttribute>(blob_desc, logical_blob_name);
 }
 
 Maybe<OpArgParallelAttribute> CreatOpArgParallelAttribute(
@@ -101,12 +99,9 @@ Maybe<OpArgParallelAttribute> ApiGetOpArgParallelAttribute(
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<OpArgBlobAttribute, std::shared_ptr<OpArgBlobAttribute>>(m, "OpArgBlobAttribute")
-      .def(py::init([](const std::string& batch_axis_str, const std::string& blob_desc_str,
-                       const std::string& logical_blob_name) {
-        return CreatOpArgBlobAttribute(batch_axis_str, blob_desc_str, logical_blob_name)
-            .GetPtrOrThrow();
+      .def(py::init([](const std::string& blob_desc_str, const std::string& logical_blob_name) {
+        return CreatOpArgBlobAttribute(blob_desc_str, logical_blob_name).GetPtrOrThrow();
       }))
-      .def_property_readonly("batch_axis", &OpArgBlobAttribute::batch_axis)
       .def_property_readonly("blob_desc", &OpArgBlobAttribute::blob_desc)
       .def_property_readonly("logical_blob_name", &OpArgBlobAttribute::logical_blob_name)
       .def_property_readonly("is_tensor_list", &OpArgBlobAttribute::is_tensor_list)

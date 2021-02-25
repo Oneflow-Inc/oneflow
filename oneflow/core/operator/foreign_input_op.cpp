@@ -30,9 +30,9 @@ void ForeignInputOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-Maybe<void> ForeignInputOp::InferBlobDescs(
+Maybe<void> ForeignInputOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   CheckOpConf(op_conf());
   const auto& conf = op_conf().foreign_input_conf().blob_conf();
@@ -45,12 +45,6 @@ Maybe<void> ForeignInputOp::InferBlobDescs(
   }
   out_blob_desc->set_is_dynamic(conf.is_dynamic());
   out_blob_desc->set_is_tensor_list(conf.is_tensor_list());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> ForeignInputOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  *BatchAxis4BnInOp("out") = op_conf().foreign_input_conf().blob_conf().batch_axis();
   return Maybe<void>::Ok();
 }
 

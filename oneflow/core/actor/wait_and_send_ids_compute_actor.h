@@ -41,6 +41,7 @@ class WaitAndSendIdsCompActor final : public CompActor {
   int HandlerWaitToStart(const ActorMsg&);
 
   WaitAndSendIdsStatus wait_and_send_ids_status_;
+  int64_t cur_piece_id_;
 };
 
 }  // namespace oneflow

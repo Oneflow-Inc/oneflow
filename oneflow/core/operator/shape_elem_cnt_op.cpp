@@ -50,13 +50,13 @@ HashSet<int32_t> GetInclusiveAxes(const ShapeElemCntOpConf& conf, int32_t num_ax
 }  // namespace
 
 void ShapeElemCntOp::InitFromOpConf() {
-  EnrollInputBn("x", false)->set_use_header_only(true);
+  EnrollInputBn("x", false);
   EnrollOutputBn("y", false);
 }
 
-Maybe<void> ShapeElemCntOp::InferBlobDescs(
+Maybe<void> ShapeElemCntOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   GetBlobDesc4BnInOp("y")->set_data_type(op_conf().shape_elem_cnt_conf().data_type());
   GetBlobDesc4BnInOp("y")->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
@@ -70,12 +70,6 @@ void ShapeElemCntOp::VirtualGenKernelConf(
       GetInclusiveAxes(op_conf().shape_elem_cnt_conf(), num_axes);
   *kernel_conf->mutable_shape_elem_cnt_conf()->mutable_axis() = {inclusive_axis.begin(),
                                                                  inclusive_axis.end()};
-}
-
-Maybe<void> ShapeElemCntOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("y")->clear_value();
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> ShapeElemCntOp::GetSbpSignatures(

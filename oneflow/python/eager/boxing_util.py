@@ -33,6 +33,7 @@ import oneflow.python.eager.boxing_middle as boxing_middle
 import random
 import oneflow
 import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api
 
 
 def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):
@@ -360,7 +361,8 @@ MatchNcclAllReduce = (
 @boxing_condition(MatchNcclAllReduce)
 def GpuNcclAllReduce(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     parallel_conf = consumer_op_arg_parallel_attr.parallel_desc_symbol.parallel_conf
-    bn_in_op2blob_object = dict(in_0=produced_blob_object)
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+    bn_in_op2blob_object["in_0"] = produced_blob_object
     op_attribute = _GetEagerNcclAllReduce(parallel_conf, bn_in_op2blob_object)
     builder.NoBoxingStatelessCall(
         op_attribute,
@@ -538,7 +540,7 @@ def BuildNaiveCpuBoxing(
     boxing_parallel_desc_symbol,
     out_parallel_num,
 ):
-    bn_in_op2blob_object = {}
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
     for i in range(len(physical_in_blob_objects)):
         bn_in_op2blob_object["in_%s" % i] = physical_in_blob_objects[i]
     builder.NoBoxingStatelessCall(
@@ -582,9 +584,9 @@ def ConstructNaiveBoxingOpConf(
     op_conf.boxing_conf.split_box.part_num.extend(
         balanced_splitter.BalancedPartNums(shape[out_axis], out_parallel_num)
     )
-    bn_in_op2blob_object = {
-        ("in_%s" % i): produced_blob_object for i in range(in_parallel_num)
-    }
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+    for i in range(in_parallel_num):
+        bn_in_op2blob_object["in_%s" % i] = produced_blob_object
     return op_infer_util.Infer(op_conf, bn_in_op2blob_object)
 
 
@@ -690,7 +692,8 @@ def _MakeCopyHdOpConfAndRetLbi():
 def _BuildCopyInstruction(builder, produced_blob_object, op_conf, to_device_tag):
     x_devices = produced_blob_object.parallel_desc_symbol.machine_id2device_id_list
     x_device_tag = produced_blob_object.parallel_desc_symbol.device_tag
-    bn_in_op2blob_object = {"in": produced_blob_object}
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+    bn_in_op2blob_object["in"] = produced_blob_object
     op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object)
     assert to_device_tag != x_device_tag, (to_device_tag, x_device_tag)
     if to_device_tag == "cpu" and x_device_tag == "gpu":
@@ -740,7 +743,9 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
     )
     ref_device_tag = ref_blob_object.parallel_desc_symbol.device_tag
     value_device_tag = value_blob_object.parallel_desc_symbol.device_tag
-    bn_in_op2blob_object = {"ref": ref_blob_object, "value": value_blob_object}
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+    bn_in_op2blob_object["ref"] = ref_blob_object
+    bn_in_op2blob_object["value"] = value_blob_object
     op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object)
     if ref_device_tag == value_device_tag:
         builder.NoBoxingStatelessCall(

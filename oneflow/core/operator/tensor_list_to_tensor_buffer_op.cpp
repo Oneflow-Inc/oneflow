@@ -30,9 +30,9 @@ class TensorListToTensorBufferOp final : public Operator {
     EnrollOutputBn("out", false)->set_header_infered_before_compute(false);
   }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx,
-                             const SbpSignature* sbp_signature) const override {
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override {
     const BlobDesc* in_desc = GetBlobDesc4BnInOp("in");
     CHECK_OR_RETURN(in_desc->is_tensor_list());
     const int64_t N = in_desc->shape().At(0);
@@ -51,14 +51,6 @@ class TensorListToTensorBufferOp final : public Operator {
         .Split(input_bns(), 0)
         .Split(output_bns(), 0)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    CHECK_OR_RETURN(BatchAxis4BnInOp("in")->has_value());
-    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp("in")->value(), 0);
-    BatchAxis4BnInOp("out")->set_value(0);
     return Maybe<void>::Ok();
   }
 };

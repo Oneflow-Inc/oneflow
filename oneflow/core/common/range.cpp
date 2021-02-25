@@ -27,6 +27,17 @@ void Range::ToProto(RangeProto* ret) const {
   ret->set_end(end_);
 }
 
+Maybe<void> Range::ForEachSubRange(
+    int64_t sub_range_size, const std::function<Maybe<void>(const Range&)>& DoEachRange) const {
+  CHECK_EQ_OR_RETURN(size() % sub_range_size, 0);
+  int64_t start = begin();
+  for (; start < end(); start += sub_range_size) {
+    JUST(DoEachRange(Range(start, start + sub_range_size)));
+  }
+  CHECK_EQ_OR_RETURN(start, end());
+  return Maybe<void>::Ok();
+}
+
 Range FindIntersectant(const Range& lhs, const Range& rhs) {
   if (lhs.end() > rhs.begin() && rhs.end() > lhs.begin()) {
     int64_t left = lhs.begin() > rhs.begin() ? lhs.begin() : rhs.begin();

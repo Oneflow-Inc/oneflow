@@ -20,16 +20,11 @@ import numpy as np
 import oneflow as flow
 from test_util import GenArgList
 import oneflow.typing as oft
+import os
 
 
 def _test_split_to_split(
-    test_case,
-    src_device_type,
-    dst_device_type,
-    src_device_num,
-    dst_device_num,
-    src_axis,
-    dst_axis,
+    test_case, src_device_type, dst_device_type, src_axis, dst_axis,
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -37,27 +32,31 @@ def _test_split_to_split(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(function_config=func_config)
-    def split_to_split_job(x: oft.Numpy.Placeholder((96, 96))):
+    def build_s2s(input_blob, src_device_num, dst_device_num):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
-            src = flow.identity(x.with_distribute(flow.distribute.split(src_axis)))
+            src = flow.identity(
+                input_blob.with_distribute(flow.distribute.split(src_axis))
+            )
         with flow.scope.placement(dst_device_type, "0:0-" + str(dst_device_num - 1)):
             dst = flow.identity(src.with_distribute(flow.distribute.split(dst_axis)))
         return dst
 
+    @flow.global_function(function_config=func_config)
+    def split_to_split_job(input_blob: oft.Numpy.Placeholder((96, 96))):
+        result_list = []
+        for i in (1, 2, 3):
+            for j in (1, 2, 3):
+                result_list.append(build_s2s(input_blob, i, j))
+        return tuple(result_list)
+
     x = np.random.rand(96, 96).astype(np.float32)
-    y = split_to_split_job(x).get().numpy()
-    test_case.assertTrue(np.array_equal(x, y))
+    result_tuple = split_to_split_job(x).get()
+    for out in result_tuple:
+        test_case.assertTrue(np.array_equal(x, out.numpy()))
 
 
 def _test_split_to_split_enable_all_to_all(
-    test_case,
-    src_device_type,
-    dst_device_type,
-    src_device_num,
-    dst_device_num,
-    src_axis,
-    dst_axis,
+    test_case, src_device_type, dst_device_type, src_device_num, dst_device_num,
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -66,26 +65,33 @@ def _test_split_to_split_enable_all_to_all(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(function_config=func_config)
-    def split_to_split_job(x: oft.Numpy.Placeholder((32, 16, 64, 48))):
+    def build_s2s_all2all(input_blob, src_axis, dst_axis):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
-            src = flow.identity(x.with_distribute(flow.distribute.split(src_axis)))
+            src = flow.identity(
+                input_blob.with_distribute(flow.distribute.split(src_axis))
+            )
         with flow.scope.placement(dst_device_type, "0:0-" + str(dst_device_num - 1)):
             dst = flow.identity(src.with_distribute(flow.distribute.split(dst_axis)))
         return dst
 
+    @flow.global_function(function_config=func_config)
+    def split_to_split_all2all_job(input_blob: oft.Numpy.Placeholder((32, 16, 64, 48))):
+        result_list = []
+        for i in (0, 1, 2, 3):
+            for j in (0, 1, 2, 3):
+                if i == j:
+                    continue
+                result_list.append(build_s2s_all2all(input_blob, i, j))
+        return tuple(result_list)
+
     x = np.random.rand(32, 16, 64, 48).astype(np.float32)
-    y = split_to_split_job(x).get().numpy()
-    test_case.assertTrue(np.array_equal(x, y))
+    result_tuple = split_to_split_all2all_job(x).get()
+    for out in result_tuple:
+        test_case.assertTrue(np.array_equal(x, out.numpy()))
 
 
 def _test_split_to_broadcast(
-    test_case,
-    src_device_type,
-    dst_device_type,
-    src_device_num,
-    dst_device_num,
-    src_axis,
+    test_case, src_device_type, dst_device_type, src_axis,
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -93,26 +99,31 @@ def _test_split_to_broadcast(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(function_config=func_config)
-    def split_to_broadcast_job(x: oft.Numpy.Placeholder((96, 96))):
+    def build_s2b(input_blob, src_device_num, dst_device_num):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
-            src = flow.identity(x.with_distribute(flow.distribute.split(src_axis)))
+            src = flow.identity(
+                input_blob.with_distribute(flow.distribute.split(src_axis))
+            )
         with flow.scope.placement(dst_device_type, "0:0-" + str(dst_device_num - 1)):
             dst = flow.identity(src.with_distribute(flow.distribute.broadcast()))
         return dst
 
+    @flow.global_function(function_config=func_config)
+    def split_to_broadcast_job(input_blob: oft.Numpy.Placeholder((96, 96))):
+        result_list = []
+        for i in (1, 2, 3):
+            for j in (1, 2, 3):
+                result_list.append(build_s2b(input_blob, i, j))
+        return tuple(result_list)
+
     x = np.random.rand(96, 96).astype(np.float32)
-    y = split_to_broadcast_job(x).get().numpy()
-    test_case.assertTrue(np.array_equal(x, y))
+    result_tuple = split_to_broadcast_job(x).get()
+    for out in result_tuple:
+        test_case.assertTrue(np.array_equal(x, out.numpy()))
 
 
 def _test_broadcast_to_split(
-    test_case,
-    src_device_type,
-    dst_device_type,
-    src_device_num,
-    dst_device_num,
-    dst_axis,
+    test_case, src_device_type, dst_device_type, dst_axis,
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -120,26 +131,29 @@ def _test_broadcast_to_split(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(function_config=func_config)
-    def broadcast_to_split_job(x: oft.Numpy.Placeholder((96, 96))):
+    def build_b2s(input_blob, src_device_num, dst_device_num):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
-            src = flow.identity(x.with_distribute(flow.distribute.broadcast()))
+            src = flow.identity(input_blob.with_distribute(flow.distribute.broadcast()))
         with flow.scope.placement(dst_device_type, "0:0-" + str(dst_device_num - 1)):
             dst = flow.identity(src.with_distribute(flow.distribute.split(dst_axis)))
         return dst
 
+    @flow.global_function(function_config=func_config)
+    def broadcast_to_split_job(input_blob: oft.Numpy.Placeholder((96, 96))):
+        result_list = []
+        for i in (1, 2, 3):
+            for j in (1, 2, 3):
+                result_list.append(build_b2s(input_blob, i, j))
+        return tuple(result_list)
+
     x = np.random.rand(96, 96).astype(np.float32)
-    y = broadcast_to_split_job(x).get().numpy()
-    test_case.assertTrue(np.array_equal(x, y))
+    result_tuple = broadcast_to_split_job(x).get()
+    for out in result_tuple:
+        test_case.assertTrue(np.array_equal(x, out.numpy()))
 
 
 def _test_partial_sum_to_split(
-    test_case,
-    src_device_type,
-    dst_device_type,
-    src_device_num,
-    dst_device_num,
-    dst_axis,
+    test_case, src_device_type, dst_device_type, dst_axis,
 ):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
@@ -147,63 +161,83 @@ def _test_partial_sum_to_split(
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(function_config=func_config)
-    def partial_sum_to_split_job(x: oft.Numpy.Placeholder((96, 96, 96))):
+    def build_p2s(input_blob, src_device_num, dst_device_num):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
-            src = flow.identity(x.with_distribute(flow.distribute.split(0)))
+            src = flow.identity(input_blob.with_distribute(flow.distribute.split(0)))
             src = flow.math.reduce_sum(src, axis=0)
         with flow.scope.placement(dst_device_type, "0:0-" + str(dst_device_num - 1)):
             dst = flow.identity(src.with_distribute(flow.distribute.split(dst_axis)))
         return dst
 
+    @flow.global_function(function_config=func_config)
+    def partial_sum_to_split_job(input_blob: oft.Numpy.Placeholder((96, 96, 96))):
+        result_list = []
+        for i in (2, 3):
+            for j in (1, 2, 3):
+                result_list.append(build_p2s(input_blob, i, j))
+        return tuple(result_list)
+
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
-    y = partial_sum_to_split_job(x).get().numpy()
-    test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
+    result_tuple = partial_sum_to_split_job(x).get()
+    for out in result_tuple:
+        test_case.assertTrue(np.allclose(np.sum(x, axis=0), out.numpy()))
 
 
-def _test_partial_sum_to_broadcast(
-    test_case, src_device_type, dst_device_type, src_device_num, dst_device_num
-):
+def _test_partial_sum_to_broadcast(test_case, src_device_type, dst_device_type):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(function_config=func_config)
-    def partial_sum_to_broadcast_job(x: oft.Numpy.Placeholder((96, 96, 96))):
+    def build_p2b(input_blob, src_device_num, dst_device_num):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
-            src = flow.identity(x.with_distribute(flow.distribute.split(0)))
+            src = flow.identity(input_blob.with_distribute(flow.distribute.split(0)))
             src = flow.math.reduce_sum(src, axis=0)
         with flow.scope.placement(dst_device_type, "0:0-" + str(dst_device_num - 1)):
             dst = flow.identity(src.with_distribute(flow.distribute.broadcast()))
         return dst
 
+    @flow.global_function(function_config=func_config)
+    def partial_sum_to_broadcast_job(input_blob: oft.Numpy.Placeholder((96, 96, 96))):
+        result_list = []
+        for i in (2, 3):
+            for j in (1, 2, 3):
+                result_list.append(build_p2b(input_blob, i, j))
+        return tuple(result_list)
+
     x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
-    y = partial_sum_to_broadcast_job(x).get().numpy()
-    test_case.assertTrue(np.allclose(np.sum(x, axis=0), y))
+    result_tuple = partial_sum_to_broadcast_job(x).get()
+    for out in result_tuple:
+        test_case.assertTrue(np.allclose(np.sum(x, axis=0), out.numpy()))
 
 
-def _test_broadcast_to_broadcast(
-    test_case, src_device_type, dst_device_type, src_device_num, dst_device_num
-):
+def _test_broadcast_to_broadcast(test_case, src_device_type, dst_device_type):
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
 
-    @flow.global_function(function_config=func_config)
-    def broadcast_to_broadcast_job(x: oft.Numpy.Placeholder((96, 96, 96))):
+    def build_b2b(input_blob, src_device_num, dst_device_num):
         with flow.scope.placement(src_device_type, "0:0-" + str(src_device_num - 1)):
-            src = flow.identity(x.with_distribute(flow.distribute.broadcast()))
+            src = flow.identity(input_blob.with_distribute(flow.distribute.broadcast()))
         with flow.scope.placement(dst_device_type, "0:0-" + str(dst_device_num - 1)):
             dst = flow.identity(src.with_distribute(flow.distribute.broadcast()))
         return dst
 
-    x = np.random.uniform(-1e-5, 1e-5, (96, 96, 96)).astype(np.float32)
-    y = broadcast_to_broadcast_job(x).get().numpy()
-    test_case.assertTrue(np.array_equal(x, y))
+    @flow.global_function(function_config=func_config)
+    def broadcast_to_broadcast_job(input_blob: oft.Numpy.Placeholder((96, 96))):
+        result_list = []
+        for i in (1, 2, 3):
+            for j in (1, 2, 3):
+                result_list.append(build_b2b(input_blob, i, j))
+        return tuple(result_list)
+
+    x = np.random.rand(96, 96).astype(np.float32)
+    result_tuple = broadcast_to_broadcast_job(x).get()
+    for out in result_tuple:
+        test_case.assertTrue(np.array_equal(x, out.numpy()))
 
 
 def _test_multi_lbi(
@@ -240,80 +274,70 @@ def _test_multi_lbi(
 
 @flow.unittest.skip_unless_1n4d()
 class TestBoxingV2(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_split_to_split(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]
         arg_dict["dst_device_type"] = ["cpu", "gpu"]
-        arg_dict["src_device_num"] = [1, 2, 3]
-        arg_dict["dst_device_num"] = [1, 2, 3]
         arg_dict["src_axis"] = [0, 1]
         arg_dict["dst_axis"] = [0, 1]
         for arg in GenArgList(arg_dict):
             _test_split_to_split(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_split_to_split_all_to_all(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["gpu"]
         arg_dict["dst_device_type"] = ["gpu"]
         arg_dict["src_device_num"] = [4]
         arg_dict["dst_device_num"] = [4]
-        arg_dict["src_axis"] = [0, 1, 2, 3]
-        arg_dict["dst_axis"] = [0, 1, 2, 3]
         for arg in GenArgList(arg_dict):
-            (_, _, _, _, src_axis, dst_axis) = arg
-            if src_axis == dst_axis:
-                continue
             _test_split_to_split_enable_all_to_all(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_split_to_broadcast(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]
         arg_dict["dst_device_type"] = ["cpu", "gpu"]
-        arg_dict["src_device_num"] = [1, 2, 3]
-        arg_dict["dst_device_num"] = [1, 2, 3]
         arg_dict["src_axis"] = [0, 1]
         for arg in GenArgList(arg_dict):
             _test_split_to_broadcast(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_broadcast_to_split(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]
         arg_dict["dst_device_type"] = ["cpu", "gpu"]
-        arg_dict["src_device_num"] = [1, 2, 3]
-        arg_dict["dst_device_num"] = [1, 2, 3]
         arg_dict["dst_axis"] = [0, 1]
         for arg in GenArgList(arg_dict):
             _test_broadcast_to_split(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_partial_sum_to_split(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]
         arg_dict["dst_device_type"] = ["cpu", "gpu"]
-        arg_dict["src_device_num"] = [2, 3]
-        arg_dict["dst_device_num"] = [1, 2, 3]
         arg_dict["dst_axis"] = [0, 1]
         for arg in GenArgList(arg_dict):
             _test_partial_sum_to_split(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_partial_sum_to_broadcast(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]
         arg_dict["dst_device_type"] = ["cpu", "gpu"]
-        arg_dict["src_device_num"] = [2, 3]
-        arg_dict["dst_device_num"] = [1, 2, 3]
         for arg in GenArgList(arg_dict):
             _test_partial_sum_to_broadcast(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_broadcast_to_broadcast(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]
         arg_dict["dst_device_type"] = ["cpu", "gpu"]
-        arg_dict["src_device_num"] = [1, 2, 3]
-        arg_dict["dst_device_num"] = [1, 2, 3]
-
         for arg in GenArgList(arg_dict):
             _test_broadcast_to_broadcast(test_case, *arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_multi_lbi(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_device_type"] = ["cpu", "gpu"]
