@@ -71,7 +71,6 @@ class Tensor {
   virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
   virtual const std::shared_ptr<TensorArg>& now_grad() const = 0;
   virtual const std::shared_ptr<const FunctionNode>& grad_fn_node() const = 0;
-  virtual FunctionNode* mut_grad_fn_node() = 0;
   virtual bool requires_grad() const = 0;
   virtual bool is_leaf() const = 0;
   virtual bool retain_grad() const = 0;
@@ -84,6 +83,7 @@ class Tensor {
   virtual void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) = 0;
   virtual void set_requires_grad(bool requires_grad) = 0;
   virtual void set_retain_grad(bool retain_grad) = 0;
+  virtual FunctionNode* mut_grad_fn_node() = 0;
 
   // Getters to be deprecated
   virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
@@ -114,7 +114,6 @@ class MirroredTensor final : public Tensor {
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
   const std::shared_ptr<TensorArg>& now_grad() const override { return impl_->now_grad(); }
   const std::shared_ptr<const FunctionNode>& grad_fn_node() const override { return grad_fn_node_; }
-  FunctionNode* mut_grad_fn_node() override { return const_cast<FunctionNode*>(grad_fn_node_.get()); }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
@@ -134,6 +133,9 @@ class MirroredTensor final : public Tensor {
   }
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
   void set_retain_grad(bool retain_grad) override { impl_->set_requires_grad(retain_grad); }
+  FunctionNode* mut_grad_fn_node() override {
+    return const_cast<FunctionNode*>(grad_fn_node_.get());
+  }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
@@ -171,7 +173,6 @@ class ConsistentTensor final : public Tensor {
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
   const std::shared_ptr<TensorArg>& now_grad() const override { return impl_->now_grad(); }
   const std::shared_ptr<const FunctionNode>& grad_fn_node() const override { return grad_fn_node_; }
-  FunctionNode* mut_grad_fn_node() override { return const_cast<FunctionNode*>(grad_fn_node_.get()); }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
@@ -193,6 +194,9 @@ class ConsistentTensor final : public Tensor {
   }
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
   void set_retain_grad(bool retain_grad) override { impl_->set_requires_grad(retain_grad); }
+  FunctionNode* mut_grad_fn_node() override {
+    return const_cast<FunctionNode*>(grad_fn_node_.get());
+  }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {

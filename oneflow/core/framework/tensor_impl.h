@@ -46,19 +46,23 @@ class TensorImpl {
   virtual DataType dtype() const = 0;
   virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
   virtual bool is_lazy() const = 0;
-  virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
-  virtual const std::shared_ptr<TensorArg>& now_grad() const = 0;
-  virtual bool requires_grad() const = 0;
-  virtual bool is_leaf() const = 0;
-  virtual bool retain_grad() const = 0;
+
+  // Getters for autograd
+  const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }
+  const std::shared_ptr<TensorArg>& now_grad() const { return now_grad_; }
+  bool requires_grad() const { return requires_grad_; }
+  bool is_leaf() const { return is_leaf_; }
+  bool retain_grad() const { return retain_grad_; }
 
   // Setters
   virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
   virtual void set_dtype(DataType dtype) = 0;
   virtual void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) = 0;
-  virtual void set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
-  virtual void set_requires_grad(bool requires_grad) = 0;
-  virtual void set_retain_grad(bool retain_grad) = 0;
+
+  // Setters for autograd
+  void set_acc_grad(const std::shared_ptr<Tensor>& grad) { acc_grad_ = grad; }
+  void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
+  void set_retain_grad(bool retain_grad) { retain_grad_ = retain_grad; }
 
   // Getters to be deprecated
   virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
@@ -68,6 +72,13 @@ class TensorImpl {
 
  protected:
   TensorImpl() = default;
+
+  // For autograd
+  std::shared_ptr<Tensor> acc_grad_;
+  std::shared_ptr<TensorArg> now_grad_;
+  bool requires_grad_;
+  bool is_leaf_;
+  bool retain_grad_;
 };
 
 class MirroredTensorImpl : public TensorImpl {
@@ -115,11 +126,6 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   }
   const std::shared_ptr<const Device>& device() const override { return device_; }
   bool is_lazy() const override { return true; }
-  const std::shared_ptr<Tensor>& acc_grad() const override { return acc_grad_; }
-  const std::shared_ptr<TensorArg>& now_grad() const override { return now_grad_; }
-  bool requires_grad() const override { return requires_grad_; }
-  bool is_leaf() const override { return is_leaf_; }
-  bool retain_grad() const override { return retain_grad_; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
@@ -128,9 +134,6 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
     parallel_desc_ = parallel_desc;
   }
   void set_device(const std::shared_ptr<const Device>& device) override { device_ = device; }
-  void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { acc_grad_ = grad; }
-  void set_requires_grad(bool requires_grad) override { requires_grad_ = requires_grad; }
-  void set_retain_grad(bool retain_grad) override { retain_grad_ = retain_grad; }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
@@ -147,12 +150,6 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   DataType dtype_;
   std::shared_ptr<const Device> device_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
-  // Autograd
-  std::shared_ptr<Tensor> acc_grad_;
-  std::shared_ptr<TensorArg> now_grad_;
-  bool requires_grad_;
-  bool is_leaf_;
-  bool retain_grad_ = false;
 };
 
 class EagerMirroredTensorImpl final : public MirroredTensorImpl {
@@ -171,11 +168,6 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   }
   const std::shared_ptr<const Device>& device() const override { return device_; }
   bool is_lazy() const override { return false; }
-  const std::shared_ptr<Tensor>& acc_grad() const override { return acc_grad_; }
-  const std::shared_ptr<TensorArg>& now_grad() const override { return now_grad_; }
-  bool requires_grad() const override { return requires_grad_; }
-  bool is_leaf() const override { return is_leaf_; }
-  bool retain_grad() const override { return retain_grad_; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
@@ -184,9 +176,6 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
     parallel_desc_ = parallel_desc;
   }
   void set_device(const std::shared_ptr<const Device>& device) override { device_ = device; }
-  void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { acc_grad_ = grad; }
-  void set_requires_grad(bool requires_grad) override { requires_grad_ = requires_grad; }
-  void set_retain_grad(bool retain_grad) override { retain_grad_ = retain_grad; }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
@@ -204,12 +193,6 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   std::shared_ptr<const Device> device_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
   std::shared_ptr<compatible_py::BlobObject> blob_object_;
-  // Autograd
-  std::shared_ptr<Tensor> acc_grad_;
-  std::shared_ptr<TensorArg> now_grad_;
-  bool requires_grad_;
-  bool is_leaf_;
-  bool retain_grad_ = false;
 };
 
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
@@ -231,11 +214,6 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
     return distribute_;
   }
   bool is_lazy() const override { return true; }
-  const std::shared_ptr<Tensor>& acc_grad() const override { return acc_grad_; }
-  const std::shared_ptr<TensorArg>& now_grad() const override { return now_grad_; }
-  bool requires_grad() const override { return requires_grad_; }
-  bool is_leaf() const override { return is_leaf_; }
-  bool retain_grad() const override { return retain_grad_; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
@@ -246,9 +224,6 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
   void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) override {
     distribute_ = distribute;
   }
-  void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { acc_grad_ = grad; }
-  void set_requires_grad(bool requires_grad) override { requires_grad_ = requires_grad; }
-  void set_retain_grad(bool retain_grad) override { retain_grad_ = retain_grad; }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
@@ -265,12 +240,6 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
   DataType dtype_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
   std::shared_ptr<const compatible_py::Distribute> distribute_;
-  // Autograd
-  std::shared_ptr<Tensor> acc_grad_;
-  std::shared_ptr<TensorArg> now_grad_;
-  bool requires_grad_;
-  bool is_leaf_;
-  bool retain_grad_ = false;
 };
 
 class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
@@ -292,11 +261,6 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
     return distribute_;
   }
   bool is_lazy() const override { return false; }
-  const std::shared_ptr<Tensor>& acc_grad() const override { return acc_grad_; }
-  const std::shared_ptr<TensorArg>& now_grad() const override { return now_grad_; }
-  bool requires_grad() const override { return requires_grad_; }
-  bool is_leaf() const override { return is_leaf_; }
-  bool retain_grad() const override { return retain_grad_; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
@@ -307,9 +271,6 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) override {
     distribute_ = distribute;
   }
-  void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { acc_grad_ = grad; }
-  void set_requires_grad(bool requires_grad) override { requires_grad_ = requires_grad; }
-  void set_retain_grad(bool retain_grad) override { retain_grad_ = retain_grad; }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
@@ -327,12 +288,6 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   std::shared_ptr<const ParallelDesc> parallel_desc_;
   std::shared_ptr<const compatible_py::Distribute> distribute_;
   std::shared_ptr<compatible_py::BlobObject> blob_object_;
-  // Autograd
-  std::shared_ptr<Tensor> acc_grad_;
-  std::shared_ptr<TensorArg> now_grad_;
-  bool requires_grad_;
-  bool is_leaf_;
-  bool retain_grad_ = false;
 };
 
 }  // namespace one

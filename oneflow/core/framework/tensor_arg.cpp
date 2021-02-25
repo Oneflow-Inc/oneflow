@@ -14,35 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_ARG_H_
-#define ONEFLOW_CORE_FRAMEWORK_TENSOR_ARG_H_
-
-#include <memory>
-#include <vector>
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/tensor_arg.h"
 
 namespace oneflow {
 namespace one {
 
-class Tensor;
+bool TensorArg::Empty() const { return partial_sum_tensors_.empty() && acc_tensor_; }
 
-// This class will be used in TensorImpl and Autograd. It will share data with different
-// FunctionNodes.
-class TensorArg final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(TensorArg);
-  TensorArg() = default;
-  ~TensorArg() = default;
-
-  bool Empty() const;
-  void Release();
-
- private:
-  std::vector<std::shared_ptr<Tensor>> partial_sum_tensors_;
-  std::shared_ptr<Tensor> acc_tensor_;
-};
+void TensorArg::Release() {
+  partial_sum_tensors_.clear();
+  acc_tensor_.reset();
+}
 
 }  // namespace one
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_ARG_H_
