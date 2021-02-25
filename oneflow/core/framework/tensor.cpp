@@ -19,7 +19,7 @@ namespace oneflow {
 
 namespace one {
 const Maybe<const compatible_py::Distribute> UndeterminedTensor::distribute() const {
-  CHECK_OR_RETURN(distribute_) << Error::ValueError("distribute is not determined.");
+  CHECK_OR_RETURN(distribute_) << Error::ValueError("Distribute is not determined.");
   return distribute_;
 }
 
