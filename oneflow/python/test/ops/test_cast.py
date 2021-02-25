@@ -24,6 +24,10 @@ import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dtype):
     assert device_type in ["gpu", "cpu"]
@@ -76,8 +80,6 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = CastJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:

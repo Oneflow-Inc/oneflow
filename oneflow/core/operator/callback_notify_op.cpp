@@ -37,11 +37,6 @@ Maybe<void> CallbackNotifyOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CallbackNotifyOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> CallbackNotifyOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Split(input_bns(), 0).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();

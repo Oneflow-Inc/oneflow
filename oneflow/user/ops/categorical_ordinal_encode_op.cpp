@@ -50,12 +50,6 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       user_op::InputArgModifier* in = GetInputArgModifierFn("in", 0);
       in->set_requires_grad(false);
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_OR_RETURN(!ctx->BatchAxis4ArgNameAndIndex("table", 0)->has_value());
-      CHECK_OR_RETURN(!ctx->BatchAxis4ArgNameAndIndex("size", 0)->has_value());
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(ctx->parallel_num(), 1);
       return Maybe<void>::Ok();

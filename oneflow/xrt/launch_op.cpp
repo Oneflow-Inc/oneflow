@@ -50,7 +50,7 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
     const LogicalBlobId &lbi = this->BnInOp2Lbi(bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     BlobDesc blob_desc(this->job_desc().DefaultDataType());
-    blob_desc.CopyMetaFrom(*GetBlobDesc4BnInOp(bn));
+    blob_desc.CopyFrom(*GetBlobDesc4BnInOp(bn));
 
     const std::string &mapping_input = io_mapping.at(blob_name);
     blob_descs.emplace(mapping_input, blob_desc);
@@ -75,20 +75,6 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
     const std::string &mapping_output = io_mapping.at(blob_name);
     CHECK_GT(blob_descs.count(mapping_output), 0);
     *GetBlobDesc4BnInOp(bn) = blob_descs.at(mapping_output);
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> XrtLaunchOp::InferBatchAxis(
-    std::function<OptInt64 *(const std::string &)> BatchAxis4BnInOp) const {
-  const auto &launch_conf = op_conf().xrt_launch_conf();
-  const auto &batch_axis = launch_conf.batch_axis();
-
-  for (const std::string &bn : this->output_bns()) {
-    const LogicalBlobId &lbi = this->BnInOp2Lbi(bn);
-    std::string blob_name = xrt::BlobIdToName(lbi);
-    CHECK_GT(batch_axis.count(blob_name), 0);
-    *BatchAxis4BnInOp(bn) = batch_axis.at(blob_name);
   }
   return Maybe<void>::Ok();
 }

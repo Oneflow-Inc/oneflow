@@ -45,7 +45,9 @@ class JobBuilder final {
   const OperatorConf& OpConf4OpName(const std::string& op_name) const;
   OperatorConf* MutableOpConf4OpName(const std::string& op_name);
 
+  Maybe<void> AddOp(const ParallelConf& parallel_conf, const OperatorConf& op_conf);
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
+  Maybe<void> MutOpOnlyOnce(const OperatorConf& op_conf);
   void MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs);
   void MutParallelConfOnlyOnce(const std::string& op_name, const ParallelConf& parallel_conf);
   void AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
@@ -71,9 +73,6 @@ class JobBuilder final {
   const OpTimeShape& TimeShape4OpName(const std::string& op_name) const;
   void AddTimeShape4OpName(const std::string& op_name, const OpTimeShape& time_shape);
 
-  const OptInt64& BatchAxis4Lbn(const std::string& lbn) const;
-  void AddBatchAxis4Lbn(const std::string& lbn, const OptInt64& axis);
-
  private:
   PlacementGroup* FindPlacementGroup(const std::string& op_name) const;
 
@@ -86,7 +85,6 @@ class JobBuilder final {
 
   HashMap<std::string, SbpSignature*> op_name2sbp_signature_conf_;
   HashMap<std::string, OpTimeShape*> op_name2time_shapes_;
-  HashMap<std::string, OptInt64*> lbn2batch_axis_;
 };
 
 }  // namespace oneflow

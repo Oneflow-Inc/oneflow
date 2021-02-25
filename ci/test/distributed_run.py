@@ -161,6 +161,7 @@ export ONEFLOW_TEST_SSH_PORT={ssh_port}
 export ONEFLOW_TEST_LOG_DIR={log_dir}
 export ONEFLOW_TEST_NODE_LIST="{this_host},{remote_host}"
 export ONEFLOW_WORKER_KEEP_LOG=1
+export ONEFLOW_TEST_TMP_DIR="./distributed-tmp"
 export NCCL_DEBUG=INFO
 """
     if oneflow_worker_bin:

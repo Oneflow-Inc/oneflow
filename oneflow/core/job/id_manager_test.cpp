@@ -64,14 +64,12 @@ TEST(IDMgr, compile_task_id) {
       (static_cast<int64_t>(1) << machine_id_shl) + (static_cast<int64_t>(2) << thread_id_shl);
   int64_t machine3thrd4 =
       (static_cast<int64_t>(3) << machine_id_shl) + (static_cast<int64_t>(4) << thread_id_shl);
-  int64_t local_work_stream1 = (static_cast<int64_t>(1) << local_work_stream_shl);
-  int64_t local_work_stream3 = (static_cast<int64_t>(3) << local_work_stream_shl);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(1, 2, 0), machine1thrd2 | 0 | 0);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(1, 2, 1), machine1thrd2 | local_work_stream1 | 1);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(1, 2, 1), machine1thrd2 | local_work_stream1 | 2);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(3, 4, 1), machine3thrd4 | local_work_stream1 | 0);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(3, 4, 1), machine3thrd4 | local_work_stream1 | 1);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(3, 4, 3), machine3thrd4 | local_work_stream3 | 2);
+  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(1, 2), machine1thrd2 | 0);
+  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(1, 2), machine1thrd2 | 1);
+  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(1, 2), machine1thrd2 | 2);
+  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(3, 4), machine3thrd4 | 0);
+  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(3, 4), machine3thrd4 | 1);
+  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(3, 4), machine3thrd4 | 2);
   Delete();
 }
 

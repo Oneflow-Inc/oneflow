@@ -23,6 +23,8 @@ limitations under the License.
 #include "oneflow/core/graph/foreign_output_compute_task_node.h"
 #include "oneflow/core/graph/callback_notify_compute_task_node.h"
 #include "oneflow/core/graph/reentrant_lock_compute_task_node.h"
+#include "oneflow/core/graph/src_subset_tick_compute_task_node.h"
+#include "oneflow/core/graph/dst_subset_tick_compute_task_node.h"
 #include "oneflow/core/graph/source_tick_compute_task_node.h"
 #include "oneflow/core/graph/tick_compute_task_node.h"
 #include "oneflow/core/graph/device_tick_compute_task_node.h"
@@ -41,9 +43,9 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   virtual ~LogicalNode() = default;
 
   // op_vec_
-  std::shared_ptr<Operator> SoleOp() const;
-  const std::vector<std::shared_ptr<Operator>>& op_vec() const { return op_vec_; }
-  std::vector<std::shared_ptr<Operator>>& mut_op_vec() { return op_vec_; }
+  std::shared_ptr<const Operator> SoleOp() const;
+  const std::vector<std::shared_ptr<const Operator>>& op_vec() const { return op_vec_; }
+  std::vector<std::shared_ptr<const Operator>>& mut_op_vec() { return op_vec_; }
 
   // parallel_desc_
   std::shared_ptr<const ParallelDesc> parallel_desc() const { return parallel_desc_; }
@@ -81,7 +83,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
  private:
   bool HasOpWithCondition(std::function<bool(const Operator*)>) const;
 
-  std::vector<std::shared_ptr<Operator>> op_vec_;
+  std::vector<std::shared_ptr<const Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
@@ -185,6 +187,8 @@ DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ForeignInput);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ForeignOutput);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(CallbackNotify);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ReentrantLock);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(SrcSubsetTick);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(DstSubsetTick);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(SourceTick);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(AccTick);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Tick);

@@ -47,10 +47,6 @@ class BroadcastToCompatibleWithOp final : public Operator {
     CHECK(op_conf().has_broadcast_to_compatible_with_conf());
     EnrollInputBn("x");
     EnrollRepeatedInputBn("compatible", false);
-    FOR_RANGE(int, i, 0, op_conf().broadcast_to_compatible_with_conf().compatible_size()) {
-      InputBlobModifier* modifer = MutInputBlobModifier4Ibn(GenRepeatedBn("compatible", i));
-      modifer->set_use_header_only(true);
-    }
     EnrollOutputBn("y");
   }
 
@@ -65,7 +61,7 @@ class BroadcastToCompatibleWithOp final : public Operator {
       GetBroadcastShape(broadcasted_shape, compatible_i->shape(), &broadcasted_shape);
     }
     BlobDesc* y_desc = GetBlobDesc4BnInOp("y");
-    y_desc->CopyMetaFrom(*x_desc);
+    y_desc->CopyFrom(*x_desc);
     y_desc->mut_shape() = broadcasted_shape;
     return Maybe<void>::Ok();
   }
@@ -82,11 +78,6 @@ class BroadcastToCompatibleWithOp final : public Operator {
       if (x_extend_shape.At(i) == 1 && y_desc->shape().At(i) != 1)
         conf->mutable_broadcast_axes()->Add(i);
     }
-  }
-
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
 
   Maybe<void> GetSbpSignatures(
