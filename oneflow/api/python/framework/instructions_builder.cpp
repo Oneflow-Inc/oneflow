@@ -283,6 +283,8 @@ GetMut2OperandBlobObjects(
                .GetPtrOrThrow());
 }
 
+// signature of python func _FindOrCreateDelegateBlobObject, it will be removed after blobcache is
+// migrated
 using FindOrCreateDelegateBlobObjectFun = std::function<std::shared_ptr<compatible_py::BlobObject>(
     const std::shared_ptr<InstructionsBuilder>&,
     const std::function<std::shared_ptr<compatible_py::BlobObject>(
@@ -353,22 +355,6 @@ void RawStatelessCall(
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object) {
   return x->RawStatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object).GetOrThrow();
-}
-
-void _StatelessCall(
-    const std::shared_ptr<InstructionsBuilder>& x, const std::string& stream_tag,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-    std::shared_ptr<ParallelDesc> op_parallel_desc_sym,
-    const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym,
-    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn_in_op2blob_object,
-    const std::function<std::shared_ptr<compatible_py::BlobObject>(
-        const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& get_delegate_blob_object) {
-  return x
-      ->_StatelessCall(stream_tag, op_attribute, op_parallel_desc_sym, blob_parallel_desc_sym,
-                       bn_in_op2blob_object, get_delegate_blob_object)
-      .GetOrThrow();
 }
 
 std::shared_ptr<compatible_py::BlobObject> Build121To(
