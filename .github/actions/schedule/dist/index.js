@@ -6,12 +6,12 @@ module.exports =
 /***/ ((__unused_webpack_module, __unused_webpack_exports, __nccwpck_require__) => {
 
 octokit = undefined
-if (process.env.GITHUB_ACTION) {
-    const { Octokit } = __nccwpck_require__(795);
-    octokit = new Octokit();
-} else {
+if (process.env.GITHUB_TOKEN) {
     const { Octokit } = __nccwpck_require__(697);
     octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+} else {
+    const { Octokit } = __nccwpck_require__(795);
+    octokit = new Octokit();
 }
 
 const owner = 'Oneflow-Inc';
