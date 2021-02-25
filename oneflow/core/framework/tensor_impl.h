@@ -87,6 +87,8 @@ class MirroredTensorImpl : public TensorImpl {
 
   // Getters
   virtual const std::shared_ptr<const Device>& device() const = 0;
+  virtual Device* mut_device() = 0;
+  virtual ParallelDesc* mut_parallel_desc() = 0;
 
   // Setters
   virtual void set_device(const std::shared_ptr<const Device>& device) = 0;
@@ -114,8 +116,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LazyMirroredTensorImpl);
   LazyMirroredTensorImpl(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                         const std::shared_ptr<const Device>& device)
-      : shape_(shape), dtype_(dtype), device_(device) {}
+                         const std::shared_ptr<const Device>& device);
   ~LazyMirroredTensorImpl() override = default;
 
   // Getters
@@ -126,6 +127,8 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   }
   const std::shared_ptr<const Device>& device() const override { return device_; }
   bool is_lazy() const override { return true; }
+  Device* mut_device() override { return const_cast<Device*>(device_.get()); }
+  ParallelDesc* mut_parallel_desc() override { return const_cast<ParallelDesc*>(parallel_desc_.get()); }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
@@ -156,8 +159,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerMirroredTensorImpl);
   EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                          const std::shared_ptr<const Device>& device)
-      : shape_(shape), dtype_(dtype), device_(device) {}
+                          const std::shared_ptr<const Device>& device);
   ~EagerMirroredTensorImpl() override = default;
 
   // Getters
@@ -168,6 +170,8 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   }
   const std::shared_ptr<const Device>& device() const override { return device_; }
   bool is_lazy() const override { return false; }
+  Device* mut_device() override { return const_cast<Device*>(device_.get()); }
+  ParallelDesc* mut_parallel_desc() override { return const_cast<ParallelDesc*>(parallel_desc_.get()); }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
