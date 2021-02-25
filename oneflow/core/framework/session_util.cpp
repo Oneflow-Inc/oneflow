@@ -52,15 +52,12 @@ Maybe<void> SetDefaultSessionId(int64_t val) {
   return Maybe<void>::Ok();
 }
 
-Maybe<Session> RegsiterSession(int64_t id) {
-  std::shared_ptr<Session> sess =
-      std::make_shared<Session>(id, std::make_shared<vm::cfg::InstructionListProto>(),
-                                std::make_shared<eager::cfg::EagerSymbolList>());
+Maybe<void> RegsiterSession(int64_t id, const std::shared_ptr<Session>& sess) {
   auto* id2session_map = JUST(GlobalId2SessionMap());
   CHECK_OR_RETURN(id2session_map->find(id) == id2session_map->end());
   (*id2session_map)[id] = sess;
   JUST(SetDefaultSessionId(id));
-  return id2session_map->at(id);
+  return Maybe<void>::Ok();
 }
 
 Maybe<Session> GetDefaultSession() {

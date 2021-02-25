@@ -41,7 +41,6 @@ from oneflow.python.framework.pull_util import (
 from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
-from oneflow.python.framework.check_point import SnapshotManager
 import oneflow.python.framework.check_point_v2 as check_point_v2
 from contextlib import contextmanager
 from typing import Callable
@@ -53,8 +52,9 @@ import oneflow_api.oneflow.core.eager.eager_symbol as eager_symbol_cfg
 import traceback
 
 
-class Session(object):
+class Session(oneflow_api.Session):
     def __init__(self, sess_id):
+        oneflow_api.Session.__init__(self, sess_id)
         # self.id_ = oneflow_api.NewSessionId()
         self.job_name2function_desc_ = {}
         self.job_name2job_ = {}
@@ -83,14 +83,10 @@ class Session(object):
         self._UpdateFunctionFlagName2DefaultVal()
         self.scope_attr_name2default_val_ = {}
         self._UpdateScopeAttrName2DefaultVal()
-        self.sess_ = oneflow_api.RegsiterSession(sess_id)
         self.backward_blob_register_ = oneflow_api.BlobRegister()
-        self.snapshot_mgr_ = SnapshotManager()
         self.eager_config_proto_ctx_ = None
 
-    @property
-    def id(self):
-        return self.sess_.id
+        oneflow_api.RegsiterSession(sess_id, self)
 
     @property
     def status(self):
@@ -139,11 +135,11 @@ class Session(object):
 
     @property
     def instruction_list(self):
-        return self.sess_.instruction_list()
+        return self.instruction_list()
 
     @property
     def eager_symbol_list(self):
-        return self.sess_.eager_symbol_list()
+        return self.eager_symbol_list()
 
     @property
     def backward_blob_register(self):
@@ -151,7 +147,7 @@ class Session(object):
 
     @property
     def snapshot_mgr(self):
-        return self.snapshot_mgr_
+        return self.snapshot_mgr()
 
     @property
     def var_name2var_blob(self):
