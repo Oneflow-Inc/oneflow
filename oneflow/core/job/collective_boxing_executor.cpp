@@ -18,8 +18,8 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_pool.h"
@@ -51,7 +51,7 @@ void SortRequestsByOrder(std::vector<const RequestDesc*>* requests) {
 }
 
 bool IsDeviceOnThisMachine(const DeviceDesc& device_desc) {
-  return device_desc.machine_id() == Global<MachineCtx>::Get()->this_machine_id();
+  return device_desc.machine_id() == GlobalProcessCtx::Rank();
 }
 
 bool HasDeviceOnThisMachine(const DeviceSet& device_set) {

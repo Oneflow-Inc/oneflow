@@ -8,11 +8,9 @@ import "oneflow/core/job/placement.proto";
 enum TaskType {
   kInvalid = 0;
   kNormalForward = 1;
-  kDecode = 5;
   kCopyHd = 12;
   kCopyCommNet = 13;
   kPrint = 15;
-  kRecordLoad = 16;
   kDeviceTick = 27;
   kDecodeRandom = 29;
   kPack = 30;
