@@ -16,24 +16,4 @@ limitations under the License.
 import oneflow_api
 from oneflow.python.oneflow_export import oneflow_export
 
-
-@oneflow_export("device")
-class Device(oneflow_api.device):
-    def __init__(self, device: str):
-        available_device = ["cpu", "cuda"]
-        device_list = device.split(":")
-        if len(device_list) > 2:
-            raise RuntimeError("Invalid device string: ", device)
-        device_type = device_list[0]
-        if device_type not in available_device:
-            raise RuntimeError(
-                "Expected one of cpu, cuda device type at start of device string "
-                + device_type,
-            )
-        if len(device_list) > 1:
-            device_index = int(device_list[1])
-            if device_type == "cpu" and device_index != 0:
-                raise RuntimeError("CPU device index must be 0")
-        else:
-            device_index = 0
-        oneflow_api.device.__init__(self, device_type, device_index)
+oneflow_export("device", oneflow_api.device)
