@@ -49,19 +49,18 @@ Thread* NewThread(StreamId stream_id) {
 }  // namespace
 
 ThreadMgr::~ThreadMgr() {
-  for (const auto& pair : threads_) {
+  for (const auto& thread_pair : threads_) {
     ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
-    Thread* thread = pair.second;
-    thread->GetMsgChannelPtr()->Send(msg);
-    delete thread;
-    LOG(INFO) << "actor thread " << SerializeStreamIdToInt64(pair.first) << " finish";
+    thread_pair.second->GetMsgChannelPtr()->Send(msg);
+    LOG(INFO) << "actor thread " << SerializeStreamIdToInt64(thread_pair.first) << " finish";
   }
 }
 
 Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
   StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id);
-  CHECK(threads_.find(stream_id) != threads_.end()) << "thread " << thrd_id << " not found";
-  return threads_.at(stream_id);
+  auto iter = threads_.find(stream_id);
+  CHECK(iter != threads_.end()) << "thread " << thrd_id << " not found";
+  return iter->second.get();
 }
 
 ThreadMgr::ThreadMgr(const Plan& plan) {
