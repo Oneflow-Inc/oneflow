@@ -1,13 +1,13 @@
-name: 'Waiting for other CI tasks of other PR'
-description: ''
+name: "Waiting for other CI tasks of other PR"
+description: ""
 inputs:
-  who-to-greet:  # id of input
-    description: 'Who to greet'
+  who-to-greet: # id of input
+    description: "Who to greet"
     required: false
-    default: 'World'
+    default: "World"
 outputs:
   time: # id of output
-    description: 'The time we greeted you'
+    description: "The time we greeted you"
 runs:
-  using: 'node12'
-  main: 'index.js'
+  using: "node12"
+  main: "dist/index.js"
