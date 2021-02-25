@@ -23,7 +23,7 @@ import oneflow as flow
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 
 from alexnet import load_data, alexnet
-from imagenet_record_dataset import ImageNetRecordDataset
+from ofrecord_dataset import ImageNetRecordDataset
 
 DEFAULT_BATCH_SIZE = 8
 DEFAULT_TRAIN_DATA_PATH = "/dataset/imagenet_227/train/32/"
@@ -118,7 +118,7 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
             .AddSignature("regress")
         )
         for input_name, lbn in input_lbns.items():
-            signature_builder.Input(input_name, lbn, batch_axis=0)
+            signature_builder.Input(input_name, lbn)
         for output_name, lbn in output_lbns.items():
             signature_builder.Output(output_name, lbn)
         saved_model_builder.Save()
@@ -170,16 +170,21 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
         # sess.print_job_set()
         sess.launch()
 
+        job_name = sess.list_jobs()[0]
         input_names = sess.list_inputs()
         print("input names:", input_names)
         for input_name in input_names:
-            print('input "{}" info: {}'.format(input_name, sess.input_info(input_name)))
+            print(
+                'input "{}" info: {}'.format(
+                    input_name, sess.input_info(input_name, job_name)
+                )
+            )
         output_names = sess.list_outputs()
         print("output names:", output_names)
         for output_name in output_names:
             print(
                 'output "{}" info: {}'.format(
-                    output_name, sess.output_info(output_name)
+                    output_name, sess.output_info(output_name, job_name)
                 )
             )
 
@@ -204,8 +209,8 @@ class TestSaveAndLoadModel(flow.unittest.TestCase):
             print("iter#{:<6} output:".format(i), outputs[0])
 
         cmp_outputs = np.array(cmp_outputs, dtype=np.float32)
-
         test_case.assertTrue(np.allclose(origin_outputs, cmp_outputs))
+        sess.close()
 
 
 if __name__ == "__main__":

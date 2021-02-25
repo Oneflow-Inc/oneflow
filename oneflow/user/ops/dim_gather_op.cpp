@@ -66,17 +66,6 @@ REGISTER_USER_OP("dim_gather")
       CHECK(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      OptInt64* indices_batch_axis = ctx->BatchAxis4ArgNameAndIndex("index", 0);
-      if (indices_batch_axis->has_value()) {
-        CHECK_GE_OR_RETURN(indices_batch_axis->value(), 0);
-        CHECK_LE_OR_RETURN(
-            indices_batch_axis->value(),
-            ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape().NumAxes() - 1);
-      }
-      *ctx->BatchAxis4ArgNameAndIndex("output", 0) = *indices_batch_axis;
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& index_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
@@ -149,14 +138,7 @@ REGISTER_USER_OP("dim_scatter_add_like")
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_arg_modifier != nullptr);
-      like_arg_modifier->set_use_header_only(true);
       like_arg_modifier->set_requires_grad(false);
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("index", 0)
-                      == *ctx->BatchAxis4ArgNameAndIndex("input", 0));
-      *ctx->BatchAxis4ArgNameAndIndex("output", 0) = *ctx->BatchAxis4ArgNameAndIndex("input", 0);
-      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& index_tensor =

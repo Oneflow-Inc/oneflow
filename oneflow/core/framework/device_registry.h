@@ -13,23 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/register/blob.h"
+#ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTRY_H_
+#define ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTRY_H_
+
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/device_type.pb.h"
 
 namespace oneflow {
 
-namespace user_op {
+using DumpVersionInfoFn = std::function<void()>;
 
-#ifdef WITH_CUDA
+class DeviceRegistry final {
+ public:
+  DeviceRegistry(DeviceType dev_type) : dev_type_(dev_type) {}
+  DeviceRegistry& SetDumpVersionInfoFn(DumpVersionInfoFn func);
+  DeviceRegistry& SetDeviceTag(std::string dev_tag);
 
-template<>
-void Tensor::CheckDataType<half>() const {
-  LOG_IF(FATAL, data_type() != DataType::kFloat16)
-      << "tensor data_type mismatched. value: kFloat16, template T: half";
-}
-
-#endif  // WITH_CUDA
-
-}  // namespace user_op
+ private:
+  DeviceType dev_type_;
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTRY_H_

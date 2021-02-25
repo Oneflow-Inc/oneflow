@@ -41,6 +41,7 @@ import oneflow.python.ops.get_variable as get_variable
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 from oneflow_api import EagerBlobTrait
+import oneflow_api
 from typing import Any, Callable, Dict, List, Union, Sequence, Optional, Iterable, Tuple
 
 
@@ -294,7 +295,8 @@ def _LogicalSlice(
             op_conf.user_conf.attr["start"].at_list_int64.val[:] = start
             op_conf.user_conf.attr["stop"].at_list_int64.val[:] = stop
             op_conf.user_conf.attr["step"].at_list_int64.val[:] = [1] * len(start)
-            bn_in_op2blob_object = {"x_0": input_blob_object}
+            bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+            bn_in_op2blob_object["x_0"] = input_blob_object
             scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(input_blob)
             op_attribute = op_infer_util.Infer(
                 op_conf, bn_in_op2blob_object, scope_symbol_id
@@ -385,7 +387,9 @@ def _LogicalSliceAssign(
         op_conf.user_conf.attr["start"].at_list_int64.val[:] = start
         op_conf.user_conf.attr["stop"].at_list_int64.val[:] = stop
         op_conf.user_conf.attr["step"].at_list_int64.val[:] = [1] * len(start)
-        bn_in_op2blob_object = {"ref_0": ref_blob_object, "value_0": value_blob_object}
+        bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+        bn_in_op2blob_object["ref_0"] = ref_blob_object
+        bn_in_op2blob_object["value_0"] = value_blob_object
         scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(ref_blob)
         op_attribute = op_infer_util.Infer(
             op_conf, bn_in_op2blob_object, scope_symbol_id

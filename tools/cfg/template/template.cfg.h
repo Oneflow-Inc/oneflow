@@ -389,7 +389,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
  public:
   void clear_{{ util.field_name(field) }}();
 
-  const {{ util.field_map_container_name(field) }} & {{ util.field_name(field) }}();
+  const {{ util.field_map_container_name(field) }} & {{ util.field_name(field) }}() const;
 
   {{ util.field_map_container_name(field) }}* mutable_{{ util.field_name(field) }}();
 

@@ -545,7 +545,6 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
                                        .at(op_name)
                                        .bn_in_op2sbp_parallel()
                                        .at(obn);
-  *blob_conf->mutable_batch_axis() = job.helper().lbn2batch_axis().at(lbn);
 }
 
 void FilterOpName2ParallelBlobConf(
@@ -866,8 +865,7 @@ void AddJobName2JobId(const std::string& job_name, int64_t job_id) {
 }
 
 bool NeedAllocateMemory(const RegstDescTypeProto& regst_desc_type) {
-  return regst_desc_type.has_data_regst_desc()
-         && regst_desc_type.data_regst_desc().packed_blob_desc().is_body_disabled() == false;
+  return regst_desc_type.has_data_regst_desc();
 }
 
 void FinishGlobalCriticalSectionDesc(const Plan& plan, int64_t job_size) {

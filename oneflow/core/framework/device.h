@@ -13,26 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_KEEP_HEADER_ONLY_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_KEEP_HEADER_ONLY_KERNEL_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
+#define ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
 
-#include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_context.h"
+#include <string>
 
 namespace oneflow {
 
-template<DeviceType device_type>
-class KeepHeaderOnlyKernel final : public KernelIf<device_type> {
+class Device final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(KeepHeaderOnlyKernel);
-  KeepHeaderOnlyKernel() = default;
-  ~KeepHeaderOnlyKernel() = default;
+  Device(const std::string& type, int64_t device_id) : type_(type), device_id_(device_id) {}
+  Device(const Device&) = default;
+  Device(Device&&) = default;
+  ~Device() = default;
+  const std::string& type() const { return type_; }
+  int64_t device_id() const { return device_id_; }
 
  private:
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override {}
+  const std::string type_;
+  const int64_t device_id_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_KEEP_HEADER_ONLY_KERNEL_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_H_

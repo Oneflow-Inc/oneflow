@@ -13,10 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/partial_tick_kernel.h"
+#include "oneflow/core/framework/config_def.h"
 
 namespace oneflow {
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kPartialTickConf, PartialTickKernel);
+namespace {
+
+REGISTER_SCOPE_CONFIG_DEF().Bool("quantization_aware_training", true,
+                                 "enable quantization aware training");
+
+}  // namespace
 
 }  // namespace oneflow
