@@ -545,6 +545,7 @@ class TestBatchNormalization(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             CompareBnWithTensorFlow(test_case, **arg, training=False, trainable=False)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_layer_batchnorm_trainable_without_training(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
@@ -562,6 +563,7 @@ class TestBatchNormalization(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             CompareBnWithTensorFlow(test_case, **arg, training=False, trainable=True)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_nn_batchnorm(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
@@ -572,6 +574,7 @@ class TestBatchNormalization(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             CompareNnBnWithTensorFlow(test_case, **arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_batchnorm_fp16(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
@@ -620,7 +623,7 @@ class TestBatchNormalization(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_batchnorm_add_relu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["input_shape"] = [(12, 16, 24, 32), (5, 7, 9, 11)]
+        arg_dict["input_shape"] = [(5, 7, 9, 11)]
         arg_dict["axis"] = [0, 1, 2, 3]
         arg_dict["data_type"] = [flow.float32, flow.float16]
         for arg in GenArgDict(arg_dict):
@@ -629,7 +632,7 @@ class TestBatchNormalization(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_batchnorm_relu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["input_shape"] = [(12, 16, 24, 32), (5, 7, 9, 11)]
+        arg_dict["input_shape"] = [(12, 16, 24, 32)]
         arg_dict["axis"] = [0, 1, 2, 3]
         arg_dict["data_type"] = [flow.float32, flow.float16]
         for arg in GenArgDict(arg_dict):
