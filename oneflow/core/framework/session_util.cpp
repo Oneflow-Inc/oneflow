@@ -46,7 +46,10 @@ Maybe<void> SetDefaultSessionId(int64_t val) {
 
 Session::Session(int64_t id, const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
                  const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list)
-    : id_(id), instruction_list_(instruction_list), eager_symbol_list_(symbol_list) {}
+    : id_(id),
+      instruction_list_(instruction_list),
+      eager_symbol_list_(symbol_list),
+      snapshot_mgr_(new SnapshotManager) {}
 
 int64_t Session::id() const { return id_; }
 
@@ -60,16 +63,13 @@ std::shared_ptr<eager::cfg::EagerSymbolList> Session::eager_symbol_list() const 
 
 Maybe<int64_t> GetDefaultSessionId() { return *(DefaultSessionId()); }
 
-Maybe<Session> RegsiterSession(int64_t id) {
-  std::shared_ptr<Session> sess =
-      std::make_shared<Session>(id, std::make_shared<vm::cfg::InstructionListProto>(),
-                                std::make_shared<eager::cfg::EagerSymbolList>());
+Maybe<void> RegsiterSession(int64_t id, const std::shared_ptr<Session>& sess) {
   std::unique_lock<std::mutex> lock(*GlobalSessionUtilMutex());
   auto* id2session_map = GlobalId2SessionMap();
   CHECK_OR_RETURN(id2session_map->find(id) == id2session_map->end());
   (*id2session_map)[id] = sess;
   JUST(SetDefaultSessionId(id));
-  return id2session_map->at(id);
+  return Maybe<void>::Ok();
 }
 
 Maybe<Session> GetDefaultSession() {
