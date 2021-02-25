@@ -39,7 +39,7 @@ std::shared_ptr<TensorList> RunBackward(const std::shared_ptr<TensorList>& outpu
   if (create_graph) { retain_graph = true; }
   std::shared_ptr<TensorList> res_grads;
   // TODO: check could run backward or not
-  // TODO: add backward codes
+  // TODO: calls `AutogradEngine.Execute()` to do backward
   return res_grads;
 }
 
@@ -50,9 +50,7 @@ std::shared_ptr<TensorList> AutoGradUtil::Backward(const std::shared_ptr<TensorL
                                                    bool retain_graph, bool create_graph) {
   std::shared_ptr<TensorList> gradients = CheckAndInitOutGrads(outputs, out_grads);
   auto inputs = std::make_shared<TensorList>(0);
-  std::shared_ptr<TensorList> res_grads =
-      RunBackward(outputs, inputs, gradients, retain_graph, create_graph);
-  return std::make_shared<TensorList>(0);
+  return RunBackward(outputs, inputs, gradients, retain_graph, create_graph);
 }
 
 std::shared_ptr<TensorList> AutoGradUtil::Grad(const std::shared_ptr<TensorList>& outputs,

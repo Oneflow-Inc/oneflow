@@ -28,8 +28,9 @@ void StackFunctionNode::ReleaseGraph() {
   backward_fn_.reset();
 }
 
-void StackFunctionNode::ReleaseTensorGrads() {
-  for (auto& out_grad : out_grads_) { out_grad->reset(); }
+void StackFunctionNode::ReleaseOutTensorArgs() {
+  // TODO: Release tensor_args
+  // for (auto& out_grad : out_grads_) { out_grad->Release(); }
 }
 
 void StackFunctionNode::Apply(bool create_graph) {
@@ -41,17 +42,21 @@ void StackFunctionNode::Apply(bool create_graph) {
               << std::endl;
     return;
   }
-  // skip when all out_grads not ready
-  if (std::all_of(out_grads_.begin(), out_grads_.end(),
-                  [](const std::shared_ptr<TensorArg>& tensor_arg) { return tensor_arg->empty(); }))
-    return;
+  // Skips this node when all out_grads not ready
+  // TODO: check all tensor_arg is empty
+  // if (std::all_of(out_grads_.begin(), out_grads_.end(),
+  //                 [](const std::shared_ptr<TensorArg>& tensor_arg) { return tensor_arg->empty();
+  //                 }))
+  //   return;
 
-  auto out_grads = std::make_shared<TensorList>();
-  for (int i = 0; i < out_grads_.size(); i++) {
-    if (out_grads_[i]->empty()) { out_grads_[i]->init_zeros_like(outputs_->at(i)); }
-    out_grads->push_back(out_grads_[i]->get_tensor_ptr());
-  }
-  // TODO: according to backward_fn interface
+  // Inits empty `out_grads_` to zeros
+  // auto out_grads = std::make_shared<TensorList>();
+  // for (int i = 0; i < out_grads_.size(); i++) {
+  //   if (out_grads_[i]->empty()) { out_grads_[i]->init_zeros_like(outputs_->at(i)); }
+  //   out_grads->push_back(out_grads_[i]->get_tensor_ptr());
+  // }
+
+  // TODO: calls `backward_fn_`
   // backward_fn_(out_grads, inputs_, outputs_, create_graph);
 }
 
@@ -59,30 +64,11 @@ std::shared_ptr<TensorList> StackAutogradEngine::Execute(
     const std::shared_ptr<TensorList>& outputs, const std::shared_ptr<TensorList>& inputs,
     const std::shared_ptr<TensorList>& out_grads, bool retain_graph, bool create_graph) {
   auto capture_tensors = std::make_shared<TensorList>(inputs->size());
-  bool retain_grad_for_leaf = inputs->empty();
-  for (int i = 0; i < outputs->size(); i++) {
-    outputs->at(i)->now_grad->set_tensor_ptr(out_grads->at(i));
-  }
-  auto it = node_list_.begin();
-  while (it != node_list_.end()) {
-    if (it->lock()) {
-      it->lock()->Apply(create_graph);
-
-      // TODO: capture return grads and save grad for tensors whose retain_grad is true
-
-      if (!retain_graph) {
-        node_list_.erase(it);
-      } else {
-        it++;
-      }
-    } else {
-      node_list_.erase(it);
-    }
-  }
+  // TODO: calls FunctionNode in list one by one and capture each input grad
   return capture_tensors;
 }
 
-// TODO: std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(...) {}
+// TODO: const std::shared_ptr<const FunctionNode>& StackAutogradEngine::AddBackwardFuncPtr(...) {}
 
 }  // namespace one
 
