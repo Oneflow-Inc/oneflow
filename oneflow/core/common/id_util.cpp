@@ -14,43 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/id_util.h"
-#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
-/*
-
 namespace {
-
-StreamType DeviceType2StreamType(DeviceType device_type) {
-  StreamType stream_type = StreamType::kInvalid;
-  switch (device_type) {
-    case kCPU: stream_type = StreamType::kCPU; break;
-    case kGPU: stream_type = StreamType::kCuda; break;
-    default: UNIMPLEMENTED();
-  }
-  return stream_type;
-}
-
-bool CheckStreamIndexValid(StreamType stream_type, uint32_t stream_index) {
-  bool valid = false;
-#define STREAM_INDEX_CHECK_CASE(case_type, index_max) \
-  case case_type: {                                   \
-    if (stream_index < index_max) { valid = true; }   \
-    break;                                            \
-  }
-
-  switch (stream_type) {
-    STREAM_INDEX_CHECK_CASE(StreamType::kCPU, StreamIndex::CPU::kMax)
-    STREAM_INDEX_CHECK_CASE(StreamType::kCuda, StreamIndex::Cuda::kMax)
-    STREAM_INDEX_CHECK_CASE(StreamType::kCommNet, 0)
-    STREAM_INDEX_CHECK_CASE(StreamType::kTickTock, 0)
-    STREAM_INDEX_CHECK_CASE(StreamType::kIndependent,
-                            (static_cast<uint32_t>(1) << StreamId::kRightBits))
-    default: { valid = false; }
-  }
-  return valid;
-}
 
 template<typename T>
 bool CheckValueInBitsRange(T val, size_t bits) {
@@ -62,211 +29,108 @@ bool CheckValueInBitsRange(T val, size_t bits) {
 
 // ProcessId methods
 ProcessId::ProcessId(uint32_t node_index, uint32_t process_index) {
-  CHECK(CheckValueInBitsRange(node_index, kLeftBits))
+  CHECK(CheckValueInBitsRange(node_index, kNodeIndexBits))
       << "node_index is out of range: " << node_index;
-  CHECK(CheckValueInBitsRange(process_index, kRightBits))
+  CHECK(CheckValueInBitsRange(process_index, kProcessIndexBits))
       << "process_index is out of range: " << process_index;
-  val_ = (node_index << kRightBits) | process_index;
+  val_ = (node_index << kProcessIndexBits) | process_index;
 }
 
-uint32_t ProcessId::node_index() const { return val_ >> kRightBits; }
+uint32_t ProcessId::node_index() const { return val_ >> kProcessIndexBits; }
 
 uint32_t ProcessId::process_index() const {
-  return (val_ << kReservedLeftBits) >> kReservedLeftBits;
+  return (val_ << (kFullBits - kProcessIndexBits)) >> (kFullBits - kProcessIndexBits);
+}
+
+// DeviceId methods
+DeviceId::DeviceId(DeviceType device_type, uint32_t device_index) {
+  CHECK(CheckValueInBitsRange(static_cast<uint32_t>(device_type), kDeviceTypeBits))
+      << "device_type is out of range: " << static_cast<uint32_t>(device_type);
+  CHECK(CheckValueInBitsRange(device_index, kDeviceIndexBits))
+      << "device_index is out of range: " << device_index;
+  val_ = (static_cast<uint32_t>(device_type) << kDeviceIndexBits) | device_index;
+}
+
+DeviceType DeviceId::device_type() const {
+  return static_cast<DeviceType>(val_ >> kDeviceIndexBits);
+}
+
+uint32_t DeviceId::device_index() const {
+  return (val_ << (kFullBits - kDeviceIndexBits)) | (kFullBits - kDeviceIndexBits);
 }
 
 // StreamId methods
-StreamType StreamId::stream_type() const {
-  return static_cast<StreamType>(val_ >> (kMiddleBits + kRightBits));
+StreamId::StreamId(DeviceId device_id, uint32_t stream_index) {
+  CHECK(CheckValueInBitsRange(device_id.val_, kDeviceIdBits))
+      << "device_id is out of range: " << device_id.val_;
+  CHECK(CheckValueInBitsRange(stream_index, kStreamIndexBits))
+      << "stream_index is out of range: " << stream_index;
+  val_ = (device_id.val_ << kStreamIndexBits) | stream_index;
 }
 
-DeviceType StreamId::device_type() const {
-  StreamType stream_type = this->stream_type();
-  DeviceType device_type = DeviceType::kInvalidDevice;
-  switch (stream_type) {
-    case StreamType::kCuda: {
-      device_type = DeviceType::kGPU;
-      break;
-    }
-    case StreamType::kCPU:
-    case StreamType::kCommNet:
-    case StreamType::kTickTock:
-    case StreamType::kIndependent: {
-      device_type = DeviceType::kCPU;
-      break;
-    }
-    default: { UNIMPLEMENTED(); }
-  }
-  return device_type;
-}
+StreamId::StreamId(DeviceType device_type, uint32_t device_index, uint32_t stream_index)
+    : StreamId(DeviceId{device_type, device_index}, stream_index) {}
 
-uint32_t StreamId::device_index() const {
-  StreamType stream_type = this->stream_type();
-  CHECK(stream_type != StreamType::kCommNet && stream_type != StreamType::kTickTock
-        && stream_type != StreamType::kIndependent)
-      << "StreamType kCommNet, kTickTock and kIndependent don't support device_index()";
-  return (val_ << (kReservedBits + kLeftBits)) >> (kReservedBits + kLeftBits + kRightBits);
-}
+DeviceId StreamId::device_id() const { return DeviceId{val_ >> kStreamIndexBits}; }
+
+DeviceType StreamId::device_type() const { return device_id().device_type(); }
+
+uint32_t StreamId::device_index() const { return device_id().device_index(); }
 
 uint32_t StreamId::stream_index() const {
-  StreamType stream_type = this->stream_type();
-  CHECK(stream_type != StreamType::kCommNet && stream_type != StreamType::kTickTock)
-      << "StreamType kCommNet and kTickTock don't support stream_index()";
-  const int shift = kReservedBits + kLeftBits + kMiddleBits;
-  return (val_ << shift) >> shift;
-}
-
-TaskType StreamId::task_type() const {
-  StreamType stream_type = this->stream_type();
-  CHECK(stream_type == StreamType::kIndependent)
-      << "Only StreamType::kIndependent support task_type()";
-  uint32_t id = (val_ << (kReservedBits + kLeftBits)) >> (kReservedBits + kLeftBits + kRightBits);
-  return static_cast<TaskType>(id);
+  return (val_ << (kFullBits - kStreamIndexBits)) >> (kFullBits - kStreamIndexBits);
 }
 
 // TaskId methods
 TaskId::TaskId(ProcessId process_id, StreamId stream_id, uint32_t task_index) {
-  CHECK(CheckValueInBitsRange(task_index, kRightBits))
+  CHECK(CheckValueInBitsRange(task_index, kTaskIndexBits))
       << "task_index is out of range: " << task_index;
-  CHECK(CheckValueInBitsRange(static_cast<uint32_t>(stream_id), kMiddleBits))
+  CHECK(CheckValueInBitsRange(stream_id.val_, kStreamIdBits))
       << "stream_id is out of range: " << static_cast<uint32_t>(stream_id);
-  CHECK(CheckValueInBitsRange(static_cast<uint32_t>(process_id), kLeftBits))
+  CHECK(CheckValueInBitsRange(process_id.val_, kProcessIdBits))
       << "process_id is out of range: " << static_cast<uint32_t>(process_id);
   val_ = static_cast<uint64_t>(task_index);
-  val_ |= static_cast<uint64_t>(stream_id) << kRightBits;
-  val_ |= static_cast<uint64_t>(process_id) << kMiddleRightBits;
+  val_ |= static_cast<uint64_t>(stream_id) << kTaskIndexBits;
+  val_ |= static_cast<uint64_t>(process_id) << (kTaskIndexBits + kStreamIdBits);
+}
+
+TaskId::TaskId(uint64_t global_stream_index, uint32_t task_index) {
+  CHECK(CheckValueInBitsRange(global_stream_index, kProcessIdBits + kStreamIdBits))
+      << "global_stream_index is out of range: " << global_stream_index;
+  CHECK(CheckValueInBitsRange(task_index, kTaskIndexBits))
+      << "task_index is out of range: " << task_index;
+  val_ = (global_stream_index << (kProcessIdBits + kStreamIdBits)) | task_index;
 }
 
 ProcessId TaskId::process_id() const {
-  uint64_t id = val_ >> kMiddleRightBits;
-  return ProcessId{static_cast<uint32_t>(id)};
+  return ProcessId{static_cast<uint32_t>(val_ >> (kTaskIndexBits + kStreamIdBits))};
 }
 
 StreamId TaskId::stream_id() const {
-  uint64_t id = (val_ << kLeftBits) >> kLeftRightBits;
-  return StreamId{static_cast<uint32_t>(id)};
+  return StreamId{static_cast<uint32_t>((val_ << kProcessIdBits) >> (kFullBits - kStreamIdBits))};
 }
 
-uint64_t TaskId::global_stream_index() const { return val_ >> kRightBits; }
+uint64_t TaskId::global_stream_index() const { return val_ >> kTaskIndexBits; }
 
 uint32_t TaskId::task_index() const {
-  uint64_t id = (val_ << kLeftMiddleBits) >> kLeftMiddleBits;
-  return ProcessId{static_cast<uint32_t>(id)};
+  return ProcessId{static_cast<uint32_t>((val_ << (kProcessIdBits + kStreamIdBits))
+                                         >> (kProcessIdBits + kStreamIdBits))};
 }
 
-// MemZoneId methods
-DeviceType MemZoneId::device_type() const {
-  return static_cast<DeviceType>(val_ >> kMiddleRightBits);
+int64_t SerializeStreamIdToInt64(StreamId stream_id) { return static_cast<int64_t>(stream_id); }
+
+StreamId DeserializeStreamIdFromInt64(int64_t id_val) {
+  CHECK(CheckValueInBitsRange(id_val, StreamId::kBits)) << "id_val is out of range: " << id_val;
+  return StreamId{static_cast<uint32_t>(id_val)};
 }
 
-uint32_t MemZoneId::device_index() const { return (val_ << kLeftMiddleBits) >> kLeftMiddleBits; }
-
-*/
-
-/*
-// IDUtil methods
-StreamId IdUtil::GetStreamId(StreamType stream_type, uint32_t device_index, uint32_t stream_index) {
-  CHECK(CheckStreamIndexValid(stream_type, stream_index))
-      << "invalid stream_index: " << stream_index << " under stream_type: " << stream_type;
-  CHECK(CheckValueInBitsRange(device_index, StreamId::kMiddleBits))
-      << "device_index is out of range: " << device_index;
-  uint32_t id = 0;
-  id |= static_cast<uint32_t>(stream_type) << (StreamId::kMiddleBits + StreamId::kRightBits);
-  id |= device_index << StreamId::kRightBits;
-  id |= stream_index;
-  return StreamId{id};
+int64_t SerializeTaskIdToInt64(TaskId task_id) {
+  return static_cast<int64_t>(task_id);
 }
 
-StreamId IdUtil::GetCommNetStreamId() {
-  uint32_t id = static_cast<uint32_t>(StreamType::kCommNet)
-                << (StreamId::kMiddleBits + StreamId::kRightBits);
-  return StreamId{id};
+TaskId DeserializeTaskIdFromInt64(int64_t id_val) {
+  CHECK(CheckValueInBitsRange(id_val, TaskId::kFullBits)) << "id_val is out of range: " << id_val;
+  return TaskId{static_cast<uint64_t>(id_val)};
 }
-
-StreamId IdUtil::GetTickTockStreamId() {
-  uint32_t id = static_cast<uint32_t>(StreamType::kTickTock)
-                << (StreamId::kMiddleBits + StreamId::kRightBits);
-  return StreamId{id};
-}
-
-MemZoneId IdUtil::GetCpuMemZoneId() {
-  return MemZoneId{static_cast<uint32_t>(DeviceType::kCPU) << MemZoneId::kMiddleRightBits};
-}
-
-bool IdUtil::IsCpuMemZoneId(MemZoneId mem_zone_id) {
-  return (static_cast<uint32_t>(mem_zone_id) >> MemZoneId::kMiddleRightBits) == DeviceType::kCPU;
-}
-
-MemZoneId IdUtil::GetDeviceMemZoneId(DeviceType device_type, uint32_t device_index) {
-  CHECK(CheckValueInBitsRange(device_index, StreamId::kRightBits))
-      << "device_index is out of range: " << device_index;
-  uint32_t id = static_cast<uint32_t>(device_type) << MemZoneId::kMiddleRightBits;
-  id |= device_index;
-  return MemZoneId{id};
-}
-
-bool IdUtil::IsCudaMemZoneId(MemZoneId mem_zone_id) {
-  return (static_cast<uint32_t>(mem_zone_id) >> MemZoneId::kMiddleRightBits) == DeviceType::kGPU;
-}
-
-bool IdUtil::IsMemZoneIdSameDevice(MemZoneId lhs, MemZoneId rhs) {
-  return lhs.device_type() == rhs.device_type() && lhs.device_index() == rhs.device_index();
-}
-
-bool IdUtil::IsMemZoneIdNormalUsage(MemZoneId mem_zone_id) {
-  uint32_t id =
-      (static_cast<uint32_t>(mem_zone_id) << MemZoneId::kLeftBits) >> MemZoneId::kMiddleRightBits;
-  return id == MemZoneId::kUsageNormal;
-}
-
-StreamId IdUtil::GenerateProcessTaskIndependentStreamId(ProcessId process_id, TaskType task_type) {
-  CHECK(CheckValueInBitsRange(static_cast<uint32_t>(task_type), StreamId::kMiddleBits))
-      << "task_type is out of range: " << static_cast<uint32_t>(task_type);
-  auto key = std::make_pair(process_id, task_type);
-  uint32_t& task_index = process_task_type2task_index_counter_[key];
-  if (IsClassRegistered<int32_t, IndependentThreadNum4TaskType>(task_type)) {
-    std::unique_ptr<IndependentThreadNum4TaskType> task_idp_thrd_num_ptr(
-        NewObj<int32_t, IndependentThreadNum4TaskType>(task_type));
-    if (task_index >= *task_idp_thrd_num_ptr) { task_index %= *task_idp_thrd_num_ptr; }
-  }
-  CHECK(CheckValueInBitsRange(task_index, StreamId::kRightBits))
-      << "task_index is out of range: " << task_index;
-  uint32_t id = static_cast<uint32_t>(StreamType::kIndependent)
-                << (StreamId::kMiddleBits + StreamId::kRightBits);
-  id |= (static_cast<uint32_t>(task_type) << StreamId::kRightBits);
-  id |= task_index;
-  task_index += 1;
-  return StreamId{id};
-}
-
-StreamId IdUtil::GenerateCPUComputeStreamIdEvenly(ProcessId process_id) {
-  uint32_t device_index = process_id2cpu_device_index_counter_[process_id]++ % cpu_device_num_;
-  return GetStreamId(StreamType::kCPU, device_index, StreamIndex::CPU::kCompute);
-}
-
-TaskId IdUtil::GenerateTaskId(ProcessId process_id, StreamId stream_id) {
-  // low of uint64 indicate stream_id as high indicate process_id
-  uint64_t process_stream_key =
-      (static_cast<uint64_t>(process_id) << StreamId::kBits) | static_cast<uint64_t>(stream_id);
-  uint32_t task_index = process_stream2task_index_counter_[process_stream_key]++;
-  CHECK_LT(task_index, (static_cast<uint32_t>(1) << TaskId::kRightBits) - 1)
-      << "task_index is out of range: " << task_index;
-  return TaskId(process_id, stream_id, task_index);
-}
-
-int64_t IdUtil::GenerateChainId(uint64_t global_stream_index) {
-  uint32_t chain_index = process_stream2chain_index_counter_[global_stream_index]++;
-  CHECK_LT(chain_index, (static_cast<uint32_t>(1) << TaskId::kRightBits) - 1)
-      << "chain_index is out of range: " << chain_index;
-  return static_cast<int64_t>(global_stream_index) | static_cast<int64_t>(chain_index);
-}
-
-IdUtil::IdUtil() {
-  size_t machine_num = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
-  CHECK(CheckValueInBitsRange(machine_num, ProcessId::kLeftBits))
-      << "machine_num is out of range: " << machine_num;
-  cpu_device_num_ = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
-}
-*/
 
 }  // namespace oneflow
