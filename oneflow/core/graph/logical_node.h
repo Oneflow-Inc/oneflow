@@ -175,8 +175,6 @@ int64_t NewAreaId();
     LOGICAL_NODE_BOILERPLATE(name);       \
   }
 
-DECLARE_NAIVE_LOGICAL_NODE(RecordLoadLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(DecodeLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DecodeRandomLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DistributeConcatLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DistributeSplitLogicalNode);

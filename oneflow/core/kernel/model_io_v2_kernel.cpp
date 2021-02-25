@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
 #include "oneflow/core/device/cpu_device_context.h"
-#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
@@ -217,10 +217,9 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
     AutoSyncBlobAccessor<device_type> ref_accessor(ctx.device_ctx, ref, false, true);
     std::shared_ptr<OnDemandHostBlob> logical_blob;
     if (original_variable_conf.has_initializer()) {
-      const std::string blob_cache_key =
-          "ModelInitBlobCache-" + var_lbn + "-Machine-"
-          + std::to_string(Global<MachineCtx>::Get()->this_machine_id()) + "-Counter-"
-          + std::to_string(*counter_);
+      const std::string blob_cache_key = "ModelInitBlobCache-" + var_lbn + "-Machine-"
+                                         + std::to_string(GlobalProcessCtx::Rank()) + "-Counter-"
+                                         + std::to_string(*counter_);
       const std::string barrier_key =
           "ModelInitBarrier-" + var_lbn + "-Counter-" + std::to_string(*counter_);
       OfCallOnce(blob_cache_key, [&]() {
