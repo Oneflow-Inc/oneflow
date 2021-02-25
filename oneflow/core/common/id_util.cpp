@@ -56,7 +56,7 @@ DeviceType DeviceId::device_type() const {
 }
 
 uint32_t DeviceId::device_index() const {
-  return (val_ << (kFullBits - kDeviceIndexBits)) | (kFullBits - kDeviceIndexBits);
+  return (val_ << (kFullBits - kDeviceIndexBits)) >> (kFullBits - kDeviceIndexBits);
 }
 
 // StreamId methods
@@ -86,9 +86,9 @@ TaskId::TaskId(ProcessId process_id, StreamId stream_id, uint32_t task_index) {
   CHECK(CheckValueInBitsRange(task_index, kTaskIndexBits))
       << "task_index is out of range: " << task_index;
   CHECK(CheckValueInBitsRange(stream_id.val_, kStreamIdBits))
-      << "stream_id is out of range: " << static_cast<uint32_t>(stream_id);
+      << "stream_id is out of range: " << stream_id.val_;
   CHECK(CheckValueInBitsRange(process_id.val_, kProcessIdBits))
-      << "process_id is out of range: " << static_cast<uint32_t>(process_id);
+      << "process_id is out of range: " << process_id.val_;
   val_ = static_cast<uint64_t>(task_index);
   val_ |= static_cast<uint64_t>(stream_id) << kTaskIndexBits;
   val_ |= static_cast<uint64_t>(process_id) << (kTaskIndexBits + kStreamIdBits);
@@ -99,7 +99,7 @@ TaskId::TaskId(uint64_t global_stream_index, uint32_t task_index) {
       << "global_stream_index is out of range: " << global_stream_index;
   CHECK(CheckValueInBitsRange(task_index, kTaskIndexBits))
       << "task_index is out of range: " << task_index;
-  val_ = (global_stream_index << (kProcessIdBits + kStreamIdBits)) | task_index;
+  val_ = (global_stream_index << kTaskIndexBits) | task_index;
 }
 
 ProcessId TaskId::process_id() const {
@@ -117,16 +117,16 @@ uint32_t TaskId::task_index() const {
                                          >> (kProcessIdBits + kStreamIdBits))};
 }
 
-int64_t SerializeStreamIdToInt64(StreamId stream_id) { return static_cast<int64_t>(stream_id); }
+int64_t SerializeStreamIdToInt64(StreamId stream_id) {
+  return static_cast<int64_t>(stream_id.val_);
+}
 
 StreamId DeserializeStreamIdFromInt64(int64_t id_val) {
   CHECK(CheckValueInBitsRange(id_val, StreamId::kBits)) << "id_val is out of range: " << id_val;
   return StreamId{static_cast<uint32_t>(id_val)};
 }
 
-int64_t SerializeTaskIdToInt64(TaskId task_id) {
-  return static_cast<int64_t>(task_id);
-}
+int64_t SerializeTaskIdToInt64(TaskId task_id) { return static_cast<int64_t>(task_id.val_); }
 
 TaskId DeserializeTaskIdFromInt64(int64_t id_val) {
   CHECK(CheckValueInBitsRange(id_val, TaskId::kFullBits)) << "id_val is out of range: " << id_val;
