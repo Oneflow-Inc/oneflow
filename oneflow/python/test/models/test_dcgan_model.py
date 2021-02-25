@@ -28,7 +28,7 @@ class DCGAN(flow.Model):
         self.z_dim = 100
         self.batch_size = batch_size
 
-    def generator(self, z, const_init=False, trainable=True):
+    def _generator(self, z, const_init=False, trainable=True):
         # (n, 256, 7, 7)
         h0 = layers.dense(
             z, 7 * 7 * 256, name="g_fc1", const_init=const_init, trainable=trainable
@@ -73,7 +73,7 @@ class DCGAN(flow.Model):
         out = flow.math.tanh(out)
         return out
 
-    def discriminator(self, img, const_init=False, trainable=True, reuse=False):
+    def _discriminator(self, img, const_init=False, trainable=True, reuse=False):
         # (n, 1, 28, 28)
         h0 = layers.conv2d(
             img,
@@ -107,14 +107,14 @@ class DCGAN(flow.Model):
         return out
 
     def forward(self, batch, trainable=False):
-        return self.generator(batch, trainable=trainable)
+        return self._generator(batch, trainable=trainable)
 
     def training_step(self, batch, optimizer_idx):
         if optimizer_idx == 0:
             # generator
             z, = batch
-            g_out = self.generator(z, trainable=True, const_init=True)
-            g_logits = self.discriminator(g_out, trainable=False, const_init=True)
+            g_out = self._generator(z, trainable=True, const_init=True)
+            g_logits = self._discriminator(g_out, trainable=False, const_init=True)
             g_loss = flow.nn.sigmoid_cross_entropy_with_logits(
                 flow.ones_like(g_logits),
                 g_logits,
@@ -124,15 +124,15 @@ class DCGAN(flow.Model):
         elif optimizer_idx == 1:
             # discriminator
             z, images = batch
-            g_out = self.generator(z, trainable=False, const_init=True)
-            g_logits = self.discriminator(g_out, trainable=True, const_init=True)
+            g_out = self._generator(z, trainable=False, const_init=True)
+            g_logits = self._discriminator(g_out, trainable=True, const_init=True)
             d_loss_fake = flow.nn.sigmoid_cross_entropy_with_logits(
                 flow.zeros_like(g_logits),
                 g_logits,
                 name="Dloss_fake_sigmoid_cross_entropy_with_logits",
             )
 
-            d_logits = self.discriminator(
+            d_logits = self._discriminator(
                 images, trainable=True, reuse=True, const_init=True
             )
             d_loss_real = flow.nn.sigmoid_cross_entropy_with_logits(
@@ -153,17 +153,22 @@ class DCGAN(flow.Model):
         return [generator_opt, discriminator_opt]
 
 
-class LossMoniter(flow.Callback):
+class LossMoniter(flow.ModelCallback):
+    def __init__(self, result_dir):
+        self.result_dir = result_dir
+
     def on_training_step_end(self, step_idx, outputs, optimizer_idx):
         if optimizer_idx == 0:
             g_loss = outputs
-            tf_g_loss = np.load(os.path.join(result_dir, "g_loss.npy"))
+            print("g_loss: ", g_loss.numpy())
+            tf_g_loss = np.load(os.path.join(self.result_dir, "g_loss.npy"))
             assert np.allclose(
                 g_loss.numpy(), tf_g_loss, rtol=1e-2, atol=1e-1
             ), "{}-{}".format(g_loss.ndarray().mean(), tf_g_loss.mean())
         elif optimizer_idx == 1:
             d_loss = outputs
-            tf_d_loss = np.load(os.path.join(result_dir, "d_loss.npy"))
+            print("d_loss: ", d_loss.numpy())
+            tf_d_loss = np.load(os.path.join(self.result_dir, "d_loss.npy"))
             assert np.allclose(
                 d_loss.numpy(), tf_d_loss, rtol=1e-2, atol=1e-1
             ), "{}-{}".format(d_loss.ndarray().mean(), tf_d_loss.mean())
@@ -176,7 +181,6 @@ class NumpyTrainData(flow.nn.NumpyModule):
         self.images = np.load(os.path.join(result_dir, "img.npy")).transpose(0, 3, 1, 2)
 
     def forward(self, step_idx, optimizer_idx):
-        print("step_idx {}, opt_idx {}:".format(step_idx, optimizer_idx))
         if optimizer_idx == 0:
             return (self.z,)
         else:
@@ -191,24 +195,6 @@ def test_1n1c(test_case):
 
 class DCGANCompare:
     def compare_with_tf(self, gpu_num, result_dir="/dataset/gan_test/dcgan/"):
-        # @flow.global_function(type="train", function_config=func_config)
-        # def test_generator(
-        #     z: oft.Numpy.Placeholder((self.batch_size, self.z_dim)),
-        #     label1: oft.Numpy.Placeholder((self.batch_size, 1)),
-        # ):
-        #     return g_loss
-
-        # @flow.global_function(type="train", function_config=func_config)
-        # def test_discriminator(
-        #     z: oft.Numpy.Placeholder((self.batch_size, 100)),
-        #     images: oft.Numpy.Placeholder((self.batch_size, 1, 28, 28)),
-        #     label1: oft.Numpy.Placeholder((self.batch_size, 1)),
-        #     label0: oft.Numpy.Placeholder((self.batch_size, 1)),
-        # ):
-
-        # g_loss = test_generator(z, label1).get()
-        # d_loss = test_discriminator(z, imgs, label1, label0).get()
-
         batch_size = 32
 
         flow.config.gpu_device_num(gpu_num)
@@ -216,7 +202,7 @@ class DCGANCompare:
         train_config = flow.ExecutionConfig()
         train_config.default_data_type(flow.float)
         train_config.default_logical_view(flow.scope.consistent_view())
-        loss_monitor = LossMoniter()
+        loss_monitor = LossMoniter(result_dir)
         dcgan_md = DCGAN(
             gpu_num,
             batch_size,

@@ -15,6 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 from abc import ABC
+from collections import OrderedDict
 from typing import Optional
 import numpy as np
 import inspect
@@ -109,8 +110,6 @@ class Model(
         raise NotImplementedError()
 
     def _func_train_job(self, optimizer_idx=0):
-        deco = api_oneflow_function(type="train", function_config=self.training_config)
-
         def job():
             batch = self.training_data()
             loss = self.training_step(batch=batch, optimizer_idx=optimizer_idx)
@@ -120,43 +119,43 @@ class Model(
         job.__name__ = (
             self.__class__.__name__ + "_Model_train_job_" + str(optimizer_idx)
         )
-
+        deco = api_oneflow_function(type="train", function_config=self.training_config)
         return deco(job)
 
     def _func_eval_job(self):
-        deco = api_oneflow_function(function_config=self.validation_config)
 
         def job():
             batch = self.validation_data()
             return self.validation_step(batch)
 
         job.__name__ = self.__class__.__name__ + "_Model_eval_job"
-
+        deco = api_oneflow_function(function_config=self.validation_config)
         return deco(job)
     
     def _construct_numpy_input_train_job(self, optimizer_idx, job_func_para_annotations):
-        for i in range(len(job_func_para_annotations)):
-            print(inspect.Parameter("para_" + str(i), inspect.Parameter.POSITIONAL_ONLY))
-
-        deco = api_oneflow_function(type="train", function_config=self.training_config)
-
-        def job(batch):
+        # 注意这里的signature不再被使用构建构建job，只是为了传递input blob
+        def job(*batch):
             loss = self.training_step(batch=batch, optimizer_idx=optimizer_idx)
             self.optimizers[optimizer_idx].minimize(loss)
             return loss
-        
-        print(job.__annotations__)
-        sig = inspect.signature(job)
-        print(sig)
-        
-        return True
 
+        # 构建job相关的会构造生成，放到job的__oneflow_function_signature__
+        # 这里直接构造_CompileJob处需要的信息
+        para_list = []
+        for i in range(len(job_func_para_annotations)):
+            para_name = "para_" + str(i)
+            para_list.append(inspect.Parameter(name=para_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=job_func_para_annotations[i]))
+
+        origin_sig = inspect.signature(job)
+        new_sig = origin_sig.replace(parameters=para_list)
+
+        job.__oneflow_function_signature__ = new_sig
         job.__name__ = (
-            self.__class__.__name__ + "_Model_train_job_" + str(optimizer_idx)
+            self.__class__.__name__ + "_Model_train_numpy_job_" + str(optimizer_idx)
         )
-
+        deco = api_oneflow_function(type="train", function_config=self.training_config)
         train_job = deco(job)
-        self.train_jobs[optimizer_idx] = train_job
+        self.train_jobs.insert(optimizer_idx, train_job)
 
     def _method_overrided(self, method_name: str = None) -> bool:
         return getattr(self.__class__, method_name) != getattr(Model, method_name)
@@ -203,8 +202,6 @@ class Model(
                 else:
                     for optimizer_idx in range(0, len(self.optimizers)):
                         self.train_jobs.append(self._func_train_job(optimizer_idx))
-            else:
-                print("TODO(strint): numpy input job")
 
         # construct validation job
         if (
@@ -225,20 +222,11 @@ class Model(
 
         for step_idx in range(0, self.max_steps):
             if self.need_training:
-                for optimizer_idx in range(0, len(self.optimizers)):
-                    if not self.is_numpy_input:
-                        loss = self.train_jobs[optimizer_idx]().get()
-                        self._method_callback(
-                            "on_training_step_end",
-                            outputs=loss,
-                            step_idx=step_idx,
-                            optimizer_idx=optimizer_idx,
-                        )
-                    else:
-                        # numpy input
-                        batch = self.training_data(step_idx, optimizer_idx)
-                        assert isinstance(batch, tuple), "nn.NumpyModule training_data for optimizer_idx {} must return a tuple".format(optimizer_idx)
-                        if step_idx == 0:
+                if self.is_numpy_input:
+                    if step_idx == 0:
+                        for optimizer_idx in range(0, len(self.optimizers)):
+                            batch = self.training_data(step_idx, optimizer_idx)
+                            assert isinstance(batch, tuple), "nn.NumpyModule training_data for optimizer_idx {} must return a tuple".format(optimizer_idx)
                             job_func_para_annotations = []
                             for item in batch:
                                 assert isinstance(item, np.ndarray)
@@ -247,10 +235,19 @@ class Model(
                                 job_func_para_annotations.append(numpy_placeholder)
                             self._construct_numpy_input_train_job(optimizer_idx, job_func_para_annotations)
 
-                        return True
+                    for optimizer_idx in range(0, len(self.optimizers)):
+                        batch = self.training_data(step_idx, optimizer_idx)
+                        loss = self.train_jobs[optimizer_idx](*batch).get()
+                        self._method_callback(
+                            "on_training_step_end",
+                            outputs=loss,
+                            step_idx=step_idx,
+                            optimizer_idx=optimizer_idx,
+                        )
 
-                        # call job
-                        loss = self.train_jobs[optimizer_idx](*batch)
+                if not self.is_numpy_input:
+                    for optimizer_idx in range(0, len(self.optimizers)):
+                        loss = self.train_jobs[optimizer_idx]().get()
                         self._method_callback(
                             "on_training_step_end",
                             outputs=loss,
