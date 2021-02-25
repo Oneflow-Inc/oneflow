@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/framework/tensor_impl.h"
 
@@ -109,10 +110,7 @@ class UndeterminedTensor final : public Tensor {
   const std::shared_ptr<const Device>& device() const { return device_; }
   void set_device(const std::shared_ptr<const Device>& device) { device_ = device; }
 
-  bool is_lazy() const override {
-    // TODO: get it from context
-    return false;
-  }
+  bool is_lazy() const override { return *Global<bool, EagerExecution>::Get(); }
 
   std::shared_ptr<DeterminedTensor> DetermineAndDestroySelf() override;
 

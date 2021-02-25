@@ -20,10 +20,9 @@ namespace oneflow {
 
 namespace one {
 std::shared_ptr<DeterminedTensor> UndeterminedTensor::DetermineAndDestroySelf() {
-  bool is_lazy = *Global<bool, EagerExecution>::Get();
   if (is_consistent()) {
     std::shared_ptr<ConsistentTensorImpl> impl;
-    if (is_lazy) {
+    if (is_lazy()) {
       impl = std::make_shared<LazyConsistentTensorImpl>(shape(), dtype(), distribute(),
                                                         parallel_desc());
     } else {
@@ -33,7 +32,7 @@ std::shared_ptr<DeterminedTensor> UndeterminedTensor::DetermineAndDestroySelf() 
     return std::static_pointer_cast<DeterminedTensor>(std::make_shared<ConsistentTensor>(impl));
   } else {
     std::shared_ptr<MirroredTensorImpl> impl;
-    if (is_lazy) {
+    if (is_lazy()) {
       impl = std::make_shared<LazyMirroredTensorImpl>(shape(), dtype(), device());
     } else {
       impl = std::make_shared<EagerMirroredTensorImpl>(shape(), dtype(), device());
