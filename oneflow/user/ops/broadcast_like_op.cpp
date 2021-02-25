@@ -92,10 +92,6 @@ REGISTER_USER_OP("broadcast_like")
       CHECK(like_modifier != nullptr);
       like_modifier->set_requires_grad(false);
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn(GetSbpSignatures);
 
 REGISTER_USER_OP_GRAD("broadcast_like")

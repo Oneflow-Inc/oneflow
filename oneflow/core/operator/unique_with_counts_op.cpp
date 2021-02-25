@@ -37,15 +37,6 @@ class UniqueWithCountsOp final : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    const OptInt64* x_batch_axis = BatchAxis4BnInOp("x");
-    *BatchAxis4BnInOp("y") = *x_batch_axis;
-    *BatchAxis4BnInOp("idx") = *x_batch_axis;
-    *BatchAxis4BnInOp("count") = *x_batch_axis;
-    BatchAxis4BnInOp("num_unique")->clear_value();
-    return Maybe<void>::Ok();
-  }
 };
 
 void UniqueWithCountsOp::InitFromOpConf() {

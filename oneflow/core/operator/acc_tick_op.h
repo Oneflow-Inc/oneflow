@@ -38,8 +38,6 @@ class AccTickOp final : public Operator {
       const ParallelContext* parallel_ctx, Shape* time_shape) const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
 };
 
 }  // namespace oneflow
