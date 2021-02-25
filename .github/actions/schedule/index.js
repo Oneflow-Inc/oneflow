@@ -67,7 +67,12 @@ async function start() {
         console.log("timeout", timeout, "s")
         i++;
     }
-    process.exit(1)
+    throw 'No GPU runner available for now';
 }
 
-start()
+try {
+    start()
+}
+catch (error) {
+    core.setFailed(error.message);
+}
