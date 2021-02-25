@@ -29,19 +29,16 @@ namespace {
 
 Thread* NewThread(StreamId stream_id) {
   Thread* thread = nullptr;
-  switch (stream_id.stream_type()) {
+  switch (stream_id.device_type()) {
 #ifdef WITH_CUDA
-    case StreamType::kCuda: {
-      thread = new GpuThread(static_cast<int64_t>(stream_id),
+    case DeviceType::kGPU: {
+      thread = new GpuThread(SerializeStreamIdToInt64(stream_id),
                              static_cast<int64_t>(stream_id.device_index()));
       break;
     }
 #endif
-    case StreamType::kCPU:
-    case StreamType::kCommNet:
-    case StreamType::kTickTock:
-    case StreamType::kIndependent: {
-      thread = new CpuThread(static_cast<int64_t>(stream_id));
+    case DeviceType::kCPU: {
+      thread = new CpuThread(SerializeStreamIdToInt64(stream_id));
       break;
     }
     default: { UNIMPLEMENTED(); }
@@ -62,7 +59,7 @@ ThreadMgr::~ThreadMgr() {
 }
 
 Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
-  StreamId stream_id{static_cast<uint32_t>(thrd_id)};
+  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id);
   CHECK(threads_.find(stream_id) != threads_.end()) << "thread " << thrd_id << " not found";
   return threads_.at(stream_id);
 }
@@ -70,7 +67,7 @@ Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
 ThreadMgr::ThreadMgr(const Plan& plan) {
   const int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   for (const TaskProto& task : plan.task()) {
-    TaskId task_id{static_cast<uint64_t>(task.task_id())};
+    TaskId task_id = DeserializeTaskIdFromInt64(task.task_id());
     if (task_id.process_id().node_index() != this_machine_id) { continue; }
     StreamId stream_id = task_id.stream_id();
     if (threads_.find(stream_id) != threads_.end()) { continue; }
