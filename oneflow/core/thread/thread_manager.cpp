@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/thread/gpu_thread.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
@@ -64,7 +64,7 @@ Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
 }
 
 ThreadMgr::ThreadMgr(const Plan& plan) {
-  const int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  const int64_t this_machine_id = GlobalProcessCtx::Rank();
   for (const TaskProto& task : plan.task()) {
     TaskId task_id = DeserializeTaskIdFromInt64(task.task_id());
     if (task_id.process_id().node_index() != this_machine_id) { continue; }

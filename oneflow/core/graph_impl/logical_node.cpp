@@ -16,11 +16,9 @@ limitations under the License.
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
-#include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
 #include "oneflow/core/graph/distribute_concat_compute_task_node.h"
 #include "oneflow/core/graph/distribute_split_compute_task_node.h"
-#include "oneflow/core/graph/record_load_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/framework/framework.h"
@@ -217,10 +215,6 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       CHECK_EQ(dst_pd->parallel_num(), 1);
       return &TaskGraph::BldSubTskGphByBoxing;
     }
-    if (src_node->SoleOp()->op_conf().has_record_load_conf()
-        && dst_node->SoleOp()->op_conf().has_tick_conf()) {
-      CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
-    }
     auto IsTickNode = [&](const LogicalNode* node) {
       return IsClassRegistered<int32_t, IsTickTockOpTypeCase>(
           node->SoleOp()->op_conf().op_type_case());
@@ -273,10 +267,6 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   return &TaskGraph::BldSubTskGphByBoxing;
 }
 
-REGISTER_BLD_SUB_TSK_GPH_MTHD("RecordLoad"
-                              "Decode",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-
 REGISTER_BLD_SUB_TSK_GPH_MTHD("*"
                               "DistributeConcat",
                               &TaskGraph::BldSubTskGphByPartialInLbiConnect);
@@ -292,8 +282,6 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
 #define LOGICAL_TYPE_SEQ                                   \
   OF_PP_MAKE_TUPLE_SEQ(DistributeConcat, kDataForwardArea) \
   OF_PP_MAKE_TUPLE_SEQ(DistributeSplit, kDataForwardArea)  \
-  OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)    \
-  OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)        \
   OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)  \
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)
 
