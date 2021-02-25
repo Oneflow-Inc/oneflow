@@ -81,12 +81,22 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitGlobalCudaDeviceProp();
 #endif
   Global<EnvDesc>::New(env_proto);
-  Global<CtrlServer>::New();
+  if (Global<EnvDesc>::Get()->has_bootstrap_conf_ctrl_port()) {
+    Global<CtrlServer>::New(Global<EnvDesc>::Get()->bootstrap_conf_ctrl_port());
+  } else {
+    Global<CtrlServer>::New();
+  }
   Global<ProcessCtx>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
-  CHECK_JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
-                 .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+  if (Global<EnvDesc>::Get()->has_ctrl_bootstrap_conf()) {
+    CHECK_JUST(RankInfoCtrlBootstrap(Global<EnvDesc>::Get()->bootstrap_conf())
+                   .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+
+  } else {
+    CHECK_JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
+                   .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+  }
   Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
   Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));

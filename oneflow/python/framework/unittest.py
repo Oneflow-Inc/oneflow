@@ -114,6 +114,62 @@ def node_size():
         return 1
 
 
+@oneflow_export("unittest.env.rank_host_list")
+def rank_host_list():
+    rank_host_list_str = os.getenv("ONEFLOW_TEST_RANK_HOST_LIST")
+    assert rank_host_list_str
+    return rank_host_list_str.split(",")
+
+
+@oneflow_export("unittest.env.has_rank_host_list")
+def has_rank_host_list():
+    if os.getenv("ONEFLOW_TEST_RANK_HOST_LIST"):
+        return True
+    else:
+        return False
+
+
+@oneflow_export("unittest.env.rank_host_list_size")
+def rank_host_list_size():
+    if has_rank_host_list():
+        rank_host_list_from_env = rank_host_list()
+        return len(rank_host_list_from_env)
+    else:
+        return 1
+
+
+@oneflow_export("unittest.env.has_world_size")
+def has_world_size():
+    if os.getenv("ONEFLOW_TEST_WORLD_SIZE"):
+        assert os.getenv(
+            "ONEFLOW_TEST_WORLD_SIZE"
+        ).isdigit(), "env var ONEFLOW_TEST_WORLD_SIZE must be num"
+        return True
+    else:
+        return False
+
+
+@oneflow_export("unittest.env.world_size")
+def world_size():
+    return int(os.getenv("ONEFLOW_TEST_WORLD_SIZE"))
+
+
+@oneflow_export("unittest.env.has_rank_ctrl_port")
+def has_rank_ctrl_port():
+    if os.getenv("ONEFLOW_TEST_RANK_CTRL_PORT"):
+        assert os.getenv(
+            "ONEFLOW_TEST_RANK_CTRL_PORT"
+        ).isdigit(), "env var ONEFLOW_TEST_RANK_CTRL_PORT must be num"
+        return True
+    else:
+        return False
+
+
+@oneflow_export("unittest.env.rank_ctrl_port")
+def rank_ctrl_port():
+    return int(os.getenv("ONEFLOW_TEST_RANK_CTRL_PORT"))
+
+
 @oneflow_export("unittest.env.device_num")
 def device_num():
     device_num_str = os.getenv("ONEFLOW_TEST_DEVICE_NUM")
@@ -133,7 +189,51 @@ class TestCase(unittest.TestCase):
         global _unittest_env_initilized
         global _unittest_worker_initilized
 
-        if has_node_list():
+        if has_rank_host_list():
+            assert rank_host_list_size() > 1
+            if _unittest_worker_initilized == False:
+                master_port = os.getenv("ONEFLOW_TEST_MASTER_PORT")
+                assert master_port, "env var ONEFLOW_TEST_MASTER_PORT not set"
+
+                ctrl_port = os.getenv("ONEFLOW_TEST_CTRL_PORT")
+                if ctrl_port:
+                    oneflow.env.ctrl_port(int(ctrl_port))
+                else:
+                    oneflow.env.ctrl_port(int(master_port))
+
+                config_rank_ctrl_port = -1
+                if has_rank_ctrl_port():
+                    config_rank_ctrl_port = rank_ctrl_port()
+
+                if has_world_size():
+                    config_world_size = world_size()
+                else:
+                    config_world_size = 0
+
+                bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
+                    rank_host_list(),
+                    int(master_port),
+                    config_world_size,
+                    config_rank_ctrl_port,
+                )
+
+                data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
+                if data_port:
+                    oneflow.env.data_port(int(data_port))
+
+                ssh_port = os.getenv("ONEFLOW_TEST_SSH_PORT")
+                print("initializing worker...")
+                oneflow.deprecated.init_worker(
+                    scp_binary=True,
+                    use_uuid=True,
+                    ssh_port=int(ssh_port),
+                    bootstrap_conf_list=bootstrap_conf_list,
+                )
+                atexit.register(
+                    oneflow.deprecated.delete_worker_by_bootstrap, ssh_port=ssh_port
+                )
+                _unittest_worker_initilized = True
+        elif has_node_list():
             assert node_size() > 1
 
             if _unittest_worker_initilized == False:
