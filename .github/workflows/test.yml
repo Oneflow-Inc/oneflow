@@ -24,6 +24,7 @@ jobs:
     runs-on: [self-hosted, linux, scheduler]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
+      - uses: actions/checkout@v2
       - name: Wait for GPU slot
         uses: ./.github/actions/schedule
 
