@@ -65,6 +65,7 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int6
   DeviceId device_id{DeviceType::kCPU, 0};
   auto* stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id, device_id));
+  CHECK_NOTNULL(stream_index_generator);
   uint32_t stream_index = 0;
   if (copy_type == CopyHdOpConf::H2D) {
     stream_index = stream_index_generator->GenerateH2DStreamIndex();
@@ -105,6 +106,7 @@ void CopyCommNetTaskNode::Init(int64_t machine_id) {
   DeviceId device_id{DeviceType::kCPU, 0};
   auto* generator = dynamic_cast<CPUStreamIndexGenerator*>(
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id, device_id));
+  CHECK_NOTNULL(generator);
   StreamId stream_id{device_id, generator->GenerateCommNetStreamIndex()};
   set_thrd_id(SerializeStreamIdToInt64(stream_id));
 }

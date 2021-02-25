@@ -62,9 +62,10 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         if (out_parallel_desc.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
           DeviceId device_id{DeviceType::kGPU, static_cast<uint32_t>(out_dev_phy_id)};
-          auto* stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
+          auto* stream_index_generator =
               Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
-                                                                                   device_id));
+                                                                                   device_id);
+          CHECK_NOTNULL(stream_index_generator);
           uint32_t stream_index = stream_index_generator->GenerateComputeStreamIndex();
           thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
 #else
@@ -72,9 +73,10 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
 #endif
         } else if (out_parallel_desc.device_type() == DeviceType::kCPU) {
           DeviceId device_id{DeviceType::kCPU, 0};
-          auto* stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
+          auto* stream_index_generator =
               Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
-                                                                                   device_id));
+                                                                                   device_id);
+          CHECK_NOTNULL(stream_index_generator);
           uint32_t stream_index = stream_index_generator->GenerateComputeStreamIndex();
           thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
         } else {

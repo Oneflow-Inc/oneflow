@@ -94,6 +94,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     auto* generator = dynamic_cast<CPUStreamIndexGenerator*>(
         Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
                                                                              device_id));
+    CHECK_NOTNULL(generator);
     uint32_t stream_index = generator->GenerateComputeStreamIndex();
     return SerializeStreamIdToInt64(StreamId{device_id, stream_index});
   };
@@ -107,6 +108,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     auto* generator = dynamic_cast<CudaStreamIndexGenerator*>(
         Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
                                                                              device_id));
+    CHECK_NOTNULL(generator);
     uint32_t stream_index = 0;
     if (work_type == CudaWorkType::kCopyH2D) {
       stream_index = generator->GenerateH2DStreamIndex();
@@ -421,6 +423,11 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
             machine_id7out_parallel_ids.first, Global<IDMgr>::Get()->CpuMemZoneId());
       } else {
         auto* add_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
+        ProcessId process_id{static_cast<uint32_t>(machine_id7out_parallel_ids.first), 0};
+        DeviceId device_id{DeviceType::kCPU, 0};
+        auto* stream_index_generator =
+            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
+                                                                                 device_id);
         add_node->Init(lbi, slice, kSliceBoxingTaskModeAdd, machine_id7out_parallel_ids.first,
                        Global<IDMgr>::Get()->PickCpuThrdIdEvenly(machine_id7out_parallel_ids.first),
                        Global<IDMgr>::Get()->CpuMemZoneId());
