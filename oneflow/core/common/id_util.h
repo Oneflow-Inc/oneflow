@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.pb.h"
-#include "oneflow/core/job/task.pb.h"
 #include <limits>
 
 namespace oneflow {
@@ -185,13 +184,6 @@ template<>
 struct hash<oneflow::TaskId> {
   size_t operator()(const oneflow::TaskId& task_id) const {
     return std::hash<uint64_t>{}(static_cast<uint64_t>(task_id));
-  }
-};
-
-template<>
-struct hash<oneflow::TaskType> {
-  std::size_t operator()(const oneflow::TaskType& task_type) const {
-    return std::hash<uint32_t>{}(static_cast<uint32_t>(task_type));
   }
 };
 
