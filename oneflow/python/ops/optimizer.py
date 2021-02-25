@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 import collections.abc
 import traceback
-from typing import Optional, Union, Sequence, Text, Callable
+from typing import Optional, Union, Sequence, List, Text, Callable
 
 import oneflow as flow
 import oneflow.python.framework.c_api_util as c_api_util
@@ -28,7 +28,7 @@ import oneflow.core.job.learning_rate_schedule_conf_pb2 as learning_rate_schedul
 import oneflow_api
 
 
-def GetVariablesForCurrentJob() -> Sequence[Text]:
+def GetVariablesForCurrentJob() -> List[Text]:
     sess = session_ctx.GetDefaultSession()
     job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     return list(sess.job_name2var_name2var_blob_[job_name].keys())
@@ -995,7 +995,7 @@ class Optimizer:
         else:
             self.loss_scale_policy = loss_scale_policy
 
-    def Variables(self) -> Sequence[Text]:
+    def Variables(self) -> List[Text]:
         if hasattr(self, "variables"):
             assert isinstance(self.variables, Sequence)
             return list(self.variables)
