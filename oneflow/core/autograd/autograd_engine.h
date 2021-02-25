@@ -74,7 +74,7 @@ class StackFunctionNode final : public FunctionNode {
   // TODO: update constructor according to op_builder interface
   StackFunctionNode(std::function<void()> backward_fn, const std::shared_ptr<TensorList>& inputs,
                     const std::shared_ptr<TensorList>& outputs);
-  ~StackFunctionNode() = default;
+  ~StackFunctionNode() override = default;
 
   std::vector<std::shared_ptr<const FunctionNode>> GetNextFunctions() override {
     return next_functions_;
@@ -103,7 +103,7 @@ class StackAutogradEngine final : public AutogradEngine {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StackAutogradEngine);
   StackAutogradEngine() = default;
-  ~StackAutogradEngine() = default;
+  ~StackAutogradEngine() override = default;
 
   std::shared_ptr<TensorList> Execute(const std::shared_ptr<TensorList>& outputs,
                                       const std::shared_ptr<TensorList>& inputs,
