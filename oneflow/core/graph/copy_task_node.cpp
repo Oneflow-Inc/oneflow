@@ -16,8 +16,8 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/common/id_util.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/common/id_util.h"
 #include "oneflow/core/device/cpu_stream_index.h"
 #include "oneflow/core/device/cuda_stream_index.h"
 
@@ -62,9 +62,9 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int6
   copy_type_ = copy_type;
   set_machine_id(machine_id);
   ProcessId process_id{static_cast<uint32_t>(machine_id), 0};
-  DeviceId device_id{DeviceType::kCPU, 0};
-  auto* stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
-      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id, device_id));
+  DeviceId device_id{DeviceType::kGPU, static_cast<uint32_t>(dev_phy_id)};
+  auto* stream_index_generator =
+      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id, device_id);
   CHECK_NOTNULL(stream_index_generator);
   uint32_t stream_index = 0;
   if (copy_type == CopyHdOpConf::H2D) {

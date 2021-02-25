@@ -394,9 +394,9 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         const int64_t device_index = CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(i));
         ProcessId process_id{static_cast<uint32_t>(machine_id), 0};
         DeviceId device_id{DeviceType::kGPU, static_cast<uint32_t>(device_index)};
-        auto* stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
+        auto* stream_index_generator =
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
-                                                                                 device_id));
+                                                                                 device_id);
         CHECK_NOTNULL(stream_index_generator);
         uint32_t stream_index = stream_index_generator->GenerateComputeStreamIndex();
         const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
