@@ -29,28 +29,41 @@ namespace one {
 
 namespace {
 
-void MakeMirroredTensorImpl(const py::tuple& py_shape, int dtype,
-                            const std::shared_ptr<Device>& device,
-                            std::shared_ptr<MirroredTensorImpl>& impl) {
+std::shared_ptr<MirroredTensor> MakeMirroredTensor(const py::tuple& py_shape, int dtype,
+                                                   const std::shared_ptr<Device>& device) {
   DimVector shape_dims;
   CHECK(py::isinstance<py::tuple>(py_shape));
   for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
   std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
+  std::shared_ptr<MirroredTensorImpl> impl;
   if (*Global<bool, EagerExecution>::Get()) {
     impl = std::make_shared<EagerMirroredTensorImpl>(shape, static_cast<DataType>(dtype), device);
   } else {
     impl = std::make_shared<LazyMirroredTensorImpl>(shape, static_cast<DataType>(dtype), device);
   }
+  return std::make_shared<MirroredTensor>(impl);
 }
 
+std::shared_ptr<ConsistentTensor> MakeConsistentTensor(
+    const std::shared_ptr<Shape>& shape, DataType dtype,
+    const std::shared_ptr<compatible_py::Distribute>& distribute,
+    std::shared_ptr<ParallelDesc>& parallel_desc) {
+  std::shared_ptr<ConsistentTensorImpl> impl;
+  if (*Global<bool, EagerExecution>::Get()) {
+    impl = std::make_shared<EagerConsistentTensorImpl>(shape, static_cast<DataType>(dtype),
+                                                       distribute, parallel_desc);
+  } else {
+    impl = std::make_shared<LazyConsistentTensorImpl>(shape, static_cast<DataType>(dtype),
+                                                      distribute, parallel_desc);
+  }
+  return std::make_shared<ConsistentTensor>(impl);
+}
+
+}  // namespace
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<MirroredTensor, std::shared_ptr<MirroredTensor>>(m, "MirroredTensor")
-      .def(
-          py::init([](const py::tuple& py_shape, int dtype, const std::shared_ptr<Device>& device) {
-            std::shared_ptr<MirroredTensorImpl> impl;
-            MakeMirroredTensorImpl(py_shape, dtype, device, impl);
-            return std::make_shared<MirroredTensor>(impl);
-          }))
+  py::class_<MirroredTensor, std::shared_ptr<MirroredTensor>>(m, "LocalTensor")
+      .def(py::init(&MakeMirroredTensor))
       .def_property_readonly("shape", &MirroredTensor::shape)
       .def_property_readonly("device", &MirroredTensor::device)
       .def("get_dtype",
@@ -58,19 +71,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("size", &MirroredTensor::shape);
 
   py::class_<ConsistentTensor, std::shared_ptr<ConsistentTensor>>(m, "ConsistentTensor")
-      .def(py::init([](const std::shared_ptr<Shape>& shape, DataType dtype,
-                       const std::shared_ptr<compatible_py::Distribute>& distribute,
-                       std::shared_ptr<ParallelDesc>& parallel_desc) {
-        std::shared_ptr<ConsistentTensorImpl> impl;
-        if (*Global<bool, EagerExecution>::Get()) {
-          impl = std::make_shared<EagerConsistentTensorImpl>(shape, static_cast<DataType>(dtype),
-                                                             distribute, parallel_desc);
-        } else {
-          impl = std::make_shared<LazyConsistentTensorImpl>(shape, static_cast<DataType>(dtype),
-                                                            distribute, parallel_desc);
-        }
-        return std::make_shared<ConsistentTensor>(impl);
-      }))
+      .def(py::init(&MakeConsistentTensor))
       .def_property_readonly("shape",
                              [](std::shared_ptr<ConsistentTensor>& x) { return x->shape(); })
       .def("get_dtype",
@@ -78,6 +79,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("size", &ConsistentTensor::shape);
 }
 
-}  // namespace
-
 }  // namespace one
+
+}  // namespace oneflow

@@ -17,4 +17,3 @@ import oneflow_api
 from oneflow.python.oneflow_export import oneflow_export
 
 oneflow_export("device")(oneflow_api.device)
-
