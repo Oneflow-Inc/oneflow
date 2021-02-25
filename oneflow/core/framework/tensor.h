@@ -68,6 +68,8 @@ class Tensor {
   virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
   virtual bool is_lazy() const = 0;
   virtual bool is_consistent() const = 0;
+
+  // Getters for autograd
   virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
   virtual const std::shared_ptr<TensorArg>& now_grad() const = 0;
   virtual const std::shared_ptr<const FunctionNode>& grad_fn_node() const = 0;
@@ -79,6 +81,8 @@ class Tensor {
   virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
   virtual void set_dtype(DataType dtype) = 0;
   virtual void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) = 0;
+
+  // Setters for autograd
   virtual void set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
   virtual void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) = 0;
   virtual void set_requires_grad(bool requires_grad) = 0;
@@ -111,6 +115,8 @@ class MirroredTensor final : public Tensor {
   const std::shared_ptr<const Device>& device() const { return impl_->device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return false; }
+
+  // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
   const std::shared_ptr<TensorArg>& now_grad() const override { return impl_->now_grad(); }
   const std::shared_ptr<const FunctionNode>& grad_fn_node() const override { return grad_fn_node_; }
@@ -127,6 +133,8 @@ class MirroredTensor final : public Tensor {
     impl_->set_parallel_desc(parallel_desc);
   }
   void set_device(const std::shared_ptr<const Device>& device) { impl_->set_device(device); }
+
+  // Setters for autograd
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
   void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) override {
     grad_fn_node_ = grad_fn_node;
