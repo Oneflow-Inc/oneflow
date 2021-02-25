@@ -51,11 +51,6 @@ Maybe<void> ReentrantLockOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReentrantLockOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  return NaiveInferBatchAxis(BatchAxis4BnInOp);
-}
-
 Maybe<void> ReentrantLockOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {

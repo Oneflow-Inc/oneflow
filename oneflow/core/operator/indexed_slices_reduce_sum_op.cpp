@@ -40,8 +40,6 @@ class IndexedSlicesReduceSumOp final : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
 };
 
 void IndexedSlicesReduceSumOp::InitFromOpConf() {
@@ -52,17 +50,6 @@ void IndexedSlicesReduceSumOp::InitFromOpConf() {
   EnrollOutputBn("y_values");
   EnrollOutputBn("num_unique", false);
   EnrollTmpBn("workspace");
-}
-
-Maybe<void> IndexedSlicesReduceSumOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  const OptInt64* x_indices_batch_axis = BatchAxis4BnInOp("x_indices");
-  const OptInt64* x_values_batch_axis = BatchAxis4BnInOp("x_values");
-  CHECK_OR_RETURN(*x_indices_batch_axis == *x_values_batch_axis);
-  *BatchAxis4BnInOp("y_indices") = *x_indices_batch_axis;
-  *BatchAxis4BnInOp("y_values") = *x_indices_batch_axis;
-  BatchAxis4BnInOp("num_unique")->clear_value();
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> IndexedSlicesReduceSumOp::InferLogicalOutBlobDescs(

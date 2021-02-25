@@ -34,14 +34,6 @@ Maybe<void> OutputOp::InferLogicalOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> OutputOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  OptInt64* out_batch_axis = BatchAxis4BnInOp("out");
-  InterfaceOpUtil::InferBatchAxis(op_conf().output_conf().blob_conf(), out_batch_axis);
-  CHECK_OR_RETURN(*out_batch_axis == *BatchAxis4BnInOp("in"));
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> OutputOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,

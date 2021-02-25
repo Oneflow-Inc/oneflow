@@ -54,12 +54,6 @@ Maybe<void> VariableOp::InferLogicalOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> VariableOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("out")->clear_value();
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   const auto& opt_split_axis = JUST(GetSplitAxis(op_conf().variable_conf()));
   SbpSignatureBuilder sbp_sig_builder;

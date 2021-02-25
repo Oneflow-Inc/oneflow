@@ -78,12 +78,6 @@ class TensorListSplitOp final : public Operator {
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
-
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp(SoleIbn()); }
-    return Maybe<void>::Ok();
-  }
 };
 
 REGISTER_OP(OperatorConf::kTensorListSplitConf, TensorListSplitOp);

@@ -29,6 +29,7 @@ Maybe<void> OpKernelObject::ResetOpAndKernel(
   };
   JUST(op->FillLogicalInBlobDesc(LogicalBlobDesc4BnInOp));
   JUST(op->FillLogicalOutBlobDesc(LogicalBlobDesc4BnInOp));
+  JUST(op->FillSbpSignature(op_node_signature.sbp_signature()));
   JUST(InferBlobDescs(*op, BlobDesc4BnInOp, &op_node_signature.sbp_signature(), parallel_ctx));
   NewPartialInitializedKernel(*op, BlobDesc4BnInOp, op_node_signature, parallel_ctx, parallel_desc);
   return Maybe<void>::Ok();
@@ -46,11 +47,7 @@ void OpKernelObject::NewPartialInitializedKernel(
     const OpNodeSignatureDesc& op_node_signature, const ParallelContext* parallel_ctx,
     const ParallelDesc* parallel_desc) {
   KernelConf kernel_conf;
-  auto LogicalBlobDesc4BnInOp = [&](const std::string& bn_in_op) -> const BlobDesc& {
-    return CHECK_JUST(op_node_signature.LogicalBlobDesc4BnInOp(bn_in_op));
-  };
-  op.GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf, LogicalBlobDesc4BnInOp,
-                   parallel_desc, &op_node_signature.sbp_signature());
+  op.GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf);
   kernel_.reset(new EagerKernel(job_desc_.get(), kernel_conf));
 }
 
@@ -65,6 +62,7 @@ Maybe<void> SystemOpKernelObject::ResetKernel(
   };
   JUST(op->FillLogicalInBlobDesc(LogicalBlobDesc4BnInOp));
   JUST(op->FillLogicalOutBlobDesc(LogicalBlobDesc4BnInOp));
+  JUST(op->FillSbpSignature(op_node_signature.sbp_signature()));
   JUST(InferBlobDescs(*op, BlobDesc4BnInOp, &op_node_signature.sbp_signature(), parallel_ctx));
   ResetKernel(*op, BlobDesc4BnInOp, op_node_signature, parallel_ctx, parallel_desc);
   return Maybe<void>::Ok();
@@ -82,11 +80,7 @@ void SystemOpKernelObject::ResetKernel(
     const OpNodeSignatureDesc& op_node_signature, const ParallelContext* parallel_ctx,
     const ParallelDesc* parallel_desc) {
   KernelConf kernel_conf;
-  auto LogicalBlobDesc4BnInOp = [&](const std::string& bn_in_op) -> const BlobDesc& {
-    return CHECK_JUST(op_node_signature.LogicalBlobDesc4BnInOp(bn_in_op));
-  };
-  op.GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf, LogicalBlobDesc4BnInOp,
-                   parallel_desc, &op_node_signature.sbp_signature());
+  op.GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf);
   kernel_ = ConstructKernel(job_desc_.get(), kernel_conf, nullptr);
 }
 

@@ -88,13 +88,6 @@ REGISTER_USER_OP("layer_norm")
       *inv_variance = *mean;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      for (const auto& ob : ctx->outputs()) {
-        *ctx->BatchAxis4ArgNameAndIndex(ob.first, ob.second) =
-            *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-      }
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .Split(ctx->inputs(), 0)
@@ -135,13 +128,6 @@ REGISTER_USER_OP("layer_norm_grad")
         const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output->data_type(), dx->data_type());
         CHECK_EQ_OR_RETURN(add_to_output->shape(), dx->shape());
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      for (const auto& ob : ctx->outputs()) {
-        *ctx->BatchAxis4ArgNameAndIndex(ob.first, ob.second) =
-            *ctx->BatchAxis4ArgNameAndIndex("x", 0);
       }
       return Maybe<void>::Ok();
     })
@@ -211,27 +197,6 @@ REGISTER_USER_OP("layer_norm_param_grad")
         const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
         CHECK_EQ_OR_RETURN(gamma->data_type(), dy->data_type());
         CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      for (const auto& ob : ctx->outputs()) {
-        ctx->BatchAxis4ArgNameAndIndex(ob.first, ob.second)->clear_value();
-      }
-      // TODO: tsai: replace lambda with user op if
-      auto has_tensor = [ctx](const std::string& bn) -> bool {
-        bool ret = false;
-        for (auto t : ctx->inputs()) {
-          if (bn == t.first) { return true; }
-        }
-        for (auto t : ctx->outputs()) {
-          if (bn == t.first) { return true; }
-        }
-        return ret;
-      };
-      if (has_tensor("normalized_diff")) {
-        *ctx->BatchAxis4ArgNameAndIndex("normalized_diff", 0) =
-            *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
       }
       return Maybe<void>::Ok();
     })

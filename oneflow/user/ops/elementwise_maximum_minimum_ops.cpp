@@ -63,22 +63,6 @@ Maybe<void> InferTensorDesc(InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
-  OptInt64* dz_batch_axis = ctx->BatchAxis4ArgNameAndIndex("dz", 0);
-  if (dz_batch_axis->has_value()) {
-    CHECK_GE_OR_RETURN(dz_batch_axis->value(), 0);
-    CHECK_LE_OR_RETURN(dz_batch_axis->value(),
-                       ctx->LogicalTensorDesc4InputArgNameAndIndex("dz", 0).shape().NumAxes() - 1);
-  }
-  if (ctx->user_op_conf().has_input("dx", 0)) {
-    *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *dz_batch_axis;
-  }
-  if (ctx->user_op_conf().has_input("dy", 0)) {
-    *ctx->BatchAxis4ArgNameAndIndex("dy", 0) = *dz_batch_axis;
-  }
-  return Maybe<void>::Ok();
-}
-
 user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name) {
   return [=](user_op::BackwardOpConfContext* ctx) -> void {
     const bool x_need_grad = ctx->FwOp().NeedGenGradTensor4OpInput("x", 0);
@@ -117,8 +101,7 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
       .Input("y")                                                      \
       .Output("z")                                                     \
       .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged) \
-      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)            \
-      .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
 
 #define REGISTER_ELEMENTWISE_XIMUM_BW_OP(op_type_name) \
   REGISTER_USER_OP(op_type_name)                       \
@@ -128,8 +111,7 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
       .OptionalOutput("dx")                            \
       .OptionalOutput("dy")                            \
       .SetTensorDescInferFn(InferTensorDesc)           \
-      .SetGetSbpFn(GetSbpSignature)                    \
-      .SetBatchAxisInferFn(InferBatchAxis)
+      .SetGetSbpFn(GetSbpSignature)
 
 #define REGISTER_ELEMENTWISE_XIMUM_GRAD(op_type_name) \
   REGISTER_USER_OP_GRAD(op_type_name)                 \

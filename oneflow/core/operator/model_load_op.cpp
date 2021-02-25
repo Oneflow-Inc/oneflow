@@ -29,8 +29,6 @@ class ModelLoadOp : public Operator {
                                 const SbpSignature* sbp_signature) const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
@@ -67,12 +65,6 @@ Maybe<void> ModelLoadOp::InferOutBlobDescs(
     out_i->mut_shape() = Shape(original_variable_conf.shape());
     out_i->set_data_type(original_variable_conf.data_type());
   }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> ModelLoadOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  for (const std::string& bns : output_bns()) { BatchAxis4BnInOp(bns)->clear_value(); }
   return Maybe<void>::Ok();
 }
 

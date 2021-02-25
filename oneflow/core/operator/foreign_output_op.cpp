@@ -37,11 +37,6 @@ Maybe<void> ForeignOutputOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ForeignOutputOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> ForeignOutputOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {

@@ -26,7 +26,7 @@ def GetDefaultBlobRegister():
 
 @contextmanager
 def BnInOp2BlobObjectScope(blob_register, op_attribute):
-    bn_in_op2blob_object = {}
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
     for ibn in op_attribute.input_bns:
         lbi = op_attribute.arg_signature.bn_in_op2lbi[ibn]
         bn_in_op2blob_object[ibn] = blob_register.GetObject4BlobName(

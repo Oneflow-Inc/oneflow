@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/sbp_context.h"
-#include "oneflow/core/framework/batch_axis_context.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
@@ -158,11 +157,6 @@ OpRegistry& OpRegistry::SetPhysicalTensorDescInferFn(TensorDescInferFn tensor_de
   return *this;
 }
 
-OpRegistry& OpRegistry::SetBatchAxisInferFn(BatchAxisInferFn batch_axis_infer_fn) {
-  result_.batch_axis_infer_fn = std::move(batch_axis_infer_fn);
-  return *this;
-}
-
 OpRegistry& OpRegistry::SetCheckAttrFn(CheckAttrFn fn) {
   result_.check_fn = std::move(fn);
   return *this;
@@ -236,9 +230,6 @@ OpRegistry& OpRegistry::Finish() {
     };
   }
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
-  if (result_.batch_axis_infer_fn == nullptr) {
-    result_.batch_axis_infer_fn = BatchAxisInferFnUtil::DefaultAsFirstHasValueInput;
-  }
   if (result_.get_sbp_fn == nullptr) {
     result_.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
   }
