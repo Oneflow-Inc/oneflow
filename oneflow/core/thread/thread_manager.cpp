@@ -54,7 +54,7 @@ ThreadMgr::~ThreadMgr() {
     Thread* thread = pair.second;
     thread->GetMsgChannelPtr()->Send(msg);
     delete thread;
-    LOG(INFO) << "actor thread " << static_cast<uint32_t>(pair.first) << " finish";
+    LOG(INFO) << "actor thread " << SerializeStreamIdToInt64(pair.first) << " finish";
   }
 }
 

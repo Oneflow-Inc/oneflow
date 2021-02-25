@@ -21,12 +21,16 @@ class ChainIdGenerator final {
   HashMap<process_stream_key_t, uint32_t> process_stream2chain_index_counter_;
 };
 
-TaskId ChainIdGenerator::Generate(uint64_t global_stream_index) {
+inline chain_id_t ChainIdGenerator::Generate(uint64_t global_stream_index) {
   chain_id_t chain_id_with_empty_chain_index{global_stream_index, 0};
   process_stream_key_t key = std::make_pair(chain_id_with_empty_chain_index.process_id(),
                                             chain_id_with_empty_chain_index.stream_id());
   uint32_t task_index = process_stream2chain_index_counter_[key]++;
   return chain_id_t{global_stream_index, task_index};
+}
+
+inline int64_t SerializeChainIdToInt64(chain_id_t chain_id) {
+  return SerializeTaskIdToInt64(chain_id);
 }
 
 }  // namespace oneflow

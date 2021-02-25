@@ -19,7 +19,7 @@ class TaskIdGenerator final {
   HashMap<process_stream_key_t, uint32_t> process_stream2task_index_counter_;
 };
 
-TaskId TaskIdGenerator::Generate(ProcessId process_id, StreamId stream_id) {
+inline TaskId TaskIdGenerator::Generate(ProcessId process_id, StreamId stream_id) {
   process_stream_key_t key = std::make_pair(process_id, stream_id);
   uint32_t task_index = process_stream2task_index_counter_[key]++;
   return TaskId(process_id, stream_id, task_index);

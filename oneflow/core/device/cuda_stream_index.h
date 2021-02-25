@@ -30,8 +30,6 @@ class CudaStreamIndexGenerator final : public StreamIndexGenerator {
   static const stream_index_t kDecodeH2D = 5;
 };
 
-REGISTER_STREAM_INDEX_GENERATOR(DeviceType::kGPU, CudaStreamIndexGenerator);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_DEVICE_CUDA_STREAM_INDEX_H_

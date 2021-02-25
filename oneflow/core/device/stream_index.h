@@ -33,8 +33,8 @@ class StreamIndexGeneratorManager final {
   HashMap<generator_key_t, std::unique_ptr<StreamIndexGenerator>> generators_;
 };
 
-StreamIndexGenerator* StreamIndexGeneratorManager::GetGenerator(ProcessId process_id,
-                                                                DeviceId device_id) {
+inline StreamIndexGenerator* StreamIndexGeneratorManager::GetGenerator(ProcessId process_id,
+                                                                       DeviceId device_id) {
   generator_key_t key = std::make_pair(process_id, device_id);
   auto iter = generators_.find(key);
   if (iter == generators_.end()) {
