@@ -189,5 +189,3 @@ def Coordinate2Index(coordinate, tensor_shape):
 
         idx += size_at_axis
     return idx
-
-

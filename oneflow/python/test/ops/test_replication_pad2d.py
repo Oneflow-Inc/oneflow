@@ -20,7 +20,16 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 import oneflow.typing as tp
-from test_util import Args, GenArgDict, GenArgList, FlattenArray, Array2Numpy, Index2Coordinate, Coordinate2Index
+from test_util import (
+    Args,
+    GenArgDict,
+    GenArgList,
+    FlattenArray,
+    Array2Numpy,
+    Index2Coordinate,
+    Coordinate2Index,
+)
+
 
 def _make_op_function(
     test_case,
