@@ -16,10 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_ID_UTIL_H_
 #define ONEFLOW_CORE_COMMON_ID_UTIL_H_
 
-#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/common/device_type.pb.h"
 #include <limits>
 
 namespace oneflow {
@@ -115,6 +113,7 @@ class StreamId {
 class TaskId {
  public:
   TaskId(ProcessId process_id, StreamId stream_id, uint32_t task_index);
+  TaskId(uint64_t global_stream_index, uint32_t task_index);
   ProcessId process_id() const;
   StreamId stream_id() const;
   uint64_t global_stream_index() const;
@@ -143,6 +142,7 @@ int64_t SerializeStreamIdToInt64(StreamId);
 StreamId DeserializeStreamIdFromInt64(int64_t);
 
 int64_t SerializeTaskIdToInt64(TaskId);
+TaskId DeserializeTaskIdFromInt64(int64_t);
 
 }  // namespace oneflow
 
