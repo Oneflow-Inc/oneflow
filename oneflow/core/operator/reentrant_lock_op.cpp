@@ -25,10 +25,9 @@ void ReentrantLockOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-Maybe<void> ReentrantLockOp::InferLogicalOutBlobDescs(
-    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const ParallelDesc& parallel_desc) const {
-  CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), 1);
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   const BlobDesc* start = BlobDesc4BnInOp("start");
   const DataType data_type = start->data_type();
   CHECK_OR_RETURN(IsIntegralDataType(data_type));
@@ -38,17 +37,20 @@ Maybe<void> ReentrantLockOp::InferLogicalOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
+}  // namespace
+
+Maybe<void> ReentrantLockOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), 1);
+  return InferBlobDescs(BlobDesc4BnInOp);
+}
+
 Maybe<void> ReentrantLockOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
-  const BlobDesc* start = GetBlobDesc4BnInOp("start");
-  const DataType data_type = start->data_type();
-  CHECK_OR_RETURN(IsIntegralDataType(data_type));
-  BlobDesc* out = GetBlobDesc4BnInOp("out");
-  out->mut_shape() = Shape({1});
-  out->set_data_type(data_type);
-  return Maybe<void>::Ok();
+  return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> ReentrantLockOp::GetSbpSignatures(

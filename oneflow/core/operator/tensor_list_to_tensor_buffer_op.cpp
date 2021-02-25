@@ -18,6 +18,21 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  const BlobDesc* in_desc = BlobDesc4BnInOp("in");
+  CHECK_OR_RETURN(in_desc->is_tensor_list());
+  const int64_t N = in_desc->shape().At(0);
+  BlobDesc* out_desc = BlobDesc4BnInOp("out");
+  out_desc->mut_shape() = Shape({N});
+  out_desc->set_data_type(DataType::kTensorBuffer);
+  out_desc->set_is_dynamic(in_desc->is_dynamic());
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 class TensorListToTensorBufferOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TensorListToTensorBufferOp);
@@ -33,27 +48,13 @@ class TensorListToTensorBufferOp final : public Operator {
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override {
-    const BlobDesc* in_desc = BlobDesc4BnInOp("in");
-    CHECK_OR_RETURN(in_desc->is_tensor_list());
-    const int64_t N = in_desc->shape().At(0);
-    BlobDesc* out_desc = BlobDesc4BnInOp("out");
-    out_desc->mut_shape() = Shape({N});
-    out_desc->set_data_type(DataType::kTensorBuffer);
-    out_desc->set_is_dynamic(in_desc->is_dynamic());
-    return Maybe<void>::Ok();
+    return InferBlobDescs(BlobDesc4BnInOp);
   }
 
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override {
-    const BlobDesc* in_desc = GetBlobDesc4BnInOp("in");
-    CHECK_OR_RETURN(in_desc->is_tensor_list());
-    const int64_t N = in_desc->shape().At(0);
-    BlobDesc* out_desc = GetBlobDesc4BnInOp("out");
-    out_desc->mut_shape() = Shape({N});
-    out_desc->set_data_type(DataType::kTensorBuffer);
-    out_desc->set_is_dynamic(in_desc->is_dynamic());
-    return Maybe<void>::Ok();
+    return InferBlobDescs(GetBlobDesc4BnInOp);
   }
 
  private:
