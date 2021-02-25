@@ -401,9 +401,9 @@ Maybe<void> UserOp::InferOutBlobDescs(
 Maybe<void> UserOp::InferInplaceObn2Ibn(
     HashMap<std::string, std::string>* mut_inplace_obn2ibn,
     HashMap<std::string, std::string>* con_inplace_obn2ibn,
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  UserOpInferContext infer_ctx(op_conf(), parallel_ctx, JUST(sbp_signature()), job_desc(),
                                GetBlobDesc4BnInOp);
   const user_op::OpKernelRegistryResult* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
@@ -548,28 +548,23 @@ Symbol<OperatorConf> UserOp::GetOpConfWithoutOpNameAndLbn() const {
 
 void UserOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
-    std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
-    const ParallelDesc* parallel_desc, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   auto user_conf = kernel_conf->mutable_user_conf();
   *(user_conf->mutable_parallel_ctx()) = *parallel_ctx;
-  *(user_conf->mutable_sbp_sig()) = *sbp_signature;
-#define BLOB_DESCS_TO_PROTO(prefix, is_arg)                                                        \
-  for (const auto& bn : prefix##_bns()) {                                                          \
-    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);                                            \
-    if (blob_desc) { blob_desc->ToProto(&(*user_conf->mutable_bn_in_op2blob_desc())[bn]); }        \
-    if (is_arg) {                                                                                  \
-      LogicalBlobDesc4BnInOp(bn).ToProto(&(*user_conf->mutable_bn_in_op2logical_blob_desc())[bn]); \
-    }                                                                                              \
+  *(user_conf->mutable_sbp_sig()) = *CHECK_JUST(sbp_signature());
+  ForEachBnInOp([&](const std::string& bn) {
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
+    if (blob_desc) { blob_desc->ToProto(&(*user_conf->mutable_bn_in_op2blob_desc())[bn]); }
+  });
+  for (const std::string& ibn : input_bns()) {
+    CHECK_JUST(GetLogicalBlobDesc4Ibn(ibn))
+        ->ToProto(&(*user_conf->mutable_bn_in_op2logical_blob_desc())[ibn]);
   }
-
-  BLOB_DESCS_TO_PROTO(input, true)
-  BLOB_DESCS_TO_PROTO(output, true)
-  BLOB_DESCS_TO_PROTO(tmp, false)
-
-#undef BLOB_DESCS_TO_PROTO
-  CHECK_NOTNULL(parallel_desc);
-  *user_conf->mutable_parallel_conf() = parallel_desc->parallel_conf();
+  for (const std::string& obn : output_bns()) {
+    CHECK_JUST(GetLogicalBlobDesc4Obn(obn))
+        ->ToProto(&(*user_conf->mutable_bn_in_op2logical_blob_desc())[obn]);
+  }
+  *user_conf->mutable_parallel_conf() = CHECK_JUST(GetOpParallelDesc())->parallel_conf();
 }
 
 REGISTER_OP(OperatorConf::kUserConf, UserOp);
