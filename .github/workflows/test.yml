@@ -26,6 +26,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Wait for GPU slot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         uses: ./.github/actions/schedule
 
   build_and_test_cuda:
