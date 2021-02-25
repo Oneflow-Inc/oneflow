@@ -23,11 +23,11 @@ namespace oneflow {
 
 Maybe<Scope> GetCurrentScope();
 
-Maybe<void> InitGlobalScopeStack(const std::shared_ptr<Scope>& scope);
+Maybe<void> InitThreadLocalScopeStack(const std::shared_ptr<Scope>& scope);
 
-Maybe<void> GlobalScopeStackPush(const std::shared_ptr<Scope>& scope);
+Maybe<void> ThreadLocalScopeStackPush(const std::shared_ptr<Scope>& scope);
 
-Maybe<void> GlobalScopeStackPop();
+Maybe<void> ThreadLocalScopeStackPop();
 
 }  // namespace oneflow
 
