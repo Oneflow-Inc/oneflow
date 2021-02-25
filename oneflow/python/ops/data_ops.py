@@ -40,14 +40,10 @@ class ImagePreprocessor(object):
         self.preprocessor = preprocessor
 
     def is_rgb(self) -> bool:
-        if self.preprocessor.lower() == "bgr2rgb":
-            return True
-        return False
+        return self.preprocessor.lower() == "bgr2rgb"
 
     def is_mirror(self) -> bool:
-        if self.preprocessor.lower() == "mirror":
-            return True
-        return False
+        return self.preprocessor.lower() == "mirror"
 
 
 @oneflow_export("data.ImageResizePreprocessor")
