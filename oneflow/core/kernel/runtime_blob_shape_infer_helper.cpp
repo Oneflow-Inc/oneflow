@@ -25,13 +25,26 @@ RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_
                                                          const KernelConf& kernel_conf,
                                                          const JobDesc* job_desc) {
   op_ = ConstructOp(op_conf, job_desc);
-  auto* map = sbp_signature_.mutable_bn_in_op2sbp_parallel();
-  op_->ForEachBnInOp([&](const std::string& bn_in_op) {
-    bn_in_op2blob_desc_[bn_in_op].reset();
-    (*map)[bn_in_op].mutable_split_parallel()->set_axis(0);
-  });
-  parallel_ctx_.set_parallel_id(0);
-  parallel_ctx_.set_parallel_num(1);
+  if (kernel_conf.op_attribute().has_sbp_signature()) {
+    sbp_signature_ = kernel_conf.op_attribute().sbp_signature();
+  } else {
+    auto* map = sbp_signature_.mutable_bn_in_op2sbp_parallel();
+    op_->ForEachBnInOp([&](const std::string& bn_in_op) {
+      (*map)[bn_in_op].mutable_split_parallel()->set_axis(0);
+    });
+  }
+  op_->ForEachBnInOp([&](const std::string& bn_in_op) { bn_in_op2blob_desc_[bn_in_op].reset(); });
+  auto& blob_desc_signature_map =
+      kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc();
+  for (const auto& pair : blob_desc_signature_map) {
+    bn_in_op2logical_blob_desc_[pair.first].reset(new BlobDesc(pair.second));
+  }
+  if (kernel_conf.has_parallel_ctx()) {
+    parallel_ctx_ = kernel_conf.parallel_ctx();
+  } else {
+    parallel_ctx_.set_parallel_id(0);
+    parallel_ctx_.set_parallel_num(1);
+  }
   op_infer_cache_key_.job_desc = job_desc;
   op_infer_cache_key_.op_conf_sym = op_->GetOpConfWithoutOpNameAndLbn();
   op_infer_cache_key_.ibn_idx2shape_sym.resize(op_->input_bns().size());
@@ -71,6 +84,14 @@ void RuntimeBlobShapeInferHelper::InferShape(std::function<Blob*(const std::stri
       if (blob == nullptr) { return nullptr; }
       return BlobDesc4BnInOp(bn_in_op, blob->blob_desc());
     });
+    auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
+      if (bn_in_op2logical_blob_desc_.find(bn) != bn_in_op2logical_blob_desc_.end()) {
+        return bn_in_op2logical_blob_desc_.at(bn).get();
+      }
+      return nullptr;
+    };
+    CHECK_JUST(op_->FillLogicalInBlobDesc(GetLogicalBlobDesc4BnInOp));
+    CHECK_JUST(op_->FillLogicalOutBlobDesc(GetLogicalBlobDesc4BnInOp));
     CHECK_JUST(op_->InferOutBlobDescsIf(CachedBlobDesc4BnInOp, &parallel_ctx_, &sbp_signature_));
     auto* ret = new OpInferCacheValue();
     ret->obn_idx2shape_sym.resize(op_->output_bns().size());

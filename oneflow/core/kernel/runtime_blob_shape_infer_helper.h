@@ -39,6 +39,7 @@ class RuntimeBlobShapeInferHelper final {
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc_;
+  HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2logical_blob_desc_;
   ParallelContext parallel_ctx_;
   SbpSignature sbp_signature_;
   OpInferCacheKey op_infer_cache_key_;
