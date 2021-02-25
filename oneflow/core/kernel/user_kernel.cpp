@@ -172,8 +172,11 @@ class UserKernelOpInferContext : public user_op::InferContext {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                            ArgVec* arg_vec) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+        const std::string& arg_name = it->first;
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
-          arg_vec->emplace_back(std::make_pair(it->first, i));
+          std::pair<std::string, int32_t> arg_pair = std::make_pair(arg_name, i);
+          arg_vec->emplace_back(arg_pair);
+          arg2tensor_desc_.emplace(arg_pair, nullptr);
         }
       }
     };

@@ -198,31 +198,23 @@ OpRegistry& OpRegistry::Finish() {
   CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
   if (!result_.physical_tensor_desc_infer_fn) {
-    // auto logical_fn = result_.logical_tensor_desc_infer_fn;
-    result_.physical_tensor_desc_infer_fn = [&](user_op::InferContext* ctx) -> Maybe<void> {
+    auto logical_fn = result_.logical_tensor_desc_infer_fn;
+    result_.physical_tensor_desc_infer_fn =
+        [logical_fn](user_op::InferContext* ctx) -> Maybe<void> {
       bool has_dynamic_output = false;
       for (const auto& pair : ctx->outputs()) {
         if (*ctx->IsDynamic4ArgNameAndIndex(pair.first, pair.second)) {
           has_dynamic_output = true;
-          LOG(ERROR) << ctx->user_op_conf().op_name() << " IsDynamic4ArgNameAndIndex " << pair.first
-                     << " " << pair.second;
           break;
         }
       }
       if (ctx->parallel_num() == 1 && has_dynamic_output) {
-        LOG(ERROR) << "user_op:: dynamic " << ctx->user_op_conf().op_name();
-        // logical_fn(ctx);
-        result_.logical_tensor_desc_infer_fn(ctx);
+        logical_fn(ctx);
       } else {
-        // static
-        LOG(ERROR) << "user_op:: static " << ctx->user_op_conf().op_name();
         for (const auto& pair : ctx->inputs()) {
           const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex(pair.first, pair.second);
           const TensorDesc* in_logical =
               ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
-          LOG(ERROR) << "in_logical " << in_logical;
-          LOG(ERROR) << "in_logical shape";
-          LOG(ERROR) << in_logical->shape();
           const TensorDesc* in_physical = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
           CHECK_OR_RETURN(*JUST(GetPhysicalShape(in_logical->shape(), sbp_parallel,
                                                  ctx->parallel_ctx().parallel_num(),
@@ -230,8 +222,6 @@ OpRegistry& OpRegistry::Finish() {
                           == in_physical->shape());
         }
         for (const auto& pair : ctx->outputs()) {
-          LOG(ERROR) << "pair" << pair.first;
-          LOG(ERROR) << ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
           TensorDesc* desc = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
           *desc = *ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
           if (ctx->parallel_ctx().parallel_num() > 1) {
