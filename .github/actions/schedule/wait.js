@@ -1,9 +1,10 @@
 const { Octokit } = require("@octokit/core");
+const { time } = require("console");
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
 const owner = 'Oneflow-Inc';
 const repo = 'oneflow';
-const has_queued_jobs = async function (a, b) {
+const has_queued_jobs = async function () {
     runs = await octokit.request('GET /repos/{owner}/{repo}/actions/runs', {
         owner: owner,
         repo: repo,
@@ -31,22 +32,37 @@ const has_queued_jobs = async function (a, b) {
             }
             return queued_jobs.length
         }).reduce((a, b) => a + b, 0)
-    console.log(num_queued_jobs)
     return num_queued_jobs > 0
 }
-let delay = async (seconds) => {
-    setTimeout(() => console.log("after", seconds, "s"), 1000 * seconds)
+
+const has_gpu_runner = async function () {
+    free_runners = await octokit.request('GET /repos/{owner}/{repo}/actions/runners', {
+        owner: owner,
+        repo: repo
+    }).then(r =>
+        r.data.runners.filter(runner => runner.busy == false
+            && runner.labels.filter(l => l.name == "gpu").length > 0))
+
+    return free_runners.length > 0
 }
+
+const sleep = require('util').promisify(setTimeout)
 
 async function start() {
     let i = 0;
     while (i < 1000) {
-        if ((await has_queued_jobs()) == false) {
-            break;
+        console.log("trying", i, "/", 1000)
+        let runner_ready = await has_gpu_runner()
+        let slot_ready = (await has_queued_jobs()) == false
+        if (runner_ready && slot_ready) {
+            break; // success
         }
-        await delay(2)
+        timeout = 60
+        await sleep(timeout * 1000)
+        console.log("timeout", timeout, "s")
         i++;
     }
+    process.exit(1)
 }
 
 start().catch(console.error)
