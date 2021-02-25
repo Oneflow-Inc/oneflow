@@ -45,13 +45,6 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
       sampled_label->mut_shape()->Set(0, num_sample_per_rank);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("mapped_label", 0) =
-          *ctx->BatchAxis4ArgNameAndIndex("label", 0);
-      ctx->BatchAxis4ArgNameAndIndex("sampled_label", 0)->clear_value();
-      ctx->BatchAxis4ArgNameAndIndex("sampled_weight", 0)->clear_value();
-      return Maybe<void>::Ok();
-    })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0);
@@ -79,11 +72,6 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
           *ctx->TensorDesc4ArgNameAndIndex("sampled_weight_diff", 0);
       *ctx->TensorDesc4ArgNameAndIndex("boxing_disabled_sampled_label", 0) =
           *ctx->TensorDesc4ArgNameAndIndex("sampled_label", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0)->clear_value();
-      ctx->BatchAxis4ArgNameAndIndex("boxing_disabled_sampled_label", 0)->clear_value();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

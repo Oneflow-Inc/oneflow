@@ -83,8 +83,10 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New();
   Global<ProcessCtx>::New();
-  JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
-           .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+  // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
+  // ~CtrlBootstrap.
+  CHECK_JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
+                 .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
   Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
   int64_t this_mchn_id = Global<ProcessCtx>::Get()->rank();
   Global<MachineCtx>::New(this_mchn_id);

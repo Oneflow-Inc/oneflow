@@ -179,18 +179,22 @@ void RpcClient::EraseCount(const std::string& k) {
 }
 
 void RpcClient::LoadServer(const std::string& server_addr, CtrlService::Stub* stub) {
+  LoadServerRequest request;
+  request.set_addr(server_addr);
+  return LoadServer(request, stub);
+}
+
+void RpcClient::LoadServer(const LoadServerRequest& request, CtrlService::Stub* stub) {
   int32_t retry_idx = 0;
   for (; retry_idx < max_retry_num; ++retry_idx) {
     grpc::ClientContext client_ctx;
-    LoadServerRequest request;
-    request.set_addr(server_addr);
     LoadServerResponse response;
     grpc::Status st = stub->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response);
     if (st.error_code() == grpc::StatusCode::OK) {
-      LOG(INFO) << "LoadServer " << server_addr << " Successful at " << retry_idx << " times";
+      LOG(INFO) << "LoadServer " << request.addr() << " Successful at " << retry_idx << " times";
       break;
     } else if (st.error_code() == grpc::StatusCode::UNAVAILABLE) {
-      LOG(INFO) << "LoadServer " << server_addr << " Failed at " << retry_idx << " times"
+      LOG(INFO) << "LoadServer " << request.addr() << " Failed at " << retry_idx << " times"
                 << " error_code " << st.error_code() << " error_message " << st.error_message();
       std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
       continue;

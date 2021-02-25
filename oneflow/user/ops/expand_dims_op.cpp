@@ -44,22 +44,6 @@ REGISTER_USER_OP("expand_dims")
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      const auto& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
-      const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_desc.shape().NumAxes());
-
-      if (in_batch_axis->has_value()) {
-        out_batch_axis->set_value(axis <= static_cast<int32_t>(in_batch_axis->value())
-                                      ? in_batch_axis->value() + 1
-                                      : in_batch_axis->value());
-      } else {
-        out_batch_axis->clear_value();
-      }
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       const int32_t axis =
