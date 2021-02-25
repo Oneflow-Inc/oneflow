@@ -17,8 +17,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing_zeros_task_node.h"
 #include "oneflow/core/common/id_util.h"
-#include "oneflow/core/device/cuda_stream_index.h"
-#include "oneflow/core/device/cpu_stream_index.h"
+#include "oneflow/core/device/stream_index.h"
 
 namespace oneflow {
 

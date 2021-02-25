@@ -26,7 +26,9 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/id_util.h"
 #include "oneflow/core/device/cpu_stream_index.h"
+#ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_stream_index.h"
+#endif
 
 namespace oneflow {
 
@@ -169,20 +171,20 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
 #endif
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
         DeviceId device_id{DeviceType::kCPU, 0};
-        auto* stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
+        auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
                                                                                  device_id));
-        CHECK_NOTNULL(stream_index_generator);
+        CHECK_NOTNULL(cpu_stream_index_generator);
         uint32_t stream_index = 0;
         if (comp_task_node->IsIndependent()) {
           TaskType task_type = comp_task_node->GetTaskType();
           if (IsClassRegistered<int32_t, TickTockTaskType>(task_type)) {
-            stream_index = stream_index_generator->GenerateTickTockStreamIndex();
+            stream_index = cpu_stream_index_generator->GenerateTickTockStreamIndex();
           } else {
-            stream_index = stream_index_generator->GenerateIndependentTaskStreamIndex(task_type);
+            stream_index = cpu_stream_index_generator->GenerateIndependentTaskStreamIndex(task_type);
           }
         } else {
-          stream_index = stream_index_generator->GenerateComputeStreamIndex();
+          stream_index = cpu_stream_index_generator->GenerateComputeStreamIndex();
         }
         comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
       } else {
