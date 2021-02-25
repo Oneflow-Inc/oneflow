@@ -299,14 +299,7 @@ Maybe<void> Operator::InferOutBlobDescsIf(
 Maybe<void> Operator::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  bool has_dynamic_output = false;
-  for (const auto& bn : output_bns()) {
-    if (JUST(GetLogicalBlobDesc4Obn(bn))->is_dynamic()) {
-      has_dynamic_output = true;
-      break;
-    }
-  }
-  if (parallel_ctx->parallel_num() == 1 && has_dynamic_output) {
+  if (parallel_ctx->parallel_num() == 1) {
     JUST(InferLogicalOutBlobDescs(GetBlobDesc4BnInOp, *JUST(GetOpParallelDesc())));
   } else {
     for (const auto& bn : input_bns()) {

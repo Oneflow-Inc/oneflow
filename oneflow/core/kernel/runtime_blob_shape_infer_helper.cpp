@@ -34,10 +34,20 @@ RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_
     });
   }
   op_->ForEachBnInOp([&](const std::string& bn_in_op) { bn_in_op2blob_desc_[bn_in_op].reset(); });
-  auto& blob_desc_signature_map =
-      kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc();
-  for (const auto& pair : blob_desc_signature_map) {
-    bn_in_op2logical_blob_desc_[pair.first].reset(new BlobDesc(pair.second));
+  if (kernel_conf.op_attribute().has_logical_blob_desc_signature()) {
+    auto& blob_desc_signature_map =
+        kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc();
+    for (const auto& pair : blob_desc_signature_map) {
+      bn_in_op2logical_blob_desc_[pair.first].reset(new BlobDesc(pair.second));
+    }
+    auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
+      if (bn_in_op2logical_blob_desc_.find(bn) != bn_in_op2logical_blob_desc_.end()) {
+        return bn_in_op2logical_blob_desc_.at(bn).get();
+      }
+      return nullptr;
+    };
+    CHECK_JUST(op_->FillLogicalInBlobDesc(GetLogicalBlobDesc4BnInOp));
+    CHECK_JUST(op_->FillLogicalOutBlobDesc(GetLogicalBlobDesc4BnInOp));
   }
   if (kernel_conf.has_parallel_ctx()) {
     parallel_ctx_ = kernel_conf.parallel_ctx();
@@ -84,14 +94,6 @@ void RuntimeBlobShapeInferHelper::InferShape(std::function<Blob*(const std::stri
       if (blob == nullptr) { return nullptr; }
       return BlobDesc4BnInOp(bn_in_op, blob->blob_desc());
     });
-    auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
-      if (bn_in_op2logical_blob_desc_.find(bn) != bn_in_op2logical_blob_desc_.end()) {
-        return bn_in_op2logical_blob_desc_.at(bn).get();
-      }
-      return nullptr;
-    };
-    CHECK_JUST(op_->FillLogicalInBlobDesc(GetLogicalBlobDesc4BnInOp));
-    CHECK_JUST(op_->FillLogicalOutBlobDesc(GetLogicalBlobDesc4BnInOp));
     CHECK_JUST(op_->InferOutBlobDescsIf(CachedBlobDesc4BnInOp, &parallel_ctx_, &sbp_signature_));
     auto* ret = new OpInferCacheValue();
     ret->obn_idx2shape_sym.resize(op_->output_bns().size());

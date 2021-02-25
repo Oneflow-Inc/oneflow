@@ -195,14 +195,7 @@ OpRegistry& OpRegistry::Finish() {
     auto logical_fn = result_.logical_tensor_desc_infer_fn;
     result_.physical_tensor_desc_infer_fn =
         [logical_fn](user_op::InferContext* ctx) -> Maybe<void> {
-      bool has_dynamic_output = false;
-      for (const auto& pair : ctx->outputs()) {
-        if (*ctx->IsDynamic4ArgNameAndIndex(pair.first, pair.second)) {
-          has_dynamic_output = true;
-          break;
-        }
-      }
-      if (ctx->parallel_num() == 1 && has_dynamic_output) {
+      if (ctx->parallel_num() == 1) {
         logical_fn(ctx);
       } else {
         for (const auto& pair : ctx->inputs()) {
