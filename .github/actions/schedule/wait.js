@@ -3,7 +3,7 @@ const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
 const owner = 'Oneflow-Inc';
 const repo = 'oneflow';
-const should_start = async function (a, b) {
+const has_queued_jobs = async function (a, b) {
     runs = await octokit.request('GET /repos/{owner}/{repo}/actions/runs', {
         owner: owner,
         repo: repo,
@@ -32,19 +32,19 @@ const should_start = async function (a, b) {
             return queued_jobs.length
         }).reduce((a, b) => a + b, 0)
     console.log(num_queued_jobs)
-    return num_queued_jobs == 0
+    return num_queued_jobs > 0
 }
 let delay = async (seconds) => {
-    setTimeout(() => console.log("after 1s"), 1000 * seconds)
+    setTimeout(() => console.log("after", seconds, "s"), 1000 * seconds)
 }
 
 async function start() {
     let i = 0;
     while (i < 1000) {
-        if (await should_start()) {
+        if ((await has_queued_jobs()) == false) {
             break;
         }
-        await delay(60)
+        await delay(2)
         i++;
     }
 }
