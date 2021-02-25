@@ -57,7 +57,7 @@ class Callback(ABC):
 
 @oneflow_export("nn.NumpyModule")
 class NumpyDataModule(Module):
-    def forward(self, step_idx, optimizer_idx):
+    def forward(self, step_idx=0, optimizer_idx=0):
         pass
 
 
@@ -86,8 +86,11 @@ class Model(
         self.callbacks = kwargs["callbacks"] if "callbacks" in kwargs else []
 
         self.need_training = False
+        self.training_is_numpy_input = False
         self.need_validation = False
-        self.need_checkpoint = False
+        self.validation_is_numpy_input = False
+        self.need_load_checkpoint = False
+        self.need_save_checkpoint = False
 
     def forward(self, *args, **kwargs):
         r"""Same as `nn.Module.forward()`, here is to define the operations you want to use for prediction.
@@ -109,7 +112,7 @@ class Model(
         """
         raise NotImplementedError()
 
-    def _func_train_job(self, optimizer_idx=0):
+    def _construct_one_train_job(self, optimizer_idx=0):
         def job():
             batch = self.training_data()
             loss = self.training_step(batch=batch, optimizer_idx=optimizer_idx)
@@ -122,33 +125,42 @@ class Model(
         deco = api_oneflow_function(type="train", function_config=self.training_config)
         return deco(job)
 
-    def _func_eval_job(self):
+    def _construct_train_jobs(self):
+        if len(self.optimizers) == 1:
+            self.train_jobs.append(self._construct_one_train_job(0))
+        else:
+            for optimizer_idx in range(0, len(self.optimizers)):
+                self.train_jobs.append(self._construct_one_train_job(optimizer_idx))
 
+    def _construct_eval_job(self):
         def job():
             batch = self.validation_data()
             return self.validation_step(batch)
 
         job.__name__ = self.__class__.__name__ + "_Model_eval_job"
         deco = api_oneflow_function(function_config=self.validation_config)
-        return deco(job)
-    
-    def _construct_numpy_input_train_job(self, optimizer_idx, job_func_para_annotations):
-        # 注意这里的signature不再被使用构建构建job，只是为了传递input blob
+        self.eval_job = deco(job)
+
+    def _construct_one_numpy_input_train_job(
+        self, optimizer_idx, job_func_para_annotations
+    ):
         def job(*batch):
             loss = self.training_step(batch=batch, optimizer_idx=optimizer_idx)
             self.optimizers[optimizer_idx].minimize(loss)
             return loss
 
-        # 构建job相关的会构造生成，放到job的__oneflow_function_signature__
-        # 这里直接构造_CompileJob处需要的信息
         para_list = []
         for i in range(len(job_func_para_annotations)):
-            para_name = "para_" + str(i)
-            para_list.append(inspect.Parameter(name=para_name, kind=inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=job_func_para_annotations[i]))
-
+            para_name = "train_para_" + str(i)
+            para_list.append(
+                inspect.Parameter(
+                    name=para_name,
+                    kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    annotation=job_func_para_annotations[i],
+                )
+            )
         origin_sig = inspect.signature(job)
         new_sig = origin_sig.replace(parameters=para_list)
-
         job.__oneflow_function_signature__ = new_sig
         job.__name__ = (
             self.__class__.__name__ + "_Model_train_numpy_job_" + str(optimizer_idx)
@@ -156,6 +168,74 @@ class Model(
         deco = api_oneflow_function(type="train", function_config=self.training_config)
         train_job = deco(job)
         self.train_jobs.insert(optimizer_idx, train_job)
+
+    def _construct_numpy_input_train_jobs(self):
+        for optimizer_idx in range(0, len(self.optimizers)):
+            batch = self.training_data(0, optimizer_idx)
+            assert isinstance(
+                batch, tuple
+            ), "nn.NumpyModule training_data for optimizer_idx {} must return a tuple".format(
+                optimizer_idx
+            )
+            job_func_para_annotations = []
+            for item in batch:
+                assert isinstance(item, np.ndarray)
+                of_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(item.dtype)
+                numpy_placeholder = oft.Numpy.Placeholder(
+                    shape=item.shape, dtype=of_dtype
+                )
+                job_func_para_annotations.append(numpy_placeholder)
+            self._construct_one_numpy_input_train_job(
+                optimizer_idx, job_func_para_annotations
+            )
+
+    def _construct_one_numpy_input_eval_job(self, job_func_para_annotations):
+        def job(*batch):
+            return self.validation_step(batch=batch)
+
+        para_list = []
+        for i in range(len(job_func_para_annotations)):
+            para_name = "eval_para_" + str(i)
+            para_list.append(
+                inspect.Parameter(
+                    name=para_name,
+                    kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    annotation=job_func_para_annotations[i],
+                )
+            )
+        origin_sig = inspect.signature(job)
+        new_sig = origin_sig.replace(parameters=para_list)
+        job.__oneflow_function_signature__ = new_sig
+        job.__name__ = self.__class__.__name__ + "_Model_eval_numpy_job"
+        deco = api_oneflow_function(function_config=self.validation_config)
+        self.eval_job = deco(job)
+
+    def _construct_numpy_input_eval_job(self):
+        batch = self.validation_data(0, 0)
+        assert isinstance(
+            batch, tuple
+        ), "nn.NumpyModule validation_data must return a tuple"
+        job_func_para_annotations = []
+        for item in batch:
+            assert isinstance(item, np.ndarray)
+            of_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(item.dtype)
+            numpy_placeholder = oft.Numpy.Placeholder(shape=item.shape, dtype=of_dtype)
+            job_func_para_annotations.append(numpy_placeholder)
+        self._construct_one_numpy_input_eval_job(job_func_para_annotations)
+
+    def _save_checkpoint(
+        self, dirpath,
+    ):
+        r"""Save model states as a checkpoint.
+        """
+        SaveVarDict(path=dirpath)
+
+    def _load_checkpoint(
+        self, dirpath,
+    ):
+        r"""Load model states from a checkpoint.
+        """
+        LoadVariables(GetCheckpoint(path=dirpath))
 
     def _method_overrided(self, method_name: str = None) -> bool:
         return getattr(self.__class__, method_name) != getattr(Model, method_name)
@@ -181,10 +261,6 @@ class Model(
         self.validation_interval = validation_interval
         self.checkpoint_config = checkpoint_config
 
-        self.is_numpy_input = (
-            True if isinstance(self.training_data, NumpyDataModule) else False
-        )
-
         optim_conf = self.configure_optimizers()
         if isinstance(optim_conf, Optimizer):
             self.optimizers = [optim_conf]
@@ -193,93 +269,84 @@ class Model(
 
         self.train_jobs = []
 
-        # construct training job
         if self._method_overrided("training_step") and self.training_data is not None:
             self.need_training = True
-            if not self.is_numpy_input:
-                if len(self.optimizers) == 1:
-                    self.train_jobs.append(self._func_train_job(0))
-                else:
-                    for optimizer_idx in range(0, len(self.optimizers)):
-                        self.train_jobs.append(self._func_train_job(optimizer_idx))
+            assert self.training_config is not None, "training_config cannot be None"
+            self.training_is_numpy_input = (
+                True if isinstance(self.training_data, NumpyDataModule) else False
+            )
 
-        # construct validation job
         if (
             self._method_overrided("validation_step")
             and self.validation_data is not None
         ):
-            if not self.is_numpy_input:
-                self.need_validation = True
-                self.eval_job = self._func_eval_job()
+            self.need_validation = True
+            assert (
+                self.validation_config is not None
+            ), "validation_config cannot be None"
+            self.validation_is_numpy_input = (
+                True if isinstance(self.validation_data, NumpyDataModule) else False
+            )
+
+        if (
+            self.checkpoint_config is not None
+            and self.checkpoint_config.load_dirpath is not None
+        ):
+            self.need_load_checkpoint = True
+
+        if (
+            self.checkpoint_config is not None
+            and self.checkpoint_config.save_dirpath is not None
+        ):
+            self.need_save_checkpoint = True
+
+        if self.need_training:
+            if self.training_is_numpy_input:
+                self._construct_numpy_input_train_jobs()
             else:
-                raise NotImplementedError
+                self._construct_train_jobs()
 
-        if self.checkpoint_config is not None and self.checkpoint_config.load_dirpath is not None:
+        if self.need_validation:
+            if self.validation_is_numpy_input:
+                self._construct_numpy_input_eval_job()
+            else:
+                self._construct_eval_job()
+
+        if self.need_load_checkpoint:
             self._load_checkpoint(dirpath=self.checkpoint_config.load_dirpath)
-
-        if self.checkpoint_config is not None and self.checkpoint_config.save_dirpath is not None:
-            self.need_checkpoint = True
 
         for step_idx in range(0, self.max_steps):
             if self.need_training:
-                if self.is_numpy_input:
-                    if step_idx == 0:
-                        for optimizer_idx in range(0, len(self.optimizers)):
-                            batch = self.training_data(step_idx, optimizer_idx)
-                            assert isinstance(batch, tuple), "nn.NumpyModule training_data for optimizer_idx {} must return a tuple".format(optimizer_idx)
-                            job_func_para_annotations = []
-                            for item in batch:
-                                assert isinstance(item, np.ndarray)
-                                of_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(item.dtype)
-                                numpy_placeholder = oft.Numpy.Placeholder(shape=item.shape, dtype=of_dtype)
-                                job_func_para_annotations.append(numpy_placeholder)
-                            self._construct_numpy_input_train_job(optimizer_idx, job_func_para_annotations)
-
-                    for optimizer_idx in range(0, len(self.optimizers)):
+                for optimizer_idx in range(0, len(self.optimizers)):
+                    loss = None
+                    if self.training_is_numpy_input:
                         batch = self.training_data(step_idx, optimizer_idx)
                         loss = self.train_jobs[optimizer_idx](*batch).get()
-                        self._method_callback(
-                            "on_training_step_end",
-                            outputs=loss,
-                            step_idx=step_idx,
-                            optimizer_idx=optimizer_idx,
-                        )
-
-                if not self.is_numpy_input:
-                    for optimizer_idx in range(0, len(self.optimizers)):
+                    else:
                         loss = self.train_jobs[optimizer_idx]().get()
-                        self._method_callback(
-                            "on_training_step_end",
-                            outputs=loss,
-                            step_idx=step_idx,
-                            optimizer_idx=optimizer_idx,
-                        )
+                    self._method_callback(
+                        "on_training_step_end",
+                        outputs=loss,
+                        step_idx=step_idx,
+                        optimizer_idx=optimizer_idx,
+                    )
 
             if self.need_validation:
                 if (step_idx + 1) % self.validation_interval == 0:
-                    eval_loss = self.eval_job().get()
+                    eval_loss = None
+                    if self.validation_is_numpy_input:
+                        batch = self.validation_data(step_idx)
+                        eval_loss = self.eval_job(*batch).get()
+                    else:
+                        eval_loss = self.eval_job().get()
                     self._method_callback(
                         "on_validation_step_end", step_idx=step_idx, outputs=eval_loss
                     )
 
-            if self.need_checkpoint:
+            if self.need_save_checkpoint:
                 if (step_idx + 1) % self.checkpoint_config.save_interval == 0:
                     self._save_checkpoint(
                         dirpath=self.checkpoint_config.save_dirpath
                         + "-"
                         + str(step_idx)
                     )
-
-    def _save_checkpoint(
-        self, dirpath,
-    ):
-        r"""Save model states as a checkpoint.
-        """
-        SaveVarDict(path=dirpath)
-
-    def _load_checkpoint(
-        self, dirpath,
-    ):
-        r"""Load model states from a checkpoint.
-        """
-        LoadVariables(GetCheckpoint(path=dirpath))
