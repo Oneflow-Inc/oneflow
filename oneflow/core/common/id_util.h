@@ -38,14 +38,8 @@ class ProcessId {
   bool operator==(const ProcessId& rhs) const { return val_ == rhs.val_; }
   bool operator!=(const ProcessId& rhs) const { return !(*this == rhs); }
 
-  // remove type cast operator in future
-  operator uint32_t() const { return val_; }
-
-  static const int kBits = 19;
-
  private:
-  uint32_t val_;
-
+  static const int kBits = 19;
   static const int kFullBits = 32;
   static_assert(kFullBits <= std::numeric_limits<uint32_t>::digits,
                 "ProcessId bits layout is illegal");
@@ -54,6 +48,13 @@ class ProcessId {
   static const int kNodeIndexBits = 12;
   static const int kProcessIndexBits = 7;
   static_assert(kNodeIndexBits + kProcessIndexBits == kBits, "ProcessId bits layout is illegal");
+
+  friend class TaskId;
+  friend class std::hash<ProcessId>;
+  explicit ProcessId(uint32_t val) : val_(val) {}
+  operator uint32_t() const { return val_; }
+
+  uint32_t val_;
 };
 
 class DeviceId {
@@ -61,15 +62,11 @@ class DeviceId {
   DeviceId(DeviceType device_type, uint32_t device_index);
   DeviceType device_type() const;
   uint32_t device_index() const;
-
-  // remove type cast operator in future
-  operator uint32_t() const { return val_; }
-
-  static const int kBits = 12;
+  bool operator==(const DeviceId& rhs) const { return val_ == rhs.val_; }
+  bool operator!=(const DeviceId& rhs) const { return !(*this == rhs); }
 
  private:
-  uint32_t val_;
-
+  static const int kBits = 12;
   static const int kFullBits = 32;
   static_assert(kFullBits <= std::numeric_limits<uint32_t>::digits,
                 "DeviceId bits layout is illegal");
@@ -78,6 +75,13 @@ class DeviceId {
   static const int kDeviceTypeBits = 5;
   static const int kDeviceIndexBits = 7;
   static_assert(kDeviceTypeBits + kDeviceIndexBits == kBits, "DeviceId bits layout is illegal");
+
+  friend class StreamId;
+  friend class std::hash<DeviceId>;
+  explicit DeviceId(uint32_t val) : val_(val) {}
+  operator uint32_t() const { return val_; }
+
+  uint32_t val_;
 };
 
 class StreamId {
@@ -91,14 +95,8 @@ class StreamId {
   bool operator==(const StreamId& rhs) const { return val_ == rhs.val_; }
   bool operator!=(const StreamId& rhs) const { return !(*this == rhs); }
 
-  // remove type cast operator in future
-  operator uint32_t() const { return val_; }
-
-  static const int kBits = 24;
-
  private:
-  uint32_t val_;
-
+  static const int kBits = 24;
   static const int kFullBits = 32;
   static_assert(kFullBits <= std::numeric_limits<uint32_t>::digits,
                 "StreamId bits layout is illegal");
@@ -108,6 +106,15 @@ class StreamId {
   static_assert(kDeviceIdBits == DeviceId::kBits, "StreamId bits layout is illegal");
   static const int kStreamIndexBits = 12;
   static_assert(kDeviceIdBits + kStreamIndexBits == kBits, "StreamId bits layout is illegal");
+
+  friend class TaskId;
+  friend int64_t SerializeStreamIdToInt64(StreamId);
+  friend StreamId DeserializeStreamIdFromInt64(int64_t);
+  friend class std::hash<StreamId>;
+  explicit StreamId(uint32_t val) : val_(val) {}
+  operator uint32_t() const { return val_; }
+
+  uint32_t val_;
 };
 
 class TaskId {
@@ -118,14 +125,10 @@ class TaskId {
   StreamId stream_id() const;
   uint64_t global_stream_index() const;
   uint32_t task_index() const;
-  operator uint64_t() const { return val_; }
-  operator int64_t() const { return static_cast<int64_t>(val_); }
   bool operator==(const TaskId& rhs) const { return val_ == rhs.val_; }
   bool operator!=(const TaskId& rhs) const { return !(*this == rhs); }
 
  private:
-  uint64_t val_;
-
   static const int kFullBits = 64;
   static_assert(kFullBits <= std::numeric_limits<uint64_t>::digits,
                 "TaskId bits layout is illegal");
@@ -136,6 +139,14 @@ class TaskId {
   static const int kTaskIndexBits = 21;
   static_assert(kProcessIdBits + kStreamIdBits + kTaskIndexBits == kFullBits,
                 "TaskId bits layout is illegal");
+
+  friend int64_t SerializeTaskIdToInt64(TaskId);
+  friend TaskId DeserializeTaskIdFromInt64(int64_t);
+  friend class std::hash<TaskId>;
+  explicit TaskId(uint64_t val) : val_(val) {}
+  operator uint64_t() const { return val_; }
+
+  uint64_t val_;
 };
 
 int64_t SerializeStreamIdToInt64(StreamId);
@@ -184,57 +195,5 @@ struct hash<oneflow::TaskType> {
 };
 
 }  // namespace std
-
-/*
-namespace oneflow {
-
-class IdUtil {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(IdUtil);
-  void Init();
-
-  // StreamId & TaskId
-  // common stream id
-  static StreamId GetStreamId(StreamType stream_type, uint32_t device_index, uint32_t stream_index);
-  // CommNet stream id
-  static StreamId GetCommNetStreamId();
-  // TickTock stream id
-  static StreamId GetTickTockStreamId();
-
-  // MemZoneId
-  static MemZoneId GetCpuMemZoneId();
-  static bool IsCpuMemZoneId(MemZoneId mem_zone_id);
-  static MemZoneId GetDeviceMemZoneId(DeviceType device_type, uint32_t device_index);
-  static bool IsCudaMemZoneId(MemZoneId mem_zone_id);
-  static bool IsMemZoneIdSameDevice(MemZoneId lhs, MemZoneId rhs);
-  static bool IsMemZoneIdNormalUsage(MemZoneId mem_zone_id);
-
-  // independent process task stream id
-  StreamId GenerateProcessTaskIndependentStreamId(ProcessId process_id, TaskType task_type);
-  // pick cpu stream id evenly
-  StreamId GenerateCPUComputeStreamIdEvenly(ProcessId process_id);
-  // task id
-  TaskId GenerateTaskId(ProcessId process_id, StreamId stream_id);
-  // chain id
-  int64_t GenerateChainId(uint64_t global_stream_index);
-
- private:
-  friend class Global<IdUtil>;
-  IdUtil();
-  // cfg: device_num
-  // HashMap<DeviceType, uint32_t> device_type2device_num_;
-  uint32_t cpu_device_num_;
-  // independent generator state: map of task_type to task_num
-  HashMap<std::pair<ProcessId, TaskType>, uint32_t> process_task_type2task_index_counter_;
-  // task id generator state: map of process stream to task_index counter
-  HashMap<uint64_t, uint32_t> process_stream2task_index_counter_;
-  // cpu compute stream_id generator state: map of process_id to cpu device_index counter
-  HashMap<ProcessId, uint32_t> process_id2cpu_device_index_counter_;
-  // chain id generator state: map of process stream to chain_index counter
-  HashMap<uint64_t, uint32_t> process_stream2chain_index_counter_;
-};
-
-}  // namespace oneflow
-*/
 
 #endif  // ONEFLOW_CORE_COMMON_ID_UTIL_H_
