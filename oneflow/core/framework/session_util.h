@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/object.h"
 #include "oneflow/core/framework/snapshot_manager.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
 
@@ -40,8 +41,7 @@ class Session {
   const std::shared_ptr<SnapshotManager>& snapshot_mgr() const { return snapshot_mgr_; }
 
   // Return a pair of global_variable_blob and job_variable_blob.
-  virtual std::pair<std::shared_ptr<compatible_py::BlobObject>,
-                    std::shared_ptr<compatible_py::BlobObject>>
+  virtual std::pair<std::shared_ptr<one::Tensor>, std::shared_ptr<one::Tensor>>
   TryGetVariableBlobOfJobFromStash(const std::string& job_name,
                                    const std::string& variable_name) const {
     UNIMPLEMENTED();

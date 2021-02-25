@@ -31,11 +31,10 @@ class PySession : public Session {
 
   virtual ~PySession() {}
 
-  std::pair<std::shared_ptr<compatible_py::BlobObject>, std::shared_ptr<compatible_py::BlobObject>>
+  std::pair<std::shared_ptr<one::Tensor>, std::shared_ptr<one::Tensor>>
   TryGetVariableBlobOfJobFromStash(const std::string& job_name,
                                    const std::string& variable_name) const override {
-    using P = std::pair<std::shared_ptr<compatible_py::BlobObject>,
-                        std::shared_ptr<compatible_py::BlobObject>>;
+    using P = std::pair<std::shared_ptr<one::Tensor>, std::shared_ptr<one::Tensor>>;
     PYBIND11_OVERRIDE(P, Session, TryGetVariableBlobOfJobFromStash, job_name, variable_name);
   }
 };

@@ -22,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 
+#include "oneflow/core/framework/object.h"
+
 namespace oneflow {
 
 class Blob;
@@ -82,6 +84,17 @@ class Tensor {
 };
 
 }  // namespace user_op
+
+namespace one {
+
+class Tensor {
+ public:
+  std::shared_ptr<compatible_py::BlobObject> blob_object() const {
+    return std::shared_ptr<compatible_py::BlobObject>();
+  }
+};
+
+}  // namespace one
 
 }  // namespace oneflow
 
