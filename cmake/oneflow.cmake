@@ -262,28 +262,8 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python_gen"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/python_gen/__init__.py"
-    COMMAND echo "generated_compile_flags = []" > "${of_pyscript_dir}/oneflow/python_gen/sysconfig.py"
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python_gen/__export_symbols__.py")
-if (BUILD_CUDA)
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "with_cuda=True" >> "${of_pyscript_dir}/oneflow/python_gen/compatibility.py"
-        COMMAND echo "\"generated_compile_flags.append('-DWITH_CUDA')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
-        )
-else()
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "with_cuda=False" >> "${of_pyscript_dir}/oneflow/python_gen/compatibility.py")
-endif()
-
-if (USE_CXX11_ABI)
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "\"generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=1')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
-        )
-else()
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "\"generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=0')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
-        )
-endif()
 
 add_dependencies(of_pyscript_copy of_protoobj)
 add_custom_target(generate_api ALL
@@ -365,6 +345,22 @@ foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
   file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
   copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 endforeach()
+
+set(DEVICE_REG_HEADERS "${PROJECT_SOURCE_DIR}/oneflow/core/framework/device_register_*.h")
+set(AUTO_GEN_DEV_REG_HEADER "${PROJECT_BINARY_DIR}/oneflow/core/framework/auto_gen_device_registry.h")
+set(AUTO_GEN_DEV_REG_MACRO_ID "ONEFLOW_CORE_FRAMEWORK_AUTO_GEN_DEVICE_REGISTRY_H_")
+
+message(STATUS "auto generated header file: ${AUTO_GEN_DEV_REG_HEADER}")
+set(AUTO_GEN_DEV_REG_HEADER_CONTENT "#ifndef ${AUTO_GEN_DEV_REG_MACRO_ID}\n#define ${AUTO_GEN_DEV_REG_MACRO_ID}\n")
+file(GLOB_RECURSE DEVICE_REGISTER_HEADERS ${DEVICE_REG_HEADERS})
+foreach(item ${DEVICE_REGISTER_HEADERS})
+    file(RELATIVE_PATH item ${PROJECT_SOURCE_DIR} ${item})
+    message(STATUS "device register header file found: " ${item})
+    set(AUTO_GEN_DEV_REG_HEADER_CONTENT "${AUTO_GEN_DEV_REG_HEADER_CONTENT}#include \"${item}\"\n")
+endforeach()
+set(AUTO_GEN_DEV_REG_HEADER_CONTENT "${AUTO_GEN_DEV_REG_HEADER_CONTENT}#endif //${AUTO_GEN_DEV_REG_MACRO_ID}\n\n")
+write_file_if_different(${AUTO_GEN_DEV_REG_HEADER} ${AUTO_GEN_DEV_REG_HEADER_CONTENT})
+list(APPEND PROTO_HDRS ${AUTO_GEN_DEV_REG_HEADER})
 
 copy_files("${PROTO_HDRS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 copy_files("${CFG_HRCS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)

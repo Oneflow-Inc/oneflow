@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/vm/string_symbol.h"
+#include "oneflow/core/operator/op_conf_symbol.h"
 
 namespace oneflow {
 
@@ -54,6 +55,12 @@ template<>
 Maybe<StringSymbol> NewSymbol<StringSymbol>(
     int64_t symbol_id, const typename ConstructArgType4Symbol<StringSymbol>::type& data) {
   return std::make_shared<StringSymbol>(symbol_id, data);
+}
+
+template<>
+Maybe<OperatorConfSymbol> NewSymbol<OperatorConfSymbol>(
+    int64_t symbol_id, const typename ConstructArgType4Symbol<OperatorConfSymbol>::type& data) {
+  return std::make_shared<OperatorConfSymbol>(symbol_id, data);
 }
 
 }  // namespace detail

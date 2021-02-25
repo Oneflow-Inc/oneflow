@@ -28,8 +28,9 @@ class AccumulateOp final : public Operator {
 
   void InitFromOpConf() override;
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override {
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override {
     return Maybe<void>::Ok();
   }
   Maybe<void> InferOutputBlobTimeShape(
@@ -40,8 +41,6 @@ class AccumulateOp final : public Operator {
   }
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override { return GenPackedLbi(); }
   LogicalBlobId lbi4obn(const std::string& output_bn) const override { return GenPackedLbi(); }
 };

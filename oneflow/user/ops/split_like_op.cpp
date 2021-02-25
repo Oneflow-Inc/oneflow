@@ -64,16 +64,8 @@ void SetLikeArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
   FOR_RANGE(int32_t, i, 0, user_op_conf.input_size("like")) {
     user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", i);
     CHECK_NOTNULL(like_modifier);
-    like_modifier->set_use_header_only(true);
     like_modifier->set_requires_grad(false);
   }
-}
-
-Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
-  FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
-    *ctx->BatchAxis4ArgNameAndIndex("out", i) = *ctx->BatchAxis4ArgNameAndIndex("like", i);
-  }
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
@@ -163,7 +155,6 @@ REGISTER_USER_OP("split_like")
     .Attr<int64_t>("axis")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn(SetLikeArgModifier)
-    .SetBatchAxisInferFn(InferBatchAxis)
     .SetGetSbpFn(GetSbpSignature);
 
 REGISTER_USER_OP_GRAD("split_like").SetGenBackwardOpConfFn(GenGradOp);

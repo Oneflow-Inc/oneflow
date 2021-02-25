@@ -25,9 +25,9 @@ void OutputOp::InitFromOpConf() {
   EnrollOutputBn("out")->set_is_mutable(true);
 }
 
-Maybe<void> OutputOp::InferBlobDescs(
+Maybe<void> OutputOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   if (in_blob_desc->is_dynamic()) {
@@ -37,14 +37,6 @@ Maybe<void> OutputOp::InferBlobDescs(
                                       parallel_ctx);
     CHECK_OR_RETURN(*out_blob_desc == *in_blob_desc);
   }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> OutputOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  OptInt64* out_batch_axis = BatchAxis4BnInOp("out");
-  InterfaceOpUtil::InferBatchAxis(op_conf().output_conf().blob_conf(), out_batch_axis);
-  CHECK_OR_RETURN(*out_batch_axis == *BatchAxis4BnInOp("in"));
   return Maybe<void>::Ok();
 }
 

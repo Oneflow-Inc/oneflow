@@ -21,12 +21,11 @@ class ModelInitOp : public Operator {
  public:
   void InitFromOpConf() override;
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
@@ -38,9 +37,9 @@ void ModelInitOp::InitFromOpConf() {
   EnrollRepeatedOutputBn("out", false);
 }
 
-Maybe<void> ModelInitOp::InferBlobDescs(
+Maybe<void> ModelInitOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const int64_t num_out = op_conf().model_init_conf().out().size();
   FOR_RANGE(int64_t, i, 0, num_out) {
     const VariableOpConf& original_variable_conf =
@@ -49,12 +48,6 @@ Maybe<void> ModelInitOp::InferBlobDescs(
     out_i->mut_shape() = Shape(original_variable_conf.shape());
     out_i->set_data_type(original_variable_conf.data_type());
   }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> ModelInitOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  for (const std::string& bns : output_bns()) { BatchAxis4BnInOp(bns)->clear_value(); }
   return Maybe<void>::Ok();
 }
 

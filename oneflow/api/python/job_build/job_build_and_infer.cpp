@@ -31,6 +31,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   m.def("CurJobBuildAndInferCtx_Complete", &CurJobBuildAndInferCtx_Complete,
         py::call_guard<py::gil_scoped_release>());
+  m.def("CurJobBuildAndInferCtx_Rebuild", &CurJobBuildAndInferCtx_Rebuild,
+        py::call_guard<py::gil_scoped_release>());
   m.def("CurJobBuildAndInferCtx_HasJobConf", &CurJobBuildAndInferCtx_HasJobConf);
   m.def("CurJobBuildAndInferCtx_AddAndInferMirroredOp",
         &CurJobBuildAndInferCtx_AddAndInferMirroredOp, py::call_guard<py::gil_scoped_release>());
@@ -40,6 +42,19 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair",
         &CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair);
 
+  m.def("JobBuildAndInferCtx_GetSerializedIdListAsStaticShape",
+        &JobBuildAndInferCtx_GetSerializedIdListAsStaticShape);
+  m.def("JobBuildAndInferCtx_GetDataType", &JobBuildAndInferCtx_GetDataType);
+  m.def("JobBuildAndInferCtx_IsDynamic", &JobBuildAndInferCtx_IsDynamic);
+
+  m.def("JobBuildAndInferCtx_DisableBoxing", &JobBuildAndInferCtx_DisableBoxing);
+  m.def("JobBuildAndInferCtx_IsTensorList", &JobBuildAndInferCtx_IsTensorList);
+
+  m.def("JobBuildAndInferCtx_GetSplitAxisFromProducerView",
+        &JobBuildAndInferCtx_GetSplitAxisFromProducerView);
+  m.def("JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView",
+        &JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView);
+
   m.def("CurJobBuildAndInferCtx_AddLossLogicalBlobName",
         &CurJobBuildAndInferCtx_AddLossLogicalBlobName);
 
@@ -48,4 +63,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         &JobBuildAndInferCtx_MirroredBlobGetNumSubLbi);
   m.def("JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi",
         &JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi);
+  m.def("JobBuildAndInferCtx_CheckLbnValidAndExist", &JobBuildAndInferCtx_CheckLbnValidAndExist);
+  m.def("JobBuildAndInferCtx_GetOpBlobLbn", &JobBuildAndInferCtx_GetOpBlobLbn);
 }
