@@ -55,11 +55,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                              [](std::shared_ptr<MirroredTensor>& x) {
                                return std::const_pointer_cast<Device>(x->device());
                              })
+      .def_property_readonly("data", []() {})
       .def("get_dtype",
            [](std::shared_ptr<MirroredTensor>& x) { return static_cast<int>(x->dtype()); })
       .def("size", &MirroredTensor::shape)
-      .def("storage", []() {})
-      .def("data", []() {});
+      .def("storage", []() {});
 
   py::class_<ConsistentTensor, std::shared_ptr<ConsistentTensor>>(m, "ConsistentTensor")
       .def(py::init([](const std::shared_ptr<Shape>& shape, DataType dtype,
