@@ -70,9 +70,7 @@ async function start() {
     throw 'No GPU runner available for now';
 }
 
-try {
-    start()
-}
-catch (error) {
+start().catch(error => {
+    const core = require('@actions/core');
     core.setFailed(error.message);
-}
+})
