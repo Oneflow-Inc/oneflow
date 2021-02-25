@@ -67,12 +67,6 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InterfaceOpUtil::InferBatchAxis(const InterfaceBlobConf& blob_conf,
-                                            OptInt64* batch_axis) {
-  *batch_axis = blob_conf.batch_axis();
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> InterfaceOpUtil::GetInputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
                                                         const PbRpf<std::string>& input_bns,
                                                         const PbRpf<std::string>& output_bns,
@@ -104,7 +98,6 @@ Maybe<void> InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
   } else {
     OF_UNIMPLEMENTED();
   }
-  *blob_conf->mutable_batch_axis() = parallel_blob_conf.batch_axis();
   return Maybe<void>::Ok();
 }
 

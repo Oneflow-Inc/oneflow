@@ -52,7 +52,6 @@ REGISTER_USER_OP("dynamic_loss_scale_schedule")
     .Attr<int64_t>("increment_period", 2000)
     .Attr<float>("multiplier", 2.0)
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetInputArgModifyFn(InputArgModifierFn);
 
 }  // namespace oneflow

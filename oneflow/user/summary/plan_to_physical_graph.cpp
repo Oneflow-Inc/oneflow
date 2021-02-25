@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
 
@@ -54,13 +55,7 @@ void PlanToPhysicalGraphFile(const Plan& plan) {
     const OperatorConf& op_conf =
         task.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf();
     DeviceType device_type = Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task.thrd_id());
-    if (device_type == DeviceType::kGPU) {
-      node->set_device("gpu");
-    } else if (device_type == DeviceType::kCPU) {
-      node->set_device("cpu");
-    } else {
-      // do nothing
-    }
+    node->set_device(CHECK_JUST(DeviceTag4DeviceType(device_type)));
     if (op_conf.has_user_conf()) {
       const UserOpConf& user_op = op_conf.user_conf();
       node->set_op(user_op.op_type_name());

@@ -425,7 +425,6 @@ message XrtLaunchOpConf {
   map<string, bool> input_mutability = 5;
   // Mapping launch op's input and output names into function.
   map<string, string> input_output_mapping = 6;
-  map<string, OptInt64> batch_axis = 7;
   // Sbp signatures of each function node.
   map<string, SbpSignature> sbp_signatures = 8;
   optional bool model_update = 9 [default = false];
@@ -468,7 +467,6 @@ message DynamicBinaryConcatOpConf {
   required string out = 2;
   required DataType out_data_type = 3;
   required ShapeProto out_shape = 4;
-  required OptInt64 out_batch_axis = 5;
   required SbpParallel out_sbp = 6;
 }
 

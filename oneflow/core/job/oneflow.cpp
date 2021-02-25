@@ -545,7 +545,6 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
                                        .at(op_name)
                                        .bn_in_op2sbp_parallel()
                                        .at(obn);
-  *blob_conf->mutable_batch_axis() = job.helper().lbn2batch_axis().at(lbn);
 }
 
 void FilterOpName2ParallelBlobConf(
