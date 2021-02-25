@@ -66,8 +66,8 @@ class Tensor {
   // Getters
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual DataType dtype() const = 0;
-  virtual const Maybe<const ParallelDesc> parallel_desc() const = 0;
-  virtual const Maybe<bool> is_consistent() const = 0;
+  virtual Maybe<const ParallelDesc> parallel_desc() const = 0;
+  virtual Maybe<bool> is_consistent() const = 0;
   virtual bool is_lazy() const = 0;
   virtual Maybe<DeterminedTensor> DetermineAndDestroySelf() = 0;
 
@@ -90,23 +90,23 @@ class UndeterminedTensor final : public Tensor {
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   void set_shape(const std::shared_ptr<const Shape>& shape) { shape_ = shape; }
 
-  const Maybe<bool> is_consistent() const override { return consistent_; }
+  Maybe<bool> is_consistent() const override { return consistent_; }
   void set_consistent(bool consistent) { consistent_ = consistent; }
 
   DataType dtype() const override { return dtype_; }
   void set_dtype(const DataType& dtype) { dtype_ = dtype; }
 
-  const Maybe<const compatible_py::Distribute> distribute() const;
+  Maybe<const compatible_py::Distribute> distribute() const;
   const void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) {
     distribute_ = distribute;
   }
 
-  const Maybe<const ParallelDesc> parallel_desc() const override;
+  Maybe<const ParallelDesc> parallel_desc() const override;
   void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
     parallel_desc_ = parallel_desc;
   }
 
-  const Maybe<const Device> device() const;
+  Maybe<const Device> device() const;
   void set_device(const std::shared_ptr<const Device>& device) { device_ = device; }
 
   bool is_lazy() const override { return lazy_; }
@@ -145,10 +145,10 @@ class MirroredTensor final : public DeterminedTensor {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   DataType dtype() const override { return impl_->dtype(); }
-  const Maybe<const ParallelDesc> parallel_desc() const override { return impl_->parallel_desc(); }
+  Maybe<const ParallelDesc> parallel_desc() const override { return impl_->parallel_desc(); }
   const std::shared_ptr<const Device>& device() const { return impl_->device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
-  const Maybe<bool> is_consistent() const override { return false; }
+  Maybe<bool> is_consistent() const override { return false; }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
@@ -176,12 +176,12 @@ class ConsistentTensor final : public DeterminedTensor {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   DataType dtype() const override { return impl_->dtype(); }
-  const Maybe<const ParallelDesc> parallel_desc() const override { return impl_->parallel_desc(); }
+  Maybe<const ParallelDesc> parallel_desc() const override { return impl_->parallel_desc(); }
   const std::shared_ptr<const compatible_py::Distribute>& distribute() const {
     return impl_->distribute();
   }
   bool is_lazy() const override { return impl_->is_lazy(); }
-  const Maybe<bool> is_consistent() const override { return true; }
+  Maybe<bool> is_consistent() const override { return true; }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
