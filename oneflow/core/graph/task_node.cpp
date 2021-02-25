@@ -239,13 +239,21 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   }
 }
 
-int64_t TaskNode::MemZoneId121() const {
-  const IDMgr* id_mgr = Global<IDMgr>::Get();
-  if (device_type() == DeviceType::kCPU) {
-    return id_mgr->CpuMemZoneId();
-  } else {
-    return id_mgr->GpuMemZoneId(id_mgr->GetGpuPhyIdFromThrdId(thrd_id_));
+MemZoneId TaskNode::MemZoneId121() const {
+  MemZoneId mem_zone_id;
+  switch (device_type()) {
+    case DeviceType::kCPU: {
+      mem_zone_id = MemZoneIdUtil::GetCpuMemZoneId();
+      break;
+    }
+    case DeviceType::kGPU: {
+      mem_zone_id =
+          MemZoneIdUtil::GetDeviceMemZoneId(DeviceType::kGPU, static_cast<uint32_t>(thrd_id_));
+      break;
+    }
+    default: { UNIMPLEMENTED(); }
   }
+  return mem_zone_id;
 }
 
 void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
