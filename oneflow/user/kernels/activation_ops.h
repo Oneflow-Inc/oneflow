@@ -117,14 +117,12 @@ struct HardtanhGradFunctor {
                                                  "dx", "x", "dy");
 
 #define REGISTER_HARDSWISH_KERNEL(device, dtype)                                                 \
-  \ 
   REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(device, "hardswish", HardswishFunctor, dtype, \
                                                    dtype, "out", "in");                          \
   REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(                                             \
       device, "hardswish_grad", HardswishGradFunctor, dtype, dtype, dtype, "dx", "x", "dy");
 
 #define REGISTER_HARDSIGMOID_KERNEL(device, dtype)                                            \
-  \ 
   REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(device, "hardsigmoid", HardsigmoidFunctor, \
                                                    dtype, dtype, "out", "in");                \
   REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(                                          \
