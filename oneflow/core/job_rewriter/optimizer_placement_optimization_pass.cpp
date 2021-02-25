@@ -66,13 +66,7 @@ ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
   device_name += std::to_string(CHECK_JUST(pd.DeviceId4ParallelId(parallel_id)));
   ParallelConf parallel_conf;
   *parallel_conf.mutable_device_name()->Add() = device_name;
-  if (pd.device_type() == DeviceType::kGPU) {
-    parallel_conf.set_device_tag("gpu");
-  } else if (pd.device_type() == DeviceType::kCPU) {
-    parallel_conf.set_device_tag("cpu");
-  } else {
-    UNIMPLEMENTED();
-  }
+  parallel_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(pd.device_type())));
   return parallel_conf;
 }
 
