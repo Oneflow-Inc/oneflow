@@ -17,19 +17,20 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename FunctorT, typename T>
-struct UnaryElemwiseXpuFunctor<DeviceType::kGPU, FunctorT, T> final {
-  void operator()(DeviceCtx* ctx, int64_t elem_cnt, T* out, const T* in, FunctorT functor) {
-    OF_CUDA_CHECK(cuda::elementwise::Unary(functor, elem_cnt, out, in, ctx->cuda_stream()));
+template<typename FunctorT, typename OutputT, typename InputA>
+struct UnaryElemwiseXpuFunctor<DeviceType::kGPU, FunctorT, OutputT, InputA> final {
+  void operator()(DeviceCtx* ctx, int64_t elem_cnt, OutputT* out, const InputA* input_a,
+                  FunctorT functor) {
+    OF_CUDA_CHECK(cuda::elementwise::Unary(functor, elem_cnt, out, input_a, ctx->cuda_stream()));
   }
 };
 
-template<typename FunctorT, typename T>
-struct BinaryElemwiseXpuFunctor<DeviceType::kGPU, FunctorT, T> final {
-  void operator()(DeviceCtx* ctx, int64_t elem_cnt, T* out, const T* in_1, const T* in_2,
-                  FunctorT functor) {
+template<typename FunctorT, typename OutputT, typename InputA, typename InputB>
+struct BinaryElemwiseXpuFunctor<DeviceType::kGPU, FunctorT, OutputT, InputA, InputB> final {
+  void operator()(DeviceCtx* ctx, int64_t elem_cnt, OutputT* out, const InputA* input_a,
+                  const InputB* input_b, FunctorT functor) {
     OF_CUDA_CHECK(
-        cuda::elementwise::Binary(functor, elem_cnt, out, in_1, in_2, ctx->cuda_stream()));
+        cuda::elementwise::Binary(functor, elem_cnt, out, input_a, input_b, ctx->cuda_stream()));
   }
 };
 

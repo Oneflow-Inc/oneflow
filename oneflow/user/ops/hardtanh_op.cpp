@@ -21,16 +21,16 @@ namespace {
 
 REGISTER_USER_OP("hardtanh")
     .Input("in")
-    .Attr<float>("min_val")
-    .Attr<float>("max_val")
+    .Attr<double>("min_val")
+    .Attr<double>("max_val")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       *out_shape = *in_shape;
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-      float min_val = ctx->Attr<float>("min_val");
-      float max_val = ctx->Attr<float>("max_val");
+      double min_val = ctx->Attr<double>("min_val");
+      double max_val = ctx->Attr<double>("max_val");
       CHECK_LE(min_val, max_val);
       return Maybe<void>::Ok();
     })
@@ -48,8 +48,8 @@ REGISTER_USER_OP("hardtanh")
 REGISTER_USER_OP("hardtanh_grad")
     .Input("y")
     .Input("dy")
-    .Attr<float>("min_val")
-    .Attr<float>("max_val")
+    .Attr<double>("min_val")
+    .Attr<double>("max_val")
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
@@ -57,8 +57,8 @@ REGISTER_USER_OP("hardtanh_grad")
       Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
       CHECK(*dy_shape == *y_shape);
       *dx_shape = *dy_shape;
-      float min_val = ctx->Attr<float>("min_val");
-      float max_val = ctx->Attr<float>("max_val");
+      double min_val = ctx->Attr<double>("min_val");
+      double max_val = ctx->Attr<double>("max_val");
       CHECK_LE(min_val, max_val);
       return Maybe<void>::Ok();
     })
@@ -80,8 +80,8 @@ REGISTER_USER_OP_GRAD("hardtanh").SetBackwardOpConfGenFn([](user_op::BackwardOpC
     return builder.OpTypeName("hardtanh_grad")
         .InputBind("y", ctx->FwOp().output("out", 0))
         .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-        .Attr("min_val", ctx->FwOp().attr<float>("min_val"))
-        .Attr("max_val", ctx->FwOp().attr<float>("max_val"))
+        .Attr("min_val", ctx->FwOp().attr<double>("min_val"))
+        .Attr("max_val", ctx->FwOp().attr<double>("max_val"))
         .Output("dx")
         .Build();
   });

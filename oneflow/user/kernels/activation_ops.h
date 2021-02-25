@@ -109,71 +109,34 @@ struct HardtanhGradFunctor {
   const T max_val;
 };
 
-#define REGISTER_ELU_KERNEL(device, dtype)                                              \
-  REGISTER_USER_KERNEL("elu")                                                           \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                              \
-        return new UnaryElemwiseXpuKernel<device, EluFunctor<dtype>, dtype>(            \
-            [](user_op::KernelComputeContext* ctx) {                                    \
-              return EluFunctor<dtype>(ctx->Attr<float>("alpha"));                      \
-            },                                                                          \
-            "out", "in");                                                               \
-      })                                                                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("elu_grad")                                                      \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                              \
-        return new BinaryElemwiseXpuKernel<device, EluGradFunctor<dtype>, dtype>(       \
-            [](user_op::KernelComputeContext* ctx) {                                    \
-              return EluGradFunctor<dtype>(ctx->Attr<float>("alpha"));                  \
-            },                                                                          \
-            "dx", "x", "dy");                                                           \
-      })                                                                                \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_ELU_KERNEL(device, dtype)                                                        \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITH_ATTR(                                                  \
+      device, "elu", EluFunctor, ctx->Attr<double>("alpha"), dtype, dtype, "out", "in");          \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITH_ATTR(device, "elu_grad", EluGradFunctor,              \
+                                                 ctx->Attr<double>("alpha"), dtype, dtype, dtype, \
+                                                 "dx", "x", "dy");
 
 #define REGISTER_HARDSWISH_KERNEL(device, dtype)                                                 \
-  REGISTER_USER_KERNEL("hardswish")                                                              \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                       \
-        return new UnaryElemwiseXpuKernel<device, HardswishFunctor<dtype>, dtype>(               \
-            [](user_op::KernelComputeContext* ctx) { return HardswishFunctor<dtype>(); }, "out", \
-            "in");                                                                               \
-      })                                                                                         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));          \
-  REGISTER_USER_KERNEL("hardswish_grad")                                                         \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                       \
-        return new BinaryElemwiseXpuKernel<device, HardswishGradFunctor<dtype>, dtype>(          \
-            [](user_op::KernelComputeContext* ctx) { return HardswishGradFunctor<dtype>(); },    \
-            "dx", "x", "dy");                                                                    \
-      })                                                                                         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+  \ 
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(device, "hardswish", HardswishFunctor, dtype, \
+                                                   dtype, "out", "in");                          \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(                                             \
+      device, "hardswish_grad", HardswishGradFunctor, dtype, dtype, dtype, "dx", "x", "dy");
 
-#define REGISTER_HARDSIGMOID_KERNEL(device, dtype)                                                 \
-  REGISTER_USER_KERNEL("hardsigmoid")                                                              \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                         \
-        return new UnaryElemwiseXpuKernel<device, HardsigmoidFunctor<dtype>, dtype>(               \
-            [](user_op::KernelComputeContext* ctx) { return HardsigmoidFunctor<dtype>(); }, "out", \
-            "in");                                                                                 \
-      })                                                                                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                         \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));            \
-  REGISTER_USER_KERNEL("hardsigmoid_grad")                                                         \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                         \
-        return new BinaryElemwiseXpuKernel<device, HardsigmoidGradFunctor<dtype>, dtype>(          \
-            [](user_op::KernelComputeContext* ctx) { return HardsigmoidGradFunctor<dtype>(); },    \
-            "dx", "x", "dy");                                                                      \
-      })                                                                                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                         \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_HARDSIGMOID_KERNEL(device, dtype)                                            \
+  \ 
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(device, "hardsigmoid", HardsigmoidFunctor, \
+                                                   dtype, dtype, "out", "in");                \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(                                          \
+      device, "hardsigmoid_grad", HardsigmoidGradFunctor, dtype, dtype, dtype, "dx", "x", "dy");
 
 #define REGISTER_HARDTANH_KERNEL(device, dtype)                                                 \
   REGISTER_USER_KERNEL("hardtanh")                                                              \
       .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                      \
-        return new UnaryElemwiseXpuKernel<device, HardtanhFunctor<dtype>, dtype>(               \
+        return new UnaryElemwiseXpuKernel<device, HardtanhFunctor<dtype>, dtype, dtype>(        \
             [](user_op::KernelComputeContext* ctx) {                                            \
-              return HardtanhFunctor<dtype>(ctx->Attr<float>("min_val"),                        \
-                                            ctx->Attr<float>("max_val"));                       \
+              return HardtanhFunctor<dtype>(ctx->Attr<double>("min_val"),                       \
+                                            ctx->Attr<double>("max_val"));                      \
             },                                                                                  \
             "out", "in");                                                                       \
       })                                                                                        \
@@ -186,10 +149,11 @@ struct HardtanhGradFunctor {
       });                                                                                       \
   REGISTER_USER_KERNEL("hardtanh_grad")                                                         \
       .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                      \
-        return new BinaryElemwiseXpuKernel<device, HardtanhGradFunctor<dtype>, dtype>(          \
+        return new BinaryElemwiseXpuKernel<device, HardtanhGradFunctor<dtype>, dtype, dtype,    \
+                                           dtype>(                                              \
             [](user_op::KernelComputeContext* ctx) {                                            \
-              return HardtanhGradFunctor<dtype>(ctx->Attr<float>("min_val"),                    \
-                                                ctx->Attr<float>("max_val"));                   \
+              return HardtanhGradFunctor<dtype>(ctx->Attr<double>("min_val"),                   \
+                                                ctx->Attr<double>("max_val"));                  \
             },                                                                                  \
             "dx", "y", "dy");                                                                   \
       })                                                                                        \

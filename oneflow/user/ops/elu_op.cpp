@@ -21,7 +21,7 @@ namespace {
 
 REGISTER_USER_OP("elu")
     .Input("in")
-    .Attr<float>("alpha")
+    .Attr<double>("alpha")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
@@ -42,7 +42,7 @@ REGISTER_USER_OP("elu")
 REGISTER_USER_OP("elu_grad")
     .Input("x")
     .Input("dy")
-    .Attr<float>("alpha")
+    .Attr<double>("alpha")
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
@@ -70,7 +70,7 @@ REGISTER_USER_OP_GRAD("elu").SetBackwardOpConfGenFn([](user_op::BackwardOpConfCo
     return builder.OpTypeName("elu_grad")
         .InputBind("x", ctx->FwOp().input("in", 0))
         .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-        .Attr("alpha", ctx->FwOp().attr<float>("alpha"))
+        .Attr("alpha", ctx->FwOp().attr<double>("alpha"))
         .Output("dx")
         .Build();
   });
