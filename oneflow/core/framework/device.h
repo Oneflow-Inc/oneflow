@@ -13,20 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/blob_trait.h"
+#ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
+#define ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
+
+#include <string>
 
 namespace oneflow {
 
-namespace compatible_py {
+class Device final {
+ public:
+  Device(const std::string& type, int64_t device_id) : type_(type), device_id_(device_id) {}
+  Device(const Device&) = default;
+  Device(Device&&) = default;
+  ~Device() = default;
+  const std::string& type() const { return type_; }
+  int64_t device_id() const { return device_id_; }
 
-std::shared_ptr<Shape> BlobHeaderTrait::static_shape() const { UNIMPLEMENTED(); }
-std::shared_ptr<Shape> BlobHeaderTrait::shape() const { UNIMPLEMENTED(); }
-std::shared_ptr<std::vector<std::shared_ptr<Shape>>> BlobHeaderTrait::shape_list() const {
-  UNIMPLEMENTED();
-}
-DataType BlobHeaderTrait::dtype() const { UNIMPLEMENTED(); }
-bool BlobHeaderTrait::is_tensor_list() const { UNIMPLEMENTED(); }
-
-}  // namespace compatible_py
+ private:
+  const std::string type_;
+  const int64_t device_id_;
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
