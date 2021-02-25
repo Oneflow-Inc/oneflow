@@ -53,8 +53,8 @@ inline StreamIndexGenerator* StreamIndexGeneratorManager::GetGenerator(ProcessId
   generator_key_t key = std::make_pair(process_id, device_id);
   auto iter = generators_.find(key);
   if (iter == generators_.end()) {
-    iter =
-        generators_.emplace(key, NewObj<int, StreamIndexGenerator>(device_id.device_type())).first;
+    iter = generators_.emplace(key, nullptr).first;
+    iter->second.reset(NewObj<int, StreamIndexGenerator>(device_id.device_type()));
   }
   return iter->second.get();
 }

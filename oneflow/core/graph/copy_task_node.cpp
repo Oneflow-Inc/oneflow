@@ -65,7 +65,6 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int6
   DeviceId device_id{DeviceType::kGPU, static_cast<uint32_t>(dev_phy_id)};
   auto* stream_index_generator =
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id, device_id);
-  CHECK_NOTNULL(stream_index_generator);
   uint32_t stream_index = 0;
   if (copy_type == CopyHdOpConf::H2D) {
     stream_index = stream_index_generator->GenerateH2DStreamIndex();
