@@ -260,11 +260,6 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
 
       // Set input and output mapping from launch op to function.
       (*launch_conf->mutable_input_output_mapping())[arg_value] = arg_proto.value();
-
-      // Store the batch axis that have batch dimension, so that it's no
-      // need to infer `HasBatchAxis4Lbn` for `XrtLaunch` operators.
-      auto *batch_axis = launch_conf->mutable_batch_axis();
-      (*batch_axis)[arg_value] = builder_->BatchAxis4Lbn(arg_value);
     }
 
     CHECK_GT(folded_nodes_[i].size(), 0);
@@ -349,8 +344,6 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
 
       std::string fixed_blob_name = absl::StrCat(launch_op_name, "/out_", index);
       fixedup_names_.emplace(arg.name(), fixed_blob_name);
-      // Append to `batch_axis`
-      builder_->AddBatchAxis4Lbn(fixed_blob_name, builder_->BatchAxis4Lbn(arg.name()));
       // Fix end input blob name
       const XrtNode *end = edge->end();
       if (end->type() != _XrtLaunchOpType) {

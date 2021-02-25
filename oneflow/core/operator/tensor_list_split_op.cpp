@@ -32,8 +32,9 @@ class TensorListSplitOp final : public Operator {
     });
   }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override {
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override {
     const BlobDesc* in_desc = GetBlobDesc4BnInOp(SoleIbn());
     CHECK_OR_RETURN(in_desc->is_tensor_list());
     CHECK_GT_OR_RETURN(in_desc->shape().NumAxes(), 1);
@@ -57,12 +58,6 @@ class TensorListSplitOp final : public Operator {
         .Split(input_bns(), 0)
         .Split(output_bns(), 0)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp(SoleIbn()); }
     return Maybe<void>::Ok();
   }
 };

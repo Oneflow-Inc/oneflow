@@ -24,16 +24,10 @@ void DeviceTickOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-Maybe<void> DeviceTickOp::InferBlobDescs(
+Maybe<void> DeviceTickOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DeviceTickOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 

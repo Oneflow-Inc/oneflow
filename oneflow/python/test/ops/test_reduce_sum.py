@@ -77,7 +77,7 @@ class TestReduceSum(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["data_type"] = ["float32", "float16"]
-        arg_dict["input_shape"] = [(64, 64, 64)]
+        arg_dict["input_shape"] = [(2, 4, 8)]
         arg_dict["axis"] = [None, [1], [0, 2]]
         arg_dict["keepdims"] = [True, False]
         for arg in GenArgList(arg_dict):
@@ -87,7 +87,7 @@ class TestReduceSum(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["data_type"] = ["float32", "float16"]
-        arg_dict["input_shape"] = [(1024 * 64, 25)]
+        arg_dict["input_shape"] = [(32, 2)]
         arg_dict["axis"] = [[0]]
         arg_dict["keepdims"] = [True, False]
         for arg in GenArgList(arg_dict):
@@ -97,7 +97,7 @@ class TestReduceSum(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["data_type"] = ["float32", "float16"]
-        arg_dict["input_shape"] = [(25, 1024 * 1024)]
+        arg_dict["input_shape"] = [(2, 64)]
         arg_dict["axis"] = [[1]]
         arg_dict["keepdims"] = [True, False]
         for arg in GenArgList(arg_dict):
@@ -107,13 +107,13 @@ class TestReduceSum(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["data_type"] = ["float32", "float16"]
-        arg_dict["input_shape"] = [(1024 * 64, 25)]
+        arg_dict["input_shape"] = [(64, 2)]
         arg_dict["axis"] = [[0, 1]]
         arg_dict["keepdims"] = [True, False]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
-    def test_batch_axis_reduced(test_case):
+    def test_split_axis_reduced(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -122,7 +122,6 @@ class TestReduceSum(flow.unittest.TestCase):
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_sum(x)
             test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
-            test_case.assertTrue(y.batch_axis == flow.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 

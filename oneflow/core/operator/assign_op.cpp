@@ -24,14 +24,11 @@ class AssignOp final : public Operator {
   ~AssignOp() override = default;
 
   void InitFromOpConf() override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
-  }
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
@@ -49,9 +46,9 @@ std::string DebugString(const BlobDesc& blob_desc) {
   return blob_desc_proto.DebugString();
 }
 
-Maybe<void> AssignOp::InferBlobDescs(
+Maybe<void> AssignOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   CHECK_OR_RETURN(*GetBlobDesc4BnInOp("ref") == *GetBlobDesc4BnInOp("value"))
       << "\nref_blob_desc: " << DebugString(*GetBlobDesc4BnInOp("ref"))
       << "\nvalue_blob_desc: " << DebugString(*GetBlobDesc4BnInOp("value"));

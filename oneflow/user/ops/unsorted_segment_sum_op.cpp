@@ -48,26 +48,6 @@ REGISTER_USER_OP("unsorted_segment_sum")
       CHECK_NOTNULL(segment_ids_modifier);
       segment_ids_modifier->set_requires_grad(false);
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      const auto axis = ctx->Attr<int64_t>("axis");
-      const auto data_batch_axis = ctx->BatchAxis4ArgNameAndIndex("data", 0);
-      const auto out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
-      const auto segment_ids_num_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("segment_ids", 0).shape().NumAxes();
-      if (data_batch_axis->has_value()) {
-        if (data_batch_axis->value() < axis) {
-          out_batch_axis->set_value(data_batch_axis->value());
-        } else if (data_batch_axis->value() >= axis
-                   && data_batch_axis->value() < (axis + segment_ids_num_axes)) {
-          out_batch_axis->clear_value();
-        } else if (data_batch_axis->value() >= segment_ids_num_axes) {
-          out_batch_axis->set_value(data_batch_axis->value() - segment_ids_num_axes + 1);
-        }
-      } else {
-        ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
-      }
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int64_t data_num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("data", 0).shape().NumAxes();
@@ -143,10 +123,6 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
       *out = *like;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);
-      return Maybe<void>::Ok();
-    })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* segment_ids_modifier = GetInputArgModifierFn("segment_ids", 0);
@@ -154,7 +130,6 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
       segment_ids_modifier->set_requires_grad(false);
       user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
       CHECK_NOTNULL(like_modifier);
-      like_modifier->set_use_header_only(true);
       like_modifier->set_requires_grad(false);
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

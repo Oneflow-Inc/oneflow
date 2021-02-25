@@ -28,17 +28,12 @@ LogicalNode* CallbackNotifyOp::NewProperLogicalNode() const {
   return new CallbackNotifyLogicalNode();
 }
 
-Maybe<void> CallbackNotifyOp::InferBlobDescs(
+Maybe<void> CallbackNotifyOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   CHECK_OR_RETURN(GetBlobDesc4BnInOp("in")->shape() == Shape({1}));
   CHECK_OR_RETURN(IsIntegralDataType(GetBlobDesc4BnInOp("in")->data_type()));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CallbackNotifyOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
   return Maybe<void>::Ok();
 }
 

@@ -25,9 +25,9 @@ void ReentrantLockOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-Maybe<void> ReentrantLockOp::InferBlobDescs(
+Maybe<void> ReentrantLockOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->mut_shape() = Shape({1});
@@ -35,11 +35,6 @@ Maybe<void> ReentrantLockOp::InferBlobDescs(
   CHECK_OR_RETURN(IsIntegralDataType(data_type));
   out->set_data_type(data_type);
   return Maybe<void>::Ok();
-}
-
-Maybe<void> ReentrantLockOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  return NaiveInferBatchAxis(BatchAxis4BnInOp);
 }
 
 Maybe<void> ReentrantLockOp::GetSbpSignatures(

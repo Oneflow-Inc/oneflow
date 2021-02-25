@@ -144,7 +144,7 @@ def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
 
 def _MakeInputBlobObject(arg_blob_def):
     input_op_conf, lbi = _MakeInputOpConfAndRetLbi(arg_blob_def)
-    bn_in_op2blob_object = {}
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
 
     def BuildInputInstruction(builder):
         op_attribute = arg_blob_def.EagerAddAndInferOp(input_op_conf)

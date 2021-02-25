@@ -24,9 +24,9 @@ class DynamicReshapeOp final : public Operator {
     EnrollInputBn("in");
     EnrollOutputBn("out")->set_const_inplace_ibn("in");
   }
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx,
-                             const SbpSignature* sbp_signature) const {
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override {
     const DynamicReshapeOpConf& conf = op_conf().dynamic_reshape_conf();
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
     BlobDesc* out = GetBlobDesc4BnInOp("out");
@@ -70,10 +70,6 @@ class DynamicReshapeOp final : public Operator {
   }
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
-  }
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override {
@@ -93,21 +89,18 @@ class DynamicReshapeLikeOp final : public Operator {
     CHECK(op_conf().has_dynamic_reshape_like_conf());
     EnrollInputBn("x");
     EnrollOutputBn("y");
-    EnrollInputBn("like", false)->set_use_header_only(true);
+    EnrollInputBn("like", false);
   }
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const {
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override {
     CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("x")->shape().elem_cnt(),
                        GetBlobDesc4BnInOp("like")->shape().elem_cnt());
-    GetBlobDesc4BnInOp("y")->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
+    GetBlobDesc4BnInOp("y")->CopyFrom(*GetBlobDesc4BnInOp("like"));
     return Maybe<void>::Ok();
   }
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
-  }
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override {

@@ -47,7 +47,7 @@ void DecodeOFRecordOp::VirtualGenKernelConf(
   kernel_conf->mutable_decode_ofrecord_conf()->set_random_seed(NewRandomSeed());
 }
 
-Maybe<void> DecodeOFRecordOp::InferBlobDescs(
+Maybe<void> DecodeOFRecordOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   int64_t batch_size = op_conf().decode_ofrecord_conf().batch_size();
@@ -76,16 +76,6 @@ LogicalBlobId DecodeOFRecordOp::lbi4obn(const std::string& output_bn) const {
   ret.set_blob_name(
       op_conf().decode_ofrecord_conf().blob(oneflow_cast<int32_t>(output_bn.substr(4))).name());
   return ret;
-}
-
-Maybe<void> DecodeOFRecordOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  if (op_conf().decode_ofrecord_conf().has_in()) {
-    CHECK_OR_RETURN(BatchAxis4BnInOp(SoleIbn())->has_value());
-    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp(SoleIbn())->value(), 0);
-  }
-  for (const auto& obn : output_bns()) { BatchAxis4BnInOp(obn)->set_value(0); }
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> DecodeOFRecordOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

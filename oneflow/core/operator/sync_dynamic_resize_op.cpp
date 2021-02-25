@@ -29,8 +29,9 @@ class SyncDynamicResizeOp : public Operator {
     EnrollOutputBn("out")->set_header_infered_before_compute(false);
   }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override {
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override {
     const SyncDynamicResizeOpConf& conf = op_conf().sync_dynamic_resize_conf();
     CHECK_EQ_OR_RETURN(conf.axis(), 0);
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
@@ -40,12 +41,6 @@ class SyncDynamicResizeOp : public Operator {
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     *out = *in;
     out->set_is_dynamic(true);
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
     return Maybe<void>::Ok();
   }
 

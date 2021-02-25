@@ -120,9 +120,6 @@ def _compare_gather_with_tf(
         params, indices, axis, batch_dims, device_type, mirrored, compare_dy
     )
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-
     if mirrored:
         of_y = gather_fn([params], [indices]).get().numpy_list()[0]
     else:

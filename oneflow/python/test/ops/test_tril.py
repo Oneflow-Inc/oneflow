@@ -15,6 +15,8 @@ limitations under the License.
 """
 import unittest
 from collections import OrderedDict
+
+import os
 import numpy as np
 import oneflow as flow
 from test_util import (
@@ -64,8 +66,6 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal, fill_value):
             flow.watch_diff(out, test_global_storage.Setter("out_diff"))
             return out
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     x = np.random.randint(low=0, high=100, size=shape)
     test_tril_fw_bw_job(x.astype(np_type)).get()
 
@@ -94,18 +94,13 @@ def _test_tril_fw_bw(test_case, device, shape, type_name, diagonal, fill_value):
 
 @flow.unittest.skip_unless_1n1d()
 class TestTril(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_tril_fw_bw(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "gpu"]
-        arg_dict["type_name"] = [
-            "float32",
-            "float16",
-            "double",
-            "int32",
-            "int64",
-        ]
-        arg_dict["shape"] = [(6, 6), (3, 6, 8)]
-        arg_dict["diagonal"] = [-8, -1, 0, 1, 8]
+        arg_dict["type_name"] = ["float32", "float16", "double", "int32", "int64"]
+        arg_dict["shape"] = [(3, 6, 8)]
+        arg_dict["diagonal"] = [-8, -1, 0, 8]
         arg_dict["fill_value"] = [1.0, 0]
         for arg in GenArgDict(arg_dict):
             if arg["device"] == "cpu" and arg["type_name"] == "float16":
