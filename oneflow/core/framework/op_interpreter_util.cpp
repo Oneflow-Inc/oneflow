@@ -50,12 +50,6 @@ typedef HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>> Bn2Blob
   return OpInterpUtil::AddBuiltinOpAndInferOpAttribute(op_conf, is_mirrored_strategy_enabled);
 }
 
-/*static*/ std::string OpInterpUtil::GetJobNameScopePrefix(const std::shared_ptr<Session>& session,
-                                                           const std::string& job_name) {
-  // TODO
-  return std::string("");
-}
-
 /*static*/ OperatorConf&& OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr* op_expr) {
   OperatorConf op_conf;
   op_expr->BuildOpConf(&op_conf);
@@ -64,16 +58,47 @@ typedef HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>> Bn2Blob
 
 /*static*/ OperatorConf&& OpInterpUtil::GenModelInitOpConf(const OperatorConf& variable_conf) {
   OperatorConf model_init_op_conf;
+  model_init_op_conf.set_name("model_init");
+  model_init_op_conf.set_device_tag("cpu");
+  model_init_op_conf.mutable_model_init_conf()->mutable_out()->Add()->assign("out_0");
+  model_init_op_conf.mutable_model_init_conf()->mutable_variable_op_name()->Add()->assign(
+      variable_conf.name());
+  model_init_op_conf.mutable_model_init_conf()->mutable_original_variable_conf()->Add()->CopyFrom(
+      variable_conf);
   return std::move(model_init_op_conf);
 }
 
 /*static*/ OperatorConf&& OpInterpUtil::GenModelIOPathInputOpConf() {
   OperatorConf path_input_op_conf;
+  path_input_op_conf.set_name("model_io_path_input");
+  path_input_op_conf.set_device_tag("cpu");
+  path_input_op_conf.mutable_input_conf()->set_out("out");
+
+  InterfaceBlobConf blob_conf;
+  blob_conf.mutable_shape()->mutable_dim()->Add(65536);
+  blob_conf.set_data_type(kInt8);
+  blob_conf.mutable_batch_axis()->set_value(0);
+  blob_conf.set_is_dynamic(true);
+
+  path_input_op_conf.mutable_input_conf()->mutable_blob_conf()->CopyFrom(blob_conf);
   return std::move(path_input_op_conf);
 }
 
-/*static*/ OperatorConf&& OpInterpUtil::GenModelLoadOpConf() {
+/*static*/ OperatorConf&& OpInterpUtil::GenModelLoadOpConf(const OperatorConf& variable_conf,
+                                                           const OperatorConf& path_input_op_conf) {
   OperatorConf model_load_op_conf;
+  model_load_op_conf.set_name("model_load");
+  model_load_op_conf.set_device_tag("cpu");
+
+  CHECK(path_input_op_conf.has_model_init_conf());
+  std::string path =
+      path_input_op_conf.name() + "/" + path_input_op_conf.model_init_conf().out()[0];
+  model_load_op_conf.mutable_model_load_conf()->set_path(path);
+  model_load_op_conf.mutable_model_load_conf()->mutable_out()->Add()->assign("out_0");
+  model_load_op_conf.mutable_model_load_conf()->mutable_variable_op_name()->Add()->assign(
+      variable_conf.name());
+  model_load_op_conf.mutable_model_load_conf()->mutable_original_variable_conf()->Add()->CopyFrom(
+      variable_conf);
   return std::move(model_load_op_conf);
 }
 
@@ -128,7 +153,7 @@ OpInterpUtil::BuildFeedPathInstruction(const std::shared_ptr<Bn2BlobObjectMap>& 
   auto _BuildFeedPathInstruction = BuildFeedPathInstruction(bn2blob_object);
 
   std::shared_ptr<Bn2BlobObjectMap> model_load_blob_objects(new Bn2BlobObjectMap{});
-  auto&& model_load_op_conf = GenModelLoadOpConf();
+  auto&& model_load_op_conf = GenModelLoadOpConf(op_conf, path_input_op_conf);
   auto BuildModelLoadInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
     auto&& scope = GetCurrentScope().GetPtrOrThrow();
     const auto& blob_object = bn2blob_object->at("out");

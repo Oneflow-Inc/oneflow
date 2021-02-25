@@ -397,6 +397,23 @@ class Session(oneflow_api.Session):
             return None
         return self.eager_global_function_desc_stack_[0]
 
+    def NameScopeStackPush(self, job_name, name):
+        if job_name not in self.job_name2name_scope_stack_:
+            self.job_name2name_scope_stack_[job_name] = []
+        self.job_name2name_scope_stack_[job_name].append(name)
+
+    def NameScopeStackPop(self, job_name):
+        assert job_name in self.job_name2name_scope_stack_
+        assert len(self.job_name2name_scope_stack_[job_name]) > 0
+        return self.job_name2name_scope_stack_[job_name].pop()
+
+    def GetJobNameScopePrefix(self):
+        if job_name not in self.job_name2name_scope_stack_:
+            return ""
+        if len(self.job_name2name_scope_stack_[job_name]) == 0:
+            return ""
+        return "-".join(self.job_name2name_scope_stack_[job_name]) + "-"
+
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):
         assert len(self.backward_blob_register.blob_name2object) == 0
