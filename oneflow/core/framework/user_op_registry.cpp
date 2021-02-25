@@ -14,12 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/user_op_registry.h"
-
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/framework/batch_axis_context.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -196,6 +197,54 @@ OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
 OpRegistry& OpRegistry::Finish() {
   CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
+  if (!result_.physical_tensor_desc_infer_fn) {
+    // auto logical_fn = result_.logical_tensor_desc_infer_fn;
+    result_.physical_tensor_desc_infer_fn = [&](user_op::InferContext* ctx) -> Maybe<void> {
+      bool has_dynamic_output = false;
+      for (const auto& pair : ctx->outputs()) {
+        if (*ctx->IsDynamic4ArgNameAndIndex(pair.first, pair.second)) {
+          has_dynamic_output = true;
+          LOG(ERROR) << ctx->user_op_conf().op_name() << " IsDynamic4ArgNameAndIndex " << pair.first
+                     << " " << pair.second;
+          break;
+        }
+      }
+      if (ctx->parallel_num() == 1 && has_dynamic_output) {
+        LOG(ERROR) << "user_op:: dynamic " << ctx->user_op_conf().op_name();
+        // logical_fn(ctx);
+        result_.logical_tensor_desc_infer_fn(ctx);
+      } else {
+        // static
+        LOG(ERROR) << "user_op:: static " << ctx->user_op_conf().op_name();
+        for (const auto& pair : ctx->inputs()) {
+          const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex(pair.first, pair.second);
+          const TensorDesc* in_logical =
+              ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          LOG(ERROR) << "in_logical " << in_logical;
+          LOG(ERROR) << "in_logical shape";
+          LOG(ERROR) << in_logical->shape();
+          const TensorDesc* in_physical = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          CHECK_OR_RETURN(*JUST(GetPhysicalShape(in_logical->shape(), sbp_parallel,
+                                                 ctx->parallel_ctx().parallel_num(),
+                                                 ctx->parallel_ctx().parallel_id()))
+                          == in_physical->shape());
+        }
+        for (const auto& pair : ctx->outputs()) {
+          LOG(ERROR) << "pair" << pair.first;
+          LOG(ERROR) << ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          TensorDesc* desc = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          *desc = *ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          if (ctx->parallel_ctx().parallel_num() > 1) {
+            const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex(pair.first, pair.second);
+            *desc->mut_shape() = *JUST(GetPhysicalShape(desc->shape(), sbp_parallel,
+                                                        ctx->parallel_ctx().parallel_num(),
+                                                        ctx->parallel_ctx().parallel_id()));
+          }
+        }
+      }
+      return Maybe<void>::Ok();
+    };
+  }
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
   if (result_.batch_axis_infer_fn == nullptr) {
     result_.batch_axis_infer_fn = BatchAxisInferFnUtil::DefaultAsFirstHasValueInput;
