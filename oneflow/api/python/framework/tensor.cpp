@@ -37,13 +37,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
         std::shared_ptr<MirroredTensorImpl> impl;
         if (*Global<bool, EagerExecution>::Get()) {
-          impl = std::static_pointer_cast<MirroredTensorImpl>(
-              std::make_shared<EagerMirroredTensorImpl>(shape, static_cast<DataType>(dtype),
-                                                        device));
+          impl = std::make_shared<EagerMirroredTensorImpl>(shape, static_cast<DataType>(dtype),
+                                                        device);
         } else {
-          impl =
-              std::static_pointer_cast<MirroredTensorImpl>(std::make_shared<LazyMirroredTensorImpl>(
-                  shape, static_cast<DataType>(dtype), device));
+          impl = std::make_shared<LazyMirroredTensorImpl>(
+                  shape, static_cast<DataType>(dtype), device);
         }
         return std::make_shared<MirroredTensor>(impl);
       }))
@@ -67,13 +65,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                        std::shared_ptr<ParallelDesc>& parallel_desc) {
         std::shared_ptr<ConsistentTensorImpl> impl;
         if (*Global<bool, EagerExecution>::Get()) {
-          impl = std::static_pointer_cast<ConsistentTensorImpl>(
-              std::make_shared<EagerConsistentTensorImpl>(shape, static_cast<DataType>(dtype),
-                                                          distribute, parallel_desc));
+          impl = std::make_shared<EagerConsistentTensorImpl>(shape, static_cast<DataType>(dtype),
+                                                          distribute, parallel_desc);
         } else {
-          impl = std::static_pointer_cast<ConsistentTensorImpl>(
-              std::make_shared<LazyConsistentTensorImpl>(shape, static_cast<DataType>(dtype),
-                                                         distribute, parallel_desc));
+          impl = std::make_shared<LazyConsistentTensorImpl>(shape, static_cast<DataType>(dtype),
+                                                         distribute, parallel_desc);
         }
         return std::make_shared<ConsistentTensor>(impl);
       }))
