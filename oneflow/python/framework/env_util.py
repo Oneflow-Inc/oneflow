@@ -115,12 +115,6 @@ def api_machine(*val: list) -> None:
     return enable_if.unique([machine, do_nothing])(*val)
 
 
-# only used by CI
-@oneflow_export("env.init_bootstrap_confs")
-def api_init_bootstrap_confs(*val: list) -> None:
-    return enable_if.unique([MakeBootstrapConfs, do_nothing])(*val)
-
-
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
 def machine(*val):
 
@@ -145,57 +139,6 @@ def api_ctrl_port(val: int) -> None:
 def ctrl_port(val):
     assert type(val) is int
     default_env_proto.ctrl_port = val
-
-
-@oneflow_export("env.master_host")
-def api_master_port(host: str) -> None:
-    r"""Set host of master node. Same on every machine.
-
-    Args:
-        val: a addr accessible to master node
-    """
-    return enable_if.unique([master_host, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def master_host(host):
-    assert type(host) is str
-    global config_master_addr
-    config_master_addr.host = host
-
-
-@oneflow_export("env.master_port")
-def api_master_port(val: int) -> None:
-    r"""Set port number of master node. Same on every machine.
-
-    Args:
-        val: a port number accessible to master node
-    """
-    return enable_if.unique([master_port, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def master_port(val):
-    assert type(val) is int
-    global config_master_addr
-    config_master_addr.port = val
-
-
-@oneflow_export("env.world_size")
-def api_world_size(val: int) -> None:
-    r"""Set number of rank in cluster. Same on every machine.
-
-    Args:
-        val: a port number of rank in cluster
-    """
-    return enable_if.unique([world_size, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def world_size(val):
-    assert type(val) is int
-    global config_world_size
-    config_world_size = val
 
 
 @oneflow_export("env.data_port")
@@ -315,6 +258,12 @@ def _MakeMachine(machines):
         assert m.addr not in addrs_for_check
         addrs_for_check.add(m.addr)
     return rp_machine
+
+
+# only used by CI
+@oneflow_export("env.init_bootstrap_confs")
+def api_init_bootstrap_confs(*val: list) -> None:
+    return enable_if.unique([MakeBootstrapConfs, do_nothing])(*val)
 
 
 def _MakeBootstrapConf(bootstrap_info: dict):
