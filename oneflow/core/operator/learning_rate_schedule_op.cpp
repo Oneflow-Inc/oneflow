@@ -43,9 +43,9 @@ void LearningRateScheduleOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-Maybe<void> LearningRateScheduleOp::InferLogicalOutBlobDescs(
-    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const ParallelDesc& parallel_desc) const {
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   const BlobDesc* train_step = BlobDesc4BnInOp("train_step");
   CHECK_EQ(train_step->shape().elem_cnt(), 1);
   CHECK_EQ(train_step->data_type(), DataType::kInt64);
@@ -55,16 +55,18 @@ Maybe<void> LearningRateScheduleOp::InferLogicalOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
+}  // namespace
+
+Maybe<void> LearningRateScheduleOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(BlobDesc4BnInOp);
+}
+
 Maybe<void> LearningRateScheduleOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  const BlobDesc* train_step = GetBlobDesc4BnInOp("train_step");
-  CHECK_EQ(train_step->shape().elem_cnt(), 1);
-  CHECK_EQ(train_step->data_type(), DataType::kInt64);
-  BlobDesc* out = GetBlobDesc4BnInOp("out");
-  out->mut_shape() = Shape({1});
-  out->set_data_type(DataType::kFloat);
-  return Maybe<void>::Ok();
+  return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> LearningRateScheduleOp::GetSbpSignatures(

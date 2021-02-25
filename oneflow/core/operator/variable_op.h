@@ -27,6 +27,9 @@ class VariableOp final : public Operator {
   ~VariableOp() = default;
 
   void InitFromOpConf() override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
 
  private:
   Maybe<void> InferLogicalOutBlobDescs(

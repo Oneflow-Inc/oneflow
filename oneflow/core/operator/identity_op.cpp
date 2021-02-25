@@ -20,6 +20,15 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  *BlobDesc4BnInOp("out") = *BlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 template<typename T>
 class IdentityOpTpl final : public Operator {
  public:
@@ -34,14 +43,12 @@ class IdentityOpTpl final : public Operator {
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override {
-    *BlobDesc4BnInOp("out") = *BlobDesc4BnInOp("in");
-    return Maybe<void>::Ok();
+    return InferBlobDescs(BlobDesc4BnInOp);
   }
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override {
-    *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
-    return Maybe<void>::Ok();
+    return InferBlobDescs(GetBlobDesc4BnInOp);
   }
 
  private:

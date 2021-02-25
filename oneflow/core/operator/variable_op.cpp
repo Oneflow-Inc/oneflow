@@ -54,6 +54,28 @@ Maybe<void> VariableOp::InferLogicalOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> VariableOp::InferOutBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  const VariableOpConf& variable_conf = op_conf().variable_conf();
+  CHECK_OR_RETURN(job_desc().job_conf().has_default_initializer_conf()
+                  || job_desc().job_conf().has_default_initialize_with_snapshot_path()
+                  || variable_conf.has_initializer()
+                  || variable_conf.has_initialize_with_snapshot());
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  out_blob_desc->mut_shape() = Shape(variable_conf.shape());
+  out_blob_desc->set_data_type(variable_conf.has_data_type() ? variable_conf.data_type()
+                                                             : job_desc().DefaultDataType());
+  const auto& opt_split_axis = JUST(GetSplitAxis(variable_conf));
+  if (opt_split_axis->has_value()) {
+    int32_t model_split_axis = opt_split_axis->value();
+    int64_t split_dim_num = out_blob_desc->shape().At(model_split_axis);
+    BalancedSplitter bs(split_dim_num, parallel_ctx->parallel_num());
+    out_blob_desc->mut_shape().Set(model_split_axis, bs.At(parallel_ctx->parallel_id()).size());
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   const auto& opt_split_axis = JUST(GetSplitAxis(op_conf().variable_conf()));
   SbpSignatureBuilder sbp_sig_builder;

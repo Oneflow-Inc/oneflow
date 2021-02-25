@@ -18,6 +18,15 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  BlobDesc4BnInOp("out")->mut_shape() = Shape({1});
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 void TickOp::InitFromOpConf() {
   CHECK(op_conf().has_tick_conf());
   EnrollRepeatedInputBn("tick", false);
@@ -27,15 +36,13 @@ void TickOp::InitFromOpConf() {
 Maybe<void> TickOp::InferLogicalOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc& parallel_desc) const {
-  BlobDesc4BnInOp("out")->mut_shape() = Shape({1});
-  return Maybe<void>::Ok();
+  return InferBlobDescs(BlobDesc4BnInOp);
 }
 
 Maybe<void> TickOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
-  return Maybe<void>::Ok();
+  return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> TickOp::GetSbpSignatures(

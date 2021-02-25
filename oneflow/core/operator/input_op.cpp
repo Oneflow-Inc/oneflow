@@ -37,6 +37,15 @@ Maybe<void> InputOp::InferLogicalOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InputOp::InferOutBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  JUST(InterfaceOpUtil::InferOutBlobDesc(op_conf().input_conf().blob_conf(), out_blob_desc,
+                                         parallel_ctx));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InputOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,

@@ -25,18 +25,25 @@ void ReturnOp::InitFromOpConf() {
   EnrollOutputBn("out")->set_is_mutable(true);
 }
 
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  *BlobDesc4BnInOp("out") = *BlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 Maybe<void> ReturnOp::InferLogicalOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc& parallel_desc) const {
-  *BlobDesc4BnInOp("out") = *BlobDesc4BnInOp("in");
-  return Maybe<void>::Ok();
+  return InferBlobDescs(BlobDesc4BnInOp);
 }
 
 Maybe<void> ReturnOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
-  return Maybe<void>::Ok();
+  return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> ReturnOp::InferSbpSignature(
