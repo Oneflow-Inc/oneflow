@@ -19,13 +19,20 @@ jobs:
       - name: Check license and format (please run 'make of_format' if failed)
         uses: ./.github/actions/fmt
 
-  build_and_test_all:
-    needs: [check_license_and_format]
-    name: CUDA, XLA, CPU
+  wait_for_gpu_slot:
+    name: Wait until all existing CI tasks are run
+    runs-on: [self-hosted, linux, scheduler]
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    steps:
+      - name: Wait for GPU slot
+        uses: ./.github/actions/schedule
+
+  build_and_test_cuda:
+    needs: [check_license_and_format, wait_for_gpu_slot]
+    name: CUDA
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      # CUDA
       - name: (CUDA) Set environment variables
         run: |
           echo "ci_tmp_dir=$HOME/ci-tmp" >> $GITHUB_ENV
@@ -120,7 +127,12 @@ jobs:
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
 
-      # XLA
+  build_and_test_xla:
+    needs: [check_license_and_format, wait_for_gpu_slot]
+    name: XLA
+    runs-on: [self-hosted, linux, gpu]
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    steps:
       - name: (XLA) Set environment variables
         run: |
           echo "ci_tmp_dir=$HOME/ci-tmp-xla" >> $GITHUB_ENV
@@ -151,7 +163,12 @@ jobs:
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
 
-      # CPU
+  build_and_test_cpu:
+    needs: [check_license_and_format, wait_for_gpu_slot]
+    name: CPU
+    runs-on: [self-hosted, linux, gpu]
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    steps:
       - name: (CPU) Set environment variables
         run: |
           echo "ci_tmp_dir=$HOME/ci-tmp-cpu" >> $GITHUB_ENV
