@@ -63,8 +63,6 @@ def compare_with_tensorflow(
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = UpsampleJob().get()
     channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
     # TensorFlow

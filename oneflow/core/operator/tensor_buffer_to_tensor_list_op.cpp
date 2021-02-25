@@ -57,14 +57,6 @@ class TensorBufferToTensorListOp final : public Operator {
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     return Maybe<void>::Ok();
   }
-
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    CHECK_OR_RETURN(BatchAxis4BnInOp("in")->has_value());
-    CHECK_EQ_OR_RETURN(BatchAxis4BnInOp("in")->value(), 0);
-    BatchAxis4BnInOp("out")->set_value(0);
-    return Maybe<void>::Ok();
-  }
 };
 
 REGISTER_CPU_OP(OperatorConf::kTensorBufferToTensorListConf, TensorBufferToTensorListOp);

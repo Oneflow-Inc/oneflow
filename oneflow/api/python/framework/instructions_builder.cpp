@@ -259,6 +259,8 @@ GetMut2OperandBlobObjects(
                .GetPtrOrThrow());
 }
 
+// signature of python func _FindOrCreateDelegateBlobObject, it will be removed after blobcache is
+// migrated
 using FindOrCreateDelegateBlobObjectFun = std::function<std::shared_ptr<compatible_py::BlobObject>(
     const std::shared_ptr<InstructionsBuilder>&,
     const std::function<std::shared_ptr<compatible_py::BlobObject>(

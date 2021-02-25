@@ -31,7 +31,6 @@ class DumpTimeShapeAndBlobParallelConfPass final : public JobPass {
 
   Maybe<void> Apply(const OpGraph& op_graph, Job* job) const {
     op_graph.DumpOpTimeShape(job);
-    op_graph.DumpBatchAxisLbi(job);
     op_graph.DumpLogicalBlobDesc(job);
     op_graph.DumpSbpSignature(job);
     return Maybe<void>::Ok();

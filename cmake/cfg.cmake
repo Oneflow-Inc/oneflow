@@ -53,7 +53,6 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/job/mirrored_parallel.proto
       oneflow/core/operator/op_attribute.proto
       oneflow/core/operator/op_node_signature.proto
-      oneflow/core/register/batch_axis_signature.proto
       oneflow/core/operator/arg_modifier_signature.proto
       oneflow/core/job/blob_lifetime_signature.proto
       oneflow/core/job/parallel_signature.proto
@@ -111,7 +110,6 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/job/mirrored_parallel.proto
       oneflow/core/operator/op_attribute.proto
       oneflow/core/operator/op_node_signature.proto
-      oneflow/core/register/batch_axis_signature.proto
       oneflow/core/job/parallel_signature.proto
       oneflow/core/job/initializer_conf.proto
       oneflow/core/job/regularizer_conf.proto

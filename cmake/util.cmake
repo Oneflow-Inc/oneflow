@@ -5,6 +5,19 @@ function(SHOW_VARIABLES)
   endforeach()
 endfunction()
 
+macro(write_file_if_different file_path content)
+  if (EXISTS ${file_path})
+    file(READ ${file_path} current_content)
+    # NOTE: it seems a cmake bug that "content" in this macro is not
+    # treated as a variable
+    if (NOT (current_content STREQUAL ${content}))
+      file(WRITE ${file_path} ${content})
+    endif()
+  else()
+    file(WRITE ${file_path} ${content})
+  endif()
+endmacro()
+
 set(_COUNTER 0)
 macro(copy_files file_paths source_dir dest_dir target)
   find_program(rsync rsync)

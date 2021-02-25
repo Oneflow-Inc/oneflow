@@ -29,8 +29,6 @@ class LearningRateScheduleOp final : public Operator {
                                 const SbpSignature* sbp_signature) const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
@@ -51,13 +49,6 @@ Maybe<void> LearningRateScheduleOp::InferOutBlobDescs(
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->mut_shape() = Shape({1});
   out->set_data_type(DataType::kFloat);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> LearningRateScheduleOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  CHECK(!BatchAxis4BnInOp("train_step")->has_value());
-  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 
