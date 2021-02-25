@@ -13,29 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_ACTOR_RECORD_LOAD_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_RECORD_LOAD_ACTOR_H_
 
-#include "oneflow/core/actor/compute_actor.h"
-#include "oneflow/core/kernel/record_load_kernel.h"
+#include "oneflow/core/framework/tensor_arg.h"
 
 namespace oneflow {
+namespace one {
 
-class RecordLoadActor final : public CompActor {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(RecordLoadActor);
-  RecordLoadActor() = default;
-  ~RecordLoadActor() = default;
+bool TensorArg::Empty() const { return partial_sum_tensors_.empty() && acc_tensor_; }
 
- private:
-  void VirtualCompActorInit(const TaskProto&) override;
-  void Act() override;
-  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+void TensorArg::Release() {
+  partial_sum_tensors_.clear();
+  acc_tensor_.reset();
+}
 
-  bool is_eof_;
-  RecordLoadStatus record_load_status_;
-};
-
+}  // namespace one
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_ACTOR_RECORD_LOAD_ACTOR_H_
