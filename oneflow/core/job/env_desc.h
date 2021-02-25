@@ -24,8 +24,10 @@ namespace oneflow {
 class EnvDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EnvDesc);
+  explicit EnvDesc(const EnvProto& env_proto) : env_proto_(env_proto) {}
   ~EnvDesc() = default;
 
+  const EnvProto& env_proto() const { return env_proto_; }
   size_t TotalMachineNum() const { return env_proto_.machine().size(); }
   const Machine& machine(int32_t idx) const { return env_proto_.machine(idx); }
   int32_t ctrl_port() const { return env_proto_.ctrl_port(); }
@@ -33,9 +35,6 @@ class EnvDesc final {
   int64_t GetMachineId(const std::string& addr) const;
 
  private:
-  friend class Global<EnvDesc>;
-  explicit EnvDesc(const EnvProto& env_proto) : env_proto_(env_proto) {}
-
   EnvProto env_proto_;
 };
 

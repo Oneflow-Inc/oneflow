@@ -21,9 +21,13 @@ limitations under the License.
 
 namespace oneflow {
 
-void CriticalSectionDesc::AddCriticalSection(std::unique_ptr<CriticalSection>&& critical_section) {
+CriticalSection* CriticalSectionDesc::AddCriticalSection(int64_t job_id) {
   CHECK_EQ(inited_, false);
+  auto critical_section = std::make_unique<CriticalSection>();
+  CriticalSection* ret = critical_section.get();
+  critical_section->set_job_id(job_id);
   critical_sections_.emplace_back(std::move(critical_section));
+  return ret;
 }
 
 void CriticalSectionDesc::Done() {

@@ -255,7 +255,7 @@ class SignatureBuilder(object):
     def proto(self):
         return self.proto_
 
-    def Input(self, input_name: str, lbn: str, batch_axis: typing.Optional[int] = None):
+    def Input(self, input_name: str, lbn: str):
         assert isinstance(input_name, str)
         assert isinstance(lbn, str)
         assert "/" in lbn
@@ -269,8 +269,6 @@ class SignatureBuilder(object):
 
         input_def = self.proto.inputs[input_name]
         Lbn2Lbi(lbn, input_def.lbi)
-        if isinstance(batch_axis, int):
-            input_def.blob_conf.batch_axis.value = batch_axis
         return self
 
     def Output(self, output_name: str, lbn: str):
@@ -312,7 +310,6 @@ def GetInterfaceBlobConf(job_name, lbn, blob_conf=None):
     split_axis = c_api_util.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
         job_name, lbn
     )
-    batch_axis = c_api_util.JobBuildAndInferCtx_GetBatchAxis(job_name, lbn)
     is_dynamic = c_api_util.JobBuildAndInferCtx_IsDynamic(job_name, lbn)
     is_tensor_list = c_api_util.JobBuildAndInferCtx_IsTensorList(job_name, lbn)
 
@@ -320,8 +317,6 @@ def GetInterfaceBlobConf(job_name, lbn, blob_conf=None):
     blob_conf.data_type = dtype
     if split_axis is not None:
         blob_conf.split_axis.value = split_axis
-    if batch_axis is not None:
-        blob_conf.batch_axis.value = batch_axis
     blob_conf.is_dynamic = is_dynamic
     blob_conf.is_tensor_list = is_tensor_list
     return blob_conf

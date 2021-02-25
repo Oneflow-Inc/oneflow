@@ -23,7 +23,8 @@ namespace {
 Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   int32_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
   const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
-  HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
+  HashSet<int32_t> conf_axes;
+  ReduceSbpUtil::GetRegularAxes(num_axes, reduced_axes, &conf_axes);
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
   int32_t num_reduced_axis = 0;
   FOR_RANGE(int64_t, i, 0, num_axes) {
@@ -89,12 +90,7 @@ REGISTER_USER_OP("broadcast_like")
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_modifier != nullptr);
-      like_modifier->set_use_header_only(true);
       like_modifier->set_requires_grad(false);
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);
-      return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbpSignatures);
 

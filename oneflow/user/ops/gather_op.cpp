@@ -49,15 +49,6 @@ REGISTER_USER_OP("gather")
       CHECK(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      if (ctx->BatchAxis4ArgNameAndIndex("indices", 0)->has_value()) {
-        ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(
-            ctx->Attr<int64_t>("axis") + ctx->BatchAxis4ArgNameAndIndex("indices", 0)->value());
-      } else {
-        ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
-      }
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int64_t in_num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();

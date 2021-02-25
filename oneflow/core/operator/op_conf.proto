@@ -24,21 +24,6 @@ enum ActivationType {
   kRelu = 3;
 }
 
-message SigmoidCrossEntropyOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string loss = 3;
-  required DataType label_type = 4;
-}
-
-message SigmoidCrossEntropyGradOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string prediction_diff = 3;
-  required string loss_diff = 4;
-  required DataType label_type = 5;
-}
-
 message DistributeConcatOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -286,6 +271,16 @@ message ReentrantLockOpConf {
   repeated Int64List lock_id2intersecting_lock_ids = 4;
 }
 
+message SrcSubsetTickOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
+message DstSubsetTickOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
 message SourceTickOpConf {
   required string out = 1;
 }
@@ -293,11 +288,6 @@ message SourceTickOpConf {
 message SinkTickOpConf {
   repeated string tick = 1;
   required string out = 2;
-}
-
-message KeepHeaderOnlyOpConf {
-  repeated string in = 1;
-  repeated string out = 2;
 }
 
 message TotalLossInstanceNumOpConf {
@@ -381,11 +371,6 @@ message EsacOpConf {
   optional DataType data_type = 3 [default=kInt32];
 }
 
-message PartialTickOpConf {
-  required string tick = 1;
-  required string out = 2;
-}
-
 message AssignOpConf {
   required string ref = 1;
   required string value = 2;
@@ -440,7 +425,6 @@ message XrtLaunchOpConf {
   map<string, bool> input_mutability = 5;
   // Mapping launch op's input and output names into function.
   map<string, string> input_output_mapping = 6;
-  map<string, OptInt64> batch_axis = 7;
   // Sbp signatures of each function node.
   map<string, SbpSignature> sbp_signatures = 8;
   optional bool model_update = 9 [default = false];
@@ -483,7 +467,6 @@ message DynamicBinaryConcatOpConf {
   required string out = 2;
   required DataType out_data_type = 3;
   required ShapeProto out_shape = 4;
-  required OptInt64 out_batch_axis = 5;
   required SbpParallel out_sbp = 6;
 }
 
@@ -609,9 +592,10 @@ message OperatorConf {
     AccumulateOpConf accumulate_conf = 117;
     VariableOpConf variable_conf = 122;
     TickOpConf tick_conf = 124;
-    KeepHeaderOnlyOpConf keep_header_only_conf = 125;
     TotalLossInstanceNumOpConf total_loss_instance_num_conf = 126;
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
+    SrcSubsetTickOpConf src_subset_tick_conf = 133;
+    DstSubsetTickOpConf dst_subset_tick_conf = 134;
     SourceTickOpConf source_tick_conf = 135;
     SinkTickOpConf sink_tick_conf = 136;
     InputOpConf input_conf = 137;
@@ -623,7 +607,6 @@ message OperatorConf {
     ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
     ReturnOpConf return_conf = 146;
-    PartialTickOpConf partial_tick_conf = 149;
     ForeignWatchOpConf foreign_watch_conf = 151;
     DistributeConcatOpConf distribute_concat_conf = 155;
     DistributeSplitOpConf distribute_split_conf = 156;
@@ -646,7 +629,6 @@ message OperatorConf {
 
     // domain op
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-    SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
@@ -656,7 +638,6 @@ message OperatorConf {
     ModelSaveOpConf model_save_conf = 297;
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
     ModelLoadOpConf model_load_conf = 301;
-    SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 317;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;

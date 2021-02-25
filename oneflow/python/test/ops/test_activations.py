@@ -49,7 +49,6 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
         "relu": tf.nn.relu,
         "sigmoid": tf.math.sigmoid,
         "tanh": tf.math.tanh,
-        #        "gelu": tfa.activations.gelu,
     }
 
     @flow.global_function(type="train", function_config=func_config)
@@ -74,8 +73,6 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = ActivationJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
@@ -84,8 +81,8 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
-    rtol = 1e-3 if activation_type is "gelu" else 1e-5
-    atol = 1e-3 if activation_type is "gelu" else 1e-5
+    rtol = 1e-5
+    atol = 1e-5
     assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol, atol)
     assert np.allclose(test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol, atol)
 
@@ -95,16 +92,15 @@ class TestActivations(flow.unittest.TestCase):
     def test_activations(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
-        #    arg_dict["activation_type"] = ["relu", "sigmoid", "tanh", "gelu"]
         arg_dict["activation_type"] = ["relu", "sigmoid", "tanh"]
-        arg_dict["shape"] = [(1024, 1024)]
+        arg_dict["shape"] = [(64, 64)]
         arg_dict["data_type"] = [flow.float, flow.double]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
         if os.getenv("ONEFLOW_TEST_CPU_ONLY") is None:
             for act_type in arg_dict["activation_type"]:
-                compare_with_tensorflow("gpu", act_type, (1024, 1024), flow.float16)
+                compare_with_tensorflow("gpu", act_type, (64, 64), flow.float16)
 
 
 if __name__ == "__main__":

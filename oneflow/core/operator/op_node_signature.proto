@@ -4,13 +4,11 @@ package oneflow;
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/job/mirrored_parallel.proto";
 import "oneflow/core/register/blob_desc.proto";
-import "oneflow/core/register/batch_axis_signature.proto";
 import "oneflow/core/job/parallel_signature.proto";
 
 message OpNodeSignature {
   optional SbpSignature sbp_signature = 1;
   optional MirroredSignature mirrored_signature = 2;
   optional BlobDescSignature logical_blob_desc_signature = 3;
-  optional BatchAxisSignature batch_axis_signature = 4;
   optional ParallelSignature parallel_signature = 5;
 }
