@@ -45,11 +45,6 @@ REGISTER_USER_OP("softmax_cross_entropy")
       *out_desc->mut_shape() = Shape(out_dim_vector);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("prob", 0) = *ctx->BatchAxis4ArgNameAndIndex("prediction", 0);
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("label", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       // ctx->LogicalTensorDesc4InputArgNameAndIndex("out", 0) is not initialized here
       const auto num_out_axes =
@@ -84,11 +79,6 @@ REGISTER_USER_OP("softmax_cross_entropy_grad")
       CHECK_EQ_OR_RETURN(label_desc->data_type(), prob_desc->data_type());
       CHECK_EQ_OR_RETURN(dy_desc->data_type(), prob_desc->data_type());
       *ctx->TensorDesc4ArgNameAndIndex("prediction_diff", 0) = *prob_desc;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("prediction_diff", 0) =
-          *ctx->BatchAxis4ArgNameAndIndex("prob", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

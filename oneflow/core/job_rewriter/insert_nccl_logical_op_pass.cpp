@@ -158,6 +158,117 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   return false;
 }
 
+bool ReverseOrderInsertNcclLogicalOps() {
+  return Global<ResourceDesc, ForSession>::Get()->resource().disable_group_boxing_by_dst_parallel();
+}
+
+void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
+    HashMap<std::string, OperatorConf>* subgraph_op_name2conf, HashSet<std::string>* mut_op_names,
+    std::vector<OperatorConf>* nccl_op_confs, const std::vector<const OpNode*>& subgraph_order,
+    const HashMap<const OpNode*, int64_t>& node2order) {
+  for (const OpNode* src_node : subgraph_order) {
+    const std::string& src_op_name = src_node->op().op_name();
+    for (const OpEdge* op_edge : src_node->out_edges()) {
+      const OpNode* dst_node = op_edge->dst_node();
+      const std::string& dst_op_name = dst_node->op().op_name();
+      CHECK(src_node != dst_node);
+      if (subgraph_op_name2conf->find(dst_op_name) == subgraph_op_name2conf->end()) {
+        // NOTE(chengcheng): child node is not in this subgraph.
+        continue;
+      }
+      for (const LogicalBlobId& lbi : op_edge->lbis()) {
+        OperatorConf nccl_op;
+        if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi)) { continue; }
+        mut_op_names->insert(dst_op_name);
+        // insert nccl op
+        user_op::UserOpConfWrapper nccl_op_wrapper(nccl_op);
+        for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
+          std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
+              &subgraph_op_name2conf->at(dst_op_name), ibn, nccl_op_wrapper.output("out", 0));
+        }
+
+        if (nccl_op_confs->size() >= 1) {
+          // NOTE(chengcheng): MUST add ctrl edge between nccl ops for 1 src node insert multi-nccl
+          const std::string& pre_nccl_op_name = nccl_op_confs->at(nccl_op_confs->size() - 1).name();
+          nccl_op.add_ctrl_in_op_name(pre_nccl_op_name);
+        }
+
+        // NOTE(chengcheng): src_node MUST not the last node in subgraph, find the next op
+        int64_t src_order = node2order.at(src_node);
+        CHECK(src_order + 1 < subgraph_order.size());
+        const std::string& next_op_name = subgraph_order.at(src_order + 1)->op().op_name();
+        if (dst_op_name != next_op_name) {
+          // NOTE(chengcheng): MUST add ctrl edge for strict exec order
+          subgraph_op_name2conf->at(next_op_name).add_ctrl_in_op_name(nccl_op.name());
+          mut_op_names->insert(next_op_name);
+        }
+
+        if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+          std::cout << "cc_debug_log: insert nccl op from: [" << src_op_name << "](" << src_order
+                    << ")->[" << dst_op_name << "](" << node2order.at(dst_node) << ") and before: ["
+                    << next_op_name << "](" << src_order + 1 << ")\n";
+        }
+        nccl_op_confs->push_back(nccl_op);
+      }
+    }
+  }
+}
+
+void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
+    HashMap<std::string, OperatorConf>* subgraph_op_name2conf, HashSet<std::string>* mut_op_names,
+    std::vector<OperatorConf>* nccl_op_confs, const std::vector<const OpNode*>& subgraph_order,
+    const HashMap<const OpNode*, int64_t>& node2order) {
+  for (const OpNode* dst_node : subgraph_order) {
+    const std::string& dst_op_name = dst_node->op().op_name();
+    for (const OpEdge* op_edge : dst_node->in_edges()) {
+      const OpNode* src_node = op_edge->src_node();
+      const std::string& src_op_name = src_node->op().op_name();
+      CHECK(src_node != dst_node);
+      if (subgraph_op_name2conf->find(src_op_name) == subgraph_op_name2conf->end()) {
+        // NOTE(chengcheng): parent node is not in this subgraph.
+        continue;
+      }
+      for (const LogicalBlobId& lbi : op_edge->lbis()) {
+        OperatorConf nccl_op;
+        // builde nccl op
+        if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi)) { continue; }
+        mut_op_names->insert(dst_op_name);
+        // insert nccl op
+        user_op::UserOpConfWrapper nccl_op_wrapper(nccl_op);
+        for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
+          std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
+              &subgraph_op_name2conf->at(dst_op_name), ibn, nccl_op_wrapper.output("out", 0));
+          CHECK(old_lbn == GenLogicalBlobName(lbi));
+        }
+
+        // add necessary ctrl edge for strict order
+        if (nccl_op_confs->size() >= 1) {
+          // NOTE(chengcheng): MUST add ctrl edge between nccl ops for 1 dst node insert multi-nccl
+          const std::string& pre_nccl_op_name = nccl_op_confs->at(nccl_op_confs->size() - 1).name();
+          nccl_op.add_ctrl_in_op_name(pre_nccl_op_name);
+        }
+
+        // NOTE(chengcheng): dst_node MUST not the first node in subgraph, find the Immediately
+        //   previous op of dst_node.
+        int64_t dst_order = node2order.at(dst_node);
+        CHECK_GT(dst_order, 0);
+        const std::string& pre_op_name = subgraph_order.at(dst_order - 1)->op().op_name();
+        if (src_op_name != pre_op_name) {
+          // NOTE(chengcheng): MUST add ctrl edge for strict exec order
+          nccl_op.add_ctrl_in_op_name(pre_op_name);
+        }
+
+        if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+          std::cout << "cc_debug_log: insert nccl op from: [" << src_op_name << "]("
+                    << node2order.at(src_node) << ")->[" << dst_op_name << "](" << dst_order
+                    << ") and after: [" << pre_op_name << "](" << dst_order - 1 << ")\n";
+        }
+        nccl_op_confs->push_back(nccl_op);
+      }
+    }
+  }
+}
+
 Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   auto OpGraphForEachInDataAndCtrlNode = [&](OpNode* node,
                                              const std::function<void(OpNode*)>& Handler) {
@@ -205,46 +316,23 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     }
   }
 
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    std::cout << "cc_debug_log: Try insert nccl logical ops into job: "
+              << job_builder->job().job_conf().job_name() << ". Begin...\n";
+  }
+
   std::vector<OperatorConf> nccl_op_confs;
-  for (const OpNode* src_node : subgraph_order) {
-    for (const OpEdge* op_edge : src_node->out_edges()) {
-      const OpNode* dst_node = op_edge->dst_node();
-      const std::string& dst_op_name = dst_node->op().op_name();
-      CHECK(src_node != dst_node);
-      if (subgraph_op_name2conf.find(dst_op_name) == subgraph_op_name2conf.end()) {
-        // NOTE(chengcheng): child node is not in this subgraph.
-        continue;
-      }
-      for (const LogicalBlobId& lbi : op_edge->lbis()) {
-        OperatorConf nccl_op;
-        if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi)) { continue; }
-        mut_op_names.insert(dst_op_name);
-        // insert nccl op
-        user_op::UserOpConfWrapper nccl_op_wrapper(nccl_op);
-        for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
-          std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
-              &subgraph_op_name2conf.at(dst_op_name), ibn, nccl_op_wrapper.output("out", 0));
-        }
+  if (ReverseOrderInsertNcclLogicalOps()) {
+    InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(&subgraph_op_name2conf, &mut_op_names,
+                                                   &nccl_op_confs, subgraph_order, node2order);
+  } else {
+    InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(&subgraph_op_name2conf, &mut_op_names,
+                                                   &nccl_op_confs, subgraph_order, node2order);
+  }
 
-        if (nccl_op_confs.size() >= 1) {
-          // NOTE(chengcheng): MUST add ctrl edge between nccl ops for 1 src node insert multi-nccl
-          const std::string& pre_nccl_op_name = nccl_op_confs.at(nccl_op_confs.size() - 1).name();
-          nccl_op.add_ctrl_in_op_name(pre_nccl_op_name);
-        }
-
-        // NOTE(chengcheng): src_node MUST not the last node in subgraph, find the next op
-        int64_t src_order = node2order.at(src_node);
-        CHECK(src_order + 1 < subgraph_order.size());
-        const std::string& next_op_name = subgraph_order.at(src_order + 1)->op().op_name();
-        if (dst_op_name != next_op_name) {
-          // NOTE(chengcheng): MUST add ctrl edge for strict exec order
-          subgraph_op_name2conf.at(next_op_name).add_ctrl_in_op_name(nccl_op.name());
-          mut_op_names.insert(next_op_name);
-        }
-
-        nccl_op_confs.push_back(nccl_op);
-      }
-    }
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    std::cout << "cc_debug_log: Try insert nccl logical ops into job: "
+              << job_builder->job().job_conf().job_name() << ". ...End\n\n";
   }
 
   std::vector<OperatorConf> mut_op_confs;

@@ -35,12 +35,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         for (auto dim : py_static_shape) { static_shape_dims.emplace_back(dim.cast<int64_t>()); }
         std::shared_ptr<Shape> static_shape = std::make_shared<Shape>(static_shape_dims);
         CHECK(py::isinstance<py::list>(py_shape_list));
-        std::vector<std::shared_ptr<Shape>> shape_list;
+        std::shared_ptr<std::vector<std::shared_ptr<Shape>>> shape_list =
+            std::make_shared<std::vector<std::shared_ptr<Shape>>>();
         for (const auto& py_shape : py_shape_list) {
           CHECK(py::isinstance<py::tuple>(py_shape));
           DimVector sub_shape_dims;
           for (auto dim : py_shape) { sub_shape_dims.emplace_back(dim.cast<int64_t>()); }
-          shape_list.emplace_back(std::make_shared<Shape>(sub_shape_dims));
+          shape_list->emplace_back(std::make_shared<Shape>(sub_shape_dims));
         }
         return std::make_shared<EagerPhysicalBlobHeader>(
             static_shape, shape_list, static_cast<DataType>(dtype), is_tensor_list);
@@ -67,7 +68,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                              [](const std::shared_ptr<EagerPhysicalBlobHeader>& x) {
                                const auto& shape_list = x->shape_list();
                                py::list ret;
-                               for (const auto& sub_shape : shape_list) {
+                               for (const auto& sub_shape : *shape_list) {
                                  py::tuple sub_shape_tuple(sub_shape->NumAxes());
                                  for (int i = 0; i < sub_shape->NumAxes(); ++i) {
                                    sub_shape_tuple[i] = sub_shape->At(i);

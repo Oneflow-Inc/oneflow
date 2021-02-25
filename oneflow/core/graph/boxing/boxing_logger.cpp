@@ -27,13 +27,7 @@ namespace {
 std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   std::string serialized_parallel_desc;
   std::string device_type;
-  if (parallel_desc.device_type() == DeviceType::kCPU) {
-    device_type = "CPU";
-  } else if (parallel_desc.device_type() == DeviceType::kGPU) {
-    device_type = "GPU";
-  } else {
-    device_type = "UNKNOWN_DEVICE";
-  }
+  device_type = CHECK_JUST(DeviceTag4DeviceType(parallel_desc.device_type()));
   auto sorted_machine_ids = parallel_desc.sorted_machine_ids();
   for (int64_t i = 0; i < sorted_machine_ids.size(); ++i) {
     const int64_t machine_id = sorted_machine_ids.at(i);

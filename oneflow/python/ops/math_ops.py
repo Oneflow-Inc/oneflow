@@ -39,14 +39,14 @@ def add(
     y: Union[int, float, oneflow_api.BlobDesc],
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
-    """Compute :math:`X + Y` element-wise, math.add supports broadcasting. 
+    """Compute :math:`X + Y` element-wise, math.add supports broadcasting.
     The equation is:
 
     .. math::
         out = X + Y
 
     Args:
-        x (Union[int, float, oneflow_api.BlobDesc]): A Blob. 
+        x (Union[int, float, oneflow_api.BlobDesc]): A Blob.
         y (Union[int, float, oneflow_api.BlobDesc]): A Blob has the same type of x.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
@@ -62,14 +62,14 @@ def add(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def addJob(x: tp.Numpy.Placeholder((3, )), 
+        def addJob(x: tp.Numpy.Placeholder((3, )),
                 y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.add(x, y)
 
         x = np.array([1, 2, 3]).astype(np.float32)
         y = np.array([1, 1, 1]).astype(np.float32)
-        out = addJob(x, y) 
+        out = addJob(x, y)
 
         # out [2., 3., 4.]
 
@@ -78,7 +78,7 @@ def add(
         return scalar_add(y, x, name)
     elif isinstance(y, (int, float)):
         return scalar_add(x, y, name)
-    elif x.shape == y.shape and x.batch_axis == y.batch_axis:
+    elif x.shape == y.shape and x.is_dynamic == y.is_dynamic:
         return element_wise_add(x, y, name)
     elif x.shape == (1,):
         return scalar_add_by_tensor(y, x, name)
@@ -116,10 +116,10 @@ def _recursive_build_add_n(inputs, name=None):
 def add_n(
     inputs: Sequence[oneflow_api.BlobDesc], name: Optional[str] = None
 ) -> oneflow_api.BlobDesc:
-    """Add all the input tensors in element-wise. 
+    """Add all the input tensors in element-wise.
 
     Args:
-        inputs (Sequence[oneflow_api.BlobDesc]): A list of Blob, each Blob has the same shape and type. 
+        inputs (Sequence[oneflow_api.BlobDesc]): A list of Blob, each Blob has the same shape and type.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -134,7 +134,7 @@ def add_n(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def add_n_Job(x: tp.Numpy.Placeholder((3, )), 
+        def add_n_Job(x: tp.Numpy.Placeholder((3, )),
                     y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.add_n([x, y])
@@ -156,7 +156,7 @@ def subtract(
     y: Union[int, float, oneflow_api.BlobDesc],
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
-    """Compute :math:`X - Y` element-wise. 
+    """Compute :math:`X - Y` element-wise.
 
     The equation is:
 
@@ -180,7 +180,7 @@ def subtract(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def subtractJob(x: tp.Numpy.Placeholder((3, )), 
+        def subtractJob(x: tp.Numpy.Placeholder((3, )),
                         y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.subtract(x, y)
@@ -213,7 +213,7 @@ def multiply(
     y: Union[int, float, oneflow_api.BlobDesc],
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
-    r"""Compute :math:`x \times y` element-wise. 
+    r"""Compute :math:`x \times y` element-wise.
 
     The equation is:
 
@@ -237,7 +237,7 @@ def multiply(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def multiplyJob(x: tp.Numpy.Placeholder((3, )), 
+        def multiplyJob(x: tp.Numpy.Placeholder((3, )),
                         y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.multiply(x, y)
@@ -253,7 +253,7 @@ def multiply(
         return scalar_mul(y, x, name)
     elif isinstance(y, (int, float)):
         return scalar_mul(x, y, name)
-    elif x.shape == y.shape and x.batch_axis == y.batch_axis:
+    elif x.shape == y.shape:
         return element_wise_mul(x, y, name)
     elif x.shape == (1,):
         return scalar_mul_by_tensor(y, x, name)
@@ -269,7 +269,7 @@ def divide(
     y: Union[int, float, oneflow_api.BlobDesc],
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
-    r"""Computes the division of x by y. 
+    r"""Computes the division of x by y.
 
     The equation is:
 
@@ -293,7 +293,7 @@ def divide(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def divideJob(x: tp.Numpy.Placeholder((3, )), 
+        def divideJob(x: tp.Numpy.Placeholder((3, )),
                     y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.divide(x, y)
@@ -330,7 +330,7 @@ def floor_mod(
     y: Union[int, float, oneflow_api.BlobDesc],
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
-    r"""This operator mods two Blobs. 
+    r"""This operator mods two Blobs.
 
     The equation is:
 
@@ -358,7 +358,7 @@ def floor_mod(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def modJob(x: tp.Numpy.Placeholder((3, )), 
+        def modJob(x: tp.Numpy.Placeholder((3, )),
                 y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.mod(x, y)
@@ -529,7 +529,7 @@ def broadcast_floor_mod(x, y, name=None):
 
 @oneflow_export("math.gelu")
 def gelu(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.BlobDesc:
-    r"""Gelu activation operator. 
+    r"""Gelu activation operator.
 
     The equation is:
 
@@ -624,7 +624,7 @@ def relu(x: oneflow_api.BlobDesc, name: Optional[str] = None) -> oneflow_api.Blo
 def sigmoid(
     x: oneflow_api.BlobDesc, name: Optional[str] = None
 ) -> oneflow_api.BlobDesc:
-    r"""Sigmoid activation 
+    r"""Sigmoid activation
 
     The equation is:
 
@@ -696,8 +696,8 @@ def unsorted_segment_sum(
     axis: int = 0,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
-    r"""Computes the sum along segments of a Blob. 
-    
+    r"""Computes the sum along segments of a Blob.
+
     Args:
         data (oneflow_api.BlobDesc): Input Blob
         segment_ids (oneflow_api.BlobDesc): A Blob should be the size of the first dimension, with consecutive IDs in the range 0 to k (k < d0).
@@ -710,9 +710,9 @@ def unsorted_segment_sum(
 
     For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
-        # Example 1: 
+        # Example 1:
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
@@ -723,8 +723,8 @@ def unsorted_segment_sum(
         )->tp.Numpy:
             return flow.math.unsorted_segment_sum(data, segment_ids, num_segments=2, axis=1)
 
-        input_blob = np.array([[1, 2, 3, 4], 
-                               [5, 6, 7 ,8], 
+        input_blob = np.array([[1, 2, 3, 4],
+                               [5, 6, 7 ,8],
                                [9, 10, 11, 12]]).astype(np.float32)
         segment_ids = np.array([0, 1, 0, 1]).astype(np.int32)
         out = unsorted_segment_sumJob(input_blob, segment_ids)
@@ -744,8 +744,8 @@ def unsorted_segment_sum(
         )->tp.Numpy:
             return flow.math.unsorted_segment_sum(data, segment_ids, num_segments=2, axis=0)
 
-        input_blob = np.array([[1, 2, 3, 4], 
-                               [5, 6, 7 ,8], 
+        input_blob = np.array([[1, 2, 3, 4],
+                               [5, 6, 7 ,8],
                                [9, 10, 11, 12]]).astype(np.float32)
         segment_ids = np.array([0, 1, 0]).astype(np.int32)
         out = unsorted_segment_sumJob(input_blob, segment_ids)
@@ -778,7 +778,7 @@ def unsorted_segment_sum_like(
     axis: int = 0,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
-    r"""Computes the sum along segments of a Blob, the output shape is the same as the `like` Blob. 
+    r"""Computes the sum along segments of a Blob, the output shape is the same as the `like` Blob.
 
     Args:
         data (oneflow_api.BlobDesc): Input Blob
@@ -790,9 +790,9 @@ def unsorted_segment_sum_like(
     Returns:
         oneflow_api.BlobDesc: A Blob.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -800,13 +800,13 @@ def unsorted_segment_sum_like(
 
         @flow.global_function()
         def unsorted_segment_sum_like_Job(data: tp.Numpy.Placeholder((3, 4)),
-                                        segment_ids: tp.Numpy.Placeholder((3, ), dtype=flow.int32), 
+                                        segment_ids: tp.Numpy.Placeholder((3, ), dtype=flow.int32),
                                         like: tp.Numpy.Placeholder((2, 4), dtype=flow.float32)
         )->tp.Numpy:
             return flow.math.unsorted_segment_sum_like(data, segment_ids, like, axis=0)
 
-        input_blob = np.array([[1, 2, 3, 4], 
-                            [5, 6, 7 ,8], 
+        input_blob = np.array([[1, 2, 3, 4],
+                            [5, 6, 7 ,8],
                             [9, 10, 11, 12]]).astype(np.float32)
         segment_ids = np.array([0, 1, 0]).astype(np.int32)
         like = np.zeros(shape=(2, 4), dtype=np.float32)
@@ -840,18 +840,18 @@ def unsorted_batch_segment_sum(
     num_segments: int,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
-    r"""It is similar with `unsorted_segment_sum`, the difference is that `unsorted_batch_segment_sum` brings a `batch axis`. We can do the segment sum in different batch of data. 
+    r"""It is similar with `unsorted_segment_sum`, the difference is that `unsorted_batch_segment_sum` brings a `batch axis`. We can do the segment sum in different batch of data.
 
     For example, the segment id is like:
 
     .. code-block:: python
 
-        [[0 0 0 1 2 2 3 3], 
+        [[0 0 0 1 2 2 3 3],
          [0 0 1 1 2 3 3 3]]
 
     Args:
         data (oneflow_api.BlobDesc): Input Blob
-        segment_ids (oneflow_api.BlobDesc): A Blob with shape (d0, d1). The d0, d1 are the first and second dimension of data. 
+        segment_ids (oneflow_api.BlobDesc): A Blob with shape (d0, d1). The d0, d1 are the first and second dimension of data.
         num_segments (int): num_segments should equal the number of distinct segment IDs.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
@@ -872,11 +872,11 @@ def unsorted_batch_segment_sum(
         )->tp.Numpy:
             return flow.math.unsorted_batch_segment_sum(data, segment_ids, 2)
 
-        input_blob = np.array([[1, 2, 3, 4], 
-                            [1, 2, 3 ,4], 
+        input_blob = np.array([[1, 2, 3, 4],
+                            [1, 2, 3 ,4],
                             [1, 2, 3, 4]]).astype(np.float32)
-        segment_ids = np.array([[0, 0, 0, 1], 
-                                [0, 0, 1, 0], 
+        segment_ids = np.array([[0, 0, 0, 1],
+                                [0, 0, 1, 0],
                                 [0, 1, 0, 0]]).astype(np.int32)
         out = unsorted_batch_segment_sum_Job(input_blob, segment_ids)
 
@@ -973,7 +973,7 @@ def equal(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def equal_Job(x: tp.Numpy.Placeholder((3, )), 
+        def equal_Job(x: tp.Numpy.Placeholder((3, )),
                     y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.equal(x, y)
@@ -1011,7 +1011,7 @@ def not_equal(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def not_equal_Job(x: tp.Numpy.Placeholder((3, )), 
+        def not_equal_Job(x: tp.Numpy.Placeholder((3, )),
                         y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.not_equal(x, y)
@@ -1049,7 +1049,7 @@ def less(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def less_Job(x: tp.Numpy.Placeholder((3, )), 
+        def less_Job(x: tp.Numpy.Placeholder((3, )),
                     y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.less(x, y)
@@ -1087,7 +1087,7 @@ def less_equal(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def less_equal_Job(x: tp.Numpy.Placeholder((3, )), 
+        def less_equal_Job(x: tp.Numpy.Placeholder((3, )),
                         y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.less_equal(x, y)
@@ -1116,7 +1116,7 @@ def greater(
     Returns:
         oneflow_api.BlobDesc: A Blob with int8 type.
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
@@ -1125,7 +1125,7 @@ def greater(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def greater_Job(x: tp.Numpy.Placeholder((3, )), 
+        def greater_Job(x: tp.Numpy.Placeholder((3, )),
                         y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.greater(x, y)
@@ -1163,7 +1163,7 @@ def greater_equal(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def greater_equal_Job(x: tp.Numpy.Placeholder((3, )), 
+        def greater_equal_Job(x: tp.Numpy.Placeholder((3, )),
                             y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.greater_equal(x, y)
@@ -1206,7 +1206,7 @@ def logical_and(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def logical_and_Job(x: tp.Numpy.Placeholder((3, )), 
+        def logical_and_Job(x: tp.Numpy.Placeholder((3, )),
                             y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.logical_and(x, y)
@@ -1233,7 +1233,7 @@ def minimum(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: A Blob, has the same type of x. 
+        oneflow_api.BlobDesc: A Blob, has the same type of x.
 
     For example:
 
@@ -1244,7 +1244,7 @@ def minimum(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def minimum_Job(x: tp.Numpy.Placeholder((3, )), 
+        def minimum_Job(x: tp.Numpy.Placeholder((3, )),
                         y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.minimum(x, y)
@@ -1283,7 +1283,7 @@ def maximum(
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: A Blob, has the same type of x. 
+        oneflow_api.BlobDesc: A Blob, has the same type of x.
 
     For example:
 
@@ -1294,7 +1294,7 @@ def maximum(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def maximum_Job(x: tp.Numpy.Placeholder((3, )), 
+        def maximum_Job(x: tp.Numpy.Placeholder((3, )),
                         y: tp.Numpy.Placeholder((3, ))
         )->tp.Numpy:
             return flow.math.maximum(x, y)
@@ -1328,7 +1328,7 @@ def elem_cnt(
     dtype: Optional[dtype_util.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
-    """Computes the product of input_blob's dimensions along the parameter `axis`. By default, all the dimensions will be computed. 
+    """Computes the product of input_blob's dimensions along the parameter `axis`. By default, all the dimensions will be computed.
 
     Args:
         input_blob (oneflow_api.BlobDesc): Input Blob
@@ -1423,7 +1423,7 @@ def top_k(
     sorted: bool = True,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
-    """Finds the indices of the k largest entries at specified axis, the difference between other framework is that oneflow only return the indices. 
+    """Finds the indices of the k largest entries at specified axis, the difference between other framework is that oneflow only return the indices.
 
     Args:
         input (oneflow_api.BlobDesc): The input Blob
@@ -1510,7 +1510,7 @@ def argmax(
         )->tp.Numpy:
             return flow.math.argmax(x)
 
-        x = np.array([[1, 3, 8, 7, 2], 
+        x = np.array([[1, 3, 8, 7, 2],
                     [1, 9, 4, 3, 2]], dtype=np.float32)
 
         out = argmax_Job(x)
@@ -1689,7 +1689,7 @@ def l2_normalize(
 ) -> oneflow_api.BlobDesc:
     r"""Use L2 norm to normalizes along dimension `axis`
 
-    The equation is: 
+    The equation is:
 
     .. math::
         out = \frac{x}{\sqrt{\Sigma{x^2}+\epsilon}}
@@ -1768,7 +1768,7 @@ def squared_difference(
         import oneflow.typing as tp
 
         @flow.global_function()
-        def squared_difference_Job(x: tp.Numpy.Placeholder((4, )), 
+        def squared_difference_Job(x: tp.Numpy.Placeholder((4, )),
                                 y: tp.Numpy.Placeholder((4, ))
         )->tp.Numpy:
             return flow.math.squared_difference(x, y)
@@ -1817,7 +1817,7 @@ def tril(
 
     Args:
         x (oneflow_api.BlobDesc): Input Blob.
-        diagonal (int): Diagonal offset, when diagonal > 0, diagonal offset up, 
+        diagonal (int): Diagonal offset, when diagonal > 0, diagonal offset up,
                         otherwise, offset downward.
         fill_value(Union[int, float]): The value filled into the upper triangle.
         name (Optional[str], optional): The name for the operation. Defaults to None.
@@ -1931,7 +1931,7 @@ def polyval(
 
     Returns:
         oneflow_api.BlobDesc: A Blob, has the same data type of x.
-    
+
     For example:
 
     .. code-block:: python
@@ -1939,7 +1939,7 @@ def polyval(
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-        
+
         @flow.global_function()
         def polyval_Job(
             x: tp.Numpy.Placeholder((3,), dtype=flow.float32)
@@ -1949,7 +1949,7 @@ def polyval(
 
         x = np.array([1.0, 2.0, 3.0]).astype(np.float32)
         out = polyval_Job(x)
-        
+
         # output [ 2. 8. 16.]
 
     """
@@ -2021,11 +2021,11 @@ def in_top_k(
 
 @oneflow_export("range")
 def range(start, limit=None, delta=1, dtype=None, name="range") -> oneflow_api.BlobDesc:
-    r"""This operator is similar to python `range`, the difference is that `oneflow.range` generates 
-    a Blob. 
+    r"""This operator is similar to python `range`, the difference is that `oneflow.range` generates
+    a Blob.
 
     Args:
-        start ([type]): The start of interval. Its type should be `int`. 
+        start ([type]): The start of interval. Its type should be `int`.
         limit ([type], optional): The limit of interval. Its type should be `int`.
         delta (int, optional): The numerical spacing between elements. Defaults to 1.
         dtype ([type], optional): The output's data type. Currently we only support `oneflow.int64`. Defaults to None.
@@ -2034,40 +2034,40 @@ def range(start, limit=None, delta=1, dtype=None, name="range") -> oneflow_api.B
     Returns:
         oneflow_api.BlobDesc: The result Blob
 
-    For example: 
+    For example:
 
-    Example 1: 
+    Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp 
+        import oneflow.typing as tp
 
 
         @flow.global_function()
         def range_job()->tp.Numpy:
-            with flow.scope.placement("cpu", "0:0"):   
+            with flow.scope.placement("cpu", "0:0"):
                 out = flow.range(10, dtype=flow.int64)
-            
+
             return out
 
         out = range_job()
 
         # out [0 1 2 3 4 5 6 7 8 9]
-    
-    Example2: 
 
-    .. code-block:: python 
+    Example2:
+
+    .. code-block:: python
 
         import oneflow as flow
-        import oneflow.typing as tp 
+        import oneflow.typing as tp
 
 
         @flow.global_function()
         def range_job()->tp.Numpy:
-            with flow.scope.placement("cpu", "0:0"):   
+            with flow.scope.placement("cpu", "0:0"):
                 out = flow.range(1, 10, 3, dtype=flow.int64)
-            
+
             return out
 
         out = range_job()
