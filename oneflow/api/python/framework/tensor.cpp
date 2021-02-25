@@ -66,6 +66,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init(&MakeMirroredTensor))
       .def_property_readonly("shape", &MirroredTensor::shape)
       .def_property_readonly("device", &MirroredTensor::device)
+      .def_property_readonly("ndim", &MirroredTensor::ndim)
+      .def_property_readonly("is_cuda", &MirroredTensor::is_cuda)
       .def("get_dtype",
            [](std::shared_ptr<MirroredTensor>& x) { return static_cast<int>(x->dtype()); })
       .def("size", &MirroredTensor::shape);
