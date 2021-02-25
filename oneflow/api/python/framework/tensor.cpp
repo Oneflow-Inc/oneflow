@@ -45,9 +45,9 @@ std::shared_ptr<MirroredTensor> MakeMirroredTensor(const py::tuple& py_shape, in
 }
 
 std::shared_ptr<ConsistentTensor> MakeConsistentTensor(
-    const std::shared_ptr<Shape>& shape, DataType dtype,
-    const std::shared_ptr<compatible_py::Distribute>& distribute,
-    std::shared_ptr<ParallelDesc>& parallel_desc) {
+  const std::shared_ptr<Shape>& shape, DataType dtype,
+  const std::shared_ptr<compatible_py::Distribute>& distribute,
+  std::shared_ptr<ParallelDesc>& parallel_desc) {
   std::shared_ptr<ConsistentTensorImpl> impl;
   if (*Global<bool, EagerExecution>::Get()) {
     impl = std::make_shared<EagerConsistentTensorImpl>(shape, static_cast<DataType>(dtype),
