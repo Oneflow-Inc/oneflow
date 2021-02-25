@@ -110,7 +110,7 @@ class UndeterminedTensor final : public Tensor {
   const std::shared_ptr<const Device>& device() const { return device_; }
   void set_device(const std::shared_ptr<const Device>& device) { device_ = device; }
 
-  bool is_lazy() const override { return *Global<bool, EagerExecution>::Get(); }
+  bool is_lazy() const override { return !(*Global<bool, EagerExecution>::Get()); }
 
   std::shared_ptr<DeterminedTensor> DetermineAndDestroySelf() override;
 
