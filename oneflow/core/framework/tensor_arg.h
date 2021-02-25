@@ -13,20 +13,36 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_RECORD_OFRECORD_BYTES_LIST_ENCODER_H_
-#define ONEFLOW_CORE_RECORD_OFRECORD_BYTES_LIST_ENCODER_H_
 
-#include "oneflow/core/record/ofrecord_encoder.h"
+#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_ARG_H_
+#define ONEFLOW_CORE_FRAMEWORK_TENSOR_ARG_H_
+
+#include <memory>
+#include <vector>
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace one {
 
-template<typename T>
-class OFRecordEncoderImpl<EncodeCase::kBytesList, T> final : public OFRecordEncoderIf {
+class Tensor;
+
+// This class will be used in TensorImpl and Autograd. It will share data with different
+// FunctionNodes.
+class TensorArg final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(TensorArg);
+  TensorArg() = default;
+  ~TensorArg() = default;
+
+  bool Empty() const;
+  void Release();
+
  private:
-  void EncodeOneCol(DeviceCtx*, const Blob* in_blob, int64_t in_offset, Feature&,
-                    const std::string& field_name, int64_t one_col_elem_num) const override;
+  std::vector<std::shared_ptr<Tensor>> partial_sum_tensors_;
+  std::shared_ptr<Tensor> acc_tensor_;
 };
 
+}  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_RECORD_OFRECORD_BYTES_LIST_ENCODER_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_ARG_H_
