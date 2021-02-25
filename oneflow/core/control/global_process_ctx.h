@@ -13,19 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/virtual_machine_scope.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
-#include "oneflow/core/vm/oneflow_vm.h"
-#include "oneflow/core/control/global_process_ctx.h"
+#ifndef ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
+#define ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
+
+#include <string>
 
 namespace oneflow {
-namespace vm {
 
-VirtualMachineScope::VirtualMachineScope(const Resource& resource) {
-  Global<OneflowVM>::New(resource, GlobalProcessCtx::Rank());
-}
+struct GlobalProcessCtx {
+  static int64_t Rank();
+  static bool IsThisProcessMaster();
+  static size_t WorldSize();
+  static std::string LogDirEntry();
+};
 
-VirtualMachineScope::~VirtualMachineScope() { Global<OneflowVM>::Delete(); }
-
-}  // namespace vm
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_

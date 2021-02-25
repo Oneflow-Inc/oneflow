@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/profiler.h"
@@ -52,8 +52,7 @@ void PushAvailableMemDescOfThisMachine() {
   }
 #endif
   this_machine_mem_desc.add_zone_size(GetAvailableCpuMemSize());
-  Global<CtrlClient>::Get()->PushKV(GetAmdCtrlKey(Global<MachineCtx>::Get()->this_machine_id()),
-                                    this_machine_mem_desc);
+  Global<CtrlClient>::Get()->PushKV(GetAmdCtrlKey(GlobalProcessCtx::Rank()), this_machine_mem_desc);
 }
 
 AvailableMemDesc PullAvailableMemDesc() {
@@ -78,12 +77,12 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   Global<const IOConf>::SessionNew(config_proto.session_id(), config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
   Global<IDMgr>::New();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()
+  if (GlobalProcessCtx::IsThisProcessMaster()
       && Global<const ProfilerConf>::Get()->collect_act_event()) {
     Global<Profiler>::New();
   }
   PushAvailableMemDescOfThisMachine();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<AvailableMemDesc>::New();
     *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
     Global<JobName2JobId>::New();
@@ -98,7 +97,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
 }
 
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<RuntimeBufferManagersScope>::Delete();
     Global<JobSetCompileCtx>::Delete();
     Global<LazyJobBuildAndInferCtxMgr>::Delete();
