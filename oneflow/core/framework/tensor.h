@@ -66,8 +66,9 @@ class Tensor {
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual DataType dtype() const = 0;
   virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
+  virtual bool is_consistent() const = 0;
   virtual bool is_lazy() const = 0;
-  virtual std::shared_ptr<DeterminedTensor> DeterminizeAndDestroySelf() = 0;
+  virtual std::shared_ptr<DeterminedTensor> DetermineAndDestroySelf() = 0;
 
  protected:
   Tensor() = default;
@@ -76,21 +77,24 @@ class Tensor {
 class ConsistentTensor;
 class MirroredTensor;
 
-class NonDeterminedTensor final : public Tensor {
+class UndeterminedTensor final : public Tensor {
  public:
-  virtual ~NonDeterminedTensor() = default;
-  NonDeterminedTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
-                      const std::shared_ptr<const ParallelDesc>& parallel_desc)
+  virtual ~UndeterminedTensor() = default;
+  UndeterminedTensor(const std::shared_ptr<Shape>& shape, DataType dtype,
+                     const std::shared_ptr<const ParallelDesc>& parallel_desc)
       : shape_(shape), dtype_(dtype), parallel_desc_(parallel_desc) {}
 
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   void set_shape(const std::shared_ptr<const Shape>& shape) { shape_ = shape; }
 
+  bool is_consistent() const override { return consistent_; }
+  void set_consistent(const bool consistent) { consistent_ = consistent; }
+
   DataType dtype() const override { return dtype_; }
   void set_dtype(const DataType& dtype) { dtype_ = dtype; }
 
   std::shared_ptr<const compatible_py::Distribute> distribute() const { return distribute_; }
-  std::shared_ptr<const compatible_py::Distribute>& set_distribute(
+  const std::shared_ptr<const compatible_py::Distribute>& set_distribute(
       const std::shared_ptr<const compatible_py::Distribute>& distribute) {
     return distribute_ = distribute;
   }
@@ -110,18 +114,7 @@ class NonDeterminedTensor final : public Tensor {
     return false;
   }
 
-  std::shared_ptr<DeterminedTensor> DeterminizeAndDestroySelf() override {
-    // TODO: replace these fake functions
-    auto is_consistent_mode_now = []() { return false; };
-    auto is_parameter = []() { return false; };
-    if (is_consistent_mode_now() || is_parameter()) {
-      return std::static_pointer_cast<DeterminedTensor>(
-          std::make_shared<ConsistentTensor>(shape(), dtype(), parallel_desc(), distribute()));
-    } else {
-      return std::static_pointer_cast<DeterminedTensor>(
-          std::make_shared<MirroredTensor>(shape(), dtype(), parallel_desc(), device()));
-    }
-  }
+  std::shared_ptr<DeterminedTensor> DetermineAndDestroySelf() override;
 
  private:
   std::shared_ptr<const Shape> shape_;
@@ -129,18 +122,17 @@ class NonDeterminedTensor final : public Tensor {
   std::shared_ptr<const ParallelDesc> parallel_desc_;
   std::shared_ptr<const Device> device_;
   std::shared_ptr<const compatible_py::Distribute> distribute_;
+  bool consistent_;
 };
 
 class DeterminedTensor : public Tensor, public std::enable_shared_from_this<DeterminedTensor> {
-  virtual bool is_consistent() const = 0;
-
   // Getters to be deprecated
   virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
 
   // Setters to be deprecated
   virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 
-  std::shared_ptr<DeterminedTensor> DeterminizeAndDestroySelf() override {
+  std::shared_ptr<DeterminedTensor> DetermineAndDestroySelf() override {
     return shared_from_this();
   }
 };
