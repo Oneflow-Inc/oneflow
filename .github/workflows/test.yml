@@ -40,7 +40,7 @@ jobs:
         python3 tools/package_mirror.py -i cmake
 
   build_and_test_all:
-    needs: [check_license_and_format, mirror_third_party]
+    needs: [check_license_and_format]
     name: CUDA, XLA, CPU
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
