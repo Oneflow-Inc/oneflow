@@ -20,68 +20,74 @@ limitations under the License.
 namespace oneflow {
 
 int64_t IDMgr::GetGpuComputeThrdId(int64_t dev_phy_id) const {
-  return IdUtil::GetStreamId(StreamType::kCuda, static_cast<uint32_t>(dev_phy_id),
-                             StreamIndex::Cuda::kCompute);
+  UNIMPLEMENTED();
+  return 0;
 }
 
 int64_t IDMgr::GetGpuH2DThrdId(int64_t dev_phy_id) const {
-  return IdUtil::GetStreamId(StreamType::kCuda, static_cast<uint32_t>(dev_phy_id),
-                             StreamIndex::Cuda::kH2D);
+  UNIMPLEMENTED();
+  return 0;
 }
 
 int64_t IDMgr::GetGpuD2HThrdId(int64_t dev_phy_id) const {
-  return IdUtil::GetStreamId(StreamType::kCuda, static_cast<uint32_t>(dev_phy_id),
-                             StreamIndex::Cuda::kD2H);
+  UNIMPLEMENTED();
+  return 0;
 }
 
 int64_t IDMgr::GetGpuNcclThrdId(int64_t dev_phy_id) const {
-  return IdUtil::GetStreamId(StreamType::kCuda, static_cast<uint32_t>(dev_phy_id),
-                             StreamIndex::Cuda::kNccl);
+  UNIMPLEMENTED();
+  return 0;
 }
 
 int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
-  return IdUtil::GetStreamId(StreamType::kCuda, static_cast<uint32_t>(dev_phy_id),
-                             StreamIndex::Cuda::kMix);
+  UNIMPLEMENTED();
+  return 0;
 }
 
 int64_t IDMgr::GetGpuDecodeH2DThrdId(int64_t dev_phy_id) const {
-  return IdUtil::GetStreamId(StreamType::kCuda, static_cast<uint32_t>(dev_phy_id),
-                             StreamIndex::Cuda::kDecodeH2D);
+  UNIMPLEMENTED();
+  return 0;
 }
 
 int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
-  return IdUtil::GetStreamId(StreamType::kCPU, static_cast<uint32_t>(dev_phy_id),
-                             StreamIndex::CPU::kCompute);
+  UNIMPLEMENTED();
+  return 0;
 }
 
-int64_t IDMgr::CommNetThrdId() const { return IdUtil::GetCommNetStreamId(); }
+int64_t IDMgr::CommNetThrdId() const {
+  UNIMPLEMENTED();
+  return 0;
+}
 
-int64_t IDMgr::TickTockThrdId() const { return IdUtil::GetTickTockStreamId(); }
+int64_t IDMgr::TickTockThrdId() const {
+  UNIMPLEMENTED();
+  return 0;
+}
 
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
-  return StreamId{static_cast<uint32_t>(thrd_id)}.device_type();
+  return DeserializeStreamIdFromInt64(thrd_id).device_type();
 }
 
 int64_t IDMgr::GetGpuPhyIdFromThrdId(int64_t thrd_id) const {
-  StreamId stream_id{static_cast<uint32_t>(thrd_id)};
+  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id);
   CHECK_EQ(stream_id.device_type(), DeviceType::kGPU);
   return stream_id.device_index();
 }
 
 DeviceType IDMgr::GetDeviceTypeFromActorId(int64_t actor_id) const {
-  return TaskId{static_cast<uint64_t>(actor_id)}.stream_id().device_type();
+  return DeserializeTaskIdFromInt64(actor_id).stream_id().device_type();
 }
 
 int64_t IDMgr::MachineId4ActorId(int64_t actor_id) const {
-  return TaskId{static_cast<uint64_t>(actor_id)}.process_id().node_index();
+  return DeserializeTaskIdFromInt64(actor_id).process_id().node_index();
 }
 
 int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
-  return TaskId{static_cast<uint64_t>(actor_id)}.stream_id();
+  return SerializeStreamIdToInt64(DeserializeTaskIdFromInt64(actor_id).stream_id());
 }
 
 int64_t IDMgr::GlobalWorkStreamId4TaskId(int64_t task_id) const {
-  return (task_id >> TaskId::kRightBits) << TaskId::kRightBits;
+  return DeserializeTaskIdFromInt64(task_id).global_stream_index();
 }
 
 int64_t IDMgr::GlobalWorkStreamId4ActorId(int64_t actor_id) const {
@@ -89,16 +95,20 @@ int64_t IDMgr::GlobalWorkStreamId4ActorId(int64_t actor_id) const {
 }
 
 int64_t IDMgr::GlobalThrdId4TaskId(int64_t task_id) const {
-  return (task_id >> TaskId::kRightBits) << TaskId::kRightBits;
+  return DeserializeTaskIdFromInt64(task_id).global_stream_index();
 }
 
 int64_t IDMgr::AllocateChainId(int64_t global_work_stream_id) {
-  return Global<IdUtil>::Get()->GenerateChainId(static_cast<uint64_t>(global_work_stream_id));
+  return chain_id_gen_.Generate(static_cast<uint64_t>(global_work_stream_id));
 }
 
 int64_t IDMgr::PickCpuThrdIdEvenly(int64_t machine_id) {
-  return Global<IdUtil>::Get()->GenerateCPUComputeStreamIdEvenly(
-      ProcessId{static_cast<uint32_t>(machine_id), 0});
+  ProcessId process_id{static_cast<uint32_t>(machine_id), 0};
+  DeviceId device_id{DeviceType::kCPU, 0};
+  auto* stream_index_generator =
+      GetStreamIndexGeneratorManager()->GetGenerator(process_id, device_id);
+  StreamId stream_id{device_id, stream_index_generator->GenerateComputeStreamIndex()};
+  return SerializeStreamIdToInt64(stream_id);
 }
 
 IDMgr::IDMgr() {
@@ -110,14 +120,6 @@ IDMgr::IDMgr() {
   regst_desc_id_count_ = 0;
   mem_block_id_count_ = 0;
   chunk_id_count_ = 0;
-  base_independent_thrd_id_ = TickTockThrdId() + 1;
-}
-
-int64_t IDMgr::GetMachineThrdId(int64_t machine_id, int64_t thrd_id) {
-  int64_t machine_id64bit = machine_id << (63 - machine_id_bit_num_);
-  int64_t thread_id64bit = thrd_id << (local_work_stream_id_bit_num_ + task_id_bit_num_);
-  int64_t machine_thread_id = machine_id64bit | thread_id64bit;
-  return machine_thread_id;
 }
 
 }  // namespace oneflow
