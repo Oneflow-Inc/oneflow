@@ -13,19 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/virtual_machine_scope.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
-#include "oneflow/core/vm/oneflow_vm.h"
-#include "oneflow/core/control/global_process_ctx.h"
+
+#include "oneflow/core/framework/tensor_arg.h"
 
 namespace oneflow {
-namespace vm {
+namespace one {
 
-VirtualMachineScope::VirtualMachineScope(const Resource& resource) {
-  Global<OneflowVM>::New(resource, GlobalProcessCtx::Rank());
+bool TensorArg::Empty() const { return partial_sum_tensors_.empty() && acc_tensor_; }
+
+void TensorArg::Release() {
+  partial_sum_tensors_.clear();
+  acc_tensor_.reset();
 }
 
-VirtualMachineScope::~VirtualMachineScope() { Global<OneflowVM>::Delete(); }
-
-}  // namespace vm
+}  // namespace one
 }  // namespace oneflow

@@ -13,31 +13,36 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_CLUSTER_DESC_H_
-#define ONEFLOW_CORE_JOB_CLUSTER_DESC_H_
 
-#include "oneflow/core/job/env.pb.h"
+#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_ARG_H_
+#define ONEFLOW_CORE_FRAMEWORK_TENSOR_ARG_H_
+
+#include <memory>
+#include <vector>
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace one {
 
-class EnvDesc final {
+class Tensor;
+
+// This class will be used in TensorImpl and Autograd. It will share data with different
+// FunctionNodes.
+class TensorArg final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(EnvDesc);
-  explicit EnvDesc(const EnvProto& env_proto) : env_proto_(env_proto) {}
-  ~EnvDesc() = default;
+  OF_DISALLOW_COPY_AND_MOVE(TensorArg);
+  TensorArg() = default;
+  ~TensorArg() = default;
 
-  const EnvProto& env_proto() const { return env_proto_; }
-  const Machine& machine(int32_t idx) const { return env_proto_.machine(idx); }
-  int32_t ctrl_port() const { return env_proto_.ctrl_port(); }
-  int32_t data_port() const { return env_proto_.data_port(); }
-  size_t TotalMachineNum() const;
-  int64_t GetMachineId(const std::string& addr) const;
+  bool Empty() const;
+  void Release();
 
  private:
-  EnvProto env_proto_;
+  std::vector<std::shared_ptr<Tensor>> partial_sum_tensors_;
+  std::shared_ptr<Tensor> acc_tensor_;
 };
 
+}  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_CLUSTER_DESC_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_ARG_H_
