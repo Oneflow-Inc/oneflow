@@ -49,7 +49,7 @@ class TensorImpl {
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }
-  const std::shared_ptr<TensorArg>& now_grad() const { return now_grad_; }
+  const std::shared_ptr<TensorArg>& now_grad_arg() const { return now_grad_arg_; }
   bool requires_grad() const { return requires_grad_; }
   bool is_leaf() const { return is_leaf_; }
   bool retain_grad() const { return retain_grad_; }
@@ -75,7 +75,7 @@ class TensorImpl {
 
   // For autograd
   std::shared_ptr<Tensor> acc_grad_;
-  std::shared_ptr<TensorArg> now_grad_;
+  std::shared_ptr<TensorArg> now_grad_arg_;
   bool requires_grad_;
   bool is_leaf_;
   bool retain_grad_;
