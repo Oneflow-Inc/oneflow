@@ -64,8 +64,14 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   rank_desc->set_rank(parallel_id);
 
   const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
-  const int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
-  const int64_t thrd_id = Global<IDMgr>::Get()->GetGpuNcclThrdId(device_id);
+  const int64_t device_index = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+  ProcessId process_id{static_cast<uint32_t>(machine_id), 0};
+  DeviceId device_id{DeviceType::kGPU, static_cast<uint32_t>(device_index)};
+  auto* stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
+      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id, device_id));
+  CHECK_NOTNULL(stream_index_generator);
+  uint32_t stream_index = stream_index_generator->GenerateNcclStreamIndex();
+  const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
   node->Init(machine_id, thrd_id, NewAreaId(), op_conf);
 }
 
@@ -391,6 +397,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         auto* stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
                                                                                  device_id));
+        CHECK_NOTNULL(stream_index_generator);
         uint32_t stream_index = stream_index_generator->GenerateComputeStreamIndex();
         const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
         TaskNode* in_node = sorted_in_tasks.at(i);
