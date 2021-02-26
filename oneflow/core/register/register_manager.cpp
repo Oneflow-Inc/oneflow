@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/comm_network/comm_network.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/memory/memory_allocator.h"
 
@@ -44,7 +44,7 @@ struct PackedChunkInfo {
 }  // namespace
 
 RegstMgr::RegstMgr(const Plan& plan) {
-  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
 
   HashMap<int64_t, char*> chunk_id2ptr;
   for (const ChunkProto& chunk : plan.block_chunk_list().chunk()) {
