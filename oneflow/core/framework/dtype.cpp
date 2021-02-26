@@ -73,7 +73,8 @@ std::shared_ptr<DType> RecordDType() {
 }
 
 std::shared_ptr<DType> TensorBufferDType() {
-  static std::shared_ptr<DType> tensor_buffer_dtype = std::make_shared<DType>(DataType::kTensorBuffer);
+  static std::shared_ptr<DType> tensor_buffer_dtype =
+      std::make_shared<DType>(DataType::kTensorBuffer);
   return tensor_buffer_dtype;
 }
 
