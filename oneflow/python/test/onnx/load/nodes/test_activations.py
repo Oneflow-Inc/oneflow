@@ -15,6 +15,8 @@ limitations under the License.
 """
 import torch
 from torch import nn
+from absl import app
+from absl.testing import absltest
 
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
@@ -26,3 +28,6 @@ def test_relu(test_case):
             return x
 
     load_pytorch_module_and_check(test_case, Net)
+
+test_case = absltest.TestCase
+test_relu(test_case)
