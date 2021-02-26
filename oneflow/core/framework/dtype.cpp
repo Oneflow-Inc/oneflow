@@ -68,12 +68,12 @@ std::shared_ptr<DType> UInt8() {
 }
 
 std::shared_ptr<DType> RecordDType() {
-  static std::shared_ptr<DType> record_dtype = std::make_shared<DType>(DataType::kChar);
+  static std::shared_ptr<DType> record_dtype = std::make_shared<DType>(DataType::kOFRecord);
   return record_dtype;
 }
 
 std::shared_ptr<DType> TensorBufferDType() {
-  static std::shared_ptr<DType> tensor_buffer_dtype = std::make_shared<DType>(DataType::kChar);
+  static std::shared_ptr<DType> tensor_buffer_dtype = std::make_shared<DType>(DataType::kTensorBuffer);
   return tensor_buffer_dtype;
 }
 
