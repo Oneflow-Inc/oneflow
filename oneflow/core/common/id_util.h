@@ -37,6 +37,7 @@ class ProcessId {
   uint32_t process_index() const;
   bool operator==(const ProcessId& rhs) const { return val_ == rhs.val_; }
   bool operator!=(const ProcessId& rhs) const { return !(*this == rhs); }
+  size_t hash() const { return std::hash<underlying_t>{}(val_); }
 
  private:
   using underlying_t = uint32_t;
@@ -48,9 +49,6 @@ class ProcessId {
   constexpr static int kReservedBits = kFullBits - kBits;
 
   friend class TaskId;
-  friend class std::hash<ProcessId>;
-  explicit ProcessId(underlying_t val) : val_(val) {}
-  operator uint32_t() const { return val_; }
 
   underlying_t val_;
 };
@@ -62,6 +60,7 @@ class DeviceId {
   uint32_t device_index() const;
   bool operator==(const DeviceId& rhs) const { return val_ == rhs.val_; }
   bool operator!=(const DeviceId& rhs) const { return !(*this == rhs); }
+  size_t hash() const { return std::hash<underlying_t>{}(val_); }
 
  private:
   using underlying_t = uint32_t;
@@ -73,9 +72,6 @@ class DeviceId {
   constexpr static int kReservedBits = kFullBits - kBits;
 
   friend class StreamId;
-  friend class std::hash<DeviceId>;
-  explicit DeviceId(underlying_t val) : val_(val) {}
-  operator underlying_t() const { return val_; }
 
   underlying_t val_;
 };
@@ -90,10 +86,13 @@ class StreamId {
   uint32_t stream_index() const;
   bool operator==(const StreamId& rhs) const { return val_ == rhs.val_; }
   bool operator!=(const StreamId& rhs) const { return !(*this == rhs); }
+  size_t hash() const { return std::hash<underlying_t>{}(val_); }
 
  private:
   using underlying_t = uint32_t;
   constexpr static int kDeviceIdBits = DeviceId::kBits;
+  constexpr static int kDeviceTypeBits = DeviceId::kDeviceTypeBits;
+  constexpr static int kDeviceIndexBits = DeviceId::kDeviceIndexBits;
   constexpr static int kStreamIndexBits = 12;
   constexpr static int kBits = kDeviceIdBits + kStreamIndexBits;
   constexpr static int kFullBits = sizeof(underlying_t) * CHAR_BIT;
@@ -101,11 +100,6 @@ class StreamId {
   constexpr static int kReservedBits = kFullBits - kBits;
 
   friend class TaskId;
-  friend int64_t SerializeStreamIdToInt64(StreamId);
-  friend StreamId DeserializeStreamIdFromInt64(int64_t);
-  friend class std::hash<StreamId>;
-  explicit StreamId(underlying_t val) : val_(val) {}
-  operator underlying_t() const { return val_; }
 
   underlying_t val_;
 };
@@ -120,6 +114,7 @@ class TaskId {
   uint32_t task_index() const;
   bool operator==(const TaskId& rhs) const { return val_ == rhs.val_; }
   bool operator!=(const TaskId& rhs) const { return !(*this == rhs); }
+  size_t hash() const { return std::hash<underlying_t>{}(val_); }
 
  private:
   using underlying_t = uint64_t;
@@ -130,20 +125,8 @@ class TaskId {
   const static int kFullBits = sizeof(underlying_t) * CHAR_BIT;
   static_assert(kBits == kFullBits, "TaskId bits layout is illegal");
 
-  friend int64_t SerializeTaskIdToInt64(TaskId);
-  friend TaskId DeserializeTaskIdFromInt64(int64_t);
-  friend class std::hash<TaskId>;
-  explicit TaskId(underlying_t val) : val_(val) {}
-  operator underlying_t() const { return val_; }
-
   underlying_t val_;
 };
-
-int64_t SerializeStreamIdToInt64(StreamId);
-StreamId DeserializeStreamIdFromInt64(int64_t);
-
-int64_t SerializeTaskIdToInt64(TaskId);
-TaskId DeserializeTaskIdFromInt64(int64_t);
 
 }  // namespace oneflow
 
@@ -151,30 +134,22 @@ namespace std {
 
 template<>
 struct hash<oneflow::ProcessId> {
-  size_t operator()(const oneflow::ProcessId& process_id) const {
-    return std::hash<uint32_t>{}(static_cast<uint32_t>(process_id));
-  }
+  size_t operator()(const oneflow::ProcessId& process_id) const { return process_id.hash(); }
 };
 
 template<>
 struct hash<oneflow::DeviceId> {
-  size_t operator()(const oneflow::DeviceId& device_id) const {
-    return std::hash<uint32_t>{}(static_cast<uint32_t>(device_id));
-  }
+  size_t operator()(const oneflow::DeviceId& device_id) const { return device_id.hash(); }
 };
 
 template<>
 struct hash<oneflow::StreamId> {
-  size_t operator()(const oneflow::StreamId& stream_id) const {
-    return std::hash<uint32_t>{}(static_cast<uint32_t>(stream_id));
-  }
+  size_t operator()(const oneflow::StreamId& stream_id) const { return stream_id.hash(); }
 };
 
 template<>
 struct hash<oneflow::TaskId> {
-  size_t operator()(const oneflow::TaskId& task_id) const {
-    return std::hash<uint64_t>{}(static_cast<uint64_t>(task_id));
-  }
+  size_t operator()(const oneflow::TaskId& task_id) const { return task_id.hash(); }
 };
 
 }  // namespace std
