@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/id_manager.h"
 
@@ -60,7 +60,7 @@ ncclComm_t EagerNcclCommMgr::GetCommForDevice(
                 return a.first < b.first;
               }
             });
-  int64_t machine = Global<MachineCtx>::Get()->this_machine_id();
+  int64_t machine = GlobalProcessCtx::Rank();
   std::pair<int64_t, int64_t> this_device(machine, dev);
   auto it = std::find(device_vec.cbegin(), device_vec.cend(), this_device);
   CHECK(it != device_vec.end());

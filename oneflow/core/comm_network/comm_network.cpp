@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/comm_network/comm_network.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/global_for.h"
@@ -88,7 +88,7 @@ void CommNet::AddWorkToStream(void* actor_read_id, const std::function<void()>& 
 }
 
 CommNet::CommNet(const Plan& plan) {
-  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
   HashMap<int64_t, MachineIds> net_topo;
   net_topo = PbMap2HashMap(plan.net_topo().peer_machine_ids());
   auto machine_ids_it = net_topo.find(this_machine_id);
@@ -103,7 +103,7 @@ CommNet::CommNet(const Plan& plan) {
 }
 
 CommNet::CommNet() {
-  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
   int64_t total_machine_num = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
   for (int64_t i = 0; i < total_machine_num; ++i) {
     if (i == this_machine_id) { continue; }
