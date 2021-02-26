@@ -166,11 +166,11 @@ class UserKernelOpInferContext : public user_op::InferContext {
  public:
   UserKernelOpInferContext(const KernelConf& kernel_conf, const JobDesc& job_desc)
       : user_op::InferContext(user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+        job_desc_(job_desc),
         parallel_ctx_(kernel_conf.user_conf().parallel_ctx()),
-        sbp_signature_(kernel_conf.user_conf().sbp_sig()),
-        job_desc_(job_desc) {
-    auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
-                           ArgVec* arg_vec) {
+        sbp_signature_(kernel_conf.user_conf().sbp_sig()) {
+    auto InitTensorDesc = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
+                              ArgVec* arg_vec) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         const std::string& arg_name = it->first;
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
@@ -180,8 +180,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
         }
       }
     };
-    InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().input(), &inputs_);
-    InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_);
+    InitTensorDesc(kernel_conf.op_attribute().op_conf().user_conf().input(), &inputs_);
+    InitTensorDesc(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_);
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2logical_blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
                                        user_op::TensorDesc(pair.second));

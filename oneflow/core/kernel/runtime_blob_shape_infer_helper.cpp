@@ -26,23 +26,21 @@ RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_
                                                          const JobDesc* job_desc) {
   op_ = ConstructOp(op_conf, job_desc);
   if (kernel_conf.op_attribute().has_sbp_signature()) {
-    sbp_signature_ = kernel_conf.op_attribute().sbp_signature();
-  } else {
-    auto* map = sbp_signature_.mutable_bn_in_op2sbp_parallel();
-    op_->ForEachBnInOp([&](const std::string& bn_in_op) {
-      (*map)[bn_in_op].mutable_split_parallel()->set_axis(0);
-    });
+    sbp_signature_.reset(new SbpSignature(kernel_conf.op_attribute().sbp_signature()));
+    CHECK_JUST(op_->FillSbpSignature(*sbp_signature_));
   }
+  // TODO(guoran): FillOpParallelDesc
   op_->ForEachBnInOp([&](const std::string& bn_in_op) { bn_in_op2blob_desc_[bn_in_op].reset(); });
   if (kernel_conf.op_attribute().has_logical_blob_desc_signature()) {
+    HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2logical_blob_desc;
     auto& blob_desc_signature_map =
         kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc();
     for (const auto& pair : blob_desc_signature_map) {
-      bn_in_op2logical_blob_desc_[pair.first].reset(new BlobDesc(pair.second));
+      bn_in_op2logical_blob_desc[pair.first].reset(new BlobDesc(pair.second));
     }
     auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
-      if (bn_in_op2logical_blob_desc_.find(bn) != bn_in_op2logical_blob_desc_.end()) {
-        return bn_in_op2logical_blob_desc_.at(bn).get();
+      if (bn_in_op2logical_blob_desc.find(bn) != bn_in_op2logical_blob_desc.end()) {
+        return bn_in_op2logical_blob_desc.at(bn).get();
       }
       return nullptr;
     };
@@ -50,10 +48,7 @@ RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_
     CHECK_JUST(op_->FillLogicalOutBlobDesc(GetLogicalBlobDesc4BnInOp));
   }
   if (kernel_conf.has_parallel_ctx()) {
-    parallel_ctx_ = kernel_conf.parallel_ctx();
-  } else {
-    parallel_ctx_.set_parallel_id(0);
-    parallel_ctx_.set_parallel_num(1);
+    parallel_ctx_.reset(new ParallelContext(kernel_conf.parallel_ctx()));
   }
   op_infer_cache_key_.job_desc = job_desc;
   op_infer_cache_key_.op_conf_sym = op_->GetOpConfWithoutOpNameAndLbn();
@@ -94,7 +89,8 @@ void RuntimeBlobShapeInferHelper::InferShape(std::function<Blob*(const std::stri
       if (blob == nullptr) { return nullptr; }
       return BlobDesc4BnInOp(bn_in_op, blob->blob_desc());
     });
-    CHECK_JUST(op_->InferOutBlobDescsIf(CachedBlobDesc4BnInOp, &parallel_ctx_, &sbp_signature_));
+    CHECK_JUST(
+        op_->InferOutBlobDescsIf(CachedBlobDesc4BnInOp, parallel_ctx_.get(), sbp_signature_.get()));
     auto* ret = new OpInferCacheValue();
     ret->obn_idx2shape_sym.resize(op_->output_bns().size());
     FOR_RANGE(int, i, 0, op_->output_bns().size()) {
