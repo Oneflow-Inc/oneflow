@@ -29,10 +29,6 @@ class StreamIndexGenerator {
   virtual stream_index_t GenerateComputeStreamIndex() = 0;
   virtual stream_index_t GenerateH2DStreamIndex() = 0;
   virtual stream_index_t GenerateD2HStreamIndex() = 0;
-
-  virtual bool IsComputeStreamIndex(stream_index_t index) const = 0;
-  virtual bool IsH2DStreamIndex(stream_index_t index) const = 0;
-  virtual bool IsD2HStreamIndex(stream_index_t index) const = 0;
 };
 
 class StreamIndexGeneratorManager final {

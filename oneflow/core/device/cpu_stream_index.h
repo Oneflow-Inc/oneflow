@@ -34,12 +34,6 @@ class CPUStreamIndexGenerator final : public StreamIndexGenerator {
   stream_index_t GenerateTickTockStreamIndex();
   stream_index_t GenerateIndependentTaskStreamIndex(TaskType task_type);
 
-  bool IsComputeStreamIndex(stream_index_t index) const override;
-  bool IsH2DStreamIndex(stream_index_t index) const override { UNIMPLEMENTED(); }
-  bool IsD2HStreamIndex(stream_index_t index) const override { UNIMPLEMENTED(); }
-  bool IsCommNetStreamIndex(stream_index_t index) const;
-  bool IsTickTockStreamIndex(stream_index_t index) const;
-
  private:
   stream_index_t next_stream_index_;
   stream_index_t compute_stream_index_begin_;
