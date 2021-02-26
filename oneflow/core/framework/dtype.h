@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-class final DType {
+class DType final {
  public:
 };
 
