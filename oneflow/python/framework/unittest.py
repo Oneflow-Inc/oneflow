@@ -179,7 +179,7 @@ def device_num():
         return 1
 
 
-def eager_init_by_host_list():
+def enable_init_by_host_list():
     return os.getenv("ONEFLOW_TEST_ENABLE_INIT_BY_HOST_LIST") == "1"
 
 _unittest_env_initilized = False
@@ -192,7 +192,7 @@ class TestCase(unittest.TestCase):
         global _unittest_env_initilized
         global _unittest_worker_initilized
         if has_node_list() or has_rank_host_list():
-            if eager_init_by_host_list():
+            if enable_init_by_host_list():
                 print("*" * 50)
                 print("init by host list")
                 assert node_size() > 1
