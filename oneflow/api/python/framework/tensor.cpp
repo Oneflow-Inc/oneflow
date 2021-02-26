@@ -38,10 +38,10 @@ std::shared_ptr<T> MakeTensor(const py::tuple& py_shape, int dtype,
 }
 
 template<>
-std::shared_ptr<MirroredTensor> MakeTensor<MirroredTensor>(const py::tuple& py_shape, int dtype,
-                              const std::shared_ptr<Device>& device,
-                              const std::shared_ptr<compatible_py::Distribute>& distribute,
-                              std::shared_ptr<ParallelDesc>& parallel_desc) {
+std::shared_ptr<MirroredTensor> MakeTensor<MirroredTensor>(
+    const py::tuple& py_shape, int dtype, const std::shared_ptr<Device>& device,
+    const std::shared_ptr<compatible_py::Distribute>& distribute,
+    std::shared_ptr<ParallelDesc>& parallel_desc) {
   DimVector shape_dims;
   CHECK(py::isinstance<py::tuple>(py_shape));
   for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
@@ -56,10 +56,10 @@ std::shared_ptr<MirroredTensor> MakeTensor<MirroredTensor>(const py::tuple& py_s
 }
 
 template<>
-std::shared_ptr<ConsistentTensor> MakeTensor<ConsistentTensor>(const py::tuple& py_shape, int dtype,
-                              const std::shared_ptr<Device>& device,
-                              const std::shared_ptr<compatible_py::Distribute>& distribute,
-                              std::shared_ptr<ParallelDesc>& parallel_desc) {
+std::shared_ptr<ConsistentTensor> MakeTensor<ConsistentTensor>(
+    const py::tuple& py_shape, int dtype, const std::shared_ptr<Device>& device,
+    const std::shared_ptr<compatible_py::Distribute>& distribute,
+    std::shared_ptr<ParallelDesc>& parallel_desc) {
   DimVector shape_dims;
   CHECK(py::isinstance<py::tuple>(py_shape));
   for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
