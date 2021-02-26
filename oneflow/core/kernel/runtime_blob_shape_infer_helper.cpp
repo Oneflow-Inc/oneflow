@@ -33,7 +33,7 @@ RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_
   op_->ForEachBnInOp([&](const std::string& bn_in_op) { bn_in_op2blob_desc_[bn_in_op].reset(); });
   if (kernel_conf.op_attribute().has_logical_blob_desc_signature()) {
     HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2logical_blob_desc;
-    auto& blob_desc_signature_map =
+    const auto& blob_desc_signature_map =
         kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc();
     for (const auto& pair : blob_desc_signature_map) {
       bn_in_op2logical_blob_desc[pair.first].reset(new BlobDesc(pair.second));

@@ -121,7 +121,7 @@ class UserOpInferContext : public user_op::InferContext {
         sbp_signature_(sbp_signature),
         job_desc_(job_desc),
         parallel_num_(parallel_num) {
-    auto InitInOrOut =
+    auto InitTensorDesc =
         [&](const PbMap<std::string, UserOpConf::ListString>& arg_map, ArgVec* arg_vec,
             std::function<const BlobDesc*(const std::string&)> GetLogicalBlobDesc4BnInOp) {
           for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
@@ -148,8 +148,8 @@ class UserOpInferContext : public user_op::InferContext {
       return &GetLogicalBlobDesc4Obn(bn);
     };
 
-    InitInOrOut(op_conf.user_conf().input(), &inputs_, LogicalBlobDesc4Ibn);
-    InitInOrOut(op_conf.user_conf().output(), &outputs_, LogicalBlobDesc4Obn);
+    InitTensorDesc(op_conf.user_conf().input(), &inputs_, LogicalBlobDesc4Ibn);
+    InitTensorDesc(op_conf.user_conf().output(), &outputs_, LogicalBlobDesc4Obn);
   }
   ~UserOpInferContext() = default;
 
