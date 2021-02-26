@@ -913,7 +913,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
   };
   if (GlobalJobDesc().Bool("__is_user_function__")) {
-    JUST(DoPass("CompleteOfrecordDecoder"));
     JUST(DoPass("SetDefaultVariableConf"));
     JUST(DoPass("AddInputOutputOpsPass"));
 #ifdef WITH_CUDA
@@ -1039,8 +1038,6 @@ std::string OpConf2ClassName(const OperatorConf& op_conf) {
     return op_conf.user_conf().op_type_name();
   } else if (op_conf.has_variable_conf()) {
     return "variable";
-  } else if (op_conf.has_decode_ofrecord_conf()) {
-    return "decode_ofrecord";
   } else if (op_conf.has_input_conf() && op_conf.has_return_conf()) {
     return "input";
   } else if (op_conf.has_output_conf() && op_conf.has_return_conf()) {
