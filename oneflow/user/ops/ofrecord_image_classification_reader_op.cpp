@@ -54,11 +54,6 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
       ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("image", 0)->set_value(0);
-      ctx->BatchAxis4ArgNameAndIndex("label", 0)->set_value(0);
-      return Maybe<void>::Ok();
-    })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
                              const user_op::UserOpConfWrapper& conf) {
       user_op::OutputArgModifier* image_modifier = GetOutputArgModifierFn("image", 0);

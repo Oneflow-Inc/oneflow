@@ -168,28 +168,8 @@ void DeleteObject(const std::shared_ptr<InstructionsBuilder>& x,
   return x->DeleteObject(blob_object).GetOrThrow();
 }
 
-void InsertRemoveForeignCallbackInstruction(const std::shared_ptr<InstructionsBuilder>& x,
-                                            int64_t object_id, int64_t callback_id) {
-  return x->InsertRemoveForeignCallbackInstruction(object_id, callback_id).GetOrThrow();
-}
-
-void FetchBlobHeader(const std::shared_ptr<InstructionsBuilder>& x,
-                     const std::shared_ptr<compatible_py::BlobObject>& blob_object,
-                     int64_t callback_id) {
-  return x->FetchBlobHeader(blob_object, callback_id).GetOrThrow();
-}
-
-void FetchBlobBody(const std::shared_ptr<InstructionsBuilder>& x,
-                   const std::shared_ptr<compatible_py::BlobObject>& blob_object,
-                   int64_t callback_id) {
-  return x->FetchBlobBody(blob_object, callback_id).GetOrThrow();
-}
-
-void FeedBlob(const std::shared_ptr<InstructionsBuilder>& x,
-              const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
-  return x->FeedBlob(blob_object, callback_id).GetOrThrow();
-}
-
+// signature of python func _FindOrCreateDelegateBlobObject, it will be removed after blobcache is
+// migrated
 using FindOrCreateDelegateBlobObjectFun = std::function<std::shared_ptr<compatible_py::BlobObject>(
     const std::shared_ptr<InstructionsBuilder>&,
     const std::function<std::shared_ptr<compatible_py::BlobObject>(

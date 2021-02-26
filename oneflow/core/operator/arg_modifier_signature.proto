@@ -3,7 +3,6 @@ package oneflow;
 
 message InputBlobModifier {
   optional bool is_mutable = 1 [default = false];
-  optional bool use_header_only = 2 [default = false];
   optional bool requires_grad = 3 [default = false];
 }
 

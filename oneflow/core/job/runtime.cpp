@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_job_descs.h"
@@ -66,7 +66,7 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   std::vector<const TaskProto*> other_tasks;
   int64_t this_machine_task_num = 0;
   for (const TaskProto& task : plan.task()) {
-    if (task.machine_id() != Global<MachineCtx>::Get()->this_machine_id()) { continue; }
+    if (task.machine_id() != GlobalProcessCtx::Rank()) { continue; }
     if (!HasNonCtrlConsumedRegstDescId(task)) {
       source_tasks.push_back(&task);
     } else {
@@ -96,8 +96,7 @@ Runtime::~Runtime() {
 
 void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
   Global<RuntimeCtx>::New(total_piece_num, is_experiment_phase);
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()
-      && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
+  if (GlobalProcessCtx::IsThisProcessMaster() && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
   // TODO(chengcheng)

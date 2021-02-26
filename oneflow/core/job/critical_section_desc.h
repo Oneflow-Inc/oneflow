@@ -28,7 +28,7 @@ class CriticalSectionDesc final {
   OF_DISALLOW_COPY_AND_MOVE(CriticalSectionDesc);
   ~CriticalSectionDesc() = default;
 
-  void AddCriticalSection(std::unique_ptr<CriticalSection>&&);
+  CriticalSection* AddCriticalSection(int64_t job_id);
   void Done();
 
   size_t CriticalSectionNum() const { return critical_sections_.size(); }

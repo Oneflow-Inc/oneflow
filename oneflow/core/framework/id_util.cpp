@@ -13,23 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/id_util.h"
 
 namespace oneflow {
 
-namespace {
-
-int64_t UniqueId() {
-  static int64_t _unique_id = 0;
-  int64_t ret = _unique_id;
-  ++_unique_id;
-  return ret;
-}
-
-}  // namespace
-
-Maybe<std::string> UniqueStr(const std::string& prefix) {
-  return prefix + std::to_string(UniqueId());
-}
+Maybe<std::string> UniqueStr(const std::string& prefix) { return prefix + NewUniqueId(); }
 
 }  // namespace oneflow

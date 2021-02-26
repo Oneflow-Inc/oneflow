@@ -145,12 +145,6 @@ inline Maybe<bool> JobBuildAndInferCtx_IsTensorList(const std::string& job_name,
   return ctx->IsTensorList(lbn);
 }
 
-inline Maybe<std::string> JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,
-                                                           const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(*JUST(ctx->GetBatchAxis(lbn)));
-}
-
 inline Maybe<std::string> JobBuildAndInferCtx_GetSplitAxisFromProducerView(
     const std::string& job_name, const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
@@ -191,6 +185,13 @@ inline Maybe<void> JobBuildAndInferCtx_CheckLbnValidAndExist(const std::string& 
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   JUST(ctx->CheckLbnValidAndExist(lbn));
   return Maybe<void>::Ok();
+}
+
+inline Maybe<std::string> JobBuildAndInferCtx_GetOpBlobLbn(const std::string& job_name,
+                                                           const std::string& op_name,
+                                                           const std::string bn_in_op) {
+  const auto* job_ctx = JUST(GetJobBuildAndInferCtx(job_name));
+  return job_ctx->GetOpBlobLbn(op_name, bn_in_op);
 }
 
 }  // namespace oneflow

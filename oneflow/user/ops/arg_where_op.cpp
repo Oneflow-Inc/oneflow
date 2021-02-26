@@ -32,20 +32,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
-  const OptInt64* input_batch_axis = ctx->BatchAxis4ArgNameAndIndex("input", 0);
-  CHECK_NOTNULL_OR_RETURN(input_batch_axis);
-  if (input_batch_axis->has_value()) {
-    OptInt64* output_batch_axis = ctx->BatchAxis4ArgNameAndIndex("output", 0);
-    CHECK_NOTNULL_OR_RETURN(output_batch_axis);
-    output_batch_axis->set_value(0);
-    OptInt64* output_size_batch_axis = ctx->BatchAxis4ArgNameAndIndex("output_size", 0);
-    CHECK_NOTNULL_OR_RETURN(output_size_batch_axis);
-    output_size_batch_axis->clear_value();
-  }
-  return Maybe<void>::Ok();
-}
-
 }  // namespace
 
 REGISTER_USER_OP("argwhere")
@@ -53,7 +39,6 @@ REGISTER_USER_OP("argwhere")
     .Output("output")
     .Output("output_size")
     .Attr<DataType>("dtype", DataType::kInt32)
-    .SetTensorDescInferFn(InferTensorDesc)
-    .SetBatchAxisInferFn(InferBatchAxis);
+    .SetTensorDescInferFn(InferTensorDesc);
 
 }  // namespace oneflow

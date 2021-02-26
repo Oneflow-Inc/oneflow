@@ -63,7 +63,6 @@ import oneflow.python.framework.python_interpreter_util
 import oneflow.python.framework.register_class_method_util as register_class_method_util
 import oneflow_api
 
-INVALID_BATCH_AXIS = oneflow_api.INVALID_BATCH_AXIS
 INVALID_SPLIT_AXIS = oneflow_api.INVALID_SPLIT_AXIS
 
 register_class_method_util.RegisterMethod4Class()
