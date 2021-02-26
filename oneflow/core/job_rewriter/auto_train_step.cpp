@@ -13,28 +13,33 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
 
 namespace oneflow {
 
 namespace {
 
-class AutoTrainStep final : public OpGraphPass {
+class AutoTrainStep final : public JobPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AutoTrainStep);
   AutoTrainStep() = default;
   ~AutoTrainStep() override = default;
 
-  bool IsEnabled() const override { return GlobalJobDesc().IsTrain(); }
-
-  Maybe<void> Apply(const OpGraph& op_graph, Job* job) const override;
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
 };
 
-Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
-  if (job->job_conf().train_conf().has_train_step_lbn()) { return Maybe<void>::Ok(); }
+Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
+  if (!ctx->job_desc().IsTrain()) { return Maybe<void>::Ok(); }
+  const OpGraph op_graph(*job);
+  const TrainConf& train_conf = job->job_conf().train_conf();
+  if (train_conf.has_train_step_lbn()) {
+    CHECK_OR_RETURN(!train_conf.has_dynamic_loss_scale_policy());
+    return Maybe<void>::Ok();
+  }
   OperatorConf variable_op_conf{};
   const std::string train_step_name = "System-Train-TrainStep-" + job->job_conf().job_name();
   variable_op_conf.set_name(train_step_name);
@@ -55,8 +60,15 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
 
   JobBuilder job_builder(job);
   const ParallelConf& parallel_conf = GenParallelConfOfCpuZeroOnMaster();
-  int64_t scope_symbol_id = Global<ForeignCallback>::Get()->MakeScopeSymbol(
-      job->job_conf().DebugString(), parallel_conf.DebugString(), false);
+  int64_t scope_symbol_id = 0;
+  {
+    const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
+        std::make_shared<cfg::JobConfigProto>(job->job_conf());
+    const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
+        std::make_shared<cfg::ParallelConf>(parallel_conf);
+    scope_symbol_id =
+        Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+  }
 
   auto scalar_add_op = user_op::UserOpConfWrapperBuilder(train_step_name + "-ScalarAdd")
                            .Op("scalar_add")
@@ -69,23 +81,37 @@ Maybe<void> AutoTrainStep::Apply(const OpGraph& op_graph, Job* job) const {
                            .ScopeSymbolId(scope_symbol_id)
                            .Build();
 
-  auto assign_op =
-      user_op::UserOpConfWrapperBuilder(train_step_name + "-Assign")
-          .Op("assign")
-          .Input("ref", GenLogicalBlobName(variable_op_conf.name(), variable_conf->out()))
-          .Input("value", scalar_add_op.output("out", 0))
-          .ScopeSymbolId(scope_symbol_id)
-          .Build();
-
   variable_op_conf.set_scope_symbol_id(scope_symbol_id);
   identity_op_conf.set_scope_symbol_id(scope_symbol_id);
-  job_builder.AddOps(parallel_conf, {variable_op_conf, identity_op_conf, scalar_add_op.op_conf(),
-                                     assign_op.op_conf()});
+  job_builder.AddOps(parallel_conf, {variable_op_conf, identity_op_conf, scalar_add_op.op_conf()});
+  if (train_conf.has_dynamic_loss_scale_policy()) {
+    const auto& dynamic_loss_scale_state =
+        JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
+    auto assign_op =
+        user_op::UserOpConfWrapperBuilder(train_step_name + "-AssignIfNot")
+            .Op("assign_if_not")
+            .Input("ref", GenLogicalBlobName(variable_op_conf.name(), variable_conf->out()))
+            .Input("value", scalar_add_op.output("out", 0))
+            .Input("condition", dynamic_loss_scale_state.count_not_finite_lbn())
+            .ScopeSymbolId(scope_symbol_id)
+            .Build();
+    job_builder.AddOps(parallel_conf, {assign_op.op_conf()});
+  } else {
+    auto assign_op =
+        user_op::UserOpConfWrapperBuilder(train_step_name + "-Assign")
+            .Op("assign")
+            .Input("ref", GenLogicalBlobName(variable_op_conf.name(), variable_conf->out()))
+            .Input("value", scalar_add_op.output("out", 0))
+            .ScopeSymbolId(scope_symbol_id)
+            .Build();
+    job_builder.AddOps(parallel_conf, {assign_op.op_conf()});
+  }
+
   job->mutable_job_conf()->mutable_train_conf()->set_train_step_lbn(train_step_lbn);
   return Maybe<void>::Ok();
 }
 
-REGISTER_FUNCTION_PASS("AutoTrainStep", AutoTrainStep);
+REGISTER_JOB_PASS("AutoTrainStep", AutoTrainStep);
 
 }  // namespace
 

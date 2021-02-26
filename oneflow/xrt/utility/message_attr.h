@@ -34,7 +34,7 @@ inline void Attr(const PbMessage &message, const std::string &attr_name, T *valu
     UserOpAttrVal val = user_conf->attr().at(attr_name);
     *value = user_op::AttrValAccessor<T>::Attr(val);
   } else {
-    CHECK(HasFieldInPbMessage(message, attr_name));
+    CHECK(FieldDefinedInPbMessage(message, attr_name));
     *value = GetValFromPbMessage<T>(message, attr_name);
   }
 }
@@ -46,7 +46,7 @@ inline void Attr(PbMessage *message, const std::string &attr_name, const T &valu
 
 template<>
 inline void Attr<Shape>(const PbMessage &message, const std::string &attr_name, Shape *value) {
-  CHECK(HasFieldInPbMessage(message, attr_name));
+  CHECK(FieldDefinedInPbMessage(message, attr_name));
   *value = Shape(GetValFromPbMessage<ShapeProto>(message, attr_name));
 }
 
@@ -59,7 +59,7 @@ inline void Attr<Shape>(PbMessage *message, const std::string &attr_name, const 
 
 template<typename T>
 inline void GetMessage(const PbMessage &message, const std::string &attr_name, T **value) {
-  CHECK(HasFieldInPbMessage(message, attr_name));
+  CHECK(FieldDefinedInPbMessage(message, attr_name));
   *value = dynamic_cast<T *>(
       const_cast<oneflow::PbMessage *>(&GetMessageInPbMessage(message, attr_name)));
 }

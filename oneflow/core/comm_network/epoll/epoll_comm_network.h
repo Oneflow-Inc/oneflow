@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/comm_network/epoll/socket_helper.h"
 #include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 namespace oneflow {
 
@@ -29,17 +29,22 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   OF_DISALLOW_COPY_AND_MOVE(EpollCommNet);
   ~EpollCommNet();
 
-  static void Init(const Plan& plan) { Global<CommNet>::SetAllocated(new EpollCommNet(plan)); }
+  DEPRECATED static void Init(const Plan& plan) {
+    Global<CommNet>::SetAllocated(new EpollCommNet(plan));
+  }
 
   void RegisterMemoryDone() override;
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
   void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
+  void SendTransportMsg(int64_t dst_machine_id, const TransportMsg& msg);
 
  private:
   SocketMemDesc* NewMemDesc(void* ptr, size_t byte_size) override;
 
-  EpollCommNet(const Plan& plan);
+  friend class Global<EpollCommNet>;
+  EpollCommNet();
+  DEPRECATED EpollCommNet(const Plan& plan);
   void InitSockets();
   SocketHelper* GetSocketHelper(int64_t machine_id);
   void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
@@ -49,14 +54,8 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   HashMap<int, SocketHelper*> sockfd2helper_;
 };
 
-template<>
-class Global<EpollCommNet> final {
- public:
-  static EpollCommNet* Get() { return static_cast<EpollCommNet*>(Global<CommNet>::Get()); }
-};
-
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_COMM_NETWORK_H_

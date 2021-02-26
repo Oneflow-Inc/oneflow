@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/operator.h"
@@ -31,10 +32,10 @@ namespace oneflow {
 namespace {
 
 void CheckFunctionConfig(const JobConfigProto& job_conf) {
-  const auto& flag_name2flag_def = GlobalFunctionConfigDef().flag_name2flag_def();
+  const auto& attr_name2attr_def = GlobalFunctionConfigDef().attr_name2attr_def();
   for (const auto& pair : job_conf.flag_name2flag_value()) {
-    const auto& iter = flag_name2flag_def.find(pair.first);
-    CHECK(iter != flag_name2flag_def.end());
+    const auto& iter = attr_name2attr_def.find(pair.first);
+    CHECK(iter != attr_name2attr_def.end());
     CHECK_EQ(iter->second.default_val().value_case(), pair.second.value_case());
   }
 }
@@ -51,21 +52,23 @@ bool JobDesc::enable_experiment_run() const {
 
 int64_t JobDesc::TotalBatchNum() const { return job_conf_.total_batch_num(); }
 int64_t JobDesc::NumOfPiecesInBatch() const { return 1; }
-int32_t JobDesc::loss_scale_factor() const {
-  int32_t loss_scale_factor = job_conf_.train_conf().loss_scale_factor();
-  CHECK_GE(loss_scale_factor, 1);
-  return loss_scale_factor;
-}
 
 JobDesc::JobDesc(const JobConfigProto& job_conf, int64_t job_id)
-    : job_conf_(job_conf), job_id_(job_id) {
-  Init();
+    : job_conf_(job_conf), job_id_(job_id), symbol_id_(Error::SymbolIdUninitialized()) {
+  CHECK_JUST(Init());
 }
 
-void JobDesc::Init() {
+Maybe<JobDesc> JobDesc::New(int64_t symbol_id, const JobConfigProto& job_conf) {
+  auto job_desc = std::make_shared<JobDesc>(job_conf);
+  job_desc->symbol_id_ = Maybe<int64_t>(symbol_id);
+  return job_desc;
+}
+
+Maybe<void> JobDesc::Init() {
+  cfg_job_conf_.reset(new cfg::JobConfigProto(job_conf_));
 #ifndef WITH_RDMA
-  CHECK_NOTNULL((Global<ResourceDesc, ForSession>::Get()));
-  CHECK_EQ((Global<ResourceDesc, ForSession>::Get()->use_rdma()), false)
+  CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
+  CHECK_EQ_OR_RETURN((Global<ResourceDesc, ForSession>::Get()->use_rdma()), false)
       << "Please compile ONEFLOW with RDMA";
 #endif
   int64_t piece_exp = job_conf_.exp_run_conf().piece_num_of_experiment_phase();
@@ -79,22 +82,23 @@ void JobDesc::Init() {
   LOG(INFO) << "Set piece_num_of_experiment_phase " << piece_exp;
   job_conf_.mutable_exp_run_conf()->set_piece_num_of_experiment_phase(piece_exp);
 #ifndef WITH_CUDA
-  CHECK_EQ((Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()), 0);
+  CHECK_EQ_OR_RETURN((Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()), 0);
 #endif
   CheckFunctionConfig(job_conf_);
+  return Maybe<void>::Ok();
 }
 
-const UserOpAttrVal& JobDesc::GetFunctionFlagVal(const std::string& field_name) const {
+const AttrValue& JobDesc::GetFunctionFlagVal(const std::string& field_name) const {
   const auto& iter = job_conf_.flag_name2flag_value().find(field_name);
   if (iter != job_conf_.flag_name2flag_value().end()) { return iter->second; }
-  const auto& flag_name2flag_def = GlobalFunctionConfigDef().flag_name2flag_def();
-  const auto& def_iter = flag_name2flag_def.find(field_name);
-  CHECK(def_iter != flag_name2flag_def.end());
+  const auto& attr_name2attr_def = GlobalFunctionConfigDef().attr_name2attr_def();
+  const auto& def_iter = attr_name2attr_def.find(field_name);
+  CHECK(def_iter != attr_name2attr_def.end());
   return def_iter->second.default_val();
 }
 
 bool IsInterfaceOpConf(const OperatorConf& op_conf) {
-  return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_conf.op_type_case());
+  return IsClassRegistered<int32_t, IsInterfaceOpConf4OpTypeCase>(op_conf.op_type_case());
 }
 
 GlobalJobDescScope::GlobalJobDescScope(const JobConfigProto& job_conf, int64_t job_id) {

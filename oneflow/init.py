@@ -59,11 +59,34 @@ import oneflow.python_gen.__export_symbols__
 
 import atexit
 import oneflow.python.framework.c_api_util
+import oneflow.python.framework.python_interpreter_util
+import oneflow.python.framework.register_class_method_util as register_class_method_util
+import oneflow_api
 
-atexit.register(oneflow.python.framework.c_api_util.DestroyEnv)
+INVALID_SPLIT_AXIS = oneflow_api.INVALID_SPLIT_AXIS
+
+register_class_method_util.RegisterMethod4Class()
+
+atexit.register(oneflow_api.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
+atexit.register(oneflow.python.framework.python_interpreter_util.SetShuttingDown)
 del atexit
 
+import sys
+
+__original_exit__ = sys.exit
+
+
+def custom_exit(returncode):
+    if returncode != 0:
+        oneflow_api.MasterSendAbort()
+    __original_exit__(returncode)
+
+
+sys.exit = custom_exit
+
+del custom_exit
+del sys
 del absolute_import
 del oneflow
 del python

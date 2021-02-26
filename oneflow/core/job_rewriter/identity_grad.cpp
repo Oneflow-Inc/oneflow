@@ -61,6 +61,7 @@ void GenerateCastToMirroredBackwardOpConf(
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf grad_op{};
     grad_op.set_name("System-AutoGrad-" + op.op_name());
+    grad_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
     CastFromMirroredOpConf* bw_op_conf = grad_op.mutable_cast_from_mirrored_conf();
     bw_op_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     bw_op_conf->set_out("out");
@@ -85,6 +86,7 @@ void GenerateCastFromMirroredBackwardOpConf(
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf grad_op{};
     grad_op.set_name("System-AutoGrad-" + op.op_name());
+    grad_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
     CastToMirroredOpConf* bw_op_conf = grad_op.mutable_cast_to_mirrored_conf();
     bw_op_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     bw_op_conf->set_out("out");

@@ -24,7 +24,7 @@ OpKernelRegistry& OpKernelRegistry::Name(const std::string& op_type_name) {
   return *this;
 }
 
-OpKernelRegistry& OpKernelRegistry::SetCreateFn(CreateFn fn) {
+OpKernelRegistry& OpKernelRegistry::SetCreateFn(OpKernelCreateFn fn) {
   result_.create_fn = std::move(fn);
   return *this;
 }

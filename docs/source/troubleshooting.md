@@ -24,9 +24,6 @@
 - How to compile OneFlow with RDMA support?
     - add cmake flag `-DBUILD_RDMA` to compile OneFlow
 
-- SWIG not found
-    - Usually you could install it with a package manager like apt-get. You can also build it from source. Refer to [SWIG official release](http://www.swig.org/download.html)
-
 - Which version of g++ CMake is using to build OneFlow?
     - You should find a line like this in CMake output:
 

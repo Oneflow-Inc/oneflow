@@ -23,10 +23,13 @@ namespace oneflow {
 struct ClusterInstruction final {
   static void MasterSendSessionStart();
   static void MasterSendHalt();
+  static void MasterSendAbort();
   static void MasterSendEagerInstruction(const ClusterInstructionProto& cluster_instruction);
+  static void MasterSendEagerSync();
   static void WorkerReceiveInstruction(ClusterInstructionProto* cluster_instruction);
   static void NewSessionBarrier();
   static void HaltBarrier();
+  static void EagerSyncBarrier();
 };
 
 }  // namespace oneflow

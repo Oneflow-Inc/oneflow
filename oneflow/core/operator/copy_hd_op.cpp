@@ -24,15 +24,11 @@ class CopyHdOp final : public Operator {
   ~CopyHdOp() override = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
-  }
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -53,14 +49,12 @@ void CopyHdOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-Maybe<void> CopyHdOp::InferBlobDescs(
+Maybe<void> CopyHdOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
   return Maybe<void>::Ok();
 }
-
-const PbMessage& CopyHdOp::GetCustomizedConf() const { return op_conf().copy_hd_conf(); }
 
 LogicalBlobId CopyHdOp::lbi4ibn(const std::string& input_bn) const {
   if (this->op_conf().copy_hd_conf().has_lbi()) {

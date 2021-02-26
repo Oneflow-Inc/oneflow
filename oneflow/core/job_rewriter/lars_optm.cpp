@@ -14,33 +14,47 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/optimizer.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
 namespace {
 
-void GenerateOptimizerOpConf(const VariableOp& op, const ParallelConf& parallel_conf,
-                             JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out) {
-  OperatorConf momentum_var(op.op_conf());
+void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
+                             const std::string& model_diff_lbn, const OptimizerConf optimizer_conf,
+                             JobBuilder* job_builder) {
+  const VariableOp* var_op = dynamic_cast<const VariableOp*>(&var_op_node.op());
+  CHECK_NOTNULL(var_op);
+  const std::string momentum_var_op_name = var_op->op_name() + "-momentum";
+  OperatorConf momentum_var(var_op->op_conf());
   InitializerConf constant_initializer;
   constant_initializer.mutable_constant_conf()->set_value(0.f);
   *(momentum_var.mutable_variable_conf()->mutable_initializer()) = constant_initializer;
-  momentum_var.set_name(op.op_name() + "-momentum");
+  momentum_var.set_name(momentum_var_op_name);
   momentum_var.mutable_variable_conf()->set_out("out");
-  momentum_var.set_scope_symbol_id(op.op_conf().scope_symbol_id());
-  job_builder->AddOps(parallel_conf, {momentum_var});
+  momentum_var.set_scope_symbol_id(var_op->op_conf().scope_symbol_id());
+  job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {momentum_var});
 
-  OperatorConf mdupdt_op;
-  mdupdt_op.set_name(op.op_name() + "_optimizer");
-  auto* mdupdt_op_conf = mdupdt_op.mutable_lars_model_update_conf();
-  ConstructMdUpdtOpConf(op, diff_lbi_of_var_out, job_builder, mdupdt_op_conf);
-  mdupdt_op_conf->set_momentum(momentum_var.name() + "/out");
-  mdupdt_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
-  job_builder->AddOps(parallel_conf, {mdupdt_op});
+  user_op::UserOpConfWrapperBuilder lars_update_op_builder(var_op->op_name() + "_optimizer");
+  lars_update_op_builder.OpTypeName("lars_update")
+      .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
+      .Input("model_diff", model_diff_lbn)
+      .Input("learning_rate", optimizer_conf.learning_rate_lbn())
+      .Input("train_step", job_builder->job().job_conf().train_conf().train_step_lbn())
+      .Input("momentum",
+             GenLogicalBlobName(momentum_var_op_name, momentum_var.variable_conf().out()))
+      .Attr<float>("momentum_beta", optimizer_conf.lars_conf().momentum_beta())
+      .Attr<float>("epsilon", optimizer_conf.lars_conf().epsilon())
+      .Attr<float>("lars_coefficient", optimizer_conf.lars_conf().lars_coefficient())
+      .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
+      .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
+  SetDynamicLossScaleSkipIf(ctx, &lars_update_op_builder);
+  user_op::UserOpConfWrapper lars_update_op = lars_update_op_builder.Build();
+  job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {lars_update_op.op_conf()});
 }
 
 }  // namespace
 
-REGISTER_OPTIMIZER(NormalModelUpdateOpUserConf::kLarsConf, &GenerateOptimizerOpConf);
+REGISTER_OPTIMIZER(OptimizerConf::kLarsConf, &GenerateOptimizerOpConf);
 
 }  // namespace oneflow

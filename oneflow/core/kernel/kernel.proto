@@ -1,11 +1,9 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/common/dtype_signature.proto";
 import "oneflow/core/operator/op_attribute.proto";
-import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/placement.proto";
 import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/job/sbp_parallel.proto";
@@ -15,28 +13,9 @@ message DecodeRandomKernelConf {
   required uint32 random_seed = 1;
 }
 
-message DecodeOFRecordKernelConf {
-  required uint32 random_seed = 1;
-}
-
-message SliceKernelConf {
-  required ShapeProto in_shape = 1;
-}
-
-message ConstantKernelConf {
-  required InitializerConf initializer = 1;
-  required uint32 random_seed = 2;
-}
-
 message VariableKernelConf {
   required bool is_fw_inplace = 1;
   required bool is_bw_inplace = 2;
-}
-
-message RecordLoadKernelConf {
-  required int64 device_piece_size = 1;
-  required int64 parallel_id = 2;
-  required int64 parallel_num = 3;
 }
 
 message ShapeElemCntKernelConf {
@@ -68,35 +47,17 @@ message IndexedSlicesReduceSumKernelConf {
   required DataType indices_data_type = 1;
 }
 
-message IndexedSlicesNaiveModelUpdateKernelConf {
-  required DataType indices_data_type = 1;
-  required int64 lower_bound = 2;
-  required int64 upper_bound = 3;
-}
-
-message IndexedSlicesMomentumModelUpdateKernelConf {
-  required DataType indices_data_type = 1;
-  required int64 lower_bound = 2;
-  required int64 upper_bound = 3;
-}
-
-message IndexedSlicesLazyAdamModelUpdateKernelConf {
-  required DataType indices_data_type = 1;
-  required int64 lower_bound = 2;
-  required int64 upper_bound = 3;
-}
-
 message SyncDynamicResizeKernelConf {
   required DataType size_data_type = 1;
 }
 
-message ArgWhereKernelConf {
-  required int32 num_axes = 1;
-  required DataType in_data_type = 2;
-}
-
 message BroadcastToCompatibleWithKernelConf {
   repeated int64 broadcast_axes = 1;
+}
+
+message ImageDecoderRandomCropResizeKernelConf {
+  required int64 seed = 1;
+  required int64 batch_size = 2;
 }
 
 message KernelConf {
@@ -110,21 +71,15 @@ message KernelConf {
   oneof kernel_type {
     UserKernelConf user_conf = 100;
     DecodeRandomKernelConf decode_random_conf = 103;
-    DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
     XrtLaunchKernelConf xrt_launch_conf = 353;
     UniqueWithCountsKernelConf unique_with_counts_conf = 354;
     IndexedSlicesReduceSumKernelConf indexed_slices_reduce_sum_conf = 355;
-    IndexedSlicesNaiveModelUpdateKernelConf indexed_slices_naive_model_update_conf = 357;
-    IndexedSlicesMomentumModelUpdateKernelConf indexed_slices_momentum_model_update_conf = 358;
-    IndexedSlicesLazyAdamModelUpdateKernelConf indexed_slices_lazy_adam_model_update_conf = 359;
     SyncDynamicResizeKernelConf sync_dynamic_resize_conf = 360;
-    ArgWhereKernelConf arg_where_conf = 361;
 
-    SliceKernelConf slice_conf = 402;
     VariableKernelConf variable_conf = 407;
-    RecordLoadKernelConf record_load_conf = 408;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
     ModelIoV2KernelConf model_io_v2_conf = 418;
     BroadcastToCompatibleWithKernelConf broadcast_to_compatible_with_conf = 428;
+    ImageDecoderRandomCropResizeKernelConf image_decoder_random_crop_resize_conf = 429;
   }
 }

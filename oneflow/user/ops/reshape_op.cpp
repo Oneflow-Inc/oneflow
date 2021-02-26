@@ -27,7 +27,8 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   ShapeProto shape_proto;
   shape.ToProto(&shape_proto);
   const auto& outshape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape_proto));
-  return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(in_shape, *outshape, ctx);
+  return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(in_shape, *outshape, {{"in", 0}},
+                                                          {{"out", 0}}, ctx);
 }
 
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
@@ -57,22 +58,34 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
 REGISTER_USER_OP("reshape")
     .Input("in")
     .Output("out")
-    .Attr("shape", UserOpAttrType::kAtShape)
+    .Attr<Shape>("shape")
     .SetTensorDescInferFn(TensorDescInferFn)
     .SetGetSbpFn(GetSbpFn);
 
 REGISTER_USER_OP_GRAD("reshape").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
+    const auto& in_desc = op.TensorDesc4ArgNameAndIndex("in", 0);
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper reshape_grad_op =
-        builder.Op("reshape_like")
-            .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-            .Input("like", op.input("in", 0))
-            .Output("out")
-            .Build();
-    op.BindGradTensorWithOpInput(reshape_grad_op.output("out", 0), "in", 0);
-    AddOp(reshape_grad_op);
+    if (in_desc.is_dynamic()) {
+      user_op::UserOpConfWrapper reshape_grad_op =
+          builder.Op("reshape_like")
+              .Input("in", op.GetGradTensorWithOpOutput("out", 0))
+              .Input("like", op.input("in", 0))
+              .Output("out")
+              .Build();
+      op.BindGradTensorWithOpInput(reshape_grad_op.output("out", 0), "in", 0);
+      AddOp(reshape_grad_op);
+    } else {
+      user_op::UserOpConfWrapper reshape_grad_op =
+          builder.Op("reshape")
+              .Input("in", op.GetGradTensorWithOpOutput("out", 0))
+              .Attr("shape", in_desc.shape())
+              .Output("out")
+              .Build();
+      op.BindGradTensorWithOpInput(reshape_grad_op.output("out", 0), "in", 0);
+      AddOp(reshape_grad_op);
+    }
   }
 });
 

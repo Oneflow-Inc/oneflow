@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
 import os
@@ -53,8 +54,6 @@ def compare_with_tensorflow(device_type, x_shape, axis):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = SqueezeJob().get().numpy()
     # TensorFlow
     tf_out = tf.squeeze(np.ones(x_shape, dtype=np.float32), axis).numpy()
@@ -72,11 +71,17 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-def test_squeeze(test_case):
-    for arg in gen_arg_list():
-        compare_with_tensorflow(*arg)
-    if os.getenv("ONEFLOW_TEST_CPU_ONLY") is None:
-        compare_with_tensorflow("gpu", (1, 1, 1), [0, 1, 2])
-        compare_with_tensorflow("gpu", (5, 6, 7), None)
-    compare_with_tensorflow("cpu", (1, 1, 1), [0, 1, 2])
-    compare_with_tensorflow("cpu", (5, 6, 7), None)
+@flow.unittest.skip_unless_1n1d()
+class TestSqueeze(flow.unittest.TestCase):
+    def test_squeeze(test_case):
+        for arg in gen_arg_list():
+            compare_with_tensorflow(*arg)
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY") is None:
+            compare_with_tensorflow("gpu", (1, 1, 1), [0, 1, 2])
+            compare_with_tensorflow("gpu", (5, 6, 7), None)
+        compare_with_tensorflow("cpu", (1, 1, 1), [0, 1, 2])
+        compare_with_tensorflow("cpu", (5, 6, 7), None)
+
+
+if __name__ == "__main__":
+    unittest.main()

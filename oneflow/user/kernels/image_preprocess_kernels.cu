@@ -105,7 +105,7 @@ __global__ void CropMirrorNormalizeGpuImpl(int32_t elem_cnt, const uint8_t* in_d
     float mean_val;
     float inv_std_val;
     const int32_t c = in_idx[3];
-    // When the compiler can’t resolve array indices to constants it will put private arrays into
+    // When the compiler can't resolve array indices to constants it will put private arrays into
     // GPU local memory. Using local memory is slower than keeping array elements directly in
     // registers.
     if (c == 0) {

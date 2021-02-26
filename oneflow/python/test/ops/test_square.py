@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -56,8 +57,6 @@ def compare_with_tensorflow(device_type, x_shape):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = SquareJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
@@ -72,9 +71,15 @@ def compare_with_tensorflow(device_type, x_shape):
     )
 
 
-def test_square(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["x_shape"] = [(10, 20, 30)]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestSquare(flow.unittest.TestCase):
+    def test_square(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["x_shape"] = [(10, 20, 30)]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

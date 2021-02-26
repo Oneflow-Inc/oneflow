@@ -7,11 +7,14 @@ SET(RE2_INSTALL_DIR ${THIRD_PARTY_DIR}/re2)
 SET(RE2_INCLUDE_DIR ${RE2_INSTALL_DIR}/include CACHE PATH "" FORCE)
 SET(RE2_LIBRARY_DIR ${RE2_INSTALL_DIR}/lib CACHE PATH "" FORCE)
 SET(RE2_LIBRARIES ${RE2_LIBRARY_DIR}/libre2.a)
+SET(RE2_URL https://github.com/Oneflow-Inc/re2/archive/e17af7789.tar.gz)
+use_mirror(VARIABLE RE2_URL URL ${RE2_URL})
 
 if (THIRD_PARTY)
     ExternalProject_Add(${RE2_PROJECT}
         PREFIX re2
-        URL ${THIRD_PARTY_SUBMODULE_DIR}/re2/src/re2
+        URL ${RE2_URL}
+        URL_MD5 3b2e20c1edd1cfe887aeef3b0747eac0
         UPDATE_COMMAND ""
         CMAKE_ARGS
           -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}

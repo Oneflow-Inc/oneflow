@@ -22,7 +22,6 @@ import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
 
-import tensorflow as tf
 import test_global_storage
 
 
@@ -55,6 +54,12 @@ class Args:
         self.flow_args = flow_args
         self.tf_args = tf_args
 
+    def __str__(self):
+        return "flow_args={} tf_args={}".format(self.flow_args, self.tf_args)
+
+    def __repr__(self):
+        return self.__str__()
+
 
 def RunOneflowOp(device_type, flow_op, x, flow_args):
     flow.clear_default_session()
@@ -80,15 +85,18 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     y = FlowJob(x).get().numpy()
     x_diff = test_global_storage.Get("x_diff")
     return y, x_diff
 
 
 def RunTensorFlowOp(tf_op, x, tf_args):
-    # TensorFlow
+    import tensorflow as tf
+
+    gpus = tf.config.experimental.list_physical_devices("GPU")
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
+
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(x)
         y = tf_op(x, *tf_args)

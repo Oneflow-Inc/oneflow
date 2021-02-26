@@ -61,14 +61,19 @@ def _run_test(test_case, indices, values, indices_dtype, values_dtype, device):
     )
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_indexed_slices_reduce_sum_gpu(test_case):
-    indices = np.random.randint(0, 32, 1024).astype(np.int32)
-    values = np.random.rand(1024, 8).astype(np.float32)
-    _run_test(test_case, indices, values, flow.int32, flow.float32, "gpu")
+@flow.unittest.skip_unless_1n1d()
+class TestIndexedSlicesReduceSum(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_indexed_slices_reduce_sum_gpu(test_case):
+        indices = np.random.randint(0, 32, 1024).astype(np.int32)
+        values = np.random.rand(1024, 8).astype(np.float32)
+        _run_test(test_case, indices, values, flow.int32, flow.float32, "gpu")
+
+    def test_indexed_slices_reduce_sum_cpu(test_case):
+        indices = np.random.randint(0, 32, 1024).astype(np.int32)
+        values = np.random.rand(1024, 8).astype(np.float32)
+        _run_test(test_case, indices, values, flow.int32, flow.float32, "cpu")
 
 
-def test_indexed_slices_reduce_sum_cpu(test_case):
-    indices = np.random.randint(0, 32, 1024).astype(np.int32)
-    values = np.random.rand(1024, 8).astype(np.float32)
-    _run_test(test_case, indices, values, flow.int32, flow.float32, "cpu")
+if __name__ == "__main__":
+    unittest.main()

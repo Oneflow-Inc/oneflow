@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/profiler.h"
-#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/regst_lifetime_graph.h"
@@ -247,29 +247,17 @@ uint64_t CalcMemoryConsumed(
   return mem_consuming;
 }
 
-std::shared_ptr<HashMap<int64_t, RegstDescProto*>> MakeRegstDescId2RegstDesc(Plan* plan) {
-  auto regst_desc_id2regst_desc = std::make_shared<HashMap<int64_t, RegstDescProto*>>();
-  for (int i = 0; i < plan->task_size(); i++) {
-    TaskProto* task = plan->mutable_task(i);
-    for (auto& pair : *task->mutable_produced_regst_desc()) {
-      int64_t regst_desc_id = pair.second.regst_desc_id();
-      regst_desc_id2regst_desc->insert({regst_desc_id, &pair.second});
-    }
-  }
-  return regst_desc_id2regst_desc;
-}
-
 std::function<uint64_t(int64_t)> MakeGetterGetPlanRegstNum(Plan* plan) {
-  auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(plan);
-  return [regst_desc_id2regst_desc](int64_t regst_desc_id) {
-    return regst_desc_id2regst_desc->at(regst_desc_id)->register_num();
+  auto MutRestDesc4Id = PlanUtil::MakeMutRegstDesc4Id(plan);
+  return [MutRestDesc4Id](int64_t regst_desc_id) {
+    return MutRestDesc4Id(regst_desc_id)->register_num();
   };
 }
 
 std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
-  auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(plan);
-  return [regst_desc_id2regst_desc](int64_t regst_desc_id, uint64_t num) {
-    regst_desc_id2regst_desc->at(regst_desc_id)->set_register_num(num);
+  auto MutRestDesc4Id = PlanUtil::MakeMutRegstDesc4Id(plan);
+  return [MutRestDesc4Id](int64_t regst_desc_id, uint64_t num) {
+    MutRestDesc4Id(regst_desc_id)->set_register_num(num);
   };
 }
 
@@ -392,8 +380,8 @@ void FixReliantCtrlRegstNum(const Plan& plan, const std::function<uint64_t(int64
   }
 }
 
-void SetInplaceConsumedRegstDescId(
-    Plan* plan, const HashMap<int64_t, RegstDescProto*>& regst_desc_id2regst_desc) {
+void SetInplaceConsumedRegstDescId(Plan* plan,
+                                   const std::function<RegstDescProto*(int64_t)>& RegstDesc4Id) {
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task = plan->mutable_task(i);
     for (auto& pair : *task->mutable_produced_regst_desc()) {
@@ -401,7 +389,7 @@ void SetInplaceConsumedRegstDescId(
       CHECK_EQ(regst_desc->has_inplace_consumed_regst_desc_id(), false);
       if (regst_desc->has_hint_inplace_consumed_regst_desc_id()) {
         int64_t hint = regst_desc->hint_inplace_consumed_regst_desc_id();
-        const RegstDescProto* in_regst_desc = regst_desc_id2regst_desc.at(hint);
+        const RegstDescProto* in_regst_desc = RegstDesc4Id(hint);
         if (in_regst_desc->mem_block_id() != -1
             && in_regst_desc->mem_block_id() == regst_desc->mem_block_id()
             && in_regst_desc->mem_block_offset() == regst_desc->mem_block_offset()) {
@@ -432,8 +420,10 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
   // mzuid = memory zone unique id
   HashMap<int64_t, ChunkProto> mzuid2chunk;
 
-  auto GenMemBlock4RegstIfNeed = [&](RegstDescProto* regst_desc, int64_t job_id,
-                                     int64_t machine_id) {
+  auto GenMemBlock4RegstIfNeed = [&](RegstDescProto* regst_desc, const TaskProto* task) {
+    const int64_t job_id = task->job_id();
+    const int64_t machine_id = task->machine_id();
+    const int64_t thrd_id = task->thrd_id();
     int64_t mem_block_id = regst_desc->mem_block_id();
     int64_t mem_block_offset = regst_desc->mem_block_offset();
     CHECK_NE(mem_block_id, -1);
@@ -452,6 +442,7 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
       *(mem_block.mutable_mem_case()) = regst_desc->mem_case();
       mem_block.set_enable_reuse_mem(regst_desc->enable_reuse_mem());
       mem_block.set_mem_size(regst_main_size + mem_block_offset);
+      mem_block.set_thrd_id_hint(thrd_id);
       CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
     } else {
       MemBlockProto* mem_block = &(mem_block_id2mem_block.at(mem_block_id));
@@ -473,6 +464,7 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
           MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
       mem_block.set_enable_reuse_mem(false);
       mem_block.set_mem_size(regst_separated_size);
+      mem_block.set_thrd_id_hint(thrd_id);
       CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
     }
   };
@@ -502,7 +494,7 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task = plan->mutable_task(i);
     for (auto& pair : *task->mutable_produced_regst_desc()) {
-      GenMemBlock4RegstIfNeed(&pair.second, task->job_id(), task->machine_id());
+      GenMemBlock4RegstIfNeed(&pair.second, task);
     }
   }
 
@@ -729,16 +721,16 @@ Plan Improver::GenAndInferMemBlockId(const Plan& naive_plan) const {
   Plan plan(naive_plan);
   PlanTaskGraph plan_task_graph(naive_plan);
   {
-    auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(&plan);
+    const auto& MutRegstDesc4Id = PlanUtil::MakeMutRegstDesc4Id(&plan);
     if (GlobalJobDesc().use_memory_allocation_algorithm_v2()) {
       IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(&plan, plan_task_graph);
     } else {
       ForEachInferredMemBlockId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_block_id) {
-        regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_id(mem_block_id);
-        regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_block_offset(0);
+        MutRegstDesc4Id(regst_desc_id)->set_mem_block_id(mem_block_id);
+        MutRegstDesc4Id(regst_desc_id)->set_mem_block_offset(0);
       });
     }
-    SetInplaceConsumedRegstDescId(&plan, *regst_desc_id2regst_desc);
+    SetInplaceConsumedRegstDescId(&plan, MutRegstDesc4Id);
   }
   {
     auto OrderInGraph4TaskId = [&](int64_t task_id) {

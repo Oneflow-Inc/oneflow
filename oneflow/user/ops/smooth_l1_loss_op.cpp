@@ -21,7 +21,7 @@ REGISTER_USER_OP("smooth_l1_loss")
     .Input("prediction")
     .Input("label")
     .Output("loss")
-    .Attr("beta", UserOpAttrType::kAtFloat)
+    .Attr<float>("beta")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("prediction", 0),
                          *ctx->Shape4ArgNameAndIndex("label", 0));
@@ -38,10 +38,6 @@ REGISTER_USER_OP("smooth_l1_loss")
       CHECK(label_modifier != nullptr);
       label_modifier->set_requires_grad(false);
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("loss", 0) = *ctx->BatchAxis4ArgNameAndIndex("prediction", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& prediction_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
@@ -56,7 +52,7 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
     .Input("prediction")
     .Input("label")
     .Output("prediction_grad")
-    .Attr("beta", UserOpAttrType::kAtFloat)
+    .Attr<float>("beta")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("loss_grad", 0),
                          *ctx->Shape4ArgNameAndIndex("prediction", 0));
@@ -71,11 +67,6 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
           *ctx->Shape4ArgNameAndIndex("loss_grad", 0);
       *ctx->Dtype4ArgNameAndIndex("prediction_grad", 0) =
           *ctx->Dtype4ArgNameAndIndex("loss_grad", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("prediction_grad", 0) =
-          *ctx->BatchAxis4ArgNameAndIndex("prediction", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

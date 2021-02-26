@@ -13,14 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/control/ctrl_bootstrap.h"
+#include "oneflow/core/control/ctrl_util.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -31,30 +33,6 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-
-sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
-  sockaddr_in sa;
-  sa.sin_family = AF_INET;
-  sa.sin_port = htons(port);
-  PCHECK(inet_pton(AF_INET, addr.c_str(), &(sa.sin_addr)) == 1);
-  return sa;
-}
-
-int FindAvailablePort() {
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
-
-  for (uint16_t port = 10000; port < GetMaxVal<uint16_t>(); ++port) {
-    sockaddr_in sa = GetSockAddr("0.0.0.0", port);
-    int bind_result = bind(sock, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
-    if (bind_result == 0) {
-      shutdown(sock, SHUT_RDWR);
-      close(sock);
-      return port;
-    }
-  }
-
-  return -1;
-}
 
 EnvProto GetEnvProto(int port) {
   EnvProto ret;
@@ -77,29 +55,29 @@ Resource GetResource() {
 }  // namespace
 
 TEST(CtrlServer, new_delete) {
-  int port = FindAvailablePort();
+  int port = CtrlUtil().FindAvailablePort();
   if (port == -1) { return; }
   EnvProto env_proto = GetEnvProto(port);
   Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New();
-  Global<CtrlClient>::New();
-  int64_t this_mchn_id =
-      Global<EnvDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
-  Global<MachineCtx>::New(this_mchn_id);
+  Global<ProcessCtx>::New();
+  CHECK_JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
+                 .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+  Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
   Global<ResourceDesc, ForEnv>::New(GetResource());
   Global<ResourceDesc, ForSession>::New(GetResource());
 
   // do test
-  // OF_BARRIER_ALL();
+  // OF_ENV_BARRIER();
 
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForEnv>::Delete();
-  Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
+  Global<ProcessCtx>::Delete();
   Global<CtrlServer>::Delete();
   Global<EnvDesc>::Delete();
 }
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX

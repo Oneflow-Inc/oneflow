@@ -21,10 +21,10 @@ namespace oneflow {
 REGISTER_USER_OP("pad")
     .Input("x")
     .Output("y")
-    .Attr("padding_before", UserOpAttrType::kAtListInt64)
-    .Attr("padding_after", UserOpAttrType::kAtListInt64)
-    .Attr("floating_constant_value", UserOpAttrType::kAtDouble)
-    .Attr("integral_constant_value", UserOpAttrType::kAtInt64)
+    .Attr<std::vector<int64_t>>("padding_before")
+    .Attr<std::vector<int64_t>>("padding_after")
+    .Attr<double>("floating_constant_value")
+    .Attr<int64_t>("integral_constant_value")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
@@ -57,10 +57,10 @@ REGISTER_USER_OP("pad")
 REGISTER_USER_OP("pad_grad")
     .Input("dy")
     .Output("dx")
-    .Attr("padding_before", UserOpAttrType::kAtListInt64)
-    .Attr("padding_after", UserOpAttrType::kAtListInt64)
-    .Attr("floating_constant_value", UserOpAttrType::kAtDouble)
-    .Attr("integral_constant_value", UserOpAttrType::kAtInt64)
+    .Attr<std::vector<int64_t>>("padding_before")
+    .Attr<std::vector<int64_t>>("padding_after")
+    .Attr<double>("floating_constant_value")
+    .Attr<int64_t>("integral_constant_value")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
       const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");

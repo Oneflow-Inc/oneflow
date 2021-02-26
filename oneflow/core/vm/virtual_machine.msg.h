@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_SCHEDULER_MSG_H_
 
 #include <mutex>
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/stream.msg.h"
@@ -43,10 +44,15 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   OF_PUBLIC void Receive(ObjectMsgPtr<InstructionMsg>&& instruction_msg);
   OF_PUBLIC void Schedule();
   OF_PUBLIC bool Empty() const;
-  OF_PUBLIC const std::shared_ptr<ParallelDesc>& GetInstructionParallelDesc(const InstructionMsg&);
+  OF_PUBLIC Maybe<ParallelDesc> GetInstructionParallelDesc(const InstructionMsg&);
   OF_PUBLIC MirroredObject* MutMirroredObject(int64_t logical_object_id, int64_t global_device_id);
   OF_PUBLIC const MirroredObject* GetMirroredObject(int64_t logical_object_id,
                                                  int64_t global_device_id);
+
+  OF_PUBLIC int64_t this_machine_id() const;
+  OF_PUBLIC int64_t this_start_global_device_id() const {
+    return this_machine_id() * vm_resource_desc().max_device_num_per_machine();
+  }
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);

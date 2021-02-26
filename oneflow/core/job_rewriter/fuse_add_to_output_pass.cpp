@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/framework/framework.h"
 
@@ -21,13 +21,22 @@ namespace oneflow {
 
 namespace {
 
-class FuseAddToOutputPass final : public OpGraphPass {
+class FuseAddToOutputPass final : public JobPass {
  public:
   FuseAddToOutputPass() = default;
   ~FuseAddToOutputPass() override = default;
 
-  bool IsEnabled() const override { return GlobalJobDesc().job_conf().enable_fuse_add_to_output(); }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  bool IsEnabled(const JobPassCtx& ctx) const {
+    return ctx.job_desc().job_conf().enable_fuse_add_to_output();
+  }
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 };
 
 Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
@@ -36,6 +45,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
        {"normalization", user_op::OpArg("y", 0)},
        {"dropout", user_op::OpArg("out", 0)},
        {"matmul", user_op::OpArg("out", 0)},
+       {"layer_norm_grad", user_op::OpArg("dx", 0)},
        {"batch_matmul", user_op::OpArg("out", 0)}});
   HashMap<std::string, OperatorConf> op_name2op_conf;
   auto IsAddToOutputSupported = [&](const OpNode* node, const LogicalBlobId& lbi) -> bool {
@@ -114,10 +124,9 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
       for (const std::string& ibn : consumer->op().input_bns()) {
         if (consumer->op().BnInOp2Lbi(ibn) == out) {
           OperatorConf& consumer_op_conf = op_name2op_conf.at(consumer_op_name);
-          PbMessage* conf =
-              MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
-          ReplaceInputLbnInOpCustomizedConf(conf, ibn, GenLogicalBlobName(out),
-                                            GenLogicalBlobName(*sum_lbi));
+          const auto& new_val = GenLogicalBlobName(*sum_lbi);
+          const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, new_val);
+          CHECK_EQ(GenLogicalBlobName(out), old_val);
         }
       }
     }
@@ -129,6 +138,6 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
 
 }  // namespace
 
-REGISTER_FUNCTION_PASS("FuseAddToOutputPass", FuseAddToOutputPass);
+REGISTER_JOB_PASS("FuseAddToOutputPass", FuseAddToOutputPass);
 
 }  // namespace oneflow

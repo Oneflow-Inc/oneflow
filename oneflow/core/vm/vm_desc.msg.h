@@ -46,6 +46,8 @@ OBJECT_MSG_END(VmDesc);
 // clang-format on
 
 ObjectMsgPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id);
+ObjectMsgPtr<VmDesc> MakeVmDesc(const Resource& resource, int64_t this_machine_id,
+                                const std::set<std::string>& instr_type_names);
 
 }  // namespace vm
 }  // namespace oneflow

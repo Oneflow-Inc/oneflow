@@ -42,10 +42,9 @@ REGISTER_USER_OP("l1_l2_regularize_gradient")
     .Input("model")
     .Input("model_diff")
     .Output("out")
-    .Attr<float>("l1", UserOpAttrType::kAtFloat, 0)
-    .Attr<float>("l2", UserOpAttrType::kAtFloat, 0)
+    .Attr<float>("l1", 0)
+    .Attr<float>("l2", 0)
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn(GetSbpSignatures);
 
 }  // namespace oneflow

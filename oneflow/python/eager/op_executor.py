@@ -15,25 +15,32 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
+import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.operator.interface_blob_conf_pb2 as inter_face_blob_conf_util
 import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.boxing_util as boxing_util
+import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.op_arg_util as op_arg_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.python.framework.session_context as session_ctx
-import oneflow.core.job.placement_pb2 as placement_pb
+import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.eager.op_infer_util as op_infer_util
+import oneflow.python.eager.blob_register as blob_register_util
+import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 from google.protobuf import text_format
 
 import oneflow
+import oneflow_api
 import numpy as np
 import os
+
+default_blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
 def Interpret(op_attribute, parallel_conf, blob_register):
@@ -41,10 +48,7 @@ def Interpret(op_attribute, parallel_conf, blob_register):
         return MirroredCast(op_attribute, blob_register)
     if op_attribute.op_conf.HasField("cast_from_mirrored_conf"):
         return MirroredCast(op_attribute, blob_register)
-    if type(parallel_conf) is str:
-        parallel_conf = text_format.Parse(parallel_conf, placement_pb.ParallelConf())
-    else:
-        assert isinstance(parallel_conf, placement_pb.ParallelConf)
+    assert isinstance(parallel_conf, placement_cfg.ParallelConf)
     if op_attribute.op_conf.HasField("distribute_split_conf"):
         return DistributeSplitOrClone(op_attribute, parallel_conf, blob_register)
     if op_attribute.op_conf.HasField("distribute_clone_conf"):
@@ -62,7 +66,9 @@ def Interpret(op_attribute, parallel_conf, blob_register):
 
 def OpKernelCall(opkernel_object, op_attribute, blob_register):
     def BuildInstruction(builder):
-        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+        with blob_register_util.BnInOp2BlobObjectScope(
+            blob_register, op_attribute
+        ) as bn_in_op2blob_object:
             builder.StatefulCall(
                 op_attribute,
                 opkernel_object=opkernel_object,
@@ -74,11 +80,13 @@ def OpKernelCall(opkernel_object, op_attribute, blob_register):
 
 def MirroredCast(op_attribute, blob_register):
     def BuildInstruction(builder):
-        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+        with blob_register_util.BnInOp2BlobObjectScope(
+            blob_register, op_attribute
+        ) as bn_in_op2blob_object:
             in_blob_object = bn_in_op2blob_object["in"]
             parallel_desc_symbol = in_blob_object.parallel_desc_symbol
-            op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-                parallel_desc_symbol, op_attribute, "out"
+            op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+                parallel_desc_symbol, str(op_attribute), "out"
             )
             out_blob_object = builder.MakeReferenceBlobObject(
                 in_blob_object, op_arg_parallel_attr
@@ -93,16 +101,18 @@ def DistributeSplitOrClone(op_attribute, parallel_conf, blob_register):
 
     def GetInBlobObject(builder, ibn, bn_in_op2blob_object):
         origin_blob_object = bn_in_op2blob_object[ibn]
-        in_op_parallel_desc_sym = symbol_storage.GetSymbol4Id(parallel_sig[ibn])
-        in_op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-            in_op_parallel_desc_sym, op_attribute, ibn
+        in_op_parallel_desc_sym = oneflow_api.GetPlacementSymbol(parallel_sig[ibn])
+        in_op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+            in_op_parallel_desc_sym, str(op_attribute), ibn
         )
         return boxing_util.BoxingTo(
             builder, origin_blob_object, in_op_arg_parallel_attr
         )
 
     def BuildInstruction(builder):
-        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+        with blob_register_util.BnInOp2BlobObjectScope(
+            blob_register, op_attribute
+        ) as bn_in_op2blob_object:
             physical_out_blob_objects = builder.UnpackLogicalBlobToPhysicalBlobs(
                 GetInBlobObject(builder, "in", bn_in_op2blob_object)
             )
@@ -113,29 +123,31 @@ def DistributeSplitOrClone(op_attribute, parallel_conf, blob_register):
 
 
 def DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register):
-    op_parallel_desc_sym = symbol_storage.GetSymbol4Id(
+    op_parallel_desc_sym = oneflow_api.GetPlacementSymbol(
         op_attribute.parallel_signature.op_parallel_desc_symbol_id
     )
     parallel_size = len(op_attribute.input_bns)
-    op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-        op_parallel_desc_sym, op_attribute, "out"
+    op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+        op_parallel_desc_sym, str(op_attribute), "out"
     )
-    op_arg_blob_attr = op_arg_util.GetOpArgBlobAttribute(op_attribute, "out")
+    op_arg_blob_attr = oneflow_api.GetOpArgBlobAttribute(str(op_attribute), "out")
     parallel_sig = op_attribute.parallel_signature.bn_in_op2parallel_desc_symbol_id
 
     def GetInBlobObject(builder, i, bn_in_op2blob_object):
         ibn = "in_%s" % i
         origin_blob_object = bn_in_op2blob_object[ibn]
-        in_op_parallel_desc_sym = symbol_storage.GetSymbol4Id(parallel_sig[ibn])
-        in_op_arg_parallel_attr = op_arg_util.GetOpArgParallelAttribute(
-            in_op_parallel_desc_sym, op_attribute, ibn
+        in_op_parallel_desc_sym = oneflow_api.GetPlacementSymbol(parallel_sig[ibn])
+        in_op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+            in_op_parallel_desc_sym, str(op_attribute), ibn
         )
         return boxing_util.BoxingTo(
             builder, origin_blob_object, in_op_arg_parallel_attr
         )
 
     def BuildInstruction(builder):
-        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+        with blob_register_util.BnInOp2BlobObjectScope(
+            blob_register, op_attribute
+        ) as bn_in_op2blob_object:
 
             def GetPhysicalInBlob(i):
                 return GetInBlobObject(builder, i, bn_in_op2blob_object)
@@ -149,7 +161,7 @@ def DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register):
 
 
 def _FindOrCreateVarBlobObject(op_attribute, parallel_conf, blob_register):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + op_attribute.op_conf.name
     sess = session_ctx.GetDefaultSession()
     var_blob, _ = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
@@ -170,10 +182,17 @@ def _Watch(op_attribute, parallel_conf, blob_register):
     uuid = op_attribute.op_conf.foreign_watch_conf.handler_uuid
     lbn = "%s/%s" % (lbi.op_name, lbi.blob_name)
     in_blob_object = blob_register.GetObject4BlobName(lbn)
+    if not isinstance(lbi, lbi_util.LogicalBlobId):
+        cfg_lbi = lbi_util.LogicalBlobId()
+        cfg_lbi.set_op_name(lbi.op_name)
+        cfg_lbi.set_blob_name(lbi.blob_name)
+        lbi = cfg_lbi
     if in_blob_object.op_arg_parallel_attr.is_mirrored():
-        blob = remote_blob_util.EagerMirroredBlob(lbi, in_blob_object)
+        blob = oneflow_api.EagerMirroredBlob(lbi, in_blob_object, default_blob_register)
     else:
-        blob = remote_blob_util.EagerConsistentBlob(lbi, in_blob_object)
+        blob = oneflow_api.EagerConsistentBlob(
+            lbi, in_blob_object, default_blob_register
+        )
     uuid2watch_handler = session_ctx.GetDefaultSession().uuid2watch_handler
     assert uuid in uuid2watch_handler
     uuid2watch_handler[uuid](blob)
@@ -182,7 +201,9 @@ def _Watch(op_attribute, parallel_conf, blob_register):
 
 def _NaiveInterpret(op_attribute, parallel_conf, blob_register):
     def BuildInstruction(builder):
-        with blob_register.BnInOp2BlobObjectScope(op_attribute) as bn_in_op2blob_object:
+        with blob_register_util.BnInOp2BlobObjectScope(
+            blob_register, op_attribute
+        ) as bn_in_op2blob_object:
             builder.StatelessCall(
                 op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object,
             )
@@ -196,10 +217,15 @@ def _MakeEagerLogicalBlob(op_attribute, obn, blob_register):
         "%s/%s" % (lbi.op_name, lbi.blob_name)
     )
     mirrored_sig_map = op_attribute.mirrored_signature.bn_in_op2opt_mirrored_parallel
+    if not isinstance(lbi, lbi_util.LogicalBlobId):
+        cfg_lbi = lbi_util.LogicalBlobId()
+        cfg_lbi.set_op_name(lbi.op_name)
+        cfg_lbi.set_blob_name(lbi.blob_name)
+        lbi = cfg_lbi
     if mirrored_sig_map[obn].HasField("mirrored_parallel"):
-        return remote_blob_util.EagerMirroredBlob(lbi, blob_object)
+        return oneflow_api.EagerMirroredBlob(lbi, blob_object, default_blob_register)
     else:
-        return remote_blob_util.EagerConsistentBlob(lbi, blob_object)
+        return oneflow_api.EagerConsistentBlob(lbi, blob_object, default_blob_register)
 
 
 def EagerInitVariableBlob(sess, var_op_conf, var_blob):
@@ -224,10 +250,10 @@ def _Assign(var_blob_object, value_blob_object):
         new_parallel_desc_symbol = boxing_util.TryReplaceDeviceTag(
             builder, var_blob_object.parallel_desc_symbol, "cpu"
         )
-        consumer_op_arg_parallel_attr = op_arg_util.OpArgParallelAttribute(
+        consumer_op_arg_parallel_attr = oneflow_api.OpArgParallelAttribute(
             new_parallel_desc_symbol,
-            var_blob_object.op_arg_parallel_attr.sbp_parallel,
-            var_blob_object.op_arg_parallel_attr.opt_mirrored_parallel,
+            str(var_blob_object.op_arg_parallel_attr.sbp_parallel),
+            str(var_blob_object.op_arg_parallel_attr.opt_mirrored_parallel),
         )
         tmp_blob_object = boxing_util.BoxingTo(
             builder, value_blob_object, consumer_op_arg_parallel_attr
@@ -238,15 +264,15 @@ def _Assign(var_blob_object, value_blob_object):
 
 
 def _BuildNotMirroredScope(old_scope, builder):
-    return old_scope.BuildWithNewIsMirrored(builder, False)
+    return builder.BuildScopeWithNewIsMirrored(old_scope, False)
 
 
 def _EagerRunModelInit(var_op_conf):
     op_conf, _ = _GenModelInitOpConfAndRetLbi(var_op_conf)
-    bn_in_op2blob_object = {}
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
 
     def BuildModelInitInstruction(builder):
-        upstream_signature = op_attribute_pb.OpNodeSignature()
+        upstream_signature = op_node_signature_pb.OpNodeSignature()
         op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
         op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
         parallel_conf = (
@@ -257,7 +283,7 @@ def _EagerRunModelInit(var_op_conf):
         )
 
     sess = session_ctx.GetDefaultSession()
-    with sess.NewCurrentScope(sess.MakeScope(_BuildNotMirroredScope)):
+    with scope_util.ScopeContext(scope_util.MakeScope(_BuildNotMirroredScope)):
         vm_util.LogicalRun(BuildModelInitInstruction)
 
     return bn_in_op2blob_object["out_0"]
@@ -315,7 +341,7 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
         )
 
     sess = session_ctx.GetDefaultSession()
-    with sess.NewCurrentScope(sess.MakeScope(_BuildNotMirroredScope)):
+    with scope_util.ScopeContext(scope_util.MakeScope(_BuildNotMirroredScope)):
         vm_util.LogicalRun(BuildModelIOPathInputInstruction)
         vm_util.LogicalRun(BuildFeedPathInstruction)
         vm_util.LogicalRun(BuildModelLoadInstruction)
@@ -351,7 +377,7 @@ def _EagerRunModelSave(var_blobs, snapshot_path):
         )
 
     sess = session_ctx.GetDefaultSession()
-    with sess.NewCurrentScope(sess.MakeScope(_BuildNotMirroredScope)):
+    with scope_util.ScopeContext(scope_util.MakeScope(_BuildNotMirroredScope)):
         vm_util.LogicalRun(BuildModelIOPathInputInstruction)
         vm_util.LogicalRun(BuildFeedPathInstruction)
         vm_util.LogicalRun(BuildModelSaveInstruction)
@@ -396,10 +422,9 @@ def _GenModelIOPathInputOpConfAndRetLbi():
     op_conf.device_tag = "cpu"
     op_conf.input_conf.out = "out"
 
-    blob_conf = op_conf_util.InterfaceBlobConf()
+    blob_conf = inter_face_blob_conf_util.InterfaceBlobConf()
     blob_conf.shape.dim.append(65536)
     blob_conf.data_type = dtype_util.int8.oneflow_proto_dtype
-    blob_conf.batch_axis.value = 0
     blob_conf.is_dynamic = True
     op_conf.input_conf.blob_conf.CopyFrom(blob_conf)
 

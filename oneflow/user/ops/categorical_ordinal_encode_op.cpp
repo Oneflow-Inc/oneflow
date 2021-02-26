@@ -22,7 +22,7 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
     .Input("size")
     .Input("in")
     .Output("out")
-    .Attr("hash_precomputed", UserOpAttrType::kAtBool)
+    .Attr<bool>("hash_precomputed")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const DataType data_type = *ctx->Dtype4ArgNameAndIndex("in", 0);
       CHECK_OR_RETURN(IsIndexDataType(data_type));
@@ -49,12 +49,6 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       size->set_requires_grad(false);
       user_op::InputArgModifier* in = GetInputArgModifierFn("in", 0);
       in->set_requires_grad(false);
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_OR_RETURN(!ctx->BatchAxis4ArgNameAndIndex("table", 0)->has_value());
-      CHECK_OR_RETURN(!ctx->BatchAxis4ArgNameAndIndex("size", 0)->has_value());
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(ctx->parallel_num(), 1);

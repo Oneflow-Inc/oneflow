@@ -56,7 +56,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   }
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
-  int64_t LocalWorkStreamId() const;
   int64_t GlobalWorkStreamId() const;
   int64_t GpuPhyId() const { return Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_); }
   virtual int64_t AreaId4ChainMerge() const { return area_id(); }
@@ -132,8 +131,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void LockRegsts();
   void FixRegisterNumRange();
 
-  virtual int64_t AllocateLocalWorkStreamId();
-
   virtual void InferProducedDataRegstTimeShape() = 0;
   void NaiveInferProducedDataRegstTimeShape();
 
@@ -185,14 +182,15 @@ struct IndependentThreadNum4TaskType final {
   std::function<size_t()> get_num_;
 };
 
-#define REGISTER_INDEPENDENT_THREAD_NUM(task_type, ...)            \
-  REGISTER_CLASS_CREATOR(task_type, IndependentThreadNum4TaskType, \
+#define REGISTER_INDEPENDENT_THREAD_NUM(task_type, ...)                     \
+  REGISTER_CLASS_CREATOR(int32_t, task_type, IndependentThreadNum4TaskType, \
                          ([] { return new IndependentThreadNum4TaskType(__VA_ARGS__); }))
 
 struct TickTockTaskType final {};
 
-#define REGISTER_TICK_TOCK_TASK_TYPE(task_type) \
-  REGISTER_CLASS_CREATOR(task_type, TickTockTaskType, ([] { return new TickTockTaskType; }))
+#define REGISTER_TICK_TOCK_TASK_TYPE(task_type)                \
+  REGISTER_CLASS_CREATOR(int32_t, task_type, TickTockTaskType, \
+                         ([] { return new TickTockTaskType; }))
 
 }  // namespace oneflow
 

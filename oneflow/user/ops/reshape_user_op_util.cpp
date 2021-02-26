@@ -97,6 +97,8 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
 
 Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(const Shape& in_shape,
                                                              const Shape& out_shape,
+                                                             std::vector<user_op::OpArg> in_args,
+                                                             std::vector<user_op::OpArg> out_args,
                                                              user_op::SbpContext* ctx) {
   HashMap<int, int> squeezed_group_start_in_axis2out_axis;
   HashMap<int, int> in_squeezed_axis2original_axis;
@@ -113,10 +115,7 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(const Shape& in_sha
   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
     int64_t start_in_axis = in_squeezed_axis2original_axis.at(pair.first);
     int64_t start_out_axis = out_squeezed_axis2original_axis.at(pair.second);
-    ctx->NewBuilder()
-        .Split(ctx->inputs(), start_in_axis)
-        .Split(ctx->outputs(), start_out_axis)
-        .Build();
+    ctx->NewBuilder().Split(in_args, start_in_axis).Split(out_args, start_out_axis).Build();
   }
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();

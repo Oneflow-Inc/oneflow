@@ -4,7 +4,7 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 
-enum UserOpAttrType {
+enum AttrType {
   kAtInt32 = 1;
   kAtInt64 = 2;
   kAtBool = 3;
@@ -21,7 +21,7 @@ enum UserOpAttrType {
   kAtListString = 14;
 }
 
-message UserOpAttrVal {
+message AttrValue {
   message ListInt32 {
     repeated int32 val = 1;
   }
@@ -37,7 +37,7 @@ message UserOpAttrVal {
   message ListShape {
     repeated ShapeProto val = 1;
   }
-  // order and naming convention of the oneof field must be consistent with the enum UserOpAttrType
+  // order and naming convention of the oneof field must be consistent with the enum AttrType
   message ListString {
     repeated string val = 1;
   }
@@ -57,4 +57,10 @@ message UserOpAttrVal {
     ListShape at_list_shape = 13;
     ListString at_list_string = 14;
   }
+}
+
+message AttrDef {
+  required string name = 1;
+  required string description = 2;
+  required AttrValue default_val = 3;
 }

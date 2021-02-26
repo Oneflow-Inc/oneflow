@@ -20,16 +20,12 @@ namespace oneflow {
 REGISTER_USER_OP("scalar_add")
     .Input("in")
     .Output("out")
-    .Attr("has_int_operand", UserOpAttrType::kAtBool)
-    .Attr("has_float_operand", UserOpAttrType::kAtBool)
-    .Attr("int_operand", UserOpAttrType::kAtInt64)
-    .Attr("float_operand", UserOpAttrType::kAtDouble)
+    .Attr<bool>("has_int_operand")
+    .Attr<bool>("has_float_operand")
+    .Attr<int64_t>("int_operand")
+    .Attr<double>("float_operand")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

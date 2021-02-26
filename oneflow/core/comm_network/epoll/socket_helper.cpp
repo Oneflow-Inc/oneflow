@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/comm_network/epoll/socket_helper.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 namespace oneflow {
 
@@ -35,4 +35,4 @@ void SocketHelper::AsyncWrite(const SocketMsg& msg) { write_helper_->AsyncWrite(
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX

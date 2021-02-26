@@ -79,7 +79,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->TopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
-  task_gph->AddOrderingCtrlEdgeInSameChain();
+  task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
   if (job_desc.enable_inplace()) {
     auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
     task_gph->EnableInplaceMemSharing(IsReachable);

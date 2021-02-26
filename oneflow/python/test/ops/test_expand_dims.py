@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
 import numpy as np
@@ -52,8 +53,6 @@ def compare_with_tensorflow(device_type, x_shape, axis):
             return loss
 
     # # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = ExpandDimsJob().get().numpy()
     # # TensorFlow
     tf_out = tf.expand_dims(np.ones(x_shape, dtype=np.float32), axis).numpy()
@@ -70,6 +69,12 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-def test_expand_dims(test_case):
-    for arg in gen_arg_list():
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestExpandDims(flow.unittest.TestCase):
+    def test_expand_dims(test_case):
+        for arg in gen_arg_list():
+            compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

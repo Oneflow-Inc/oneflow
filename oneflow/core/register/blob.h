@@ -96,6 +96,7 @@ class Blob final {
 
   DataType data_type() const { return blob_desc_->data_type(); }
   const char* header_ptr() const { return header_ptr_->ptr(); }
+  char* mut_header_ptr() { return header_ptr_->ptr(); }
   char* mut_contiguous_header_ptr();
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }

@@ -14,11 +14,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
+
+namespace {
+
+using MachineId2DeviceIdList =
+    std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>;
+
+bool GlobalDeviceIdsContaining(const MachineId2DeviceIdList& bigger,
+                               const MachineId2DeviceIdList& smaller) {
+  for (const auto& pair : *smaller) {
+    if (bigger->find(pair.first) == bigger->end()) { return false; }
+    const auto& bigger_device_ids = bigger->find(pair.first)->second;
+    std::vector<int64_t>::iterator ret;
+    for (int64_t device_id : *pair.second) {
+      ret = std::find(bigger_device_ids->begin(), bigger_device_ids->end(), device_id);
+      if (ret == bigger_device_ids->end()) { return false; }
+    }
+  }
+  return true;
+}
+
+}  // namespace
 
 Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
                                 std::string* device_id_str) {
@@ -43,27 +65,32 @@ Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
   return machine2device_list;
 }
 
-ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
+ParallelDesc::ParallelDesc(const ParallelConf& user_conf)
+    : symbol_id_(Error::SymbolIdUninitialized()) {
   CHECK_JUST(MaybeInit(user_conf));
   CHECK_JUST(CheckWithResourceDesc(*(Global<ResourceDesc, ForSession>::Get())));
 }
 
+Maybe<ParallelDesc> ParallelDesc::New(int64_t symbol_id, const ParallelConf& parallel_conf) {
+  std::shared_ptr<ParallelDesc> parallel_desc(new ParallelDesc(symbol_id));
+  parallel_desc->MaybeInit(parallel_conf);
+  return parallel_desc;
+}
+
 Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   parallel_conf_ = user_conf;
-  HashSet<int64_t> machine_id_set;
+  cfg_parallel_conf_.reset(new cfg::ParallelConf(user_conf));
   device_type_ = DeviceType::kInvalidDevice;
   const std::string& device_tag = parallel_conf_.device_tag();
   DeviceType device_type = JUST(DeviceType4DeviceTag(device_tag));
   CHECK_OR_RETURN(device_type_ == DeviceType::kInvalidDevice || device_type_ == device_type);
   device_type_ = device_type;
+  machine_id2sorted_dev_phy_ids_ =
+      std::make_shared<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>();
   for (const std::string& device_name : parallel_conf_.device_name()) {
     int64_t mchn_id;
     std::string device_id_str;
     JUST(ParseDeviceNameConf(device_name, &mchn_id, &device_id_str));
-    machine_id_set.insert(mchn_id);
-    if (machine_id_set.find(mchn_id) == machine_id_set.end()) {
-      sorted_machine_ids_.push_back(mchn_id);
-    }
     int64_t minus_pos = device_id_str.find("-");
     if (minus_pos == std::string::npos) {
       device_id_str = device_id_str + "-" + device_id_str;
@@ -72,8 +99,11 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     int64_t min_id = oneflow_cast<int64_t>(device_id_str.substr(0, minus_pos));
     int64_t max_id = oneflow_cast<int64_t>(device_id_str.substr(minus_pos + 1));
     CHECK_LE_OR_RETURN(min_id, max_id);
+    if (!(*machine_id2sorted_dev_phy_ids_)[mchn_id]) {
+      (*machine_id2sorted_dev_phy_ids_)[mchn_id] = std::make_shared<std::vector<int64_t>>();
+    }
     for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
-      machine_id2sorted_dev_phy_ids_[mchn_id].push_back(dev_phy_id);
+      (*machine_id2sorted_dev_phy_ids_)[mchn_id]->push_back(dev_phy_id);
     }
   }
   ClearUp();
@@ -81,42 +111,58 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ParallelDesc::GetParallelContext(ParallelContext* parallel_ctx, int64_t machine_id,
-                                             int64_t device_id) const {
-  parallel_ctx->set_parallel_num(parallel_num());
+Maybe<int64_t> ParallelDesc::ParallelId4MachineDeviceId(int64_t machine_id,
+                                                        int64_t device_id) const {
   const auto& machine_iter = machine_id2device_id2parallel_id_.find(machine_id);
   CHECK_OR_RETURN(machine_iter != machine_id2device_id2parallel_id_.end());
   const auto& device_iter = machine_iter->second.find(device_id);
   CHECK_OR_RETURN(device_iter != machine_iter->second.end());
-  parallel_ctx->set_parallel_id(device_iter->second);
+  return device_iter->second;
+}
+
+Maybe<void> ParallelDesc::GetParallelContext(ParallelContext* parallel_ctx, int64_t machine_id,
+                                             int64_t device_id) const {
+  parallel_ctx->set_parallel_num(parallel_num());
+  parallel_ctx->set_parallel_id(JUST(ParallelId4MachineDeviceId(machine_id, device_id)));
   return Maybe<void>::Ok();
 }
 
 bool ParallelDesc::Equals(const ParallelDesc& rhs) const {
   return device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
-         && machine_id2sorted_dev_phy_ids_ == rhs.machine_id2sorted_dev_phy_ids_;
+         && EqualsMachineId2SortedDevPhyIds(rhs);
 }
 
 bool ParallelDesc::EqualsIgnoringDeviceType(const ParallelDesc& rhs) const {
-  return sorted_machine_ids_ == rhs.sorted_machine_ids_
-         && machine_id2sorted_dev_phy_ids_ == rhs.machine_id2sorted_dev_phy_ids_;
+  return sorted_machine_ids_ == rhs.sorted_machine_ids_ && EqualsMachineId2SortedDevPhyIds(rhs);
+}
+
+bool ParallelDesc::EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const {
+  for (int64_t machine_id : sorted_machine_ids_) {
+    if (*machine_id2sorted_dev_phy_ids_->at(machine_id)
+        != *rhs.machine_id2sorted_dev_phy_ids_->at(machine_id)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void ParallelDesc::ClearUp() {
-  EraseIf<int64_t, std::vector<int64_t>>(
-      &machine_id2sorted_dev_phy_ids_,
-      [](HashMap<int64_t, std::vector<int64_t>>::iterator it) { return it->second.empty(); });
+  EraseIf<int64_t, std::shared_ptr<std::vector<int64_t>>>(
+      machine_id2sorted_dev_phy_ids_.get(),
+      [](HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>::iterator it) {
+        return it->second->empty();
+      });
   sorted_machine_ids_.clear();
   parallel_num_ = 0;
-  for (auto& pair : machine_id2sorted_dev_phy_ids_) {
+  for (auto& pair : *machine_id2sorted_dev_phy_ids_) {
     sorted_machine_ids_.push_back(pair.first);
-    SortAndRemoveDuplication(&(pair.second));
-    parallel_num_ += pair.second.size();
+    SortAndRemoveDuplication((pair.second).get());
+    parallel_num_ += pair.second->size();
   }
   SortAndRemoveDuplication(&sorted_machine_ids_);
   int64_t parallel_id = 0;
   for (int64_t machine_id : sorted_machine_ids_) {
-    for (int64_t device_id : machine_id2sorted_dev_phy_ids_.at(machine_id)) {
+    for (int64_t device_id : *machine_id2sorted_dev_phy_ids_->at(machine_id)) {
       parallel_id2machine_id_[parallel_id] = machine_id;
       parallel_id2device_id_[parallel_id] = device_id;
       machine_id2device_id2parallel_id_[machine_id][device_id] = parallel_id;
@@ -134,11 +180,11 @@ void ParallelDesc::set_device_type(DeviceType device_type) {
 
 Maybe<void> ParallelDesc::SanityCheck() {
   device_num_of_each_machine_ = -1;
-  for (auto& pair : machine_id2sorted_dev_phy_ids_) {
+  for (auto& pair : *machine_id2sorted_dev_phy_ids_) {
     if (device_num_of_each_machine_ == -1) {
-      device_num_of_each_machine_ = pair.second.size();
+      device_num_of_each_machine_ = pair.second->size();
     } else {
-      CHECK_EQ_OR_RETURN(device_num_of_each_machine_, pair.second.size());
+      CHECK_EQ_OR_RETURN(device_num_of_each_machine_, pair.second->size());
     }
   }
   return Maybe<void>::Ok();
@@ -146,8 +192,8 @@ Maybe<void> ParallelDesc::SanityCheck() {
 
 Maybe<void> ParallelDesc::CheckWithResourceDesc(const ResourceDesc& resource_desc) {
   if (device_type_ == DeviceType::kGPU) {
-    for (auto& pair : machine_id2sorted_dev_phy_ids_) {
-      for (int64_t dev_phy_id : pair.second) {
+    for (auto& pair : *machine_id2sorted_dev_phy_ids_) {
+      for (int64_t dev_phy_id : *pair.second) {
         CHECK_LT_OR_RETURN(dev_phy_id, resource_desc.GpuDeviceNum());
       }
     }
@@ -157,26 +203,44 @@ Maybe<void> ParallelDesc::CheckWithResourceDesc(const ResourceDesc& resource_des
 
 ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) const {
   ParallelConf parallel_conf;
-  std::string machine_id = std::to_string(MachineIdForParallelId(parallel_id));
-  std::string device_id = std::to_string(DeviceIdForParallelId(parallel_id));
+  std::string machine_id = std::to_string(CHECK_JUST(MachineId4ParallelId(parallel_id)));
+  std::string device_id = std::to_string(CHECK_JUST(DeviceId4ParallelId(parallel_id)));
   parallel_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type())));
   parallel_conf.add_device_name(machine_id + ":" + device_id);
   return parallel_conf;
 }
 
-int64_t ParallelDesc::MachineIdForParallelId(int64_t parallel_id) const {
-  return parallel_id2machine_id_.at(parallel_id);
+Maybe<int64_t> ParallelDesc::MachineId4ParallelId(int64_t parallel_id) const {
+  const auto& iter = parallel_id2machine_id_.find(parallel_id);
+  CHECK_OR_RETURN(iter != parallel_id2machine_id_.end())
+      << "parallel_id: " << parallel_id << "\n----[ parallel_conf ]----"
+      << parallel_conf().DebugString();
+  return iter->second;
 }
 
-int64_t ParallelDesc::DeviceIdForParallelId(int64_t parallel_id) const {
-  return parallel_id2device_id_.at(parallel_id);
+Maybe<int64_t> ParallelDesc::DeviceId4ParallelId(int64_t parallel_id) const {
+  const auto& iter = parallel_id2device_id_.find(parallel_id);
+  CHECK_OR_RETURN(iter != parallel_id2device_id_.end())
+      << "parallel_id: " << parallel_id << "\n----[ parallel_conf ]----"
+      << parallel_conf().DebugString();
+  return iter->second;
+}
+
+bool ParallelDesc::ContainingMachineId(int64_t machine_id) const {
+  return machine_id2sorted_dev_phy_ids_->find(machine_id) != machine_id2sorted_dev_phy_ids_->end();
 }
 
 bool ParallelDesc::Containing(int64_t machine_id, int64_t device_id) const {
-  const auto& machine_iter = machine_id2sorted_dev_phy_ids_.find(machine_id);
-  if (machine_iter == machine_id2sorted_dev_phy_ids_.end()) { return false; }
+  const auto& machine_iter = machine_id2sorted_dev_phy_ids_->find(machine_id);
+  if (machine_iter == machine_id2sorted_dev_phy_ids_->end()) { return false; }
   const auto& vec = machine_iter->second;
-  return std::find(vec.begin(), vec.end(), device_id) != vec.end();
+  return std::find(vec->begin(), vec->end(), device_id) != vec->end();
+}
+
+bool ParallelDesc::Bigger(const ParallelDesc& rhs) const {
+  if (device_tag() != rhs.device_tag()) { return false; }
+  return GlobalDeviceIdsContaining(machine_id2sorted_dev_phy_ids_,
+                                   rhs.machine_id2sorted_dev_phy_ids());
 }
 
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(

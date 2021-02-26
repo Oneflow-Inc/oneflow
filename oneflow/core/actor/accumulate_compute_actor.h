@@ -27,14 +27,13 @@ class AccumulateCompActor : public CompActor {
   virtual ~AccumulateCompActor() = default;
 
  protected:
-  void Init(const TaskProto&, int32_t max_acc_cnt, ColIdOrder order);
+  void Init(const TaskProto&, int32_t max_acc_cnt);
   int64_t ActNumForEachOutput(int64_t regst_desc_id) const override;
 
  private:
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 
-  ColIdOrder order_;
   std::function<void(DeviceCtx*, void* dst, const void* src, size_t)> cpy_func_;
   int32_t acc_cnt_;
   int32_t max_acc_cnt_;

@@ -18,6 +18,8 @@ include(absl)
 include(cares)
 include(openssl)
 include(grpc)
+include(flatbuffers)
+include(lz4)
 
 if (WITH_XLA)
   include(tensorflow)
@@ -45,6 +47,9 @@ if (BUILD_CUDA)
     get_filename_component(cuda_lib_dir ${CUDA_cudart_static_LIBRARY} DIRECTORY)
   endif()
   set(extra_cuda_libs libculibos.a libcurand_static.a)
+  if(CUDA_VERSION VERSION_GREATER_EQUAL "10.2")
+    list(APPEND extra_cuda_libs libnvjpeg_static.a libnppc_static.a libnppig_static.a)
+  endif()
   foreach(extra_cuda_lib ${extra_cuda_libs})
     list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/${extra_cuda_lib})
   endforeach()
@@ -95,10 +100,13 @@ else()
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
-set(oneflow_third_party_libs
-    ${CMAKE_THREAD_LIBS_INIT}
+# libraries only a top level .so or exe should be linked to
+set(oneflow_exe_third_party_libs
     ${GLOG_STATIC_LIBRARIES}
     ${GFLAGS_STATIC_LIBRARIES}
+)
+
+set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
     ${PROTOBUF_STATIC_LIBRARIES}
@@ -112,6 +120,9 @@ set(oneflow_third_party_libs
     ${CARES_STATIC_LIBRARIES}
     ${ABSL_STATIC_LIBRARIES}
     ${OPENSSL_STATIC_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${FLATBUFFERS_STATIC_LIBRARIES}
+    ${LZ4_STATIC_LIBRARIES}
 )
 
 if (NOT WITH_XLA)
@@ -149,6 +160,9 @@ set(oneflow_third_party_dependencies
   half_copy_headers_to_destination
   re2
   json_copy_headers_to_destination
+  flatbuffers
+  lz4_copy_libs_to_destination
+  lz4_copy_headers_to_destination
 )
 
 
@@ -170,6 +184,8 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${ABSL_INCLUDE_DIR}
     ${CARES_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
+    ${FLATBUFFERS_INCLUDE_DIR}
+    ${LZ4_INCLUDE_DIR}
 )
 
 if (NOT WITH_XLA)

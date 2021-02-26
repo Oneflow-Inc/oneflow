@@ -17,14 +17,13 @@ limitations under the License.
 
 namespace oneflow {
 
-void AccumulateCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt, ColIdOrder order) {
+void AccumulateCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt) {
   using namespace std::placeholders;
-  order_ = order;
   if (GetDeviceType() == DeviceType::kCPU) {
-    cpy_func_ = std::bind(Memcpy<DeviceType::kCPU>, _1, _2, _3, _4, cudaMemcpyHostToHost);
+    cpy_func_ = std::bind(Memcpy<DeviceType::kCPU>, _1, _2, _3, _4);
   } else {
 #ifdef WITH_CUDA
-    cpy_func_ = std::bind(Memcpy<DeviceType::kGPU>, _1, _2, _3, _4, cudaMemcpyDeviceToDevice);
+    cpy_func_ = std::bind(Memcpy<DeviceType::kGPU>, _1, _2, _3, _4);
 #else
     UNIMPLEMENTED();
 #endif
@@ -40,10 +39,9 @@ int64_t AccumulateCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
 }
 
 void AccumulateCompActor::Act() {
-  Regst* in_regst = GetNaiveCurReadable("one");
   Regst* out_regst = GetNaiveCurWriteable("acc");
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  if (acc_cnt_ == 0 && IsFirstRegstInPieceWithOrder(in_regst, order_)) {
+  if (acc_cnt_ == 0) {
     Blob* out_blob = out_regst->packed_blob();
     if (GetDeviceType() == DeviceType::kCPU) {
       Memset<DeviceType::kCPU>(kernel_ctx.device_ctx, out_blob->mut_dptr(), 0,
@@ -60,7 +58,7 @@ void AccumulateCompActor::Act() {
     }
   }
   AsyncLaunchKernel(kernel_ctx);
-  if (IsLastRegstInPieceWithOrder(in_regst, order_)) { acc_cnt_ += 1; }
+  acc_cnt_ += 1;
 }
 
 void AccumulateCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {

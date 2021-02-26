@@ -67,20 +67,6 @@ void FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierF
   moving_variance_modifier->set_requires_grad(false);
 }
 
-Maybe<void> FwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
-  const OptInt64* x_batch_axis = ctx->BatchAxis4ArgNameAndIndex("x", 0);
-  *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *x_batch_axis;
-  const auto ClearBatchAxis = [ctx](const std::string& name) {
-    if (ctx->user_op_conf().has_output(name, 0)) {
-      ctx->BatchAxis4ArgNameAndIndex(name, 0)->clear_value();
-    }
-  };
-  ClearBatchAxis("mean");
-  ClearBatchAxis("inv_variance");
-  ClearBatchAxis("reserve_space");
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
   std::vector<user_op::OpArg> split_args;
   split_args.emplace_back("x", 0);
@@ -164,13 +150,12 @@ REGISTER_USER_OP("normalization")
     .Output("y")
     .OptionalOutput("mean")
     .OptionalOutput("inv_variance")
-    .Attr("axis", UserOpAttrType::kAtInt32)
-    .Attr("epsilon", UserOpAttrType::kAtFloat)
-    .Attr("training", UserOpAttrType::kAtBool)
-    .Attr("momentum", UserOpAttrType::kAtFloat)
+    .Attr<int32_t>("axis")
+    .Attr<float>("epsilon")
+    .Attr<bool>("training")
+    .Attr<float>("momentum")
     .SetInputArgModifyFn(FwInputArgModifyFn)
     .SetTensorDescInferFn(MakeFwTensorDescInferFn())
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
     .SetGetSbpFn(FwGetSbpFn);
 
 REGISTER_USER_OP("normalization_add_relu")
@@ -184,18 +169,19 @@ REGISTER_USER_OP("normalization_add_relu")
     .Output("reserve_space")
     .OptionalOutput("mean")
     .OptionalOutput("inv_variance")
-    .Attr("axis", UserOpAttrType::kAtInt32)
-    .Attr("epsilon", UserOpAttrType::kAtFloat)
-    .Attr("momentum", UserOpAttrType::kAtFloat)
+    .Attr<int32_t>("axis")
+    .Attr<float>("epsilon")
+    .Attr<float>("momentum")
     .SetInputArgModifyFn(FwInputArgModifyFn)
     .SetTensorDescInferFn(
         MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
-          *reserve_space->mut_data_type() = DataType::kChar;
-          *reserve_space->mut_shape() = Shape({1});
+          const auto* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          *reserve_space->mut_data_type() = DataType::kInt32;
+          *reserve_space->mut_shape() =
+              Shape({static_cast<int64_t>(RoundUp(x_desc->shape().elem_cnt(), 32) / 32)});
           return Maybe<void>::Ok();
         }))
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
     .SetGetSbpFn(FwGetSbpFn);
 
 #if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
@@ -211,9 +197,9 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
     .Output("reserve_space")
     .OptionalOutput("mean")
     .OptionalOutput("inv_variance")
-    .Attr("axis", UserOpAttrType::kAtInt32)
-    .Attr("epsilon", UserOpAttrType::kAtFloat)
-    .Attr("momentum", UserOpAttrType::kAtFloat)
+    .Attr<int32_t>("axis")
+    .Attr<float>("epsilon")
+    .Attr<float>("momentum")
     .SetInputArgModifyFn(FwInputArgModifyFn)
     .SetTensorDescInferFn(
         MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
@@ -245,7 +231,6 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
           OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle));
           return Maybe<void>::Ok();
         }))
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
     .SetGetSbpFn(FwGetSbpFn);
 
 #endif
@@ -280,17 +265,6 @@ Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
   JUST(CheckParamTensorDesc("beta"));
   JUST(SetParamTensorDesc("gamma_diff"));
   JUST(SetParamTensorDesc("beta_diff"));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> BwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
-  const OptInt64* dy_batch_axis = ctx->BatchAxis4ArgNameAndIndex("dy", 0);
-  *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *dy_batch_axis;
-  if (ctx->user_op_conf().has_output("addend_diff", 0)) {
-    *ctx->BatchAxis4ArgNameAndIndex("addend_diff", 0) = *dy_batch_axis;
-  }
-  ctx->BatchAxis4ArgNameAndIndex("gamma_diff", 0)->clear_value();
-  ctx->BatchAxis4ArgNameAndIndex("beta_diff", 0)->clear_value();
   return Maybe<void>::Ok();
 }
 
@@ -331,10 +305,9 @@ REGISTER_USER_OP("normalization_grad")
     .Output("gamma_diff")
     .Output("beta_diff")
     .Output("dx")
-    .Attr("axis", UserOpAttrType::kAtInt32)
-    .Attr("epsilon", UserOpAttrType::kAtFloat)
+    .Attr<int32_t>("axis")
+    .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
 
 REGISTER_USER_OP("normalization_add_relu_grad")
@@ -350,10 +323,9 @@ REGISTER_USER_OP("normalization_add_relu_grad")
     .Output("beta_diff")
     .Output("dx")
     .OptionalOutput("addend_diff")
-    .Attr("axis", UserOpAttrType::kAtInt32)
-    .Attr("epsilon", UserOpAttrType::kAtFloat)
+    .Attr<int32_t>("axis")
+    .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
 
 #if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
@@ -371,10 +343,9 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu_grad")
     .Output("beta_diff")
     .Output("dx")
     .OptionalOutput("addend_diff")
-    .Attr("axis", UserOpAttrType::kAtInt32)
-    .Attr("epsilon", UserOpAttrType::kAtFloat)
+    .Attr<int32_t>("axis")
+    .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
 
 #endif

@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
-#include "oneflow/core/operator/normal_model_update_op.h"
+#include "oneflow/core/framework/device_registry_manager.h"
 
 namespace oneflow {
 
@@ -81,11 +81,6 @@ bool OpEdge::CalcIsStrict121Connected() const {
   return true;
 }
 
-Maybe<const OptInt64*> OpNode::BatchAxis4Lbi(const LogicalBlobId& lbi) const {
-  const auto& op = ProducerOpNode4Lbi(lbi).op();
-  return op.BatchAxis4BnInOp(*JUST(op.obn4lbi(lbi)));
-}
-
 const SbpParallel& OpNode::SbpParallel4BnInOp(const std::string& bn_in_op) const {
   return *CHECK_JUST(op().SbpParallel4BnInOp(bn_in_op));
 }
@@ -100,14 +95,8 @@ std::string OpNode::VisualStr() const {
   std::string str = op().op_name();
   {
     for (int64_t machine_id : parallel_desc().sorted_machine_ids()) {
-      std::string dev_type;
-      if (parallel_desc().device_type() == DeviceType::kCPU) {
-        dev_type = "cpu";
-      } else if (parallel_desc().device_type() == DeviceType::kGPU) {
-        dev_type = "gpu";
-      } else {
-        UNIMPLEMENTED();
-      }
+      const char* dev_type = CHECK_JUST(DeviceTag4DeviceType(parallel_desc().device_type()));
+
       std::string parallel_desc_str = std::to_string(machine_id) + ":" + dev_type + ":";
       const auto& dev_phy_ids = parallel_desc().sorted_dev_phy_ids(machine_id);
       parallel_desc_str += std::to_string(dev_phy_ids.front());
@@ -209,7 +198,7 @@ void OpNode::ForEachSplitOrBroadcastBlobDesc(
     int32_t axis = sbp_parallel.split_parallel().axis();
     CHECK_GE(axis, 0);
     CHECK_LT(axis, blob_desc.shape().NumAxes());
-    CHECK_GE(blob_desc.shape().At(axis), parallel_desc().parallel_num());
+    CHECK_GE(blob_desc.shape().At(axis), parallel_desc().parallel_num()) << this->op_->op_name();
     BalancedSplitter bs(blob_desc.shape().At(axis), parallel_desc().parallel_num());
     BlobDesc sub_blob_desc(blob_desc);
     FOR_RANGE(int64_t, axis_parallel_id, 0, parallel_desc().parallel_num()) {
@@ -248,21 +237,12 @@ void OpNode::ConcatBlobDesc(const ParallelDesc& blob_parallel_desc,
     FOR_RANGE(int64_t, i, 1, same_blob_descs.size()) {
       CHECK(*same_blob_descs.at(i) == *same_blob_descs.at(0));
     }
-    concatenated_blob_desc->CopyAllFrom(*same_blob_descs.at(0));
+    concatenated_blob_desc->CopyFrom(*same_blob_descs.at(0));
   } else {
     FOR_RANGE(int64_t, i, 1, blob_descs.size()) { CHECK(*blob_descs.at(i) == *blob_descs.at(0)); }
     // select first BlobDesc
-    concatenated_blob_desc->CopyAllFrom(*blob_descs.at(0));
+    concatenated_blob_desc->CopyFrom(*blob_descs.at(0));
   }
-}
-
-int64_t OpNode::GetAxisParallelNum(
-    const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo) const {
-  bool is_split = false;
-  int32_t axis = -1;
-  int64_t axis_parallel_num = 0;
-  GetAxisParallelInfo(&is_split, &axis, &axis_parallel_num);
-  return axis_parallel_num;
 }
 
 void OpNode::SplitLogicalInputBlobDesc() {
@@ -309,7 +289,6 @@ void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& 
   for (const std::string& bn : op().input_bns()) { Check(bn); }
   for (const std::string& bn : op().output_bns()) { Check(bn); }
   for (const std::string& bn : op().tmp_bns()) { Check(bn); }
-  for (const std::string& bn : op().const_buf_bns()) { Check(bn); }
 }
 
 const ParallelDesc& OpNode::BlobParallelDesc4Obn(const std::string& obn) const {
@@ -317,18 +296,9 @@ const ParallelDesc& OpNode::BlobParallelDesc4Obn(const std::string& obn) const {
 }
 
 void OpNode::InferBlobParallelDesc() {
-  auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
-    auto iter = obn2blob_parallel_desc_.find(obn);
-    if (iter == obn2blob_parallel_desc_.end()) {
-      iter = obn2blob_parallel_desc_.emplace(obn, parallel_desc()).first;
-    }
-    return &iter->second;
-  };
-  auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc* {
-    return &LogicalBlobDesc4Lbi(op().BnInOp2Lbi(ibn));
-  };
-  CHECK_JUST(op().InferOutParallelDescIf(ParallelDesc4Obn, LogicalBlobDesc4Ibn, parallel_desc(),
-                                         &sbp_signature()));
+  for (const auto& bn : op().output_bns()) {
+    obn2blob_parallel_desc_.emplace(bn, *CHECK_JUST(op().GetParallelDesc4BnInOp(bn)));
+  }
 }
 
 void OpNode::InitLbi2SourceNode() {
@@ -439,8 +409,10 @@ void OpGraph::InitEdges() {
       const auto it = producer_op_name2lbi2obn.find(pair.first);
       CHECK(it != producer_op_name2lbi2obn.end()) << "producer_op_name: " << pair.first;
       const auto& lbi2obn = it->second;
-      OpNode* producer = lbi2producer.at(lbis->at(0));
-      Connect(producer, NewEdge(lbis, lbi2obn, consumer_lbi2ibns), op_node);
+      auto producer_it = lbi2producer.find(lbis->front());
+      CHECK(producer_it != lbi2producer.end())
+          << "producer not found: " << GenLogicalBlobName(lbis->front());
+      Connect(producer_it->second, NewEdge(lbis, lbi2obn, consumer_lbi2ibns), op_node);
     }
   });
 }
@@ -489,15 +461,10 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
     const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
     const SbpParallel* sbp = &producer->SbpParallel4Lbi(lbi);
-    const OptInt64* batch_axis = CHECK_JUST(producer->BatchAxis4Lbi(lbi));
-    ibn2sbp_infer_hint.emplace(ibn,
-                               SbpInferHint(parallel_desc, logical_blob_desc, sbp, batch_axis));
+    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(parallel_desc, logical_blob_desc, sbp));
   }
-  const auto& BatchAxis4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const OptInt64*> {
-    return op_node->op().BatchAxis4BnInOp(bn_in_op);
-  };
   CHECK_JUST(InferOpSbpSignature(op_node->mut_op(), sbp_sig_conf, op_node->parallel_desc(),
-                                 ibn2sbp_infer_hint, BatchAxis4BnInOp));
+                                 ibn2sbp_infer_hint));
   op_node->InitLbi2SbpParallel();
 }
 
@@ -548,7 +515,7 @@ Maybe<void> OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
     parallel_ctx.set_parallel_id(parallel_id);
     parallel_ctx.set_parallel_num(parallel_num);
     JUST(op_node->op().InferOutBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx,
-                                           &op_node->sbp_signature(), [](OpContext*) {}));
+                                           &op_node->sbp_signature()));
   }
   op_node->ConcatLogicalOutputBlobDesc();
   return Maybe<void>::Ok();
@@ -568,21 +535,13 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     oba2sbp_identical_obas[pair.second()].push_back(pair.first());
   }
   JUST(TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
+    auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
+      return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn));
+    };
+    JUST(op_node->mut_op()->FillOpParallelDesc(op_node->parallel_desc()));
+    JUST(op_node->mut_op()->FillLogicalInBlobDesc(LogicalBlobDesc4BnInOp));
     // Infer ParallelSignature
     JUST(op_node->mut_op()->InferParallelSignatureIf());
-    // Infer batch_axis
-    const auto& BatchAxis4Ibn = [&](const std::string& ibn) -> Maybe<const OptInt64*> {
-      const auto& lbi = op_node->op().BnInOp2Lbi(ibn);
-      const auto* producer = op_node->MutSrcNode4InputLbi(lbi);
-      CHECK_NOTNULL_OR_RETURN(producer);
-      return producer->op().BatchAxis4BnInOp(*JUST(producer->op().obn4lbi(lbi)));
-    };
-    const auto& LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc& {
-      const auto& ibns = op_node->op().input_bns();
-      CHECK(std::find(ibns.begin(), ibns.end(), ibn) != ibns.end());
-      return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn));
-    };
-    JUST(op_node->mut_op()->InferBatchAxisIf(LogicalBlobDesc4Ibn, BatchAxis4Ibn));
     // Infer mirrored_signature
     bool is_mirrored_conf = false;
     {
@@ -604,37 +563,10 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     // Infer logical_blob_desc
     JUST(InferOpNodeLogicalBlobDesc(op_node));
     // Fill logical blob_desc signature.
-    JUST(op_node->mut_op()->FillLogicalBlobDescSignature(
-        [&](const std::string& bn_in_op) -> Maybe<const BlobDesc&> {
-          return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
-        }));
+    JUST(op_node->mut_op()->FillLogicalOutBlobDesc(LogicalBlobDesc4BnInOp));
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
-}
-
-BalancedSplitter OpGraph::GetBalancedSplitter(const std::string& op_name,
-                                              const LogicalBlobId& lbi) const {
-  OpNode* op_node = op_name2op_node_.at(GetOpNameKey(op_name, lbi));
-  const SbpParallel& sbp_parallel = GetSbpParallel(op_name, lbi);
-  CHECK(sbp_parallel.has_split_parallel());
-  int64_t split_num = GetSplitNum(op_name, lbi);
-  CHECK_GE(split_num, op_node->parallel_desc().parallel_num());
-  return BalancedSplitter(split_num, op_node->parallel_desc().parallel_num());
-}
-
-int32_t OpGraph::GetModelSplitAxis(const std::string& op_name, const LogicalBlobId& lbi) const {
-  const SbpParallel& sbp_parallel = GetSbpParallel(op_name, lbi);
-  CHECK(sbp_parallel.has_split_parallel());
-  return sbp_parallel.split_parallel().axis();
-}
-
-int64_t OpGraph::GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const {
-  OpNode* op_node = op_name2op_node_.at(GetOpNameKey(op_name, lbi));
-  const LogicalBlobId& lbi_key = GetLogicalBlobIdKey(op_name, lbi);
-  const SbpParallel& sbp_parallel = op_node->SbpParallel4Lbi(lbi_key);
-  CHECK(sbp_parallel.has_split_parallel());
-  return op_node->LogicalBlobDesc4Lbi(lbi_key).shape().At(sbp_parallel.split_parallel().axis());
 }
 
 int64_t OpGraph::GetParallelNum(const std::string& op_name) const {
@@ -656,12 +588,6 @@ DataType OpGraph::GetBlobDataType(const LogicalBlobId& lbi) const {
 const BlobDesc& OpGraph::GetLogicalBlobDesc(const LogicalBlobId& lbi) const {
   return op_name2op_node_.at(lbi.op_name())
       ->LogicalBlobDesc4Lbi(GetLogicalBlobIdKey(lbi.op_name(), lbi));
-}
-
-bool OpGraph::IsBatchAxisBlob(const std::string& op_name, const LogicalBlobId& lbi) const {
-  const auto& op = *op_name2op_node_.at(GetOpNameKey(op_name, lbi));
-  const auto& opt_int64 = *CHECK_JUST(op.BatchAxis4Lbi(GetLogicalBlobIdKey(op_name, lbi)));
-  return opt_int64.has_value();
 }
 
 void OpGraph::CheckBlobDescs(const std::string& op_name,
@@ -702,50 +628,6 @@ LogicalBlobId OpGraph::GetLogicalBlobIdKey(const std::string& op_name,
   } else {
     UNIMPLEMENTED();
   }
-}
-
-std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc4ModelLbi() const {
-  HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2unparalleled_blob_desc;
-  DataType dtype = GlobalJobDesc().DefaultDataType();
-  TopoForEachNode([&](OpNode* op_node) {
-    ParallelContext parallel_ctx;
-    parallel_ctx.set_parallel_id(0);
-    parallel_ctx.set_parallel_num(1);
-    SbpSignature sbp_signature;
-    for (const auto& ibn : op_node->op().input_bns()) {
-      (*sbp_signature.mutable_bn_in_op2sbp_parallel())[ibn].mutable_split_parallel()->set_axis(0);
-    }
-    for (const auto& obn : op_node->op().output_bns()) {
-      (*sbp_signature.mutable_bn_in_op2sbp_parallel())[obn].mutable_split_parallel()->set_axis(0);
-    }
-    auto MutUnparalleledBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
-      const auto& lbi = op_node->op().BnInOp2Lbi(bn);
-      auto it = lbi2unparalleled_blob_desc.find(lbi);
-      if (it == lbi2unparalleled_blob_desc.end()) {
-        auto& blob_desc = lbi2unparalleled_blob_desc[lbi];
-        blob_desc.reset(new BlobDesc(dtype));
-        return blob_desc.get();
-      }
-      return it->second.get();
-    };
-    // the real important data we want to get is:
-    // a) model blobs' byte size;
-    // b) number of axes of blobs' body shape;
-    CHECK_JUST(op_node->op().InferOutBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx,
-                                                 &sbp_signature, [](OpContext*) {}));
-  });
-  auto model_lbi2blob_desc = std::make_shared<HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>>();
-  ForEachNode([&](OpNode* op_node) {
-    for (const std::string& tmp_bn : op_node->op().tmp_bns()) {
-      const auto& lbi = op_node->op().BnInOp2Lbi(tmp_bn);
-      const auto& iter = lbi2unparalleled_blob_desc.find(lbi);
-      if (iter == lbi2unparalleled_blob_desc.end()) { continue; }
-      CHECK(model_lbi2blob_desc->emplace(lbi, std::move(iter->second)).second);
-    }
-  });
-  return [model_lbi2blob_desc](const LogicalBlobId& model_lbi) -> const BlobDesc& {
-    return *model_lbi2blob_desc->at(model_lbi);
-  };
 }
 
 void OpGraph::ForEachDataAndCtrlInNode(OpNode* node,
@@ -826,19 +708,6 @@ void OpGraph::DumpOpTimeShape(Job* job) const {
     const auto* in_blob_fastest_time_shape = op_node->GetInputBlobFastestTimeShape();
     if (in_blob_fastest_time_shape != nullptr) {
       in_blob_fastest_time_shape->ToProto(op_time_shape->mutable_in_blob_fastest_time_shape());
-    }
-  });
-}
-
-void OpGraph::DumpBatchAxisLbi(Job* job) const {
-  auto* lbn2batch_axis = job->mutable_helper()->mutable_lbn2batch_axis();
-  ForEachNode([&](OpNode* op_node) {
-    for (const auto& obn : op_node->op().output_bns()) {
-      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(obn);
-      const auto& lbn = GenLogicalBlobName(lbi);
-      const auto& batch_axis = *CHECK_JUST(op_node->BatchAxis4Lbi(lbi));
-      const auto& pair = PbMapPair<std::string, OptInt64>(lbn, batch_axis);
-      CHECK(lbn2batch_axis->insert(pair).first->second == batch_axis);
     }
   });
 }

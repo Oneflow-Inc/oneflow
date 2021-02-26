@@ -24,12 +24,51 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Sequence, Tuple
+import oneflow_api
 
 
 @oneflow_export("tensor_list_to_tensor_buffer")
 def tensor_list_to_tensor_buffer(
-    input: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    input: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
+    """This operator converts `TensorList` to `TensorBuffer`. 
+
+    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
+    for more about TensorList. 
+
+    Args:
+        input (oneflow_api.BlobDesc): The input `TensorList`. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: The result Blob. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        func_config = flow.FunctionConfig()
+        func_config.default_data_type(flow.float)
+        func_config.default_logical_view(flow.scope.mirrored_view())
+        @flow.global_function(function_config=func_config)
+        def tensorList_to_tensorBuffer_Job(x: tp.ListListNumpy.Placeholder(shape=(2, 5, 4), dtype=flow.float32),
+        ) -> tp.ListListNumpy:
+            x = flow.tensor_list_to_tensor_buffer(input=x)
+            return flow.tensor_buffer_to_tensor_list(x, 
+                                                    shape=(5, 4), 
+                                                    dtype=flow.float32)
+
+        x = np.random.rand(1, 3, 2).astype(np.float32)
+        y = np.random.rand(1, 2, 2).astype(np.float32)
+        out = tensorList_to_tensorBuffer_Job([[x, y]])
+
+        # out[0][0].shape (1, 3, 2)
+
+    """
     if name is None:
         name = id_util.UniqueStr("TensorListToBuffer_")
 
@@ -47,11 +86,50 @@ def tensor_list_to_tensor_buffer(
 
 @oneflow_export("tensor_buffer_to_tensor_list")
 def tensor_buffer_to_tensor_list(
-    input: remote_blob_util.BlobDef,
+    input: oneflow_api.BlobDesc,
     shape: Sequence[int],
     dtype: dtype_util.dtype,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
+    """This operator converts `TensorBuffer` to `TensorList`. 
+
+    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
+    for more about TensorList. 
+
+    Args:
+        input (oneflow_api.BlobDesc): The input Tensor Buffer. 
+        shape (Sequence[int]): The shape of input Tensor Buffer. 
+        dtype (dtype_util.dtype): The data type. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: The result Blob. 
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def tensorBuffer_to_tensorList_Job(x: tp.Numpy.Placeholder(shape=(4, 16, 64, 64), dtype=flow.float32),
+        ) -> tp.ListListNumpy:
+            x = flow.tensor_to_tensor_buffer(x, 
+                                            instance_dims=3)
+            out = flow.tensor_buffer_to_tensor_list(input=x, 
+                                                    shape=(16, 64, 64), 
+                                                    dtype=flow.float32)
+            return out
+
+        x = np.random.randn(4, 16, 64, 64).astype(np.float32)
+        out = tensorBuffer_to_tensorList_Job(x)
+
+        # out[0][0].shape (1, 16, 64, 64)
+
+    """
     if name is None:
         name = id_util.UniqueStr("TensorBufferToList_")
 
@@ -75,8 +153,44 @@ def tensor_buffer_to_tensor_list(
 
 @oneflow_export("tensor_list_split")
 def tensor_list_split(
-    input_tensor_list: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> Tuple[remote_blob_util.BlobDef]:
+    input_tensor_list: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> Tuple[oneflow_api.BlobDesc]:
+    """This operator splits the input `TensorList`. 
+
+    Args:
+        input_tensor_list (oneflow_api.BlobDesc): The input `TensorList`. 
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        Tuple[oneflow_api.BlobDesc]: A Tuple of `ListNumpy`. 
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+        from typing import Tuple
+
+
+        func_config = flow.FunctionConfig()
+        func_config.default_data_type(flow.float)
+        func_config.default_logical_view(flow.scope.mirrored_view())
+        @flow.global_function(function_config=func_config)
+        def tensorList_split_Job(x: tp.ListListNumpy.Placeholder(shape=(2, 5, 4), dtype=flow.float32),
+        ) -> Tuple[tp.ListNumpy, tp.ListNumpy]:
+            return flow.tensor_list_split(x)
+
+
+        x = np.random.rand(1, 3, 2).astype(np.float32)
+        y = np.random.rand(1, 2, 2).astype(np.float32)
+        out = tensorList_split_Job([[x, y]])
+
+        # out[0][0].shape (3, 2)
+        # out[1][0].shape (2, 2)
+
+    """
     if name is None:
         name = id_util.UniqueStr("TensorListSplit_")
 

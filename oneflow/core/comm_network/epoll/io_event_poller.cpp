@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/comm_network/epoll/io_event_poller.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 #include <sys/eventfd.h>
 
@@ -109,4 +109,4 @@ void IOEventPoller::EpollLoop() {
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX

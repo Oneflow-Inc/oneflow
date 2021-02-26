@@ -16,6 +16,8 @@ option(WITH_XLA "Option to build with XLA" OFF)
 option(WITH_TENSORRT "Option to build with TensorRT" OFF)
 option(FOR_CI "" OFF)
 option(BUILD_GIT_VERSION "" ON)
+option(BUILD_PROFILER "" OFF)
+set(THIRD_PARTY_MIRROR "" CACHE STRING "")
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
   set(CUDNN_STATIC OFF CACHE BOOL "")
@@ -25,13 +27,24 @@ endif()
 
 project(oneflow C CXX)
 
+set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
+
+# Modules
+list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
+list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
+include(util)
+include(proto2cpp)
+
 if (NOT DEFINED USE_CXX11_ABI)
-  if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5))
-    set(USE_CXX11_ABI OFF)
-  else()
-    set(USE_CXX11_ABI ON)
+  check_cxx11_abi(CXX11_ABI_AVAILABLE)
+  set(USE_CXX11_ABI ${CXX11_ABI_AVAILABLE})
+elseif(USE_CXX11_ABI)
+  check_cxx11_abi(CXX11_ABI_AVAILABLE)
+  if (NOT CXX11_ABI_AVAILABLE)
+    message(FATAL_ERROR "cxx11 abi is not available for current compiler")
   endif()
 endif()
+message(STATUS "USE_CXX11_ABI: ${USE_CXX11_ABI}")
 
 if (WITH_XLA)
   add_definitions(-DWITH_XLA)
@@ -44,25 +57,19 @@ if (USE_CXX11_ABI)
 else()
   add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 endif()
+if (BUILD_PROFILER)
+  add_definitions(-DOF_ENABLE_PROFILER)
+endif()
 
 enable_testing()
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
 set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party"
   CACHE PATH "Where the third party headers and libs are put")
 
 set(THIRD_PARTY_SUBMODULE_DIR "${PROJECT_SOURCE_DIR}/build/third_party"
   CACHE PATH "Where the third party submodules are")
-
-# Modules
-list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
-list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
-include(util)
-include(proto2cpp)
-include(swig)
 
 if(WIN32)
   set(CMAKE_BUILD_TYPE Debug)
@@ -94,28 +101,47 @@ endif()
 include(third_party)
 
 if (BUILD_CUDA)
-  set(CUDA_SEPARABLE_COMPILATION ON)
+  set(CUDA_SEPARABLE_COMPILATION OFF)
   list(APPEND CUDA_NVCC_FLAGS -w -Wno-deprecated-gpu-targets)
   if((CMAKE_BUILD_TYPE MATCHES Debug) OR (FOR_CI))
     if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-      set(CUDA_NVCC_GENCODES "arch=compute_61,code=sm_61" "arch=compute_61,code=compute_61" "arch=compute_75,code=sm_75" "arch=compute_75,code=compute_75")
+      set(DEFAULT_CUDA_NVCC_GENCODES "arch=compute_61,code=sm_61" "arch=compute_61,code=compute_61" "arch=compute_75,code=sm_75" "arch=compute_75,code=compute_75")
     else()
-      set(CUDA_NVCC_GENCODES "arch=compute_61,code=sm_61" "arch=compute_61,code=compute_61")
+      set(DEFAULT_CUDA_NVCC_GENCODES "arch=compute_61,code=sm_61" "arch=compute_61,code=compute_61")
     endif()
   else()
     #  half is not fully supported when __CUDA_ARCH__ < 530
-    #  list(APPEND __cuda_nvcc_gencodes "arch=compute_30,code=sm_30")
-    #  list(APPEND __cuda_nvcc_gencodes "arch=compute_52,code=sm_52")
-    list(APPEND __cuda_nvcc_gencodes "arch=compute_60,code=sm_60")
-    list(APPEND __cuda_nvcc_gencodes "arch=compute_61,code=sm_61")
-    list(APPEND __cuda_nvcc_gencodes "arch=compute_70,code=sm_70")
+    #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_30,code=sm_30")
+    #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_52,code=sm_52")
+    # cubin
+    # Tesla P100
+    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_60,code=sm_60")
+    # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
+    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_61,code=sm_61")
+    # V100, TITAN V
+    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_70,code=sm_70")
     if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-      list(APPEND __cuda_nvcc_gencodes "arch=compute_75,code=sm_75")
-      list(APPEND __cuda_nvcc_gencodes "arch=compute_75,code=compute_75")
-    else()
-      list(APPEND __cuda_nvcc_gencodes "arch=compute_70,code=compute_70")
+      # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
+      list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_75,code=sm_75")
     endif()
-    set(CUDA_NVCC_GENCODES ${__cuda_nvcc_gencodes})
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+      # A100
+      list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_80,code=sm_80")
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.1")
+      # GeForce RTX 30xx
+      list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_86,code=sm_86")
+    endif()
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+      list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_80,code=compute_80")
+    elseif(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
+      list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_75,code=compute_75")
+    else()
+      list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_70,code=compute_70")
+    endif()
+  endif()
+  if(NOT DEFINED CUDA_NVCC_GENCODES)
+    set(CUDA_NVCC_GENCODES ${DEFAULT_CUDA_NVCC_GENCODES})
   endif()
   foreach(CUDA_NVCC_GENCODE ${CUDA_NVCC_GENCODES})
     list(APPEND CUDA_NVCC_FLAGS -gencode ${CUDA_NVCC_GENCODE})
@@ -131,7 +157,7 @@ else()
   add_custom_target(prepare_oneflow_third_party ALL)
 endif()
 
-# skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src, swig src
+# skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src
 if (ONEFLOW)
   include(oneflow)
 endif()

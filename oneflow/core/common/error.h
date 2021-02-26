@@ -18,15 +18,25 @@ limitations under the License.
 
 #include <sstream>
 #include <vector>
-#include "oneflow/core/common/error.pb.h"
+#include "oneflow/core/common/error.cfg.h"
 
 namespace oneflow {
 
 class Error final {
  public:
-  Error(const std::shared_ptr<ErrorProto>& error_proto) : error_proto_(error_proto) {}
+  Error(const std::shared_ptr<cfg::ErrorProto>& error_proto) : error_proto_(error_proto) {}
   Error(const Error&) = default;
   ~Error() = default;
+
+  std::shared_ptr<cfg::ErrorProto> error_proto() const { return error_proto_; }
+  const cfg::ErrorProto* operator->() const { return error_proto_.get(); }
+  cfg::ErrorProto* operator->() { return error_proto_.get(); }
+  operator std::string() const;
+  void Assign(const Error& other) { error_proto_ = other.error_proto_; }
+
+  // r-value reference is used to supporting expressions like `Error().AddStackFrame("foo.cpp",
+  // "Bar") << "invalid value"` because operator<<() need r-value reference
+  Error&& AddStackFrame(const std::string& location, const std::string& function);
 
   static Error Ok();
   static Error ProtoParseFailedError();
@@ -60,23 +70,34 @@ class Error final {
                                              const std::vector<std::string>& error_msgs);
   static Error LossBlobNotFoundError(const std::string& error_summary);
 
+  static Error RwMutexedObjectNotFoundError();
+
   // gradient
   static Error GradientFunctionNotFound();
 
-  std::shared_ptr<ErrorProto> error_proto() const { return error_proto_; }
-  ErrorProto* operator->() const { return error_proto_.get(); }
-  operator std::string() const;
-  void Assign(const Error& other) { error_proto_ = other.error_proto_; }
+  // symbol
+  static Error SymbolIdUninitialized();
+
+  static Error CompileOptionWrong();
 
  private:
-  std::shared_ptr<ErrorProto> error_proto_;
+  std::shared_ptr<cfg::ErrorProto> error_proto_;
 };
 
+void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error);
+const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError();
+
+// r-value reference is used to supporting expressions like `Error() << "invalid value"`
 template<typename T>
 Error&& operator<<(Error&& error, const T& x) {
   std::ostringstream ss;
   ss << x;
-  error->set_msg(error->msg() + ss.str());
+  if (error->stack_frame().empty()) {
+    error->set_msg(error->msg() + ss.str());
+  } else {
+    auto* stack_frame_top = error->mutable_stack_frame(error->stack_frame_size() - 1);
+    stack_frame_top->set_error_msg(stack_frame_top->error_msg() + ss.str());
+  }
   return std::move(error);
 }
 
@@ -85,9 +106,6 @@ inline Error&& operator<<(Error&& error, const Error& other) {
   error.Assign(other);
   return std::move(error);
 }
-
-// for LOG(ERROR)
-Error&& operator<=(const std::pair<std::string, std::string>& loc_and_func, Error&& error);
 
 }  // namespace oneflow
 

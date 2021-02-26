@@ -21,11 +21,11 @@ namespace oneflow {
 REGISTER_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
     .Input("in")
     .Output("out")
-    .Attr("name", UserOpAttrType::kAtString)
-    .Attr("shape", UserOpAttrType::kAtShape)
-    .Attr("data_type", UserOpAttrType::kAtDataType)
-    .Attr<bool>("dim1_varying_length", UserOpAttrType::kAtBool, false)
-    .Attr<bool>("auto_zero_padding", UserOpAttrType::kAtBool, false)
+    .Attr<std::string>("name")
+    .Attr<Shape>("shape")
+    .Attr<DataType>("data_type")
+    .Attr<bool>("dim1_varying_length", false)
+    .Attr<bool>("auto_zero_padding", false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -51,18 +51,33 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
           .Split(user_op::OpArg("out", 0), 0)
           .Build();
       return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
-      return Maybe<void>::Ok();
     });
+
+REGISTER_CPU_ONLY_USER_OP("ofrecord_bytes_decoder")
+    .Input("in")
+    .Output("out")
+    .Attr<std::string>("name")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      CHECK_OR_RETURN(in->data_type() == DataType::kOFRecord);
+      *out = *in;
+      *out->mut_data_type() = DataType::kTensorBuffer;
+      return Maybe<void>::Ok();
+    })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
+      CHECK_NOTNULL(in_modifier);
+      in_modifier->set_requires_grad(false);
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis);
 
 REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder")
     .Input("in")
     .Output("out")
-    .Attr("name", UserOpAttrType::kAtString)
-    .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
+    .Attr<std::string>("name")
+    .Attr<std::string>("color_space", "BGR")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -83,24 +98,19 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder")
           .Split(user_op::OpArg("in", 0), 0)
           .Split(user_op::OpArg("out", 0), 0)
           .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
       return Maybe<void>::Ok();
     });
 
 REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder_random_crop")
     .Input("in")
     .Output("out")
-    .Attr("name", UserOpAttrType::kAtString)
-    .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
-    .Attr<int32_t>("num_attempts", UserOpAttrType::kAtInt32, 10)
-    .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
-    .Attr<bool>("has_seed", UserOpAttrType::kAtBool, false)
-    .Attr<std::vector<float>>("random_area", UserOpAttrType::kAtListFloat, {0.08, 1.0})
-    .Attr<std::vector<float>>("random_aspect_ratio", UserOpAttrType::kAtListFloat, {0.75, 1.333333})
+    .Attr<std::string>("name")
+    .Attr<std::string>("color_space", "BGR")
+    .Attr<int32_t>("num_attempts", 10)
+    .Attr<int64_t>("seed", -1)
+    .Attr<bool>("has_seed", false)
+    .Attr<std::vector<float>>("random_area", {0.08, 1.0})
+    .Attr<std::vector<float>>("random_aspect_ratio", {0.75, 1.333333})
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -122,11 +132,6 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder_random_crop")
       user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
       CHECK_NOTNULL(in_modifier);
       in_modifier->set_requires_grad(false);
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
-      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

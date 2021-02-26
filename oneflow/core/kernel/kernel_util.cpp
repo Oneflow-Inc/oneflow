@@ -257,28 +257,17 @@ void MatrixRowReduce(const int64_t row_num, const int64_t col_num, const T* x, T
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
-  void (*func)(DeviceCtx*, void* dst, const void* src, size_t sz, cudaMemcpyKind);
-  cudaMemcpyKind kind;
+  void (*func)(DeviceCtx*, void* dst, const void* src, size_t sz);
   if (src_mem_case.has_host_mem() && dst_mem_case.has_host_mem()) {
     func = &Memcpy<DeviceType::kCPU>;
-    kind = cudaMemcpyKind::cudaMemcpyHostToHost;
   } else {
 #ifdef WITH_CUDA
     func = &Memcpy<DeviceType::kGPU>;
-    if (src_mem_case.has_host_mem() && dst_mem_case.has_device_cuda_mem()) {
-      kind = cudaMemcpyKind::cudaMemcpyHostToDevice;
-    } else if (src_mem_case.has_device_cuda_mem() && dst_mem_case.has_host_mem()) {
-      kind = cudaMemcpyKind::cudaMemcpyDeviceToHost;
-    } else if (src_mem_case.has_device_cuda_mem() && dst_mem_case.has_device_cuda_mem()) {
-      kind = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
-    } else {
-      UNIMPLEMENTED();
-    }
 #else
     UNIMPLEMENTED();
 #endif  // WITH_CUDA
   }
-  func(ctx, dst, src, sz, kind);
+  func(ctx, dst, src, sz);
 }
 
 void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
@@ -366,12 +355,6 @@ KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
 KU_IF_METHOD Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x) {
   for (int64_t i = 0; i < n; ++i) { y[i] = *x; }
 }
-KU_IF_METHOD AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] + y; }
-}
-KU_IF_METHOD MulByScalarPara(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y; }
-}
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \
@@ -443,9 +426,6 @@ KU_FLOATING_METHOD Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
 KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   for (int64_t i = 0; i < n; ++i) { y[i] = std::sqrt(x[i]); }
 }
-KU_FLOATING_METHOD MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[0]; }
-}
 KU_FLOATING_METHOD Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y) {
   for (int64_t i = 0; i < n; ++i) { y[i] = static_cast<T>(1.0) / x[i]; }
 }
@@ -466,13 +446,6 @@ KU_FLOATING_METHOD Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
 KU_FLOATING_METHOD SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                                    const T* dy, T* dx) {
   for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * (1 - y[i]) * dy[i]; }
-}
-KU_FLOATING_METHOD TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  for (int64_t i = 0; i != n; ++i) { y[i] = std::tanh(x[i]); }
-}
-KU_FLOATING_METHOD TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
-                                const T* dy, T* dx) {
-  for (int64_t i = 0; i != n; ++i) { dx[i] = (1 - y[i] * y[i]) * dy[i]; }
 }
 KU_FLOATING_METHOD Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   T zero = GetZeroVal<T>();

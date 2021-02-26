@@ -4,20 +4,108 @@ package oneflow;
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/job/placement.proto";
 import "oneflow/core/register/blob_desc.proto";
-import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/framework/user_op_attr.proto";
+import "oneflow/core/job/initializer_conf.proto";
+import "oneflow/core/job/learning_rate_schedule_conf.proto";
+import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/operator/interface_blob_conf.proto";
+
+message NaiveModelUpdateConf {
+}
+
+message MomentumModelUpdateConf {
+  optional float beta = 1 [default = 0.9];
+}
+
+message RMSPropModelUpdateConf {
+  optional float decay_rate = 1 [default = 0.99];
+  optional float epsilon = 2 [default = 1e-8];
+  optional bool centered = 3 [default = false];
+}
+
+message LARSModelUpdateConf {
+  optional float momentum_beta = 1 [default = 0.9];
+  optional float epsilon = 2 [default = 1e-9];
+  optional float lars_coefficient = 3 [default = 0.0001];
+}
+
+message AdamModelUpdateConf {
+  optional float beta1 = 1 [default = 0.9];
+  optional float beta2 = 2 [default = 0.999];
+  optional float epsilon = 3 [default = 1e-8];
+  optional bool do_bias_correction = 4 [default = false];
+}
+
+message LazyAdamModelUpdateConf {
+  optional float beta1 = 1 [default = 0.9];
+  optional float beta2 = 2 [default = 0.999];
+  optional float epsilon = 3 [default = 1e-8];
+}
+
+message LambModelUpdateConf {
+  required float beta1 = 1;
+  required float beta2 = 2;
+  required float epsilon = 3;
+}
+
+message ClipByGlobalNormConf {
+  required float clip_norm = 1;
+  optional float global_norm = 2;
+}
+
+message ClipConf {
+  oneof type {
+    ClipByGlobalNormConf clip_by_global_norm = 1;
+  }
+}
+
+message WeightDecayFilterPatternSet {
+  repeated string pattern = 1;
+}
+
+message WeightDecayConf {
+  required float weight_decay_rate = 1;
+  oneof weight_decay_filter_type {
+    WeightDecayFilterPatternSet includes = 2;
+    WeightDecayFilterPatternSet excludes = 3;
+  }
+}
+
+message OptimizerConf {
+  repeated string variable_op_names = 1;
+  optional float base_learning_rate = 2;
+  optional WarmupConf warmup_conf = 3;
+  optional LearningRateDecayConf learning_rate_decay = 4;
+  optional string learning_rate_lbn = 5;
+  optional ClipConf clip_conf = 6;
+  optional WeightDecayConf weight_decay_conf = 7;
+  oneof normal_mdupdt {
+    NaiveModelUpdateConf naive_conf = 1000;
+    MomentumModelUpdateConf momentum_conf = 1001;
+    RMSPropModelUpdateConf rmsprop_conf = 1002;
+    LARSModelUpdateConf lars_conf = 1003;
+    AdamModelUpdateConf adam_conf = 1004;
+    LazyAdamModelUpdateConf lazy_adam_conf = 1005;
+    LambModelUpdateConf lamb_conf = 1006;
+  }
+}
+
+
+message DynamicLossScalePolicy {
+  optional float initial_loss_scale = 1 [default = 1073741824.0];
+  optional float increment_period = 2 [default = 2000];
+  optional float multiplier = 3 [default=2.0];
+}
 
 message TrainConf {
-  optional NormalModelUpdateOpUserConf model_update_conf = 3;
-  repeated string loss_lbn = 6;
-  optional int32 loss_scale_factor = 7 [default = 1];
-  optional string train_step_lbn = 8;
-  optional string primary_lr_lbn = 9;
-  optional string secondary_lr_lbn = 10;
-
-  optional float primary_lr = 101;
-  optional float secondary_lr = 102;
+  repeated OptimizerConf optimizer_conf = 1;
+  repeated string loss_lbn = 2;
+  optional string train_step_lbn = 3;
+  oneof loss_scale_policy {
+    float loss_scale_factor = 4 [default = 1];
+    DynamicLossScalePolicy dynamic_loss_scale_policy = 5;
+  }
 }
 
 message PredictConf {
@@ -49,6 +137,14 @@ message XrtConfig {
   optional TensorRTConfig tensorrt_config = 4;
 }
 
+message QatConfig {
+  optional bool per_channel_weight_quantization = 1 [default = false];
+  optional bool symmetric = 2 [default = true];
+  optional float moving_min_max_momentum = 3 [default = 0.95];
+  optional int64 moving_min_max_stop_update_after_iters = 4;
+  optional string target_backend = 5 [default = ""];
+}
+
 message IndexedSlicesOptimizerConf {
   optional bool enable = 1 [default = true];
   required OpNameSet include_op_names = 2;
@@ -58,7 +154,20 @@ message ParallelBlobConf {
   required BlobDescProto logical_blob_desc_conf = 1;
   required ParallelConf parallel_conf = 2;
   required SbpParallel sbp_conf = 3;
-  required OptInt64 batch_axis = 4;
+}
+
+message JobInputDef {
+  required LogicalBlobId lbi = 1;
+  required InterfaceBlobConf blob_conf = 2;
+}
+
+message JobOutputDef {
+  required LogicalBlobId lbi = 1;
+}
+
+message JobSignatureDef {
+  map<string, JobInputDef> inputs = 1;
+  map<string, JobOutputDef> outputs = 2;
 }
 
 message JobConfigProto {
@@ -82,6 +191,12 @@ message JobConfigProto {
   optional XrtConfig xrt_config = 103;
 
   optional IndexedSlicesOptimizerConf indexed_slices_optimizer_conf = 104;
+  optional bool enable_fuse_model_update_ops = 105 [default = false];
+  optional bool enable_gradients_stats_aggregation = 106 [default = true];
+  optional string optimizer_placement_optimization_mode = 107;
+  optional int64 optimizer_placement_optimization_threshold = 108 [default = 1024];
+
+  optional QatConfig qat_config = 109;
 
   optional bool enable_cudnn = 200 [default = true];
   optional int64 cudnn_buf_limit_mbyte = 201 [default = 1024];  // 1GByte
@@ -92,6 +207,7 @@ message JobConfigProto {
   optional bool cudnn_conv_use_deterministic_algo_only = 206 [default = false];
   optional bool enable_cudnn_fused_normalization_add_relu = 207;
   optional bool enable_fuse_add_to_output = 208 [default = false];
+  optional bool enable_fuse_cast_scale = 209 [default = false];
 
   optional bool enable_reuse_mem = 300 [default = true];
   optional bool enable_inplace = 301 [default = true];
@@ -99,19 +215,18 @@ message JobConfigProto {
 
   optional bool do_parallel_cast_before_widening_type_cast = 403 [default = true];
 
-  optional bool enable_non_distributed_optimizer = 506 [default = false];
   optional bool prune_parallel_cast_ops = 509 [default = true];
   optional bool prune_cast_to_static_shape_ops = 510 [default = true];
 
   optional bool cudnn_conv_enable_pseudo_half = 600 [default = true];
-  optional bool enable_float_compute_for_half_gemm = 601 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
+  optional bool enable_quantization_aware_training = 603 [default = false];
   
-  optional bool enable_keep_header_only = 700 [default = true];
-
   optional int64 concurrency_width = 1000 [default = 128];
 
-  map<string, UserOpAttrVal> flag_name2flag_value = 2000;
+  map<string, AttrValue> flag_name2flag_value = 2000;
 
   optional int64 logical_object_id = 3000;
+
+  optional JobSignatureDef signature = 4000;
 }

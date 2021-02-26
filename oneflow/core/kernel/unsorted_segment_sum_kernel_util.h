@@ -20,21 +20,16 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, typename K>
+template<DeviceType device_type, typename T, typename K, typename U>
 struct UnsortedSegmentSumKernelUtil final {
-  static void UnsortedSegmentSum(DeviceCtx* ctx, const K* segment_ids, const T* data,
+  static void UnsortedSegmentSum(DeviceCtx* ctx, const K* segment_ids, const U* data,
                                  int64_t num_segment_ids, int64_t num_segments,
                                  int64_t outer_dim_size, int64_t inner_dim_size,
                                  int64_t segment_id_offset, T* out);
 };
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
-#define UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ \
-  FLOATING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) FLOAT16_DATA_TYPE_SEQ
-#else
 #define UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ \
   FLOATING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
-#endif
 
 }  // namespace oneflow
 

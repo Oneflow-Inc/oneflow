@@ -23,15 +23,15 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
     .Input("in")
     .OptionalInput("mirror")
     .Output("out")
-    .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
-    .Attr<std::string>("output_layout", UserOpAttrType::kAtString, "NCHW")
-    .Attr<std::vector<float>>("mean", UserOpAttrType::kAtListFloat, {0.0})
-    .Attr<std::vector<float>>("std", UserOpAttrType::kAtListFloat, {1.0})
-    .Attr<int64_t>("crop_h", UserOpAttrType::kAtInt64, 0)
-    .Attr<int64_t>("crop_w", UserOpAttrType::kAtInt64, 0)
-    .Attr<float>("crop_pos_x", UserOpAttrType::kAtFloat, 0.5)
-    .Attr<float>("crop_pos_y", UserOpAttrType::kAtFloat, 0.5)
-    .Attr<DataType>("output_dtype", UserOpAttrType::kAtDataType, DataType::kFloat)
+    .Attr<std::string>("color_space", "BGR")
+    .Attr<std::string>("output_layout", "NCHW")
+    .Attr<std::vector<float>>("mean", {0.0})
+    .Attr<std::vector<float>>("std", {1.0})
+    .Attr<int64_t>("crop_h", 0)
+    .Attr<int64_t>("crop_w", 0)
+    .Attr<float>("crop_pos_x", 0.5)
+    .Attr<float>("crop_pos_y", 0.5)
+    .Attr<DataType>("output_dtype", DataType::kFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* mirror_tensor = ctx->TensorDesc4ArgNameAndIndex("mirror", 0);
@@ -68,26 +68,21 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
-      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
     .Input("in")
     .OptionalInput("mirror")
     .Output("out")
-    .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
-    .Attr<std::string>("output_layout", UserOpAttrType::kAtString, "NCHW")
-    .Attr<std::vector<float>>("mean", UserOpAttrType::kAtListFloat, {0.0})
-    .Attr<std::vector<float>>("std", UserOpAttrType::kAtListFloat, {1.0})
-    .Attr<int64_t>("crop_h", UserOpAttrType::kAtInt64, 0)
-    .Attr<int64_t>("crop_w", UserOpAttrType::kAtInt64, 0)
-    .Attr<float>("crop_pos_x", UserOpAttrType::kAtFloat, 0.5)
-    .Attr<float>("crop_pos_y", UserOpAttrType::kAtFloat, 0.5)
-    .Attr<DataType>("output_dtype", UserOpAttrType::kAtDataType, DataType::kFloat)
+    .Attr<std::string>("color_space", "BGR")
+    .Attr<std::string>("output_layout", "NCHW")
+    .Attr<std::vector<float>>("mean", {0.0})
+    .Attr<std::vector<float>>("std", {1.0})
+    .Attr<int64_t>("crop_h", 0)
+    .Attr<int64_t>("crop_w", 0)
+    .Attr<float>("crop_pos_x", 0.5)
+    .Attr<float>("crop_pos_y", 0.5)
+    .Attr<DataType>("output_dtype", DataType::kFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* mirror_tensor = ctx->TensorDesc4ArgNameAndIndex("mirror", 0);
@@ -130,19 +125,14 @@ REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
-      return Maybe<void>::Ok();
     });
 
 REGISTER_CPU_ONLY_USER_OP("coin_flip")
     .Output("out")
-    .Attr<float>("probability", UserOpAttrType::kAtFloat, 0.5)
-    .Attr("batch_size", UserOpAttrType::kAtInt64)
-    .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
-    .Attr<bool>("has_seed", UserOpAttrType::kAtBool, false)
+    .Attr<float>("probability", 0.5)
+    .Attr<int64_t>("batch_size")
+    .Attr<int64_t>("seed", -1)
+    .Attr<bool>("has_seed", false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
@@ -160,20 +150,16 @@ REGISTER_CPU_ONLY_USER_OP("coin_flip")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(user_op::OpArg("out", 0), 0).Build();
       return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
-      return Maybe<void>::Ok();
     });
 
 REGISTER_CPU_ONLY_USER_OP("image_random_crop")
     .Input("in")
     .Output("out")
-    .Attr<int32_t>("num_attempts", UserOpAttrType::kAtInt32, 10)
-    .Attr<int64_t>("seed", UserOpAttrType::kAtInt64, -1)
-    .Attr<bool>("has_seed", UserOpAttrType::kAtBool, false)
-    .Attr<std::vector<float>>("random_area", UserOpAttrType::kAtListFloat, {0.08, 1.0})
-    .Attr<std::vector<float>>("random_aspect_ratio", UserOpAttrType::kAtListFloat, {0.75, 1.333333})
+    .Attr<int32_t>("num_attempts", 10)
+    .Attr<int64_t>("seed", -1)
+    .Attr<bool>("has_seed", false)
+    .Attr<std::vector<float>>("random_area", {0.08, 1.0})
+    .Attr<std::vector<float>>("random_aspect_ratio", {0.75, 1.333333})
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -187,7 +173,6 @@ REGISTER_CPU_ONLY_USER_OP("image_random_crop")
       user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
       CHECK_NOTNULL(in_modifier);
       in_modifier->set_requires_grad(false);
-    })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+    });
 
 }  // namespace oneflow

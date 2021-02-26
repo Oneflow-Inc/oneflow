@@ -5,6 +5,19 @@ function(SHOW_VARIABLES)
   endforeach()
 endfunction()
 
+macro(write_file_if_different file_path content)
+  if (EXISTS ${file_path})
+    file(READ ${file_path} current_content)
+    # NOTE: it seems a cmake bug that "content" in this macro is not
+    # treated as a variable
+    if (NOT (current_content STREQUAL ${content}))
+      file(WRITE ${file_path} ${content})
+    endif()
+  else()
+    file(WRITE ${file_path} ${content})
+  endif()
+endmacro()
+
 set(_COUNTER 0)
 macro(copy_files file_paths source_dir dest_dir target)
   find_program(rsync rsync)
@@ -71,4 +84,58 @@ function(add_copy_headers_target)
     add_custom_command(TARGET "${PARSED_ARGS_NAME}_copy_headers_to_destination" PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PARSED_ARGS_SRC}/${header_file}" "${PARSED_ARGS_DST}/${header_file}")
   endforeach()
+endfunction()
+
+function(use_mirror)
+  cmake_parse_arguments(
+    PARSED_ARGS
+    ""
+    "VARIABLE;URL"
+    ""
+    ${ARGN}
+  )
+  if(NOT PARSED_ARGS_VARIABLE)
+    message(FATAL_ERROR "VARIABLE required")
+  endif(NOT PARSED_ARGS_VARIABLE)
+  if(NOT PARSED_ARGS_URL)
+    message(FATAL_ERROR "url required")
+  endif(NOT PARSED_ARGS_URL)
+  if(DEFINED THIRD_PARTY_MIRROR)
+    if(THIRD_PARTY_MIRROR STREQUAL "aliyun")
+      execute_process( 
+        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL} 
+        OUTPUT_VARIABLE temp_url
+        RESULT_VARIABLE ret_code)
+      if (NOT (ret_code EQUAL "0"))
+        message(FATAL_ERROR "Fail to execute the script package_mirror.py.")
+      else()
+        set(${PARSED_ARGS_VARIABLE} ${temp_url} PARENT_SCOPE)
+      endif()
+    elseif(NOT THIRD_PARTY_MIRROR STREQUAL "")
+      message(FATAL_ERROR "Invalid key for third party mirror.")
+    endif()
+  endif()
+endfunction()
+
+function(check_cxx11_abi OUTPUT_VAR)
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E echo "#include <string>\n void test(std::string){}\n int main(){}" OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/temp.cpp)
+  try_compile(COMPILE_SUCCESS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/temp.cpp
+    COMPILE_DEFINITIONS -D_GLIBCXX_USE_CXX11_ABI=1
+    COPY_FILE ${CMAKE_CURRENT_BINARY_DIR}/temp)
+  if (NOT COMPILE_SUCCESS)
+    message(FATAL_ERROR "Detecting cxx11 availability failed. Please report to OneFlow developers.")
+  endif()
+  execute_process(
+    COMMAND nm ${CMAKE_CURRENT_BINARY_DIR}/temp
+    COMMAND grep -q cxx11
+    RESULT_VARIABLE RET_CODE)
+  if (RET_CODE EQUAL 0)
+    set(CXX11_ABI_AVAILABLE ON)
+  else()
+    set(CXX11_ABI_AVAILABLE OFF)
+  endif()
+  execute_process(
+    COMMAND rm ${CMAKE_CURRENT_BINARY_DIR}/temp ${CMAKE_CURRENT_BINARY_DIR}/temp.cpp)
+  set(${OUTPUT_VAR} ${CXX11_ABI_AVAILABLE} PARENT_SCOPE)
 endfunction()

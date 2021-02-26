@@ -26,14 +26,10 @@ class DynamicBinarySplitOp final : public Operator {
 
   void InitFromOpConf() override;
 
-  const PbMessage& GetCustomizedConf() const override;
-
  private:
-  Maybe<void> InferBatchAxis(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext*) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
@@ -47,13 +43,9 @@ void DynamicBinarySplitOp::InitFromOpConf() {
   });
 }
 
-const PbMessage& DynamicBinarySplitOp::GetCustomizedConf() const {
-  return op_conf().dynamic_binary_split_conf();
-}
-
-Maybe<void> DynamicBinarySplitOp::InferBlobDescs(
+Maybe<void> DynamicBinarySplitOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const auto& in_blob_desc = *GetBlobDesc4BnInOp("in");
   CHECK_OR_RETURN(in_blob_desc.is_dynamic());
   CHECK_GE_OR_RETURN(output_bns().size(), 2);
@@ -78,14 +70,6 @@ Maybe<void> DynamicBinarySplitOp::InferBlobDescs(
     blob_desc->mut_shape() = Shape({out_sizes.at(output_bns().size() - 1 - i)});
     blob_desc->set_data_type(DataType::kChar);
   }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DynamicBinarySplitOp::InferBatchAxis(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  // out blob has NOT  batch axis
-  FOR_RANGE(int32_t, i, 0, output_bns().size()) { BatchAxis4BnInOp(output_bns().Get(i)); }
   return Maybe<void>::Ok();
 }
 
@@ -114,14 +98,10 @@ class DynamicBinaryConcatOp final : public Operator {
 
   void InitFromOpConf() override;
 
-  const PbMessage& GetCustomizedConf() const override;
-
  private:
-  Maybe<void> InferBatchAxis(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext*) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                const SbpSignature* sbp_signature) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
@@ -138,13 +118,9 @@ void DynamicBinaryConcatOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-const PbMessage& DynamicBinaryConcatOp::GetCustomizedConf() const {
-  return op_conf().dynamic_binary_concat_conf();
-}
-
-Maybe<void> DynamicBinaryConcatOp::InferBlobDescs(
+Maybe<void> DynamicBinaryConcatOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const auto& conf = op_conf().dynamic_binary_concat_conf();
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *GetBlobDesc4BnInOp(input_bns().Get(0));
@@ -160,13 +136,6 @@ Maybe<void> DynamicBinaryConcatOp::InferBlobDescs(
     input_total_size += RtBlobDesc(*in_blob_desc).ByteSizeOfBlobBody();
   }
   CHECK_GE_OR_RETURN(input_total_size, RtBlobDesc(*out_blob_desc).AlignedTotalByteSize());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DynamicBinaryConcatOp::InferBatchAxis(
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  *BatchAxis4BnInOp("out") = op_conf().dynamic_binary_concat_conf().out_batch_axis();
   return Maybe<void>::Ok();
 }
 

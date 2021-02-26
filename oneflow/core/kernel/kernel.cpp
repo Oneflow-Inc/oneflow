@@ -14,24 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/common/gdb.h"
-#include "oneflow/core/common/cached_caller.h"
+#include "oneflow/core/kernel/kernel_helper.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
+#include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/profiler/kernel.h"
 
 namespace oneflow {
-
-namespace {
-
-bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
-                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  for (const auto& bn : bns) {
-    Blob* blob = BnInOp2Blob(bn);
-    if (blob && !blob->IsBodyEmpty()) { return false; }
-  }
-  return true;
-}
-
-}  // namespace
 
 Kernel::~Kernel() {
   if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
@@ -50,16 +38,9 @@ void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, Device
   VirtualKernelInit(device_ctx);
 }
 
-void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
-                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitConstBufBlobs(ctx.device_ctx, BnInOp2Blob);
-}
-
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
   Forward(ctx, BnInOp2Blob);
-  gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
@@ -112,7 +93,9 @@ void Kernel::Forward(const KernelCtx& ctx,
   ForwardHeader(ctx, BnInOp2Blob);
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
   SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob);
+  OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentStart(this, ctx, BnInOp2Blob));
   ForwardDataContent(ctx, BnInOp2Blob);
+  OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentEnd(this, ctx, BnInOp2Blob));
   SetOutputBlobConsumerAccessChecker(BnInOp2Blob);
 }
 
@@ -138,7 +121,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
                                               DeviceCtx* device_ctx) {
   auto op_type = conf.op_attribute().op_conf().op_type_case();
   Kernel* rptr = kernel_registration::CreateKernel(conf);
-  if (rptr == nullptr) { rptr = NewObj<Kernel>(op_type, conf); }
+  if (rptr == nullptr) { rptr = NewObj<int32_t, Kernel>(op_type, conf); }
   CHECK_NOTNULL(rptr);
   rptr->Init(job_desc, conf, device_ctx);
   return std::unique_ptr<const Kernel>(rptr);

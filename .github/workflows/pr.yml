@@ -1,0 +1,19 @@
+name: Check PR
+
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+
+jobs:
+  check_labels:
+    runs-on: ubuntu-18.04
+    name: Labels
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Check labels
+        uses: OneFlow-Inc/verify-pr-label-action@master
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          required-type-labels: 'bug, enhancement, purge, feature, documentation'
+          required-component-labels: 'op, system, eager, build, xla, python, ci, test, tooling, onnx'

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
@@ -37,5 +38,11 @@ def _test_tensor_buffer_convert(test_case):
     test_case.assertTrue(np.array_equal(input_arr, output_arr))
 
 
-def test_tensor_buffer_convert(test_case):
-    _test_tensor_buffer_convert(test_case)
+@flow.unittest.skip_unless_1n1d()
+class TestTensorBufferOps(flow.unittest.TestCase):
+    def test_tensor_buffer_convert(test_case):
+        _test_tensor_buffer_convert(test_case)
+
+
+if __name__ == "__main__":
+    unittest.main()

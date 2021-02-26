@@ -52,12 +52,11 @@ class ExecEdge final : public Edge<ExecNode, ExecEdge> {
 class ExecNode final : public Node<ExecNode, ExecEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ExecNode);
-  ExecNode() : fw_node_(nullptr) {}
+  ExecNode() {}
   ~ExecNode() = default;
 
   std::shared_ptr<const Operator> op() const { return op_; }
   std::shared_ptr<const Operator>& mut_op() { return op_; }
-  const OpContext* op_context() const { return fw_node_ ? fw_node_->op_ctx_.get() : op_ctx_.get(); }
   RegstDesc* RegstDesc4BnInOp(const std::string& bn) const { return bn_in_op2regst_.at(bn).get(); }
 
   void BindBnWithRegst(const std::string& bn, std::shared_ptr<RegstDesc>);
@@ -65,16 +64,22 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
                         std::shared_ptr<RegstDesc>);
   void AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_getter)() const,
                              std::shared_ptr<RegstDesc>);
+  bool TryBindBnWithOneOfTheRegsts(const std::string&,
+                                   const std::list<std::shared_ptr<RegstDesc>>&);
   void BindBnWithOneOfTheRegsts(const std::string&, const std::list<std::shared_ptr<RegstDesc>>&);
   void UnbindBnWithEmptyRegst();
-
-  void set_fw_node(ExecNode* val) { fw_node_ = val; }
-  ExecNode* fw_node() { return fw_node_; }
 
   std::string VisualStr() const override { return op_->op_name(); }
   void ToProto(const ParallelContext*, ExecNodeProto*) const;
 
   void InferBlobDescs(const ParallelContext* parallel_ctx);
+
+  const HashMap<std::string, std::string>& mut_inplace_obn2ibn() const {
+    return mut_inplace_obn2ibn_;
+  }
+  const HashMap<std::string, std::string>& con_inplace_obn2ibn() const {
+    return con_inplace_obn2ibn_;
+  }
 
  private:
   std::function<const BlobDesc&(const std::string&)> GetLogicalBlobDesc4BnInOpFunc() const;
@@ -82,9 +87,9 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
 
   std::shared_ptr<const Operator> op_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> bn_in_op2regst_;
-  ExecNode* fw_node_;
 
-  std::unique_ptr<OpContext> op_ctx_;
+  HashMap<std::string, std::string> mut_inplace_obn2ibn_;
+  HashMap<std::string, std::string> con_inplace_obn2ibn_;
 };
 
 class ExecGraph final : public Graph<ExecNode, ExecEdge> {

@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
+#include "oneflow/core/cuda/atomic.cuh"
 
 namespace oneflow {
 
@@ -55,7 +55,7 @@ __global__ void UpsampleNearestBackward(const int64_t elem_cnt, const T* dy_dptr
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
     const int64_t dx_h = GetNearestInputIndex(h, scale_h, dx_height);
     const int64_t dx_w = GetNearestInputIndex(w, scale_w, dx_width);
-    gpu_atomic_add(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h, dx_w), dy_dptr[index]);
+    cuda::atomic::Add(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h, dx_w), dy_dptr[index]);
   }
 }
 
@@ -120,15 +120,16 @@ __global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const T* dy_dpt
     const T dy = dy_dptr[index];
     const float dbottom = params.h_lerp * dy;
     T* dx_dptr_bottom_offset = dx_dptr + bottom_offset;
-    gpu_atomic_add(dx_dptr_bottom_offset + params.left_w_index,
-                   static_cast<T>((1 - params.w_lerp) * dbottom));
-    gpu_atomic_add(dx_dptr_bottom_offset + params.right_w_index,
-                   static_cast<T>(params.w_lerp * dbottom));
+    cuda::atomic::Add(dx_dptr_bottom_offset + params.left_w_index,
+                      static_cast<T>((1 - params.w_lerp) * dbottom));
+    cuda::atomic::Add(dx_dptr_bottom_offset + params.right_w_index,
+                      static_cast<T>(params.w_lerp * dbottom));
     const float dtop = dy - dbottom;
     T* dx_dptr_top_offset = dx_dptr + top_offset;
-    gpu_atomic_add(dx_dptr_top_offset + params.left_w_index,
-                   static_cast<T>((1 - params.w_lerp) * dtop));
-    gpu_atomic_add(dx_dptr_top_offset + params.right_w_index, static_cast<T>(params.w_lerp * dtop));
+    cuda::atomic::Add(dx_dptr_top_offset + params.left_w_index,
+                      static_cast<T>((1 - params.w_lerp) * dtop));
+    cuda::atomic::Add(dx_dptr_top_offset + params.right_w_index,
+                      static_cast<T>(params.w_lerp * dtop));
   }
 }
 

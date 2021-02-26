@@ -23,6 +23,7 @@ import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow
+import oneflow_api
 
 blob_register = blob_register_util.GetDefaultBlobRegister()
 

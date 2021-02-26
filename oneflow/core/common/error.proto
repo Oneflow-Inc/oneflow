@@ -105,12 +105,19 @@ message MemoryZoneOutOfMemoryError {
 
 message LossBlobNotFoundError { }
 
-message UnkownError { }
+message RwMutexedObjectNotFoundError { }
+
+message UnknownError { }
+
+message CompileOptionWrongError { }
 
 message ErrorStackFrame {
   required string location = 1;
   required string function = 2;
+  required string error_msg = 3;
 }
+
+message SymbolIdUninitializedError {}
 
 message ErrorProto {
   optional string error_summary = 1 [default = ""];
@@ -147,6 +154,9 @@ message ErrorProto {
     PlacementError placement_error= 470;
     BlobSplitAxisInferError blob_split_axis_infer_error = 480;
     UnknownJobBuildAndInferError unknown_job_build_and_infer_error = 500;
-    UnkownError unknown_error = 900;
+    RwMutexedObjectNotFoundError rw_mutexed_object_not_found_error = 600;
+    SymbolIdUninitializedError symbol_id_uninitialized_error = 700;
+    UnknownError unknown_error = 900;
+    CompileOptionWrongError compile_option_wrong_error = 950;
   }
 }

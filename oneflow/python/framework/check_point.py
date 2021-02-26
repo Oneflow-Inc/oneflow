@@ -15,10 +15,14 @@ limitations under the License.
 """
 import datetime
 import os
+import shutil
 
 import numpy as np
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.job_instance as job_instance
+
+import oneflow.python.framework.check_point_v2 as check_point_v2
+import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.op_executor as op_executor
@@ -34,7 +38,13 @@ class CheckPoint(object):
     """
 
     def __init__(self) -> None:
-        pass
+        if not config_util.api_legacy_model_io_enabled():
+            print(
+                "\033[1mWARNING: 'flow.train.CheckPoint' is deprecated. Please use the new API:\033[0m\n"
+                "flow.train.CheckPoint().save(path) => \033[1m\033[92mflow.checkpoint.save(path)\033[0m\n"
+                "flow.train.CheckPoint().load(path) => \033[1m\033[92mflow.load_variables(flow.checkpoint.get(path))\033[0m\n"
+                "flow.train.CheckPoint().init() is not needed any more.\n"
+            )
 
     @session_ctx.try_init_default_session
     def save(self, path: str) -> None:
@@ -43,6 +53,9 @@ class CheckPoint(object):
         Args:
             path: A `string` of path to save checkpoint. 
         """
+        if not config_util.api_legacy_model_io_enabled():
+            check_point_v2.SaveVarDict(path)
+            return
         assert type(path) is str
         enable_if.unique([lazy_checkpoint_save, eager_checkpoint_save])(path)
 
@@ -50,6 +63,8 @@ class CheckPoint(object):
     def init(self) -> None:
         r"""Initialize models by default initializer of op or Job.
         """
+        if not config_util.api_legacy_model_io_enabled():
+            return
         enable_if.unique([lazy_checkpoint_init, eager_checkpoint_init])()
 
     @session_ctx.try_init_default_session
@@ -59,6 +74,9 @@ class CheckPoint(object):
         Args:
             path: A `string` of path to load checkpoint.
         """
+        if not config_util.api_legacy_model_io_enabled():
+            check_point_v2.LoadVariables(check_point_v2.GetCheckpoint(path))
+            return
         assert type(path) is str
         enable_if.unique([lazy_checkpoint_load, eager_checkpoint_load])(path)
 
@@ -155,7 +173,6 @@ class SimpleCheckPointManager(object):
             assert os.path.isdir(root_path)
         self._root_path = root_path
         self._prefix = prefix
-        self._checkpoint = CheckPoint()
 
     def list_checkpoints(self) -> List[str]:
         def is_snapshot(name):
@@ -176,13 +193,14 @@ class SimpleCheckPointManager(object):
     def initialize_or_restore(self) -> None:
         name = self.latest_checkpoint()
         if name:
-            self._checkpoint.load(self._GetSnapshotPath(name))
+            check_point_v2.LoadVariables(
+                check_point_v2.GetCheckpoint(self._GetSnapshotPath(name))
+            )
         else:
-            self._checkpoint.init()
             self.save()
 
     def save(self) -> None:
-        self._checkpoint.save(self._GetSnapshotPath(self._NextSnapshotName()))
+        check_point_v2.SaveVarDict(self._GetSnapshotPath(self._NextSnapshotName()),)
 
     def _NextSnapshotName(self) -> str:
         return self._prefix + datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")

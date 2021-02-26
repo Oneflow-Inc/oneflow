@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
+#include "glog/logging.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/global_for.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 #include <netinet/tcp.h>
 
@@ -32,19 +33,24 @@ sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
   sockaddr_in sa;
   sa.sin_family = AF_INET;
   sa.sin_port = htons(port);
-  PCHECK(inet_pton(AF_INET, addr.c_str(), &(sa.sin_addr)) == 1);
+  PCHECK(inet_pton(AF_INET, addr.c_str(), &(sa.sin_addr)) == 1)
+      << "addr: " << addr << ", port: " << port;
   return sa;
 }
 
 int SockListen(int listen_sockfd, uint16_t listen_port, int32_t total_machine_num) {
   sockaddr_in sa = GetSockAddr("0.0.0.0", listen_port);
+  int reuse = 1;
+  int ret_setopt =
+      setsockopt(listen_sockfd, SOL_SOCKET, SO_REUSEADDR, (const void*)&reuse, sizeof(int));
+  CHECK_EQ(ret_setopt, 0);
   int bind_result = bind(listen_sockfd, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
   if (bind_result == 0) {
     PCHECK(listen(listen_sockfd, total_machine_num) == 0);
     LOG(INFO) << "CommNet:Epoll listening on "
               << "0.0.0.0:" + std::to_string(listen_port);
   } else {
-    PCHECK(errno == EACCES || errno == EADDRINUSE);
+    PCHECK(errno == EACCES || errno == EADDRINUSE) << "SockListen errno: " << errno;
   }
   return bind_result;
 }
@@ -78,7 +84,8 @@ EpollCommNet::~EpollCommNet() {
     LOG(INFO) << "CommNet Thread " << i << " finish";
     pollers_[i]->Stop();
   }
-  OF_BARRIER();
+  // TODO(chengcheng): change to OF_ENV_BARRIER
+  OF_SESSION_BARRIER();
   for (IOEventPoller* poller : pollers_) { delete poller; }
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
@@ -94,6 +101,13 @@ void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_ms
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
+void EpollCommNet::SendTransportMsg(int64_t dst_machine_id, const TransportMsg& transport_msg) {
+  SocketMsg msg;
+  msg.msg_type = SocketMsgType::kTransport;
+  msg.transport_msg = transport_msg;
+  SendSocketMsg(dst_machine_id, msg);
+}
+
 void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
@@ -105,6 +119,13 @@ SocketMemDesc* EpollCommNet::NewMemDesc(void* ptr, size_t byte_size) {
   return mem_desc;
 }
 
+EpollCommNet::EpollCommNet() {
+  pollers_.resize(Global<ResourceDesc, ForSession>::Get()->CommNetWorkerNum(), nullptr);
+  for (size_t i = 0; i < pollers_.size(); ++i) { pollers_[i] = new IOEventPoller; }
+  InitSockets();
+  for (IOEventPoller* poller : pollers_) { poller->Start(); }
+}
+
 EpollCommNet::EpollCommNet(const Plan& plan) : CommNetIf(plan) {
   pollers_.resize(Global<ResourceDesc, ForSession>::Get()->CommNetWorkerNum(), nullptr);
   for (size_t i = 0; i < pollers_.size(); ++i) { pollers_[i] = new IOEventPoller; }
@@ -113,7 +134,7 @@ EpollCommNet::EpollCommNet(const Plan& plan) : CommNetIf(plan) {
 }
 
 void EpollCommNet::InitSockets() {
-  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
   auto this_machine = Global<ResourceDesc, ForSession>::Get()->machine(this_machine_id);
   int64_t total_machine_num = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
   machine_id2sockfd_.assign(total_machine_num, -1);
@@ -190,7 +211,7 @@ void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kRequestWrite;
   msg.request_write_msg.src_token = src_token;
-  msg.request_write_msg.dst_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  msg.request_write_msg.dst_machine_id = GlobalProcessCtx::Rank();
   msg.request_write_msg.dst_token = dst_token;
   msg.request_write_msg.read_id = read_id;
   GetSocketHelper(src_machine_id)->AsyncWrite(msg);
@@ -198,4 +219,4 @@ void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX

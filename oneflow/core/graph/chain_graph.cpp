@@ -165,15 +165,6 @@ bool NoOutRegstConsumedByBwNode(TaskNode* node) {
   return true;
 };
 
-bool IsNonSoleKeepHeaderOnlyEdge(TaskNode* src_task, TaskNode* dst_task) {
-  if (dst_task->in_edges().size() <= 1) { return false; }
-  const auto* src_comp_task = dynamic_cast<CompTaskNode*>(src_task);
-  if (src_comp_task == nullptr) { return false; }
-  if (src_comp_task->logical_node()->op_vec().size() != 1) { return false; }
-  const auto& src_op = *src_comp_task->logical_node()->SoleOp();
-  return src_op.op_conf().has_keep_header_only_conf();
-}
-
 void CollectIgnoreTaskEdgesInFirstMergedChains(const std::vector<std::vector<TaskNode*>>& chains,
                                                HashSet<TaskEdge*>* ignore_edges) {
   auto HasGpuVariableOpInChain = [&](const std::vector<TaskNode*>& chain) -> bool {
@@ -232,7 +223,9 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   for (auto& task_nodes : chains) { PrioritizeUntrainableTaskNode(&task_nodes); }
   InitChainNode(chains);
   InitChainEdge(chains);
-  CheckNoCycle();
+  // NOTE(chengcheng): Remove this check because:
+  //   Even if there is a cycle in chain graph, there is no problem.
+  // CheckNoCycle();
   SetChainId4ChainNode();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     ToDotWithFilePath(JoinPath("dot", TypeName(), GlobalJobDesc().job_name() + ".dot"));
@@ -310,7 +303,6 @@ void ChainGraph::CollectTaskNodeAncestors(const TaskGraph& task_gph,
       if (ignore_edges && ignore_edges->find(in_edge) != ignore_edges->end()) { continue; }
       TaskNode* in_node = in_edge->src_node();
       if (in_node->GetTaskType() == TaskType::kTick) { continue; }
-      if (IsNonSoleKeepHeaderOnlyEdge(in_node, node)) { continue; }
       (*node2ancestors)[node].insert(in_node);
       (*node2ancestors)[node].insert((*node2ancestors)[in_node].begin(),
                                      (*node2ancestors)[in_node].end());
@@ -446,8 +438,7 @@ void ChainGraph::InitChainEdge(const std::vector<std::vector<TaskNode*>>& chains
 }
 
 void ChainGraph::SetChainId4ChainNode() {
-  TopoForEachNode([&](ChainNode* chain_node) {
-    ordered_chain_nodes_.emplace_back(chain_node);
+  ForEachNode([&](ChainNode* chain_node) {
     int64_t stream_id = chain_node->TaskNodes().front()->GlobalWorkStreamId();
     int64_t chain_id = Global<IDMgr>::Get()->AllocateChainId(stream_id);
     chain_node->SetChainId(chain_id);

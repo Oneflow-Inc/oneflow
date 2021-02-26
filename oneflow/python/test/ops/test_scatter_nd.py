@@ -141,9 +141,6 @@ def _compare_scatter_nd_with_tf(
         indices, updates, params_shape, device_type, mirrored, compare_dy
     )
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-
     if mirrored:
         of_y = scatter_nd_fn([indices], [updates]).get().numpy_list()[0]
     else:
@@ -228,8 +225,6 @@ def _compare_scatter_nd_update_with_tf(
         flow.watch_diff(y, compare_dz_dy)
         return z
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_z = scatter_nd_update_grad_fn(params, indices, updates).get()
 
     if verbose is True:
@@ -296,8 +291,6 @@ def _of_tensor_scatter_nd_add(
         ):
             return do_tensor_scatter_nd_add(params_def, indices_def, updates_def)
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         return (
             tensor_scatter_nd_add_fn([params], [indices], [updates])
             .get()
@@ -315,8 +308,6 @@ def _of_tensor_scatter_nd_add(
         ):
             return do_tensor_scatter_nd_add(params_def, indices_def, updates_def)
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         return tensor_scatter_nd_add_fn(params, indices, updates).get().numpy()
 
 
@@ -499,200 +490,189 @@ def _compare_tensor_scatter_nd_add_dynamic_indices_with_tf(
     test_case.assertTrue(np.allclose(z.numpy(), of_z))
 
 
-def test_scatter_nd(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["params_shape"] = [(10,)]
-    arg_dict["indices_shape"] = [(5, 1)]
-    arg_dict["updates_shape"] = [(5,)]
-    arg_dict["mirrored"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        _compare_scatter_nd_with_tf(test_case, *arg)
+@flow.unittest.skip_unless_1n1d()
+class TestScatterNd(flow.unittest.TestCase):
+    def test_scatter_nd(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["params_shape"] = [(10,)]
+        arg_dict["indices_shape"] = [(5, 1)]
+        arg_dict["updates_shape"] = [(5,)]
+        arg_dict["mirrored"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            _compare_scatter_nd_with_tf(test_case, *arg)
+
+    def test_scatter_nd_case_1(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["params_shape"] = [(128,)]
+        arg_dict["indices_shape"] = [(100, 1)]
+        arg_dict["updates_shape"] = [(100,)]
+        for arg in GenArgList(arg_dict):
+            _compare_scatter_nd_with_tf(test_case, *arg)
+
+    def test_scatter_nd_case_2(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["params_shape"] = [(32, 16, 4)]
+        arg_dict["indices_shape"] = [(50, 2)]
+        arg_dict["updates_shape"] = [(50, 4)]
+        for arg in GenArgList(arg_dict):
+            _compare_scatter_nd_with_tf(test_case, *arg)
+
+    def test_scatter_nd_case_3(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["params_shape"] = [(24, 25, 32, 10, 12)]
+        arg_dict["indices_shape"] = [(3, 4, 2)]
+        arg_dict["updates_shape"] = [(3, 4, 32, 10, 12)]
+        arg_dict["mirrored"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            _compare_scatter_nd_with_tf(test_case, *arg)
+
+    def test_scatter_nd_case_4(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["params_shape"] = [(8,)]
+        arg_dict["indices_shape"] = [(12, 1)]
+        arg_dict["updates_shape"] = [(12,)]
+        for arg in GenArgList(arg_dict):
+            _compare_scatter_nd_with_tf(test_case, *arg)
+
+    def test_scatter_nd_update(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["params_shape"] = [(10,)]
+        arg_dict["indices_shape"] = [(5, 1)]
+        arg_dict["updates_shape"] = [(5,)]
+        arg_dict["allow_duplicate_index"] = [False]
+        # arg_dict["verbose"] = [True]
+        for arg in GenArgList(arg_dict):
+            _compare_scatter_nd_update_with_tf(test_case, *arg)
+
+    def test_scatter_nd_update_case_1(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["params_shape"] = [(256, 64)]
+        arg_dict["indices_shape"] = [(128, 2)]
+        arg_dict["updates_shape"] = [(128,)]
+        for arg in GenArgList(arg_dict):
+            _compare_scatter_nd_update_with_tf(test_case, *arg)
+
+    def test_scatter_nd_update_case_2(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["params_shape"] = [(20, 10, 11, 3, 5)]
+        arg_dict["indices_shape"] = [(2, 4, 3)]
+        arg_dict["updates_shape"] = [(2, 4, 3, 5)]
+        for arg in GenArgList(arg_dict):
+            _compare_scatter_nd_update_with_tf(test_case, *arg)
+
+    def test_scatter_nd_update_case_3(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["params_shape"] = [(256, 4)]
+        arg_dict["indices_shape"] = [(10, 25, 1)]
+        arg_dict["updates_shape"] = [(10, 25, 4)]
+        for arg in GenArgList(arg_dict):
+            _compare_scatter_nd_update_with_tf(test_case, *arg)
+
+    def test_tensor_scatter_nd_add(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["params_shape"] = [(12,)]
+        arg_dict["indices_shape"] = [(7, 1)]
+        arg_dict["updates_shape"] = [(7,)]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["mirrored"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            _compare_tensor_scatter_nd_add_with_tf(test_case, *arg)
+
+    def test_tensor_scatter_nd_add_case1(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["params_shape"] = [(38, 66, 9)]
+        arg_dict["indices_shape"] = [(17, 2)]
+        arg_dict["updates_shape"] = [(17, 9)]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["mirrored"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            _compare_tensor_scatter_nd_add_with_tf(test_case, *arg)
+
+    def test_tensor_scatter_nd_add_case2(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["params_shape"] = [(2, 7, 19, 41, 33)]
+        arg_dict["indices_shape"] = [(20, 9, 3)]
+        arg_dict["updates_shape"] = [(20, 9, 41, 33)]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["mirrored"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            _compare_tensor_scatter_nd_add_with_tf(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_scatter_nd_dynamic_indices(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["indices_shape"] = [(12, 10, 2)]
+        arg_dict["updates_shape"] = [(12, 10, 41, 33)]
+        arg_dict["indices_static_shape"] = [(15, 10, 2)]
+        arg_dict["updates_static_shape"] = [(15, 10, 41, 33)]
+        arg_dict["params_shape"] = [(64, 22, 41, 33)]
+        for arg in GenArgList(arg_dict):
+            _compare_scatter_nd_dynamic_indices_with_tf(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_scatter_nd_empty_indices(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["indices_shape"] = [(0, 1)]
+        arg_dict["updates_shape"] = [(0, 14)]
+        arg_dict["indices_static_shape"] = [(8, 1)]
+        arg_dict["updates_static_shape"] = [(8, 14)]
+        arg_dict["params_shape"] = [(10, 14)]
+        for arg in GenArgList(arg_dict):
+            _compare_scatter_nd_dynamic_indices_with_tf(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_tensor_scatter_nd_update_dynamic_indices(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["params_shape"] = [(32, 33, 4, 5)]
+        arg_dict["indices_shape"] = [(12, 2)]
+        arg_dict["updates_shape"] = [(12, 4, 5)]
+        arg_dict["indices_static_shape"] = [(14, 2)]
+        arg_dict["updates_static_shape"] = [(14, 4, 5)]
+        for arg in GenArgList(arg_dict):
+            _compare_tensor_scatter_nd_update_dynamic_indices_with_tf(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_tensor_scatter_nd_update_empty_indices(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["params_shape"] = [(37, 14)]
+        arg_dict["indices_shape"] = [(7, 0, 1)]
+        arg_dict["updates_shape"] = [(7, 0, 14)]
+        arg_dict["indices_static_shape"] = [(7, 5, 1)]
+        arg_dict["updates_static_shape"] = [(7, 5, 14)]
+        for arg in GenArgList(arg_dict):
+            _compare_tensor_scatter_nd_update_dynamic_indices_with_tf(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_tensor_scatter_nd_add_dynamic_indices(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["params_shape"] = [(2, 9, 7, 5, 4)]
+        arg_dict["indices_shape"] = [(12, 5, 3)]
+        arg_dict["updates_shape"] = [(12, 5, 5, 4)]
+        arg_dict["indices_static_shape"] = [(15, 6, 3)]
+        arg_dict["updates_static_shape"] = [(15, 6, 5, 4)]
+        for arg in GenArgList(arg_dict):
+            _compare_tensor_scatter_nd_add_dynamic_indices_with_tf(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_tensor_scatter_nd_add_empty_indices(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["params_shape"] = [(24, 30, 14)]
+        arg_dict["indices_shape"] = [(0, 2)]
+        arg_dict["updates_shape"] = [(0, 14)]
+        arg_dict["indices_static_shape"] = [(11, 2)]
+        arg_dict["updates_static_shape"] = [(11, 14)]
+        for arg in GenArgList(arg_dict):
+            _compare_tensor_scatter_nd_add_dynamic_indices_with_tf(test_case, *arg)
 
 
-def test_scatter_nd_case_1(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(128,)]
-    arg_dict["indices_shape"] = [(100, 1)]
-    arg_dict["updates_shape"] = [(100,)]
-    for arg in GenArgList(arg_dict):
-        _compare_scatter_nd_with_tf(test_case, *arg)
-
-
-def test_scatter_nd_case_2(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(32, 16, 4)]
-    arg_dict["indices_shape"] = [(50, 2)]
-    arg_dict["updates_shape"] = [(50, 4)]
-    for arg in GenArgList(arg_dict):
-        _compare_scatter_nd_with_tf(test_case, *arg)
-
-
-def test_scatter_nd_case_3(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(24, 25, 32, 10, 12)]
-    arg_dict["indices_shape"] = [(3, 4, 2)]
-    arg_dict["updates_shape"] = [(3, 4, 32, 10, 12)]
-    arg_dict["mirrored"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        _compare_scatter_nd_with_tf(test_case, *arg)
-
-
-def test_scatter_nd_case_4(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(8,)]
-    arg_dict["indices_shape"] = [(12, 1)]
-    arg_dict["updates_shape"] = [(12,)]
-    for arg in GenArgList(arg_dict):
-        _compare_scatter_nd_with_tf(test_case, *arg)
-
-
-def test_scatter_nd_update(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["params_shape"] = [(10,)]
-    arg_dict["indices_shape"] = [(5, 1)]
-    arg_dict["updates_shape"] = [(5,)]
-    arg_dict["allow_duplicate_index"] = [False]
-    # arg_dict["verbose"] = [True]
-    for arg in GenArgList(arg_dict):
-        _compare_scatter_nd_update_with_tf(test_case, *arg)
-
-
-def test_scatter_nd_update_case_1(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(256, 64)]
-    arg_dict["indices_shape"] = [(128, 2)]
-    arg_dict["updates_shape"] = [(128,)]
-    for arg in GenArgList(arg_dict):
-        _compare_scatter_nd_update_with_tf(test_case, *arg)
-
-
-def test_scatter_nd_update_case_2(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(20, 10, 11, 3, 5)]
-    arg_dict["indices_shape"] = [(2, 4, 3)]
-    arg_dict["updates_shape"] = [(2, 4, 3, 5)]
-    for arg in GenArgList(arg_dict):
-        _compare_scatter_nd_update_with_tf(test_case, *arg)
-
-
-def test_scatter_nd_update_case_3(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["params_shape"] = [(256, 4)]
-    arg_dict["indices_shape"] = [(10, 25, 1)]
-    arg_dict["updates_shape"] = [(10, 25, 4)]
-    for arg in GenArgList(arg_dict):
-        _compare_scatter_nd_update_with_tf(test_case, *arg)
-
-
-def test_tensor_scatter_nd_add(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["params_shape"] = [(12,)]
-    arg_dict["indices_shape"] = [(7, 1)]
-    arg_dict["updates_shape"] = [(7,)]
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["mirrored"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        _compare_tensor_scatter_nd_add_with_tf(test_case, *arg)
-
-
-def test_tensor_scatter_nd_add_case1(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["params_shape"] = [(38, 66, 9)]
-    arg_dict["indices_shape"] = [(17, 2)]
-    arg_dict["updates_shape"] = [(17, 9)]
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["mirrored"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        _compare_tensor_scatter_nd_add_with_tf(test_case, *arg)
-
-
-def test_tensor_scatter_nd_add_case2(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["params_shape"] = [(2, 7, 19, 41, 33)]
-    arg_dict["indices_shape"] = [(20, 9, 3)]
-    arg_dict["updates_shape"] = [(20, 9, 41, 33)]
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["mirrored"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        _compare_tensor_scatter_nd_add_with_tf(test_case, *arg)
-
-
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_scatter_nd_dynamic_indices(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["indices_shape"] = [(12, 10, 2)]
-    arg_dict["updates_shape"] = [(12, 10, 41, 33)]
-    arg_dict["indices_static_shape"] = [(15, 10, 2)]
-    arg_dict["updates_static_shape"] = [(15, 10, 41, 33)]
-    arg_dict["params_shape"] = [(64, 22, 41, 33)]
-    for arg in GenArgList(arg_dict):
-        _compare_scatter_nd_dynamic_indices_with_tf(test_case, *arg)
-
-
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_scatter_nd_empty_indices(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["indices_shape"] = [(0, 1)]
-    arg_dict["updates_shape"] = [(0, 14)]
-    arg_dict["indices_static_shape"] = [(8, 1)]
-    arg_dict["updates_static_shape"] = [(8, 14)]
-    arg_dict["params_shape"] = [(10, 14)]
-    for arg in GenArgList(arg_dict):
-        _compare_scatter_nd_dynamic_indices_with_tf(test_case, *arg)
-
-
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_tensor_scatter_nd_update_dynamic_indices(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["params_shape"] = [(32, 33, 4, 5)]
-    arg_dict["indices_shape"] = [(12, 2)]
-    arg_dict["updates_shape"] = [(12, 4, 5)]
-    arg_dict["indices_static_shape"] = [(14, 2)]
-    arg_dict["updates_static_shape"] = [(14, 4, 5)]
-    for arg in GenArgList(arg_dict):
-        _compare_tensor_scatter_nd_update_dynamic_indices_with_tf(test_case, *arg)
-
-
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_tensor_scatter_nd_update_empty_indices(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["params_shape"] = [(37, 14)]
-    arg_dict["indices_shape"] = [(7, 0, 1)]
-    arg_dict["updates_shape"] = [(7, 0, 14)]
-    arg_dict["indices_static_shape"] = [(7, 5, 1)]
-    arg_dict["updates_static_shape"] = [(7, 5, 14)]
-    for arg in GenArgList(arg_dict):
-        _compare_tensor_scatter_nd_update_dynamic_indices_with_tf(test_case, *arg)
-
-
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_tensor_scatter_nd_add_dynamic_indices(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["params_shape"] = [(2, 9, 7, 5, 4)]
-    arg_dict["indices_shape"] = [(12, 5, 3)]
-    arg_dict["updates_shape"] = [(12, 5, 5, 4)]
-    arg_dict["indices_static_shape"] = [(15, 6, 3)]
-    arg_dict["updates_static_shape"] = [(15, 6, 5, 4)]
-    for arg in GenArgList(arg_dict):
-        _compare_tensor_scatter_nd_add_dynamic_indices_with_tf(test_case, *arg)
-
-
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_tensor_scatter_nd_add_empty_indices(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["params_shape"] = [(24, 30, 14)]
-    arg_dict["indices_shape"] = [(0, 2)]
-    arg_dict["updates_shape"] = [(0, 14)]
-    arg_dict["indices_static_shape"] = [(11, 2)]
-    arg_dict["updates_static_shape"] = [(11, 14)]
-    for arg in GenArgList(arg_dict):
-        _compare_tensor_scatter_nd_add_dynamic_indices_with_tf(test_case, *arg)
+if __name__ == "__main__":
+    unittest.main()

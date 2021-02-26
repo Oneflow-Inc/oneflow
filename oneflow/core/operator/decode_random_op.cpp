@@ -23,17 +23,13 @@ void DecodeRandomOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-const PbMessage& DecodeRandomOp::GetCustomizedConf() const {
-  return op_conf().decode_random_conf();
-}
-
 void DecodeRandomOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   kernel_conf->mutable_decode_random_conf()->set_random_seed(NewRandomSeed());
 }
 
-Maybe<void> DecodeRandomOp::InferBlobDescs(
+Maybe<void> DecodeRandomOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
@@ -46,12 +42,6 @@ Maybe<void> DecodeRandomOp::InferBlobDescs(
   FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = conf.shape().dim(j - 1); }
   out_blob_desc->mut_shape() = Shape(dim_vec);
   out_blob_desc->set_data_type(conf.data_type());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DecodeRandomOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("out")->set_value(0);
   return Maybe<void>::Ok();
 }
 

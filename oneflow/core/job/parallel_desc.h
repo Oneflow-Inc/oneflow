@@ -33,22 +33,36 @@ Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id
 
 class ParallelContext;
 
+namespace cfg {
+class ParallelConf;
+}
+
 class ParallelDesc final {
  public:
   ~ParallelDesc() = default;
 
   ParallelDesc(const ParallelDesc&) = default;
   ParallelDesc(const ParallelConf& user_conf);
+
+  static Maybe<ParallelDesc> New(int64_t symbol_id, const ParallelConf& parallel_conf);
+
   Maybe<void> MaybeInit(const ParallelConf& user_conf);
 
   // Getters
+  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
   DeviceType device_type() const { return device_type_; }
+  std::string device_tag() const { return parallel_conf_.device_tag(); }
+  std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>
+  machine_id2sorted_dev_phy_ids() const {
+    return machine_id2sorted_dev_phy_ids_;
+  }
   bool HasMachineId(int64_t machine_id) const {
-    return machine_id2sorted_dev_phy_ids_.find(machine_id) != machine_id2sorted_dev_phy_ids_.end();
+    return machine_id2sorted_dev_phy_ids_->find(machine_id)
+           != machine_id2sorted_dev_phy_ids_->end();
   }
   const std::vector<int64_t>& sorted_machine_ids() const { return sorted_machine_ids_; }
   const std::vector<int64_t>& sorted_dev_phy_ids(int64_t machine_id) const {
-    return machine_id2sorted_dev_phy_ids_.at(machine_id);
+    return *machine_id2sorted_dev_phy_ids_->at(machine_id);
   }
   int64_t parallel_num() const { return parallel_num_; }
   int64_t device_num_of_each_machine() const { return device_num_of_each_machine_; }
@@ -67,26 +81,39 @@ class ParallelDesc final {
   bool operator==(const ParallelDesc& rhs) const { return Equals(rhs); }
   bool operator!=(const ParallelDesc& rhs) const { return !(*this == rhs); }
   bool Equals(const ParallelDesc* rhs) const { return Equals(*rhs); }
-  int64_t MachineIdForParallelId(int64_t parallel_id) const;
-  int64_t DeviceIdForParallelId(int64_t parallel_id) const;
+  Maybe<int64_t> MachineId4ParallelId(int64_t parallel_id) const;
+  Maybe<int64_t> DeviceId4ParallelId(int64_t parallel_id) const;
+  Maybe<int64_t> ParallelId4MachineDeviceId(int64_t machine_id, int64_t device_id) const;
   bool Containing(int64_t machine_id, int64_t device_id) const;
+  // this api is exported to python as Containing
+  bool Bigger(const ParallelDesc& rhs) const;
+  bool ContainingMachineId(int64_t machine_id) const;
+
+  std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf() const { return cfg_parallel_conf_; }
 
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
-  ParallelDesc() = default;
+  ParallelDesc() : symbol_id_(Error::SymbolIdUninitialized()) {}
+  ParallelDesc(int64_t symbol_id) : symbol_id_(symbol_id) {}
   void ClearUp();
   Maybe<void> SanityCheck();
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
+  bool EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const;
 
+  Maybe<int64_t> symbol_id_;
   DeviceType device_type_;
   ParallelConf parallel_conf_;
   std::vector<int64_t> sorted_machine_ids_;
-  HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_dev_phy_ids_;
+  std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>
+      machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;
   int64_t device_num_of_each_machine_;
   HashMap<int64_t, int64_t> parallel_id2machine_id_;
   HashMap<int64_t, int64_t> parallel_id2device_id_;
   HashMap<int64_t, HashMap<int64_t, int64_t>> machine_id2device_id2parallel_id_;
+  // TODO(lixinqi): merge cfg_parallel_conf_ and parallel_conf_ after cfg::ParallelConf taken as the
+  // constructor argument
+  std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf_;
 };
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {

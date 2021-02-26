@@ -39,17 +39,21 @@ def do_test(test_case, mirrored):
         flow.optimizer.SGD(lr_scheduler, momentum=0).minimize(w)
         return w
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     r1 = Foo().get().numpy()
     test_case.assertTrue(np.all(r1 == 1.0))
     r2 = Foo().get().numpy()
     test_case.assertTrue(np.all(r2 == 0.5))
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_variable_as_loss_on_two_device(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["mirrored"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        do_test(test_case, *arg)
+@flow.unittest.skip_unless_1n2d()
+class TestAllReduceGroup(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_variable_as_loss_on_two_device(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["mirrored"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            do_test(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

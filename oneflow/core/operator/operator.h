@@ -33,12 +33,9 @@ limitations under the License.
 
 namespace oneflow {
 
-struct OpContext {
-  virtual ~OpContext() {}
-};
-
 class LogicalNode;
 class MirroredSigInferHint;
+class OpNodeSignature;
 class Scope;
 
 class Operator {
@@ -61,13 +58,8 @@ class Operator {
   const std::string& op_name() const { return op_conf().name(); }
   DeviceType device_type() const;
   const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
-  virtual const PbMessage& GetCustomizedConf() const {
-    UNIMPLEMENTED();
-    return *static_cast<const PbMessage*>(nullptr);
-  }
-
-  bool HasFieldInCustomizedConf(const std::string& field_name) const {
-    return HasFieldInPbMessage(GetCustomizedConf(), field_name);
+  const PbMessage& GetCustomizedConf() const {
+    return GetMessageInPbMessage(op_conf(), op_conf().op_type_case());
   }
 
   template<typename T>
@@ -75,19 +67,6 @@ class Operator {
     return GetValFromPbMessage<T>(GetCustomizedConf(), field_name);
   }
 
-  int32_t GetEnumFromCustomizedConf(const std::string& field_name) const {
-    return GetEnumFromPbMessage(GetCustomizedConf(), field_name);
-  }
-
-  template<typename T>
-  const T& GetMsgFromCustomizedConf(const std::string& field_name) const {
-    return static_cast<const T&>(GetValFromCustomizedConf<const PbMessage&>(field_name));
-  }
-
-  template<typename T>
-  const PbRf<T>& GetPbRfFromCustomizedConf(const std::string& field_name) const {
-    return GetPbRfFromPbMessage<T>(GetCustomizedConf(), field_name);
-  }
   template<typename T>
   const PbRpf<T>& GetPbRpfFromCustomizedConf(const std::string& field_name) const {
     return GetPbRpfFromPbMessage<T>(GetCustomizedConf(), field_name);
@@ -105,62 +84,53 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(input_bns);
   DEFINE_BLOB_NAMES_GETTER(output_bns);
   DEFINE_BLOB_NAMES_GETTER(tmp_bns);
-  DEFINE_BLOB_NAMES_GETTER(const_buf_bns);
 
 #undef DEFINE_BLOB_NAMES_GETTER
 
-  Maybe<void> InferParallelSignatureIf();
+  const PbRpf<std::string>& input_output_bns() const { return input_output_bns_; };
 
-  // Read: shape of input_blobs
-  // Write: shape of output_blobs
+  Maybe<void> FillOpParallelDesc(const ParallelDesc& parallel_desc);
+  Maybe<const ParallelDesc> GetOpParallelDesc() const;
+
+  Maybe<void> InferParallelSignatureIf();
+  Maybe<const ParallelDesc> GetParallelDesc4BnInOp(const std::string& bn) const;
+
+  Maybe<void> FillLogicalInBlobDesc(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
+  Maybe<void> FillLogicalInBlobDesc(
+      const std::function<const BlobDesc&(const std::string&)>& BlobDesc4BnInOp);
+  Maybe<const BlobDesc> GetLogicalBlobDesc4Ibn(const std::string& ibn) const;
+  Maybe<void> FillLogicalOutBlobDesc(
+      const std::function<const BlobDesc&(const std::string&)>& BlobDesc4BnInOp);
+  Maybe<void> FillLogicalOutBlobDesc(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
+  Maybe<const BlobDesc> GetLogicalBlobDesc4Obn(const std::string& obn) const;
   Maybe<void> InferLogicalOutBlobDescsIf(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-      const std::function<Maybe<const OptInt64*>(const std::string&)>& BatchAxis4Ibn,
       const ParallelDesc& parallel_desc) const {
-    return InferLogicalOutBlobDescs(BlobDesc4BnInOp, BatchAxis4Ibn, parallel_desc);
+    return InferLogicalOutBlobDescs(BlobDesc4BnInOp, parallel_desc);
   }
   virtual Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-      const std::function<Maybe<const OptInt64*>(const std::string&)>& BatchAxis4Ibn,
       const ParallelDesc& parallel_desc) const;
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs
   Maybe<void> InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext*, const SbpSignature* sbp_signature,
-                               std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual Maybe<void> InferBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      const SbpSignature* sbp_signature, std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual Maybe<void> InferBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      const SbpSignature* sbp_signature) const;
-  virtual Maybe<void> InferBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*) const;
+                               const ParallelContext*, const SbpSignature* sbp_signature) const;
 
   Maybe<void> InferOutBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext*, const SbpSignature* sbp_signature,
-                                  std::function<void(OpContext*)> EnrollOpCtx) const;
+                                  const ParallelContext*, const SbpSignature* sbp_signature) const;
 
-  virtual Maybe<void> InferOutBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      const SbpSignature* sbp_signature, std::function<void(OpContext*)> EnrollOpCtx) const;
+  Maybe<void> InferInternalBlobDescsIf(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const;
 
-  Maybe<void> InferOutParallelDescIf(
-      std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
-      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&,
-      const SbpSignature*) const;
-  virtual Maybe<void> InferOutParallelDesc(
-      std::function<ParallelDesc*(const std::string&)> ParallelDesc4Obn,
-      std::function<const BlobDesc*(const std::string&)> LogicalBlobDesc4Ibn, const ParallelDesc&,
-      const SbpSignature*) const;
-
-  Maybe<void> InferBatchAxisIf(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4Ibn);
-  Maybe<void> NaiveInferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const;
+  Maybe<void> InferInplaceObn2IbnIf(
+      HashMap<std::string, std::string>* mut_inplace_obn2ibn,
+      HashMap<std::string, std::string>* con_inplace_obn2ibn,
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const;
 
   // Infer out blob's time shape
   Maybe<void> InferOutputBlobTimeShapeIf(
@@ -169,7 +139,8 @@ class Operator {
   virtual Maybe<void> InferOutputBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
-  // Infer blob's SbpSignature
+
+  Maybe<void> FillSbpSignature(const SbpSignature& sbp_signature);
   Maybe<void> InferSbpSignatureIf(
       const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -180,14 +151,11 @@ class Operator {
       std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
           MirroredSigInferHint4Ibn,
       bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc);
-  void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                     const ParallelContext*, KernelConf*, const OpContext*,
-                     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
-                     const ParallelDesc* parallel_desc) const;
+  void GenKernelConf(const std::function<const BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+                     const ParallelContext*, KernelConf*) const;
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
   Maybe<const SbpParallel*> SbpParallel4BnInOp(const std::string& bn_in_op) const;
-  Maybe<const OptInt64*> BatchAxis4BnInOp(const std::string& bn_in_op) const;
   Maybe<const OptMirroredParallel*> OptMirroredParallel4BnInOp(const std::string& bn_in_op) const;
 
   Maybe<void> GetSbpSignaturesIf(
@@ -204,18 +172,23 @@ class Operator {
   ParallelSignature* mut_parallel_signature() { return op_attribute_.mutable_parallel_signature(); }
 
   Maybe<const SbpSignature*> sbp_signature() const;
-  SbpSignature* mut_sbp_signature() { return op_attribute_.mutable_sbp_signature(); }
   BlobLastUsedSignature* mut_blob_last_used_signature() {
     return op_attribute_.mutable_blob_last_used_signature();
   }
   BlobBackwardUsedSignature* mut_blob_backward_used_signature() {
     return op_attribute_.mutable_blob_backward_used_signature();
   }
-  Maybe<void> FillLogicalBlobDescSignature(
-      const std::function<Maybe<const BlobDesc&>(const std::string&)>& BlobDesc4BnInOp);
 
  protected:
-  virtual Maybe<void> InferParallelSignature();
+  Maybe<void> FillBlobParallelDesc(
+      const std::function<Maybe<const ParallelDesc>(const std::string&)>& ParallelDesc4Bn);
+  virtual Maybe<void> InferBlobParallelDesc();
+  virtual Maybe<void> InferOutBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      const SbpSignature* sbp_signature) const;
+  virtual Maybe<void> InferInternalBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const;
   virtual Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
@@ -244,54 +217,19 @@ class Operator {
     UNIMPLEMENTED();
     return nullptr;
   }
-  template<typename T>
-  void SetValInCustomizedConf(const std::string& field_name, const T& val) const {
-    SetValInPbMessage<T>(&const_cast<PbMessage&>(GetCustomizedConf()), field_name, val);
-  }
 
-  template<typename T>
-  void SetValInCustomizedKernelConf(KernelConf* kernel_conf, const std::string& field_name,
-                                    const T& val) const {
-    PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);
-    SetValInPbMessage<T>(customized_conf, field_name, val);
-  }
-
-  template<typename T>
-  T* MutableMsgInCustomizedKernelConf(KernelConf* kernel_conf,
-                                      const std::string& field_name) const {
-    PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);
-    return static_cast<T*>(MutableMessageInPbMessage(customized_conf, field_name));
-  }
-
-  template<typename T>
-  void AddValToPbRfInCustomizedKernelConf(KernelConf* kernel_conf, const std::string& field_name,
-                                          const T& val) const {
-    PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);
-    AddValInPbRf<T>(customized_conf, field_name, val);
-  }
+  virtual Maybe<void> InferInplaceObn2Ibn(
+      HashMap<std::string, std::string>* mut_inplace_obn2ibn,
+      HashMap<std::string, std::string>* con_inplace_obn2ibn,
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const;
 
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      KernelConf*, const OpContext*,
-      std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
-      const ParallelDesc* parallel_desc) const;
-
-  virtual void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      KernelConf*, const OpContext*,
-      std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const;
-
-  virtual void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      KernelConf*, const OpContext*) const;
-  virtual void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      KernelConf*) const {}
+      KernelConf*) const;
 
   virtual LogicalBlobId lbi4ibn(const std::string& input_bn) const;
   virtual LogicalBlobId lbi4obn(const std::string& output_bn) const;
-
-  OperatorConf* mut_op_conf() { return op_attribute_.mutable_op_conf(); }
 
   // enroll data blobs
   void EnrollTmpBn(const std::string& dtbn);
@@ -317,33 +255,23 @@ class Operator {
   void EnrollRepeatedOutputBnWithSetter(
       const std::string& obn_prefix,
       const std::function<void(OutputBlobModifier*)>& ModifierSetter);
-  void EnrollConstBufBn(const std::string& cbbn);
 
   InputBlobModifier* EnrollInputBn(const std::string& ibn, bool has_diff);
   InputBlobModifier* EnrollInputBn(const std::string& ibn) { return EnrollInputBn(ibn, true); }
   OutputBlobModifier* EnrollOutputBn(const std::string& obn, bool has_diff);
   OutputBlobModifier* EnrollOutputBn(const std::string& obn) { return EnrollOutputBn(obn, true); }
 
-  void StrFieldTolower(const std::string& field_name);
-
   InputBlobModifier* MutInputBlobModifier4Ibn(const std::string& ibn);
   OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
   OptMirroredParallel* MutOptMirroredParallel(const std::string& bn_in_op);
 
  private:
-  virtual Maybe<void> InferBatchAxis(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-    return InferBatchAxis(BatchAxis4BnInOp);
-  }
-  virtual Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-    UNIMPLEMENTED() << " InferBatchAxis unimplemented, op name: " << op_name();
-    return Maybe<void>::Ok();
-  }
+  Maybe<void> FilterAndCheckValidSbpSignatureListByLogicalShape(
+      const SbpSignatureList& total_sbp_sig_list,
+      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc, SbpSignatureList* valid_sbp_sig_list) const;
 
   LogicalBlobId tbn2lbi(const std::string& data_tmp_bn) const;
-  virtual LogicalBlobId cbbn2lbi(const std::string& const_buf_bn) const;
   std::string Bn2ConfName(const std::string& bn) const;
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
     return op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi();
@@ -355,6 +283,12 @@ class Operator {
   OpAttribute op_attribute_;
   const JobDesc* job_desc_;
   HashMap<LogicalBlobId, std::string> lbi2obn_;
+  std::shared_ptr<const ParallelDesc> op_parallel_desc_;
+  std::unique_ptr<HashMap<std::string, std::shared_ptr<const ParallelDesc>>> bn2parallel_desc_;
+  std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> ibn2logical_blob_desc_;
+  std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> obn2logical_blob_desc_;
+  std::shared_ptr<const SbpSignature> sbp_signature_;
+  PbRpf<std::string> input_output_bns_;
 };
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
@@ -385,40 +319,40 @@ struct RuntimeRegstNum4OpSameOutputBlob final {
 };
 
 #define REGISTER_OP(op_type_case, OpType)                                       \
-  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, OnlyCpuSupportPredicator,       \
                          ([] { return new OnlyCpuSupportPredicator(false); })); \
-  REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
+  REGISTER_CLASS_WITH_ARGS(int32_t, op_type_case, Operator, OpType, const OperatorConf&)
 
 #define REGISTER_CPU_OP(op_type_case, OpType)                                  \
-  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,               \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, OnlyCpuSupportPredicator,      \
                          ([] { return new OnlyCpuSupportPredicator(true); })); \
-  REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
+  REGISTER_CLASS_WITH_ARGS(int32_t, op_type_case, Operator, OpType, const OperatorConf&)
 
 #define REGISTER_OP_CREATOR(op_type_case, creator)                              \
-  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, OnlyCpuSupportPredicator,       \
                          ([] { return new OnlyCpuSupportPredicator(false); })); \
-  REGISTER_CLASS_CREATOR(op_type_case, Operator, creator, const OperatorConf&)
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, Operator, creator, const OperatorConf&)
 
-#define REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(op_type_case, num)        \
-  REGISTER_CLASS_CREATOR(op_type_case, RuntimeRegstNum4OpSameOutputBlob, \
+#define REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(op_type_case, num)                 \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, RuntimeRegstNum4OpSameOutputBlob, \
                          ([] { return new RuntimeRegstNum4OpSameOutputBlob(num); }))
 
 struct IsInterfaceOpConf4OpTypeCase final {};
 
-#define REGISTER_INTERFACE_OP(op_type_case)                          \
-  REGISTER_CLASS_CREATOR(op_type_case, IsInterfaceOpConf4OpTypeCase, \
+#define REGISTER_INTERFACE_OP(op_type_case)                                   \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, IsInterfaceOpConf4OpTypeCase, \
                          ([] { return new IsInterfaceOpConf4OpTypeCase(); }))
 
 struct DisableInputBoxingGroup final {};
 
-#define REGISTER_DISABLE_INPUT_BOXING_GROUP(op_type_case)       \
-  REGISTER_CLASS_CREATOR(op_type_case, DisableInputBoxingGroup, \
+#define REGISTER_DISABLE_INPUT_BOXING_GROUP(op_type_case)                \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, DisableInputBoxingGroup, \
                          ([] { return new DisableInputBoxingGroup(); }))
 
 struct IsTickTockOpTypeCase final {};
 
-#define REGISTER_TICK_TOCK_OP(op_type_case)                  \
-  REGISTER_CLASS_CREATOR(op_type_case, IsTickTockOpTypeCase, \
+#define REGISTER_TICK_TOCK_OP(op_type_case)                           \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, IsTickTockOpTypeCase, \
                          ([] { return new IsTickTockOpTypeCase; }))
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, const JobDesc*);
@@ -457,15 +391,17 @@ inline std::string GenLogicalBlobName(const LogicalBlobId& lbi) {
 Maybe<bool> GetSbpParallelInLbnOrNothing(const std::string& lbn, SbpParallel* sbp);
 Maybe<bool> ParseDisableBoxingFlag(const std::string& lbn_with_hint, bool* disable_boxing);
 
-Maybe<void> InferOpSbpSignature(
-    Operator* op, const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc,
-    const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint,
-    std::function<Maybe<const OptInt64*>(const std::string&)> BatchAxis4BnInOp);
+Maybe<void> InferOpSbpSignature(Operator* op, const SbpSignature& sbp_sig_conf,
+                                const ParallelDesc& parallel_desc,
+                                const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint);
 
-std::string GetInputLbnInOpCustomizedConf(const PbMessage& msg,
+std::string GetInputLbnInOpCustomizedConf(const OperatorConf& op_conf,
                                           const std::string& fd_name_may_have_idx);
-void ReplaceInputLbnInOpCustomizedConf(PbMessage* msg, const std::string& fd_name_may_have_idx,
-                                       const std::string& old_val, const std::string& new_val);
+
+// return old value
+std::string ReplaceInputLbnInOpCustomizedConf(OperatorConf* op_conf,
+                                              const std::string& fd_name_may_have_idx,
+                                              const std::string& new_val);
 
 bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
 

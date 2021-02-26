@@ -33,11 +33,8 @@ class BlobDesc final {
   explicit BlobDesc(DataType dtype) : BlobDesc(Shape(), dtype) {}
   explicit BlobDesc(const BlobDescProto& proto);
   explicit BlobDesc(const BlobDesc&);
-  BlobDesc(const TensorPodDesc& body, bool is_tensor_list, bool is_body_disabled, bool is_dynamic)
-      : body_(body),
-        is_tensor_list_(is_tensor_list),
-        is_body_disabled_(is_body_disabled),
-        is_dynamic_(is_dynamic) {}
+  BlobDesc(const TensorPodDesc& body, bool is_tensor_list, bool is_dynamic)
+      : body_(body), is_tensor_list_(is_tensor_list), is_dynamic_(is_dynamic) {}
 
   static const int32_t kAlignSize = 512;
 
@@ -53,8 +50,6 @@ class BlobDesc final {
   void set_data_type(DataType val) { body_.set_data_type(val); }
 
   bool is_tensor_list() const { return is_tensor_list_; }
-  bool is_body_disabled() const { return is_body_disabled_; }
-  void set_is_body_disabled(bool val) { is_body_disabled_ = val; }
   bool header_is_opaque() const { return opaque_header_ != nullptr; }
   bool is_dynamic() const { return is_dynamic_; }
   void set_is_dynamic(bool);
@@ -63,16 +58,12 @@ class BlobDesc final {
   void ToProto(BlobDescProto*) const;
 
   void CopyFrom(const BlobDesc&);
-  // legacy interface, shouldn't use in new code
-  void CopyMetaFrom(const BlobDesc& other);
-  void CopyAllFrom(const BlobDesc& other) { CopyFrom(other); }
 
  private:
   void InitFromProto(const BlobDescProto& proto);
 
   TensorPodDesc body_;
   bool is_tensor_list_;
-  bool is_body_disabled_;
   bool is_dynamic_;
 
   // TODO(niuchong): remove opaque_header

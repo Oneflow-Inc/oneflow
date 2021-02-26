@@ -26,11 +26,14 @@ import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.interpret_util as interpret_util
-import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
+import oneflow.python.framework.hob as hob
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow
+
+oneflow_api = oneflow.oneflow_api
 
 
 @oneflow_export("assign")
@@ -60,7 +63,7 @@ def api_system_assign(ref, value, validate_shape=None, use_locking=None, name=No
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_system_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     op_conf = _SystemAssignOpConf(ref, value, name=name)
-    device_tag, machine_device_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
+    device_tag, machine_device_ids = oneflow_api.GetDeviceTagAndMachineDeviceIds(
         ref.parallel_conf
     )
     with oneflow.scope.placement(device_tag, machine_device_ids):
@@ -75,6 +78,17 @@ def eager_system_assign(ref, value, validate_shape=None, use_locking=None, name=
     vm_util.LogicalRun(
         lambda builder: boxing_util.BuildAssignInstruction(
             builder, ref.blob_object, value.blob_object, op_conf
+        )
+    )
+    return ref
+
+
+@oneflow_export("experimental.eager_assign_121")
+def api_one_to_one_assign(ref, value):
+    assert hob.eager_execution_enabled(None)
+    vm_util.LogicalRun(
+        lambda builder: builder.Build121AssignInstruction(
+            ref.blob_object, value.blob_object
         )
     )
     return ref

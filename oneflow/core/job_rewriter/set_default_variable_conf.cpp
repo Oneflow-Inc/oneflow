@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/job_set_compile_ctx.h"
 
@@ -21,11 +21,15 @@ namespace oneflow {
 
 namespace {
 
-class SetDefaultVariableConf final : public OpGraphPass {
-  bool IsEnabled() const override { return true; }
+class SetDefaultVariableConf final : public JobPass {
+ public:
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override {
-    auto BlobDesc4ModelLbi = op_graph.MakeGetterBlobDesc4ModelLbi();
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
     op_graph.ForEachNode([&](OpNode* op_node) {
       if (op_node->op().op_conf().has_variable_conf()) {
         OperatorConf variable_op_conf(op_node->op().op_conf());
@@ -68,7 +72,7 @@ class SetDefaultVariableConf final : public OpGraphPass {
   }
 };
 
-REGISTER_FUNCTION_PASS("SetDefaultVariableConf", SetDefaultVariableConf);
+REGISTER_JOB_PASS("SetDefaultVariableConf", SetDefaultVariableConf);
 
 }  // namespace
 

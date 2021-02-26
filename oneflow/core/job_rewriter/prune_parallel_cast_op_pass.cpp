@@ -13,19 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
 namespace {
 
-class PruneParallelCastOpsPass final : public OpGraphPass {
+class PruneParallelCastOpsPass final : public JobPass {
  public:
   PruneParallelCastOpsPass() = default;
   ~PruneParallelCastOpsPass() override = default;
-  bool IsEnabled() const override { return GlobalJobDesc().prune_parallel_cast_ops(); }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+
+  bool IsEnabled(const JobPassCtx& ctx) const { return ctx.job_desc().prune_parallel_cast_ops(); }
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 };
 
 Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
@@ -40,13 +49,15 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
   });
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
-    if (!op_conf.has_parallel_cast_conf()) { return; }
     if (!op_conf.ctrl_in_op_name().empty()) { return; }
     if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return; }
+    if (!op_conf.has_user_conf()) { return; }
+    if (op_conf.user_conf().op_type_name() != "parallel_cast") { return; }
     if (op_node->in_edges().size() != 1) { return; }
-    const OpNode* producer = op_node->SoleInEdge()->src_node();
-    const LogicalBlobId& parallel_cast_in_lbi = op_node->op().BnInOp2Lbi("in");
-    const LogicalBlobId& parallel_cast_out_lbi = op_node->op().BnInOp2Lbi("out");
+    user_op::UserOpConfWrapper conf_wrapper(op_conf);
+    const LogicalBlobId& parallel_cast_in_lbi = GenLogicalBlobId(conf_wrapper.input("in", 0));
+    const LogicalBlobId& parallel_cast_out_lbi = GenLogicalBlobId(conf_wrapper.output("out", 0));
+    const OpNode* producer = op_graph.OpNode4OpName(parallel_cast_in_lbi.op_name());
     const SbpParallel& parallel_cast_sbp_parallel = op_node->SbpParallel4Lbi(parallel_cast_in_lbi);
     const SbpParallel& producer_sbp_parallel = producer->SbpParallel4Lbi(parallel_cast_in_lbi);
     if (op_node->parallel_desc() != producer->parallel_desc()) { return; }
@@ -55,7 +66,10 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
     }
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
-      if (consumer->op().op_conf().has_parallel_cast_conf()) { return; }
+      if (consumer->op().op_conf().has_user_conf()
+          && consumer->op().op_conf().user_conf().op_type_name() == "parallel_cast") {
+        return;
+      }
       if (consumer->parallel_desc() != op_node->parallel_desc()) { return; }
       if (consumer->SbpParallel4Lbi(parallel_cast_out_lbi) != parallel_cast_sbp_parallel) {
         return;
@@ -70,12 +84,11 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
         op_name2op_conf[consumer_op_name] = consumer->op().op_conf();
       }
       OperatorConf& consumer_op_conf = op_name2op_conf.at(consumer_op_name);
-      PbMessage* conf =
-          MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
       for (const std::string& ibn : consumer->op().input_bns()) {
         if (consumer->op().BnInOp2Lbi(ibn) == parallel_cast_out_lbi) {
-          ReplaceInputLbnInOpCustomizedConf(conf, ibn, GenLogicalBlobName(parallel_cast_out_lbi),
-                                            GenLogicalBlobName(parallel_cast_in_lbi));
+          const auto& new_val = GenLogicalBlobName(parallel_cast_in_lbi);
+          const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, new_val);
+          CHECK_EQ(GenLogicalBlobName(parallel_cast_out_lbi), old_val);
         }
       }
     }
@@ -90,6 +103,6 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
 
 }  // namespace
 
-REGISTER_FUNCTION_PASS("PruneParallelCastOpsPass", PruneParallelCastOpsPass);
+REGISTER_JOB_PASS("PruneParallelCastOpsPass", PruneParallelCastOpsPass);
 
 }  // namespace oneflow

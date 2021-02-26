@@ -23,11 +23,11 @@ namespace user_op {
 REGISTER_USER_OP("same_padding")
     .Input("x")
     .Output("y")
-    .Attr("padding", UserOpAttrType::kAtString)
-    .Attr("data_format", UserOpAttrType::kAtString)
-    .Attr("kernel_size", UserOpAttrType::kAtListInt32)
-    .Attr("strides", UserOpAttrType::kAtListInt32)
-    .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
+    .Attr<std::string>("padding")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("strides")
+    .Attr<std::vector<int32_t>>("dilation_rate")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
@@ -74,11 +74,11 @@ REGISTER_USER_OP("same_padding_grad")
     .Input("x_like")
     .Input("dy")
     .Output("dx")
-    .Attr("padding", UserOpAttrType::kAtString)
-    .Attr("data_format", UserOpAttrType::kAtString)
-    .Attr("kernel_size", UserOpAttrType::kAtListInt32)
-    .Attr("strides", UserOpAttrType::kAtListInt32)
-    .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
+    .Attr<std::string>("padding")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("strides")
+    .Attr<std::vector<int32_t>>("dilation_rate")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("x_like", 0);
       return Maybe<void>::Ok();

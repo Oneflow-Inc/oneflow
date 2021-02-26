@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/profiler.h"
@@ -30,7 +30,6 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
-#include "oneflow/core/job/lbi_diff_watcher_info.pb.h"
 #include "oneflow/core/job/job_set_compile_ctx.h"
 #include "oneflow/core/job/runtime_buffer_managers_scope.h"
 #include "oneflow/core/framework/load_library.h"
@@ -53,8 +52,7 @@ void PushAvailableMemDescOfThisMachine() {
   }
 #endif
   this_machine_mem_desc.add_zone_size(GetAvailableCpuMemSize());
-  Global<CtrlClient>::Get()->PushKV(GetAmdCtrlKey(Global<MachineCtx>::Get()->this_machine_id()),
-                                    this_machine_mem_desc);
+  Global<CtrlClient>::Get()->PushKV(GetAmdCtrlKey(GlobalProcessCtx::Rank()), this_machine_mem_desc);
 }
 
 AvailableMemDesc PullAvailableMemDesc() {
@@ -71,25 +69,26 @@ AvailableMemDesc PullAvailableMemDesc() {
 SessionGlobalObjectsScope::SessionGlobalObjectsScope() {}
 
 Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
+  session_id_ = config_proto.session_id();
   Global<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
   Global<ResourceDesc, ForSession>::New(config_proto.resource());
   Global<const IOConf>::New(config_proto.io_conf());
+  Global<const IOConf>::SessionNew(config_proto.session_id(), config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
   Global<IDMgr>::New();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()
+  if (GlobalProcessCtx::IsThisProcessMaster()
       && Global<const ProfilerConf>::Get()->collect_act_event()) {
     Global<Profiler>::New();
   }
   PushAvailableMemDescOfThisMachine();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<AvailableMemDesc>::New();
     *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
     Global<JobName2JobId>::New();
     Global<CriticalSectionDesc>::New();
     Global<InterUserJobInfo>::New();
     Global<LazyJobBuildAndInferCtxMgr>::New();
-    Global<LbiDiffWatcherInfo>::New();
     Global<JobSetCompileCtx>::New();
     Global<RuntimeBufferManagersScope>::New();
   }
@@ -98,10 +97,9 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
 }
 
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<RuntimeBufferManagersScope>::Delete();
     Global<JobSetCompileCtx>::Delete();
-    Global<LbiDiffWatcherInfo>::Delete();
     Global<LazyJobBuildAndInferCtxMgr>::Delete();
     Global<InterUserJobInfo>::Delete();
     Global<CriticalSectionDesc>::Delete();
@@ -112,6 +110,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   Global<IDMgr>::Delete();
   Global<const ProfilerConf>::Delete();
   Global<const IOConf>::Delete();
+  Global<const IOConf>::SessionDelete(session_id_);
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource());
 }

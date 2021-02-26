@@ -17,27 +17,28 @@ limitations under the License.
 #include "oneflow/core/vm/init_symbol_instruction_type.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/scope.h"
-#include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
+#include "oneflow/core/operator/op_conf_symbol.h"
 
 namespace oneflow {
 namespace eager {
 
-COMMAND(Global<vm::SymbolStorage<Scope>>::SetAllocated(new vm::SymbolStorage<Scope>()));
+COMMAND(Global<symbol::Storage<Scope>>::SetAllocated(new symbol::Storage<Scope>()));
 using ScopeInstr = vm::InitSymbolInstructionType<Scope>;
 COMMAND(vm::RegisterInstructionType<ScopeInstr>("InitScopeSymbol"));
 
-COMMAND(Global<vm::SymbolStorage<JobDesc>>::SetAllocated(new vm::SymbolStorage<JobDesc>()));
+COMMAND(Global<symbol::Storage<JobDesc>>::SetAllocated(new symbol::Storage<JobDesc>()));
 using JobDescInstr = vm::InitSymbolInstructionType<JobDesc>;
 COMMAND(vm::RegisterInstructionType<JobDescInstr>("InitJobDescSymbol"));
 
-COMMAND(
-    Global<vm::SymbolStorage<OperatorConf>>::SetAllocated(new vm::SymbolStorage<OperatorConf>()));
-using OperatorConfInstr = vm::InitSymbolInstructionType<OperatorConf>;
+COMMAND(Global<symbol::Storage<OperatorConfSymbol>>::SetAllocated(
+    new symbol::Storage<OperatorConfSymbol>()));
+
+using OperatorConfInstr = vm::InitSymbolInstructionType<OperatorConfSymbol>;
 COMMAND(vm::RegisterInstructionType<OperatorConfInstr>("InitOperatorConfSymbol"));
 
-COMMAND(Global<vm::SymbolStorage<OpNodeSignatureDesc>>::SetAllocated(
-    new vm::SymbolStorage<OpNodeSignatureDesc>()));
+COMMAND(Global<symbol::Storage<OpNodeSignatureDesc>>::SetAllocated(
+    new symbol::Storage<OpNodeSignatureDesc>()));
 using OpNodeSignatureInstr = vm::InitSymbolInstructionType<OpNodeSignatureDesc>;
 COMMAND(vm::RegisterInstructionType<OpNodeSignatureInstr>("InitOpNodeSignatureDescSymbol"));
 

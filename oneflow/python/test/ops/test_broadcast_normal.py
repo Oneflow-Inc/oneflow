@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -70,8 +71,6 @@ def RunOneflowOp(device_type, flow_op, x, y, data_type):
             return loss
 
     # Oneflow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     out = FlowJob(x, y).get().numpy()
     x_diff = test_global_storage.Get("x_diff")
     y_diff = test_global_storage.Get("y_diff")
@@ -100,8 +99,8 @@ def compare_with_tensorflow_grad(
     input_maxval=10,
     out_rtol=1e-5,
     out_atol=1e-5,
-    diff_rtol=1e-5,
-    diff_atol=1e-5,
+    diff_rtol=1e-4,
+    diff_atol=1e-3,
 ):
     assert device_type in ["gpu", "cpu"]
 
@@ -181,85 +180,85 @@ def compare_with_tensorflow(
     flow.clear_default_session()
 
 
-def test_broadcast_add(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["flow_op"] = [flow.math.add]
-    arg_dict["tf_op"] = [tf.math.add]
-    arg_dict["x_shape"] = [(3, 1, 4, 1)]
-    arg_dict["y_shape"] = [(4, 1, 6)]
-    arg_dict["data_type"] = ["float32", "double"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow_grad(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestBroadcastNormal(flow.unittest.TestCase):
+    def test_broadcast_add(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["flow_op"] = [flow.math.add]
+        arg_dict["tf_op"] = [tf.math.add]
+        arg_dict["x_shape"] = [(3, 1, 4, 1)]
+        arg_dict["y_shape"] = [(4, 1, 6)]
+        arg_dict["data_type"] = ["float32", "double"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow_grad(*arg)
+
+    def test_broadcast_sub(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["flow_op"] = [flow.math.subtract]
+        arg_dict["tf_op"] = [tf.math.subtract]
+        arg_dict["x_shape"] = [(3, 1, 4, 1)]
+        arg_dict["y_shape"] = [(4, 1, 6)]
+        arg_dict["data_type"] = ["float32", "double"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_broadcast_mul(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["flow_op"] = [flow.math.multiply]
+        arg_dict["tf_op"] = [tf.math.multiply]
+        arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
+        arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
+        arg_dict["data_type"] = ["float32", "double"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow_grad(*arg)
+
+    def test_broadcast_div(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["flow_op"] = [flow.math.divide]
+        arg_dict["tf_op"] = [tf.math.divide]
+        arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
+        arg_dict["y_shape"] = [(3, 4, 1, 1, 5)]
+        arg_dict["data_type"] = ["float32", "double"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow_grad(*arg)
+
+    def test_broadcast_floormod(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["flow_op"] = [flow.math.mod]
+        arg_dict["tf_op"] = [tf.math.floormod]
+        arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
+        arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
+        arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_broadcast_maximum(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["flow_op"] = [flow.math.maximum]
+        arg_dict["tf_op"] = [tf.math.maximum]
+        arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
+        arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
+        arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_broadcast_minimum(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["flow_op"] = [flow.math.minimum]
+        arg_dict["tf_op"] = [tf.math.minimum]
+        arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
+        arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
+        arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
 
-def test_broadcast_sub(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["flow_op"] = [flow.math.subtract]
-    arg_dict["tf_op"] = [tf.math.subtract]
-    arg_dict["x_shape"] = [(3, 1, 4, 1)]
-    arg_dict["y_shape"] = [(4, 1, 6)]
-    arg_dict["data_type"] = ["float32", "double"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-
-def test_broadcast_mul(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["flow_op"] = [flow.math.multiply]
-    arg_dict["tf_op"] = [tf.math.multiply]
-    arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
-    arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
-    arg_dict["data_type"] = ["float32", "double"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow_grad(*arg)
-
-
-def test_broadcast_div(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["flow_op"] = [flow.math.divide]
-    arg_dict["tf_op"] = [tf.math.divide]
-    arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
-    arg_dict["y_shape"] = [(3, 4, 1, 1, 5)]
-    arg_dict["data_type"] = ["float32", "double"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow_grad(*arg)
-
-
-def test_broadcast_floormod(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["flow_op"] = [flow.math.mod]
-    arg_dict["tf_op"] = [tf.math.floormod]
-    arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
-    arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
-    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-
-def test_broadcast_maximum(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["flow_op"] = [flow.math.maximum]
-    arg_dict["tf_op"] = [tf.math.maximum]
-    arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
-    arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
-    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-
-def test_broadcast_minimum(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["flow_op"] = [flow.math.minimum]
-    arg_dict["tf_op"] = [tf.math.minimum]
-    arg_dict["x_shape"] = [(3, 1, 4, 5, 1)]
-    arg_dict["y_shape"] = [(1, 4, 1, 1, 5)]
-    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+if __name__ == "__main__":
+    unittest.main()

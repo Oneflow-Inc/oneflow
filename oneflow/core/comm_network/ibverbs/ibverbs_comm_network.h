@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 
-#if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -34,7 +34,9 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   IBVerbsCommNet() = delete;
   ~IBVerbsCommNet();
 
-  static void Init(const Plan& plan) { Global<CommNet>::SetAllocated(new IBVerbsCommNet(plan)); }
+  DEPRECATED static void Init(const Plan& plan) {
+    Global<CommNet>::SetAllocated(new IBVerbsCommNet(plan));
+  }
 
   void RegisterMemoryDone() override;
 
@@ -45,7 +47,7 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
     return new IBVerbsMemDesc(pd_, ptr, byte_size);
   }
 
-  IBVerbsCommNet(const Plan&);
+  DEPRECATED IBVerbsCommNet(const Plan&);
   void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
   void PollCQ();
 
@@ -60,6 +62,7 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   std::thread poll_thread_;
 };
 
+// DEPRECATED
 template<>
 class Global<IBVerbsCommNet> final {
  public:
@@ -68,6 +71,6 @@ class Global<IBVerbsCommNet> final {
 
 }  // namespace oneflow
 
-#endif  // WITH_RDMA && PLATFORM_POSIX
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_COMM_NETWORK_H_

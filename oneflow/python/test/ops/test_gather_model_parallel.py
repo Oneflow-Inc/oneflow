@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -60,12 +61,18 @@ def _test_gather_model_parallel_fw(
         test_case.assertTrue(np.array_equal(out, out_arr))
 
 
-def test_gather_model_parallel_fw(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["params_shape"] = [(96, 96, 96)]
-    arg_dict["indices_shape"] = [(32, 48)]
-    arg_dict["axis"] = [0, 1, 2]
-    arg_dict["split_axis"] = [0, 1, 2]
-    for arg in GenArgList(arg_dict):
-        _test_gather_model_parallel_fw(test_case, *arg)
+@flow.unittest.skip_unless_1n4d()
+class TestGatherModelParallel(flow.unittest.TestCase):
+    def test_gather_model_parallel_fw(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["params_shape"] = [(96, 96, 96)]
+        arg_dict["indices_shape"] = [(32, 48)]
+        arg_dict["axis"] = [0, 1, 2]
+        arg_dict["split_axis"] = [0, 1, 2]
+        for arg in GenArgList(arg_dict):
+            _test_gather_model_parallel_fw(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

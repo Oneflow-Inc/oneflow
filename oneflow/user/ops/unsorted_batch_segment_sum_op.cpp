@@ -21,7 +21,7 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
     .Input("data")
     .Input("segment_ids")
     .Output("out")
-    .Attr("num_segments", UserOpAttrType::kAtInt64)
+    .Attr<int64_t>("num_segments")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
       const user_op::TensorDesc* segment_ids = ctx->TensorDesc4ArgNameAndIndex("segment_ids", 0);
@@ -48,10 +48,6 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
       user_op::InputArgModifier* segment_ids_modifier = GetInputArgModifierFn("segment_ids", 0);
       CHECK_NOTNULL(segment_ids_modifier);
       segment_ids_modifier->set_requires_grad(false);
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("data", 0);
-      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int64_t segment_ids_num_axes =

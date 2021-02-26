@@ -13,9 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/acc_compute_actor.h"
+#include "oneflow/core/actor/accumulate_compute_actor.h"
 
 namespace oneflow {
+
+class AccCompActor final : public AccumulateCompActor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AccCompActor);
+  AccCompActor() = default;
+  ~AccCompActor() override = default;
+
+ private:
+  void VirtualCompActorInit(const TaskProto& proto) override;
+};
 
 void AccCompActor::VirtualCompActorInit(const TaskProto& proto) {
   const Shape& one_time_shape = Global<RegstMgr>::Get()
@@ -25,8 +35,7 @@ void AccCompActor::VirtualCompActorInit(const TaskProto& proto) {
                                     ->RegstDesc4RegstDescId(Name2SoleRegstDescId("acc"))
                                     .data_regst_time_shape();
   CHECK_GE(one_time_shape.elem_cnt(), acc_time_shape.elem_cnt());
-  AccumulateCompActor::Init(proto, one_time_shape.elem_cnt() / acc_time_shape.elem_cnt(),
-                            ColIdOrder::kAscending);
+  AccumulateCompActor::Init(proto, one_time_shape.elem_cnt() / acc_time_shape.elem_cnt());
 }
 
 REGISTER_ACTOR(TaskType::kAcc, AccCompActor);

@@ -22,10 +22,9 @@ limitations under the License.
 
 namespace oneflow {
 
-void AutoSourceTick(const OpGraph& op_graph, JobBuilder* job_builder);
+void AutoPrependTick(const OpGraph& op_graph, JobBuilder* job_builder);
 void AddTickForTimeShape(const OpGraph& op_graph, JobBuilder* job_builder);
-void AutoSinkTick(const OpGraph& op_graph, JobBuilder* job_builder);
-void AddGlobalTotalJobCriticalSection(const Job& job);
+void AutoSourceAndSinkTick(const OpGraph& op_graph, JobBuilder* job_builder);
 void AddGlobalInputCriticalSections(const OpGraph& op_graph, JobBuilder* job_builder);
 void AddGlobalOutputCriticalSections(const OpGraph& op_graph, JobBuilder* job_builder);
 
@@ -45,7 +44,7 @@ class MutOpConTickInputHelper {
 };
 
 #define REGISTER_AUTO_TICK(op_type_case, HelperType) \
-  REGISTER_CLASS(op_type_case, MutOpConTickInputHelper, HelperType)
+  REGISTER_CLASS(int32_t, op_type_case, MutOpConTickInputHelper, HelperType)
 
 }  // namespace oneflow
 

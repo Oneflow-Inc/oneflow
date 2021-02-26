@@ -27,6 +27,7 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow
+import oneflow_api
 
 
 def GetCurJobConfigProto():
@@ -42,7 +43,7 @@ def GetEagerCurJobConfigProto():
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def GetLazyCurJobConfigProto():
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     function_desc = session_ctx.GetDefaultSession().GetLazyFunctionDesc(job_name)
     assert function_desc is not None
     return function_desc.job_config_proto

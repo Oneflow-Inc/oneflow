@@ -17,11 +17,11 @@ limitations under the License.
 #include <mutex>
 #include "oneflow/core/common/str_util.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 #include <dlfcn.h>
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX
 
 #define FS_RETURN_FALSE_IF_FALSE(val) \
   if (!val) {                         \
@@ -35,7 +35,7 @@ namespace fs {
 
 namespace internal {
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 bool GetSymbolFromLibrary(void* handle, const char* symbol_name, void** symbol) {
   *symbol = dlsym(handle, symbol_name);
@@ -55,7 +55,7 @@ bool LoadLibrary(const char* library_filename, void** handle) {
   return true;
 }
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX
 
 }  // namespace internal
 
