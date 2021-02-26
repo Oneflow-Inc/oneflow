@@ -18,6 +18,7 @@ limitations under the License.
 #include <memory>
 #include <vector>
 #include "oneflow/api/python/autograd/autograd.h"
+#include "oneflow/api/python/autograd/autograd_api.h"
 #include "oneflow/api/python/of_api_registry.h"
 
 namespace oneflow {
@@ -68,10 +69,10 @@ Maybe<std::shared_ptr<one::TensorList>> Grad(const std::shared_ptr<one::TensorLi
   return RunBackward(outputs.get(), inputs.get(), gradients.get(), retain_graph, create_graph);
 }
 
+}  // namespace autograd
+}  // namespace oneflow
+
 ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
   m.def("backward", &Backward);
   m.def("grad", &Grad);
 }
-
-}  // namespace autograd
-}  // namespace oneflow
