@@ -40,6 +40,8 @@ class BoxingOp final : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
+  Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+                             bool is_logical) const;
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,

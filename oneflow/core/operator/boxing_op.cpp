@@ -60,9 +60,8 @@ Symbol<OperatorConf> BoxingOp::GetOpConfWithoutOpNameAndLbn() const {
   return SymbolOf(op_conf);
 }
 
-Maybe<void> BoxingOp::InferLogicalOutBlobDescs(
-    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const ParallelDesc& parallel_desc) const {
+Maybe<void> BoxingOp::InferBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp, bool is_logical) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   BlobDesc* first_in_blob = BlobDesc4BnInOp(input_bns().Get(0));
   if (conf.in_box_case() == BoxingOpConf::kAddBox) {
@@ -73,7 +72,7 @@ Maybe<void> BoxingOp::InferLogicalOutBlobDescs(
   }
 
   DimVector data_tmp_blob_shape_vec = BlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
-  InferTmpBlobDesc(BlobDesc4BnInOp, &data_tmp_blob_shape_vec, true);
+  InferTmpBlobDesc(BlobDesc4BnInOp, &data_tmp_blob_shape_vec, is_logical);
 
   if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
     const BoxSplitConf& split_conf = conf.split_box();
@@ -98,42 +97,16 @@ Maybe<void> BoxingOp::InferLogicalOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> BoxingOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(BlobDesc4BnInOp, true);
+}
+
 Maybe<void> BoxingOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  const BoxingOpConf& conf = op_conf().boxing_conf();
-  BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
-  if (conf.in_box_case() == BoxingOpConf::kAddBox) {
-    const Shape& first_in_blob_shape = first_in_blob->shape();
-    for (const std::string& ibn : input_bns()) {
-      CHECK_EQ_OR_RETURN(first_in_blob_shape, GetBlobDesc4BnInOp(ibn)->shape());
-    }
-  }
-
-  DimVector data_tmp_blob_shape_vec = GetBlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
-  InferTmpBlobDesc(GetBlobDesc4BnInOp, &data_tmp_blob_shape_vec, false);
-
-  if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
-    const BoxSplitConf& split_conf = conf.split_box();
-    CHECK_GE_OR_RETURN(split_conf.axis(), 0);
-    CHECK_LT_OR_RETURN(split_conf.axis(), data_tmp_blob_shape_vec.size());
-    FOR_RANGE(size_t, i, 0, output_bns().size()) {
-      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
-      *out_blob_desc = *first_in_blob;
-      CHECK_GT_OR_RETURN(split_conf.part_num(i), 0);
-      data_tmp_blob_shape_vec[split_conf.axis()] = split_conf.part_num(i);
-      out_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
-    }
-  } else if (conf.out_box_case() == BoxingOpConf::kCloneBox) {
-    for (const std::string& obn : output_bns()) {
-      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(obn);
-      *out_blob_desc = *first_in_blob;
-      out_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
-    }
-  } else {
-    UNIMPLEMENTED_THEN_RETURN();
-  }
-  return Maybe<void>::Ok();
+  return InferBlobDescs(GetBlobDesc4BnInOp, false);
 }
 
 Maybe<void> BoxingOp::InferTmpBlobDesc(
