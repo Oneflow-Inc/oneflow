@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_CUH_
+#define _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_CUH_
 #include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
@@ -35,3 +37,5 @@ struct BinaryElemwiseXpuFunctor<DeviceType::kGPU, FunctorT, OutputT, InputA, Inp
 };
 
 }  // namespace oneflow
+
+#endif  // _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_CUH_

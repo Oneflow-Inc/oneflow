@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef _ONEFLOW_USER_KERNELS_ACTIVATION_OPS_H_
+#define _ONEFLOW_USER_KERNELS_ACTIVATION_OPS_H_
 #include "oneflow/user/kernels/elementwise_xpu_kernel.h"
 
 namespace oneflow {
@@ -109,12 +111,12 @@ struct HardtanhGradFunctor {
   const T max_val;
 };
 
-#define REGISTER_ELU_KERNEL(device, dtype)                                                        \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITH_ATTR(                                                  \
-      device, "elu", EluFunctor, ctx->Attr<double>("alpha"), dtype, dtype, "out", "in");          \
-  REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITH_ATTR(device, "elu_grad", EluGradFunctor,              \
-                                                 ctx->Attr<double>("alpha"), dtype, dtype, dtype, \
-                                                 "dx", "x", "dy");
+#define REGISTER_ELU_KERNEL(device, dtype)                                                         \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITH_ATTR(device, "elu", EluFunctor, dtype, dtype, "out",    \
+                                                "in", ctx->Attr<double>("alpha"));                 \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITH_ATTR(device, "elu_grad", EluGradFunctor, dtype, dtype, \
+                                                 dtype, "dx", "x", "dy",                           \
+                                                 ctx->Attr<double>("alpha"));
 
 #define REGISTER_HARDSWISH_KERNEL(device, dtype)                                                 \
   REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(device, "hardswish", HardswishFunctor, dtype, \
@@ -128,39 +130,46 @@ struct HardtanhGradFunctor {
   REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(                                          \
       device, "hardsigmoid_grad", HardsigmoidGradFunctor, dtype, dtype, dtype, "dx", "x", "dy");
 
-#define REGISTER_HARDTANH_KERNEL(device, dtype)                                                 \
-  REGISTER_USER_KERNEL("hardtanh")                                                              \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                      \
-        return new UnaryElemwiseXpuKernel<device, HardtanhFunctor<dtype>, dtype, dtype>(        \
-            [](user_op::KernelComputeContext* ctx) {                                            \
-              return HardtanhFunctor<dtype>(ctx->Attr<double>("min_val"),                       \
-                                            ctx->Attr<double>("max_val"));                      \
-            },                                                                                  \
-            "out", "in");                                                                       \
-      })                                                                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))          \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
-        return Maybe<void>::Ok();                                                               \
-      });                                                                                       \
-  REGISTER_USER_KERNEL("hardtanh_grad")                                                         \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                      \
-        return new BinaryElemwiseXpuKernel<device, HardtanhGradFunctor<dtype>, dtype, dtype,    \
-                                           dtype>(                                              \
-            [](user_op::KernelComputeContext* ctx) {                                            \
-              return HardtanhGradFunctor<dtype>(ctx->Attr<double>("min_val"),                   \
-                                                ctx->Attr<double>("max_val"));                  \
-            },                                                                                  \
-            "dx", "y", "dy");                                                                   \
-      })                                                                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \
-        return Maybe<void>::Ok();                                                               \
-      });
+#define REGISTER_HARDTANH_KERNEL(device, dtype)                                                    \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITH_ATTR(device, "hardtanh", HardtanhFunctor, dtype, dtype, \
+                                                "out", "in", ctx->Attr<double>("min_val"),         \
+                                                ctx->Attr<double>("max_val"));
+
+// #define REGISTER_HARDTANH_KERNEL(device, dtype)                                                 \
+//   REGISTER_USER_KERNEL("hardtanh")                                                              \
+//       .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                      \
+//         return new UnaryElemwiseXpuKernel<device, HardtanhFunctor<dtype>, dtype, dtype>(        \
+//             [](user_op::KernelComputeContext* ctx) {                                            \
+//               return HardtanhFunctor<dtype>(ctx->Attr<double>("min_val"),                       \
+//                                             ctx->Attr<double>("max_val"));                      \
+//             },                                                                                  \
+//             "out", "in");                                                                       \
+//       })                                                                                        \
+//       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+//                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))          \
+//       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+//                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+//         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
+//         return Maybe<void>::Ok();                                                               \
+//       });                                                                                       \
+//   REGISTER_USER_KERNEL("hardtanh_grad")                                                         \
+//       .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                      \
+//         return new BinaryElemwiseXpuKernel<device, HardtanhGradFunctor<dtype>, dtype, dtype,    \
+//                                            dtype>(                                              \
+//             [](user_op::KernelComputeContext* ctx) {                                            \
+//               return HardtanhGradFunctor<dtype>(ctx->Attr<double>("min_val"),                   \
+//                                                 ctx->Attr<double>("max_val"));                  \
+//             },                                                                                  \
+//             "dx", "y", "dy");                                                                   \
+//       })                                                                                        \
+//       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+//                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
+//       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+//                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+//         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \
+//         return Maybe<void>::Ok();                                                               \
+//       });
 
 }  // namespace oneflow
+
+#endif  // _ONEFLOW_USER_KERNELS_ACTIVATION_OPS_H_

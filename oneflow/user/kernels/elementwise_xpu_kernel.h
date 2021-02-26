@@ -132,7 +132,7 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITH_ATTR(                                             \
-    device, kernel_name, functor, attr, out_dtype, input_a_dtype, out_name, input_a_name)          \
+    device, kernel_name, functor, out_dtype, input_a_dtype, out_name, input_a_name, attr...)       \
   REGISTER_USER_KERNEL(kernel_name)                                                                \
       .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                         \
         return new UnaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, input_a_dtype>(   \
@@ -143,9 +143,9 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel {
           (user_op::HobDeviceTag() == device)                                                      \
           & (user_op::HobDataType(input_a_name, 0) == GetDataType<out_dtype>::value));
 
-#define REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITH_ATTR(device, kernel_name, functor, attr,         \
-                                                       out_dtype, input_a_dtype, input_b_dtype,    \
-                                                       out_name, input_a_name, input_b_name)       \
+#define REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITH_ATTR(device, kernel_name, functor, out_dtype,    \
+                                                       input_a_dtype, input_b_dtype, out_name,     \
+                                                       input_a_name, input_b_name, attr...)        \
   REGISTER_USER_KERNEL(kernel_name)                                                                \
       .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                         \
         return new BinaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, input_a_dtype,   \
