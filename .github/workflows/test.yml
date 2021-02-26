@@ -25,13 +25,13 @@ jobs:
     needs: [check_license_and_format]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - uses: Oneflow-Inc/github-workflow-schedule@0193f0d57fee919c2d76d184213ce85fe7025e0f
+      - uses: Oneflow-Inc/github-workflow-schedule@3f02dea06f4803aed2ab3df9c26c15f76b4fd7ef
         name: Wait for GPU slot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build_and_test:
-    name: CUDA, XLA, CPU
+    name: Test suite
     strategy:
       max-parallel: 5
       matrix:
