@@ -23,18 +23,18 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_list.h"
 
 namespace oneflow {
-namespace one {
+namespace autograd {
 
-Maybe<std::shared_ptr<TensorList>> Backward(const std::shared_ptr<TensorList>& outputs,
-                                            const std::shared_ptr<TensorList>& out_grads,
-                                            bool retain_graph, bool create_graph);
+Maybe<std::shared_ptr<one::TensorList>> Backward(const std::shared_ptr<one::TensorList>& outputs,
+                                                 const std::shared_ptr<one::TensorList>& out_grads,
+                                                 bool retain_graph, bool create_graph);
 
-Maybe<std::shared_ptr<TensorList>> Grad(const std::shared_ptr<TensorList>& outputs,
-                                        const std::shared_ptr<TensorList>& inputs,
-                                        const std::shared_ptr<TensorList>& out_grads,
-                                        bool retain_graph, bool create_graph);
+Maybe<std::shared_ptr<one::TensorList>> Grad(const std::shared_ptr<one::TensorList>& outputs,
+                                             const std::shared_ptr<one::TensorList>& inputs,
+                                             const std::shared_ptr<one::TensorList>& out_grads,
+                                             bool retain_graph, bool create_graph);
 
-}  // namespace one
+}  // namespace autograd
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_AUTOGRAD_AUTOGRAD_H_

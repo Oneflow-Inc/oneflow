@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 
 namespace oneflow {
-namespace one {
+namespace autograd {
 
 namespace {
 
@@ -29,19 +29,20 @@ namespace {
 // If output is the tensor whose size is greater than 1, out_grad's shape must be same as output's.
 // If output is a scaler tensor, out_grad will also be a scaler or empty(will be inited to
 // `flow.ones([1])`).
-std::shared_ptr<TensorList> CheckAndInitOutGrads(TensorList* outputs, TensorList* out_grads) {
-  auto gradients = std::make_shared<TensorList>(out_grads->size());
+std::shared_ptr<one::TensorList> CheckAndInitOutGrads(one::TensorList* outputs,
+                                                      one::TensorList* out_grads) {
+  auto gradients = std::make_shared<one::TensorList>(out_grads->size());
   // TODO: check all out_grads and push default value for empty item
   return gradients;
 }
 
 // All autograd operators will call this function finally to calculate gradients for each input by
 // calling once `AutogradEngine.Execute()`
-std::shared_ptr<TensorList> RunBackward(TensorList* outputs, TensorList* intputs,
-                                        TensorList* out_grads, bool retain_graph,
-                                        bool create_graph) {
+std::shared_ptr<one::TensorList> RunBackward(one::TensorList* outputs, one::TensorList* intputs,
+                                             one::TensorList* out_grads, bool retain_graph,
+                                             bool create_graph) {
   if (create_graph) { retain_graph = true; }
-  std::shared_ptr<TensorList> res_grads;
+  std::shared_ptr<one::TensorList> res_grads;
   // TODO: check could run backward or not
   // TODO: calls `AutogradEngine.Execute()` to do backward
   return res_grads;
@@ -49,21 +50,21 @@ std::shared_ptr<TensorList> RunBackward(TensorList* outputs, TensorList* intputs
 
 }  // namespace
 
-Maybe<std::shared_ptr<TensorList>> Backward(const std::shared_ptr<TensorList>& outputs,
-                                            const std::shared_ptr<TensorList>& out_grads,
-                                            bool retain_graph, bool create_graph) {
-  std::shared_ptr<TensorList> gradients = CheckAndInitOutGrads(outputs.get(), out_grads.get());
-  auto inputs = std::make_shared<TensorList>(0);
+Maybe<std::shared_ptr<one::TensorList>> Backward(const std::shared_ptr<one::TensorList>& outputs,
+                                                 const std::shared_ptr<one::TensorList>& out_grads,
+                                                 bool retain_graph, bool create_graph) {
+  std::shared_ptr<one::TensorList> gradients = CheckAndInitOutGrads(outputs.get(), out_grads.get());
+  auto inputs = std::make_shared<one::TensorList>(0);
   return RunBackward(outputs.get(), inputs.get(), gradients.get(), retain_graph, create_graph);
 }
 
-Maybe<std::shared_ptr<TensorList>> Grad(const std::shared_ptr<TensorList>& outputs,
-                                        const std::shared_ptr<TensorList>& inputs,
-                                        const std::shared_ptr<TensorList>& out_grads,
-                                        bool retain_graph, bool create_graph) {
+Maybe<std::shared_ptr<one::TensorList>> Grad(const std::shared_ptr<one::TensorList>& outputs,
+                                             const std::shared_ptr<one::TensorList>& inputs,
+                                             const std::shared_ptr<one::TensorList>& out_grads,
+                                             bool retain_graph, bool create_graph) {
   if (inputs->empty()) { return Backward(outputs, out_grads, retain_graph, create_graph); }
 
-  std::shared_ptr<TensorList> gradients = CheckAndInitOutGrads(outputs.get(), out_grads.get());
+  std::shared_ptr<one::TensorList> gradients = CheckAndInitOutGrads(outputs.get(), out_grads.get());
   return RunBackward(outputs.get(), inputs.get(), gradients.get(), retain_graph, create_graph);
 }
 
@@ -72,5 +73,5 @@ ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
   m.def("grad", &Grad);
 }
 
-}  // namespace one
+}  // namespace autograd
 }  // namespace oneflow

@@ -26,7 +26,7 @@ inline std::shared_ptr<oneflow::one::TensorList> Backward(
     const std::shared_ptr<oneflow::one::TensorList>& outputs,
     const std::shared_ptr<oneflow::one::TensorList>& out_grads, bool retain_graph,
     bool create_graph) {
-  return oneflow::one::Backward(outputs, out_grads, retain_graph, create_graph).GetOrThrow();
+  return oneflow::autograd::Backward(outputs, out_grads, retain_graph, create_graph).GetOrThrow();
 }
 
 inline std::shared_ptr<oneflow::one::TensorList> Grad(
@@ -34,7 +34,8 @@ inline std::shared_ptr<oneflow::one::TensorList> Grad(
     const std::shared_ptr<oneflow::one::TensorList>& inputs,
     const std::shared_ptr<oneflow::one::TensorList>& out_grads, bool retain_graph,
     bool create_graph) {
-  return oneflow::one::Grad(outputs, inputs, out_grads, retain_graph, create_graph).GetOrThrow();
+  return oneflow::autograd::Grad(outputs, inputs, out_grads, retain_graph, create_graph)
+      .GetOrThrow();
 }
 
 #endif
