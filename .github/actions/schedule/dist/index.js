@@ -76,8 +76,7 @@ async function start() {
     let i = 0;
     while (i < 1000) {
         console.log("trying", i, "/", 1000)
-        let num_in_progress_runs = await num_in_progress_runs()
-        if (num_in_progress_runs == 1) {
+        if (await num_in_progress_runs() == 1) {
             break; // success
         }
         timeout = 60
