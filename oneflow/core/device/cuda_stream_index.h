@@ -29,13 +29,6 @@ class CudaStreamIndexGenerator final : public StreamIndexGenerator {
   stream_index_t GenerateNcclStreamIndex() { return kNccl; }
   stream_index_t GenerateDecodeH2DStreamIndex() { return kDecodeH2D; }
 
-  bool IsComputeStreamIndex(stream_index_t index) const override { return index == kCompute; }
-  bool IsH2DStreamIndex(stream_index_t index) const override { return index == kH2D; }
-  bool IsD2HStreamIndex(stream_index_t index) const override { return index == kD2H; }
-  bool IsMixStreamIndex(stream_index_t index) const { return index == kMix; }
-  bool IsNcclStreamIndex(stream_index_t index) const { return index == kNccl; }
-  bool IsDecodeH2DStreamIndex(stream_index_t index) const { return index == kDecodeH2D; }
-
  private:
   static const stream_index_t kCompute = 0;
   static const stream_index_t kH2D = 1;

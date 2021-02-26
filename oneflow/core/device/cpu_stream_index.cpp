@@ -76,18 +76,6 @@ stream_index_t CPUStreamIndexGenerator::GenerateIndependentTaskStreamIndex(TaskT
   return index;
 }
 
-bool CPUStreamIndexGenerator::IsComputeStreamIndex(stream_index_t index) const {
-  return index < compute_stream_num_;
-}
-
-bool CPUStreamIndexGenerator::IsCommNetStreamIndex(stream_index_t index) const {
-  return index == comm_net_stream_index_;
-}
-
-bool CPUStreamIndexGenerator::IsTickTockStreamIndex(stream_index_t index) const {
-  return index == tick_tock_stream_index_;
-}
-
 REGISTER_STREAM_INDEX_GENERATOR(DeviceType::kCPU, CPUStreamIndexGenerator);
 
 }  // namespace oneflow
