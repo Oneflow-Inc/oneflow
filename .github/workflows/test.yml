@@ -36,6 +36,15 @@ jobs:
       max-parallel: 5
       matrix:
         test_suite: ["cuda", "xla", "cpu"]
+        include:
+          - test_suite: cuda
+            cuda_version: 10.1
+            extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\"
+          - test_suite: xla
+            cuda_version: 10.1
+            extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --xla
+          - test_suite: cpu
+            extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --cpu
     needs: [check_license_and_format, wait_for_gpu_slot]
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
@@ -50,6 +59,9 @@ jobs:
           echo "ci_tmp_dir=${ci_tmp_dir}" >> $GITHUB_ENV
           echo "wheelhouse_dir=${ci_tmp_dir}/wheelhouse" >> $GITHUB_ENV
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
+          if [ "$test_suite" == "xla" ]; then
+            echo "ONEFLOW_TEST_CPU_ONLY=1" >> $GITHUB_ENV
+          fi
           if [ "$test_suite" == "cpu" ]; then
             echo "ONEFLOW_TEST_CPU_ONLY=1" >> $GITHUB_ENV
           fi
@@ -61,7 +73,8 @@ jobs:
         uses: ./.github/actions/whl
         with:
           tmp_dir: ${ci_tmp_dir}
-          extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\"
+          extra_flags: ${{ matrix.extra_flags }}
+          cuda_version: ${{ matrix.cuda_version }}
       - name: Upload wheel
         uses: ./.github/actions/upload_oss
         with:
