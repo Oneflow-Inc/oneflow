@@ -22,4 +22,3 @@ import oneflow.python.framework.device as oneflow_device
 oneflow_export("LocalTensor")(oneflow_api.LocalTensor)
 
 oneflow_export("ConsistentTensor")(oneflow_api.ConsistentTensor)
-

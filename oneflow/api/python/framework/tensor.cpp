@@ -29,8 +29,19 @@ namespace one {
 
 namespace {
 
-std::shared_ptr<MirroredTensor> MakeMirroredTensor(const py::tuple& py_shape, int dtype,
-                                                   const std::shared_ptr<Device>& device) {
+template<typename T>
+std::shared_ptr<T> MakeTensor(const py::tuple& py_shape, int dtype,
+                              const std::shared_ptr<Device>& device,
+                              const std::shared_ptr<compatible_py::Distribute>& distribute,
+                              std::shared_ptr<ParallelDesc>& parallel_desc) {
+  UNIMPLEMENTED();
+}
+
+template<>
+std::shared_ptr<MirroredTensor> MakeTensor<MirroredTensor>(const py::tuple& py_shape, int dtype,
+                              const std::shared_ptr<Device>& device,
+                              const std::shared_ptr<compatible_py::Distribute>& distribute,
+                              std::shared_ptr<ParallelDesc>& parallel_desc) {
   DimVector shape_dims;
   CHECK(py::isinstance<py::tuple>(py_shape));
   for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
@@ -44,10 +55,15 @@ std::shared_ptr<MirroredTensor> MakeMirroredTensor(const py::tuple& py_shape, in
   return std::make_shared<MirroredTensor>(impl);
 }
 
-std::shared_ptr<ConsistentTensor> MakeConsistentTensor(
-    const std::shared_ptr<Shape>& shape, DataType dtype,
-    const std::shared_ptr<compatible_py::Distribute>& distribute,
-    std::shared_ptr<ParallelDesc>& parallel_desc) {
+template<>
+std::shared_ptr<ConsistentTensor> MakeTensor<ConsistentTensor>(const py::tuple& py_shape, int dtype,
+                              const std::shared_ptr<Device>& device,
+                              const std::shared_ptr<compatible_py::Distribute>& distribute,
+                              std::shared_ptr<ParallelDesc>& parallel_desc) {
+  DimVector shape_dims;
+  CHECK(py::isinstance<py::tuple>(py_shape));
+  for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
+  std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
   std::shared_ptr<ConsistentTensorImpl> impl;
   if (*Global<bool, EagerExecution>::Get()) {
     impl = std::make_shared<EagerConsistentTensorImpl>(shape, static_cast<DataType>(dtype),
@@ -59,41 +75,41 @@ std::shared_ptr<ConsistentTensor> MakeConsistentTensor(
   return std::make_shared<ConsistentTensor>(impl);
 }
 
+template<typename T>
+void ExportTensor(py::module& m, const char* name) {
+  py::class_<T, std::shared_ptr<T>>(m, name)
+      .def(py::init(&MakeTensor<T>))
+      .def_property_readonly("shape", &T::shape)
+      .def_property_readonly("device", &T::device)
+      .def_property_readonly("ndim", &T::ndim)
+      .def_property_readonly("is_cuda", &T::is_cuda)
+      .def_property_readonly("dtype", &T::dtype)
+      .def_property_readonly("data", &T::data)
+      .def_property_readonly("grad", &T::grad)
+      .def_property_readonly("grad_fn", &T::grad_fn)
+      .def_property_readonly("requires_grad", &T::requires_grad)
+      .def_property_readonly("is_leaf", &T::is_leaf)
+      .def("size", &T::shape)
+      .def("dim", &T::dim)
+      .def("ndimension", &T::ndimension)
+      .def("get_device", &T::get_device)
+      .def("nelement", &T::nelement)
+      .def("data_ptr", &T::data_ptr)
+      .def("element_size", &T::element_size)
+      .def("numpy", &T::numpy)
+      .def("tolist", &T::tolist)
+      .def("backward", &T::backward)
+      .def("__str__", &T::ToString)
+      .def("__repr__", &T::ToString)
+      .def("__array__", &T::ToArray)
+      .def("__sizeof__", &T::SizeOf);
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<MirroredTensor, std::shared_ptr<MirroredTensor>>(m, "LocalTensor")
-      .def(py::init(&MakeMirroredTensor))
-      .def_property_readonly("shape", &MirroredTensor::shape)
-      .def_property_readonly("device", &MirroredTensor::device)
-      .def_property_readonly("ndim", &MirroredTensor::ndim)
-      .def_property_readonly("is_cuda", &MirroredTensor::is_cuda)
-      .def_property_readonly("dtype", &MirroredTensor::dtype)
-      .def_property_readonly("data", &MirroredTensor::data)
-      .def_property_readonly("grad", &MirroredTensor::grad)
-      .def_property_readonly("grad_fn", &MirroredTensor::grad_fn)
-      .def_property_readonly("requires_grad", &MirroredTensor::requires_grad)
-      .def_property_readonly("is_leaf", &MirroredTensor::is_leaf)
-      .def("size", &MirroredTensor::shape)
-      .def("dim", &MirroredTensor::dim)
-      .def("ndimension", &MirroredTensor::ndimension)
-      .def("get_device", &MirroredTensor::get_device)
-      .def("nelement", &MirroredTensor::nelement)
-      .def("data_ptr", &MirroredTensor::data_ptr)
-      .def("element_size", &MirroredTensor::element_size)
-      .def("numpy", &MirroredTensor::numpy)
-      .def("tolist", &MirroredTensor::tolist)
-      .def("backward", &MirroredTensor::backward)
-      .def("__str__", &MirroredTensor::ToString)
-      .def("__repr__", &MirroredTensor::ToString)
-      .def("__array__", &MirroredTensor::ToArray)
-      .def("__sizeof__", &MirroredTensor::SizeOf);
-
-  py::class_<ConsistentTensor, std::shared_ptr<ConsistentTensor>>(m, "ConsistentTensor")
-      .def(py::init(&MakeConsistentTensor))
-      .def_property_readonly("shape", &ConsistentTensor::shape)
-      .def("dtype", &ConsistentTensor::dtype)
-      .def("size", &ConsistentTensor::shape);
+  ExportTensor<MirroredTensor>(m, "LocalTensor");
+  ExportTensor<ConsistentTensor>(m, "MirroredTensor");
 }
 
 }  // namespace one
