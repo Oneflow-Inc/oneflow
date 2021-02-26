@@ -71,11 +71,16 @@ StreamId::StreamId(DeviceId device_id, uint32_t stream_index) {
 StreamId::StreamId(DeviceType device_type, uint32_t device_index, uint32_t stream_index)
     : StreamId(DeviceId{device_type, device_index}, stream_index) {}
 
-DeviceId StreamId::device_id() const { return DeviceId{val_ >> kStreamIndexBits}; }
+DeviceId StreamId::device_id() const { return DeviceId{device_type(), device_index()}; }
 
-DeviceType StreamId::device_type() const { return device_id().device_type(); }
+DeviceType StreamId::device_type() const {
+  return static_cast<DeviceType>(val_ >> (DeviceId::kDeviceIndexBits + kStreamIndexBits));
+}
 
-uint32_t StreamId::device_index() const { return device_id().device_index(); }
+uint32_t StreamId::device_index() const {
+  return (val_ << (kFullBits - DeviceId::kDeviceIndexBits - kStreamIndexBits))
+         >> (kFullBits - DeviceId::kDeviceIndexBits);
+}
 
 uint32_t StreamId::stream_index() const {
   return (val_ << (kFullBits - kStreamIndexBits)) >> (kFullBits - kStreamIndexBits);
@@ -90,8 +95,8 @@ TaskId::TaskId(ProcessId process_id, StreamId stream_id, uint32_t task_index) {
   CHECK(CheckValueInBitsRange(process_id.val_, kProcessIdBits))
       << "process_id is out of range: " << process_id.val_;
   val_ = static_cast<uint64_t>(task_index);
-  val_ |= static_cast<uint64_t>(stream_id) << kTaskIndexBits;
-  val_ |= static_cast<uint64_t>(process_id) << (kTaskIndexBits + kStreamIdBits);
+  val_ |= static_cast<uint64_t>(stream_id.val_) << kTaskIndexBits;
+  val_ |= static_cast<uint64_t>(process_id.val_) << (kTaskIndexBits + kStreamIdBits);
 }
 
 TaskId::TaskId(uint64_t global_stream_index, uint32_t task_index) {
@@ -103,34 +108,28 @@ TaskId::TaskId(uint64_t global_stream_index, uint32_t task_index) {
 }
 
 ProcessId TaskId::process_id() const {
-  return ProcessId{static_cast<uint32_t>(val_ >> (kTaskIndexBits + kStreamIdBits))};
+  underlying_t node_index = val_ >> (ProcessId::kProcessIndexBits + kStreamIdBits + kTaskIndexBits);
+  underlying_t process_index =
+      (val_ << ProcessId::kNodeIndexBits) >> (kFullBits - ProcessId::kProcessIndexBits);
+  return ProcessId{static_cast<uint32_t>(node_index), static_cast<uint32_t>(process_index)};
 }
 
 StreamId TaskId::stream_id() const {
-  return StreamId{static_cast<uint32_t>((val_ << kProcessIdBits) >> (kFullBits - kStreamIdBits))};
+  underlying_t device_type = (val_ << kProcessIdBits) >> (kFullBits - StreamId::kDeviceTypeBits);
+  underlying_t device_index = (val_ << (kProcessIdBits + StreamId::kDeviceTypeBits))
+                              >> (kFullBits - StreamId::kDeviceIndexBits);
+  underlying_t stream_index = (val_ << (kProcessIdBits + StreamId::kDeviceIndexBits))
+                              >> (kFullBits - StreamId::kStreamIndexBits);
+  return StreamId{static_cast<DeviceType>(device_type), static_cast<uint32_t>(device_index),
+                  static_cast<uint32_t>(stream_index)};
 }
 
 uint64_t TaskId::global_stream_index() const { return val_ >> kTaskIndexBits; }
 
 uint32_t TaskId::task_index() const {
-  return ProcessId{static_cast<uint32_t>((val_ << (kProcessIdBits + kStreamIdBits))
-                                         >> (kProcessIdBits + kStreamIdBits))};
-}
-
-int64_t SerializeStreamIdToInt64(StreamId stream_id) {
-  return static_cast<int64_t>(stream_id.val_);
-}
-
-StreamId DeserializeStreamIdFromInt64(int64_t id_val) {
-  CHECK(CheckValueInBitsRange(id_val, StreamId::kBits)) << "id_val is out of range: " << id_val;
-  return StreamId{static_cast<uint32_t>(id_val)};
-}
-
-int64_t SerializeTaskIdToInt64(TaskId task_id) { return static_cast<int64_t>(task_id.val_); }
-
-TaskId DeserializeTaskIdFromInt64(int64_t id_val) {
-  CHECK(CheckValueInBitsRange(id_val, TaskId::kFullBits)) << "id_val is out of range: " << id_val;
-  return TaskId{static_cast<uint64_t>(id_val)};
+  underlying_t task_index =
+      (val_ << (kProcessIdBits + kStreamIdBits)) >> (kFullBits - kTaskIndexBits);
+  return static_cast<uint32_t>(task_index);
 }
 
 }  // namespace oneflow
