@@ -33,4 +33,3 @@
 /oneflow-src.zip
 /distributed-tmp
 /serving-tmp
-**/node_modules
