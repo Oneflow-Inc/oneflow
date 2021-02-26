@@ -35,6 +35,7 @@ def _make_op_function(
     test_case,
     input,
     padding,
+    constant_value,
     grad,
     device_type,
     value_type,
@@ -72,7 +73,7 @@ def _make_op_function(
                     dtype=value_type,
                     initializer=flow.zeros_initializer(),
                 )
-                out = flow.reflection_pad2d(x, padding)
+                out = flow.constant_pad2d(x, padding, constant_value)
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0
                 ).minimize(out)
@@ -93,7 +94,7 @@ def _make_op_function(
                     dtype=flow.float32,
                     initializer=flow.zeros_initializer(),
                 )
-                y_int32 = flow.reflection_pad2d(x, padding)
+                y_int32 = flow.constant_pad2d(x, padding, constant_value)
                 y_fp32 = flow.cast(y_int32, dtype=flow.float32)
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0
@@ -119,7 +120,8 @@ def _make_op_function(
                 input_x = x_var + x
                 x_fp32 = flow.cast(input_x, flow.float32)
                 x_fp16 = flow.cast(input_x, dtype=flow.float16)
-                y_fp16 = flow.reflection_pad2d(x_fp16, padding)
+                constant_value_fp16 = flow.cast(constant_value, dtype=flow.float16)
+                y_fp16 = flow.constant_pad2d(x_fp16, padding, constant_value_fp16)
                 y_fp32 = flow.cast(y_fp16, dtype=flow.float32)
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0
@@ -131,7 +133,7 @@ def _make_op_function(
         return op_function
 
 
-def gen_numpy_test_sample(input_shape, padding, is_float=True):
+def gen_numpy_test_sample(input_shape, padding, constant_value, is_float=True):
     c_idx, h_idx, w_idx = 1, 2, 3
     pad_left = padding[0]
     pad_right = padding[1]
@@ -139,11 +141,13 @@ def gen_numpy_test_sample(input_shape, padding, is_float=True):
     pad_bottom = padding[3]
     pad_shape = ((0, 0), (0, 0), (pad_top, pad_bottom), (pad_left, pad_right))
 
-    def _np_reflection_pad2d(input, pad_shape):
-        numpy_reflect = np.pad(input, pad_shape, "reflect")
-        return numpy_reflect
+    def _np_constant_pad2d(input, pad_shape, constant_value):
+        numpy_constant = np.pad(
+            input, pad_shape, "constant", constant_values=constant_value
+        )
+        return numpy_constant
 
-    def _np_reflection_pad2d_grad(src, dest):
+    def _np_constant_pad2d_grad(src, dest):
         dx_height, dx_width = input.shape[h_idx], input.shape[w_idx]
         dy_height, dy_width = output.shape[h_idx], output.shape[w_idx]
 
@@ -159,28 +163,19 @@ def gen_numpy_test_sample(input_shape, padding, is_float=True):
             coords = Index2Coordinate(iter_n, src.shape)
             n, c, i, j = coords[0], coords[c_idx], coords[h_idx], coords[w_idx]
             ip_x = ip_y = 0
-            if j < pad_left:
-                ip_x = pad_left * 2 - j
-            elif j >= pad_left and j < (dx_width + pad_left):
-                ip_x = j
-            else:
-                ip_x = (dx_width + pad_left - 1) * 2 - j
-
-            if i < pad_top:
-                ip_y = pad_top * 2 - i
-            elif i >= pad_top and i < (dx_height + pad_top):
-                ip_y = i
-            else:
-                ip_y = (dx_height + pad_top - 1) * 2 - i
-
-            ip_x = ip_x - pad_left
-            ip_y = ip_y - pad_top
-            src_index = n * src_num + c * dy_width * dy_height + i * dy_width + j
-            dest_index = (
-                n * dest_num + c * dx_width * dx_height + ip_y * dx_width + ip_x
-            )
-            array_dest[dest_index] += array_src[src_index]
-
+            if (
+                j >= pad_left
+                and j < (dx_width + pad_left)
+                and i >= pad_top
+                and i < (dx_height + pad_top)
+            ):
+                ip_x = j - pad_left
+                ip_y = i - pad_top
+                src_index = n * src_num + c * dy_width * dy_height + i * dy_width + j
+                dest_index = (
+                    n * dest_num + c * dx_width * dx_height + ip_y * dx_width + ip_x
+                )
+                array_dest[dest_index] += array_src[src_index]
         numpy_dest = Array2Numpy(array_dest, dest.shape)
         return numpy_dest
 
@@ -189,12 +184,13 @@ def gen_numpy_test_sample(input_shape, padding, is_float=True):
     else:
         input = np.random.randint(0, 100, input_shape)
 
-    output = _np_reflection_pad2d(input, pad_shape)
-    grad = _np_reflection_pad2d_grad(output, input)
+    output = _np_constant_pad2d(input, pad_shape, constant_value)
+    grad = _np_constant_pad2d_grad(output, input)
 
     numpy_results = {
         "input": input,
         "padding": padding,
+        "constant_value": constant_value,
         "output": output,
         "grad": grad,
     }
@@ -209,6 +205,7 @@ def _compare_op_function_with_samples(
         test_case,
         sample["input"].astype(value_type[0]),
         sample["padding"],
+        sample["constant_value"],
         sample["grad"].astype(value_type[0]),
         device_type,
         value_type[1],
@@ -236,9 +233,9 @@ def _gen_arg_dict(
     arg_dict = OrderedDict()
     arg_dict["device_type"] = [device_type]
     arg_dict["samples"] = []
-    arg_dict["samples"].append(gen_numpy_test_sample((2, 1, 2, 2), [1, 1, 1, 1]))
-    arg_dict["samples"].append(gen_numpy_test_sample((4, 2, 3, 3), [2, 2, 2, 2]))
-    arg_dict["samples"].append(gen_numpy_test_sample((2, 3, 4, 5), [3, 2, 1, 2]))
+    arg_dict["samples"].append(gen_numpy_test_sample((2, 1, 2, 2), [1, 1, 1, 1], 1.5))
+    arg_dict["samples"].append(gen_numpy_test_sample((4, 2, 3, 3), [2, 2, 2, 2], 0.0))
+    arg_dict["samples"].append(gen_numpy_test_sample((2, 3, 4, 5), [3, 2, 1, 2], -2.0))
     if value_type == "float":
         if device_type == "gpu":
             arg_dict["value_type"] = [
@@ -259,7 +256,7 @@ def _gen_arg_dict(
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestReflectionPad2d1n1d(flow.unittest.TestCase):
+class TestConstantPad2d1n1d(flow.unittest.TestCase):
     def test_op_function_int_cpu(test_case):
         arg_dict = _gen_arg_dict("cpu", "int", "0:0", 1)
         for arg in GenArgList(arg_dict):
@@ -284,7 +281,7 @@ class TestReflectionPad2d1n1d(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n2d()
-class TestReflectionPad2d1n2d(flow.unittest.TestCase):
+class TestConstantPad2d1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_op_function_float(test_case):
         arg_dict = _gen_arg_dict("gpu", "float", "0:0-1", 2)
