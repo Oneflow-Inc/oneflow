@@ -21,15 +21,20 @@ limitations under the License.
 #include <vector>
 
 namespace oneflow {
-
 namespace one {
 
 class Tensor;
 
+class TensorList final : public std::vector<std::shared_ptr<Tensor>>,
+                         public std::enable_shared_from_this<TensorList> {
+ public:
+  TensorList(const TensorList&) = delete;
+  TensorList(TensorList&) = delete;
+  TensorList() = default;
+  ~TensorList() = default;
+};
+
 }  // namespace one
-
-using TensorList = std::vector<std::shared_ptr<one::Tensor>>;
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_LIST_H_
