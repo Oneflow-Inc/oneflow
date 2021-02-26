@@ -67,7 +67,7 @@ jobs:
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
       - uses: actions/checkout@v2
-      - name: (CUDA) Build OneFlow
+      - name: Build OneFlow
         uses: ./.github/actions/whl
         with:
           tmp_dir: ${ci_tmp_dir}
@@ -83,7 +83,7 @@ jobs:
       - name: Build docker image for testing
         run: |
           bash docker/ci/test/build.sh
-      - name: (CUDA) Exe test
+      - name: Exe test
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
@@ -93,7 +93,7 @@ jobs:
             -w ${bin_dir} \
             oneflow-test:$USER \
             ./oneflow_testexe
-      - name: (CUDA) Op test (distributed)
+      - name: Op test (distributed)
         if: matrix.test_suite == 'cuda'
         run: |
           python3 ci/test/distributed_run.py --make_dotssh
@@ -143,7 +143,7 @@ jobs:
             --env ONEFLOW_TEST_CPU_ONLY=${ONEFLOW_TEST_CPU_ONLY} \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
-      - name: (CUDA) Model serve test
+      - name: Model serve test
         if: matrix.test_suite == 'cuda'
         run: |
           docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} \
