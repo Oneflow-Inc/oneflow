@@ -388,9 +388,8 @@ void TaskNode::FixRegisterNumRange() {
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  ProcessId process_id{static_cast<uint32_t>(machine_id_), 0};
   StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
-  TaskId task_id = Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(process_id, stream_id);
+  TaskId task_id = Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id);
   task_id_ = SerializeTaskIdToInt64(task_id);
 }
 
