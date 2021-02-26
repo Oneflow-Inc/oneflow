@@ -28,7 +28,7 @@ jobs:
       - uses: Oneflow-Inc/github-workflow-schedule@74bdbf1fd82d88c0e81633cd892879e4d18e3760
         name: Wait for GPU slot
         env:
-          GITHUB_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build_and_test_cuda:
     needs: [check_license_and_format, wait_for_gpu_slot]
