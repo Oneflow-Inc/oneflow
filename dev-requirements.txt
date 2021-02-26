@@ -6,4 +6,3 @@ tqdm
 requests
 onnx
 jinja2
-opencv-python==4.2.0.34
