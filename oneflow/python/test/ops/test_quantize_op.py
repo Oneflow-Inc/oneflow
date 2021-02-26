@@ -495,7 +495,7 @@ class TestMinMaxObserver(flow.unittest.TestCase):
             _run_test_min_max_observer(*arg)
 
 
-@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(True, "skip for now")
 class TestMovingAverageMinMaxObserver(flow.unittest.TestCase):
     def test_moving_average_min_max_observer(test_case):
         arg_dict = OrderedDict()
