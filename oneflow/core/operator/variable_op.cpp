@@ -43,6 +43,17 @@ void VariableOp::InitFromOpConf() {
   EnrollOutputBn("out", is_trainable)->set_is_mutable(true);
 }
 
+Maybe<void> VariableOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  const VariableOpConf& variable_conf = op_conf().variable_conf();
+  BlobDesc* out_blob_desc = BlobDesc4BnInOp("out");
+  out_blob_desc->mut_shape() = Shape(variable_conf.shape());
+  out_blob_desc->set_data_type(variable_conf.has_data_type() ? variable_conf.data_type()
+                                                             : job_desc().DefaultDataType());
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> VariableOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
@@ -62,12 +73,6 @@ Maybe<void> VariableOp::InferOutBlobDescs(
     BalancedSplitter bs(split_dim_num, parallel_ctx->parallel_num());
     out_blob_desc->mut_shape().Set(model_split_axis, bs.At(parallel_ctx->parallel_id()).size());
   }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> VariableOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("out")->clear_value();
   return Maybe<void>::Ok();
 }
 

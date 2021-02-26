@@ -13,20 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_RECORD_OFRECORD_BYTES_LIST_ENCODER_H_
-#define ONEFLOW_CORE_RECORD_OFRECORD_BYTES_LIST_ENCODER_H_
+#ifndef ONEFLOW_USER_OPS_PAD_2D_SEQ_H_
+#define ONEFLOW_USER_OPS_PAD_2D_SEQ_H_
 
-#include "oneflow/core/record/ofrecord_encoder.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-template<typename T>
-class OFRecordEncoderImpl<EncodeCase::kBytesList, T> final : public OFRecordEncoderIf {
- private:
-  void EncodeOneCol(DeviceCtx*, const Blob* in_blob, int64_t in_offset, Feature&,
-                    const std::string& field_name, int64_t one_col_elem_num) const override;
-};
-
+#define PAD_2D_TYPE_SEQ                     \
+  OF_PP_MAKE_TUPLE_SEQ("reflection_pad2d")  \
+  OF_PP_MAKE_TUPLE_SEQ("replication_pad2d") \
+  OF_PP_MAKE_TUPLE_SEQ("constant_pad2d")
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_RECORD_OFRECORD_BYTES_LIST_ENCODER_H_
+#endif  // ONEFLOW_USER_OPS_PAD_2D_SEQ_H_

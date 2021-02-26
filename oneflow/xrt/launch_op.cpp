@@ -79,20 +79,6 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> XrtLaunchOp::InferBatchAxis(
-    std::function<OptInt64 *(const std::string &)> BatchAxis4BnInOp) const {
-  const auto &launch_conf = op_conf().xrt_launch_conf();
-  const auto &batch_axis = launch_conf.batch_axis();
-
-  for (const std::string &bn : this->output_bns()) {
-    const LogicalBlobId &lbi = this->BnInOp2Lbi(bn);
-    std::string blob_name = xrt::BlobIdToName(lbi);
-    CHECK_GT(batch_axis.count(blob_name), 0);
-    *BatchAxis4BnInOp(bn) = batch_axis.at(blob_name);
-  }
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> XrtLaunchOp::InferSbpSignature(
     SbpSignature *sbp_signature, const SbpSignature &sbp_sig_conf,
     const std::function<int32_t(const SbpSignature &)> &CalcOrderValue4SbpSig,

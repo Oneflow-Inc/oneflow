@@ -13,19 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_RECORD_ENCODE_CASE_UTIL_H_
-#define ONEFLOW_CORE_RECORD_ENCODE_CASE_UTIL_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
+#define ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
 
-#include "oneflow/core/common/data_type.h"
+#include <string>
 
 namespace oneflow {
 
-//  encode case
-#define ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT                                            \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kJpeg), ARITHMETIC_DATA_TYPE_SEQ)                   \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kRaw), ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ) \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kBytesList), ((char, DataType::kChar))((int8_t, DataType::kInt8)))
+class Device final {
+ public:
+  Device(const std::string& type, int64_t device_id) : type_(type), device_id_(device_id) {}
+  Device(const Device&) = default;
+  Device(Device&&) = default;
+  ~Device() = default;
+  const std::string& type() const { return type_; }
+  int64_t device_id() const { return device_id_; }
+
+ private:
+  const std::string type_;
+  const int64_t device_id_;
+};
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_RECORD_ENCODE_CASE_UTIL_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_H_

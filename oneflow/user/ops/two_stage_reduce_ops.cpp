@@ -99,57 +99,6 @@ Maybe<void> InferReduceGlobalStageGradTensorDescFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferReduceDeviceStageBatchAxisFn(user_op::BatchAxisContext* ctx) {
-  const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
-  HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
-  const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
-  auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
-  auto* mask_batch_axis = ctx->BatchAxis4ArgNameAndIndex("mask", 0);
-  auto* count_batch_axis = ctx->BatchAxis4ArgNameAndIndex("count", 0);
-  if (in_batch_axis->has_value() && !conf_axes.empty()
-      && conf_axes.find(in_batch_axis->value()) == conf_axes.end()) {
-    *out_batch_axis = *in_batch_axis;
-    *mask_batch_axis = *in_batch_axis;
-    *count_batch_axis = *in_batch_axis;
-  } else {
-    out_batch_axis->clear_value();
-    mask_batch_axis->clear_value();
-    count_batch_axis->clear_value();
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferReduceDeviceStageGradBatchAxisFn(user_op::BatchAxisContext* ctx) {
-  const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
-  HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
-  const auto* out_diff_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out_diff", 0);
-  auto* in_diff_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in_diff", 0);
-  if (out_diff_batch_axis->has_value() && !conf_axes.empty()
-      && conf_axes.find(out_diff_batch_axis->value()) == conf_axes.end()) {
-    *in_diff_batch_axis = *out_diff_batch_axis;
-  } else {
-    in_diff_batch_axis->clear_value();
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferReduceGlobalStageBatchAxisFn(user_op::BatchAxisContext* ctx) {
-  const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
-  HashSet<int32_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
-  const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
-  auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
-  auto* mask_batch_axis = ctx->BatchAxis4ArgNameAndIndex("mask", 0);
-  if (in_batch_axis->has_value() && !conf_axes.empty()
-      && conf_axes.find(in_batch_axis->value()) == conf_axes.end()) {
-    *out_batch_axis = *in_batch_axis;
-    *mask_batch_axis = *in_batch_axis;
-  } else {
-    out_batch_axis->clear_value();
-    mask_batch_axis->clear_value();
-  }
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> GetReduceDeviceStageSbpFn(user_op::SbpContext* ctx) {
   int32_t num_axes = 0;
   HashSet<int32_t> conf_axes;
@@ -206,7 +155,6 @@ Maybe<void> GetReduceDeviceStageGradSbpFn(user_op::SbpContext* ctx) {
       .Output("count")                                          \
       .Attr<std::vector<int32_t>>("axis")                       \
       .SetTensorDescInferFn(InferReduceDeviceStageTensorDescFn) \
-      .SetBatchAxisInferFn(InferReduceDeviceStageBatchAxisFn)   \
       .SetGetSbpFn(GetReduceDeviceStageSbpFn);
 
 REGISTER_REDUCE_DEVICE_STAGE_USER_OP("reduce_min_device_stage")
@@ -220,7 +168,6 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP("reduce_max_device_stage")
       .Output("in_diff")                                            \
       .Attr<std::vector<int32_t>>("axis")                           \
       .SetTensorDescInferFn(InferReduceDeviceStageGradTensorDescFn) \
-      .SetBatchAxisInferFn(InferReduceDeviceStageGradBatchAxisFn)   \
       .SetGetSbpFn(GetReduceDeviceStageGradSbpFn);
 
 REGISTER_REDUCE_DEVICE_STAGE_GRAD_USER_OP("reduce_min_device_stage_grad")
@@ -260,7 +207,6 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max
       .Attr<std::vector<int32_t>>("axis")                                         \
       .Attr<bool>("keepdims")                                                     \
       .SetTensorDescInferFn(InferReduceGlobalStageTensorDescFn)                   \
-      .SetBatchAxisInferFn(InferReduceGlobalStageBatchAxisFn)                     \
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn, \
                               const user_op::UserOpConfWrapper&) {                \
         user_op::InputArgModifier* device_count_modifier =                        \
@@ -281,7 +227,6 @@ REGISTER_REDUCE_GLOBAL_STAGE_USER_OP("reduce_max_global_stage")
       .Attr<std::vector<int32_t>>("axis")                           \
       .Attr<bool>("keepdims")                                       \
       .SetTensorDescInferFn(InferReduceGlobalStageGradTensorDescFn) \
-      .SetBatchAxisInferFn(InferReduceDeviceStageGradBatchAxisFn)   \
       .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); });
 
 REGISTER_REDUCE_GLOBAL_STAGE_GRAD_USER_OP("reduce_min_global_stage_grad")

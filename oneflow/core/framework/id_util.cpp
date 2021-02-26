@@ -13,27 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/autotick.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/id_util.h"
 
 namespace oneflow {
 
-namespace {
-
-class MutRecordLoadOpConTickInputHelper final : public MutOpConTickInputHelper {
- public:
-  MutRecordLoadOpConTickInputHelper() : MutOpConTickInputHelper() {}
-
-  bool VirtualIsTickInputBound() const override { return op_conf().record_load_conf().has_tick(); }
-
-  OperatorConf NewTickInputBoundOpConf(const std::string& lbn) const override {
-    OperatorConf ret(op_conf());
-    ret.mutable_record_load_conf()->set_tick(lbn);
-    return ret;
-  }
-};
-
-}  // namespace
-
-REGISTER_AUTO_TICK(OperatorConf::kRecordLoadConf, MutRecordLoadOpConTickInputHelper);
+Maybe<std::string> UniqueStr(const std::string& prefix) { return prefix + NewUniqueId(); }
 
 }  // namespace oneflow

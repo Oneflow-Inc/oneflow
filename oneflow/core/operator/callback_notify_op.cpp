@@ -28,22 +28,31 @@ LogicalNode* CallbackNotifyOp::NewProperLogicalNode() const {
   return new CallbackNotifyLogicalNode();
 }
 
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  CHECK_OR_RETURN(BlobDesc4BnInOp("in")->shape() == Shape({1}));
+  CHECK_OR_RETURN(IsIntegralDataType(BlobDesc4BnInOp("in")->data_type()));
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+Maybe<void> CallbackNotifyOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), 1);
+  return InferBlobDescs(BlobDesc4BnInOp);
+}
+
 Maybe<void> CallbackNotifyOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
-  CHECK_OR_RETURN(GetBlobDesc4BnInOp("in")->shape() == Shape({1}));
-  CHECK_OR_RETURN(IsIntegralDataType(GetBlobDesc4BnInOp("in")->data_type()));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CallbackNotifyOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  return Maybe<void>::Ok();
+  return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> CallbackNotifyOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder().Split(input_bns(), 0).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 

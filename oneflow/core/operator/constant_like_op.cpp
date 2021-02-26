@@ -17,6 +17,19 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
+                           const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  const ConstantLikeOpConf& conf = op_conf.constant_like_conf();
+  BlobDesc* out_blob_desc = BlobDesc4BnInOp("out");
+  *out_blob_desc = *BlobDesc4BnInOp("like");
+  if (conf.has_data_type()) { out_blob_desc->set_data_type(conf.data_type()); }
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 class ConstantLikeOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConstantLikeOp);
@@ -29,22 +42,19 @@ class ConstantLikeOp final : public Operator {
     EnrollOutputBn("out", false);
   }
 
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    return InferBlobDescs(op_conf(), BlobDesc4BnInOp);
+  }
+
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override {
-    const ConstantLikeOpConf& conf = op_conf().constant_like_conf();
-    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-    *out_blob_desc = *GetBlobDesc4BnInOp("like");
-    if (conf.has_data_type()) { out_blob_desc->set_data_type(conf.data_type()); }
-    return Maybe<void>::Ok();
+    return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
   }
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
-  }
-
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const {
