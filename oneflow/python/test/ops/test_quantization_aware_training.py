@@ -23,7 +23,7 @@ import oneflow.typing as tp
 from test_util import GenArgList
 
 
-def _test(test_case, per_channel, symmetric, build_backbone_fn):
+def _test(test_case, per_channel, symmetric, target_backend, build_backbone_fn):
     def run_with_func_config(build_backbone_fn, func_config):
         flow.clear_default_session()
 
@@ -47,6 +47,7 @@ def _test(test_case, per_channel, symmetric, build_backbone_fn):
     qat_func_config.qat.symmetric(symmetric)
     qat_func_config.qat.per_channel_weight_quantization(per_channel)
     qat_func_config.qat.moving_min_max_stop_update_after_iters(1000)
+    qat_func_config.qat.target_backend(target_backend)
 
     res_qat = run_with_func_config(build_backbone_fn, qat_func_config)
 
@@ -54,14 +55,21 @@ def _test(test_case, per_channel, symmetric, build_backbone_fn):
 class TestQAT(flow.unittest.TestCase):
     def test_qat(test_case):
         def build_conv_with_bias(x):
-            return flow.layers.conv2d(x, 4, 3, 1, "SAME", use_bias=True)
+            y = flow.layers.conv2d(x, 4, 3, 1, "SAME", use_bias=True, name="conv1")
+            with flow.experimental.scope.config(quantization_aware_training=False):
+                z = flow.layers.conv2d(y, 4, 3, 1, "SAME", use_bias=True, name="conv2")
+                return z
 
         def build_conv_without_bias(x):
-            return flow.layers.conv2d(x, 4, 3, 1, "SAME", use_bias=False)
+            y = flow.layers.conv2d(x, 4, 3, 1, "SAME", use_bias=False, name="conv1")
+            with flow.experimental.scope.config(quantization_aware_training=False):
+                z = flow.layers.conv2d(y, 4, 3, 1, "SAME", use_bias=False, name="conv2")
+                return z
 
         arg_dict = OrderedDict()
         arg_dict["per_channel"] = [True, False]
         arg_dict["symmetric"] = [True, False]
+        arg_dict["target_backend"] = ["", "cambricon"]
         arg_dict["build_backbone_fn"] = [build_conv_with_bias, build_conv_without_bias]
         for arg in GenArgList(arg_dict):
             _test(test_case, *arg)

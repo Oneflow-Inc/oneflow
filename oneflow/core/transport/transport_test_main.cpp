@@ -15,13 +15,14 @@ limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/oneflow.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/transport/transport.h"
@@ -131,7 +132,7 @@ void TestCorrectness() {
   }
   total_mib = (total_bytes * 1.0 / 1000000.0);
 
-  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
   if (this_machine_id == 0) {
     std::cout << "I'm first machine!" << std::endl;
 
@@ -187,7 +188,7 @@ void TestCorrectnessOnLocalMachine() {
   }
   total_mib = (total_bytes * 1.0 / 1000000.0);
 
-  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
 
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   BlockingCounter bc(test_num * 2);
@@ -234,7 +235,7 @@ void TestCorrectnessOnLocalMachine() {
 
 void TestThroughputWithBytes(uint64_t bytes, uint64_t first_token) {
   int32_t total_iteration = 1000;
-  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
   std::vector<std::chrono::steady_clock::time_point> time_points(1010,
                                                                  std::chrono::steady_clock::now());
   std::size_t size = bytes;
@@ -294,10 +295,10 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   EnvProto env_proto = GetEnvProto(first_machine_ip, second_machine_ip, ctrl_port);
   Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New();
-  Global<CtrlClient>::New();
-  int64_t this_mchn_id =
-      Global<EnvDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
-  Global<MachineCtx>::New(this_mchn_id);
+  Global<ProcessCtx>::New();
+  JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
+           .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+  Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
   Global<ResourceDesc, ForEnv>::New(GetResource());
   Global<ResourceDesc, ForSession>::New(GetResource());
 
@@ -326,8 +327,8 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   Global<EpollCommNet>::Delete();
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForEnv>::Delete();
-  Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
+  Global<ProcessCtx>::Delete();
   Global<CtrlServer>::Delete();
   Global<EnvDesc>::Delete();
   std::cout << "All Done!" << std::endl;

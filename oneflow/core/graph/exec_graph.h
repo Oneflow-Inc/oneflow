@@ -57,7 +57,6 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
 
   std::shared_ptr<const Operator> op() const { return op_; }
   std::shared_ptr<const Operator>& mut_op() { return op_; }
-  const OpContext* op_context() const { return op_ctx_.get(); }
   RegstDesc* RegstDesc4BnInOp(const std::string& bn) const { return bn_in_op2regst_.at(bn).get(); }
 
   void BindBnWithRegst(const std::string& bn, std::shared_ptr<RegstDesc>);
@@ -65,6 +64,8 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
                         std::shared_ptr<RegstDesc>);
   void AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_getter)() const,
                              std::shared_ptr<RegstDesc>);
+  bool TryBindBnWithOneOfTheRegsts(const std::string&,
+                                   const std::list<std::shared_ptr<RegstDesc>>&);
   void BindBnWithOneOfTheRegsts(const std::string&, const std::list<std::shared_ptr<RegstDesc>>&);
   void UnbindBnWithEmptyRegst();
 
@@ -73,6 +74,13 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
 
   void InferBlobDescs(const ParallelContext* parallel_ctx);
 
+  const HashMap<std::string, std::string>& mut_inplace_obn2ibn() const {
+    return mut_inplace_obn2ibn_;
+  }
+  const HashMap<std::string, std::string>& con_inplace_obn2ibn() const {
+    return con_inplace_obn2ibn_;
+  }
+
  private:
   std::function<const BlobDesc&(const std::string&)> GetLogicalBlobDesc4BnInOpFunc() const;
   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
@@ -80,7 +88,8 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   std::shared_ptr<const Operator> op_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> bn_in_op2regst_;
 
-  std::unique_ptr<OpContext> op_ctx_;
+  HashMap<std::string, std::string> mut_inplace_obn2ibn_;
+  HashMap<std::string, std::string> con_inplace_obn2ibn_;
 };
 
 class ExecGraph final : public Graph<ExecNode, ExecEdge> {

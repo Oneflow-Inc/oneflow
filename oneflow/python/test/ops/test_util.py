@@ -85,8 +85,6 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     y = FlowJob(x).get().numpy()
     x_diff = test_global_storage.Get("x_diff")
     return y, x_diff
@@ -94,6 +92,10 @@ def RunOneflowOp(device_type, flow_op, x, flow_args):
 
 def RunTensorFlowOp(tf_op, x, tf_args):
     import tensorflow as tf
+
+    gpus = tf.config.experimental.list_physical_devices("GPU")
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
 
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(x)

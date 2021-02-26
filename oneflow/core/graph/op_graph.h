@@ -43,12 +43,12 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const Shape* out_blob_time_shape() const;
   bool IsTimeShapeIdentity() const;
   const Operator& op() const { return *op_; }
+  std::shared_ptr<const Operator> shared_op() const { return op_; }
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
   const SbpSignature& sbp_signature() const { return *CHECK_JUST(op().sbp_signature()); }
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
-  Maybe<const OptInt64*> BatchAxis4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& SrcNode4Ibn(const std::string& bn_in_op) const;
   const ParallelDesc& BlobParallelDesc4Obn(const std::string& obn) const;
@@ -64,7 +64,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   // Setters
   Operator* mut_op() { return op_.get(); }
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
-  SbpSignature* mut_sbp_signature() { return mut_op()->mut_sbp_signature(); }
   Shape* mut_out_blob_time_shape();
   HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
@@ -158,11 +157,12 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   void ForEachDataAndCtrlInNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
   void ForEachDataAndCtrlOutNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
+  // NOTE(chengcheng): For topo for each with ctrl edges. OpEdge is ONLY data edge.
+  std::list<OpNode*> DataOrCtrlSourceNodes() const;
 
   void DumpLogicalBlobDesc(Job* job) const;
   void DumpSbpSignature(Job* job) const;
   void DumpOpTimeShape(Job* job) const;
-  void DumpBatchAxisLbi(Job* job) const;
 
   Maybe<void> Init(const Job& job);
 
@@ -177,12 +177,10 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   Maybe<void> InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const;
   Maybe<void> InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
   Maybe<void> InferLogicalBlobDesc(const Job& job) const;
-  bool IsBatchAxisBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;
 
   std::function<bool(const OpNode*, const OpNode*)> MakePredicatorIsDataOrCtrlReachable() const;
-  std::list<OpNode*> DataOrCtrlSourceNodes() const;
 
   HashMap<std::string, OpNode*> op_name2op_node_;
   std::list<std::string> op_names_;

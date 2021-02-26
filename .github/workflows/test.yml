@@ -20,27 +20,8 @@ jobs:
     - name: Check license and format (please run 'make of_format' if failed)
       uses: ./.github/actions/fmt
 
-  mirror_third_party:
-    name: Mirror third party dependencies
-    runs-on: ubuntu-18.04
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
-    steps:
-    - uses: actions/checkout@v2
-    - name: Mirror dependencies to aliyun
-      env:
-        OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-        OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-      run: |
-        if [ -z "$OSS_ACCESS_KEY_ID" ]
-        then
-          exit 0
-        fi
-        python3 -m pip install setuptools wheel
-        python3 -m pip install oss2
-        python3 tools/package_mirror.py -i cmake
-
   build_and_test_all:
-    needs: [check_license_and_format, mirror_third_party]
+    needs: [check_license_and_format]
     name: CUDA, XLA, CPU
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
@@ -87,6 +68,10 @@ jobs:
           --build_docker_img \
           --oneflow_wheel_path=${wheelhouse_dir} \
           --oneflow_worker_bin=${bin_dir}/oneflow_worker
+    - name: Print backtrace (distributed test)
+      if: always()
+      run: |
+        docker run --privileged --network host --shm-size=8g --rm -v $PWD:$PWD -w $PWD oneflow-test:$USER bash ci/test/print_stack_from_core.sh python3 distributed-tmp
     - name: Upload log (distributed test)
       if: always()
       uses: ./.github/actions/upload_oss
@@ -116,21 +101,16 @@ jobs:
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
           oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
-    - name: (CUDA) Benchmark
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          oneflow-test:$USER \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
-    - name: (CUDA) Benchmark FP16
-      run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-          oneflow-test:$USER \
-          bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
     - name: (CUDA) Model serve test
       run: |
-        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
+        docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} \
+          --env ONEFLOW_TEST_TMP_DIR=$PWD/serving-tmp --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
           oneflow-test:$USER \
           bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_serve_test.sh"
+    - name: Print backtrace (serving test)
+      if: always()
+      run: |
+        docker run --privileged --network host --shm-size=8g --rm -v $PWD:$PWD -w $PWD oneflow-test:$USER bash ci/test/print_stack_from_core.sh python3 serving-tmp
     - name: ONNX export test
       run: |
         docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \

@@ -67,9 +67,15 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InterfaceOpUtil::InferBatchAxis(const InterfaceBlobConf& blob_conf,
-                                            OptInt64* batch_axis) {
-  *batch_axis = blob_conf.batch_axis();
+Maybe<void> InterfaceOpUtil::InferLogicalOutBlobDesc(const InterfaceBlobConf& blob_conf,
+                                                     BlobDesc* out_blob_desc,
+                                                     const ParallelDesc& parallel_desc) {
+  out_blob_desc->mut_shape() = Shape(blob_conf.shape());
+  CheckShape(out_blob_desc->shape());
+  CHECK_GT(out_blob_desc->mut_shape().At(0), 0);
+  out_blob_desc->set_data_type(blob_conf.data_type());
+  out_blob_desc->set_is_dynamic(blob_conf.is_dynamic());
+  out_blob_desc->set_is_tensor_list(blob_conf.is_tensor_list());
   return Maybe<void>::Ok();
 }
 
@@ -104,7 +110,6 @@ Maybe<void> InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
   } else {
     OF_UNIMPLEMENTED();
   }
-  *blob_conf->mutable_batch_axis() = parallel_blob_conf.batch_axis();
   return Maybe<void>::Ok();
 }
 

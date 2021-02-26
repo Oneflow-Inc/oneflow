@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/common/channel.h"
 
 namespace oneflow {
