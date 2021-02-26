@@ -81,7 +81,6 @@ class Tensor {
 
  protected:
   Tensor() = default;
-  std::shared_ptr<const FunctionNode> grad_fn_node_;
 };
 
 class ConsistentTensor;
@@ -159,12 +158,15 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
   // and now_grad_arg is temporary grad to shared data with different FunctionNode
   virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
   virtual const std::shared_ptr<TensorArg>& now_grad_arg() const = 0;
-
+  const std::shared_ptr<const FunctionNode>& grad_fn_node() const { return grad_fn_node_; }
   // Setters for autograd
   virtual void set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
   void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) {
     grad_fn_node_ = grad_fn_node;
   }
+
+ protected:
+  std::shared_ptr<const FunctionNode> grad_fn_node_;
 };
 
 class MirroredTensor final : public DeterminedTensor {
