@@ -88,6 +88,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("__str__", &MirroredTensor::ToString)
       .def("__repr__", &MirroredTensor::ToString)
       .def("__array__", &MirroredTensor::ToArray)
+      .def("__sizeof__", &MirroredTensor::SizeOf);
 
   py::class_<ConsistentTensor, std::shared_ptr<ConsistentTensor>>(m, "ConsistentTensor")
       .def(py::init(&MakeConsistentTensor))
