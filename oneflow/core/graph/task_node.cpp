@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
