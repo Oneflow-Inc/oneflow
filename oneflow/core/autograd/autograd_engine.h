@@ -21,7 +21,6 @@ limitations under the License.
 #include <vector>
 #include <memory>
 #include <functional>
-#include "oneflow/core/framework/tensor_list.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -30,6 +29,7 @@ namespace one {
 
 class TensorArg;
 class Tensor;
+class TensorList;
 
 // Calculates one backward op
 class FunctionNode {
