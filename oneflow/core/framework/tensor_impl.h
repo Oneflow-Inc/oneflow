@@ -128,15 +128,15 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   const std::shared_ptr<const Device>& device() const override { return device_; }
   bool is_lazy() const override { return true; }
   Device* mut_device() override { return const_cast<Device*>(device_.get()); }
-  ParallelDesc* mut_parallel_desc() override { return const_cast<ParallelDesc*>(parallel_desc_.get()); }
+  ParallelDesc* mut_parallel_desc() override {
+    return const_cast<ParallelDesc*>(parallel_desc_.get());
+  }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(DataType dtype) override { dtype_ = dtype; }
-  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override {
-    parallel_desc_ = parallel_desc;
-  }
-  void set_device(const std::shared_ptr<const Device>& device) override { device_ = device; }
+  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override;
+  void set_device(const std::shared_ptr<const Device>& device) override;
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
@@ -171,15 +171,15 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   const std::shared_ptr<const Device>& device() const override { return device_; }
   bool is_lazy() const override { return false; }
   Device* mut_device() override { return const_cast<Device*>(device_.get()); }
-  ParallelDesc* mut_parallel_desc() override { return const_cast<ParallelDesc*>(parallel_desc_.get()); }
+  ParallelDesc* mut_parallel_desc() override {
+    return const_cast<ParallelDesc*>(parallel_desc_.get());
+  }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(DataType dtype) override { dtype_ = dtype; }
-  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override {
-    parallel_desc_ = parallel_desc;
-  }
-  void set_device(const std::shared_ptr<const Device>& device) override { device_ = device; }
+  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override;
+  void set_device(const std::shared_ptr<const Device>& device) override;
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {

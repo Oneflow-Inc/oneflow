@@ -22,39 +22,54 @@ namespace one {
 
 namespace {
 
-void SetParallelDescByDevice(const std::shared_ptr<const Device>& device, ParallelDesc* parallel_desc) {
+void SetParallelDescByDevice(const std::shared_ptr<const Device>& device,
+                             ParallelDesc* parallel_desc) {
+  // TODO: Set ParallelDesc using Device
 }
 
-void SetDeviceByParallelDesc(const std::shared_ptr<const ParallelDesc>& parallel_desc, Device* device) {
+void SetDeviceByParallelDesc(const std::shared_ptr<const ParallelDesc>& parallel_desc,
+                             Device* device) {
+  // TODO: Set Device using ParallelDesc
 }
 
-}
+}  // namespace
 
-LazyMirroredTensorImpl::LazyMirroredTensorImpl(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                         const std::shared_ptr<const Device>& device)
-  : shape_(shape), dtype_(dtype), device_(device) {
+LazyMirroredTensorImpl::LazyMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
+                                               DataType dtype,
+                                               const std::shared_ptr<const Device>& device)
+    : shape_(shape), dtype_(dtype), device_(device) {
   SetParallelDescByDevice(device, mut_parallel_desc());
 }
 
-EagerMirroredTensorImpl::EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                          const std::shared_ptr<const Device>& device)
-  : shape_(shape), dtype_(dtype), device_(device) {
+EagerMirroredTensorImpl::EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
+                                                 DataType dtype,
+                                                 const std::shared_ptr<const Device>& device)
+    : shape_(shape), dtype_(dtype), device_(device) {
   SetParallelDescByDevice(device, mut_parallel_desc());
 }
 
-// Support later
-/* void LazyMirroredTensorImpl::set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) { */
-/*   parallel_desc_ = parallel_desc; */
-/* } */
-
-/* void EagerMirroredTensorImpl::set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) { */
-/*   parallel_desc_ = parallel_desc; */
-/* } */
-
-/* void LazyMirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) { */ 
-/*   device_ = device; */ 
-/* } */
-
+void LazyMirroredTensorImpl::set_parallel_desc(
+    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  parallel_desc_ = parallel_desc;
+  SetDeviceByParallelDesc(parallel_desc, mut_device());
 }
+
+void EagerMirroredTensorImpl::set_parallel_desc(
+    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  parallel_desc_ = parallel_desc;
+  SetDeviceByParallelDesc(parallel_desc, mut_device());
+}
+
+void LazyMirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
+  device_ = device;
+  SetParallelDescByDevice(device, mut_parallel_desc());
+}
+
+void EagerMirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
+  device_ = device;
+  SetParallelDescByDevice(device, mut_parallel_desc());
+}
+
+}  // namespace one
 
 }  // namespace oneflow
