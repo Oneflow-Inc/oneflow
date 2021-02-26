@@ -24,6 +24,9 @@ class AssignOp final : public Operator {
   ~AssignOp() override = default;
 
   void InitFromOpConf() override;
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override;
@@ -46,13 +49,27 @@ std::string DebugString(const BlobDesc& blob_desc) {
   return blob_desc_proto.DebugString();
 }
 
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  CHECK_OR_RETURN(*BlobDesc4BnInOp("ref") == *BlobDesc4BnInOp("value"))
+      << "\nref_blob_desc: " << DebugString(*BlobDesc4BnInOp("ref"))
+      << "\nvalue_blob_desc: " << DebugString(*BlobDesc4BnInOp("value"));
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+Maybe<void> AssignOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(BlobDesc4BnInOp);
+}
+
 Maybe<void> AssignOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  CHECK_OR_RETURN(*GetBlobDesc4BnInOp("ref") == *GetBlobDesc4BnInOp("value"))
-      << "\nref_blob_desc: " << DebugString(*GetBlobDesc4BnInOp("ref"))
-      << "\nvalue_blob_desc: " << DebugString(*GetBlobDesc4BnInOp("value"));
-  return Maybe<void>::Ok();
+  return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> AssignOp::GetSbpSignatures(

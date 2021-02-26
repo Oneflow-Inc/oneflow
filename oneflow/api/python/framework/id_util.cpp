@@ -13,19 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_RECORD_ENCODE_CASE_UTIL_H_
-#define ONEFLOW_CORE_RECORD_ENCODE_CASE_UTIL_H_
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/id_util.h"
 
-#include "oneflow/core/common/data_type.h"
+namespace py = pybind11;
 
 namespace oneflow {
 
-//  encode case
-#define ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT                                            \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kJpeg), ARITHMETIC_DATA_TYPE_SEQ)                   \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kRaw), ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ) \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kBytesList), ((char, DataType::kChar))((int8_t, DataType::kInt8)))
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("UniqueStr", [](const std::string& prefix) { return UniqueStr(prefix).GetOrThrow(); });
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_RECORD_ENCODE_CASE_UTIL_H_

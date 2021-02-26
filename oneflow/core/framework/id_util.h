@@ -13,29 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_ACTOR_RECORD_LOAD_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_RECORD_LOAD_ACTOR_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_ID_UTIL_H_
 
-#include "oneflow/core/actor/compute_actor.h"
-#include "oneflow/core/kernel/record_load_kernel.h"
+#include <string>
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
-class RecordLoadActor final : public CompActor {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(RecordLoadActor);
-  RecordLoadActor() = default;
-  ~RecordLoadActor() = default;
-
- private:
-  void VirtualCompActorInit(const TaskProto&) override;
-  void Act() override;
-  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
-
-  bool is_eof_;
-  RecordLoadStatus record_load_status_;
-};
+Maybe<std::string> UniqueStr(const std::string& prefix);
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_RECORD_LOAD_ACTOR_H_
+#define ONEFLOW_CORE_FRAMEWORK_ID_UTIL_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_ID_UTIL_H_
