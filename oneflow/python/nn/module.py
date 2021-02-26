@@ -20,6 +20,10 @@ from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, C
 from inspect import signature
 import itertools
 
+import numpy as np
+
+import oneflow
+import oneflow_api
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.ops import parallel_cast
 from oneflow.python.ops.get_variable import api_get_variable as get_variable
@@ -32,44 +36,64 @@ from oneflow.python.ops import initializer_util
 T = TypeVar("T", bound="Module")
 
 
-def new_counter():
-    _counter = 0
+_counter = 0
 
-    def counter():
-        nonlocal _counter
-        while True:
-            yield _counter
-            _counter += 1
-
-    return counter()
-
-
-counter = new_counter()
-
-
-# NOTE: temp workaround. Remove when flow.Tensor is ready
-class TensorInternal:
-    def __init__(self, shape):
-        self._shape = shape
+def get_var_helper(shape, name=None):
+    global _counter
+    if name is None:
+        name = "x_" + str(_counter)
+    var = oneflow.get_variable(
+        name, shape=shape, initializer=oneflow.kaiming_initializer(shape)
+    )
+    _counter += 1
+    return var
 
 
 @oneflow_export("Tensor")
 class Tensor:
-    def __init__(self, shape_or_internal):
-        if isinstance(shape_or_internal, TensorInternal):
-            self._internal = shape_or_internal
+    def __init__(self, shape_or_var):
+        if isinstance(shape_or_var, oneflow_api.EagerConsistentBlob):
+            self._variable = shape_or_var
+            self._var_name = None
+            self._shape = shape_or_var.shape
         else:
-            self._internal = TensorInternal(shape_or_internal)
+            self._variable = None
+            self._var_name = None
+            self._shape = shape_or_var
 
     @property
     def shape(self):
-        return self._internal._shape
+        return self._shape
+
+    def determinize(self):
+        if self._var_name is None:
+            self._var_name = get_var_helper(self._shape).lbi.op_name()
+        return self
+
+    def __add__(self, other):
+        return Tensor(self._var + other._var)
+
+    def numpy(self):
+        return self._var.numpy()
+
+    @property
+    def _var(self):
+        self.determinize()
+        if self._variable is not None:
+            return self._variable
+        return get_var_helper(self.shape, name=self._var_name)
+
+    def _get_var_name(self):
+        return self._var_name
 
 
 @oneflow_export("nn.Parameter")
 class Parameter(Tensor):
     def __init__(self, data):
-        super().__init__(data._internal)
+        self._data = data
+
+    def __getattr__(self, name):
+        return getattr(self._data, name)
 
 
 class InputConfigs:
@@ -144,14 +168,39 @@ class Module(object):
         else:
             return self.forward(*args)
 
+    def add_module(self, name: str, module: Optional['Module']) -> None:
+        r"""Adds a child module to the current module.
+
+        The module can be accessed as an attribute using the given name.
+
+        Args:
+            name (string): name of the child module. The child module can be
+                accessed from this module using the given name
+            module (Module): child module to be added to the module.
+        """
+        if not isinstance(module, Module) and module is not None:
+            raise TypeError("{} is not a Module subclass".format(
+                type(module)))
+        elif not isinstance(name, str):
+            raise TypeError("module name should be a string. Got {}".format(
+                type(name)))
+        elif hasattr(self, name) and name not in self._modules:
+            raise KeyError("attribute '{}' already exists".format(name))
+        elif '.' in name:
+            raise KeyError("module name can't contain \".\", got: {}".format(name))
+        elif name == '':
+            raise KeyError("module name can't be empty string \"\"")
+        self._modules[name] = module
+
     def register_buffer(
         self, name: str, tensor: Optional[Tensor], persistent: bool = True
     ) -> None:
         if "_buffers" not in self.__dict__:
             raise AttributeError("cannot assign buffer before Module.__init__() call")
         elif not isinstance(name, str):
-            raise TypeError("buffer name should be a string. "
-                            "Got {}".format(type(name)))
+            raise TypeError(
+                "buffer name should be a string. " "Got {}".format(type(name))
+            )
         elif "." in name:
             raise KeyError('buffer name can\'t contain "."')
         elif name == "":
@@ -176,8 +225,9 @@ class Module(object):
                 "cannot assign parameter before Module.__init__() call"
             )
         elif not isinstance(name, str):
-            raise TypeError("parameter name should be a string. "
-                            "Got {}".format(type(name)))
+            raise TypeError(
+                "parameter name should be a string. " "Got {}".format(type(name))
+            )
         elif "." in name:
             raise KeyError('parameter name can\'t contain "."')
         elif name == "":
@@ -365,6 +415,15 @@ class Module(object):
             if buf is not None and name not in self._non_persistent_buffers_set:
                 # destination[prefix + name] = buf if keep_vars else buf.detach()
                 destination[prefix + name] = buf
+
+    def load_state_dict(self, state_dict: Dict[str, np.ndarray],
+            strict: bool = True):
+        param_buffer_var_names = [x._get_var_name() for x in self.parameters()]
+        state_dict_overlapped = {key: item for key, item in state_dict.items() if key in param_buffer_var_names}
+        if strict and len(state_dict) != len(state_dict_overlapped):
+            # TODO:
+            raise RuntimeError()
+        oneflow.load_variables(state_dict_overlapped)
 
     def state_dict(
         self, destination=None, prefix="", keep_vars=False
