@@ -88,7 +88,6 @@ class MirroredTensor;
 
 class UndeterminedTensor final : public Tensor {
  public:
-  virtual ~UndeterminedTensor() = default;
   UndeterminedTensor(const std::shared_ptr<Shape>& shape, DataType dtype, bool lazy,
                      bool requires_grad, bool retain_grad)
       : shape_(shape),
@@ -145,6 +144,8 @@ class UndeterminedTensor final : public Tensor {
 };
 
 class DeterminedTensor : public Tensor, public std::enable_shared_from_this<DeterminedTensor> {
+ public:
+  virtual ~DeterminedTensor() = default;
   // Getters to be deprecated
   virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
 
@@ -172,9 +173,7 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
 class MirroredTensor final : public DeterminedTensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
-  MirroredTensor(const std::shared_ptr<const Shape>&, const DataType,
-                 const std::shared_ptr<const ParallelDesc>&, const std::shared_ptr<const Device>&) {
-  }
+  MirroredTensor() = default;
   MirroredTensor(const std::shared_ptr<MirroredTensorImpl>& impl) { impl_ = impl; }
   ~MirroredTensor() = default;
 
@@ -215,9 +214,7 @@ class MirroredTensor final : public DeterminedTensor {
 class ConsistentTensor final : public DeterminedTensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConsistentTensor);
-  ConsistentTensor(const std::shared_ptr<const Shape>&, const DataType,
-                   const std::shared_ptr<const ParallelDesc>&,
-                   const std::shared_ptr<const compatible_py::Distribute>&) {}
+  ConsistentTensor() = default;
   ConsistentTensor(const std::shared_ptr<ConsistentTensorImpl>& impl) { impl_ = impl; }
   ~ConsistentTensor() = default;
 
