@@ -50,7 +50,7 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - name: (CUDA) Set environment variables
+      - name: Set environment variables
         env:
           test_suite: ${{matrix.test_suite }}
         run: |
