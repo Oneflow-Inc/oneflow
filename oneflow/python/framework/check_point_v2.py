@@ -31,6 +31,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
@@ -301,10 +302,15 @@ def _LogicalSlice(
             op_attribute = op_infer_util.Infer(
                 op_conf, bn_in_op2blob_object, scope_symbol_id
             )
+            cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+                str(op_attribute)
+            )
             builder.StatelessCall(
-                op_attribute,
-                parallel_conf=parallel_conf,
-                bn_in_op2blob_object=bn_in_op2blob_object,
+                cfg_op_attribute,
+                parallel_conf,
+                bn_in_op2blob_object,
+                boxing_util.BoxingTo,
+                vm_util._FindOrCreateDelegateBlobObject,
             )
             Yield(bn_in_op2blob_object["y_0"])
 
@@ -394,10 +400,15 @@ def _LogicalSliceAssign(
         op_attribute = op_infer_util.Infer(
             op_conf, bn_in_op2blob_object, scope_symbol_id
         )
+        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+            str(op_attribute)
+        )
         builder.StatelessCall(
-            op_attribute,
-            parallel_conf=parallel_conf,
-            bn_in_op2blob_object=bn_in_op2blob_object,
+            cfg_op_attribute,
+            parallel_conf,
+            bn_in_op2blob_object,
+            boxing_util.BoxingTo,
+            vm_util._FindOrCreateDelegateBlobObject,
         )
 
     vm_util.LogicalRun(BuildAssignInstruction)
