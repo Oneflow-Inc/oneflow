@@ -13,19 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_RECORD_ENCODE_CASE_UTIL_H_
-#define ONEFLOW_CORE_RECORD_ENCODE_CASE_UTIL_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_SCOPE_UTIL_H_
+#define ONEFLOW_CORE_FRAMEWORK_SCOPE_UTIL_H_
 
-#include "oneflow/core/common/data_type.h"
+#include <vector>
+#include "oneflow/core/job/scope.h"
 
 namespace oneflow {
 
-//  encode case
-#define ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT                                            \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kJpeg), ARITHMETIC_DATA_TYPE_SEQ)                   \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kRaw), ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ) \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kBytesList), ((char, DataType::kChar))((int8_t, DataType::kInt8)))
+Maybe<Scope> GetCurrentScope();
+
+Maybe<void> InitThreadLocalScopeStack(const std::shared_ptr<Scope>& scope);
+
+Maybe<void> ThreadLocalScopeStackPush(const std::shared_ptr<Scope>& scope);
+
+Maybe<void> ThreadLocalScopeStackPop();
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_RECORD_ENCODE_CASE_UTIL_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_SCOPE_UTIL_H_

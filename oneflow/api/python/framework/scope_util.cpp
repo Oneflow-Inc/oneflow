@@ -13,19 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/virtual_machine_scope.h"
-#include "oneflow/core/vm/virtual_machine.msg.h"
-#include "oneflow/core/vm/oneflow_vm.h"
-#include "oneflow/core/control/global_process_ctx.h"
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/scope_util.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
-namespace vm {
 
-VirtualMachineScope::VirtualMachineScope(const Resource& resource) {
-  Global<OneflowVM>::New(resource, GlobalProcessCtx::Rank());
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("GetCurrentScope", []() { return GetCurrentScope().GetPtrOrThrow(); });
+  m.def("InitGlobalScopeStack", [](const std::shared_ptr<Scope>& scope) {
+    return InitThreadLocalScopeStack(scope).GetOrThrow();
+  });
+
+  m.def("GlobalScopeStackPush", [](const std::shared_ptr<Scope>& scope) {
+    return ThreadLocalScopeStackPush(scope).GetOrThrow();
+  });
+  m.def("GlobalScopeStackPop", []() { return ThreadLocalScopeStackPop().GetOrThrow(); });
 }
 
-VirtualMachineScope::~VirtualMachineScope() { Global<OneflowVM>::Delete(); }
-
-}  // namespace vm
 }  // namespace oneflow

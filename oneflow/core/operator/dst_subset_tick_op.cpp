@@ -20,6 +20,15 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  BlobDesc4BnInOp("out")->mut_shape() = Shape({1});
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 class DstSubsetTickOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DstSubsetTickOp);
@@ -27,6 +36,9 @@ class DstSubsetTickOp final : public Operator {
   ~DstSubsetTickOp() = default;
 
   void InitFromOpConf() override;
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature*) const override;
@@ -46,11 +58,16 @@ LogicalNode* DstSubsetTickOp::NewProperLogicalNode() const {
   return new DstSubsetTickLogicalNode();
 }
 
+Maybe<void> DstSubsetTickOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(BlobDesc4BnInOp);
+}
+
 Maybe<void> DstSubsetTickOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature*) const {
-  GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
-  return Maybe<void>::Ok();
+  return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> DstSubsetTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
