@@ -168,7 +168,7 @@ void DeleteObject(const std::shared_ptr<InstructionsBuilder>& x,
   return x->DeleteObject(blob_object).GetOrThrow();
 }
 
-// signature of python func _FindOrCreateDelegateBlobObject, it will be removed after blobcache is
+// signature of python fun _FindOrCreateDelegateBlobObject, it will be removed after blobcache is
 // migrated
 using FindOrCreateDelegateBlobObjectFun = std::function<std::shared_ptr<compatible_py::BlobObject>(
     const std::shared_ptr<InstructionsBuilder>&,

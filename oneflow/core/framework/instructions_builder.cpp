@@ -218,7 +218,7 @@ Maybe<compatible_py::BlobObject> MakeNewBlobObjectLike(
           std::make_shared<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>();
   builder->RawStatelessCall(std::make_shared<cfg::OpAttribute>(*op_attribute), parallel_conf,
                             bn_in_op2blob_object);
-  return (*bn_in_op2blob_object)["out"];
+  return JUST(MapAt(*bn_in_op2blob_object, "out"));
 }
 
 }  // namespace
@@ -1085,7 +1085,7 @@ Maybe<OpNodeSignatureDesc> InstructionsBuilder::GetOpNodeSignatureSymbol(
   return GetSymbol<cfg::OpNodeSignature, OpNodeSignatureDesc>(*op_node_signature);
 }
 
-// signature of python func _FindOrCreateDelegateBlobObject, it will be removed after blobcache is
+// signature of python fun _FindOrCreateDelegateBlobObject, it will be removed after blobcache is
 // migrated
 using FindOrCreateDelegateBlobObjectFun = std::function<std::shared_ptr<compatible_py::BlobObject>(
     const std::shared_ptr<InstructionsBuilder>&,
@@ -1156,7 +1156,7 @@ Maybe<void> InstructionsBuilder::StatelessCall(
   };
 
   const auto GetDelegateBlobObject =
-      [this, find_or_creat_delegate_blob_object, &FetchDelegateBlobObject](
+      [this, &find_or_creat_delegate_blob_object, &FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
@@ -1201,7 +1201,7 @@ Maybe<void> InstructionsBuilder::NoBoxingStatelessCall(
   };
 
   const auto GetDirectOr121BlobObject =
-      [this, find_or_creat_delegate_blob_object, &FetchDelegateBlobObject](
+      [this, &find_or_creat_delegate_blob_object, &FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
@@ -1292,9 +1292,9 @@ Maybe<void> InstructionsBuilder::_StatefulCall(
        &get_delegate_blob_object](const std::string& ibn) -> Maybe<compatible_py::BlobObject> {
     OpAttribute pb_op_attribute;
     op_attribute->ToProto(&pb_op_attribute);
-    std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr = CHECK_JUST(
-        compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, pb_op_attribute, ibn));
-    return get_delegate_blob_object((*bn_in_op2blob_object)[ibn], op_arg_parallel_attr);
+    std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr =
+        JUST(compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, pb_op_attribute, ibn));
+    return get_delegate_blob_object(JUST(MapAt(*bn_in_op2blob_object, ibn)), op_arg_parallel_attr);
   };
 
   std::shared_ptr<OpNodeSignatureDesc> op_node_signature_sym =
@@ -1342,16 +1342,14 @@ Maybe<void> InstructionsBuilder::_StatelessCall(
     op_parallel_desc_sym = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(symbol_id));
   }
   CHECK_OR_RETURN(op_parallel_desc_sym);
-  // TODO(hanbinbin): use Maybe as return after StatefulCall is migrated
   const auto DelegateBlobObject4Ibn =
       [&op_attribute, &bn_in_op2blob_object, &get_delegate_blob_object,
        op_parallel_desc_sym](const std::string& ibn) -> Maybe<compatible_py::BlobObject> {
     OpAttribute pb_op_attribute;
     op_attribute->ToProto(&pb_op_attribute);
-    std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr = CHECK_JUST(
-        compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, pb_op_attribute, ibn));
-    return CHECK_JUST(get_delegate_blob_object(CHECK_JUST(MapAt(*bn_in_op2blob_object, ibn)),
-                                               op_arg_parallel_attr));
+    std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr =
+        JUST(compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, pb_op_attribute, ibn));
+    return get_delegate_blob_object(JUST(MapAt(*bn_in_op2blob_object, ibn)), op_arg_parallel_attr);
   };
 
   const auto& op_conf = op_attribute->op_conf();

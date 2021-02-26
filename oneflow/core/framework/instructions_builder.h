@@ -268,6 +268,40 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<void> _DeleteObject(compatible_py::Object* blob_object);
 
+  Maybe<std::vector<
+      std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
+  GetConstInputOperandBlobObjects(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::function<Maybe<compatible_py::BlobObject>(const std::string&)>& blob_object4ibn);
+
+  Maybe<std::vector<
+      std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
+  GetMutableInputOperandBlobObjects(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::function<Maybe<compatible_py::BlobObject>(const std::string&)>& blob_object4ibn);
+
+  Maybe<std::vector<
+      std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
+  GetMut1OperandBlobObjects(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+      const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+          bn_in_op2blob_object);
+
+  Maybe<void> CheckRefInBlobObjectParallelDesc(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<ParallelDesc>& op_parallel_desc_sym,
+      const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+          bn_in_op2blob_object);
+
+  Maybe<std::vector<
+      std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
+  GetMut2OperandBlobObjects(
+      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+      const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+          bn_in_op2blob_object);
+
   Maybe<void> _StatefulCallOpKernel(
       const std::string& instr_name, const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
       const std::shared_ptr<compatible_py::OpKernelObject> opkernel_object,
