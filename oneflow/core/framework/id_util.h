@@ -13,16 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_OPS_PAD_2D_SEQ_H_
-#define ONEFLOW_USER_OPS_PAD_2D_SEQ_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_ID_UTIL_H_
 
-#include "oneflow/core/common/util.h"
+#include <string>
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
-#define PAD_2D_TYPE_SEQ                    \
-  OF_PP_MAKE_TUPLE_SEQ("reflection_pad2d") \
-  OF_PP_MAKE_TUPLE_SEQ("replication_pad2d")
+Maybe<std::string> UniqueStr(const std::string& prefix);
+
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_OPS_PAD_2D_SEQ_H_
+#define ONEFLOW_CORE_FRAMEWORK_ID_UTIL_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_ID_UTIL_H_

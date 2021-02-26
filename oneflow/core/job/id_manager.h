@@ -73,7 +73,6 @@ class IDMgr final {
   //  1   |     10     |   11    |          21          | 21
   int64_t GlobalWorkStreamId4ActorId(int64_t actor_id) const;
   int64_t GlobalWorkStreamId4TaskId(int64_t task_id) const;
-  int64_t AllocateChainId(int64_t global_work_stream_id);
   int64_t PickCpuThrdIdEvenly(int64_t machine_id);
 
   StreamIndexGeneratorManager* GetStreamIndexGeneratorManager() { return &stream_index_gen_mgr_; }
