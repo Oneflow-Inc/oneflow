@@ -135,9 +135,9 @@ class UndeterminedTensor final : public Tensor {
   std::shared_ptr<const Shape> shape_;
   DataType dtype_;
   bool lazy_;
-  std::shared_ptr<const ParallelDesc> parallel_desc_ = nullptr;
-  std::shared_ptr<const Device> device_ = nullptr;
-  std::shared_ptr<const compatible_py::Distribute> distribute_ = nullptr;
+  std::shared_ptr<const ParallelDesc> parallel_desc_;
+  std::shared_ptr<const Device> device_;
+  std::shared_ptr<const compatible_py::Distribute> distribute_;
   bool requires_grad_;
   bool retain_grad_;
   Maybe<bool> consistent_;

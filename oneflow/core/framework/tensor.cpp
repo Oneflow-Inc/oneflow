@@ -60,8 +60,7 @@ Maybe<DeterminedTensor> UndeterminedTensor::DetermineAndDestroySelf() {
 }
 
 bool UndeterminedTensor::is_leaf() const {
-  // TODO: implement the logic
-  return false;
+  TODO();
 }
 
 }  // namespace one
