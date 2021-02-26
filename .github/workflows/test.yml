@@ -60,9 +60,6 @@ jobs:
           echo "ci_tmp_dir=${ci_tmp_dir}" >> $GITHUB_ENV
           echo "wheelhouse_dir=${ci_tmp_dir}/wheelhouse" >> $GITHUB_ENV
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
-          if [ "$test_suite" == "xla" ]; then
-            echo "ONEFLOW_TEST_CPU_ONLY=1" >> $GITHUB_ENV
-          fi
           if [ "$test_suite" == "cpu" ]; then
             echo "ONEFLOW_TEST_CPU_ONLY=1" >> $GITHUB_ENV
           fi
