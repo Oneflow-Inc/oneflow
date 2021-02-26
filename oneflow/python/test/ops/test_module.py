@@ -35,6 +35,26 @@ def get_var_helper(shape):
 
 
 class TestModule(flow.unittest.TestCase):
+    def test_x(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.w = flow.nn.Parameter(flow.Tensor((2, 3)))
+
+            def forward(self, x):
+                return x + self.w
+
+        m = CustomModule()
+        print(m.state_dict())
+
+        @flow.global_function()
+        def job() -> None:
+            x = flow.Tensor((2, 3))
+            print(m(x).numpy())
+        job()
+        m.load_state_dict({'x_2': np.ones((2, 3), dtype=np.float32)})
+        job()
+
     def test_parameter(test_case):
         shape = (3, 4)
         t = flow.Tensor(shape)
