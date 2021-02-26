@@ -13,19 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_RECORD_ENCODE_CASE_UTIL_H_
-#define ONEFLOW_CORE_RECORD_ENCODE_CASE_UTIL_H_
 
-#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/framework/tensor_arg.h"
 
 namespace oneflow {
+namespace one {
 
-//  encode case
-#define ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT                                            \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kJpeg), ARITHMETIC_DATA_TYPE_SEQ)                   \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kRaw), ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ) \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kBytesList), ((char, DataType::kChar))((int8_t, DataType::kInt8)))
+bool TensorArg::Empty() const { return partial_sum_tensors_.empty() && acc_tensor_; }
 
+void TensorArg::Release() {
+  partial_sum_tensors_.clear();
+  acc_tensor_.reset();
+}
+
+}  // namespace one
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_RECORD_ENCODE_CASE_UTIL_H_

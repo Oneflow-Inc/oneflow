@@ -13,20 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/record/ofrecord_bytes_list_encoder.h"
+#ifndef ONEFLOW_CORE_FRAMEWORK_SCOPE_UTIL_H_
+#define ONEFLOW_CORE_FRAMEWORK_SCOPE_UTIL_H_
+
+#include <vector>
+#include "oneflow/core/job/scope.h"
 
 namespace oneflow {
 
-template<typename T>
-void OFRecordEncoderImpl<EncodeCase::kBytesList, T>::EncodeOneCol(
-    DeviceCtx* ctx, const Blob* in_blob, int64_t in_offset, Feature& feature,
-    const std::string& field_name, int64_t one_col_elem_num) const {
-  UNIMPLEMENTED();
-}
+Maybe<Scope> GetCurrentScope();
 
-#define INSTANTIATE_OFRECORD_BYTES_LIST_ENCODER(type_cpp, type_proto) \
-  template class OFRecordEncoderImpl<EncodeCase::kBytesList, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_BYTES_LIST_ENCODER,
-                     ((char, DataType::kChar))((int8_t, DataType::kInt8)))
+Maybe<void> InitThreadLocalScopeStack(const std::shared_ptr<Scope>& scope);
+
+Maybe<void> ThreadLocalScopeStackPush(const std::shared_ptr<Scope>& scope);
+
+Maybe<void> ThreadLocalScopeStackPop();
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_FRAMEWORK_SCOPE_UTIL_H_

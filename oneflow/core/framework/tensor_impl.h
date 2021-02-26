@@ -34,6 +34,9 @@ class Device;
 
 namespace one {
 
+class Tensor;
+class TensorArg;
+
 class TensorImpl {
  public:
   virtual ~TensorImpl() = default;
@@ -44,10 +47,22 @@ class TensorImpl {
   virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
   virtual bool is_lazy() const = 0;
 
+  // Getters for autograd
+  const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }
+  const std::shared_ptr<TensorArg>& now_grad_arg() const { return now_grad_arg_; }
+  bool requires_grad() const { return requires_grad_; }
+  bool is_leaf() const { return is_leaf_; }
+  bool retain_grad() const { return retain_grad_; }
+
   // Setters
   virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
   virtual void set_dtype(DataType dtype) = 0;
   virtual void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) = 0;
+
+  // Setters for autograd
+  void set_acc_grad(const std::shared_ptr<Tensor>& grad) { acc_grad_ = grad; }
+  void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
+  void set_retain_grad(bool retain_grad) { retain_grad_ = retain_grad; }
 
   // Getters to be deprecated
   virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
@@ -57,6 +72,13 @@ class TensorImpl {
 
  protected:
   TensorImpl() = default;
+
+  // For autograd
+  std::shared_ptr<Tensor> acc_grad_;
+  std::shared_ptr<TensorArg> now_grad_arg_;
+  bool requires_grad_;
+  bool is_leaf_;
+  bool retain_grad_;
 };
 
 class MirroredTensorImpl : public TensorImpl {

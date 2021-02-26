@@ -64,7 +64,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   // Setters
   Operator* mut_op() { return op_.get(); }
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
-  SbpSignature* mut_sbp_signature() { return mut_op()->mut_sbp_signature(); }
   Shape* mut_out_blob_time_shape();
   HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
