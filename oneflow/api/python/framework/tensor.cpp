@@ -73,8 +73,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("grad_fn", &MirroredTensor::grad_fn)
       .def_property_readonly("requires_grad", &MirroredTensor::requires_grad)
       .def_property_readonly("is_leaf", &MirroredTensor::is_leaf)
-      .def("get_dtype",
-           [](std::shared_ptr<MirroredTensor>& x) { return static_cast<int>(x->dtype()); })
       .def("size", &MirroredTensor::shape)
       .def("dim", &MirroredTensor::dim)
       .def("ndimension", &MirroredTensor::ndimension)
@@ -88,7 +86,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("__str__", &MirroredTensor::ToString)
       .def("__repr__", &MirroredTensor::ToString)
       .def("__array__", &MirroredTensor::ToArray)
-      .def("__sizeof__", &MirroredTensor::SizeOf);
+      .def("__sizeof__", &MirroredTensor::SizeOf)
+      .def("get_dtype",
+           [](std::shared_ptr<MirroredTensor>& x) { return static_cast<int>(x->dtype()); });
 
   py::class_<ConsistentTensor, std::shared_ptr<ConsistentTensor>>(m, "ConsistentTensor")
       .def(py::init(&MakeConsistentTensor))
