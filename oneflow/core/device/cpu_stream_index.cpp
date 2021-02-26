@@ -29,7 +29,7 @@ CPUStreamIndexGenerator::CPUStreamIndexGenerator()
 }
 
 stream_index_t CPUStreamIndexGenerator::GenerateComputeStreamIndex() {
-  return compute_stream_index_counter_++ % compute_stream_num_;
+  return compute_stream_index_begin_ + (compute_stream_index_counter_++ % compute_stream_num_);
 }
 
 stream_index_t CPUStreamIndexGenerator::GenerateCommNetStreamIndex() {
