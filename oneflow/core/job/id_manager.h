@@ -30,17 +30,6 @@ class IDMgr final {
   OF_DISALLOW_COPY_AND_MOVE(IDMgr);
   ~IDMgr() = default;
 
-  // Get ThrdId, TaskId, RegstDescId
-  int64_t GetGpuComputeThrdId(int64_t dev_phy_id) const;
-  int64_t GetGpuH2DThrdId(int64_t dev_phy_id) const;
-  int64_t GetGpuD2HThrdId(int64_t dev_phy_id) const;
-  int64_t GetGpuNcclThrdId(int64_t dev_phy_id) const;
-  int64_t GetGpuMixThrdId(int64_t dev_phy_id) const;
-  int64_t GetGpuDecodeH2DThrdId(int64_t dev_phy_id) const;
-  int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const;
-  int64_t CommNetThrdId() const;
-  int64_t TickTockThrdId() const;
-
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
   int64_t NewMemBlockId() { return mem_block_id_count_++; }
   int64_t NewChunkId() { return chunk_id_count_++; }

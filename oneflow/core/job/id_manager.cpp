@@ -20,51 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-int64_t IDMgr::GetGpuComputeThrdId(int64_t dev_phy_id) const {
-  UNIMPLEMENTED();
-  return 0;
-}
-
-int64_t IDMgr::GetGpuH2DThrdId(int64_t dev_phy_id) const {
-  UNIMPLEMENTED();
-  return 0;
-}
-
-int64_t IDMgr::GetGpuD2HThrdId(int64_t dev_phy_id) const {
-  UNIMPLEMENTED();
-  return 0;
-}
-
-int64_t IDMgr::GetGpuNcclThrdId(int64_t dev_phy_id) const {
-  UNIMPLEMENTED();
-  return 0;
-}
-
-int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
-  UNIMPLEMENTED();
-  return 0;
-}
-
-int64_t IDMgr::GetGpuDecodeH2DThrdId(int64_t dev_phy_id) const {
-  UNIMPLEMENTED();
-  return 0;
-}
-
-int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
-  UNIMPLEMENTED();
-  return 0;
-}
-
-int64_t IDMgr::CommNetThrdId() const {
-  UNIMPLEMENTED();
-  return 0;
-}
-
-int64_t IDMgr::TickTockThrdId() const {
-  UNIMPLEMENTED();
-  return 0;
-}
-
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
   return DeserializeStreamIdFromInt64(thrd_id).device_type();
 }
