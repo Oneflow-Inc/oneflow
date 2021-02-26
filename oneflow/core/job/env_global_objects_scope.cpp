@@ -73,20 +73,7 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
   return resource;
 }
 
-}  // namespace
-
-Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
-  InitLogging(env_proto.cpp_logging_conf());
-#ifdef WITH_CUDA
-  InitGlobalCudaDeviceProp();
-#endif
-  Global<EnvDesc>::New(env_proto);
-  if (Global<EnvDesc>::Get()->has_bootstrap_conf_ctrl_port()) {
-    Global<CtrlServer>::New(Global<EnvDesc>::Get()->bootstrap_conf_ctrl_port());
-  } else {
-    Global<CtrlServer>::New();
-  }
-  Global<ProcessCtx>::New();
+Maybe<void> SyncProcessCtx() {
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
   if (Global<EnvDesc>::Get()->has_ctrl_bootstrap_conf()) {
@@ -97,6 +84,20 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     CHECK_JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
                    .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
   }
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
+  InitLogging(env_proto.cpp_logging_conf());
+#ifdef WITH_CUDA
+  InitGlobalCudaDeviceProp();
+#endif
+  Global<EnvDesc>::New(env_proto);
+  Global<CtrlServer>::New();
+  Global<ProcessCtx>::New();
+  SyncProcessCtx();
   Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
   Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));

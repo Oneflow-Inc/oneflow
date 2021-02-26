@@ -22,7 +22,12 @@ limitations under the License.
 
 namespace oneflow {
 
-CtrlServer::CtrlServer(int ctrl_port) : RpcServer(), port_(ctrl_port) {
+CtrlServer::CtrlServer() : RpcServer() {
+  if (Global<EnvDesc>::Get()->has_bootstrap_conf_ctrl_port()) {
+    port_ = Global<EnvDesc>::Get()->bootstrap_conf_ctrl_port();
+  } else {
+    port_ = 0;
+  }
   Init();
   grpc::ServerBuilder server_builder;
   server_builder.SetMaxMessageSize(INT_MAX);
@@ -43,8 +48,6 @@ CtrlServer::CtrlServer(int ctrl_port) : RpcServer(), port_(ctrl_port) {
             << "0.0.0.0:" + std::to_string(port());
   loop_thread_ = std::thread(&CtrlServer::HandleRpcs, this);
 }
-
-CtrlServer::CtrlServer() : CtrlServer(0) {}
 
 void CtrlServer::OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) {
   call->SendResponse();
