@@ -4,7 +4,6 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/common/device_type.proto";
-import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
@@ -152,85 +151,6 @@ message VariableOpConf {
   required OptInt64 split_axis = 8;
   optional int64 random_seed = 9;
   optional RegularizerConf regularizer = 10;
-}
-
-message EncodeConf {
-  oneof encode {
-    EncodeRaw raw = 1;
-    EncodeJpeg jpeg = 2;
-    EncodeBytesList bytes_list = 3;
-  }
-}
-
-message EncodeBytesList {
-}
-
-message EncodeRaw {
-  optional bool dim1_varying_length = 1 [default = false];
-  optional bool auto_zero_padding = 2 [default = false];
-}
-
-message EncodeJpeg {
-  repeated ImagePreprocess preprocess = 1;
-}
-
-message SubtractPreprocessConf {
-  required float value = 1;
-}
-
-message NormByChannelPreprocessConf {
-  repeated float mean_value = 1;
-  repeated float std_value = 2;
-  required string data_format = 3;
-}
-
-message ScalePreprocessConf {
-  required float value = 1;
-}
-
-message PreprocessConf {
-  oneof type {
-    SubtractPreprocessConf subtract_conf = 1;
-    NormByChannelPreprocessConf norm_by_channel_conf = 2;
-    ScalePreprocessConf scale_conf = 3;
-  }
-}
-
-message RandomShuffleConf {
-  optional int32 buffer_size = 1 [default = 1024];
-}
-
-message RecordLoadOpConf {
-  optional string tick  = 1;
-  required string out = 2;
-  required string data_dir = 3;
-  required int32 data_part_num = 4;
-  optional string part_name_prefix = 5 [default = "part-"];
-  optional int32 part_name_suffix_length = 6 [default = -1];
-  optional RandomShuffleConf random_shuffle_conf = 7;
-  required int64 batch_size = 8;
-}
-
-message BlobConf {
-  required string name = 1;
-  required ShapeProto shape = 2;
-  required DataType data_type = 3;
-  optional int32 max_sequence_size = 4 [default = 1];
-  required EncodeConf encode_case = 5;
-  repeated PreprocessConf preprocess = 6;
-  optional int32 tensor_list_variable_axis = 7 [default = -1];
-  optional bool is_dynamic = 9 [default = false];
-}
-
-message DecodeOFRecordOpConf {
-  required string data_dir = 1;
-  required int32 data_part_num = 2; // piece_size % data_part_num = 0
-  optional string part_name_prefix = 3 [default = "part-"];
-  optional int32 part_name_suffix_length = 4 [default = -1];
-  optional string in = 5;
-  repeated BlobConf blob = 6;
-  optional RandomShuffleConf random_shuffle_conf = 7;
-  required int64 batch_size = 8;
 }
 
 message DecodeRandomOpConf {
@@ -425,7 +345,6 @@ message XrtLaunchOpConf {
   map<string, bool> input_mutability = 5;
   // Mapping launch op's input and output names into function.
   map<string, string> input_output_mapping = 6;
-  map<string, OptInt64> batch_axis = 7;
   // Sbp signatures of each function node.
   map<string, SbpSignature> sbp_signatures = 8;
   optional bool model_update = 9 [default = false];
@@ -468,7 +387,6 @@ message DynamicBinaryConcatOpConf {
   required string out = 2;
   required DataType out_data_type = 3;
   required ShapeProto out_shape = 4;
-  required OptInt64 out_batch_axis = 5;
   required SbpParallel out_sbp = 6;
 }
 
@@ -585,9 +503,7 @@ message OperatorConf {
   optional int64 scope_symbol_id = 8;
   oneof op_type {
     // system op
-    DecodeOFRecordOpConf decode_ofrecord_conf = 101;
     DecodeRandomOpConf decode_random_conf = 102;
-    RecordLoadOpConf record_load_conf = 103;
     CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
     BoxingOpConf boxing_conf = 108;

@@ -22,6 +22,9 @@ limitations under the License.
 
 namespace py = pybind11;
 
+PYBIND11_MAKE_OPAQUE(
+    std::unordered_map<std::string, std::shared_ptr<::oneflow::compatible_py::BlobObject>>);
+
 namespace oneflow {
 
 namespace {
@@ -71,6 +74,12 @@ std::shared_ptr<OperatorConfSymbol> GetOpConfSymbol(
     const std::shared_ptr<InstructionsBuilder>& x,
     const std::shared_ptr<cfg::OperatorConf>& op_conf) {
   return x->GetOpConfSymbol(op_conf).GetPtrOrThrow();
+}
+
+std::shared_ptr<OpNodeSignatureDesc> GetOpNodeSignatureSymbol(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute) {
+  return x->GetOpNodeSignatureSymbol(op_attribute).GetPtrOrThrow();
 }
 
 std::shared_ptr<compatible_py::BlobObject> NewBlobObject(
@@ -223,36 +232,171 @@ void _StatefulCallOpKernel(
       .GetOrThrow();
 }
 
-void _StatelessCallOpKernel(
-    const std::shared_ptr<InstructionsBuilder>& x, const std::string& instr_name,
+std::vector<std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+GetConstInputOperandBlobObjects(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::function<std::shared_ptr<compatible_py::BlobObject>(const std::string&)>&
+        blob_object4ibn) {
+  return *(x->GetConstInputOperandBlobObjects(op_attribute, blob_object4ibn).GetPtrOrThrow());
+}
+
+std::vector<std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+GetMutableInputOperandBlobObjects(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::function<std::shared_ptr<compatible_py::BlobObject>(const std::string&)>&
+        blob_object4ibn) {
+  return *(x->GetMutableInputOperandBlobObjects(op_attribute, blob_object4ibn).GetPtrOrThrow());
+}
+
+std::vector<std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+GetMut1OperandBlobObjects(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
-    const std::shared_ptr<JobDesc>& job_desc_sym,
-    const std::shared_ptr<OperatorConfSymbol>& op_conf_sym,
-    const std::shared_ptr<OpNodeSignatureDesc>& op_node_signature_sym,
-    const std::shared_ptr<compatible_py::Object>& shared_opkernel_obj,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
-        const_input_operand_blob_objects,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
-        mutable_input_operand_blob_objects,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
-        mut1_operand_blob_objects,
-    std::vector<
-        std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
-        mut2_operand_blob_objects) {
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object) {
+  return *(x->GetMut1OperandBlobObjects(op_attribute, parallel_desc_sym, bn_in_op2blob_object)
+               .GetPtrOrThrow());
+}
+
+void CheckRefInBlobObjectParallelDesc(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<ParallelDesc>& op_parallel_desc_sym,
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object) {
   return x
-      ->_StatelessCallOpKernel(instr_name, parallel_desc_sym, job_desc_sym, op_conf_sym,
-                               op_node_signature_sym, shared_opkernel_obj,
-                               const_input_operand_blob_objects, mutable_input_operand_blob_objects,
-                               mut1_operand_blob_objects, mut2_operand_blob_objects)
+      ->CheckRefInBlobObjectParallelDesc(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object)
       .GetOrThrow();
+}
+
+std::vector<std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>
+GetMut2OperandBlobObjects(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object) {
+  return *(x->GetMut2OperandBlobObjects(op_attribute, parallel_desc_sym, bn_in_op2blob_object)
+               .GetPtrOrThrow());
+}
+
+// signature of python func _FindOrCreateDelegateBlobObject, it will be removed after blobcache is
+// migrated
+using FindOrCreateDelegateBlobObjectFun = std::function<std::shared_ptr<compatible_py::BlobObject>(
+    const std::shared_ptr<InstructionsBuilder>&,
+    const std::function<std::shared_ptr<compatible_py::BlobObject>(
+        const std::shared_ptr<compatible_py::BlobObject>&,
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&,
+    const std::shared_ptr<compatible_py::BlobObject>&,
+    const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>;
+
+void StatelessCall(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object,
+    const std::function<std::shared_ptr<compatible_py::BlobObject>(
+        const std::shared_ptr<InstructionsBuilder>&,
+        const std::shared_ptr<compatible_py::BlobObject>&,
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& boxing_to,
+    const FindOrCreateDelegateBlobObjectFun& find_or_creat_delegate_blob_object) {
+  return x
+      ->StatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object, boxing_to,
+                      find_or_creat_delegate_blob_object)
+      .GetOrThrow();
+}
+
+void NoBoxingStatelessCall(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object,
+    const FindOrCreateDelegateBlobObjectFun& find_or_creat_delegate_blob_object) {
+  return x
+      ->NoBoxingStatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object,
+                              find_or_creat_delegate_blob_object)
+      .GetOrThrow();
+}
+
+void NoBoxingCudaD2HStatelessCall(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<cfg::ParallelConf>& in_parallel_conf,
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object,
+    const std::function<std::shared_ptr<ParallelDesc>(
+        const std::shared_ptr<InstructionsBuilder>&, const std::shared_ptr<ParallelDesc>&,
+        const std::string&)>& try_replace_device_tag) {
+  return x
+      ->NoBoxingCudaD2HStatelessCall(op_attribute, in_parallel_conf, bn_in_op2blob_object,
+                                     try_replace_device_tag)
+      .GetOrThrow();
+}
+
+void NoBoxingCudaH2DStatelessCall(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<cfg::ParallelConf>& out_parallel_conf,
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object) {
+  return x->NoBoxingCudaH2DStatelessCall(op_attribute, out_parallel_conf, bn_in_op2blob_object)
+      .GetOrThrow();
+}
+
+void RawStatelessCall(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
+    const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
+        bn_in_op2blob_object) {
+  return x->RawStatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object).GetOrThrow();
+}
+
+std::shared_ptr<compatible_py::BlobObject> Build121To(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+    const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
+  return x->Build121To(blob_object, parallel_desc_symbol).GetPtrOrThrow();
 }
 
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
+  using BnInOp2BlobObject =
+      std::unordered_map<std::string, std::shared_ptr<compatible_py::BlobObject>>;
+
+  py::class_<BnInOp2BlobObject, std::shared_ptr<BnInOp2BlobObject>>(m, "BnInOp2BlobObject")
+      .def(py::init<>())
+      .def("__len__", [](const std::shared_ptr<BnInOp2BlobObject>& x) { return x->size(); })
+      .def("items",
+           [](std::shared_ptr<BnInOp2BlobObject>& x) {
+             return py::make_iterator(x->begin(), x->end());
+           },
+           py::keep_alive<0, 1>())
+      .def("__getitem__", (BnInOp2BlobObject::mapped_type
+                           & (BnInOp2BlobObject::*)(const BnInOp2BlobObject::key_type& pos))
+                              & BnInOp2BlobObject::operator[])
+      .def("__setitem__",
+           [](std::shared_ptr<BnInOp2BlobObject>& x, const BnInOp2BlobObject::key_type& k,
+              BnInOp2BlobObject::mapped_type& v) {
+             auto it = x->find(k);
+             if (it != x->end()) {
+               it->second = v;
+             } else {
+               x->emplace(k, v);
+             }
+           })
+      .def("__iter__",
+           [](std::shared_ptr<BnInOp2BlobObject>& x) {
+             return py::make_iterator(x->begin(), x->end());
+           },
+           py::keep_alive<0, 1>());
+
   py::class_<InstructionsBuilder, std::shared_ptr<InstructionsBuilder>>(m, "InstructionsBuilder")
       .def(py::init([](const std::shared_ptr<vm::IdGenerator>& id_generator,
                        const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
@@ -273,6 +417,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("GetParallelDescSymbol", &GetParallelDescSymbol)
       .def("GetScopeSymbol", &GetScopeSymbol)
       .def("GetOpConfSymbol", &GetOpConfSymbol)
+      .def("GetOpNodeSignatureSymbol", &GetOpNodeSignatureSymbol)
       .def("NewBlobObject", &NewBlobObject)
       .def("NewSymbolId4OpNodeSignature", &NewSymbolId4OpNodeSignature)
       .def("GetPhysicalParallelDescSymbols", &GetPhysicalParallelDescSymbols)
@@ -295,7 +440,17 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
            &GetSharedOpKernelObject4ParallelConfSymbol)
       .def("DeleteObject", &DeleteObject)
       .def("_StatefulCallOpKernel", &_StatefulCallOpKernel)
-      .def("_StatelessCallOpKernel", &_StatelessCallOpKernel);
+      .def("StatelessCall", &StatelessCall)
+      .def("NoBoxingStatelessCall", &NoBoxingStatelessCall)
+      .def("NoBoxingCudaD2HStatelessCall", &NoBoxingCudaD2HStatelessCall)
+      .def("NoBoxingCudaH2DStatelessCall", &NoBoxingCudaH2DStatelessCall)
+      .def("RawStatelessCall", &RawStatelessCall)
+      .def("Build121To", &Build121To)
+      .def("GetConstInputOperandBlobObjects", &GetConstInputOperandBlobObjects)
+      .def("GetMutableInputOperandBlobObjects", &GetMutableInputOperandBlobObjects)
+      .def("GetMut1OperandBlobObjects", &GetMut1OperandBlobObjects)
+      .def("CheckRefInBlobObjectParallelDesc", &CheckRefInBlobObjectParallelDesc)
+      .def("GetMut2OperandBlobObjects", &GetMut2OperandBlobObjects);
 
   // these API will be removed when InstructionsBuilder is refactor competely
   py::module_ vm_sub_module = m.def_submodule("vm");

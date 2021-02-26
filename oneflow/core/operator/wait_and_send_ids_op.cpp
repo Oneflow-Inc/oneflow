@@ -28,23 +28,33 @@ LogicalNode* WaitAndSendIdsOp::NewProperLogicalNode() const {
   return new WaitAndSendIdsLogicalNode();
 }
 
+namespace {
+
+Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
+                           const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  BlobDesc4BnInOp("out")->mut_shape() = Shape({1});
+  BlobDesc4BnInOp("out")->set_data_type(op_conf.wait_and_send_ids_conf().data_type());
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+Maybe<void> WaitAndSendIdsOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), 1);
+  return InferBlobDescs(op_conf(), BlobDesc4BnInOp);
+}
+
 Maybe<void> WaitAndSendIdsOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
-  GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
-  GetBlobDesc4BnInOp("out")->set_data_type(op_conf().wait_and_send_ids_conf().data_type());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> WaitAndSendIdsOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("out")->clear_value();
-  return Maybe<void>::Ok();
+  return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
 }
 
 Maybe<void> WaitAndSendIdsOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder().Split(output_bns(), 0).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder().Broadcast(output_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 

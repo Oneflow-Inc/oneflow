@@ -241,6 +241,83 @@ OF_DEVICE_FUNC void DoReplicationPad2dGrad(const IN_T *src, IN_T *dest,
 #define INSTANTIATE_REPLICATION_PAD2D_GRAD_FUNCTOR(device_type_v, dtype_pair) \
   template struct ReplicationPad2dGradFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
 
+template<DeviceType device_type, typename IN_T>
+struct ConstantPad2dFunctor final {
+  void operator()(DeviceCtx *ctx, const IN_T *src, IN_T *dest,
+                  const NdIndexOffsetHelper<int64_t, 4> &index_helper, int64_t n_batch,
+                  int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
+                  int64_t x_width, int64_t pad_left, int64_t pad_top, IN_T constant_value);
+};
+
+template<DeviceType device_type, typename IN_T>
+struct ConstantPad2dGradFunctor final {
+  void operator()(DeviceCtx *ctx, const IN_T *src, IN_T *dest,
+                  const NdIndexOffsetHelper<int64_t, 4> &index_helper, int64_t n_batch,
+                  int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
+                  int64_t dx_width, int64_t pad_left, int64_t pad_top);
+};
+
+template<typename IN_T>
+OF_DEVICE_FUNC void DoConstantPad2d(const IN_T *src, IN_T *dest,
+                                    const NdIndexOffsetHelper<int64_t, 4> &index_helper,
+                                    int64_t elem_num, int64_t src_num, int64_t dest_num,
+                                    int64_t y_height, int64_t y_width, int64_t x_height,
+                                    int64_t x_width, int64_t pad_left, int64_t pad_top,
+                                    IN_T constant_value) {
+  XPU_1D_KERNEL_LOOP(k, elem_num) {
+    int64_t n, c, i, j;
+    int64_t coord_y[4];
+    index_helper.OffsetToNdIndex(k, coord_y);
+    n = coord_y[0];
+    c = coord_y[1];
+    i = coord_y[2];
+    j = coord_y[3];
+
+    int64_t dest_index = n * dest_num + c * y_width * y_height + i * y_width + j;
+    if (j >= pad_left && j < x_width + pad_left && i >= pad_top && i < x_height + pad_top) {
+      int64_t ip_x = j - pad_left;
+      int64_t ip_y = i - pad_top;
+
+      int64_t src_index = n * src_num + c * x_width * x_height + ip_y * x_width + ip_x;
+      dest[dest_index] = src[src_index];
+    } else {
+      dest[dest_index] = constant_value;
+    }
+  }
+}
+
+template<typename IN_T>
+OF_DEVICE_FUNC void DoConstantPad2dGrad(const IN_T *src, IN_T *dest,
+                                        const NdIndexOffsetHelper<int64_t, 4> &index_helper,
+                                        int64_t elem_num, int64_t src_num, int64_t dest_num,
+                                        int64_t dy_height, int64_t dy_width, int64_t dx_height,
+                                        int64_t dx_width, int64_t pad_left, int64_t pad_top) {
+  XPU_1D_KERNEL_LOOP(k, elem_num) {
+    int64_t n, c, i, j;
+    int64_t coord[4];
+    index_helper.OffsetToNdIndex(k, coord);
+    n = coord[0];
+    c = coord[1];
+    i = coord[2];
+    j = coord[3];
+    if (j >= pad_left && j < dx_width + pad_left && i >= pad_top && i < dx_height + pad_top) {
+      int64_t ip_x = j - pad_left;
+      int64_t ip_y = i - pad_top;
+
+      int64_t src_index = n * src_num + c * dy_width * dy_height + i * dy_width + j;
+      int64_t dest_index = n * dest_num + c * dx_width * dx_height + ip_y * dx_width + ip_x;
+      DeviceAdd<IN_T>::Invoke(src + src_index, dest + dest_index);
+    }
+  }
+}
+
+// macros for functors instantiate(used by pad2d_kernels_util.cu)
+#define INSTANTIATE_CONSTANT_PAD2D_FUNCTOR(device_type_v, dtype_pair) \
+  template struct ConstantPad2dFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
+
+#define INSTANTIATE_CONSTANT_PAD2D_GRAD_FUNCTOR(device_type_v, dtype_pair) \
+  template struct ConstantPad2dGradFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
+
 }  // namespace user_op
 }  // namespace oneflow
 

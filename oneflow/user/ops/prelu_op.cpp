@@ -33,10 +33,6 @@ REGISTER_USER_OP("prelu")
       *y_desc = *x_desc;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       const user_op::TensorDesc& alpha_tensor =
@@ -78,12 +74,6 @@ REGISTER_USER_OP("prelu_grad")
       CHECK_EQ_OR_RETURN(dy_desc->data_type(), x_desc->data_type());
       *dx_desc = *x_desc;
       *ctx->TensorDesc4ArgNameAndIndex("alpha_diff", 0) = *alpha_desc;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-      *ctx->BatchAxis4ArgNameAndIndex("alpha_diff", 0) =
-          *ctx->BatchAxis4ArgNameAndIndex("alpha", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

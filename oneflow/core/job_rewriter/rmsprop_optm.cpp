@@ -37,42 +37,42 @@ OperatorConf GenerateRmspropHelperVariableOpConf(const VariableOp& op, const std
   return helper_variable_op;
 }
 
-void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
-                             const ParallelConf& parallel_conf, JobBuilder* job_builder,
-                             const LogicalBlobId& diff_lbi_of_var_out) {
-  const auto& train_conf = job_builder->job().job_conf().train_conf();
-  const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
+void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
+                             const std::string& model_diff_lbn, const OptimizerConf optimizer_conf,
+                             JobBuilder* job_builder) {
+  const VariableOp* var_op = dynamic_cast<const VariableOp*>(&var_op_node.op());
+  CHECK_NOTNULL(var_op);
+  OperatorConf mean_square_var(GenerateRmspropHelperVariableOpConf(*var_op, "mean_square", 0.f));
+  job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {mean_square_var});
 
-  OperatorConf mean_square_var(GenerateRmspropHelperVariableOpConf(op, "mean_square", 0.f));
-  job_builder->AddOps(parallel_conf, {mean_square_var});
-
-  user_op::UserOpConfWrapperBuilder rmsprop_update_op_builder(op.op_name() + "_optimizer");
-  const RMSPropModelUpdateConf& rmsprop_conf = model_update_conf.rmsprop_conf();
+  user_op::UserOpConfWrapperBuilder rmsprop_update_op_builder(var_op->op_name() + "_optimizer");
+  const RMSPropModelUpdateConf& rmsprop_conf = optimizer_conf.rmsprop_conf();
   bool centered = rmsprop_conf.centered();
   rmsprop_update_op_builder.OpTypeName("rmsprop_update")
-      .Input("model", GenLogicalBlobName(op.BnInOp2Lbi("out")))
-      .Input("model_diff", GenLogicalBlobName(diff_lbi_of_var_out))
-      .Input("learning_rate", train_conf.primary_lr_lbn())
+      .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
+      .Input("model_diff", model_diff_lbn)
+      .Input("learning_rate", optimizer_conf.learning_rate_lbn())
       .Input("mean_square", GenVariableOutputLbn(mean_square_var))
       .Attr<bool>("centered", centered)
       .Attr<float>("epsilon", rmsprop_conf.epsilon())
       .Attr<float>("decay_rate", rmsprop_conf.decay_rate())
-      .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
-      .ScopeSymbolId(op.op_conf().scope_symbol_id());
+      .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
+      .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
   SetDynamicLossScaleSkipIf(ctx, &rmsprop_update_op_builder);
 
   if (centered) {
-    OperatorConf mean_gradient_var(GenerateRmspropHelperVariableOpConf(op, "mean_gradient", 0.f));
-    job_builder->AddOps(parallel_conf, {mean_gradient_var});
+    OperatorConf mean_gradient_var(
+        GenerateRmspropHelperVariableOpConf(*var_op, "mean_gradient", 0.f));
+    job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {mean_gradient_var});
     rmsprop_update_op_builder.Input("mean_gradient", GenVariableOutputLbn(mean_gradient_var));
   }
 
   user_op::UserOpConfWrapper rmsprop_update_op = rmsprop_update_op_builder.Build();
-  job_builder->AddOps(parallel_conf, {rmsprop_update_op.op_conf()});
+  job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {rmsprop_update_op.op_conf()});
 }
 
 }  // namespace
 
-REGISTER_OPTIMIZER(NormalModelUpdateOpUserConf::kRmspropConf, &GenerateOptimizerOpConf);
+REGISTER_OPTIMIZER(OptimizerConf::kRmspropConf, &GenerateOptimizerOpConf);
 
 }  // namespace oneflow

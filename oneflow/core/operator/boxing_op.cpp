@@ -129,23 +129,6 @@ Maybe<void> BoxingOp::InferTmpBlobDesc(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BoxingOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  const OptInt64* batch_axis = nullptr;
-  for (const auto& ibn : input_bns()) {
-    const OptInt64* const cur_ibn_batch_axis = BatchAxis4BnInOp(ibn);
-    if (cur_ibn_batch_axis->has_value() == false) { continue; }
-    if (batch_axis) {
-      CHECK_OR_RETURN(*batch_axis == *cur_ibn_batch_axis);
-    } else {
-      batch_axis = cur_ibn_batch_axis;
-    }
-  }
-  OptInt64 no_batch_axis;
-  if (batch_axis == nullptr) { batch_axis = &no_batch_axis; }
-  for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *batch_axis; }
-  return Maybe<void>::Ok();
-}
 Maybe<void> BoxingOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,

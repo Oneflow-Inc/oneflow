@@ -30,6 +30,9 @@ class DistributeConcatOp final : public Operator {
 
   void InitFromOpConf() override;
 
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override;
@@ -37,8 +40,6 @@ class DistributeConcatOp final : public Operator {
 
  private:
   Maybe<void> InferBlobParallelDesc() override;
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -57,6 +58,30 @@ void DistributeConcatOp::InitFromOpConf() {
 
   EnrollRepeatedInputBn("in");
   EnrollOutputBn("out");
+}
+
+Maybe<void> DistributeConcatOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  const auto& conf = op_conf().distribute_concat_conf();
+  BlobDesc* out = BlobDesc4BnInOp("out");
+  *out = *BlobDesc4BnInOp(input_bns().Get(0));
+  const int32_t concat_axis = FixAxis(conf.axis(), out->shape().NumAxes());
+  int64_t concat_dim_size = out->shape().At(concat_axis);
+  for (size_t i = 1; i < input_bns().size(); ++i) {
+    const BlobDesc* in_i = BlobDesc4BnInOp(input_bns().Get(i));
+    for (int64_t j = 0; j < in_i->shape().NumAxes(); ++j) {
+      if (j == concat_axis) {
+        concat_dim_size += in_i->shape().At(j);
+      } else {
+        CHECK_EQ_OR_RETURN(out->shape().At(j), in_i->shape().At(j));
+      }
+    }
+    CHECK_EQ_OR_RETURN(in_i->data_type(), out->data_type());
+  }
+  out->mut_shape().Set(concat_axis, concat_dim_size);
+  out->set_is_dynamic(false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> DistributeConcatOp::InferOutBlobDescs(
@@ -115,15 +140,6 @@ Maybe<void> DistributeConcatOp::InferBlobParallelDesc() {
     CHECK_OR_RETURN(it != bn2parallel_desc.end());
     return it->second;
   });
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DistributeConcatOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  FOR_RANGE(int32_t, i, 0, input_bns().size()) {
-    CHECK_OR_RETURN(*BatchAxis4BnInOp(input_bns().Get(i)) == *BatchAxis4BnInOp(input_bns().Get(0)));
-  }
-  *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp(input_bns().Get(0));
   return Maybe<void>::Ok();
 }
 
