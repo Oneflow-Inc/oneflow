@@ -22,20 +22,10 @@ namespace one {
 
 namespace {
 
-void SetMirroredTensorParallelDescByDevice(const std::shared_ptr<const Device>& device, ParallelDesc* parallel_desc) {
-  ParallelConf parallel_conf;
-  parallel_conf.set_device_tag(device->type());
-  std::string device_name = "0:" + std::to_string(device->device_id());
-  parallel_conf.add_device_name(device_name);
-  parallel_desc = new ParallelDesc(parallel_conf);
+void SetParallelDescByDevice(const std::shared_ptr<const Device>& device, ParallelDesc* parallel_desc) {
 }
 
-void SetMirroredTensorDeviceByParallelDesc(const std::shared_ptr<const ParallelDesc>& parallel_desc, Device* device) {
-  ParallelConf parallel_conf = parallel_desc->parallel_conf();
-  std::string type = parallel_conf.device_tag();
-  // TODO: Get device id from parallel conf
-  int64_t device_id = 0;
-  device = new Device(type, device_id);
+void SetDeviceByParallelDesc(const std::shared_ptr<const ParallelDesc>& parallel_desc, Device* device) {
 }
 
 }
@@ -43,13 +33,13 @@ void SetMirroredTensorDeviceByParallelDesc(const std::shared_ptr<const ParallelD
 LazyMirroredTensorImpl::LazyMirroredTensorImpl(const std::shared_ptr<const Shape>& shape, DataType dtype,
                          const std::shared_ptr<const Device>& device)
   : shape_(shape), dtype_(dtype), device_(device) {
-  SetMirroredTensorParallelDescByDevice(device, mut_parallel_desc());
+  SetParallelDescByDevice(device, mut_parallel_desc());
 }
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape, DataType dtype,
                           const std::shared_ptr<const Device>& device)
   : shape_(shape), dtype_(dtype), device_(device) {
-  SetMirroredTensorParallelDescByDevice(device, mut_parallel_desc());
+  SetParallelDescByDevice(device, mut_parallel_desc());
 }
 
 // Support later
