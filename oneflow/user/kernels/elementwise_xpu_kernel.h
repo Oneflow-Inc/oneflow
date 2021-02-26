@@ -159,29 +159,15 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel {
 
 #define REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(device, kernel_name, functor, out_dtype, \
                                                          input_a_dtype, out_name, input_a_name)   \
-  REGISTER_USER_KERNEL(kernel_name)                                                               \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                        \
-        return new UnaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, input_a_dtype>(  \
-            [](user_op::KernelComputeContext* ctx) { return functor<out_dtype>(); }, out_name,    \
-            input_a_name);                                                                        \
-      })                                                                                          \
-      .SetIsMatchedHob(                                                                           \
-          (user_op::HobDeviceTag() == device)                                                     \
-          & (user_op::HobDataType(input_a_name, 0) == GetDataType<out_dtype>::value));
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITH_ATTR(device, kernel_name, functor, out_dtype,          \
+                                                input_a_dtype, out_name, input_a_name, )
 
 #define REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(device, kernel_name, functor, out_dtype, \
                                                           input_a_dtype, input_b_dtype, out_name,  \
                                                           input_a_name, input_b_name)              \
-  REGISTER_USER_KERNEL(kernel_name)                                                                \
-      .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                         \
-        return new BinaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, input_a_dtype,   \
-                                           input_b_dtype>(                                         \
-            [](user_op::KernelComputeContext* ctx) { return functor<out_dtype>(); }, out_name,     \
-            input_a_name, input_b_name);                                                           \
-      })                                                                                           \
-      .SetIsMatchedHob(                                                                            \
-          (user_op::HobDeviceTag() == device)                                                      \
-          & (user_op::HobDataType(input_a_name, 0) == GetDataType<out_dtype>::value));
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITH_ATTR(device, kernel_name, functor, out_dtype,          \
+                                                 input_a_dtype, input_b_dtype, out_name,           \
+                                                 input_a_name, input_b_name, )
 
 }  // namespace oneflow
 
