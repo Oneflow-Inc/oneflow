@@ -45,7 +45,8 @@ jobs:
           test_suite: ${{matrix.test_suite }}
         run: |
           echo "test_suite=${test_suite}" >> $GITHUB_ENV
-          export ci_tmp_dir=$HOME/ci-tmp-${test_suite}
+          export ci_tmp_dir=$HOME/ci-cache/test_suite/${test_suite}
+          mkdir -p $ci_tmp_dir
           echo "ci_tmp_dir=${ci_tmp_dir}" >> $GITHUB_ENV
           echo "wheelhouse_dir=${ci_tmp_dir}/wheelhouse" >> $GITHUB_ENV
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
