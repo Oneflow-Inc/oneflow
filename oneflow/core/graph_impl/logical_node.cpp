@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/cpu_stream_index.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_stream_index.h"
