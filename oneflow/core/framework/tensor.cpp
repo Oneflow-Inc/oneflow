@@ -59,9 +59,7 @@ Maybe<DeterminedTensor> UndeterminedTensor::DetermineAndDestroySelf() {
   }
 }
 
-bool UndeterminedTensor::is_leaf() const {
-  TODO();
-}
+bool UndeterminedTensor::is_leaf() const { TODO(); }
 
 }  // namespace one
 }  // namespace oneflow
