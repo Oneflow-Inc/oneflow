@@ -13,29 +13,36 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_ACTOR_DECODE_COMPUTE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_DECODE_COMPUTE_ACTOR_H_
 
-#include "oneflow/core/actor/compute_actor.h"
-#include "oneflow/core/kernel/decode_ofrecord_kernel.h"
+#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_ARG_H_
+#define ONEFLOW_CORE_FRAMEWORK_TENSOR_ARG_H_
+
+#include <memory>
+#include <vector>
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace one {
 
-class DecodeCompActor final : public CompActor {
+class Tensor;
+
+// This class will be used in TensorImpl and Autograd. It will share data with different
+// FunctionNodes.
+class TensorArg final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DecodeCompActor);
-  DecodeCompActor() = default;
-  ~DecodeCompActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(TensorArg);
+  TensorArg() = default;
+  ~TensorArg() = default;
+
+  bool Empty() const;
+  void Release();
 
  private:
-  void VirtualCompActorInit(const TaskProto&) override;
-  void Act() override;
-  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
-  void VirtualAsyncSendNaiveConsumedRegstMsgToProducer() override;
-
-  int32_t piece_id_;
+  std::vector<std::shared_ptr<Tensor>> partial_sum_tensors_;
+  std::shared_ptr<Tensor> acc_tensor_;
 };
 
+}  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_DECODE_COMPUTE_ACTOR_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_ARG_H_

@@ -13,20 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_RECORD_OFRECORD_BYTES_LIST_ENCODER_H_
-#define ONEFLOW_CORE_RECORD_OFRECORD_BYTES_LIST_ENCODER_H_
 
-#include "oneflow/core/record/ofrecord_encoder.h"
+#include "oneflow/core/framework/tensor_arg.h"
 
 namespace oneflow {
+namespace one {
 
-template<typename T>
-class OFRecordEncoderImpl<EncodeCase::kBytesList, T> final : public OFRecordEncoderIf {
- private:
-  void EncodeOneCol(DeviceCtx*, const Blob* in_blob, int64_t in_offset, Feature&,
-                    const std::string& field_name, int64_t one_col_elem_num) const override;
-};
+bool TensorArg::Empty() const { return partial_sum_tensors_.empty() && acc_tensor_; }
 
+void TensorArg::Release() {
+  partial_sum_tensors_.clear();
+  acc_tensor_.reset();
+}
+
+}  // namespace one
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_RECORD_OFRECORD_BYTES_LIST_ENCODER_H_

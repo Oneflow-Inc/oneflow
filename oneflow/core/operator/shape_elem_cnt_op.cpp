@@ -54,12 +54,27 @@ void ShapeElemCntOp::InitFromOpConf() {
   EnrollOutputBn("y", false);
 }
 
+namespace {
+
+Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
+                           const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  BlobDesc4BnInOp("y")->set_data_type(op_conf.shape_elem_cnt_conf().data_type());
+  BlobDesc4BnInOp("y")->mut_shape() = Shape({1});
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+Maybe<void> ShapeElemCntOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(op_conf(), BlobDesc4BnInOp);
+}
+
 Maybe<void> ShapeElemCntOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  GetBlobDesc4BnInOp("y")->set_data_type(op_conf().shape_elem_cnt_conf().data_type());
-  GetBlobDesc4BnInOp("y")->mut_shape() = Shape({1});
-  return Maybe<void>::Ok();
+  return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
 }
 
 void ShapeElemCntOp::VirtualGenKernelConf(
