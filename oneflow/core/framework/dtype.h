@@ -16,11 +16,37 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_DTYPE_H_
 #define ONEFLOW_CORE_FRAMEWORK_DTYPE_H_
 
+#include "oneflow/core/common/data_type.pb.h"
+
 namespace oneflow {
 
 class DType final {
  public:
+  DType() : proto_dtype_(DataType::kInvalidDataType) {}
+  DType(const DataType& proto_dtype) : proto_dtype_(proto_dtype) {}
+
+  std::string ToString() const { return DataType_Name(proto_dtype_); }
+  DataType oneflow_proto_dtype() const { return proto_dtype_; }
+  bool is_signed() const { return proto_dtype_ != DataType::kUInt8; }
+  bool is_complex() const { return false; }
+  bool is_floating_point() const;
+
+ private:
+  DataType proto_dtype_;
 };
+
+std::shared_ptr<DType> Char();
+std::shared_ptr<DType> Float16();
+std::shared_ptr<DType> Float();
+
+std::shared_ptr<DType> Double();
+std::shared_ptr<DType> Int8();
+std::shared_ptr<DType> Int32();
+
+std::shared_ptr<DType> Int64();
+std::shared_ptr<DType> UInt8();
+std::shared_ptr<DType> RecordDType();
+std::shared_ptr<DType> TensorBufferDType();
 
 }  // namespace oneflow
 
