@@ -28,25 +28,22 @@ class UserOp final : public Operator {
   ~UserOp() = default;
 
   void InitFromOpConf() override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx,
-                             const SbpSignature* sbp_signature) const override;
+  Maybe<void> InferInternalBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const override;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext*,
                                 const SbpSignature* sbp_signature) const override;
-  Maybe<void> InferInplaceObn2Ibn(HashMap<std::string, std::string>* mut_inplace_obn2ibn,
-                                  HashMap<std::string, std::string>* con_inplace_obn2ibn,
-                                  std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext* parallel_ctx,
-                                  const SbpSignature* sbp_signature) const override;
+  Maybe<void> InferInplaceObn2Ibn(
+      HashMap<std::string, std::string>* mut_inplace_obn2ibn,
+      HashMap<std::string, std::string>* con_inplace_obn2ibn,
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 
  private:
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
-  Maybe<void> InferBatchAxis(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -58,11 +55,9 @@ class UserOp final : public Operator {
   Maybe<void> InferOutputBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const override;
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
-      std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
-      const ParallelDesc* parallel_desc, const SbpSignature* sbp_signature) const override;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override;
 
   const user_op::OpRegistryResult* val_;
 };

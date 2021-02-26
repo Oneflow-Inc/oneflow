@@ -33,8 +33,6 @@ std::shared_ptr<Shape> BlobDesc::shape() const { UNIMPLEMENTED(); }
 DataType BlobDesc::dtype() const { UNIMPLEMENTED(); }
 std::shared_ptr<cfg::ParallelConf> BlobDesc::parallel_conf() const { UNIMPLEMENTED(); }
 
-int64_t BlobDesc::batch_axis() const { UNIMPLEMENTED(); }
-bool BlobDesc::has_batch_axis() const { return batch_axis() != INVALID_BATCH_AXIS; }
 bool BlobDesc::is_dynamic() const { UNIMPLEMENTED(); }
 bool BlobDesc::is_tensor_list() const { UNIMPLEMENTED(); }
 std::shared_ptr<Distribute> BlobDesc::distribute() const { return distribute_; }

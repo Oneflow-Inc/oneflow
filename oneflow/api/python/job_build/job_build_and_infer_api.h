@@ -97,11 +97,6 @@ inline bool JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const 
   return oneflow::JobBuildAndInferCtx_IsTensorList(job_name, lbn).GetOrThrow();
 }
 
-inline std::string JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,
-                                                    const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_GetBatchAxis(job_name, lbn).GetOrThrow();
-}
-
 inline std::string JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& job_name,
                                                                     const std::string& lbn) {
   return oneflow::JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn).GetOrThrow();
@@ -136,6 +131,12 @@ inline std::string JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi(const std
 inline void JobBuildAndInferCtx_CheckLbnValidAndExist(const std::string& job_name,
                                                       const std::string& lbn) {
   return oneflow::JobBuildAndInferCtx_CheckLbnValidAndExist(job_name, lbn).GetOrThrow();
+}
+
+inline std::string JobBuildAndInferCtx_GetOpBlobLbn(const std::string& job_name,
+                                                    const std::string& op_name,
+                                                    const std::string bn_in_op) {
+  return oneflow::JobBuildAndInferCtx_GetOpBlobLbn(job_name, op_name, bn_in_op).GetOrThrow();
 }
 
 #endif  // ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_API_H_
