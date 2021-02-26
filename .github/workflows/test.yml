@@ -24,7 +24,7 @@ jobs:
     runs-on: [self-hosted, scheduler]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - uses: Oneflow-Inc/github-workflow-schedule@7a80a2557c646cbe6f97a3df4da625f6a0f3f4f2
+      - uses: Oneflow-Inc/github-workflow-schedule@2ff3cb52018d5886c175f3fa2244d48f21c3f3aa
         name: Wait for GPU slot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
