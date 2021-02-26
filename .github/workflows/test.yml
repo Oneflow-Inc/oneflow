@@ -22,6 +22,7 @@ jobs:
   wait_for_gpu_slot:
     name: Wait for GPU slots
     runs-on: [self-hosted, scheduler]
+    needs: [check_license_and_format]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - uses: Oneflow-Inc/github-workflow-schedule@34f0bc51cbaa419736b223aff34a28559f19d6dc
