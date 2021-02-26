@@ -22,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
@@ -49,16 +51,16 @@ Thread* NewThread(StreamId stream_id) {
 }  // namespace
 
 ThreadMgr::~ThreadMgr() {
-  for (const auto& thread_pair : threads_) {
+  for (auto& thread_pair : threads_) {
     ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
     thread_pair.second->GetMsgChannelPtr()->Send(msg);
-    LOG(INFO) << "actor thread " << SerializeStreamIdToInt64(thread_pair.first) << " finish";
+    thread_pair.second.reset();
+    LOG(INFO) << "actor thread " << thread_pair.first << " finish";
   }
 }
 
 Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
-  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id);
-  auto iter = threads_.find(stream_id);
+  auto iter = threads_.find(thrd_id);
   CHECK(iter != threads_.end()) << "thread " << thrd_id << " not found";
   return iter->second.get();
 }
@@ -69,10 +71,11 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
     TaskId task_id = DeserializeTaskIdFromInt64(task.task_id());
     if (task_id.process_id().node_index() != this_machine_id) { continue; }
     StreamId stream_id = task_id.stream_id();
-    if (threads_.find(stream_id) != threads_.end()) { continue; }
+    int64_t thrd_id = SerializeStreamIdToInt64(stream_id);
+    if (threads_.find(thrd_id) != threads_.end()) { continue; }
     Thread* thread = NewThread(stream_id);
     CHECK_NOTNULL(thread);
-    CHECK(threads_.emplace(stream_id, thread).second);
+    threads_[thrd_id].reset(thread);
   }
 }
 
