@@ -68,7 +68,7 @@ const sleep = require('util').promisify(setTimeout)
 async function start() {
     let i = 0;
     while (i < 1000) {
-        console.log("trying", i, "/", 1000)
+        console.log("trying", i + 1, "/", 1000)
         if (await num_in_progress_runs() == 1) {
             break; // success
         }
