@@ -56,6 +56,9 @@ void Operator::Init(const OperatorConf& op_conf, const JobDesc* conf_job_desc) {
   *this_op_conf = op_conf;
   if (has_job_desc() && job_desc().IsPredict()) { this_op_conf->set_trainable(false); }
   InitFromOpConf();
+  *op_attribute_.mutable_input_bns() = input_bns_;
+  *op_attribute_.mutable_output_bns() = output_bns_;
+  *op_attribute_.mutable_tmp_bns() = tmp_bns_;
   input_output_bns_.Reserve(input_bns().size() + output_bns().size());
   for (const auto& bn : input_bns()) { *input_output_bns_.Add() = bn; }
   for (const auto& bn : output_bns()) { *input_output_bns_.Add() = bn; }
@@ -65,15 +68,6 @@ LogicalNode* Operator::NewProperLogicalNode() const { return new NormalForwardLo
 
 const LogicalBlobId& Operator::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute_.arg_signature().bn_in_op2lbi().at(bn_in_op);
-}
-
-LogicalBlobId* Operator::MutBnInOp2Lbi(const std::string& bn_in_op) {
-  auto it = op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi()->find(bn_in_op);
-  if (it == op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi()->end()) {
-    return nullptr;
-  } else {
-    return &(it->second);
-  }
 }
 
 DeviceType Operator::device_type() const {
@@ -100,6 +94,14 @@ Maybe<const std::string*> Operator::obn4lbi(const LogicalBlobId& lbi) const {
       << "no logical blob id found. lbn: " << lbi.op_name() << "/" << lbi.blob_name();
   return &iter->second;
 }
+
+const PbRpf<std::string>& Operator::input_bns() const { return input_bns_; }
+
+const PbRpf<std::string>& Operator::output_bns() const { return output_bns_; }
+
+const PbRpf<std::string>& Operator::tmp_bns() const { return tmp_bns_; }
+
+const PbRpf<std::string>& Operator::input_output_bns() const { return input_output_bns_; }
 
 Maybe<void> Operator::InferParallelSignatureIf() {
   JUST(InferBlobParallelDesc());
@@ -679,7 +681,7 @@ LogicalBlobId Operator::tbn2lbi(const std::string& tmp_bn) const {
 }
 
 void Operator::EnrollTmpBn(const std::string& tbn) {
-  *(mut_tmp_bns()->Add()) = tbn;
+  *tmp_bns_.Add() = tbn;
   CHECK(mut_bn_in_op2lbi()->insert({tbn, tbn2lbi(tbn)}).second);
 }
 
@@ -687,7 +689,7 @@ InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff
   LogicalBlobId lbi = lbi4ibn(ibn);
   auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_ibn2input_blob_modifier();
   CHECK(map->insert({ibn, InputBlobModifier()}).second);
-  *(mut_input_bns()->Add()) = ibn;
+  *input_bns_.Add() = ibn;
   CHECK(mut_bn_in_op2lbi()->insert({ibn, lbi}).second);
   auto* ret = MutInputBlobModifier4Ibn(ibn);
   ret->set_requires_grad(has_diff);
@@ -738,7 +740,7 @@ OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_di
   EmplaceLbi2Obn(lbi, obn);
   auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_obn2output_blob_modifier();
   CHECK(map->insert({obn, OutputBlobModifier()}).second);
-  *(mut_output_bns()->Add()) = obn;
+  *output_bns_.Add() = obn;
   CHECK(mut_bn_in_op2lbi()->insert({obn, lbi}).second);
   auto* ret = MutOutputBlobModifier4Obn(obn);
   ret->set_requires_grad(has_diff);

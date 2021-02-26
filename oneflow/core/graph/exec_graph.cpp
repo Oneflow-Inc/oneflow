@@ -105,19 +105,6 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
                                         GetBlobDesc4BnInOp, parallel_ctx));
 }
 
-std::function<const BlobDesc&(const std::string&)> ExecNode::GetLogicalBlobDesc4BnInOpFunc() const {
-  const OpNode* op_node = Global<OpGraph>::Get()->OpNode4OpName(op()->op_name());
-  if (op_node == nullptr) {
-    return [](const std::string& bn_in_op) -> const BlobDesc& {
-      UNIMPLEMENTED();
-      return *(const BlobDesc*)nullptr;
-    };
-  }
-  return [op_node, this](const std::string& bn_in_op) -> const BlobDesc& {
-    return op_node->LogicalBlobDesc4Lbi(op()->BnInOp2Lbi(bn_in_op));
-  };
-}
-
 std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc() const {
   return [this](const std::string& bn_in_op) -> BlobDesc* {
     auto it = bn_in_op2regst_.find(bn_in_op);

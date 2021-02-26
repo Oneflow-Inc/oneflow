@@ -63,7 +63,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
 
   // Setters
   Operator* mut_op() { return op_.get(); }
-  ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
   Shape* mut_out_blob_time_shape();
   BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
   OpNode* MutSrcNode4Ibn(const std::string& bn_in_op) const;
