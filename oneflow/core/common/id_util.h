@@ -58,6 +58,7 @@ class ProcessId {
 class DeviceId {
  public:
   DeviceId(DeviceType device_type, uint32_t device_index);
+  DeviceId() : val_(0) {}
   DeviceType device_type() const;
   uint32_t device_index() const;
   bool operator==(const DeviceId& rhs) const { return val_ == rhs.val_; }
@@ -74,11 +75,15 @@ class DeviceId {
 
   friend class StreamId;
   friend class std::hash<DeviceId>;
+  friend int64_t SerializeMemZoneIdToInt64(DeviceId);
+  friend DeviceId DeserializeMemZoneIdFromInt64(int64_t);
   explicit DeviceId(underlying_t val) : val_(val) {}
   operator underlying_t() const { return val_; }
 
   underlying_t val_;
 };
+
+using MemZoneId = DeviceId;
 
 class StreamId {
  public:
@@ -138,6 +143,9 @@ class TaskId {
 
   underlying_t val_;
 };
+
+int64_t SerializeMemZoneIdToInt64(MemZoneId);
+MemZoneId DeserializeMemZoneIdFromInt64(int64_t);
 
 int64_t SerializeStreamIdToInt64(StreamId);
 StreamId DeserializeStreamIdFromInt64(int64_t);

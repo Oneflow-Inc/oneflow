@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_ID_MANAGER_H_
 #define ONEFLOW_CORE_JOB_ID_MANAGER_H_
 
+#include "oneflow/core/common/id_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -47,13 +48,25 @@ class IDMgr final {
   int64_t NewChunkId() { return chunk_id_count_++; }
 
   // MemZoneId
-  int64_t CpuMemZoneId() const { return gpu_device_num_; }
-  bool IsCpuMemZone(int64_t mem_zone_id) const { return mem_zone_id == CpuMemZoneId(); }
-  bool IsGpuMemZone(int64_t mem_zone_id) const { return mem_zone_id < gpu_device_num_; }
-  int64_t GpuMemZoneId(int64_t dev_phy_id) const { return dev_phy_id; }
+  int64_t CpuMemZoneId() const {
+    MemZoneId cpu_mem_zone_id(DeviceType::kCPU, 0);
+    return SerializeMemZoneIdToInt64(cpu_mem_zone_id);
+  }
+  bool IsCpuMemZone(int64_t mem_zone_id) const {
+    MemZoneId cpu_mem_zone_id = DeserializeMemZoneIdFromInt64(mem_zone_id);
+    return cpu_mem_zone_id.device_type() == DeviceType::kCPU;
+  }
+  bool IsGpuMemZone(int64_t mem_zone_id) const {
+    MemZoneId gpu_mem_zone_id = DeserializeMemZoneIdFromInt64(mem_zone_id);
+    return gpu_mem_zone_id.device_type() == DeviceType::kGPU;
+  }
+  int64_t GpuMemZoneId(int64_t dev_phy_id) const {
+    MemZoneId gpu_mem_zone_id(DeviceType::kGPU, dev_phy_id);
+    return SerializeMemZoneIdToInt64(gpu_mem_zone_id);
+  }
   int64_t GetGpuPhyIdFromMemZoneId(int64_t mem_zone_id) const {
-    CHECK_LT(mem_zone_id, gpu_device_num_);
-    return mem_zone_id;
+    MemZoneId gpu_mem_zone_id = DeserializeMemZoneIdFromInt64(mem_zone_id);
+    return static_cast<int64_t>(gpu_mem_zone_id.device_index());
   }
 
   // GetFromThrdId

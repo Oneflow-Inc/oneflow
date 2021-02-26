@@ -117,6 +117,16 @@ uint32_t TaskId::task_index() const {
                                          >> (kProcessIdBits + kStreamIdBits))};
 }
 
+int64_t SerializeMemZoneIdToInt64(MemZoneId mem_zone_id) {
+  return static_cast<int64_t>(mem_zone_id.val_);
+}
+
+MemZoneId DeserializeMemZoneIdFromInt64(int64_t mem_zone_id) {
+  CHECK(CheckValueInBitsRange(mem_zone_id, MemZoneId::kBits))
+      << "mem_zone_id is out of range: " << mem_zone_id;
+  return MemZoneId{static_cast<uint32_t>(mem_zone_id)};
+}
+
 int64_t SerializeStreamIdToInt64(StreamId stream_id) {
   return static_cast<int64_t>(stream_id.val_);
 }
