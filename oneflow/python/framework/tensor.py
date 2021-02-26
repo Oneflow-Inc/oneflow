@@ -19,7 +19,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.device as oneflow_device
 
 
-oneflow_export("MirroredTensor")(oneflow_api.MirroredTensor)
+oneflow_export("LocalTensor")(oneflow_api.LocalTensor)
 
 oneflow_export("ConsistentTensor")(oneflow_api.ConsistentTensor)
 
