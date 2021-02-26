@@ -20,9 +20,10 @@ limitations under the License.
 
 namespace oneflow {
 
-#define PAD_2D_TYPE_SEQ                    \
-  OF_PP_MAKE_TUPLE_SEQ("reflection_pad2d") \
-  OF_PP_MAKE_TUPLE_SEQ("replication_pad2d")
+#define PAD_2D_TYPE_SEQ                     \
+  OF_PP_MAKE_TUPLE_SEQ("reflection_pad2d")  \
+  OF_PP_MAKE_TUPLE_SEQ("replication_pad2d") \
+  OF_PP_MAKE_TUPLE_SEQ("constant_pad2d")
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_OPS_PAD_2D_SEQ_H_
