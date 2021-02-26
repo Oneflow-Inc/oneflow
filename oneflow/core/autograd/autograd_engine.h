@@ -50,11 +50,11 @@ class FunctionNode {
   FunctionNode() = default;
 };
 
-// Calls every `FunctionNode.Apply()` and capture grad for `inputs`
 class AutogradEngine {
  public:
   virtual ~AutogradEngine() = default;
 
+  // Calls every `FunctionNode.Apply()` and capture grad in this calling for `inputs`
   virtual Maybe<std::shared_ptr<TensorList>> Execute(TensorList* outputs, TensorList* inputs,
                                                      TensorList* out_grads, bool retain_graph,
                                                      bool create_graph) = 0;
