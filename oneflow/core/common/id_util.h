@@ -54,6 +54,7 @@ class ProcessId {
     CHECK_LE(node_index, kMaxNodeIndex);
     CHECK_LE(process_index, kMaxProcessIndex);
   }
+  ProcessId(node_index_t node_index) : ProcessId(node_index, 0) {}
   node_index_t node_index() const { return node_index_; }
   process_index_t process_index() const { return process_index_; }
   bool operator==(const ProcessId& rhs) const {

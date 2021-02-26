@@ -27,17 +27,15 @@ class TaskIdGenerator final {
   OF_DISALLOW_COPY_AND_MOVE(TaskIdGenerator);
   ~TaskIdGenerator() = default;
 
-  TaskId Generate(ProcessId process_id, StreamId stream_id);
+  TaskId Generate(const StreamId& stream_id);
 
  private:
-  using process_stream_key_t = std::pair<ProcessId, StreamId>;
-  HashMap<process_stream_key_t, uint32_t> process_stream2task_index_counter_;
+  HashMap<StreamId, task_index_t> stream_id2task_index_counter_;
 };
 
-inline TaskId TaskIdGenerator::Generate(ProcessId process_id, StreamId stream_id) {
-  process_stream_key_t key = std::make_pair(process_id, stream_id);
-  uint32_t task_index = process_stream2task_index_counter_[key]++;
-  return TaskId(process_id, stream_id, task_index);
+inline TaskId TaskIdGenerator::Generate(const StreamId& stream_id) {
+  task_index_t task_index = stream_id2task_index_counter_[stream_id]++;
+  return TaskId{stream_id, task_index};
 }
 
 }  // namespace oneflow

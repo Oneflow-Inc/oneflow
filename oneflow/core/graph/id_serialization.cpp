@@ -111,7 +111,7 @@ constexpr int64_t kNodeIndexInt64Mask = ((int64_t{1} << ProcessId::kNodeIndexBit
 
 }  // namespace task_id_const
 
-int64_t SerializeTaskIdToInt64(TaskId task_id) {
+int64_t SerializeTaskIdToInt64(const TaskId& task_id) {
   int64_t id = static_cast<int64_t>(task_id.task_index());
   id |= static_cast<int64_t>(task_id.stream_id().stream_index())
         << task_id_const::kStreamIndexShift;
