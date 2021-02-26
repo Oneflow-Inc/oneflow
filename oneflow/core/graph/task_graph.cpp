@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/job/thrd_id_generator.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
-#include "oneflow/core/operator/user_op_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_context.h"
@@ -59,8 +58,7 @@ bool IsConnectToTickOp(const TaskNode* node) {
 
 bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
   const OperatorConf& op_conf = op->op_conf();
-  if (op_conf.has_variable_conf() || op_conf.has_keep_header_only_conf() || op_conf.has_tick_conf()
-      || op_conf.has_device_tick_conf() || op_conf.has_partial_tick_conf()) {
+  if (op_conf.has_variable_conf() || op_conf.has_tick_conf() || op_conf.has_device_tick_conf()) {
     return true;
   }
   return false;
@@ -211,6 +209,22 @@ std::unique_ptr<BoxingLogger> CreateBoxingLogger() {
   }
 }
 
+Maybe<void> MakeGetterTaskNode4MachineId7ThrdId(
+    const std::vector<CompTaskNode*>& task_nodes,
+    std::function<Maybe<CompTaskNode*>(int64_t mchn_id, int64_t thrd_id)>* Getter) {
+  // ticks are shared within a machine/process
+  auto machine_id2task_node = std::make_shared<HashMap<int64_t, CompTaskNode*>>();
+  for (auto* task_node : task_nodes) {
+    machine_id2task_node->emplace(task_node->machine_id(), task_node);
+  }
+  *Getter = [machine_id2task_node](int64_t mchn_id, int64_t thrd_id) -> Maybe<CompTaskNode*> {
+    const auto& iter = machine_id2task_node->find(mchn_id);
+    CHECK_OR_RETURN(iter != machine_id2task_node->end());
+    return iter->second;
+  };
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
@@ -220,7 +234,9 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new OneToOneSubTskGphBuilder());
   builders.emplace_back(new B21SubTskGphBuilder());
-  builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
+  if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+    builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
+  }
   builders.emplace_back(new SliceBoxingSubTskGphBuilder());
   builders.emplace_back(new NaiveB2BSubTskGphBuilder());
   builders.emplace_back(new NaiveB2PSubTskGphBuilder());
@@ -269,11 +285,30 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
       [&](const LogicalNode* src, const LogicalNode* dst, int64_t ctrl_regst_num) {
         const auto& src_task_nodes = logical2sorted_comp_tasks.at(src);
         const auto& dst_task_nodes = logical2sorted_comp_tasks.at(dst);
-        ConnectCtrlEdges(src_task_nodes, dst_task_nodes, ctrl_regst_num);
+        if (src->SoleOp()->op_conf().has_src_subset_tick_conf()) {
+          UNIMPLEMENTED();
+        } else if (dst->SoleOp()->op_conf().has_dst_subset_tick_conf()) {
+          UNIMPLEMENTED();
+        } else {
+          ConnectCtrlEdges(src_task_nodes, dst_task_nodes, ctrl_regst_num);
+        }
       });
 
   SetOrderInGraphForEachNode();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
+}
+
+Maybe<void> TaskGraph::ConnectDstSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
+                                                 const std::vector<CompTaskNode*>& dst_task_nodes) {
+  std::function<Maybe<CompTaskNode*>(int64_t mchn_id, int64_t thrd_id)> TaskNode4MachineId7ThrdId;
+  JUST(MakeGetterTaskNode4MachineId7ThrdId(dst_task_nodes, &TaskNode4MachineId7ThrdId));
+  for (CompTaskNode* src_task_node : src_task_nodes) {
+    CompTaskNode* dst_task_node =
+        JUST(TaskNode4MachineId7ThrdId(src_task_node->machine_id(), src_task_node->thrd_id()));
+    TaskEdge* edge = NewEdge();
+    Connect<TaskNode>(src_task_node, edge, dst_task_node);
+  }
+  return Maybe<void>::Ok();
 }
 
 void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
@@ -424,25 +459,11 @@ void TaskGraph::GetInplaceOpBlobArgList(
         *obas_info->mut_in_obas.mutable_oba()->Add() = GenOpBlobArg(op.op_name(), ibn);
       }
     }
-    for (const std::string& obn : op.output_bns()) {
-      const auto& obn_modifier = op.OutputBlobModifier4Obn(obn);
-      if (obn_modifier.has_mutable_inplace_ibn()) {
-        AddMutableInplaceArgPair(task_node, obn_modifier.mutable_inplace_ibn(), obn, op.op_name());
-      } else if (obn_modifier.has_const_inplace_ibn()) {
-        AddConstInplaceArgPair(task_node, obn_modifier.const_inplace_ibn(), obn, op.op_name());
-      }
+    for (const auto& pair : task_node->exec_gph().SoleNode()->mut_inplace_obn2ibn()) {
+      AddMutableInplaceArgPair(task_node, pair.second, pair.first, op.op_name());
     }
-
-    if (op.op_conf().has_user_conf()) {
-      const OpContext* op_ctx = task_node->exec_gph().SoleNode()->op_context();
-      const UserOpCtx* user_op_ctx = dynamic_cast<const UserOpCtx*>(op_ctx);
-      CHECK_NOTNULL(user_op_ctx);
-      for (const auto& pair : user_op_ctx->mut_inplace_obn2ibn) {
-        AddMutableInplaceArgPair(task_node, pair.second, pair.first, op.op_name());
-      }
-      for (const auto& pair : user_op_ctx->con_inplace_obn2ibn) {
-        AddConstInplaceArgPair(task_node, pair.second, pair.first, op.op_name());
-      }
+    for (const auto& pair : task_node->exec_gph().SoleNode()->con_inplace_obn2ibn()) {
+      AddConstInplaceArgPair(task_node, pair.second, pair.first, op.op_name());
     }
   }
 }
@@ -618,6 +639,27 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect) {
   }
 }
 
+Maybe<void> TaskGraph::ConnectSrcSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
+                                                 const std::vector<CompTaskNode*>& dst_task_nodes) {
+  std::function<Maybe<CompTaskNode*>(int64_t mchn_id, int64_t thrd_id)> TaskNode4MachineId7ThrdId;
+  JUST(MakeGetterTaskNode4MachineId7ThrdId(src_task_nodes, &TaskNode4MachineId7ThrdId));
+  for (CompTaskNode* dst_task_node : dst_task_nodes) {
+    CompTaskNode* src_task_node =
+        JUST(TaskNode4MachineId7ThrdId(dst_task_node->machine_id(), dst_task_node->thrd_id()));
+    TaskEdge* edge = NewEdge();
+    Connect<TaskNode>(src_task_node, edge, dst_task_node);
+  }
+  return Maybe<void>::Ok();
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySrcSubsetConnect) {
+  CHECK_JUST(ConnectSrcSubsetTickEdges(sorted_src_comp_tasks, sorted_dst_comp_tasks));
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByDstSubsetConnect) {
+  CHECK_JUST(ConnectDstSubsetTickEdges(sorted_src_comp_tasks, sorted_dst_comp_tasks));
+}
+
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D) {
   CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
@@ -709,7 +751,7 @@ TaskNode* TaskGraph::AddCopyD2HTaskFrom(TaskNode* task) {
 TaskNode* TaskGraph::AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst) {
   CHECK_NE(src->machine_id(), dst->machine_id());
   CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
-  copy_comm_net_task->Init(dst->machine_id(), src->machine_id());
+  copy_comm_net_task->Init(dst->machine_id());
   return copy_comm_net_task;
 }
 

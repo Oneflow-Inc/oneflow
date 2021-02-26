@@ -92,8 +92,6 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
 
             return loss
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     x = (np.random.random(x_shape) - 1).astype(type_name_to_np_type[dtype])
     y = PreluJob(x).get()
     _check(test_case, x, y.numpy(), shared_axes)
@@ -101,13 +99,14 @@ def _run_test(test_case, device_type, dtype, x_shape, shared_axes):
 
 @flow.unittest.skip_unless_1n1d()
 class TestPrelu(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_prelu(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_case"] = [test_case]
         arg_dict["device_type"] = ["gpu", "cpu"]
-        arg_dict["dtype"] = ["float32", "double"]
+        arg_dict["dtype"] = ["float32"]
         arg_dict["x_shape"] = [(10, 32, 20, 20)]
-        arg_dict["shared_axes"] = [(2,), (2, 3), (1,), (1, 2), (1, 2, 3)]
+        arg_dict["shared_axes"] = [(2,), (1, 2), (1, 3), (1, 2, 3)]
 
         for arg in GenArgList(arg_dict):
             _run_test(*arg)

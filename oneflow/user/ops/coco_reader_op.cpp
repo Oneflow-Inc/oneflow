@@ -79,12 +79,6 @@ REGISTER_CPU_ONLY_USER_OP("COCOReader")
       ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      for (const auto& out_arg_pair : ctx->outputs()) {
-        ctx->BatchAxis4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second)->set_value(0);
-      }
-      return Maybe<void>::Ok();
-    })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
                              const user_op::UserOpConfWrapper& conf) {
       user_op::OutputArgModifier* image_modifier = GetOutputArgModifierFn("image", 0);

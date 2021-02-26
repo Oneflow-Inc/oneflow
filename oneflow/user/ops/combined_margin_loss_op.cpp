@@ -37,10 +37,6 @@ REGISTER_USER_OP("combined_margin_loss")
       *theta->mut_shape() = label->shape();
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-      return Maybe<void>::Ok();
-    })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* label_arg_modifier = GetInputArgModifierFn("label", 0);
@@ -79,10 +75,6 @@ REGISTER_USER_OP("combined_margin_loss_grad")
       CHECK_EQ_OR_RETURN(label->shape().At(0), theta->shape().At(0));
       CHECK_GE_OR_RETURN(dy->shape().NumAxes(), 2);
       *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *dy;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

@@ -86,11 +86,6 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferBatchAxis4Conv(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> GetSbpSignatures4Conv(user_op::SbpContext* ctx) {
   // TODO(niuchong) : handle bias_multiplier
   bool has_bias = false;
@@ -249,7 +244,6 @@ REGISTER_USER_OP("conv1d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<1>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<1>)
-    .SetBatchAxisInferFn(InferBatchAxis4Conv)
     .SetGetSbpFn(GetSbpSignatures4Conv);
 
 REGISTER_USER_OP("conv2d")
@@ -267,7 +261,6 @@ REGISTER_USER_OP("conv2d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<2>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<2>)
-    .SetBatchAxisInferFn(InferBatchAxis4Conv)
     .SetGetSbpFn(GetSbpSignatures4Conv);
 
 REGISTER_USER_OP("conv3d")
@@ -285,7 +278,6 @@ REGISTER_USER_OP("conv3d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<3>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<3>)
-    .SetBatchAxisInferFn(InferBatchAxis4Conv)
     .SetGetSbpFn(GetSbpSignatures4Conv);
 
 REGISTER_USER_OP_GRAD("conv1d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4Conv);
@@ -306,12 +298,6 @@ REGISTER_USER_OP("conv_data_grad")
     .Attr<std::vector<int32_t>>("dilation_rate")
     .Attr<int32_t>("groups")
     .SetCheckAttrFn(CheckAttr<0>)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* x_like = GetInputArgModifierFn("x_like", 0);
-      CHECK_NOTNULL(x_like);
-      x_like->set_use_header_only(true);
-    })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const user_op::TensorDesc* x_like = ctx->TensorDesc4ArgNameAndIndex("x_like", 0);
@@ -329,15 +315,6 @@ REGISTER_USER_OP("conv_data_grad")
       }
       user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
       *dx = *x_like;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      auto BatchAxis4BnInOp = [&ctx](const std::string& arg_name) -> OptInt64* {
-        return ctx->BatchAxis4ArgNameAndIndex(arg_name, 0);
-      };
-      CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x_like"));
-      CHECK_OR_RETURN(BatchAxis4BnInOp("filter")->has_value() == false);
-      *BatchAxis4BnInOp("dx") = *BatchAxis4BnInOp("dy");
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -406,14 +383,6 @@ REGISTER_USER_OP("conv_filter_grad")
 
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      auto BatchAxis4BnInOp = [&ctx](const std::string& arg_name) -> OptInt64* {
-        return ctx->BatchAxis4ArgNameAndIndex(arg_name, 0);
-      };
-      CHECK_OR_RETURN(*BatchAxis4BnInOp("dy") == *BatchAxis4BnInOp("x"));
-      BatchAxis4BnInOp("filter_diff")->clear_value();
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .Split(user_op::OpArg("dy", 0), 0)
@@ -456,10 +425,6 @@ REGISTER_USER_OP("conv_bias_grad")
       } else {
         OF_UNIMPLEMENTED();
       }
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("bias_diff", 0)->clear_value();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

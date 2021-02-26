@@ -21,6 +21,7 @@ import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
+import os
 from oneflow.python.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim
 from oneflow.python.ops.transpose_util import get_inversed_perm
 
@@ -66,9 +67,9 @@ def compare_with_tensorflow(device_type, in_shape, axis, k, data_type, sorted):
 def gen_arg_list():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["in_shape"] = [(100,), (100, 100), (10, 500), (10, 10, 500)]
+    arg_dict["in_shape"] = [(100,), (10, 10, 50)]
     arg_dict["axis"] = [-1]
-    arg_dict["k"] = [1, 50, 200]
+    arg_dict["k"] = [1, 50]
     arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
     arg_dict["sorted"] = [True]
 
@@ -79,7 +80,7 @@ def gen_arg_list_for_test_axis():
     arg_dict = OrderedDict()
     arg_dict["device_type"] = ["cpu", "gpu"]
     arg_dict["in_shape"] = [(10, 10, 500)]
-    arg_dict["axis"] = [-2, -1, 0, 1, 2]
+    arg_dict["axis"] = [-2, 0, 2]
     arg_dict["k"] = [1, 50, 200]
     arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
     arg_dict["sorted"] = [True]
@@ -89,6 +90,7 @@ def gen_arg_list_for_test_axis():
 
 @flow.unittest.skip_unless_1n1d()
 class TestTopK(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_top_k(test_case):
         for arg in gen_arg_list():
             compare_with_tensorflow(*arg)

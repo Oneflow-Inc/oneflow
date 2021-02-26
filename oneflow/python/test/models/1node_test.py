@@ -36,14 +36,6 @@ class TestResNet50(Test1NodeMixin, TestResNet50Mixin, absltest.TestCase):
     pass
 
 
-class TestVgg16(Test1NodeMixin, TestVgg16Mixin, absltest.TestCase):
-    pass
-
-
-class TestInceptionV3(Test1NodeMixin, TestInceptionV3Mixin, absltest.TestCase):
-    pass
-
-
 flow.unittest.register_test_cases(
     scope=globals(),
     directory=os.path.dirname(os.path.realpath(__file__)),

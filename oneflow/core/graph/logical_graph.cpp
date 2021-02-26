@@ -65,7 +65,8 @@ void LogicalGraph::NaiveBuildFwStruct(
     CHECK(parallel_desc_ptr_it != name2parallel_desc.end());
     const std::shared_ptr<ParallelDesc>& parallel_desc_ptr = parallel_desc_ptr_it->second;
     cur_op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(parallel_desc_ptr->device_type())));
-    std::shared_ptr<Operator> cur_op = ConstructOp(cur_op_conf, &GlobalJobDesc());
+    std::shared_ptr<const Operator> cur_op =
+        Global<OpGraph>::Get()->OpNode4OpName(cur_op_conf.name())->shared_op();
     LogicalNode* cur_node = cur_op->NewProperLogicalNode();
     AddAllocatedNode(cur_node);
     cur_node->mut_op_vec() = {cur_op};

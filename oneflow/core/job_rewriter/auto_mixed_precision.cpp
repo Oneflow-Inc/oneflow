@@ -57,14 +57,7 @@ std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph&
   auto allowed_set = std::make_shared<HashSet<OpNode*>>();
   op_graph.ForEachNode([&](OpNode* node) {
     if (node->parallel_desc().device_type() != DeviceType::kGPU) { return; }
-    for (const std::string& obn : node->op().output_bns()) {
-      LogicalBlobId lbi = node->op().BnInOp2Lbi(obn);
-      // TODO(niuchong): this isn't right for fw-bw-opgraph, but right for fw-opgraph
-      if (CHECK_JUST(node->BatchAxis4Lbi(lbi))->has_value()) {
-        INSERT_CHECK(allowed_set->insert(node));
-        return;
-      }
-    }
+    if (node->op().output_bns().size() > 0) { INSERT_CHECK(allowed_set->insert(node)); }
   });
   return [allowed_set](OpNode* node) -> bool { return IsKeyFound(*allowed_set, node); };
 }
