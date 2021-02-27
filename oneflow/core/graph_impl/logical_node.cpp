@@ -131,11 +131,10 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
       ProcessId process_id{static_cast<uint32_t>(machine_id), 0};
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-        DeviceId device_id{DeviceType::kGPU, static_cast<uint32_t>(dev_phy_id)};
+        DeviceId device_id{process_id, DeviceType::kGPU, static_cast<uint32_t>(dev_phy_id)};
         uint32_t stream_index = 0;
         auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
-            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
-                                                                                 device_id));
+            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
         CHECK_NOTNULL(cuda_stream_index_generator);
         switch (comp_task_node->GetCudaWorkType()) {
           case CudaWorkType::kCompute: {
@@ -169,10 +168,9 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
         UNIMPLEMENTED();
 #endif
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
-        DeviceId device_id{DeviceType::kCPU, 0};
+        DeviceId device_id{process_id, DeviceType::kCPU, 0};
         auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
-            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id,
-                                                                                 device_id));
+            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
         CHECK_NOTNULL(cpu_stream_index_generator);
         uint32_t stream_index = 0;
         if (comp_task_node->IsIndependent()) {
