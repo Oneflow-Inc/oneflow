@@ -45,9 +45,9 @@ class ProcessId {
   constexpr static int kNodeIndexBits = 12;
   constexpr static int kProcessIndexBits = 7;
   constexpr static node_index_t kMaxNodeIndex =
-      (static_cast<node_index_t>(1) << kNodeIndexBits) - 1;
+      (node_index_t{1} << kNodeIndexBits) - node_index_t{1};
   constexpr static process_index_t kMaxProcessIndex =
-      (static_cast<process_index_t>(1) << kProcessIndexBits) - 1;
+      (process_index_t{1} << kProcessIndexBits) - process_index_t{1};
 
   ProcessId(node_index_t node_index, process_index_t process_index)
       : node_index_(node_index), process_index_(process_index) {
@@ -74,9 +74,9 @@ class DeviceId {
  public:
   constexpr static int kDeviceTypeBits = 5;
   constexpr static int kDeviceIndexBits = 7;
-  constexpr static int kMaxDeviceTypeVal = (static_cast<int>(1) << kDeviceTypeBits) - 1;
+  constexpr static int kMaxDeviceTypeVal = (int{1} << kDeviceTypeBits) - int{1};
   constexpr static device_index_t kMaxDeviceIndex =
-      (static_cast<device_index_t>(1) << kDeviceIndexBits) - 1;
+      (device_index_t{1} << kDeviceIndexBits) - device_index_t{1};
 
   DeviceId(const ProcessId& process_id, DeviceType device_type, device_index_t device_index)
       : process_id_(process_id), device_type_(device_type), device_index_(device_index) {
@@ -106,7 +106,7 @@ class StreamId {
  public:
   constexpr static int kStreamIndexBits = 12;
   constexpr static stream_index_t kMaxStreamIndex =
-      (static_cast<stream_index_t>(1) << kStreamIndexBits) - 1;
+      (stream_index_t{1} << kStreamIndexBits) - stream_index_t{1};
 
   StreamId(const DeviceId& device_id, stream_index_t stream_index)
       : device_id_(device_id), stream_index_(stream_index) {
@@ -129,7 +129,7 @@ class TaskId {
  public:
   const static int kTaskIndexBits = 21;
   constexpr static task_index_t kMaxTaskIndex =
-      (static_cast<task_index_t>(1) << kTaskIndexBits) - 1;
+      (task_index_t{1} << kTaskIndexBits) - task_index_t{1};
 
   TaskId(const StreamId& stream_id, task_index_t task_index)
       : stream_id_(stream_id), task_index_(task_index) {
