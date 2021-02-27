@@ -24,8 +24,10 @@ CPUStreamIndexGenerator::CPUStreamIndexGenerator()
   // TODO: It will not be specified by cpu_device_num in future
   compute_stream_num_ = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();
   next_stream_index_ += compute_stream_num_;
-  comm_net_stream_index_ = next_stream_index_++;
-  tick_tock_stream_index_ = next_stream_index_++;
+  comm_net_stream_index_ = next_stream_index_;
+  next_stream_index_++;
+  tick_tock_stream_index_ = next_stream_index_;
+  next_stream_index_++;
 }
 
 stream_index_t CPUStreamIndexGenerator::GenerateComputeStreamIndex() {
