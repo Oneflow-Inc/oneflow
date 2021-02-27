@@ -99,36 +99,34 @@ class UndeterminedTensor final : public Tensor {
         retain_grad_(retain_grad),
         consistent_(Error::ValueError("Consistent/Mirrored undetermined")) {}
 
+  // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
-  void set_shape(const std::shared_ptr<const Shape>& shape) { shape_ = shape; }
-
   Maybe<bool> is_consistent() const override { return consistent_; }
-  void set_consistent(bool consistent) { consistent_ = consistent; }
-
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
-  void set_dtype(const std::shared_ptr<const DType>& dtype) { dtype_ = dtype; }
-
   Maybe<const compatible_py::Distribute> distribute() const;
+  Maybe<const ParallelDesc> parallel_desc() const override;
+  Maybe<const Device> device() const;
+  bool is_lazy() const override { return lazy_; }
+
+  // Setters
+  void set_shape(const std::shared_ptr<const Shape>& shape) { shape_ = shape; }
+  void set_consistent(bool consistent) { consistent_ = consistent; }
+  void set_dtype(const std::shared_ptr<const DType>& dtype) { dtype_ = dtype; }
   const void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) {
     distribute_ = distribute;
   }
-
-  Maybe<const ParallelDesc> parallel_desc() const override;
   void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
     parallel_desc_ = parallel_desc;
   }
-
-  Maybe<const Device> device() const;
   void set_device(const std::shared_ptr<const Device>& device) { device_ = device; }
 
-  bool is_lazy() const override { return lazy_; }
-
+  // Getters for autograd
   bool is_leaf() const override;
-
   bool requires_grad() const override { return requires_grad_; }
-  void set_requires_grad(bool requires_grad) override { requires_grad_ = requires_grad; }
-
   bool retain_grad() const override { return retain_grad_; }
+
+  // Setters for autograd
+  void set_requires_grad(bool requires_grad) override { requires_grad_ = requires_grad; }
   void set_retain_grad(bool retain_grad) override { retain_grad_ = retain_grad; }
 
   Maybe<DeterminedTensor> DetermineAndDestroySelf() override;
@@ -162,6 +160,7 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
   virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
   virtual const std::shared_ptr<TensorArg>& now_grad_arg() const = 0;
   const std::shared_ptr<const FunctionNode>& grad_fn_node() const { return grad_fn_node_; }
+
   // Setters for autograd
   virtual void set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
   void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) {
