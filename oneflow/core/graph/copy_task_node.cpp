@@ -103,7 +103,7 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 void CopyCommNetTaskNode::Init(int64_t machine_id) {
   set_machine_id(machine_id);
   ProcessId process_id{static_cast<uint32_t>(machine_id)};
-  DeviceId device_id{process_id, DeviceType::kCPU, 0};
+  DeviceId device_id{process_id, DeviceType::kCPU, kCPUDeviceIndex};
   auto* generator = dynamic_cast<CPUStreamIndexGenerator*>(
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
   CHECK_NOTNULL(generator);

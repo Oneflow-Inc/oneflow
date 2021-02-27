@@ -128,7 +128,7 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
-      ProcessId process_id{static_cast<uint32_t>(machine_id), 0};
+      ProcessId process_id{static_cast<uint32_t>(machine_id)};
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
         DeviceId device_id{process_id, DeviceType::kGPU, static_cast<uint32_t>(dev_phy_id)};
@@ -168,7 +168,7 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
         UNIMPLEMENTED();
 #endif
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
-        DeviceId device_id{process_id, DeviceType::kCPU, 0};
+        DeviceId device_id{process_id, DeviceType::kCPU, kCPUDeviceIndex};
         auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
         CHECK_NOTNULL(cpu_stream_index_generator);
