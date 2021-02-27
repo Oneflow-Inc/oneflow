@@ -469,9 +469,9 @@ def constant_pad2d(
         raise ValueError("padding must be in or list or tuple!")
 
     if x.dtype in [
-        flow.float32,
-        flow.float16,
-        flow.float64,
+        oneflow.float32,
+        oneflow.float16,
+        oneflow.float64,
     ]:
         floating_value = float(constant_value)
         integral_value = int(0)
