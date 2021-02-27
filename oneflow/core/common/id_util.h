@@ -62,7 +62,9 @@ class ProcessId {
   }
   bool operator!=(const ProcessId& rhs) const { return !(*this == rhs); }
   size_t hash() const {
-    return std::hash<node_index_t>{}(node_index_) ^ std::hash<process_index_t>{}(process_index_);
+    size_t hash = std::hash<node_index_t>{}(node_index_);
+    HashCombine(&hash, std::hash<process_index_t>{}(process_index_));
+    return hash;
   }
 
  private:
@@ -92,8 +94,10 @@ class DeviceId {
   }
   bool operator!=(const DeviceId& rhs) const { return !(*this == rhs); }
   size_t hash() const {
-    return process_id_.hash() ^ std::hash<int>{}(static_cast<int>(device_type_))
-           ^ std::hash<device_index_t>{}(device_index_);
+    size_t hash = process_id_.hash();
+    HashCombine(&hash, std::hash<int>{}(static_cast<int>(device_type_)));
+    HashCombine(&hash, std::hash<device_index_t>{}(device_index_));
+    return hash;
   }
 
  private:
@@ -118,7 +122,11 @@ class StreamId {
     return device_id_ == rhs.device_id_ && stream_index_ == rhs.stream_index_;
   }
   bool operator!=(const StreamId& rhs) const { return !(*this == rhs); }
-  size_t hash() const { return device_id_.hash() ^ std::hash<stream_index_t>{}(stream_index_); }
+  size_t hash() const {
+    size_t hash = device_id_.hash();
+    HashCombine(&hash, std::hash<stream_index_t>{}(stream_index_));
+    return hash;
+  }
 
  private:
   DeviceId device_id_;
@@ -141,7 +149,11 @@ class TaskId {
     return stream_id_ == rhs.stream_id_ && task_index_ == rhs.task_index_;
   }
   bool operator!=(const TaskId& rhs) const { return !(*this == rhs); }
-  size_t hash() const { return stream_id_.hash() ^ std::hash<task_index_t>{}(task_index_); }
+  size_t hash() const {
+    size_t hash = stream_id_.hash();
+    HashCombine(&hash, std::hash<task_index_t>{}(task_index_));
+    return hash;
+  }
 
  private:
   StreamId stream_id_;
