@@ -48,7 +48,7 @@ stream_index_t CPUStreamIndexGenerator::GenerateIndependentTaskStreamIndex(TaskT
     std::unique_ptr<IndependentThreadNum4TaskType> thread_num_ptr(
         NewObj<int32_t, IndependentThreadNum4TaskType>(task_type));
     const size_t max_num = static_cast<size_t>(*thread_num_ptr.get());
-    auto max_num_iter = task_type2max_stream_num_.find(task_type);
+    max_num_iter = task_type2max_stream_num_.find(task_type);
     if (max_num_iter == task_type2max_stream_num_.end()) {
       task_type2max_stream_num_.emplace(task_type, max_num);
       CHECK(task_type2allocated_stream_index_vec_.emplace(task_type, std::vector<stream_index_t>{})
