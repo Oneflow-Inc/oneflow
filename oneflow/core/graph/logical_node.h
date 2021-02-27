@@ -73,9 +73,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
                               std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
                               std::function<void(CompTaskNode*)>) const;
 
-  // other
-  virtual int64_t GetAreaId() const = 0;
-
  protected:
   LogicalNode() {}
   virtual CompTaskNode* NewCompTaskNode() const = 0;
@@ -122,10 +119,9 @@ class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
 
 BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src, const LogicalNode* dst);
 
-#define OVERRIDE_PURE_VIRTUAL_METHOD()            \
-  std::string TypeName() const override;          \
-  CompTaskNode* NewCompTaskNode() const override; \
-  int64_t GetAreaId() const override;
+#define OVERRIDE_PURE_VIRTUAL_METHOD()   \
+  std::string TypeName() const override; \
+  CompTaskNode* NewCompTaskNode() const override;
 
 #define LOGICAL_NODE_BOILERPLATE(class_name) \
   OF_DISALLOW_COPY_AND_MOVE(class_name);     \
@@ -147,26 +143,20 @@ class NormalForwardLogicalNode final : public ForwardLogicalNode {
  private:
 };
 
-int64_t NewAreaId();
+#define LOGICAL_NODE_WITH_TASK_TYPE_BOILERPLATE(name)     \
+ public:                                                  \
+  OF_DISALLOW_COPY_AND_MOVE(name##LogicalNode);           \
+  name##LogicalNode() = default;                          \
+  ~name##LogicalNode() = default;                         \
+                                                          \
+  std::string TypeName() const override { return #name; } \
+  CompTaskNode* NewCompTaskNode() const override { return new name##CompTaskNode; }
 
-#define LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name)                             \
- public:                                                                            \
-  OF_DISALLOW_COPY_AND_MOVE(name##LogicalNode);                                     \
-  name##LogicalNode() { area_id_ = NewAreaId(); }                                   \
-  ~name##LogicalNode() = default;                                                   \
-                                                                                    \
-  std::string TypeName() const override { return #name; }                           \
-  CompTaskNode* NewCompTaskNode() const override { return new name##CompTaskNode; } \
-  int64_t GetAreaId() const override { return area_id_; }                           \
-                                                                                    \
- private:                                                                           \
-  int64_t area_id_;
-
-#define DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(name) \
-  class name##LogicalNode final : public ForwardLogicalNode {       \
-    LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name)                 \
-                                                                    \
-   private:                                                         \
+#define DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(name) \
+  class name##LogicalNode final : public ForwardLogicalNode {               \
+    LOGICAL_NODE_WITH_TASK_TYPE_BOILERPLATE(name)                           \
+                                                                            \
+   private:                                                                 \
   }
 
 #define DECLARE_NAIVE_LOGICAL_NODE(name)  \
@@ -180,53 +170,20 @@ DECLARE_NAIVE_LOGICAL_NODE(DistributeConcatLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DistributeSplitLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
 
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(WaitAndSendIds);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ForeignInput);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ForeignOutput);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(CallbackNotify);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(ReentrantLock);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(SrcSubsetTick);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(DstSubsetTick);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(SourceTick);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(AccTick);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Tick);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(DeviceTick);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Case);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Esac);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(DecodeH2D);
-
-class UserOpAreaIdCreator {
- public:
-  virtual ~UserOpAreaIdCreator() = default;
-  virtual int64_t GetAreaId() = 0;
-};
-
-class FixedUserOpAreaIdCreator : public UserOpAreaIdCreator {
- public:
-  explicit FixedUserOpAreaIdCreator(int64_t area_id) : area_id_(area_id) {}
-  ~FixedUserOpAreaIdCreator() override = default;
-
-  int64_t GetAreaId() override { return area_id_; }
-
- private:
-  int64_t area_id_;
-};
-
-class IndependentUserOpAreaIdCreator : public UserOpAreaIdCreator {
- public:
-  IndependentUserOpAreaIdCreator() = default;
-  ~IndependentUserOpAreaIdCreator() override = default;
-
-  int64_t GetAreaId() override { return NewAreaId(); }
-};
-
-#define REGISTER_USER_OP_AREA_ID(op_type_name, area_id)                  \
-  REGISTER_CLASS_CREATOR(std::string, op_type_name, UserOpAreaIdCreator, \
-                         ([] { return new FixedUserOpAreaIdCreator(area_id); }));
-
-#define REGISTER_USER_OP_INDEPENDENT_AREA_ID(op_type_name)               \
-  REGISTER_CLASS_CREATOR(std::string, op_type_name, UserOpAreaIdCreator, \
-                         ([] { return new IndependentUserOpAreaIdCreator(); }));
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(WaitAndSendIds);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(ForeignInput);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(ForeignOutput);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(CallbackNotify);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(ReentrantLock);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(SrcSubsetTick);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(DstSubsetTick);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(SourceTick);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(AccTick);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(Tick);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(DeviceTick);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(Case);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(Esac);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(DecodeH2D);
 
 class UserOpCompTaskNodeCreator {
  public:

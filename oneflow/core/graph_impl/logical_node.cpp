@@ -257,16 +257,16 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
                               "DecodeH2D",
                               &TaskGraph::BldSubTskGphNormalForwardToDecodeH2D);
 
-#define LOGICAL_TYPE_SEQ                                   \
-  OF_PP_MAKE_TUPLE_SEQ(DistributeConcat, kDataForwardArea) \
-  OF_PP_MAKE_TUPLE_SEQ(DistributeSplit, kDataForwardArea)  \
-  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)  \
-  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)
+#define LOGICAL_TYPE_SEQ                 \
+  OF_PP_MAKE_TUPLE_SEQ(DistributeConcat) \
+  OF_PP_MAKE_TUPLE_SEQ(DistributeSplit)  \
+  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom)     \
+  OF_PP_MAKE_TUPLE_SEQ(Print)
 
-#define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
-  std::string x##LogicalNode::TypeName() const { return #x; }                           \
-  CompTaskNode* x##LogicalNode::NewCompTaskNode() const { return new x##CompTaskNode; } \
-  int64_t x##LogicalNode::GetAreaId() const { return area_type; }
+#define DEFINE_VIRTUAL_METHOD(x)                              \
+  std::string x##LogicalNode::TypeName() const { return #x; } \
+  CompTaskNode* x##LogicalNode::NewCompTaskNode() const { return new x##CompTaskNode; }
+
 OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, LOGICAL_TYPE_SEQ);
 
 std::string NormalForwardLogicalNode::TypeName() const { return "NormalForward"; }
@@ -286,33 +286,5 @@ CompTaskNode* NormalForwardLogicalNode::NewCompTaskNode() const {
     return new NormalForwardCompTaskNode;
   }
 }
-
-int64_t NormalForwardLogicalNode::GetAreaId() const {
-  if (this->SoleOp()->op_conf().has_user_conf()) {
-    const std::string& op_type_name = this->SoleOp()->op_conf().user_conf().op_type_name();
-    if (IsClassRegistered<std::string, UserOpAreaIdCreator>(op_type_name)) {
-      return std::unique_ptr<UserOpAreaIdCreator>(
-                 NewObj<std::string, UserOpAreaIdCreator>(op_type_name))
-          ->GetAreaId();
-    } else {
-      return AreaType::kDataForwardArea;
-    }
-  } else {
-    return AreaType::kDataForwardArea;
-  }
-}
-
-int64_t NewAreaId() {
-  static int64_t next_area_id = AreaType_ARRAYSIZE;
-  return ++next_area_id;
-}
-
-REGISTER_USER_OP_AREA_ID("sgd_update", AreaType::kMdUpdtArea)
-REGISTER_USER_OP_AREA_ID("indexed_slices_sgd_update", AreaType::kMdUpdtArea)
-REGISTER_USER_OP_AREA_ID("momentum_update", AreaType::kMdUpdtArea)
-REGISTER_USER_OP_AREA_ID("indexed_slices_momentum_update", AreaType::kMdUpdtArea)
-REGISTER_USER_OP_AREA_ID("adam_update", AreaType::kMdUpdtArea)
-REGISTER_USER_OP_AREA_ID("indexed_slices_adam_update", AreaType::kMdUpdtArea)
-REGISTER_USER_OP_AREA_ID("lamb_update", AreaType::kMdUpdtArea)
 
 }  // namespace oneflow
