@@ -38,9 +38,11 @@ class StreamIndexGeneratorManager final {
   StreamIndexGenerator* GetGenerator(const DeviceId& device_id) {
     auto iter = generators_.find(device_id);
     if (iter == generators_.end()) {
-      generators_[device_id].reset(NewObj<int, StreamIndexGenerator>(device_id.device_type()));
+      auto* generator = NewObj<int, StreamIndexGenerator>(device_id.device_type());
+      generators_[device_id].reset(generator);
+      return generator;
     }
-    return generators_[device_id].get();
+    return iter->second.get();
   }
 
  private:
