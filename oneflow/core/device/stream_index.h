@@ -22,8 +22,6 @@ limitations under the License.
 
 namespace oneflow {
 
-using stream_index_t = uint32_t;
-
 class StreamIndexGenerator {
  public:
   virtual stream_index_t GenerateComputeStreamIndex() = 0;
@@ -37,23 +35,17 @@ class StreamIndexGeneratorManager final {
   OF_DISALLOW_COPY_AND_MOVE(StreamIndexGeneratorManager);
   ~StreamIndexGeneratorManager() = default;
 
-  StreamIndexGenerator* GetGenerator(ProcessId process_id, DeviceId device_id);
+  StreamIndexGenerator* GetGenerator(const DeviceId& device_id) {
+    auto iter = generators_.find(device_id);
+    if (iter == generators_.end()) {
+      generators_[device_id].reset(NewObj<int, StreamIndexGenerator>(device_id.device_type()));
+    }
+    return generators_[device_id].get();
+  }
 
  private:
-  using generator_key_t = std::pair<ProcessId, DeviceId>;
-  HashMap<generator_key_t, std::unique_ptr<StreamIndexGenerator>> generators_;
+  HashMap<DeviceId, std::unique_ptr<StreamIndexGenerator>> generators_;
 };
-
-inline StreamIndexGenerator* StreamIndexGeneratorManager::GetGenerator(ProcessId process_id,
-                                                                       DeviceId device_id) {
-  generator_key_t key = std::make_pair(process_id, device_id);
-  auto iter = generators_.find(key);
-  if (iter == generators_.end()) {
-    iter = generators_.emplace(key, nullptr).first;
-    iter->second.reset(NewObj<int, StreamIndexGenerator>(device_id.device_type()));
-  }
-  return iter->second.get();
-}
 
 #define REGISTER_STREAM_INDEX_GENERATOR(device_type_v, stream_index_generator_class) \
   REGISTER_CLASS(int, device_type_v, StreamIndexGenerator, stream_index_generator_class)
