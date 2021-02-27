@@ -260,9 +260,9 @@ if __name__ == "__main__":
     cuda_versions = args.cuda_version.split(",")
     cuda_versions = [v.strip() for v in cuda_versions]
     if args.xla:
-        extra_oneflow_cmake_args += " --DWITH_XLA=ON"
+        extra_oneflow_cmake_args += " -DWITH_XLA=ON"
     else:
-        extra_oneflow_cmake_args += " --DWITH_XLA=Off"
+        extra_oneflow_cmake_args += " -DWITH_XLA=Off"
     if args.xla == True and args.cpu == True:
         raise ValueError("flag xla can't coexist with flag cpu")
     for cuda_version in cuda_versions:
