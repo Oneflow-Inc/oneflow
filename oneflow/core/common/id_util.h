@@ -135,9 +135,7 @@ class TaskId {
       : stream_id_(stream_id), task_index_(task_index) {
     CHECK_LE(task_index_, kMaxTaskIndex);
   }
-  // TaskId(uint64_t global_stream_index, uint32_t task_index);
   const StreamId& stream_id() const { return stream_id_; }
-  // uint64_t global_stream_index() const;
   task_index_t task_index() const { return task_index_; }
   bool operator==(const TaskId& rhs) const {
     return stream_id_ == rhs.stream_id_ && task_index_ == rhs.task_index_;
