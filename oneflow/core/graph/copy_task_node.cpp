@@ -62,10 +62,10 @@ void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataReg
 void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int64_t dev_phy_id) {
   copy_type_ = copy_type;
   set_machine_id(machine_id);
-  ProcessId process_id{static_cast<uint32_t>(machine_id), 0};
-  DeviceId device_id{DeviceType::kGPU, static_cast<uint32_t>(dev_phy_id)};
+  ProcessId process_id{static_cast<uint32_t>(machine_id)};
+  DeviceId device_id{process_id, DeviceType::kGPU, static_cast<uint32_t>(dev_phy_id)};
   auto* stream_index_generator =
-      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id, device_id);
+      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
   uint32_t stream_index = 0;
   if (copy_type == CopyHdOpConf::H2D) {
     stream_index = stream_index_generator->GenerateH2DStreamIndex();
@@ -102,10 +102,10 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 
 void CopyCommNetTaskNode::Init(int64_t machine_id) {
   set_machine_id(machine_id);
-  ProcessId process_id{static_cast<uint32_t>(machine_id), 0};
-  DeviceId device_id{DeviceType::kCPU, 0};
+  ProcessId process_id{static_cast<uint32_t>(machine_id)};
+  DeviceId device_id{process_id, DeviceType::kCPU, 0};
   auto* generator = dynamic_cast<CPUStreamIndexGenerator*>(
-      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(process_id, device_id));
+      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
   CHECK_NOTNULL(generator);
   StreamId stream_id{device_id, generator->GenerateCommNetStreamIndex()};
   set_thrd_id(SerializeStreamIdToInt64(stream_id));
