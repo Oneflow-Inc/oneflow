@@ -35,20 +35,40 @@ struct TensorExportUtil final {};
 template<>
 struct TensorExportUtil<MirroredTensor> {
   static std::shared_ptr<MirroredTensor> MakeTensor(const py::tuple& py_shape,
-                                                    const std::shared_ptr<Dtype>& dtype,
-                                                    const std::shared_ptr<Device>& device,
+                                                    const std::shared_ptr<const Dtype>& dtype,
+                                                    const std::shared_ptr<const Device>& device,
                                                     bool is_lazy) {
-    // TODO
+    DimVector shape_dims;
+    CHECK(py::isinstance<py::tuple>(py_shape));
+    for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
+    std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
+    std::shared_ptr<MirroredTensorImpl> impl;
+    if (is_lazy) {
+      impl = std::make_shared<LazyMirroredTensorImpl>(shape, dtype, device);
+    } else {
+      impl = std::make_shared<EagerMirroredTensorImpl>(shape, dtype, device);
+    }
+    return std::make_shared<MirroredTensor>(impl);
   }
 };
 
 template<>
 struct TensorExportUtil<ConsistentTensor> {
   static std::shared_ptr<ConsistentTensor> MakeTensor(
-      const py::tuple& py_shape, const std::shared_ptr<Dtype>& dtype,
-      const std::shared_ptr<compatible_py::Distribute>& distribute,
-      const std::shared_ptr<ParallelDesc>& parallel_desc, bool is_lazy) {
-    // TODO
+      const py::tuple& py_shape, const std::shared_ptr<const Dtype>& dtype,
+      const std::shared_ptr<const compatible_py::Distribute>& distribute,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy) {
+    DimVector shape_dims;
+    CHECK(py::isinstance<py::tuple>(py_shape));
+    for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
+    std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
+    std::shared_ptr<ConsistentTensorImpl> impl;
+    if (is_lazy) {
+      impl = std::make_shared<LazyConsistentTensorImpl>(shape, dtype, distribute, parallel_desc);
+    } else {
+      impl = std::make_shared<LazyConsistentTensorImpl>(shape, dtype, distribute, parallel_desc);
+    }
+    return std::make_shared<ConsistentTensor>(impl);
   }
 };
 

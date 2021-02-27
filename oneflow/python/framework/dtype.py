@@ -151,5 +151,6 @@ def convert_numpy_dtype_to_oneflow_dtype(numpy_dtype):
             return k
     raise NotImplementedError
 
+
 del data_type_pb2
 del np
