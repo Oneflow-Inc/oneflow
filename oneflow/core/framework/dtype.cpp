@@ -13,68 +13,109 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/dtype.h"
 
 namespace oneflow {
 
-bool DType::is_floating_point() const {
-  switch (oneflow_proto_dtype()) {
-    case DataType::kFloat16:
-    case DataType::kFloat:
-    case DataType::kDouble: return true;
-    default: return false;
+std::shared_ptr<DType> DType::GetDTypeByDataType(const DataType& data_type) {
+  switch (data_type) {
+    case DataType::kInvalidDataType: {
+      static std::shared_ptr<DType> invalid_dtype = std::make_shared<DType>();
+      return invalid_dtype;
+    }
+    case DataType::kChar: {
+      return Char();
+    }
+    case DataType::kFloat16: {
+      return Float16();
+    }
+    case DataType::kFloat: {
+      return Float();
+    }
+    case DataType::kDouble: {
+      return Double();
+    }
+    case DataType::kInt8: {
+      return Int8();
+    }
+    case DataType::kInt32: {
+      return Int32();
+    }
+    case DataType::kInt64: {
+      return Int64();
+    }
+    case DataType::kUInt8: {
+      return UInt8();
+    }
+    case DataType::kOFRecord: {
+      return OFRecordDType();
+    }
+    case DataType::kTensorBuffer: {
+      return TensorBufferDType();
+    }
+    default: UNIMPLEMENTED();
   }
-  return false;
+  UNIMPLEMENTED();
 }
 
-std::shared_ptr<DType> Char() {
-  static std::shared_ptr<DType> char_dtype = std::make_shared<DType>(DataType::kChar);
+std::shared_ptr<DType> DType::Char() {
+  static std::shared_ptr<DType> char_dtype =
+      std::make_shared<DType>(DataType::kChar, "oneflow.char", false, false, false);
   return char_dtype;
 }
 
-std::shared_ptr<DType> Float16() {
-  static std::shared_ptr<DType> float16_dtype = std::make_shared<DType>(DataType::kFloat16);
+std::shared_ptr<DType> DType::Float16() {
+  static std::shared_ptr<DType> float16_dtype =
+      std::make_shared<DType>(DataType::kFloat16, "oneflow.float16", true, true, false);
   return float16_dtype;
 }
 
-std::shared_ptr<DType> Float() {
-  static std::shared_ptr<DType> float_dtype = std::make_shared<DType>(DataType::kFloat);
+std::shared_ptr<DType> DType::Float() {
+  static std::shared_ptr<DType> float_dtype =
+      std::make_shared<DType>(DataType::kFloat, "oneflow.float32", true, true, false);
   return float_dtype;
 }
 
-std::shared_ptr<DType> Double() {
-  static std::shared_ptr<DType> double_dtype = std::make_shared<DType>(DataType::kDouble);
+std::shared_ptr<DType> DType::Double() {
+  static std::shared_ptr<DType> double_dtype =
+      std::make_shared<DType>(DataType::kDouble, "oneflow.float64", true, true, false);
   return double_dtype;
 }
 
-std::shared_ptr<DType> Int8() {
-  static std::shared_ptr<DType> int8_dtype = std::make_shared<DType>(DataType::kInt8);
+std::shared_ptr<DType> DType::Int8() {
+  static std::shared_ptr<DType> int8_dtype =
+      std::make_shared<DType>(DataType::kInt8, "oneflow.int8", true, false, false);
   return int8_dtype;
 }
 
-std::shared_ptr<DType> Int32() {
-  static std::shared_ptr<DType> int32_dtype = std::make_shared<DType>(DataType::kInt32);
+std::shared_ptr<DType> DType::Int32() {
+  static std::shared_ptr<DType> int32_dtype =
+      std::make_shared<DType>(DataType::kInt32, "oneflow.int32", true, false, false);
   return int32_dtype;
 }
 
-std::shared_ptr<DType> Int64() {
-  static std::shared_ptr<DType> int64_dtype = std::make_shared<DType>(DataType::kInt64);
+std::shared_ptr<DType> DType::Int64() {
+  static std::shared_ptr<DType> int64_dtype =
+      std::make_shared<DType>(DataType::kInt64, "oneflow.int64", true, false, false);
   return int64_dtype;
 }
 
-std::shared_ptr<DType> UInt8() {
-  static std::shared_ptr<DType> uint8_dtype = std::make_shared<DType>(DataType::kUInt8);
+std::shared_ptr<DType> DType::UInt8() {
+  static std::shared_ptr<DType> uint8_dtype =
+      std::make_shared<DType>(DataType::kUInt8, "oneflow.uint8", false, false, false);
   return uint8_dtype;
 }
 
-std::shared_ptr<DType> RecordDType() {
-  static std::shared_ptr<DType> record_dtype = std::make_shared<DType>(DataType::kOFRecord);
+std::shared_ptr<DType> DType::OFRecordDType() {
+  static std::shared_ptr<DType> record_dtype =
+      std::make_shared<DType>(DataType::kOFRecord, "oneflow.of_record", false, false, false);
   return record_dtype;
 }
 
-std::shared_ptr<DType> TensorBufferDType() {
-  static std::shared_ptr<DType> tensor_buffer_dtype =
-      std::make_shared<DType>(DataType::kTensorBuffer);
+std::shared_ptr<DType> DType::TensorBufferDType() {
+  static std::shared_ptr<DType> tensor_buffer_dtype = std::make_shared<DType>(
+      DataType::kTensorBuffer, "oneflow.tensor_buffer", false, false, false);
   return tensor_buffer_dtype;
 }
 

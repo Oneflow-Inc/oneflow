@@ -22,31 +22,43 @@ namespace oneflow {
 
 class DType final {
  public:
-  DType() : proto_dtype_(DataType::kInvalidDataType) {}
-  DType(const DataType& proto_dtype) : proto_dtype_(proto_dtype) {}
+  DType(const DataType& proto_dtype, const std::string& name, bool is_signed,
+        bool is_floating_point, bool is_complex)
+      : proto_dtype_(proto_dtype),
+        name_(name),
+        is_signed_(is_signed),
+        is_floating_point_(is_floating_point),
+        is_complex_(is_complex) {}
+  DType() : DType(DataType::kInvalidDataType, "oneflow.invalid_data_type", false, false, false) {}
 
-  std::string ToString() const { return DataType_Name(proto_dtype_); }
   DataType oneflow_proto_dtype() const { return proto_dtype_; }
-  bool is_signed() const { return proto_dtype_ != DataType::kUInt8; }
-  bool is_complex() const { return false; }
-  bool is_floating_point() const;
+  bool is_signed() const { return is_signed_; }
+  bool is_complex() const { return is_complex_; }
+  bool is_floating_point() const { return is_floating_point_; }
+  std::string name() const { return name_; }
+
+  static std::shared_ptr<DType> GetDTypeByDataType(const DataType&);
+
+  static std::shared_ptr<DType> Char();
+  static std::shared_ptr<DType> Float16();
+  static std::shared_ptr<DType> Float();
+
+  static std::shared_ptr<DType> Double();
+  static std::shared_ptr<DType> Int8();
+  static std::shared_ptr<DType> Int32();
+
+  static std::shared_ptr<DType> Int64();
+  static std::shared_ptr<DType> UInt8();
+  static std::shared_ptr<DType> OFRecordDType();
+  static std::shared_ptr<DType> TensorBufferDType();
 
  private:
-  DataType proto_dtype_;
+  const DataType proto_dtype_;
+  const std::string name_;
+  const bool is_signed_;
+  const bool is_floating_point_;
+  const bool is_complex_;
 };
-
-std::shared_ptr<DType> Char();
-std::shared_ptr<DType> Float16();
-std::shared_ptr<DType> Float();
-
-std::shared_ptr<DType> Double();
-std::shared_ptr<DType> Int8();
-std::shared_ptr<DType> Int32();
-
-std::shared_ptr<DType> Int64();
-std::shared_ptr<DType> UInt8();
-std::shared_ptr<DType> RecordDType();
-std::shared_ptr<DType> TensorBufferDType();
 
 }  // namespace oneflow
 

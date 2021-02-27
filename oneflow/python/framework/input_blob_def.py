@@ -30,7 +30,6 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow_api
@@ -136,7 +135,7 @@ class FixedTensorDef(ArgBlobDef):
     def __init__(
         self,
         shape: Sequence[int],
-        dtype: dtype_util.dtype = dtype_util.float,
+        dtype: oneflow.dtype = oneflow.float,
         name: Optional[str] = None,
     ) -> None:
         ArgBlobDef.__init__(
@@ -181,7 +180,7 @@ class MirroredTensorDef(ArgBlobDef):
     def __init__(
         self,
         shape: Sequence[int],
-        dtype: dtype_util.dtype = dtype_util.float,
+        dtype: oneflow.dtype = oneflow.float,
         name: Optional[str] = None,
     ) -> None:
         assert type(shape) is tuple
@@ -230,7 +229,7 @@ class MirroredTensorListDef(ArgBlobDef):
     def __init__(
         self,
         shape: Sequence[int],
-        dtype: dtype_util.dtype = dtype_util.float,
+        dtype: oneflow.dtype = oneflow.float,
         name: Optional[str] = None,
     ) -> None:
         assert type(shape) is tuple
