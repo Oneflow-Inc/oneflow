@@ -270,7 +270,7 @@ def _MakeBootstrapConf(bootstrap_info: dict):
     global config_master_addr
     assert config_master_addr.HasField("host"), "must config master host first"
     assert config_master_addr.HasField("port"), "must config master port first"
-    assert config_world_size != 0, "must config world first"
+    assert config_world_size != 0, "must config world size first"
     bootstrap_conf = ctrl_bootstrap_pb.BootstrapConf()
     bootstrap_conf.master_addr.CopyFrom(config_master_addr)
     bootstrap_conf.world_size = config_world_size
