@@ -22,7 +22,7 @@ import oneflow.typing as tp
 import onnx
 import onnxruntime as ort
 import numpy as np
-from util import convert_to_onnx_and_check
+from oneflow.python.test.onnx.save.util import convert_to_onnx_and_check
 
 
 BLOCK_COUNTS = [3, 4, 6, 3]

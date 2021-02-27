@@ -16,7 +16,7 @@ limitations under the License.
 import oneflow as flow
 import oneflow.typing as tp
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
-from util import convert_to_onnx_and_check
+from oneflow.python.test.onnx.save.util import convert_to_onnx_and_check
 
 g_trainable = False
 
