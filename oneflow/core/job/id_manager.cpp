@@ -21,21 +21,22 @@ limitations under the License.
 namespace oneflow {
 
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
-  return DeserializeStreamIdFromInt64(thrd_id).device_type();
+  return DeserializeStreamIdFromInt64(thrd_id).device_id().device_type();
 }
 
 int64_t IDMgr::GetGpuPhyIdFromThrdId(int64_t thrd_id) const {
   StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id);
-  CHECK_EQ(stream_id.device_type(), DeviceType::kGPU);
-  return stream_id.device_index();
+  DeviceId device_id = stream_id.device_id();
+  CHECK_EQ(device_id.device_type(), DeviceType::kGPU);
+  return device_id.device_index();
 }
 
 DeviceType IDMgr::GetDeviceTypeFromActorId(int64_t actor_id) const {
-  return DeserializeTaskIdFromInt64(actor_id).stream_id().device_type();
+  return DeserializeTaskIdFromInt64(actor_id).stream_id().device_id().device_type();
 }
 
 int64_t IDMgr::MachineId4ActorId(int64_t actor_id) const {
-  return DeserializeTaskIdFromInt64(actor_id).process_id().node_index();
+  return DeserializeTaskIdFromInt64(actor_id).stream_id().device_id().process_id().node_index();
 }
 
 int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
@@ -43,7 +44,7 @@ int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
 }
 
 int64_t IDMgr::GlobalWorkStreamId4TaskId(int64_t task_id) const {
-  return DeserializeTaskIdFromInt64(task_id).global_stream_index();
+  return SerializeStreamIdToInt64(DeserializeTaskIdFromInt64(task_id).stream_id());
 }
 
 int64_t IDMgr::GlobalWorkStreamId4ActorId(int64_t actor_id) const {
@@ -51,14 +52,13 @@ int64_t IDMgr::GlobalWorkStreamId4ActorId(int64_t actor_id) const {
 }
 
 int64_t IDMgr::GlobalThrdId4TaskId(int64_t task_id) const {
-  return DeserializeTaskIdFromInt64(task_id).global_stream_index();
+  return SerializeStreamIdToInt64(DeserializeTaskIdFromInt64(task_id).stream_id());
 }
 
 int64_t IDMgr::PickCpuThrdIdEvenly(int64_t machine_id) {
-  ProcessId process_id{static_cast<uint32_t>(machine_id), 0};
-  DeviceId device_id{DeviceType::kCPU, 0};
-  auto* stream_index_generator =
-      GetStreamIndexGeneratorManager()->GetGenerator(process_id, device_id);
+  ProcessId process_id{static_cast<uint32_t>(machine_id)};
+  DeviceId device_id{process_id, DeviceType::kCPU, 0};
+  auto* stream_index_generator = GetStreamIndexGeneratorManager()->GetGenerator(device_id);
   StreamId stream_id{device_id, stream_index_generator->GenerateComputeStreamIndex()};
   return SerializeStreamIdToInt64(stream_id);
 }
