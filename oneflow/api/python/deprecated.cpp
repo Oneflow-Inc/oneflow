@@ -44,8 +44,8 @@ Maybe<cfg::OpAttribute> MakeOpAttribute(const std::string& op_attribute_str) {
 }
 
 Maybe<int> GetProtoDtype4OfDtype(const std::shared_ptr<DType>& x) {
-  // type enum of Protobuf is int at python side
-  return static_cast<int>(x->data_dtype());
+  // int is the compatible data type of DType used in python code.
+  return static_cast<int>(x->data_type());
 }
 
 }  // namespace

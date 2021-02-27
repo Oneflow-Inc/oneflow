@@ -20,20 +20,22 @@ namespace oneflow {
 
 Maybe<DType> DType::GetDTypeByDataType(const DataType& data_type) {
   switch (data_type) {
-#define MAKE_DATA_TYPE_OBJ(data_type) \
-  case DataType::k##data_type: {      \
-    return data_type();               \
+#define MAKE_DATA_TYPE_OBJ(data_type)       \
+  case OF_PP_CAT(DataType::k, data_type): { \
+    return data_type();                     \
   }
     OF_PP_FOR_EACH_TUPLE(MAKE_DATA_TYPE_OBJ, DTYPE_SEQ)
 #undef MAKE_DATA_TYPE_OBJ
-    default: {
-      static std::shared_ptr<DType> invalid_dtype = std::make_shared<DType>(
-          DataType::kInvalidDataType, "oneflow.invalid_data_type", false, false, false);
-      return invalid_dtype;
-    }
+    default: { OF_UNIMPLEMENTED(); }
   }
   OF_UNIMPLEMENTED();
   return std::shared_ptr<DType>();
+}
+
+Maybe<DType> DType::InvalidDataType() {
+  static std::shared_ptr<DType> invalid_dtype = std::make_shared<DType>(
+      DataType::kInvalidDataType, "oneflow.invalid_data_type", false, false, false);
+  return invalid_dtype;
 }
 
 Maybe<DType> DType::Char() {

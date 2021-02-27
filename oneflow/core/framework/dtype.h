@@ -22,29 +22,30 @@ limitations under the License.
 
 namespace oneflow {
 
-#define DTYPE_SEQ                \
-  OF_PP_MAKE_TUPLE_SEQ(Char)     \
-  OF_PP_MAKE_TUPLE_SEQ(Float16)  \
-  OF_PP_MAKE_TUPLE_SEQ(Float)    \
-  OF_PP_MAKE_TUPLE_SEQ(Double)   \
-  OF_PP_MAKE_TUPLE_SEQ(Int8)     \
-  OF_PP_MAKE_TUPLE_SEQ(Int32)    \
-  OF_PP_MAKE_TUPLE_SEQ(Int64)    \
-  OF_PP_MAKE_TUPLE_SEQ(UInt8)    \
-  OF_PP_MAKE_TUPLE_SEQ(OFRecord) \
+#define DTYPE_SEQ                       \
+  OF_PP_MAKE_TUPLE_SEQ(InvalidDataType) \
+  OF_PP_MAKE_TUPLE_SEQ(Char)            \
+  OF_PP_MAKE_TUPLE_SEQ(Float16)         \
+  OF_PP_MAKE_TUPLE_SEQ(Float)           \
+  OF_PP_MAKE_TUPLE_SEQ(Double)          \
+  OF_PP_MAKE_TUPLE_SEQ(Int8)            \
+  OF_PP_MAKE_TUPLE_SEQ(Int32)           \
+  OF_PP_MAKE_TUPLE_SEQ(Int64)           \
+  OF_PP_MAKE_TUPLE_SEQ(UInt8)           \
+  OF_PP_MAKE_TUPLE_SEQ(OFRecord)        \
   OF_PP_MAKE_TUPLE_SEQ(TensorBuffer)
 
 class DType final {
  public:
-  DType(const DataType& data_dtype, const std::string& name, bool is_signed, bool is_floating_point,
+  DType(const DataType& data_type, const std::string& name, bool is_signed, bool is_floating_point,
         bool is_complex)
-      : data_dtype_(data_dtype),
+      : data_type_(data_type),
         name_(name),
         is_signed_(is_signed),
         is_floating_point_(is_floating_point),
         is_complex_(is_complex) {}
 
-  DataType data_dtype() const { return data_dtype_; }
+  DataType data_type() const { return data_type_; }
   bool is_signed() const { return is_signed_; }
   bool is_complex() const { return is_complex_; }
   bool is_floating_point() const { return is_floating_point_; }
@@ -57,7 +58,7 @@ class DType final {
 #undef DEFINE_GET_DATA_TYPE_FUNCTION
 
  private:
-  const DataType data_dtype_;
+  const DataType data_type_;
   const std::string name_;
   const bool is_signed_;
   const bool is_floating_point_;
