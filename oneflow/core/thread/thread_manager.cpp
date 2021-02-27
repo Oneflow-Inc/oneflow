@@ -30,17 +30,18 @@ namespace oneflow {
 namespace {
 
 Thread* NewThread(StreamId stream_id) {
+  int64_t thrd_id = SerializeStreamIdToInt64(stream_id);
+  DeviceId device_id = stream_id.device_id();
   Thread* thread = nullptr;
-  switch (stream_id.device_type()) {
+  switch (device_id.device_type()) {
 #ifdef WITH_CUDA
     case DeviceType::kGPU: {
-      thread = new GpuThread(SerializeStreamIdToInt64(stream_id),
-                             static_cast<int64_t>(stream_id.device_index()));
+      thread = new GpuThread(thrd_id, static_cast<int64_t>(device_id.device_index()));
       break;
     }
 #endif
     case DeviceType::kCPU: {
-      thread = new CpuThread(SerializeStreamIdToInt64(stream_id));
+      thread = new CpuThread(thrd_id);
       break;
     }
     default: { UNIMPLEMENTED(); }
@@ -69,8 +70,8 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
   const int64_t this_machine_id = GlobalProcessCtx::Rank();
   for (const TaskProto& task : plan.task()) {
     TaskId task_id = DeserializeTaskIdFromInt64(task.task_id());
-    if (task_id.process_id().node_index() != this_machine_id) { continue; }
     StreamId stream_id = task_id.stream_id();
+    if (stream_id.device_id().process_id().node_index() != this_machine_id) { continue; }
     int64_t thrd_id = SerializeStreamIdToInt64(stream_id);
     if (threads_.find(thrd_id) != threads_.end()) { continue; }
     Thread* thread = NewThread(stream_id);
