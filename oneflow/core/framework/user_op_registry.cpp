@@ -141,7 +141,18 @@ OpRegistry& OpRegistry::DefaultedAttr(const std::string& name, AttrType type,
 }
 
 OpRegistry& OpRegistry::SetTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
-  result_.tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
+  SetLogicalTensorDescInferFn(tensor_desc_infer_fn);
+  SetPhysicalTensorDescInferFn(tensor_desc_infer_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetLogicalTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
+  result_.logical_tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetPhysicalTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
+  result_.physical_tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
   return *this;
 }
 
@@ -177,8 +188,10 @@ OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
 }
 
 OpRegistry& OpRegistry::Finish() {
-  CHECK(result_.tensor_desc_infer_fn != nullptr)
-      << "No TensorDescInfer function for " << result_.op_type_name;
+  CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
+      << "No logical TensorDescInfer function for " << result_.op_type_name;
+  CHECK(result_.physical_tensor_desc_infer_fn != nullptr)
+      << "No physical TensorDescInfer function for " << result_.op_type_name;
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
   if (result_.get_sbp_fn == nullptr) {
     result_.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
