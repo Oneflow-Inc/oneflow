@@ -30,55 +30,32 @@ namespace one {
 namespace {
 
 template<typename T>
-std::shared_ptr<T> MakeTensor(const py::tuple& py_shape, int dtype,
-                              const std::shared_ptr<Device>& device,
-                              const std::shared_ptr<compatible_py::Distribute>& distribute,
-                              std::shared_ptr<ParallelDesc>& parallel_desc) {
-  UNIMPLEMENTED();
-}
+struct TensorExportUtil final {};
 
 template<>
-std::shared_ptr<MirroredTensor> MakeTensor<MirroredTensor>(
-    const py::tuple& py_shape, int dtype, const std::shared_ptr<Device>& device,
-    const std::shared_ptr<compatible_py::Distribute>& distribute,
-    std::shared_ptr<ParallelDesc>& parallel_desc) {
-  DimVector shape_dims;
-  CHECK(py::isinstance<py::tuple>(py_shape));
-  for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
-  std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
-  std::shared_ptr<MirroredTensorImpl> impl;
-  if (*Global<bool, EagerExecution>::Get()) {
-    impl = std::make_shared<EagerMirroredTensorImpl>(shape, static_cast<DataType>(dtype), device);
-  } else {
-    impl = std::make_shared<LazyMirroredTensorImpl>(shape, static_cast<DataType>(dtype), device);
+struct TensorExportUtil<MirroredTensor> {
+  static std::shared_ptr<MirroredTensor> MakeTensor(const py::tuple& py_shape,
+                                                    const std::shared_ptr<Dtype>& dtype,
+                                                    const std::shared_ptr<Device>& device,
+                                                    bool is_lazy) {
+    // TODO
   }
-  return std::make_shared<MirroredTensor>(impl);
-}
+};
 
 template<>
-std::shared_ptr<ConsistentTensor> MakeTensor<ConsistentTensor>(
-    const py::tuple& py_shape, int dtype, const std::shared_ptr<Device>& device,
-    const std::shared_ptr<compatible_py::Distribute>& distribute,
-    std::shared_ptr<ParallelDesc>& parallel_desc) {
-  DimVector shape_dims;
-  CHECK(py::isinstance<py::tuple>(py_shape));
-  for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
-  std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
-  std::shared_ptr<ConsistentTensorImpl> impl;
-  if (*Global<bool, EagerExecution>::Get()) {
-    impl = std::make_shared<EagerConsistentTensorImpl>(shape, static_cast<DataType>(dtype),
-                                                       distribute, parallel_desc);
-  } else {
-    impl = std::make_shared<LazyConsistentTensorImpl>(shape, static_cast<DataType>(dtype),
-                                                      distribute, parallel_desc);
+struct TensorExportUtil<ConsistentTensor> {
+  static std::shared_ptr<ConsistentTensor> MakeTensor(
+      const py::tuple& py_shape, const std::shared_ptr<Dtype>& dtype,
+      const std::shared_ptr<compatible_py::Distribute>& distribute,
+      const std::shared_ptr<ParallelDesc>& parallel_desc, bool is_lazy) {
+    // TODO
   }
-  return std::make_shared<ConsistentTensor>(impl);
-}
+};
 
 template<typename T>
 void ExportTensor(py::module& m, const char* name) {
   py::class_<T, std::shared_ptr<T>>(m, name)
-      .def(py::init(&MakeTensor<T>))
+      .def(py::init(&TensorExportUtil<T>::MakeTensor))
       .def_property_readonly("shape", &T::shape)
       .def_property_readonly("device", &T::device)
       .def_property_readonly("ndim", &T::ndim)

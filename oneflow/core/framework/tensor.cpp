@@ -18,12 +18,6 @@ limitations under the License.
 namespace oneflow {
 
 namespace one {
-
-#include "oneflow/core/framework/tensor.h"
-
-namespace oneflow {
-
-namespace one {
 Maybe<const compatible_py::Distribute> UndeterminedTensor::distribute() const {
   CHECK_OR_RETURN(distribute_) << Error::ValueError("Distribute is not determined.");
   return distribute_;
