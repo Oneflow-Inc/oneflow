@@ -26,29 +26,24 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_signed", &DType::is_signed)
       .def_property_readonly("is_complex", &DType::is_complex)
       .def_property_readonly("is_floating_point", &DType::is_floating_point)
-      // type enum of Protobuf at python side
-      .def_property_readonly("oneflow_proto_dtype",
-                             [](const std::shared_ptr<DType>& x) {
-                               return static_cast<int>(x->oneflow_proto_dtype());
-                             })
-      .def_property_readonly_static("char", [](py::object) { return DType::Char(); })
-      .def_property_readonly_static("float16", [](py::object) { return DType::Float16(); })
-      .def_property_readonly_static("float", [](py::object) { return DType::Float(); })
-      .def_property_readonly_static("float32", [](py::object) { return DType::Float(); })
-      .def_property_readonly_static("double", [](py::object) { return DType::Double(); })
-      .def_property_readonly_static("float64", [](py::object) { return DType::Double(); })
-      .def_property_readonly_static("int8", [](py::object) { return DType::Int8(); })
-      .def_property_readonly_static("int32", [](py::object) { return DType::Int32(); })
-      .def_property_readonly_static("int64", [](py::object) { return DType::Int64(); })
-      .def_property_readonly_static("uint8", [](py::object) { return DType::UInt8(); })
-      .def_property_readonly_static("record", [](py::object) { return DType::OFRecordDType(); })
-      .def_property_readonly_static("tensor_buffer",
-                                    [](py::object) { return DType::TensorBufferDType(); })
-      .def_static(
-          "GetDTypeByDataType",
-          [](int data_type) { return DType::GetDTypeByDataType(static_cast<DataType>(data_type)); })
       .def("__str__", &DType::name)
       .def("__repr__", &DType::name);
+
+  m.attr("char") = DType::Char().GetPtrOrThrow();
+  m.attr("float16") = DType::Float16().GetPtrOrThrow();
+  m.attr("float") = DType::Float().GetPtrOrThrow();
+
+  m.attr("float32") = DType::Float().GetPtrOrThrow();
+  m.attr("double") = DType::Double().GetPtrOrThrow();
+  m.attr("float64") = DType::Double().GetPtrOrThrow();
+
+  m.attr("int8") = DType::Int8().GetPtrOrThrow();
+  m.attr("int32") = DType::Int32().GetPtrOrThrow();
+  m.attr("int64") = DType::Int64().GetPtrOrThrow();
+
+  m.attr("uint8") = DType::UInt8().GetPtrOrThrow();
+  m.attr("record") = DType::OFRecord().GetPtrOrThrow();
+  m.attr("tensor_buffer") = DType::TensorBuffer().GetPtrOrThrow();
 }
 
 }  // namespace oneflow

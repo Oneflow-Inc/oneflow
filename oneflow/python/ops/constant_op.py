@@ -210,7 +210,11 @@ def constant_like(
     else:
         raise NotImplementedError
     if dtype is not None:
-        setattr(op_conf.constant_like_conf, "data_type", dtype.oneflow_proto_dtype)
+        setattr(
+            op_conf.constant_like_conf,
+            "data_type",
+            oneflow_api.deprecated.GetProtoDtype4OfDtype(dtype),
+        )
     setattr(op_conf.constant_like_conf, "out", "out")
     interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()

@@ -37,6 +37,7 @@ import six
 from oneflow.python.framework import id_util
 from oneflow.python.onnx import constants
 import oneflow
+import oneflow_api
 
 
 #
@@ -54,7 +55,7 @@ FLOW_2_ONNX_DTYPE = {
 
 FLOW_PROTO_2_ONNX_DTYPE = {}
 for k, v in FLOW_2_ONNX_DTYPE.items():
-    FLOW_PROTO_2_ONNX_DTYPE[k.oneflow_proto_dtype] = v
+    FLOW_PROTO_2_ONNX_DTYPE[oneflow_api.deprecated.GetProtoDtype4OfDtype(k)] = v
 del k
 
 #

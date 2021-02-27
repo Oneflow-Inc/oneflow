@@ -141,7 +141,7 @@ def tensor_buffer_to_tensor_list(
     setattr(
         op_conf.tensor_buffer_to_tensor_list_conf,
         "data_type",
-        dtype.oneflow_proto_dtype,
+        oneflow_api.deprecated.GetProtoDtype4OfDtype(dtype),
     )
     interpret_util.Forward(op_conf)
 

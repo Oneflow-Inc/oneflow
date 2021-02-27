@@ -112,7 +112,9 @@ class ArgBlobDef(object):
     def ToInterfaceBlobConf(self):
         interface_blob_conf = inter_face_blob_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
-        interface_blob_conf.data_type = self.dtype_.oneflow_proto_dtype
+        interface_blob_conf.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(
+            self.dtype_
+        )
         interface_blob_conf.is_dynamic = self.is_dynamic
         interface_blob_conf.is_tensor_list = self.is_tensor_list
         # NOTE(chengcheng): rm batch_axis, so set split_axis always = 0 for safe. will support

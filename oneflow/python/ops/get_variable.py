@@ -298,7 +298,9 @@ def GenerateVariableOpConf(
     op_conf.variable_conf.shape.dim.extend(shape)
 
     assert dtype is not None
-    op_conf.variable_conf.data_type = dtype.oneflow_proto_dtype
+    op_conf.variable_conf.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(
+        dtype
+    )
 
     if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
         root_path = None

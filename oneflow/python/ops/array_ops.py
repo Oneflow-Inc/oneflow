@@ -1589,7 +1589,9 @@ def elem_cnt(
 
     op_conf.shape_elem_cnt_conf.exclude_axis_conf.SetInParent()
     if dtype is not None:
-        op_conf.shape_elem_cnt_conf.data_type = dtype.oneflow_proto_dtype
+        op_conf.shape_elem_cnt_conf.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(
+            dtype
+        )
     op_conf.shape_elem_cnt_conf.y = "y"
     interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()

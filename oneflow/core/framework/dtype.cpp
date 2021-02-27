@@ -18,102 +18,79 @@ limitations under the License.
 
 namespace oneflow {
 
-std::shared_ptr<DType> DType::GetDTypeByDataType(const DataType& data_type) {
+Maybe<DType> DType::GetDTypeByDataType(const DataType& data_type) {
   switch (data_type) {
-    case DataType::kInvalidDataType: {
-      static std::shared_ptr<DType> invalid_dtype = std::make_shared<DType>();
+#define MAKE_DATA_TYPE_OBJ(data_type) \
+  case DataType::k##data_type: {      \
+    return data_type();               \
+  }
+    OF_PP_FOR_EACH_TUPLE(MAKE_DATA_TYPE_OBJ, DTYPE_SEQ)
+#undef MAKE_DATA_TYPE_OBJ
+    default: {
+      static std::shared_ptr<DType> invalid_dtype = std::make_shared<DType>(
+          DataType::kInvalidDataType, "oneflow.invalid_data_type", false, false, false);
       return invalid_dtype;
     }
-    case DataType::kChar: {
-      return Char();
-    }
-    case DataType::kFloat16: {
-      return Float16();
-    }
-    case DataType::kFloat: {
-      return Float();
-    }
-    case DataType::kDouble: {
-      return Double();
-    }
-    case DataType::kInt8: {
-      return Int8();
-    }
-    case DataType::kInt32: {
-      return Int32();
-    }
-    case DataType::kInt64: {
-      return Int64();
-    }
-    case DataType::kUInt8: {
-      return UInt8();
-    }
-    case DataType::kOFRecord: {
-      return OFRecordDType();
-    }
-    case DataType::kTensorBuffer: {
-      return TensorBufferDType();
-    }
-    default: UNIMPLEMENTED();
   }
-  UNIMPLEMENTED();
+  OF_UNIMPLEMENTED();
+  return std::shared_ptr<DType>();
 }
 
-std::shared_ptr<DType> DType::Char() {
+Maybe<DType> DType::Char() {
   static std::shared_ptr<DType> char_dtype =
       std::make_shared<DType>(DataType::kChar, "oneflow.char", false, false, false);
   return char_dtype;
 }
 
-std::shared_ptr<DType> DType::Float16() {
+Maybe<DType> DType::Float16() {
   static std::shared_ptr<DType> float16_dtype =
       std::make_shared<DType>(DataType::kFloat16, "oneflow.float16", true, true, false);
   return float16_dtype;
 }
 
-std::shared_ptr<DType> DType::Float() {
+Maybe<DType> DType::Float() {
   static std::shared_ptr<DType> float_dtype =
       std::make_shared<DType>(DataType::kFloat, "oneflow.float32", true, true, false);
   return float_dtype;
 }
 
-std::shared_ptr<DType> DType::Double() {
+Maybe<DType> DType::Double() {
   static std::shared_ptr<DType> double_dtype =
       std::make_shared<DType>(DataType::kDouble, "oneflow.float64", true, true, false);
   return double_dtype;
 }
 
-std::shared_ptr<DType> DType::Int8() {
+Maybe<DType> DType::Int8() {
   static std::shared_ptr<DType> int8_dtype =
       std::make_shared<DType>(DataType::kInt8, "oneflow.int8", true, false, false);
   return int8_dtype;
 }
 
-std::shared_ptr<DType> DType::Int32() {
+Maybe<DType> DType::Int32() {
   static std::shared_ptr<DType> int32_dtype =
       std::make_shared<DType>(DataType::kInt32, "oneflow.int32", true, false, false);
   return int32_dtype;
 }
 
-std::shared_ptr<DType> DType::Int64() {
+Maybe<DType> DType::Int64() {
   static std::shared_ptr<DType> int64_dtype =
       std::make_shared<DType>(DataType::kInt64, "oneflow.int64", true, false, false);
   return int64_dtype;
 }
 
-std::shared_ptr<DType> DType::UInt8() {
+Maybe<DType> DType::UInt8() {
   static std::shared_ptr<DType> uint8_dtype =
       std::make_shared<DType>(DataType::kUInt8, "oneflow.uint8", false, false, false);
   return uint8_dtype;
 }
 
-std::shared_ptr<DType> DType::OFRecordDType() {
+Maybe<DType> DType::OFRecord() {
   static std::shared_ptr<DType> record_dtype =
       std::make_shared<DType>(DataType::kOFRecord, "oneflow.of_record", false, false, false);
   return record_dtype;
 }
 
-std::shared_ptr<DType> DType::TensorBufferDType() {
+Maybe<DType> DType::TensorBuffer() {
   static std::shared_ptr<DType> tensor_buffer_dtype = std::make_shared<DType>(
       DataType::kTensorBuffer, "oneflow.tensor_buffer", false, false, false);
   return tensor_buffer_dtype;

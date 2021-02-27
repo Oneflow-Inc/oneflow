@@ -375,7 +375,11 @@ def decode_random(
     op_conf.decode_random_conf.shape.dim.extend(shape)
 
     assert dtype is not None
-    setattr(op_conf.decode_random_conf, "data_type", dtype.oneflow_proto_dtype)
+    setattr(
+        op_conf.decode_random_conf,
+        "data_type",
+        oneflow_api.deprecated.GetProtoDtype4OfDtype(dtype),
+    )
 
     op_conf.decode_random_conf.batch_size = batch_size
 

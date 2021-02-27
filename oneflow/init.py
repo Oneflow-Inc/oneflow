@@ -46,18 +46,18 @@ oneflow_api = import_oneflow_internal2()
 # define dtype at the begining of oneflow init
 
 dtype = oneflow_api.dtype
-char = oneflow_api.dtype.char
-float16 = oneflow_api.dtype.float16
-float32 = oneflow_api.dtype.float32
-float = oneflow_api.dtype.float
-double = oneflow_api.dtype.double
-float64 = oneflow_api.dtype.float64
-int8 = oneflow_api.dtype.int8
-int32 = oneflow_api.dtype.int32
-int64 = oneflow_api.dtype.int64
-uint8 = oneflow_api.dtype.uint8
-record = oneflow_api.dtype.record
-tensor_buffer = oneflow_api.dtype.tensor_buffer
+char = oneflow_api.char
+float16 = oneflow_api.float16
+float32 = oneflow_api.float32
+float = oneflow_api.float
+double = oneflow_api.double
+float64 = oneflow_api.float64
+int8 = oneflow_api.int8
+int32 = oneflow_api.int32
+int64 = oneflow_api.int64
+uint8 = oneflow_api.uint8
+record = oneflow_api.record
+tensor_buffer = oneflow_api.tensor_buffer
 
 del import_secondary_module
 del import_oneflow_internal2

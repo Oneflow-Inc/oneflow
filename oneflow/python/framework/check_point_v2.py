@@ -256,7 +256,7 @@ def SaveVarDict(
     for name, var in var_dict.items():
         meta_info = variable_meta_info_pb.VariableMetaInfo()
         meta_info.shape.dim[:] = var.shape
-        meta_info.data_type = var.dtype.oneflow_proto_dtype
+        meta_info.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(var.dtype)
         var_dir = os.path.join(path, name)
         param_path = os.path.join(var_dir, DATA_FILENAME)
         os.makedirs(os.path.dirname(param_path))

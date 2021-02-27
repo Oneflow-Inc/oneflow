@@ -22,6 +22,7 @@ limitations under the License.
 
 #include "oneflow/core/operator/op_conf.cfg.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/framework/dtype.h"
 
 namespace py = pybind11;
 
@@ -42,6 +43,11 @@ Maybe<cfg::OpAttribute> MakeOpAttribute(const std::string& op_attribute_str) {
   return std::make_shared<cfg::OpAttribute>(op_attribute);
 }
 
+Maybe<int> GetProtoDtype4OfDtype(const std::shared_ptr<DType>& x) {
+  // type enum of Protobuf is int at python side
+  return static_cast<int>(x->data_dtype());
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
@@ -50,6 +56,9 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
 
   m.def("MakeOpAttributeByString",
         [](const std::string& str) { return MakeOpAttribute(str).GetPtrOrThrow(); });
+
+  m.def("GetProtoDtype4OfDtype",
+        [](const std::shared_ptr<DType>& x) { return GetProtoDtype4OfDtype(x).GetOrThrow(); });
 }
 
 }  // namespace oneflow

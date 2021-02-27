@@ -46,7 +46,9 @@ def unique_with_counts(
     op_conf.unique_with_counts_conf.idx = "idx"
     op_conf.unique_with_counts_conf.count = "count"
     op_conf.unique_with_counts_conf.num_unique = "num_unique"
-    op_conf.unique_with_counts_conf.out_idx = out_idx.oneflow_proto_dtype
+    op_conf.unique_with_counts_conf.out_idx = oneflow_api.deprecated.GetProtoDtype4OfDtype(
+        out_idx
+    )
 
     interpret_util.Forward(op_conf)
     y_lbi = logical_blob_id_util.LogicalBlobId()
