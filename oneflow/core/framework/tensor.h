@@ -73,10 +73,12 @@ class Tensor {
   virtual bool is_lazy() const = 0;
   virtual Maybe<DeterminedTensor> DetermineAndDestroySelf() = 0;
 
+  // Getters for autograd
   virtual bool requires_grad() const = 0;
   virtual bool is_leaf() const = 0;
   virtual bool retain_grad() const = 0;
 
+  // Setters for autograd
   virtual void set_requires_grad(bool requires_grad) = 0;
   virtual void set_retain_grad(bool retain_grad) = 0;
 
@@ -146,11 +148,6 @@ class UndeterminedTensor final : public Tensor {
 class DeterminedTensor : public Tensor, public std::enable_shared_from_this<DeterminedTensor> {
  public:
   virtual ~DeterminedTensor() = default;
-  // Getters to be deprecated
-  virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
-
-  // Setters to be deprecated
-  virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 
   Maybe<DeterminedTensor> DetermineAndDestroySelf() override { return shared_from_this(); }
 
@@ -167,6 +164,12 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
     grad_fn_node_ = grad_fn_node;
   }
 
+  // Getters to be deprecated
+  virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
+
+  // Setters to be deprecated
+  virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
+
  protected:
   std::shared_ptr<const FunctionNode> grad_fn_node_;
 };
@@ -175,7 +178,7 @@ class MirroredTensor final : public DeterminedTensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
   MirroredTensor() = default;
-  MirroredTensor(const std::shared_ptr<MirroredTensorImpl>& impl) { impl_ = impl; }
+  explicit MirroredTensor(const std::shared_ptr<MirroredTensorImpl>& impl) { impl_ = impl; }
   ~MirroredTensor() override = default;
 
   // Getters
@@ -216,7 +219,7 @@ class ConsistentTensor final : public DeterminedTensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConsistentTensor);
   ConsistentTensor() = default;
-  ConsistentTensor(const std::shared_ptr<ConsistentTensorImpl>& impl) { impl_ = impl; }
+  explicit ConsistentTensor(const std::shared_ptr<ConsistentTensorImpl>& impl) { impl_ = impl; }
   ~ConsistentTensor() override = default;
 
   // Getters

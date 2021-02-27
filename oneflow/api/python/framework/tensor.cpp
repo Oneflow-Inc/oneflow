@@ -35,40 +35,46 @@ template<typename T>
 struct TensorExportUtil final {};
 
 template<>
-struct TensorExportUtil<MirroredTensor> {
+struct TensorExportUtil<MirroredTensor> final {
   static std::shared_ptr<MirroredTensor> MakeTensor(const py::tuple& py_shape,
                                                     const std::shared_ptr<const DType>& dtype,
                                                     const std::shared_ptr<const Device>& device,
-                                                    bool is_lazy) {
+                                                    bool is_lazy, bool requires_grad, bool is_leaf,
+                                                    bool retain_grad) {
     DimVector shape_dims;
     CHECK(py::isinstance<py::tuple>(py_shape));
     for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
     std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
     std::shared_ptr<MirroredTensorImpl> impl;
     if (is_lazy) {
-      impl = std::make_shared<LazyMirroredTensorImpl>(shape, dtype, device);
+      impl = std::make_shared<LazyMirroredTensorImpl>(shape, dtype, device, requires_grad, is_leaf,
+                                                      retain_grad);
     } else {
-      impl = std::make_shared<EagerMirroredTensorImpl>(shape, dtype, device);
+      impl = std::make_shared<EagerMirroredTensorImpl>(shape, dtype, device, requires_grad, is_leaf,
+                                                       retain_grad);
     }
     return std::make_shared<MirroredTensor>(impl);
   }
 };
 
 template<>
-struct TensorExportUtil<ConsistentTensor> {
+struct TensorExportUtil<ConsistentTensor> final {
   static std::shared_ptr<ConsistentTensor> MakeTensor(
       const py::tuple& py_shape, const std::shared_ptr<const DType>& dtype,
       const std::shared_ptr<const compatible_py::Distribute>& distribute,
-      const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy) {
+      const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
+      bool is_leaf, bool retain_grad) {
     DimVector shape_dims;
     CHECK(py::isinstance<py::tuple>(py_shape));
     for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
     std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
     std::shared_ptr<ConsistentTensorImpl> impl;
     if (is_lazy) {
-      impl = std::make_shared<LazyConsistentTensorImpl>(shape, dtype, distribute, parallel_desc);
+      impl = std::make_shared<LazyConsistentTensorImpl>(shape, dtype, distribute, parallel_desc,
+                                                        requires_grad, is_leaf, retain_grad);
     } else {
-      impl = std::make_shared<EagerConsistentTensorImpl>(shape, dtype, distribute, parallel_desc);
+      impl = std::make_shared<EagerConsistentTensorImpl>(shape, dtype, distribute, parallel_desc,
+                                                         requires_grad, is_leaf, retain_grad);
     }
     return std::make_shared<ConsistentTensor>(impl);
   }
