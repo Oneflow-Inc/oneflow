@@ -67,7 +67,11 @@ int32_t GetDefaultGpuDeviceNum() {
 
 Resource GetDefaultResource(const EnvProto& env_proto) {
   Resource resource;
-  resource.set_machine_num(env_proto.machine_size());
+  if (env_proto.has_ctrl_bootstrap_conf()) {
+    resource.set_machine_num(env_proto.ctrl_bootstrap_conf().world_size());
+  } else {
+    resource.set_machine_num(env_proto.machine_size());
+  }
   resource.set_cpu_device_num(GetDefaultCpuDeviceNum());
   resource.set_gpu_device_num(GetDefaultGpuDeviceNum());
   return resource;

@@ -291,7 +291,7 @@ def MakeBootstrapConfs(rank_host_list, master_port, world_size=0, ctrl_port=-1):
 
     For instance:
 
-        ONEFLOW_TEST_RANK_HOST_LIST=192.168.1.16,192.168.1.15 ONEFLOW_TEST_MASTER_PORT=43256
+        ONEFLOW_TEST_NODE_LIST=192.168.1.16,192.168.1.15 ONEFLOW_TEST_MASTER_PORT=43256
         ONEFLOW_TEST_WORLD_SIZE=2 ONEFLOW_TEST_RANK_CTRL_PORT=34527
 
     Args:

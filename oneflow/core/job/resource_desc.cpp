@@ -28,8 +28,17 @@ size_t ResourceDesc::TotalMachineNum() const {
 }
 
 const Machine& ResourceDesc::machine(int32_t idx) const {
+  CHECK_GE(idx, 0);
   CHECK_LT(idx, TotalMachineNum());
-  return Global<EnvDesc>::Get()->machine(idx);
+  if (Global<EnvDesc>::Get()->has_ctrl_bootstrap_conf()) {
+    CHECK_EQ(Global<ProcessCtx>::Get()->ctrl_addr().size(), TotalMachineNum());
+    static Machine machine;
+    const Address& addr = Global<ProcessCtx>::Get()->ctrl_addr(idx);
+    machine.set_addr(addr.host());
+    return machine;
+  } else {
+    return Global<EnvDesc>::Get()->machine(idx);
+  }
 }
 
 int32_t ResourceDesc::ComputeThreadPoolSize() const {
