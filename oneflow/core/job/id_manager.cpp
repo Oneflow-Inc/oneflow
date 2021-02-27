@@ -57,7 +57,7 @@ int64_t IDMgr::GlobalThrdId4TaskId(int64_t task_id) const {
 
 int64_t IDMgr::PickCpuThrdIdEvenly(int64_t machine_id) {
   ProcessId process_id{static_cast<uint32_t>(machine_id)};
-  DeviceId device_id{process_id, DeviceType::kCPU, 0};
+  DeviceId device_id{process_id, DeviceType::kCPU, kCPUDeviceIndex};
   auto* stream_index_generator = GetStreamIndexGeneratorManager()->GetGenerator(device_id);
   StreamId stream_id{device_id, stream_index_generator->GenerateComputeStreamIndex()};
   return SerializeStreamIdToInt64(stream_id);
