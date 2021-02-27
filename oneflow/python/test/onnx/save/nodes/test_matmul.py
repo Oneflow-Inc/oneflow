@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from util import convert_to_onnx_and_check
+from oneflow.python.test.onnx.save.util import convert_to_onnx_and_check
 
 
 def test_matmul(test_case):

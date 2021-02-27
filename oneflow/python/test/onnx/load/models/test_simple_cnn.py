@@ -18,6 +18,8 @@ from torch import nn
 
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
+from absl import app
+from absl.testing import absltest
 
 def test_simple_cnn(test_case):
     class Net(nn.Module):
@@ -31,7 +33,8 @@ def test_simple_cnn(test_case):
             self.register_buffer("label", torch.tensor([0, 1], dtype=torch.int64))
 
         def forward(self, x):
-            x = self.bn(self.conv(x))
+            x = self.conv(x)
+            x = self.bn(x)
             x = self.pool(x)
             x = torch.reshape(x, (2, 4, 3, 5))
             x = torch.reshape(x, (2, 4, 5, 3))
@@ -41,3 +44,6 @@ def test_simple_cnn(test_case):
             return x
 
     load_pytorch_module_and_check(test_case, Net)
+
+test_case = absltest.TestCase
+test_simple_cnn(test_case)

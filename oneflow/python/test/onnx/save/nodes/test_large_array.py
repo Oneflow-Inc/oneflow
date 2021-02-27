@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 import oneflow.typing as tp
-from util import convert_to_onnx_and_check
+from oneflow.python.test.onnx.save.util import convert_to_onnx_and_check
 
 
 def test_large_array(test_case):

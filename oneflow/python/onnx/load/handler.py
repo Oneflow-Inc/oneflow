@@ -174,7 +174,7 @@ class BackendHandler:
         """ Helper method to make tensor.
 
     :param node: OnnxNode object.
-    :param flow_func: Callable Tf function. Default is cls.FLOW_FUNC.
+    :param flow_func: Callable OneFlow function. Default is cls.FLOW_FUNC.
     :param inputs: Inputs tensor. Default is got from node.inputs.
     :param attrs: Attributes. Default is node.attrs.
     :param name: Node name.

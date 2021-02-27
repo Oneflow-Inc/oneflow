@@ -66,7 +66,6 @@ def from_onnx(
             len(input_names) == 1
         ), "Please use input dict if the model has multiple inputs"
         inputs = {input_names[0]: inputs}
-    print(input_names)
     if do_onnxsim and has_onnxsim:
         onnx_model, _ = onnxsim.simplify(
             onnx_model,
@@ -113,7 +112,6 @@ def from_onnx(
     write_fake_data("v1", np.array([0], dtype=np.float32))
 
     d = prepare(onnx_model, blob_dict=inputs)
-    print("end")
     output_names = [x.name for x in onnx_model.graph.output]
     if len(output_names) == 1:
         return d[output_names[0]]
@@ -121,12 +119,13 @@ def from_onnx(
 
 
 @oneflow_export("from_pytorch")
-def from_pytorch(torch_model, inputs, model_weight_dir="/tmp/tmp", do_onnxsim=True):
+def from_pytorch(torch_model, inputs, model_weight_dir="/tmp", do_onnxsim=True):
     if type(inputs) is not list:
         inputs = [inputs]
     input_names = ["x_{}".format(i) for i in range(len(inputs))]
 
     torch_model = torch_model.to("cpu")
+    
     f = io.BytesIO()
     torch.onnx.export(
         torch_model,
@@ -136,7 +135,9 @@ def from_pytorch(torch_model, inputs, model_weight_dir="/tmp/tmp", do_onnxsim=Tr
         opset_version=12,
     )
     model_str = f.getvalue()
-    with open("/home/dev/files/temp.onnx", "wb") as f:
+    if not os.path.exists('./temp_onnx'):
+        os.makedirs('./temp_onnx')
+    with open("./temp_onnx/temp.onnx", "wb") as f:
         f.write(model_str)
     onnx_model = onnx.load_model_from_string(model_str)
     return from_onnx(

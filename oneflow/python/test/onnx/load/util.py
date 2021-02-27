@@ -34,7 +34,7 @@ def load_pytorch_module_and_check(
         input_size = (2, 4, 3, 5)
     pt_module = pt_module_class()
 
-    model_weight_save_dir = "/tmp/tmp"
+    model_weight_save_dir = "./tmp"
 
     @flow.global_function(type="train")
     def job(x: tp.Numpy.Placeholder(input_size)) -> tp.Numpy:
@@ -50,24 +50,24 @@ def load_pytorch_module_and_check(
         flow.optimizer.SGD(lr_scheduler).minimize(y)
         return y
 
-    checkpoint = flow.train.CheckPoint()
-    checkpoint.load(model_weight_save_dir)
+    flow.load_variables(flow.checkpoint.get(model_weight_save_dir))
 
-    pt_module = pt_module.to("cuda")
+    pt_module = pt_module.to("cuda")    
+    
     ipt1 = np.random.uniform(
         low=input_min_val, high=input_max_val, size=input_size
     ).astype(np.float32)
     flow_res = job(ipt1)
-    pytorch_res = pt_module(torch.tensor(ipt1).to("cuda")).cpu().detach().numpy()
+    pytorch_res = pt_module(torch.tensor(ipt1).to( "cuda")).cpu().detach().numpy()
     print(flow_res)
     print("-------------")
     print(pytorch_res)
-    np.save("/tmp/flow_res.npy", flow_res)
-    np.save("/tmp/pytorch_res.npy", pytorch_res)
+    np.save("./tmp/flow_res.npy", flow_res)
+    np.save("./tmp/pytorch_res.npy", pytorch_res)
 
-    # a, b = flow_res.flatten(), pytorch_res.flatten()
-    #
-    # max_idx = np.argmax(np.abs(a - b) / a)
-    # print("max rel diff is {} at index {}".format(np.max(np.abs(a - b) / a), max_idx))
-    # print("a[{}]={}, b[{}]={}".format(max_idx, a[max_idx], max_idx, b[max_idx]))
+    a, b = flow_res.flatten(), pytorch_res.flatten()
+    
+    max_idx = np.argmax(np.abs(a - b) / a)
+    print("max rel diff is {} at index {}".format(np.max(np.abs(a - b) / a), max_idx))
+    print("a[{}]={}, b[{}]={}".format(max_idx, a[max_idx], max_idx, b[max_idx]))
     test_case.assertTrue(np.allclose(flow_res, pytorch_res, rtol=1e-4, atol=1e-5))
