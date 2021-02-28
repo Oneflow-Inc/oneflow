@@ -91,12 +91,6 @@ int64_t IDMgr::GlobalThrdId4TaskId(int64_t task_id) const {
   return (task_id >> shift) << shift;
 }
 
-int64_t IDMgr::AllocateChainId(int64_t global_work_stream_id) {
-  CHECK_LT(stream_id2chain_cnt_[global_work_stream_id],
-           (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
-  return global_work_stream_id | (stream_id2chain_cnt_[global_work_stream_id]++);
-}
-
 int64_t IDMgr::PickCpuThrdIdEvenly(int64_t machine_id) {
   return GetCpuDeviceThrdId(machine_id2num_cpu_thrd_id_picked_[machine_id]++ % cpu_device_num_);
 }

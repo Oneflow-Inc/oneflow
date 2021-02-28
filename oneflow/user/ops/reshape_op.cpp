@@ -31,6 +31,22 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
                                                           {{"out", 0}}, ctx);
 }
 
+Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
+  const Shape& shape = ctx->Attr<Shape>("shape");
+  const user_op::TensorDesc* in_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  const Shape& in_shape = in_tensor_desc->shape();
+  Shape* out_shape = out_tensor_desc->mut_shape();
+  CHECK_OR_RETURN(in_tensor_desc->is_dynamic() == false);
+  *out_tensor_desc = *in_tensor_desc;
+  CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
+  DimVector dim_vec = {shape.dim_vec().begin(), shape.dim_vec().end()};
+  FOR_RANGE(int32_t, i, 0, dim_vec.size()) { CHECK_GT_OR_RETURN(dim_vec.at(i), 0); }
+  *out_shape = Shape(dim_vec);
+  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   const Shape& shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc* in_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
@@ -59,7 +75,8 @@ REGISTER_USER_OP("reshape")
     .Input("in")
     .Output("out")
     .Attr<Shape>("shape")
-    .SetTensorDescInferFn(TensorDescInferFn)
+    .SetLogicalTensorDescInferFn(LogicalTensorDescInferFn)
+    .SetPhysicalTensorDescInferFn(TensorDescInferFn)
     .SetGetSbpFn(GetSbpFn);
 
 REGISTER_USER_OP_GRAD("reshape").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
