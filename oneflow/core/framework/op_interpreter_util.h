@@ -57,7 +57,7 @@ class OpInterpUtil {
                                          const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object);
 
   static std::function<void(const std::shared_ptr<InstructionsBuilder>&)> BuildFeedPathInstruction(
-      const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object);
+      const std::string& path, const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object);
 
   static std::shared_ptr<compatible_py::BlobObject> EagerRunModelInit(const OperatorConf& op_conf);
 
