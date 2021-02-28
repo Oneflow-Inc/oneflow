@@ -57,7 +57,8 @@ struct OpRegistryResult {
   int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;
-  TensorDescInferFn tensor_desc_infer_fn;
+  TensorDescInferFn logical_tensor_desc_infer_fn;
+  TensorDescInferFn physical_tensor_desc_infer_fn;
   GetSbpFn get_sbp_fn;
   InferSbpSignatureFn infer_sbp_signature_fn;
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistryResult since it is more about
@@ -98,6 +99,8 @@ class OpRegistry final {
   OpRegistry& Attr(const std::string& name);
 
   OpRegistry& SetTensorDescInferFn(TensorDescInferFn fn);
+  OpRegistry& SetLogicalTensorDescInferFn(TensorDescInferFn fn);
+  OpRegistry& SetPhysicalTensorDescInferFn(TensorDescInferFn fn);
   OpRegistry& SetGetSbpFn(GetSbpFn fn);
   OpRegistry& SetInferSbpSignatureFn(InferSbpSignatureFn fn);
   OpRegistry& SetInputArgModifyFn(InputArgModifyFn fn);

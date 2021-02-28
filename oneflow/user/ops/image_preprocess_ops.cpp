@@ -133,7 +133,14 @@ REGISTER_CPU_ONLY_USER_OP("coin_flip")
     .Attr<int64_t>("batch_size")
     .Attr<int64_t>("seed", -1)
     .Attr<bool>("has_seed", false)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      int64_t batch_size = ctx->Attr<int64_t>("batch_size");
+      *out_tensor->mut_shape() = Shape({batch_size});
+      *out_tensor->mut_data_type() = DataType::kInt8;
+      return Maybe<void>::Ok();
+    })
+    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
       const ParallelContext& parallel_ctx = ctx->parallel_ctx();
