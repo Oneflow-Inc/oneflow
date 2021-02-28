@@ -78,7 +78,6 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   InterfaceBlobConf blob_conf;
   blob_conf.mutable_shape()->mutable_dim()->Add(65536);
   blob_conf.set_data_type(kInt8);
-  blob_conf.mutable_batch_axis()->set_value(0);
   blob_conf.set_is_dynamic(true);
 
   path_input_op_conf.mutable_input_conf()->mutable_blob_conf()->CopyFrom(blob_conf);
@@ -203,7 +202,7 @@ OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
   } else {
     temp_blob_object = OpInterpUtil::EagerRunModelLoad(op_conf, snapshot_path);
   }
-  auto target_blob_object = output->blob_object();
+  auto target_blob_object = dynamic_cast<DeterminedTensor*>(output.get())->blob_object();
   OpInterpUtil::Assign(target_blob_object, temp_blob_object);
 }
 
