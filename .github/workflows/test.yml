@@ -37,6 +37,7 @@ jobs:
       max-parallel: 5
       matrix:
         test_suite: ["cuda", "xla", "cpu"]
+        experimental: [false]
         include:
           - test_suite: cuda
             cuda_version: 10.2
