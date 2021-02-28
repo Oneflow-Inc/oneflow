@@ -41,7 +41,7 @@ class IDMgr final {
   int64_t BaseIndependentThrdId() const;
   void UpdateBaseIndependentThrdId(int64_t val);
 
-  int64_t NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id);
+  int64_t NewTaskId(int64_t machine_id, int64_t thrd_id);
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
   int64_t NewMemBlockId() { return mem_block_id_count_++; }
   int64_t NewChunkId() { return chunk_id_count_++; }
@@ -65,14 +65,6 @@ class IDMgr final {
   int64_t MachineId4ActorId(int64_t actor_id) const;
   int64_t ThrdId4ActorId(int64_t actor_id) const;
 
-  // local_work_stream_id
-  // for cpu:
-  //   0: the actor thread
-  // for gpu:
-  //   0: the global cuda stream
-  int64_t AllocateLocalWorkStreamId(int64_t machine_id, int64_t thrd_id);
-  int64_t LocalWorkStreamId4TaskId(int64_t task_id) const;
-  int64_t LocalWorkStreamId4ActorId(int64_t actor_id) const;
   // global_thread_id
   // sign | machine_id | thrd_id | 0  | 0
   //  1   |     10     |   11    | 21 | 21
@@ -82,7 +74,6 @@ class IDMgr final {
   //  1   |     10     |   11    |          21          | 21
   int64_t GlobalWorkStreamId4ActorId(int64_t actor_id) const;
   int64_t GlobalWorkStreamId4TaskId(int64_t task_id) const;
-  int64_t AllocateChainId(int64_t global_work_stream_id);
   int64_t PickCpuThrdIdEvenly(int64_t machine_id);
 
  private:
@@ -97,7 +88,6 @@ class IDMgr final {
   int64_t chunk_id_count_;
   HashMap<int64_t, int64_t> machine_thrd_id2num_of_tasks_;
   HashMap<int64_t, int64_t> machine_thrd_id2stream_id_cnt_;
-  HashMap<int64_t, int64_t> stream_id2chain_cnt_;
   int64_t base_independent_thrd_id_;
   HashMap<int64_t, int64_t> machine_id2num_cpu_thrd_id_picked_;
 

@@ -21,6 +21,7 @@ import oneflow as flow
 import tensorflow as tf
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
+import os
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -60,23 +61,21 @@ def gen_arg_list():
     arg_dict["device_type"] = ["gpu", "cpu"]
     arg_dict["in_shape"] = [
         (100,),
-        (100, 100),
-        (1000, 1000),
-        (10, 10, 2000),
-        (10, 10000),
+        (10, 10, 20),
+        (10, 1000),
     ]
     arg_dict["axis"] = [-1]
-    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+    arg_dict["data_type"] = ["double", "int64"]
 
     return GenArgList(arg_dict)
 
 
 def gen_arg_list_for_test_axis():
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
+    arg_dict["device_type"] = ["gpu"]
     arg_dict["in_shape"] = [(10, 10, 20, 30)]
-    arg_dict["axis"] = [-2, -1, 0, 1, 2]
-    arg_dict["data_type"] = ["float32", "double", "int32", "int64"]
+    arg_dict["axis"] = [-2, 0, 1, 2]
+    arg_dict["data_type"] = ["float32", "int32"]
 
     return GenArgList(arg_dict)
 
@@ -86,6 +85,9 @@ class TestArgmax(flow.unittest.TestCase):
     def test_argmax(test_case):
         for arg in gen_arg_list():
             compare_with_tensorflow(*arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_argmax_gpu(test_case):
         for arg in gen_arg_list_for_test_axis():
             compare_with_tensorflow(*arg)
 

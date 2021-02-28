@@ -872,7 +872,7 @@ def layer_norm(
         affined = normalized
         if gamma:
             gamma = flow.reshape(gamma, nd_params_shape)
-            affined *= scale
+            affined *= gamma
         if beta:
             beta = flow.reshape(beta, nd_params_shape)
             affined += beta

@@ -25,11 +25,6 @@ Maybe<void> InferClipTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferClipBatchAxis(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> GetClipSbpSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
@@ -41,11 +36,6 @@ Maybe<void> GetClipSbpSignature(user_op::SbpContext* ctx) {
 Maybe<void> InferClipGradTensorDesc(user_op::InferContext* ctx) {
   *ctx->Shape4ArgNameAndIndex("dx", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
   *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferClipGradBatchAxis(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -76,7 +66,6 @@ REGISTER_USER_OP("clip_by_scalar")
     .Attr<int64_t>("integral_max")
     .Output("y")
     .SetTensorDescInferFn(InferClipTensorDesc)
-    .SetBatchAxisInferFn(InferClipBatchAxis)
     .SetGetSbpFn(GetClipSbpSignature);
 
 REGISTER_USER_OP("clip_by_scalar_min")
@@ -85,7 +74,6 @@ REGISTER_USER_OP("clip_by_scalar_min")
     .Attr<int64_t>("integral_min")
     .Output("y")
     .SetTensorDescInferFn(InferClipTensorDesc)
-    .SetBatchAxisInferFn(InferClipBatchAxis)
     .SetGetSbpFn(GetClipSbpSignature);
 
 REGISTER_USER_OP("clip_by_scalar_max")
@@ -94,7 +82,6 @@ REGISTER_USER_OP("clip_by_scalar_max")
     .Attr<int64_t>("integral_max")
     .Output("y")
     .SetTensorDescInferFn(InferClipTensorDesc)
-    .SetBatchAxisInferFn(InferClipBatchAxis)
     .SetGetSbpFn(GetClipSbpSignature);
 
 REGISTER_USER_OP("clip_by_scalar_grad")
@@ -106,7 +93,6 @@ REGISTER_USER_OP("clip_by_scalar_grad")
     .Attr<int64_t>("integral_max")
     .Output("dx")
     .SetTensorDescInferFn(InferClipGradTensorDesc)
-    .SetBatchAxisInferFn(InferClipGradBatchAxis)
     .SetGetSbpFn(GetClipGradSbpSignature);
 
 REGISTER_USER_OP("clip_by_scalar_min_grad")
@@ -116,7 +102,6 @@ REGISTER_USER_OP("clip_by_scalar_min_grad")
     .Attr<int64_t>("integral_min")
     .Output("dx")
     .SetTensorDescInferFn(InferClipGradTensorDesc)
-    .SetBatchAxisInferFn(InferClipGradBatchAxis)
     .SetGetSbpFn(GetClipGradSbpSignature);
 
 REGISTER_USER_OP("clip_by_scalar_max_grad")
@@ -126,7 +111,6 @@ REGISTER_USER_OP("clip_by_scalar_max_grad")
     .Attr<int64_t>("integral_max")
     .Output("dx")
     .SetTensorDescInferFn(InferClipGradTensorDesc)
-    .SetBatchAxisInferFn(InferClipGradBatchAxis)
     .SetGetSbpFn(GetClipGradSbpSignature);
 
 REGISTER_USER_OP_GRAD("clip_by_scalar")

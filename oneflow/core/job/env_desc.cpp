@@ -17,6 +17,14 @@ limitations under the License.
 
 namespace oneflow {
 
+size_t EnvDesc::TotalMachineNum() const {
+  if (env_proto_.has_ctrl_bootstrap_conf()) {
+    return env_proto_.ctrl_bootstrap_conf().world_size();
+  } else {
+    return env_proto_.machine().size();
+  }
+}
+
 int64_t EnvDesc::GetMachineId(const std::string& addr) const {
   int64_t machine_id = -1;
   int64_t machine_num = env_proto_.machine_size();

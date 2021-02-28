@@ -190,6 +190,8 @@ void FeedBlob(const std::shared_ptr<InstructionsBuilder>& x,
   return x->FeedBlob(blob_object, callback_id).GetOrThrow();
 }
 
+// signature of python fun _FindOrCreateDelegateBlobObject, it will be removed after blobcache is
+// migrated
 using FindOrCreateDelegateBlobObjectFun = std::function<std::shared_ptr<compatible_py::BlobObject>(
     const std::function<std::shared_ptr<compatible_py::BlobObject>(
         const std::shared_ptr<compatible_py::BlobObject>&,

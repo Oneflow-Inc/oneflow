@@ -17,6 +17,7 @@ import unittest
 import numpy as np
 import oneflow as flow
 import tensorflow as tf
+import os
 
 from collections import OrderedDict
 from test_util import GenArgDict
@@ -100,8 +101,6 @@ def _of_where(
         ):
             return do_where(condition_def, x_def, y_def)
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         return where_fn([condition], [x], [y]).get().numpy_list()[0]
 
     else:
@@ -118,8 +117,6 @@ def _of_where(
         ):
             return do_where(condition_def, x_def, y_def)
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         return where_fn(condition, x, y).get().numpy()
 
 
@@ -222,6 +219,7 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
 
 @flow.unittest.skip_unless_1n4d()
 class TestWhere(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_where(test_case):
         arg_dict = OrderedDict()
         arg_dict["cond_shape"] = [[5, 10]]
@@ -232,6 +230,7 @@ class TestWhere(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_where_case_1(test_case):
         arg_dict = OrderedDict()
         arg_dict["cond_shape"] = [[4, 5, 8]]
@@ -242,6 +241,7 @@ class TestWhere(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_where_case_2(test_case):
         arg_dict = OrderedDict()
         arg_dict["cond_shape"] = [[10, 7, 9]]
@@ -252,6 +252,7 @@ class TestWhere(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_where_case_3(test_case):
         arg_dict = OrderedDict()
         arg_dict["cond_shape"] = [[12, 25, 6]]
@@ -262,6 +263,7 @@ class TestWhere(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_where_grad(test_case):
         arg_dict = OrderedDict()
         arg_dict["cond_shape"] = [[10]]
@@ -273,6 +275,7 @@ class TestWhere(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_tf(test_case, **arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_where_grad_case_1(test_case):
         arg_dict = OrderedDict()
         arg_dict["cond_shape"] = [[3, 7, 10]]
@@ -283,6 +286,7 @@ class TestWhere(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_tf(test_case, **arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_where_grad_case_2(test_case):
         arg_dict = OrderedDict()
         arg_dict["cond_shape"] = [[16, 1]]
@@ -293,6 +297,7 @@ class TestWhere(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_tf(test_case, **arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_where_grad_4card(test_case):
         arg_dict = OrderedDict()
         arg_dict["cond_shape"] = [[10]]
@@ -304,6 +309,7 @@ class TestWhere(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_tf(test_case, **arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_where_argwhere(test_case):
         rand_input = np.random.random_sample((11, 3, 5)).astype(np.float32)
         rand_input[np.nonzero(rand_input < 0.5)] = 0.0
