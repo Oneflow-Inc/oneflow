@@ -39,6 +39,28 @@ void XrtLaunchOp::InitFromOpConf() {
   if (outputs_num > 0) { EnrollRepeatedOutputBn("out"); }
 }
 
+Maybe<void> XrtLaunchOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  const auto &launch_conf = op_conf().xrt_launch_conf();
+  const auto &in_out_logical_blob_desc = launch_conf.input_output_logical_blob_desc();
+  // check input blob descs
+  for (const std::string &bn : this->input_bns()) {
+    const LogicalBlobId &lbi = this->BnInOp2Lbi(bn);
+    auto it = in_out_logical_blob_desc.find(GenLogicalBlobName(lbi));
+    CHECK_OR_RETURN(it != in_out_logical_blob_desc.end());
+    CHECK_OR_RETURN(*BlobDesc4BnInOp(bn) == BlobDesc(it->second));
+  }
+  for (const std::string &bn : this->output_bns()) {
+    const LogicalBlobId &lbi = this->BnInOp2Lbi(bn);
+    auto it = in_out_logical_blob_desc.find(GenLogicalBlobName(lbi));
+    CHECK_OR_RETURN(it != in_out_logical_blob_desc.end());
+    *BlobDesc4BnInOp(bn) = BlobDesc(it->second);
+  }
+  return Maybe<void>::Ok();
+}
+
+
 Maybe<void> XrtLaunchOp::InferOutBlobDescs(
     std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
     const ParallelContext *parallel_ctx, const SbpSignature* sbp_signature) const {
