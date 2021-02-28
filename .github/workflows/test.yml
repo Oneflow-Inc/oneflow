@@ -37,11 +37,11 @@ jobs:
       max-parallel: 5
       matrix:
         test_suite: ["cuda", "xla", "cpu"]
-        experimental: [false]
         include:
           - test_suite: cuda
             cuda_version: 10.2
             extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\"
+            experimental: false
           - test_suite: xla
             cuda_version: 10.1
             extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --xla
@@ -49,6 +49,7 @@ jobs:
           - test_suite: cpu
             cuda_version: 10.2
             extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --cpu
+            experimental: false
     needs: [check_license_and_format, wait_for_gpu_slot]
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
