@@ -49,6 +49,8 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
       const SbpParallel& dst_sbp_parallel = parallel7group.first.second;
       OperatorConf identity_op_conf{};
       identity_op_conf.set_name("System-Boxing-Identity-" + NewUniqueId());
+      identity_op_conf.set_scope_symbol_id(
+          op_graph.OpNode4OpName(lbi.op_name())->op().op_conf().scope_symbol_id());
       IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
       identity_conf->set_in(GenLogicalBlobName(lbi));
       identity_conf->set_out("out");

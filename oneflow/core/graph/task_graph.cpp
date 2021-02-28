@@ -61,8 +61,16 @@ bool IsConnectToTickOp(const TaskNode* node) {
 bool IsOptimizerPassOp(const Operator* op) {
   // NOTE(chengcheng): use scope::calculation_pass_name instead of area_id to not merge optimizer
   // ops with fw/bw ops
+  if (!op->op_conf().has_scope_symbol_id()) {
+    // NOTE(chengcheng): Some system op insert to OpGraph may not set scope_symbol_id, it MUST NOT
+    // optimizer subgraph ops.
+    return false;
+  }
   int64_t scope_symbol_id = op->op_conf().scope_symbol_id();
-  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
+  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
+      << " Error! op : \n " << op->op_conf().DebugString()
+      << " has error scope_symbol_id = " << scope_symbol_id
+      << " which cannot find in Global<symbol::Storage<Scope>>::Get()\n";
   const Scope& scope = Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
   return scope.scope_proto().calculation_pass_name() == kOptimizerPass;
 }
