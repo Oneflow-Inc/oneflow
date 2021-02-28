@@ -267,7 +267,8 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
     bn2blob_desc[ibn].reset(new BlobDesc(*JUST(GetLogicalBlobDesc4Ibn(ibn))));
   }
   for (const auto& obn : output_bns()) {
-    bn2blob_desc[obn].reset(new BlobDesc(DataType::kInvalidDataType));
+    // TODO(liujuncheng) : use GlobalJobDesc().DefaultDataType() or DataType::kInvalidDataType
+    bn2blob_desc[obn].reset(new BlobDesc(DataType::kFloat));
   }
   auto BlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
     return bn2blob_desc.at(bn).get();
