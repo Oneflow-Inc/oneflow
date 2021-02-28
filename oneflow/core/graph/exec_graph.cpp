@@ -86,10 +86,15 @@ Maybe<void> CheckPhysicalBlobDesc(
     const std::function<BlobDesc*(const std::string&)>& GetPhysicalBlobDesc) {
   const std::shared_ptr<const ParallelDesc> op_parallel_desc = CHECK_JUST(op.GetOpParallelDesc());
   for (const auto& bn : bns) {
+    const BlobDesc* physical_blob_desc = GetPhysicalBlobDesc(bn);
+    if (physical_blob_desc == nullptr) {
+      // TODO(liujuncheng): remove this hotfix
+      continue;
+    }
     if (*CHECK_JUST(op.GetParallelDesc4BnInOp(bn)) == *op_parallel_desc) {
       CHECK_JUST(CheckPhysicalBlobDesc(*CHECK_JUST(GetLogicalBlobDesc(bn)),
                                        sbp_signature->bn_in_op2sbp_parallel().at(bn), parallel_ctx,
-                                       *GetPhysicalBlobDesc(bn)));
+                                       *physical_blob_desc));
     }
   }
   return Maybe<void>::Ok();
