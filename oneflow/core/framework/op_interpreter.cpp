@@ -114,11 +114,11 @@ MakeBn2BlobObjectMap(const BuiltinOpExpr* op_expr, const TensorList& inputs,
   auto* bn2blob_object(new HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>{});
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& ibn = op_expr->indexed_ibns().at(i);
-    bn2blob_object->emplace(ibn, inputs[i]->blob_object());
+    bn2blob_object->emplace(ibn, dynamic_cast<DeterminedTensor*>(inputs[i].get())->blob_object());
   }
   for (int i = 0; i < outputs.size(); ++i) {
     const auto& obn = op_expr->indexed_obns().at(i);
-    bn2blob_object->emplace(obn, outputs[i]->blob_object());
+    bn2blob_object->emplace(obn, dynamic_cast<DeterminedTensor*>(outputs[i].get())->blob_object());
   }
   return std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>(
       bn2blob_object);
