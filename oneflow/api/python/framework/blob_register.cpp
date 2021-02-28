@@ -48,9 +48,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            py::keep_alive<0, 1>());
 
   py::class_<BlobRegister, std::shared_ptr<BlobRegister>>(m, "BlobRegister")
-      .def(py::init([](const std::function<void(std::shared_ptr<BlobObject>)>& release) {
-        return std::make_shared<BlobRegister>(release);
-      }))
+      .def(py::init<>())
       .def_property_readonly("blob_name2object", &BlobRegister::blob_name2object)
       .def("OpenRegisteredBlobAccess", &BlobRegister::OpenRegisteredBlobAccess)
       .def("CloseRegisteredBlobAccess", &BlobRegister::CloseRegisteredBlobAccess)
@@ -83,6 +81,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("blob_register", &RegisteredBlobAccess::blob_register)
       .def("increase_reference_counter", &RegisteredBlobAccess::increase_reference_counter)
       .def("decrease_reference_counter", &RegisteredBlobAccess::decrease_reference_counter);
+
+  m.def("GetDefaultBlobRegister", []() { return GetDefaultBlobRegister().GetPtrOrThrow(); });
 }
 
 }  // namespace compatible_py

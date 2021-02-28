@@ -16,7 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
 #define ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/object.h"
+#include "oneflow/core/framework/snapshot_manager.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
 
@@ -24,22 +28,41 @@ namespace oneflow {
 
 class Session {
  public:
-  Session(const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
+  Session(int64_t id, const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
           const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list);
   Session(const Session&) = delete;
   Session(Session&&) = delete;
-  ~Session() = default;
+  virtual ~Session() = default;
 
+  int64_t id() const;
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list() const;
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list() const;
 
+  const std::shared_ptr<SnapshotManager>& snapshot_mgr() const { return snapshot_mgr_; }
+
+  // Return a pair of global_variable_blob and job_variable_blob.
+  virtual std::pair<std::shared_ptr<one::Tensor>, std::shared_ptr<one::Tensor>>
+  TryGetVariableBlobOfJobFromStash(const std::string& job_name,
+                                   const std::string& variable_name) const {
+    UNIMPLEMENTED();
+  }
+
+  virtual std::string GetJobNameScopePrefix(const std::string& job_name) const { UNIMPLEMENTED(); }
+
  private:
+  int64_t id_;
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list_;
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
+  std::shared_ptr<SnapshotManager> snapshot_mgr_;
 };
 
+Maybe<int64_t*> GetDefaultSessionId();
+Maybe<void> SetDefaultSessionId(int64_t val);
+Maybe<void> RegsiterSession(int64_t id, const std::shared_ptr<Session>& sess);
 Maybe<Session> GetDefaultSession();
-Maybe<void> ResetDefaultSession();
+Maybe<void> ClearDefaultSession();
+Maybe<void> ClearSessionById(int64_t id);
+Maybe<void> ClearAllSession();
 
 }  // namespace oneflow
 

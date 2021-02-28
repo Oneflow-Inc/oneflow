@@ -59,7 +59,6 @@ import oneflow.python_gen.__export_symbols__
 
 import atexit
 import oneflow.python.framework.c_api_util
-import oneflow.python.framework.python_interpreter_util
 import oneflow.python.framework.register_class_method_util as register_class_method_util
 import oneflow_api
 
@@ -68,8 +67,9 @@ INVALID_SPLIT_AXIS = oneflow_api.INVALID_SPLIT_AXIS
 register_class_method_util.RegisterMethod4Class()
 
 atexit.register(oneflow_api.DestroyEnv)
+atexit.register(oneflow_api.ClearAllBlobCache)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
-atexit.register(oneflow.python.framework.python_interpreter_util.SetShuttingDown)
+atexit.register(oneflow_api.SetShuttingDown)
 del atexit
 
 import sys

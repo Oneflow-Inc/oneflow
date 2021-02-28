@@ -25,28 +25,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-inline Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  if (EagerExecutionEnabled()) {
-    return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
-  } else {
-    return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
-  }
-}
-
-inline Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {
-  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
-  return mgr->FindJobBuildAndInferCtx(job_name);
-}
-
-inline Maybe<JobBuildAndInferCtx*> GetCurInferCtx() {
-  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
-  return mgr->FindJobBuildAndInferCtx(*JUST(mgr->GetCurrentJobName()));
-}
-
-}  // namespace
-
 inline Maybe<void> JobBuildAndInferCtx_Open(const std::string& job_name) {
   auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
   return mgr->OpenJobBuildAndInferCtx(job_name);
