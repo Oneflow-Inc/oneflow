@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename FunctorT, typename OutputT, typename InputA>
-struct UnaryElemwiseXpuFunctor<DeviceType::kGPU, FunctorT, OutputT, InputA> final {
+struct UnaryElemwiseXpuLauncher<DeviceType::kGPU, FunctorT, OutputT, InputA> final {
   void operator()(DeviceCtx* ctx, int64_t elem_cnt, OutputT* out, const InputA* input_a,
                   FunctorT functor) {
     OF_CUDA_CHECK(cuda::elementwise::Unary(functor, elem_cnt, out, input_a, ctx->cuda_stream()));
@@ -28,7 +28,7 @@ struct UnaryElemwiseXpuFunctor<DeviceType::kGPU, FunctorT, OutputT, InputA> fina
 };
 
 template<typename FunctorT, typename OutputT, typename InputA, typename InputB>
-struct BinaryElemwiseXpuFunctor<DeviceType::kGPU, FunctorT, OutputT, InputA, InputB> final {
+struct BinaryElemwiseXpuLauncher<DeviceType::kGPU, FunctorT, OutputT, InputA, InputB> final {
   void operator()(DeviceCtx* ctx, int64_t elem_cnt, OutputT* out, const InputA* input_a,
                   const InputB* input_b, FunctorT functor) {
     OF_CUDA_CHECK(

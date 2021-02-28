@@ -21,13 +21,13 @@ limitations under the License.
 
 namespace oneflow {
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA>
-struct UnaryElemwiseXpuFunctor final {
+struct UnaryElemwiseXpuLauncher final {
   void operator()(DeviceCtx* ctx, int64_t elem_cnt, OutputT* out, const InputA* input_a,
                   FunctorT functor);
 };
 
 template<typename FunctorT, typename OutputT, typename InputA>
-struct UnaryElemwiseXpuFunctor<DeviceType::kCPU, FunctorT, OutputT, InputA> final {
+struct UnaryElemwiseXpuLauncher<DeviceType::kCPU, FunctorT, OutputT, InputA> final {
   void operator()(DeviceCtx* ctx, int64_t elem_cnt, OutputT* out, const InputA* input_a,
                   FunctorT functor) {
     FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = functor(input_a[i]); }
@@ -36,13 +36,13 @@ struct UnaryElemwiseXpuFunctor<DeviceType::kCPU, FunctorT, OutputT, InputA> fina
 
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA,
          typename InputB>
-struct BinaryElemwiseXpuFunctor final {
+struct BinaryElemwiseXpuLauncher final {
   void operator()(DeviceCtx* ctx, int64_t elem_cnt, OutputT* out, const InputA* input_a,
                   const InputB* input_b, FunctorT functor);
 };
 
 template<typename FunctorT, typename OutputT, typename InputA, typename InputB>
-struct BinaryElemwiseXpuFunctor<DeviceType::kCPU, FunctorT, OutputT, InputA, InputB> final {
+struct BinaryElemwiseXpuLauncher<DeviceType::kCPU, FunctorT, OutputT, InputA, InputB> final {
   void operator()(DeviceCtx* ctx, int64_t elem_cnt, OutputT* out, const InputA* input_a,
                   const InputB* input_b, FunctorT functor) {
     FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = functor(input_a[i], input_b[i]); }
@@ -76,7 +76,7 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel {
     OutputT* out_ptr = out_tensor->mut_dptr<OutputT>();
     const int64_t elem_cnt = input_a_shape.elem_cnt();
 
-    UnaryElemwiseXpuFunctor<device_type, FunctorT, OutputT, InputA>()(
+    UnaryElemwiseXpuLauncher<device_type, FunctorT, OutputT, InputA>()(
         ctx->device_ctx(), elem_cnt, out_ptr, input_a_ptr, FunctorCreateFn(ctx));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -121,7 +121,7 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel {
     OutputT* out_ptr = out_tensor->mut_dptr<OutputT>();
     const int64_t elem_cnt = input_a_shape.elem_cnt();
 
-    BinaryElemwiseXpuFunctor<device_type, FunctorT, OutputT, InputA, InputB>()(
+    BinaryElemwiseXpuLauncher<device_type, FunctorT, OutputT, InputA, InputB>()(
         ctx->device_ctx(), elem_cnt, out_ptr, input_a_ptr, input_b_ptr, FunctorCreateFn(ctx));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
