@@ -138,7 +138,9 @@ class Model(
             return self.validation_step(batch)
 
         job.__name__ = self.__class__.__name__ + "_Model_eval_job"
-        deco = api_oneflow_function(function_config=self.validation_config)
+        deco = api_oneflow_function(
+            type="predict", function_config=self.validation_config
+        )
         self.eval_job = deco(job)
 
     def _construct_one_numpy_input_train_job(
@@ -207,7 +209,9 @@ class Model(
         new_sig = origin_sig.replace(parameters=para_list)
         job.__oneflow_function_signature__ = new_sig
         job.__name__ = self.__class__.__name__ + "_Model_eval_numpy_job"
-        deco = api_oneflow_function(function_config=self.validation_config)
+        deco = api_oneflow_function(
+            type="predict", function_config=self.validation_config
+        )
         self.eval_job = deco(job)
 
     def _construct_numpy_input_eval_job(self):
