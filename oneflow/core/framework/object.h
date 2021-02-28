@@ -49,7 +49,7 @@ class BlobObject : public Object {
 
   std::shared_ptr<OpArgBlobAttribute> op_arg_blob_attr() const;
 
-  void add_releaser(std::function<void(Object*)> release);
+  void add_releaser(const std::function<void(Object*)>& release);
 
   void ForceReleaseAll();
 

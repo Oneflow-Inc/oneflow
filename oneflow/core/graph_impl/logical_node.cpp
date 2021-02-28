@@ -16,11 +16,9 @@ limitations under the License.
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
-#include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
 #include "oneflow/core/graph/distribute_concat_compute_task_node.h"
 #include "oneflow/core/graph/distribute_split_compute_task_node.h"
-#include "oneflow/core/graph/record_load_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/framework/framework.h"
@@ -83,7 +81,7 @@ void AddFuncForFindBldSubTskGphMthd(const std::string& k, BldSubTskGphMthd v) {
 
 }  // namespace
 
-std::shared_ptr<Operator> LogicalNode::SoleOp() const {
+std::shared_ptr<const Operator> LogicalNode::SoleOp() const {
   CHECK_EQ(op_vec_.size(), 1);
   return op_vec_.front();
 }
@@ -110,7 +108,7 @@ bool LogicalNode::IsDataLbiOnOutEdge(const LogicalBlobId& lbi) const {
 std::string LogicalNode::VisualStr() const {
   std::stringstream ss;
   ss << TypeName();
-  for (std::shared_ptr<Operator> op : op_vec_) { ss << "\\n" << op->op_name(); }
+  for (std::shared_ptr<const Operator> op : op_vec_) { ss << "\\n" << op->op_name(); }
   return ss.str();
 }
 
@@ -183,12 +181,17 @@ bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) 
 }
 
 BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const LogicalNode* dst_node) {
+  const auto& IsSubsetTick = [](const OperatorConf tick) {
+    return tick.has_src_subset_tick_conf() || tick.has_dst_subset_tick_conf();
+  };
   std::shared_ptr<const ParallelDesc> src_pd = src_node->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst_node->parallel_desc();
   if (src_node->op_vec().size() == 1 && dst_node->op_vec().size() == 1) {
-    if (src_node->SoleOp()->op_conf().has_record_load_conf()
-        && dst_node->SoleOp()->op_conf().has_tick_conf()) {
-      CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
+    if (src_node->SoleOp()->op_conf().has_wait_and_send_ids_conf()
+        && dst_node->SoleOp()->op_conf().has_reentrant_lock_conf()) {
+      CHECK_EQ(src_pd->parallel_num(), 1);
+      CHECK_EQ(dst_pd->parallel_num(), 1);
+      return &TaskGraph::BldSubTskGphByBoxing;
     }
     auto IsTickNode = [&](const LogicalNode* node) {
       return IsClassRegistered<int32_t, IsTickTockOpTypeCase>(
@@ -197,14 +200,20 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
     if (IsTickNode(src_node) || IsTickNode(dst_node)) {
       const auto& src_op_conf = src_node->SoleOp()->op_conf();
       const auto& dst_op_conf = dst_node->SoleOp()->op_conf();
-      if (src_op_conf.has_src_subset_tick_conf()) {
-        return &TaskGraph::BldSubTskGphBySrcSubsetConnect;
-      } else if (dst_op_conf.has_dst_subset_tick_conf()) {
-        return &TaskGraph::BldSubTskGphByDstSubsetConnect;
-      } else if (src_pd->parallel_num() > 1 && dst_pd->parallel_num() == 1
-                 && src_op_conf.has_partial_tick_conf()) {
-        CHECK(dst_op_conf.has_sink_tick_conf());
+      if (src_op_conf.has_source_tick_conf()) {
+        CHECK(dst_op_conf.has_tick_conf());
+        CHECK_EQ(src_pd->parallel_num(), 1);
+        CHECK_EQ(dst_pd->parallel_num(), 1);
         return &TaskGraph::BldSubTskGphByBoxing;
+      } else if (dst_op_conf.has_sink_tick_conf()) {
+        CHECK(src_op_conf.has_tick_conf() || src_op_conf.has_sink_tick_conf());
+        CHECK_EQ(src_pd->parallel_num(), 1);
+        CHECK_EQ(dst_pd->parallel_num(), 1);
+        return &TaskGraph::BldSubTskGphByBoxing;
+      } else if (IsSubsetTick(src_op_conf)) {
+        return &TaskGraph::BldSubTskGphBySrcSubsetConnect;
+      } else if (IsSubsetTick(dst_op_conf)) {
+        return &TaskGraph::BldSubTskGphByDstSubsetConnect;
       } else {
         if (IsTickNode(src_node) && IsTickNode(dst_node)) {
           if (src_pd->parallel_num() == dst_pd->parallel_num()) {
@@ -236,10 +245,6 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   return &TaskGraph::BldSubTskGphByBoxing;
 }
 
-REGISTER_BLD_SUB_TSK_GPH_MTHD("RecordLoad"
-                              "Decode",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-
 REGISTER_BLD_SUB_TSK_GPH_MTHD("*"
                               "DistributeConcat",
                               &TaskGraph::BldSubTskGphByPartialInLbiConnect);
@@ -255,8 +260,6 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
 #define LOGICAL_TYPE_SEQ                                   \
   OF_PP_MAKE_TUPLE_SEQ(DistributeConcat, kDataForwardArea) \
   OF_PP_MAKE_TUPLE_SEQ(DistributeSplit, kDataForwardArea)  \
-  OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)    \
-  OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)        \
   OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)  \
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)
 

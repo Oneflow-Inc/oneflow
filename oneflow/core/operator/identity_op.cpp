@@ -20,6 +20,15 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  *BlobDesc4BnInOp("out") = *BlobDesc4BnInOp("in");
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 template<typename T>
 class IdentityOpTpl final : public Operator {
  public:
@@ -31,18 +40,18 @@ class IdentityOpTpl final : public Operator {
     EnrollInputBn("in");
     EnrollOutputBn("out")->set_const_inplace_ibn("in");
   }
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    return InferBlobDescs(BlobDesc4BnInOp);
+  }
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override {
-    *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
-    return Maybe<void>::Ok();
+    return InferBlobDescs(GetBlobDesc4BnInOp);
   }
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
-  }
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override {
@@ -70,18 +79,18 @@ class MirroredCastOp : public Operator {
     EnrollInputBn("in");
     EnrollOutputBn("out")->set_const_inplace_ibn("in");
   }
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    return InferBlobDescs(BlobDesc4BnInOp);
+  }
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override {
-    *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
-    return Maybe<void>::Ok();
+    return InferBlobDescs(GetBlobDesc4BnInOp);
   }
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
-  }
 };
 
 namespace {
@@ -95,17 +104,18 @@ class CastToMirroredOp : public MirroredCastOp {
  private:
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-      const std::function<Maybe<const OptInt64*>(const std::string&)>& BatchAxis4Ibn,
       const ParallelDesc& parallel_desc) const override {
-    const auto& batch_axis = *JUST(BatchAxis4Ibn("in"));
     BlobDesc* out = BlobDesc4BnInOp("out");
     *out = *BlobDesc4BnInOp("in");
-    if (batch_axis.has_value()) {
-      CHECK_GE_OR_RETURN(batch_axis.value(), 0);
-      CHECK_LT_OR_RETURN(batch_axis.value(), out->shape().NumAxes());
-      int64_t dim = out->shape().At(batch_axis.value());
-      CHECK_EQ_OR_RETURN(dim % parallel_desc.parallel_num(), 0);
-      out->mut_shape().Set(batch_axis.value(), dim / parallel_desc.parallel_num());
+    const SbpParallel& conf_sbp = op_conf().cast_to_mirrored_conf().sbp_parallel();
+    if (conf_sbp.has_split_parallel()) {
+      const int64_t axis = conf_sbp.split_parallel().axis();
+      CHECK_GE_OR_RETURN(axis, 0);
+      CHECK_LT_OR_RETURN(axis, out->shape().NumAxes());
+      const int64_t dim_value = out->shape().At(axis);
+      const int64_t parallel_num = parallel_desc.parallel_num();
+      CHECK_EQ_OR_RETURN(dim_value % parallel_num, 0);
+      out->mut_shape().Set(axis, dim_value / parallel_num);
     }
     return Maybe<void>::Ok();
   }
@@ -121,8 +131,10 @@ class CastToMirroredOp : public MirroredCastOp {
     const auto& ibn_hint = *JUST(SbpInferHint4Ibn("in"));
     CHECK_EQ_OR_RETURN(ibn_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
     auto* map = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    const SbpParallel& conf_sbp = op_conf().cast_to_mirrored_conf().sbp_parallel();
+    CHECK_OR_RETURN(ibn_hint.sbp_parallel() == conf_sbp);
     (*map)["in"] = ibn_hint.sbp_parallel();
-    (*map)["out"] = op_conf().cast_to_mirrored_conf().sbp_parallel();
+    (*map)["out"] = conf_sbp;
     return Maybe<void>::Ok();
   }
   Maybe<void> InferMirroredSignature(
@@ -154,16 +166,15 @@ class CastFromMirroredOp : public MirroredCastOp {
  private:
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-      const std::function<Maybe<const OptInt64*>(const std::string&)>& BatchAxis4Ibn,
       const ParallelDesc& parallel_desc) const override {
-    const auto& batch_axis = *JUST(BatchAxis4Ibn("in"));
     BlobDesc* out = BlobDesc4BnInOp("out");
     *out = *BlobDesc4BnInOp("in");
-    if (batch_axis.has_value()) {
-      CHECK_GE_OR_RETURN(batch_axis.value(), 0);
-      CHECK_LT_OR_RETURN(batch_axis.value(), out->shape().NumAxes());
-      int64_t dim = out->shape().At(batch_axis.value());
-      out->mut_shape().Set(batch_axis.value(), dim * parallel_desc.parallel_num());
+    const SbpParallel& conf_sbp = op_conf().cast_from_mirrored_conf().sbp_parallel();
+    if (conf_sbp.has_split_parallel()) {
+      const int64_t axis = conf_sbp.split_parallel().axis();
+      CHECK_GE_OR_RETURN(axis, 0);
+      CHECK_LT_OR_RETURN(axis, out->shape().NumAxes());
+      out->mut_shape().Set(axis, out->shape().At(axis) * parallel_desc.parallel_num());
     }
     return Maybe<void>::Ok();
   }

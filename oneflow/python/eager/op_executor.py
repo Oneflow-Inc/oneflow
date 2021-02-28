@@ -458,7 +458,6 @@ def _GenModelIOPathInputOpConfAndRetLbi():
     blob_conf = inter_face_blob_conf_util.InterfaceBlobConf()
     blob_conf.shape.dim.append(65536)
     blob_conf.data_type = dtype_util.int8.oneflow_proto_dtype
-    blob_conf.batch_axis.value = 0
     blob_conf.is_dynamic = True
     op_conf.input_conf.blob_conf.CopyFrom(blob_conf)
 

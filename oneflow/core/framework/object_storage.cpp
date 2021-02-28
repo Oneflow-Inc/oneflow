@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-std::mutex GLOBAL_PARA_SYM2SHARED_OPKENEL_OBJ_MUTEX;
+std::mutex global_parallel_sym2shared_opkernel_obj_mutex;
 
 namespace {
 
@@ -34,7 +34,7 @@ GlobalParallelConfSym2SharedOpkernelObject() {
 
 Maybe<bool> HasSharedOpKernelObject4ParallelConfSymbol(
     const std::shared_ptr<ParallelDesc>& parallel_conf_sym) {
-  std::unique_lock<std::mutex> lock(GLOBAL_PARA_SYM2SHARED_OPKENEL_OBJ_MUTEX);
+  std::unique_lock<std::mutex> lock(global_parallel_sym2shared_opkernel_obj_mutex);
   auto* parallel_conf_symbol2shared_opkernel_object = GlobalParallelConfSym2SharedOpkernelObject();
   return (*parallel_conf_symbol2shared_opkernel_object).find(*parallel_conf_sym)
          != (*parallel_conf_symbol2shared_opkernel_object).end();
@@ -42,7 +42,7 @@ Maybe<bool> HasSharedOpKernelObject4ParallelConfSymbol(
 
 Maybe<compatible_py::Object> GetOpKernelObject4ParallelConfSymbol(
     const std::shared_ptr<ParallelDesc>& parallel_conf_sym) {
-  std::unique_lock<std::mutex> lock(GLOBAL_PARA_SYM2SHARED_OPKENEL_OBJ_MUTEX);
+  std::unique_lock<std::mutex> lock(global_parallel_sym2shared_opkernel_obj_mutex);
   auto* parallel_conf_symbol2shared_opkernel_object = GlobalParallelConfSym2SharedOpkernelObject();
   return (*parallel_conf_symbol2shared_opkernel_object).at(*parallel_conf_sym);
 }
@@ -50,7 +50,7 @@ Maybe<compatible_py::Object> GetOpKernelObject4ParallelConfSymbol(
 Maybe<void> SetSharedOpKernelObject4ParallelConfSymbol(
     const std::shared_ptr<ParallelDesc>& parallel_conf_sym,
     const std::shared_ptr<compatible_py::Object>& shared_opkernel_object) {
-  std::unique_lock<std::mutex> lock(GLOBAL_PARA_SYM2SHARED_OPKENEL_OBJ_MUTEX);
+  std::unique_lock<std::mutex> lock(global_parallel_sym2shared_opkernel_obj_mutex);
   auto* parallel_conf_symbol2shared_opkernel_object = GlobalParallelConfSym2SharedOpkernelObject();
   CHECK_OR_RETURN((*parallel_conf_symbol2shared_opkernel_object).find(*parallel_conf_sym)
                   == (*parallel_conf_symbol2shared_opkernel_object).end());

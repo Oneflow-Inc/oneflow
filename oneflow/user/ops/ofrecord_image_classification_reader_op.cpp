@@ -34,7 +34,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
     .Attr<std::string>("label_feature_name", "class/label")
     .Attr<int32_t>("decode_buffer_size_per_thread", 8)
     .Attr<int32_t>("num_decode_threads_per_machine", 0)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* image_tensor = ctx->TensorDesc4ArgNameAndIndex("image", 0);
       user_op::TensorDesc* label_tensor = ctx->TensorDesc4ArgNameAndIndex("label", 0);
       int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
@@ -50,13 +50,18 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
       *label_tensor->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* image_tensor = ctx->TensorDesc4ArgNameAndIndex("image", 0);
+      user_op::TensorDesc* label_tensor = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      int32_t batch_size = ctx->Attr<int32_t>("batch_size");
+      *image_tensor->mut_shape() = Shape({batch_size});
+      *image_tensor->mut_data_type() = DataType::kTensorBuffer;
+      *label_tensor->mut_shape() = Shape({batch_size});
+      *label_tensor->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("image", 0)->set_value(0);
-      ctx->BatchAxis4ArgNameAndIndex("label", 0)->set_value(0);
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,

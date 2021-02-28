@@ -20,8 +20,9 @@ limitations under the License.
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/util.h"
@@ -81,10 +82,12 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #endif
   Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New();
-  Global<CtrlClient>::New();
-  int64_t this_mchn_id =
-      Global<EnvDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
-  Global<MachineCtx>::New(this_mchn_id);
+  Global<ProcessCtx>::New();
+  // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
+  // ~CtrlBootstrap.
+  CHECK_JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
+                 .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+  Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
   Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
@@ -109,12 +112,11 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
     Global<ResourceDesc, ForSession>::Delete();
   }
   Global<ResourceDesc, ForEnv>::Delete();
-  CHECK_NOTNULL(Global<MachineCtx>::Get());
   CHECK_NOTNULL(Global<CtrlClient>::Get());
   CHECK_NOTNULL(Global<CtrlServer>::Get());
   CHECK_NOTNULL(Global<EnvDesc>::Get());
-  Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
+  Global<ProcessCtx>::Delete();
   Global<CtrlServer>::Delete();
   Global<EnvDesc>::Delete();
 #ifdef WITH_CUDA

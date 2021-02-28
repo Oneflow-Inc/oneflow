@@ -18,6 +18,27 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> InferBlobDescs(const Operator& op,
+                           const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  const BlobDesc* in_desc = BlobDesc4BnInOp(op.SoleIbn());
+  CHECK_OR_RETURN(in_desc->is_tensor_list());
+  CHECK_GT_OR_RETURN(in_desc->shape().NumAxes(), 1);
+  const int64_t N = in_desc->shape().At(0);
+  CHECK_EQ_OR_RETURN(N, op.output_bns().size());
+  DimVector dim_vec{in_desc->shape().dim_vec().begin() + 1, in_desc->shape().dim_vec().end()};
+  FOR_RANGE(int, i, 0, N) {
+    BlobDesc* out_i = BlobDesc4BnInOp(op.output_bns().Get(i));
+    out_i->mut_shape() = Shape(dim_vec);
+    out_i->set_data_type(in_desc->data_type());
+    out_i->set_is_dynamic(true);
+  }
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 class TensorListSplitOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TensorListSplitOp);
@@ -32,22 +53,16 @@ class TensorListSplitOp final : public Operator {
     });
   }
 
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    return InferBlobDescs(*this, BlobDesc4BnInOp);
+  }
+
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override {
-    const BlobDesc* in_desc = GetBlobDesc4BnInOp(SoleIbn());
-    CHECK_OR_RETURN(in_desc->is_tensor_list());
-    CHECK_GT_OR_RETURN(in_desc->shape().NumAxes(), 1);
-    const int64_t N = in_desc->shape().At(0);
-    CHECK_EQ_OR_RETURN(N, output_bns().size());
-    DimVector dim_vec{in_desc->shape().dim_vec().begin() + 1, in_desc->shape().dim_vec().end()};
-    FOR_RANGE(int, i, 0, N) {
-      BlobDesc* out_i = GetBlobDesc4BnInOp(output_bns().Get(i));
-      out_i->mut_shape() = Shape(dim_vec);
-      out_i->set_data_type(in_desc->data_type());
-      out_i->set_is_dynamic(true);
-    }
-    return Maybe<void>::Ok();
+    return InferBlobDescs(*this, GetBlobDesc4BnInOp);
   }
 
  private:
@@ -58,12 +73,6 @@ class TensorListSplitOp final : public Operator {
         .Split(input_bns(), 0)
         .Split(output_bns(), 0)
         .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *BatchAxis4BnInOp(SoleIbn()); }
     return Maybe<void>::Ok();
   }
 };

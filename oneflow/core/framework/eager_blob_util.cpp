@@ -21,7 +21,8 @@ namespace compatible_py {
 
 EagerPhysicalBlobHeader::EagerPhysicalBlobHeader(
     const std::shared_ptr<Shape>& static_shape,
-    const std::vector<std::shared_ptr<Shape>>& shape_list, DataType dtype, bool is_tensor_list)
+    const std::shared_ptr<std::vector<std::shared_ptr<Shape>>>& shape_list, DataType dtype,
+    bool is_tensor_list)
     : static_shape_(static_shape),
       shape_list_(shape_list),
       dtype_(dtype),
@@ -29,12 +30,12 @@ EagerPhysicalBlobHeader::EagerPhysicalBlobHeader(
 std::shared_ptr<Shape> EagerPhysicalBlobHeader::static_shape() const { return static_shape_; }
 
 std::shared_ptr<Shape> EagerPhysicalBlobHeader::shape() const {
-  CHECK_EQ(shape_list_.size(), 1);
+  CHECK_EQ(shape_list_->size(), 1);
   CHECK_EQ(is_tensor_list_, false);
-  return shape_list_.at(0);
+  return shape_list_->at(0);
 }
 
-std::vector<std::shared_ptr<Shape>> EagerPhysicalBlobHeader::shape_list() const {
+std::shared_ptr<std::vector<std::shared_ptr<Shape>>> EagerPhysicalBlobHeader::shape_list() const {
   CHECK_EQ(is_tensor_list_, true);
   return shape_list_;
 }

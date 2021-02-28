@@ -43,45 +43,45 @@ void SetScalarShapeAndSbpConf(OperatorConf* op_conf) {
   CHECK_NE(op_conf->name(), std::string(""));
 }
 
-void GenerateOptimizerOpConf(JobPassCtx* ctx, const VariableOp& op,
-                             const ParallelConf& parallel_conf, JobBuilder* job_builder,
-                             const LogicalBlobId& diff_lbi_of_var_out) {
-  const auto& train_conf = job_builder->job().job_conf().train_conf();
-  const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
-  OperatorConf m_var = GenerateLAMBHelperVariableOpConf(op, "m", 0.f);
-  OperatorConf v_var = GenerateLAMBHelperVariableOpConf(op, "v", 0.f);
-  job_builder->AddOps(parallel_conf, {m_var, v_var});
+void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
+                             const std::string& model_diff_lbn, const OptimizerConf optimizer_conf,
+                             JobBuilder* job_builder) {
+  const VariableOp* var_op = dynamic_cast<const VariableOp*>(&var_op_node.op());
+  CHECK_NOTNULL(var_op);
+  OperatorConf m_var = GenerateLAMBHelperVariableOpConf(*var_op, "m", 0.f);
+  OperatorConf v_var = GenerateLAMBHelperVariableOpConf(*var_op, "v", 0.f);
+  job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {m_var, v_var});
 
   OperatorConf beta1_t_var;
   OperatorConf beta2_t_var;
-  const LambModelUpdateConf& lamb_conf = model_update_conf.lamb_conf();
-  beta1_t_var = GenerateLAMBHelperVariableOpConf(op, "beta1_t", lamb_conf.beta1());
+  const LambModelUpdateConf& lamb_conf = optimizer_conf.lamb_conf();
+  beta1_t_var = GenerateLAMBHelperVariableOpConf(*var_op, "beta1_t", lamb_conf.beta1());
   SetScalarShapeAndSbpConf(&beta1_t_var);
-  beta2_t_var = GenerateLAMBHelperVariableOpConf(op, "beta2_t", lamb_conf.beta2());
+  beta2_t_var = GenerateLAMBHelperVariableOpConf(*var_op, "beta2_t", lamb_conf.beta2());
   SetScalarShapeAndSbpConf(&beta2_t_var);
-  job_builder->AddOps(parallel_conf, {beta1_t_var, beta2_t_var});
+  job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {beta1_t_var, beta2_t_var});
 
-  user_op::UserOpConfWrapperBuilder lamb_update_op_builder(op.op_name() + "_optimizer");
+  user_op::UserOpConfWrapperBuilder lamb_update_op_builder(var_op->op_name() + "_optimizer");
   lamb_update_op_builder.OpTypeName("lamb_update")
       .Input("m", GenVariableOutputLbn(m_var))
       .Input("v", GenVariableOutputLbn(v_var))
       .Input("beta1_t", GenVariableOutputLbn(beta1_t_var))
       .Input("beta2_t", GenVariableOutputLbn(beta2_t_var))
-      .Input("model", GenLogicalBlobName(op.BnInOp2Lbi("out")))
-      .Input("model_diff", GenLogicalBlobName(diff_lbi_of_var_out))
-      .Input("learning_rate", train_conf.primary_lr_lbn())
+      .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
+      .Input("model_diff", model_diff_lbn)
+      .Input("learning_rate", optimizer_conf.learning_rate_lbn())
       .Attr<float>("beta1", lamb_conf.beta1())
       .Attr<float>("beta2", lamb_conf.beta2())
       .Attr<float>("epsilon", lamb_conf.epsilon())
-      .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(model_update_conf, op))
-      .ScopeSymbolId(op.op_conf().scope_symbol_id());
+      .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
+      .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
   SetDynamicLossScaleSkipIf(ctx, &lamb_update_op_builder);
   const auto lamb_update_op = lamb_update_op_builder.Build();
-  job_builder->AddOps(parallel_conf, {lamb_update_op.op_conf()});
+  job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {lamb_update_op.op_conf()});
 }
 
 }  // namespace
 
-REGISTER_OPTIMIZER(NormalModelUpdateOpUserConf::kLambConf, &GenerateOptimizerOpConf);
+REGISTER_OPTIMIZER(OptimizerConf::kLambConf, &GenerateOptimizerOpConf);
 
 }  // namespace oneflow

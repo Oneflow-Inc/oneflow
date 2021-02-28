@@ -56,6 +56,8 @@ class InferContext {
 
   const UserOpConfWrapper& user_op_conf() const { return conf_; }
 
+  virtual int64_t parallel_num() const = 0;
+
  protected:
   InferContext(UserOpConfWrapper&& conf) : conf_(std::move(conf)) {}
   InferContext(const InferContext&) = delete;

@@ -24,6 +24,10 @@ from test_util import Args, GenArgDict, type_name_to_flow_type, type_name_to_np_
 import oneflow.typing as oft
 import unittest
 
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def TODO_test_train(test_case):
     flow.config.enable_debug_mode(True)
@@ -105,8 +109,6 @@ def CompareNnBnWithTensorFlow(
             flow.watch_diff(x_full_precision, test_global_storage.Setter("x_diff"))
             return y
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_y = FlowNnBnJob(x, mean, variance, offset, scale).get().numpy()
     of_x_diff = test_global_storage.Get("x_diff")
 
@@ -208,8 +210,6 @@ def RunOneflowLayerBn(
 
             return y
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     y = FlowJob(x).get().numpy()
     if trainable:
         x_diff = test_global_storage.Get("x_diff")
@@ -402,9 +402,6 @@ def _test_batchnorm_add_relu(test_case, input_shape, axis, data_type):
 
         return loss
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-
     x = np.random.rand(*input_shape).astype(np.float32)
     addend = np.random.rand(*input_shape).astype(np.float32)
 
@@ -468,9 +465,6 @@ def _test_batchnorm_relu(test_case, input_shape, axis, data_type):
         ).minimize(flow.math.reduce_sum(loss))
 
         return loss
-
-    check_point = flow.train.CheckPoint()
-    check_point.init()
 
     x = np.random.rand(*input_shape).astype(np.float32)
 
@@ -551,6 +545,7 @@ class TestBatchNormalization(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             CompareBnWithTensorFlow(test_case, **arg, training=False, trainable=False)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_layer_batchnorm_trainable_without_training(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
@@ -568,6 +563,7 @@ class TestBatchNormalization(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             CompareBnWithTensorFlow(test_case, **arg, training=False, trainable=True)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_nn_batchnorm(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
@@ -578,6 +574,7 @@ class TestBatchNormalization(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             CompareNnBnWithTensorFlow(test_case, **arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_batchnorm_fp16(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
@@ -626,7 +623,7 @@ class TestBatchNormalization(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_batchnorm_add_relu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["input_shape"] = [(12, 16, 24, 32), (5, 7, 9, 11)]
+        arg_dict["input_shape"] = [(5, 7, 9, 11)]
         arg_dict["axis"] = [0, 1, 2, 3]
         arg_dict["data_type"] = [flow.float32, flow.float16]
         for arg in GenArgDict(arg_dict):
@@ -635,7 +632,7 @@ class TestBatchNormalization(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_batchnorm_relu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["input_shape"] = [(12, 16, 24, 32), (5, 7, 9, 11)]
+        arg_dict["input_shape"] = [(12, 16, 24, 32)]
         arg_dict["axis"] = [0, 1, 2, 3]
         arg_dict["data_type"] = [flow.float32, flow.float16]
         for arg in GenArgDict(arg_dict):
