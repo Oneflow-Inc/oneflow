@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef _ONEFLOW_USER_KERNELS_ACTIVATION_OPS_H_
-#define _ONEFLOW_USER_KERNELS_ACTIVATION_OPS_H_
+#ifndef _ONEFLOW_USER_KERNELS_ACTIVATION_KERNELS_H_
+#define _ONEFLOW_USER_KERNELS_ACTIVATION_KERNELS_H_
 #include "oneflow/user/kernels/elementwise_xpu_kernel.h"
 
 namespace oneflow {
@@ -167,4 +167,4 @@ struct HardtanhGradFunctor {
 
 }  // namespace oneflow
 
-#endif  // _ONEFLOW_USER_KERNELS_ACTIVATION_OPS_H_
+#endif  // _ONEFLOW_USER_KERNELS_ACTIVATION_KERNELS_H_
