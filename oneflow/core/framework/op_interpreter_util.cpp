@@ -16,9 +16,10 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter_util.h"
 
 #include "oneflow/core/common/file_system.h"
-#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
-#include "oneflow/api/python/job_build/job_build_and_infer.h"
+#include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 namespace one {
@@ -106,7 +107,7 @@ typedef HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>> Bn2Blob
 OpInterpUtil::BuildModelInitOrIOPathInputInstruction(
     const OperatorConf& op_conf, const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object) {
   using namespace std::placeholders;
-  return [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+  return [=](const std::shared_ptr<InstructionsBuilder>& builder) {
     auto scope = GetCurrentScope().GetPtrOrThrow();
     auto op_attribute = OpInterpUtil::InferOpAttribute(op_conf, scope, Bn2BlobObjectMap{});
     auto parallel_conf =
@@ -118,10 +119,10 @@ OpInterpUtil::BuildModelInitOrIOPathInputInstruction(
 }
 
 /*static*/ std::function<void(const std::shared_ptr<InstructionsBuilder>&)>
-OpInterpUtil::BuildFeedPathInstruction(const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object) {
-  // TODO
-  int callback_id = -1;
-  return [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
+                                       const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object) {
+  int64_t callback_id = Global<ForeignCallback>::Get()->FeedPath(path);
+  return [=](const std::shared_ptr<InstructionsBuilder>& builder) {
     const auto& blob_object = bn2blob_object->at("out");
     builder->FeedBlob(blob_object, callback_id);
     builder->InsertRemoveForeignCallbackInstruction(blob_object->object_id(), callback_id);
@@ -148,13 +149,13 @@ OpInterpUtil::BuildFeedPathInstruction(const std::shared_ptr<Bn2BlobObjectMap>& 
   auto&& path_input_op_conf = GenModelIOPathInputOpConf();
 
   std::shared_ptr<Bn2BlobObjectMap> bn2blob_object(new Bn2BlobObjectMap{});
-  auto BuildModelIOPathInputInstruction =
+  auto build_model_io_path_input_instruction =
       BuildModelInitOrIOPathInputInstruction(path_input_op_conf, bn2blob_object);
-  auto _BuildFeedPathInstruction = BuildFeedPathInstruction(bn2blob_object);
+  auto build_feed_path_instruction = BuildFeedPathInstruction(snapshot_path, bn2blob_object);
 
   std::shared_ptr<Bn2BlobObjectMap> model_load_blob_objects(new Bn2BlobObjectMap{});
   auto&& model_load_op_conf = GenModelLoadOpConf(op_conf, path_input_op_conf);
-  auto BuildModelLoadInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+  auto build_model_load_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
     auto&& scope = GetCurrentScope().GetPtrOrThrow();
     const auto& blob_object = bn2blob_object->at("out");
     (*model_load_blob_objects)["path"] = blob_object;
@@ -167,9 +168,9 @@ OpInterpUtil::BuildFeedPathInstruction(const std::shared_ptr<Bn2BlobObjectMap>& 
                            std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util, _1, _2, _3));
   };
 
-  LogicalRun(BuildModelIOPathInputInstruction).GetOrThrow();
-  LogicalRun(_BuildFeedPathInstruction).GetOrThrow();
-  LogicalRun(BuildModelLoadInstruction).GetOrThrow();
+  LogicalRun(build_model_io_path_input_instruction).GetOrThrow();
+  LogicalRun(build_feed_path_instruction).GetOrThrow();
+  LogicalRun(build_model_load_instruction).GetOrThrow();
   return model_load_blob_objects->at("out_0");
 }
 
