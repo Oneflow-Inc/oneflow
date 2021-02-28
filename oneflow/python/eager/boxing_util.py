@@ -38,6 +38,15 @@ import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api
 
 
+def _FindOrCreateDelegateBlobObject(
+    builder, Fetch, x_blob_object, op_arg_parallel_attr
+):
+    if x_blob_object.op_arg_parallel_attr == op_arg_parallel_attr:
+        return x_blob_object
+    blob_cache = blob_cache_util.FindOrCreateBlobCache(x_blob_object)
+    return blob_cache.GetCachedDelegateBlobObject(op_arg_parallel_attr, Fetch)
+
+
 def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     hob_context = BoxingHobContext(produced_blob_object, consumer_op_arg_parallel_attr)
     if enable_if.get_condition_hob(NoBoxing)(hob_context):

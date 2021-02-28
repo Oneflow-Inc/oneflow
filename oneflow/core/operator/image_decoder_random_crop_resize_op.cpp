@@ -74,12 +74,6 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
-    return Maybe<void>::Ok();
-  }
-
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override {
@@ -109,26 +103,26 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     }
   }
 
-  Maybe<void> InferParallelSignature() override {
+  Maybe<void> InferBlobParallelDesc() override {
+    HashMap<std::string, std::shared_ptr<const ParallelDesc>> bn2parallel_desc;
+    const std::shared_ptr<const ParallelDesc> op_parallel_desc = JUST(GetOpParallelDesc());
+    bn2parallel_desc["out"] = op_parallel_desc;
     if (device_type() == DeviceType::kCPU) {
-      return Operator::InferParallelSignature();
+      bn2parallel_desc["in"] = op_parallel_desc;
     } else if (device_type() == DeviceType::kGPU) {
-      const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
-      const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
-      const int64_t device_parallel_desc_symbol_id =
-          scope.scope_proto().device_parallel_desc_symbol_id();
-      const int64_t host_parallel_desc_symbol_id =
-          scope.scope_proto().host_parallel_desc_symbol_id();
-      mut_parallel_signature()->set_op_parallel_desc_symbol_id(device_parallel_desc_symbol_id);
-      auto* map = mut_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id();
-      for (const auto& ibn : input_bns()) { (*map)[ibn] = host_parallel_desc_symbol_id; }
-      for (const auto& obn : output_bns()) { (*map)[obn] = device_parallel_desc_symbol_id; }
-      for (const auto& tbn : tmp_bns()) { (*map)[tbn] = device_parallel_desc_symbol_id; }
-      return Maybe<void>::Ok();
+      std::shared_ptr<ParallelDesc> in_parallel_desc =
+          std::make_shared<ParallelDesc>(*op_parallel_desc);
+      in_parallel_desc->set_device_type(DeviceType::kCPU);
+      bn2parallel_desc["in"] = in_parallel_desc;
     } else {
-      UNIMPLEMENTED();
-      return Maybe<void>::Ok();
+      UNIMPLEMENTED_THEN_RETURN();
     }
+    FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
+      auto it = bn2parallel_desc.find(bn);
+      CHECK_OR_RETURN(it != bn2parallel_desc.end());
+      return it->second;
+    });
+    return Maybe<void>::Ok();
   }
 };
 

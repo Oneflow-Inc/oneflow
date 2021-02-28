@@ -27,20 +27,21 @@ class SrcSubsetTickOp final : public Operator {
   ~SrcSubsetTickOp() = default;
 
   void InitFromOpConf() override;
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature*) const override;
   LogicalNode* NewProperLogicalNode() const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 
 void SrcSubsetTickOp::InitFromOpConf() {
   CHECK(op_conf().has_src_subset_tick_conf());
-  if (op_conf().src_subset_tick_conf().has_in()) { EnrollInputBn("in", false); }
+  EnrollRepeatedInputBn("in", false);
   EnrollOutputBn("out", false);
 }
 
@@ -48,17 +49,25 @@ LogicalNode* SrcSubsetTickOp::NewProperLogicalNode() const {
   return new SrcSubsetTickLogicalNode();
 }
 
-Maybe<void> SrcSubsetTickOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature*) const {
-  GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  BlobDesc4BnInOp("out")->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SrcSubsetTickOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("out")->clear_value();
-  return Maybe<void>::Ok();
+}  // namespace
+
+Maybe<void> SrcSubsetTickOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(BlobDesc4BnInOp);
+}
+
+Maybe<void> SrcSubsetTickOp::InferOutBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const SbpSignature*) const {
+  return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> SrcSubsetTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

@@ -68,9 +68,6 @@ def compare_with_tensorflow_addons_lamb(
             ).minimize(loss)
             return x
 
-    checkpoint = flow.train.CheckPoint()
-    checkpoint.init()
-
     # generate random number sequences
     random_masks_seq = []
     for i in range(train_iters + 1):

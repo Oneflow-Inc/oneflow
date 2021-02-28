@@ -30,7 +30,7 @@ class BlobHeaderTrait {
 
   virtual std::shared_ptr<Shape> static_shape() const;
   virtual std::shared_ptr<Shape> shape() const;
-  virtual std::vector<std::shared_ptr<Shape>> shape_list() const;
+  virtual std::shared_ptr<std::vector<std::shared_ptr<Shape>>> shape_list() const;
   virtual DataType dtype() const;
   virtual bool is_tensor_list() const;
 };

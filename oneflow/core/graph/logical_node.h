@@ -43,9 +43,9 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   virtual ~LogicalNode() = default;
 
   // op_vec_
-  std::shared_ptr<Operator> SoleOp() const;
-  const std::vector<std::shared_ptr<Operator>>& op_vec() const { return op_vec_; }
-  std::vector<std::shared_ptr<Operator>>& mut_op_vec() { return op_vec_; }
+  std::shared_ptr<const Operator> SoleOp() const;
+  const std::vector<std::shared_ptr<const Operator>>& op_vec() const { return op_vec_; }
+  std::vector<std::shared_ptr<const Operator>>& mut_op_vec() { return op_vec_; }
 
   // parallel_desc_
   std::shared_ptr<const ParallelDesc> parallel_desc() const { return parallel_desc_; }
@@ -83,7 +83,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
  private:
   bool HasOpWithCondition(std::function<bool(const Operator*)>) const;
 
-  std::vector<std::shared_ptr<Operator>> op_vec_;
+  std::vector<std::shared_ptr<const Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
@@ -175,8 +175,6 @@ int64_t NewAreaId();
     LOGICAL_NODE_BOILERPLATE(name);       \
   }
 
-DECLARE_NAIVE_LOGICAL_NODE(RecordLoadLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(DecodeLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DecodeRandomLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DistributeConcatLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DistributeSplitLogicalNode);

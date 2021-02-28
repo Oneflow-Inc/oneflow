@@ -32,3 +32,4 @@
 /.cache
 /oneflow-src.zip
 /distributed-tmp
+/serving-tmp
