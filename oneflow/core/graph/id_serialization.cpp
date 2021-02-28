@@ -32,16 +32,16 @@ namespace oneflow {
 
 namespace {
 
-constexpr int kInt64Bits = sizeof(int64_t) * CHAR_BIT;
+constexpr size_t kInt64Bits = sizeof(int64_t) * CHAR_BIT;
 
 }  // namespace
 
 namespace stream_id_const {
 
-constexpr int kDeviceIndexShift = StreamId::kStreamIndexBits;
-constexpr int kDeviceTypeShift = kDeviceIndexShift + DeviceId::kDeviceIndexBits;
-constexpr int kProcessIndexShift = kDeviceTypeShift + DeviceId::kDeviceTypeBits;
-constexpr int kNodeIndexShift = kProcessIndexShift + ProcessId::kProcessIndexBits;
+constexpr size_t kDeviceIndexShift = StreamId::kStreamIndexBits;
+constexpr size_t kDeviceTypeShift = kDeviceIndexShift + DeviceId::kDeviceIndexBits;
+constexpr size_t kProcessIndexShift = kDeviceTypeShift + DeviceId::kDeviceTypeBits;
+constexpr size_t kNodeIndexShift = kProcessIndexShift + ProcessId::kProcessIndexBits;
 static_assert(kInt64Bits == kNodeIndexShift + ProcessId::kNodeIndexBits + TaskId::kTaskIndexBits,
               "");
 
@@ -90,11 +90,11 @@ StreamId DeserializeStreamIdFromInt64(int64_t stream_id_val) {
 
 namespace task_id_const {
 
-constexpr int kStreamIndexShift = TaskId::kTaskIndexBits;
-constexpr int kDeviceIndexShift = kStreamIndexShift + StreamId::kStreamIndexBits;
-constexpr int kDeviceTypeShift = kDeviceIndexShift + DeviceId::kDeviceIndexBits;
-constexpr int kProcessIndexShift = kDeviceTypeShift + DeviceId::kDeviceTypeBits;
-constexpr int kNodeIndexShift = kProcessIndexShift + ProcessId::kProcessIndexBits;
+constexpr size_t kStreamIndexShift = TaskId::kTaskIndexBits;
+constexpr size_t kDeviceIndexShift = kStreamIndexShift + StreamId::kStreamIndexBits;
+constexpr size_t kDeviceTypeShift = kDeviceIndexShift + DeviceId::kDeviceIndexBits;
+constexpr size_t kProcessIndexShift = kDeviceTypeShift + DeviceId::kDeviceTypeBits;
+constexpr size_t kNodeIndexShift = kProcessIndexShift + ProcessId::kProcessIndexBits;
 static_assert(kInt64Bits == kNodeIndexShift + ProcessId::kNodeIndexBits, "");
 
 constexpr int64_t kTaskIndexInt64Mask = (int64_t{1} << TaskId::kTaskIndexBits) - 1;

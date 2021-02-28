@@ -38,12 +38,12 @@ using process_index_t = uint32_t;
 using device_index_t = uint32_t;
 using stream_index_t = uint32_t;
 using task_index_t = uint32_t;
-constexpr int kCPUDeviceIndex = 0;
+constexpr device_index_t kCPUDeviceIndex = 0;
 
 class ProcessId {
  public:
-  constexpr static int kNodeIndexBits = 12;
-  constexpr static int kProcessIndexBits = 7;
+  constexpr static size_t kNodeIndexBits = 12;
+  constexpr static size_t kProcessIndexBits = 7;
   constexpr static node_index_t kMaxNodeIndex =
       (node_index_t{1} << kNodeIndexBits) - node_index_t{1};
   constexpr static process_index_t kMaxProcessIndex =
@@ -74,15 +74,15 @@ class ProcessId {
 
 class DeviceId {
  public:
-  constexpr static int kDeviceTypeBits = 5;
-  constexpr static int kDeviceIndexBits = 7;
-  constexpr static int kMaxDeviceTypeVal = (int{1} << kDeviceTypeBits) - int{1};
+  constexpr static size_t kDeviceTypeBits = 5;
+  constexpr static size_t kDeviceIndexBits = 7;
+  constexpr static size_t kMaxDeviceTypeVal = (size_t{1} << kDeviceTypeBits) - size_t{1};
   constexpr static device_index_t kMaxDeviceIndex =
       (device_index_t{1} << kDeviceIndexBits) - device_index_t{1};
 
   DeviceId(const ProcessId& process_id, DeviceType device_type, device_index_t device_index)
       : process_id_(process_id), device_type_(device_type), device_index_(device_index) {
-    CHECK_LE(static_cast<int>(device_type), kMaxDeviceTypeVal);
+    CHECK_LE(static_cast<size_t>(device_type), kMaxDeviceTypeVal);
     CHECK_LE(device_index, kMaxDeviceIndex);
   }
   const ProcessId& process_id() const { return process_id_; }
@@ -95,7 +95,7 @@ class DeviceId {
   bool operator!=(const DeviceId& rhs) const { return !(*this == rhs); }
   size_t hash() const {
     size_t hash = process_id_.hash();
-    HashCombine(&hash, std::hash<int>{}(static_cast<int>(device_type_)));
+    HashCombine(&hash, std::hash<size_t>{}(static_cast<size_t>(device_type_)));
     HashCombine(&hash, std::hash<device_index_t>{}(device_index_));
     return hash;
   }
@@ -108,7 +108,7 @@ class DeviceId {
 
 class StreamId {
  public:
-  constexpr static int kStreamIndexBits = 12;
+  constexpr static size_t kStreamIndexBits = 12;
   constexpr static stream_index_t kMaxStreamIndex =
       (stream_index_t{1} << kStreamIndexBits) - stream_index_t{1};
 
@@ -135,7 +135,7 @@ class StreamId {
 
 class TaskId {
  public:
-  const static int kTaskIndexBits = 21;
+  const static size_t kTaskIndexBits = 21;
   constexpr static task_index_t kMaxTaskIndex =
       (task_index_t{1} << kTaskIndexBits) - task_index_t{1};
 
