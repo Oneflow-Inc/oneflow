@@ -66,13 +66,7 @@ ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
   device_name += std::to_string(CHECK_JUST(pd.DeviceId4ParallelId(parallel_id)));
   ParallelConf parallel_conf;
   *parallel_conf.mutable_device_name()->Add() = device_name;
-  if (pd.device_type() == DeviceType::kGPU) {
-    parallel_conf.set_device_tag("gpu");
-  } else if (pd.device_type() == DeviceType::kCPU) {
-    parallel_conf.set_device_tag("cpu");
-  } else {
-    UNIMPLEMENTED();
-  }
+  parallel_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(pd.device_type())));
   return parallel_conf;
 }
 
@@ -96,8 +90,6 @@ Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
     if (cur_node->op().output_bns().size() != 1) { break; }
     const std::string& sole_obn = cur_node->op().SoleObn();
     if (!cur_node->SbpParallel4BnInOp(sole_obn).has_broadcast_parallel()) { break; }
-    const auto& lbi = cur_node->op().BnInOp2Lbi(sole_obn);
-    if (JUST(cur_node->BatchAxis4Lbi(lbi))->has_value()) { break; }
     out->push_back(cur_node);
     if (cur_node->out_edges().size() == 1) {
       cur_node = cur_node->SoleOutEdge()->dst_node();

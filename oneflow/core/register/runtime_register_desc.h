@@ -49,7 +49,6 @@ class RtRegstDesc {
   size_t SeparatedHeaderByteSize4OneRegst() const;
   size_t MainByteSize4OneRegst() const;
   const Shape& data_regst_time_shape() const;
-  bool is_body_disabled() const { return packed_blob_desc_->is_body_disabled(); }
 
   void ForEachBlobDescOffsetInOnRegst(
       const std::function<void(int64_t ordinal, const LogicalBlobId& lbi, const RtBlobDesc* desc,

@@ -54,8 +54,6 @@ def compare_with_numpy(test_case, device_type, input_shape, start_end_dim):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = FlattenJob()
 
     # Numpy

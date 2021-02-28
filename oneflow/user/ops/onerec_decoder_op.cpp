@@ -55,11 +55,6 @@ REGISTER_CPU_ONLY_USER_OP("onerec_decoder")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
-      return Maybe<void>::Ok();
-    })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
                              const user_op::UserOpConfWrapper& conf) {
       user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);

@@ -61,26 +61,25 @@ Symbol<OperatorConf> BoxingOp::GetOpConfWithoutOpNameAndLbn() const {
 }
 
 Maybe<void> BoxingOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp, bool is_logical) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
-  BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
+  BlobDesc* first_in_blob = BlobDesc4BnInOp(input_bns().Get(0));
   if (conf.in_box_case() == BoxingOpConf::kAddBox) {
     const Shape& first_in_blob_shape = first_in_blob->shape();
     for (const std::string& ibn : input_bns()) {
-      CHECK_EQ_OR_RETURN(first_in_blob_shape, GetBlobDesc4BnInOp(ibn)->shape());
+      CHECK_EQ_OR_RETURN(first_in_blob_shape, BlobDesc4BnInOp(ibn)->shape());
     }
   }
 
-  DimVector data_tmp_blob_shape_vec = GetBlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
-  InferTmpBlobDesc(GetBlobDesc4BnInOp, &data_tmp_blob_shape_vec);
+  DimVector data_tmp_blob_shape_vec = BlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
+  InferTmpBlobDesc(BlobDesc4BnInOp, &data_tmp_blob_shape_vec, is_logical);
 
   if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
     const BoxSplitConf& split_conf = conf.split_box();
     CHECK_GE_OR_RETURN(split_conf.axis(), 0);
     CHECK_LT_OR_RETURN(split_conf.axis(), data_tmp_blob_shape_vec.size());
     FOR_RANGE(size_t, i, 0, output_bns().size()) {
-      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
+      BlobDesc* out_blob_desc = BlobDesc4BnInOp(output_bns().Get(i));
       *out_blob_desc = *first_in_blob;
       CHECK_GT_OR_RETURN(split_conf.part_num(i), 0);
       data_tmp_blob_shape_vec[split_conf.axis()] = split_conf.part_num(i);
@@ -88,7 +87,7 @@ Maybe<void> BoxingOp::InferBlobDescs(
     }
   } else if (conf.out_box_case() == BoxingOpConf::kCloneBox) {
     for (const std::string& obn : output_bns()) {
-      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(obn);
+      BlobDesc* out_blob_desc = BlobDesc4BnInOp(obn);
       *out_blob_desc = *first_in_blob;
       out_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
     }
@@ -98,9 +97,21 @@ Maybe<void> BoxingOp::InferBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BoxingOp::InferTmpBlobDesc(
+Maybe<void> BoxingOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(BlobDesc4BnInOp, true);
+}
+
+Maybe<void> BoxingOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    DimVector* data_tmp_vec_ptr) const {
+    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+  return InferBlobDescs(GetBlobDesc4BnInOp, false);
+}
+
+Maybe<void> BoxingOp::InferTmpBlobDesc(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, DimVector* data_tmp_vec_ptr,
+    bool is_logical) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   if (conf.in_box_case() == BoxingOpConf::kConcatBox) {
     int32_t concat_axis = conf.concat_box().axis();
@@ -122,30 +133,15 @@ Maybe<void> BoxingOp::InferTmpBlobDesc(
   CHECK_NE_OR_RETURN(conf.out_box_case(), BoxingOpConf::OUT_BOX_NOT_SET);
   if (conf.in_box_case() == BoxingOpConf::kAddBox
       && conf.out_box_case() == BoxingOpConf::kSplitBox) {
-    BlobDesc* data_tmp_blob_desc = GetBlobDesc4BnInOp(SoleTbn());
-    data_tmp_blob_desc->mut_shape() = Shape(*data_tmp_vec_ptr);
-    data_tmp_blob_desc->set_data_type(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type());
+    if (!is_logical) {
+      BlobDesc* data_tmp_blob_desc = GetBlobDesc4BnInOp(SoleTbn());
+      data_tmp_blob_desc->mut_shape() = Shape(*data_tmp_vec_ptr);
+      data_tmp_blob_desc->set_data_type(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type());
+    }
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BoxingOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  const OptInt64* batch_axis = nullptr;
-  for (const auto& ibn : input_bns()) {
-    const OptInt64* const cur_ibn_batch_axis = BatchAxis4BnInOp(ibn);
-    if (cur_ibn_batch_axis->has_value() == false) { continue; }
-    if (batch_axis) {
-      CHECK_OR_RETURN(*batch_axis == *cur_ibn_batch_axis);
-    } else {
-      batch_axis = cur_ibn_batch_axis;
-    }
-  }
-  OptInt64 no_batch_axis;
-  if (batch_axis == nullptr) { batch_axis = &no_batch_axis; }
-  for (const auto& obn : output_bns()) { *BatchAxis4BnInOp(obn) = *batch_axis; }
-  return Maybe<void>::Ok();
-}
 Maybe<void> BoxingOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,

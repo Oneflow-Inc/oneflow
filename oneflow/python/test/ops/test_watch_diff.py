@@ -19,7 +19,6 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
@@ -51,8 +50,6 @@ def WatchDiff(test_case, device_type, input_shape, dtype):
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(x)
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     TrainJob()
 
 
