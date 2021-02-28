@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-typedef HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>> Bn2BlobObjectMap;
+using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
 
 /*static*/ std::shared_ptr<cfg::OpAttribute> OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
     const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled) {
