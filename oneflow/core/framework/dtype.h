@@ -49,7 +49,7 @@ class DType final {
   bool is_signed() const { return is_signed_; }
   bool is_complex() const { return is_complex_; }
   bool is_floating_point() const { return is_floating_point_; }
-  std::string name() const { return name_; }
+  const std::string& name() const { return name_; }
 
   static Maybe<DType> GetDTypeByDataType(const DataType&);
 
