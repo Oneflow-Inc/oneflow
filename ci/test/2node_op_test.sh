@@ -1,6 +1,8 @@
 #!/bin/bash
 set -xe
 
+export PYTHONUNBUFFERED=1
+
 bash ci/test/try_install.sh
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}

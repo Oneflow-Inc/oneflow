@@ -17,6 +17,24 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
+                           const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  const SyncDynamicResizeOpConf& conf = op_conf.sync_dynamic_resize_conf();
+  CHECK_EQ_OR_RETURN(conf.axis(), 0);
+  const BlobDesc* in = BlobDesc4BnInOp("in");
+  const BlobDesc* size = BlobDesc4BnInOp("size");
+  CHECK_EQ_OR_RETURN(size->shape().elem_cnt(), 1);
+  CHECK_OR_RETURN(IsIntegralDataType(size->data_type()));
+  BlobDesc* out = BlobDesc4BnInOp("out");
+  *out = *in;
+  out->set_is_dynamic(true);
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 class SyncDynamicResizeOp : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SyncDynamicResizeOp);
@@ -29,25 +47,16 @@ class SyncDynamicResizeOp : public Operator {
     EnrollOutputBn("out")->set_header_infered_before_compute(false);
   }
 
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    return InferBlobDescs(op_conf(), BlobDesc4BnInOp);
+  }
+
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 const SbpSignature* sbp_signature) const override {
-    const SyncDynamicResizeOpConf& conf = op_conf().sync_dynamic_resize_conf();
-    CHECK_EQ_OR_RETURN(conf.axis(), 0);
-    const BlobDesc* in = GetBlobDesc4BnInOp("in");
-    const BlobDesc* size = GetBlobDesc4BnInOp("size");
-    CHECK_EQ_OR_RETURN(size->shape().elem_cnt(), 1);
-    CHECK_OR_RETURN(IsIntegralDataType(size->data_type()));
-    BlobDesc* out = GetBlobDesc4BnInOp("out");
-    *out = *in;
-    out->set_is_dynamic(true);
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
-    return Maybe<void>::Ok();
+    return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
   }
 
   Maybe<void> GetSbpSignatures(

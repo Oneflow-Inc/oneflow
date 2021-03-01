@@ -59,11 +59,7 @@ void ExecNode::UnbindBnWithEmptyRegst() {
 }
 
 void ExecNode::ToProto(const ParallelContext* parallel_ctx, ExecNodeProto* ret) const {
-  const OpNode* op_node = Global<OpGraph>::Get()->OpNode4OpName(op_->op_name());
-  const ParallelDesc* parallel_desc = op_node == nullptr ? nullptr : &op_node->parallel_desc();
-  const SbpSignature* sbp_signature = op_node == nullptr ? nullptr : &op_node->sbp_signature();
-  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx, ret->mutable_kernel_conf(),
-                     GetLogicalBlobDesc4BnInOpFunc(), parallel_desc, sbp_signature);
+  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx, ret->mutable_kernel_conf());
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
     auto regst = bn_regst.second;
@@ -73,30 +69,59 @@ void ExecNode::ToProto(const ParallelContext* parallel_ctx, ExecNodeProto* ret) 
   }
 }
 
-void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
-  auto GetBlobDesc4BnInOp = GetBlobDesc4BnInOpFunc();
-  const SbpSignature* sbp_signature = nullptr;
-  {
-    const OpNode* op_node = Global<OpGraph>::Get()->OpNode4OpName(op()->op_name());
-    if (op_node != nullptr) { sbp_signature = &op_node->sbp_signature(); }
-  }
-  CHECK_JUST(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature));
-  Global<OpGraph>::Get()->CheckBlobDescs(op_->op_name(), GetBlobDesc4BnInOp, parallel_ctx);
-  CHECK_JUST(op_->InferInplaceObn2IbnIf(&mut_inplace_obn2ibn_, &con_inplace_obn2ibn_,
-                                        GetBlobDesc4BnInOp, parallel_ctx, sbp_signature));
+namespace {
+
+Maybe<void> CheckPhysicalBlobDesc(const BlobDesc& logical, const SbpParallel& sbp_parallel,
+                                  const ParallelContext* parallel_ctx, const BlobDesc& physical) {
+  CHECK_EQ_OR_RETURN(physical.shape(), *CHECK_JUST(GetPhysicalShape(logical.shape(), sbp_parallel,
+                                                                    parallel_ctx->parallel_num(),
+                                                                    parallel_ctx->parallel_id())));
+  return Maybe<void>::Ok();
 }
 
-std::function<const BlobDesc&(const std::string&)> ExecNode::GetLogicalBlobDesc4BnInOpFunc() const {
-  const OpNode* op_node = Global<OpGraph>::Get()->OpNode4OpName(op()->op_name());
-  if (op_node == nullptr) {
-    return [](const std::string& bn_in_op) -> const BlobDesc& {
-      UNIMPLEMENTED();
-      return *(const BlobDesc*)nullptr;
-    };
+Maybe<void> CheckPhysicalBlobDesc(
+    const Operator& op, const PbRpf<std::string>& bns,
+    const std::function<Maybe<const BlobDesc>(const std::string&)>& GetLogicalBlobDesc,
+    const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx,
+    const std::function<BlobDesc*(const std::string&)>& GetPhysicalBlobDesc) {
+  const std::shared_ptr<const ParallelDesc> op_parallel_desc = CHECK_JUST(op.GetOpParallelDesc());
+  for (const auto& bn : bns) {
+    const BlobDesc* physical_blob_desc = GetPhysicalBlobDesc(bn);
+    if (physical_blob_desc == nullptr) {
+      // TODO(liujuncheng): remove this hotfix
+      continue;
+    }
+    if (*CHECK_JUST(op.GetParallelDesc4BnInOp(bn)) == *op_parallel_desc) {
+      CHECK_JUST(CheckPhysicalBlobDesc(*CHECK_JUST(GetLogicalBlobDesc(bn)),
+                                       sbp_signature->bn_in_op2sbp_parallel().at(bn), parallel_ctx,
+                                       *physical_blob_desc));
+    }
   }
-  return [op_node, this](const std::string& bn_in_op) -> const BlobDesc& {
-    return op_node->LogicalBlobDesc4Lbi(op()->BnInOp2Lbi(bn_in_op));
-  };
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
+  auto GetBlobDesc4BnInOp = GetBlobDesc4BnInOpFunc();
+  const OpNode* op_node = Global<OpGraph>::Get()->OpNode4OpName(op()->op_name());
+  const SbpSignature* sbp_signature = nullptr;
+  if (op_node != nullptr) { sbp_signature = &op_node->sbp_signature(); }
+  if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && sbp_signature != nullptr) {
+    CheckPhysicalBlobDesc(
+        *op(), op()->input_bns(),
+        std::bind(&Operator::GetLogicalBlobDesc4Ibn, op().get(), std::placeholders::_1),
+        sbp_signature, parallel_ctx, GetBlobDesc4BnInOp);
+  }
+  CHECK_JUST(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature));
+  if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && sbp_signature != nullptr) {
+    CheckPhysicalBlobDesc(
+        *op(), op()->output_bns(),
+        std::bind(&Operator::GetLogicalBlobDesc4Obn, op().get(), std::placeholders::_1),
+        sbp_signature, parallel_ctx, GetBlobDesc4BnInOp);
+  }
+  CHECK_JUST(op_->InferInplaceObn2IbnIf(&mut_inplace_obn2ibn_, &con_inplace_obn2ibn_,
+                                        GetBlobDesc4BnInOp, parallel_ctx));
 }
 
 std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc() const {

@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/thread/gpu_thread.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
@@ -54,7 +54,7 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
 }
 
 void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {
-  const int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  const int64_t this_machine_id = GlobalProcessCtx::Rank();
 
   int64_t max_thrd_id = 0;
   for (const TaskProto& task : plan.task()) {

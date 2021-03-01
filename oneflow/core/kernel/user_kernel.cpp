@@ -39,7 +39,6 @@ void FillTensorDescWithBlob(const Blob* blob, user_op::TensorDesc* tensor_desc) 
   blob->blob_desc().header_pod_desc().ToProto(proto.mutable_header());
   blob->blob_desc().body().ToProto(proto.mutable_body());
   proto.set_is_tensor_list(blob->blob_desc().is_tensor_list());
-  proto.set_is_body_disabled(blob->blob_desc().is_body_disabled());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   proto.set_header_is_opaque(blob->blob_desc().header_is_opaque());
   *tensor_desc = proto;
@@ -235,6 +234,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
     }
   }
 
+  int64_t parallel_num() const override { return parallel_ctx_.parallel_num(); }
+
  private:
   const JobDesc& job_desc_;
   ArgVec inputs_;
@@ -267,7 +268,11 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     const auto* op_reg_val = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(
         kernel_conf.op_attribute().op_conf().user_conf().op_type_name());
     CHECK_NOTNULL(op_reg_val);
-    tensor_desc_infer_fn_ = op_reg_val->tensor_desc_infer_fn;
+    if (op_reg_val->physical_tensor_desc_infer_fn) {
+      tensor_desc_infer_fn_ = op_reg_val->physical_tensor_desc_infer_fn;
+    } else {
+      UNIMPLEMENTED();
+    }
   }
   ~UserKernelInferContext() = default;
 

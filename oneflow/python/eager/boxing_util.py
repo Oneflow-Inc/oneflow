@@ -33,6 +33,16 @@ import oneflow.python.eager.boxing_middle as boxing_middle
 import random
 import oneflow
 import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api
+
+
+def _FindOrCreateDelegateBlobObject(
+    builder, Fetch, x_blob_object, op_arg_parallel_attr
+):
+    if x_blob_object.op_arg_parallel_attr == op_arg_parallel_attr:
+        return x_blob_object
+    blob_cache = blob_cache_util.FindOrCreateBlobCache(x_blob_object)
+    return blob_cache.GetCachedDelegateBlobObject(op_arg_parallel_attr, Fetch)
 
 
 def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):
@@ -360,12 +370,15 @@ MatchNcclAllReduce = (
 @boxing_condition(MatchNcclAllReduce)
 def GpuNcclAllReduce(builder, produced_blob_object, consumer_op_arg_parallel_attr):
     parallel_conf = consumer_op_arg_parallel_attr.parallel_desc_symbol.parallel_conf
-    bn_in_op2blob_object = dict(in_0=produced_blob_object)
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+    bn_in_op2blob_object["in_0"] = produced_blob_object
     op_attribute = _GetEagerNcclAllReduce(parallel_conf, bn_in_op2blob_object)
+    cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
     builder.NoBoxingStatelessCall(
-        op_attribute,
-        parallel_conf=parallel_conf,
-        bn_in_op2blob_object=bn_in_op2blob_object,
+        cfg_op_attribute,
+        parallel_conf,
+        bn_in_op2blob_object,
+        _FindOrCreateDelegateBlobObject,
     )
     y_blob_object = bn_in_op2blob_object["out_0"]
     y_blob_object.op_arg_parallel_attr.Assign(consumer_op_arg_parallel_attr)
@@ -538,13 +551,15 @@ def BuildNaiveCpuBoxing(
     boxing_parallel_desc_symbol,
     out_parallel_num,
 ):
-    bn_in_op2blob_object = {}
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
     for i in range(len(physical_in_blob_objects)):
         bn_in_op2blob_object["in_%s" % i] = physical_in_blob_objects[i]
+    cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
     builder.NoBoxingStatelessCall(
-        op_attribute,
-        parallel_conf=boxing_parallel_desc_symbol.parallel_conf,
-        bn_in_op2blob_object=bn_in_op2blob_object,
+        cfg_op_attribute,
+        boxing_parallel_desc_symbol.parallel_conf,
+        bn_in_op2blob_object,
+        _FindOrCreateDelegateBlobObject,
     )
     return [bn_in_op2blob_object["out_%s" % i] for i in range(out_parallel_num)]
 
@@ -582,9 +597,9 @@ def ConstructNaiveBoxingOpConf(
     op_conf.boxing_conf.split_box.part_num.extend(
         balanced_splitter.BalancedPartNums(shape[out_axis], out_parallel_num)
     )
-    bn_in_op2blob_object = {
-        ("in_%s" % i): produced_blob_object for i in range(in_parallel_num)
-    }
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+    for i in range(in_parallel_num):
+        bn_in_op2blob_object["in_%s" % i] = produced_blob_object
     return op_infer_util.Infer(op_conf, bn_in_op2blob_object)
 
 
@@ -690,13 +705,15 @@ def _MakeCopyHdOpConfAndRetLbi():
 def _BuildCopyInstruction(builder, produced_blob_object, op_conf, to_device_tag):
     x_devices = produced_blob_object.parallel_desc_symbol.machine_id2device_id_list
     x_device_tag = produced_blob_object.parallel_desc_symbol.device_tag
-    bn_in_op2blob_object = {"in": produced_blob_object}
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+    bn_in_op2blob_object["in"] = produced_blob_object
     op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object)
     assert to_device_tag != x_device_tag, (to_device_tag, x_device_tag)
+    cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
     if to_device_tag == "cpu" and x_device_tag == "gpu":
         x_parallel_conf = produced_blob_object.parallel_desc_symbol.parallel_conf
         builder.NoBoxingCudaD2HStatelessCall(
-            op_attribute, x_parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
+            cfg_op_attribute, x_parallel_conf, bn_in_op2blob_object, TryReplaceDeviceTag
         )
     elif to_device_tag == "gpu" and x_device_tag == "cpu":
         out_parallel_desc_symbol = TryReplaceDeviceTag(
@@ -705,9 +722,7 @@ def _BuildCopyInstruction(builder, produced_blob_object, op_conf, to_device_tag)
         out_parallel_conf = out_parallel_desc_symbol.parallel_conf
         with builder.CudaHostPinBlob(produced_blob_object):
             builder.NoBoxingCudaH2DStatelessCall(
-                op_attribute,
-                out_parallel_conf,
-                bn_in_op2blob_object=bn_in_op2blob_object,
+                cfg_op_attribute, out_parallel_conf, bn_in_op2blob_object,
             )
     else:
         raise NotImplementedError(
@@ -740,25 +755,30 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
     )
     ref_device_tag = ref_blob_object.parallel_desc_symbol.device_tag
     value_device_tag = value_blob_object.parallel_desc_symbol.device_tag
-    bn_in_op2blob_object = {"ref": ref_blob_object, "value": value_blob_object}
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+    bn_in_op2blob_object["ref"] = ref_blob_object
+    bn_in_op2blob_object["value"] = value_blob_object
     op_attribute = op_infer_util.Infer(op_conf, bn_in_op2blob_object)
+    cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
     if ref_device_tag == value_device_tag:
         builder.NoBoxingStatelessCall(
-            op_attribute,
-            parallel_conf=ref_parallel_conf,
-            bn_in_op2blob_object=bn_in_op2blob_object,
+            cfg_op_attribute,
+            ref_parallel_conf,
+            bn_in_op2blob_object,
+            _FindOrCreateDelegateBlobObject,
         )
     elif ref_device_tag == "cpu" and value_device_tag == "gpu":
         value_parallel_conf = value_blob_object.parallel_desc_symbol.parallel_conf
         builder.NoBoxingCudaD2HStatelessCall(
-            op_attribute, value_parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
+            cfg_op_attribute,
+            value_parallel_conf,
+            bn_in_op2blob_object,
+            TryReplaceDeviceTag,
         )
     elif ref_device_tag == "gpu" and value_device_tag == "cpu":
         with builder.CudaHostPinBlob(value_blob_object):
             builder.NoBoxingCudaH2DStatelessCall(
-                op_attribute,
-                ref_parallel_conf,
-                bn_in_op2blob_object=bn_in_op2blob_object,
+                cfg_op_attribute, ref_parallel_conf, bn_in_op2blob_object,
             )
     else:
         raise NotImplementedError(

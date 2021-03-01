@@ -24,7 +24,7 @@ namespace oneflow {
 Maybe<bool> HasSharedOpKernelObject4ParallelConfSymbol(
     const std::shared_ptr<ParallelDesc>& parallel_conf_sym);
 
-Maybe<compatible_py::Object> GetSharedOpKernelObject4ParallelConfSymbol(
+Maybe<compatible_py::Object> GetOpKernelObject4ParallelConfSymbol(
     const std::shared_ptr<ParallelDesc>& parallel_conf_sym);
 
 Maybe<void> SetSharedOpKernelObject4ParallelConfSymbol(

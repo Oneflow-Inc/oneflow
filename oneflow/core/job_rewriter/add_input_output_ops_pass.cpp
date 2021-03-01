@@ -80,10 +80,12 @@ Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
   };
 
   HashSet<std::string> keep_op_names;
+  HashSet<LogicalBlobId> traced_lbi;
   // TODO: This search way only support stateless subgraph.
   // Control edge and mutable input need to be considered when supporting side-effect subgraph.
   std::function<Maybe<void>(const LogicalBlobId&)> SearchConstSrcAndTrace;
   SearchConstSrcAndTrace = [&](const LogicalBlobId& lbi) -> Maybe<void> {
+    CHECK(traced_lbi.insert(lbi).second);
     keep_op_names.insert(lbi.op_name());
     const auto* op_node = op_graph.OpNode4OpName(lbi.op_name());
     if (op_node->in_edges().empty()) { return Maybe<void>::Ok(); }
@@ -92,8 +94,10 @@ Maybe<void> AddInputOutputOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
       const auto& src_lbi = op_node->op().BnInOp2Lbi(ibn);
       if (IsInputLbi(src_lbi)) {
         RecordScopeSymbolId(src_lbi);
-      } else {
+      } else if (traced_lbi.find(src_lbi) == traced_lbi.end()) {
         SearchConstSrcAndTrace(src_lbi);
+      } else {
+        // pass
       }
     }
     return Maybe<void>::Ok();

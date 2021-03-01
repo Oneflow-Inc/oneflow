@@ -26,6 +26,13 @@ void SourceTickOp::InitFromOpConf() {
 
 LogicalNode* SourceTickOp::NewProperLogicalNode() const { return new SourceTickLogicalNode(); }
 
+Maybe<void> SourceTickOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  BlobDesc4BnInOp("out")->mut_shape() = Shape({1});
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> SourceTickOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
@@ -34,14 +41,8 @@ Maybe<void> SourceTickOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SourceTickOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("out")->clear_value();
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> SourceTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder().Split(output_bns(), 0).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder().Broadcast(output_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 

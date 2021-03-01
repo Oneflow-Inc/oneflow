@@ -30,7 +30,6 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow_api
@@ -40,12 +39,7 @@ import traceback
 
 class ArgBlobDef(object):
     def __init__(
-        self,
-        shape,
-        dtype,
-        batch_axis,
-        name=None,
-        distribute=oneflow_api.distribute.auto(),
+        self, shape, dtype, name=None, distribute=oneflow_api.distribute.auto(),
     ):
         lbi = lbi_util.LogicalBlobId()
         if name is None:
@@ -59,8 +53,6 @@ class ArgBlobDef(object):
             assert dim > 0
         self.shape_ = shape
         self.dtype_ = dtype
-        assert type(batch_axis) is int
-        self.batch_axis_ = batch_axis
         self.distribute_ = distribute
 
     @property
@@ -88,10 +80,6 @@ class ArgBlobDef(object):
         return self.dtype_
 
     @property
-    def batch_axis(self):
-        return self.batch_axis_
-
-    @property
     def is_dynamic(self):
         raise NotImplementedError
 
@@ -100,20 +88,10 @@ class ArgBlobDef(object):
         raise NotImplementedError
 
     def with_distribute(self, distribute):
-        return type(self)(
-            shape=self.shape_,
-            dtype=self.dtype_,
-            batch_axis=self.batch_axis_,
-            name=self.op_name,
-        )
+        return type(self)(shape=self.shape_, dtype=self.dtype_, name=self.op_name,)
 
     def Clone(self, op_name=None):
-        return type(self)(
-            shape=self.shape_,
-            dtype=self.dtype_,
-            batch_axis=self.batch_axis_,
-            name=op_name,
-        )
+        return type(self)(shape=self.shape_, dtype=self.dtype_, name=op_name,)
 
     def AddAndInferOp(self, op_conf):
         raise NotImplementedError
@@ -131,16 +109,17 @@ class ArgBlobDef(object):
     def _AsyncPush(self, session, arg_ndarray):
         raise NotImplementedError
 
-    def SetBatchAxisAndSplitAxis(self, interface_blob_conf):
-        raise NotImplementedError
-
     def ToInterfaceBlobConf(self):
         interface_blob_conf = inter_face_blob_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
-        interface_blob_conf.data_type = self.dtype_.oneflow_proto_dtype
+        interface_blob_conf.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(
+            self.dtype_
+        )
         interface_blob_conf.is_dynamic = self.is_dynamic
         interface_blob_conf.is_tensor_list = self.is_tensor_list
-        self.SetBatchAxisAndSplitAxis(interface_blob_conf)
+        # NOTE(chengcheng): rm batch_axis, so set split_axis always = 0 for safe. will support
+        #     set sbp in future, or will delete in multi-client
+        interface_blob_conf.split_axis.value = 0
         return interface_blob_conf
 
     def _Distribute2Str(self):
@@ -158,20 +137,11 @@ class FixedTensorDef(ArgBlobDef):
     def __init__(
         self,
         shape: Sequence[int],
-        dtype: dtype_util.dtype = dtype_util.float,
-        batch_axis: int = 0,
+        dtype: oneflow.dtype = oneflow.float,
         name: Optional[str] = None,
     ) -> None:
-        if batch_axis is None:
-            batch_axis = oneflow_api.INVALID_BATCH_AXIS
-        assert type(batch_axis) is int
-        if batch_axis != oneflow_api.INVALID_BATCH_AXIS:
-            if batch_axis < 0:
-                batch_axis += len(shape)
-            assert batch_axis >= 0
-            assert batch_axis < len(shape)
         ArgBlobDef.__init__(
-            self, shape, dtype=dtype, batch_axis=batch_axis, name=name,
+            self, shape, dtype=dtype, name=name,
         )
 
     @property
@@ -200,17 +170,6 @@ class FixedTensorDef(ArgBlobDef):
         with oneflow.scope.placement(device_tag, device_ids):
             return compile_context.CurJobAddConsistentOp(op_conf)
 
-    def SetBatchAxisAndSplitAxis(
-        self, interface_blob_conf: inter_face_blob_conf_util.InterfaceBlobConf
-    ) -> None:
-        if self.batch_axis == oneflow_api.INVALID_BATCH_AXIS:
-            interface_blob_conf.batch_axis.ClearField("value")
-            interface_blob_conf.split_axis.ClearField("value")
-        else:
-            assert type(self.batch_axis) is int
-            interface_blob_conf.batch_axis.value = self.batch_axis
-            interface_blob_conf.split_axis.value = self.batch_axis
-
     def _CheckNdarray(self, ndarray: np.ndarray) -> None:
         assert isinstance(ndarray, np.ndarray)
         assert ndarray.shape == self.shape
@@ -223,18 +182,11 @@ class MirroredTensorDef(ArgBlobDef):
     def __init__(
         self,
         shape: Sequence[int],
-        dtype: dtype_util.dtype = dtype_util.float,
-        batch_axis: int = 0,
+        dtype: oneflow.dtype = oneflow.float,
         name: Optional[str] = None,
     ) -> None:
         assert type(shape) is tuple
-        assert type(batch_axis) is int
-        if batch_axis != oneflow_api.INVALID_BATCH_AXIS:
-            if batch_axis < 0:
-                batch_axis += len(shape)
-            assert batch_axis >= 0
-            assert batch_axis < len(shape)
-        ArgBlobDef.__init__(self, shape, dtype=dtype, batch_axis=batch_axis, name=name)
+        ArgBlobDef.__init__(self, shape, dtype=dtype, name=name)
         self.sub_consistent_blob_list_ = []
 
     @property
@@ -252,13 +204,6 @@ class MirroredTensorDef(ArgBlobDef):
 
     def EagerAddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
         return compile_context.CurJobAddMirroredOp(op_conf)
-
-    def SetBatchAxisAndSplitAxis(
-        self, interface_blob_conf: inter_face_blob_conf_util.InterfaceBlobConf
-    ) -> None:
-        assert type(self.batch_axis) is int
-        interface_blob_conf.batch_axis.value = self.batch_axis
-        interface_blob_conf.split_axis.ClearField("value")
 
     def _CheckNdarray(self, ndarray_list: Sequence[np.ndarray]) -> None:
         assert isinstance(ndarray_list, (list, tuple))
@@ -286,18 +231,11 @@ class MirroredTensorListDef(ArgBlobDef):
     def __init__(
         self,
         shape: Sequence[int],
-        dtype: dtype_util.dtype = dtype_util.float,
-        batch_axis: int = 0,
+        dtype: oneflow.dtype = oneflow.float,
         name: Optional[str] = None,
     ) -> None:
         assert type(shape) is tuple
-        assert type(batch_axis) is int
-        if batch_axis != oneflow_api.INVALID_BATCH_AXIS:
-            if batch_axis < 0:
-                batch_axis += len(shape)
-            assert batch_axis >= 0
-            assert batch_axis < len(shape)
-        ArgBlobDef.__init__(self, shape, dtype=dtype, batch_axis=batch_axis, name=name)
+        ArgBlobDef.__init__(self, shape, dtype=dtype, name=name)
         self.sub_consistent_blob_list_ = []
 
     @property
@@ -315,13 +253,6 @@ class MirroredTensorListDef(ArgBlobDef):
 
     def EagerAddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
         return compile_context.CurJobAddMirroredOp(op_conf)
-
-    def SetBatchAxisAndSplitAxis(
-        self, interface_blob_conf: inter_face_blob_conf_util.InterfaceBlobConf
-    ) -> None:
-        assert type(self.batch_axis) is int
-        interface_blob_conf.batch_axis.value = self.batch_axis
-        interface_blob_conf.split_axis.ClearField("value")
 
     def _CheckNdarray(self, ndarray_lists: Sequence[np.ndarray]) -> None:
         assert isinstance(ndarray_lists, (list, tuple))

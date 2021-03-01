@@ -50,9 +50,6 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
   for (auto& pair : *(job_parallel_view_conf->mutable_op_name2sbp_signature_conf())) {
     op_name2sbp_signature_conf_.emplace(pair.first, &pair.second);
   }
-  for (auto& pair : *(job->mutable_helper()->mutable_lbn2batch_axis())) {
-    lbn2batch_axis_.emplace(pair.first, &pair.second);
-  }
   auto* helper_conf = job->mutable_helper();
   for (auto& pair : *(helper_conf->mutable_op_name2op_time_shape())) {
     op_name2time_shapes_.emplace(pair.first, &pair.second);
@@ -169,7 +166,6 @@ void JobBuilder::RemoveOpByName(const std::unordered_set<std::string>& removing_
     // Update time shape
     if (time_shape_conf->count(op_name) > 0) { time_shape_conf->erase(op_name); }
   }
-  // Update batch dim lbis
   // Update identical sbp oba pairs
   if (job_->helper().has_identical_sbp_oba_pairs()) {
     auto identical_sbp_oba_pairs = job_->helper().identical_sbp_oba_pairs().pair();
@@ -186,7 +182,6 @@ void JobBuilder::RemoveOpByName(const std::unordered_set<std::string>& removing_
   op_name2op_conf_.swap(builder.op_name2op_conf_);
   op_name2parallel_conf_.swap(builder.op_name2parallel_conf_);
   op_name2sbp_signature_conf_.swap(builder.op_name2sbp_signature_conf_);
-  lbn2batch_axis_.swap(builder.lbn2batch_axis_);
 }
 
 void JobBuilder::DelOps(const std::vector<std::string>& op_names) {
@@ -301,22 +296,6 @@ void JobBuilder::AddTimeShape4OpName(const std::string& op_name, const OpTimeSha
     auto* time_shape_conf = job_->mutable_helper()->mutable_op_name2op_time_shape();
     (*time_shape_conf)[op_name] = time_shape;
     op_name2time_shapes_[op_name] = &((*time_shape_conf)[op_name]);
-  }
-}
-
-const OptInt64& JobBuilder::BatchAxis4Lbn(const std::string& lbn) const {
-  const auto& it = lbn2batch_axis_.find(lbn);
-  CHECK(it != lbn2batch_axis_.end());
-  return *(it->second);
-}
-
-void JobBuilder::AddBatchAxis4Lbn(const std::string& lbn, const OptInt64& axis) {
-  bool update =
-      (lbn2batch_axis_.count(lbn) == 0) || (lbn2batch_axis_[lbn]->value() != axis.value());
-  if (update) {
-    auto* batch_axis = job_->mutable_helper()->mutable_lbn2batch_axis();
-    (*batch_axis)[lbn] = axis;
-    lbn2batch_axis_[lbn] = &((*batch_axis)[lbn]);
   }
 }
 

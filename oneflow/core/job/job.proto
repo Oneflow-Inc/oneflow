@@ -1,7 +1,6 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/common/data_type.proto";
 import "oneflow/core/job/dlnet_conf.proto";
 import "oneflow/core/job/placement.proto";
 import "oneflow/core/job/job_conf.proto";
@@ -29,7 +28,6 @@ message JobHelperConf {
   map<string, OpTimeShape> op_name2op_time_shape = 3;
   map<string, BlobDescProto> lbn2logical_blob_desc = 4;
   map<string, int64> lbn2logical_object_id = 5;
-  map<string, OptInt64> lbn2batch_axis = 6;
   optional OpBlobArgPairs identical_sbp_oba_pairs = 7;
   optional LbiDiffWatcherInfo lbi_diff_watcher_info = 8;
 }
