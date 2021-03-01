@@ -63,7 +63,7 @@ jobs:
           mkdir -p $ci_tmp_dir
           echo "ci_tmp_dir=${ci_tmp_dir}" >> $GITHUB_ENV
           echo "wheelhouse_dir=${ci_tmp_dir}/wheelhouse" >> $GITHUB_ENV
-          echo "sha_dir=$ci-static/pr/${{ github.event.pull_request.number }}/$GITHUB_SHA/${{matrix.test_suite }}" >> $GITHUB_ENV
+          echo "sha_dir=ci-static/pr/${{ github.event.pull_request.number }}/$GITHUB_SHA/${{matrix.test_suite }}" >> $GITHUB_ENV
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
       - name: Fix permissions
         run: |
