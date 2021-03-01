@@ -23,8 +23,8 @@ from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
 def test_alexnet(test_case):
     load_pytorch_module_and_check(
-        test_case, 
-        torchvision.models.alexnet, 
+        test_case,
+        torchvision.models.alexnet,
         input_size=(1, 3, 224, 224),
         train_flag=False,
     )
