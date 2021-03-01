@@ -64,7 +64,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
                              static_cast<DeviceId::device_index_t>(out_dev_phy_id)};
           auto* stream_index_generator =
               Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
-          uint32_t stream_index = stream_index_generator->GenerateComputeStreamIndex();
+          auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
           thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
 #else
           UNIMPLEMENTED();

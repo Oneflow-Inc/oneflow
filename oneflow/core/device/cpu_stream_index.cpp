@@ -71,7 +71,7 @@ StreamIndexGenerator::stream_index_t CPUStreamIndexGenerator::GenerateIndependen
       CHECK_EQ(allocated_stream_index_vec.size(), max_num_iter->second);
       auto& next = task_type2allocated_stream_index_vec_index_[task_type];
       index = allocated_stream_index_vec[next++];
-      next %= allocated_stream_index_vec.size();
+      if (next >= allocated_stream_index_vec.size()) { next %= allocated_stream_index_vec.size(); }
     }
   } else {
     next_stream_index_++;

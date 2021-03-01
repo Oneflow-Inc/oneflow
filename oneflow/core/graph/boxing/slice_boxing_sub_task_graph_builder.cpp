@@ -100,7 +100,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     auto* generator = dynamic_cast<CudaStreamIndexGenerator*>(
         Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
     CHECK_NOTNULL(generator);
-    uint32_t stream_index = 0;
+    StreamId::stream_index_t stream_index = 0;
     if (work_type == CudaWorkType::kCopyH2D) {
       stream_index = generator->GenerateH2DStreamIndex();
     } else if (work_type == CudaWorkType::kCopyD2H) {

@@ -132,7 +132,7 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
 #ifdef WITH_CUDA
         DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
                            static_cast<DeviceId::device_index_t>(dev_phy_id)};
-        uint32_t stream_index = 0;
+        StreamId::stream_index_t stream_index = 0;
         auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
         CHECK_NOTNULL(cuda_stream_index_generator);
@@ -173,7 +173,7 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
         auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
         CHECK_NOTNULL(cpu_stream_index_generator);
-        uint32_t stream_index = 0;
+        StreamId::stream_index_t stream_index = 0;
         if (comp_task_node->IsIndependent()) {
           TaskType task_type = comp_task_node->GetTaskType();
           if (IsClassRegistered<int32_t, TickTockTaskType>(task_type)) {

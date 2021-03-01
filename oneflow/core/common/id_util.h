@@ -47,6 +47,7 @@ class DeviceId {
 
   DeviceId(rank_t rank, DeviceType device_type, device_index_t device_index)
       : rank_(rank), device_type_(device_type), device_index_(device_index) {
+    CHECK_LE(rank, kMaxRank);
     CHECK_LE(static_cast<size_t>(device_type), kMaxDeviceTypeVal);
     CHECK_LE(device_index, kMaxDeviceIndex);
   }

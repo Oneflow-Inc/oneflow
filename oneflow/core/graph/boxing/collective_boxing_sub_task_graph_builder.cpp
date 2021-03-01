@@ -71,7 +71,7 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   auto* stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
   CHECK_NOTNULL(stream_index_generator);
-  uint32_t stream_index = stream_index_generator->GenerateNcclStreamIndex();
+  auto stream_index = stream_index_generator->GenerateNcclStreamIndex();
   const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
   node->Init(machine_id, thrd_id, NewAreaId(), op_conf);
 }
@@ -397,7 +397,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
                            static_cast<DeviceId::device_index_t>(device_index)};
         auto* stream_index_generator =
             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
-        uint32_t stream_index = stream_index_generator->GenerateComputeStreamIndex();
+        auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
         const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
         TaskNode* in_node = sorted_in_tasks.at(i);
         CollectiveBoxingPackTaskNode* pack_node =
