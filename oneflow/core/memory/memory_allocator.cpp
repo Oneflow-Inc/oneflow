@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/record/record.pb.h"
+#include "oneflow/core/memory/memory_fake_dev_allocator.h"
 
 namespace oneflow {
 
@@ -48,6 +49,8 @@ void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
 #else
     UNIMPLEMENTED();
 #endif
+  } else if (mem_case.has_fake_dev_mem()) {
+    ptr = FakeDevMemoryAllocatorImpl::Allocate(mem_case, size);
   } else {
     UNIMPLEMENTED();
   }
@@ -72,6 +75,8 @@ void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
 #else
     UNIMPLEMENTED();
 #endif
+  } else if (mem_case.has_fake_dev_mem()) {
+    FakeDevMemoryAllocatorImpl::Deallocate(ptr, mem_case);
   } else {
     UNIMPLEMENTED();
   }
