@@ -16,38 +16,51 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from __future__ import print_function
-import lintutils
-from subprocess import PIPE
+import asyncio
 import argparse
-import difflib
-import multiprocessing as mp
-import sys
-from functools import partial
+import pathlib
+import multiprocessing
 
 
-# examine the output of clang-format and if changes are
-# present assemble a (unified)patch of the difference
-def _check_one_file(completed_processes, filename):
-    with open(filename, "rb") as reader:
-        original = reader.read()
+def split_and_print(prefix, text):
+    lines = text.decode().splitlines(keepends=True)
+    prefixed = ""
+    for l in lines:
+        prefixed += f"{prefix} {l.strip()}"
+    if l.strip():
+        print(prefixed, flush=True)
 
-    returncode, stdout, stderr = completed_processes[filename]
-    formatted = stdout
-    if formatted != original:
-        # Run the equivalent of diff -u
-        diff = list(
-            difflib.unified_diff(
-                original.decode("utf8").splitlines(True),
-                formatted.decode("utf8").splitlines(True),
-                fromfile=filename,
-                tofile="{} (after clang format)".format(filename),
-            )
-        )
-    else:
-        diff = None
 
-    return filename, diff
+async def handle_stream(stream, cb):
+    while True:
+        line = await stream.readline()
+        if line:
+            cb(line)
+        else:
+            break
+
+
+async def run_command(cmd=None, dry=False, name=None):
+    if dry:
+        print(f"[dry] {cmd}")
+        return 0
+    process = await asyncio.create_subprocess_shell(
+        cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    l = lambda x: split_and_print(f"[{name}]" if name else "", x)
+    l = lambda x: x
+    await asyncio.gather(
+        handle_stream(process.stdout, l), handle_stream(process.stderr, l),
+    )
+    await process.wait()
+    assert process.returncode == 0, cmd
+    return process.returncode
+
+
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i : i + n]
 
 
 if __name__ == "__main__":
@@ -60,11 +73,6 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--clang_format_binary", required=True, help="Path to the clang-format binary"
-    )
-    parser.add_argument(
-        "--exclude_globs",
-        help="Filename containing globs for files "
-        "that should be excluded from the checks",
     )
     parser.add_argument(
         "--source_dir", required=True, help="Root directory of the source code"
@@ -83,81 +91,22 @@ if __name__ == "__main__":
         action="store_true",
         help="If specified, only print errors",
     )
-    arguments = parser.parse_args()
-
-    # FIXME: files under xrt directory are formatted differently, skip for now
-    exclude_globs = ["*/oneflow/xrt/*"]
-    if arguments.exclude_globs:
-        for line in open(arguments.exclude_globs):
-            exclude_globs.append(line.strip())
-
-    formatted_filenames = []
-    for path in lintutils.get_sources(arguments.source_dir, exclude_globs):
-        formatted_filenames.append(str(path))
-
-    if arguments.fix:
-        if not arguments.quiet:
-            print(
-                "\n".join(map(lambda x: "Formatting {}".format(x), formatted_filenames))
-            )
-
-        # Break clang-format invocations into chunks: each invocation formats
-        # 16 files. Wait for all processes to complete
-        results = lintutils.run_parallel(
-            [
-                [arguments.clang_format_binary, "-i"] + some
-                for some in lintutils.chunk(formatted_filenames, 16)
-            ]
-        )
-        for returncode, stdout, stderr in results:
-            # if any clang-format reported a parse error, bubble it
-            if returncode != 0:
-                sys.exit(returncode)
-
-    else:
-        # run an instance of clang-format for each source file in parallel,
-        # then wait for all processes to complete
-        results = lintutils.run_parallel(
-            [
-                [arguments.clang_format_binary, filename]
-                for filename in formatted_filenames
-            ],
-            stdout=PIPE,
-            stderr=PIPE,
-        )
-        for returncode, stdout, stderr in results:
-            # if any clang-format reported a parse error, bubble it
-            if returncode != 0:
-                sys.exit(returncode)
-
-        error = False
-        checker = partial(
-            _check_one_file,
-            {
-                filename: result
-                for filename, result in zip(formatted_filenames, results)
-            },
-        )
-        pool = mp.Pool()
-        try:
-            # check the output from each invocation of clang-format in parallel
-            for filename, diff in pool.imap(checker, formatted_filenames):
-                if not arguments.quiet:
-                    print("Checking {}".format(filename))
-                if diff:
-                    print("{} had clang-format style issues".format(filename))
-                    # Print out the diff to stderr
-                    error = True
-                    # pad with a newline
-                    print(file=sys.stderr)
-                    diff_out = []
-                    for diff_str in diff:
-                        diff_out.append(diff_str)
-                    sys.stderr.writelines(diff_out)
-        except Exception:
-            error = True
-            raise
-        finally:
-            pool.terminate()
-            pool.join()
-        sys.exit(1 if error else 0)
+    print("RUNNING CLANG-FMT")
+    args = parser.parse_args()
+    exts = [".h", ".cc", ".cpp", ".cu", ".cuh"]
+    files = filter(
+        lambda p: p.suffix in exts and str(p).startswith("oneflow/xrt") == False,
+        pathlib.Path(args.source_dir).rglob("*"),
+    )
+    loop = asyncio.get_event_loop()
+    files = [str(f) for f in files]
+    print(files)
+    for chuck in chunks(list(files), multiprocessing.cpu_count() * 4):
+        promises = [
+            run_command(f"{args.clang_format_binary} -dry-run --Werror {f}")
+            for f in chuck
+        ]
+        results = loop.run_until_complete(asyncio.gather(*promises))
+        print(results)
+    # fs = " ".join(files)
+    # loop.run_until_complete(run_command(f"{args.clang_format_binary} {fs}"))
