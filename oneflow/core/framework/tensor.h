@@ -151,6 +151,15 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
 
   Maybe<DeterminedTensor> DetermineAndDestroySelf() override { return shared_from_this(); }
 
+  // Getters
+  virtual int ndim() const = 0;
+  virtual bool is_cuda() const = 0;
+  virtual int nelement() const = 0;
+  virtual std::size_t element_size() const = 0;
+  virtual std::size_t SizeOf() const = 0;
+  virtual std::string ToString() const = 0;
+  virtual int dim(int index) const = 0;
+
   // Getters for autograd
   // acc_grad is tensor's accumulated grad in more than once backward operation,
   // and now_grad_arg is temporary grad to shared data with different FunctionNode
@@ -171,6 +180,7 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
   virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 
  protected:
+  DeterminedTensor() = default;
   std::shared_ptr<const FunctionNode> grad_fn_node_;
 };
 
@@ -188,6 +198,13 @@ class MirroredTensor final : public DeterminedTensor {
   const std::shared_ptr<const Device>& device() const { return impl_->device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   Maybe<bool> is_consistent() const override { return false; }
+  int ndim() const override { return impl_->shape()->NumAxes(); }
+  bool is_cuda() const override;
+  int dim(int index) const override;
+  int nelement() const override;
+  std::size_t element_size() const override;
+  std::size_t SizeOf() const override;
+  std::string ToString() const override;
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
@@ -231,6 +248,13 @@ class ConsistentTensor final : public DeterminedTensor {
   }
   bool is_lazy() const override { return impl_->is_lazy(); }
   Maybe<bool> is_consistent() const override { return true; }
+  int ndim() const override { return impl_->shape()->NumAxes(); }
+  bool is_cuda() const override;
+  int dim(int index) const override;
+  int nelement() const override;
+  std::size_t element_size() const override;
+  std::size_t SizeOf() const override;
+  std::string ToString() const override;
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }

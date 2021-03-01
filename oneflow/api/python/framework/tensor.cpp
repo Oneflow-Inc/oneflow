@@ -91,18 +91,18 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("dtype", &T::dtype)
       .def_property_readonly("data", &T::data)
       .def_property_readonly("grad", &T::grad)
-      .def_property_readonly("grad_fn", &T::grad_fn)
+      .def_property_readonly("grad_fn", &T::grad_fn_node)
       .def_property_readonly("requires_grad", &T::requires_grad)
       .def_property_readonly("is_leaf", &T::is_leaf)
       .def("size", &T::shape)
       .def("dim", &T::dim)
-      .def("ndimension", &T::ndimension)
-      .def("get_device", &T::get_device)
+      .def("ndimension", &T::ndim)
+      .def("get_device", &T::device)
       .def("nelement", &T::nelement)
       .def("data_ptr", &T::data_ptr)
       .def("element_size", &T::element_size)
       .def("numpy", &T::numpy)
-      .def("tolist", &T::tolist)
+      .def("tolist", &T::ToList)
       .def("backward", &T::backward)
       .def("__str__", &T::ToString)
       .def("__repr__", &T::ToString)
@@ -114,7 +114,7 @@ void ExportTensor(py::module& m, const char* name) {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   ExportTensor<MirroredTensor>(m, "LocalTensor");
-  ExportTensor<ConsistentTensor>(m, "MirroredTensor");
+  ExportTensor<ConsistentTensor>(m, "ConsistentTensor");
 }
 
 }  // namespace one

@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 
@@ -60,6 +62,47 @@ Maybe<DeterminedTensor> UndeterminedTensor::DetermineAndDestroySelf() {
 }
 
 bool UndeterminedTensor::is_leaf() const { TODO(); }
+
+bool MirroredTensor::is_cuda() const { 
+  return device()->type() == "cuda";
+}
+
+int MirroredTensor::dim(int index) const {
+  return shape()->At(index);
+}
+
+int MirroredTensor::nelement() const {
+  return shape()->elem_cnt();
+}
+
+std::size_t MirroredTensor::element_size() const {
+  TODO();
+}
+
+std::size_t MirroredTensor::SizeOf() const { TODO(); }
+
+std::string MirroredTensor::ToString() const { TODO(); }
+
+int ConsistentTensor::dim(int index) const {
+  return shape()->At(index);
+}
+
+int ConsistentTensor::nelement() const {
+  return shape()->elem_cnt();
+}
+
+std::size_t ConsistentTensor::element_size() const {
+  TODO();
+}
+
+std::size_t ConsistentTensor::SizeOf() const { TODO(); }
+
+std::string ConsistentTensor::ToString() const { TODO(); }
+
+bool ConsistentTensor::is_cuda() const { 
+  return parallel_desc().GetPtrOrThrow()->device_type() == DeviceType::kGPU;
+}
+
 
 }  // namespace one
 
