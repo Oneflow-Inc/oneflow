@@ -99,7 +99,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--clang_format_binary",
         required=False,
-        help="Path to the clang-format binary",
+        help="Path to the clang-format binary.",
         default="clang-format",
     )
     parser.add_argument(
