@@ -43,7 +43,7 @@ class FunctionNode {
   virtual void ReleaseGraph() = 0;
 
   // Getters
-  virtual std::vector<std::shared_ptr<const FunctionNode>> GetNextFunctions() = 0;
+  virtual std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>> GetNextFunctions() = 0;
   virtual const std::string& GetOpName() = 0;
 
  protected:
@@ -55,14 +55,15 @@ class AutogradEngine {
   virtual ~AutogradEngine() = default;
 
   // Calls every `FunctionNode.Apply()` and capture grad in this calling for `inputs`
-  virtual Maybe<std::shared_ptr<TensorList>> Execute(TensorList* outputs, TensorList* inputs,
-                                                     TensorList* out_grads, bool retain_graph,
+  virtual Maybe<std::shared_ptr<TensorList>> Execute(const TensorList& outputs,
+                                                     const TensorList& inputs,
+                                                     const TensorList& out_grads, bool retain_graph,
                                                      bool create_graph) = 0;
   // Builds FunctionNode, binding to all `outputs_` tensors and saving in AutogradEngine
   // TODO: add parameters for `backward_fn`
   virtual const std::shared_ptr<const FunctionNode>& AddBackwardFuncPtr(
-      const std::shared_ptr<const std::function<void()>>& backward_fn, TensorList* inputs,
-      TensorList* outputs) = 0;
+      const std::shared_ptr<const std::function<void()>>& backward_fn, const TensorList& inputs,
+      const TensorList& outputs) = 0;
 
  protected:
   AutogradEngine() = default;
@@ -74,10 +75,10 @@ class StackFunctionNode final : public FunctionNode {
   OF_DISALLOW_COPY_AND_MOVE(StackFunctionNode);
   // TODO: update constructor according to op_builder interface
   StackFunctionNode(const std::shared_ptr<const std::function<void()>>& backward_fn,
-                    TensorList* inputs, TensorList* outputs);
+                    const TensorList& inputs, const TensorList& outputs);
   ~StackFunctionNode() override = default;
 
-  std::vector<std::shared_ptr<const FunctionNode>> GetNextFunctions() override {
+  std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>> GetNextFunctions() override {
     return next_functions_;
   }
   const std::string& GetOpName() override { return op_name_; }
@@ -98,7 +99,7 @@ class StackFunctionNode final : public FunctionNode {
   std::shared_ptr<const std::function<void()>> backward_fn_;
 
   const std::string op_name_;
-  std::vector<std::shared_ptr<const FunctionNode>> next_functions_;
+  std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>> next_functions_;
 };
 
 class StackAutogradEngine final : public AutogradEngine {
@@ -107,12 +108,12 @@ class StackAutogradEngine final : public AutogradEngine {
   StackAutogradEngine() = default;
   ~StackAutogradEngine() override = default;
 
-  Maybe<std::shared_ptr<TensorList>> Execute(TensorList* outputs, TensorList* inputs,
-                                             TensorList* out_grads, bool retain_graph,
+  Maybe<std::shared_ptr<TensorList>> Execute(const TensorList& outputs, const TensorList& inputs,
+                                             const TensorList& out_grads, bool retain_graph,
                                              bool create_graph) override;
   const std::shared_ptr<const FunctionNode>& AddBackwardFuncPtr(
-      const std::shared_ptr<const std::function<void()>>& backward_fn, TensorList* inputs,
-      TensorList* outputs) override;
+      const std::shared_ptr<const std::function<void()>>& backward_fn, const TensorList& inputs,
+      const TensorList& outputs) override;
 
  protected:
   // StackFunctionNode must be saved in engine, because any node in list may be released at any
