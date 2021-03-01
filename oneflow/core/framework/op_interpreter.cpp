@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
+#include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"

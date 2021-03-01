@@ -22,10 +22,10 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+using TensorList = std::vector<std::shared_ptr<Tensor>>;
+
 class OpExprInterpState {
  public:
-  DEFINE_DEFAULT_CONSTRUCTOR(OpExprInterpState);
-
   const TensorList& SavedTensors() const { return saved_tensors_; }
 
   void SaveTensorForBackward(const std::shared_ptr<Tensor>& tensor) {

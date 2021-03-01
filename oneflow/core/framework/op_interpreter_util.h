@@ -25,6 +25,8 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+using TensorList = std::vector<std::shared_ptr<Tensor>>;
+
 class OpInterpUtil {
  public:
   static std::shared_ptr<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr* op_expr);
