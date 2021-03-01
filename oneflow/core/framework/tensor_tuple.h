@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_LIST_H_
-#define ONEFLOW_CORE_FRAMEWORK_TENSOR_LIST_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_TUPLE_H_
+#define ONEFLOW_CORE_FRAMEWORK_TENSOR_TUPLE_H_
 
 #include <memory>
 #include <vector>
@@ -25,16 +25,16 @@ namespace one {
 
 class Tensor;
 
-class TensorList final : public std::vector<std::shared_ptr<Tensor>>,
-                         public std::enable_shared_from_this<TensorList> {
+class TensorTuple final : public std::vector<std::shared_ptr<Tensor>>,
+                          public std::enable_shared_from_this<TensorTuple> {
  public:
-  TensorList(const TensorList&) = delete;
-  TensorList(TensorList&) = delete;
-  TensorList() = default;
-  ~TensorList() = default;
+  TensorTuple(const TensorTuple&) = delete;
+  TensorTuple(TensorTuple&) = delete;
+  TensorTuple() = default;
+  ~TensorTuple() = default;
 };
 
 }  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_LIST_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_TUPLE_H_

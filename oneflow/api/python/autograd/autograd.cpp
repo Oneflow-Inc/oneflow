@@ -18,6 +18,7 @@ limitations under the License.
 #include <memory>
 #include <vector>
 #include "oneflow/api/python/autograd/autograd.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/api/python/of_api_registry.h"
 
 namespace oneflow {
@@ -29,18 +30,19 @@ namespace {
 // If output is the tensor whose size is greater than 1, out_grad's shape must be same as output's.
 // If output is a scaler tensor, out_grad will also be a scaler or empty(will be inited to
 // `flow.ones([1])`).
-Maybe<one::TensorList> CheckAndInitOutGrads(const one::TensorList& outputs,
-                                            const one::TensorList& out_grads) {
-  auto gradients = std::make_shared<one::TensorList>(out_grads.size());
+Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
+                                             const one::TensorTuple& out_grads) {
+  auto gradients = std::make_shared<one::TensorTuple>(out_grads.size());
   // TODO: check all out_grads and push default value for empty item
   return gradients;
 }
 
-Maybe<one::TensorList> RunBackward(const one::TensorList& outputs, const one::TensorList& intputs,
-                                   const one::TensorList& out_grads, bool retain_graph,
-                                   bool create_graph) {
+Maybe<one::TensorTuple> RunBackward(const one::TensorTuple& outputs,
+                                    const one::TensorTuple& intputs,
+                                    const one::TensorTuple& out_grads, bool retain_graph,
+                                    bool create_graph) {
   if (create_graph) { retain_graph = true; }
-  std::shared_ptr<one::TensorList> res_grads;
+  std::shared_ptr<one::TensorTuple> res_grads;
   // TODO: check could run backward or not
   // TODO: calls `AutogradEngine.Execute()` to do backward
   return res_grads;
@@ -48,19 +50,19 @@ Maybe<one::TensorList> RunBackward(const one::TensorList& outputs, const one::Te
 
 }  // namespace
 
-Maybe<one::TensorList> Backward(const one::TensorList& outputs, const one::TensorList& out_grads,
-                                bool retain_graph, bool create_graph) {
-  std::shared_ptr<one::TensorList> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
-  auto inputs = std::make_shared<one::TensorList>(0);
+Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::TensorTuple& out_grads,
+                                 bool retain_graph, bool create_graph) {
+  std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
+  auto inputs = std::make_shared<one::TensorTuple>(0);
   return RunBackward(outputs, *inputs, *gradients, retain_graph, create_graph);
 }
 
-Maybe<one::TensorList> Grad(const one::TensorList& outputs, const one::TensorList& inputs,
-                            const one::TensorList& out_grads, bool retain_graph,
-                            bool create_graph) {
+Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorTuple& inputs,
+                             const one::TensorTuple& out_grads, bool retain_graph,
+                             bool create_graph) {
   if (inputs.empty()) { return Backward(outputs, out_grads, retain_graph, create_graph); }
 
-  std::shared_ptr<one::TensorList> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
+  std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
   return RunBackward(outputs, inputs, *gradients, retain_graph, create_graph);
 }
 
@@ -68,18 +70,18 @@ Maybe<one::TensorList> Grad(const one::TensorList& outputs, const one::TensorLis
 
 namespace {
 
-std::shared_ptr<oneflow::one::TensorList> BackwardOrThrow(
-    const std::shared_ptr<oneflow::one::TensorList>& outputs,
-    const std::shared_ptr<oneflow::one::TensorList>& out_grads, bool retain_graph,
+std::shared_ptr<oneflow::one::TensorTuple> BackwardOrThrow(
+    const std::shared_ptr<oneflow::one::TensorTuple>& outputs,
+    const std::shared_ptr<oneflow::one::TensorTuple>& out_grads, bool retain_graph,
     bool create_graph) {
   return oneflow::autograd::Backward(*outputs, *out_grads.get(), retain_graph, create_graph)
       .GetPtrOrThrow();
 }
 
-std::shared_ptr<oneflow::one::TensorList> GradOrThrow(
-    const std::shared_ptr<oneflow::one::TensorList>& outputs,
-    const std::shared_ptr<oneflow::one::TensorList>& inputs,
-    const std::shared_ptr<oneflow::one::TensorList>& out_grads, bool retain_graph,
+std::shared_ptr<oneflow::one::TensorTuple> GradOrThrow(
+    const std::shared_ptr<oneflow::one::TensorTuple>& outputs,
+    const std::shared_ptr<oneflow::one::TensorTuple>& inputs,
+    const std::shared_ptr<oneflow::one::TensorTuple>& out_grads, bool retain_graph,
     bool create_graph) {
   return oneflow::autograd::Grad(*outputs, *inputs, *out_grads.get(), retain_graph, create_graph)
       .GetPtrOrThrow();

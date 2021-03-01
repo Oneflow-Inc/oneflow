@@ -20,16 +20,21 @@ limitations under the License.
 #include <memory>
 #include <vector>
 #include "oneflow/core/autograd/autograd_engine.h"
-#include "oneflow/core/framework/tensor_list.h"
 
 namespace oneflow {
+
+namespace one {
+class TensorTuple;
+}  // namespace one
+
 namespace autograd {
 
-Maybe<one::TensorList> Backward(const one::TensorList& outputs, const one::TensorList& out_grads,
-                                bool retain_graph, bool create_graph);
+Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::TensorTuple& out_grads,
+                                 bool retain_graph, bool create_graph);
 
-Maybe<one::TensorList> Grad(const one::TensorList& outputs, const one::TensorList& inputs,
-                            const one::TensorList& out_grads, bool retain_graph, bool create_graph);
+Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorTuple& inputs,
+                             const one::TensorTuple& out_grads, bool retain_graph,
+                             bool create_graph);
 
 }  // namespace autograd
 }  // namespace oneflow
