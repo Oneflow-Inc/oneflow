@@ -44,7 +44,7 @@ class FunctionNode {
 
   // Getters
   virtual std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>> GetNextFunctions() = 0;
-  virtual const std::string& GetOpName() = 0;
+  virtual const std::string& GetOpName() const = 0;
 
  protected:
   FunctionNode() = default;
@@ -61,7 +61,7 @@ class AutogradEngine {
                                                      bool create_graph) = 0;
   // Builds FunctionNode, binding to all `outputs_` tensors and saving in AutogradEngine
   // TODO: add parameters for `backward_fn`
-  virtual const std::shared_ptr<const FunctionNode>& AddBackwardFuncPtr(
+  virtual const std::shared_ptr<FunctionNode>& AddBackwardFuncPtr(
       const std::shared_ptr<const std::function<void()>>& backward_fn, const TensorList& inputs,
       const TensorList& outputs) = 0;
 
@@ -81,7 +81,7 @@ class StackFunctionNode final : public FunctionNode {
   std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>> GetNextFunctions() override {
     return next_functions_;
   }
-  const std::string& GetOpName() override { return op_name_; }
+  const std::string& GetOpName() const override { return op_name_; }
 
   void ReleaseOutTensorArgs() override;
   void ReleaseGraph() override;
@@ -111,7 +111,7 @@ class StackAutogradEngine final : public AutogradEngine {
   Maybe<std::shared_ptr<TensorList>> Execute(const TensorList& outputs, const TensorList& inputs,
                                              const TensorList& out_grads, bool retain_graph,
                                              bool create_graph) override;
-  const std::shared_ptr<const FunctionNode>& AddBackwardFuncPtr(
+  const std::shared_ptr<FunctionNode>& AddBackwardFuncPtr(
       const std::shared_ptr<const std::function<void()>>& backward_fn, const TensorList& inputs,
       const TensorList& outputs) override;
 

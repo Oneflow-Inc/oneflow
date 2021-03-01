@@ -25,14 +25,11 @@ limitations under the License.
 namespace oneflow {
 namespace autograd {
 
-Maybe<std::shared_ptr<one::TensorList>> Backward(const std::shared_ptr<one::TensorList>& outputs,
-                                                 const std::shared_ptr<one::TensorList>& out_grads,
-                                                 bool retain_graph, bool create_graph);
+Maybe<one::TensorList> Backward(const one::TensorList& outputs, const one::TensorList& out_grads,
+                                bool retain_graph, bool create_graph);
 
-Maybe<std::shared_ptr<one::TensorList>> Grad(const std::shared_ptr<one::TensorList>& outputs,
-                                             const std::shared_ptr<one::TensorList>& inputs,
-                                             const std::shared_ptr<one::TensorList>& out_grads,
-                                             bool retain_graph, bool create_graph);
+Maybe<one::TensorList> Grad(const one::TensorList& outputs, const one::TensorList& inputs,
+                            const one::TensorList& out_grads, bool retain_graph, bool create_graph);
 
 }  // namespace autograd
 }  // namespace oneflow
