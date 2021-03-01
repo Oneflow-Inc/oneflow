@@ -18,20 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
-#include "oneflow/core/graph/foreign_input_compute_task_node.h"
-#include "oneflow/core/graph/foreign_output_compute_task_node.h"
-#include "oneflow/core/graph/callback_notify_compute_task_node.h"
-#include "oneflow/core/graph/reentrant_lock_compute_task_node.h"
-#include "oneflow/core/graph/src_subset_tick_compute_task_node.h"
-#include "oneflow/core/graph/dst_subset_tick_compute_task_node.h"
-#include "oneflow/core/graph/source_tick_compute_task_node.h"
-#include "oneflow/core/graph/tick_compute_task_node.h"
-#include "oneflow/core/graph/device_tick_compute_task_node.h"
-#include "oneflow/core/graph/acc_tick_compute_task_node.h"
-#include "oneflow/core/graph/case_compute_task_node.h"
-#include "oneflow/core/graph/esac_compute_task_node.h"
-#include "oneflow/core/graph/decode_h2d_compute_task_node.h"
 
 namespace oneflow {
 
@@ -119,71 +105,39 @@ class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
 
 BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src, const LogicalNode* dst);
 
-#define OVERRIDE_PURE_VIRTUAL_METHOD()   \
-  std::string TypeName() const override; \
-  CompTaskNode* NewCompTaskNode() const override;
+#define DECLARE_LOGICAL_NODE(name)                     \
+  class name##LogicalNode final : public LogicalNode { \
+   public:                                             \
+    OF_DISALLOW_COPY_AND_MOVE(name##LogicalNode);      \
+    name##LogicalNode() = default;                     \
+    ~name##LogicalNode() = default;                    \
+    std::string TypeName() const override;             \
+    CompTaskNode* NewCompTaskNode() const override;    \
+  };
 
-#define LOGICAL_NODE_BOILERPLATE(class_name) \
-  OF_DISALLOW_COPY_AND_MOVE(class_name);     \
-  class_name() = default;                    \
-  ~class_name() = default;                   \
-  OVERRIDE_PURE_VIRTUAL_METHOD();
+DECLARE_LOGICAL_NODE(NormalForward);
 
-class ForwardLogicalNode : public LogicalNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ForwardLogicalNode);
-  ForwardLogicalNode() = default;
-  virtual ~ForwardLogicalNode() = default;
-};
+#define LOGICAL_TYPE_SEQ                 \
+  OF_PP_MAKE_TUPLE_SEQ(WaitAndSendIds)   \
+  OF_PP_MAKE_TUPLE_SEQ(ForeignInput)     \
+  OF_PP_MAKE_TUPLE_SEQ(ForeignOutput)    \
+  OF_PP_MAKE_TUPLE_SEQ(CallbackNotify)   \
+  OF_PP_MAKE_TUPLE_SEQ(ReentrantLock)    \
+  OF_PP_MAKE_TUPLE_SEQ(SrcSubsetTick)    \
+  OF_PP_MAKE_TUPLE_SEQ(DstSubsetTick)    \
+  OF_PP_MAKE_TUPLE_SEQ(SourceTick)       \
+  OF_PP_MAKE_TUPLE_SEQ(AccTick)          \
+  OF_PP_MAKE_TUPLE_SEQ(Tick)             \
+  OF_PP_MAKE_TUPLE_SEQ(DeviceTick)       \
+  OF_PP_MAKE_TUPLE_SEQ(Case)             \
+  OF_PP_MAKE_TUPLE_SEQ(Esac)             \
+  OF_PP_MAKE_TUPLE_SEQ(DecodeH2D)        \
+  OF_PP_MAKE_TUPLE_SEQ(DistributeConcat) \
+  OF_PP_MAKE_TUPLE_SEQ(DistributeSplit)  \
+  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom)     \
+  OF_PP_MAKE_TUPLE_SEQ(Print)
 
-class NormalForwardLogicalNode final : public ForwardLogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(NormalForwardLogicalNode);
-
- private:
-};
-
-#define LOGICAL_NODE_WITH_TASK_TYPE_BOILERPLATE(name)     \
- public:                                                  \
-  OF_DISALLOW_COPY_AND_MOVE(name##LogicalNode);           \
-  name##LogicalNode() = default;                          \
-  ~name##LogicalNode() = default;                         \
-                                                          \
-  std::string TypeName() const override { return #name; } \
-  CompTaskNode* NewCompTaskNode() const override { return new name##CompTaskNode; }
-
-#define DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(name) \
-  class name##LogicalNode final : public ForwardLogicalNode {               \
-    LOGICAL_NODE_WITH_TASK_TYPE_BOILERPLATE(name)                           \
-                                                                            \
-   private:                                                                 \
-  }
-
-#define DECLARE_NAIVE_LOGICAL_NODE(name)  \
-  class name final : public LogicalNode { \
-   public:                                \
-    LOGICAL_NODE_BOILERPLATE(name);       \
-  }
-
-DECLARE_NAIVE_LOGICAL_NODE(DecodeRandomLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(DistributeConcatLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(DistributeSplitLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
-
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(WaitAndSendIds);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(ForeignInput);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(ForeignOutput);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(CallbackNotify);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(ReentrantLock);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(SrcSubsetTick);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(DstSubsetTick);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(SourceTick);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(AccTick);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(Tick);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(DeviceTick);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(Case);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(Esac);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_COMP_TASK_NODE_TYPE(DecodeH2D);
+OF_PP_FOR_EACH_TUPLE(DECLARE_LOGICAL_NODE, LOGICAL_TYPE_SEQ);
 
 class UserOpCompTaskNodeCreator {
  public:

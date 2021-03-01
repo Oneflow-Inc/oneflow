@@ -19,6 +19,20 @@ limitations under the License.
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
 #include "oneflow/core/graph/distribute_concat_compute_task_node.h"
 #include "oneflow/core/graph/distribute_split_compute_task_node.h"
+#include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
+#include "oneflow/core/graph/foreign_input_compute_task_node.h"
+#include "oneflow/core/graph/foreign_output_compute_task_node.h"
+#include "oneflow/core/graph/callback_notify_compute_task_node.h"
+#include "oneflow/core/graph/reentrant_lock_compute_task_node.h"
+#include "oneflow/core/graph/src_subset_tick_compute_task_node.h"
+#include "oneflow/core/graph/dst_subset_tick_compute_task_node.h"
+#include "oneflow/core/graph/source_tick_compute_task_node.h"
+#include "oneflow/core/graph/tick_compute_task_node.h"
+#include "oneflow/core/graph/device_tick_compute_task_node.h"
+#include "oneflow/core/graph/acc_tick_compute_task_node.h"
+#include "oneflow/core/graph/case_compute_task_node.h"
+#include "oneflow/core/graph/esac_compute_task_node.h"
+#include "oneflow/core/graph/decode_h2d_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/framework/framework.h"
@@ -256,12 +270,6 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("DistributeSplit"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
                               "DecodeH2D",
                               &TaskGraph::BldSubTskGphNormalForwardToDecodeH2D);
-
-#define LOGICAL_TYPE_SEQ                 \
-  OF_PP_MAKE_TUPLE_SEQ(DistributeConcat) \
-  OF_PP_MAKE_TUPLE_SEQ(DistributeSplit)  \
-  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom)     \
-  OF_PP_MAKE_TUPLE_SEQ(Print)
 
 #define DEFINE_VIRTUAL_METHOD(x)                              \
   std::string x##LogicalNode::TypeName() const { return #x; } \
