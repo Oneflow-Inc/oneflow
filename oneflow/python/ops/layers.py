@@ -1377,7 +1377,7 @@ def batch_normalization_add_relu(
             dtype=params_dtype,
             initializer=moving_variance_initializer or flow.ones_initializer(),
             trainable=False,
-            distribute=oneflow_api.distribute.broadcast(),
+             =oneflow_api.distribute.broadcast(),
             reuse=False,
         )
 
