@@ -204,9 +204,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<cfg::ParallelConf>& in_parallel_conf,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
           bn_in_op2blob_object,
-      const std::function<std::shared_ptr<ParallelDesc>(
-          const std::shared_ptr<InstructionsBuilder>&, const std::shared_ptr<ParallelDesc>&,
-          const std::string&)>& TryReplaceDeviceTag);
+      const std::function<std::shared_ptr<ParallelDesc>(const std::shared_ptr<InstructionsBuilder>&,
+                                                        const std::shared_ptr<ParallelDesc>&,
+                                                        const std::string&)>& TryReplaceDeviceTag);
 
   Maybe<void> NoBoxingCudaH2DStatelessCall(
       const std::shared_ptr<cfg::OpAttribute>& op_attribute,
@@ -345,8 +345,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
           bn_in_op2blob_object,
       const std::function<Maybe<compatible_py::BlobObject>(
           const std::shared_ptr<compatible_py::BlobObject>&,
-          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&
-          GetDelegateBlobObject);
+          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& GetDelegateBlobObject);
 
   Maybe<void> _StatelessCall(
       const std::string& stream_tag, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
@@ -356,8 +355,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
           bn_in_op2blob_object,
       const std::function<Maybe<compatible_py::BlobObject>(
           const std::shared_ptr<compatible_py::BlobObject>&,
-          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&
-          GetDelegateBlobObject);
+          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& GetDelegateBlobObject);
 
   Maybe<void> _FetchBlob(const std::string& instruction_name,
                          const std::shared_ptr<compatible_py::BlobObject>& blob_object,
