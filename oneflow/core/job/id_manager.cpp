@@ -20,6 +20,29 @@ limitations under the License.
 
 namespace oneflow {
 
+int64_t IDMgr::CpuMemZoneId() const {
+  MemZoneId cpu_mem_zone_id(DeviceType::kCPU, 0);
+  return SerializeMemZoneIdToInt64(cpu_mem_zone_id);
+}
+bool IDMgr::IsCpuMemZone(int64_t mem_zone_id) const {
+  MemZoneId cpu_mem_zone_id = DeserializeMemZoneIdFromInt64(mem_zone_id);
+  return cpu_mem_zone_id.device_type() == DeviceType::kCPU;
+}
+bool IDMgr::IsGpuMemZone(int64_t mem_zone_id) const {
+  MemZoneId gpu_mem_zone_id = DeserializeMemZoneIdFromInt64(mem_zone_id);
+  return gpu_mem_zone_id.device_type() == DeviceType::kGPU;
+}
+int64_t IDMgr::GpuMemZoneId(int64_t dev_phy_id) const {
+  MemZoneId gpu_mem_zone_id(DeviceType::kGPU, dev_phy_id);
+  return SerializeMemZoneIdToInt64(gpu_mem_zone_id);
+}
+int64_t IDMgr::GetGpuPhyIdFromMemZoneId(int64_t mem_zone_id) const {
+  CHECK_LT(mem_zone_id, gpu_device_num_);
+  return mem_zone_id;
+  MemZoneId gpu_mem_zone_id = DeserializeMemZoneIdFromInt64(mem_zone_id);
+  return static_cast<int64_t>(gpu_mem_zone_id.device_index());
+}
+
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
   return DeserializeStreamIdFromInt64(thrd_id).device_id().device_type();
 }
