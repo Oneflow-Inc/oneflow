@@ -67,6 +67,7 @@ message KernelConf {
   optional bool need_do_tensor_list = 5 [default = false];
   optional bool need_do_shape = 6 [default = false];
   required DTypeSignature dtype_signature = 7;
+  optional ParallelContext parallel_ctx = 8;
 
   oneof kernel_type {
     UserKernelConf user_conf = 100;

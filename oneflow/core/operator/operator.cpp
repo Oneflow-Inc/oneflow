@@ -631,6 +631,7 @@ void Operator::GenKernelConf(
     }
     kernel_conf->set_data_type(data_type);
   }
+  if (parallel_ctx != nullptr) { *(kernel_conf->mutable_parallel_ctx()) = *parallel_ctx; }
 
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
