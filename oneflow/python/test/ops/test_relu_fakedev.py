@@ -23,22 +23,22 @@ config = flow.function_config()
 
 
 def make_job(input_shape, dtype=flow.float32):
-
     @flow.global_function(config)
-    def relu_job(x:tp.Numpy.Placeholder(input_shape)) -> tp.Numpy:
+    def relu_job(x: tp.Numpy.Placeholder(input_shape)) -> tp.Numpy:
         with flow.scope.placement("fakedevice", "0:0"):
             return flow.math.relu(x)
 
     return relu_job
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestRelu(flow.unittest.TestCase):
     def test_body(test_case):
-        x = np.random.random((2,3)).astype(np.float32)
+        x = np.random.random((2, 3)).astype(np.float32)
         relu_fakedev_job = make_job(x.shape, dtype=flow.float32)
         y = relu_fakedev_job(x)
         print(y)
-        
+
 
 if __name__ == "__main__":
     unittest.main()
