@@ -33,7 +33,7 @@ namespace {
 Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
                                              const one::TensorTuple& out_grads) {
   auto gradients = std::make_shared<one::TensorTuple>(out_grads.size());
-  // TODO: check all out_grads and push default value for empty item
+  TODO();  // Wang Yinggang. Checks all out_grads and push default value for empty item
   return gradients;
 }
 
@@ -43,8 +43,8 @@ Maybe<one::TensorTuple> RunBackward(const one::TensorTuple& outputs,
                                     bool create_graph) {
   if (create_graph) { retain_graph = true; }
   std::shared_ptr<one::TensorTuple> res_grads;
-  // TODO: check could run backward or not
-  // TODO: calls `AutogradEngine.Execute()` to do backward
+  TODO();  // Wang Yinggang. Checks could run backward or not
+  TODO();  // Wang Yinggang. Calls `AutogradEngine.Execute()` to do backward
   return res_grads;
 }
 
