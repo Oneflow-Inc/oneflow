@@ -562,6 +562,7 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
       const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
       if (calc >= available) {
         const auto* id_mgr = Global<IDMgr>::Get();
+        // TODO(Liang Depeng): remove id_mgr usage
         const char* device_tag = JUST(DeviceTag4DeviceType(
             id_mgr->IsGpuMemZone(mem_zone_id) ? DeviceType::kGPU : DeviceType::kCPU));
         return Error::MemoryZoneOutOfMemoryError(machine_id, mem_zone_id, calc, available,

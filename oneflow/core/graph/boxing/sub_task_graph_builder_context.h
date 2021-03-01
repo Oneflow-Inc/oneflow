@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_CONTEXT_H_
 #define ONEFLOW_CORE_GRAPH_BOXING_SUB_TASK_GRAPH_BUILDER_CONTEXT_H_
 
+#include "oneflow/core/common/id_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/memory/memory_allocator.h"
@@ -32,9 +33,9 @@ class SubTskGphBuilderCtx final {
   virtual ~SubTskGphBuilderCtx() = default;
 
   virtual TaskGraph* task_graph();
-  TaskNode* GetProxyNode(TaskNode* src_node, int64_t src_mem_zone_id, int64_t dst_machine_id,
-                         int64_t dst_mem_zone_id);
-  TaskNode* GetProxyNode(TaskNode* src_node, int64_t src_mem_zone_id,
+  TaskNode* GetProxyNode(TaskNode* src_node, MemZoneId src_mem_zone_id, int64_t dst_machine_id,
+                         MemZoneId dst_mem_zone_id);
+  TaskNode* GetProxyNode(TaskNode* src_node, MemZoneId src_mem_zone_id,
                          const ParallelDesc& dst_parallel_desc, const int64_t dst_parallel_id);
   template<typename T1, typename T2>
   void ConnectAll121(const std::vector<T1*>& src_nodes, const std::vector<T2*>& dst_nodes) {
@@ -46,7 +47,7 @@ class SubTskGphBuilderCtx final {
 
  private:
   TaskGraph* task_graph_;
-  HashMap<TaskNode*, HashMap<std::pair<int64_t, int64_t>, TaskNode*>> node2proxies_;
+  HashMap<TaskNode*, HashMap<std::pair<int64_t, MemZoneId>, TaskNode*>> node2proxies_;
 };
 
 }  // namespace oneflow
