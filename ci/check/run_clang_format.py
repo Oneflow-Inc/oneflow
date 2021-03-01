@@ -90,7 +90,6 @@ if __name__ == "__main__":
         action="store_true",
         help="If specified, only print errors",
     )
-    print("RUNNING CLANG-FMT")
     args = parser.parse_args()
     exts = [".h", ".cc", ".cpp", ".cu", ".cuh"]
     files = filter(
@@ -99,24 +98,19 @@ if __name__ == "__main__":
     )
     loop = asyncio.get_event_loop()
     files = [str(f) for f in files]
-    print(files)
     clang_fmt_args = "-dry-run --Werror"
     if args.fix:
-        clang_fmt_args = ""
+        clang_fmt_args = "-i"
     results = []
-    # for chunk in chunks(list(files), multiprocessing.cpu_count()):
-    #     promises = [
-    #         run_command(f"{args.clang_format_binary} {clang_fmt_args} {f}")
-    #         for f in chunk
-    #     ]
-    #     chunk_results = loop.run_until_complete(asyncio.gather(*promises))
-    #     results.append(chunk_results)
-    # print(len(results), len(files))
-    # assert len(results) == len(files)
-    # for (r, f) in zip(results, files):
-    #     if r != 0:
-    #         print(f)
-    fs = " ".join(files)
-    loop.run_until_complete(
-        run_command(f"{args.clang_format_binary} {clang_fmt_args} {fs}")
-    )
+    for chunk in chunks(files, multiprocessing.cpu_count()):
+        promises = [
+            run_command(f"{args.clang_format_binary} {clang_fmt_args} {f}")
+            for f in chunk
+        ]
+        chunk_results = loop.run_until_complete(asyncio.gather(*promises))
+        results.extend(chunk_results)
+    assert len(results) == len(files)
+    for (r, f) in zip(results, files):
+        if r != 0:
+            print("[fail]", f)
+    assert sum(results) == 0
