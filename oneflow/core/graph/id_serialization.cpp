@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/graph/id_serialization.h"
 #include <climits>
-#include "oneflow/core/common/id_util.h"
 
 namespace oneflow {
 
