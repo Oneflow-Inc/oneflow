@@ -31,7 +31,6 @@ def convert_to_onnx_and_check(
     ort_optimize=True,
     opset=None,
 ):
-    check_point = flow.train.CheckPoint()
     if explicit_init:
         # it is a trick to keep check_point.save() from hanging when there is no variable
         @flow.global_function()
@@ -42,10 +41,8 @@ def convert_to_onnx_and_check(
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(),
             )
-
-        check_point.init()
     flow_weight_dir = tempfile.TemporaryDirectory()
-    check_point.save(flow_weight_dir.name)
+    flow.checkpoint.save(flow_weight_dir.name)
     # TODO(daquexian): a more elegant way?
     while not os.path.exists(os.path.join(flow_weight_dir.name, "snapshot_done")):
         pass

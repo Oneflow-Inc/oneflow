@@ -17,8 +17,9 @@ import torchvision
 
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
+from absl import app
+from absl.testing import absltest
 
-@unittest.skipIf(True, "The error of mobilenet is large")
 def test_mobilenet_v2(test_case):
     load_pytorch_module_and_check(
         test_case,
@@ -26,4 +27,8 @@ def test_mobilenet_v2(test_case):
         input_size=(1, 3, 224, 224),
         input_min_val=0,
         input_max_val=1,
+        train_flag=False
     )
+
+test_case = absltest.TestCase
+test_mobilenet_v2(test_case)

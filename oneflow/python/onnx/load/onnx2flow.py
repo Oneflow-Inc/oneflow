@@ -119,13 +119,13 @@ def from_onnx(
 
 
 @oneflow_export("from_pytorch")
-def from_pytorch(torch_model, inputs, model_weight_dir="/tmp", do_onnxsim=True):
+def from_pytorch(torch_model, inputs, model_weight_dir="/tmp", do_onnxsim=True, train_flag=True):
     if type(inputs) is not list:
         inputs = [inputs]
     input_names = ["x_{}".format(i) for i in range(len(inputs))]
 
     torch_model = torch_model.to("cpu")
-    
+
     f = io.BytesIO()
     torch.onnx.export(
         torch_model,
@@ -133,6 +133,7 @@ def from_pytorch(torch_model, inputs, model_weight_dir="/tmp", do_onnxsim=True):
         f,
         input_names=input_names,
         opset_version=12,
+        training=train_flag
     )
     model_str = f.getvalue()
     if not os.path.exists('./temp_onnx'):
