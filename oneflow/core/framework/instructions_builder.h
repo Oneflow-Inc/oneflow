@@ -268,6 +268,23 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<void> _DeleteObject(compatible_py::Object* blob_object);
 
+  Maybe<void> _StatefulCallOpKernel(
+      const std::string& instr_name, const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
+      const std::shared_ptr<compatible_py::OpKernelObject> opkernel_object,
+      const std::shared_ptr<OpNodeSignatureDesc> op_node_signature_sym,
+      const std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
+          const_input_operand_blob_objects,
+      const std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
+          mutable_input_operand_blob_objects,
+      const std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
+          mut1_operand_blob_objects,
+      const std::vector<
+          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
+          mut2_operand_blob_objects);
+
   Maybe<std::vector<
       std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
   GetConstInputOperandBlobObjects(
@@ -301,23 +318,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
           bn_in_op2blob_object);
-
-  Maybe<void> _StatefulCallOpKernel(
-      const std::string& instr_name, const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
-      const std::shared_ptr<compatible_py::OpKernelObject> opkernel_object,
-      const std::shared_ptr<OpNodeSignatureDesc> op_node_signature_sym,
-      const std::vector<
-          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
-          const_input_operand_blob_objects,
-      const std::vector<
-          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
-          mutable_input_operand_blob_objects,
-      const std::vector<
-          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
-          mut1_operand_blob_objects,
-      const std::vector<
-          std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
-          mut2_operand_blob_objects);
 
   Maybe<void> _StatelessCallOpKernel(
       const std::string& instr_name, const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
