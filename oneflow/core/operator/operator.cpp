@@ -139,7 +139,10 @@ Maybe<void> Operator::FillBlobParallelDesc(
   CHECK_OR_RETURN(!bn2parallel_desc_);
   bn2parallel_desc_.reset(new HashMap<std::string, std::shared_ptr<const ParallelDesc>>);
   for (const auto& bn : input_output_bns()) {
-    CHECK(bn2parallel_desc_->emplace(bn, JUST(ParallelDesc4Bn(bn))).second);
+    auto blob_parallel_desc = JUST(ParallelDesc4Bn(bn));
+    (*op_attribute_.mutable_parallel_conf_signature()->mutable_bn_in_op2parallel_conf())[bn] =
+        blob_parallel_desc->parallel_conf();
+    CHECK(bn2parallel_desc_->emplace(bn, blob_parallel_desc).second);
   }
   return Maybe<void>::Ok();
 }
@@ -153,6 +156,8 @@ Maybe<void> Operator::InferBlobParallelDesc() {
 Maybe<void> Operator::FillOpParallelDesc(const ParallelDesc& parallel_desc) {
   CHECK_OR_RETURN(!op_parallel_desc_);
   op_parallel_desc_.reset(new ParallelDesc(parallel_desc));
+  *op_attribute_.mutable_parallel_conf_signature()->mutable_op_parallel_conf() =
+      op_parallel_desc_->parallel_conf();
   return Maybe<void>::Ok();
 }
 

@@ -55,6 +55,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/operator/arg_modifier_signature.proto
       oneflow/core/job/blob_lifetime_signature.proto
       oneflow/core/job/parallel_signature.proto
+      oneflow/core/job/parallel_conf_signature.proto
       oneflow/core/eager/eager_instruction.proto
       oneflow/core/job/cluster_instruction.proto
       oneflow/core/job/initializer_conf.proto
@@ -110,6 +111,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/operator/op_attribute.proto
       oneflow/core/operator/op_node_signature.proto
       oneflow/core/job/parallel_signature.proto
+      oneflow/core/job/parallel_conf_signature.proto
       oneflow/core/job/initializer_conf.proto
       oneflow/core/job/regularizer_conf.proto
       oneflow/core/job/learning_rate_schedule_conf.proto
