@@ -117,10 +117,6 @@ MakeBn2BlobObjectMap(const BuiltinOpExpr* op_expr, const TensorList& inputs,
     const auto& ibn = op_expr->indexed_ibns().at(i);
     bn2blob_object->emplace(ibn, dynamic_cast<DeterminedTensor*>(inputs[i].get())->blob_object());
   }
-  for (int i = 0; i < outputs.size(); ++i) {
-    const auto& obn = op_expr->indexed_obns().at(i);
-    bn2blob_object->emplace(obn, dynamic_cast<DeterminedTensor*>(outputs[i].get())->blob_object());
-  }
   return std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>(
       bn2blob_object);
 }
@@ -132,6 +128,10 @@ static void NaiveInterpret(const BuiltinOpExpr* op_expr, const TensorList& input
   auto BuildInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
     auto bn2blob_object = MakeBn2BlobObjectMap(op_expr, inputs, outputs);
     builder->NoBoxingStatelessCall(op_attribute, parallel_conf, bn2blob_object);
+    for (int i = 0; i < outputs.size(); ++i) {
+      const std::string& obn = op_expr->indexed_obns().at(i);
+      dynamic_cast<DeterminedTensor*>(outputs[i].get())->set_blob_object(bn2blob_object->at(obn));
+    }
   };
   void(LogicalRun(BuildInstruction).GetOrThrow());
 }
@@ -199,10 +199,13 @@ BuildMirroredCastInstruction(const BuiltinOpExpr* op_expr, const TensorList& inp
     const auto& op_arg_parallel_attr =
         compatible_py::GetOpArgParallelAttribute(parallel_desc_symbol, proto_op_attribute, "out")
             .GetOrThrow();
-    auto out_blob_object = builder->MakeReferenceBlobObject(
-        in_blob_object,
-        std::make_shared<compatible_py::OpArgParallelAttribute>(op_arg_parallel_attr));
-    *((*bn2blob_object)["out"]) = out_blob_object.GetOrThrow();
+    auto out_blob_object =
+        builder
+            ->MakeReferenceBlobObject(
+                in_blob_object,
+                std::make_shared<compatible_py::OpArgParallelAttribute>(op_arg_parallel_attr))
+            .GetPtrOrThrow();
+    dynamic_cast<DeterminedTensor*>(outputs[0].get())->set_blob_object(out_blob_object);
   };
   return BuildInstruction;
 }
@@ -250,7 +253,8 @@ BuildDistributeSplitOrCloneInstruction(const BuiltinOpExpr* op_expr, const Tenso
     auto physical_out_blob_objects =
         builder->UnpackLogicalBlobToPhysicalBlobs(logical_in_blob_object).GetOrThrow();
     for (int i = 0; i < physical_out_blob_objects.size(); ++i) {
-      *((*bn2blob_object)["out_" + std::to_string(i)]) = *(physical_out_blob_objects[i]);
+      dynamic_cast<DeterminedTensor*>(outputs[i].get())
+          ->set_blob_object(physical_out_blob_objects[i]);
     }
   };
   return BuildInstruction;
@@ -299,7 +303,7 @@ BuildDistributeConcatAndAddInstruction(const BuiltinOpExpr* op_expr, const Tenso
                                         ->PackPhysicalBlobsToLogicalBlob(
                                             in_blob_objects, op_arg_parallel_attr, op_arg_blob_attr)
                                         .GetPtrOrThrow();
-    *((*bn2blob_object)["out"]) = *physical_out_blob_object;
+    dynamic_cast<DeterminedTensor*>(outputs[0].get())->set_blob_object(physical_out_blob_object);
   };
   return BuildInstruction;
 }
