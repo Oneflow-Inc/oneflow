@@ -82,6 +82,7 @@ void LazyInterpreter::Apply_(const BuiltinOpExpr* op_expr, const TensorList& inp
 void LazyInterpreter::Apply_(const FunctionOpExpr* op_expr, const TensorList& inputs,
                              TensorList& outputs, const OpExprInterpState* state) {
   // TODO
+  UNIMPLEMENTED();
 }
 
 void EagerInterpreter::Apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
@@ -174,9 +175,11 @@ void EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const TensorList& i
   if (mirrored_sig_map.at("out").has_mirrored_parallel()) {
     // TODO
     // outputs[0].reset(new EagerMirroredTensor(...));
+    UNIMPLEMENTED();
   } else {
     // TODO
     // outputs[0].reset(new EagerConsistentTensor(...));
+    UNIMPLEMENTED();
   }
   OpInterpUtil::InitVariableOutputBlob(session, outputs[0], proto_op_attribute);
 }
@@ -318,11 +321,13 @@ void EagerInterpreter::Apply_(const DistributeAddOpExpr* op_expr, const TensorLi
 void EagerInterpreter::Apply_(const FunctionOpExpr* op_expr, const TensorList& inputs,
                               TensorList& outputs, const OpExprInterpState* state) {
   // TODO(hjchen2)
+  UNIMPLEMENTED();
 }
 
 void AutogradInterpreter::Apply(const OpExpr* op_expr, const TensorList& inputs,
                                 TensorList& outputs, const OpExprInterpState* state) {
   // TODO(hjchen2)
+  UNIMPLEMENTED();
 }
 
 }  // namespace one
