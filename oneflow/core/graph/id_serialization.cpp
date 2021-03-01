@@ -69,9 +69,9 @@ StreamId DeserializeStreamIdFromInt64(int64_t stream_id_val) {
                          >> stream_id_const::kDeviceIndexShift;
   int64_t stream_index = (stream_id_val & stream_id_const::kStreamIndexInt64Mask);
 
-  DeviceId device_id{static_cast<rank_t>(rank), static_cast<DeviceType>(device_type),
-                     static_cast<device_index_t>(device_index)};
-  return StreamId{device_id, static_cast<stream_index_t>(stream_index)};
+  DeviceId device_id{static_cast<DeviceId::rank_t>(rank), static_cast<DeviceType>(device_type),
+                     static_cast<DeviceId::device_index_t>(device_index)};
+  return StreamId{device_id, static_cast<StreamId::stream_index_t>(stream_index)};
 }
 
 namespace task_id_const {
@@ -114,10 +114,10 @@ TaskId DeserializeTaskIdFromInt64(int64_t task_id_val) {
   int64_t stream_index =
       (task_id_val & task_id_const::kStreamIndexInt64Mask) >> task_id_const::kStreamIndexShift;
   int64_t task_index = task_id_val & task_id_const::kTaskIndexInt64Mask;
-  DeviceId device_id{static_cast<rank_t>(rank), static_cast<DeviceType>(device_type),
-                     static_cast<device_index_t>(device_index)};
-  StreamId stream_id{device_id, static_cast<stream_index_t>(stream_index)};
-  return TaskId{stream_id, static_cast<task_index_t>(task_index)};
+  DeviceId device_id{static_cast<DeviceId::rank_t>(rank), static_cast<DeviceType>(device_type),
+                     static_cast<DeviceId::device_index_t>(device_index)};
+  StreamId stream_id{device_id, static_cast<StreamId::stream_index_t>(stream_index)};
+  return TaskId{stream_id, static_cast<TaskId::task_index_t>(task_index)};
 }
 
 }  // namespace oneflow

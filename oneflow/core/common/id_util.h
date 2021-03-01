@@ -31,14 +31,11 @@ namespace oneflow {
 // |                                      TaskId                                          |
 // | ----------------------------------- 64 bit ----------------------------------------- |
 
-using rank_t = uint32_t;
-using device_index_t = uint32_t;
-using stream_index_t = uint32_t;
-using task_index_t = uint32_t;
-constexpr device_index_t kCPUDeviceIndex = 0;
-
 class DeviceId {
  public:
+  using rank_t = uint32_t;
+  using device_index_t = uint32_t;
+
   constexpr static size_t kRankBits = 19;
   constexpr static size_t kDeviceTypeBits = 5;
   constexpr static size_t kDeviceIndexBits = 7;
@@ -46,6 +43,7 @@ class DeviceId {
   constexpr static size_t kMaxDeviceTypeVal = (size_t{1} << kDeviceTypeBits) - size_t{1};
   constexpr static device_index_t kMaxDeviceIndex =
       (device_index_t{1} << kDeviceIndexBits) - device_index_t{1};
+  constexpr static device_index_t kCPUDeviceIndex = 0;
 
   DeviceId(rank_t rank, DeviceType device_type, device_index_t device_index)
       : rank_(rank), device_type_(device_type), device_index_(device_index) {
@@ -75,6 +73,8 @@ class DeviceId {
 
 class StreamId {
  public:
+  using stream_index_t = uint32_t;
+
   constexpr static size_t kStreamIndexBits = 12;
   constexpr static stream_index_t kMaxStreamIndex =
       (stream_index_t{1} << kStreamIndexBits) - stream_index_t{1};
@@ -102,6 +102,8 @@ class StreamId {
 
 class TaskId {
  public:
+  using task_index_t = uint32_t;
+
   const static size_t kTaskIndexBits = 21;
   constexpr static task_index_t kMaxTaskIndex =
       (task_index_t{1} << kTaskIndexBits) - task_index_t{1};

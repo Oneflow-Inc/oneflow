@@ -30,19 +30,20 @@ CPUStreamIndexGenerator::CPUStreamIndexGenerator()
   next_stream_index_++;
 }
 
-stream_index_t CPUStreamIndexGenerator::GenerateComputeStreamIndex() {
+StreamIndexGenerator::stream_index_t CPUStreamIndexGenerator::GenerateComputeStreamIndex() {
   return compute_stream_index_begin_ + (compute_stream_index_counter_++ % compute_stream_num_);
 }
 
-stream_index_t CPUStreamIndexGenerator::GenerateCommNetStreamIndex() {
+StreamIndexGenerator::stream_index_t CPUStreamIndexGenerator::GenerateCommNetStreamIndex() {
   return comm_net_stream_index_;
 }
 
-stream_index_t CPUStreamIndexGenerator::GenerateTickTockStreamIndex() {
+StreamIndexGenerator::stream_index_t CPUStreamIndexGenerator::GenerateTickTockStreamIndex() {
   return tick_tock_stream_index_;
 }
 
-stream_index_t CPUStreamIndexGenerator::GenerateIndependentTaskStreamIndex(TaskType task_type) {
+StreamIndexGenerator::stream_index_t CPUStreamIndexGenerator::GenerateIndependentTaskStreamIndex(
+    TaskType task_type) {
   auto max_num_iter = task_type2max_stream_num_.end();
   if (IsClassRegistered<int32_t, IndependentThreadNum4TaskType>(task_type)) {
     std::unique_ptr<IndependentThreadNum4TaskType> thread_num_ptr(
