@@ -67,6 +67,10 @@ Maybe<bool> MirroredTensor::is_cuda() const {
   return JUST(device())->type() == "cuda";
 }
 
+int MirroredTensor::ndim() const {
+  return shape()->NumAxes();
+}
+
 int MirroredTensor::dim(int index) const {
   return shape()->At(index);
 }
@@ -85,6 +89,10 @@ int ConsistentTensor::dim(int index) const {
 
 int ConsistentTensor::nelement() const {
   return shape()->elem_cnt();
+}
+
+int ConsistentTensor::ndim() const {
+  return shape()->NumAxes();
 }
 
 }  // namespace one

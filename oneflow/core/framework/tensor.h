@@ -197,7 +197,7 @@ class MirroredTensor final : public DeterminedTensor {
   Maybe<const Device> device() const override { return impl_->device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   Maybe<bool> is_consistent() const override { return false; }
-  int ndim() const override { return impl_->shape()->NumAxes(); }
+  int ndim() const override;
   Maybe<bool> is_cuda() const override;
   int dim(int index) const override;
   int nelement() const override;
@@ -245,7 +245,7 @@ class ConsistentTensor final : public DeterminedTensor {
   }
   bool is_lazy() const override { return impl_->is_lazy(); }
   Maybe<bool> is_consistent() const override { return true; }
-  int ndim() const override { return impl_->shape()->NumAxes(); }
+  int ndim() const override;
   Maybe<bool> is_cuda() const override;
   int dim(int index) const override;
   int nelement() const override;
