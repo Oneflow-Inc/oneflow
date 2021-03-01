@@ -44,7 +44,7 @@ def test_simple_cnn(test_case):
             x = self.loss(x, self.label)
             return x
 
-    load_pytorch_module_and_check(test_case, Net)
+    load_pytorch_module_and_check(test_case, Net, train_flag=False,)
 
 
 # test_case = absltest.TestCase

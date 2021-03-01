@@ -17,6 +17,8 @@ import torchvision
 
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
+# from absl import app
+# from absl.testing import absltest
 
 def test_mobilenet_v2(test_case):
     load_pytorch_module_and_check(
@@ -27,3 +29,6 @@ def test_mobilenet_v2(test_case):
         input_max_val=1,
         train_flag=False,
     )
+
+# test_case = absltest.TestCase
+# test_mobilenet_v2(test_case)
