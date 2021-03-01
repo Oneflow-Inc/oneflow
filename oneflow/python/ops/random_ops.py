@@ -18,7 +18,6 @@ from typing import Optional
 from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow as flow
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.module as module_util
@@ -29,7 +28,7 @@ import oneflow_api
 def Bernoulli(
     x: oneflow_api.BlobDesc,
     seed: Optional[int] = None,
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: str = "Bernoulli",
 ) -> oneflow_api.BlobDesc:
     """This operator returns a Blob with binaray random numbers (0 / 1) from a Bernoulli distribution. 
@@ -37,7 +36,7 @@ def Bernoulli(
     Args:
         x (oneflow_api.BlobDesc): The input Blob. 
         seed (Optional[int], optional): The random seed. Defaults to None.
-        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        dtype (Optional[flow.dtype], optional): The data type. Defaults to None.
         name (str, optional): The name for the operation. Defaults to "Bernoulli".
 
     Returns:
@@ -83,7 +82,7 @@ def Bernoulli(
 
 class BernoulliModule(module_util.Module):
     def __init__(
-        self, dtype: dtype_util.dtype, random_seed: Optional[int], name: str,
+        self, dtype: flow.dtype, random_seed: Optional[int], name: str,
     ):
         module_util.Module.__init__(self, name)
         seed, has_seed = flow.random.gen_seed(random_seed)
