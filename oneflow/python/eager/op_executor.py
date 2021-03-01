@@ -68,10 +68,15 @@ def OpKernelCall(opkernel_object, op_attribute, blob_register):
         with blob_register_util.BnInOp2BlobObjectScope(
             blob_register, op_attribute
         ) as bn_in_op2blob_object:
+            cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+                str(op_attribute)
+            )
             builder.StatefulCall(
-                op_attribute,
-                opkernel_object=opkernel_object,
-                bn_in_op2blob_object=bn_in_op2blob_object,
+                cfg_op_attribute,
+                opkernel_object,
+                bn_in_op2blob_object,
+                boxing_util.BoxingTo,
+                vm_util._FindOrCreateDelegateBlobObject,
             )
 
     vm_util.LogicalRun(BuildInstruction)
