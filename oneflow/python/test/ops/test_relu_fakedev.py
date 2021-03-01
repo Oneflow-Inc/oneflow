@@ -23,7 +23,7 @@ config = flow.function_config()
 
 
 def make_job(input_shape, dtype=flow.float32):
-    @flow.global_function(config)
+    @flow.global_function(type="predict", function_config=config)
     def relu_job(x: tp.Numpy.Placeholder(input_shape)) -> tp.Numpy:
         with flow.scope.placement("fakedevice", "0:0"):
             return flow.math.relu(x)
