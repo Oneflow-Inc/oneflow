@@ -37,42 +37,60 @@ struct TensorExportUtil final {};
 
 template<>
 struct TensorExportUtil<MirroredTensor> final {
-  static std::shared_ptr<MirroredTensor> MakeTensor(const py::tuple& py_shape,
-                                                    const std::shared_ptr<const DType>& dtype,
-                                                    const std::shared_ptr<const Device>& device,
-                                                    bool is_lazy, bool requires_grad, bool is_leaf,
-                                                    bool retain_grad) {
+  static Maybe<MirroredTensor> MakeTensor(const py::tuple& py_shape,
+                                          const std::shared_ptr<const DType>& dtype,
+                                          const std::shared_ptr<const Device>& device, bool is_lazy,
+                                          bool requires_grad, bool is_leaf, bool retain_grad) {
     DimVector shape_dims;
-    /* CHECK_OR_RETURN(py::isinstance<py::tuple>(py_shape)) */
-    /*     << Error::ValueError("Input shape must be tuple."); */
+    CHECK_OR_RETURN(py::isinstance<py::tuple>(py_shape))
+        << Error::ValueError("Input shape must be tuple.");
     for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
     std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
     return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf,
                                       retain_grad);
   }
+
+  static std::shared_ptr<MirroredTensor> ApiMakeTensor(const py::tuple& py_shape,
+                                                       const std::shared_ptr<const DType>& dtype,
+                                                       const std::shared_ptr<const Device>& device,
+                                                       bool is_lazy, bool requires_grad,
+                                                       bool is_leaf, bool retain_grad) {
+    return MakeTensor(py_shape, dtype, device, is_lazy, requires_grad, is_leaf, retain_grad)
+        .GetPtrOrThrow();
+  }
 };
 
 template<>
 struct TensorExportUtil<ConsistentTensor> final {
-  static std::shared_ptr<ConsistentTensor> MakeTensor(
+  static Maybe<ConsistentTensor> MakeTensor(
       const py::tuple& py_shape, const std::shared_ptr<const DType>& dtype,
       const std::shared_ptr<const compatible_py::Distribute>& distribute,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
       bool is_leaf, bool retain_grad) {
     DimVector shape_dims;
-    /* CHECK_OR_RETURN(py::isinstance<py::tuple>(py_shape)) */
-    /*     << Error::ValueError("Input shape must be tuple."); */
+    CHECK_OR_RETURN(py::isinstance<py::tuple>(py_shape))
+        << Error::ValueError("Input shape must be tuple.");
     for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
     std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
     return ConsistentTensor::MakeTensor(shape, dtype, distribute, parallel_desc, is_lazy,
                                         requires_grad, is_leaf, retain_grad);
+  }
+
+  static std::shared_ptr<ConsistentTensor> ApiMakeTensor(
+      const py::tuple& py_shape, const std::shared_ptr<const DType>& dtype,
+      const std::shared_ptr<const compatible_py::Distribute>& distribute,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
+      bool is_leaf, bool retain_grad) {
+    return MakeTensor(py_shape, dtype, distribute, parallel_desc, is_lazy, requires_grad, is_leaf,
+                      retain_grad)
+        .GetPtrOrThrow();
   }
 };
 
 template<typename T>
 void ExportTensor(py::module& m, const char* name) {
   py::class_<T, std::shared_ptr<T>>(m, name)
-      .def(py::init(&TensorExportUtil<T>::MakeTensor))
+      .def(py::init(&TensorExportUtil<T>::ApiMakeTensor))
       // Properties of pytorch
       .def_property_readonly("shape", &T::shape)
       .def_property_readonly("device",
