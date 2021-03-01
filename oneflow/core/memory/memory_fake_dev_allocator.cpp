@@ -22,10 +22,10 @@ void* FakeDevMemoryAllocatorImpl::Allocate(MemoryCase& mem_case, size_t size) {
   ptr = malloc(size + sizeof(FAKE_MAGIC_CODE));
   memcpy(ptr, &FAKE_MAGIC_CODE, sizeof(FAKE_MAGIC_CODE));
   CHECK_NOTNULL(ptr);
-  return (char*)ptr + 4;
+  return static_cast<char*>(ptr) + 4;
 }
 
 void FakeDevMemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
-  free((char*)ptr - 4);
+  free(static_cast<char*>(ptr) - 4);
 }
 }  // namespace oneflow

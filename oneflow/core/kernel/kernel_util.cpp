@@ -260,6 +260,8 @@ void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
   void (*func)(DeviceCtx*, void* dst, const void* src, size_t sz);
   if (src_mem_case.has_host_mem() && dst_mem_case.has_host_mem()) {
     func = &Memcpy<DeviceType::kCPU>;
+  } else if (src_mem_case.has_fake_dev_mem() || dst_mem_case.has_fake_dev_mem()) {
+    func = &Memcpy<DeviceType::kFAKEDEVICE>;
   } else {
 #ifdef WITH_CUDA
     func = &Memcpy<DeviceType::kGPU>;

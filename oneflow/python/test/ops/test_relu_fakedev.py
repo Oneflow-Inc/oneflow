@@ -20,6 +20,7 @@ import oneflow as flow
 import oneflow.typing as tp
 
 config = flow.function_config()
+flow.config.enable_legacy_model_io(True)
 
 
 def make_job(input_shape, dtype=flow.float32):
@@ -31,13 +32,16 @@ def make_job(input_shape, dtype=flow.float32):
     return relu_job
 
 
+def _compare_with_np(input_shape):
+    x = np.random.random(input_shape).astype(np.float32)
+    relu_fakedev_job = make_job(x.shape, dtype=flow.float32)
+    y = relu_fakedev_job(x)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestRelu(flow.unittest.TestCase):
-    def test_body(test_case):
-        x = np.random.random((2, 3)).astype(np.float32)
-        relu_fakedev_job = make_job(x.shape, dtype=flow.float32)
-        y = relu_fakedev_job(x)
-        print(y)
+    def test_random_value(test_case):
+        _compare_with_np((2, 3))
 
 
 if __name__ == "__main__":
