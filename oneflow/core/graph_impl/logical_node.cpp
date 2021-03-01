@@ -22,6 +22,12 @@ limitations under the License.
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/id_serialization.h"
+#include "oneflow/core/device/cpu_stream_index.h"
+#ifdef WITH_CUDA
+#include "oneflow/core/device/cuda_stream_index.h"
+#endif
 
 namespace oneflow {
 
@@ -112,10 +118,7 @@ std::string LogicalNode::VisualStr() const {
   return ss.str();
 }
 
-void LogicalNode::GenSortedCompTaskNodes(
-    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
-    std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
-    std::function<void(CompTaskNode*)> Handler) const {
+void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
   for (int64_t machine_id : parallel_desc_->sorted_machine_ids()) {
@@ -125,45 +128,64 @@ void LogicalNode::GenSortedCompTaskNodes(
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
-      const IDMgr* id_mgr = Global<IDMgr>::Get();
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
+        DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
+                           static_cast<DeviceId::device_index_t>(dev_phy_id)};
+        StreamId::stream_index_t stream_index = 0;
+        auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
+            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
+        CHECK_NOTNULL(cuda_stream_index_generator);
         switch (comp_task_node->GetCudaWorkType()) {
           case CudaWorkType::kCompute: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuComputeThrdId(dev_phy_id));
+            stream_index = cuda_stream_index_generator->GenerateComputeStreamIndex();
             break;
           }
           case CudaWorkType::kCopyH2D: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuH2DThrdId(dev_phy_id));
+            stream_index = cuda_stream_index_generator->GenerateH2DStreamIndex();
             break;
           }
           case CudaWorkType::kCopyD2H: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuD2HThrdId(dev_phy_id));
+            stream_index = cuda_stream_index_generator->GenerateD2HStreamIndex();
             break;
           }
           case CudaWorkType::kNccl: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuNcclThrdId(dev_phy_id));
+            stream_index = cuda_stream_index_generator->GenerateNcclStreamIndex();
             break;
           }
           case CudaWorkType::kMix: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
+            stream_index = cuda_stream_index_generator->GenerateMixStreamIndex();
             break;
           }
           case CudaWorkType::kDecodeH2D: {
-            comp_task_node->set_thrd_id(id_mgr->GetGpuDecodeH2DThrdId(dev_phy_id));
+            stream_index = cuda_stream_index_generator->GenerateDecodeH2DStreamIndex();
             break;
           }
-          default: UNIMPLEMENTED();
+          default: { UNIMPLEMENTED(); }
         }
+        comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
 #else
         UNIMPLEMENTED();
 #endif
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
+        DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kCPU,
+                           DeviceId::kCPUDeviceIndex};
+        auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
+            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
+        CHECK_NOTNULL(cpu_stream_index_generator);
+        StreamId::stream_index_t stream_index = 0;
         if (comp_task_node->IsIndependent()) {
-          nodes->push_back({machine_id, comp_task_node});
+          TaskType task_type = comp_task_node->GetTaskType();
+          if (IsClassRegistered<int32_t, TickTockTaskType>(task_type)) {
+            stream_index = cpu_stream_index_generator->GenerateTickTockStreamIndex();
+          } else {
+            stream_index =
+                cpu_stream_index_generator->GenerateIndependentTaskStreamIndex(task_type);
+          }
         } else {
-          comp_task_node->set_thrd_id(AllocateCpuThrdIdEvenly(comp_task_node));
+          stream_index = cpu_stream_index_generator->GenerateComputeStreamIndex();
         }
+        comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
       } else {
         UNIMPLEMENTED();
       }
