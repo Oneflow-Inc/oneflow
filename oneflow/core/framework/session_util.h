@@ -24,22 +24,29 @@ namespace oneflow {
 
 class Session {
  public:
-  Session(const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
+  Session(int64_t id, const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
           const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list);
   Session(const Session&) = delete;
   Session(Session&&) = delete;
   ~Session() = default;
 
+  int64_t id() const;
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list() const;
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list() const;
 
  private:
+  int64_t id_;
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list_;
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
 };
 
+Maybe<int64_t*> GetDefaultSessionId();
+Maybe<void> SetDefaultSessionId(int64_t val);
+Maybe<Session> RegsiterSession(int64_t id);
 Maybe<Session> GetDefaultSession();
-Maybe<void> ResetDefaultSession();
+Maybe<void> ClearDefaultSession();
+Maybe<void> ClearSessionById(int64_t id);
+Maybe<void> ClearAllSession();
 
 }  // namespace oneflow
 
