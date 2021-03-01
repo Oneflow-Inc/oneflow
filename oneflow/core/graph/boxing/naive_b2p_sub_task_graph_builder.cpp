@@ -60,8 +60,8 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         int64_t thrd_id;
         if (out_parallel_desc.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-          ProcessId process_id{static_cast<uint32_t>(out_machine_id)};
-          DeviceId device_id{process_id, DeviceType::kGPU, static_cast<uint32_t>(out_dev_phy_id)};
+          DeviceId device_id{static_cast<DeviceId::rank_t>(out_machine_id), DeviceType::kGPU,
+                             static_cast<DeviceId::device_index_t>(out_dev_phy_id)};
           auto* stream_index_generator =
               Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
           uint32_t stream_index = stream_index_generator->GenerateComputeStreamIndex();
