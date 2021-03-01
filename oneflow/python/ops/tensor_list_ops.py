@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
@@ -24,6 +23,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Sequence, Tuple
+import oneflow
 import oneflow_api
 
 
@@ -88,7 +88,7 @@ def tensor_list_to_tensor_buffer(
 def tensor_buffer_to_tensor_list(
     input: oneflow_api.BlobDesc,
     shape: Sequence[int],
-    dtype: dtype_util.dtype,
+    dtype: oneflow.dtype,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """This operator converts `TensorBuffer` to `TensorList`. 
@@ -99,7 +99,7 @@ def tensor_buffer_to_tensor_list(
     Args:
         input (oneflow_api.BlobDesc): The input Tensor Buffer. 
         shape (Sequence[int]): The shape of input Tensor Buffer. 
-        dtype (dtype_util.dtype): The data type. 
+        dtype (oneflow.dtype): The data type. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -141,7 +141,7 @@ def tensor_buffer_to_tensor_list(
     setattr(
         op_conf.tensor_buffer_to_tensor_list_conf,
         "data_type",
-        dtype.oneflow_proto_dtype,
+        oneflow_api.deprecated.GetProtoDtype4OfDtype(dtype),
     )
     interpret_util.Forward(op_conf)
 
