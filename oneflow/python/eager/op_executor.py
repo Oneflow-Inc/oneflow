@@ -28,7 +28,6 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
@@ -459,7 +458,7 @@ def _GenModelIOPathInputOpConfAndRetLbi():
 
     blob_conf = inter_face_blob_conf_util.InterfaceBlobConf()
     blob_conf.shape.dim.append(65536)
-    blob_conf.data_type = dtype_util.int8.oneflow_proto_dtype
+    blob_conf.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(oneflow.int8)
     blob_conf.is_dynamic = True
     op_conf.input_conf.blob_conf.CopyFrom(blob_conf)
 
