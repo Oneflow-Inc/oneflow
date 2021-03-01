@@ -72,9 +72,9 @@ struct ClampHelper<
     std::enable_if_t<
         NeedsClamp<U, T>::value && std::is_signed<U>::value && std::is_signed<T>::value, void>> {
   OF_DEVICE_FUNC static const T Call(U value) {
-    return value <= GetMinVal<T>()   ? GetMinVal<T>()
-           : value >= GetMaxVal<T>() ? GetMaxVal<T>()
-                                     : static_cast<T>(value);
+    return value <= GetMinVal<T>()
+               ? GetMinVal<T>()
+               : value >= GetMaxVal<T>() ? GetMaxVal<T>() : static_cast<T>(value);
   }
 };
 
@@ -85,9 +85,9 @@ struct ClampHelper<T, U,
                                         && IsFloatingOrHalf<U>::value && std::is_unsigned<T>::value,
                                     void>> {
   OF_DEVICE_FUNC static const T Call(U value) {
-    return value <= GetMinVal<T>()   ? GetMinVal<T>()
-           : value >= GetMaxVal<T>() ? GetMaxVal<T>()
-                                     : static_cast<T>(value);
+    return value <= GetMinVal<T>()
+               ? GetMinVal<T>()
+               : value >= GetMaxVal<T>() ? GetMaxVal<T>() : static_cast<T>(value);
   }
 };
 
@@ -98,9 +98,10 @@ struct ClampHelper<T, U,
                                         && std::is_integral<U>::value && std::is_unsigned<T>::value,
                                     void>> {
   OF_DEVICE_FUNC static const T Call(U value) {
-    return value <= 0                                                      ? 0
-           : static_cast<std::make_unsigned_t<U>>(value) >= GetMaxVal<T>() ? GetMaxVal<T>()
-                                                                           : static_cast<T>(value);
+    return value <= 0 ? 0
+                      : static_cast<std::make_unsigned_t<U>>(value) >= GetMaxVal<T>()
+                            ? GetMaxVal<T>()
+                            : static_cast<T>(value);
   }
 };
 
@@ -126,9 +127,10 @@ OF_DEVICE_FUNC const int32_t Clamp(uint32_t value) {
 OF_DEVICE_FUNC const uint32_t Clamp(int32_t value) { return value < 0 ? 0u : value; }
 
 OF_DEVICE_FUNC const int32_t Clamp(int64_t value) {
-  return value < static_cast<int64_t>(GetMinVal<int32_t>())   ? GetMinVal<int32_t>()
-         : value > static_cast<int64_t>(GetMaxVal<int32_t>()) ? GetMaxVal<int32_t>()
-                                                              : static_cast<int32_t>(value);
+  return value < static_cast<int64_t>(GetMinVal<int32_t>())
+             ? GetMinVal<int32_t>()
+             : value > static_cast<int64_t>(GetMaxVal<int32_t>()) ? GetMaxVal<int32_t>()
+                                                                  : static_cast<int32_t>(value);
 }
 
 template<>
@@ -142,9 +144,10 @@ struct ClampHelper<int32_t, uint64_t> {
 template<>
 struct ClampHelper<uint32_t, int64_t> {
   OF_DEVICE_FUNC static const uint32_t Call(int64_t value) {
-    return value < 0                                             ? 0
-           : value > static_cast<int64_t>(GetMaxVal<uint32_t>()) ? GetMaxVal<uint32_t>()
-                                                                 : static_cast<uint32_t>(value);
+    return value < 0
+               ? 0
+               : value > static_cast<int64_t>(GetMaxVal<uint32_t>()) ? GetMaxVal<uint32_t>()
+                                                                     : static_cast<uint32_t>(value);
   }
 };
 
@@ -166,9 +169,9 @@ struct ClampHelper<float16, T> {
   inline static const float16 Call(T value) {
     return static_cast<float16>(ClampHelper<T, float>::Call(value) < GetMinVal<float16>()
                                     ? GetMinVal<float16>()
-                                : ClampHelper<T, float>::Call(value) > GetMaxVal<float16>()
-                                    ? GetMaxVal<float16>()
-                                    : ClampHelper<T, float>::Call(value));
+                                    : ClampHelper<T, float>::Call(value) > GetMaxVal<float16>()
+                                          ? GetMaxVal<float16>()
+                                          : ClampHelper<T, float>::Call(value));
   }
 };
 

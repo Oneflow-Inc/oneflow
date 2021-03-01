@@ -33,21 +33,19 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<BlobName2Object, std::shared_ptr<BlobName2Object>>(m, "BlobName2Object")
       .def(py::init<>())
       .def("__len__", [](const std::shared_ptr<BlobName2Object>& v) { return v->size(); })
-      .def(
-          "items",
-          [](std::shared_ptr<BlobName2Object>& v) {
-            return py::make_iterator(v->begin(), v->end());
-          },
-          py::keep_alive<0, 1>())
+      .def("items",
+           [](std::shared_ptr<BlobName2Object>& v) {
+             return py::make_iterator(v->begin(), v->end());
+           },
+           py::keep_alive<0, 1>())
       .def("__getitem__", (BlobName2Object::mapped_type
                            & (BlobName2Object::*)(const BlobName2Object::key_type& pos))
                               & BlobName2Object::operator[])
-      .def(
-          "__iter__",
-          [](std::shared_ptr<BlobName2Object>& v) {
-            return py::make_iterator(v->begin(), v->end());
-          },
-          py::keep_alive<0, 1>());
+      .def("__iter__",
+           [](std::shared_ptr<BlobName2Object>& v) {
+             return py::make_iterator(v->begin(), v->end());
+           },
+           py::keep_alive<0, 1>());
 
   py::class_<BlobRegister, std::shared_ptr<BlobRegister>>(m, "BlobRegister")
       .def(py::init([](const std::function<void(std::shared_ptr<BlobObject>)>& release) {
