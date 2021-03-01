@@ -129,72 +129,76 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
       ProcessId process_id{static_cast<uint32_t>(machine_id)};
-      
+
       auto device_index = parallel_desc_->device_type() == DeviceType::kCPU ? 0 : dev_phy_id;
-      DeviceId device_id{process_id, parallel_desc_->device_type(), static_cast<uint32_t>(device_index)};
-      auto stream_index_getter = StreamIndexGetterRegistryManager::Get().GetStreamIndexGetterFunc(parallel_desc_->device_type(), comp_task_node->GetTaskType());
+      DeviceId device_id{process_id, parallel_desc_->device_type(),
+                         static_cast<uint32_t>(device_index)};
+      auto stream_index_getter = StreamIndexGetterRegistryManager::Get().GetStreamIndexGetterFunc(
+          parallel_desc_->device_type(), comp_task_node->GetTaskType());
       uint32_t stream_index = stream_index_getter(device_id);
       comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
 
-//       if (parallel_desc_->device_type() == DeviceType::kGPU) {
-// #ifdef WITH_CUDA
-//         DeviceId device_id{process_id, DeviceType::kGPU, static_cast<uint32_t>(dev_phy_id)};
-//         uint32_t stream_index = 0;
-//         auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
-//             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-//         CHECK_NOTNULL(cuda_stream_index_generator);
-//         switch (comp_task_node->GetCudaWorkType()) {
-//           case CudaWorkType::kCompute: {
-//             stream_index = cuda_stream_index_generator->GenerateComputeStreamIndex();
-//             break;
-//           }
-//           case CudaWorkType::kCopyH2D: {
-//             stream_index = cuda_stream_index_generator->GenerateH2DStreamIndex();
-//             break;
-//           }
-//           case CudaWorkType::kCopyD2H: {
-//             stream_index = cuda_stream_index_generator->GenerateD2HStreamIndex();
-//             break;
-//           }
-//           case CudaWorkType::kNccl: {
-//             stream_index = cuda_stream_index_generator->GenerateNcclStreamIndex();
-//             break;
-//           }
-//           case CudaWorkType::kMix: {
-//             stream_index = cuda_stream_index_generator->GenerateMixStreamIndex();
-//             break;
-//           }
-//           case CudaWorkType::kDecodeH2D: {
-//             stream_index = cuda_stream_index_generator->GenerateDecodeH2DStreamIndex();
-//             break;
-//           }
-//           default: { UNIMPLEMENTED(); }
-//         }
-//         comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
-// #else
-//         UNIMPLEMENTED();
-// #endif
-//       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
-//         DeviceId device_id{process_id, DeviceType::kCPU, kCPUDeviceIndex};
-//         auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
-//             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-//         CHECK_NOTNULL(cpu_stream_index_generator);
-//         uint32_t stream_index = 0;
-//         if (comp_task_node->IsIndependent()) {
-//           TaskType task_type = comp_task_node->GetTaskType();
-//           if (IsClassRegistered<int32_t, TickTockTaskType>(task_type)) {
-//             stream_index = cpu_stream_index_generator->GenerateTickTockStreamIndex();
-//           } else {
-//             stream_index =
-//                 cpu_stream_index_generator->GenerateIndependentTaskStreamIndex(task_type);
-//           }
-//         } else {
-//           stream_index = cpu_stream_index_generator->GenerateComputeStreamIndex();
-//         }
-//         comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
-//       } else {
-//         UNIMPLEMENTED();
-//       }
+      //       if (parallel_desc_->device_type() == DeviceType::kGPU) {
+      // #ifdef WITH_CUDA
+      //         DeviceId device_id{process_id, DeviceType::kGPU,
+      //         static_cast<uint32_t>(dev_phy_id)}; uint32_t stream_index = 0; auto*
+      //         cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
+      //             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
+      //         CHECK_NOTNULL(cuda_stream_index_generator);
+      //         switch (comp_task_node->GetCudaWorkType()) {
+      //           case CudaWorkType::kCompute: {
+      //             stream_index = cuda_stream_index_generator->GenerateComputeStreamIndex();
+      //             break;
+      //           }
+      //           case CudaWorkType::kCopyH2D: {
+      //             stream_index = cuda_stream_index_generator->GenerateH2DStreamIndex();
+      //             break;
+      //           }
+      //           case CudaWorkType::kCopyD2H: {
+      //             stream_index = cuda_stream_index_generator->GenerateD2HStreamIndex();
+      //             break;
+      //           }
+      //           case CudaWorkType::kNccl: {
+      //             stream_index = cuda_stream_index_generator->GenerateNcclStreamIndex();
+      //             break;
+      //           }
+      //           case CudaWorkType::kMix: {
+      //             stream_index = cuda_stream_index_generator->GenerateMixStreamIndex();
+      //             break;
+      //           }
+      //           case CudaWorkType::kDecodeH2D: {
+      //             stream_index = cuda_stream_index_generator->GenerateDecodeH2DStreamIndex();
+      //             break;
+      //           }
+      //           default: { UNIMPLEMENTED(); }
+      //         }
+      //         comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id,
+      //         stream_index}));
+      // #else
+      //         UNIMPLEMENTED();
+      // #endif
+      //       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
+      //         DeviceId device_id{process_id, DeviceType::kCPU, kCPUDeviceIndex};
+      //         auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
+      //             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
+      //         CHECK_NOTNULL(cpu_stream_index_generator);
+      //         uint32_t stream_index = 0;
+      //         if (comp_task_node->IsIndependent()) {
+      //           TaskType task_type = comp_task_node->GetTaskType();
+      //           if (IsClassRegistered<int32_t, TickTockTaskType>(task_type)) {
+      //             stream_index = cpu_stream_index_generator->GenerateTickTockStreamIndex();
+      //           } else {
+      //             stream_index =
+      //                 cpu_stream_index_generator->GenerateIndependentTaskStreamIndex(task_type);
+      //           }
+      //         } else {
+      //           stream_index = cpu_stream_index_generator->GenerateComputeStreamIndex();
+      //         }
+      //         comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id,
+      //         stream_index}));
+      //       } else {
+      //         UNIMPLEMENTED();
+      //       }
       comp_task_node->set_logical_node(this);
       Handler(comp_task_node);
     }
