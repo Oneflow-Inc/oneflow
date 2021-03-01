@@ -48,12 +48,11 @@ async def run_command(cmd=None, dry=False, name=None):
         cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
     )
     l = lambda x: split_and_print(f"[{name}]" if name else "", x)
-    l = lambda x: x
+    # l = lambda x: x
     await asyncio.gather(
         handle_stream(process.stdout, l), handle_stream(process.stderr, l),
     )
     await process.wait()
-    assert process.returncode == 0, cmd
     return process.returncode
 
 
@@ -101,12 +100,23 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     files = [str(f) for f in files]
     print(files)
-    for chuck in chunks(list(files), multiprocessing.cpu_count() * 4):
-        promises = [
-            run_command(f"{args.clang_format_binary} -dry-run --Werror {f}")
-            for f in chuck
-        ]
-        results = loop.run_until_complete(asyncio.gather(*promises))
-        print(results)
-    # fs = " ".join(files)
-    # loop.run_until_complete(run_command(f"{args.clang_format_binary} {fs}"))
+    clang_fmt_args = "-dry-run --Werror"
+    if args.fix:
+        clang_fmt_args = ""
+    results = []
+    # for chunk in chunks(list(files), multiprocessing.cpu_count()):
+    #     promises = [
+    #         run_command(f"{args.clang_format_binary} {clang_fmt_args} {f}")
+    #         for f in chunk
+    #     ]
+    #     chunk_results = loop.run_until_complete(asyncio.gather(*promises))
+    #     results.append(chunk_results)
+    # print(len(results), len(files))
+    # assert len(results) == len(files)
+    # for (r, f) in zip(results, files):
+    #     if r != 0:
+    #         print(f)
+    fs = " ".join(files)
+    loop.run_until_complete(
+        run_command(f"{args.clang_format_binary} {clang_fmt_args} {fs}")
+    )
