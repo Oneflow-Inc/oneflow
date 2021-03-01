@@ -51,19 +51,19 @@ void LazyInterpreter::Apply_(const BuiltinOpExpr* op_expr, const TensorList& inp
                              TensorList& outputs, const OpExprInterpState* state) {
   CHECK_EQ(inputs.size(), op_expr->input_num());
   auto scope = GetCurrentScope().GetPtrOrThrow();
-  OperatorConf&& op_conf = OpInterpUtil::GenBuiltinOpConf(op_expr);
+  auto op_conf = OpInterpUtil::GenBuiltinOpConf(op_expr);
   int64_t symbol_id = scope->symbol_id().GetOrThrow();
-  op_conf.set_scope_symbol_id(symbol_id);
-  if (!op_conf.has_device_tag()) {
-    op_conf.set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
+  op_conf->set_scope_symbol_id(symbol_id);
+  if (!op_conf->has_device_tag()) {
+    op_conf->set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
   }
   for (int i = 0; i < inputs.size(); ++i) {
     const std::string& ibn = op_expr->indexed_ibns().at(i);
     const std::string& tensor_name = TensorNameScope::Global()->Lookup(inputs[i]);
-    ReplaceInputLbnInOpCustomizedConf(&op_conf, ibn, tensor_name);
+    ReplaceInputLbnInOpCustomizedConf(op_conf.get(), ibn, tensor_name);
   }
   auto op_attribute = OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
-      op_conf, context()->is_mirrored_strategy_enabled);
+      *op_conf, context()->is_mirrored_strategy_enabled);
   OpAttribute proto_op_attribute;
   op_attribute->ToProto(&proto_op_attribute);
 
