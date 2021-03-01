@@ -22,20 +22,20 @@ REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kPrint, []() -> size_t {
   return Global<ResourceDesc, ForSession>::Get()->MaxMdSaveWorkerNum();
 });
 
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kPrint)     \
-  .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {                             \
-      auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(         \
-        Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));  \
-      CHECK_NOTNULL(cuda_stream_index_generator);                                          \
-      return cuda_stream_index_generator->GenerateComputeStreamIndex();                    \
-  });
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kPrint)
+    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
+      auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
+          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
+      CHECK_NOTNULL(cuda_stream_index_generator);
+      return cuda_stream_index_generator->GenerateComputeStreamIndex();
+    });
 
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kPrint)            \
-.SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {            \
-    auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(                \
-      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));       \
-    CHECK_NOTNULL(cpu_stream_index_generator);                                                \
-    return cpu_stream_index_generator->GenerateIndependentTaskStreamIndex(TaskType::kPrint);  \
-  });
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kPrint)
+    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
+      auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
+          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
+      CHECK_NOTNULL(cpu_stream_index_generator);
+      return cpu_stream_index_generator->GenerateIndependentTaskStreamIndex(TaskType::kPrint);
+    });
 
-}
+}  // namespace oneflow
