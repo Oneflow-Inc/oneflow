@@ -25,6 +25,7 @@ import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
@@ -329,8 +330,12 @@ def _MakeModelIOPathInputBuilds(op_conf, path, bn_in_op2blob_object):
 
     def BuildFeedPathInstruction(builder):
         blob_object = bn_in_op2blob_object["out"]
-        builder.FeedBlob(blob_object, FeedPath)
-        builder.InsertRemoveForeignCallbackInstruction(blob_object.object_id, FeedPath)
+        builder.FeedBlob(
+            blob_object, python_callback.GetIdForRegisteredCallback(FeedPath)
+        )
+        builder.InsertRemoveForeignCallbackInstruction(
+            blob_object.object_id, python_callback.GetIdForRegisteredCallback(FeedPath)
+        )
 
     return BuildModelIOPathInputInstruction, BuildFeedPathInstruction
 
