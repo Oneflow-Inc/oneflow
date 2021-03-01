@@ -1,31 +1,17 @@
 inputs:
-    src_path:
-      required: true
-    oss_dst_path:
-      required: true
-    oss_access_key_id:
-      required: true
-    oss_access_key_secret:
-      required: true
+  src_path:
+    required: true
+  host:
+    required: true
+  dst_path:
+    required: true
 runs:
   using: "composite"
   steps:
     - run: |
-        if [ -z "$OSS_ACCESS_KEY_ID" ]
-        then
-          exit 0
-        fi
-        if [ ! -f "$HOME/ossutil64" ]; then
-          curl http://gosspublic.alicdn.com/ossutil/1.6.19/ossutil64 -o $HOME/ossutil64
-        fi
-        chmod 755 $HOME/ossutil64
-        $HOME/ossutil64 config -e oss-cn-beijing.aliyuncs.com -i ${{ inputs.oss_access_key_id }} -k ${{ inputs.oss_access_key_secret }}  -L EN -c $HOME/.ossutilconfig
         dir_arg=""
         if [ -d "${{ inputs.src_path }}" ]; then
-          dir_arg="--recursive"
+          dir_arg="-r"
         fi
-        $HOME/ossutil64 cp --update ${dir_arg} ${{ inputs.src_path }} ${{ inputs.oss_dst_path }}
+        scp ${dir_arg} ${{ inputs.src_path }} ${{ inputs.host }}:~/${{ inputs.dst_path }}
       shell: bash
-      env:
-        OSS_ACCESS_KEY_ID: ${{ inputs.oss_access_key_id }}
-        OSS_ACCESS_KEY_SECRET: ${{ inputs.oss_access_key_secret }}
