@@ -108,8 +108,8 @@ void ExportTensor(py::module& m, const char* name) {
       .def("numpy", []() { TODO(); })
       .def("tolist", []() { TODO(); })
       .def("backward", []() { TODO(); })
-      .def("__str__", &T::ToString)
-      .def("__repr__", &T::ToString)
+      .def("__str__", []() { TODO(); })
+      .def("__repr__", []() { TODO(); })
       .def("__array__", []() { TODO(); })
       .def("__sizeof__", []() { TODO(); });
 }

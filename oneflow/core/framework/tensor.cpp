@@ -75,8 +75,6 @@ int MirroredTensor::nelement() const {
   return shape()->elem_cnt();
 }
 
-std::string MirroredTensor::ToString() const { TODO(); }
-
 Maybe<bool> ConsistentTensor::is_cuda() const { 
   return JUST(parallel_desc())->device_type() == DeviceType::kGPU;
 }
@@ -88,8 +86,6 @@ int ConsistentTensor::dim(int index) const {
 int ConsistentTensor::nelement() const {
   return shape()->elem_cnt();
 }
-
-std::string ConsistentTensor::ToString() const { TODO(); }
 
 }  // namespace one
 

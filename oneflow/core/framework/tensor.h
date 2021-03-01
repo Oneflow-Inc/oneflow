@@ -157,7 +157,6 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
   virtual int ndim() const = 0;
   virtual Maybe<bool> is_cuda() const = 0;
   virtual int nelement() const = 0;
-  virtual std::string ToString() const = 0;
   virtual int dim(int index) const = 0;
 
   // Getters for autograd
@@ -202,7 +201,6 @@ class MirroredTensor final : public DeterminedTensor {
   Maybe<bool> is_cuda() const override;
   int dim(int index) const override;
   int nelement() const override;
-  std::string ToString() const override;
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
@@ -251,7 +249,6 @@ class ConsistentTensor final : public DeterminedTensor {
   Maybe<bool> is_cuda() const override;
   int dim(int index) const override;
   int nelement() const override;
-  std::string ToString() const override;
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
