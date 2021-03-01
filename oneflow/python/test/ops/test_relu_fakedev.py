@@ -32,6 +32,7 @@ def make_job(input_shape, dtype=flow.float32):
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skip("fake device is not fully ready")
 class TestRelu(flow.unittest.TestCase):
     def test_body(test_case):
         x = np.random.random((2, 3)).astype(np.float32)
