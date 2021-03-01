@@ -17,11 +17,9 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 
 namespace oneflow {
-
 namespace one {
 
-TensorTuple::TensorTuple(uint32_t size) { resize(size); }
+TensorTuple::TensorTuple(std::vector<std::shared_ptr<Tensor>>::size_type size) { resize(size); }
 
 }  // namespace one
-
 }  // namespace oneflow
