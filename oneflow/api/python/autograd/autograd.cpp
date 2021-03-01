@@ -17,9 +17,9 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <memory>
 #include <vector>
-#include "oneflow/api/python/autograd/autograd.h"
-#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace autograd {
@@ -61,7 +61,6 @@ Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorT
                              const one::TensorTuple& out_grads, bool retain_graph,
                              bool create_graph) {
   if (inputs.empty()) { return Backward(outputs, out_grads, retain_graph, create_graph); }
-
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
   return RunBackward(outputs, inputs, *gradients, retain_graph, create_graph);
 }
