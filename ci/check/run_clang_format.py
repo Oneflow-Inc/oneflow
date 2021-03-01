@@ -20,6 +20,8 @@ import asyncio
 import argparse
 import pathlib
 import multiprocessing
+import subprocess
+import os
 
 
 def split_and_print(prefix, text):
@@ -62,6 +64,28 @@ def chunks(lst, n):
         yield lst[i : i + n]
 
 
+def check_version(bin):
+    out = subprocess.check_output(f"{bin} --version", shell=True).decode()
+    expected = "clang-format version 11.0.0"
+    return expected == out.strip()
+
+
+def download(dry=False):
+    url = "https://oneflow-static.oss-cn-beijing.aliyuncs.com/bin/clang-format/linux-x86/clang-format-11"
+    dst_dir = ".cache"
+    dst = f"{dst_dir}/clang-format"
+    if dry:
+        if os.path.isfile(dst):
+            return dst
+        else:
+            None
+    else:
+        assert subprocess.call(f"mkdir -p {dst_dir}", shell=True) == 0
+        assert subprocess.call(f"curl {url} -o {dst}", shell=True) == 0
+        assert subprocess.call(f"chmod +x {dst}", shell=True) == 0
+        return dst
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Runs clang-format on all of the source "
@@ -71,7 +95,10 @@ if __name__ == "__main__":
         "changes as a patch in unified diff format"
     )
     parser.add_argument(
-        "--clang_format_binary", required=True, help="Path to the clang-format binary"
+        "--clang_format_binary",
+        required=False,
+        help="Path to the clang-format binary",
+        default="clang-format",
     )
     parser.add_argument(
         "--source_dir", required=True, help="Root directory of the source code"
@@ -102,6 +129,13 @@ if __name__ == "__main__":
     if args.fix:
         clang_fmt_args = "-i"
     results = []
+    if check_version(args.clang_format_binary) == False:
+        downloaded = download(dry=True)
+        if downloaded:
+            args.clang_format_binary = downloaded
+        else:
+            args.clang_format_binary = download()
+            assert check_version(args.clang_format_binary)
     for chunk in chunks(files, multiprocessing.cpu_count()):
         promises = [
             run_command(f"{args.clang_format_binary} {clang_fmt_args} {f}")
