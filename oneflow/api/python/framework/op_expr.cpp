@@ -24,7 +24,7 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-std::vector<std::shared_ptr<one::Tensor>> Interpret(
+Maybe<std::vector<std::shared_ptr<one::Tensor>>> Interpret(
     const std::shared_ptr<one::OpExpr>& op,
     const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
   // TODO(): Execute the op by Autograd.
@@ -38,7 +38,7 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
         for (int i = 0; i < args.size(); ++i) {
           inputs[i] = py::cast<std::shared_ptr<one::Tensor>>(args[i]);
         }
-        return Interpret(op_expr, inputs);
+        return Interpret(op_expr, inputs).GetOrThrow();
       });
 
   py::class_<one::BuiltinOpExpr, one::OpExpr, std::shared_ptr<one::BuiltinOpExpr>>(m,

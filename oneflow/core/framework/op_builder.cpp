@@ -76,7 +76,7 @@ OpBuilder& OpBuilder::Attr(const std::string& attr_name, const std::string& seri
   return *this;
 }
 
-std::shared_ptr<UserOpExpr> OpBuilder::Build() {
+Maybe<UserOpExpr> OpBuilder::Build() {
   return std::make_shared<UserOpExpr>(op_name_, std::move(proto_), indexed_ibns_, indexed_obns_);
 }
 
