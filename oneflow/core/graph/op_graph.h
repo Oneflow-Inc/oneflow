@@ -63,25 +63,10 @@ class OpNode final : public Node<OpNode, OpEdge> {
 
   // Setters
   Operator* mut_op() { return op_.get(); }
-  ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
-  SbpSignature* mut_sbp_signature() { return mut_op()->mut_sbp_signature(); }
   Shape* mut_out_blob_time_shape();
-  HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
-    return &bn2parallel_id2blob_desc_;
-  }
   BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
   OpNode* MutSrcNode4Ibn(const std::string& bn_in_op) const;
   OpNode* MutSrcNode4InputLbi(const LogicalBlobId& lbi) const;
-  void ForEachSplitOrBroadcastBlobDesc(const BlobDesc& blob_desc, const SbpParallel& sbp_parallel,
-                                       const std::function<void(const BlobDesc&)>& Handler) const;
-
-  void ConcatBlobDesc(const ParallelDesc& blob_parallel_desc,
-                      const std::vector<std::shared_ptr<BlobDesc>>& blob_descs,
-                      const SbpParallel& sbp_parallel, BlobDesc* concatenated_blob_desc) const;
-  void SplitLogicalInputBlobDesc();
-  void ConcatLogicalOutputBlobDesc();
-  void CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const;
   void InferBlobParallelDesc();
   void InitLbi2SourceNode();
   void InitInputBlobFastestTimeShape();
@@ -92,7 +77,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   std::unique_ptr<Shape> out_blob_time_shape_;
-  HashMap<std::string, std::vector<std::shared_ptr<BlobDesc>>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
   std::unique_ptr<Shape> input_blob_fastest_time_shape_;
@@ -146,9 +130,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   const SbpParallel& GetSbpParallel(const std::string& op_name, const LogicalBlobId& lbi) const;
   DataType GetBlobDataType(const LogicalBlobId& lbi) const;
   const BlobDesc& GetLogicalBlobDesc(const LogicalBlobId& lbi) const;
-  void CheckBlobDescs(const std::string& op_name,
-                      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const;
 
   // a set of nodes is called a chain family if they can divided into several connected chains
   void ForEachChainFamily(const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
@@ -176,7 +157,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferTimeShape() const;
   void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
   Maybe<void> InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const;
-  Maybe<void> InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
   Maybe<void> InferLogicalBlobDesc(const Job& job) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;

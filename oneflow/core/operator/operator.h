@@ -52,7 +52,6 @@ class Operator {
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
-  LogicalBlobId* MutBnInOp2Lbi(const std::string& bn_in_op);
 
   // Getters
   const std::string& op_name() const { return op_conf().name(); }
@@ -77,17 +76,10 @@ class Operator {
   const std::string& SoleTbn() const;
   Maybe<const std::string*> obn4lbi(const LogicalBlobId& lbi) const;
 
-#define DEFINE_BLOB_NAMES_GETTER(getter_name)                                           \
-  const PbRpf<std::string>& getter_name() const { return op_attribute_.getter_name(); } \
-  PbRpf<std::string>* mut_##getter_name() { return op_attribute_.mutable_##getter_name(); }
-
-  DEFINE_BLOB_NAMES_GETTER(input_bns);
-  DEFINE_BLOB_NAMES_GETTER(output_bns);
-  DEFINE_BLOB_NAMES_GETTER(tmp_bns);
-
-#undef DEFINE_BLOB_NAMES_GETTER
-
-  const PbRpf<std::string>& input_output_bns() const { return input_output_bns_; };
+  const PbRpf<std::string>& input_bns() const;
+  const PbRpf<std::string>& output_bns() const;
+  const PbRpf<std::string>& tmp_bns() const;
+  const PbRpf<std::string>& input_output_bns() const;
 
   Maybe<void> FillOpParallelDesc(const ParallelDesc& parallel_desc);
   Maybe<const ParallelDesc> GetOpParallelDesc() const;
@@ -95,8 +87,6 @@ class Operator {
   Maybe<void> InferParallelSignatureIf();
   Maybe<const ParallelDesc> GetParallelDesc4BnInOp(const std::string& bn) const;
 
-  // Read: shape of input_blobs
-  // Write: shape of output_blobs
   Maybe<void> FillLogicalInBlobDesc(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
   Maybe<void> FillLogicalInBlobDesc(
@@ -107,11 +97,7 @@ class Operator {
   Maybe<void> FillLogicalOutBlobDesc(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
   Maybe<const BlobDesc> GetLogicalBlobDesc4Obn(const std::string& obn) const;
-  Maybe<void> InferLogicalOutBlobDescsIf(
-      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-      const ParallelDesc& parallel_desc) const {
-    return InferLogicalOutBlobDescs(BlobDesc4BnInOp, parallel_desc);
-  }
+  Maybe<void> InferLogicalOutBlobDescsIf();
   virtual Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const;
@@ -128,11 +114,11 @@ class Operator {
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const;
 
-  Maybe<void> InferInplaceObn2IbnIf(HashMap<std::string, std::string>* mut_inplace_obn2ibn,
-                                    HashMap<std::string, std::string>* con_inplace_obn2ibn,
-                                    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx,
-                                    const SbpSignature* sbp_signature) const;
+  Maybe<void> InferInplaceObn2IbnIf(
+      HashMap<std::string, std::string>* mut_inplace_obn2ibn,
+      HashMap<std::string, std::string>* con_inplace_obn2ibn,
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const;
 
   // Infer out blob's time shape
   Maybe<void> InferOutputBlobTimeShapeIf(
@@ -141,7 +127,8 @@ class Operator {
   virtual Maybe<void> InferOutputBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
-  // Infer blob's SbpSignature
+
+  Maybe<void> FillSbpSignature(const SbpSignature& sbp_signature);
   Maybe<void> InferSbpSignatureIf(
       const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -152,10 +139,8 @@ class Operator {
       std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
           MirroredSigInferHint4Ibn,
       bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc);
-  void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                     const ParallelContext*, KernelConf*,
-                     std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
-                     const ParallelDesc* parallel_desc, const SbpSignature* sbp_signature) const;
+  void GenKernelConf(const std::function<const BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+                     const ParallelContext*, KernelConf*) const;
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
   Maybe<const SbpParallel*> SbpParallel4BnInOp(const std::string& bn_in_op) const;
@@ -172,10 +157,7 @@ class Operator {
   virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
   std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
 
-  ParallelSignature* mut_parallel_signature() { return op_attribute_.mutable_parallel_signature(); }
-
   Maybe<const SbpSignature*> sbp_signature() const;
-  SbpSignature* mut_sbp_signature() { return op_attribute_.mutable_sbp_signature(); }
   BlobLastUsedSignature* mut_blob_last_used_signature() {
     return op_attribute_.mutable_blob_last_used_signature();
   }
@@ -217,30 +199,11 @@ class Operator {
           MirroredSigInferHint4Ibn,
       bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc);
 
-  virtual PbMessage* MutableCustomizedKernelConf(KernelConf*) const {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-
   virtual Maybe<void> InferInplaceObn2Ibn(
       HashMap<std::string, std::string>* mut_inplace_obn2ibn,
       HashMap<std::string, std::string>* con_inplace_obn2ibn,
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const;
-
-  virtual void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      KernelConf*, std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
-      const ParallelDesc* parallel_desc, const SbpSignature* sbp_signature) const;
-
-  virtual void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      KernelConf*, std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp,
-      const ParallelDesc* parallel_desc) const;
-
-  virtual void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      KernelConf*, std::function<const BlobDesc&(const std::string&)> LogicalBlobDesc4BnInOp) const;
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const;
 
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
@@ -248,8 +211,6 @@ class Operator {
 
   virtual LogicalBlobId lbi4ibn(const std::string& input_bn) const;
   virtual LogicalBlobId lbi4obn(const std::string& output_bn) const;
-
-  OperatorConf* mut_op_conf() { return op_attribute_.mutable_op_conf(); }
 
   // enroll data blobs
   void EnrollTmpBn(const std::string& dtbn);
@@ -307,6 +268,10 @@ class Operator {
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const ParallelDesc>>> bn2parallel_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> ibn2logical_blob_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> obn2logical_blob_desc_;
+  std::shared_ptr<const SbpSignature> sbp_signature_;
+  PbRpf<std::string> input_bns_;
+  PbRpf<std::string> output_bns_;
+  PbRpf<std::string> tmp_bns_;
   PbRpf<std::string> input_output_bns_;
 };
 
@@ -426,6 +391,8 @@ bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
 
 Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope);
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const SbpParallel& sbp_parallel,
+                              const int64_t parallel_num, const int64_t parallel_id);
 
 }  // namespace oneflow
 

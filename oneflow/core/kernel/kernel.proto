@@ -13,19 +13,9 @@ message DecodeRandomKernelConf {
   required uint32 random_seed = 1;
 }
 
-message DecodeOFRecordKernelConf {
-  required uint32 random_seed = 1;
-}
-
 message VariableKernelConf {
   required bool is_fw_inplace = 1;
   required bool is_bw_inplace = 2;
-}
-
-message RecordLoadKernelConf {
-  required int64 device_piece_size = 1;
-  required int64 parallel_id = 2;
-  required int64 parallel_num = 3;
 }
 
 message ShapeElemCntKernelConf {
@@ -77,17 +67,16 @@ message KernelConf {
   optional bool need_do_tensor_list = 5 [default = false];
   optional bool need_do_shape = 6 [default = false];
   required DTypeSignature dtype_signature = 7;
+  optional ParallelContext parallel_ctx = 8;
 
   oneof kernel_type {
     UserKernelConf user_conf = 100;
     DecodeRandomKernelConf decode_random_conf = 103;
-    DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
     XrtLaunchKernelConf xrt_launch_conf = 353;
     IndexedSlicesReduceSumKernelConf indexed_slices_reduce_sum_conf = 355;
     SyncDynamicResizeKernelConf sync_dynamic_resize_conf = 360;
 
     VariableKernelConf variable_conf = 407;
-    RecordLoadKernelConf record_load_conf = 408;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
     ModelIoV2KernelConf model_io_v2_conf = 418;
     BroadcastToCompatibleWithKernelConf broadcast_to_compatible_with_conf = 428;

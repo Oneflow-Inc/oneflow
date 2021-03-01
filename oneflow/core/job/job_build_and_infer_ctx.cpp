@@ -555,8 +555,10 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
 
   // infer logical blob desc
   JUST(GenOpProducedEmptyLogicalBlobDesc(op));
-  JUST(op->InferLogicalOutBlobDescsIf(GetBlobDesc4BnInOp, parallel_desc));
-  JUST(op->FillLogicalOutBlobDesc(GetBlobDesc4BnInOp));
+  JUST(op->InferLogicalOutBlobDescsIf());
+  for (const auto& bn : op->output_bns()) {
+    *lbi2logical_blob_desc_.at(op->BnInOp2Lbi(bn)) = *JUST(op->GetLogicalBlobDesc4Obn(bn));
+  }
   // Infer ParallelDesc for output blobs.
   auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
     const auto& lbi = op->BnInOp2Lbi(obn);
@@ -907,17 +909,12 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
-  if (job().job_conf().has_train_conf()) {
-    CHECK_OR_RETURN(job().job_conf().train_conf().has_model_update_conf());
-    CHECK_OR_RETURN(job().job_conf().train_conf().has_primary_lr());
-  }
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
     return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
   };
   if (GlobalJobDesc().Bool("__is_user_function__")) {
-    JUST(DoPass("CompleteOfrecordDecoder"));
     JUST(DoPass("SetDefaultVariableConf"));
     JUST(DoPass("AddInputOutputOpsPass"));
 #ifdef WITH_CUDA
@@ -1043,8 +1040,6 @@ std::string OpConf2ClassName(const OperatorConf& op_conf) {
     return op_conf.user_conf().op_type_name();
   } else if (op_conf.has_variable_conf()) {
     return "variable";
-  } else if (op_conf.has_decode_ofrecord_conf()) {
-    return "decode_ofrecord";
   } else if (op_conf.has_input_conf() && op_conf.has_return_conf()) {
     return "input";
   } else if (op_conf.has_output_conf() && op_conf.has_return_conf()) {

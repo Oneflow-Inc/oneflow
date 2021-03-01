@@ -42,59 +42,51 @@ class AutoLearningRate final : public JobPass {
 Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
   JobBuilder job_builder(job);
   const TrainConf& train_conf = job->job_conf().train_conf();
-  auto AddScheduleOp = [&](const std::string& op_name, const float learning_rate) -> std::string {
+  auto AddScheduleOp = [&](const OptimizerConf& optimizer_conf,
+                           const std::string& op_name) -> std::string {
     const class oneflow::OpNode* op_node =
         op_graph.OpNode4OpName(GenLogicalBlobId(train_conf.train_step_lbn()).op_name());
-    CHECK_OR_RETURN(op_node != nullptr) << "op node not fould in op graph, op name: " << op_name;
+    CHECK_OR_RETURN(op_node != nullptr) << "op node not found in op graph, op name: " << op_name;
     const ParallelConf& parallel_conf = op_node->parallel_desc().parallel_conf();
-    const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
-    if (model_update_conf.has_warmup_conf() || model_update_conf.has_learning_rate_decay()) {
+    if (optimizer_conf.has_warmup_conf() || optimizer_conf.has_learning_rate_decay()) {
       OperatorConf schedule_op_conf{};
       schedule_op_conf.set_name(op_name);
       LearningRateScheduleOpConf* schedule_conf =
           schedule_op_conf.mutable_learning_rate_schedule_conf();
       schedule_conf->set_train_step(train_conf.train_step_lbn());
-      schedule_conf->set_learning_rate(learning_rate);
+      schedule_conf->set_learning_rate(optimizer_conf.base_learning_rate());
       schedule_conf->set_out("out");
-      if (model_update_conf.has_warmup_conf()) {
-        *schedule_conf->mutable_warmup_conf() = model_update_conf.warmup_conf();
+      if (optimizer_conf.has_warmup_conf()) {
+        *schedule_conf->mutable_warmup_conf() = optimizer_conf.warmup_conf();
       }
-      if (model_update_conf.has_learning_rate_decay()) {
-        *schedule_conf->mutable_learning_rate_decay() = model_update_conf.learning_rate_decay();
+      if (optimizer_conf.has_learning_rate_decay()) {
+        *schedule_conf->mutable_learning_rate_decay() = optimizer_conf.learning_rate_decay();
       }
       schedule_op_conf.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
       job_builder.AddOps(parallel_conf, {schedule_op_conf});
       return GenLogicalBlobName(op_name, schedule_conf->out());
     } else {
-      const auto constant_op = user_op::UserOpConfWrapperBuilder(op_name)
-                                   .Op("constant")
-                                   .Attr<double>("floating_value", learning_rate)
-                                   .Attr<int64_t>("integer_value", 0)
-                                   .Attr<bool>("is_floating_value", true)
-                                   .Attr<DataType>("dtype", DataType::kFloat)
-                                   .Attr<Shape>("shape", Shape({1}))
-                                   .Output("out")
-                                   .ScopeSymbolId(op_node->op().op_conf().scope_symbol_id())
-                                   .Build();
+      const auto constant_op =
+          user_op::UserOpConfWrapperBuilder(op_name)
+              .Op("constant")
+              .Attr<double>("floating_value", optimizer_conf.base_learning_rate())
+              .Attr<int64_t>("integer_value", 0)
+              .Attr<bool>("is_floating_value", true)
+              .Attr<DataType>("dtype", DataType::kFloat)
+              .Attr<Shape>("shape", Shape({1}))
+              .Output("out")
+              .ScopeSymbolId(op_node->op().op_conf().scope_symbol_id())
+              .Build();
       job_builder.AddOps(parallel_conf, {constant_op.op_conf()});
       return constant_op.output("out", 0);
     }
   };
-  if (!train_conf.has_primary_lr_lbn()) {
-    CHECK(train_conf.has_primary_lr());
-    const std::string lbn =
-        AddScheduleOp("System-Train-PrimaryLearningRate-Scheduler", train_conf.primary_lr());
-    job->mutable_job_conf()->mutable_train_conf()->set_primary_lr_lbn(lbn);
-  }
-  if (!train_conf.has_secondary_lr_lbn()) {
-    if (train_conf.has_secondary_lr()) {
-      const std::string lbn =
-          AddScheduleOp("System-Train-SecondaryLearningRate-Scheduler", train_conf.secondary_lr());
-      job->mutable_job_conf()->mutable_train_conf()->set_secondary_lr_lbn(lbn);
-    } else {
-      job->mutable_job_conf()->mutable_train_conf()->set_secondary_lr_lbn(
-          train_conf.primary_lr_lbn());
-    }
+  FOR_RANGE(int64_t, i, 0, train_conf.optimizer_conf_size()) {
+    const auto& optimizer_conf = train_conf.optimizer_conf(i);
+    const std::string& lbn =
+        AddScheduleOp(optimizer_conf, "System-Train-LearningRate-Scheduler_" + NewUniqueId());
+    job->mutable_job_conf()->mutable_train_conf()->mutable_optimizer_conf(i)->set_learning_rate_lbn(
+        lbn);
   }
   return Maybe<void>::Ok();
 }

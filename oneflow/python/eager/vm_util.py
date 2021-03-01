@@ -26,7 +26,6 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
 import oneflow.core.register.blob_desc_pb2 as blob_desc_pb
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow_api.oneflow.core.job.scope as scope_cfg
@@ -82,189 +81,6 @@ def _Run(build, id_generator, run_api, release_object):
 
 def _DefaultBlobObject4Ibn(ibn):
     raise NotImplementedError
-
-
-def StatelessCall(
-    self,
-    op_attribute,
-    parallel_conf,
-    bn_in_op2blob_object=oneflow_api.deprecated.BnInOp2BlobObject(),
-):
-    op_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
-    cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
-    self.CheckRefInBlobObjectParallelDesc(
-        cfg_op_attribute, op_parallel_desc_sym, bn_in_op2blob_object,
-    )
-
-    def FetchDelegateBlobObject(x_blob_object, op_arg_parallel_attr):
-        return boxing_util.BoxingTo(self, x_blob_object, op_arg_parallel_attr)
-
-    def GetDelegateBlobObject(blob_object, op_arg_parallel_attr):
-        return _FindOrCreateDelegateBlobObject(
-            self, FetchDelegateBlobObject, blob_object, op_arg_parallel_attr
-        )
-
-    self._StatelessCall(
-        "compute",
-        cfg_op_attribute,
-        op_parallel_desc_sym,
-        op_parallel_desc_sym,
-        bn_in_op2blob_object,
-        GetDelegateBlobObject,
-    )
-
-
-def NoBoxingStatelessCall(
-    self,
-    op_attribute,
-    parallel_conf,
-    bn_in_op2blob_object=oneflow_api.deprecated.BnInOp2BlobObject(),
-):
-    op_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
-    cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
-    self.CheckRefInBlobObjectParallelDesc(
-        cfg_op_attribute, op_parallel_desc_sym, bn_in_op2blob_object,
-    )
-
-    def FetchDelegateBlobObject(blob_object, op_arg_parallel_attr):
-        from_pd = blob_object.parallel_desc_symbol
-        to_pd = op_arg_parallel_attr.parallel_desc_symbol
-        if from_pd == to_pd:
-            return blob_object
-        assert from_pd.device_tag == "cpu"
-        assert to_pd.device_tag == "cpu"
-        assert from_pd.parallel_num == to_pd.parallel_num
-        from_machine_ids = dict(from_pd.machine_id2device_id_list).keys()
-        to_machine_ids = dict(to_pd.machine_id2device_id_list).keys()
-        if (
-            len(from_pd.machine_id2device_id_list) == from_pd.parallel_num
-            and from_machine_ids == to_machine_ids
-        ):
-            return self.BroadcastBlobReference(blob_object, to_pd)
-        return self.Build121To(blob_object, to_pd)
-
-    def GetDirectOr121BlobObject(blob_object, op_arg_parallel_attr):
-        return _FindOrCreateDelegateBlobObject(
-            self, FetchDelegateBlobObject, blob_object, op_arg_parallel_attr
-        )
-
-    self._StatelessCall(
-        "compute",
-        cfg_op_attribute,
-        op_parallel_desc_sym,
-        op_parallel_desc_sym,
-        bn_in_op2blob_object,
-        GetDirectOr121BlobObject,
-    )
-
-
-def NoBoxingCudaD2HStatelessCall(
-    self,
-    op_attribute,
-    in_parallel_conf,
-    bn_in_op2blob_object=oneflow_api.deprecated.BnInOp2BlobObject(),
-):
-    op_parallel_desc_sym = self.GetParallelDescSymbol(in_parallel_conf)
-    blob_parallel_desc_sym = boxing_util.TryReplaceDeviceTag(
-        self, op_parallel_desc_sym, "cpu"
-    )
-    cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
-    self.CheckRefInBlobObjectParallelDesc(
-        cfg_op_attribute, blob_parallel_desc_sym, bn_in_op2blob_object,
-    )
-
-    def GetDirectBlobObject(blob_object, op_arg_parallel_attr):
-        return blob_object
-
-    self._StatelessCall(
-        "copy_d2h",
-        cfg_op_attribute,
-        op_parallel_desc_sym,
-        blob_parallel_desc_sym,
-        bn_in_op2blob_object,
-        GetDirectBlobObject,
-    )
-
-
-def NoBoxingCudaH2DStatelessCall(
-    self,
-    op_attribute,
-    out_parallel_conf,
-    bn_in_op2blob_object=oneflow_api.deprecated.BnInOp2BlobObject(),
-):
-    op_parallel_desc_sym = self.GetParallelDescSymbol(out_parallel_conf)
-    cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
-    self.CheckRefInBlobObjectParallelDesc(
-        cfg_op_attribute, op_parallel_desc_sym, bn_in_op2blob_object,
-    )
-
-    def GetDirectBlobObject(blob_object, op_arg_parallel_attr):
-        return blob_object
-
-    self._StatelessCall(
-        "copy_h2d",
-        cfg_op_attribute,
-        op_parallel_desc_sym,
-        op_parallel_desc_sym,
-        bn_in_op2blob_object,
-        GetDirectBlobObject,
-    )
-
-
-def RawStatelessCall(
-    self,
-    op_attribute,
-    parallel_conf,
-    bn_in_op2blob_object=oneflow_api.deprecated.BnInOp2BlobObject(),
-):
-    op_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
-    cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
-    self.CheckRefInBlobObjectParallelDesc(
-        cfg_op_attribute, op_parallel_desc_sym, bn_in_op2blob_object,
-    )
-
-    def GetDirectBlobObject(blob_object, op_arg_parallel_attr):
-        return blob_object
-
-    self._StatelessCall(
-        "compute",
-        cfg_op_attribute,
-        op_parallel_desc_sym,
-        op_parallel_desc_sym,
-        bn_in_op2blob_object,
-        GetDirectBlobObject,
-    )
-
-
-def StatefulCall(
-    self,
-    op_attribute,
-    opkernel_object,
-    bn_in_op2blob_object=oneflow_api.deprecated.BnInOp2BlobObject(),
-):
-    op_parallel_desc_sym = opkernel_object.parallel_desc_symbol
-    parallel_sig = op_attribute.parallel_signature
-    assert parallel_sig.HasField("op_parallel_desc_symbol_id")
-    assert op_parallel_desc_sym.symbol_id == parallel_sig.op_parallel_desc_symbol_id
-    cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
-    self.CheckRefInBlobObjectParallelDesc(
-        cfg_op_attribute, op_parallel_desc_sym, bn_in_op2blob_object,
-    )
-
-    def FetchDelegateBlobObject(x_blob_object, op_arg_parallel_attr):
-        return boxing_util.BoxingTo(self, x_blob_object, op_arg_parallel_attr)
-
-    def GetDelegateBlobObject(blob_object, op_arg_parallel_attr):
-        return _FindOrCreateDelegateBlobObject(
-            self, FetchDelegateBlobObject, blob_object, op_arg_parallel_attr
-        )
-
-    self._StatefulCall(
-        op_attribute,
-        opkernel_object=opkernel_object,
-        bn_in_op2blob_object=bn_in_op2blob_object,
-        get_delegate_blob_object=GetDelegateBlobObject,
-    )
 
 
 def InsertRemoveForeignCallbackInstruction(self, object_id, callback):
@@ -324,65 +140,6 @@ def CudaHostPinBlob(self, blob_object):
         self.CudaHostUnregisterBlob(blob_object)
 
 
-def NewOpKernelObject(self, op_conf):
-    assert op_conf.HasField("scope_symbol_id")
-    scope_symbol = oneflow_api.GetScopeSymbol(op_conf.scope_symbol_id)
-    cfg_op_conf = oneflow_api.deprecated.MakeOpConfByString(str(op_conf))
-    op_conf_sym = self.GetOpConfSymbol(cfg_op_conf)
-    parallel_desc_sym_id = c_api_util.GetOpParallelSymbolId(op_conf)
-    parallel_desc_symbol = oneflow_api.GetPlacementSymbol(parallel_desc_sym_id)
-    object_id = self._NewOpKernelObject(
-        parallel_desc_symbol, scope_symbol.job_desc_symbol, op_conf_sym
-    )
-    return oneflow_api.OpKernelObject(object_id, cfg_op_conf, self.object_releaser())
-
-
-def Build121To(self, blob_object, parallel_desc_symbol):
-    ref_blob_object = _MakeNewBlobObjectLike(self, blob_object, parallel_desc_symbol)
-    self.Build121AssignInstruction(ref_blob_object, blob_object)
-    return ref_blob_object
-
-
-def _StatefulCall(
-    self, op_attribute, opkernel_object, bn_in_op2blob_object, get_delegate_blob_object,
-):
-    op_parallel_desc_sym = opkernel_object.parallel_desc_symbol
-
-    def DelegateBlobObject4Ibn(ibn):
-        op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
-            op_parallel_desc_sym, str(op_attribute), ibn
-        )
-        return get_delegate_blob_object(bn_in_op2blob_object[ibn], op_arg_parallel_attr)
-
-    cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
-    op_node_signature_sym = self.GetOpNodeSignatureSymbol(cfg_op_attribute)
-    const_input_operand_blob_objects = self.GetConstInputOperandBlobObjects(
-        cfg_op_attribute, DelegateBlobObject4Ibn
-    )
-    mutable_input_operand_blob_objects = self.GetMutableInputOperandBlobObjects(
-        cfg_op_attribute, DelegateBlobObject4Ibn
-    )
-    mut1_operand_blob_objects = self.GetMut1OperandBlobObjects(
-        cfg_op_attribute, op_parallel_desc_sym, bn_in_op2blob_object,
-    )
-    mut2_operand_blob_objects = self.GetMut2OperandBlobObjects(
-        cfg_op_attribute, op_parallel_desc_sym, bn_in_op2blob_object,
-    )
-    is_user_op = op_attribute.op_conf.HasField("user_conf")
-    assert is_user_op
-    instruction_prefix = "" if is_user_op else "System"
-    self._StatefulCallOpKernel(
-        "%sCallOpKernel" % instruction_prefix,
-        op_parallel_desc_sym,
-        opkernel_object,
-        op_node_signature_sym,
-        const_input_operand_blob_objects,
-        mutable_input_operand_blob_objects,
-        mut1_operand_blob_objects,
-        mut2_operand_blob_objects,
-    )
-
-
 def _FetchBlob(self, instruction_name, blob_object, fetcher):
     unique_callback_id = python_callback.GetIdForRegisteredCallback(fetcher)
     instruction = instr_cfg.InstructionProto()
@@ -414,18 +171,6 @@ def FeedBlob(self, blob_object, feeder):
 
 
 def RegisterMethod4InstructionsBuilder():
-    oneflow_api.deprecated.InstructionsBuilder.StatelessCall = StatelessCall
-    oneflow_api.deprecated.InstructionsBuilder.NoBoxingStatelessCall = (
-        NoBoxingStatelessCall
-    )
-    oneflow_api.deprecated.InstructionsBuilder.NoBoxingCudaD2HStatelessCall = (
-        NoBoxingCudaD2HStatelessCall
-    )
-    oneflow_api.deprecated.InstructionsBuilder.NoBoxingCudaH2DStatelessCall = (
-        NoBoxingCudaH2DStatelessCall
-    )
-    oneflow_api.deprecated.InstructionsBuilder.RawStatelessCall = RawStatelessCall
-    oneflow_api.deprecated.InstructionsBuilder.StatefulCall = StatefulCall
     oneflow_api.deprecated.InstructionsBuilder.InsertRemoveForeignCallbackInstruction = (
         InsertRemoveForeignCallbackInstruction
     )
@@ -435,32 +180,8 @@ def RegisterMethod4InstructionsBuilder():
         MakeLazyRefBlobObject
     )
     oneflow_api.deprecated.InstructionsBuilder.CudaHostPinBlob = CudaHostPinBlob
-    oneflow_api.deprecated.InstructionsBuilder.Build121To = Build121To
-    oneflow_api.deprecated.InstructionsBuilder._StatefulCall = _StatefulCall
     oneflow_api.deprecated.InstructionsBuilder._FetchBlob = _FetchBlob
     oneflow_api.deprecated.InstructionsBuilder.FeedBlob = FeedBlob
-
-
-def _MakeNewBlobObjectLike(builder, blob_object, new_parallel_desc_symbol):
-    op_conf = op_conf_pb.OperatorConf()
-    op_conf.name = id_util.UniqueStr("Input")
-    op_conf.device_tag = new_parallel_desc_symbol.device_tag
-    op_conf.input_conf.out = "out"
-    cfg_interface_blob_conf = (
-        oneflow_api.oneflow.core.operator.interface_blob_conf.InterfaceBlobConf()
-    )
-    blob_object.op_arg_parallel_attr.DumpToInterfaceBlobConf(cfg_interface_blob_conf)
-    blob_object.op_arg_blob_attr.DumpToInterfaceBlobConf(cfg_interface_blob_conf)
-    text_format.Parse(str(cfg_interface_blob_conf), op_conf.input_conf.blob_conf)
-    op_conf.scope_symbol_id = oneflow.current_scope().symbol_id
-    upstream_signature = op_node_signature_pb.OpNodeSignature()
-    op_attribute = c_api_util.InferOpConf(op_conf, upstream_signature)
-    parallel_conf = new_parallel_desc_symbol.parallel_conf
-    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
-    builder.RawStatelessCall(
-        op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
-    )
-    return bn_in_op2blob_object["out"]
 
 
 def _FindOrCreateDelegateBlobObject(

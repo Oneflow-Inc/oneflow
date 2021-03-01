@@ -71,16 +71,12 @@ REGISTER_USER_OP("layer_norm")
       const Shape param_shape(param_shape_dim_vec);
       if (center) {
         const user_op::TensorDesc* beta = ctx->TensorDesc4ArgNameAndIndex("beta", 0);
-        CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
-                        || ctx->SbpParallel4ArgNameAndIndex("beta", 0).has_broadcast_parallel());
         CHECK_EQ_OR_RETURN(beta->shape(), param_shape);
         CHECK_EQ_OR_RETURN(beta->data_type(), x->data_type());
       }
       if (scale) {
         user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
         const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
-        CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
-                        || ctx->SbpParallel4ArgNameAndIndex("gamma", 0).has_broadcast_parallel());
         CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
         CHECK_EQ_OR_RETURN(gamma->data_type(), x->data_type());
         *normalized = *x;
@@ -199,10 +195,6 @@ REGISTER_USER_OP("layer_norm_param_grad")
       }
       if (has_gamma) {
         const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
-        CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
-                        || ctx->SbpParallel4ArgNameAndIndex("gamma", 0).has_broadcast_parallel())
-            << "parallel_num: " << ctx->parallel_ctx().parallel_num() << ", "
-            << "gamma sbp:" << ctx->SbpParallel4ArgNameAndIndex("gamma", 0).DebugString();
         CHECK_EQ_OR_RETURN(gamma->data_type(), dy->data_type());
         CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
       }

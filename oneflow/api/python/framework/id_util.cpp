@@ -13,20 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_RECORD_OFRECORD_JPEG_ENCODER_H_
-#define ONEFLOW_CORE_RECORD_OFRECORD_JPEG_ENCODER_H_
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/id_util.h"
 
-#include "oneflow/core/record/ofrecord_encoder.h"
+namespace py = pybind11;
 
 namespace oneflow {
 
-template<typename T>
-class OFRecordEncoderImpl<EncodeCase::kJpeg, T> final : public OFRecordEncoderIf {
- private:
-  void EncodeOneCol(DeviceCtx*, const Blob* in_blob, int64_t in_offset, Feature&,
-                    const std::string& field_name, int64_t one_col_elem_num) const override;
-};
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("UniqueStr", [](const std::string& prefix) { return UniqueStr(prefix).GetOrThrow(); });
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_RECORD_OFRECORD_JPEG_ENCODER_H_
