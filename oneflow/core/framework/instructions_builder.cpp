@@ -224,7 +224,7 @@ Maybe<compatible_py::BlobObject> MakeNewBlobObjectLike(
 }
 
 Maybe<void> _Run(
-    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& build,
+    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build,
     const std::shared_ptr<vm::IdGenerator>& id_generator,
     const std::function<Maybe<void>(const std::shared_ptr<vm::cfg::InstructionListProto>&,
                                     const std::shared_ptr<eager::cfg::EagerSymbolList>&)>&
@@ -233,7 +233,7 @@ Maybe<void> _Run(
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list = sess->instruction_list();
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list = sess->eager_symbol_list();
-  build(std::make_shared<InstructionsBuilder>(id_generator, instruction_list, eager_symbol_list,
+  Build(std::make_shared<InstructionsBuilder>(id_generator, instruction_list, eager_symbol_list,
                                               ReleaseObject));
   JUST(RunInstruction(instruction_list, eager_symbol_list));
   instruction_list->clear_instruction();

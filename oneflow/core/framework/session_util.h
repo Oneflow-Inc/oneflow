@@ -40,13 +40,10 @@ class Session {
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
 };
 
-Maybe<int64_t*> GetDefaultSessionId();
-Maybe<void> SetDefaultSessionId(int64_t val);
+Maybe<int64_t> GetDefaultSessionId();
 Maybe<Session> RegsiterSession(int64_t id);
 Maybe<Session> GetDefaultSession();
-Maybe<void> ClearDefaultSession();
 Maybe<void> ClearSessionById(int64_t id);
-Maybe<void> ClearAllSession();
 
 }  // namespace oneflow
 
