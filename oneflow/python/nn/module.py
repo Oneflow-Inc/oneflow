@@ -38,6 +38,7 @@ T = TypeVar("T", bound="Module")
 
 _counter = 0
 
+
 def get_var_helper(shape, name=None):
     global _counter
     if name is None:
@@ -168,7 +169,7 @@ class Module(object):
         else:
             return self.forward(*args)
 
-    def add_module(self, name: str, module: Optional['Module']) -> None:
+    def add_module(self, name: str, module: Optional["Module"]) -> None:
         r"""Adds a child module to the current module.
 
         The module can be accessed as an attribute using the given name.
@@ -179,17 +180,15 @@ class Module(object):
             module (Module): child module to be added to the module.
         """
         if not isinstance(module, Module) and module is not None:
-            raise TypeError("{} is not a Module subclass".format(
-                type(module)))
+            raise TypeError("{} is not a Module subclass".format(type(module)))
         elif not isinstance(name, str):
-            raise TypeError("module name should be a string. Got {}".format(
-                type(name)))
+            raise TypeError("module name should be a string. Got {}".format(type(name)))
         elif hasattr(self, name) and name not in self._modules:
             raise KeyError("attribute '{}' already exists".format(name))
-        elif '.' in name:
-            raise KeyError("module name can't contain \".\", got: {}".format(name))
-        elif name == '':
-            raise KeyError("module name can't be empty string \"\"")
+        elif "." in name:
+            raise KeyError('module name can\'t contain ".", got: {}'.format(name))
+        elif name == "":
+            raise KeyError('module name can\'t be empty string ""')
         self._modules[name] = module
 
     def register_buffer(
@@ -416,10 +415,13 @@ class Module(object):
                 # destination[prefix + name] = buf if keep_vars else buf.detach()
                 destination[prefix + name] = buf
 
-    def load_state_dict(self, state_dict: Dict[str, np.ndarray],
-            strict: bool = True):
+    def load_state_dict(self, state_dict: Dict[str, np.ndarray], strict: bool = True):
         param_buffer_var_names = [x._get_var_name() for x in self.parameters()]
-        state_dict_overlapped = {key: item for key, item in state_dict.items() if key in param_buffer_var_names}
+        state_dict_overlapped = {
+            key: item
+            for key, item in state_dict.items()
+            if key in param_buffer_var_names
+        }
         if strict and len(state_dict) != len(state_dict_overlapped):
             # TODO:
             raise RuntimeError()

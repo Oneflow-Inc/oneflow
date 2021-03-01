@@ -34,6 +34,10 @@ def get_var_helper(shape):
     return var
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in eager mode",
+)
 class TestModule(flow.unittest.TestCase):
     def test_x(test_case):
         class CustomModule(flow.nn.Module):
@@ -51,8 +55,9 @@ class TestModule(flow.unittest.TestCase):
         def job() -> None:
             x = flow.Tensor((2, 3))
             print(m(x).numpy())
+
         job()
-        m.load_state_dict({'x_2': np.ones((2, 3), dtype=np.float32)})
+        m.load_state_dict({"x_2": np.ones((2, 3), dtype=np.float32)})
         job()
 
     def test_parameter(test_case):
