@@ -17,7 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Check license and format (please run 'make of_format' if failed)
-        uses: ./.github/actions/fmt
+        run: |
+          python3 -m pip install black==19.10b0
+          python3 ci/check/run_license_format.py -i oneflow -c
+          python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
+          python3 ci/check/run_py_format.py --source_dir $PWD
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
