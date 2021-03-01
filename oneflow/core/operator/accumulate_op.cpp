@@ -24,12 +24,6 @@ void AccumulateOp::InitFromOpConf() {
   EnrollOutputBn("acc", false);
 }
 
-Maybe<void> AccumulateOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("acc")->clear_value();
-  return Maybe<void>::Ok();
-}
-
 REGISTER_OP(OperatorConf::kAccumulateConf, AccumulateOp);
 
 }  // namespace oneflow

@@ -16,7 +16,6 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow.python.eager.symbol as symbol_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
@@ -35,6 +34,15 @@ import random
 import oneflow
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api
+
+
+def _FindOrCreateDelegateBlobObject(
+    builder, Fetch, x_blob_object, op_arg_parallel_attr
+):
+    if x_blob_object.op_arg_parallel_attr == op_arg_parallel_attr:
+        return x_blob_object
+    blob_cache = blob_cache_util.FindOrCreateBlobCache(x_blob_object)
+    return blob_cache.GetCachedDelegateBlobObject(op_arg_parallel_attr, Fetch)
 
 
 def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):
@@ -370,7 +378,7 @@ def GpuNcclAllReduce(builder, produced_blob_object, consumer_op_arg_parallel_att
         cfg_op_attribute,
         parallel_conf,
         bn_in_op2blob_object,
-        vm_util._FindOrCreateDelegateBlobObject,
+        _FindOrCreateDelegateBlobObject,
     )
     y_blob_object = bn_in_op2blob_object["out_0"]
     y_blob_object.op_arg_parallel_attr.Assign(consumer_op_arg_parallel_attr)
@@ -551,7 +559,7 @@ def BuildNaiveCpuBoxing(
         cfg_op_attribute,
         boxing_parallel_desc_symbol.parallel_conf,
         bn_in_op2blob_object,
-        vm_util._FindOrCreateDelegateBlobObject,
+        _FindOrCreateDelegateBlobObject,
     )
     return [bn_in_op2blob_object["out_%s" % i] for i in range(out_parallel_num)]
 
@@ -757,7 +765,7 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
             cfg_op_attribute,
             ref_parallel_conf,
             bn_in_op2blob_object,
-            vm_util._FindOrCreateDelegateBlobObject,
+            _FindOrCreateDelegateBlobObject,
         )
     elif ref_device_tag == "cpu" and value_device_tag == "gpu":
         value_parallel_conf = value_blob_object.parallel_desc_symbol.parallel_conf

@@ -20,7 +20,6 @@ import os
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -36,7 +35,7 @@ def one_hot(
     on_value: Union[int, float] = 1,
     off_value: Union[int, float] = 0,
     axis: int = -1,
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """This operator generates a onehot Blob from input Blob. 
@@ -51,7 +50,7 @@ def one_hot(
         on_value (Union[int, float], optional): The fill value when `indices[i] == i`. Defaults to 1.
         off_value (Union[int, float], optional): The fill value when `indice[i] != i`. Defaults to 0.
         axis (int, optional): The specified dimension that the new axis is generated on. Defaults to -1.
-        dtype (Optional[dtype_util.dtype], optional): The output data type, it can be "oneflow.int32", "oneflow.int64", "oneflow.float", "oneflow.double". Defaults to None.
+        dtype (Optional[flow.dtype], optional): The output data type, it can be "oneflow.int32", "oneflow.int64", "oneflow.float", "oneflow.double". Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Note: 

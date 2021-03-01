@@ -41,4 +41,8 @@ message Resource {
   optional bool enable_debug_mode = 18 [default = false];
   optional CollectiveBoxingConf collective_boxing_conf = 19;
   optional bool enable_tensor_float_32_compute = 20 [default = true];
+
+  // NOTE(chengcheng) to reuse nccl memory and speed up
+  optional bool nccl_use_compute_stream = 30 [default = false];
+  optional bool disable_group_boxing_by_dst_parallel = 31 [default = false];
 }

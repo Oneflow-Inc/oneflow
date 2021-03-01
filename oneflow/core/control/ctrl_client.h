@@ -16,69 +16,23 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CONTROL_CTRL_CLIENT_H_
 #define ONEFLOW_CORE_CONTROL_CTRL_CLIENT_H_
 
-#include "oneflow/core/actor/actor_message.h"
-#include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/control/ctrl_service.h"
-#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/control/rpc_client.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 
 namespace oneflow {
 
-class CtrlClient final {
+class CtrlClient final : public RpcClient {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CtrlClient);
   ~CtrlClient();
 
-  void Barrier(const std::string& barrier_name);
-  void Barrier(const std::string& barrier_name, int32_t barrier_num);
-
-  TryLockResult TryLock(const std::string& name);
-  void NotifyDone(const std::string& name);
-  void WaitUntilDone(const std::string& name);
-
-  void PushKV(const std::string& k, std::function<void(std::string*)> VSetter);
-  void PushKV(const std::string& k, const std::string& v);
-  void PushKV(const std::string& k, const PbMessage& msg);
-  void PushMasterKV(const std::string& k, const PbMessage& msg);
-  template<typename T>
-  typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(const std::string& k, T v) {
-    PushKV(k, std::to_string(v));
-  }
-
-  void ClearKV(const std::string& k);
-  void ClearMasterKV(const std::string& k);
-
-  void PullKV(const std::string& k, std::function<void(const std::string&)> VGetter);
-  void PullKV(const std::string& k, std::string* v);
-  void PullKV(const std::string& k, PbMessage* msg);
-  void PullMasterKV(const std::string& k, PbMessage* msg);
-  template<typename T>
-  typename std::enable_if<std::is_arithmetic<T>::value>::type PullKVT(const std::string& k, T* v) {
-    std::string v_str;
-    PullKV(k, &v_str);
-    *v = oneflow_cast<T>(v_str);
-  }
-
-  void PushActEvent(const ActEvent&);
-  void Clear();
-
-  int32_t IncreaseCount(const std::string& k, int32_t v);
-  int32_t IncreaseCount(const std::string& k) { return IncreaseCount(k, 1); }
-  void EraseCount(const std::string& k);
-
  private:
   friend class Global<CtrlClient>;
-  CtrlClient();
-  void LoadServer(const std::string& server_addr, CtrlService::Stub* stub);
-  void PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter);
-  void PullMasterKV(const std::string& k, std::function<void(const std::string&)> VGetter);
-  CtrlService::Stub* GetMasterStub() { return stubs_[0].get(); }
-  CtrlService::Stub* GetThisStub();
-  CtrlService::Stub* GetResponsibleStub(const std::string& key);
+  CtrlClient(const ProcessCtx& process_ctx);
 
-  std::vector<std::unique_ptr<CtrlService::Stub>> stubs_;
-  std::mutex done_names_mtx_;
-  HashSet<std::string> done_names_;
+  const ProcessCtx& process_ctx() const { return process_ctx_; }
 
+  ProcessCtx process_ctx_;
   bool need_heartbeat_thread_stop_;
   std::mutex need_heartbeat_thread_stop_mtx_;
   std::thread heartbeat_thread_;

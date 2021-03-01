@@ -39,4 +39,4 @@ class TickCompTaskNode final : public CompTaskNode {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_NORMAL_FORWARD_COMPUTE_TASK_NODE_H_
+#endif  // ONEFLOW_CORE_GRAPH_TICK_COMPUTE_TASK_NODE_H_

@@ -24,13 +24,13 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetCurrentScope", []() { return GetCurrentScope().GetPtrOrThrow(); });
   m.def("InitGlobalScopeStack", [](const std::shared_ptr<Scope>& scope) {
-    return InitGlobalScopeStack(scope).GetOrThrow();
+    return InitThreadLocalScopeStack(scope).GetOrThrow();
   });
 
   m.def("GlobalScopeStackPush", [](const std::shared_ptr<Scope>& scope) {
-    return GlobalScopeStackPush(scope).GetOrThrow();
+    return ThreadLocalScopeStackPush(scope).GetOrThrow();
   });
-  m.def("GlobalScopeStackPop", []() { return GlobalScopeStackPop().GetOrThrow(); });
+  m.def("GlobalScopeStackPop", []() { return ThreadLocalScopeStackPop().GetOrThrow(); });
 }
 
 }  // namespace oneflow

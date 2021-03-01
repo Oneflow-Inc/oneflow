@@ -20,7 +20,7 @@ limitations under the License.
 
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
-#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 namespace xrt {
@@ -31,8 +31,8 @@ inline void Attr(const PbMessage &message, const std::string &attr_name, T *valu
   const UserOpConf* user_conf = dynamic_cast<const UserOpConf*>(&message);
   if (user_conf) {
     CHECK(user_conf->attr().find(attr_name) != user_conf->attr().end());
-    UserOpAttrVal val = user_conf->attr().at(attr_name);
-    *value = user_op::AttrValAccessor<T>::Attr(val);
+    auto val = user_conf->attr().at(attr_name);
+    *value = user_op::AttrValueAccessor<T>::Attr(val);
   } else {
     CHECK(FieldDefinedInPbMessage(message, attr_name));
     *value = GetValFromPbMessage<T>(message, attr_name);

@@ -64,6 +64,8 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
                         std::shared_ptr<RegstDesc>);
   void AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_getter)() const,
                              std::shared_ptr<RegstDesc>);
+  bool TryBindBnWithOneOfTheRegsts(const std::string&,
+                                   const std::list<std::shared_ptr<RegstDesc>>&);
   void BindBnWithOneOfTheRegsts(const std::string&, const std::list<std::shared_ptr<RegstDesc>>&);
   void UnbindBnWithEmptyRegst();
 
@@ -80,7 +82,6 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   }
 
  private:
-  std::function<const BlobDesc&(const std::string&)> GetLogicalBlobDesc4BnInOpFunc() const;
   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
 
   std::shared_ptr<const Operator> op_;
