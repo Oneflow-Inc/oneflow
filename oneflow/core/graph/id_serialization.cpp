@@ -38,6 +38,11 @@ constexpr size_t kInt64Bits = sizeof(int64_t) * CHAR_BIT;
 
 namespace stream_id_const {
 
+constexpr size_t kMemZoneIdDeviceTypeShift = MemZoneId::kDeviceIndexBits;
+constexpr int64_t kMemZoneIdDeviceTypeInt64Mask = ((int64_t{1} << MemZoneId::kDeviceTypeBits) - 1)
+                                                  << kMemZoneIdDeviceTypeShift;
+constexpr int64_t kMemZoneIdDeviceIndexInt64Mask = (int64_t{1} << MemZoneId::kDeviceIndexBits) - 1;
+
 constexpr size_t kDeviceIndexShift = StreamId::kStreamIndexBits;
 constexpr size_t kDeviceTypeShift = kDeviceIndexShift + DeviceId::kDeviceIndexBits;
 constexpr size_t kProcessIndexShift = kDeviceTypeShift + DeviceId::kDeviceTypeBits;
@@ -56,6 +61,20 @@ constexpr int64_t kNodeIndexInt64Mask = ((int64_t{1} << ProcessId::kNodeIndexBit
                                         << kNodeIndexShift;
 
 }  // namespace stream_id_const
+
+int64_t SerializeMemZoneIdToInt64(const MemZoneId& mem_zone_id) {
+  int64_t id = static_cast<int64_t>(mem_zone_id.device_index());
+  id |= static_cast<int64_t>(mem_zone_id.device_type())
+        << stream_id_const::kMemZoneIdDeviceTypeShift;
+  return id;
+}
+
+MemZoneId DeserializeMemZoneIdFromInt64(int64_t mem_zone_id) {
+  int64_t device_type = (mem_zone_id & stream_id_const::kMemZoneIdDeviceTypeInt64Mask)
+                        >> stream_id_const::kDeviceTypeShift;
+  int64_t device_index = mem_zone_id & stream_id_const::kMemZoneIdDeviceIndexInt64Mask;
+  return MemZoneId(static_cast<DeviceType>(device_type), static_cast<device_index_t>(device_index));
+}
 
 int64_t SerializeStreamIdToInt64(const StreamId& stream_id) {
   int64_t id = static_cast<int64_t>(stream_id.stream_index());
