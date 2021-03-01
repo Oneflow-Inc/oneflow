@@ -27,7 +27,7 @@ namespace one {
 
 class OpInterpUtil {
  public:
-  static OperatorConf&& GenBuiltinOpConf(const BuiltinOpExpr* op_expr);
+  static std::shared_ptr<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr* op_expr);
 
   static std::shared_ptr<cfg::OpAttribute> AddBuiltinOpAndInferOpAttribute(
       const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled);
@@ -41,10 +41,10 @@ class OpInterpUtil {
                                      const OpAttribute& op_attribute);
 
  private:
-  static OperatorConf&& GenModelInitOpConf(const OperatorConf& variable_conf);
-  static OperatorConf&& GenModelIOPathInputOpConf();
-  static OperatorConf&& GenModelLoadOpConf(const OperatorConf& variable_conf,
-                                           const OperatorConf& path_input_op_conf);
+  static std::shared_ptr<OperatorConf> GenModelInitOpConf(const OperatorConf& variable_conf);
+  static std::shared_ptr<OperatorConf> GenModelIOPathInputOpConf();
+  static std::shared_ptr<OperatorConf> GenModelLoadOpConf(const OperatorConf& variable_conf,
+                                                          const OperatorConf& path_input_op_conf);
 
   using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
 
