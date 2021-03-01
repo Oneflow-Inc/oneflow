@@ -67,15 +67,15 @@ Maybe<bool> MirroredTensor::is_cuda() const {
   return JUST(device())->type() == "cuda";
 }
 
-int MirroredTensor::ndim() const {
+int64_t MirroredTensor::ndim() const {
   return shape()->NumAxes();
 }
 
-int MirroredTensor::dim(int index) const {
+int64_t MirroredTensor::dim(int64_t index) const {
   return shape()->At(index);
 }
 
-int MirroredTensor::nelement() const {
+int64_t MirroredTensor::nelement() const {
   return shape()->elem_cnt();
 }
 
@@ -83,15 +83,15 @@ Maybe<bool> ConsistentTensor::is_cuda() const {
   return JUST(parallel_desc())->device_type() == DeviceType::kGPU;
 }
 
-int ConsistentTensor::dim(int index) const {
+int64_t ConsistentTensor::dim(int64_t index) const {
   return shape()->At(index);
 }
 
-int ConsistentTensor::nelement() const {
+int64_t ConsistentTensor::nelement() const {
   return shape()->elem_cnt();
 }
 
-int ConsistentTensor::ndim() const {
+int64_t ConsistentTensor::ndim() const {
   return shape()->NumAxes();
 }
 

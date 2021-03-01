@@ -154,10 +154,10 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
   Maybe<DeterminedTensor> DetermineAndDestroySelf() override { return shared_from_this(); }
 
   // Getters
-  virtual int ndim() const = 0;
+  virtual int64_t ndim() const = 0;
   virtual Maybe<bool> is_cuda() const = 0;
-  virtual int nelement() const = 0;
-  virtual int dim(int index) const = 0;
+  virtual int64_t nelement() const = 0;
+  virtual int64_t dim(int64_t index) const = 0;
 
   // Getters for autograd
   // acc_grad is tensor's accumulated grad in more than once backward operation,
@@ -197,10 +197,10 @@ class MirroredTensor final : public DeterminedTensor {
   Maybe<const Device> device() const override { return impl_->device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   Maybe<bool> is_consistent() const override { return false; }
-  int ndim() const override;
+  int64_t ndim() const override;
   Maybe<bool> is_cuda() const override;
-  int dim(int index) const override;
-  int nelement() const override;
+  int64_t dim(int64_t index) const override;
+  int64_t nelement() const override;
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
@@ -245,10 +245,10 @@ class ConsistentTensor final : public DeterminedTensor {
   }
   bool is_lazy() const override { return impl_->is_lazy(); }
   Maybe<bool> is_consistent() const override { return true; }
-  int ndim() const override;
+  int64_t ndim() const override;
   Maybe<bool> is_cuda() const override;
-  int dim(int index) const override;
-  int nelement() const override;
+  int64_t dim(int64_t index) const override;
+  int64_t nelement() const override;
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
