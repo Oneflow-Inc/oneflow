@@ -840,13 +840,13 @@ Maybe<void> ConnectCriticalSectionEndToReentrantLockEnd(
   op_attribute->add_input_bns("end");
   (*op_attribute->mutable_arg_signature()->mutable_bn_in_op2lbi())["end"] =
       lock_back_edge.critical_section_sink_lbi;
-  auto& blob_desc_signature_map = op_attribute->logical_blob_desc_signature().bn_in_op2blob_desc();
-  auto it = blob_desc_signature_map.find("start");
+  const auto& blob_desc_signature_map =
+      op_attribute->logical_blob_desc_signature().bn_in_op2blob_desc();
+  const auto it = blob_desc_signature_map.find("start");
   CHECK_OR_RETURN(it != blob_desc_signature_map.end());
   CHECK_OR_RETURN(blob_desc_signature_map.find("end") == blob_desc_signature_map.end());
   (*op_attribute->mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc())["end"] =
       it->second;
-
   auto* reentrant_lock_conf = op_attribute->mutable_op_conf()->mutable_reentrant_lock_conf();
   reentrant_lock_conf->set_end(GenLogicalBlobName(lock_back_edge.critical_section_sink_lbi));
   return Maybe<void>::Ok();

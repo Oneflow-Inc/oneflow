@@ -24,7 +24,6 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.module as module_util
 import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
 from oneflow.python.oneflow_export import oneflow_export
@@ -902,13 +901,13 @@ def unsorted_batch_segment_sum(
 
 @oneflow_export("cast")
 def cast(
-    x: oneflow_api.BlobDesc, dtype: dtype_util.dtype, name: Optional[str] = None
+    x: oneflow_api.BlobDesc, dtype: flow.dtype, name: Optional[str] = None
 ) -> oneflow_api.BlobDesc:
     r"""The op takes input x and casts it to the output with `dtype`
 
     Args:
         x (oneflow_api.BlobDesc): Input Blob
-        dtype (dtype_util.dtype): Data type of the output
+        dtype (flow.dtype): Data type of the output
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -1325,7 +1324,7 @@ def maximum(
 def elem_cnt(
     input_blob: oneflow_api.BlobDesc,
     axis: Optional[Sequence[int]] = None,
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """Computes the product of input_blob's dimensions along the parameter `axis`. By default, all the dimensions will be computed.
@@ -1333,7 +1332,7 @@ def elem_cnt(
     Args:
         input_blob (oneflow_api.BlobDesc): Input Blob
         axis (Optional[Sequence[int]], optional): The dimensions along which the op is performed. Defaults to None.
-        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        dtype (Optional[flow.dtype], optional): The data type. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -1387,7 +1386,9 @@ def elem_cnt(
         assert isinstance(axis, (tuple, list))
         op_conf.shape_elem_cnt_conf.include_axis_conf.axis.extend(axis)
     if dtype is not None:
-        op_conf.shape_elem_cnt_conf.data_type = dtype.oneflow_proto_dtype
+        op_conf.shape_elem_cnt_conf.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(
+            dtype
+        )
     op_conf.shape_elem_cnt_conf.y = "y"
     interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
