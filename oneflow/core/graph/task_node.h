@@ -22,6 +22,17 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 
+namespace std {
+
+template<>
+struct hash<oneflow::TaskType> {
+  std::size_t operator()(const oneflow::TaskType& task_type) const {
+    return std::hash<uint32_t>{}(static_cast<uint32_t>(task_type));
+  }
+};
+
+}  // namespace std
+
 namespace oneflow {
 
 RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
