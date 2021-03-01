@@ -229,7 +229,7 @@ Maybe<void> _Run(
     const std::function<Maybe<void>(const std::shared_ptr<vm::cfg::InstructionListProto>&,
                                     const std::shared_ptr<eager::cfg::EagerSymbolList>&)>&
         RunInstruction,
-    const std::function<void(compatible_py::Object*)>& ReleaseObject) {
+    const std::function<Maybe<void>(compatible_py::Object*)>& ReleaseObject) {
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list = sess->instruction_list();
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list = sess->eager_symbol_list();
@@ -241,14 +241,16 @@ Maybe<void> _Run(
   return Maybe<void>::Ok();
 }
 
-void _ReleaseLogicalObject(compatible_py::Object* obj) {
-  CHECK_JUST(LogicalRun(
+Maybe<void> _ReleaseLogicalObject(compatible_py::Object* obj) {
+  JUST(LogicalRun(
       [&obj](const std::shared_ptr<InstructionsBuilder>& build) { build->DeleteObject(obj); }));
+  return Maybe<void>::Ok();
 }
 
-void _ReleasePhysicalObject(compatible_py::Object* obj) {
-  CHECK_JUST(PhysicalRun(
+Maybe<void> _ReleasePhysicalObject(compatible_py::Object* obj) {
+  JUST(PhysicalRun(
       [&obj](const std::shared_ptr<InstructionsBuilder>& build) { build->DeleteObject(obj); }));
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
