@@ -25,8 +25,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-using TensorList = std::vector<std::shared_ptr<Tensor>>;
-
 #define DEFINE_DEFAULT_CONSTRUCTOR(class_type) \
   class_type() = default;                      \
   virtual ~class_type() = default;
@@ -34,10 +32,6 @@ using TensorList = std::vector<std::shared_ptr<Tensor>>;
 class OpExpr {
  public:
   DEFINE_DEFAULT_CONSTRUCTOR(OpExpr);
-
-  // TODO(): Uncomment.
-  // virtual FilterInputTensorsUsedByBackward(const TensorList& inputs) = 0;
-  // virtual FilterOutputTensorsUsedByBackward(const TensorList& outputs) = 0;
 
   virtual std::shared_ptr<OpExpr> GetBackwardOpExpr() const = 0;
   virtual std::string type() const = 0;
@@ -119,5 +113,7 @@ class FunctionOpExpr : public OpExpr {
 
 }  // namespace one
 }  // namespace oneflow
+
+#undef DEFINE_DEFAULT_CONSTRUCTOR
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_

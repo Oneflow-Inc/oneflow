@@ -39,7 +39,9 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
               const int output_num) { builder->Output(output_name, output_num); })
       .def("Attr", [](const std::shared_ptr<one::OpBuilder>& builder, const std::string& attr_name,
                       const std::string& attr_value) { builder->Attr(attr_name, attr_value); })
-      .def("Build", &one::OpBuilder::Build);
+      .def("Build", [](const std::shared_ptr<one::OpBuilder>& builder) {
+        return builder->Build().GetPtrOrThrow();
+      });
 }
 
 }  // namespace oneflow

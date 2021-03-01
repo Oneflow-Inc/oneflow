@@ -53,7 +53,7 @@ class OpBuilder {
   // template <typename T>
   // OpBuilder& Attr(const std::string& attr_name, const T& attr_value);
 
-  std::shared_ptr<UserOpExpr> Build();
+  Maybe<UserOpExpr> Build();
 
  private:
   std::string op_name_;
