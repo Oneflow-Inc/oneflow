@@ -86,6 +86,7 @@ def init_worker(
         for bootstrap_conf in bootstrap_conf_list:
             if bootstrap_conf.rank == 0:
                 continue
+            # set ctrl_bootstrap_conf of worker
             assert bootstrap_conf.HasField("host")
             worker_env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
             env_file = NamedTemporaryFile(delete=False)

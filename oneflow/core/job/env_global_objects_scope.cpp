@@ -87,6 +87,12 @@ Maybe<CtrlBootstrap> MakeCtrlBootstrap(const EnvDesc& env_desc) {
   return ctrl_bootstrap;
 }
 
+Maybe<int> GetCtrlPort(const EnvDesc& env_desc) {
+  int port = 0;
+  if (env_desc.has_bootstrap_conf_ctrl_port()) { port = env_desc.bootstrap_conf_ctrl_port(); }
+  return port;
+}
+
 }  // namespace
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
@@ -95,13 +101,12 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitGlobalCudaDeviceProp();
 #endif
   Global<EnvDesc>::New(env_proto);
-  Global<CtrlServer>::New();
+  Global<CtrlServer>::New(JUST(GetCtrlPort(*Global<EnvDesc>::Get())));
   Global<ProcessCtx>::New();
-  std::shared_ptr<CtrlBootstrap> ctrl_bootstrap = JUST(MakeCtrlBootstrap(*Global<EnvDesc>::Get()));
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
-  CHECK_JUST(
-      ctrl_bootstrap->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+  CHECK_JUST(JUST(MakeCtrlBootstrap(*Global<EnvDesc>::Get()))
+                 ->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
   Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
   Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));

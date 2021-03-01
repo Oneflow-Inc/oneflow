@@ -297,26 +297,28 @@ def MakeBootstrapConfs(node_list, master_port, world_size=0, ctrl_port=-1):
     Args:
         val:  `list`, First in the list is the master machine.
     """
-    if isinstance(rank_host_list, str):
-        rank_host_list = [rank_host_list]
+    if isinstance(node_list, str):
+        node_list = [node_list]
     global global_ctrl_bootstrap_confs
     assert len(global_ctrl_bootstrap_confs) == 0, "ctrl_bootstrap_conf has been inited"
     global config_master_addr
-    config_master_addr.host = rank_host_list[0]
+    config_master_addr.host = node_list[0]
     config_master_addr.port = master_port
     global config_world_size
+    # set size of node list as world_size if which is not configed
     if world_size == 0:
-        config_world_size = len(rank_host_list)
+        config_world_size = len(node_list)
     else:
-        assert (world_size % len(rank_host_list)) == 0
+        assert (world_size % len(node_list)) == 0
         config_world_size = world_size
     global config_bootstrap_ctrl_port
     if ctrl_port != -1:
         config_bootstrap_ctrl_port = ctrl_port
     rank = 0
-    for rank_host in rank_host_list:
+    for rank_host in node_list:
         assert isinstance(rank_host, str)
         bootstrap_conf = _MakeBootstrapConf({"rank": rank, "host": rank_host})
+        # init ctrl_bootstrap_conf on master
         if rank == 0:
             global default_env_proto
             default_env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
