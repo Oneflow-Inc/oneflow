@@ -82,6 +82,7 @@ def init_worker(
     else:
         worker_env_proto = EnvProto()
         worker_env_proto.CopyFrom(env_proto)
+        worker_env_proto.ClearField("ctrl_bootstrap_conf")
         for bootstrap_conf in bootstrap_conf_list:
             if bootstrap_conf.rank == 0:
                 continue
