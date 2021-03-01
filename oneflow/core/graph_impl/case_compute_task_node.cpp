@@ -61,5 +61,7 @@ void CaseCompTaskNode::BuildExecGphAndRegst() {
 void CaseCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kCase);
+REGISTER_COMPUTE_TASK_NODE_GPU_STREAM_INDEX_GETTER(TaskType::kCase);
+REGISTER_COMPUTE_TASK_NODE_CPU_STREAM_INDEX_GETTER(TaskType::kCase);
 
 }  // namespace oneflow
