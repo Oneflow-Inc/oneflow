@@ -760,7 +760,7 @@ Maybe<compatible_py::BlobObject> InstructionsBuilder::MakeLazyRefBlobObject(
     const std::string& interface_op_name, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
   CHECK_EQ_OR_RETURN(op_attribute->output_bns().size(), 1);
-  std::string obn = op_attribute->output_bns().at(0);
+  const std::string& obn = op_attribute->output_bns().at(0);
   std::shared_ptr<ParallelDesc> blob_parallel_desc_sym = JUST(GetParallelDescSymbol(parallel_conf));
   OpAttribute pb_op_attribute;
   op_attribute->ToProto(&pb_op_attribute);
