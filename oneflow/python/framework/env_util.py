@@ -286,7 +286,7 @@ def _MakeBootstrapConf(bootstrap_info: dict):
 
 # only used by CI
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def MakeBootstrapConfs(rank_host_list, master_port, world_size=0, ctrl_port=-1):
+def MakeBootstrapConfs(node_list, master_port, world_size=0, ctrl_port=-1):
     r"""Set ctrl_bootstrap_conf' info.
 
     For instance:
