@@ -994,7 +994,7 @@ Maybe<void> InstructionsBuilder::StatefulCall(
       [this, &find_or_creat_delegate_blob_object, &FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
-      -> std::shared_ptr<compatible_py::BlobObject> {
+      -> Maybe<compatible_py::BlobObject> {
     return find_or_creat_delegate_blob_object(shared_from_this(), FetchDelegateBlobObject,
                                               blob_object, op_arg_parallel_attr);
   };
