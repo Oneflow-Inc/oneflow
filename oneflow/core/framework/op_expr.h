@@ -105,6 +105,8 @@ DEFINE_BUILTIN_OPEXPR_CLASS(DistributeCloneOp, distribute_clone);
 DEFINE_BUILTIN_OPEXPR_CLASS(DistributeConcatOp, distribute_concat);
 DEFINE_BUILTIN_OPEXPR_CLASS(DistributeAddOp, distribute_add);
 
+#undef DEFINE_BUILTIN_OPEXPR_CLASS
+
 // TODO(): Finish the class definition of `FunctionOpExpr`.
 class FunctionOpExpr : public OpExpr {
  public:
