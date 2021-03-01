@@ -55,7 +55,7 @@ class AutogradEngine {
   virtual ~AutogradEngine() = default;
 
   // Calls every `FunctionNode.Apply()` and capture grad in this calling for `inputs`
-  virtual Maybe<std::shared_ptr<TensorList>> Execute(const TensorList& outputs,
+  virtual Maybe<TensorList> Execute(const TensorList& outputs,
                                                      const TensorList& inputs,
                                                      const TensorList& out_grads, bool retain_graph,
                                                      bool create_graph) = 0;
@@ -108,7 +108,7 @@ class StackAutogradEngine final : public AutogradEngine {
   StackAutogradEngine() = default;
   ~StackAutogradEngine() override = default;
 
-  Maybe<std::shared_ptr<TensorList>> Execute(const TensorList& outputs, const TensorList& inputs,
+  Maybe<TensorList> Execute(const TensorList& outputs, const TensorList& inputs,
                                              const TensorList& out_grads, bool retain_graph,
                                              bool create_graph) override;
   const std::shared_ptr<FunctionNode>& AddBackwardFuncPtr(
