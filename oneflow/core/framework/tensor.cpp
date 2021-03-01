@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/dtype.h"
 
 namespace oneflow {
 
