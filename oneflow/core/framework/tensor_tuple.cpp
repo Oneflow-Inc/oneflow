@@ -14,28 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_TUPLE_H_
-#define ONEFLOW_CORE_FRAMEWORK_TENSOR_TUPLE_H_
-
-#include <memory>
-#include <vector>
+#include "oneflow/core/framework/tensor_tuple.h"
 
 namespace oneflow {
+
 namespace one {
 
-class Tensor;
-
-class TensorTuple final : public std::vector<std::shared_ptr<Tensor>>,
-                          public std::enable_shared_from_this<TensorTuple> {
- public:
-  TensorTuple(const TensorTuple&) = delete;
-  TensorTuple(TensorTuple&) = delete;
-  TensorTuple() = default;
-  ~TensorTuple() = default;
-  TensorTuple(uint32_t size);
-};
+TensorTuple::TensorTuple(uint32_t size) { resize(size); }
 
 }  // namespace one
-}  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_TUPLE_H_
+}  // namespace oneflow
