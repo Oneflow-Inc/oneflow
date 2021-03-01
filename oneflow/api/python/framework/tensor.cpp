@@ -84,6 +84,7 @@ template<typename T>
 void ExportTensor(py::module& m, const char* name) {
   py::class_<T, std::shared_ptr<T>>(m, name)
       .def(py::init(&TensorExportUtil<T>::MakeTensor))
+      // Properties of pytorch
       .def_property_readonly("shape", &T::shape)
       .def_property_readonly("device", [](const T& tensor) { return tensor.device().GetPtrOrThrow(); })
       .def_property_readonly("ndim", &T::ndim)
@@ -96,6 +97,7 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("is_leaf", &T::is_leaf)
       // Unique properties of oneflow
       .def_property_readonly("placement", [](const T& tensor) { return tensor.parallel_desc().GetPtrOrThrow(); })
+      // Methods of pytorch
       .def("size", &T::shape)
       .def("dim", &T::dim)
       .def("ndimension", &T::ndim)
