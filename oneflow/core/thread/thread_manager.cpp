@@ -67,11 +67,11 @@ Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
 }
 
 ThreadMgr::ThreadMgr(const Plan& plan) {
-  const int64_t this_machine_id = GlobalProcessCtx::Rank();
+  const int64_t this_rank = GlobalProcessCtx::Rank();
   for (const TaskProto& task : plan.task()) {
     TaskId task_id = DeserializeTaskIdFromInt64(task.task_id());
     StreamId stream_id = task_id.stream_id();
-    if (stream_id.device_id().process_id().node_index() != this_machine_id) { continue; }
+    if (stream_id.device_id().rank() != this_rank) { continue; }
     int64_t thrd_id = SerializeStreamIdToInt64(stream_id);
     if (threads_.find(thrd_id) != threads_.end()) { continue; }
     Thread* thread = NewThread(stream_id);
