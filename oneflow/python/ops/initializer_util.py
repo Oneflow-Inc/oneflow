@@ -23,20 +23,19 @@ import numpy as np
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
-import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Sequence, Union
 
 
 @oneflow_export("constant_initializer")
 def constant_initializer(
-    value: float = 0, dtype: dtype_util.dtype = dtype_util.float
+    value: float = 0, dtype: flow.dtype = flow.float
 ) -> initializer_conf_util.InitializerConf:
     r"""Initializer that generates blob with constant values.
 
     Args:
         value (float, optional): A Python scalar. All elements of the initialized variable . Defaults to 0.
-        dtype (dtype_util.dtype, optional): Default data type. Defaults to dtype_util.float.
+        dtype (flow.dtype, optional): Default data type. Defaults to flow.float.
 
     Raises:
         NotImplementedError:  Do not support such data type.
@@ -108,12 +107,12 @@ def constant_initializer(
 
     """
     initializer = initializer_conf_util.InitializerConf()
-    if dtype in [dtype_util.float, dtype_util.double]:
+    if dtype in [flow.float, flow.double]:
         setattr(initializer.constant_conf, "value", float(value))
     elif dtype in [
-        dtype_util.int8,
-        dtype_util.int32,
-        dtype_util.int64,
+        flow.int8,
+        flow.int32,
+        flow.int64,
     ]:
         setattr(initializer.constant_int_conf, "value", int(value))
     else:
@@ -124,12 +123,12 @@ def constant_initializer(
 
 @oneflow_export("zeros_initializer")
 def zeros_initializer(
-    dtype: dtype_util.dtype = dtype_util.float,
+    dtype: flow.dtype = flow.float,
 ) -> initializer_conf_util.InitializerConf:
     r"""Initializer that generates blobs initialized to 0
 
     Args:
-        dtype (dtype_util.dtype, optional): Default data type. Defaults to dtype_util.float.
+        dtype (flow.dtype, optional): Default data type. Defaults to flow.float.
 
     Returns:
         initializer_conf_util.InitializerConf: constant_initializer
@@ -202,12 +201,12 @@ def zeros_initializer(
 
 @oneflow_export("ones_initializer")
 def ones_initializer(
-    dtype: dtype_util.dtype = dtype_util.float,
+    dtype: flow.dtype = flow.float,
 ) -> initializer_conf_util.InitializerConf:
     r"""Initializer that generates blobs initialized to 1.
 
     Args:
-        dtype (dtype_util.dtype, optional): Default data type. Defaults to dtype_util.float.
+        dtype (flow.dtype, optional): Default data type. Defaults to flow.float.
 
     Returns:
         initializer_conf_util.InitializerConf: constant_initializer
@@ -280,14 +279,14 @@ def ones_initializer(
 
 @oneflow_export("random_uniform_initializer")
 def random_uniform_initializer(
-    minval: float = 0, maxval: float = 1, dtype: dtype_util.dtype = dtype_util.float
+    minval: float = 0, maxval: float = 1, dtype: flow.dtype = flow.float
 ) -> initializer_conf_util.InitializerConf:
     r"""Initializer that generates blobs with a uniform distribution. 
 
     Args:
         minval (float, optional): A python scalar. Lower bound of the range of random values to generate. Defaults to 0.
         maxval (float, optional): A python scalar. Upper bound of the range of random values to generate. Defaults to 1.
-        dtype (dtype_util.dtype, optional): Default data type. Defaults to dtype_util.float.
+        dtype (flow.dtype, optional): Default data type. Defaults to flow.float.
 
     Raises:
         NotImplementedError: Do not support such data type.
@@ -361,13 +360,13 @@ def random_uniform_initializer(
     """
     assert minval <= maxval
     initializer = initializer_conf_util.InitializerConf()
-    if dtype in [dtype_util.float, dtype_util.double]:
+    if dtype in [flow.float, flow.double]:
         setattr(initializer.random_uniform_conf, "min", float(minval))
         setattr(initializer.random_uniform_conf, "max", float(maxval))
     elif dtype in [
-        dtype_util.int8,
-        dtype_util.int32,
-        dtype_util.int64,
+        flow.int8,
+        flow.int32,
+        flow.int64,
     ]:
         setattr(initializer.random_uniform_int_conf, "min", int(minval))
         setattr(initializer.random_uniform_int_conf, "max", int(maxval))
@@ -382,7 +381,7 @@ def random_normal_initializer(
     mean: float = 0.0,
     stddev: float = 1.0,
     seed: Optional[int] = None,
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
 ) -> initializer_conf_util.InitializerConf:
     r"""Initializer that generates blob with a normal distribution.
 
@@ -390,7 +389,7 @@ def random_normal_initializer(
         mean (float, optional): A python scalar. Mean of the random values to generate.. Defaults to 0.0.
         stddev (float, optional): A python scalar. Standard deviation of the random values to generate. Defaults to 1.0.
         seed (Optional[int], optional): None. Not support yet. Defaults to None.
-        dtype (Optional[dtype_util.dtype], optional): . Defaults to None.
+        dtype (Optional[flow.dtype], optional): . Defaults to None.
 
     Returns:
         initializer_conf_util.InitializerConf: Initial configuration
