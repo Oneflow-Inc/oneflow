@@ -19,6 +19,7 @@ import torch.nn.functional as F
 
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
+
 def test_bn(test_case):
     class Net(nn.Module):
         def __init__(self):

@@ -41,6 +41,3 @@ def test_reduce_mean_axis_keepdim(test_case):
             return torch.mean(x, dim=3, keepdim=True)
 
     load_pytorch_module_and_check(test_case, Net)
-
-
-

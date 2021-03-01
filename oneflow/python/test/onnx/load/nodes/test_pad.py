@@ -19,6 +19,9 @@ import torch.nn.functional as F
 
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
+# from absl import app
+# from absl.testing import absltest
+
 
 def test_pad(test_case):
     class Net(nn.Module):
@@ -36,3 +39,7 @@ def test_pad_with_value(test_case):
             return x
 
     load_pytorch_module_and_check(test_case, Net)
+
+
+# test_case = absltest.TestCase
+# test_pad(test_case)

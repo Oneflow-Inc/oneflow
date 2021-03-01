@@ -28,15 +28,21 @@ import oneflow.typing as tp
 
 
 def load_pytorch_module_and_check(
-    test_case, pt_module_class, input_size=None, input_min_val=-10, input_max_val=10, train_flag=True
+    test_case,
+    pt_module_class,
+    input_size=None,
+    input_min_val=-10,
+    input_max_val=10,
+    train_flag=True,
 ):
     if input_size is None:
         input_size = (2, 4, 3, 5)
     pt_module = pt_module_class()
 
-    model_weight_save_dir = "./tmp"
+    model_weight_save_dir = "/home/zhangxiaoyu/tmp"
 
     if train_flag == True:
+
         @flow.global_function(type="train")
         def job_train(x: tp.Numpy.Placeholder(input_size)) -> tp.Numpy:
             x += flow.get_variable(
@@ -46,11 +52,19 @@ def load_pytorch_module_and_check(
                 initializer=flow.zeros_initializer(),
             )
 
-            y = flow.from_pytorch(pt_module, x, model_weight_dir=model_weight_save_dir, do_onnxsim=False, train_flag=train_flag)
+            y = flow.from_pytorch(
+                pt_module,
+                x,
+                model_weight_dir=model_weight_save_dir,
+                do_onnxsim=True,
+                train_flag=train_flag,
+            )
             lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0])
             flow.optimizer.SGD(lr_scheduler).minimize(y)
             return y
+
     else:
+
         @flow.global_function(type="predict")
         def job_eval(x: tp.Numpy.Placeholder(input_size)) -> tp.Numpy:
             x += flow.get_variable(
@@ -60,9 +74,13 @@ def load_pytorch_module_and_check(
                 initializer=flow.zeros_initializer(),
             )
 
-            y = flow.from_pytorch(pt_module, x, model_weight_dir=model_weight_save_dir, do_onnxsim=True, train_flag=train_flag)
-            # lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0])
-            # flow.optimizer.SGD(lr_scheduler).minimize(y)
+            y = flow.from_pytorch(
+                pt_module,
+                x,
+                model_weight_dir=model_weight_save_dir,
+                do_onnxsim=True,
+                train_flag=train_flag,
+            )
             return y
 
     flow.load_variables(flow.checkpoint.get(model_weight_save_dir))
@@ -78,16 +96,17 @@ def load_pytorch_module_and_check(
         flow_res = job_train(ipt1)
     else:
         flow_res = job_eval(ipt1)
-    pytorch_res = pt_module(torch.tensor(ipt1).to( "cuda")).cpu().detach().numpy()
+    pytorch_res = pt_module(torch.tensor(ipt1).to("cuda")).cpu().detach().numpy()
     print(flow_res)
     print("-------------")
     print(pytorch_res)
-    np.save("./tmp/flow_res.npy", flow_res)
-    np.save("./tmp/pytorch_res.npy", pytorch_res)
+    np.save("/home/zhangxiaoyu/tmp/flow_res.npy", flow_res)
+    np.save("/home/zhangxiaoyu/tmp/pytorch_res.npy", pytorch_res)
 
     a, b = flow_res.flatten(), pytorch_res.flatten()
-    
+
     max_idx = np.argmax(np.abs(a - b) / a)
     print("max rel diff is {} at index {}".format(np.max(np.abs(a - b) / a), max_idx))
     print("a[{}]={}, b[{}]={}".format(max_idx, a[max_idx], max_idx, b[max_idx]))
-    test_case.assertTrue(np.allclose(flow_res, pytorch_res, rtol=1e-4, atol=1e-5))
+    msg = "success"
+    test_case.assertTrue(np.allclose(flow_res, pytorch_res, rtol=1e-4, atol=1e-5), msg)

@@ -41,6 +41,7 @@ def convert_to_onnx_and_check(
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(),
             )
+
     flow_weight_dir = tempfile.TemporaryDirectory()
     flow.checkpoint.save(flow_weight_dir.name)
     # TODO(daquexian): a more elegant way?

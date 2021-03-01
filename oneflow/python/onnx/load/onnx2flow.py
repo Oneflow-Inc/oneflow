@@ -119,7 +119,9 @@ def from_onnx(
 
 
 @oneflow_export("from_pytorch")
-def from_pytorch(torch_model, inputs, model_weight_dir="/tmp", do_onnxsim=True, train_flag=True):
+def from_pytorch(
+    torch_model, inputs, model_weight_dir="/tmp", do_onnxsim=True, train_flag=True
+):
     if type(inputs) is not list:
         inputs = [inputs]
     input_names = ["x_{}".format(i) for i in range(len(inputs))]
@@ -133,13 +135,13 @@ def from_pytorch(torch_model, inputs, model_weight_dir="/tmp", do_onnxsim=True, 
         f,
         input_names=input_names,
         opset_version=12,
-        training=train_flag
+        training=train_flag,
     )
     model_str = f.getvalue()
-    if not os.path.exists('./temp_onnx'):
-        os.makedirs('./temp_onnx')
-    with open("./temp_onnx/temp.onnx", "wb") as f:
-        f.write(model_str)
+    # if not os.path.exists('/home/zhangxiaoyu/temp_onnx'):
+    #     os.makedirs('/home/zhangxiaoyu/temp_onnx')
+    # with open("/home/zhangxiaoyu/temp_onnx/temp.onnx", "wb") as f:
+    #     f.write(model_str)
     onnx_model = onnx.load_model_from_string(model_str)
     return from_onnx(
         onnx_model,

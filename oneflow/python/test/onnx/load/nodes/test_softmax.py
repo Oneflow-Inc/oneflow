@@ -36,6 +36,3 @@ def test_softmax_with_axis(test_case):
             return x
 
     load_pytorch_module_and_check(test_case, Net)
-
-
-
