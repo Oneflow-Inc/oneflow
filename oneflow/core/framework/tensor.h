@@ -92,6 +92,7 @@ class MirroredTensor;
 
 class UndeterminedTensor final : public Tensor {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(UndeterminedTensor);
   UndeterminedTensor(const std::shared_ptr<const Shape>& shape,
                      const std::shared_ptr<const DType>& dtype, bool lazy, bool requires_grad,
                      bool retain_grad)
@@ -154,10 +155,8 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
 
   // Getters
   virtual int ndim() const = 0;
-  virtual bool is_cuda() const = 0;
+  virtual Maybe<bool> is_cuda() const = 0;
   virtual int nelement() const = 0;
-  virtual std::size_t element_size() const = 0;
-  virtual std::size_t SizeOf() const = 0;
   virtual std::string ToString() const = 0;
   virtual int dim(int index) const = 0;
 
@@ -173,7 +172,6 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
   void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) {
     grad_fn_node_ = grad_fn_node;
   }
-
 
   // Getters to be deprecated
   virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
@@ -196,16 +194,14 @@ class MirroredTensor final : public DeterminedTensor {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   const std::shared_ptr<const DType>& dtype() const override { return impl_->dtype(); }
-  Maybe<const ParallelDesc> parallel_desc() const override { return impl_->parallel_desc(); }
+  Maybe<const ParallelDesc> parallel_desc() const override { UNIMPLEMENTED(); }
   Maybe<const Device> device() const override { return impl_->device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   Maybe<bool> is_consistent() const override { return false; }
   int ndim() const override { return impl_->shape()->NumAxes(); }
-  bool is_cuda() const override;
+  Maybe<bool> is_cuda() const override;
   int dim(int index) const override;
   int nelement() const override;
-  std::size_t element_size() const override;
-  std::size_t SizeOf() const override;
   std::string ToString() const override;
 
   // Getters for autograd
@@ -245,17 +241,16 @@ class ConsistentTensor final : public DeterminedTensor {
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   const std::shared_ptr<const DType>& dtype() const override { return impl_->dtype(); }
   Maybe<const ParallelDesc> parallel_desc() const override { return impl_->parallel_desc(); }
+  Maybe<const Device> device() const override { UNIMPLEMENTED(); }
   const std::shared_ptr<const compatible_py::Distribute>& distribute() const {
     return impl_->distribute();
   }
   bool is_lazy() const override { return impl_->is_lazy(); }
   Maybe<bool> is_consistent() const override { return true; }
   int ndim() const override { return impl_->shape()->NumAxes(); }
-  bool is_cuda() const override;
+  Maybe<bool> is_cuda() const override;
   int dim(int index) const override;
   int nelement() const override;
-  std::size_t element_size() const override;
-  std::size_t SizeOf() const override;
   std::string ToString() const override;
 
   // Getters for autograd

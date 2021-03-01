@@ -45,8 +45,6 @@ class TensorImpl {
   // Getters
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual const std::shared_ptr<const DType>& dtype() const = 0;
-  virtual const std::shared_ptr<const Device>& device() const = 0;
-  virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
   virtual bool is_lazy() const = 0;
 
   // Getters for autograd
@@ -59,8 +57,6 @@ class TensorImpl {
   // Setters
   virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
   virtual void set_dtype(const std::shared_ptr<const DType>& dtype) = 0;
-  virtual void set_device(const std::shared_ptr<const Device>& device) = 0;
-  virtual void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) = 0;
 
   // Setters for autograd
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) { acc_grad_ = grad; }
@@ -91,17 +87,16 @@ class MirroredTensorImpl : public TensorImpl {
   virtual ~MirroredTensorImpl() = default;
 
   // Getters
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const override { UNIMPLEMENTED(); }
+  virtual const std::shared_ptr<const Device>& device() const = 0;
 
   // Setters
-  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override {
-    UNIMPLEMENTED();
-  }
+  virtual void set_device(const std::shared_ptr<const Device>& device) = 0;
 
  protected:
   MirroredTensorImpl() = default;
   MirroredTensorImpl(bool requires_grad, bool is_leaf, bool retain_grad)
       : TensorImpl(requires_grad, is_leaf, retain_grad) {}
+
 };
 
 class ConsistentTensorImpl : public TensorImpl {
@@ -109,11 +104,11 @@ class ConsistentTensorImpl : public TensorImpl {
   virtual ~ConsistentTensorImpl() = default;
 
   // Getters
-  const std::shared_ptr<const Device>& device() const override { UNIMPLEMENTED(); }
+  virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
   virtual const std::shared_ptr<const compatible_py::Distribute>& distribute() const = 0;
 
   // Setters
-  void set_device(const std::shared_ptr<const Device>& device) override { UNIMPLEMENTED(); }
+  virtual void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) = 0;
   virtual void set_distribute(
       const std::shared_ptr<const compatible_py::Distribute>& distribute) = 0;
 
@@ -139,16 +134,12 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const override { UNIMPLEMENTED(); }
   const std::shared_ptr<const Device>& device() const override { return device_; }
   bool is_lazy() const override { return true; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
-  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override {
-    UNIMPLEMENTED();
-  }
   void set_device(const std::shared_ptr<const Device>& device) override { device_ = device; }
 
   // Getters to be deprecated
@@ -183,16 +174,12 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const override { UNIMPLEMENTED(); }
   const std::shared_ptr<const Device>& device() const override { return device_; }
   bool is_lazy() const override { return false; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
-  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override {
-    UNIMPLEMENTED();
-  }
   void set_device(const std::shared_ptr<const Device>& device) override { device_ = device; }
 
   // Getters to be deprecated

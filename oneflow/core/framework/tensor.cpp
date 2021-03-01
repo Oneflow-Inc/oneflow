@@ -63,8 +63,8 @@ Maybe<DeterminedTensor> UndeterminedTensor::DetermineAndDestroySelf() {
 
 bool UndeterminedTensor::is_leaf() const { TODO(); }
 
-bool MirroredTensor::is_cuda() const { 
-  return device().GetPtrOrThrow()->type() == "cuda";
+Maybe<bool> MirroredTensor::is_cuda() const { 
+  return JUST(device())->type() == "cuda";
 }
 
 int MirroredTensor::dim(int index) const {
@@ -75,13 +75,11 @@ int MirroredTensor::nelement() const {
   return shape()->elem_cnt();
 }
 
-std::size_t MirroredTensor::element_size() const {
-  TODO();
-}
-
-std::size_t MirroredTensor::SizeOf() const { TODO(); }
-
 std::string MirroredTensor::ToString() const { TODO(); }
+
+Maybe<bool> ConsistentTensor::is_cuda() const { 
+  return JUST(parallel_desc())->device_type() == DeviceType::kGPU;
+}
 
 int ConsistentTensor::dim(int index) const {
   return shape()->At(index);
@@ -91,18 +89,7 @@ int ConsistentTensor::nelement() const {
   return shape()->elem_cnt();
 }
 
-std::size_t ConsistentTensor::element_size() const {
-  TODO();
-}
-
-std::size_t ConsistentTensor::SizeOf() const { TODO(); }
-
 std::string ConsistentTensor::ToString() const { TODO(); }
-
-bool ConsistentTensor::is_cuda() const { 
-  return parallel_desc().GetPtrOrThrow()->device_type() == DeviceType::kGPU;
-}
-
 
 }  // namespace one
 
