@@ -321,6 +321,8 @@ void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   } else if (device_type() == DeviceType::kGPU) {
     mem_case->mutable_device_cuda_mem()->set_device_id(
         Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_));
+  } else if (device_type() == DeviceType::kFAKEDEVICE) {
+    mem_case->mutable_fake_dev_mem();
   } else {
     UNIMPLEMENTED();
   }
