@@ -59,7 +59,7 @@ class FileBackendVariableBlob:
     def __init__(
         self,
         var_dir: str,
-        dtype: Optional[dtype_util.dtype] = None,
+        dtype: Optional[oneflow.dtype] = None,
         shape: Optional[Sequence[int]] = None,
     ):
         data_path = os.path.join(var_dir, DATA_FILENAME)
@@ -109,7 +109,7 @@ class FileBackendVariableBlob:
         raise NotImplementedError()
 
     @property
-    def dtype(self) -> dtype_util.dtype:
+    def dtype(self) -> oneflow.dtype:
         return self.dtype_
 
     def numpy(self) -> np.ndarray:
@@ -256,7 +256,7 @@ def SaveVarDict(
     for name, var in var_dict.items():
         meta_info = variable_meta_info_pb.VariableMetaInfo()
         meta_info.shape.dim[:] = var.shape
-        meta_info.data_type = var.dtype.oneflow_proto_dtype
+        meta_info.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(var.dtype)
         var_dir = os.path.join(path, name)
         param_path = os.path.join(var_dir, DATA_FILENAME)
         os.makedirs(os.path.dirname(param_path))
@@ -332,7 +332,7 @@ def _LogicalSlice(
 
 
 def _GetCpu0VariableBlobFromNumpy(
-    np_array: np.ndarray, dtype: dtype_util.dtype
+    np_array: np.ndarray, dtype: oneflow.dtype
 ) -> oneflow_api.EagerConsistentBlob:
     """
     Add a variable on cpu 0, and feed the value of `np_array`

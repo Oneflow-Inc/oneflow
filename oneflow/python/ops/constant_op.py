@@ -21,7 +21,6 @@ from typing import Optional, Sequence, Union
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -32,7 +31,7 @@ import oneflow_api
 @oneflow_export("constant")
 def constant(
     value: Union[int, float],
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     shape: Optional[Sequence[int]] = None,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
@@ -40,7 +39,7 @@ def constant(
 
     Args:
         value (Union[int, float]): The constant value of Blob.
-        dtype (Optional[dtype_util.dtype], optional): The data type of Blob. Defaults to None.
+        dtype (Optional[flow.dtype], optional): The data type of Blob. Defaults to None.
         shape (Optional[Sequence[int]], optional): The shape of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
@@ -112,14 +111,14 @@ def constant(
 @oneflow_export("constant_scalar")
 def constant_scalar(
     value: Union[int, float],
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """This operator creates a constant scalar Blob. 
 
     Args:
         value (Union[int, float]): The constant value of Blob.
-        dtype (Optional[dtype_util.dtype], optional): The data type of Blob. Defaults to None.
+        dtype (Optional[flow.dtype], optional): The data type of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -153,7 +152,7 @@ def constant_scalar(
 def constant_like(
     like: oneflow_api.BlobDesc,
     value: Union[int, float],
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """This operator creates a constant Blob that has the same shape as `like`. 
@@ -161,7 +160,7 @@ def constant_like(
     Args:
         like (oneflow_api.BlobDesc): A Blob. 
         value (Union[int, float]): The constant value of Blob.
-        dtype (Optional[dtype_util.dtype], optional): The data type of Blob. Defaults to None.
+        dtype (Optional[flow.dtype], optional): The data type of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Raises:
@@ -211,7 +210,11 @@ def constant_like(
     else:
         raise NotImplementedError
     if dtype is not None:
-        setattr(op_conf.constant_like_conf, "data_type", dtype.oneflow_proto_dtype)
+        setattr(
+            op_conf.constant_like_conf,
+            "data_type",
+            oneflow_api.deprecated.GetProtoDtype4OfDtype(dtype),
+        )
     setattr(op_conf.constant_like_conf, "out", "out")
     interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
@@ -223,14 +226,14 @@ def constant_like(
 @oneflow_export("ones_like")
 def ones_like(
     like: oneflow_api.BlobDesc,
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """This operator creates a Blob with all elements set to `1` that has the same shape as `like`.
 
     Args:
         like (oneflow_api.BlobDesc): A Blob. 
-        dtype (Optional[dtype_util.dtype], optional): The data type of Blob. Defaults to None.
+        dtype (Optional[flow.dtype], optional): The data type of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -268,14 +271,14 @@ def ones_like(
 @oneflow_export("zeros_like")
 def zeros_like(
     like: oneflow_api.BlobDesc,
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """This operator creates a Blob that has the same shape as `like` whose all elements are set to `0`. 
 
     Args:
         like (oneflow_api.BlobDesc): A Blob. 
-        dtype (Optional[dtype_util.dtype], optional): The data type of Blob. Defaults to None.
+        dtype (Optional[flow.dtype], optional): The data type of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
