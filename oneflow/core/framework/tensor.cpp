@@ -64,7 +64,7 @@ Maybe<DeterminedTensor> UndeterminedTensor::DetermineAndDestroySelf() {
 bool UndeterminedTensor::is_leaf() const { TODO(); }
 
 bool MirroredTensor::is_cuda() const { 
-  return device()->type() == "cuda";
+  return device().GetPtrOrThrow()->type() == "cuda";
 }
 
 int MirroredTensor::dim(int index) const {

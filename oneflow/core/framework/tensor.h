@@ -69,6 +69,7 @@ class Tensor {
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual const std::shared_ptr<const DType>& dtype() const = 0;
   virtual Maybe<const ParallelDesc> parallel_desc() const = 0;
+  virtual Maybe<const Device> device() const = 0;
   virtual Maybe<bool> is_consistent() const = 0;
   virtual bool is_lazy() const = 0;
   virtual Maybe<DeterminedTensor> DetermineAndDestroySelf() = 0;
@@ -107,7 +108,7 @@ class UndeterminedTensor final : public Tensor {
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
   Maybe<const compatible_py::Distribute> distribute() const;
   Maybe<const ParallelDesc> parallel_desc() const override;
-  Maybe<const Device> device() const;
+  Maybe<const Device> device() const override;
   bool is_lazy() const override { return lazy_; }
 
   // Setters
@@ -173,6 +174,7 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
     grad_fn_node_ = grad_fn_node;
   }
 
+
   // Getters to be deprecated
   virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
 
@@ -195,7 +197,7 @@ class MirroredTensor final : public DeterminedTensor {
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   const std::shared_ptr<const DType>& dtype() const override { return impl_->dtype(); }
   Maybe<const ParallelDesc> parallel_desc() const override { return impl_->parallel_desc(); }
-  const std::shared_ptr<const Device>& device() const { return impl_->device(); }
+  Maybe<const Device> device() const override { return impl_->device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   Maybe<bool> is_consistent() const override { return false; }
   int ndim() const override { return impl_->shape()->NumAxes(); }
