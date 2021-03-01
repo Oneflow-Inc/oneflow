@@ -31,7 +31,7 @@ class ResourceDesc final {
   ~ResourceDesc() = default;
 
   size_t TotalMachineNum() const;
-  const Machine& machine(int32_t idx) const;
+  __attribute__((deprecated)) Machine machine(int32_t idx) const;
   size_t CommNetWorkerNum() const { return resource_.comm_net_worker_num(); }
   size_t rdma_mem_block_byte() const { return resource_.rdma_mem_block_mbyte() * kMB; }
   size_t rdma_recv_msg_buf_byte() const { return resource_.rdma_recv_msg_buf_mbyte() * kMB; }
