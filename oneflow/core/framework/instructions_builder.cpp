@@ -227,14 +227,15 @@ Maybe<void> _Run(
     const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& build,
     const std::shared_ptr<vm::IdGenerator>& id_generator,
     const std::function<Maybe<void>(const std::shared_ptr<vm::cfg::InstructionListProto>&,
-                                    const std::shared_ptr<eager::cfg::EagerSymbolList>&)>& run_api,
-    const std::function<void(compatible_py::Object*)>& release_object) {
+                                    const std::shared_ptr<eager::cfg::EagerSymbolList>&)>&
+        RunInstruction,
+    const std::function<void(compatible_py::Object*)>& ReleaseObject) {
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list = sess->instruction_list();
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list = sess->eager_symbol_list();
   build(std::make_shared<InstructionsBuilder>(id_generator, instruction_list, eager_symbol_list,
-                                              release_object));
-  JUST(run_api(instruction_list, eager_symbol_list));
+                                              ReleaseObject));
+  JUST(RunInstruction(instruction_list, eager_symbol_list));
   instruction_list->clear_instruction();
   eager_symbol_list->clear_eager_symbol();
   return Maybe<void>::Ok();
@@ -1152,7 +1153,7 @@ Maybe<void> InstructionsBuilder::StatefulCall(
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
-    return FindOrCreateDelegateBlobObject(shared_from_this(), FetchDelegateBlobObject, blob_object,
+    return FindOrCreateDelegateBlobObject(FetchDelegateBlobObject, blob_object,
                                           op_arg_parallel_attr);
   };
 
@@ -1188,7 +1189,7 @@ Maybe<void> InstructionsBuilder::StatelessCall(
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
-    return FindOrCreateDelegateBlobObject(shared_from_this(), FetchDelegateBlobObject, blob_object,
+    return FindOrCreateDelegateBlobObject(FetchDelegateBlobObject, blob_object,
                                           op_arg_parallel_attr);
   };
 
@@ -1233,7 +1234,7 @@ Maybe<void> InstructionsBuilder::NoBoxingStatelessCall(
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
-    return FindOrCreateDelegateBlobObject(shared_from_this(), FetchDelegateBlobObject, blob_object,
+    return FindOrCreateDelegateBlobObject(FetchDelegateBlobObject, blob_object,
                                           op_arg_parallel_attr);
   };
   JUST(_StatelessCall("compute", op_attribute, op_parallel_desc_sym, op_parallel_desc_sym,
@@ -1567,28 +1568,30 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
 }
 
 Maybe<void> LogicalRun(
-    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& build) {
-  const auto& run_api =
+    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
+  const auto& RunInstruction =
       [](const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
          const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) -> Maybe<void> {
     JUST(Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(instruction_list,
                                                                    eager_symbol_list));
     return Maybe<void>::Ok();
   };
-  JUST(_Run(build, std::make_shared<vm::LogicalIdGenerator>(), run_api, _ReleaseLogicalObject));
+  JUST(_Run(Build, std::make_shared<vm::LogicalIdGenerator>(), RunInstruction,
+            _ReleaseLogicalObject));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> PhysicalRun(
-    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& build) {
-  const auto& run_api =
+    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
+  const auto& RunInstruction =
       [](const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
          const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) -> Maybe<void> {
     JUST(Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(instruction_list,
                                                                     eager_symbol_list));
     return Maybe<void>::Ok();
   };
-  JUST(_Run(build, std::make_shared<vm::PhysicalIdGenerator>(), run_api, _ReleasePhysicalObject));
+  JUST(_Run(Build, std::make_shared<vm::PhysicalIdGenerator>(), RunInstruction,
+            _ReleasePhysicalObject));
   return Maybe<void>::Ok();
 }
 

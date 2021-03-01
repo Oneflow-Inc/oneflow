@@ -420,10 +420,10 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 };
 
 Maybe<void> LogicalRun(
-    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& build);
+    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
 
 Maybe<void> PhysicalRun(
-    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& build);
+    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
 
 }  // namespace oneflow
 
