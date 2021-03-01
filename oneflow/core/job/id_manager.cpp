@@ -36,7 +36,8 @@ DeviceType IDMgr::GetDeviceTypeFromActorId(int64_t actor_id) const {
 }
 
 int64_t IDMgr::MachineId4ActorId(int64_t actor_id) const {
-  return DeserializeTaskIdFromInt64(actor_id).stream_id().device_id().process_id().node_index();
+  // TODO: change this inferface semantics, rank does not indicate machine_id in multi-client
+  return DeserializeTaskIdFromInt64(actor_id).stream_id().device_id().rank();
 }
 
 int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
@@ -56,8 +57,8 @@ int64_t IDMgr::GlobalThrdId4TaskId(int64_t task_id) const {
 }
 
 int64_t IDMgr::PickCpuThrdIdEvenly(int64_t machine_id) {
-  ProcessId process_id{static_cast<uint32_t>(machine_id)};
-  DeviceId device_id{process_id, DeviceType::kCPU, kCPUDeviceIndex};
+  DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kCPU,
+                     DeviceId::kCPUDeviceIndex};
   auto* stream_index_generator = GetStreamIndexGeneratorManager()->GetGenerator(device_id);
   StreamId stream_id{device_id, stream_index_generator->GenerateComputeStreamIndex()};
   return SerializeStreamIdToInt64(stream_id);
