@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow.python.eager.symbol as symbol_util
+import oneflow.python.eager.vm_util as vm_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
@@ -720,7 +721,7 @@ def _BuildCopyInstruction(builder, produced_blob_object, op_conf, to_device_tag)
             builder, produced_blob_object.parallel_desc_symbol, to_device_tag
         )
         out_parallel_conf = out_parallel_desc_symbol.parallel_conf
-        with builder.CudaHostPinBlob(produced_blob_object):
+        with vm_util.CudaHostPinBlob(builder, produced_blob_object):
             builder.NoBoxingCudaH2DStatelessCall(
                 cfg_op_attribute, out_parallel_conf, bn_in_op2blob_object,
             )
@@ -776,7 +777,7 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
             TryReplaceDeviceTag,
         )
     elif ref_device_tag == "gpu" and value_device_tag == "cpu":
-        with builder.CudaHostPinBlob(value_blob_object):
+        with vm_util.CudaHostPinBlob(builder, value_blob_object):
             builder.NoBoxingCudaH2DStatelessCall(
                 cfg_op_attribute, ref_parallel_conf, bn_in_op2blob_object,
             )
