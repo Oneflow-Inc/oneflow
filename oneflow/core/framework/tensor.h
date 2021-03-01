@@ -94,11 +94,11 @@ class UndeterminedTensor final : public Tensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UndeterminedTensor);
   UndeterminedTensor(const std::shared_ptr<const Shape>& shape,
-                     const std::shared_ptr<const DType>& dtype, bool lazy, bool requires_grad,
+                     const std::shared_ptr<const DType>& dtype, bool is_lazy, bool requires_grad,
                      bool is_leaf, bool retain_grad)
       : shape_(shape),
         dtype_(dtype),
-        is_lazy_(lazy),
+        is_lazy_(is_lazy),
         requires_grad_(requires_grad),
         is_leaf_(is_leaf),
         retain_grad_(retain_grad),
