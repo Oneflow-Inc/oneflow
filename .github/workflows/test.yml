@@ -22,7 +22,7 @@ jobs:
   wait_for_gpu_slot:
     name: Wait for GPU slots
     runs-on: [self-hosted, scheduler]
-    needs: [check_license_and_format]
+    needs: [build]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - uses: Oneflow-Inc/github-workflow-schedule@6603c9b838c8df18defd90565374bf47d07bfd44
@@ -50,7 +50,7 @@ jobs:
             cuda_version: 10.2
             extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --cpu
             experimental: false
-    needs: [wait_for_gpu_slot]
+    needs: [check_license_and_format]
     runs-on: [self-hosted, linux, release]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
@@ -109,7 +109,7 @@ jobs:
             experimental: true
           - test_suite: cpu
             experimental: false
-    needs: [build]
+    needs: [build, wait_for_gpu_slot]
     runs-on: [self-hosted, linux, release]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
