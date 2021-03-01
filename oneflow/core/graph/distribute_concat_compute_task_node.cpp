@@ -81,4 +81,20 @@ void DistributeConcatCompTaskNode::InferProducedDataRegstTimeShape() {
       GetSoleConsumedRegst("in")->data_regst_time_shape();
 }
 
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDistributeConcat)
+    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
+      auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
+          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
+      CHECK_NOTNULL(cuda_stream_index_generator);
+      return cuda_stream_index_generator->GenerateComputeStreamIndex();
+    });
+
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kDistributeConcat)
+    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
+      auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
+          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
+      CHECK_NOTNULL(cpu_stream_index_generator);
+      return cpu_stream_index_generator->GenerateComputeStreamIndex();
+    });
+
 }  // namespace oneflow
