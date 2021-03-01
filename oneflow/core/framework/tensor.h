@@ -95,11 +95,12 @@ class UndeterminedTensor final : public Tensor {
   OF_DISALLOW_COPY_AND_MOVE(UndeterminedTensor);
   UndeterminedTensor(const std::shared_ptr<const Shape>& shape,
                      const std::shared_ptr<const DType>& dtype, bool lazy, bool requires_grad,
-                     bool retain_grad)
+                     bool is_leaf, bool retain_grad)
       : shape_(shape),
         dtype_(dtype),
-        lazy_(lazy),
+        is_lazy_(lazy),
         requires_grad_(requires_grad),
+        is_leaf_(is_leaf),
         retain_grad_(retain_grad),
         consistent_(Error::ValueError("Consistent/Mirrored undetermined")) {}
 
@@ -110,7 +111,7 @@ class UndeterminedTensor final : public Tensor {
   Maybe<const compatible_py::Distribute> distribute() const;
   Maybe<const ParallelDesc> parallel_desc() const override;
   Maybe<const Device> device() const override;
-  bool is_lazy() const override { return lazy_; }
+  bool is_lazy() const override { return is_lazy_; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) { shape_ = shape; }
@@ -125,7 +126,7 @@ class UndeterminedTensor final : public Tensor {
   void set_device(const std::shared_ptr<const Device>& device) { device_ = device; }
 
   // Getters for autograd
-  bool is_leaf() const override;
+  bool is_leaf() const override { return is_leaf_; }
   bool requires_grad() const override { return requires_grad_; }
   bool retain_grad() const override { return retain_grad_; }
 
@@ -138,11 +139,12 @@ class UndeterminedTensor final : public Tensor {
  private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
-  bool lazy_;
+  bool is_lazy_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
   std::shared_ptr<const Device> device_;
   std::shared_ptr<const compatible_py::Distribute> distribute_;
   bool requires_grad_;
+  bool is_leaf_;
   bool retain_grad_;
   Maybe<bool> consistent_;
 };
@@ -224,6 +226,12 @@ class MirroredTensor final : public DeterminedTensor {
     impl_->set_blob_object(blob_object);
   }
 
+  static std::shared_ptr<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                                    const std::shared_ptr<const DType>& dtype,
+                                                    const std::shared_ptr<const Device>& device,
+                                                    bool is_lazy, bool requires_grad, bool is_leaf,
+                                                    bool retain_grad);
+
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
 };
@@ -271,6 +279,12 @@ class ConsistentTensor final : public DeterminedTensor {
   void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
     impl_->set_blob_object(blob_object);
   }
+
+  static std::shared_ptr<ConsistentTensor> MakeTensor(
+      const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
+      const std::shared_ptr<const compatible_py::Distribute>& distribute,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
+      bool is_leaf, bool retain_grad);
 
  private:
   std::shared_ptr<ConsistentTensorImpl> impl_;

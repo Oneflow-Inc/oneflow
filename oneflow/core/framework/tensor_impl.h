@@ -96,7 +96,6 @@ class MirroredTensorImpl : public TensorImpl {
   MirroredTensorImpl() = default;
   MirroredTensorImpl(bool requires_grad, bool is_leaf, bool retain_grad)
       : TensorImpl(requires_grad, is_leaf, retain_grad) {}
-
 };
 
 class ConsistentTensorImpl : public TensorImpl {
