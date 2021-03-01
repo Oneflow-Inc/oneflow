@@ -50,9 +50,12 @@ def FetchTensorBlobAsNumpyList(parallel_size, blob_object):
         fetcher = _MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield)
 
         def BuildFetchBlobBodyInstruction(builder):
-            builder.FetchBlobBody(blob_object, fetcher)
+            builder.FetchBlobBody(
+                blob_object, python_callback.GetIdForRegisteredCallback(fetcher)
+            )
             builder.InsertRemoveForeignCallbackInstruction(
-                blob_object.object_id, fetcher
+                blob_object.object_id,
+                python_callback.GetIdForRegisteredCallback(fetcher),
             )
 
         vm_util.PhysicalRun(BuildFetchBlobBodyInstruction)
@@ -75,9 +78,12 @@ def _FetchBlobHeader(blob_object):
         fetcher = _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield)
 
         def BuildFetchBlobHeaderInstruction(builder):
-            builder.FetchBlobHeader(blob_object, fetcher)
+            builder.FetchBlobHeader(
+                blob_object, python_callback.GetIdForRegisteredCallback(fetcher)
+            )
             builder.InsertRemoveForeignCallbackInstruction(
-                blob_object.object_id, fetcher
+                blob_object.object_id,
+                python_callback.GetIdForRegisteredCallback(fetcher),
             )
 
         vm_util.PhysicalRun(BuildFetchBlobHeaderInstruction)
