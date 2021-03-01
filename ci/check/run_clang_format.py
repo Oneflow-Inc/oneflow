@@ -122,8 +122,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     exts = [".h", ".cc", ".cpp", ".cu", ".cuh"]
     files = filter(
-        lambda p: p.suffix in exts and str(p).startswith("oneflow/xrt") == False,
-        pathlib.Path(args.source_dir).rglob("*"),
+        lambda p: p.suffix in exts, pathlib.Path(args.source_dir).rglob("*"),
     )
     loop = asyncio.get_event_loop()
     files = [str(f) for f in files]
