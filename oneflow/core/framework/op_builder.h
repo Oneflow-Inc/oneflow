@@ -17,34 +17,16 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OP_BUILDER_H_
 
 #include <string>
-#include <mutex>
 
 #include "oneflow/core/framework/op_expr.h"
 
 namespace oneflow {
 namespace one {
 
-class TensorNameScope {
- public:
-  static TensorNameScope* Global();
-
-  const std::string& Lookup(const std::shared_ptr<Tensor>& tensor) const;
-
-  void Record(const std::shared_ptr<Tensor>& tensor, const std::string& name);
-
- private:
-  TensorNameScope() = default;
-  virtual ~TensorNameScope() = default;
-
- private:
-  mutable std::mutex mutex_;
-
-  std::string default_tensor_name_ = "";
-  // uint64_t(Tensor*) -> the name of the tensor.
-  std::unordered_map<uint64_t, std::string> tensor_names_;
-};
-
-// UserOp builder.
+// The op builder for UserOp.
+// Note that the internal proto will be moved if the Build method is called.
+// Therefore, please make sure that the Build method be called at last, and do not perform any
+// operations on this builder instance after the calling.
 class OpBuilder {
  public:
   OpBuilder() = default;
