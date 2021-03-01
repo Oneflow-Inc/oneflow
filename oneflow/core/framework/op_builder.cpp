@@ -23,29 +23,6 @@ namespace one {
 
 static constexpr char _PositionalPlaceholderPrefix[] = "_/#^Placeholder_";
 
-/*static*/ TensorNameScope* TensorNameScope::Global() {
-  static TensorNameScope scope;
-  return &scope;
-}
-
-const std::string& TensorNameScope::Lookup(const std::shared_ptr<Tensor>& tensor) const {
-  std::lock_guard<std::mutex> lock(mutex_);
-  uint64_t key = reinterpret_cast<uint64_t>(tensor.get());
-  const auto& it = tensor_names_.find(key);
-  if (it != tensor_names_.end()) {
-    return it->second;
-  } else {
-    return default_tensor_name_;
-  }
-}
-
-void TensorNameScope::Record(const std::shared_ptr<Tensor>& tensor, const std::string& name) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  uint64_t key = reinterpret_cast<uint64_t>(tensor.get());
-  // We assume that the name of the tensor will be update more than once.
-  tensor_names_[key] = name;
-}
-
 OpBuilder::OpBuilder(const std::string& op_type_name) {
   *(proto_.mutable_op_type_name()) = op_type_name;
 }
