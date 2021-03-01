@@ -609,7 +609,7 @@ Maybe<Scope> InstructionsBuilder::BuildScopeByProtoSetter(
     const std::shared_ptr<Scope>& scope,
     const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& Setter) {
   std::shared_ptr<cfg::ScopeProto> scope_proto = JUST(scope->MakeChildScopeProto());
-  setter(scope_proto);
+  Setter(scope_proto);
   return GetScopeSymbol(scope_proto);
 }
 
@@ -1201,12 +1201,12 @@ Maybe<void> InstructionsBuilder::NoBoxingStatelessCall(
   };
 
   const auto GetDirectOr121BlobObject =
-      [this, &find_or_creat_delegate_blob_object, &FetchDelegateBlobObject](
+      [this, &FindOrCreateDelegateBlobObject, &FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
-    return find_or_creat_delegate_blob_object(shared_from_this(), FetchDelegateBlobObject,
-                                              blob_object, op_arg_parallel_attr);
+    return FindOrCreateDelegateBlobObject(shared_from_this(), FetchDelegateBlobObject, blob_object,
+                                          op_arg_parallel_attr);
   };
   JUST(_StatelessCall("compute", op_attribute, op_parallel_desc_sym, op_parallel_desc_sym,
                       bn_in_op2blob_object, GetDirectOr121BlobObject));
