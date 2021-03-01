@@ -14,5 +14,7 @@ runs:
         if [ -d "${{ inputs.src_path }}" ]; then
           dir_arg="-r"
         fi
+        parent_path=$(dirname ${{ inputs.dst_path }})
+        ssh ${{ inputs.host }} mkdir -p parent_path
         scp ${dir_arg} ${{ inputs.src_path }} ${{ inputs.host }}:~/${{ inputs.dst_path }}
       shell: bash
