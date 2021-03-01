@@ -77,7 +77,7 @@ inline void RunXrtPass(const std::string &pass, XrtGraph *graph, const XrtPassOp
 // Run an xrt pass with unfixed parameters.
 template<typename... Args>
 inline void RunXrtPass(const std::string &pass, XrtGraph *graph, const XrtPassOptions &options,
-                       Args &&... args) {
+                       Args &&...args) {
   return RunPassImpl(pass, graph, options, std::forward<Args>(args)...);
 }
 
