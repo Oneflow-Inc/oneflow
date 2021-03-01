@@ -21,7 +21,6 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.blob_trait as blob_trait
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
 import oneflow.python.eager.eager_blob_util as eager_blob_util
@@ -92,7 +91,7 @@ def LazyRemoteBlob(lbi, **kw):
 @property
 def dtype(self):
     ret = convert_proto_dtype_to_oneflow_dtype(self.get_dtype())
-    assert issubclass(ret, dtype_util.dtype)
+    assert isinstance(ret, oneflow.dtype)
     return ret
 
 
