@@ -13,26 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_FAKEDEV_H_
-#define ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_FAKEDEV_H_
+#ifndef ONEFLOW_CORE_MEMORY_MEMORY_FAKE_DEV_ALLOCATOR_H_
+#define ONEFLOW_CORE_MEMORY_MEMORY_FAKE_DEV_ALLOCATOR_H_
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/device_registry_manager.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 namespace oneflow {
-constexpr int FAKE_MAGIC_CODE = 0x46414B45;
 
-struct fakeFloat16 {
-  unsigned short int value_;
+struct FakeDevMemoryAllocatorImpl final {
+  static void* Allocate(MemoryCase& mem_case, size_t size);
+  static void Deallocate(void* ptr, MemoryCase mem_case);
 };
-
-template<typename T>
-struct IsFloat16;
-
-template<>
-struct IsFloat16<fakeFloat16> : std::true_type {};
-
-REGISTER_DEVICE(DeviceType::kFAKEDEVICE)
-    .SetDumpVersionInfoFn([]() -> void {})
-    .SetDeviceTag("fakedevice");
 }  // namespace oneflow
-#endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTER_FAKEDEV_H_
+
+#endif  // ONEFLOW_CORE_MEMORY_MEMORY_FAKE_DEV_ALLOCATOR_H_
