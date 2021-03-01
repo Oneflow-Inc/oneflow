@@ -50,7 +50,7 @@ class DeviceId {
     CHECK_LE(static_cast<size_t>(device_type), kMaxDeviceTypeVal);
     CHECK_LE(device_index, kMaxDeviceIndex);
   }
-  const rank_t& rank() const { return rank_; }
+  rank_t rank() const { return rank_; }
   DeviceType device_type() const { return device_type_; }
   device_index_t device_index() const { return device_index_; }
   bool operator==(const DeviceId& rhs) const {
