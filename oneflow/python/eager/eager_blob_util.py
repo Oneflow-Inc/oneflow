@@ -95,7 +95,7 @@ def _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield):
             oneflow_api.EagerPhysicalBlobHeader(
                 ofblob.static_shape,
                 ofblob.shape_list,
-                int(ofblob.dtype.oneflow_proto_dtype),
+                oneflow_api.deprecated.GetProtoDtype4OfDtype(ofblob.dtype),
                 ofblob.is_tensor_list,
             )
         )

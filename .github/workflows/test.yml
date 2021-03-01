@@ -25,13 +25,14 @@ jobs:
     needs: [check_license_and_format]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - uses: Oneflow-Inc/github-workflow-schedule@3f02dea06f4803aed2ab3df9c26c15f76b4fd7ef
+      - uses: Oneflow-Inc/github-workflow-schedule@46aacc832e16f52d6017c14cc0695cd7dddb52ce
         name: Wait for GPU slot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build_and_test:
     name: Test suite
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
       max-parallel: 5
       matrix:
@@ -40,12 +41,15 @@ jobs:
           - test_suite: cuda
             cuda_version: 10.2
             extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\"
+            experimental: false
           - test_suite: xla
             cuda_version: 10.1
             extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --xla
+            experimental: true
           - test_suite: cpu
             cuda_version: 10.2
             extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --cpu
+            experimental: false
     needs: [check_license_and_format, wait_for_gpu_slot]
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
