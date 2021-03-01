@@ -9,6 +9,7 @@ runs:
   using: "composite"
   steps:
     - run: |
+        set -x
         dir_arg=""
         if [ -d "${{ inputs.src_path }}" ]; then
           dir_arg="-r"
