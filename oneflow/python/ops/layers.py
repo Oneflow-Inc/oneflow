@@ -1030,6 +1030,10 @@ def batch_normalization(
         trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
         training (bool, optional): A boolean specifies whether now is training the model. Defaults to True.
         name (Optional[str], optional): This layer's name. Defaults to None.
+        gamma_name (Optional[str], optional): This gamma's name. Defaults to None.
+        beta_name (Optional[str], optional): This beta's name. Defaults to None.
+        moving_mean_name (Optional[str], optional): This moving_mean's name. Defaults to None.
+        moving_var_name (Optional[str], optional): This moving_var's name. Defaults to None.
 
     Returns:
         oneflow_api.BlobDesc:  A `Blob` with same shape of input.
