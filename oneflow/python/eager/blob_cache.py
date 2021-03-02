@@ -20,19 +20,19 @@ import oneflow_api
 
 
 def GetBodyCache(self, fetch):
-    if self.body_cache_ is None:
+    if not hasattr(self, "body_cache_"):
         self.body_cache_ = fetch(self.blob_object)
     return self.body_cache_
 
 
 def GetCachedNumpyMirroredList(self, fetch):
-    if self.numpy_mirrored_list_ is None:
+    if not hasattr(self, "numpy_mirrored_list_"):
         self.numpy_mirrored_list_ = fetch(self.blob_object)
     return self.numpy_mirrored_list_
 
 
 def GetCachedNumpy(self, fetch):
-    if self.numpy_ is None:
+    if not hasattr(self, "numpy_"):
         self.numpy_ = fetch(self.blob_object)
     return self.numpy_
 
