@@ -56,8 +56,7 @@ REGISTER_DEVICE_THREAD_CREATOR_WITH_STREAM_ID(
     DeviceType::kGPU, ([](const StreamId& stream_id) -> Thread* {
       int64_t thrd_id = SerializeStreamIdToInt64(stream_id);
       int64_t dev_id = static_cast<int64_t>(stream_id.device_id().device_index());
-      Thread* thread = new GpuThread(thrd_id, dev_id);
-      return thread;
+      return new GpuThread(thrd_id, dev_id);
     }));
 
 #endif

@@ -34,10 +34,8 @@ CpuThread::CpuThread(int64_t thrd_id) {
 
 REGISTER_DEVICE_THREAD_CREATOR_WITH_STREAM_ID(DeviceType::kCPU,
                                               ([](const StreamId& stream_id) -> Thread* {
-                                                int64_t thrd_id =
-                                                    SerializeStreamIdToInt64(stream_id);
-                                                Thread* thread = new CpuThread(thrd_id);
-                                                return thread;
+                                                return new CpuThread(
+                                                    SerializeStreamIdToInt64(stream_id));
                                               }));
 
 }  // namespace oneflow
