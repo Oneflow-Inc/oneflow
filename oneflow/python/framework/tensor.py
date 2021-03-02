@@ -41,6 +41,46 @@ class UndeterminedTensor:
         self.is_leaf = is_leaf
         self.placement = placement
         self.sbp = sbp
+        self.is_consistent = False
+
+    def get_shape(self):
+        return self.shape
+
+    def get_dtype(self):
+        return self.dtype
+
+    def get_device(self):
+        return self.device
+
+    def get_requires_grad(self):
+        return self.requires_grad
+
+    def get_retain_grad(self):
+        return self.retain_grad
+
+    def get_is_leaf(self):
+        return self.is_leaf
+
+    def get_placement(self):
+        return self.placement
+
+    def get_sbp(self):
+        return self.sbp
+
+    def get_consistent(self):
+        return self.is_consistent
+
+    def set_device(self, value):
+        self.device = value
+
+    def set_placement(self, value):
+        self.placement = value
+
+    def set_sbp(self, value):
+        self.sbp = value
+
+    def set_consistent(self, value):
+        self.is_consistent = value
 
 @oneflow_export("tensor")
 class Tensor:
