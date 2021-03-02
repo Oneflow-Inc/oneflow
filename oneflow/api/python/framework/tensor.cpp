@@ -37,9 +37,10 @@ struct TensorExportUtil final {};
 template<>
 struct TensorExportUtil<MirroredTensor> final {
   static std::shared_ptr<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                          const std::shared_ptr<const DType>& dtype,
-                                          const std::shared_ptr<const Device>& device, bool is_lazy,
-                                          bool requires_grad, bool is_leaf, bool retain_grad) {
+                                                    const std::shared_ptr<const DType>& dtype,
+                                                    const std::shared_ptr<const Device>& device,
+                                                    bool is_lazy, bool requires_grad, bool is_leaf,
+                                                    bool retain_grad) {
     return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf,
                                       retain_grad);
   }
