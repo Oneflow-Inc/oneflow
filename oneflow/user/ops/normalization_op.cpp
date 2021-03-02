@@ -178,14 +178,14 @@ REGISTER_USER_OP("normalization_add_relu")
                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
           const auto* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
           const auto& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
-          size_t reserve_space_size = x_desc->shape().elem_cnt();
+          size_t reserve_space_bits = x_desc->shape().elem_cnt();
           if (x_sbp.has_split_parallel()) {
             CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
-            reserve_space_size = reserve_space_size / ctx->parallel_num();
+            reserve_space_bits = reserve_space_bits / ctx->parallel_num();
           }
           *reserve_space->mut_data_type() = DataType::kInt32;
           *reserve_space->mut_shape() =
-              Shape({static_cast<int64_t>(RoundUp(reserve_space_size, 32) / 32)});
+              Shape({static_cast<int64_t>(RoundUp(reserve_space_bits, 32) / 32)});
           return Maybe<void>::Ok();
         }))
     .SetPhysicalTensorDescInferFn(
