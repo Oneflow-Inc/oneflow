@@ -201,9 +201,8 @@ REGISTER_USER_OP("normalization_add_relu")
 
 #if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
 
-Maybe<void> InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int64_t n,
-                                       int64_t c, int64_t h, int64_t w,
-                                       size_t* reserve_space_size) {
+void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int64_t n, int64_t c,
+                                int64_t h, int64_t w, size_t* reserve_space_size) {
   cudnnHandle_t cudnn_handle;
   OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle));
   CudnnTensorDesc xy_desc(CUDNN_TENSOR_NHWC, data_type, n, c, h, w);
@@ -212,7 +211,6 @@ Maybe<void> InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t o
       cudnn_handle, CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops, activation_desc.Get(), xy_desc.Get(),
       reserve_space_size));
   OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle));
-  return Maybe<void>::Ok();
 }
 
 REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
@@ -240,9 +238,9 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
           int64_t h = x_shape.Count(1, axis);
           int64_t w = 1;
           int64_t c = x_shape.At(axis);
-          const auto& input_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
-          if (input_sbp.has_split_parallel()) {
-            CHECK_EQ_OR_RETURN(input_sbp.split_parallel().axis(), 0);
+          const auto& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+          if (x_sbp.has_split_parallel()) {
+            CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
             n = n / ctx->parallel_num();
           }
           cudnnBatchNormOps_t ops;
