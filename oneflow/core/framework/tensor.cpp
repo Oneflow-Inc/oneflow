@@ -22,31 +22,6 @@ limitations under the License.
 namespace oneflow {
 
 namespace one {
-Maybe<const compatible_py::Distribute> UndeterminedTensor::distribute() const {
-  CHECK_OR_RETURN(distribute_) << Error::ValueError("Distribute is not determined.");
-  return distribute_;
-}
-
-Maybe<const ParallelDesc> UndeterminedTensor::parallel_desc() const {
-  CHECK_OR_RETURN(parallel_desc_) << Error::ValueError("Parallel_desc undetermined");
-  return parallel_desc_;
-}
-
-Maybe<const Device> UndeterminedTensor::device() const {
-  CHECK_OR_RETURN(device_) << Error::ValueError("Device undetermined.");
-  return device_;
-}
-
-Maybe<DeterminedTensor> UndeterminedTensor::DetermineAndDestroySelf() {
-  if (JUST(is_consistent())) {
-    return std::static_pointer_cast<DeterminedTensor>(
-        ConsistentTensor::MakeTensor(shape(), dtype(), JUST(distribute()), JUST(parallel_desc()),
-                                     is_lazy(), requires_grad(), is_leaf(), retain_grad()));
-  } else {
-    return std::static_pointer_cast<DeterminedTensor>(MirroredTensor::MakeTensor(
-        shape(), dtype(), JUST(device()), is_lazy(), requires_grad(), is_leaf(), retain_grad()));
-  }
-}
 
 std::shared_ptr<MirroredTensor> MirroredTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
@@ -63,7 +38,7 @@ std::shared_ptr<MirroredTensor> MirroredTensor::MakeTensor(
   return std::make_shared<MirroredTensor>(impl);
 }
 
-Maybe<bool> MirroredTensor::is_cuda() const { return JUST(device())->type() == "cuda"; }
+bool MirroredTensor::is_cuda() const { return device()->type() == "cuda"; }
 
 int64_t MirroredTensor::ndim() const { return shape()->NumAxes(); }
 
@@ -87,8 +62,8 @@ std::shared_ptr<ConsistentTensor> ConsistentTensor::MakeTensor(
   return std::make_shared<ConsistentTensor>(impl);
 }
 
-Maybe<bool> ConsistentTensor::is_cuda() const {
-  return JUST(parallel_desc())->device_type() == DeviceType::kGPU;
+bool ConsistentTensor::is_cuda() const {
+  return parallel_desc()->device_type() == DeviceType::kGPU;
 }
 
 int64_t ConsistentTensor::dim(int64_t index) const { return shape()->At(index); }
