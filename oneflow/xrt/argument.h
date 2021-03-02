@@ -49,33 +49,33 @@ class Argument {
  public:
   Argument() : initialized_(false) {}
 
-  explicit Argument(const std::string &name) : Argument(name, ArgumentMetaData()) {}
+  explicit Argument(const std::string& name) : Argument(name, ArgumentMetaData()) {}
 
-  explicit Argument(const std::string &name, const Shape &shape, const DataType &data_type)
+  explicit Argument(const std::string& name, const Shape& shape, const DataType& data_type)
       : Argument(name, shape, data_type, ArgumentMetaData()) {}
 
-  explicit Argument(const std::string &name, const ArgumentMetaData &meta_data)
+  explicit Argument(const std::string& name, const ArgumentMetaData& meta_data)
       : arg_name_(name), meta_data_(meta_data), initialized_(true) {}
 
-  explicit Argument(const std::string &name, const Shape &shape, const DataType &data_type,
-                    const ArgumentMetaData &meta_data)
+  explicit Argument(const std::string& name, const Shape& shape, const DataType& data_type,
+                    const ArgumentMetaData& meta_data)
       : arg_name_(name),
         shape_(shape),
         data_type_(data_type),
         meta_data_(meta_data),
         initialized_(true) {}
 
-  const std::string &name() const { return arg_name_; }
+  const std::string& name() const { return arg_name_; }
 
-  const Shape &shape() const { return shape_; }
-  const DataType &data_type() const { return data_type_; }
+  const Shape& shape() const { return shape_; }
+  const DataType& data_type() const { return data_type_; }
 
-  void set_meta_data(const ArgumentMetaData &meta_data) { meta_data_ = meta_data; }
-  const ArgumentMetaData &meta_data() const { return meta_data_; }
+  void set_meta_data(const ArgumentMetaData& meta_data) { meta_data_ = meta_data; }
+  const ArgumentMetaData& meta_data() const { return meta_data_; }
 
   bool initialized() const { return initialized_; }
 
-  bool operator==(const Argument &rhs) const {
+  bool operator==(const Argument& rhs) const {
     return arg_name_ == rhs.arg_name_ && shape_ == rhs.shape_ && data_type_ == rhs.data_type_;
   }
 
@@ -95,7 +95,7 @@ class Argument {
 namespace std {
 template<>
 struct hash<oneflow::xrt::Argument> {
-  size_t operator()(const oneflow::xrt::Argument &arg) const {
+  size_t operator()(const oneflow::xrt::Argument& arg) const {
     return std::hash<std::string>()(arg.name());
   }
 };

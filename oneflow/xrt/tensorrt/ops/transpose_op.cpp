@@ -24,12 +24,12 @@ namespace tensorrt {
 
 class TransposeOp : public TrtOpKernel {
  public:
-  void Compile(TrtOpContext *ctx) override {
+  void Compile(TrtOpContext* ctx) override {
     const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
     Shape in_shape = ctx->SoleInputShape();
     CHECK_EQ(perm.size(), in_shape.NumAxes());
 
-    nvinfer1::ITensor *input = ctx->SoleInput();
+    nvinfer1::ITensor* input = ctx->SoleInput();
     if (IsIdentity(perm)) {
       ctx->SetSoleOutput(input);
     } else {
@@ -37,7 +37,7 @@ class TransposeOp : public TrtOpKernel {
     }
   }
 
-  bool IsIdentity(const std::vector<int32_t> &perm) const {
+  bool IsIdentity(const std::vector<int32_t>& perm) const {
     bool is_identity = true;
     for (int i = 0; i < perm.size(); ++i) {
       if (i != perm[i]) {

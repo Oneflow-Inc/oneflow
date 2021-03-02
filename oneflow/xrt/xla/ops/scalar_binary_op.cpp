@@ -27,20 +27,20 @@ namespace mola {
 template<typename BinaryOp>
 class ScalarBinaryOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext *ctx) override {
+  void Compile(XlaOpContext* ctx) override {
     xla::XlaOp scalar = Scalar(ctx);
     xla::XlaOp in = ctx->SoleInput();
 
     ctx->SetSoleOutput(BinaryOp()(in, scalar));
   }
 
-  xla::XlaOp Scalar(XlaOpContext *ctx) const {
-    xla::XlaBuilder *builder = ctx->builder();
+  xla::XlaOp Scalar(XlaOpContext* ctx) const {
+    xla::XlaBuilder* builder = ctx->builder();
     DataType data_type = ctx->SoleInputType();
     if (ctx->Attr<bool>("has_int_operand")) {
       int64_t value = ctx->Attr<int64_t>("int_operand");
       return IntegerLiteral(builder, data_type, value);
-    } else if(ctx->Attr<bool>("has_float_operand")) {
+    } else if (ctx->Attr<bool>("has_float_operand")) {
       double value = ctx->Attr<double>("float_operand");
       return FloatLiteral(builder, data_type, value);
     }
