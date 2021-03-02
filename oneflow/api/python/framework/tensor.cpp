@@ -43,7 +43,7 @@ struct TensorExportUtil<MirroredTensor> final {
     DimVector shape_dims;
     CHECK_OR_RETURN(py::isinstance<py::tuple>(py_shape))
         << Error::ValueError("Input shape must be tuple.");
-    for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
+    for (const auto& dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
     std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
     return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf,
                                       retain_grad);
@@ -69,7 +69,7 @@ struct TensorExportUtil<ConsistentTensor> final {
     DimVector shape_dims;
     CHECK_OR_RETURN(py::isinstance<py::tuple>(py_shape))
         << Error::ValueError("Input shape must be tuple.");
-    for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
+    for (const auto& dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
     std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
     return ConsistentTensor::MakeTensor(shape, dtype, distribute, parallel_desc, is_lazy,
                                         requires_grad, is_leaf, retain_grad);
