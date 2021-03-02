@@ -67,8 +67,6 @@ int64_t MemoryCaseUtil::GenMemZoneId(const MemoryCase& mem_case) {
     return 128;  // CPU host mem
   }
   if (mem_case.has_fake_dev_mem()) { return 1024; }
-  LOG(INFO) << "wrong mem_case: ";
-  LOG(INFO) << mem_case.DebugString();
   UNIMPLEMENTED();
   return -1;
 }
