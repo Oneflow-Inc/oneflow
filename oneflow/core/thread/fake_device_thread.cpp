@@ -13,10 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/device_tick_kernel.h"
+#include "oneflow/core/thread/fake_device_thread.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR_INCLUDING_FAKE(OperatorConf::kDeviceTickConf, DeviceTickKernel);
+FakeDeviceThread::FakeDeviceThread(int64_t thrd_id) {
+  set_thrd_id(thrd_id);
+  mut_actor_thread() = std::thread([this, thrd_id]() {
+    OF_PROFILER_NAME_THIS_HOST_THREAD("Fake Device Actor : (" + std::to_string(thrd_id) + ")");
+    ThreadCtx ctx;
+#ifdef WITH_CUDA
+    ctx.cb_event_chan = nullptr;
+#endif  // WITH_CUDA
+    PollMsgChannel(ctx);
+  });
+}
 
 }  // namespace oneflow

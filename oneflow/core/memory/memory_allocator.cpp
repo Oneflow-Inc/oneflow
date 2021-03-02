@@ -106,6 +106,8 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
 #else
     UNIMPLEMENTED();
 #endif
+  } else if (mem_case.has_fake_dev_mem()) {
+    memset(dptr, memset_val, size);
   } else {
     UNIMPLEMENTED();
   }

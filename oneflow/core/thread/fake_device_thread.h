@@ -13,10 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/device_tick_kernel.h"
+#ifndef ONEFLOW_CORE_THREAD_FAKE_DEVICE_THREAD_H_
+#define ONEFLOW_CORE_THREAD_FAKE_DEVICE_THREAD_H_
+
+#include "oneflow/core/thread/thread.h"
 
 namespace oneflow {
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR_INCLUDING_FAKE(OperatorConf::kDeviceTickConf, DeviceTickKernel);
+class FakeDeviceThread final : public Thread {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(FakeDeviceThread);
+  FakeDeviceThread() = delete;
+  ~FakeDeviceThread() = default;
+
+  FakeDeviceThread(int64_t thrd_id);
+
+ private:
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_THREAD_FAKE_DEVICE_THREAD_H_

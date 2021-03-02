@@ -85,6 +85,10 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
     DeviceType dev_type = DeserializeStreamIdFromInt64(thrd_id()).device_id().device_type();
     if (dev_type == DeviceType::kGPU) {
       mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
+    } else if (dev_type == DeviceType::kFAKEDEVICE) {
+      mem_case->mutable_fake_dev_mem();
+    } else {
+      UNIMPLEMENTED();
     }
   } else {
     UNIMPLEMENTED();
