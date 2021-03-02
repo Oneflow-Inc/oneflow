@@ -60,7 +60,9 @@ class Tensor:
 
     @property
     def shape(self):
-        pass
+        if (self.local_or_consistent_tensor is None):
+            return self.undetermined_tensor.shape
+        return self.local_or_consistent_tensor.shape
 
     @property
     def device(self):
