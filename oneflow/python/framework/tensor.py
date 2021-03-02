@@ -29,13 +29,14 @@ class Tensor:
         shape,
         dtype,
         device=None,
+        requires_grad=True,
+        retain_grad=False,
+        is_leaf=True,
         placement=None,
         distribute=None,
         is_lazy=False,
         is_consistent=False,
         is_determined=False,
-        requires_grad=True,
-        retain_grad=False,
     ):
         if (is_determined):
             if (is_consistent):
