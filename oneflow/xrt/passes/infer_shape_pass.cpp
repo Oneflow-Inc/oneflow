@@ -91,7 +91,7 @@ class InferShapePass : public XrtPass {
   void Run(XrtGraph *graph, const XrtPassOptions &options,
            const std::vector<Any> &params) override {
     CHECK_EQ(params.size(), 6)
-        << "JobDesc, BlobDesc, ParallelCtx ParallelDesc SbpSignatures and lbn2logical_blob_desc_proto are required in "
+        << "JobDesc, BlobDesc, ParallelCtx, ParallelDesc, SbpSignatures and lbn2logical_blob_desc_proto are required in "
            "InferShapePass.";
     const auto *job_desc = any_cast<const JobDesc *>(params[0]);
     const auto *parallel_ctx = any_cast<const ParallelContext *>(params[1]);
