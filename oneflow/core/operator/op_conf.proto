@@ -17,6 +17,13 @@ import "oneflow/core/job/learning_rate_schedule_conf.proto";
 import "oneflow/core/operator/interface_blob_conf.proto";
 import "oneflow/core/register/blob_desc.proto";
 
+enum ActivationType { 
+  kNone = 0;  
+  kTanH = 1;  
+  kSigmoid = 2; 
+  kRelu = 3;  
+}
+
 message DistributeConcatOpConf {
   repeated string in = 1;
   required string out = 2;
