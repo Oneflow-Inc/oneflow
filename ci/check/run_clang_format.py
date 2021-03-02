@@ -83,7 +83,7 @@ def download(dry=False):
             None
     else:
         assert subprocess.call(f"mkdir -p {dst_dir}", shell=True) == 0
-        assert subprocess.call(f"curl {url} -o {dst}", shell=True) == 0
+        assert subprocess.call(f"curl -L {url} -o {dst}", shell=True) == 0
         assert subprocess.call(f"chmod +x {dst}", shell=True) == 0
         return dst
 
