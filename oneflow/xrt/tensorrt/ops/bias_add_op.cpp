@@ -37,7 +37,8 @@ class BiasAddOp : public TrtOpKernel {
     int32_t axis = ctx->Attr<int32_t>("axis");
     dims[axis] = bias_shape.At(0);
 
-    nvinfer1::ITensor *in = ctx->Input("a_0");;
+    nvinfer1::ITensor *in = ctx->Input("a_0");
+    ;
     nvinfer1::Weights bias = ctx->Weight("b_0");
     nvinfer1::ITensor *reshaped_bias = helpers::Reshape(ctx, bias, AsShape(dims));
     // Add bias to input by ElementWise layer.

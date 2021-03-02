@@ -100,7 +100,7 @@ inline void RunPassImpl(const std::string &pass, XrtGraph *graph, const XrtPassO
 
 template<typename... Args>
 inline void RunPassImpl(const std::string &pass, XrtGraph *graph, const XrtPassOptions &options,
-                        Args &&... args) {
+                        Args &&...args) {
   std::vector<Any> params{std::forward<Args>(args)...};
   auto optimize_pass = std::shared_ptr<XrtPass>(XrtPass::Registry()->Lookup(pass)());
   optimize_pass->Run(graph, options, params);
