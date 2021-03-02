@@ -50,7 +50,8 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
     if (stream_id.device_id().rank() != this_rank) { continue; }
     int64_t thrd_id = SerializeStreamIdToInt64(stream_id);
     if (threads_.find(thrd_id) != threads_.end()) { continue; }
-    Thread* thread = NewObj<int, Thread>(stream_id.device_id().device_type(), stream_id);
+    Thread* thread =
+        NewObj<int, Thread, const StreamId&>(stream_id.device_id().device_type(), stream_id);
     CHECK_NOTNULL(thread);
     threads_[thrd_id].reset(thread);
   }
