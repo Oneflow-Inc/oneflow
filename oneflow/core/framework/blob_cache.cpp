@@ -22,7 +22,7 @@ namespace compatible_py {
 
 namespace {
 
-std::mutex& GlobalObjectId2BlobCacheMutex() {
+std::mutex* GlobalObjectId2BlobCacheMutex() {
   static std::mutex global_object_id2blob_cache_mutex;
   return global_object_id2blob_cache_mutex;
 }
@@ -55,7 +55,7 @@ Maybe<BlobObject> BlobCache::GetCachedDelegateBlobObject(
 
 Maybe<BlobCache> FindOrCreateBlobCache(const std::shared_ptr<BlobObject>& blob_object) {
   int64_t object_id = blob_object->object_id();
-  std::unique_lock<std::mutex> lock(GlobalObjectId2BlobCacheMutex());
+  std::unique_lock<std::mutex> lock(*GlobalObjectId2BlobCacheMutex());
   auto* object_id2blob_cache = GlobalObjectId2BlobCache();
   if (object_id2blob_cache->find(object_id) == object_id2blob_cache->end()) {
     (*object_id2blob_cache)[object_id] = std::make_shared<BlobCache>(blob_object);
@@ -65,7 +65,7 @@ Maybe<BlobCache> FindOrCreateBlobCache(const std::shared_ptr<BlobObject>& blob_o
 
 Maybe<void> TryDisableBlobCache(const std::shared_ptr<BlobObject>& blob_object) {
   int64_t object_id = blob_object->object_id();
-  std::unique_lock<std::mutex> lock(GlobalObjectId2BlobCacheMutex());
+  std::unique_lock<std::mutex> lock(*GlobalObjectId2BlobCacheMutex());
   auto* object_id2blob_cache = GlobalObjectId2BlobCache();
   if (object_id2blob_cache->find(object_id) != object_id2blob_cache->end()) {
     object_id2blob_cache->erase(object_id);
@@ -84,7 +84,7 @@ Maybe<BlobObject> FindOrCreateDelegateBlobObject(
 }
 
 Maybe<void> ClearAllBlobCache() {
-  std::unique_lock<std::mutex> lock(GlobalObjectId2BlobCacheMutex());
+  std::unique_lock<std::mutex> lock(*GlobalObjectId2BlobCacheMutex());
   auto* object_id2blob_cache = GlobalObjectId2BlobCache();
   object_id2blob_cache->clear();
   return Maybe<void>::Ok();

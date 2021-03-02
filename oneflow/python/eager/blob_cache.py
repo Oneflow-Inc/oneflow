@@ -38,9 +38,7 @@ def GetCachedNumpy(self, fetch):
 
 
 def RegisterMethodAndAttr4BlobCache():
-    oneflow_api.BlobCache.body_cache_ = None
-    oneflow_api.BlobCache.numpy_mirrored_list_ = None
-    oneflow_api.BlobCache.numpy_ = None
+    # BlobCache has will be registered three attr in these fun: body_cache_, numpy_mirrored_list_, numpy_
     oneflow_api.BlobCache.GetBodyCache = GetBodyCache
     oneflow_api.BlobCache.GetCachedNumpyMirroredList = GetCachedNumpyMirroredList
     oneflow_api.BlobCache.GetCachedNumpy = GetCachedNumpy
