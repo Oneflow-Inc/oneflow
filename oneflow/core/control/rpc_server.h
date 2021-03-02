@@ -16,8 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CONTROL_RPC_SERVER_H_
 #define ONEFLOW_CORE_CONTROL_RPC_SERVER_H_
 
+#ifdef RPC_CLIENT_GRPC
 #include <grpc++/alarm.h>
 #include <grpc++/server_builder.h>
+#ifdef RPC_CLIENT_GRPC
 #include "oneflow/core/control/ctrl_call.h"
 #include "oneflow/core/common/function_traits.h"
 
