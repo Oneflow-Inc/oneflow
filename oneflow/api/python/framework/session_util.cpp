@@ -23,11 +23,15 @@ namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Session, std::shared_ptr<Session>>(m, "Session")
+      .def_property_readonly("id", &Session::id)
       .def("instruction_list", &Session::instruction_list)
       .def("eager_symbol_list", &Session::eager_symbol_list);
 
+  m.def("GetDefaultSessionId", []() { return GetDefaultSessionId().GetOrThrow(); });
+  m.def("RegsiterSession", [](int64_t id) { return RegsiterSession(id).GetPtrOrThrow(); });
+
   m.def("GetDefaultSession", []() { return GetDefaultSession().GetPtrOrThrow(); });
-  m.def("ResetDefaultSession", []() { return ResetDefaultSession().GetOrThrow(); });
+  m.def("ClearSessionById", [](int64_t id) { return ClearSessionById(id).GetOrThrow(); });
 }
 
 }  // namespace oneflow
