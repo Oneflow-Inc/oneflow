@@ -32,7 +32,7 @@ jobs:
       - uses: Oneflow-Inc/github-workflow-schedule@7847157787cea96221712426bc599784301def4f
         name: Wait for GPU slot
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
 
   build_and_test:
     name: Test suite
