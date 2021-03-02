@@ -40,20 +40,20 @@ struct Signature {
   std::vector<Shape> entry_shapes;
 };
 
-bool operator==(const Signature& lhs, const Signature& rhs);
+bool operator==(const Signature &lhs, const Signature &rhs);
 
 struct SignatureHash {
-  size_t operator()(const Signature& signature) const;
+  size_t operator()(const Signature &signature) const;
 };
 
-Signature ComputeSignature(const std::string& name, const int device_ordinal,
-                           const std::vector<xrt::Parameter>& entry_params);
+Signature ComputeSignature(const std::string &name, const int device_ordinal,
+                           const std::vector<xrt::Parameter> &entry_params);
 
 class CompilationCache {
  public:
-  Executable* GetRecord(const Signature& signature) const;
+  Executable *GetRecord(const Signature &signature) const;
 
-  void Record(const Signature& signature, const std::shared_ptr<Executable>& result);
+  void Record(const Signature &signature, const std::shared_ptr<Executable> &result);
 
   void Release();
 

@@ -32,14 +32,14 @@ namespace mola {
 
 class OptimizerOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext* ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     xla::XlaOp gradient = ctx->Input("model_diff_0");
     xla::XlaOp learning_rate = ctx->Input("learning_rate_0");
     ApplyUpdate(ctx, gradient, learning_rate);
   }
 
  private:
-  virtual void ApplyUpdate(XlaOpContext* ctx, xla::XlaOp gradient, xla::XlaOp learning_rate) = 0;
+  virtual void ApplyUpdate(XlaOpContext *ctx, xla::XlaOp gradient, xla::XlaOp learning_rate) = 0;
 };
 
 }  // namespace mola

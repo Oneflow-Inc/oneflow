@@ -32,40 +32,40 @@ class XrtGraph : public util::AttributeMap {
   XrtGraph() = default;
   virtual ~XrtGraph() = default;
 
-  XrtNode* Node(int64_t node_id);
-  const XrtNode* Node(int64_t node_id) const;
+  XrtNode *Node(int64_t node_id);
+  const XrtNode *Node(int64_t node_id) const;
 
-  XrtNode* AddNode();
-  XrtNode* AddNode(const google::protobuf::Message& param);
+  XrtNode *AddNode();
+  XrtNode *AddNode(const google::protobuf::Message &param);
 
-  XrtEdge* AddEdge();
-  XrtEdge* AddEdge(const XrtNode* start, const XrtNode* end);
+  XrtEdge *AddEdge();
+  XrtEdge *AddEdge(const XrtNode *start, const XrtNode *end);
 
-  XrtEdge* Connect(const XrtNode* start, const XrtNode* end);
-  XrtEdge* Connect(const XrtNode* start, const XrtNode* end, const Argument& arg);
-  void Disconnect(const XrtEdge* edge);
+  XrtEdge *Connect(const XrtNode *start, const XrtNode *end);
+  XrtEdge *Connect(const XrtNode *start, const XrtNode *end, const Argument &arg);
+  void Disconnect(const XrtEdge *edge);
 
   // Create a subgraph for node that unique id is `node_id`
-  XrtGraph* AddSubgraph(int64_t node_id);
+  XrtGraph *AddSubgraph(int64_t node_id);
 
-  const std::vector<XrtNode*>& Nodes() const { return nodes_; }
-  std::vector<XrtNode*>& Nodes() { return nodes_; }
+  const std::vector<XrtNode *> &Nodes() const { return nodes_; }
+  std::vector<XrtNode *> &Nodes() { return nodes_; }
 
-  const std::vector<XrtEdge*>& Edges() const { return edges_; }
-  std::vector<XrtEdge*>& Edges() { return edges_; }
+  const std::vector<XrtEdge *> &Edges() const { return edges_; }
+  std::vector<XrtEdge *> &Edges() { return edges_; }
 
   std::string ToDot() const;
 
   std::vector<Argument> Arguments() const;
 
  protected:
-  std::vector<XrtNode*> nodes_;
+  std::vector<XrtNode *> nodes_;
   // All allocated nodes in the graph. The node unique id is related to it's
   // index in the vector. The Xrt node in `nodes_` can be nullptr since we will
   // always keep it in `nodes_` even if it has been removed from the graph.
   std::vector<std::unique_ptr<XrtNode>> allocated_nodes_;
 
-  std::vector<XrtEdge*> edges_;
+  std::vector<XrtEdge *> edges_;
   // All allocated edges in the graph. The edge unique id is related to it's
   // index in the vector. And the xrt edge in `edges_` can also be nullptr.
   std::vector<std::unique_ptr<XrtEdge>> allocated_edges_;
@@ -78,14 +78,14 @@ class XrtGraph : public util::AttributeMap {
 namespace algorithm {
 template<>
 struct GraphTypeTrait<XrtGraph> {
-  typedef XrtNode* pNodeType;
-  typedef XrtEdge* pEdgeType;
+  typedef XrtNode *pNodeType;
+  typedef XrtEdge *pEdgeType;
 };
 
 template<>
 struct GraphTypeTrait<const XrtGraph> {
-  typedef const XrtNode* pNodeType;
-  typedef const XrtEdge* pEdgeType;
+  typedef const XrtNode *pNodeType;
+  typedef const XrtEdge *pEdgeType;
 };
 }  // namespace algorithm
 

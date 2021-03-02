@@ -29,7 +29,7 @@ inline size_t Align(int alignment, size_t size) {
   return (size + alignment - 1) / alignment * alignment;
 }
 
-XlaAllocator::XlaAllocator(const se::Platform* platform, DeviceBufferAllocator* allocator)
+XlaAllocator::XlaAllocator(const se::Platform *platform, DeviceBufferAllocator *allocator)
     : se::DeviceMemoryAllocator(platform),
       allocator_(allocator),
       allocate_offset_(0),
@@ -45,7 +45,7 @@ xla::StatusOr<se::OwningDeviceMemory> XlaAllocator::Allocate(int device_ordinal,
       && populated_buffers_[allocate_index_].populated) {
     memory_base = populated_buffers_[allocate_index_].memory;
   } else {
-    void* data = nullptr;
+    void *data = nullptr;
     if (size != 0) {
       data = allocator_->AllocateRaw(allocate_offset_, size);
       allocate_offset_ += Align(64 /*alignment*/, size);
@@ -74,8 +74,8 @@ void XlaAllocator::ReserveWorkspace(size_t workspace_bytes) {
   allocator_->Reserve(workspace_bytes);
 }
 
-void XlaAllocator::PopulateDeviceMemory(const std::vector<se::DeviceMemoryBase>& device_buffers,
-                                        const std::vector<int64_t>& allocation_indices) {
+void XlaAllocator::PopulateDeviceMemory(const std::vector<se::DeviceMemoryBase> &device_buffers,
+                                        const std::vector<int64_t> &allocation_indices) {
   int64_t max_populated_index = 0;
   for (int i = 0; i < allocation_indices.size(); ++i) {
     int64_t index = allocation_indices[i];

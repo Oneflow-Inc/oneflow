@@ -29,33 +29,33 @@ limitations under the License.
 namespace oneflow {
 namespace xrt {
 
-std::string ExtractOpTypeAsString(const OperatorConf& conf);
+std::string ExtractOpTypeAsString(const OperatorConf &conf);
 
-XrtDevice DeviceTypeToXrtDevice(const DeviceType& device_type);
+XrtDevice DeviceTypeToXrtDevice(const DeviceType &device_type);
 
-XrtDevice DeviceTagToXrtDevice(const std::string& device_tag);
+XrtDevice DeviceTagToXrtDevice(const std::string &device_tag);
 
-DeviceType XrtDeviceToDeviceType(const XrtDevice& device);
+DeviceType XrtDeviceToDeviceType(const XrtDevice &device);
 
-XrtEngine StringToXrtEngine(const std::string& engine);
+XrtEngine StringToXrtEngine(const std::string &engine);
 
-std::string BlobIdToName(const LogicalBlobId& lbi);
+std::string BlobIdToName(const LogicalBlobId &lbi);
 
-LogicalBlobId BlobNameToId(const std::string& blob_name);
+LogicalBlobId BlobNameToId(const std::string &blob_name);
 
 template<typename T>
-inline Shape AsShape(const std::vector<T>& dim_vec) {
+inline Shape AsShape(const std::vector<T> &dim_vec) {
   return Shape(DimVector(dim_vec.begin(), dim_vec.end()));
 }
 
 // Build an xrt graph from launch conf.
-std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function& function,
-                                        const DeviceType& device_type, const JobDesc& job_desc);
+std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function &function,
+                                        const DeviceType &device_type, const JobDesc &job_desc);
 
 // Build an xrt graph from op graph.
-std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph* op_graph);
+std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph *op_graph);
 
-void InitXrtConfigurations(const XrtConfig& config);
+void InitXrtConfigurations(const XrtConfig &config);
 
 bool XrtCompilationEnabled();
 
@@ -70,23 +70,23 @@ XrtPassOptions CreateDefaultXrtPassOptions(bool train_phase = false);
 // pass    "Pass type, sunch as \"BuildSubGraph\"."
 // graph   "An XRT graph which be applied by pass."
 // options "Specify options to affect pass results."
-inline void RunXrtPass(const std::string& pass, XrtGraph* graph, const XrtPassOptions& options) {
+inline void RunXrtPass(const std::string &pass, XrtGraph *graph, const XrtPassOptions &options) {
   return RunPassImpl(pass, graph, options);
 }
 
 // Run an xrt pass with unfixed parameters.
 template<typename... Args>
-inline void RunXrtPass(const std::string& pass, XrtGraph* graph, const XrtPassOptions& options,
-                       Args&&... args) {
+inline void RunXrtPass(const std::string &pass, XrtGraph *graph, const XrtPassOptions &options,
+                       Args &&... args) {
   return RunPassImpl(pass, graph, options, std::forward<Args>(args)...);
 }
 
-void RunCompilationTimeXrtPasses(const OpGraph& op_graph, Job* job, bool train_phase);
+void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job, bool train_phase);
 
 #ifdef WITH_TENSORRT
 namespace tensorrt {
 void CacheInt8Calibration();
-void WriteInt8Calibration(const std::string& path);
+void WriteInt8Calibration(const std::string &path);
 }  // namespace tensorrt
 #endif  // WITH_TENSORRT
 

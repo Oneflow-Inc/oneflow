@@ -26,7 +26,7 @@ namespace nv {
 
 struct PtrDeleter {
   template<typename T>
-  inline void operator()(T* obj) {
+  inline void operator()(T *obj) {
     if (obj) { obj->destroy(); }
   }
 };

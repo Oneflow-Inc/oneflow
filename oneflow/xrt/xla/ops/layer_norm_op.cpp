@@ -27,18 +27,18 @@ namespace mola {
 
 class LayerNormOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext* ctx) override;
+  void Compile(XlaOpContext *ctx) override;
 
  private:
-  xla::XlaOp BatchNormTraining(const xla::XlaOp& input, const xla::XlaOp& scale,
-                               const xla::XlaOp& shift, double epsilon) {
+  xla::XlaOp BatchNormTraining(const xla::XlaOp &input, const xla::XlaOp &scale,
+                               const xla::XlaOp &shift, double epsilon) {
     // Feature index is 1 for NCHW
     int feature_index = 1;
     return xla::BatchNormTraining(input, scale, shift, epsilon, feature_index);
   }
 };
 
-void LayerNormOp::Compile(XlaOpContext* ctx) {
+void LayerNormOp::Compile(XlaOpContext *ctx) {
   // input layout [N, C, H, W]
   Shape input_shape = ctx->InputShape("x_0");
 
@@ -105,19 +105,19 @@ void LayerNormOp::Compile(XlaOpContext* ctx) {
 
 class LayerNormGradOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext* ctx) override;
+  void Compile(XlaOpContext *ctx) override;
 
  private:
-  xla::XlaOp BatchNormGrad(const xla::XlaOp& activations, const xla::XlaOp& scale,
-                           const xla::XlaOp& mean, const xla::XlaOp& variance,
-                           const xla::XlaOp& grad, double epsilon) {
+  xla::XlaOp BatchNormGrad(const xla::XlaOp &activations, const xla::XlaOp &scale,
+                           const xla::XlaOp &mean, const xla::XlaOp &variance,
+                           const xla::XlaOp &grad, double epsilon) {
     // Feature index is 1 for NCHW
     int feature_index = 1;
     return xla::BatchNormGrad(activations, scale, mean, variance, grad, epsilon, feature_index);
   }
 };
 
-void LayerNormGradOp::Compile(XlaOpContext* ctx) {
+void LayerNormGradOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp output_grad = ctx->Input("dy_0");
   xla::XlaOp activation = ctx->Input("x_0");
   xla::XlaOp mean = ctx->Input("mean_0");
@@ -162,10 +162,10 @@ void LayerNormGradOp::Compile(XlaOpContext* ctx) {
 
 class LayerNormParamGradOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext* ctx) override;
+  void Compile(XlaOpContext *ctx) override;
 };
 
-void LayerNormParamGradOp::Compile(XlaOpContext* ctx) {
+void LayerNormParamGradOp::Compile(XlaOpContext *ctx) {
   xla::XlaOp output_grad = ctx->Input("dy_0");
   Shape output_shape = ctx->InputShape("dy_0");
 
@@ -177,7 +177,7 @@ void LayerNormParamGradOp::Compile(XlaOpContext* ctx) {
   std::vector<long long> norm_dims(norm_dims_size);
   std::iota(norm_dims.begin(), norm_dims.end(), begin_params_axis);
 
-  xla::XlaBuilder* builder = ctx->builder();
+  xla::XlaBuilder *builder = ctx->builder();
   DataType data_type = ctx->InputType("dy_0");
   xla::XlaComputation add_func = CreateAddFunc(data_type);
   if (ctx->HasOutput("beta_diff_0")) {

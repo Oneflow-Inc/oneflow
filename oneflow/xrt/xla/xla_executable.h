@@ -25,9 +25,9 @@ namespace mola {
 
 class XlaExecutable : public Executable {
  public:
-  XlaExecutable(const std::string& name, const XrtDevice& device,
-                const std::vector<xla::Shape>& input_shapes, const xla::Shape& output_shape,
-                std::unique_ptr<xla::LocalExecutable>&& executable)
+  XlaExecutable(const std::string &name, const XrtDevice &device,
+                const std::vector<xla::Shape> &input_shapes,
+                const xla::Shape &output_shape, std::unique_ptr<xla::LocalExecutable> &&executable)
       : Executable(name, XrtEngine::XLA),
         device_(device),
         input_shapes_(input_shapes),
@@ -36,7 +36,7 @@ class XlaExecutable : public Executable {
 
   virtual ~XlaExecutable() = default;
 
-  bool Run(const std::vector<Parameter>& inputs, const ExecutableRunOptions& run_options,
+  bool Run(const std::vector<Parameter> &inputs, const ExecutableRunOptions &run_options,
            bool block_until_done = true) override;
 
  private:

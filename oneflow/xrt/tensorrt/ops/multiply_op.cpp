@@ -24,18 +24,20 @@ namespace tensorrt {
 
 class MultiplyOp : public TrtOpKernel {
  public:
-  void Compile(TrtOpContext* ctx) override {
+  void Compile(TrtOpContext *ctx) override {
     Shape x_shape = ctx->InputShape("x_0");
     Shape y_shape = ctx->InputShape("y_0");
-    nvinfer1::ITensor* x = ctx->Input("x_0");
-    nvinfer1::ITensor* y = ctx->Input("y_0");
+    nvinfer1::ITensor *x = ctx->Input("x_0");
+    nvinfer1::ITensor *y = ctx->Input("y_0");
     CHECK_EQ(x_shape, y_shape);
-    auto* layer = ctx->builder()->addElementWise(*x, *y, nvinfer1::ElementWiseOperation::kPROD);
-    ctx->SetSoleOutput(layer->getOutput(0));
+    auto *layer = ctx->builder()->addElementWise(*x, *y, nvinfer1::ElementWiseOperation::kPROD); 
+    ctx->SetSoleOutput(layer->getOutput(0));  
   }
 };
 
-REGISTER_TRT_OP_KERNEL(Multiply, MultiplyOp).EnableTrainPhase().Finalize();
+REGISTER_TRT_OP_KERNEL(Multiply, MultiplyOp)
+    .EnableTrainPhase()
+    .Finalize();
 
 }  // namespace tensorrt
 }  // namespace xrt

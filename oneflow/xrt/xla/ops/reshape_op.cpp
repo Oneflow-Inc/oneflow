@@ -25,7 +25,7 @@ namespace mola {
 
 class ReshapeOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext* ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     Shape in_shape = ctx->SoleInputShape();
     Shape shape = ctx->SoleOutputShape();
     CHECK_EQ(shape.Count(0), in_shape.Count(0));
@@ -38,7 +38,7 @@ REGISTER_XLA_OP_KERNEL(Reshape, ReshapeOp).Finalize();
 
 class ReshapeLikeOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext* ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     Shape x_shape = ctx->InputShape("in_0");
     Shape like_shape = ctx->InputShape("like_0");
     CHECK_EQ(x_shape.Count(0), like_shape.Count(0));

@@ -34,9 +34,9 @@ class DeviceMemoryPool {
   DeviceMemoryPool() = delete;
   virtual ~DeviceMemoryPool() = default;
 
-  virtual void* AllocateRaw(size_t offset, size_t size) {
+  virtual void *AllocateRaw(size_t offset, size_t size) {
     CHECK_LE(offset + size, capacity_);
-    return reinterpret_cast<void*>(mem_buffer_ + offset);
+    return reinterpret_cast<void *>(mem_buffer_ + offset);
   }
 
   void Reserve(size_t size);
@@ -46,24 +46,24 @@ class DeviceMemoryPool {
 
   int device_ordinal() const { return device_ordinal_; }
 
-  static std::shared_ptr<DeviceMemoryPool> NewMemoryPool(const se::Platform* platform,
-                                                         se::Stream* stream, int device_ordinal);
+  static std::shared_ptr<DeviceMemoryPool> NewMemoryPool(const se::Platform *platform,
+                                                         se::Stream *stream, int device_ordinal);
 
   static auto Registry()
-      -> util::Registry<se::Platform::Id, std::function<DeviceMemoryPool*(se::Stream*, int)>>*;
+      -> util::Registry<se::Platform::Id, std::function<DeviceMemoryPool *(se::Stream *, int)>> *;
 
  protected:
-  explicit DeviceMemoryPool(se::Stream* stream, int device_ordinal)
+  explicit DeviceMemoryPool(se::Stream *stream, int device_ordinal)
       : mem_buffer_(nullptr), capacity_(0), stream_(stream), device_ordinal_(device_ordinal) {}
 
   virtual void ReserveImpl(size_t size) = 0;
   virtual void ReleaseImpl() = 0;
 
  protected:
-  uint8_t* mem_buffer_ = nullptr;
+  uint8_t *mem_buffer_ = nullptr;
   size_t capacity_ = 0;
 
-  se::Stream* stream_ = nullptr;
+  se::Stream *stream_ = nullptr;
   int device_ordinal_ = 0;
   // Limited size for allocated buffer. Set -1 if limit is not required.
   int64_t limited_memory_size_ = -1;
@@ -72,8 +72,8 @@ class DeviceMemoryPool {
 template<typename MemoryPool>
 class DeviceMemoryPoolRegistarr {
  public:
-  DeviceMemoryPoolRegistarr(const se::Platform::Id& platform_id) {
-    DeviceMemoryPool::Registry()->Register(platform_id, [](se::Stream* stream, int device_ordinal) {
+  DeviceMemoryPoolRegistarr(const se::Platform::Id &platform_id) {
+    DeviceMemoryPool::Registry()->Register(platform_id, [](se::Stream *stream, int device_ordinal) {
       return new MemoryPool(stream, device_ordinal);
     });
   }

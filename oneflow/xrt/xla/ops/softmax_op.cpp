@@ -25,11 +25,11 @@ namespace mola {
 
 class SoftmaxOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext* ctx) override;
+  void Compile(XlaOpContext *ctx) override;
 };
 
-void SoftmaxOp::Compile(XlaOpContext* ctx) {
-  xla::XlaBuilder* builder = ctx->builder();
+void SoftmaxOp::Compile(XlaOpContext *ctx) {
+  xla::XlaBuilder *builder = ctx->builder();
   Shape input_shape = ctx->SoleInputShape();
 
   int axis = input_shape.NumAxes() - 1;
@@ -56,12 +56,12 @@ REGISTER_XLA_OP_KERNEL(Softmax, SoftmaxOp).Finalize();
 
 class SoftmaxGradOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext* ctx) override;
+  void Compile(XlaOpContext *ctx) override;
 };
 
 // softmax gradient formula:
 // dx = y * (dy - sum(dy * y))
-void SoftmaxGradOp::Compile(XlaOpContext* ctx) {
+void SoftmaxGradOp::Compile(XlaOpContext *ctx) {
   Shape y_shape = ctx->InputShape("y_0");
 
   int axis = y_shape.NumAxes() - 1;
@@ -74,7 +74,7 @@ void SoftmaxGradOp::Compile(XlaOpContext* ctx) {
   xla::XlaOp y = ctx->Input("y_0");
   xla::XlaOp dy = ctx->Input("dy_0");
   DataType data_type = ctx->InputType("y_0");
-  xla::XlaBuilder* builder = ctx->builder();
+  xla::XlaBuilder *builder = ctx->builder();
 
   xla::XlaComputation add_func = CreateAddFunc(data_type);
   xla::XlaOp sum = xla::Reduce(y * dy, Zero(builder, data_type), add_func, {axis});

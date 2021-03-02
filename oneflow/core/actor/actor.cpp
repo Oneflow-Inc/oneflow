@@ -270,9 +270,7 @@ void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
       break;
     }
 #endif
-    default: {
-      UNIMPLEMENTED();
-    }
+    default: { UNIMPLEMENTED(); }
   }
 }
 

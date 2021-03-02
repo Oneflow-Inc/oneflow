@@ -30,17 +30,17 @@ namespace xrt {
 
 namespace shape_inference {
 
-void InferShape(XrtGraph* graph, const XrtPassOptions& options, const JobDesc* job_desc,
-                const ParallelContext* parallel_ctx,
-                const util::PbMap<std::string, SbpSignature>* sbp_signatures,
-                util::Map<std::string, BlobDesc>* blob_descs) {
-  algorithm::TopologyVisit(*graph, [&](XrtNode* node) {
+void InferShape(XrtGraph *graph, const XrtPassOptions &options, const JobDesc *job_desc,
+                const ParallelContext *parallel_ctx,
+                const util::PbMap<std::string, SbpSignature> *sbp_signatures,
+                util::Map<std::string, BlobDesc> *blob_descs) {
+  algorithm::TopologyVisit(*graph, [&](XrtNode *node) {
     if (!node->IsArgumentNode()) {
       DeviceType device_type = XrtDeviceToDeviceType(node->device());
-      const auto& conf = *dynamic_cast<const OperatorConf*>(&node->param());
+      const auto &conf = *dynamic_cast<const OperatorConf *>(&node->param());
       auto op = ConstructOp(conf, device_type, job_desc);
-      auto get_blob_desc_fn = [&](const std::string& bn) -> BlobDesc* {
-        const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
+      auto get_blob_desc_fn = [&](const std::string &bn) -> BlobDesc * {
+        const LogicalBlobId &lbi = op->BnInOp2Lbi(bn);
         std::string blob_name = BlobIdToName(lbi);
         auto it = blob_descs->find(blob_name);
         if (it == blob_descs->end()) {
@@ -50,15 +50,15 @@ void InferShape(XrtGraph* graph, const XrtPassOptions& options, const JobDesc* j
         return &(it->second);
       };
 
-      const SbpSignature& sbp_signature = sbp_signatures->at(node->name());
+      const SbpSignature &sbp_signature = sbp_signatures->at(node->name());
       CHECK_JUST(op->InferOutBlobDescsIf(get_blob_desc_fn, parallel_ctx, &sbp_signature));
     }
     // Update blob desc on the output edges.
-    for (XrtEdge* edge : node->out_edges()) {
+    for (XrtEdge *edge : node->out_edges()) {
       std::string name = edge->argument().name();
       auto it = blob_descs->find(name);
       CHECK(it != blob_descs->end());
-      const auto& metadata = edge->argument().meta_data();
+      const auto &metadata = edge->argument().meta_data();
       Argument argument(name, it->second.shape(), it->second.data_type(), metadata);
       edge->SetArgument(argument);
     }
@@ -71,15 +71,16 @@ class InferShapePass : public XrtPass {
  public:
   InferShapePass() = default;
 
-  void Run(XrtGraph* graph, const XrtPassOptions& options,
-           const std::vector<Any>& params) override {
+  void Run(XrtGraph *graph, const XrtPassOptions &options,
+           const std::vector<Any> &params) override {
     CHECK_EQ(params.size(), 4)
         << "JobDesc, BlobDesc, ParallelCtx and SbpSignatures are required in "
            "InferShapePass.";
-    const auto* job_desc = any_cast<const JobDesc*>(params[0]);
-    const auto* parallel_ctx = any_cast<const ParallelContext*>(params[1]);
-    const auto* sbp_signatures = any_cast<const util::PbMap<std::string, SbpSignature>*>(params[2]);
-    auto* blob_descs = any_cast<util::Map<std::string, BlobDesc>*>(params[3]);
+    const auto *job_desc = any_cast<const JobDesc *>(params[0]);
+    const auto *parallel_ctx = any_cast<const ParallelContext *>(params[1]);
+    const auto *sbp_signatures =
+        any_cast<const util::PbMap<std::string, SbpSignature> *>(params[2]);
+    auto *blob_descs = any_cast<util::Map<std::string, BlobDesc> *>(params[3]);
 
     shape_inference::InferShape(graph, options, job_desc, parallel_ctx, sbp_signatures, blob_descs);
   }

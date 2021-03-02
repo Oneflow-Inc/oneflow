@@ -29,10 +29,10 @@ class FieldRegistry;
 
 class RegistryBase {
  public:
-  virtual bool IsRegistered(const Any& key) const = 0;
+  virtual bool IsRegistered(const Any &key) const = 0;
 
   typedef util::Map<std::string, Any> Attribute;
-  virtual const Attribute& LookupAttr(const Any& key) const = 0;
+  virtual const Attribute &LookupAttr(const Any &key) const = 0;
 
   RegistryBase() = default;
   virtual ~RegistryBase() = default;
@@ -42,8 +42,8 @@ class RegistryBase {
 template<typename Key, typename Factory>
 class Registry : public RegistryBase {
  public:
-  static Registry<Key, Factory>* Global() {
-    static auto* g_registry = new Registry<Key, Factory>;
+  static Registry<Key, Factory> *Global() {
+    static auto *g_registry = new Registry<Key, Factory>;
     return g_registry;
   }
 
@@ -52,27 +52,27 @@ class Registry : public RegistryBase {
     Attribute attribute;
   };
 
-  bool IsRegistered(const Any& key) const override {
+  bool IsRegistered(const Any &key) const override {
     return factories_.count(any_cast<Key>(key)) > 0;
   }
 
-  const Factory& Lookup(const Any& key) const { return Lookup(any_cast<Key>(key)); }
+  const Factory &Lookup(const Any &key) const { return Lookup(any_cast<Key>(key)); }
 
-  const Factory& Lookup(const Key& key) const {
+  const Factory &Lookup(const Key &key) const {
     CHECK_GT(factories_.count(key), 0) << "Factory (" << key << ") has not been registered.";
     return factories_.at(key).factory;
   }
 
-  const Attribute& LookupAttr(const Any& key) const { return LookupAttr(any_cast<Key>(key)); }
+  const Attribute &LookupAttr(const Any &key) const { return LookupAttr(any_cast<Key>(key)); }
 
-  const Attribute& LookupAttr(const Key& key) const {
+  const Attribute &LookupAttr(const Key &key) const {
     CHECK_GT(factories_.count(key), 0) << "Factory (" << key << ") has not been registered.";
     return factories_.at(key).attribute;
   }
 
-  void Register(const Key& key, Factory factory) { Register(key, factory, Attribute{}); }
+  void Register(const Key &key, Factory factory) { Register(key, factory, Attribute{}); }
 
-  void Register(const Key& key, Factory factory, const Attribute& attribute) {
+  void Register(const Key &key, Factory factory, const Attribute &attribute) {
     if (!factories_.emplace(key, MakeFactory(factory, attribute)).second) {
       LOG(INFO) << "Factory (" << key << ") has been registered more than once.";
     }
@@ -85,7 +85,7 @@ class Registry : public RegistryBase {
 
  protected:
   Registry() = default;
-  AttributeFactory MakeFactory(Factory factory, const Attribute& attribute) {
+  AttributeFactory MakeFactory(Factory factory, const Attribute &attribute) {
     AttributeFactory attri_factory;
     attri_factory.factory = factory;
     attri_factory.attribute = attribute;
@@ -116,37 +116,37 @@ class Registry : public RegistryBase {
 template<typename Field>
 class RegistryManager {
  public:
-  static RegistryManager<Field>* Global() {
-    static auto* g_registry_manager = new RegistryManager<Field>;
+  static RegistryManager<Field> *Global() {
+    static auto *g_registry_manager = new RegistryManager<Field>;
     return g_registry_manager;
   }
 
-  RegistryBase* GetRegistry(const Field& field) const {
+  RegistryBase *GetRegistry(const Field &field) const {
     CHECK_GT(registry_fields_.count(field), 0) << "No registry field.";
     return registry_fields_.at(field);
   }
 
-  bool Insert(const Field& field, RegistryBase* registry) {
+  bool Insert(const Field &field, RegistryBase *registry) {
     return registry_fields_.emplace(field, registry).second;
   }
 
-  bool HasRegistry(const Field& field) const { return registry_fields_.count(field) > 0; }
+  bool HasRegistry(const Field &field) const { return registry_fields_.count(field) > 0; }
 
   virtual ~RegistryManager() = default;
 
  private:
-  util::Map<Field, RegistryBase*> registry_fields_;
+  util::Map<Field, RegistryBase *> registry_fields_;
 };
 
 template<typename Field, typename Key, typename Factory>
 class FieldRegistry {
  public:
-  static FieldRegistry<Field, Key, Factory>* Global() {
-    static auto* g_field_registry = new FieldRegistry<Field, Key, Factory>();
+  static FieldRegistry<Field, Key, Factory> *Global() {
+    static auto *g_field_registry = new FieldRegistry<Field, Key, Factory>();
     return g_field_registry;
   }
 
-  Registry<Key, Factory>* Get(const Field& field) {
+  Registry<Key, Factory> *Get(const Field &field) {
     auto it = field_factories_.find(field);
     if (it == field_factories_.end()) {
       it = field_factories_.emplace(field, Registry<Key, Factory>()).first;
@@ -162,7 +162,7 @@ class FieldRegistry {
 
  private:
   util::Map<Field, Registry<Key, Factory>> field_factories_;
-  RegistryManager<Field>* registry_manager_;
+  RegistryManager<Field> *registry_manager_;
 };
 
 }  // namespace util

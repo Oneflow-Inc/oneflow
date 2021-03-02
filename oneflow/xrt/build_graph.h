@@ -32,10 +32,10 @@ class GraphBuilder {
  public:
   GraphBuilder() = delete;
 
-  explicit GraphBuilder(const OpGraph* op_graph);
+  explicit GraphBuilder(const OpGraph *op_graph);
 
-  explicit GraphBuilder(const XrtLaunchOpConf::Function& function, const DeviceType& device_type,
-                        const JobDesc& job_desc);
+  explicit GraphBuilder(const XrtLaunchOpConf::Function &function, const DeviceType &device_type,
+                        const JobDesc &job_desc);
 
   std::shared_ptr<XrtGraph> Build() {
     BuildGraphEdges();
@@ -46,38 +46,38 @@ class GraphBuilder {
   struct NodeInfo {
     util::Set<std::string> inputs;
     util::Map<std::string, std::string> input_output_keys;
-    const OpNode* op_node = nullptr;
+    const OpNode *op_node = nullptr;
   };
 
  private:
-  void SetupXrtNode(XrtNode* node, const OperatorConf& node_conf) const {
+  void SetupXrtNode(XrtNode *node, const OperatorConf &node_conf) const {
     node->set_name(node_conf.name());
     node->set_type(ExtractOpTypeAsString(node_conf));
     node->set_device(DeviceTagToXrtDevice(node_conf.device_tag()));
   }
 
-  void SetupXrtNode(XrtNode* node, const XrtLaunchOpConf::Argument& arg_conf) const {
+  void SetupXrtNode(XrtNode *node, const XrtLaunchOpConf::Argument &arg_conf) const {
     node->set_name(arg_conf.name());
     node->set_type(_ArgumentOpType);
     node->set_device(DeviceTypeToXrtDevice(arg_conf.device_type()));
   }
 
-  void MakeMetaData(const XrtNode* start, const XrtNode* end, const std::string& arg_name,
-                    ArgumentMetaData* meta_data);
+  void MakeMetaData(const XrtNode *start, const XrtNode *end, const std::string &arg_name,
+                    ArgumentMetaData *meta_data);
 
   void BuildGraphEdges();
   void SetupGraphEdges();
 
  private:
   std::shared_ptr<XrtGraph> graph_;
-  util::Map<std::string, const XrtNode*> producers_;
-  util::Map<const XrtNode*, NodeInfo> node_info_;
+  util::Map<std::string, const XrtNode *> producers_;
+  util::Map<const XrtNode *, NodeInfo> node_info_;
 };
 
-std::shared_ptr<XrtGraph> BuildGraph(const XrtLaunchOpConf::Function& function,
-                                     const DeviceType& device_type, const JobDesc& job_desc);
+std::shared_ptr<XrtGraph> BuildGraph(const XrtLaunchOpConf::Function &function,
+                                     const DeviceType &device_type, const JobDesc &job_desc);
 
-std::shared_ptr<XrtGraph> BuildGraph(const OpGraph* op_graph);
+std::shared_ptr<XrtGraph> BuildGraph(const OpGraph *op_graph);
 
 }  // namespace graph_builder
 

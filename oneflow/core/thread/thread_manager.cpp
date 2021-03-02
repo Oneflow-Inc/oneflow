@@ -44,9 +44,7 @@ Thread* NewThread(StreamId stream_id) {
       thread = new CpuThread(thrd_id);
       break;
     }
-    default: {
-      UNIMPLEMENTED();
-    }
+    default: { UNIMPLEMENTED(); }
   }
   return thread;
 }

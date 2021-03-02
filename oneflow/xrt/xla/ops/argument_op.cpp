@@ -23,7 +23,7 @@ namespace mola {
 
 class ArgumentOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext* ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     // xla::XlaOp value = ctx->Variable("value");
     // ctx->SetOutput("value", value);
   }

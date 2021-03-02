@@ -29,26 +29,26 @@ class AttributeMap {
  public:
   AttributeMap() = default;
 
-  AttributeMap(const util::Map<std::string, Any>& attributes) : attributes_(attributes) {}
+  AttributeMap(const util::Map<std::string, Any> &attributes) : attributes_(attributes) {}
 
   virtual ~AttributeMap() = default;
 
-  bool HasAttr(const std::string& name) const { return attributes_.count(name) > 0; }
+  bool HasAttr(const std::string &name) const { return attributes_.count(name) > 0; }
 
   template<typename T>
-  const T& Attr(const std::string& name) const {
+  const T &Attr(const std::string &name) const {
     CHECK_GT(attributes_.count(name), 0);
     return any_cast<T>(attributes_.at(name));
   }
 
   template<typename T>
-  T& Attr(const std::string& name) {
+  T &Attr(const std::string &name) {
     CHECK_GT(attributes_.count(name), 0);
-    return *any_cast<T*>(&attributes_[name]);
+    return *any_cast<T *>(&attributes_[name]);
   }
 
   template<typename T>
-  void Attr(const std::string& name, const T& valule) {
+  void Attr(const std::string &name, const T &valule) {
     attributes_[name] = valule;
   }
 

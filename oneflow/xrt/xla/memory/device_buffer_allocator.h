@@ -33,7 +33,7 @@ class DeviceBufferAllocator {
 
   virtual ~DeviceBufferAllocator() {}
 
-  void* AllocateRaw(size_t offset, size_t size) { return mem_pool_->AllocateRaw(offset, size); }
+  void *AllocateRaw(size_t offset, size_t size) { return mem_pool_->AllocateRaw(offset, size); }
 
   void Reserve(size_t size) {
     while (size > mem_pool_->capacity()) {

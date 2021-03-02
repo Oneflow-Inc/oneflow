@@ -25,9 +25,9 @@ namespace tensorrt {
 template<nvinfer1::ActivationType activation_type>
 class ActivationOp : public TrtOpKernel {
  public:
-  void Compile(TrtOpContext* ctx) override {
-    nvinfer1::ITensor* in = ctx->SoleInput();
-    auto* layer = ctx->builder()->addActivation(*in, activation_type);
+  void Compile(TrtOpContext *ctx) override {
+    nvinfer1::ITensor *in = ctx->SoleInput();
+    auto *layer = ctx->builder()->addActivation(*in, activation_type);
     layer->setName(ctx->op_name().c_str());
     ctx->SetSoleOutput(layer->getOutput(0));
   }
@@ -46,9 +46,9 @@ REGISTER_TRT_OP_KERNEL(Sigmoid, ActivationOp<nvinfer1::ActivationType::kSIGMOID>
 template<>
 class ActivationOp<nvinfer1::ActivationType::kLEAKY_RELU> : public TrtOpKernel {
  public:
-  void Compile(TrtOpContext* ctx) override {
-    nvinfer1::ITensor* in = ctx->SoleInput();
-    auto* layer = ctx->builder()->addActivation(*in, nvinfer1::ActivationType::kLEAKY_RELU);
+  void Compile(TrtOpContext *ctx) override {
+    nvinfer1::ITensor *in = ctx->SoleInput();
+    auto *layer = ctx->builder()->addActivation(*in, nvinfer1::ActivationType::kLEAKY_RELU);
     layer->setAlpha(ctx->Attr<float>("alpha"));
     layer->setName(ctx->op_name().c_str());
     ctx->SetSoleOutput(layer->getOutput(0));

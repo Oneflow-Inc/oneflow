@@ -34,20 +34,21 @@ DECLARE_string(int8_calibration);
 
 namespace oneflow {
 namespace xrt {
-static Parameter BuildParameter(const Blob& blob, const std::string& name) {
-  const auto& desc = blob.blob_desc();
-  return Parameter(name, const_cast<void*>(blob.dptr<void>()), desc.body_shape(), desc.data_type());
+static Parameter BuildParameter(const Blob &blob, const std::string &name) {
+  const auto &desc = blob.blob_desc();
+  return Parameter(name, const_cast<void *>(blob.dptr<void>()), desc.body_shape(),
+                   desc.data_type());
 }
 }  // namespace xrt
 
 template<DeviceType device_type>
 void BlobDescGetter<device_type>::DumpEntryBlobDescTo(
-    std::unordered_map<std::string, BlobDesc>* entry_blob_desc) const {
-  const auto& launch_conf = kernel_->op_conf().xrt_launch_conf();
-  const auto& io_mapping = launch_conf.input_output_mapping();
+    std::unordered_map<std::string, BlobDesc> *entry_blob_desc) const {
+  const auto &launch_conf = kernel_->op_conf().xrt_launch_conf();
+  const auto &io_mapping = launch_conf.input_output_mapping();
 
-  for (const auto& bn : kernel_->op_attribute().input_bns()) {
-    const RtBlobDesc& runtime_desc = get_blob_fn_(bn)->blob_desc();
+  for (const auto &bn : kernel_->op_attribute().input_bns()) {
+    const RtBlobDesc &runtime_desc = get_blob_fn_(bn)->blob_desc();
     BlobDesc blob_desc(kernel_->job_desc().DefaultDataType());
     blob_desc.mut_shape() = runtime_desc.body_shape();
     blob_desc.set_data_type(runtime_desc.data_type());
@@ -55,19 +56,19 @@ void BlobDescGetter<device_type>::DumpEntryBlobDescTo(
     // Map blob_name to function's input name.
     std::string blob_name = xrt::BlobIdToName(kernel_->BnInOp2Lbi(bn));
     // CHECK_GT(io_mapping.count(blob_name), 0);
-    const std::string& mapping_name = io_mapping.at(blob_name);
+    const std::string &mapping_name = io_mapping.at(blob_name);
     entry_blob_desc->emplace(mapping_name, std::move(blob_desc));
   }
 }
 
 template<DeviceType device_type>
-xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
-    const std::vector<xrt::Parameter>& entry_params,
-    const std::vector<xrt::Parameter>& return_params,
-    const std::vector<xrt::InputOutputAlias>& aliases, const int device_ordinal) const {
+xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
+    const std::vector<xrt::Parameter> &entry_params,
+    const std::vector<xrt::Parameter> &return_params,
+    const std::vector<xrt::InputOutputAlias> &aliases, const int device_ordinal) const {
   if (!compilation_cache_) { compilation_cache_.reset(new xrt::CompilationCache); }
 
-  xrt::Executable* executable = nullptr;
+  xrt::Executable *executable = nullptr;
   xrt::Signature signature =
       xrt::ComputeSignature(this->op_conf().name(), device_ordinal, entry_params);
   bool force_compile = false;
@@ -75,12 +76,12 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
 
   if (!executable) {
     VLOG(2) << "Build executable for launch op " << this->op_conf().name();
-    const auto& launch_conf = this->op_conf().xrt_launch_conf();
+    const auto &launch_conf = this->op_conf().xrt_launch_conf();
     auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type, this->job_desc());
     {
       // Run InferShape pass
-      const auto& parallel_ctx = this->kernel_conf().xrt_launch_conf().parallel_ctx();
-      const auto& sbp_signatures = launch_conf.sbp_signatures();
+      const auto &parallel_ctx = this->kernel_conf().xrt_launch_conf().parallel_ctx();
+      const auto &sbp_signatures = launch_conf.sbp_signatures();
 
       std::unordered_map<std::string, BlobDesc> entry_blob_descs;
       desc_getter_.DumpEntryBlobDescTo(&entry_blob_descs);
@@ -106,13 +107,13 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
 
 template<DeviceType device_type>
 void XrtLaunchKernel<device_type>::MakeInputOutputAlias(
-    const std::vector<xrt::Parameter>& entry_params, std::vector<xrt::Parameter>* return_params,
-    std::vector<xrt::InputOutputAlias>* aliases) const {
-  const auto& launch_conf = this->op_conf().xrt_launch_conf();
-  const auto& mutability_table = launch_conf.input_mutability();
+    const std::vector<xrt::Parameter> &entry_params, std::vector<xrt::Parameter> *return_params,
+    std::vector<xrt::InputOutputAlias> *aliases) const {
+  const auto &launch_conf = this->op_conf().xrt_launch_conf();
+  const auto &mutability_table = launch_conf.input_mutability();
 
   for (int i = 0; i < entry_params.size(); ++i) {
-    const std::string& entry_name = entry_params[i].name();
+    const std::string &entry_name = entry_params[i].name();
     if (mutability_table.count(entry_name) > 0) {
       aliases->push_back({{static_cast<int>(return_params->size())} /*output_index*/,
                           i /*param_number=*/,
@@ -124,15 +125,15 @@ void XrtLaunchKernel<device_type>::MakeInputOutputAlias(
 
 template<DeviceType device_type>
 void XrtLaunchKernel<device_type>::MappingParamsToFunctionNames(
-    std::vector<xrt::Parameter>* entry_params, std::vector<xrt::Parameter>* return_params) const {
-  const auto& launch_conf = this->op_conf().xrt_launch_conf();
-  const auto& io_mapping = launch_conf.input_output_mapping();
+    std::vector<xrt::Parameter> *entry_params, std::vector<xrt::Parameter> *return_params) const {
+  const auto &launch_conf = this->op_conf().xrt_launch_conf();
+  const auto &io_mapping = launch_conf.input_output_mapping();
 
-  for (xrt::Parameter& param : *entry_params) {
+  for (xrt::Parameter &param : *entry_params) {
     // CHECK_GT(io_mapping.count(param.name()), 0);
     param.set_name(io_mapping.at(param.name()));
   }
-  for (xrt::Parameter& param : *return_params) {
+  for (xrt::Parameter &param : *return_params) {
     // CHECK_GT(io_mapping.count(param.name()), 0);
     param.set_name(io_mapping.at(param.name()));
   }
@@ -140,18 +141,18 @@ void XrtLaunchKernel<device_type>::MappingParamsToFunctionNames(
 
 template<DeviceType device_type>
 void XrtLaunchKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
   desc_getter_ = BlobDescGetter<device_type>(this, BnInOp2Blob);
   // Prepare input and output parameters
   std::vector<xrt::Parameter> entry_params, return_params;
-  for (const std::string& bn : this->op_attribute().input_bns()) {
-    const LogicalBlobId& lbi = this->BnInOp2Lbi(bn);
+  for (const std::string &bn : this->op_attribute().input_bns()) {
+    const LogicalBlobId &lbi = this->BnInOp2Lbi(bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     xrt::Parameter input = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
     entry_params.push_back(input);
   }
-  for (const std::string& bn : this->op_attribute().output_bns()) {
-    const LogicalBlobId& lbi = this->BnInOp2Lbi(bn);
+  for (const std::string &bn : this->op_attribute().output_bns()) {
+    const LogicalBlobId &lbi = this->BnInOp2Lbi(bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     xrt::Parameter output = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
     return_params.push_back(output);
@@ -186,7 +187,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
   bool status = executable->Run(entry_params, run_options, block_until_done);
   CHECK(status) << "Executable is running failed.";
 
-  const std::vector<xrt::Parameter>& results = executable->Results();
+  const std::vector<xrt::Parameter> &results = executable->Results();
   CHECK_EQ(results.size(), return_params.size());
   for (int i = 0; i < results.size(); ++i) { CHECK_EQ(results[i].data(), return_params[i].data()); }
 }

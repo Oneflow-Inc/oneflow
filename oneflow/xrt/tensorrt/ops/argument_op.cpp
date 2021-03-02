@@ -22,7 +22,7 @@ namespace tensorrt {
 
 class ArgumentOp : public TrtOpKernel {
  public:
-  void Compile(TrtOpContext* ctx) override {
+  void Compile(TrtOpContext *ctx) override {
     // nvinfer1::ITensor *value = ctx->Variable("value");
     // ctx->SetOutput("value", value);
   }

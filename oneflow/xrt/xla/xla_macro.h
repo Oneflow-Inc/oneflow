@@ -27,7 +27,7 @@ limitations under the License.
                              rexpr)
 
 #define MOLA_CHECK_AND_ASSIGN_IMPL(statusor, lhs, rexpr)                   \
-  auto&& statusor = (rexpr);                                               \
+  auto &&statusor = (rexpr);                                               \
   CHECK(statusor.ok()) << xla::WithLogBacktrace(statusor.status()) << ". " \
                        << TF_CPP_VLOG_LEVEL_REQUARED(2);                   \
   lhs = std::move(statusor.ValueOrDie());

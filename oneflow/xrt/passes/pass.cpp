@@ -18,7 +18,7 @@ limitations under the License.
 namespace oneflow {
 namespace xrt {
 
-bool CheckUseXrtEngine(const ClusteringOptions& options, const XrtEngine& engine) {
+bool CheckUseXrtEngine(const ClusteringOptions &options, const XrtEngine &engine) {
   XrtEngineOptionBit bit = [&]() {
     switch (engine) {
       case XrtEngine::XLA: return XrtEngineOptionBit::kUseXlaJit;

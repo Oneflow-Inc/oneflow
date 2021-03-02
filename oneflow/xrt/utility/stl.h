@@ -51,9 +51,9 @@ template<typename K, typename T>
 using PbMap = google::protobuf::Map<K, T>;
 
 template<typename K, typename T>
-inline PbMap<K, T> ConvertToPbMap(const Map<K, T>& stdmap) {
+inline PbMap<K, T> ConvertToPbMap(const Map<K, T> &stdmap) {
   PbMap<K, T> pbmap;
-  for (const auto& it : stdmap) { pbmap[it.first] = it.second; }
+  for (const auto &it : stdmap) { pbmap[it.first] = it.second; }
   return std::move(pbmap);
 }
 

@@ -30,23 +30,23 @@ namespace tensorrt {
 
 class TrtGraphCompiler : public GraphCompiler::Impl {
  public:
-  explicit TrtGraphCompiler(const std::string& name) : GraphCompiler::Impl(name) {
+  explicit TrtGraphCompiler(const std::string &name) : GraphCompiler::Impl(name) {
     builder_ = std::make_shared<TrtBuilder>(name);
   }
 
   virtual ~TrtGraphCompiler() = default;
 
-  std::shared_ptr<Executable> Compile(const XrtGraph* graph,
-                                      const std::vector<Parameter>& entry_params,
-                                      const std::vector<Parameter>& return_params,
-                                      const std::vector<InputOutputAlias>& aliases) override;
+  std::shared_ptr<Executable> Compile(const XrtGraph *graph,
+                                      const std::vector<Parameter> &entry_params,
+                                      const std::vector<Parameter> &return_params,
+                                      const std::vector<InputOutputAlias> &aliases) override;
 
  private:
-  void SetupKernelContextParam(const XrtNode* node, TrtOpContext::Param* context_param);
+  void SetupKernelContextParam(const XrtNode *node, TrtOpContext::Param *context_param);
 
-  void PopulateEntryParams(const std::vector<Parameter>& entry_params);
+  void PopulateEntryParams(const std::vector<Parameter> &entry_params);
 
-  Argument ArgFromParameter(const Parameter& param);
+  Argument ArgFromParameter(const Parameter &param);
 
  private:
   std::shared_ptr<TrtBuilder> builder_;

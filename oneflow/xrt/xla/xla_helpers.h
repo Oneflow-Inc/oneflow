@@ -24,22 +24,22 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-xla::XlaOp One(xla::XlaBuilder* builder, DataType data_type);
+xla::XlaOp One(xla::XlaBuilder *builder, DataType data_type);
 
-xla::XlaOp Zero(xla::XlaBuilder* builder, DataType data_type);
+xla::XlaOp Zero(xla::XlaBuilder *builder, DataType data_type);
 
-xla::XlaOp Ones(xla::XlaBuilder* builder, const Shape& shape, DataType data_type);
+xla::XlaOp Ones(xla::XlaBuilder *builder, const Shape &shape, DataType data_type);
 
-xla::XlaOp Zeros(xla::XlaBuilder* builder, const Shape& shape, DataType data_type);
+xla::XlaOp Zeros(xla::XlaBuilder *builder, const Shape &shape, DataType data_type);
 
-xla::XlaOp IntegerLiteral(xla::XlaBuilder* builder, DataType data_type, int32_t value);
+xla::XlaOp IntegerLiteral(xla::XlaBuilder *builder, DataType data_type, int32_t value);
 
-xla::XlaOp FloatLiteral(xla::XlaBuilder* builder, DataType data_type, float value);
+xla::XlaOp FloatLiteral(xla::XlaBuilder *builder, DataType data_type, float value);
 
 xla::XlaOp Reshape(xla::XlaOp input, Shape dest_shape);
 
-xla::XlaOp MinValue(xla::XlaBuilder* builder, DataType data_type);
-xla::XlaOp MaxValue(xla::XlaBuilder* builder, DataType data_type);
+xla::XlaOp MinValue(xla::XlaBuilder *builder, DataType data_type);
+xla::XlaOp MaxValue(xla::XlaBuilder *builder, DataType data_type);
 
 // Create computation of max func with data_type
 xla::XlaComputation CreateMaxFunc(DataType data_type);

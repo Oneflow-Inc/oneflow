@@ -28,7 +28,7 @@ namespace mola {
 
 class ReduceOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext* ctx) override {
+  void Compile(XlaOpContext *ctx) override {
     std::vector<int32_t> axis = ctx->Attr<std::vector<int>>("axis");
     Shape in_shape = ctx->SoleInputShape();
     for (int i = 0; i < axis.size(); ++i) {
@@ -44,7 +44,7 @@ class ReduceOp : public XlaOpKernel {
       std::iota(axis.begin(), axis.end(), 1);
     }
 
-    xla::XlaBuilder* builder = ctx->builder();
+    xla::XlaBuilder *builder = ctx->builder();
     DataType data_type = ctx->SoleInputType();
     xla::XlaOp output = xla::Reduce(input, InitValue(builder, data_type), Reduction(data_type),
                                     std::vector<long long>{axis.begin(), axis.end()});
@@ -61,17 +61,17 @@ class ReduceOp : public XlaOpKernel {
     ctx->SetSoleOutput(output);
   }
 
-  virtual xla::XlaOp InitValue(xla::XlaBuilder* builder, const DataType& data_type) = 0;
-  virtual xla::XlaComputation Reduction(const DataType& data_type) = 0;
+  virtual xla::XlaOp InitValue(xla::XlaBuilder *builder, const DataType &data_type) = 0;
+  virtual xla::XlaComputation Reduction(const DataType &data_type) = 0;
 };
 
 class ReduceSumOp : public ReduceOp {
  public:
-  xla::XlaOp InitValue(xla::XlaBuilder* builder, const DataType& data_type) override {
+  xla::XlaOp InitValue(xla::XlaBuilder *builder, const DataType &data_type) override {
     return Zero(builder, data_type);
   }
 
-  xla::XlaComputation Reduction(const DataType& data_type) override {
+  xla::XlaComputation Reduction(const DataType &data_type) override {
     return CreateAddFunc(data_type);
   }
 };

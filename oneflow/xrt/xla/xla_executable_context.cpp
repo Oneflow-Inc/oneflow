@@ -23,8 +23,8 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-XlaExecutableRunContext::XlaExecutableRunContext(const ExecutableRunOptions& run_options,
-                                                 const XrtDevice& device)
+XlaExecutableRunContext::XlaExecutableRunContext(const ExecutableRunOptions &run_options,
+                                                 const XrtDevice &device)
     : run_options_(run_options), device_(device) {
   client_ = resource_mgr::GetOrCreateLocalClient(device);
   device_ordinal_ = run_options_.device_ordinal;
@@ -32,14 +32,14 @@ XlaExecutableRunContext::XlaExecutableRunContext(const ExecutableRunOptions& run
   MOLA_CHECK_AND_ASSIGN(stream_, client_->mutable_backend()->BorrowStream(device_ordinal_));
   host_device_ = resource_mgr::GetOrCreateEigenHostDevice();
 
-  DeviceBufferAllocator* buffer_allocator = resource_mgr::GetOrCreateBufferAllocator(
+  DeviceBufferAllocator *buffer_allocator = resource_mgr::GetOrCreateBufferAllocator(
       device, run_options.stream, stream_.get(), device_ordinal_);
   allocator_.reset(new XlaAllocator(client_->platform(), buffer_allocator));
 }
 
-const std::vector<xla::ShapedBuffer*>& XlaExecutableRunContext::PopulateInputs(
-    const std::vector<Parameter>& inputs, const std::vector<xla::Shape>& input_shapes) {
-  const auto& return_params = run_options_.return_params;
+const std::vector<xla::ShapedBuffer *> &XlaExecutableRunContext::PopulateInputs(
+    const std::vector<Parameter> &inputs, const std::vector<xla::Shape> &input_shapes) {
+  const auto &return_params = run_options_.return_params;
   CHECK_GT(return_params.size(), 0) << "Need one output at least.";
 
   namespace se = tensorflow::se;
@@ -47,19 +47,20 @@ const std::vector<xla::ShapedBuffer*>& XlaExecutableRunContext::PopulateInputs(
   shaped_buffers_.resize(inputs.size());
   input_buffers_.resize(inputs.size());
   for (int i = 0; i < input_shapes.size(); ++i) {
-    const xla::Shape& shape = input_shapes[i];
+    const xla::Shape &shape = input_shapes[i];
     const xla::Shape on_device_shape =
         client_->backend().transfer_manager()->HostShapeToDeviceShape(shape);
     CHECK(!on_device_shape.IsTuple()) << "Tuple shape is not allowed for xla input buffers";
     int64_t data_size = inputs[i].byte_size();
-    const char* data_ptr = inputs[i].data<char>();
+    const char *data_ptr = inputs[i].data<char>();
 
     // Buffer is nullptr if the blob is body disabled. It should be assigned
     // by a real pointer to prevent check failure while runing the XLA
     // executable, so here we assign the first input or output buffer to it
     // since it's sure that this entry should never be modified at any time.
     if (data_size > 0 && !data_ptr) { data_ptr = return_params[0].data<char>(); }
-    se::DeviceMemoryBase memory_base = se::DeviceMemoryBase(const_cast<char*>(data_ptr), data_size);
+    se::DeviceMemoryBase memory_base =
+        se::DeviceMemoryBase(const_cast<char *>(data_ptr), data_size);
     shaped_buffers_[i] = std::make_shared<xla::ShapedBuffer>(
         /*on_host_shape=*/shape, /*on_device_shape=*/shape, client_->platform(), device_ordinal_);
     shaped_buffers_[i]->set_buffer(memory_base, /*index=*/{});
@@ -68,8 +69,8 @@ const std::vector<xla::ShapedBuffer*>& XlaExecutableRunContext::PopulateInputs(
   return input_buffers_;
 }
 
-void XlaExecutableRunContext::PopulateResultBuffers(const std::vector<Parameter>& outputs,
-                                                    xla::LocalExecutable* executable) {
+void XlaExecutableRunContext::PopulateResultBuffers(const std::vector<Parameter> &outputs,
+                                                    xla::LocalExecutable *executable) {
   std::vector<int64_t> allocation_indices;
   xla::ResultAllocationIndices(executable, &allocation_indices);
   CHECK_EQ(outputs.size(), allocation_indices.size());
@@ -77,7 +78,7 @@ void XlaExecutableRunContext::PopulateResultBuffers(const std::vector<Parameter>
   std::vector<se::DeviceMemoryBase> device_buffers;
   device_buffers.reserve(outputs.size());
   for (int i = 0; i < outputs.size(); ++i) {
-    char* data = outputs[i].data<char>();
+    char *data = outputs[i].data<char>();
     device_buffers.emplace_back(data, outputs[i].byte_size());
   }
   allocator_->PopulateDeviceMemory(device_buffers, allocation_indices);

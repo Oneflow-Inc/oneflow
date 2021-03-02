@@ -26,7 +26,7 @@ namespace xrt {
 
 namespace platform {
 
-int GetDeviceId(const XrtDevice& device) {
+int GetDeviceId(const XrtDevice &device) {
   switch (device) {
     case XrtDevice::CPU_X86: return 0;
     case XrtDevice::GPU_CUDA: {
@@ -47,7 +47,7 @@ int GetDeviceId(const XrtDevice& device) {
   return 0;  // Compiler warning free
 }
 
-void SetDeviceId(const XrtDevice& device, const int device_id) {
+void SetDeviceId(const XrtDevice &device, const int device_id) {
   switch (device) {
     case XrtDevice::CPU_X86: return;
     case XrtDevice::GPU_CUDA: {
