@@ -48,27 +48,27 @@ Maybe<DeterminedTensor> FacadeTensor::SelfDetermined() {
 }
 
 Maybe<int64_t> FacadeTensor::ndim() {
-  return (JUST(SelfDetermined()).get())->ndim();
+  return JUST(SelfDetermined())->ndim();
 }
 
 Maybe<bool> FacadeTensor::is_cuda() {
-  return (JUST(SelfDetermined()).get())->is_cuda();
+  return JUST(SelfDetermined())->is_cuda();
 }
 
 Maybe<int64_t> FacadeTensor::nelement() {
-  return (JUST(SelfDetermined()).get())->nelement();
+  return JUST(SelfDetermined())->nelement();
 }
 
 Maybe<int64_t> FacadeTensor::dim(int64_t index) {
-  return (JUST(SelfDetermined()).get())->dim(index);
+  return JUST(SelfDetermined())->dim(index);
 }
 
 Maybe<const FunctionNode> FacadeTensor::grad_fn_node() {
-  return (JUST(SelfDetermined()).get())->grad_fn_node();
+  return JUST(SelfDetermined())->grad_fn_node();
 }
 
 Maybe<Tensor> FacadeTensor::acc_grad() {
-  return (JUST(SelfDetermined()).get())->acc_grad();
+  return JUST(SelfDetermined())->acc_grad();
 }
 
 Maybe<const compatible_py::Distribute> UndeterminedTensor::distribute() const {
