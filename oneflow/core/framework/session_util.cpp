@@ -20,9 +20,20 @@ namespace oneflow {
 
 namespace {
 
-Maybe<HashMap<int64_t, std::shared_ptr<Session>>*> GlobalId2SessionMap() {
+HashMap<int64_t, std::shared_ptr<Session>>* GlobalId2SessionMap() {
   static HashMap<int64_t, std::shared_ptr<Session>> id2session_map;
   return &id2session_map;
+}
+
+int64_t* DefaultSessionId() {
+  static int64_t default_sess_id;
+  return &default_sess_id;
+}
+
+Maybe<void> SetDefaultSessionId(int64_t val) {
+  int64_t* id = DefaultSessionId();
+  *id = val;
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -41,22 +52,13 @@ std::shared_ptr<eager::cfg::EagerSymbolList> Session::eager_symbol_list() const 
   return eager_symbol_list_;
 }
 
-Maybe<int64_t*> GetDefaultSessionId() {
-  static int64_t default_sess_id;
-  return &default_sess_id;
-}
-
-Maybe<void> SetDefaultSessionId(int64_t val) {
-  int64_t* id = JUST(GetDefaultSessionId());
-  *id = val;
-  return Maybe<void>::Ok();
-}
+Maybe<int64_t> GetDefaultSessionId() { return *(DefaultSessionId()); }
 
 Maybe<Session> RegsiterSession(int64_t id) {
   std::shared_ptr<Session> sess =
       std::make_shared<Session>(id, std::make_shared<vm::cfg::InstructionListProto>(),
                                 std::make_shared<eager::cfg::EagerSymbolList>());
-  auto* id2session_map = JUST(GlobalId2SessionMap());
+  auto* id2session_map = GlobalId2SessionMap();
   CHECK_OR_RETURN(id2session_map->find(id) == id2session_map->end());
   (*id2session_map)[id] = sess;
   JUST(SetDefaultSessionId(id));
@@ -64,30 +66,16 @@ Maybe<Session> RegsiterSession(int64_t id) {
 }
 
 Maybe<Session> GetDefaultSession() {
-  int64_t default_sess_id = *JUST(GetDefaultSessionId());
-  auto* id2session_map = JUST(GlobalId2SessionMap());
+  int64_t default_sess_id = JUST(GetDefaultSessionId());
+  auto* id2session_map = GlobalId2SessionMap();
   CHECK_OR_RETURN(id2session_map->find(default_sess_id) != id2session_map->end());
   return id2session_map->at(default_sess_id);
 }
 
-Maybe<void> ClearDefaultSession() {
-  int64_t default_sess_id = *JUST(GetDefaultSessionId());
-  auto* id2session_map = JUST(GlobalId2SessionMap());
-  CHECK_OR_RETURN(id2session_map->find(default_sess_id) != id2session_map->end());
-  id2session_map->erase(default_sess_id);
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> ClearSessionById(int64_t id) {
-  auto* id2session_map = JUST(GlobalId2SessionMap());
+  auto* id2session_map = GlobalId2SessionMap();
   CHECK_OR_RETURN(id2session_map->find(id) != id2session_map->end());
   id2session_map->erase(id);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> ClearAllSession() {
-  auto* id2session_map = JUST(GlobalId2SessionMap());
-  id2session_map->clear();
   return Maybe<void>::Ok();
 }
 

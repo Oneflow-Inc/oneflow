@@ -55,7 +55,6 @@ import traceback
 
 class Session(object):
     def __init__(self, sess_id):
-        # self.id_ = oneflow_api.NewSessionId()
         self.job_name2function_desc_ = {}
         self.job_name2job_ = {}
         self.status_ = SessionStatus.OPEN

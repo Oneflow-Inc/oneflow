@@ -27,18 +27,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("instruction_list", &Session::instruction_list)
       .def("eager_symbol_list", &Session::eager_symbol_list);
 
-  m.def("GetDefaultSessionId", []() {
-    int64_t default_sess_id = *GetDefaultSessionId().GetOrThrow();
-    return default_sess_id;
-  });
-  m.def("SetDefaultSessionId", [](int64_t val) { return SetDefaultSessionId(val).GetOrThrow(); });
+  m.def("GetDefaultSessionId", []() { return GetDefaultSessionId().GetOrThrow(); });
   m.def("RegsiterSession", [](int64_t id) { return RegsiterSession(id).GetPtrOrThrow(); });
 
   m.def("GetDefaultSession", []() { return GetDefaultSession().GetPtrOrThrow(); });
-  m.def("ClearDefaultSession", []() { return ClearDefaultSession().GetOrThrow(); });
-
   m.def("ClearSessionById", [](int64_t id) { return ClearSessionById(id).GetOrThrow(); });
-  m.def("ClearAllSession", []() { return ClearAllSession().GetOrThrow(); });
 }
 
 }  // namespace oneflow
