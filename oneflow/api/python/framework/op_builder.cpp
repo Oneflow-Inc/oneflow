@@ -25,20 +25,43 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+one::OpBuilder& OpBuilder_Name(const std::shared_ptr<one::OpBuilder>& builder,
+                               const std::string& op_name) {
+  return builder->MaybeName(op_name).GetOrThrow();
+}
+
+one::OpBuilder& OpBuilder_Op(const std::shared_ptr<one::OpBuilder>& builder,
+                             const std::string& op_type_name) {
+  return builder->MaybeOp(op_type_name).GetOrThrow();
+}
+
+one::OpBuilder& OpBuilder_Input(const std::shared_ptr<one::OpBuilder>& builder,
+                                const std::string& input_name, const int input_num) {
+  return builder->MaybeInput(input_name, input_num).GetOrThrow();
+}
+
+one::OpBuilder& OpBuilder_Output(const std::shared_ptr<one::OpBuilder>& builder,
+                                 const std::string& output_name, const int output_num) {
+  return builder->MaybeOutput(output_name, output_num).GetOrThrow();
+}
+
+one::OpBuilder& OpBuilder_Attr(const std::shared_ptr<one::OpBuilder>& builder,
+                               const std::string& attr_name,
+                               const std::string& serialized_attr_value) {
+  AttrValue attr_value;
+  TxtString2PbMessage(serialized_attr_value, &attr_value);
+  return builder->MaybeAttr(attr_name, attr_value).GetOrThrow();
+}
+
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::OpBuilder, std::shared_ptr<one::OpBuilder>>(m, "OpBuilder")
       .def(py::init<>())
       .def(py::init<const std::string&>())
-      .def("Name", &one::OpBuilder::Name)
-      .def("Op", &one::OpBuilder::Op)
-      .def("Input",
-           [](const std::shared_ptr<one::OpBuilder>& builder, const std::string& input_name,
-              const int input_num) { builder->Input(input_name, input_num); })
-      .def("Output",
-           [](const std::shared_ptr<one::OpBuilder>& builder, const std::string& output_name,
-              const int output_num) { builder->Output(output_name, output_num); })
-      .def("Attr", [](const std::shared_ptr<one::OpBuilder>& builder, const std::string& attr_name,
-                      const std::string& attr_value) { builder->Attr(attr_name, attr_value); })
+      .def("Name", &OpBuilder_Name)
+      .def("Op", &OpBuilder_Op)
+      .def("Input", &OpBuilder_Input)
+      .def("Output", &OpBuilder_Output)
+      .def("Attr", &OpBuilder_Attr)
       .def("Build", [](const std::shared_ptr<one::OpBuilder>& builder) {
         return builder->Build().GetPtrOrThrow();
       });
