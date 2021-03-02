@@ -21,6 +21,26 @@ oneflow_export("LocalTensor")(oneflow_api.LocalTensor)
 
 oneflow_export("ConsistentTensor")(oneflow_api.ConsistentTensor)
 
+class UndeterminedTensor:
+    def __init__(
+        self,
+        shape,
+        dtype,
+        device=None,
+        requires_grad=True,
+        retain_grad=False,
+        is_leaf=True,
+        placement=None,
+        sbp=None
+    ):
+        self.shape = shape
+        self.dtype = dtype
+        self.device = device
+        self.requires_grad = requires_grad
+        self.retain_grad = retain_grad
+        self.is_leaf = is_leaf
+        self.placement = placement
+        self.sbp = sbp
 
 @oneflow_export("tensor")
 class Tensor:
