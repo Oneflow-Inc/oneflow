@@ -137,13 +137,14 @@ if __name__ == "__main__":
         else:
             args.clang_format_binary = download()
             assert check_version(args.clang_format_binary)
-    for chunk in chunks(files, multiprocessing.cpu_count()):
+    for chunk in chunks(files, multiprocessing.cpu_count() * 2):
         promises = [
             run_command(f"{args.clang_format_binary} {clang_fmt_args} {f}")
             for f in chunk
         ]
         chunk_results = loop.run_until_complete(asyncio.gather(*promises))
         results.extend(chunk_results)
+    print(len(results), "files checked")
     assert len(results) == len(files)
     for (r, f) in zip(results, files):
         if r != 0:
