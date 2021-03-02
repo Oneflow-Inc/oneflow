@@ -17,14 +17,6 @@ import "oneflow/core/job/learning_rate_schedule_conf.proto";
 import "oneflow/core/operator/interface_blob_conf.proto";
 import "oneflow/core/register/blob_desc.proto";
 
-
-enum ActivationType {
-  kNone = 0;
-  kTanH = 1;
-  kSigmoid = 2;
-  kRelu = 3;
-}
-
 message DistributeConcatOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -89,9 +81,6 @@ message BoxingOpConf {
     BoxSplitConf split_box = 6;
     BoxCloneConf clone_box = 7;
   }
-}
-
-message AccumulateOpConf {
 }
 
 message DynamicReshapeOpConf {
@@ -496,7 +485,6 @@ message OperatorConf {
     CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
     BoxingOpConf boxing_conf = 108;
-    AccumulateOpConf accumulate_conf = 117;
     VariableOpConf variable_conf = 122;
     TickOpConf tick_conf = 124;
     TotalLossInstanceNumOpConf total_loss_instance_num_conf = 126;
