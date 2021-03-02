@@ -35,24 +35,16 @@ class Tensor:
         placement=None,
         sbp=None
     ):
-        self.shape_ = shape
-        self.dtype_ = dtype
-        self.device_ = device
-        self.requires_grad_ = requires_grad
-        self.retain_grad_ = retain_grad
-        self.is_leaf_ = is_leaf
-        self.placement_ = placement
-        self.sbp_ = sbp
-        self.local_tensor_ = None
-        self.consistent_tensor_ = None
+        self.undetermined_tensor = UndeterminedTensor(shape, dtype, device, requires_grad, retain_grad, is_leaf, placement, sbp)
+        self.local_or_consistent_tensor = None
 
     @property
     def shape(self):
-        return self.shape_
+        pass
 
     @property
     def device(self):
-        return self.device_
+        pass
 
     @property
     def ndim(self):
