@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,25 +12,8 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#include "oneflow/core/framework/tensor_impl.h"
+"""
+import oneflow_api
+from oneflow.python.oneflow_export import oneflow_export
 
-namespace oneflow {
-namespace one {
-
-namespace {
-
-std::shared_ptr<const ParallelDesc> MakeParallelDescByDevice(const Device& device) {
-  TODO();  // liyurui
-  return std::shared_ptr<const ParallelDesc>();
-}
-
-}  // namespace
-
-void MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
-  device_ = device;
-  parallel_desc_ = MakeParallelDescByDevice(*device);
-}
-
-}  // namespace one
-}  // namespace oneflow
+oneflow_export("device")(oneflow_api.device)
