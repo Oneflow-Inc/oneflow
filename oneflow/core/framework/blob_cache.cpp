@@ -21,7 +21,7 @@ namespace compatible_py {
 
 namespace {
 
-Maybe<HashMap<int64_t, std::shared_ptr<BlobCache>>*> GlobalObjectId2BlobCache() {
+HashMap<int64_t, std::shared_ptr<BlobCache>>* GlobalObjectId2BlobCache() {
   static HashMap<int64_t, std::shared_ptr<BlobCache>> object_id2blob_cache;
   return &object_id2blob_cache;
 }
@@ -29,9 +29,9 @@ Maybe<HashMap<int64_t, std::shared_ptr<BlobCache>>*> GlobalObjectId2BlobCache() 
 }  // namespace
 
 std::shared_ptr<EagerPhysicalBlobHeader> BlobCache::GetHeaderCache(
-    std::function<std::shared_ptr<EagerPhysicalBlobHeader>(const std::shared_ptr<BlobObject>&)>&
-        fetch) {
-  if (!header_cache_) { header_cache_ = fetch(blob_object_); }
+    const std::function<
+        std::shared_ptr<EagerPhysicalBlobHeader>(const std::shared_ptr<BlobObject>&)>& Fetch) {
+  if (!header_cache_) { header_cache_ = Fetch(blob_object_); }
   return header_cache_;
 }
 
@@ -39,9 +39,9 @@ std::shared_ptr<BlobObject> BlobCache::GetCachedDelegateBlobObject(
     const std::shared_ptr<OpArgParallelAttribute>& op_arg_parallel_attr,
     const std::function<std::shared_ptr<BlobObject>(
         const std::shared_ptr<BlobObject>&, const std::shared_ptr<OpArgParallelAttribute>&)>&
-        fetch) {
+        Fetch) {
   if (delegate_blob_object_.find(*op_arg_parallel_attr) == delegate_blob_object_.end()) {
-    std::shared_ptr<BlobObject> delegate_blob_object = fetch(blob_object_, op_arg_parallel_attr);
+    std::shared_ptr<BlobObject> delegate_blob_object = Fetch(blob_object_, op_arg_parallel_attr);
     delegate_blob_object_[*op_arg_parallel_attr] = delegate_blob_object;
   }
   return delegate_blob_object_.at(*op_arg_parallel_attr);
@@ -49,7 +49,7 @@ std::shared_ptr<BlobObject> BlobCache::GetCachedDelegateBlobObject(
 
 Maybe<BlobCache> FindOrCreateBlobCache(const std::shared_ptr<BlobObject>& blob_object) {
   int64_t object_id = blob_object->object_id();
-  auto* object_id2blob_cache = JUST(GlobalObjectId2BlobCache());
+  auto* object_id2blob_cache = GlobalObjectId2BlobCache();
   if (object_id2blob_cache->find(object_id) == object_id2blob_cache->end()) {
     (*object_id2blob_cache)[object_id] = std::make_shared<BlobCache>(blob_object);
   }
@@ -58,25 +58,25 @@ Maybe<BlobCache> FindOrCreateBlobCache(const std::shared_ptr<BlobObject>& blob_o
 
 Maybe<void> TryDisableBlobCache(const std::shared_ptr<BlobObject>& blob_object) {
   int64_t object_id = blob_object->object_id();
-  auto* object_id2blob_cache = JUST(GlobalObjectId2BlobCache());
+  auto* object_id2blob_cache = GlobalObjectId2BlobCache();
   if (object_id2blob_cache->find(object_id) != object_id2blob_cache->end()) {
     object_id2blob_cache->erase(object_id);
   }
   return Maybe<void>::Ok();
 }
 
-std::shared_ptr<BlobObject> FindOrCreateDelegateBlobObject(
+Maybe<BlobObject> FindOrCreateDelegateBlobObject(
     const std::function<std::shared_ptr<BlobObject>(
-        const std::shared_ptr<BlobObject>&, const std::shared_ptr<OpArgParallelAttribute>&)>& fetch,
+        const std::shared_ptr<BlobObject>&, const std::shared_ptr<OpArgParallelAttribute>&)>& Fetch,
     const std::shared_ptr<BlobObject>& x_blob_object,
     const std::shared_ptr<OpArgParallelAttribute>& op_arg_parallel_attr) {
   if ((*x_blob_object->op_arg_parallel_attr()) == (*op_arg_parallel_attr)) { return x_blob_object; }
-  std::shared_ptr<BlobCache> blob_cache = CHECK_JUST(FindOrCreateBlobCache(x_blob_object));
-  return blob_cache->GetCachedDelegateBlobObject(op_arg_parallel_attr, fetch);
+  std::shared_ptr<BlobCache> blob_cache = JUST(FindOrCreateBlobCache(x_blob_object));
+  return blob_cache->GetCachedDelegateBlobObject(op_arg_parallel_attr, Fetch);
 }
 
 Maybe<void> ClearAllBlobCache() {
-  auto* object_id2blob_cache = JUST(GlobalObjectId2BlobCache());
+  auto* object_id2blob_cache = GlobalObjectId2BlobCache();
   object_id2blob_cache->clear();
   return Maybe<void>::Ok();
 }
