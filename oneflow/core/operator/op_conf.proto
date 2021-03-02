@@ -18,11 +18,11 @@ import "oneflow/core/operator/interface_blob_conf.proto";
 import "oneflow/core/register/blob_desc.proto";
 
 
-enum ActivationType { 
-  kNone = 0;  
-  kTanH = 1;  
-  kSigmoid = 2; 
-  kRelu = 3;  
+enum ActivationType {
+  kNone = 0;
+  kTanH = 1;
+  kSigmoid = 2;
+  kRelu = 3;
 }
 
 message DistributeConcatOpConf {
