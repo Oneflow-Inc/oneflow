@@ -68,6 +68,5 @@ void UnpackCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("unpack", UnpackCompTaskNode);
-REGISTER_USER_OP_INDEPENDENT_AREA_ID("unpack")
 
 }  // namespace oneflow
