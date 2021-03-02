@@ -21,6 +21,9 @@ limitations under the License.
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 #include "oneflow/core/graph/collective_boxing_pack_task_node.h"
 #include "oneflow/core/graph/collective_boxing_unpack_task_node.h"
+#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/id_serialization.h"
+#include "oneflow/core/device/cuda_stream_index.h"
 #ifdef WITH_CUDA
 #include <nccl.h>
 #endif
@@ -62,9 +65,15 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   rank_desc->set_rank(parallel_id);
 
   const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
-  const int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
-  const int64_t thrd_id = Global<IDMgr>::Get()->GetGpuNcclThrdId(device_id);
-  node->Init(machine_id, thrd_id, NewAreaId(), op_conf);
+  const int64_t device_index = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+  DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
+                     static_cast<DeviceId::device_index_t>(device_index)};
+  auto* stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
+      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
+  CHECK_NOTNULL(stream_index_generator);
+  auto stream_index = stream_index_generator->GenerateNcclStreamIndex();
+  const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+  node->Init(machine_id, thrd_id, op_conf);
 }
 
 int64_t FindRootParallelId(const ParallelDesc& multi_device, const ParallelDesc& sole_device) {
@@ -383,13 +392,18 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAll2All-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
         const int64_t machine_id = CHECK_JUST(in_parallel_desc.MachineId4ParallelId(i));
-        const int64_t device_id = CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(i));
-        const int64_t thrd_id = Global<IDMgr>::Get()->GetGpuComputeThrdId(device_id);
+        const int64_t device_index = CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(i));
+        DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
+                           static_cast<DeviceId::device_index_t>(device_index)};
+        auto* stream_index_generator =
+            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
+        auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
+        const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
         TaskNode* in_node = sorted_in_tasks.at(i);
         CollectiveBoxingPackTaskNode* pack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
-        pack_node->Init(machine_id, thrd_id, NewAreaId(), lbi, logical_blob_desc.shape(),
-                        in_sbp_parallel, out_sbp_parallel, in_parallel_desc.parallel_num());
+        pack_node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(), in_sbp_parallel,
+                        out_sbp_parallel, in_parallel_desc.parallel_num());
         Connect<TaskNode>(in_node, ctx->task_graph()->NewEdge(), pack_node);
 
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
@@ -399,8 +413,8 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
 
         CollectiveBoxingUnpackTaskNode* unpack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingUnpackTaskNode>();
-        unpack_node->Init(machine_id, thrd_id, NewAreaId(), lbi, logical_blob_desc.shape(),
-                          in_sbp_parallel, out_sbp_parallel, in_parallel_desc.parallel_num());
+        unpack_node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(), in_sbp_parallel,
+                          out_sbp_parallel, in_parallel_desc.parallel_num());
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
         sorted_out_tasks->push_back(unpack_node);
       }

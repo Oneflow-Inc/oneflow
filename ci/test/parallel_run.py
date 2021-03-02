@@ -64,7 +64,7 @@ def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
                     env=dict(
                         os.environ,
                         CUDA_VISIBLE_DEVICES=cuda_visible_devices,
-                        ONEFLOW_TEST_CTRL_PORT=str(find_free_port()),
+                        ONEFLOW_TEST_MASTER_PORT=str(find_free_port()),
                         ONEFLOW_TEST_LOG_DIR=("./unittest-log-" + str(uuid.uuid4())),
                     ),
                     stdout=subprocess.PIPE,
