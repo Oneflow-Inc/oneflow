@@ -16,6 +16,9 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/naive_b2p_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing_zeros_task_node.h"
+#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/id_serialization.h"
+#include "oneflow/core/device/stream_index.h"
 
 namespace oneflow {
 
@@ -57,7 +60,12 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         int64_t thrd_id;
         if (out_parallel_desc.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-          thrd_id = Global<IDMgr>::Get()->GetGpuComputeThrdId(out_dev_phy_id);
+          DeviceId device_id{static_cast<DeviceId::rank_t>(out_machine_id), DeviceType::kGPU,
+                             static_cast<DeviceId::device_index_t>(out_dev_phy_id)};
+          auto* stream_index_generator =
+              Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
+          auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
+          thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
 #else
           UNIMPLEMENTED();
 #endif

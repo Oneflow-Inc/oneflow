@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/id_serialization.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
@@ -356,7 +359,9 @@ void TaskNode::LockRegsts() {
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_);
+  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
+  TaskId task_id = Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id);
+  task_id_ = SerializeTaskIdToInt64(task_id);
 }
 
 int64_t TaskNode::GlobalWorkStreamId() const {
