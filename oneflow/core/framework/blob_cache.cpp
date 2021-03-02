@@ -24,7 +24,7 @@ namespace {
 
 std::mutex* GlobalObjectId2BlobCacheMutex() {
   static std::mutex global_object_id2blob_cache_mutex;
-  return global_object_id2blob_cache_mutex;
+  return &global_object_id2blob_cache_mutex;
 }
 
 HashMap<int64_t, std::shared_ptr<BlobCache>>* GlobalObjectId2BlobCache() {

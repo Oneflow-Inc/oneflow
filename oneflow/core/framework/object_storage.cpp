@@ -21,7 +21,7 @@ namespace oneflow {
 
 std::mutex* GlobalParallelSym2SharedOpkernelObjMutex() {
   static std::mutex global_parallel_sym2shared_opkernel_obj_mutex;
-  return global_parallel_sym2shared_opkernel_obj_mutex;
+  return &global_parallel_sym2shared_opkernel_obj_mutex;
 }
 
 namespace {

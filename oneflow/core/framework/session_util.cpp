@@ -23,7 +23,7 @@ namespace {
 
 std::mutex* GlobalSessionUtilMutex() {
   static std::mutex global_id2session_map_mutex;
-  return global_id2session_map_mutex;
+  return &global_id2session_map_mutex;
 }
 
 HashMap<int64_t, std::shared_ptr<Session>>* GlobalId2SessionMap() {
