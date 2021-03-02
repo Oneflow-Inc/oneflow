@@ -175,7 +175,9 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
             stream_index = cuda_stream_index_generator->GenerateDecodeH2DStreamIndex();
             break;
           }
-          default: { UNIMPLEMENTED(); }
+          default: {
+            UNIMPLEMENTED();
+          }
         }
         comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
 #else

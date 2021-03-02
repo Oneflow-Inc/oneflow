@@ -58,8 +58,8 @@ class TrtOpContext : public OpContext {
   TrtBuilder *builder() const { return param_.builder; }
 
   const std::string &op_name() const { return param_.op_name; }
-  
-  const std::string &SoleOutputName() const; 
+
+  const std::string &SoleOutputName() const;
 
   // Return input named `name` as tensor
   nvinfer1::ITensor *Input(const std::string &name);
@@ -92,7 +92,7 @@ class TrtOpContext : public OpContext {
   Shape SoleInputShape() const;
   // Return output `name` shape as Shape
   Shape OutputShape(const std::string &name) const;
-  Shape SoleOutputShape() const;  
+  Shape SoleOutputShape() const;
 
   // Input data type
   DataType InputType(const std::string &name) const;

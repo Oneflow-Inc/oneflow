@@ -112,9 +112,7 @@ Shape TrtOpContext::OutputShape(const std::string &name) const {
   return ArgumentFromKey(name).shape();
 }
 
-Shape TrtOpContext::SoleOutputShape() const {
-  return ArgumentFromKey(SoleOutputName()).shape();
-}
+Shape TrtOpContext::SoleOutputShape() const { return ArgumentFromKey(SoleOutputName()).shape(); }
 
 bool TrtOpContext::HasInput(const std::string &name) const {
   return param_.arguments.count(name) > 0;

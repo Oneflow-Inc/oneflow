@@ -25,7 +25,7 @@ namespace tensorrt {
 class TransposeOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
-    const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
+    const auto &perm = ctx->Attr<std::vector<int32_t>>("perm");
     Shape in_shape = ctx->SoleInputShape();
     CHECK_EQ(perm.size(), in_shape.NumAxes());
 
