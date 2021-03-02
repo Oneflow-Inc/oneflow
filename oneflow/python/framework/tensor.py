@@ -43,33 +43,6 @@ class UndeterminedTensor:
         self.sbp = sbp
         self.is_consistent = False
 
-    def get_shape(self):
-        return self.shape
-
-    def get_dtype(self):
-        return self.dtype
-
-    def get_device(self):
-        return self.device
-
-    def get_requires_grad(self):
-        return self.requires_grad
-
-    def get_retain_grad(self):
-        return self.retain_grad
-
-    def get_is_leaf(self):
-        return self.is_leaf
-
-    def get_placement(self):
-        return self.placement
-
-    def get_sbp(self):
-        return self.sbp
-
-    def get_consistent(self):
-        return self.is_consistent
-
     def set_device(self, value):
         self.device = value
 
