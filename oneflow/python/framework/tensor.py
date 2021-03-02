@@ -33,29 +33,19 @@ class Tensor:
         retain_grad=False,
         is_leaf=True,
         placement=None,
-        distribute=None,
-        is_lazy=False,
-        is_consistent=False,
-        is_determined=False,
     ):
-        if (is_determined):
-            if (is_consistent):
-                self.consistent_tensor = oneflow_api.ConsistentTensor()
-            else:
-                self.mirrored_tensor = oneflow_api.LocalTensor()
-        else:
-            self.shape = shape
-            self.dtype = dtype
-            self.device = device
-            self.placement = placement
-            self.distribute = distribute
-            self.is_lazy = is_lazy
-            self.is_consistent = is_consistent
-            self.is_determined = is_determined
-            self.requires_grad = requires_grad
-            self.retain_grad = retain_grad
-            self.local_tensor = None
-            self.consistent_tensor = None
+        self.shape = shape
+        self.dtype = dtype
+        self.device = device
+        self.placement = placement
+        self.distribute = distribute
+        self.is_lazy = is_lazy
+        self.is_consistent = is_consistent
+        self.is_determined = is_determined
+        self.requires_grad = requires_grad
+        self.retain_grad = retain_grad
+        self.local_tensor = None
+        self.consistent_tensor = None
 
     @property
     def shape(self):
@@ -111,7 +101,7 @@ class Tensor:
 
     def size(self):
         pass
-    
+
     def dim(self):
         pass
 
@@ -168,6 +158,3 @@ class Tensor:
 
     def __sizeof__(self):
         pass
-
-
-
