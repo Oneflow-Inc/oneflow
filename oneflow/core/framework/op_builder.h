@@ -33,21 +33,25 @@ class OpBuilder {
   explicit OpBuilder(const std::string& op_type_name);
   virtual ~OpBuilder() = default;
 
-  OpBuilder& Name(const std::string& op_name) {
+  Maybe<OpBuilder&> MaybeName(const std::string& op_name) {
     op_name_ = op_name;
     return *this;
   }
+  OpBuilder& Name(const std::string& op_name) { return CHECK_JUST(MaybeName(op_name)); }
 
+  Maybe<OpBuilder&> MaybeOp(const std::string& op_type_name);
   OpBuilder& Op(const std::string& op_type_name);
 
+  Maybe<OpBuilder&> MaybeInput(const std::string& input_name, const int count);
   OpBuilder& Input(const std::string& input_name);
   OpBuilder& Input(const std::string& input_name, const int count);
 
+  Maybe<OpBuilder&> MaybeOutput(const std::string& output_name, const int count);
   OpBuilder& Output(const std::string& output_name);
   OpBuilder& Output(const std::string& output_name, const int count);
 
+  Maybe<OpBuilder&> MaybeAttr(const std::string& attr_name, const AttrValue& attr_value);
   OpBuilder& Attr(const std::string& attr_name, const AttrValue& attr_value);
-  OpBuilder& Attr(const std::string& attr_name, const std::string& serialized_attr_value);
 
   // TODO(): Set attribute from primitive type.
   // template <typename T>
