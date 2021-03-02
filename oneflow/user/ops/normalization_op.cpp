@@ -173,7 +173,22 @@ REGISTER_USER_OP("normalization_add_relu")
     .Attr<float>("epsilon")
     .Attr<float>("momentum")
     .SetInputArgModifyFn(FwInputArgModifyFn)
-    .SetTensorDescInferFn(
+    .SetLogicalTensorDescInferFn(
+        MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
+          const auto* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          const auto& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+          size_t reserve_space_size = x_desc->shape().elem_cnt();
+          if (x_sbp.has_split_parallel()) {
+            CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
+            reserve_space_size = reserve_space_size / ctx->parallel_num();
+          }
+          *reserve_space->mut_data_type() = DataType::kInt32;
+          *reserve_space->mut_shape() =
+              Shape({static_cast<int64_t>(RoundUp(reserve_space_size, 32) / 32)});
+          return Maybe<void>::Ok();
+        }))
+    .SetPhysicalTensorDescInferFn(
         MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
           const auto* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
@@ -185,6 +200,20 @@ REGISTER_USER_OP("normalization_add_relu")
     .SetGetSbpFn(FwGetSbpFn);
 
 #if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
+
+Maybe<void> InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int64_t n,
+                                       int64_t c, int64_t h, int64_t w,
+                                       size_t* reserve_space_size) {
+  cudnnHandle_t cudnn_handle;
+  OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle));
+  CudnnTensorDesc xy_desc(CUDNN_TENSOR_NHWC, data_type, n, c, h, w);
+  CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
+  OF_CUDNN_CHECK(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
+      cudnn_handle, CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops, activation_desc.Get(), xy_desc.Get(),
+      reserve_space_size));
+  OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle));
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
     .Input("x")
@@ -201,7 +230,7 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
     .Attr<float>("epsilon")
     .Attr<float>("momentum")
     .SetInputArgModifyFn(FwInputArgModifyFn)
-    .SetTensorDescInferFn(
+    .SetLogicalTensorDescInferFn(
         MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
           const Shape& x_shape = x->shape();
@@ -211,24 +240,45 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
           int64_t h = x_shape.Count(1, axis);
           int64_t w = 1;
           int64_t c = x_shape.At(axis);
-          cudnnHandle_t cudnn_handle;
-          size_t reserve_space_size;
-          OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle));
-          CudnnTensorDesc xy_desc(CUDNN_TENSOR_NHWC, x->data_type(), n, c, h, w);
-          CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
+          const auto& input_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+          if (input_sbp.has_split_parallel()) {
+            CHECK_EQ_OR_RETURN(input_sbp.split_parallel().axis(), 0);
+            n = n / ctx->parallel_num();
+          }
           cudnnBatchNormOps_t ops;
           if (ctx->user_op_conf().has_input("addend", 0)) {
             ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
           } else {
             ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
           }
-          OF_CUDNN_CHECK(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
-              cudnn_handle, CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops, activation_desc.Get(),
-              xy_desc.Get(), &reserve_space_size));
+          size_t reserve_space_size;
+          InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
           reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
           *reserve_space->mut_data_type() = DataType::kChar;
           *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
-          OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle));
+          return Maybe<void>::Ok();
+        }))
+    .SetPhysicalTensorDescInferFn(
+        MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
+          const Shape& x_shape = x->shape();
+          const auto axis = ctx->Attr<int32_t>("axis");
+          CHECK_EQ_OR_RETURN(x_shape.Count(axis + 1), 1);
+          int64_t n = x_shape.At(0);
+          int64_t h = x_shape.Count(1, axis);
+          int64_t w = 1;
+          int64_t c = x_shape.At(axis);
+          cudnnBatchNormOps_t ops;
+          if (ctx->user_op_conf().has_input("addend", 0)) {
+            ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
+          } else {
+            ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
+          }
+          size_t reserve_space_size;
+          InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
+          reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
+          *reserve_space->mut_data_type() = DataType::kChar;
+          *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
           return Maybe<void>::Ok();
         }))
     .SetGetSbpFn(FwGetSbpFn);
