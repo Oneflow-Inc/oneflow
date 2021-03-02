@@ -19,6 +19,5 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.device as oneflow_device
 
 
-oneflow_export("LocalTensor")(oneflow_api.LocalTensor)
+oneflow_export("Tensor")(oneflow_api.Tensor)
 
-oneflow_export("ConsistentTensor")(oneflow_api.ConsistentTensor)
