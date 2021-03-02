@@ -161,7 +161,9 @@ size_t GetCudnnDataTypeByteSize(cudnnDataType_t data_type) {
       break;
     }
 #endif
-    default: { UNIMPLEMENTED(); }
+    default: {
+      UNIMPLEMENTED();
+    }
   }
   return byte_size;
 }
