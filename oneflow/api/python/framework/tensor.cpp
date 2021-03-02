@@ -107,7 +107,7 @@ struct TensorExportUtil<UndeterminedTensor> final {
       const std::shared_ptr<const Device>& device,
       const std::shared_ptr<const ParallelDesc>& parallel_desc,
       const std::shared_ptr<const compatible_py::Distribute>& distribute, bool is_lazy,
-      bool requires_grad, bool is_leaf, bool retain_grad, bool is_determined, bool is_consistent) {
+      bool requires_grad, bool is_leaf, bool retain_grad) {
     return std::make_shared<FacadeTensor>(
         MakeTensor(py_shape, dtype, is_lazy, requires_grad, is_leaf, retain_grad).GetPtrOrThrow());
   }
