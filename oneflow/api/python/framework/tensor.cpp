@@ -35,66 +35,140 @@ template<typename T>
 struct TensorExportUtil final {};
 
 template<>
-struct TensorExportUtil<FacadeTensor> final {
-  static Maybe<FacadeTensor> MakeTensor(
-      const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-      const std::shared_ptr<const Device>& device,
-      const std::shared_ptr<const ParallelDesc>& parallel_desc,
-      const std::shared_ptr<const compatible_py::Distribute>& distribute, bool is_lazy,
-      bool requires_grad, bool is_leaf, bool retain_grad, bool is_determined, bool is_consistent) {
-    if (is_determined) {
-      if (is_consistent) {
-        return std::make_shared<FacadeTensor>(ConsistentTensor::MakeTensor(
-            shape, dtype, distribute, parallel_desc, is_lazy, requires_grad, is_leaf, retain_grad));
-      } else {
-        return std::make_shared<FacadeTensor>(MirroredTensor::MakeTensor(
-            shape, dtype, device, is_lazy, requires_grad, is_leaf, retain_grad));
-      }
-    } else {
-      return std::make_shared<FacadeTensor>(
-          std::make_shared<UndeterminedTensor>(shape, dtype, is_leaf, retain_grad));
-    }
+struct TensorExportUtil<MirroredTensor> final {
+  static Maybe<MirroredTensor> MakeTensor(const py::tuple& py_shape,
+                                          const std::shared_ptr<const DType>& dtype,
+                                          const std::shared_ptr<const Device>& device, bool is_lazy,
+                                          bool requires_grad, bool is_leaf, bool retain_grad) {
+    DimVector shape_dims;
+    CHECK_OR_RETURN(py::isinstance<py::tuple>(py_shape))
+        << Error::ValueError("Input shape must be tuple.");
+    for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
+    std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
+    return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf,
+                                      retain_grad);
   }
 
-  static std::shared_ptr<FacadeTensor> ApiMakeTensor(
-      const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-      const std::shared_ptr<const Device>& device,
-      const std::shared_ptr<const ParallelDesc>& parallel_desc,
-      const std::shared_ptr<const compatible_py::Distribute>& distribute, bool is_lazy,
-      bool requires_grad, bool is_leaf, bool retain_grad, bool is_determined, bool is_consistent) {
-    return MakeTensor(shape, dtype, device, parallel_desc, distribute, is_lazy, requires_grad,
-                      is_leaf, retain_grad, is_determined, is_consistent)
-        .GetPtrOrThrow();
+  static std::shared_ptr<FacadeTensor> MakeFacadeTensor(const py::tuple& py_shape,
+                                                        const std::shared_ptr<const DType>& dtype,
+                                                        const std::shared_ptr<const Device>& device,
+                                                        bool is_lazy, bool requires_grad,
+                                                        bool is_leaf, bool retain_grad) {
+    return std::make_shared<FacadeTensor>(
+        MakeTensor(py_shape, dtype, device, is_lazy, requires_grad, is_leaf, retain_grad)
+            .GetPtrOrThrow());
   }
 };
 
-template<typename T>
-void ExportTensor(py::module& m, const char* name) {
-  py::class_<T, std::shared_ptr<T>>(m, name)
-      .def(py::init(&TensorExportUtil<T>::ApiMakeTensor))
+template<>
+struct TensorExportUtil<ConsistentTensor> final {
+  static Maybe<ConsistentTensor> MakeTensor(
+      const py::tuple& py_shape, const std::shared_ptr<const DType>& dtype,
+      const std::shared_ptr<const compatible_py::Distribute>& distribute,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
+      bool is_leaf, bool retain_grad) {
+    DimVector shape_dims;
+    CHECK_OR_RETURN(py::isinstance<py::tuple>(py_shape))
+        << Error::ValueError("Input shape must be tuple.");
+    for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
+    std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
+    return ConsistentTensor::MakeTensor(shape, dtype, distribute, parallel_desc, is_lazy,
+                                        requires_grad, is_leaf, retain_grad);
+  }
+
+  static std::shared_ptr<FacadeTensor> MakeFacadeTensor(
+      const py::tuple& py_shape, const std::shared_ptr<const DType>& dtype,
+      const std::shared_ptr<const compatible_py::Distribute>& distribute,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
+      bool is_leaf, bool retain_grad) {
+    return std::make_shared<FacadeTensor>(MakeTensor(py_shape, dtype, distribute, parallel_desc,
+                                                     is_lazy, requires_grad, is_leaf, retain_grad)
+                                              .GetPtrOrThrow());
+  }
+};
+
+template<>
+struct TensorExportUtil<UndeterminedTensor> final {
+  static Maybe<UndeterminedTensor> MakeTensor(const py::tuple& py_shape,
+                                              const std::shared_ptr<const DType>& dtype,
+                                              bool is_lazy, bool requires_grad, bool is_leaf,
+                                              bool retain_grad) {
+    DimVector shape_dims;
+    CHECK_OR_RETURN(py::isinstance<py::tuple>(py_shape))
+        << Error::ValueError("Input shape must be tuple.");
+    for (auto dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
+    std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
+    return std::make_shared<UndeterminedTensor>(shape, dtype, is_lazy, requires_grad, is_leaf,
+                                                retain_grad);
+  }
+
+  static std::shared_ptr<FacadeTensor> MakeFacadeTensor(
+      const py::tuple& py_shape, const std::shared_ptr<const DType>& dtype,
+      const std::shared_ptr<const Device>& device,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc,
+      const std::shared_ptr<const compatible_py::Distribute>& distribute, bool is_lazy,
+      bool requires_grad, bool is_leaf, bool retain_grad, bool is_determined, bool is_consistent) {
+    return std::make_shared<FacadeTensor>(
+        MakeTensor(py_shape, dtype, is_lazy, requires_grad, is_leaf, retain_grad).GetPtrOrThrow());
+  }
+};
+
+}  // namespace
+
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::class_<FacadeTensor, std::shared_ptr<FacadeTensor>>(m, "Tensor")
+      .def(py::init(&TensorExportUtil<MirroredTensor>::MakeFacadeTensor))
+      .def(py::init(&TensorExportUtil<ConsistentTensor>::MakeFacadeTensor))
+      .def(py::init(&TensorExportUtil<UndeterminedTensor>::MakeFacadeTensor))
       // Properties of pytorch
       .def_property_readonly("shape",
-                             [](const T& tensor) { return tensor.shape().GetPtrOrThrow(); })
+                             [](const std::shared_ptr<FacadeTensor>& tensor) {
+                               return tensor->shape().GetPtrOrThrow();
+                             })
       .def_property_readonly("device",
-                             [](const T& tensor) { return tensor.device().GetPtrOrThrow(); })
-      .def_property_readonly("ndim", [](T& tensor) { return tensor.ndim().GetOrThrow(); })
-      .def_property_readonly("is_cuda", [](T& tensor) { return tensor.is_cuda().GetOrThrow(); })
+                             [](const std::shared_ptr<FacadeTensor>& tensor) {
+                               return tensor->device().GetPtrOrThrow();
+                             })
+      .def_property_readonly(
+          "ndim", [](std::shared_ptr<FacadeTensor>& tensor) { return tensor->ndim().GetOrThrow(); })
+      .def_property_readonly(
+          "is_cuda",
+          [](std::shared_ptr<FacadeTensor>& tensor) { return tensor->is_cuda().GetOrThrow(); })
       .def_property_readonly("dtype",
-                             [](const T& tensor) { return tensor.device().GetPtrOrThrow(); })
+                             [](const std::shared_ptr<FacadeTensor>& tensor) {
+                               return tensor->device().GetPtrOrThrow();
+                             })
       .def_property_readonly("data", []() { TODO(); })
-      .def_property_readonly("grad", [](T& tensor) { return tensor.acc_grad().GetPtrOrThrow(); })
+      .def_property_readonly(
+          "grad",
+          [](std::shared_ptr<FacadeTensor>& tensor) { return tensor->acc_grad().GetPtrOrThrow(); })
       .def_property_readonly("grad_fn",
-                             [](T& tensor) { return tensor.grad_fn_node().GetPtrOrThrow(); })
+                             [](std::shared_ptr<FacadeTensor>& tensor) {
+                               return tensor->grad_fn_node().GetPtrOrThrow();
+                             })
       .def_property_readonly("requires_grad",
-                             [](const T& tensor) { return tensor.requires_grad().GetOrThrow(); })
+                             [](const std::shared_ptr<FacadeTensor>& tensor) {
+                               return tensor->requires_grad().GetOrThrow();
+                             })
       .def_property_readonly("is_leaf",
-                             [](const T& tensor) { return tensor.is_leaf().GetOrThrow(); })
+                             [](const std::shared_ptr<FacadeTensor>& tensor) {
+                               return tensor->is_leaf().GetOrThrow();
+                             })
       // Methods of pytorch
-      .def("size", [](const T& tensor) { return tensor.shape().GetPtrOrThrow(); })
-      .def("dim", [](T& tensor, int index) { return tensor.dim(index).GetOrThrow(); })
-      .def("ndimension", [](T& tensor) { return tensor.ndim().GetOrThrow(); })
-      .def("get_device", [](const T& tensor) { return tensor.device().GetPtrOrThrow(); })
-      .def("nelement", [](T& tensor) { return tensor.nelement().GetOrThrow(); })
+      .def("size",
+           [](const std::shared_ptr<FacadeTensor>& tensor) {
+             return tensor->shape().GetPtrOrThrow();
+           })
+      .def("dim", [](std::shared_ptr<FacadeTensor>& tensor,
+                     int index) { return tensor->dim(index).GetOrThrow(); })
+      .def("ndimension",
+           [](std::shared_ptr<FacadeTensor>& tensor) { return tensor->ndim().GetOrThrow(); })
+      .def("get_device",
+           [](const std::shared_ptr<FacadeTensor>& tensor) {
+             return tensor->device().GetPtrOrThrow();
+           })
+      .def("nelement",
+           [](std::shared_ptr<FacadeTensor>& tensor) { return tensor->nelement().GetOrThrow(); })
       .def("data_ptr", []() { TODO(); })
       .def("element_size", []() { TODO(); })
       .def("numpy", []() { TODO(); })
@@ -106,15 +180,15 @@ void ExportTensor(py::module& m, const char* name) {
       .def("__sizeof__", []() { TODO(); })
       // OneFlow tensor properties other than pytorch tensor
       .def_property_readonly("placement",
-                             [](const T& tensor) { return tensor.parallel_desc().GetPtrOrThrow(); })
-      .def_property_readonly("is_lazy", [](const T& tensor) { return tensor.is_lazy(); })
-      .def_property_readonly("is_consistent",
-                             [](const T& tensor) { return tensor.is_consistent().GetOrThrow(); });
+                             [](const std::shared_ptr<FacadeTensor>& tensor) {
+                               return tensor->parallel_desc().GetPtrOrThrow();
+                             })
+      .def_property_readonly(
+          "is_lazy", [](const std::shared_ptr<FacadeTensor>& tensor) { return tensor->is_lazy(); })
+      .def_property_readonly("is_consistent", [](const std::shared_ptr<FacadeTensor>& tensor) {
+        return tensor->is_consistent().GetOrThrow();
+      });
 }
-
-}  // namespace
-
-ONEFLOW_API_PYBIND11_MODULE("", m) { ExportTensor<FacadeTensor>(m, "Tensor"); }
 
 }  // namespace one
 
