@@ -20,6 +20,7 @@ import oneflow as flow
 import oneflow.typing as tp
 
 config = flow.function_config()
+flow.config.enable_debug_mode(True)
 flow.config.enable_legacy_model_io(True)
 
 
@@ -39,7 +40,6 @@ def _compare_with_np(input_shape):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skip("fake device is not fully ready")
 class TestRelu(flow.unittest.TestCase):
     def test_random_value(test_case):
         _compare_with_np((2, 3))

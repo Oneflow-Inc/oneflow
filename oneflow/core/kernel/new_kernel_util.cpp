@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "build-gcc485/grpc/src/grpc/include/grpcpp/impl/codegen/status_code_enum.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/framework/device_register_fakedev.h"

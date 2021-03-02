@@ -210,4 +210,7 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kNorm
       return cpu_stream_index_generator->GenerateComputeStreamIndex();
     });
 
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kFAKEDEVICE, TaskType::kNormalForward)
+    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t { return 0; });
+
 }  // namespace oneflow
