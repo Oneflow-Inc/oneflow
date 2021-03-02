@@ -36,7 +36,7 @@ TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, MemZoneId src_me
           GetProxyNode(src_node, src_mem_zone_id, dst_machine_id, MemZoneId(DeviceType::kCPU, 0));
       CopyHdTaskNode* copy_task = task_graph()->NewNode<CopyHdTaskNode>();
       copy_task->Init(CopyHdOpConf::H2D, proxy_on_dst_host->machine_id(),
-                      dst_mem_zone_id.device_index());
+                      dst_mem_zone_id.device_type(), dst_mem_zone_id.device_index());
       Connect<TaskNode>(proxy_on_dst_host, task_graph()->NewEdge(), copy_task);
       node2proxies_[src_node][key] = copy_task;
       return copy_task;
@@ -44,7 +44,7 @@ TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, MemZoneId src_me
       if (src_node->machine_id() == dst_machine_id) {
         if (src_mem_zone_id.device_type() == DeviceType::kGPU) {
           CopyHdTaskNode* copy_task = task_graph()->NewNode<CopyHdTaskNode>();
-          copy_task->Init(CopyHdOpConf::D2H, src_node->machine_id(),
+          copy_task->Init(CopyHdOpConf::D2H, src_node->machine_id(), src_mem_zone_id.device_type(),
                           src_mem_zone_id.device_index());
           Connect<TaskNode>(src_node, task_graph()->NewEdge(), copy_task);
           node2proxies_[src_node][key] = copy_task;

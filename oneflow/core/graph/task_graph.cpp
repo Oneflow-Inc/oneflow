@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/global_for.h"
@@ -700,16 +701,20 @@ TaskNode* TaskGraph::BuildTaskStep(TaskNode* src, TaskNode* dst, const GetBufTas
 TaskNode* TaskGraph::TryAddCopyH2DTaskTo(TaskNode* task) {
   if (IsInterfaceTask(task)) { return nullptr; }
   if (IsClassRegistered<int32_t, TickTockTaskType>(task->GetTaskType())) { return nullptr; }
-  CHECK_EQ(task->device_type(), DeviceType::kGPU);
+  CHECK_NE(task->device_type(), DeviceType::kCPU);
   CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-  copy_task->Init(CopyHdOpConf::H2D, task->machine_id(), task->GpuPhyId());
+  StreamId stream_id = DeserializeStreamIdFromInt64(task->thrd_id());
+  copy_task->Init(CopyHdOpConf::H2D, task->machine_id(), stream_id.device_id().device_type(),
+                  stream_id.device_id().device_index());
   return copy_task;
 }
 
 TaskNode* TaskGraph::AddCopyD2HTaskFrom(TaskNode* task) {
-  CHECK_EQ(task->device_type(), DeviceType::kGPU);
+  CHECK_NE(task->device_type(), DeviceType::kCPU);
   CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-  copy_task->Init(CopyHdOpConf::D2H, task->machine_id(), task->GpuPhyId());
+  StreamId stream_id = DeserializeStreamIdFromInt64(task->thrd_id());
+  copy_task->Init(CopyHdOpConf::D2H, task->machine_id(), stream_id.device_id().device_type(),
+                  stream_id.device_id().device_index());
   return copy_task;
 }
 

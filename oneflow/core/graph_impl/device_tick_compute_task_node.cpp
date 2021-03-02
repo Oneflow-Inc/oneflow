@@ -56,6 +56,9 @@ void DeviceTickCompTaskNode::InferProducedDataRegstTimeShape() {
 
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kDeviceTick);
 
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kFAKEDEVICE, TaskType::kDeviceTick)
+    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t { return 0; });
+
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDeviceTick)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
       auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
