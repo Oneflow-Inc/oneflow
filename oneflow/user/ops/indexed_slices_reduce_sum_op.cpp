@@ -44,4 +44,5 @@ REGISTER_USER_OP("indexed_slices_reduce_sum")
       *num_unique->mut_data_type() = DataType::kInt64;
       return Maybe<void>::Ok();
     });
-}
+
+}  // namespace oneflow
