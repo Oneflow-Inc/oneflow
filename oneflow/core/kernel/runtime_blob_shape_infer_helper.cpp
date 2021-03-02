@@ -76,7 +76,7 @@ BlobDesc* RuntimeBlobShapeInferHelper::BlobDesc4BnInOp(const std::string& bn_in_
   BlobDesc* blob_desc = bn_in_op2blob_desc_.at(bn_in_op).get();
   if (blob_desc != nullptr) { return blob_desc; }
   blob_desc =
-      new BlobDesc(rt_blob_desc.body(), rt_blob_desc.is_tensor_list(), rt_blob_desc.is_dynamic());
+      new BlobDesc(rt_blob_desc.body(), rt_blob_desc.is_dynamic());
   bn_in_op2blob_desc_.at(bn_in_op).reset(blob_desc);
   return blob_desc;
 }

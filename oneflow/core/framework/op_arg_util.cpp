@@ -35,13 +35,12 @@ std::string OpArgBlobAttribute::logical_blob_name() const { return logical_blob_
 
 cfg::DataType OpArgBlobAttribute::get_dtype() const { return blob_desc_->body().data_type(); }
 
-bool OpArgBlobAttribute::is_tensor_list() const { return blob_desc_->is_tensor_list(); }
 
 bool OpArgBlobAttribute::is_dynamic() const { return blob_desc_->is_dynamic(); }
 
 bool OpArgBlobAttribute::operator==(const OpArgBlobAttribute& other) const {
   return (*shape_ == *other.shape()) && (get_dtype() == other.get_dtype())
-         && (is_tensor_list() == other.is_tensor_list()) && (is_dynamic() == other.is_dynamic())
+         && (is_dynamic() == other.is_dynamic())
          && (logical_blob_name_ == other.logical_blob_name());
 }
 
@@ -62,7 +61,6 @@ void OpArgBlobAttribute::DumpToInterfaceBlobConf(
   }
   interface_blob_conf->set_data_type(blob_desc_->body().data_type());
   interface_blob_conf->set_is_dynamic(is_dynamic());
-  interface_blob_conf->set_is_tensor_list(is_tensor_list());
 }
 
 void OpArgBlobAttribute::DumpToOpNodeSignature(

@@ -30,22 +30,15 @@ def dtype(self):
 
 
 def numpy(self):
-    assert not self.is_tensor_list
-    return _GetPhysicalBlobBodyCache(self.blob_object)
-
-
-def numpy_list(self):
-    assert self.is_tensor_list
     return _GetPhysicalBlobBodyCache(self.blob_object)
 
 
 def RegisterMethod4EagerPhysicalBlob():
     oneflow_api.EagerPhysicalBlob.dtype = dtype
     oneflow_api.EagerPhysicalBlob.numpy = numpy
-    oneflow_api.EagerPhysicalBlob.numpy_list = numpy_list
 
 
-def FetchTensorBlobAsNumpyList(parallel_size, blob_object):
+def FetchTensorBlobAsNumpy(parallel_size, blob_object):
     def AsyncFetchBlobBody(Yield):
         fetcher = _MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield)
 
@@ -92,7 +85,7 @@ def _FetchBlobHeader(blob_object):
 
 
 def _FetchPhysicalBlobBody(blob_object):
-    return FetchTensorBlobAsNumpyList(1, blob_object)[0]
+    return FetchTensorBlobAsNumpy(1, blob_object)[0]
 
 
 def _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield):
@@ -100,9 +93,8 @@ def _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield):
         Yield(
             oneflow_api.EagerPhysicalBlobHeader(
                 ofblob.static_shape,
-                ofblob.shape_list,
+                ofblob.shape,
                 oneflow_api.deprecated.GetProtoDtype4OfDtype(ofblob.dtype),
-                ofblob.is_tensor_list,
             )
         )
 
@@ -111,9 +103,5 @@ def _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield):
 
 def _MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield):
     def FetchFromOfBlob(ofblob):
-        if ofblob.is_tensor_list:
-            Yield(ofblob.CopyToFlatNdarrayList())
-        else:
-            Yield(ofblob.CopyToNdarray())
-
+        Yield(ofblob.CopyToNdarray())
     return FetchFromOfBlob

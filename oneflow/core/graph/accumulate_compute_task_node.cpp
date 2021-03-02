@@ -39,7 +39,6 @@ void AccumulateCompTaskNode::BuildExecGphAndRegst() {
   acc_regst->ForEachLbi([acc_regst](const LogicalBlobId& lbi) {
     const BlobDesc* blob_desc = acc_regst->GetBlobDesc(lbi);
     CHECK_EQ(blob_desc->is_dynamic(), false);
-    CHECK_EQ(blob_desc->is_tensor_list(), false);
   });
 }
 
