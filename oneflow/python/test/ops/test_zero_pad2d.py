@@ -140,9 +140,7 @@ def gen_numpy_test_sample(input_shape, padding, is_float=True):
     pad_shape = ((0, 0), (0, 0), (pad_top, pad_bottom), (pad_left, pad_right))
 
     def _np_zero_pad2d(input, pad_shape4):
-        numpy_zero = np.pad(
-            input, pad_shape, "constant", constant_values=0.
-        )
+        numpy_zero = np.pad(input, pad_shape, "constant", constant_values=0.0)
         return numpy_zero
 
     def _np_zero_pad2d_grad(src, dest):

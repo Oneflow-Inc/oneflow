@@ -547,4 +547,4 @@ def zero_pad2d(
     """
     if name is None:
         name = id_util.UniqueStr("Zero_Pad2d_")
-    return constant_pad2d(x, padding, 0., name)
+    return constant_pad2d(x, padding, 0.0, name)
