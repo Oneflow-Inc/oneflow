@@ -21,27 +21,6 @@ oneflow_export("LocalTensor")(oneflow_api.LocalTensor)
 
 oneflow_export("ConsistentTensor")(oneflow_api.ConsistentTensor)
 
-class UndeterminedTensor:
-    def __init__(
-        self,
-        shape,
-        dtype,
-        device=None,
-        requires_grad=True,
-        retain_grad=False,
-        is_leaf=True,
-        placement=None,
-        sbp=None
-    ):
-        self.shape = shape
-        self.dtype = dtype
-        self.device = device
-        self.requires_grad = requires_grad
-        self.retain_grad = retain_grad
-        self.is_leaf = is_leaf
-        self.placement = placement
-        self.sbp = sbp
-
 @oneflow_export("tensor")
 class Tensor:
     def __init__(
@@ -53,121 +32,230 @@ class Tensor:
         retain_grad=False,
         is_leaf=True,
         placement=None,
-        sbp=None
+        sbp=None,
+        is_consistent=False,
+        is_lazy=False,
+        determining_initializer=None,
     ):
-        self.undetermined_tensor = UndeterminedTensor(shape, dtype, device, requires_grad, retain_grad, is_leaf, placement, sbp)
         self.local_or_consistent_tensor = None
+        self.undetermined_tensor = UndeterminedTensor(
+            shape, dtype, device,
+            requires_grad=requires_grad,
+            retain_grad=retain_grad,
+            is_leaf=is_leaf,
+            placement=placement,
+            sbp=sbp,
+            is_consistent=is_consistent,
+            is_lazy=is_lazy,
+        )
+        if determining_initializer is None:
+            determining_initializer = _default_initializer_for_determining
+        self.determining_initializer = determining_initializer
 
     @property
     def shape(self):
-        if (self.local_or_consistent_tensor is None):
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.shape
+        else:
             return self.undetermined_tensor.shape
-        return self.local_or_consistent_tensor.shape
 
     @property
     def device(self):
-        pass
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.device
+        else:
+            return self.undetermined_tensor.device
 
     @property
     def ndim(self):
-        pass
+        return len(self.shape)
 
     @property
     def is_cuda(self):
-        pass
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.is_cuda
+        else:
+            return self.undetermined_tensor.is_cuda
 
     @property
     def dtype(self):
-        return self.dtype_
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.dtype
+        else:
+            return self.undetermined_tensor.dtype
 
     @property
     def data(self):
-        pass
+        TODO()
 
     @property
     def grad(self):
-        pass
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.grad
+        else:
+            return None
 
     @property
     def grad_fn(self):
-        pass
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.grad_fn
+        else:
+            return None
 
     @property
     def requires_grad(self):
-        pass
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.requires_grad
+        else:
+            return self.undetermined_tensor.requires_grad
 
     @property
     def is_leaf(self):
-        return self.is_leaf_
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.is_leaf
+        else:
+            return self.undetermined_tensor.is_leaf
 
     @property
     def placement(self):
-        pass
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.placement
+        else:
+            return self.undetermined_tensor.placement
 
     @property
     def is_lazy(self):
-        pass
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.is_lazy
+        else:
+            return self.undetermined_tensor.is_lazy
 
     @property
     def is_consistent(self):
-        pass
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.is_consistent
+        else:
+            return self.undetermined_tensor.is_consistent
 
     def size(self):
-        return self.shape_
+        return self.shape
 
     def dim(self, idx):
-        pass
+        return self.shape[idx]
 
     def ndimension(self):
-        pass
+        return self.ndim
 
     def get_device(self):
-        return self.device_
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.device
+        else:
+            return self.undetermined_tensor.device
 
     def nelemenet(self):
-        pass
+        prod = 1
+        for dim in self.shape:
+            prod *= dim
+        return prod
 
     def data_ptr(self):
-        pass
+        TODO()
 
     def element_size(self):
-        pass
+        TODO()
 
     def numpy(self):
-        pass
+        TODO()
 
     def tolist(self):
-        pass
+        TODO()
 
     def backward(self):
-        pass
-
-    def set_device(self, device):
-        self.device_ = device
-
-    def set_placement(self, placement):
-        self.placement_ = placement
-
-    def set_sbp(self, sbp):
-        self.sbp_ = sbp
-
-    def set_dtype(self, dtype):
-        self.dtype_ = dtype
-
-    def set_consistent(self, is_consistent):
-        pass
-
-    def determined(self):
-        pass
+        TODO()
 
     def __str__(self):
-        pass
+        TODO()
 
     def __repr__(self):
-        pass
+        TODO()
 
     def __array__(self):
-        pass
+        TODO()
 
     def __sizeof__(self):
-        pass
+        TODO()
+
+    def determine(self, local_or_consistent_tensor=None, determining_initializer=None):
+        assert not self.is_determined
+        if determining_initializer is None:
+            determining_initializer = self.determining_initializer
+        if local_or_consistent_tensor is None:
+            local_or_consistent_tensor = determining_initializer(self.undetermined_tensor)
+        self.local_or_consistent_tensor = local_or_consistent_tensor
+        self.undetermined_tensor = None
+
+    def is_determined(self):
+        if self.local_or_consistent_tensor is not None:
+            assert self.undetermined_tensor is None
+            return True
+        else:
+            assert self.undetermined_tensor is not None
+            return False
+
+    def set_placement(self, placement):
+        assert isinstance(placement, oneflow_api.Placement)
+        assert self.local_or_consistent_tensor is None
+        assert self.undetermined_tensor is not None
+        self.undetermined_tensor.placement = placement
+
+    def set_sbp(self, sbp):
+        assert isinstance(sbp, oneflow_api.Distribute)
+        assert self.local_or_consistent_tensor is None
+        assert self.undetermined_tensor is not None
+        self.undetermined_tensor.sbp = sbp
+
+    def set_is_consistent(self, is_consistent):
+        assert isinstance(is_consistent, bool)
+        assert self.local_or_consistent_tensor is None
+        assert self.undetermined_tensor is not None
+        self.undetermined_tensor.is_consistent = is_consistent
+
+    def set_is_lazy(self, is_lazy):
+        assert isinstance(is_lazy, bool)
+        assert self.local_or_consistent_tensor is None
+        assert self.undetermined_tensor is not None
+        self.undetermined_tensor.is_lazy = is_lazy
+
+
+class UndeterminedTensor:
+    def __init__(
+        self,
+        shape,
+        dtype,
+        device=None,
+        requires_grad=True,
+        retain_grad=False,
+        is_leaf=True,
+        placement=None,
+        sbp=None,
+        is_consistent=False,
+        is_lazy=False,
+    ):
+        if not isinstance(shape, oneflow_api.Size):
+            if not isinstance(shape, tuple):
+                shape = tuple(shape)
+            shape = oneflow.api.Size(shape)
+        self.shape = shape
+        self.dtype = dtype
+        self.device = device
+        self.requires_grad = requires_grad
+        self.retain_grad = retain_grad
+        self.is_leaf = is_leaf
+        self.placement = placement
+        self.sbp = sbp
+        self.is_consistent = is_consistent
+        self.is_lazy = is_lazy
+
+
+def _default_initializer_for_determining(undetermined_tensor):
+    TODO()
