@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_H_
 
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/job/scope.h"
 
 namespace oneflow {

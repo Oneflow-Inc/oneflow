@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
+#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
 namespace one {
