@@ -75,6 +75,13 @@ jobs:
           tmp_dir: ${ci_tmp_dir}
           extra_flags: ${{ matrix.extra_flags }}
           cuda_version: ${{ matrix.cuda_version }}
+      - name: Custom Op test (run by oneflow build docker)
+        if: matrix.test_suite == 'cuda'
+        run: |
+          docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+            $extra_docker_args \
+            oneflow:manylinux2014-cuda10.2 \
+            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
       - name: Upload wheel to cloud
         uses: ./.github/actions/upload_oss
         with:
@@ -183,13 +190,6 @@ jobs:
             --env ONEFLOW_TEST_CPU_ONLY=${ONEFLOW_TEST_CPU_ONLY} \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
-      - name: Custom Op test (run by oneflow build docker)
-        if: matrix.test_suite == 'cuda'
-        run: |
-          docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-            $extra_docker_args \
-            oneflow:manylinux2014-cuda10.2 \
-            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
       - name: Op test (eager)
         if: matrix.test_suite != 'xla'
         run: |
