@@ -73,6 +73,7 @@ class Tensor {
   virtual Maybe<bool> is_consistent() const = 0;
   virtual Maybe<bool> is_lazy() const = 0;
   virtual Maybe<DeterminedTensor> DetermineAndDestroySelf() = 0;
+  virtual Maybe<bool> is_determined() const = 0;
 
   // Getters for autograd
   virtual Maybe<bool> requires_grad() const = 0;
@@ -103,25 +104,26 @@ class FacadeTensor final : public Tensor {
   Maybe<DeterminedTensor> DetermineAndDestroySelf() override {
     return tensor_->DetermineAndDestroySelf();
   }
-  Maybe<int64_t> ndim() const;
-  Maybe<bool> is_cuda() const;
-  Maybe<int64_t> nelement() const;
-  Maybe<int64_t> dim(int64_t index) const;
+  Maybe<int64_t> ndim();
+  Maybe<bool> is_cuda();
+  Maybe<int64_t> nelement();
+  Maybe<int64_t> dim(int64_t index);
+  Maybe<bool> is_determined() const override { return tensor_->is_determined(); }
 
   // Getters for autograd
   Maybe<bool> requires_grad() const override { return tensor_->requires_grad(); }
   Maybe<bool> is_leaf() const override { return tensor_->is_leaf(); }
   Maybe<bool> retain_grad() const override { return tensor_->retain_grad(); }
-  Maybe<const FunctionNode> grad_fn_node() const;
-  Maybe<Tensor> acc_grad() const; 
+  Maybe<const FunctionNode> grad_fn_node();
+  Maybe<Tensor> acc_grad(); 
 
   // Setters for autograd
   void set_requires_grad(bool requires_grad) override { tensor_->set_requires_grad(requires_grad); }
   void set_retain_grad(bool retain_grad) override { return tensor_->set_retain_grad(retain_grad); }
 
  private:
-  bool is_determined() const;
   std::shared_ptr<Tensor> tensor_;
+  Maybe<Tensor> SelfDetermined();
 };
 
 class ConsistentTensor;
@@ -149,6 +151,7 @@ class UndeterminedTensor final : public Tensor {
   Maybe<const ParallelDesc> parallel_desc() const override;
   Maybe<const Device> device() const override;
   Maybe<bool> is_lazy() const override { return is_lazy_; }
+  Maybe<bool> is_determined() const override { return false; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) { shape_ = shape; }
@@ -197,6 +200,7 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
   virtual Maybe<bool> is_cuda() const = 0;
   virtual Maybe<int64_t> nelement() const = 0;
   virtual Maybe<int64_t> dim(int64_t index) const = 0;
+  Maybe<bool> is_determined() const override { return true; }
 
   // Getters for autograd
   // acc_grad is tensor's accumulated grad in more than once backward operation,

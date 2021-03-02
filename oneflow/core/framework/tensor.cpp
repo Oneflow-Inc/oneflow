@@ -23,28 +23,35 @@ namespace oneflow {
 
 namespace one {
 
-Maybe<int64_t> FacadeTensor::ndim() const {
-  return JUST(tensor_->DetermineAndDestroySelf())->ndim();
+Maybe<Tensor> FacadeTensor::SelfDetermined() {
+  if (!JUST(is_determined())) {
+    tensor_ = JUST(tensor_->DetermineAndDestroySelf());
+  }
+  return tensor_;
 }
 
-Maybe<bool> FacadeTensor::is_cuda() const {
-  return JUST(tensor_->DetermineAndDestroySelf())->is_cuda();
+Maybe<int64_t> FacadeTensor::ndim() {
+  return dynamic_cast<DeterminedTensor*>(JUST(SelfDetermined()).get())->ndim();
 }
 
-Maybe<int64_t> FacadeTensor::nelement() const {
-  return JUST(tensor_->DetermineAndDestroySelf())->nelement();
+Maybe<bool> FacadeTensor::is_cuda() {
+  return dynamic_cast<DeterminedTensor*>(JUST(SelfDetermined()).get())->is_cuda();
 }
 
-Maybe<int64_t> FacadeTensor::dim(int64_t index) const {
-  return JUST(tensor_->DetermineAndDestroySelf())->dim(index);
+Maybe<int64_t> FacadeTensor::nelement() {
+  return dynamic_cast<DeterminedTensor*>(JUST(SelfDetermined()).get())->nelement();
 }
 
-Maybe<const FunctionNode> FacadeTensor::grad_fn_node() const {
-  return JUST(tensor_->DetermineAndDestroySelf())->grad_fn_node();
+Maybe<int64_t> FacadeTensor::dim(int64_t index) {
+  return dynamic_cast<DeterminedTensor*>(JUST(SelfDetermined()).get())->dim(index);
 }
 
-Maybe<Tensor> FacadeTensor::acc_grad() const {
-  return JUST(tensor_->DetermineAndDestroySelf())->acc_grad();
+Maybe<const FunctionNode> FacadeTensor::grad_fn_node() {
+  return dynamic_cast<DeterminedTensor*>(JUST(SelfDetermined()).get())->grad_fn_node();
+}
+
+Maybe<Tensor> FacadeTensor::acc_grad() {
+  return dynamic_cast<DeterminedTensor*>(JUST(SelfDetermined()).get())->acc_grad();
 }
 
 Maybe<const compatible_py::Distribute> UndeterminedTensor::distribute() const {

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/operator/input_op.h"
 
 namespace py = pybind11;
 
@@ -42,6 +43,8 @@ struct TensorExportUtil<FacadeTensor> final {
       const std::shared_ptr<const ParallelDesc>& parallel_desc,
       const std::shared_ptr<const compatible_py::Distribute>& distribute, bool is_lazy,
       bool requires_grad, bool is_leaf, bool retain_grad, bool is_determined, bool is_consistent) {
+    InputOp op;
+    op.InitFromOpConf();
     std::shared_ptr<Tensor> tensor;
     if (is_determined) {
       if (is_consistent) {
