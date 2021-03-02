@@ -28,7 +28,7 @@ namespace util {
 
 template<typename T>
 inline void Attr(const PbMessage &message, const std::string &attr_name, T *value) {
-  const UserOpConf *user_conf = dynamic_cast<const UserOpConf *>(&message);
+  const UserOpConf* user_conf = dynamic_cast<const UserOpConf*>(&message);
   if (user_conf) {
     CHECK(user_conf->attr().find(attr_name) != user_conf->attr().end());
     auto val = user_conf->attr().at(attr_name);

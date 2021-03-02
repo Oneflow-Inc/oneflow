@@ -54,6 +54,7 @@ struct Identity {
 
 REGISTER_XLA_OP_KERNEL(Identity, ApplyUnaryOp<Identity>).Finalize();
 
+
 }  // namespace mola
 }  // namespace xrt
 }  // namespace oneflow
