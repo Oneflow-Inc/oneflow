@@ -42,33 +42,33 @@ DeterminedTensor::DeterminedTensor() {
   op_->InitFromOpConf();
 }
 
-Maybe<Tensor> FacadeTensor::SelfDetermined() {
+Maybe<DeterminedTensor> FacadeTensor::SelfDetermined() {
   if (!JUST(is_determined())) { tensor_ = JUST(tensor_->DetermineAndDestroySelf()); }
-  return tensor_;
+  // TODO: return type
 }
 
 Maybe<int64_t> FacadeTensor::ndim() {
-  return dynamic_cast<DeterminedTensor*>(JUST(SelfDetermined()).get())->ndim();
+  return (JUST(SelfDetermined()).get())->ndim();
 }
 
 Maybe<bool> FacadeTensor::is_cuda() {
-  return dynamic_cast<DeterminedTensor*>(JUST(SelfDetermined()).get())->is_cuda();
+  return (JUST(SelfDetermined()).get())->is_cuda();
 }
 
 Maybe<int64_t> FacadeTensor::nelement() {
-  return dynamic_cast<DeterminedTensor*>(JUST(SelfDetermined()).get())->nelement();
+  return (JUST(SelfDetermined()).get())->nelement();
 }
 
 Maybe<int64_t> FacadeTensor::dim(int64_t index) {
-  return dynamic_cast<DeterminedTensor*>(JUST(SelfDetermined()).get())->dim(index);
+  return (JUST(SelfDetermined()).get())->dim(index);
 }
 
 Maybe<const FunctionNode> FacadeTensor::grad_fn_node() {
-  return dynamic_cast<DeterminedTensor*>(JUST(SelfDetermined()).get())->grad_fn_node();
+  return (JUST(SelfDetermined()).get())->grad_fn_node();
 }
 
 Maybe<Tensor> FacadeTensor::acc_grad() {
-  return dynamic_cast<DeterminedTensor*>(JUST(SelfDetermined()).get())->acc_grad();
+  return (JUST(SelfDetermined()).get())->acc_grad();
 }
 
 Maybe<const compatible_py::Distribute> UndeterminedTensor::distribute() const {

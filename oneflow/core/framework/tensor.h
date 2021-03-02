@@ -124,7 +124,7 @@ class FacadeTensor final : public Tensor {
 
  private:
   std::shared_ptr<Tensor> tensor_;
-  Maybe<Tensor> SelfDetermined();
+  Maybe<DeterminedTensor> SelfDetermined();
 };
 
 class ConsistentTensor;
