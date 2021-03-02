@@ -17,6 +17,16 @@ limitations under the License.
 
 namespace oneflow {
 
+const BootstrapConf& EnvDesc::bootstrap_conf() const {
+  CHECK(has_ctrl_bootstrap_conf());
+  return env_proto_.ctrl_bootstrap_conf();
+}
+
+int32_t EnvDesc::bootstrap_conf_ctrl_port() const {
+  CHECK(has_bootstrap_conf_ctrl_port());
+  return env_proto_.ctrl_bootstrap_conf().ctrl_port();
+}
+
 size_t EnvDesc::TotalMachineNum() const {
   if (env_proto_.has_ctrl_bootstrap_conf()) {
     return env_proto_.ctrl_bootstrap_conf().world_size();

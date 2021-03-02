@@ -67,10 +67,30 @@ int32_t GetDefaultGpuDeviceNum() {
 
 Resource GetDefaultResource(const EnvProto& env_proto) {
   Resource resource;
-  resource.set_machine_num(env_proto.machine_size());
+  if (env_proto.has_ctrl_bootstrap_conf()) {
+    resource.set_machine_num(env_proto.ctrl_bootstrap_conf().world_size());
+  } else {
+    resource.set_machine_num(env_proto.machine_size());
+  }
   resource.set_cpu_device_num(GetDefaultCpuDeviceNum());
   resource.set_gpu_device_num(GetDefaultGpuDeviceNum());
   return resource;
+}
+
+Maybe<CtrlBootstrap> MakeCtrlBootstrap(const EnvDesc& env_desc) {
+  std::shared_ptr<CtrlBootstrap> ctrl_bootstrap;
+  if (env_desc.has_ctrl_bootstrap_conf()) {
+    ctrl_bootstrap.reset(new RankInfoCtrlBootstrap(env_desc.bootstrap_conf()));
+  } else {
+    ctrl_bootstrap.reset(new HostListCtrlBootstrap(env_desc));
+  }
+  return ctrl_bootstrap;
+}
+
+Maybe<int> GetCtrlPort(const EnvDesc& env_desc) {
+  int port = 0;
+  if (env_desc.has_bootstrap_conf_ctrl_port()) { port = env_desc.bootstrap_conf_ctrl_port(); }
+  return port;
 }
 
 }  // namespace
@@ -81,12 +101,12 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitGlobalCudaDeviceProp();
 #endif
   Global<EnvDesc>::New(env_proto);
-  Global<CtrlServer>::New();
+  Global<CtrlServer>::New(JUST(GetCtrlPort(*Global<EnvDesc>::Get())));
   Global<ProcessCtx>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
-  CHECK_JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
-                 .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+  CHECK_JUST(JUST(MakeCtrlBootstrap(*Global<EnvDesc>::Get()))
+                 ->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
   Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
   Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));

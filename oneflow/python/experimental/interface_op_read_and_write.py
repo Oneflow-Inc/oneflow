@@ -26,6 +26,7 @@ import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager.op_executor as op_executor
+import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow_api
 
@@ -33,9 +34,24 @@ blob_register = blob_register_util.GetDefaultBlobRegister()
 
 
 def _GetInterfaceBlobObject(builder, op_name):
+    sess = session_ctx.GetDefaultSession()
     if oneflow_api.EagerExecutionEnabled():
-        return session_ctx.GetDefaultSession().var_name2var_blob[op_name].blob_object
-    blob_object = builder.MakeLazyRefBlobObject(op_name)
+        return sess.var_name2var_blob[op_name].blob_object
+    sess = session_ctx.GetDefaultSession()
+    op_attribute = sess.OpAttribute4InterfaceOpName(op_name)
+    cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
+    parallel_conf = sess.ParallelConf4LazyInterfaceOpName(op_name)
+    if not isinstance(
+        parallel_conf, oneflow_api.oneflow.core.job.placement.ParallelConf
+    ):
+        parallel_conf_cfg = placement_cfg.ParallelConf()
+        parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
+        for device_name in parallel_conf.device_name:
+            parallel_conf_cfg.add_device_name(device_name)
+        parallel_conf = parallel_conf_cfg
+    blob_object = builder.MakeLazyRefBlobObject(
+        op_name, cfg_op_attribute, parallel_conf
+    )
     return blob_object
 
 

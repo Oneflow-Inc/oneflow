@@ -56,6 +56,69 @@ void SetMirroredOperand(vm::cfg::OperandProto* operand, int64_t object_id) {
   operand->mutable_current_global_device_id();
 }
 
+std::shared_ptr<vm::cfg::InstructionOperandProto> DelObjectOperand(int64_t object_id) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  SetAllMirroredOperand(operand->mutable_mut_operand(), object_id);
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> MutOperand(int64_t object_id) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  SetMirroredOperand(operand->mutable_mut_operand(), object_id);
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> Int64Operand(int64_t val) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  operand->set_int64_operand(val);
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> InitSymbolOperand(int64_t val) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  SetSoleMirroredOperand(operand->mutable_init_symbol_operand(), val);
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> SymbolOperand(int64_t val) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  SetSoleMirroredOperand(operand->mutable_symbol_operand(), val);
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> ConstOperand(int64_t val) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  SetMirroredOperand(operand->mutable_const_operand(), val);
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> OperandSeparator() {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  operand->mutable_separator();
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> Uint64Operand(int64_t val) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  operand->set_uint64_operand(val);
+  return operand;
+}
+
+std::shared_ptr<vm::cfg::InstructionOperandProto> Mut2Operand(int64_t val) {
+  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
+      std::make_shared<vm::cfg::InstructionOperandProto>();
+  SetMirroredOperand(operand->mutable_mut2_operand(), val);
+  return operand;
+}
+
 Maybe<int64_t> NewSymbolId(vm::IdGenerator* id_generator,
                            vm::cfg::InstructionListProto* instruction_list) {
   int64_t symbol_id = JUST(id_generator->NewSymbolId());
@@ -544,9 +607,9 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewScopeName(const std::shared_p
 
 Maybe<Scope> InstructionsBuilder::BuildScopeByProtoSetter(
     const std::shared_ptr<Scope>& scope,
-    const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& setter) {
+    const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& Setter) {
   std::shared_ptr<cfg::ScopeProto> scope_proto = JUST(scope->MakeChildScopeProto());
-  setter(scope_proto);
+  Setter(scope_proto);
   return GetScopeSymbol(scope_proto);
 }
 
@@ -678,7 +741,8 @@ Maybe<compatible_py::OpKernelObject> InstructionsBuilder::NewOpKernelObject(
 }
 
 Maybe<void> InstructionsBuilder::LazyReference(
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object, std::string interface_op_name) {
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+    const std::string& interface_op_name) {
   vm::cfg::InstructionProto instruction;
   std::string device_tag = blob_object->parallel_desc_symbol()->device_tag();
   instruction.set_instr_type_name(device_tag + ".LazyReference");
@@ -690,6 +754,24 @@ Maybe<void> InstructionsBuilder::LazyReference(
       *SymbolOperand(JUST(interface_op_name_sym->symbol_id())));
   instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
   return Maybe<void>::Ok();
+}
+
+Maybe<compatible_py::BlobObject> InstructionsBuilder::MakeLazyRefBlobObject(
+    const std::string& interface_op_name, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+  CHECK_EQ_OR_RETURN(op_attribute->output_bns().size(), 1);
+  const std::string& obn = op_attribute->output_bns().at(0);
+  std::shared_ptr<ParallelDesc> blob_parallel_desc_sym = JUST(GetParallelDescSymbol(parallel_conf));
+  OpAttribute pb_op_attribute;
+  op_attribute->ToProto(&pb_op_attribute);
+  std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr =
+      JUST(compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, pb_op_attribute, obn));
+  std::shared_ptr<compatible_py::OpArgBlobAttribute> op_arg_blob_attr =
+      JUST(compatible_py::GetOpArgBlobAttribute(pb_op_attribute, obn));
+  std::shared_ptr<compatible_py::BlobObject> blob_object =
+      JUST(NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr));
+  JUST(LazyReference(blob_object, interface_op_name));
+  return blob_object;
 }
 
 Maybe<compatible_py::Object> InstructionsBuilder::GetSharedOpKernelObject4ParallelConfSymbol(
@@ -793,6 +875,53 @@ Maybe<void> InstructionsBuilder::InitOpConfSymbol(
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_op_conf_symbol()->CopyFrom(*op_conf);
   eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::InsertRemoveForeignCallbackInstruction(int64_t object_id,
+                                                                        int64_t callback_id) {
+  vm::cfg::InstructionProto instruction;
+  instruction.set_instr_type_name("RemoveForeignCallback");
+  instruction.mutable_operand()->Add()->CopyFrom(*DelObjectOperand(object_id));
+  instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(callback_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::_FetchBlob(
+    const std::string& instruction_name,
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
+  vm::cfg::InstructionProto instruction;
+  const std::string& device_tag = blob_object->parallel_desc_symbol()->device_tag();
+  instruction.set_instr_type_name(device_tag + "." + instruction_name);
+  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*ConstOperand(blob_object->object_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(callback_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::FeedBlob(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
+  vm::cfg::InstructionProto instruction;
+  const std::string& device_tag = blob_object->parallel_desc_symbol()->device_tag();
+  instruction.set_instr_type_name(device_tag + "." + "FeedBlob");
+  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*Mut2Operand(blob_object->object_id()));
+  instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(callback_id));
+  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::FetchBlobHeader(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
+  JUST(_FetchBlob("FetchBlobHeader", blob_object, callback_id));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::FetchBlobBody(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
+  JUST(_FetchBlob("FetchBlobBody", blob_object, callback_id));
   return Maybe<void>::Ok();
 }
 
@@ -974,8 +1103,8 @@ Maybe<void> InstructionsBuilder::StatefulCall(
     const std::function<std::shared_ptr<compatible_py::BlobObject>(
         const std::shared_ptr<InstructionsBuilder>&,
         const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& boxing_to,
-    const FindOrCreateDelegateBlobObjectFun& find_or_creat_delegate_blob_object) {
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo,
+    const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject) {
   std::shared_ptr<ParallelDesc> op_parallel_desc_sym = opkernel_object->parallel_desc_symbol();
   const auto& parallel_sig = op_attribute->parallel_signature();
   CHECK_OR_RETURN(parallel_sig.has_op_parallel_desc_symbol_id());
@@ -983,20 +1112,20 @@ Maybe<void> InstructionsBuilder::StatefulCall(
                   == parallel_sig.op_parallel_desc_symbol_id());
   JUST(CheckRefInBlobObjectParallelDesc(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object));
   const auto FetchDelegateBlobObject =
-      [this, &boxing_to](
+      [this, &BoxingTo](
           const std::shared_ptr<compatible_py::BlobObject>& x_blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> std::shared_ptr<compatible_py::BlobObject> {
-    return boxing_to(shared_from_this(), x_blob_object, op_arg_parallel_attr);
+    return BoxingTo(shared_from_this(), x_blob_object, op_arg_parallel_attr);
   };
 
   const auto GetDelegateBlobObject =
-      [this, &find_or_creat_delegate_blob_object, &FetchDelegateBlobObject](
+      [this, &FindOrCreateDelegateBlobObject, &FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
-    return find_or_creat_delegate_blob_object(shared_from_this(), FetchDelegateBlobObject,
-                                              blob_object, op_arg_parallel_attr);
+    return FindOrCreateDelegateBlobObject(shared_from_this(), FetchDelegateBlobObject, blob_object,
+                                          op_arg_parallel_attr);
   };
 
   JUST(_StatefulCall(op_attribute, opkernel_object, bn_in_op2blob_object, GetDelegateBlobObject));
@@ -1012,27 +1141,27 @@ Maybe<void> InstructionsBuilder::StatelessCall(
     const std::function<std::shared_ptr<compatible_py::BlobObject>(
         const std::shared_ptr<InstructionsBuilder>&,
         const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& boxing_to,
-    const FindOrCreateDelegateBlobObjectFun& find_or_creat_delegate_blob_object) {
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo,
+    const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject) {
   std::shared_ptr<ParallelDesc> op_parallel_desc_sym = JUST(GetParallelDescSymbol(parallel_conf));
   JUST(CheckRefInBlobObjectParallelDesc(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object));
 
   const auto FetchDelegateBlobObject =
-      [this, &boxing_to](
+      [this, &BoxingTo](
           const std::shared_ptr<compatible_py::BlobObject>& x_blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> std::shared_ptr<compatible_py::BlobObject> {
     // TODO(hanbinbin): use Maybe as return after blobcache is migrated
-    return boxing_to(shared_from_this(), x_blob_object, op_arg_parallel_attr);
+    return BoxingTo(shared_from_this(), x_blob_object, op_arg_parallel_attr);
   };
 
   const auto GetDelegateBlobObject =
-      [this, &find_or_creat_delegate_blob_object, &FetchDelegateBlobObject](
+      [this, &FindOrCreateDelegateBlobObject, &FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
-    return find_or_creat_delegate_blob_object(shared_from_this(), FetchDelegateBlobObject,
-                                              blob_object, op_arg_parallel_attr);
+    return FindOrCreateDelegateBlobObject(shared_from_this(), FetchDelegateBlobObject, blob_object,
+                                          op_arg_parallel_attr);
   };
 
   JUST(_StatelessCall("compute", op_attribute, op_parallel_desc_sym, op_parallel_desc_sym,
@@ -1046,7 +1175,7 @@ Maybe<void> InstructionsBuilder::NoBoxingStatelessCall(
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object,
-    const FindOrCreateDelegateBlobObjectFun& find_or_creat_delegate_blob_object) {
+    const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject) {
   std::shared_ptr<ParallelDesc> op_parallel_desc_sym = JUST(GetParallelDescSymbol(parallel_conf));
   JUST(CheckRefInBlobObjectParallelDesc(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object));
 
@@ -1072,12 +1201,12 @@ Maybe<void> InstructionsBuilder::NoBoxingStatelessCall(
   };
 
   const auto GetDirectOr121BlobObject =
-      [this, &find_or_creat_delegate_blob_object, &FetchDelegateBlobObject](
+      [this, &FindOrCreateDelegateBlobObject, &FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
-    return find_or_creat_delegate_blob_object(shared_from_this(), FetchDelegateBlobObject,
-                                              blob_object, op_arg_parallel_attr);
+    return FindOrCreateDelegateBlobObject(shared_from_this(), FetchDelegateBlobObject, blob_object,
+                                          op_arg_parallel_attr);
   };
   JUST(_StatelessCall("compute", op_attribute, op_parallel_desc_sym, op_parallel_desc_sym,
                       bn_in_op2blob_object, GetDirectOr121BlobObject));
@@ -1090,13 +1219,13 @@ Maybe<void> InstructionsBuilder::NoBoxingCudaD2HStatelessCall(
     const std::shared_ptr<cfg::ParallelConf>& in_parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object,
-    const std::function<std::shared_ptr<ParallelDesc>(
-        const std::shared_ptr<InstructionsBuilder>&, const std::shared_ptr<ParallelDesc>&,
-        const std::string&)>& try_replace_device_tag) {
+    const std::function<std::shared_ptr<ParallelDesc>(const std::shared_ptr<InstructionsBuilder>&,
+                                                      const std::shared_ptr<ParallelDesc>&,
+                                                      const std::string&)>& TryReplaceDeviceTag) {
   std::shared_ptr<ParallelDesc> op_parallel_desc_sym =
       JUST(GetParallelDescSymbol(in_parallel_conf));
   std::shared_ptr<ParallelDesc> blob_parallel_desc_sym =
-      try_replace_device_tag(shared_from_this(), op_parallel_desc_sym, "cpu");
+      TryReplaceDeviceTag(shared_from_this(), op_parallel_desc_sym, "cpu");
   JUST(CheckRefInBlobObjectParallelDesc(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object));
   const auto GetDirectBlobObject =
       [](const std::shared_ptr<compatible_py::BlobObject>& blob_object,
@@ -1155,17 +1284,17 @@ Maybe<void> InstructionsBuilder::_StatefulCall(
         bn_in_op2blob_object,
     const std::function<Maybe<compatible_py::BlobObject>(
         const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& get_delegate_blob_object) {
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& GetDelegateBlobObject) {
   std::shared_ptr<ParallelDesc> op_parallel_desc_sym = opkernel_object->parallel_desc_symbol();
 
   const auto DelegateBlobObject4Ibn =
       [&op_attribute, &bn_in_op2blob_object, &op_parallel_desc_sym,
-       &get_delegate_blob_object](const std::string& ibn) -> Maybe<compatible_py::BlobObject> {
+       &GetDelegateBlobObject](const std::string& ibn) -> Maybe<compatible_py::BlobObject> {
     OpAttribute pb_op_attribute;
     op_attribute->ToProto(&pb_op_attribute);
     std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr =
         JUST(compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, pb_op_attribute, ibn));
-    return get_delegate_blob_object(JUST(MapAt(*bn_in_op2blob_object, ibn)), op_arg_parallel_attr);
+    return GetDelegateBlobObject(JUST(MapAt(*bn_in_op2blob_object, ibn)), op_arg_parallel_attr);
   };
 
   std::shared_ptr<OpNodeSignatureDesc> op_node_signature_sym =
@@ -1207,20 +1336,20 @@ Maybe<void> InstructionsBuilder::_StatelessCall(
         bn_in_op2blob_object,
     const std::function<Maybe<compatible_py::BlobObject>(
         const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& get_delegate_blob_object) {
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& GetDelegateBlobObject) {
   if (op_attribute->parallel_signature().has_op_parallel_desc_symbol_id()) {
     int64_t symbol_id = op_attribute->parallel_signature().op_parallel_desc_symbol_id();
     op_parallel_desc_sym = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(symbol_id));
   }
   CHECK_OR_RETURN(op_parallel_desc_sym);
   const auto DelegateBlobObject4Ibn =
-      [&op_attribute, &bn_in_op2blob_object, &get_delegate_blob_object,
+      [&op_attribute, &bn_in_op2blob_object, &GetDelegateBlobObject,
        op_parallel_desc_sym](const std::string& ibn) -> Maybe<compatible_py::BlobObject> {
     OpAttribute pb_op_attribute;
     op_attribute->ToProto(&pb_op_attribute);
     std::shared_ptr<compatible_py::OpArgParallelAttribute> op_arg_parallel_attr =
         JUST(compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, pb_op_attribute, ibn));
-    return get_delegate_blob_object(JUST(MapAt(*bn_in_op2blob_object, ibn)), op_arg_parallel_attr);
+    return GetDelegateBlobObject(JUST(MapAt(*bn_in_op2blob_object, ibn)), op_arg_parallel_attr);
   };
 
   const auto& op_conf = op_attribute->op_conf();
@@ -1273,7 +1402,7 @@ Maybe<std::vector<
     std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
 InstructionsBuilder::GetConstInputOperandBlobObjects(
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-    const std::function<Maybe<compatible_py::BlobObject>(const std::string&)>& blob_object4ibn) {
+    const std::function<Maybe<compatible_py::BlobObject>(const std::string&)>& BlobObject4Ibn) {
   std::shared_ptr<std::vector<
       std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
       const_input_operand_blob_objects = std::make_shared<std::vector<
@@ -1282,7 +1411,7 @@ InstructionsBuilder::GetConstInputOperandBlobObjects(
     const auto& ibn2modifier = op_attribute->arg_modifier_signature().ibn2input_blob_modifier();
     if (JUST(MapAt(ibn2modifier, ibn)).is_mutable()) { continue; }
     std::shared_ptr<StringSymbol> ibn_sym = JUST(GetSymbol4String(ibn));
-    std::shared_ptr<compatible_py::BlobObject> in_object = JUST(blob_object4ibn(ibn));
+    std::shared_ptr<compatible_py::BlobObject> in_object = JUST(BlobObject4Ibn(ibn));
     const_input_operand_blob_objects->emplace_back(std::make_pair(ibn_sym, in_object));
   }
   return const_input_operand_blob_objects;
@@ -1292,7 +1421,7 @@ Maybe<std::vector<
     std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
 InstructionsBuilder::GetMutableInputOperandBlobObjects(
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-    const std::function<Maybe<compatible_py::BlobObject>(const std::string&)>& blob_object4ibn) {
+    const std::function<Maybe<compatible_py::BlobObject>(const std::string&)>& BlobObject4Ibn) {
   std::shared_ptr<std::vector<
       std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>>
       mutable_input_operand_blob_objects = std::make_shared<std::vector<
@@ -1301,7 +1430,7 @@ InstructionsBuilder::GetMutableInputOperandBlobObjects(
     const auto& ibn2modifier = op_attribute->arg_modifier_signature().ibn2input_blob_modifier();
     if (!(JUST(MapAt(ibn2modifier, ibn)).is_mutable())) { continue; }
     std::shared_ptr<StringSymbol> ibn_sym = JUST(GetSymbol4String(ibn));
-    std::shared_ptr<compatible_py::BlobObject> in_object = JUST(blob_object4ibn(ibn));
+    std::shared_ptr<compatible_py::BlobObject> in_object = JUST(BlobObject4Ibn(ibn));
     mutable_input_operand_blob_objects->emplace_back(std::make_pair(ibn_sym, in_object));
   }
   return mutable_input_operand_blob_objects;
@@ -1407,69 +1536,6 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
     mut2_operand_blob_objects->emplace_back(std::make_pair(obn_sym, out_blob_object));
   }
   return mut2_operand_blob_objects;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> DelObjectOperand(int64_t object_id) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  SetAllMirroredOperand(operand->mutable_mut_operand(), object_id);
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> MutOperand(int64_t object_id) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  SetMirroredOperand(operand->mutable_mut_operand(), object_id);
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> Int64Operand(int64_t val) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  operand->set_int64_operand(val);
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> InitSymbolOperand(int64_t val) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  SetSoleMirroredOperand(operand->mutable_init_symbol_operand(), val);
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> SymbolOperand(int64_t val) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  SetSoleMirroredOperand(operand->mutable_symbol_operand(), val);
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> ConstOperand(int64_t val) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  SetMirroredOperand(operand->mutable_const_operand(), val);
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> OperandSeparator() {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  operand->mutable_separator();
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> Uint64Operand(int64_t val) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  operand->set_uint64_operand(val);
-  return operand;
-}
-
-std::shared_ptr<vm::cfg::InstructionOperandProto> Mut2Operand(int64_t val) {
-  std::shared_ptr<vm::cfg::InstructionOperandProto> operand =
-      std::make_shared<vm::cfg::InstructionOperandProto>();
-  SetMirroredOperand(operand->mutable_mut2_operand(), val);
-  return operand;
 }
 
 }  // namespace oneflow
