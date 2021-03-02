@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/autograd/autograd_engine.h"
 
 namespace oneflow {
 

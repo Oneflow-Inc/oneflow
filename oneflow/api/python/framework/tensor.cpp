@@ -21,14 +21,13 @@ limitations under the License.
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/autograd/autograd_engine.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
 namespace one {
-
-class FunctionNode {};
 
 namespace {
 
