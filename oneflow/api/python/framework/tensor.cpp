@@ -78,26 +78,26 @@ void ExportTensor(py::module& m, const char* name) {
                              [](const T& tensor) { return tensor.shape().GetPtrOrThrow(); })
       .def_property_readonly("device",
                              [](const T& tensor) { return tensor.device().GetPtrOrThrow(); })
-      .def_property_readonly("ndim", [](const T& tensor) { return tensor.ndim().GetOrThrow(); })
+      .def_property_readonly("ndim", [](T& tensor) { return tensor.ndim().GetOrThrow(); })
       .def_property_readonly("is_cuda",
-                             [](const T& tensor) { return tensor.is_cuda().GetOrThrow(); })
+                             [](T& tensor) { return tensor.is_cuda().GetOrThrow(); })
       .def_property_readonly("dtype",
                              [](const T& tensor) { return tensor.device().GetPtrOrThrow(); })
       .def_property_readonly("data", []() { TODO(); })
       .def_property_readonly("grad",
-                             [](const T& tensor) { return tensor.acc_grad().GetPtrOrThrow(); })
+                             [](T& tensor) { return tensor.acc_grad().GetPtrOrThrow(); })
       .def_property_readonly("grad_fn",
-                             [](const T& tensor) { return tensor.grad_fn_node().GetPtrOrThrow(); })
+                             [](T& tensor) { return tensor.grad_fn_node().GetPtrOrThrow(); })
       .def_property_readonly("requires_grad",
                              [](const T& tensor) { return tensor.requires_grad().GetOrThrow(); })
       .def_property_readonly("is_leaf",
                              [](const T& tensor) { return tensor.is_leaf().GetOrThrow(); })
       // Methods of pytorch
-      .def("size", [](const T& tensor) { return tensor.shape().GetOrThrow(); })
-      .def("dim", [](const T& tensor, int index) { return tensor.dim(index).GetOrThrow(); })
-      .def("ndimension", [](const T& tensor) { return tensor.ndim().GetOrThrow(); })
+      .def("size", [](const T& tensor) { return tensor.shape().GetPtrOrThrow(); })
+      .def("dim", [](T& tensor, int index) { return tensor.dim(index).GetOrThrow(); })
+      .def("ndimension", [](T& tensor) { return tensor.ndim().GetOrThrow(); })
       .def("get_device", [](const T& tensor) { return tensor.device().GetPtrOrThrow(); })
-      .def("nelement", [](const T& tensor) { return tensor.nelement().GetOrThrow(); })
+      .def("nelement", [](T& tensor) { return tensor.nelement().GetOrThrow(); })
       .def("data_ptr", []() { TODO(); })
       .def("element_size", []() { TODO(); })
       .def("numpy", []() { TODO(); })
