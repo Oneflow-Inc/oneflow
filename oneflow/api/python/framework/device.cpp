@@ -13,28 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
-#define ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/to_string.h"
 
-#include <string>
+namespace py = pybind11;
 
 namespace oneflow {
 
-class Device final {
- public:
-  Device(const std::string& type, int64_t device_id) : type_(type), device_id_(device_id) {}
-  Device(const Device&) = default;
-  Device(Device&&) = default;
-  ~Device() = default;
-  const std::string& type() const { return type_; }
-  int64_t device_id() const { return device_id_; }
-  std::string ToString() const;
-
- private:
-  const std::string type_;
-  const int64_t device_id_;
-};
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::class_<Device, std::shared_ptr<Device>>(m, "device")
+      .def(py::init([](const std::string& type, int device_id) {
+        return std::make_shared<Device>(type, device_id);
+      }))
+      .def_property_readonly("type", &Device::type)
+      .def_property_readonly("index", &Device::device_id)
+      .def("__str__", &Device::ToString)
+      .def("__repr__", &Device::ToString);
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
