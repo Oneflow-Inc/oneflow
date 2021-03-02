@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/thread/gpu_thread.h"
+#include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
@@ -49,6 +51,14 @@ GpuThread::~GpuThread() {
   cb_event_chan_.Close();
   cb_event_poller_.join();
 }
+
+REGISTER_DEVICE_THREAD_CREATOR_WITH_STREAM_ID(
+    DeviceType::kGPU, ([](const StreamId& stream_id) -> Thread* {
+      int64_t thrd_id = SerializeStreamIdToInt64(stream_id);
+      int64_t dev_id = static_cast<int64_t>(stream_id.device_id().device_index());
+      Thread* thread = new GpuThread(thrd_id, dev_id);
+      return thread;
+    }));
 
 #endif
 
