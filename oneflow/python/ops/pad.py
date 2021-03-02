@@ -306,7 +306,7 @@ def reflection_pad2d(
 
     return (
         oneflow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Reflection_Pad2d")
+            name if name is not None else id_util.UniqueStr("Reflection_Pad2d_")
         )
         .Op("reflection_pad2d")
         .Input("x", [x])
@@ -387,7 +387,7 @@ def replication_pad2d(
 
     return (
         oneflow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Replication_Pad2d")
+            name if name is not None else id_util.UniqueStr("Replication_Pad2d_")
         )
         .Op("replication_pad2d")
         .Input("x", [x])
@@ -412,6 +412,7 @@ def constant_pad2d(
         x (oneflow_api.BlobDesc): input blob, only support "NCHW" format.
         padding (Union[int, oneflow_api.BlobDesc]): The size or bundary of padding, if is int uses the same padding in all dimension;
         if 4-dims tuple, uses (\text{padding\_left}padding_left , \text{padding\_right}padding_right , \text{padding\_top}padding_top , \text{padding\_bottom}padding_bottom )
+        constant_value (Union[int, float]): The constant value used for padding. Defaults to Zero.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -481,7 +482,7 @@ def constant_pad2d(
 
     return (
         oneflow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Constant_Pad2d")
+            name if name is not None else id_util.UniqueStr("Constant_Pad2d_")
         )
         .Op("constant_pad2d")
         .Input("x", [x])
@@ -493,3 +494,57 @@ def constant_pad2d(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("zero_pad2d")
+def zero_pad2d(
+    x: oneflow_api.BlobDesc,
+    padding: Union[int, tuple, list],
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    """Pads the input tensor using zeros. 
+
+    Args:
+        x (oneflow_api.BlobDesc): input blob, only support "NCHW" format.
+        padding (Union[int, oneflow_api.BlobDesc]): The size or bundary of padding, if is int uses the same padding in all dimension;
+        if 4-dims tuple, uses (\text{padding\_left}padding_left , \text{padding\_right}padding_right , \text{padding\_top}padding_top , \text{padding\_bottom}padding_bottom )
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow_api.BlobDesc: [description]
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import oneflow.typing as tp
+        import numpy as np 
+
+
+        @flow.global_function()
+        def pad_Job(x: tp.Numpy.Placeholder((1, 2, 3, 3), const_value)
+        ) -> tp.Numpy:
+            return flow.constant_pad2d(x, padding=[2, 2, 1, 1], const_value)
+
+
+        x = np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32)
+        const_value = 1.5
+        out = pad_Job(x, const_value)
+
+        # out [[[[ 0.  0.  0.  0.  0.  0.  0.]
+        #    [ 0.  0.  0.  1.  2.  0.  0.]
+        #    [ 0.  0.  3.  4.  5.  0.  0.]
+        #    [ 0.  0.  6.  7.  8.  0.  0.]
+        #    [ 0.  0.  0.  0.  0.  0.  0.]]
+
+        #   [[ 0.  0.  0.  0.  0.  0.  0.]
+        #    [ 0.  0.  9.  10.  11.  0.  0.]
+        #    [ 0.  0.  12.  13.  14.  0.  0.]
+        #    [ 0.  0.  15.  16.  17.  0.  0.]
+        #    [ 0.  0.  0.  0.  0.  0.  0.]]]]
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("Zero_Pad2d_")
+    return constant_pad2d(x, padding, 0.0, name)
