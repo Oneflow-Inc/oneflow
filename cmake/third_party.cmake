@@ -17,7 +17,9 @@ include(json)
 include(absl)
 include(cares)
 include(openssl)
-include(grpc)
+if (RPC_CLIENT STREQUAL "GRPC")
+  include(grpc)
+endif()
 include(flatbuffers)
 include(lz4)
 
@@ -149,8 +151,6 @@ set(oneflow_third_party_dependencies
   googletest_copy_libs_to_destination
   googlemock_copy_headers_to_destination
   googlemock_copy_libs_to_destination
-  grpc_copy_headers_to_destination
-  grpc_copy_libs_to_destination
   opencv_copy_headers_to_destination
   libpng_copy_headers_to_destination
   opencv_copy_libs_to_destination
@@ -192,6 +192,10 @@ if (NOT WITH_XLA)
   list(APPEND ONEFLOW_INCLUDE_SRC_DIRS ${RE2_INCLUDE_DIR})
 endif()
 
+if (RPC_CLIENT STREQUAL "GRPC")
+  list(APPEND oneflow_third_party_dependencies grpc_copy_headers_to_destination)
+  list(APPEND oneflow_third_party_dependencies grpc_copy_libs_to_destination)
+endif()
 if (BUILD_CUDA)
   include(cub)
   include(nccl)

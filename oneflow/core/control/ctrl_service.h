@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CONTROL_CTRL_SERVICE_H_
 #define ONEFLOW_CORE_CONTROL_CTRL_SERVICE_H_
 
+#ifdef RPC_CLIENT_GRPC
 #include <grpc++/grpc++.h>
 #include <grpc++/impl/codegen/async_stream.h>
 #include <grpc++/impl/codegen/async_unary_call.h>
@@ -26,6 +27,7 @@ limitations under the License.
 #include <grpc++/impl/codegen/stub_options.h>
 #include <grpc++/impl/codegen/sync_stream.h>
 #include <grpc++/impl/codegen/client_unary_call.h>
+#endif  // RPC_CLIENT_GRPC
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/control/control.pb.h"
@@ -72,7 +74,7 @@ using CtrlResponse =
 inline const char* GetMethodName(CtrlMethod method) {
   return g_method_name[static_cast<int32_t>(method)];
 }
-
+#ifdef RPC_CLIENT_GRPC
 class CtrlService final {
  public:
   class Stub final {
@@ -102,7 +104,7 @@ class CtrlService final {
     using grpc::Service::RequestAsyncUnary;
   };
 };
-
+#endif  // RPC_CLIENT_GRPC
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_CONTROL_CTRL_SERVICE_H_

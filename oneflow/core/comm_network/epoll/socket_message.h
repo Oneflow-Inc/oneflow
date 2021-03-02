@@ -26,7 +26,9 @@ limitations under the License.
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#ifdef __linux__
 #include <sys/epoll.h>
+#endif
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>

@@ -67,15 +67,19 @@ class RpcClient {
 
  protected:
   RpcClient() = default;
+#ifdef RPC_CLIENT_GRPC
   void LoadServer(const std::string& server_addr, CtrlService::Stub* stub);
   void LoadServer(const LoadServerRequest& request, CtrlService::Stub* stub);
+#endif  // RPC_CLIENT_GRPC
   void PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter);
   void PullMasterKV(const std::string& k, std::function<void(const std::string&)> VGetter);
+#ifdef RPC_CLIENT_GRPC
   CtrlService::Stub* GetMasterStub() { return stubs_[0].get(); }
   CtrlService::Stub* GetThisStub();
   CtrlService::Stub* GetResponsibleStub(const std::string& key);
 
   std::vector<std::unique_ptr<CtrlService::Stub>> stubs_;
+#endif  // RPC_CLIENT_GRPC
   std::mutex done_names_mtx_;
   HashSet<std::string> done_names_;
 };

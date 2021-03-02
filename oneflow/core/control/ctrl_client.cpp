@@ -31,12 +31,14 @@ CtrlClient::~CtrlClient() {
 }
 
 CtrlClient::CtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx) {
+  #ifdef RPC_CLIENT_GRPC
   stubs_.reserve(process_ctx.ctrl_addr_size());
   for (int64_t i = 0; i < process_ctx.ctrl_addr_size(); ++i) {
     const Address& address = process_ctx.ctrl_addr(i);
     stubs_.push_back(CtrlService::NewStub(address.host() + ":" + std::to_string(address.port())));
     LoadServer(address.host(), stubs_[i].get());
   }
+  #endif
   need_heartbeat_thread_stop_ = false;
   heartbeat_thread_ = std::thread([this]() {
     std::mt19937 gen(NewRandomSeed());
@@ -48,12 +50,14 @@ CtrlClient::CtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx
         std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
         if (need_heartbeat_thread_stop_) { break; }
       }
+      #ifdef RPC_CLIENT_GRPC
       for (size_t i = 0; i < stubs_.size(); ++i) {
         grpc::ClientContext client_ctx;
         request.set_addr(this->process_ctx().ctrl_addr(i).host());
         GRPC_CHECK(stubs_[i]->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response))
             << "Machine " << i << " lost";
       }
+      #endif
       std::this_thread::sleep_for(std::chrono::seconds(sleep_second_dis(gen)));
     }
   });

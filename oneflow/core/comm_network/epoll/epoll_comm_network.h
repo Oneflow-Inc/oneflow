@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/comm_network/epoll/socket_helper.h"
 #include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
 
-#ifdef OF_PLATFORM_POSIX
+#ifdef __linux__
 
 namespace oneflow {
 
@@ -56,6 +56,6 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
 
 }  // namespace oneflow
 
-#endif  // OF_PLATFORM_POSIX
+#endif  // __linux__
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_COMM_NETWORK_H_

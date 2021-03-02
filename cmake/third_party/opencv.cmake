@@ -17,7 +17,7 @@ else()
     set(OPENCV_BUILD_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR})
     set(OPENCV_BUILD_3RDPARTY_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/share/OpenCV/3rdparty/${CMAKE_INSTALL_LIBDIR})
     set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_highgui.a libopencv_imgcodecs.a libopencv_core.a)
-    set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a libittnotify.a liblibjasper.a liblibpng.a liblibtiff.a liblibwebp.a)
+    set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a liblibjasper.a liblibpng.a liblibtiff.a liblibwebp.a)
 endif()
 
 foreach(LIBRARY_NAME ${OPENCV_LIBRARY_NAMES})
