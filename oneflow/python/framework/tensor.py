@@ -135,7 +135,7 @@ class Tensor:
         self.placement_ = placement
 
     def set_sbp(self, sbp):
-        self.sbp_ = distribute
+        self.sbp_ = sbp
 
     def set_dtype(self, dtype):
         self.dtype_ = dtype
