@@ -104,6 +104,7 @@ def build_third_party(
     oneflow_src_dir,
     cache_dir,
     extra_oneflow_cmake_args,
+    extra_docker_args,
     bash_args,
     bash_wrap,
     dry,
@@ -129,7 +130,7 @@ make -j`nproc` prepare_oneflow_third_party
         cache_dir=cache_dir,
         current_dir=third_party_build_dir,
     )
-    docker_cmd = f"docker run --rm {common_docker_args}"
+    docker_cmd = f"docker run {extra_docker_args} --rm {common_docker_args}"
     create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry)
 
 
@@ -149,6 +150,7 @@ def build_oneflow(
     oneflow_src_dir,
     cache_dir,
     extra_oneflow_cmake_args,
+    extra_docker_args,
     python_version,
     skip_wheel,
     package_name,
@@ -176,7 +178,7 @@ def build_oneflow(
         current_dir=oneflow_build_dir,
         house_dir=house_dir,
     )
-    docker_cmd = f"docker run --rm {common_docker_args}"
+    docker_cmd = f"docker run --rm {common_docker_args} {extra_docker_args}"
     bash_cmd = f"""set -ex
 export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
@@ -203,26 +205,53 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--custom_img_tag", type=str, required=False, default=None,
+        "--custom_img_tag",
+        type=str,
+        required=False,
+        default=None,
     )
     parser.add_argument(
-        "--cache_dir", type=str, required=False, default=None,
+        "--cache_dir",
+        type=str,
+        required=False,
+        default=None,
     )
     default_wheel_house_dir = os.path.join(os.getcwd(), "wheelhouse")
     parser.add_argument(
-        "--wheel_house_dir", type=str, required=False, default=default_wheel_house_dir,
+        "--wheel_house_dir",
+        type=str,
+        required=False,
+        default=default_wheel_house_dir,
     )
     parser.add_argument(
-        "--python_version", type=str, required=False, default="3.5, 3.6, 3.7, 3.8",
+        "--python_version",
+        type=str,
+        required=False,
+        default="3.5, 3.6, 3.7, 3.8",
     )
     parser.add_argument(
-        "--cuda_version", type=str, required=False, default="10.2",
+        "--cuda_version",
+        type=str,
+        required=False,
+        default="10.2",
     )
     parser.add_argument(
-        "--extra_oneflow_cmake_args", type=str, required=False, default="",
+        "--extra_oneflow_cmake_args",
+        type=str,
+        required=False,
+        default="",
     )
     parser.add_argument(
-        "--oneflow_src_dir", type=str, required=False, default=os.getcwd(),
+        "--extra_docker_args",
+        type=str,
+        required=False,
+        default="",
+    )
+    parser.add_argument(
+        "--oneflow_src_dir",
+        type=str,
+        required=False,
+        default=os.getcwd(),
     )
     parser.add_argument(
         "--skip_third_party", default=False, action="store_true", required=False
@@ -316,6 +345,7 @@ gcc --version
                     args.oneflow_src_dir,
                     cache_dir,
                     extra_oneflow_cmake_args,
+                    args.extra_docker_args,
                     bash_args,
                     bash_wrap,
                     args.dry,
@@ -337,6 +367,7 @@ gcc --version
                     args.oneflow_src_dir,
                     cache_dir,
                     extra_oneflow_cmake_args,
+                    args.extra_docker_args,
                     python_version,
                     args.skip_wheel,
                     package_name,

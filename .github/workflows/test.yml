@@ -18,7 +18,6 @@ jobs:
       - uses: actions/checkout@v2
       - name: Check license and format (please run 'make of_format' if failed)
         uses: ./.github/actions/fmt
-
   wait_for_gpu_slot:
     name: Wait for GPU slots
     runs-on: [self-hosted, scheduler]
@@ -65,6 +64,12 @@ jobs:
           echo "wheelhouse_dir=${ci_tmp_dir}/wheelhouse" >> $GITHUB_ENV
           echo "sha_dir=ci-static/pr/${{ github.event.pull_request.number }}/$GITHUB_SHA/${{matrix.test_suite }}" >> $GITHUB_ENV
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
+          extra_docker_args=""
+          container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
+          echo "container_name=${container_name}" >> $GITHUB_ENV
+          extra_docker_args+=" --name ${container_name}"
+          echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
       - name: Fix permissions
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
@@ -75,6 +80,7 @@ jobs:
           tmp_dir: ${ci_tmp_dir}
           extra_flags: ${{ matrix.extra_flags }}
           cuda_version: ${{ matrix.cuda_version }}
+          extra_docker_args: $extra_docker_args
       - name: Custom Op test (run by oneflow build docker)
         if: matrix.test_suite == 'cuda'
         run: |
@@ -102,6 +108,10 @@ jobs:
           src_path: ${bin_dir}
           host: ${{ secrets.CI_LOCAL_STATIC_HOST }}
           dst_path: $sha_dir/bin
+      - name: Remove container
+        if: always()
+        run: |
+          docker rm -f ${container_name} || true
   test:
     name: Test suite
     continue-on-error: ${{ matrix.experimental }}
@@ -141,6 +151,9 @@ jobs:
             echo "ONEFLOW_TEST_CPU_ONLY=1" >> $GITHUB_ENV
           fi
           extra_docker_args=""
+          container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
+          echo "container_name=${container_name}" >> $GITHUB_ENV
+          extra_docker_args+=" --name ${container_name}"
           ONEFLOW_PIP_INDEX="http://${{ secrets.CI_LOCAL_STATIC_HOST }}:${{ secrets.CI_LOCAL_STATIC_PORT }}/${sha_sub_dir}/whl"
           extra_docker_args+=" --env ONEFLOW_PIP_INDEX=${ONEFLOW_PIP_INDEX}"
           extra_docker_args+=" --env ONEFLOW_PACKAGE_NAME=oneflow_${suffix}"
@@ -239,3 +252,7 @@ jobs:
             $extra_docker_args \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
+      - name: Remove container
+        if: always()
+        run: |
+          docker rm -f ${container_name} || true
