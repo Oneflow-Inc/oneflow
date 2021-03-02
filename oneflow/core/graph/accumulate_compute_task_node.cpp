@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/graph/accumulate_compute_task_node.h"
 
 namespace oneflow {
 
