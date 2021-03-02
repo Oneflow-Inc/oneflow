@@ -27,16 +27,18 @@ OpBuilder::OpBuilder(const std::string& op_type_name) {
   *(proto_.mutable_op_type_name()) = op_type_name;
 }
 
-OpBuilder& OpBuilder::Op(const std::string& op_type_name) {
+Maybe<OpBuilder&> OpBuilder::MaybeOp(const std::string& op_type_name) {
   *(proto_.mutable_op_type_name()) = op_type_name;
   return *this;
 }
 
-OpBuilder& OpBuilder::Input(const std::string& input_name) { return this->Input(input_name, 1); }
+OpBuilder& OpBuilder::Op(const std::string& op_type_name) {
+  return CHECK_JUST(MaybeOp(op_type_name));
+}
 
-OpBuilder& OpBuilder::Input(const std::string& input_name, const int count) {
-  CHECK_GT(count, 0);
-  CHECK_EQ(proto_.input().count(input_name), 0)
+Maybe<OpBuilder&> OpBuilder::MaybeInput(const std::string& input_name, const int count) {
+  CHECK_GT_OR_RETURN(count, 0);
+  CHECK_EQ_OR_RETURN(proto_.input().count(input_name), 0)
       << "The Input " << input_name << " has been specified more than once.";
   auto& input_list = (*(proto_.mutable_input()))[input_name];
   for (int i = 0; i < count; ++i) {
@@ -47,13 +49,16 @@ OpBuilder& OpBuilder::Input(const std::string& input_name, const int count) {
   return *this;
 }
 
-OpBuilder& OpBuilder::Output(const std::string& output_name) {
-  return this->Output(output_name, 1);
+OpBuilder& OpBuilder::Input(const std::string& input_name) {
+  return CHECK_JUST(MaybeInput(input_name, 1));
+}
+OpBuilder& OpBuilder::Input(const std::string& input_name, const int count) {
+  return CHECK_JUST(MaybeInput(input_name, count));
 }
 
-OpBuilder& OpBuilder::Output(const std::string& output_name, const int count) {
-  CHECK_GT(count, 0);
-  CHECK_EQ(proto_.output().count(output_name), 0)
+Maybe<OpBuilder&> OpBuilder::MaybeOutput(const std::string& output_name, const int count) {
+  CHECK_GT_OR_RETURN(count, 0);
+  CHECK_EQ_OR_RETURN(proto_.output().count(output_name), 0)
       << "The output " << output_name << " has been specified more than once.";
   auto& output_list = (*(proto_.mutable_output()))[output_name];
   for (int i = 0; i < count; ++i) {
@@ -64,16 +69,21 @@ OpBuilder& OpBuilder::Output(const std::string& output_name, const int count) {
   return *this;
 }
 
-OpBuilder& OpBuilder::Attr(const std::string& attr_name, const AttrValue& attr_value) {
+OpBuilder& OpBuilder::Output(const std::string& output_name) {
+  return CHECK_JUST(MaybeOutput(output_name, 1));
+}
+
+OpBuilder& OpBuilder::Output(const std::string& output_name, const int count) {
+  return CHECK_JUST(MaybeOutput(output_name, count));
+}
+
+Maybe<OpBuilder&> OpBuilder::MaybeAttr(const std::string& attr_name, const AttrValue& attr_value) {
   (*(proto_.mutable_attr()))[attr_name] = attr_value;
   return *this;
 }
 
-OpBuilder& OpBuilder::Attr(const std::string& attr_name, const std::string& serialized_attr_value) {
-  AttrValue attr_value;
-  TxtString2PbMessage(serialized_attr_value, &attr_value);
-  (*(proto_.mutable_attr()))[attr_name] = attr_value;
-  return *this;
+OpBuilder& OpBuilder::Attr(const std::string& attr_name, const AttrValue& attr_value) {
+  return CHECK_JUST(MaybeAttr(attr_name, attr_value));
 }
 
 Maybe<UserOpExpr> OpBuilder::Build() {
