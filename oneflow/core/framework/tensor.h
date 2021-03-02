@@ -87,11 +87,11 @@ class Tensor {
   Tensor() = default;
 };
 
-class FascadeTensor final : public Tensor {
+class FacadeTensor final : public Tensor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(FascadeTensor);
-  FascadeTensor(const std::shared_ptr<Tensor>& tensor) : tensor_(tensor) {}
-  ~FascadeTensor() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(FacadeTensor);
+  FacadeTensor(const std::shared_ptr<Tensor>& tensor) : tensor_(tensor) {}
+  ~FacadeTensor() override = default;
 
   // Getters
   Maybe<const Shape> shape() const override { return tensor_->shape(); }

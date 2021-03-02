@@ -23,27 +23,27 @@ namespace oneflow {
 
 namespace one {
 
-Maybe<int64_t> FascadeTensor::ndim() const {
+Maybe<int64_t> FacadeTensor::ndim() const {
   return JUST(tensor_->DetermineAndDestroySelf())->ndim();
 }
 
-Maybe<bool> FascadeTensor::is_cuda() const {
+Maybe<bool> FacadeTensor::is_cuda() const {
   return JUST(tensor_->DetermineAndDestroySelf())->is_cuda();
 }
 
-Maybe<int64_t> FascadeTensor::nelement() const {
+Maybe<int64_t> FacadeTensor::nelement() const {
   return JUST(tensor_->DetermineAndDestroySelf())->nelement();
 }
 
-Maybe<int64_t> FascadeTensor::dim(int64_t index) const {
+Maybe<int64_t> FacadeTensor::dim(int64_t index) const {
   return JUST(tensor_->DetermineAndDestroySelf())->dim(index);
 }
 
-Maybe<const FunctionNode> FascadeTensor::grad_fn_node() const {
+Maybe<const FunctionNode> FacadeTensor::grad_fn_node() const {
   return JUST(tensor_->DetermineAndDestroySelf())->grad_fn_node();
 }
 
-Maybe<Tensor> FascadeTensor::acc_grad() const {
+Maybe<Tensor> FacadeTensor::acc_grad() const {
   return JUST(tensor_->DetermineAndDestroySelf())->acc_grad();
 }
 

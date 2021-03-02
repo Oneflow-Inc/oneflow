@@ -35,8 +35,8 @@ template<typename T>
 struct TensorExportUtil final {};
 
 template<>
-struct TensorExportUtil<FascadeTensor> final {
-  static Maybe<FascadeTensor> MakeTensor(
+struct TensorExportUtil<FacadeTensor> final {
+  static Maybe<FacadeTensor> MakeTensor(
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
       const std::shared_ptr<const Device>& device,
       const std::shared_ptr<const ParallelDesc>& parallel_desc,
@@ -54,10 +54,10 @@ struct TensorExportUtil<FascadeTensor> final {
     } else {
       tensor = std::make_shared<UndeterminedTensor>(shape, dtype, is_leaf, retain_grad);
     }
-    return std::make_shared<FascadeTensor>(tensor);
+    return std::make_shared<FacadeTensor>(tensor);
   }
 
-  static std::shared_ptr<FascadeTensor> ApiMakeTensor(
+  static std::shared_ptr<FacadeTensor> ApiMakeTensor(
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
       const std::shared_ptr<const Device>& device,
       const std::shared_ptr<const ParallelDesc>& parallel_desc,
@@ -94,7 +94,7 @@ void ExportTensor(py::module& m, const char* name) {
                              [](const T& tensor) { return tensor.is_leaf().GetOrThrow(); })
       // Methods of pytorch
       .def("size", [](const T& tensor) { return tensor.shape().GetOrThrow(); })
-      .def("dim", [](const T& tensor, int index) { return tensor.dim().GetOrThrow(); })
+      .def("dim", [](const T& tensor, int index) { return tensor.dim(index).GetOrThrow(); })
       .def("ndimension", [](const T& tensor) { return tensor.ndim().GetOrThrow(); })
       .def("get_device", [](const T& tensor) { return tensor.device().GetPtrOrThrow(); })
       .def("nelement", [](const T& tensor) { return tensor.nelement().GetOrThrow(); })
@@ -117,7 +117,7 @@ void ExportTensor(py::module& m, const char* name) {
 
 }  // namespace
 
-ONEFLOW_API_PYBIND11_MODULE("", m) { ExportTensor<FascadeTensor>(m, "Tensor"); }
+ONEFLOW_API_PYBIND11_MODULE("", m) { ExportTensor<FacadeTensor>(m, "Tensor"); }
 
 }  // namespace one
 
