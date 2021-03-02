@@ -149,4 +149,4 @@ if __name__ == "__main__":
     for (r, f) in zip(results, files):
         if r != 0:
             print("[fail]", f)
-    assert sum(results) == 0
+    assert sum(results) == 0, "some files requires formatting"
