@@ -55,7 +55,7 @@ inline Maybe<void> InitEnv(const std::string& env_proto_str) {
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
   JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
-  if (!GlobalProcessCtx::IsThisProcessMaster()) { CHECK_JUST(Cluster::WorkerLoop()); }
+  if (!GlobalProcessCtx::IsThisProcessMaster()) { JUST(Cluster::WorkerLoop()); }
   return Maybe<void>::Ok();
 }
 
