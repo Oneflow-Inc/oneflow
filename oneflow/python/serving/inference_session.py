@@ -112,9 +112,6 @@ def _inferface_blob_conf_proto_to_cfg(
     mut_inferface_blob_conf_cfg.mutable_split_axis().CopyFrom(split_axis)
 
     mut_inferface_blob_conf_cfg.set_is_dynamic(inferface_blob_conf_proto.is_dynamic)
-    mut_inferface_blob_conf_cfg.set_is_tensor_list(
-        inferface_blob_conf_proto.is_tensor_list
-    )
 
 
 @oneflow_export("serving.ModelVersionPolicy")

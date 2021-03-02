@@ -461,7 +461,9 @@ if __name__ == "__main__":
     _vis_img_segm_mask_cmp(of_mask_list, mask_list)
 
 
-@flow.unittest.skip_unless_1n1d()
+# @flow.unittest.skip_unless_1n1d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
 class TestObjectSegmPolyToMask(flow.unittest.TestCase):
     def test_poly_to_mask(test_case):
         _poly_to_mask_with_of_and_cv(

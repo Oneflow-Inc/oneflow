@@ -85,20 +85,21 @@ def coco_data_load(cfg, machine_id, nrank):
             dtype=flow.float,
             alignment=cfg.image_align_size,
         )
-        gt_bbox = flow.tensor_buffer_to_tensor_list(
-            bbox, shape=(cfg.max_num_objs, 4), dtype=flow.float
-        )
-        gt_label = flow.tensor_buffer_to_tensor_list(
-            label, shape=(cfg.max_num_objs,), dtype=flow.int32
-        )
-        segm_mask = flow.detection.object_segmentation_polygon_to_mask(
-            segm_poly, segm_poly_index, new_size
-        )
-        gt_mask = flow.tensor_buffer_to_tensor_list(
-            segm_mask,
-            shape=(cfg.max_num_objs, aligned_target_size, aligned_max_size),
-            dtype=flow.int8,
-        )
+        # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+        # gt_bbox = flow.tensor_buffer_to_tensor_list(
+        #     bbox, shape=(cfg.max_num_objs, 4), dtype=flow.float
+        # )
+        # gt_label = flow.tensor_buffer_to_tensor_list(
+        #     label, shape=(cfg.max_num_objs,), dtype=flow.int32
+        # )
+        # segm_mask = flow.detection.object_segmentation_polygon_to_mask(
+        #     segm_poly, segm_poly_index, new_size
+        # )
+        # gt_mask = flow.tensor_buffer_to_tensor_list(
+        #     segm_mask,
+        #     shape=(cfg.max_num_objs, aligned_target_size, aligned_max_size),
+        #     dtype=flow.int8,
+        # )
         return image, new_size, gt_bbox, gt_label, gt_mask
 
 

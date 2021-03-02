@@ -40,9 +40,10 @@ class OfBlob final {
   void CopyStaticShapeTo(int64_t* ptr, int64_t num_axis) const;
   void CopyShapeFrom(const int64_t* ptr, int64_t num_axis) const;
 
-  void CurMutTensorAutoMemCopyFrom(const T* ptr, int64_t len) const;
   template<typename T>
-  void StaticTensorAutoMemCopyFrom(const T* ptr, int64_t len) const;
+  void AutoMemCopyTo(T* ptr, int64_t len) const;
+  template<typename T>
+  void AutoMemCopyFrom(const T* ptr, int64_t len) const;
 
  private:
   void ClearShape(FullyMutTensorView* tensor) const;
@@ -74,27 +75,19 @@ inline void OfBlob::CopyStaticShapeTo(int64_t* ptr, int64_t num_axis) const {
 }
 
 template<typename T>
-void OfBlob::CurTensorAutoMemCopyTo(T* ptr, int64_t len) const {
+void OfBlob::AutoMemCopyTo(T* ptr, int64_t len) const {
   CHECK_EQ(blob_->shape().elem_cnt(), len);
   CHECK(blob_->data_type() == GetDataType<T>::value);
-  SyncAutoMemcpy(device_ctx_, ptr, cur_tensor_->dptr(), len * sizeof(T), mem_case_,
+  SyncAutoMemcpy(device_ctx_, ptr, blob_->dptr(), len * sizeof(T), mem_case_,
                  blob_->mem_case());
 }
 
 template<typename T>
-void OfBlob::CurMutTensorAutoMemCopyFrom(const T* ptr, int64_t len) const {
-  CHECK_EQ(tensor_back_inserter_->cur_mut_tensor()->shape().elem_cnt(), len);
-  CHECK(tensor_back_inserter_->cur_mut_tensor()->data_type() == GetDataType<T>::value);
-  SyncAutoMemcpy(device_ctx_, tensor_back_inserter_->cur_mut_tensor()->mut_dptr(), ptr,
-                 len * sizeof(T), blob_->mem_case(), mem_case_);
-}
-
-template<typename T>
-void OfBlob::StaticTensorAutoMemCopyFrom(const T* ptr, int64_t len) const {
+void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
   blob_->blob_access_checker()->CheckBodyMutable();
-  CHECK_EQ(blob_->sole_tensor().shape().elem_cnt(), len);
-  CHECK(blob_->sole_tensor().data_type() == GetDataType<T>::value);
-  SyncAutoMemcpy(device_ctx_, blob_->sole_mut_tensor().mut_dptr(), ptr, len * sizeof(T),
+  CHECK_EQ(blob_->shape().elem_cnt(), len);
+  CHECK(blob_->data_type() == GetDataType<T>::value);
+  SyncAutoMemcpy(device_ctx_, blob_->mut_dptr(), ptr, len * sizeof(T),
                  blob_->mem_case(), mem_case_);
 }
 
