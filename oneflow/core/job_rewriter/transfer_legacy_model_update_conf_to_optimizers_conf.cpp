@@ -70,10 +70,20 @@ Maybe<void> TransferLegacyModelUpdateConfToOptimizersConf::Apply(const OpGraph& 
   if (legacy_model_update_conf.has_primary_lr()) {
     optimizer_conf->set_base_learning_rate(legacy_model_update_conf.primary_lr());
   }
-  if (legacy_model_update_conf.has_momentum_conf()) {
+  if (legacy_model_update_conf.has_naive_conf()) {
+    optimizer_conf->mutable_naive_conf()->CopyFrom(legacy_model_update_conf.naive_conf());
+  } else if (legacy_model_update_conf.has_momentum_conf()) {
     optimizer_conf->mutable_momentum_conf()->CopyFrom(legacy_model_update_conf.momentum_conf());
-  } else if (legacy_model_update_conf.has_naive_conf()) {
-    // TODO
+  } else if (legacy_model_update_conf.has_rmsprop_conf()) {
+    optimizer_conf->mutable_rmsprop_conf()->CopyFrom(legacy_model_update_conf.rmsprop_conf());
+  } else if (legacy_model_update_conf.has_lars_conf()) {
+    optimizer_conf->mutable_lars_conf()->CopyFrom(legacy_model_update_conf.lars_conf());
+  } else if (legacy_model_update_conf.has_adam_conf()) {
+    optimizer_conf->mutable_adam_conf()->CopyFrom(legacy_model_update_conf.adam_conf());
+  } else if (legacy_model_update_conf.has_lazy_adam_conf()) {
+    optimizer_conf->mutable_lazy_adam_conf()->CopyFrom(legacy_model_update_conf.lazy_adam_conf());
+  } else if (legacy_model_update_conf.has_lamb_conf()) {
+    optimizer_conf->mutable_lamb_conf()->CopyFrom(legacy_model_update_conf.lamb_conf());
   } else {
     UNIMPLEMENTED();
   }
