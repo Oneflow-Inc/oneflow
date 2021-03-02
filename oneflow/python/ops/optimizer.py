@@ -1105,7 +1105,6 @@ class SGD(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        assert train_conf.WhichOneof("optimization_conf") is not "legacy_model_update_conf"
         optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
@@ -1216,7 +1215,6 @@ class SGDW(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        assert train_conf.WhichOneof("optimization_conf") is not "legacy_model_update_conf"
         optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
@@ -1350,7 +1348,6 @@ class Adam(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        assert train_conf.WhichOneof("optimization_conf") is not "legacy_model_update_conf"
         optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
@@ -1492,7 +1489,6 @@ class AdamW(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        assert train_conf.WhichOneof("optimization_conf") is not "legacy_model_update_conf"
         optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
@@ -1614,7 +1610,6 @@ class RMSProp(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        assert train_conf.WhichOneof("optimization_conf") is not "legacy_model_update_conf"
         optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
@@ -1703,7 +1698,6 @@ class LARS(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        assert train_conf.WhichOneof("optimization_conf") is not "legacy_model_update_conf"
         optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
@@ -1800,7 +1794,6 @@ class LazyAdam(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        assert train_conf.WhichOneof("optimization_conf") is not "legacy_model_update_conf"
         optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
@@ -1877,7 +1870,6 @@ class LAMB(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        assert train_conf.WhichOneof("optimization_conf") is not "legacy_model_update_conf"
         optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
@@ -1957,7 +1949,6 @@ class CombinedOptimizer(Optimizer):
         ), "Do not allow overlap of variables between multi optimizers"
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        assert train_conf.WhichOneof("optimization_conf") is not "legacy_model_update_conf"
         self._SanityCheck()
         for optimizer in self.optimizers:
             optimizer._AddOptimizerConfInTrainConf(train_conf)
