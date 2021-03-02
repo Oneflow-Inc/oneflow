@@ -65,9 +65,9 @@ def chunks(lst, n):
 
 
 def check_version(bin):
-    out = subprocess.check_output(f"{bin} --version", shell=True).decode()
-    expected = "clang-format version 11.0.0"
-    return expected == out.strip()
+    out = subprocess.check_output(["bash", "-c", f"{bin} --version"]).decode()
+    print(out)
+    return "version 11.0.0" in out
 
 
 def download(dry=False):
@@ -133,6 +133,7 @@ if __name__ == "__main__":
     if check_version(args.clang_format_binary) == False:
         downloaded = download(dry=True)
         if downloaded:
+            assert check_version(downloaded)
             args.clang_format_binary = downloaded
         else:
             args.clang_format_binary = download()
