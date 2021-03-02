@@ -67,15 +67,21 @@ def from_onnx(
         ), "Please use input dict if the model has multiple inputs"
         inputs = {input_names[0]: inputs}
     if do_onnxsim and has_onnxsim:
+        dict(zip(input_names, [x.shape for x in inputs.values()]))
         onnx_model, _ = onnxsim.simplify(
             onnx_model,
-            skip_shape_inference=True,
+            skip_shape_inference=False,
             input_shapes=dict(zip(input_names, [x.shape for x in inputs.values()])),
         )
     elif do_onnxsim:
         logger.info(
             "We recommend installing onnx-simplifier so that OneFlow can remove the redundant ONNX nodes"
         )
+
+    if not os.path.exists("/home/zhangxiaoyu/temp_onnx"):
+        os.makedirs("/home/zhangxiaoyu/temp_onnx")
+    onnx.save(onnx_model, "/home/zhangxiaoyu/temp_onnx/temp.onnx")
+
     if os.path.exists(model_weight_dir):
         shutil.rmtree(model_weight_dir)
     BackendHandler.WEIGHT_SAVE_DIR = model_weight_dir
@@ -138,10 +144,6 @@ def from_pytorch(
         training=train_flag,
     )
     model_str = f.getvalue()
-    # if not os.path.exists('/home/zhangxiaoyu/temp_onnx'):
-    #     os.makedirs('/home/zhangxiaoyu/temp_onnx')
-    # with open("/home/zhangxiaoyu/temp_onnx/temp.onnx", "wb") as f:
-    #     f.write(model_str)
     onnx_model = onnx.load_model_from_string(model_str)
     return from_onnx(
         onnx_model,
