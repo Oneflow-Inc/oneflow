@@ -23,8 +23,8 @@ namespace tensorrt {
 template<nvinfer1::ReduceOperation reduce_op>
 class ReduceOp : public TrtOpKernel {
  public:
-  void Compile(TrtOpContext *ctx) override {
-    const auto &axis = ctx->Attr<std::vector<int32_t>>("axis");
+  void Compile(TrtOpContext* ctx) override {
+    const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
 
     int32_t reduce_axis = 0;
     for (int i = 0; i < axis.size(); ++i) { reduce_axis = reduce_axis | (1U << axis[i]); }
@@ -36,8 +36,8 @@ class ReduceOp : public TrtOpKernel {
           << "TensorRT does not support full reduce without keepDimensions.";
     }
 
-    nvinfer1::ITensor *in = ctx->SoleInput();
-    auto *layer = ctx->builder()->addReduce(*in, reduce_op, reduce_axis, keepDimensions);
+    nvinfer1::ITensor* in = ctx->SoleInput();
+    auto* layer = ctx->builder()->addReduce(*in, reduce_op, reduce_axis, keepDimensions);
     layer->setName(ctx->op_name().c_str());
     ctx->SetSoleOutput(layer->getOutput(0));
   }

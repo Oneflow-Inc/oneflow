@@ -21,7 +21,7 @@ namespace mola {
 
 class AdamOptimizerOp : public OptimizerOp {
  private:
-  void ApplyUpdate(XlaOpContext *ctx, xla::XlaOp gradient, xla::XlaOp learning_rate) override {
+  void ApplyUpdate(XlaOpContext* ctx, xla::XlaOp gradient, xla::XlaOp learning_rate) override {
     xla::XlaOp weight = ctx->Input("model_0");
     xla::XlaOp m = ctx->Input("m_0");
     xla::XlaOp v = ctx->Input("v_0");

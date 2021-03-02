@@ -26,7 +26,7 @@ namespace xrt {
 namespace mola {
 
 struct Gelu {
-  xla::XlaOp operator()(const xla::XlaOp &x) {
+  xla::XlaOp operator()(const xla::XlaOp& x) {
     xla::XlaOp dot_5 = xla::ScalarLike(x, 0.5f);
     xla::XlaOp inv_sqrt2 = xla::ScalarLike(x, std::sqrt(0.5f));
     xla::XlaOp one = xla::ScalarLike(x, 1.f);
@@ -40,7 +40,7 @@ struct Gelu {
 template<typename UnaryOp>
 class ApplyUnaryOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext *ctx) override { ctx->SetSoleOutput(UnaryOp()(ctx->SoleInput())); }
+  void Compile(XlaOpContext* ctx) override { ctx->SetSoleOutput(UnaryOp()(ctx->SoleInput())); }
 };
 
 REGISTER_XLA_OP_KERNEL(Sigmoid, ApplyUnaryOp<op::Logistic>).Finalize();
@@ -49,7 +49,7 @@ REGISTER_XLA_OP_KERNEL(Gelu, ApplyUnaryOp<Gelu>).Finalize();
 REGISTER_XLA_OP_KERNEL(Rsqrt, ApplyUnaryOp<op::Rsqrt>).Finalize();
 
 struct Identity {
-  xla::XlaOp operator()(const xla::XlaOp &x) { return x; }
+  xla::XlaOp operator()(const xla::XlaOp& x) { return x; }
 };
 
 REGISTER_XLA_OP_KERNEL(Identity, ApplyUnaryOp<Identity>).Finalize();

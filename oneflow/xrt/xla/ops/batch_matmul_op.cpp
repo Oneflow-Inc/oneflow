@@ -24,7 +24,7 @@ namespace mola {
 
 class BatchMatMulOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext *ctx) override {
+  void Compile(XlaOpContext* ctx) override {
     Shape shape_a = ctx->InputShape("a_0");
     Shape shape_b = ctx->InputShape("b_0");
     CHECK_EQ(shape_a.NumAxes(), shape_b.NumAxes());

@@ -23,7 +23,7 @@ namespace mola {
 
 class MatMulOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext *ctx) override {
+  void Compile(XlaOpContext* ctx) override {
     Shape a_shape = ctx->InputShape("a_0");
     Shape b_shape = ctx->InputShape("b_0");
     CHECK_GE(a_shape.NumAxes(), 2);

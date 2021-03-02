@@ -26,10 +26,10 @@ namespace mola {
 
 class SquareSumOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext *ctx) override {
+  void Compile(XlaOpContext* ctx) override {
     xla::XlaOp x = ctx->Input("x_0");
     Shape x_shape = ctx->InputShape("x_0");
-    xla::XlaBuilder *builder = ctx->builder();
+    xla::XlaBuilder* builder = ctx->builder();
     DataType data_type = ctx->SoleInputType();
     xla::XlaOp sum;
     std::vector<long long> x_dims(x_shape.NumAxes());
