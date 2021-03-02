@@ -207,7 +207,9 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     ScaleModelDiffByLossScale(ctx, op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     JUST(CountNotFiniteIfNeeded(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi));
     RegularizeGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
-    for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
+    const TrainConf& train_conf = job->job_conf().train_conf();
+    CHECK_OR_RETURN(train_conf.has_optimizers_conf());
+    for (const auto& optimizer_conf : train_conf.optimizers_conf().optimizer_conf()) {
       HashMap<LogicalBlobId, LogicalBlobId> cur_model_lbi2model_diff_lbi;
       FilterCurModelLbi2ModelDiffLbiByName(optimizer_conf.variable_op_names(),
                                            model_lbi2model_diff_lbi, &cur_model_lbi2model_diff_lbi);

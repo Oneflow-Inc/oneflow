@@ -42,6 +42,7 @@ class AutoLearningRate final : public JobPass {
 Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
   JobBuilder job_builder(job);
   const TrainConf& train_conf = job->job_conf().train_conf();
+  CHECK_OR_RETURN(train_conf.has_optimizers_conf());
   auto AddScheduleOp = [&](const OptimizerConf& optimizer_conf,
                            const std::string& op_name) -> std::string {
     const class oneflow::OpNode* op_node =
@@ -81,12 +82,15 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
       return constant_op.output("out", 0);
     }
   };
-  FOR_RANGE(int64_t, i, 0, train_conf.optimizer_conf_size()) {
-    const auto& optimizer_conf = train_conf.optimizer_conf(i);
+  FOR_RANGE(int64_t, i, 0, train_conf.optimizers_conf().optimizer_conf_size()) {
+    const auto& optimizer_conf = train_conf.optimizers_conf().optimizer_conf(i);
     const std::string& lbn =
         AddScheduleOp(optimizer_conf, "System-Train-LearningRate-Scheduler_" + NewUniqueId());
-    job->mutable_job_conf()->mutable_train_conf()->mutable_optimizer_conf(i)->set_learning_rate_lbn(
-        lbn);
+    job->mutable_job_conf()
+        ->mutable_train_conf()
+        ->mutable_optimizers_conf()
+        ->mutable_optimizer_conf(i)
+        ->set_learning_rate_lbn(lbn);
   }
   return Maybe<void>::Ok();
 }

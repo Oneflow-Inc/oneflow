@@ -784,6 +784,7 @@ def set_model_update_conf(func_desc, value):
     )
     print(traceback.format_stack()[-3])
     assert type(value) is dict
+    assert not func_desc.job_config_proto.train_conf().has_optimizers_conf()
     pb_msg = func_desc.job_config_proto.mutable_train_conf().mutable_model_update_conf()
     pb_util.PythonDict2CFG(value, pb_msg)
 
@@ -850,8 +851,13 @@ def set_primary_lr(func_desc, value):
         value ([type]): [description]
     """
     print(
-        """WARNING: this API does nothing now. Please replace it by the new optimizer API.
+        """WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.
         """
+    )
+    print(traceback.format_stack()[-3])
+    assert not func_desc.job_config_proto.train_conf().has_optimizers_conf()
+    func_desc.job_config_proto.mutable_train_conf().mutable_legacy_model_update_conf().set_primary_lr(
+        value
     )
 
 
@@ -864,8 +870,13 @@ def set_secondary_lr(func_desc, value):
         value ([type]): [description]
     """
     print(
-        """WARNING: this API does nothing now. Please replace it by the new optimizer API.
+        """WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.
         """
+    )
+    print(traceback.format_stack()[-3])
+    assert not func_desc.job_config_proto.train_conf().has_optimizers_conf()
+    func_desc.job_config_proto.mutable_train_conf().mutable_legacy_model_update_conf().set_secondary_lr(
+        value
     )
 
 

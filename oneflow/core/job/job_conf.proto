@@ -72,6 +72,10 @@ message WeightDecayConf {
   }
 }
 
+message OptimizersConf {
+  repeated OptimizerConf optimizer_conf = 1;
+}
+
 message OptimizerConf {
   repeated string variable_op_names = 1;
   optional float base_learning_rate = 2;
@@ -91,6 +95,23 @@ message OptimizerConf {
   }
 }
 
+message LegacyModelUpdateConf {
+  optional LearningRateDecayConf learning_rate_decay = 1;
+  optional WarmupConf warmup_conf = 2;
+  optional ClipConf clip_conf = 3;
+  optional WeightDecayConf weight_decay_conf = 4;
+  optional float primary_lr = 5;
+  optional float secondary_lr = 6;
+  oneof normal_mdupdt {
+    NaiveModelUpdateConf naive_conf = 1000;
+    MomentumModelUpdateConf momentum_conf = 1001;
+    RMSPropModelUpdateConf rmsprop_conf = 1002;
+    LARSModelUpdateConf lars_conf = 1003;
+    AdamModelUpdateConf adam_conf = 1004;
+    LazyAdamModelUpdateConf lazy_adam_conf = 1005;
+    LambModelUpdateConf lamb_conf = 1006;
+  }
+}
 
 message DynamicLossScalePolicy {
   optional float initial_loss_scale = 1 [default = 1073741824.0];
@@ -99,12 +120,15 @@ message DynamicLossScalePolicy {
 }
 
 message TrainConf {
-  repeated OptimizerConf optimizer_conf = 1;
-  repeated string loss_lbn = 2;
-  optional string train_step_lbn = 3;
+  oneof optimization_conf {
+    OptimizersConf optimizers_conf = 1;
+    LegacyModelUpdateConf legacy_model_update_conf = 2;
+  }
+  repeated string loss_lbn = 3;
+  optional string train_step_lbn = 4;
   oneof loss_scale_policy {
-    float loss_scale_factor = 4 [default = 1];
-    DynamicLossScalePolicy dynamic_loss_scale_policy = 5;
+    float loss_scale_factor = 5 [default = 1];
+    DynamicLossScalePolicy dynamic_loss_scale_policy = 6;
   }
 }
 
