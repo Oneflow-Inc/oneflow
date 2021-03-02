@@ -33,24 +33,26 @@ class Tensor:
         retain_grad=False,
         is_leaf=True,
         placement=None,
+        sbp=None
     ):
-        self.shape = shape
-        self.dtype = dtype
-        self.device = device
-        self.requires_grad = requires_grad
-        self.retain_grad = retain_grad
-        self.is_leaf = is_leaf
-        self.placement = placement
-        self.local_tensor = None
-        self.consistent_tensor = None
+        self.shape_ = shape
+        self.dtype_ = dtype
+        self.device_ = device
+        self.requires_grad_ = requires_grad
+        self.retain_grad_ = retain_grad
+        self.is_leaf_ = is_leaf
+        self.placement_ = placement
+        self.sbp_ = sbp
+        self.local_tensor_ = None
+        self.consistent_tensor_ = None
 
     @property
     def shape(self):
-        return self.shape
+        return self.shape_
 
     @property
     def device(self):
-        return self.device
+        return self.device_
 
     @property
     def ndim(self):
@@ -62,7 +64,7 @@ class Tensor:
 
     @property
     def dtype(self):
-        return self.dtype
+        return self.dtype_
 
     @property
     def data(self):
@@ -82,7 +84,7 @@ class Tensor:
 
     @property
     def is_leaf(self):
-        return self.is_leaf
+        return self.is_leaf_
 
     @property
     def placement(self):
@@ -97,7 +99,7 @@ class Tensor:
         pass
 
     def size(self):
-        return self.shape
+        return self.shape_
 
     def dim(self, idx):
         pass
@@ -106,7 +108,7 @@ class Tensor:
         pass
 
     def get_device(self):
-        return self.device
+        return self.device_
 
     def nelemenet(self):
         pass
@@ -127,16 +129,16 @@ class Tensor:
         pass
 
     def set_device(self, device):
-        self.device = device
+        self.device_ = device
 
     def set_placement(self, placement):
-        self.placement = placement
+        self.placement_ = placement
 
-    def set_distribute(self, distribute):
-        self.distribute = distribute
+    def set_sbp(self, sbp):
+        self.sbp_ = distribute
 
     def set_dtype(self, dtype):
-        self.dtype = dtype
+        self.dtype_ = dtype
 
     def set_consistent(self, is_consistent):
         pass
