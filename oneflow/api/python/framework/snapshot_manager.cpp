@@ -25,7 +25,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<SnapshotManager, std::shared_ptr<SnapshotManager>>(m, "SnapshotManager")
       .def(py::init<>())
       .def("Load", &SnapshotManager::Load)
-      .def("GetSnapshotPath", &SnapshotManager::GetSnapshotPath);
+      .def("get_snapshot_path",
+           [](const std::shared_ptr<SnapshotManager>& mgr, const std::string& variable_name) {
+             const auto& snapshot_path = mgr->GetSnapshotPath(variable_name);
+             if (snapshot_path.empty()) { return py::cast(nullptr); }
+             return py::cast(snapshot_path);
+           });
 }
 
 }  // namespace oneflow
