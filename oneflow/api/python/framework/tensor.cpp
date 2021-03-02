@@ -36,27 +36,18 @@ struct TensorExportUtil final {};
 
 template<>
 struct TensorExportUtil<MirroredTensor> final {
-  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
+  static std::shared_ptr<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
                                           const std::shared_ptr<const DType>& dtype,
                                           const std::shared_ptr<const Device>& device, bool is_lazy,
                                           bool requires_grad, bool is_leaf, bool retain_grad) {
     return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf,
                                       retain_grad);
   }
-
-  static std::shared_ptr<MirroredTensor> ApiMakeTensor(const std::shared_ptr<const Shape>& shape,
-                                                       const std::shared_ptr<const DType>& dtype,
-                                                       const std::shared_ptr<const Device>& device,
-                                                       bool is_lazy, bool requires_grad,
-                                                       bool is_leaf, bool retain_grad) {
-    return MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf, retain_grad)
-        .GetPtrOrThrow();
-  }
 };
 
 template<>
 struct TensorExportUtil<ConsistentTensor> final {
-  static Maybe<ConsistentTensor> MakeTensor(
+  static std::shared_ptr<ConsistentTensor> MakeTensor(
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
       const std::shared_ptr<const compatible_py::Distribute>& distribute,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
@@ -64,22 +55,12 @@ struct TensorExportUtil<ConsistentTensor> final {
     return ConsistentTensor::MakeTensor(shape, dtype, distribute, parallel_desc, is_lazy,
                                         requires_grad, is_leaf, retain_grad);
   }
-
-  static std::shared_ptr<ConsistentTensor> ApiMakeTensor(
-      const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-      const std::shared_ptr<const compatible_py::Distribute>& distribute,
-      const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
-      bool is_leaf, bool retain_grad) {
-    return MakeTensor(shape, dtype, distribute, parallel_desc, is_lazy, requires_grad, is_leaf,
-                      retain_grad)
-        .GetPtrOrThrow();
-  }
 };
 
 template<typename T>
 void ExportTensor(py::module& m, const char* name) {
   py::class_<T, std::shared_ptr<T>>(m, name)
-      .def(py::init(&TensorExportUtil<T>::ApiMakeTensor))
+      .def(py::init(&TensorExportUtil<T>::MakeTensor))
       // Properties of pytorch
       .def_property_readonly("shape", &T::shape)
       .def_property_readonly("device", &T::device)
