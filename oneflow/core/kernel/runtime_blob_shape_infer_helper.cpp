@@ -25,16 +25,21 @@ RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_
                                                          const KernelConf& kernel_conf,
                                                          const JobDesc* job_desc) {
   op_ = ConstructOp(op_conf, job_desc);
-  if (kernel_conf.op_attribute().has_sbp_signature()) {
-    sbp_signature_.reset(new SbpSignature(kernel_conf.op_attribute().sbp_signature()));
+  const OpAttribute& op_attribute = kernel_conf.op_attribute();
+  if (op_attribute.has_sbp_signature()) {
+    sbp_signature_.reset(new SbpSignature(op_attribute.sbp_signature()));
     CHECK_JUST(op_->FillSbpSignature(*sbp_signature_));
   }
-  // TODO(guoran): FillOpParallelDesc
+  if (op_attribute.has_parallel_conf_signature()
+      && op_attribute.parallel_conf_signature().has_op_parallel_conf()) {
+    op_->FillOpParallelDesc(
+        ParallelDesc(op_attribute.parallel_conf_signature().op_parallel_conf()));
+  }
   op_->ForEachBnInOp([&](const std::string& bn_in_op) { bn_in_op2blob_desc_[bn_in_op].reset(); });
-  if (kernel_conf.op_attribute().has_logical_blob_desc_signature()) {
+  if (op_attribute.has_logical_blob_desc_signature()) {
     HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2logical_blob_desc;
     const auto& blob_desc_signature_map =
-        kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc();
+        op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc();
     for (const auto& pair : blob_desc_signature_map) {
       bn_in_op2logical_blob_desc[pair.first].reset(new BlobDesc(pair.second));
     }

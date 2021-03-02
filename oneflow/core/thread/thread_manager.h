@@ -37,9 +37,7 @@ class ThreadMgr final {
   friend class Global<ThreadMgr>;
   explicit ThreadMgr(const Plan& plan);
 
-  void CreatePersistenceThrd(const Plan& plan, int64_t thrd_id);
-
-  std::vector<Thread*> threads_;
+  HashMap<int64_t, std::unique_ptr<Thread>> threads_;
 };
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);

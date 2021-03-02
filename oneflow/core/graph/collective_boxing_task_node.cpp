@@ -18,9 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
-void CollectiveBoxingGenericTaskNode::Init(int64_t machine_id, int64_t thrd_id, int64_t area_id,
+void CollectiveBoxingGenericTaskNode::Init(int64_t machine_id, int64_t thrd_id,
                                            const OperatorConf& op_conf) {
-  set_area_id(area_id);
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
   op_conf_ = op_conf;
