@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef __linux__
 #include "oneflow/core/comm_network/epoll/io_event_poller.h"
 
 #ifdef OF_PLATFORM_POSIX
@@ -111,4 +110,3 @@ void IOEventPoller::EpollLoop() {
 }  // namespace oneflow
 
 #endif  // OF_PLATFORM_POSIX
-#endif

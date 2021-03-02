@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef __linux__
 #ifndef ONEFLOW_CORE_COMM_NETWORK_EPOLL_IO_EVENT_POLLER_H_
 #define ONEFLOW_CORE_COMM_NETWORK_EPOLL_IO_EVENT_POLLER_H_
 
@@ -64,4 +63,3 @@ class IOEventPoller final {
 #endif  // OF_PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_IO_EVENT_POLLER_H_
-#endif

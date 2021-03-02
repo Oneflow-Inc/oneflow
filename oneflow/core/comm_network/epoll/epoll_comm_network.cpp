@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/global_for.h"
 
-#ifdef __linux__
+#ifdef OF_PLATFORM_POSIX
 
 #include <netinet/tcp.h>
 
@@ -219,4 +219,4 @@ void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token
 
 }  // namespace oneflow
 
-#endif  // __linux__
+#endif  // OF_PLATFORM_POSIX
