@@ -120,7 +120,7 @@ class DCGAN(flow.Model):
                 g_logits,
                 name="Gloss_sigmoid_cross_entropy_with_logits",
             )
-            return g_loss
+            return (g_loss, g_out)
         elif optimizer_idx == 1:
             # discriminator
             z, images = batch
@@ -159,9 +159,10 @@ class LossMoniter(flow.ModelCallback):
 
     def on_training_step_end(self, step_idx, outputs, optimizer_idx):
         if optimizer_idx == 0:
-            g_loss = outputs
+            g_loss, g_out = outputs
             fmt_str = "{:>12}  {:>12}  {:>12.6f}"
             print(fmt_str.format(step_idx, "train g_loss:", g_loss.numpy().mean()))
+            print(fmt_str.format(step_idx, "train g_out:", g_out.numpy().mean()))
             tf_g_loss = np.load(os.path.join(self.result_dir, "g_loss.npy"))
             assert np.allclose(
                 g_loss.numpy(), tf_g_loss, rtol=1e-2, atol=1e-1
