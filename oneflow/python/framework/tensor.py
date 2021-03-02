@@ -41,7 +41,6 @@ class UndeterminedTensor:
         self.is_leaf = is_leaf
         self.placement = placement
         self.sbp = sbp
-        self.is_consistent = False
 
 @oneflow_export("tensor")
 class Tensor:
