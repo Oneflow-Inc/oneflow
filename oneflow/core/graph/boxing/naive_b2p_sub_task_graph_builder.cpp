@@ -75,7 +75,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
           UNIMPLEMENTED();
         }
         auto* zeros_node = ctx->task_graph()->NewNode<BoxingZerosTaskNode>();
-        zeros_node->Init(out_machine_id, thrd_id, NewAreaId(), lbi, logical_blob_desc.shape(),
+        zeros_node->Init(out_machine_id, thrd_id, lbi, logical_blob_desc.shape(),
                          logical_blob_desc.data_type(), time_shape);
         nearest_in_node->BuildCtrlRegstDesc(zeros_node);
         Connect<TaskNode>(nearest_in_node, ctx->task_graph()->NewEdge(), zeros_node);
