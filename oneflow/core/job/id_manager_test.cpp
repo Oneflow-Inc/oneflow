@@ -58,53 +58,11 @@ void Delete() {
 
 }  // namespace
 
-TEST(IDMgr, compile_task_id) {
-  New();
-  int64_t machine1thrd2 =
-      (static_cast<int64_t>(1) << machine_id_shl) + (static_cast<int64_t>(2) << thread_id_shl);
-  int64_t machine3thrd4 =
-      (static_cast<int64_t>(3) << machine_id_shl) + (static_cast<int64_t>(4) << thread_id_shl);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(1, 2), machine1thrd2 | 0);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(1, 2), machine1thrd2 | 1);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(1, 2), machine1thrd2 | 2);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(3, 4), machine3thrd4 | 0);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(3, 4), machine3thrd4 | 1);
-  ASSERT_EQ(Global<IDMgr>::Get()->NewTaskId(3, 4), machine3thrd4 | 2);
-  Delete();
-}
-
 TEST(IDMgr, compile_regst_desc_id) {
   New();
   ASSERT_EQ(Global<IDMgr>::Get()->NewRegstDescId(), 0);
   ASSERT_EQ(Global<IDMgr>::Get()->NewRegstDescId(), 1);
   ASSERT_EQ(Global<IDMgr>::Get()->NewRegstDescId(), 2);
-  Delete();
-}
-
-TEST(IDMgr, runtime_machine_id) {
-  New();
-  int64_t actor_id5_machine1thrd3 =
-      (static_cast<int64_t>(1) << machine_id_shl)           // machine_id_1
-      + (static_cast<int64_t>(3) << thread_id_shl)          // thrd_id_3
-      + (static_cast<int64_t>(1) << local_work_stream_shl)  // work_stream_id_1
-      + 5;                                                  // actor_id_5
-  ASSERT_EQ(Global<IDMgr>::Get()->MachineId4ActorId(actor_id5_machine1thrd3), 1);
-  Delete();
-}
-
-TEST(IDMgr, runtime_thrd_id) {
-  New();
-  int64_t actor_id5_machine1thrd3 = (static_cast<int64_t>(1) << machine_id_shl)   // machine_id_1
-                                    + (static_cast<int64_t>(3) << thread_id_shl)  // thrd_id_3
-                                    // work_stream_id_0
-                                    + 5;  // actor_id_5
-  ASSERT_EQ(Global<IDMgr>::Get()->ThrdId4ActorId(actor_id5_machine1thrd3), 3);
-  int64_t actor_id6_machine2thrd4 =
-      (static_cast<int64_t>(2) << machine_id_shl)             // machine_id_2
-      + (static_cast<int64_t>(4) << thread_id_shl)            // thrd_id_4
-      + (static_cast<int64_t>(101) << local_work_stream_shl)  // work_stream_id_101
-      + 6;                                                    // actor_id_6
-  ASSERT_EQ(Global<IDMgr>::Get()->ThrdId4ActorId(actor_id6_machine2thrd4), 4);
   Delete();
 }
 

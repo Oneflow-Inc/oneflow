@@ -20,42 +20,15 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 import oneflow.typing as tp
-from test_util import Args, GenArgDict, GenArgList
-
-
-def flatten_array(input_array):
-    output_array = list()
-    for x in np.nditer(input_array):
-        output_array.append(x.tolist())
-    return output_array
-
-
-def array_to_numpy(input_array, target_shape):
-    return np.array(input_array).reshape(target_shape, order="C")
-
-
-def index2coordinate(idx, tensor_shape):
-    coordinate = []
-    tmp = idx
-    for i in range(len(tensor_shape) - 1, -1, -1):
-        axis_size = tensor_shape[i]
-        coor = tmp % axis_size
-        coordinate.insert(0, int(coor))
-        tmp = (tmp - coor) / axis_size
-    return coordinate
-
-
-def coordinate2index(coordinate, tensor_shape):
-    if len(coordinate) != len(tensor_shape):
-        raise "wrong coordinate or shape"
-    idx = 0
-    for i, coor in enumerate(coordinate):
-        size_at_axis = coor
-        for j in range(i + 1, len(tensor_shape)):
-            size_at_axis *= tensor_shape[j]
-
-        idx += size_at_axis
-    return idx
+from test_util import (
+    Args,
+    GenArgDict,
+    GenArgList,
+    FlattenArray,
+    Array2Numpy,
+    Index2Coordinate,
+    Coordinate2Index,
+)
 
 
 def _make_op_function(
@@ -176,14 +149,14 @@ def gen_numpy_test_sample(input_shape, padding, is_float=True):
 
         numpy_src = np.ones(src.shape, np.int32)
         numpy_dest = np.zeros(dest.shape, np.int32)
-        array_src = flatten_array(numpy_src)
-        array_dest = flatten_array(numpy_dest)
+        array_src = FlattenArray(numpy_src)
+        array_dest = FlattenArray(numpy_dest)
 
         src_num = src.shape[c_idx] * src.shape[h_idx] * src.shape[w_idx]
         dest_num = dest.shape[c_idx] * dest.shape[h_idx] * dest.shape[w_idx]
         elements_num = src.shape[0] * src_num
         for iter_n in range(elements_num):
-            coords = index2coordinate(iter_n, src.shape)
+            coords = Index2Coordinate(iter_n, src.shape)
             n, c, i, j = coords[0], coords[c_idx], coords[h_idx], coords[w_idx]
             ip_x = ip_y = 0
             if j < pad_left:
@@ -208,7 +181,7 @@ def gen_numpy_test_sample(input_shape, padding, is_float=True):
             )
             array_dest[dest_index] += array_src[src_index]
 
-        numpy_dest = array_to_numpy(array_dest, dest.shape)
+        numpy_dest = Array2Numpy(array_dest, dest.shape)
         return numpy_dest
 
     if is_float:

@@ -24,7 +24,6 @@ import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.interpret_util as interpret_util
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow_api
@@ -1360,7 +1359,7 @@ def tensor_scatter_nd_add(
 @oneflow_export("argwhere")
 def argwhere(
     condition: oneflow_api.BlobDesc,
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """This operator finds the indices of input Blob `condition` elements that are non-zero. It returns a List.
@@ -1368,7 +1367,7 @@ def argwhere(
 
     Args:
         condition (oneflow_api.BlobDesc): The input Blob.
-        dtype (Optional[dtype_util.dtype], optional): The data type of output. Defaults to None.
+        dtype (Optional[flow.dtype], optional): The data type of output. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -1549,14 +1548,14 @@ def where(
 @oneflow_export("elem_cnt")
 def elem_cnt(
     inputs: oneflow_api.BlobDesc,
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """This operator returns the amount of elements in input Blob.
 
     Args:
         inputs (oneflow_api.BlobDesc): The input Blob.
-        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        dtype (Optional[flow.dtype], optional): The data type. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
@@ -1590,7 +1589,9 @@ def elem_cnt(
 
     op_conf.shape_elem_cnt_conf.exclude_axis_conf.SetInParent()
     if dtype is not None:
-        op_conf.shape_elem_cnt_conf.data_type = dtype.oneflow_proto_dtype
+        op_conf.shape_elem_cnt_conf.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(
+            dtype
+        )
     op_conf.shape_elem_cnt_conf.y = "y"
     interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
@@ -2381,14 +2382,14 @@ def amp_white_identity(
 @oneflow_export("zeros")
 def zeros(
     shape: Sequence[int],
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """This operator creates a Tensor filled with the scalar value `0`.
 
     Args:
         shape (Sequence[int]): The shape of the Tensor.
-        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        dtype (Optional[flow.dtype], optional): The data type. Defaults to None.
         name (Optional[str], optional): The name for the operator. Defaults to None.
 
     Returns:
@@ -2425,14 +2426,14 @@ def zeros(
 @oneflow_export("ones")
 def ones(
     shape: Sequence[int],
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """This operator creates a Tensor filled with the scalar value `1`.
 
     Args:
         shape (Sequence[int]): The shape of the Tensor.
-        dtype (Optional[dtype_util.dtype], optional): The data type. Defaults to None.
+        dtype (Optional[flow.dtype], optional): The data type. Defaults to None.
         name (Optional[str], optional): The name for the operator. Defaults to None.
 
     Returns:
