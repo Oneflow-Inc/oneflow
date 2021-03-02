@@ -17,16 +17,33 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/operator/input_op.h"
 
 namespace oneflow {
 
 namespace one {
 
+UndeterminedTensor::UndeterminedTensor(const std::shared_ptr<const Shape>& shape,
+                                       const std::shared_ptr<const DType>& dtype, bool is_lazy,
+                                       bool requires_grad, bool is_leaf, bool retain_grad)
+    : shape_(shape),
+      dtype_(dtype),
+      is_lazy_(is_lazy),
+      requires_grad_(requires_grad),
+      is_leaf_(is_leaf),
+      retain_grad_(retain_grad),
+      consistent_(Error::ValueError("Consistent/Mirrored undetermined")) {
+  op_ = std::make_shared<InputOp>();
+  op_->InitFromOpConf();
+}
+
+DeterminedTensor::DeterminedTensor() {
+  op_ = std::make_shared<InputOp>();
+  op_->InitFromOpConf();
+}
+
 Maybe<Tensor> FacadeTensor::SelfDetermined() {
-  if (!JUST(is_determined())) {
-    tensor_ = JUST(tensor_->DetermineAndDestroySelf());
-  }
+  if (!JUST(is_determined())) { tensor_ = JUST(tensor_->DetermineAndDestroySelf()); }
   return tensor_;
 }
 

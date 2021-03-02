@@ -20,4 +20,3 @@ import oneflow.python.framework.device as oneflow_device
 
 
 oneflow_export("Tensor")(oneflow_api.Tensor)
-

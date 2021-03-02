@@ -55,6 +55,7 @@ class Distribute;
 
 class Device;
 class DType;
+class InputOp;
 
 namespace one {
 
@@ -115,7 +116,7 @@ class FacadeTensor final : public Tensor {
   Maybe<bool> is_leaf() const override { return tensor_->is_leaf(); }
   Maybe<bool> retain_grad() const override { return tensor_->retain_grad(); }
   Maybe<const FunctionNode> grad_fn_node();
-  Maybe<Tensor> acc_grad(); 
+  Maybe<Tensor> acc_grad();
 
   // Setters for autograd
   void set_requires_grad(bool requires_grad) override { tensor_->set_requires_grad(requires_grad); }
@@ -134,14 +135,7 @@ class UndeterminedTensor final : public Tensor {
   OF_DISALLOW_COPY_AND_MOVE(UndeterminedTensor);
   UndeterminedTensor(const std::shared_ptr<const Shape>& shape,
                      const std::shared_ptr<const DType>& dtype, bool is_lazy, bool requires_grad,
-                     bool is_leaf, bool retain_grad)
-      : shape_(shape),
-        dtype_(dtype),
-        is_lazy_(is_lazy),
-        requires_grad_(requires_grad),
-        is_leaf_(is_leaf),
-        retain_grad_(retain_grad),
-        consistent_(Error::ValueError("Consistent/Mirrored undetermined")) {}
+                     bool is_leaf, bool retain_grad);
 
   // Getters
   Maybe<const Shape> shape() const override { return shape_; }
@@ -187,6 +181,7 @@ class UndeterminedTensor final : public Tensor {
   bool is_leaf_;
   bool retain_grad_;
   Maybe<bool> consistent_;
+  std::shared_ptr<InputOp> op_;
 };
 
 class DeterminedTensor : public Tensor, public std::enable_shared_from_this<DeterminedTensor> {
@@ -222,7 +217,8 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
   virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 
  protected:
-  DeterminedTensor() = default;
+  DeterminedTensor();
+  std::shared_ptr<InputOp> op_;
   std::shared_ptr<const FunctionNode> grad_fn_node_;
 };
 
@@ -230,7 +226,9 @@ class MirroredTensor final : public DeterminedTensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
   MirroredTensor() = default;
-  explicit MirroredTensor(const std::shared_ptr<MirroredTensorImpl>& impl) { impl_ = impl; }
+  explicit MirroredTensor(const std::shared_ptr<MirroredTensorImpl>& impl) : DeterminedTensor() {
+    impl_ = impl;
+  }
   ~MirroredTensor() override = default;
 
   // Getters
@@ -279,7 +277,10 @@ class ConsistentTensor final : public DeterminedTensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConsistentTensor);
   ConsistentTensor() = default;
-  explicit ConsistentTensor(const std::shared_ptr<ConsistentTensorImpl>& impl) { impl_ = impl; }
+  explicit ConsistentTensor(const std::shared_ptr<ConsistentTensorImpl>& impl)
+      : DeterminedTensor() {
+    impl_ = impl;
+  }
   ~ConsistentTensor() override = default;
 
   // Getters
