@@ -138,11 +138,17 @@ foreach(oneflow_single_file ${oneflow_all_src})
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/transport/transport_test_main\\.cpp$")
-      list(APPEND of_transport_test_cc ${oneflow_single_file})
+      if(UNIX AND NOT APPLE)
+        list(APPEND of_transport_test_cc ${oneflow_single_file})
+      endif()
     elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/graph/.*\\.cpp$")
+    elseif((NOT RPC_CLIENT STREQUAL "GRPC") AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/comm_network/.*\\.cpp$")
+    elseif((NOT RPC_CLIENT STREQUAL "GRPC") AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/control/host.*\\.cpp$")
+    elseif((NOT RPC_CLIENT STREQUAL "GRPC") AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/control/rank.*\\.cpp$")
+    elseif((NOT RPC_CLIENT STREQUAL "GRPC") AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/control/ctrl.*\\.cpp$")
     else()
       # not test file
       list(FIND of_main_cc ${oneflow_single_file} main_found)
