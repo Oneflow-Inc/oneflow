@@ -20,8 +20,8 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void GenQuantScaleSymmetric(const T *in_ptr, const int32_t quantization_bit,
-                            const int64_t num_elements, T *scale, T *zero_point) {
+void GenQuantScaleSymmetric(const T* in_ptr, const int32_t quantization_bit,
+                            const int64_t num_elements, T* scale, T* zero_point) {
   T in_max = *std::max_element(in_ptr, in_ptr + num_elements);
   T in_min = *std::min_element(in_ptr, in_ptr + num_elements);
 
@@ -34,8 +34,8 @@ void GenQuantScaleSymmetric(const T *in_ptr, const int32_t quantization_bit,
 }
 
 template<typename T>
-void GenQuantScaleAffine(const T *in_ptr, const int32_t quantization_bit,
-                         const int64_t num_elements, T *scale, T *zero_point) {
+void GenQuantScaleAffine(const T* in_ptr, const int32_t quantization_bit,
+                         const int64_t num_elements, T* scale, T* zero_point) {
   T in_max = *std::max_element(in_ptr, in_ptr + num_elements);
   T in_min = *std::min_element(in_ptr, in_ptr + num_elements);
 
@@ -46,8 +46,8 @@ void GenQuantScaleAffine(const T *in_ptr, const int32_t quantization_bit,
 }
 
 template<typename T>
-void GenQuantScaleCambricon(const T *in_ptr, const int32_t quantization_bit,
-                            const int64_t num_elements, T *scale, T *zero_point) {
+void GenQuantScaleCambricon(const T* in_ptr, const int32_t quantization_bit,
+                            const int64_t num_elements, T* scale, T* zero_point) {
   T in_max = *std::max_element(in_ptr, in_ptr + num_elements);
   T in_min = *std::min_element(in_ptr, in_ptr + num_elements);
 
@@ -64,19 +64,19 @@ class CpuMinMaxObserverKernel final : public user_op::OpKernel {
   ~CpuMinMaxObserverKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext *ctx) const override {
-    const user_op::Tensor *in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor *scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
-    user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
+    user_op::Tensor* zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
 
     const std::string quantization_scheme = ctx->Attr<std::string>("quantization_scheme");
     const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
     const bool per_layer_quantization = ctx->Attr<bool>("per_layer_quantization");
     const std::string quantization_formula = ctx->Attr<std::string>("quantization_formula");
 
-    const T *in_ptr = in->dptr<T>();
-    T *scale_ptr = scale->mut_dptr<T>();
-    T *zero_point_ptr = zero_point->mut_dptr<T>();
+    const T* in_ptr = in->dptr<T>();
+    T* scale_ptr = scale->mut_dptr<T>();
+    T* zero_point_ptr = zero_point->mut_dptr<T>();
 
     if (quantization_formula == "google") {
       // NOTE(Liang Depeng): per-layer quantization by default
