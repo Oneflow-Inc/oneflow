@@ -22,8 +22,23 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+struct ShapeExportUtil final {
+  static Maybe<Shape> MakeShape(const py::tuple& py_shape) {
+    DimVector shape_dims;
+    CHECK_OR_RETURN(py::isinstance<py::tuple>(py_shape))
+        << Error::ValueError("Input shape must be tuple.");
+    for (const auto& dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
+    return std::make_shared<Shape>(shape_dims);
+  }
+
+  static std::shared_ptr<Shape> ApiMakeShape(const py::tuple& py_shape) {
+    return MakeShape(py_shape).GetPtrOrThrow();
+  }
+};
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Shape, std::shared_ptr<Shape>>(m, "Size")
+      .def(py::init(&ShapeExportUtil::ApiMakeShape))
       .def("__str__", &Shape::ToString)
       .def("__repr__", &Shape::ToString);
 }
