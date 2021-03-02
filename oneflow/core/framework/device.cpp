@@ -13,24 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/tensor_impl.h"
+#include <sstream>
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
-namespace one {
 
-namespace {
-
-std::shared_ptr<const ParallelDesc> MakeParallelDescByDevice(const Device& device) {
-  TODO();  // liyurui
-  return std::shared_ptr<const ParallelDesc>();
+std::string Device::ToString() const {
+  std::stringstream ss;
+  ss << "device(type=";
+  ss << type_;
+  ss << ", index=";
+  ss << device_id_;
+  ss << ")";
+  return ss.str();
 }
 
-}  // namespace
-
-void MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
-  device_ = device;
-  parallel_desc_ = MakeParallelDescByDevice(*device);
-}
-
-}  // namespace one
 }  // namespace oneflow
