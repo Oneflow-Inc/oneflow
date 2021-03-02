@@ -102,7 +102,7 @@ jobs:
           src_path: ${wheelhouse_dir}
           host: ${{ secrets.CI_LOCAL_STATIC_HOST }}
           dst_path: $sha_dir/whl
-      - name: Upload len(results) == len(files) to local
+      - name: Upload bin to local
         if: matrix.test_suite == 'cuda'
         uses: ./.github/actions/upload_local
         with:
