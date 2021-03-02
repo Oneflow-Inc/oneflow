@@ -73,7 +73,7 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   CHECK_NOTNULL(stream_index_generator);
   auto stream_index = stream_index_generator->GenerateNcclStreamIndex();
   const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
-  node->Init(machine_id, thrd_id, NewAreaId(), op_conf);
+  node->Init(machine_id, thrd_id, op_conf);
 }
 
 int64_t FindRootParallelId(const ParallelDesc& multi_device, const ParallelDesc& sole_device) {
@@ -402,8 +402,8 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
         TaskNode* in_node = sorted_in_tasks.at(i);
         CollectiveBoxingPackTaskNode* pack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
-        pack_node->Init(machine_id, thrd_id, NewAreaId(), lbi, logical_blob_desc.shape(),
-                        in_sbp_parallel, out_sbp_parallel, in_parallel_desc.parallel_num());
+        pack_node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(), in_sbp_parallel,
+                        out_sbp_parallel, in_parallel_desc.parallel_num());
         Connect<TaskNode>(in_node, ctx->task_graph()->NewEdge(), pack_node);
 
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
@@ -413,8 +413,8 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
 
         CollectiveBoxingUnpackTaskNode* unpack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingUnpackTaskNode>();
-        unpack_node->Init(machine_id, thrd_id, NewAreaId(), lbi, logical_blob_desc.shape(),
-                          in_sbp_parallel, out_sbp_parallel, in_parallel_desc.parallel_num());
+        unpack_node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(), in_sbp_parallel,
+                          out_sbp_parallel, in_parallel_desc.parallel_num());
         Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
         sorted_out_tasks->push_back(unpack_node);
       }
