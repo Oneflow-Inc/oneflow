@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_
 
-#include <functional>
-
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
@@ -110,9 +108,9 @@ class FunctionOpExpr : public OpExpr {
   std::string type() const override { return "FunctionOp"; }
 };
 
+#undef DEFINE_DEFAULT_CONSTRUCTOR
+
 }  // namespace one
 }  // namespace oneflow
-
-#undef DEFINE_DEFAULT_CONSTRUCTOR
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_
