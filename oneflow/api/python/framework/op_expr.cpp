@@ -15,10 +15,10 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/functional.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/tensor.h"
 
 namespace py = pybind11;
 
