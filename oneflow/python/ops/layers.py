@@ -986,6 +986,88 @@ def layer_norm_param_grad(
 
     return normalized_diff, beta_diff, gamma_diff
 
+
+def _get_batch_normalization_variables(
+    name,
+    gamma_name,
+    beta_name,
+    moving_mean_name,
+    moving_var_name,
+    center,
+    scale,
+    params_shape,
+    params_dtype,
+    trainable,
+    beta_initializer,
+    beta_regularizer,
+    gamma_initializer,
+    gamma_regularizer,
+    moving_mean_initializer,
+    moving_variance_initializer,
+):
+    if beta_name is None:
+        beta_name = "beta"
+    if gamma_name is None:
+        gamma_name = "gamma"
+    if moving_mean_name is None:
+        moving_mean_name = "moving_mean"
+    if moving_var_name is None:
+        moving_var_name = "moving_variance"
+    with flow.scope.namespace(name):
+        if center:
+            beta = flow.get_variable(
+                name=beta_name,
+                shape=params_shape,
+                dtype=params_dtype,
+                initializer=beta_initializer or flow.zeros_initializer(),
+                regularizer=beta_regularizer,
+                trainable=trainable,
+                distribute=oneflow_api.distribute.broadcast(),
+                reuse=False,
+            )
+        else:
+            beta = flow.constant(
+                0, dtype=params_dtype, shape=params_shape, name=beta_name
+            )
+
+        if scale:
+            gamma = flow.get_variable(
+                name=gamma_name,
+                shape=params_shape,
+                dtype=params_dtype,
+                initializer=gamma_initializer or flow.ones_initializer(),
+                regularizer=gamma_regularizer,
+                trainable=trainable,
+                distribute=oneflow_api.distribute.broadcast(),
+                reuse=False,
+            )
+        else:
+            gamma = flow.constant(
+                1, dtype=params_dtype, shape=params_shape, name=gamma_name
+            )
+
+        moving_mean = flow.get_variable(
+            name=moving_mean_name,
+            shape=params_shape,
+            dtype=params_dtype,
+            initializer=moving_mean_initializer or flow.zeros_initializer(),
+            trainable=False,
+            distribute=oneflow_api.distribute.broadcast(),
+            reuse=False,
+        )
+
+        moving_variance = flow.get_variable(
+            name=moving_var_name,
+            shape=params_shape,
+            dtype=params_dtype,
+            initializer=moving_variance_initializer or flow.ones_initializer(),
+            trainable=False,
+            distribute=oneflow_api.distribute.broadcast(),
+            reuse=False,
+        )
+    return beta, gamma, moving_mean, moving_variance
+
+
 @oneflow_export("layers.batch_normalization")
 def batch_normalization(
     inputs: oneflow_api.BlobDesc,
@@ -1087,78 +1169,24 @@ def batch_normalization(
     if not flow.current_global_function_desc().IsTrainable() or not trainable:
         training = False
 
-    def get_beta_var(name):
-        if center:
-            return flow.get_variable(
-                name=name,
-                shape=params_shape,
-                dtype=params_dtype,
-                initializer=beta_initializer or flow.zeros_initializer(),
-                regularizer=beta_regularizer,
-                trainable=trainable,
-                distribute=oneflow_api.distribute.broadcast(),
-                reuse=False,
-            )
-        else:
-            return flow.constant(0, dtype=params_dtype, shape=params_shape, name=name)
-
-    def get_gamma_var(name):
-        if scale:
-            return flow.get_variable(
-                name=name,
-                shape=params_shape,
-                dtype=params_dtype,
-                initializer=gamma_initializer or flow.ones_initializer(),
-                regularizer=gamma_regularizer,
-                trainable=trainable,
-                distribute=oneflow_api.distribute.broadcast(),
-                reuse=False,
-            )
-        else:
-            return flow.constant(1, dtype=params_dtype, shape=params_shape, name=name)
-
-    def get_moving_mean_var(name):
-        return flow.get_variable(
-            name=name,
-            shape=params_shape,
-            dtype=params_dtype,
-            initializer=moving_mean_initializer or flow.zeros_initializer(),
-            trainable=False,
-            distribute=oneflow_api.distribute.broadcast(),
-            reuse=False,
-        )
-
-    def get_moving_variance_var(name):
-        return flow.get_variable(
-            name=name,
-            shape=params_shape,
-            dtype=params_dtype,
-            initializer=moving_variance_initializer or flow.ones_initializer(),
-            trainable=False,
-            distribute=oneflow_api.distribute.broadcast(),
-            reuse=False,
-        )
-
-    if gamma_name is None:
-        with flow.scope.namespace(name):
-            gamma = get_gamma_var(name="gamma")
-    else:
-        gamma = get_gamma_var(name=gamma_name)
-    if beta_name is None:
-        with flow.scope.namespace(name):
-            beta = get_beta_var(name="beta")
-    else:
-        beta = get_beta_var(name=beta_name)
-    if moving_mean_name is None:
-        with flow.scope.namespace(name):
-            moving_mean = get_moving_mean_var(name="moving_mean")
-    else:
-        moving_mean = get_moving_mean_var(name=moving_mean_name)
-    if moving_var_name is None:
-        with flow.scope.namespace(name):
-            moving_variance = get_moving_variance_var(name="moving_variance")
-    else:
-        moving_variance = get_moving_variance_var(name=moving_var_name)
+    beta, gamma, moving_mean, moving_variance = _get_batch_normalization_variables(
+        name,
+        gamma_name,
+        beta_name,
+        moving_mean_name,
+        moving_var_name,
+        center,
+        scale,
+        params_shape,
+        params_dtype,
+        trainable,
+        beta_initializer,
+        beta_regularizer,
+        gamma_initializer,
+        gamma_regularizer,
+        moving_mean_initializer,
+        moving_variance_initializer,
+    )
 
     if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
         if training:
@@ -1263,6 +1291,10 @@ def batch_normalization_add_relu(
         trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
         training (bool, optional): A boolean specifies whether now is training the model. Defaults to True.
         name (Optional[str], optional): This layer's name. Defaults to None.
+        gamma_name (Optional[str], optional): This gamma's name. Defaults to None.
+        beta_name (Optional[str], optional): This beta's name. Defaults to None.
+        moving_mean_name (Optional[str], optional): This moving_mean's name. Defaults to None.
+        moving_var_name (Optional[str], optional): This moving_var's name. Defaults to None.
 
     Returns:
         oneflow_api.BlobDesc:  A `Blob` with same shape of input.
@@ -1308,78 +1340,24 @@ def batch_normalization_add_relu(
     # Float32 required to avoid precision-loss when using fp16 input/output
     params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
 
-    def get_beta_var(name):
-        if center:
-            return flow.get_variable(
-                name=name,
-                shape=params_shape,
-                dtype=params_dtype,
-                initializer=beta_initializer or flow.zeros_initializer(),
-                regularizer=beta_regularizer,
-                trainable=trainable,
-                distribute=oneflow_api.distribute.broadcast(),
-                reuse=False,
-            )
-        else:
-            return flow.constant(0, dtype=params_dtype, shape=params_shape, name=name)
-
-    def get_gamma_var(name):
-        if scale:
-            return flow.get_variable(
-                name=name,
-                shape=params_shape,
-                dtype=params_dtype,
-                initializer=gamma_initializer or flow.ones_initializer(),
-                regularizer=gamma_regularizer,
-                trainable=trainable,
-                distribute=oneflow_api.distribute.broadcast(),
-                reuse=False,
-            )
-        else:
-            return flow.constant(1, dtype=params_dtype, shape=params_shape, name=name)
-
-    def get_moving_mean_var(name):
-        return flow.get_variable(
-            name=name,
-            shape=params_shape,
-            dtype=params_dtype,
-            initializer=moving_mean_initializer or flow.zeros_initializer(),
-            trainable=False,
-            distribute=oneflow_api.distribute.broadcast(),
-            reuse=False,
-        )
-
-    def get_moving_variance_var(name):
-        return flow.get_variable(
-            name=name,
-            shape=params_shape,
-            dtype=params_dtype,
-            initializer=moving_variance_initializer or flow.ones_initializer(),
-            trainable=False,
-            distribute=oneflow_api.distribute.broadcast(),
-            reuse=False,
-        )
-
-    if gamma_name is None:
-        with flow.scope.namespace(name):
-            gamma = get_gamma_var(name="gamma")
-    else:
-        gamma = get_gamma_var(name=gamma_name)
-    if beta_name is None:
-        with flow.scope.namespace(name):
-            beta = get_beta_var(name="beta")
-    else:
-        beta = get_beta_var(name=beta_name)
-    if moving_mean_name is None:
-        with flow.scope.namespace(name):
-            moving_mean = get_moving_mean_var(name="moving_mean")
-    else:
-        moving_mean = get_moving_mean_var(name=moving_mean_name)
-    if moving_var_name is None:
-        with flow.scope.namespace(name):
-            moving_variance = get_moving_variance_var(name="moving_variance")
-    else:
-        moving_variance = get_moving_variance_var(name=moving_var_name)
+    beta, gamma, moving_mean, moving_variance = _get_batch_normalization_variables(
+        name,
+        gamma_name,
+        beta_name,
+        moving_mean_name,
+        moving_var_name,
+        center,
+        scale,
+        params_shape,
+        params_dtype,
+        trainable,
+        beta_initializer,
+        beta_regularizer,
+        gamma_initializer,
+        gamma_regularizer,
+        moving_mean_initializer,
+        moving_variance_initializer,
+    )
 
     builder = (
         flow.user_op_builder(name)
