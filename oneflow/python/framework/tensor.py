@@ -37,13 +37,10 @@ class Tensor:
         self.shape = shape
         self.dtype = dtype
         self.device = device
-        self.placement = placement
-        self.distribute = distribute
-        self.is_lazy = is_lazy
-        self.is_consistent = is_consistent
-        self.is_determined = is_determined
         self.requires_grad = requires_grad
         self.retain_grad = retain_grad
+        self.is_leaf = is_leaf
+        self.placement = placement
         self.local_tensor = None
         self.consistent_tensor = None
 
