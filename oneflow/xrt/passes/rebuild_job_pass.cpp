@@ -62,7 +62,7 @@ void SetOpInputBlobName(OperatorConf *op_conf, const std::string &input,
       break;
     }
     default: {
-      const auto &old_val = ReplaceStrValInPbFdOrPbRpf(spec_conf, input, fixed_blob_name);
+      const auto& old_val = ReplaceStrValInPbFdOrPbRpf(spec_conf, input, fixed_blob_name);
       CHECK_EQ(old_val, blob_name);
     }
   }
@@ -260,7 +260,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
 
       // Set input and output mapping from launch op to function.
       (*launch_conf->mutable_input_output_mapping())[arg_value] = arg_proto.value();
-      const auto &lbn2logical_blob_desc_map = builder_->job().helper().lbn2logical_blob_desc();
+      const auto& lbn2logical_blob_desc_map = builder_->job().helper().lbn2logical_blob_desc();
       auto iter = lbn2logical_blob_desc_map.find(arg_proto.value());
       CHECK(iter != lbn2logical_blob_desc_map.end());
       (*launch_conf->mutable_input_output_logical_blob_desc())[arg_value] = iter->second;

@@ -394,31 +394,33 @@ Maybe<void> QuantAwareTraining::Apply(Job* job, JobPassCtx* ctx) const {
     return node->op().op_name();
   };
   HashSet<OpNode*> white_set;
-  DfsTopoGraphTraversal(
-      op_graph, false, [&int8_list](OpNode* node) { return IsNodeInList(int8_list, node); },
-      [&](OpNode* node) { return IsNodeInList(transparent_list, node); },
-      [&](OpNode* node) { return IsKeyFound(white_set, node); },
-      [&](OpNode* node) {
-        INSERT_CHECK(white_set.insert(node));
-        if (node->op().op_conf().user_conf().op_type_name() == "conv2d"
-            && node->out_edges().size() == 1) {
-          OpNode* next_node = node->SoleOutEdge()->dst_node();
-          if (OpTypeName4OpNode(next_node) == "bias_add") {
-            INSERT_CHECK(white_set.insert(next_node));
-            // TODO(daquexian): mark these special nodes
-            if (next_node->out_edges().size() == 1) {
-              next_node = next_node->SoleOutEdge()->dst_node();
-            }
-          }
-          if (OpTypeName4OpNode(next_node) == "normalization") {
-            INSERT_CHECK(white_set.insert(next_node));
-            if (next_node->out_edges().size() == 1) {
-              next_node = next_node->SoleOutEdge()->dst_node();
-            }
-          }
-          if (OpTypeName4OpNode(next_node) == "relu") { INSERT_CHECK(white_set.insert(next_node)); }
-        }
-      });
+  DfsTopoGraphTraversal(op_graph, false,
+                        [&int8_list](OpNode* node) { return IsNodeInList(int8_list, node); },
+                        [&](OpNode* node) { return IsNodeInList(transparent_list, node); },
+                        [&](OpNode* node) { return IsKeyFound(white_set, node); },
+                        [&](OpNode* node) {
+                          INSERT_CHECK(white_set.insert(node));
+                          if (node->op().op_conf().user_conf().op_type_name() == "conv2d"
+                              && node->out_edges().size() == 1) {
+                            OpNode* next_node = node->SoleOutEdge()->dst_node();
+                            if (OpTypeName4OpNode(next_node) == "bias_add") {
+                              INSERT_CHECK(white_set.insert(next_node));
+                              // TODO(daquexian): mark these special nodes
+                              if (next_node->out_edges().size() == 1) {
+                                next_node = next_node->SoleOutEdge()->dst_node();
+                              }
+                            }
+                            if (OpTypeName4OpNode(next_node) == "normalization") {
+                              INSERT_CHECK(white_set.insert(next_node));
+                              if (next_node->out_edges().size() == 1) {
+                                next_node = next_node->SoleOutEdge()->dst_node();
+                              }
+                            }
+                            if (OpTypeName4OpNode(next_node) == "relu") {
+                              INSERT_CHECK(white_set.insert(next_node));
+                            }
+                          }
+                        });
 
   VLOG(3) << "white_set include: "
           << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);

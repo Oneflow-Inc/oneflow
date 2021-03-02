@@ -26,9 +26,7 @@ Maybe<DType> DType::GetDTypeByDataType(const DataType& data_type) {
   }
     OF_PP_FOR_EACH_TUPLE(MAKE_DATA_TYPE_OBJ, DTYPE_SEQ)
 #undef MAKE_DATA_TYPE_OBJ
-    default: {
-      OF_UNIMPLEMENTED();
-    }
+    default: { OF_UNIMPLEMENTED(); }
   }
   OF_UNIMPLEMENTED();
   return std::shared_ptr<DType>();

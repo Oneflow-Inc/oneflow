@@ -27,7 +27,7 @@ namespace tensorrt {
 template<nvinfer1::PoolingType pooling_type>
 class PoolingOp : public TrtOpKernel {
  public:
-  void Compile(TrtOpContext* ctx) override {
+  void Compile(TrtOpContext *ctx) override {
     Shape in_shape = ctx->SoleInputShape();
     CHECK_GE(in_shape.NumAxes(), 3);
     CHECK_LE(in_shape.NumAxes(), 5);
@@ -35,8 +35,8 @@ class PoolingOp : public TrtOpKernel {
     const auto& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
     const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
 
-    nvinfer1::ITensor* in = ctx->SoleInput();
-    auto* layer =
+    nvinfer1::ITensor *in = ctx->SoleInput();
+    auto *layer =
         ctx->builder()->addPooling(*in, pooling_type, nvinfer1::DimsHW(pool_size[0], pool_size[1]));
     layer->setName(ctx->op_name().c_str());
 
@@ -44,25 +44,25 @@ class PoolingOp : public TrtOpKernel {
 
     const std::string& padding = ctx->Attr<std::string>("padding");
     // The default padding mode is valid for TensorRT.
-    if (padding != "valid") {
-      if (padding == "customized") {
-        const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-        const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
-        const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
-        if (ceil_mode) {
-          layer->setPaddingMode(nvinfer1::PaddingMode::kEXPLICIT_ROUND_UP);
+    if(padding != "valid") {
+        if(padding=="customized") {
+            const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
+            const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
+            const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
+            if(ceil_mode) {
+                layer->setPaddingMode(nvinfer1::PaddingMode::kEXPLICIT_ROUND_UP);
+            } else {
+                layer->setPaddingMode(nvinfer1::PaddingMode::kEXPLICIT_ROUND_DOWN);
+            }
+            layer->setPrePadding(nvinfer1::DimsHW(padding_before[0], padding_before[1]));
+            layer->setPostPadding(nvinfer1::DimsHW(padding_after[0], padding_after[1]));
+        } else if(padding == "same_lower") {
+            layer->setPaddingMode(nvinfer1::PaddingMode::kSAME_LOWER);
+        } else if(padding == "same_upper") {
+            layer->setPaddingMode(nvinfer1::PaddingMode::kSAME_UPPER);
         } else {
-          layer->setPaddingMode(nvinfer1::PaddingMode::kEXPLICIT_ROUND_DOWN);
+            UNIMPLEMENTED();
         }
-        layer->setPrePadding(nvinfer1::DimsHW(padding_before[0], padding_before[1]));
-        layer->setPostPadding(nvinfer1::DimsHW(padding_after[0], padding_after[1]));
-      } else if (padding == "same_lower") {
-        layer->setPaddingMode(nvinfer1::PaddingMode::kSAME_LOWER);
-      } else if (padding == "same_upper") {
-        layer->setPaddingMode(nvinfer1::PaddingMode::kSAME_UPPER);
-      } else {
-        UNIMPLEMENTED();
-      }
     }
     ctx->SetSoleOutput(layer->getOutput(0));
   }

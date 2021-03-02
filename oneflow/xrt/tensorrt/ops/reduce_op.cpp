@@ -24,7 +24,7 @@ template<nvinfer1::ReduceOperation reduce_op>
 class ReduceOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext *ctx) override {
-    const auto &axis = ctx->Attr<std::vector<int32_t>>("axis");
+    const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
 
     int32_t reduce_axis = 0;
     for (int i = 0; i < axis.size(); ++i) { reduce_axis = reduce_axis | (1U << axis[i]); }

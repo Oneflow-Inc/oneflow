@@ -78,8 +78,8 @@ class XlaOpContext : public OpContext {
   const XrtDevice &device() const { return param_.device; }
   // Return XlaBuilder
   xla::XlaBuilder *builder() const;
-
-  const std::string &SoleOutputName() const;
+  
+  const std::string &SoleOutputName() const; 
 
   // Return input named `name` as XlaOp
   xla::XlaOp Input(const std::string &name);

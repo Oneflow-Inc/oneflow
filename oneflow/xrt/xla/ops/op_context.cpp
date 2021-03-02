@@ -148,7 +148,9 @@ Shape XlaOpContext::OutputShape(const std::string &name) const {
   return ArgumentFromKey(name).shape();
 }
 
-Shape XlaOpContext::SoleOutputShape() const { return ArgumentFromKey(SoleOutputName()).shape(); }
+Shape XlaOpContext::SoleOutputShape() const {
+  return ArgumentFromKey(SoleOutputName()).shape();
+}
 
 Argument XlaOpContext::ArgumentFromKey(const std::string &key) const {
   CHECK_GT(param_.arguments.count(key), 0);

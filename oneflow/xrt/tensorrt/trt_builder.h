@@ -144,7 +144,7 @@ class TrtBuilder {
 
 #define TRT_BUILDER_ADD_LAYER(Layer)                          \
   template<typename... Args>                                  \
-  auto add##Layer(Args &&...args) {                           \
+  auto add##Layer(Args &&... args) {                          \
     return network_->add##Layer(std::forward<Args>(args)...); \
   }
 
