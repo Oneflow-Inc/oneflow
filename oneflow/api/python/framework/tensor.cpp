@@ -42,19 +42,18 @@ struct TensorExportUtil<FacadeTensor> final {
       const std::shared_ptr<const ParallelDesc>& parallel_desc,
       const std::shared_ptr<const compatible_py::Distribute>& distribute, bool is_lazy,
       bool requires_grad, bool is_leaf, bool retain_grad, bool is_determined, bool is_consistent) {
-    std::shared_ptr<Tensor> tensor;
     if (is_determined) {
       if (is_consistent) {
-        tensor = std::static_pointer_cast<Tensor>(ConsistentTensor::MakeTensor(
+        return std::make_shared<FacadeTensor>(ConsistentTensor::MakeTensor(
             shape, dtype, distribute, parallel_desc, is_lazy, requires_grad, is_leaf, retain_grad));
       } else {
-        tensor = std::static_pointer_cast<Tensor>(MirroredTensor::MakeTensor(
+        return std::make_shared<FacadeTensor>(MirroredTensor::MakeTensor(
             shape, dtype, device, is_lazy, requires_grad, is_leaf, retain_grad));
       }
     } else {
-      tensor = std::make_shared<UndeterminedTensor>(shape, dtype, is_leaf, retain_grad);
+      return std::make_shared<FacadeTensor>(
+          std::make_shared<UndeterminedTensor>(shape, dtype, is_leaf, retain_grad));
     }
-    return std::make_shared<FacadeTensor>(tensor);
   }
 
   static std::shared_ptr<FacadeTensor> ApiMakeTensor(
@@ -79,13 +78,11 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("device",
                              [](const T& tensor) { return tensor.device().GetPtrOrThrow(); })
       .def_property_readonly("ndim", [](T& tensor) { return tensor.ndim().GetOrThrow(); })
-      .def_property_readonly("is_cuda",
-                             [](T& tensor) { return tensor.is_cuda().GetOrThrow(); })
+      .def_property_readonly("is_cuda", [](T& tensor) { return tensor.is_cuda().GetOrThrow(); })
       .def_property_readonly("dtype",
                              [](const T& tensor) { return tensor.device().GetPtrOrThrow(); })
       .def_property_readonly("data", []() { TODO(); })
-      .def_property_readonly("grad",
-                             [](T& tensor) { return tensor.acc_grad().GetPtrOrThrow(); })
+      .def_property_readonly("grad", [](T& tensor) { return tensor.acc_grad().GetPtrOrThrow(); })
       .def_property_readonly("grad_fn",
                              [](T& tensor) { return tensor.grad_fn_node().GetPtrOrThrow(); })
       .def_property_readonly("requires_grad",

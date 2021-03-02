@@ -47,29 +47,19 @@ Maybe<DeterminedTensor> FacadeTensor::SelfDetermined() {
   return std::dynamic_pointer_cast<DeterminedTensor>(tensor_);
 }
 
-Maybe<int64_t> FacadeTensor::ndim() {
-  return JUST(SelfDetermined())->ndim();
-}
+Maybe<int64_t> FacadeTensor::ndim() { return JUST(SelfDetermined())->ndim(); }
 
-Maybe<bool> FacadeTensor::is_cuda() {
-  return JUST(SelfDetermined())->is_cuda();
-}
+Maybe<bool> FacadeTensor::is_cuda() { return JUST(SelfDetermined())->is_cuda(); }
 
-Maybe<int64_t> FacadeTensor::nelement() {
-  return JUST(SelfDetermined())->nelement();
-}
+Maybe<int64_t> FacadeTensor::nelement() { return JUST(SelfDetermined())->nelement(); }
 
-Maybe<int64_t> FacadeTensor::dim(int64_t index) {
-  return JUST(SelfDetermined())->dim(index);
-}
+Maybe<int64_t> FacadeTensor::dim(int64_t index) { return JUST(SelfDetermined())->dim(index); }
 
 Maybe<const FunctionNode> FacadeTensor::grad_fn_node() {
   return JUST(SelfDetermined())->grad_fn_node();
 }
 
-Maybe<Tensor> FacadeTensor::acc_grad() {
-  return JUST(SelfDetermined())->acc_grad();
-}
+Maybe<Tensor> FacadeTensor::acc_grad() { return JUST(SelfDetermined())->acc_grad(); }
 
 Maybe<const compatible_py::Distribute> UndeterminedTensor::distribute() const {
   CHECK_OR_RETURN(distribute_) << Error::ValueError("Distribute is not determined.");
