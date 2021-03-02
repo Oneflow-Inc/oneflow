@@ -82,7 +82,7 @@ jobs:
           cuda_version: ${{ matrix.cuda_version }}
           extra_docker_args: $extra_docker_args
       - name: Custom Op test (run by oneflow build docker)
-        if: matrix.test_suite == 'cuda'
+        if: matrix.test_suite == 'cpu'
         run: |
           docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
             $extra_docker_args \
