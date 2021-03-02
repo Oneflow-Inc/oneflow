@@ -43,18 +43,6 @@ class UndeterminedTensor:
         self.sbp = sbp
         self.is_consistent = False
 
-    def set_device(self, value):
-        self.device = value
-
-    def set_placement(self, value):
-        self.placement = value
-
-    def set_sbp(self, value):
-        self.sbp = value
-
-    def set_consistent(self, value):
-        self.is_consistent = value
-
 @oneflow_export("tensor")
 class Tensor:
     def __init__(
