@@ -50,7 +50,7 @@ class Tensor:
 
     @property
     def device(self):
-        pass
+        return self.device
 
     @property
     def ndim(self):
@@ -62,7 +62,7 @@ class Tensor:
 
     @property
     def dtype(self):
-        pass
+        return self.dtype
 
     @property
     def data(self):
@@ -82,7 +82,7 @@ class Tensor:
 
     @property
     def is_leaf(self):
-        pass
+        return self.is_leaf
 
     @property
     def placement(self):
@@ -97,16 +97,16 @@ class Tensor:
         pass
 
     def size(self):
-        pass
+        return self.shape
 
-    def dim(self):
+    def dim(self, idx):
         pass
 
     def ndimension(self):
         pass
 
     def get_device(self):
-        pass
+        return self.device
 
     def nelemenet(self):
         pass
@@ -127,16 +127,16 @@ class Tensor:
         pass
 
     def set_device(self, device):
-        pass
+        self.device = device
 
     def set_placement(self, placement):
-        pass
+        self.placement = placement
 
     def set_distribute(self, distribute):
-        pass
+        self.distribute = distribute
 
-    def set_dtyp(self, dtype):
-        pass
+    def set_dtype(self, dtype):
+        self.dtype = dtype
 
     def set_consistent(self, is_consistent):
         pass
