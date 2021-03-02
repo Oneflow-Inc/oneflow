@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
+
 REGISTER_USER_OP("unique_with_counts")
     .Input("x")
     .Output("y")
@@ -23,15 +24,6 @@ REGISTER_USER_OP("unique_with_counts")
     .Output("count")
     .Output("num_unique")
     .Attr<DataType>("out_idx")
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      const OptInt64* x_batch_axis = ctx->BatchAxis4ArgNameAndIndex("x", 0);
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *x_batch_axis;
-      *ctx->BatchAxis4ArgNameAndIndex("idx", 0) = *x_batch_axis;
-      *ctx->BatchAxis4ArgNameAndIndex("count", 0) = *x_batch_axis;
-      OptInt64* num_unique_batch_axis = ctx->BatchAxis4ArgNameAndIndex("num_unique", 0);
-      num_unique_batch_axis->clear_value();
-      return Maybe<void>::Ok();
-    })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       CHECK_EQ_OR_RETURN(x->shape().NumAxes(), 1);
