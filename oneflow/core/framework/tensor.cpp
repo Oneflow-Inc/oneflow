@@ -44,7 +44,7 @@ DeterminedTensor::DeterminedTensor() {
 
 Maybe<DeterminedTensor> FacadeTensor::SelfDetermined() {
   if (!JUST(is_determined())) { tensor_ = JUST(tensor_->DetermineAndDestroySelf()); }
-  // TODO: return type
+  return std::dynamic_pointer_cast<DeterminedTensor>(tensor_);
 }
 
 Maybe<int64_t> FacadeTensor::ndim() {
