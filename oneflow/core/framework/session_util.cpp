@@ -13,12 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <mutex>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/session_util.h"
 
 namespace oneflow {
 
 namespace {
+
+std::mutex& GlobalSessionUtilMutex() {
+  static std::mutex global_id2session_map_mutex;
+  return global_id2session_map_mutex;
+}
 
 HashMap<int64_t, std::shared_ptr<Session>>* GlobalId2SessionMap() {
   static HashMap<int64_t, std::shared_ptr<Session>> id2session_map;
@@ -58,6 +64,7 @@ Maybe<Session> RegsiterSession(int64_t id) {
   std::shared_ptr<Session> sess =
       std::make_shared<Session>(id, std::make_shared<vm::cfg::InstructionListProto>(),
                                 std::make_shared<eager::cfg::EagerSymbolList>());
+  std::unique_lock<std::mutex> lock(GlobalSessionUtilMutex());
   auto* id2session_map = GlobalId2SessionMap();
   CHECK_OR_RETURN(id2session_map->find(id) == id2session_map->end());
   (*id2session_map)[id] = sess;
@@ -67,12 +74,14 @@ Maybe<Session> RegsiterSession(int64_t id) {
 
 Maybe<Session> GetDefaultSession() {
   int64_t default_sess_id = JUST(GetDefaultSessionId());
+  std::unique_lock<std::mutex> lock(GlobalSessionUtilMutex());
   auto* id2session_map = GlobalId2SessionMap();
   CHECK_OR_RETURN(id2session_map->find(default_sess_id) != id2session_map->end());
   return id2session_map->at(default_sess_id);
 }
 
 Maybe<void> ClearSessionById(int64_t id) {
+  std::unique_lock<std::mutex> lock(GlobalSessionUtilMutex());
   auto* id2session_map = GlobalId2SessionMap();
   CHECK_OR_RETURN(id2session_map->find(id) != id2session_map->end());
   id2session_map->erase(id);

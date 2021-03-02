@@ -31,13 +31,13 @@ class BlobCache {
   BlobCache(const std::shared_ptr<BlobObject>& blob_object) : blob_object_(blob_object) {}
   ~BlobCache() = default;
 
-  std::shared_ptr<BlobObject> blob_object() const { return blob_object_; }
+  Maybe<BlobObject> blob_object() const { return blob_object_; }
 
-  std::shared_ptr<EagerPhysicalBlobHeader> GetHeaderCache(
+  Maybe<EagerPhysicalBlobHeader> GetHeaderCache(
       const std::function<
           std::shared_ptr<EagerPhysicalBlobHeader>(const std::shared_ptr<BlobObject>&)>& Fetch);
 
-  std::shared_ptr<BlobObject> GetCachedDelegateBlobObject(
+  Maybe<BlobObject> GetCachedDelegateBlobObject(
       const std::shared_ptr<OpArgParallelAttribute>& op_arg_parallel_attr,
       const std::function<std::shared_ptr<BlobObject>(
           const std::shared_ptr<BlobObject>&, const std::shared_ptr<OpArgParallelAttribute>&)>&

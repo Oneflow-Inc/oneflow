@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <mutex>
 #include "oneflow/core/framework/blob_cache.h"
 
 namespace oneflow {
@@ -21,6 +22,11 @@ namespace compatible_py {
 
 namespace {
 
+std::mutex& GlobalObjectId2BlobCacheMutex() {
+  static std::mutex global_object_id2blob_cache_mutex;
+  return global_object_id2blob_cache_mutex;
+}
+
 HashMap<int64_t, std::shared_ptr<BlobCache>>* GlobalObjectId2BlobCache() {
   static HashMap<int64_t, std::shared_ptr<BlobCache>> object_id2blob_cache;
   return &object_id2blob_cache;
@@ -28,14 +34,14 @@ HashMap<int64_t, std::shared_ptr<BlobCache>>* GlobalObjectId2BlobCache() {
 
 }  // namespace
 
-std::shared_ptr<EagerPhysicalBlobHeader> BlobCache::GetHeaderCache(
+Maybe<EagerPhysicalBlobHeader> BlobCache::GetHeaderCache(
     const std::function<
         std::shared_ptr<EagerPhysicalBlobHeader>(const std::shared_ptr<BlobObject>&)>& Fetch) {
   if (!header_cache_) { header_cache_ = Fetch(blob_object_); }
   return header_cache_;
 }
 
-std::shared_ptr<BlobObject> BlobCache::GetCachedDelegateBlobObject(
+Maybe<BlobObject> BlobCache::GetCachedDelegateBlobObject(
     const std::shared_ptr<OpArgParallelAttribute>& op_arg_parallel_attr,
     const std::function<std::shared_ptr<BlobObject>(
         const std::shared_ptr<BlobObject>&, const std::shared_ptr<OpArgParallelAttribute>&)>&
@@ -49,6 +55,7 @@ std::shared_ptr<BlobObject> BlobCache::GetCachedDelegateBlobObject(
 
 Maybe<BlobCache> FindOrCreateBlobCache(const std::shared_ptr<BlobObject>& blob_object) {
   int64_t object_id = blob_object->object_id();
+  std::unique_lock<std::mutex> lock(GlobalObjectId2BlobCacheMutex());
   auto* object_id2blob_cache = GlobalObjectId2BlobCache();
   if (object_id2blob_cache->find(object_id) == object_id2blob_cache->end()) {
     (*object_id2blob_cache)[object_id] = std::make_shared<BlobCache>(blob_object);
@@ -58,6 +65,7 @@ Maybe<BlobCache> FindOrCreateBlobCache(const std::shared_ptr<BlobObject>& blob_o
 
 Maybe<void> TryDisableBlobCache(const std::shared_ptr<BlobObject>& blob_object) {
   int64_t object_id = blob_object->object_id();
+  std::unique_lock<std::mutex> lock(GlobalObjectId2BlobCacheMutex());
   auto* object_id2blob_cache = GlobalObjectId2BlobCache();
   if (object_id2blob_cache->find(object_id) != object_id2blob_cache->end()) {
     object_id2blob_cache->erase(object_id);
@@ -76,6 +84,7 @@ Maybe<BlobObject> FindOrCreateDelegateBlobObject(
 }
 
 Maybe<void> ClearAllBlobCache() {
+  std::unique_lock<std::mutex> lock(GlobalObjectId2BlobCacheMutex());
   auto* object_id2blob_cache = GlobalObjectId2BlobCache();
   object_id2blob_cache->clear();
   return Maybe<void>::Ok();

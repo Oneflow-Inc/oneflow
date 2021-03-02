@@ -21,6 +21,11 @@ namespace oneflow {
 
 std::mutex global_parallel_sym2shared_opkernel_obj_mutex;
 
+std::mutex& GlobalParallelSym2SharedOpkernelObjMutex() {
+  static std::mutex global_parallel_sym2shared_opkernel_obj_mutex;
+  return global_parallel_sym2shared_opkernel_obj_mutex;
+}
+
 namespace {
 
 HashMap<ParallelDesc, std::shared_ptr<compatible_py::Object>>*
@@ -34,7 +39,7 @@ GlobalParallelConfSym2SharedOpkernelObject() {
 
 Maybe<bool> HasSharedOpKernelObject4ParallelConfSymbol(
     const std::shared_ptr<ParallelDesc>& parallel_conf_sym) {
-  std::unique_lock<std::mutex> lock(global_parallel_sym2shared_opkernel_obj_mutex);
+  std::unique_lock<std::mutex> lock(GlobalParallelSym2SharedOpkernelObjMutex());
   auto* parallel_conf_symbol2shared_opkernel_object = GlobalParallelConfSym2SharedOpkernelObject();
   return (*parallel_conf_symbol2shared_opkernel_object).find(*parallel_conf_sym)
          != (*parallel_conf_symbol2shared_opkernel_object).end();
@@ -42,7 +47,7 @@ Maybe<bool> HasSharedOpKernelObject4ParallelConfSymbol(
 
 Maybe<compatible_py::Object> GetOpKernelObject4ParallelConfSymbol(
     const std::shared_ptr<ParallelDesc>& parallel_conf_sym) {
-  std::unique_lock<std::mutex> lock(global_parallel_sym2shared_opkernel_obj_mutex);
+  std::unique_lock<std::mutex> lock(GlobalParallelSym2SharedOpkernelObjMutex());
   auto* parallel_conf_symbol2shared_opkernel_object = GlobalParallelConfSym2SharedOpkernelObject();
   return (*parallel_conf_symbol2shared_opkernel_object).at(*parallel_conf_sym);
 }
@@ -50,7 +55,7 @@ Maybe<compatible_py::Object> GetOpKernelObject4ParallelConfSymbol(
 Maybe<void> SetSharedOpKernelObject4ParallelConfSymbol(
     const std::shared_ptr<ParallelDesc>& parallel_conf_sym,
     const std::shared_ptr<compatible_py::Object>& shared_opkernel_object) {
-  std::unique_lock<std::mutex> lock(global_parallel_sym2shared_opkernel_obj_mutex);
+  std::unique_lock<std::mutex> lock(GlobalParallelSym2SharedOpkernelObjMutex());
   auto* parallel_conf_symbol2shared_opkernel_object = GlobalParallelConfSym2SharedOpkernelObject();
   CHECK_OR_RETURN((*parallel_conf_symbol2shared_opkernel_object).find(*parallel_conf_sym)
                   == (*parallel_conf_symbol2shared_opkernel_object).end());
