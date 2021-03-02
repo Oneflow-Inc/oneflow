@@ -25,6 +25,8 @@ namespace oneflow {
 namespace compatible_py {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
+  // To enable dynamic attributes for C++ classes, add 'py::dynamic_attr' tag
+  // to py::class_ constructor
   py::class_<BlobCache, std::shared_ptr<BlobCache>>(m, "BlobCache", py::dynamic_attr())
       .def(py::init([](const std::shared_ptr<BlobObject>& blob_object) {
         return std::make_shared<BlobCache>(blob_object);
