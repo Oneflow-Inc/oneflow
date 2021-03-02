@@ -35,7 +35,7 @@ Maybe<void> SourceTickOp::InferLogicalOutBlobDescs(
 
 Maybe<void> SourceTickOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
