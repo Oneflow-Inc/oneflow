@@ -38,9 +38,9 @@ class TrtOpContext : public OpContext {
   struct Param {
     std::string op_name;
 
-    TrtBuilder *builder;
+    TrtBuilder* builder;
     // Config proto related to the operator
-    const PbMessage *message;
+    const PbMessage* message;
     // Input operands
     util::Map<Argument, TrtValue> inputs;
     std::vector<std::string> output_names;
@@ -49,63 +49,63 @@ class TrtOpContext : public OpContext {
     util::Map<std::string, Argument> arguments;
   };
 
-  explicit TrtOpContext(const Param &param) : OpContext(*param.message), param_(param) {}
+  explicit TrtOpContext(const Param& param) : OpContext(*param.message), param_(param) {}
 
   virtual ~TrtOpContext() = default;
 
-  const Param &param() const { return param_; }
+  const Param& param() const { return param_; }
 
-  TrtBuilder *builder() const { return param_.builder; }
+  TrtBuilder* builder() const { return param_.builder; }
 
-  const std::string &op_name() const { return param_.op_name; }
-  
-  const std::string &SoleOutputName() const; 
+  const std::string& op_name() const { return param_.op_name; }
+
+  const std::string& SoleOutputName() const;
 
   // Return input named `name` as tensor
-  nvinfer1::ITensor *Input(const std::string &name);
-  nvinfer1::ITensor *Input(const Argument &arg);
-  nvinfer1::ITensor *SoleInput();
+  nvinfer1::ITensor* Input(const std::string& name);
+  nvinfer1::ITensor* Input(const Argument& arg);
+  nvinfer1::ITensor* SoleInput();
   // Return output named `name` as tensor
-  nvinfer1::ITensor *Output(const std::string &name);
-  nvinfer1::ITensor *Output(const Argument &arg);
-  nvinfer1::ITensor *SoleOutput();
+  nvinfer1::ITensor* Output(const std::string& name);
+  nvinfer1::ITensor* Output(const Argument& arg);
+  nvinfer1::ITensor* SoleOutput();
 
   // Return weight named `name` as weight
-  nvinfer1::Weights &Weight(const std::string &name);
-  nvinfer1::Weights &Weight(const Argument &arg);
+  nvinfer1::Weights& Weight(const std::string& name);
+  nvinfer1::Weights& Weight(const Argument& arg);
 
   int num_inputs() const { return param_.inputs.size(); }
   int num_outputs() const { return param_.num_outputs; }
   // Return inputs as TrtValues
-  const util::Map<Argument, TrtValue> &inputs() const { return param_.inputs; }
+  const util::Map<Argument, TrtValue>& inputs() const { return param_.inputs; }
   // Return output as TrtValues
-  const util::Map<Argument, TrtValue> &outputs() const { return outputs_; }
+  const util::Map<Argument, TrtValue>& outputs() const { return outputs_; }
 
   // Setup the output `output_name` with XlaOp
-  void SetOutput(const std::string &name, nvinfer1::ITensor *tensor);
+  void SetOutput(const std::string& name, nvinfer1::ITensor* tensor);
   // Setup the output `output_name` with TrtValue
-  void SetOutput(const std::string &name, const TrtValue &value);
-  void SetSoleOutput(nvinfer1::ITensor *tensor);
+  void SetOutput(const std::string& name, const TrtValue& value);
+  void SetSoleOutput(nvinfer1::ITensor* tensor);
 
   // Return input `name` shape as Shape
-  Shape InputShape(const std::string &name) const;
+  Shape InputShape(const std::string& name) const;
   Shape SoleInputShape() const;
   // Return output `name` shape as Shape
-  Shape OutputShape(const std::string &name) const;
-  Shape SoleOutputShape() const;  
+  Shape OutputShape(const std::string& name) const;
+  Shape SoleOutputShape() const;
 
   // Input data type
-  DataType InputType(const std::string &name) const;
+  DataType InputType(const std::string& name) const;
   DataType SoleInputType() const;
   // Output data type
-  DataType OutputType(const std::string &name) const;
+  DataType OutputType(const std::string& name) const;
   DataType SoleOutputType() const;
 
-  bool HasInput(const std::string &name) const;
+  bool HasInput(const std::string& name) const;
 
  private:
   TrtOpContext() = delete;
-  Argument ArgumentFromKey(const std::string &key) const;
+  Argument ArgumentFromKey(const std::string& key) const;
 
   Param param_;
   // Output operands
