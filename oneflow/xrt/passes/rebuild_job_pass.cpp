@@ -260,10 +260,29 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
 
       // Set input and output mapping from launch op to function.
       (*launch_conf->mutable_input_output_mapping())[arg_value] = arg_proto.value();
-      const auto& lbn2logical_blob_desc_map = builder_->job().helper().lbn2logical_blob_desc();
-      auto iter = lbn2logical_blob_desc_map.find(arg_proto.value());
-      CHECK(iter != lbn2logical_blob_desc_map.end());
-      (*launch_conf->mutable_input_output_logical_blob_desc())[arg_value] = iter->second;
+    }
+
+    auto CopyLogicalBlobDesc4LbnOnEdge = [&](const XrtEdge *edge) -> void {
+      const Argument &argument = edge->argument();
+      const std::string& lbn = argument.name();
+      const auto& src_map = builder_->job().helper().lbn2logical_blob_desc();
+      auto* dst_map = launch_conf->mutable_lbn2logical_blob_desc();
+      const auto src_it = src_map.find(lbn);
+      CHECK(src_it != src_map.end());
+      auto dst_it = dst_map->find(lbn);
+      if(dst_it != dst_map->end()) {
+        CHECK(dst_it->second == src_it->second);
+      } else {
+        (*dst_map)[lbn] = src_it->second;
+      }
+    };
+    for (const XrtNode *sub_node : node->sub_graph()->Nodes()) {
+      for (const XrtEdge *edge : sub_node->in_edges()) {
+        CopyLogicalBlobDesc4LbnOnEdge(edge);
+      }
+      for (const XrtEdge *edge : sub_node->out_edges()) {
+        CopyLogicalBlobDesc4LbnOnEdge(edge);
+      }
     }
 
     CHECK_GT(folded_nodes_[i].size(), 0);

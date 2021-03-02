@@ -81,13 +81,17 @@ xrt::Executable *XrtLaunchKernel<device_type>::BuildExecutable(
     {
       // Run InferShape pass
       const auto &parallel_ctx = this->kernel_conf().xrt_launch_conf().parallel_ctx();
+      const OpAttribute& op_attribute = this->kernel_conf().op_attribute();
+      CHECK(op_attribute.has_parallel_conf_signature() && op_attribute.parallel_conf_signature().has_op_parallel_conf());
+      const auto &parallel_desc = ParallelDesc(op_attribute.parallel_conf_signature().op_parallel_conf());
       const auto &sbp_signatures = launch_conf.sbp_signatures();
+      const auto &lbn2logical_blob_desc = launch_conf.lbn2logical_blob_desc();
 
       std::unordered_map<std::string, BlobDesc> entry_blob_descs;
       desc_getter_.DumpEntryBlobDescTo(&entry_blob_descs);
       auto options = xrt::CreateDefaultXrtPassOptions();
-      xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(), &parallel_ctx,
-                      &sbp_signatures, &entry_blob_descs);
+      xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(), &parallel_ctx, &parallel_desc,
+                      &sbp_signatures, &lbn2logical_blob_desc, &entry_blob_descs);
       // Update argument meta data
       // xrt::RunXrtPass("UpdateArgMetaData", graph.get(), options,
       //                 &this->job_desc());

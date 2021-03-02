@@ -43,18 +43,23 @@ Maybe<void> XrtLaunchOp::InferLogicalOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc& parallel_desc) const {
   const auto &launch_conf = op_conf().xrt_launch_conf();
-  const auto &in_out_logical_blob_desc = launch_conf.input_output_logical_blob_desc();
+  const auto &io_mapping = launch_conf.input_output_mapping();
+  const auto &lbn2logical_blob_desc = launch_conf.lbn2logical_blob_desc();
   // check input blob descs
   for (const std::string &bn : this->input_bns()) {
     const LogicalBlobId &lbi = this->BnInOp2Lbi(bn);
-    auto it = in_out_logical_blob_desc.find(GenLogicalBlobName(lbi));
-    CHECK_OR_RETURN(it != in_out_logical_blob_desc.end());
+    std::string blob_name = xrt::BlobIdToName(lbi);
+    const std::string &mapping_input = io_mapping.at(blob_name);
+    auto it = lbn2logical_blob_desc.find(mapping_input);
+    CHECK_OR_RETURN(it != lbn2logical_blob_desc.end());
     CHECK_OR_RETURN(*BlobDesc4BnInOp(bn) == BlobDesc(it->second));
   }
   for (const std::string &bn : this->output_bns()) {
     const LogicalBlobId &lbi = this->BnInOp2Lbi(bn);
-    auto it = in_out_logical_blob_desc.find(GenLogicalBlobName(lbi));
-    CHECK_OR_RETURN(it != in_out_logical_blob_desc.end());
+    std::string blob_name = xrt::BlobIdToName(lbi);
+    const std::string &mapping_output = io_mapping.at(blob_name);
+    auto it = lbn2logical_blob_desc.find(mapping_output);
+    CHECK_OR_RETURN(it != lbn2logical_blob_desc.end());
     *BlobDesc4BnInOp(bn) = BlobDesc(it->second);
   }
   return Maybe<void>::Ok();
@@ -66,6 +71,8 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
     const ParallelContext *parallel_ctx, const SbpSignature* sbp_signature) const {
   const auto &launch_conf = op_conf().xrt_launch_conf();
   const auto &io_mapping = launch_conf.input_output_mapping();
+  const auto &lbn2logical_blob_desc = launch_conf.lbn2logical_blob_desc();
+
   // Prepare outer input blob descs
   std::unordered_map<std::string, BlobDesc> blob_descs;
   for (const std::string &bn : this->input_bns()) {
@@ -85,8 +92,9 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
     DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf().device_tag()));
     auto graph =
         xrt::BuildXrtGraph(launch_conf.function(), device_type, this->job_desc());
-    xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(), parallel_ctx,
-                    &sbp_signatures, &blob_descs);
+    const ParallelDesc& op_parallel_desc = *JUST(GetOpParallelDesc());
+    xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(), parallel_ctx, &op_parallel_desc,
+                    &sbp_signatures, &lbn2logical_blob_desc, &blob_descs);
   }
 
   // Fetch output blob descs
