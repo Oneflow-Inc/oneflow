@@ -118,11 +118,11 @@ jobs:
           test_suite: ${{matrix.test_suite }}
         run: |
           echo "test_suite=${test_suite}" >> $GITHUB_ENV
+          sha_sub_dir=pr/${{ github.event.pull_request.number }}/$GITHUB_SHA/${{matrix.test_suite }}
+          sha_dir=$HOME/ci-static/$sha_sub_dir
+          mkdir -p $sha_dir
           if [ "$test_suite" == "cuda" ]; then
             export suffix="cu102"
-            sha_sub_dir=pr/${{ github.event.pull_request.number }}/$GITHUB_SHA/${{matrix.test_suite }}
-            sha_dir=ci-static/$sha_sub_dir
-            mkdir -p $sha_dir
             scp -r ${{ secrets.CI_LOCAL_STATIC_HOST }}:$sha_dir/bin $sha_dir
             echo "bin_dir=$sha_dir/bin" >> $GITHUB_ENV
           fi
@@ -135,8 +135,8 @@ jobs:
           fi
           extra_docker_args=""
           ONEFLOW_PIP_INDEX="http://${{ secrets.CI_LOCAL_STATIC_HOST }}:${{ secrets.CI_LOCAL_STATIC_PORT }}/${sha_sub_dir}/whl"
-          extra_docker_args+="--env ONEFLOW_PIP_INDEX=${ONEFLOW_PIP_INDEX}"
-          extra_docker_args+="--env ONEFLOW_PACKAGE_NAME=oneflow_${suffix}"
+          extra_docker_args+=" --env ONEFLOW_PIP_INDEX=${ONEFLOW_PIP_INDEX}"
+          extra_docker_args+=" --env ONEFLOW_PACKAGE_NAME=oneflow_${suffix}"
           echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
       - name: Fix permissions
         run: |
