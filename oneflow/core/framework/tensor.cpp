@@ -21,6 +21,31 @@ limitations under the License.
 namespace oneflow {
 
 namespace one {
+
+Maybe<int64_t> FascadeTensor::ndim() const {
+  return JUST(tensor_->DetermineAndDestroySelf())->ndim();
+}
+
+Maybe<bool> FascadeTensor::is_cuda() const {
+  return JUST(tensor_->DetermineAndDestroySelf())->is_cuda();
+}
+
+Maybe<int64_t> FascadeTensor::nelement() const {
+  return JUST(tensor_->DetermineAndDestroySelf())->nelement();
+}
+
+Maybe<int64_t> FascadeTensor::dim(int64_t index) const {
+  return JUST(tensor_->DetermineAndDestroySelf())->dim(index);
+}
+
+Maybe<const FunctionNode> FascadeTensor::grad_fn_node() const {
+  return JUST(tensor_->DetermineAndDestroySelf())->grad_fn_node();
+}
+
+Maybe<Tensor> FascadeTensor::acc_grad() const {
+  return JUST(tensor_->DetermineAndDestroySelf())->acc_grad();
+}
+
 Maybe<const compatible_py::Distribute> UndeterminedTensor::distribute() const {
   CHECK_OR_RETURN(distribute_) << Error::ValueError("Distribute is not determined.");
   return distribute_;
@@ -38,12 +63,13 @@ Maybe<const Device> UndeterminedTensor::device() const {
 
 Maybe<DeterminedTensor> UndeterminedTensor::DetermineAndDestroySelf() {
   if (JUST(is_consistent())) {
-    return std::static_pointer_cast<DeterminedTensor>(
-        ConsistentTensor::MakeTensor(shape(), dtype(), JUST(distribute()), JUST(parallel_desc()),
-                                     is_lazy(), requires_grad(), is_leaf(), retain_grad()));
+    return std::static_pointer_cast<DeterminedTensor>(ConsistentTensor::MakeTensor(
+        JUST(shape()), JUST(dtype()), JUST(distribute()), JUST(parallel_desc()), JUST(is_lazy()),
+        JUST(requires_grad()), JUST(is_leaf()), JUST(retain_grad())));
   } else {
-    return std::static_pointer_cast<DeterminedTensor>(MirroredTensor::MakeTensor(
-        shape(), dtype(), JUST(device()), is_lazy(), requires_grad(), is_leaf(), retain_grad()));
+    return std::static_pointer_cast<DeterminedTensor>(
+        MirroredTensor::MakeTensor(JUST(shape()), JUST(dtype()), JUST(device()), JUST(is_lazy()),
+                                   JUST(requires_grad()), JUST(is_leaf()), JUST(retain_grad())));
   }
 }
 
@@ -64,11 +90,11 @@ std::shared_ptr<MirroredTensor> MirroredTensor::MakeTensor(
 
 Maybe<bool> MirroredTensor::is_cuda() const { return JUST(device())->type() == "cuda"; }
 
-int64_t MirroredTensor::ndim() const { return shape()->NumAxes(); }
+Maybe<int64_t> MirroredTensor::ndim() const { return JUST(shape())->NumAxes(); }
 
-int64_t MirroredTensor::dim(int64_t index) const { return shape()->At(index); }
+Maybe<int64_t> MirroredTensor::dim(int64_t index) const { return JUST(shape())->At(index); }
 
-int64_t MirroredTensor::nelement() const { return shape()->elem_cnt(); }
+Maybe<int64_t> MirroredTensor::nelement() const { return JUST(shape())->elem_cnt(); }
 
 std::shared_ptr<ConsistentTensor> ConsistentTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
@@ -90,11 +116,11 @@ Maybe<bool> ConsistentTensor::is_cuda() const {
   return JUST(parallel_desc())->device_type() == DeviceType::kGPU;
 }
 
-int64_t ConsistentTensor::dim(int64_t index) const { return shape()->At(index); }
+Maybe<int64_t> ConsistentTensor::dim(int64_t index) const { return JUST(shape())->At(index); }
 
-int64_t ConsistentTensor::nelement() const { return shape()->elem_cnt(); }
+Maybe<int64_t> ConsistentTensor::nelement() const { return JUST(shape())->elem_cnt(); }
 
-int64_t ConsistentTensor::ndim() const { return shape()->NumAxes(); }
+Maybe<int64_t> ConsistentTensor::ndim() const { return JUST(shape())->NumAxes(); }
 
 }  // namespace one
 
