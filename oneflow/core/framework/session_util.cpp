@@ -29,7 +29,10 @@ Maybe<HashMap<int64_t, std::shared_ptr<Session>>*> GlobalId2SessionMap() {
 
 Session::Session(int64_t id, const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
                  const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list)
-    : id_(id), instruction_list_(instruction_list), eager_symbol_list_(symbol_list) {}
+    : id_(id),
+      instruction_list_(instruction_list),
+      eager_symbol_list_(symbol_list),
+      snapshot_mgr_(new SnapshotManager) {}
 
 int64_t Session::id() const { return id_; }
 

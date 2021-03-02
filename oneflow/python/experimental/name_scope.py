@@ -72,18 +72,18 @@ def name_scope(name: str) -> None:
 def name_scope_stack_push(name):
     job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     sess = session_context.GetDefaultSession()
-    sess.name_scope_stack_push(job_name, name)
+    sess.NameScopeStackPush(job_name, name)
 
 
 def name_scope_stack_pop():
     job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     sess = session_context.GetDefaultSession()
-    sess.name_scope_stack_pop(job_name)
+    sess.NameScopeStackPop(job_name)
 
 
 def GetJobNameScopePrefix(job_name):
     sess = session_context.GetDefaultSession()
-    return sess.GetJobNameScopePrefix()
+    return sess.GetJobNameScopePrefix(job_name)
 
 
 def PrependOpNamePrefixIfNeed(op_conf):

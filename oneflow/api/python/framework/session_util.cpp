@@ -47,9 +47,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Session, PySession>(m, "Session")
       .def(py::init<int64_t>())
       .def_property_readonly("id", &Session::id)
-      .def("instruction_list", &Session::instruction_list)
-      .def("eager_symbol_list", &Session::eager_symbol_list)
-      .def("snapshot_mgr", &Session::snapshot_mgr)
+      .def("instruction_list_", &Session::instruction_list)
+      .def("eager_symbol_list_", &Session::eager_symbol_list)
+      .def("snapshot_mgr_", &Session::snapshot_mgr)
       .def("TryGetVariableBlobOfJobFromStash", &Session::TryGetVariableBlobOfJobFromStash)
       .def("GetJobNameScopePrefix", &Session::GetJobNameScopePrefix);
 

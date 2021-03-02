@@ -135,11 +135,11 @@ class Session(oneflow_api.Session):
 
     @property
     def instruction_list(self):
-        return self.instruction_list()
+        return self.instruction_list_()
 
     @property
     def eager_symbol_list(self):
-        return self.eager_symbol_list()
+        return self.eager_symbol_list_()
 
     @property
     def backward_blob_register(self):
@@ -147,7 +147,7 @@ class Session(oneflow_api.Session):
 
     @property
     def snapshot_mgr(self):
-        return self.snapshot_mgr()
+        return self.snapshot_mgr_()
 
     @property
     def var_name2var_blob(self):
@@ -407,7 +407,7 @@ class Session(oneflow_api.Session):
         assert len(self.job_name2name_scope_stack_[job_name]) > 0
         return self.job_name2name_scope_stack_[job_name].pop()
 
-    def GetJobNameScopePrefix(self):
+    def GetJobNameScopePrefix(self, job_name):
         if job_name not in self.job_name2name_scope_stack_:
             return ""
         if len(self.job_name2name_scope_stack_[job_name]) == 0:
