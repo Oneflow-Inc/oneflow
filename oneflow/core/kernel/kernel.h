@@ -218,6 +218,22 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
   REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                     \
   }
 
+#define ADD_DEVICE_TYPE_KERNEL_CREATOR_INCLUDING_FAKE(op_type_case, kernel_class)            \
+  namespace {                                                                                \
+                                                                                             \
+  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {                 \
+    static const HashMap<int, std::function<Kernel*()>> creators = {                         \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(                                                    \
+            MAKE_DEVICE_TYPE_KERNEL_CREATOR_ENTRY, (kernel_class),                           \
+            DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kFAKEDEVICE))};                 \
+    DeviceType device_type =                                                                 \
+        CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag())); \
+    return creators.at(device_type)();                                                       \
+  }                                                                                          \
+                                                                                             \
+  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                  \
+  }
+
 #define MAKE_CPU_KERNEL_CREATOR_ENTRY(kernel_class, data_type_pair) \
   {OF_PP_PAIR_SECOND(data_type_pair),                               \
    []() { return new kernel_class<OF_PP_PAIR_FIRST(data_type_pair)>(); }},

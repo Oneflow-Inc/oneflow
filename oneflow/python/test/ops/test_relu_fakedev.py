@@ -19,30 +19,41 @@ import numpy as np
 import oneflow as flow
 import oneflow.typing as tp
 
-config = flow.function_config()
 flow.config.enable_debug_mode(True)
 flow.config.enable_legacy_model_io(True)
 
 
-def make_job(input_shape, dtype=flow.float32):
-    @flow.global_function(type="predict", function_config=config)
-    def relu_job(x: tp.Numpy.Placeholder(input_shape)) -> tp.Numpy:
-        with flow.scope.placement("fakedevice", "0:0"):
+def flow_relu(x):
+    def make_job(input_shape, dtype=flow.float32):
+        config = flow.function_config()
+        config.default_placement_scope(flow.scope.placement("fakedevice", "0:0"))
+
+        @flow.global_function(type="predict", function_config=config)
+        def relu_job(x: tp.Numpy.Placeholder(input_shape)) -> tp.Numpy:
             return flow.math.relu(x)
 
-    return relu_job
+        return relu_job
 
-
-def _compare_with_np(input_shape):
-    x = np.random.random(input_shape).astype(np.float32)
     relu_fakedev_job = make_job(x.shape, dtype=flow.float32)
     y = relu_fakedev_job(x)
+    return y
+
+
+def np_relu(x):
+    return np.where(x > 0, x, 0)
+
+
+def _compare_with_np(test_case, input_shape):
+    x = np.random.random(input_shape).astype(np.float32)
+    np_res = np_relu(x)
+    flow_res = flow_relu(x)
+    test_case.assertTrue(np.array_equal(np_res, flow_res))
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestRelu(flow.unittest.TestCase):
     def test_random_value(test_case):
-        _compare_with_np((2, 3))
+        _compare_with_np(test_case, (2, 3))
 
 
 if __name__ == "__main__":

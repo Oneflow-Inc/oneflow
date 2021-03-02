@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/cpu_thread.h"
 #include "oneflow/core/thread/gpu_thread.h"
+#include "oneflow/core/thread/fake_device_thread.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -40,6 +41,10 @@ Thread* NewThread(StreamId stream_id) {
       break;
     }
 #endif
+    case DeviceType::kFAKEDEVICE: {
+      thread = new FakeDeviceThread(thrd_id);
+      break;
+    }
     case DeviceType::kCPU: {
       thread = new CpuThread(thrd_id);
       break;

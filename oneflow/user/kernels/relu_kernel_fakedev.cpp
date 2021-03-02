@@ -31,8 +31,9 @@ class ReluKernelFakeDev final : public user_op::OpKernel {
     printf("FakeDev Relu\n");
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
-    // NewKernelUtil<device_type>::Relu(ctx->device_ctx(), x->shape().elem_cnt(), x->dptr<T>(),
-    //                                  y->mut_dptr<T>());
+    for (int i = 0; i < x->shape().elem_cnt(); i++) {
+      y->mut_dptr<T>()[i] = std::max<T>(x->dptr<T>()[i], 0);
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -62,6 +63,7 @@ class ReluGradKernelFakeDev final : public user_op::OpKernel {
     const user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    TODO();
     // NewKernelUtil<device_type>::ReluBackward(ctx->device_ctx(), y_blob->shape().elem_cnt(),
     //                                          y_blob->dptr<T>(), y_blob->dptr<T>(),
     //                                          dy_blob->dptr<T>(), dx_blob->mut_dptr<T>());

@@ -48,14 +48,8 @@ void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
 
 template<>
 void Memcpy<DeviceType::kFAKEDEVICE>(DeviceCtx* ctx, void* dst, const void* src, size_t sz) {
-  int magic_code_dst = *(static_cast<int*>(dst) - 1);
-  int magic_code_src = *(static_cast<const int*>(src) - 1);
-  if (magic_code_dst != FAKE_MAGIC_CODE && magic_code_src != FAKE_MAGIC_CODE) {
-    UNIMPLEMENTED();
-  } else {
-    if (dst == src) { return; }
-    memcpy(dst, src, sz);
-  }
+  if (dst == src) { return; }
+  memcpy(dst, src, sz);
 }
 
 template<>
