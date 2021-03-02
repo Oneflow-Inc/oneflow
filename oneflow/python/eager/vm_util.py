@@ -83,105 +83,13 @@ def _DefaultBlobObject4Ibn(ibn):
     raise NotImplementedError
 
 
-def InsertRemoveForeignCallbackInstruction(self, object_id, callback):
-    unique_callback_id = python_callback.GetIdForRegisteredCallback(callback)
-    instruction = instr_cfg.InstructionProto()
-    instruction.set_instr_type_name("RemoveForeignCallback")
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.DelObjectOperand(object_id)
-    )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.Int64Operand(unique_callback_id)
-    )
-    self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-
-def FetchBlobHeader(self, blob_object, callback):
-    return self._FetchBlob("FetchBlobHeader", blob_object, callback)
-
-
-def FetchBlobBody(self, blob_object, callback):
-    return self._FetchBlob("FetchBlobBody", blob_object, callback)
-
-
-def MakeLazyRefBlobObject(self, interface_op_name):
-    sess = session_ctx.GetDefaultSession()
-    op_attribute = sess.OpAttribute4InterfaceOpName(interface_op_name)
-    assert len(op_attribute.output_bns) == 1
-    obn = op_attribute.output_bns[0]
-
-    parallel_conf = sess.ParallelConf4LazyInterfaceOpName(interface_op_name)
-    if not isinstance(
-        parallel_conf, oneflow_api.oneflow.core.job.placement.ParallelConf
-    ):
-        parallel_conf_cfg = placement_cfg.ParallelConf()
-        parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
-        for device_name in parallel_conf.device_name:
-            parallel_conf_cfg.add_device_name(device_name)
-        parallel_conf = parallel_conf_cfg
-    blob_parallel_desc_sym = self.GetParallelDescSymbol(parallel_conf)
-
-    op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
-        blob_parallel_desc_sym, str(op_attribute), obn
-    )
-    op_arg_blob_attr = oneflow_api.GetOpArgBlobAttribute(str(op_attribute), obn)
-
-    blob_object = self.NewBlobObject(op_arg_parallel_attr, op_arg_blob_attr)
-    self.LazyReference(blob_object, interface_op_name)
-    return blob_object
-
-
 @contextmanager
-def CudaHostPinBlob(self, blob_object):
-    self.CudaHostRegisterBlob(blob_object)
+def CudaHostPinBlob(build, blob_object):
+    build.CudaHostRegisterBlob(blob_object)
     try:
         yield
     finally:
-        self.CudaHostUnregisterBlob(blob_object)
-
-
-def _FetchBlob(self, instruction_name, blob_object, fetcher):
-    unique_callback_id = python_callback.GetIdForRegisteredCallback(fetcher)
-    instruction = instr_cfg.InstructionProto()
-    device_tag = blob_object.parallel_desc_symbol.device_tag
-    instruction.set_instr_type_name("%s.%s" % (device_tag, instruction_name))
-    instruction.set_parallel_desc_symbol_id(blob_object.parallel_desc_symbol.symbol_id)
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.ConstOperand(blob_object.object_id)
-    )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.Int64Operand(unique_callback_id)
-    )
-    self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-
-def FeedBlob(self, blob_object, feeder):
-    unique_callback_id = python_callback.GetIdForRegisteredCallback(feeder)
-    instruction = instr_cfg.InstructionProto()
-    device_tag = blob_object.parallel_desc_symbol.device_tag
-    instruction.set_instr_type_name("%s.%s" % (device_tag, "FeedBlob"))
-    instruction.set_parallel_desc_symbol_id(blob_object.parallel_desc_symbol.symbol_id)
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.Mut2Operand(blob_object.object_id)
-    )
-    instruction.mutable_operand().Add().CopyFrom(
-        oneflow_api.deprecated.vm.Int64Operand(unique_callback_id)
-    )
-    self.instruction_list().mutable_instruction().Add().CopyFrom(instruction)
-
-
-def RegisterMethod4InstructionsBuilder():
-    oneflow_api.deprecated.InstructionsBuilder.InsertRemoveForeignCallbackInstruction = (
-        InsertRemoveForeignCallbackInstruction
-    )
-    oneflow_api.deprecated.InstructionsBuilder.FetchBlobHeader = FetchBlobHeader
-    oneflow_api.deprecated.InstructionsBuilder.FetchBlobBody = FetchBlobBody
-    oneflow_api.deprecated.InstructionsBuilder.MakeLazyRefBlobObject = (
-        MakeLazyRefBlobObject
-    )
-    oneflow_api.deprecated.InstructionsBuilder.CudaHostPinBlob = CudaHostPinBlob
-    oneflow_api.deprecated.InstructionsBuilder._FetchBlob = _FetchBlob
-    oneflow_api.deprecated.InstructionsBuilder.FeedBlob = FeedBlob
+        build.CudaHostUnregisterBlob(blob_object)
 
 
 def _FindOrCreateDelegateBlobObject(

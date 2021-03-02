@@ -379,20 +379,6 @@ message ModelSaveV2OpConf {
   required string tick = 6;
 }
 
-message DynamicBinarySplitOpConf {
-  required string in = 1;
-  repeated string out = 2;
-  required int32 base_shift = 3;
-}
-
-message DynamicBinaryConcatOpConf {
-  repeated string in = 1;
-  required string out = 2;
-  required DataType out_data_type = 3;
-  required ShapeProto out_shape = 4;
-  required SbpParallel out_sbp = 6;
-}
-
 message UniqueWithCountsOpConf {
   required string x = 1;
   required string y = 2;
@@ -534,8 +520,6 @@ message OperatorConf {
     DistributeCloneOpConf distribute_clone_conf = 157;
     DistributeAddOpConf distribute_add_conf = 158;
     DeviceTickOpConf device_tick_conf = 159;
-    DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
-    DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
     SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
     SliceBoxingAddOpConf slice_boxing_add_conf = 167;
     TensorBufferToTensorListOpConf tensor_buffer_to_tensor_list_conf = 168;
