@@ -28,7 +28,7 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
-import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
@@ -92,10 +92,10 @@ def EagerReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
                 remote_blob.blob_object.parallel_desc_symbol.parallel_conf,
                 bn_in_op2blob_object,
                 boxing_util.BoxingTo,
-                vm_util._FindOrCreateDelegateBlobObject,
+                blob_cache_util.FindOrCreateDelegateBlobObject,
             )
 
-    vm_util.LogicalRun(BuildInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInstruction)
     return remote_blob_util.RemoteBlob(lbi)
 
 
