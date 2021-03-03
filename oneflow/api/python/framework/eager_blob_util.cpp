@@ -28,8 +28,7 @@ namespace compatible_py {
 namespace {
 
 Maybe<EagerPhysicalBlobHeader> CreateEagerPhysicalBlobHeader(const py::tuple& py_static_shape,
-                                                             const py::tuple& py_shape,
-                                                             int dtype) {
+                                                             const py::tuple& py_shape, int dtype) {
   DimVector static_shape_dims;
   CHECK_OR_RETURN(py::isinstance<py::tuple>(py_static_shape));
   for (auto dim : py_static_shape) { static_shape_dims.emplace_back(dim.cast<int64_t>()); }
@@ -48,8 +47,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<EagerPhysicalBlobHeader, std::shared_ptr<EagerPhysicalBlobHeader>>(
       m, "EagerPhysicalBlobHeader")
       .def(py::init([](const py::tuple& py_static_shape, const py::tuple& py_shape, int dtype) {
-        return CreateEagerPhysicalBlobHeader(py_static_shape, py_shape, dtype)
-            .GetPtrOrThrow();
+        return CreateEagerPhysicalBlobHeader(py_static_shape, py_shape, dtype).GetPtrOrThrow();
         ;
       }))
       .def_property_readonly("static_shape",

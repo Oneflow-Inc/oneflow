@@ -201,7 +201,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
   }
-  
+
   const ArgVec& inputs() const override { return inputs_; }
   const ArgVec& outputs() const override { return outputs_; }
   const JobDesc& job_desc() const override { return job_desc_; }

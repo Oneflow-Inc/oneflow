@@ -183,13 +183,6 @@ def JobBuildAndInferCtx_DisableBoxing(job_name, lbn):
     return ret
 
 
-def JobBuildAndInferCtx_IsTensorList(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    ret = oneflow_api.JobBuildAndInferCtx_IsTensorList(job_name, lbn)
-    return ret
-
-
 def JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)

@@ -104,4 +104,5 @@ def _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield):
 def _MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield):
     def FetchFromOfBlob(ofblob):
         Yield(ofblob.CopyToNdarray())
+
     return FetchFromOfBlob

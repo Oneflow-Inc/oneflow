@@ -69,8 +69,7 @@ bool CopyCommNetActor::NormalTryProcessReadableMsgFromOtherMachine(const ActorMs
   regst_ctx.regst_raw_ptr = msg.regst();
   regst_ctx.producer = msg.src_actor_id();
   regst_ctx.act_id = msg.act_id();
-  regst_ctx.has_sole_empty_blob =
-      msg.has_sole_empty_blob();
+  regst_ctx.has_sole_empty_blob = msg.has_sole_empty_blob();
   CHECK(piece_id2regst_ctx_.emplace(msg.piece_id(), regst_ctx).second);
   return true;
 }

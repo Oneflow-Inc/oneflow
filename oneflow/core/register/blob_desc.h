@@ -33,8 +33,7 @@ class BlobDesc final {
   explicit BlobDesc(DataType dtype) : BlobDesc(Shape(), dtype) {}
   explicit BlobDesc(const BlobDescProto& proto);
   explicit BlobDesc(const BlobDesc&);
-  BlobDesc(const TensorPodDesc& body, bool is_dynamic)
-      : body_(body), is_dynamic_(is_dynamic) {}
+  BlobDesc(const TensorPodDesc& body, bool is_dynamic) : body_(body), is_dynamic_(is_dynamic) {}
 
   static const int32_t kAlignSize = 512;
 

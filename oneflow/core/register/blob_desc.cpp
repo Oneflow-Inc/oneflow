@@ -79,9 +79,8 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
     proto->set_header_is_opaque(true);
   } else {
     StructPodDesc header;
-    header.AddField(
-        FieldKey::kTensorShape,
-        TensorPodDesc(Shape(DimVector{shape().NumAxes()}), DataType::kInt64));
+    header.AddField(FieldKey::kTensorShape,
+                    TensorPodDesc(Shape(DimVector{shape().NumAxes()}), DataType::kInt64));
     header.ToProto(proto->mutable_header());
     proto->set_header_is_opaque(false);
   }
@@ -104,13 +103,11 @@ void BlobDesc::SetOpaqueHeader(const StructPodDesc& header_pod_desc) {
   opaque_header_.reset(new StructPodDesc(header_pod_desc));
 }
 
-void BlobDesc::set_is_dynamic(bool is_dynamic) {
-  is_dynamic_ = is_dynamic;
-}
+void BlobDesc::set_is_dynamic(bool is_dynamic) { is_dynamic_ = is_dynamic; }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
-  return (body_ == rhs.body_) 
-         && (is_dynamic_ == rhs.is_dynamic_) && (opaque_header_ == rhs.opaque_header_);
+  return (body_ == rhs.body_) && (is_dynamic_ == rhs.is_dynamic_)
+         && (opaque_header_ == rhs.opaque_header_);
 }
 
 }  // namespace oneflow

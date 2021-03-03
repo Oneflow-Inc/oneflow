@@ -40,17 +40,6 @@ class LocalMirroredTensor(object):
     def is_dynamic(self):
         return self.is_dynamic_
 
-    def ndarray_list(self):
-        print(
-            "WARNING:",
-            "LocalMirroredTensor.ndarray_list is deprecated, please use LocalMirroredTensor.numpy_list\n",
-            traceback.format_stack()[-2],
-        )
-        return self.numpy_list()
-
-    def numpy_list(self):
-        return self.ndarray_list_
-
     def ndarray(self):
         print(
             "WARNING:",
@@ -75,43 +64,10 @@ class LocalMirroredTensor(object):
         return getattr(self.numpy(), attr)
 
 
-class LocalMirroredTensorList(object):
-    def __init__(self, ndarray_lists=None):
-        assert isinstance(ndarray_lists, (list, tuple))
-        for ndarray_list in ndarray_lists:
-            assert isinstance(ndarray_list, (list, tuple))
-            assert all(isinstance(ndarray, np.ndarray) for ndarray in ndarray_list)
-        self.ndarray_lists_ = ndarray_lists
-
-    def ndarray_lists(self):
-        print(
-            "WARNING:",
-            "LocalMirroredTensorList.ndarray_lists is deprecated, please use LocalMirroredTensorList.numpy_lists",
-        )
-        return self.numpy_lists()
-
-    def numpy_lists(self):
-        return self.ndarray_lists_
-
-    def numpy_list(self, parallel_id=None):
-        if parallel_id is None:
-            assert len(self.ndarray_lists_) == 0
-            return self.ndarray_lists_[0]
-        else:
-            assert parallel_id >= 0
-            assert len(self.ndarray_lists_) > parallel_id
-            return self.ndarray_lists_[parallel_id]
-
-    def parallel_num():
-        return len(self.ndarray_lists_)
-
-
 def MakeLocalBlob(ndarray_lists, consistent_blob):
     assert isinstance(consistent_blob, oneflow_api.ConsistentBlob), type(
         consistent_blob
     )
-    if consistent_blob.is_tensor_list:
-        return LocalMirroredTensorList(ndarray_lists)
     assert len(ndarray_lists) == 1
     return LocalMirroredTensor(
         ndarray_lists[0],
@@ -122,13 +78,9 @@ def MakeLocalBlob(ndarray_lists, consistent_blob):
 
 def MergeLocalBlobs(local_blob_list, mirrored_blob):
     assert isinstance(mirrored_blob, oneflow_api.MirroredBlob)
-    if mirrored_blob.is_tensor_list:
-        for local_blob in local_blob_list:
-            assert type(local_blob) is LocalMirroredTensorList
-        return LocalMirroredTensorList([x.numpy_lists()[0] for x in local_blob_list])
     # NOTE(chengcheng): concat_axis=split_axis just to be sure. Will delete in multi-client.
     return LocalMirroredTensor(
-        [x.numpy_list()[0] for x in local_blob_list],
+        [x.numpy() for x in local_blob_list],
         is_dynamic=mirrored_blob.is_dynamic,
         concat_axis=mirrored_blob.split_axis,
     )
@@ -136,9 +88,7 @@ def MergeLocalBlobs(local_blob_list, mirrored_blob):
 
 def MakeLocalBlob4EagerBlob(eager_blob):
     assert isinstance(eager_blob, oneflow_api.EagerBlobTrait)
-    if eager_blob.is_tensor_list:
-        return LocalMirroredTensorList(eager_blob.numpy_list())
-    elif isinstance(eager_blob, oneflow_api.EagerMirroredBlob):
+    if isinstance(eager_blob, oneflow_api.EagerMirroredBlob):
         # NOTE(chengcheng): concat_axis=split_axis just to be sure. Will delete in multi-client.
         return LocalMirroredTensor(
             [eager_blob.numpy(i) for i in range(eager_blob.numpy_size())],

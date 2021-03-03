@@ -29,8 +29,7 @@ namespace compatible_py {
 class EagerPhysicalBlobHeader : public BlobHeaderTrait {
  public:
   EagerPhysicalBlobHeader(const std::shared_ptr<Shape>& static_shape,
-                          const std::shared_ptr<Shape>& shape,
-                          DataType dtype);
+                          const std::shared_ptr<Shape>& shape, DataType dtype);
   EagerPhysicalBlobHeader(const EagerPhysicalBlobHeader& other) = default;
   ~EagerPhysicalBlobHeader() = default;
 

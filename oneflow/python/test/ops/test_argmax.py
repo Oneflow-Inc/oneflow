@@ -33,12 +33,12 @@ def compare_with_tensorflow(device_type, in_shape, axis, data_type):
     assert data_type in ["float32", "double", "int8", "int32", "int64"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_logical_view(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     func_config.default_data_type(flow.float)
 
     @flow.global_function(function_config=func_config)
     def ArgMaxJob(
-        input: oft.ListNumpy.Placeholder(
+        input: oft.Numpy.Placeholder(
             tuple([dim + 10 for dim in in_shape]),
             dtype=type_name_to_flow_type[data_type],
         )
@@ -48,7 +48,7 @@ def compare_with_tensorflow(device_type, in_shape, axis, data_type):
 
     input = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
     # OneFlow
-    of_out = ArgMaxJob([input]).get().numpy_list()[0]
+    of_out = ArgMaxJob(input).get().numpy()
     # TensorFlow
     tf_out = tf.math.argmax(input, axis).numpy()
     tf_out = np.array([tf_out]) if isinstance(tf_out, np.int64) else tf_out

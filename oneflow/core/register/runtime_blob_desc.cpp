@@ -45,8 +45,7 @@ size_t RtBlobDesc::AlignedTotalByteSize() const {
 }
 
 bool RtBlobDesc::operator==(const RtBlobDesc& rhs) const {
-  return (body_ == rhs.body_) && (header_ == rhs.header_)
-         && (is_dynamic_ == rhs.is_dynamic_)
+  return (body_ == rhs.body_) && (header_ == rhs.header_) && (is_dynamic_ == rhs.is_dynamic_)
          && (header_is_opaque_ == rhs.header_is_opaque_);
 }
 

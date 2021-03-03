@@ -44,17 +44,17 @@ def Watch(
     blob_watched: oneflow_api.BlobDesc,
     handler_or_prompt: Optional[Union[Callable, str]] = None,
 ) -> None:
-    r"""Register callback for a blob. The callback function will be called after the computation produce the blob finishes. We can use it to watch the values of Blob. 
+    r"""Register callback for a blob. The callback function will be called after the computation produce the blob finishes. We can use it to watch the values of Blob.
 
     Args:
         blob_watched: a `Blob`
         handler_or_prompt: a function has an argument of a `Blob`
-    
-    For example: 
 
-    Example 1: 
+    For example:
 
-    .. code-block:: python 
+    Example 1:
+
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -82,9 +82,9 @@ def Watch(
 
         # out [2.5 2.5 2.5 2.5 2.5]
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -176,11 +176,11 @@ def WatchDiff(
         blob_watched: a `Blob`
         handler_or_prompt: a function has an argument of a `Blob`
 
-    For example: 
+    For example:
 
-    Example 1: 
+    Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -217,7 +217,7 @@ def WatchDiff(
             return loss
 
 
-        if __name__ == "__main__": 
+        if __name__ == "__main__":
             checkpoint = flow.train.CheckPoint()
             checkpoint.init()
             (train_images, train_labels), (test_images, test_labels) = flow.data.load_mnist(
@@ -225,19 +225,19 @@ def WatchDiff(
             )
             for i, (images, labels) in enumerate(zip(train_images, train_labels)):
                 loss = train_job(images, labels)
-    
-        
+
+
         # watch_diff_handler: [[-1.88834548e-01  2.71021971e-03  2.28271242e-02  7.17673637e-03
         #                       4.10183379e-03  8.93106461e-02  2.23669074e-02  3.86103359e-03
         #                       3.12465224e-02  5.23346756e-03] .....
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        import numpy as np 
+        import numpy as np
 
 
         BATCH_SIZE = 20
@@ -268,8 +268,8 @@ def WatchDiff(
             check_point = flow.train.CheckPoint()
             check_point.init()
 
-            x = np.array([[1, 1, 1], 
-                        [1, 1, 1], 
+            x = np.array([[1, 1, 1],
+                        [1, 1, 1],
                         [1, 1, 1]]).astype(np.float32)
             watch_matmul_diff_job(x)
 
@@ -277,13 +277,13 @@ def WatchDiff(
         #                      [3. 3. 3.]
         #                      [3. 3. 3.]]
 
-    Example 3: 
+    Example 3:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        import numpy as np 
+        import numpy as np
 
 
         def watch_diff_handler(blob: tp.Numpy):
@@ -303,7 +303,7 @@ def WatchDiff(
                     initializer=weight_initializer
                 )
                 output = flow.nn.conv2d(images, weight, strides=1, padding="VALID")
-            
+
             lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
             flow.optimizer.SGD(lr_scheduler, momentum=0.9).minimize(output)
             flow.watch_diff(weight, watch_diff_handler)
@@ -319,7 +319,7 @@ def WatchDiff(
                             [13., 14., 15., 16.]]]]).astype(np.float32)
 
             watch_conv_diff_job(x)
-        
+
         # watch_diff_handler: [[[[14. 18. 22.]
         #                        [30. 34. 38.]
         #                        [46. 50. 54.]]]]
@@ -426,9 +426,4 @@ def _MakeHandler4ParallelIdAndLocalBlob(blob_watched, handler):
 
 
 def GetTypeAnnotation(blob_watched):
-    if not blob_watched.is_dynamic:
-        return oft.Numpy
-    elif not blob_watched.is_tensor:
-        return oft.ListNumpy
-    else:
-        return oft.ListListNumpy
+    return oft.Numpy

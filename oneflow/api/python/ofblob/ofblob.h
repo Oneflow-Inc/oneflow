@@ -41,7 +41,7 @@ inline bool OfBlob_IsDynamic(uint64_t of_blob_ptr) {
   return of_blob->is_dynamic();
 }
 
-inline void OfBlob_CopyShapeFromNumpy(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
+inline void OfBlob_CopyShapeFrom(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
   py::buffer_info buf = array.request();
   int64_t* buf_ptr = (int64_t*)buf.ptr;
   size_t size = buf.size;
@@ -50,7 +50,7 @@ inline void OfBlob_CopyShapeFromNumpy(uint64_t of_blob_ptr, py::array_t<int64_t>
   return of_blob->CopyShapeFrom(buf_ptr, size);
 }
 
-inline void OfBlob_CopyShapeToNumpy(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
+inline void OfBlob_CopyShapeTo(uint64_t of_blob_ptr, py::array_t<int64_t> array) {
   py::buffer_info buf = array.request();
   int64_t* buf_ptr = (int64_t*)buf.ptr;
   size_t size = buf.size;

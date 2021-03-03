@@ -35,7 +35,6 @@ std::string OpArgBlobAttribute::logical_blob_name() const { return logical_blob_
 
 cfg::DataType OpArgBlobAttribute::get_dtype() const { return blob_desc_->body().data_type(); }
 
-
 bool OpArgBlobAttribute::is_dynamic() const { return blob_desc_->is_dynamic(); }
 
 bool OpArgBlobAttribute::operator==(const OpArgBlobAttribute& other) const {

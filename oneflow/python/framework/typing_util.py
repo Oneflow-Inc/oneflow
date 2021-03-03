@@ -74,9 +74,7 @@ def CheckGlobalFunctionReturnAnnotation(cls):
     elif oft.OriginFrom(cls, oft.Bundle):
         assert cls.__args__[0] in (
             oft.Numpy,
-            oft.ListNumpy,
-            oft.ListListNumpy,
-        ), "T in oneflow.typing.Bundle[T] must be one of (oneflow.typing.Numpy, oneflow.typing.ListNumpy, oneflow.typing.ListListNumpy)"
+        ), "T in oneflow.typing.Bundle[T] must be one of (oneflow.typing.Numpy)"
         assert len(cls.__args__) == 1
         _CheckGlobalFunctionReturnAnnotation(cls.__args__[0])
     else:
@@ -170,15 +168,9 @@ def _CheckReturnByAnnotation(function_name, ret, annotation):
             _CheckReturnByAnnotation(function_name, val, annotation.__args__[1])
     elif oft.OriginFrom(annotation, oft.Numpy):
         assert isinstance(ret, oneflow_api.BlobDesc), "type(ret): %s" % type(ret)
-        assert not ret.is_dynamic, (
-            "only fixed shaped blob compatible to oneflow.typing.Numpy. "
-            "you can change annotation to oneflow.typing.ListNumpy "
-            "or oneflow.typing.ListListNumpy"
-        )
-    elif oft.OriginFrom(annotation, oft.ListNumpy):
-        assert isinstance(ret, oneflow_api.BlobDesc), "type(ret): %s" % type(ret)
-    elif oft.OriginFrom(annotation, oft.ListListNumpy):
-        assert isinstance(ret, oneflow_api.BlobDesc), "type(ret): %s" % type(ret)
+        assert (
+            not ret.is_dynamic
+        ), "only fixed shaped blob compatible to oneflow.typing.Numpy. "
     else:
         raise NotImplementedError("invalid return annotation %s found" % annotation)
 
@@ -208,10 +200,7 @@ def TransformReturnedBundle(bundle_blob, annotation):
     the returned bundle blob could be the form like x, [x], (x, ),
     {"key": x} or the mixed form of them.
     """
-    if isinstance(
-        bundle_blob,
-        (local_blob_util.LocalMirroredTensor, local_blob_util.LocalMirroredTensorList),
-    ):
+    if isinstance(bundle_blob, (local_blob_util.LocalMirroredTensor),):
         return TransformReturnedLocalBlob(bundle_blob, annotation.__args__[0])
     elif isinstance(bundle_blob, (list, tuple)):
         return type(bundle_blob)(
@@ -267,8 +256,7 @@ def CheckWatchCallbackParameterAnnotation(parameters):
     if not oft.OriginFrom(annotation, oft.PyStructCompatibleToBlob):
         raise NotImplementedError(
             ("invalid watch callback paremeter annotation %s found. " % annotation)
-            + "candidate annotations: oneflow.typing.Numpy, oneflow.typing.ListNumpy, "
-            "oneflow.typing.ListListNumpy"
+            + "candidate annotations: oneflow.typing.Numpy"
         )
 
 
@@ -276,15 +264,9 @@ def CheckWatchedBlobByAnnotation(blob, annotation):
     if annotation is inspect._empty:
         return
     if oft.OriginFrom(annotation, oft.Numpy):
-        assert not blob.is_dynamic, (
-            "only fixed shaped blob compatible to oneflow.typing.Numpy. "
-            "you can change annotation to oneflow.typing.ListNumpy "
-            "or oneflow.typing.ListListNumpy"
-        )
-    elif oft.OriginFrom(annotation, oft.ListNumpy):
-        pass
-    elif oft.OriginFrom(annotation, oft.ListListNumpy):
-        pass
+        assert (
+            not blob.is_dynamic
+        ), "only fixed shaped blob compatible to oneflow.typing.Numpy. "
     else:
         raise NotImplementedError(
             "invalid watch callback parameter annotation %s found" % annotation
@@ -302,10 +284,6 @@ def TransformWatchedBlob(future_blob, handler):
 def TransformLocalBlob(future_blob, annotation):
     if oft.OriginFrom(annotation, oft.Numpy):
         return future_blob.numpy()
-    elif oft.OriginFrom(annotation, oft.ListNumpy):
-        return future_blob.numpy_list()
-    elif oft.OriginFrom(annotation, oft.ListListNumpy):
-        return future_blob.numpy_lists()
     else:
         raise NotImplementedError(
             "invalid watch callback parameter annotation %s found" % annotation
