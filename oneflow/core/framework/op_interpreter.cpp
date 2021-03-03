@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter_util.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/scope_util.h"
@@ -121,7 +122,8 @@ static Maybe<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>> M
   auto* bn2blob_object(new HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>{});
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& ibn = op_expr->indexed_ibns().at(i);
-    bn2blob_object->emplace(ibn, dynamic_cast<DeterminedTensor*>(inputs[i].get())->blob_object());
+    const auto& blob_object = JUST(OpInterpUtil::GetTensorBlobObject(inputs[i]));
+    bn2blob_object->emplace(ibn, blob_object);
   }
   return std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>(
       bn2blob_object);
@@ -132,20 +134,23 @@ static Maybe<Tensor> BuildTensorFromBlobObject(
   std::shared_ptr<Tensor> tensor;
   const auto& blob_attr = blob_object->op_arg_blob_attr();
   const auto& parallel_attr = blob_object->op_arg_parallel_attr();
-  DataType dtype = DataType(blob_attr->get_dtype());
+  const auto& dtype = JUST(DType::GetDTypeByDataType(DataType(blob_attr->get_dtype())));
   if (parallel_attr->is_mirrored()) {
     // TOOD(hjchen2): Use the right device.
-    auto impl = std::make_shared<EagerMirroredTensorImpl>(blob_attr->shape(), dtype,
-                                                          std::make_shared<Device>("cpu", 0));
+    auto impl = std::make_shared<EagerMirroredTensorImpl>(
+        blob_attr->shape(), dtype, std::make_shared<Device>("cpu", 0), /*requires_grad=*/false,
+        /*is_leaf=*/false, /*retain_grad=*/false);
     tensor = std::make_shared<MirroredTensor>(impl);
+    dynamic_cast<MirroredTensor*>(tensor.get())->set_blob_object(blob_object);
   } else {
     const auto& distribute =
         compatible_py::MakeDistribute(*(parallel_attr->sbp_parallel())).GetPtrOrThrow();
-    auto impl = std::make_shared<EagerConsistentTensorImpl>(blob_attr->shape(), dtype, distribute,
-                                                            parallel_attr->parallel_desc_symbol());
+    auto impl = std::make_shared<EagerConsistentTensorImpl>(
+        blob_attr->shape(), dtype, distribute, parallel_attr->parallel_desc_symbol(),
+        /*requires_grad=*/false, /*is_leaf=*/false, /*retain_grad=*/false);
     tensor = std::make_shared<ConsistentTensor>(impl);
+    dynamic_cast<ConsistentTensor*>(tensor.get())->set_blob_object(blob_object);
   }
-  dynamic_cast<DeterminedTensor*>(tensor.get())->set_blob_object(blob_object);
   return tensor;
 }
 
@@ -199,18 +204,20 @@ Maybe<void> EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const Tensor
   op_attribute->ToProto(&proto_op_attribute);
 
   const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(proto_op_attribute, "out"));
-  DataType dtype = DataType(blob_attr->get_dtype());
+  const auto& dtype = JUST(DType::GetDTypeByDataType(DataType(blob_attr->get_dtype())));
   const auto& mirrored_sig_map =
       proto_op_attribute.mirrored_signature().bn_in_op2opt_mirrored_parallel();
   if (mirrored_sig_map.at("out").has_mirrored_parallel()) {
-    auto impl = std::make_shared<EagerMirroredTensorImpl>(blob_attr->shape(), dtype,
-                                                          std::make_shared<Device>("cpu", 0));
+    auto impl = std::make_shared<EagerMirroredTensorImpl>(
+        blob_attr->shape(), dtype, std::make_shared<Device>("cpu", 0), /*requires_grad=*/false,
+        /*is_leaf=*/false, /*retain_grad=*/false);
     outputs[0].reset(new MirroredTensor(impl));
   } else {
     auto parallel_desc =
         std::make_shared<ParallelDesc>(scope->device_parallel_desc_symbol()->parallel_conf());
     auto impl = std::make_shared<EagerConsistentTensorImpl>(
-        blob_attr->shape(), dtype, compatible_py::GlobalAutoDistribute(), parallel_desc);
+        blob_attr->shape(), dtype, compatible_py::GlobalAutoDistribute(), parallel_desc,
+        /*requires_grad=*/false, /*is_leaf=*/false, /*retain_grad=*/false);
     outputs[0].reset(new ConsistentTensor(impl));
   }
   return OpInterpUtil::InitVariableOutputBlob(session, outputs[0], proto_op_attribute);

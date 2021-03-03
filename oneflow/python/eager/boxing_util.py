@@ -983,6 +983,7 @@ conditional_function_table = [
     ),
 ]
 
+
 class BoxingUtil(oneflow_api.ForeignBoxingUtil):
     def __init__(self):
         oneflow_api.ForeignBoxingUtil.__init__(self)
@@ -995,6 +996,7 @@ class BoxingUtil(oneflow_api.ForeignBoxingUtil):
 
     def Assign(self, builder, target_blob_object, source_blob_object):
         return Assign(builder, target_blob_object, source_blob_object)
+
 
 _global_boxing_util = BoxingUtil()
 oneflow_api.RegisterBoxingUtilOnlyOnce(_global_boxing_util)

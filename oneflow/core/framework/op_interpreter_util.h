@@ -39,6 +39,9 @@ class OpInterpUtil {
       const BuiltinOpExpr* op_expr, const std::shared_ptr<Scope>& scope,
       const bool is_mirrored_strategy_enabled);
 
+  static Maybe<compatible_py::BlobObject> GetTensorBlobObject(
+      const std::shared_ptr<Tensor>& tensor);
+
   static Maybe<void> InitVariableOutputBlob(const std::shared_ptr<Session>& session,
                                             const std::shared_ptr<Tensor>& output,
                                             const OpAttribute& op_attribute);

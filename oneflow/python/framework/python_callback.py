@@ -94,7 +94,8 @@ class PythonCallback(oneflow_api.ForeignCallback):
     def FeedPath(self, path):
         def callback(ofblob):
             ofblob.CopyFromNdarray(np.frombuffer(path.encode("ascii"), dtype=np.int8))
-        return GetIdForRegisteredCallback(callback);
+
+        return GetIdForRegisteredCallback(callback)
 
 
 def _WatcherHandler(unique_id, of_blob_ptr):
