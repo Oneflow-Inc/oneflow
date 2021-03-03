@@ -34,6 +34,16 @@ Maybe<DType> DType::GetDTypeByDataType(const DataType& data_type) {
   return std::shared_ptr<DType>();
 }
 
+Maybe<size_t> DType::bytes() const {
+  // DataType::OFRecord and DataType::TensorBuffer don't have stable byte size
+  static const HashMap<DataType, size_t> data_type2bytes = {
+      {DataType::kInvalidDataType, 0}, {DataType::kChar, 1},   {DataType::kFloat16, 2},
+      {DataType::kFloat, 4},           {DataType::kDouble, 8}, {DataType::kInt8, 1},
+      {DataType::kInt32, 4},           {DataType::kInt64, 8},  {DataType::kUInt8, 1}};
+  if (data_type2bytes.find(data_type()) == data_type2bytes.end()) { OF_UNIMPLEMENTED(); }
+  return data_type2bytes.at(data_type());
+}
+
 Maybe<DType> DType::InvalidDataType() {
   static std::shared_ptr<DType> invalid_dtype = std::make_shared<DType>(
       DataType::kInvalidDataType, "oneflow.invalid_data_type", false, false, false);
