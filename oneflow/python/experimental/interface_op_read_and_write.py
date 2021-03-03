@@ -17,7 +17,6 @@ import oneflow as flow
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.blob_register as blob_register_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.framework.input_blob_def as input_blob_def_util
 import oneflow.python.framework.dtype as dtype_util
@@ -82,7 +81,7 @@ def GetEagerInterfaceBlob(op_name):
             Yield(remote_blob)
 
         def AsyncGetInterfaceBlob(Yield):
-            vm_util.LogicalRun(lambda builder: Build(builder, Yield))
+            oneflow_api.deprecated.LogicalRun(lambda builder: Build(builder, Yield))
 
         blob = async_util.Await(1, AsyncGetInterfaceBlob)[0]
         return blob
@@ -121,7 +120,7 @@ def GetInterfaceBlobValue(op_name):
             value = remote_blob.numpy()
             Yield(value)
 
-        vm_util.LogicalRun(build)
+        oneflow_api.deprecated.LogicalRun(build)
 
     return async_util.Await(1, AsyncGetInterfaceBlobValue)[0]
 
@@ -142,7 +141,7 @@ def FeedValueToInterfaceBlobObject(blob_object, ndarray):
             )
         push_util.FeedValueToEagerBlob(blob_object, input_blob_def, ndarray)
 
-    vm_util.LogicalRun(build)
+    oneflow_api.deprecated.LogicalRun(build)
 
 
 @oneflow_export("experimental.set_interface_blob_value")
@@ -155,6 +154,6 @@ def FeedValueToInterfaceBlob(op_name, ndarray):
             FeedValueToInterfaceBlobObject(blob_object, ndarray)
             Yield()
 
-        vm_util.LogicalRun(build)
+        oneflow_api.deprecated.LogicalRun(build)
 
     async_util.Await(1, AsyncFeedValueToInterfaceBlob)

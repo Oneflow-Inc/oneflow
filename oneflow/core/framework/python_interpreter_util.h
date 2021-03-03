@@ -13,16 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
-#include <string>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/vm/run_instruction.h"
+#ifndef ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
+#define ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
 
-namespace py = pybind11;
+#include "oneflow/core/common/maybe.h"
 
-ONEFLOW_API_PYBIND11_MODULE("vm", m) {
-  using namespace oneflow;
-  m.def("RunLogicalInstruction", &RunLogicalInstruction, py::call_guard<py::gil_scoped_release>());
-  m.def("RunPhysicalInstruction", &RunPhysicalInstruction,
-        py::call_guard<py::gil_scoped_release>());
-}
+namespace oneflow {
+
+Maybe<bool> IsShuttingDown();
+
+Maybe<void> SetShuttingDown();
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_

@@ -26,7 +26,6 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
@@ -181,7 +180,7 @@ def _Numpy(self):
             if not blob_register.HasObject4BlobName(consistent_blob_name):
                 blob_register.SetObject4BlobName(consistent_blob_name, tmp_blob_object)
 
-        vm_util.LogicalRun(BoxingToSingleDevice)
+        oneflow_api.deprecated.LogicalRun(BoxingToSingleDevice)
         return oneflow_api.EagerPhysicalBlob(
             consistent_blob_name,
             blob_register,

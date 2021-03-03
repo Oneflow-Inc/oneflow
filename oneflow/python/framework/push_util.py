@@ -24,7 +24,6 @@ import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
@@ -148,10 +147,10 @@ def _MakeInputBlobObject(arg_blob_def):
             parallel_conf,
             bn_in_op2blob_object,
             boxing_util.BoxingTo,
-            vm_util._FindOrCreateDelegateBlobObject,
+            blob_cache_util.FindOrCreateDelegateBlobObject,
         )
 
-    vm_util.LogicalRun(BuildInputInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInputInstruction)
     return bn_in_op2blob_object["out"], lbi
 
 
@@ -165,7 +164,7 @@ def _GetPhysicalBlobObjects(logical_blob_object, lbi):
             logical_blob_object
         )
 
-    vm_util.LogicalRun(BuildLogical2PhysicalInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildLogical2PhysicalInstruction)
     return physical_blob_objects
 
 
@@ -257,7 +256,7 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
             blob_object.object_id, python_callback.GetIdForRegisteredCallback(FeedBlob)
         )
 
-    vm_util.PhysicalRun(BuildFeedInstruction)
+    oneflow_api.deprecated.PhysicalRun(BuildFeedInstruction)
 
 
 def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):
