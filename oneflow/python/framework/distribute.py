@@ -130,15 +130,15 @@ def ConsistentStrategyEnabled() -> bool:
     return distribute_ctx.IsConsistentStrategyEnabled()
 
 
-@oneflow_export("distribute.split")
-def split(axis: int) -> oneflow_api.sbp_descripiton.SplitDistribute:
+@oneflow_export("distribute.split", "sbp.split")
+def split(axis: int) -> oneflow_api.sbp_descripiton.SplitSbpDescription:
     r"""Generate a split scheme in which op will be splitted at `axis`.
     
     Args:
         axis (int): At `axis` the op will be splitted. 
     
     Returns:
-        SplitDistribute: Split scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
+        SplitSbpDescription: Split scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
     
     Example::
         weight = weight.with_distribute(distribute.split(1))
@@ -148,12 +148,12 @@ def split(axis: int) -> oneflow_api.sbp_descripiton.SplitDistribute:
     return oneflow_api.sbp_descripiton.split(axis)
 
 
-@oneflow_export("distribute.broadcast")
-def broadcast() -> oneflow_api.sbp_descripiton.BroadcastDistribute:
+@oneflow_export("distribute.broadcast", "sbp.broadcast")
+def broadcast() -> oneflow_api.sbp_descripiton.BroadcastSbpDescription:
     r"""Generate a broadcast scheme.
 
     Returns:
-        BroadcastDistribute: Broadcast scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
+        BroadcastSbpDescription: Broadcast scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
     
     Example::
         segment_ids = segment_ids.with_distribute(flow.distribute.broadcast())
@@ -162,22 +162,22 @@ def broadcast() -> oneflow_api.sbp_descripiton.BroadcastDistribute:
     return oneflow_api.sbp_descripiton.broadcast()
 
 
-@oneflow_export("distribute.auto")
-def auto() -> oneflow_api.sbp_descripiton.AutoDistribute:
+@oneflow_export("distribute.auto", "sbp.auto")
+def auto() -> oneflow_api.sbp_descripiton.AutoSbpDescription:
     r"""Generate a broadcast scheme.
 
     Returns:
-        AutoDistribute: Auto distribute scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
+        AutoSbpDescription: Auto distribute scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
     
     """
     return oneflow_api.sbp_descripiton.auto()
 
 
-@oneflow_export("distribute.assert_is_valid_distribute")
+@oneflow_export("distribute.assert_is_valid_distribute", "sbp.assert_is_valid_sbp")
 def assert_is_valid_distribute(
-    sbp_descripiton: oneflow_api.sbp_descripiton.Distribute,
+    sbp_descripiton: oneflow_api.sbp_descripiton.SbpDescription,
 ) -> None:
     assert isinstance(
-        sbp_descripiton, oneflow_api.sbp_descripiton.Distribute
+        sbp_descripiton, oneflow_api.sbp_descripiton.SbpDescription
     ), """not a valid sbp_descripiton policy.
            expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"""

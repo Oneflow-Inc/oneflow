@@ -45,13 +45,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.attr("INVALID_SPLIT_AXIS") = INVALID_SPLIT_AXIS;
 
   py::module_ sbp_descripiton = m.def_submodule("sbp_descripiton");
-  py::class_<SbpDescription, std::shared_ptr<SbpDescription>>(sbp_descripiton, "Distribute");
+  py::class_<SbpDescription, std::shared_ptr<SbpDescription>>(sbp_descripiton, "SbpDescription");
   py::class_<AutoSbpDescription, SbpDescription, std::shared_ptr<AutoSbpDescription>>(
-      sbp_descripiton, "AutoDistribute");
+      sbp_descripiton, "AutoSbpDescription");
   py::class_<BroadcastSbpDescription, SbpDescription, std::shared_ptr<BroadcastSbpDescription>>(
-      sbp_descripiton, "BroadcastDistribute");
+      sbp_descripiton, "BroadcastSbpDescription");
   py::class_<SplitSbpDescription, SbpDescription, std::shared_ptr<SplitSbpDescription>>(
-      sbp_descripiton, "SplitDistribute")
+      sbp_descripiton, "SplitSbpDescription")
       .def_property_readonly("axis", &SplitSbpDescription::axis);
   sbp_descripiton.def("auto", &GlobalAutoSbpDescription);
   sbp_descripiton.def("broadcast", &GlobalBroadcastSbpDescription);

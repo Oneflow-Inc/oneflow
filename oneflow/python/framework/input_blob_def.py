@@ -53,7 +53,7 @@ class ArgBlobDef(object):
             assert dim > 0
         self.shape_ = shape
         self.dtype_ = dtype
-        self.distribute_ = distribute
+        self.sbp_descripiton_ = sbp_descripiton
 
     @property
     def lbi(self):
@@ -69,7 +69,7 @@ class ArgBlobDef(object):
 
     @property
     def unique_name(self):
-        return self.op_name + "/" + self.blob_name + self._Distribute2Str()
+        return self.op_name + "/" + self.blob_name + self._SbpDescripiton2Str()
 
     @property
     def shape(self):
@@ -87,7 +87,7 @@ class ArgBlobDef(object):
     def is_tensor_list(self):
         raise NotImplementedError
 
-    def with_distribute(self, distribute):
+    def with_distribute(self, sbp_descripiton):
         return type(self)(shape=self.shape_, dtype=self.dtype_, name=self.op_name,)
 
     def Clone(self, op_name=None):
@@ -122,12 +122,21 @@ class ArgBlobDef(object):
         interface_blob_conf.split_axis.value = 0
         return interface_blob_conf
 
-    def _Distribute2Str(self):
-        if type(self.distribute_) is oneflow_api.sbp_descripiton.AutoDistribute:
+    def _SbpDescripiton2Str(self):
+        if (
+            type(self.sbp_descripiton_)
+            is oneflow_api.sbp_descripiton.AutoSbpDescription
+        ):
             return ""
-        elif type(self.distribute_) is oneflow_api.sbp_descripiton.SplitDistribute:
-            return ":S" + str(self.distribute_.axis)
-        elif type(self.distribute_) is oneflow_api.sbp_descripiton.BroadcastDistribute:
+        elif (
+            type(self.sbp_descripiton_)
+            is oneflow_api.sbp_descripiton.SplitSbpDescription
+        ):
+            return ":S" + str(self.sbp_descripiton_.axis)
+        elif (
+            type(self.sbp_descripiton_)
+            is oneflow_api.sbp_descripiton.BroadcastSbpDescription
+        ):
             return ":B"
         else:
             raise NotImplementedError

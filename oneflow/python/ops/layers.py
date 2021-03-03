@@ -42,7 +42,7 @@ def dense(
     bias_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: bool = True,
     name: str = "Dense",
-    model_distribute: oneflow_api.sbp_descripiton.Distribute = oneflow_api.sbp_descripiton.broadcast(),
+    model_distribute: oneflow_api.sbp_descripiton.SbpDescription = oneflow_api.sbp_descripiton.broadcast(),
 ) -> oneflow_api.BlobDesc:
     r"""Fully-connected layer. 
 
@@ -59,7 +59,7 @@ def dense(
         bias_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for the bias vector. Defaults to None.
         trainable (bool, optional): A boolean specifies whether to train the variables. Defaults to True.
         name (Optional[str], optional): This layer's name. Defaults to None.
-        model_distribute (oneflow_api.sbp_descripiton.Distribute, optional): Define the way to ditribute the model. Defaults to oneflow_api.sbp_descripiton.broadcast().
+        model_distribute (oneflow_api.sbp_descripiton.SbpDescription, optional): Define the way to ditribute the model. Defaults to oneflow_api.sbp_descripiton.broadcast().
 
     Returns:
         oneflow_api.BlobDesc:  A N-D `Blob` with the shape of (batch_size, units).
