@@ -91,7 +91,7 @@ class MirroredTensorImpl : public TensorImpl {
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
 
   // Setters
-  void set_device(const std::shared_ptr<const Device>& device);
+  Maybe<void> set_device(const std::shared_ptr<const Device>& device);
 
  protected:
   MirroredTensorImpl(const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf,
