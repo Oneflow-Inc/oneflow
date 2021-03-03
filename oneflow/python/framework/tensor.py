@@ -273,7 +273,7 @@ class UndeterminedTensor:
         elif self.device is not None:
             device_type = self.device.type
         else:
-            raise ValueError("Neither Placement nor device found.")
+            raise ValueError("Neither placement nor device found.")
         return device_type == "gpu" or device_type == "cuda"
 
 
