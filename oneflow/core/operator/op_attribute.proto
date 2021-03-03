@@ -9,6 +9,7 @@ import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/job/mirrored_parallel.proto";
 import "oneflow/core/job/blob_lifetime_signature.proto";
 import "oneflow/core/job/parallel_signature.proto";
+import "oneflow/core/job/parallel_conf_signature.proto";
 
 message OpAttribute {
   repeated string input_bns = 1;
@@ -28,6 +29,7 @@ message OpAttribute {
   optional MirroredSignature mirrored_signature = 105;
   optional BlobDescSignature logical_blob_desc_signature = 106;
   optional ParallelSignature parallel_signature = 108;
+  optional ParallelConfSignature parallel_conf_signature = 109;
 }
 
 message OpAttributeList {
