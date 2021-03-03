@@ -18,19 +18,25 @@ import oneflow as flow
 import numpy as np
 import os
 import random
-
 import oneflow_api
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestSize(flow.unittest.TestCase):
     def test_size(test_case):
-        size = oneflow_api.Size((4, 3, 10, 5))
+        size = flow.Size((4, 3, 10, 5))
         test_case.assertTrue(size[0] == 4)
         test_case.assertTrue(size[2] == 10)
         size[1] = 10
         test_case.assertTrue(size[1] == 10)
         test_case.assertTrue(len(size) == 4)
+
+    def test_unpack(test_case):
+        one, two, three, four = oneflow_api.Size((1, 2, 3, 4))
+        test_case.assertEqual(one, 1)
+        test_case.assertEqual(two, 2)
+        test_case.assertEqual(three, 3)
+        test_case.assertEqual(four, 4)
 
 if __name__ == "__main__":
     unittest.main()
