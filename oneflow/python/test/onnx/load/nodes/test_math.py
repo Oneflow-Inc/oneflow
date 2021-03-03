@@ -101,10 +101,10 @@ def test_clip(test_case):
     load_pytorch_module_and_check(test_case, Net)
 
 
-def test_cast(test_case):
-    class Net(nn.Module):
-        def forward(self, x):
-            x = x.int()
-            return x
+# def test_cast(test_case):
+#     class Net(nn.Module):
+#         def forward(self, x):
+#             x = x.int()
+#             return x
 
-    load_pytorch_module_and_check(test_case, Net)
+#     load_pytorch_module_and_check(test_case, Net)

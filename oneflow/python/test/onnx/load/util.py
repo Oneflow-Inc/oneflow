@@ -105,12 +105,12 @@ def load_pytorch_module_and_check(
 
     a, b = flow_res.flatten(), pytorch_res.flatten()
 
-    max_idx = np.argmax(np.abs(a - b) / (a + 1e-5))
+    max_idx = np.argmax(np.abs(a - b) / (a + 1e-7))
     print(
         "max rel diff is {} at index {}".format(
-            np.max(np.abs(a - b) / (a + 1e-5)), max_idx
+            np.max(np.abs(a - b) / (a + 1e-7)), max_idx
         )
     )
     print("a[{}]={}, b[{}]={}".format(max_idx, a[max_idx], max_idx, b[max_idx]))
     msg = "success"
-    test_case.assertTrue(np.allclose(flow_res, pytorch_res, rtol=1e-4, atol=1e-5), msg)
+    test_case.assertTrue(np.allclose(flow_res, pytorch_res, rtol=1e-3, atol=1e-5), msg)

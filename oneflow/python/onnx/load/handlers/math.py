@@ -199,7 +199,6 @@ class Clip(BackendHandler):
     def _common(cls, node, tensor_dict, **kwargs):
         x = tensor_dict[node.input_tensor_names[0]]
         x_dtype = x.dtype
-
         if cls.SINCE_VERSION < 11:
             # min/max were required and passed as attributes
             clip_value_min = node.attrs.get("min", None)

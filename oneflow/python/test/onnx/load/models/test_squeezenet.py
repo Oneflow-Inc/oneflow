@@ -20,6 +20,13 @@ from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 # from absl import app
 # from absl.testing import absltest
 
+def test_squeezenet(test_case):
+    load_pytorch_module_and_check(
+        test_case,
+        torchvision.models.SqueezeNet,
+        input_size=(1, 3, 224, 224),
+        train_flag=False,
+    )
 
 def test_squeezenet1_0(test_case):
     load_pytorch_module_and_check(
@@ -29,6 +36,13 @@ def test_squeezenet1_0(test_case):
         train_flag=False,
     )
 
+def test_squeezenet1_1(test_case):
+    load_pytorch_module_and_check(
+        test_case,
+        torchvision.models.squeezenet1_1,
+        input_size=(1, 3, 224, 224),
+        train_flag=False,
+    )
 
 # test_case = absltest.TestCase
-# test_squeezenet1_0(test_case)
+# test_squeezenet1_1(test_case)
