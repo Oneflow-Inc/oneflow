@@ -46,10 +46,11 @@ Maybe<void> ModelUpdateConfCompatiblePass::Apply(const OpGraph& op_graph, Job* j
       || train_conf.has_primary_lr_lbn() || train_conf.has_secondary_lr()
       || train_conf.has_secondary_lr_lbn();
   if (!use_model_update_conf) { return Maybe<void>::Ok(); }
-  CHECK_OR_RETURN(train_conf.optimizer_conf_size() == 0);
+  CHECK_OR_RETURN(train_conf.optimizer_conf_size() == 0)
+      << "Use model update conf and optimizer conf at same time";
   const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
-  OptimizerConf* optimizer_conf =
-      job->mutable_job_conf()->mutable_train_conf()->add_optimizer_conf();
+  TrainConf* mutable_train_conf = job->mutable_job_conf()->mutable_train_conf();
+  OptimizerConf* optimizer_conf = mutable_train_conf->add_optimizer_conf();
   op_graph.ForEachNode([&](OpNode* op_node) {
     if (op_node->op().op_conf().has_variable_conf()) {
       optimizer_conf->add_variable_op_names(op_node->op().op_name());
@@ -91,7 +92,6 @@ Maybe<void> ModelUpdateConfCompatiblePass::Apply(const OpGraph& op_graph, Job* j
   } else {
     UNIMPLEMENTED();
   }
-  TrainConf* mutable_train_conf = job->mutable_job_conf()->mutable_train_conf();
   mutable_train_conf->clear_model_update_conf();
   mutable_train_conf->clear_primary_lr();
   mutable_train_conf->clear_primary_lr_lbn();

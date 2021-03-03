@@ -115,17 +115,18 @@ message DynamicLossScalePolicy {
 
 message TrainConf {
   repeated OptimizerConf optimizer_conf = 1;
-  optional NormalModelUpdateOpUserConf model_update_conf = 2;
-  repeated string loss_lbn = 3;
-  optional string train_step_lbn = 4;
-  optional string primary_lr_lbn = 5;
-  optional string secondary_lr_lbn = 6;
+  repeated string loss_lbn = 2;
+  optional string train_step_lbn = 3;
   oneof loss_scale_policy {
-    float loss_scale_factor = 7 [default = 1];
-    DynamicLossScalePolicy dynamic_loss_scale_policy = 8;
+    float loss_scale_factor = 4 [default = 1];
+    DynamicLossScalePolicy dynamic_loss_scale_policy = 5;
   }
-  optional float primary_lr = 101;
-  optional float secondary_lr = 102;
+  // Deprecated model update conf, will be removed later.
+  optional NormalModelUpdateOpUserConf model_update_conf = 101;
+  optional float primary_lr = 102;
+  optional float secondary_lr = 103;
+  optional string primary_lr_lbn = 104;
+  optional string secondary_lr_lbn = 105;
 }
 
 message PredictConf {
