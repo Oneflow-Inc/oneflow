@@ -186,7 +186,7 @@ export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
 cmake --build . -j `nproc`
 """
     if skip_wheel:
-        return 0
+        pass
     else:
         bash_cmd += f"""
 rm -rf {oneflow_build_dir}/python_scripts/*.egg-info

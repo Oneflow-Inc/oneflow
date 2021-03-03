@@ -60,14 +60,14 @@ jobs:
     steps:
       - name: Set environment variables
         env:
-          test_suite: ${{matrix.test_suite }}
+          test_suite: ${{ matrix.test_suite }}
         run: |
           echo "test_suite=${test_suite}" >> $GITHUB_ENV
           export ci_tmp_dir=$HOME/ci-cache/test_suite/${test_suite}
           mkdir -p $ci_tmp_dir
           echo "ci_tmp_dir=${ci_tmp_dir}" >> $GITHUB_ENV
           echo "wheelhouse_dir=${ci_tmp_dir}/wheelhouse" >> $GITHUB_ENV
-          echo "sha_dir=ci-static/pr/${{ github.event.pull_request.number }}/$GITHUB_SHA/${{matrix.test_suite }}" >> $GITHUB_ENV
+          echo "sha_dir=$HOME/ci-static/pr/${{ github.event.pull_request.number }}/$GITHUB_SHA/${{matrix.test_suite }}" >> $GITHUB_ENV
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
           extra_docker_args=""
           container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
@@ -101,23 +101,26 @@ jobs:
           oss_dst_path: oss://oneflow-staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-${test_suite}
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-      - name: Upload wheel to local
-        uses: ./.github/actions/upload_local
-        with:
-          src_path: ${wheelhouse_dir}
-          host: ${{ secrets.CI_LOCAL_STATIC_HOST }}
-          dst_path: $sha_dir/whl
-      - name: Upload bin to local
-        if: matrix.test_suite == 'cuda'
-        uses: ./.github/actions/upload_local
-        with:
-          src_path: ${bin_dir}
-          host: ${{ secrets.CI_LOCAL_STATIC_HOST }}
-          dst_path: $sha_dir/bin
       - name: Remove container
         if: always()
         run: |
           docker rm -f ${container_name} || true
+      - name: Setting shared env
+        run: |
+          cp -r ${wheelhouse_dir} $sha_dir/whl
+          echo "remote_whl_dir=$(hostname):$sha_dir/whl" >> build.${{ matrix.test_suite }}.env
+          echo "builder_host=$(hostname)" >> build.${{ matrix.test_suite }}.env
+          echo "sha_dir=${sha_dir}" >> build.${{ matrix.test_suite }}.env
+          if [ "$test_suite" == "cuda" ]; then
+            cp -r ${bin_dir} $sha_dir/bin
+            echo "remote_bin_dir=$(hostname):$sha_dir/bin" >> build.${{ matrix.test_suite }}.env
+          fi
+      - name: Upload math result for job 1
+        uses: actions/upload-artifact@v2
+        with:
+          name: build.${{ matrix.test_suite }}.env
+          path: build.${{ matrix.test_suite }}.env
+
   test:
     name: Test suite
     continue-on-error: ${{ matrix.experimental }}
@@ -136,10 +139,27 @@ jobs:
     runs-on: [self-hosted, linux, release]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
+      - name: Download env result
+        uses: actions/download-artifact@v2
+        with:
+          name: build.${{ matrix.test_suite }}.env
       - name: Set environment variables
         env:
           test_suite: ${{matrix.test_suite }}
         run: |
+          cat build.${{ matrix.test_suite }}.env >> $GITHUB_ENV
+          extra_docker_args=""
+          extra_docker_args+=" --name ${container_name}"
+
+          source build.${{ matrix.test_suite }}.env
+          scp -r $remote_whl_dir wheel_tmp
+          if [ "$test_suite" == "cuda" ]; then
+            scp -r $remote_bin_dir bin_tmp
+          fi
+          extra_docker_args+=" --env ONEFLOW_WHEEL_PATH=wheel_tmp"
+
+          echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
+
           echo "test_suite=${test_suite}" >> $GITHUB_ENV
           sha_sub_dir=pr/${{ github.event.pull_request.number }}/$GITHUB_SHA/${{matrix.test_suite }}
           sha_dir=$HOME/ci-static/$sha_sub_dir
@@ -147,7 +167,7 @@ jobs:
           if [ "$test_suite" == "cuda" ]; then
             export suffix="cu102"
             scp -r ${{ secrets.CI_LOCAL_STATIC_HOST }}:$sha_dir/bin $sha_dir
-            echo "bin_dir=$sha_dir/bin" >> $GITHUB_ENV
+            echo "bin_dir=bin_tmp" >> $GITHUB_ENV
           fi
           if [ "$test_suite" == "xla" ]; then
             export suffix="cu101_xla"
@@ -156,14 +176,8 @@ jobs:
             export suffix="cpu"
             echo "ONEFLOW_TEST_CPU_ONLY=1" >> $GITHUB_ENV
           fi
-          extra_docker_args=""
           container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
           echo "container_name=${container_name}" >> $GITHUB_ENV
-          extra_docker_args+=" --name ${container_name}"
-          ONEFLOW_PIP_INDEX="http://${{ secrets.CI_LOCAL_STATIC_HOST }}:${{ secrets.CI_LOCAL_STATIC_PORT }}/${sha_sub_dir}/whl"
-          extra_docker_args+=" --env ONEFLOW_PIP_INDEX=${ONEFLOW_PIP_INDEX}"
-          extra_docker_args+=" --env ONEFLOW_PACKAGE_NAME=oneflow_${suffix}"
-          echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
       - name: Fix permissions
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
@@ -261,6 +275,7 @@ jobs:
       - name: Remove container
         if: always()
         run: |
+          ssh $builder_host rm -rf $sha_dir
           docker rm -f ${container_name} || true
 
 # TODO clean up pips if the pr is closed
