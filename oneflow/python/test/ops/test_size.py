@@ -16,9 +16,21 @@ limitations under the License.
 import unittest
 import oneflow as flow
 import numpy as np
+from test_util import GenArgList, GenArgDict, type_name_to_flow_type, type_name_to_np_type
 import os
 import random
+import oneflow.typing as oft
+from collections import OrderedDict
 
+def _compare_with_np(   
+    test_case,
+    x_shape,
+    dtype,
+):
+    x = np.random.randn(*x_shape).astype(type_name_to_np_type[dtype])
+    ret = flow.Size(x_shape)
+    for idx in range(0, len(ret)):
+        test_case.assertEqual(ret[idx], x.shape[idx])
 
 @flow.unittest.skip_unless_1n1d()
 class TestSize(flow.unittest.TestCase):
@@ -36,6 +48,13 @@ class TestSize(flow.unittest.TestCase):
         test_case.assertEqual(two, 2)
         test_case.assertEqual(three, 3)
         test_case.assertEqual(four, 4)
+
+    def test_offical(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["x_shape"] = [(10,),(20, 10),(20, 10, 10),(20, 10, 10, 3),(20, 10, 10, 3, 3)]
+        arg_dict["dtype"] = ["float32", "int32", "double"]
+        for arg in GenArgDict(arg_dict):
+            _compare_with_np(test_case, **arg)
 
 
 if __name__ == "__main__":
