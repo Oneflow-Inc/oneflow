@@ -37,7 +37,7 @@ struct ShapeExportUtil final {
   }
 
   static std::shared_ptr<Shape> ApiMakeShapeByList(const py::list& py_shape) {
-    return MakeShape(py::make_tuple(py_shape)).GetPtrOrThrow();
+    return MakeShape(py::tuple(py_shape)).GetPtrOrThrow();
   }
 
   static std::string ToString(const Shape& shape) {
@@ -60,7 +60,7 @@ struct ShapeExportUtil final {
     if (it == shape.dim_vec().end()) {
       throw std::invalid_argument("tuple.index(x): x not in tuple");
     }
-    return it - shape.dim_vec().begin();
+    return std::distance(shape.dim_vec().begin(), it);
   }
 };
 
@@ -85,7 +85,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](const Shape& shape, int64_t value) {
              return std::count(shape.dim_vec().begin(), shape.dim_vec().end(), value);
            })
-      .def("index", &ShapeExportUtil::GetIndexOrError);
+      .def("index", &ShapeExportUtil::GetIndexOrError, py::arg(), py::arg("start") = 0,
+           py::arg("end") = SHAPE_MAX_AXIS_SIZE);
 }
 
 }  // namespace oneflow
