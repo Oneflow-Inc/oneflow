@@ -107,11 +107,13 @@ jobs:
           docker rm -f ${container_name} || true
       - name: Setting shared env
         run: |
+          mkdir -p $sha_dir/whl
           cp -r ${wheelhouse_dir} $sha_dir/whl
           echo "remote_whl_dir=$(hostname):$sha_dir/whl" >> build.${{ matrix.test_suite }}.env
           echo "builder_host=$(hostname)" >> build.${{ matrix.test_suite }}.env
           echo "sha_dir=${sha_dir}" >> build.${{ matrix.test_suite }}.env
           if [ "$test_suite" == "cuda" ]; then
+            mkdir -p $sha_dir/bin
             cp -r ${bin_dir} $sha_dir/bin
             echo "remote_bin_dir=$(hostname):$sha_dir/bin" >> build.${{ matrix.test_suite }}.env
           fi
