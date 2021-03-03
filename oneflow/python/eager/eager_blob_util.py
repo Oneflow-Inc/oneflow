@@ -16,7 +16,6 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.vm_util as vm_util
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 import oneflow.python.framework.blob_trait as blob_trait
 import oneflow.python.framework.python_callback as python_callback
@@ -58,18 +57,18 @@ def FetchTensorBlobAsNumpyList(parallel_size, blob_object):
                 python_callback.GetIdForRegisteredCallback(fetcher),
             )
 
-        vm_util.PhysicalRun(BuildFetchBlobBodyInstruction)
+        oneflow_api.deprecated.PhysicalRun(BuildFetchBlobBodyInstruction)
 
     return async_util.Await(parallel_size, AsyncFetchBlobBody)
 
 
 def _GetPhysicalBlobHeaderCache(blob_object):
-    blob_cache = blob_cache_util.FindOrCreateBlobCache(blob_object)
+    blob_cache = oneflow_api.FindOrCreateBlobCache(blob_object)
     return blob_cache.GetHeaderCache(_FetchBlobHeader)
 
 
 def _GetPhysicalBlobBodyCache(blob_object):
-    blob_cache = blob_cache_util.FindOrCreateBlobCache(blob_object)
+    blob_cache = oneflow_api.FindOrCreateBlobCache(blob_object)
     return blob_cache.GetBodyCache(_FetchPhysicalBlobBody)
 
 
@@ -86,7 +85,7 @@ def _FetchBlobHeader(blob_object):
                 python_callback.GetIdForRegisteredCallback(fetcher),
             )
 
-        vm_util.PhysicalRun(BuildFetchBlobHeaderInstruction)
+        oneflow_api.deprecated.PhysicalRun(BuildFetchBlobHeaderInstruction)
 
     return async_util.Await(1, AsyncFetchBlobHeader)[0]
 
