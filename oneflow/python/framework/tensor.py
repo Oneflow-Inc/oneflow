@@ -185,13 +185,11 @@ class Tensor:
     def __sizeof__(self):
         TODO()
 
-    def determine(self, local_or_consistent_tensor=None, determining_initializer=None):
+    def determine(self, determining_initializer=None):
         assert not self.is_determined
         if determining_initializer is None:
             determining_initializer = self.determining_initializer
-        if local_or_consistent_tensor is None:
-            local_or_consistent_tensor = determining_initializer(self.undetermined_tensor)
-        self.local_or_consistent_tensor = local_or_consistent_tensor
+        self.local_or_consistent_tensor = determining_initializer(self.undetermined_tensor)
         self.undetermined_tensor = None
 
     def is_determined(self):
