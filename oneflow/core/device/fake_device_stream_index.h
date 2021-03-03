@@ -23,7 +23,7 @@ namespace oneflow {
 
 class FakeDeviceStreamIndexGenerator final : public StreamIndexGenerator {
  public:
-  FakeDeviceStreamIndexGenerator();
+  FakeDeviceStreamIndexGenerator() = default;
   OF_DISALLOW_COPY_AND_MOVE(FakeDeviceStreamIndexGenerator);
   ~FakeDeviceStreamIndexGenerator() = default;
 

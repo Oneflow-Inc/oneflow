@@ -64,7 +64,6 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kFAKEDEVICE, TaskType
       return generator->GenerateComputeStreamIndex();
     });
 
-
 #ifdef WITH_CUDA
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDeviceTick)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
