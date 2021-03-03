@@ -25,12 +25,12 @@ namespace compatible_py {
 
 static const int64_t HAS_NO_AXIS = -1;
 
-class Distribute {
+class SbpDescription {
  public:
-  Distribute() : sbp_parallel_(std::make_shared<cfg::SbpParallel>()) {}
-  Distribute(const Distribute&) = delete;
-  Distribute(Distribute&&) = delete;
-  virtual ~Distribute() = default;
+  SbpDescription() : sbp_parallel_(std::make_shared<cfg::SbpParallel>()) {}
+  SbpDescription(const SbpDescription&) = delete;
+  SbpDescription(SbpDescription&&) = delete;
+  virtual ~SbpDescription() = default;
 
   virtual int64_t axis() const { return HAS_NO_AXIS; }
 
@@ -38,37 +38,37 @@ class Distribute {
   std::shared_ptr<cfg::SbpParallel> sbp_parallel_;
 };
 
-class AutoDistribute : public Distribute {
+class AutoSbpDescription : public SbpDescription {
  public:
-  AutoDistribute() : Distribute() {}
-  AutoDistribute(const AutoDistribute&) = delete;
-  AutoDistribute(AutoDistribute&&) = delete;
-  ~AutoDistribute() override = default;
+  AutoSbpDescription() : SbpDescription() {}
+  AutoSbpDescription(const AutoSbpDescription&) = delete;
+  AutoSbpDescription(AutoSbpDescription&&) = delete;
+  ~AutoSbpDescription() override = default;
 };
 
-class BroadcastDistribute : public Distribute {
+class BroadcastSbpDescription : public SbpDescription {
  public:
-  BroadcastDistribute() : Distribute() { sbp_parallel_->mutable_broadcast_parallel(); }
-  BroadcastDistribute(const BroadcastDistribute&) = delete;
-  BroadcastDistribute(BroadcastDistribute&&) = delete;
-  ~BroadcastDistribute() override = default;
+  BroadcastSbpDescription() : SbpDescription() { sbp_parallel_->mutable_broadcast_parallel(); }
+  BroadcastSbpDescription(const BroadcastSbpDescription&) = delete;
+  BroadcastSbpDescription(BroadcastSbpDescription&&) = delete;
+  ~BroadcastSbpDescription() override = default;
 };
 
-class SplitDistribute : public Distribute {
+class SplitSbpDescription : public SbpDescription {
  public:
-  SplitDistribute(int axis) : Distribute() {
+  SplitSbpDescription(int axis) : SbpDescription() {
     sbp_parallel_->mutable_split_parallel()->set_axis(axis);
   }
-  SplitDistribute(const SplitDistribute&) = delete;
-  SplitDistribute(SplitDistribute&&) = delete;
-  ~SplitDistribute() override = default;
+  SplitSbpDescription(const SplitSbpDescription&) = delete;
+  SplitSbpDescription(SplitSbpDescription&&) = delete;
+  ~SplitSbpDescription() override = default;
 
   int64_t axis() const override { return sbp_parallel_->split_parallel().axis(); }
 };
 
-std::shared_ptr<AutoDistribute> GlobalAutoDistribute();
-std::shared_ptr<BroadcastDistribute> GlobalBroadcastDistribute();
-Maybe<SplitDistribute> GlobalSplitDistribute(int axis);
+std::shared_ptr<AutoSbpDescription> GlobalAutoSbpDescription();
+std::shared_ptr<BroadcastSbpDescription> GlobalBroadcastSbpDescription();
+Maybe<SplitSbpDescription> GlobalSplitSbpDescription(int axis);
 
 }  // namespace compatible_py
 

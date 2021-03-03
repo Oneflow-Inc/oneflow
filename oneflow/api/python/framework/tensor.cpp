@@ -63,7 +63,7 @@ template<>
 struct TensorExportUtil<ConsistentTensor> final {
   static Maybe<ConsistentTensor> MakeTensor(
       const py::tuple& py_shape, const std::shared_ptr<const DType>& dtype,
-      const std::shared_ptr<const compatible_py::Distribute>& distribute,
+      const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
       bool is_leaf, bool retain_grad) {
     DimVector shape_dims;
@@ -71,17 +71,17 @@ struct TensorExportUtil<ConsistentTensor> final {
         << Error::ValueError("Input shape must be tuple.");
     for (const auto& dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
     std::shared_ptr<Shape> shape = std::make_shared<Shape>(shape_dims);
-    return ConsistentTensor::MakeTensor(shape, dtype, distribute, parallel_desc, is_lazy,
+    return ConsistentTensor::MakeTensor(shape, dtype, sbp_descripiton, parallel_desc, is_lazy,
                                         requires_grad, is_leaf, retain_grad);
   }
 
   static std::shared_ptr<ConsistentTensor> ApiMakeTensor(
       const py::tuple& py_shape, const std::shared_ptr<const DType>& dtype,
-      const std::shared_ptr<const compatible_py::Distribute>& distribute,
+      const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
       bool is_leaf, bool retain_grad) {
-    return MakeTensor(py_shape, dtype, distribute, parallel_desc, is_lazy, requires_grad, is_leaf,
-                      retain_grad)
+    return MakeTensor(py_shape, dtype, sbp_descripiton, parallel_desc, is_lazy, requires_grad,
+                      is_leaf, retain_grad)
         .GetPtrOrThrow();
   }
 };

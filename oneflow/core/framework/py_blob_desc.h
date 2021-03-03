@@ -33,7 +33,7 @@ static int64_t INVALID_SPLIT_AXIS = -22;
 class BlobDesc : public Tensor {
  public:
   BlobDesc(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
-           const std::shared_ptr<Distribute>& distribute);
+           const std::shared_ptr<SbpDescription>& sbp_descripiton);
 
   BlobDesc(const BlobDesc& blob_desc) = default;
   virtual ~BlobDesc() override = default;
@@ -48,16 +48,16 @@ class BlobDesc : public Tensor {
 
   virtual bool is_dynamic() const;
   virtual bool is_tensor_list() const;
-  virtual std::shared_ptr<Distribute> distribute() const;
+  virtual std::shared_ptr<SbpDescription> sbp_descripiton() const;
   virtual std::string unique_name() const;
 
-  void set_distribute(const std::shared_ptr<Distribute> distribute);
+  void set_sbp_descripiton(const std::shared_ptr<SbpDescription> sbp_descripiton);
 
  protected:
-  Maybe<std::string> Distribute2Str() const;
+  Maybe<std::string> SbpDescription2Str() const;
 
   std::shared_ptr<cfg::LogicalBlobId> lbi_;
-  std::shared_ptr<Distribute> distribute_;
+  std::shared_ptr<SbpDescription> sbp_descripiton_;
   std::string lbn_;
 };
 

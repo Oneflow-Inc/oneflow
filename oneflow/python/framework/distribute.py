@@ -131,7 +131,7 @@ def ConsistentStrategyEnabled() -> bool:
 
 
 @oneflow_export("distribute.split")
-def split(axis: int) -> oneflow_api.distribute.SplitDistribute:
+def split(axis: int) -> oneflow_api.sbp_descripiton.SplitDistribute:
     r"""Generate a split scheme in which op will be splitted at `axis`.
     
     Args:
@@ -145,11 +145,11 @@ def split(axis: int) -> oneflow_api.distribute.SplitDistribute:
 
     """
     assert type(axis) is int
-    return oneflow_api.distribute.split(axis)
+    return oneflow_api.sbp_descripiton.split(axis)
 
 
 @oneflow_export("distribute.broadcast")
-def broadcast() -> oneflow_api.distribute.BroadcastDistribute:
+def broadcast() -> oneflow_api.sbp_descripiton.BroadcastDistribute:
     r"""Generate a broadcast scheme.
 
     Returns:
@@ -159,23 +159,25 @@ def broadcast() -> oneflow_api.distribute.BroadcastDistribute:
         segment_ids = segment_ids.with_distribute(flow.distribute.broadcast())
     
     """
-    return oneflow_api.distribute.broadcast()
+    return oneflow_api.sbp_descripiton.broadcast()
 
 
 @oneflow_export("distribute.auto")
-def auto() -> oneflow_api.distribute.AutoDistribute:
+def auto() -> oneflow_api.sbp_descripiton.AutoDistribute:
     r"""Generate a broadcast scheme.
 
     Returns:
         AutoDistribute: Auto distribute scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
     
     """
-    return oneflow_api.distribute.auto()
+    return oneflow_api.sbp_descripiton.auto()
 
 
 @oneflow_export("distribute.assert_is_valid_distribute")
-def assert_is_valid_distribute(distribute: oneflow_api.distribute.Distribute) -> None:
+def assert_is_valid_distribute(
+    sbp_descripiton: oneflow_api.sbp_descripiton.Distribute,
+) -> None:
     assert isinstance(
-        distribute, oneflow_api.distribute.Distribute
-    ), """not a valid distribute policy.
+        sbp_descripiton, oneflow_api.sbp_descripiton.Distribute
+    ), """not a valid sbp_descripiton policy.
            expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"""

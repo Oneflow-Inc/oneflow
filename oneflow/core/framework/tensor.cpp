@@ -48,15 +48,15 @@ int64_t MirroredTensor::nelement() const { return shape()->elem_cnt(); }
 
 std::shared_ptr<ConsistentTensor> ConsistentTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-    const std::shared_ptr<const compatible_py::Distribute>& distribute,
+    const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton,
     const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
     bool is_leaf, bool retain_grad) {
   std::shared_ptr<ConsistentTensorImpl> impl;
   if (is_lazy) {
-    impl = std::make_shared<LazyConsistentTensorImpl>(shape, dtype, distribute, parallel_desc,
+    impl = std::make_shared<LazyConsistentTensorImpl>(shape, dtype, sbp_descripiton, parallel_desc,
                                                       requires_grad, is_leaf, retain_grad);
   } else {
-    impl = std::make_shared<EagerConsistentTensorImpl>(shape, dtype, distribute, parallel_desc,
+    impl = std::make_shared<EagerConsistentTensorImpl>(shape, dtype, sbp_descripiton, parallel_desc,
                                                        requires_grad, is_leaf, retain_grad);
   }
   return std::make_shared<ConsistentTensor>(impl);

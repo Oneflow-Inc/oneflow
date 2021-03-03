@@ -27,7 +27,7 @@ namespace oneflow {
 
 namespace compatible_py {
 
-class Distribute;
+class SbpDescription;
 }
 
 class Device;
@@ -111,14 +111,14 @@ class ConsistentTensorImpl : public TensorImpl {
   // Getters
   const std::shared_ptr<const Device>& device() const { return device_ /* always nullptr*/; }
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; };
-  virtual const std::shared_ptr<const compatible_py::Distribute>& distribute() const = 0;
+  virtual const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton() const = 0;
 
   // Setters
   void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
     parallel_desc_ = parallel_desc;
   }
-  virtual void set_distribute(
-      const std::shared_ptr<const compatible_py::Distribute>& distribute) = 0;
+  virtual void set_sbp_descripiton(
+      const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton) = 0;
 
  protected:
   ConsistentTensorImpl(const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad,
@@ -206,30 +206,31 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LazyConsistentTensorImpl);
-  LazyConsistentTensorImpl(const std::shared_ptr<const Shape>& shape,
-                           const std::shared_ptr<const DType>& dtype,
-                           const std::shared_ptr<const compatible_py::Distribute>& distribute,
-                           const std::shared_ptr<const ParallelDesc>& parallel_desc,
-                           bool requires_grad, bool is_leaf, bool retain_grad)
+  LazyConsistentTensorImpl(
+      const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
+      const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad, bool is_leaf,
+      bool retain_grad)
       : ConsistentTensorImpl(parallel_desc, requires_grad, is_leaf, retain_grad),
         shape_(shape),
         dtype_(dtype),
-        distribute_(distribute) {}
+        sbp_descripiton_(sbp_descripiton) {}
   ~LazyConsistentTensorImpl() override = default;
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
-  const std::shared_ptr<const compatible_py::Distribute>& distribute() const override {
-    return distribute_;
+  const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton() const override {
+    return sbp_descripiton_;
   }
   bool is_lazy() const override { return true; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
-  void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) override {
-    distribute_ = distribute;
+  void set_sbp_descripiton(
+      const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton) override {
+    sbp_descripiton_ = sbp_descripiton;
   }
 
   // Getters to be deprecated
@@ -245,36 +246,37 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
  private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
-  std::shared_ptr<const compatible_py::Distribute> distribute_;
+  std::shared_ptr<const compatible_py::SbpDescription> sbp_descripiton_;
 };
 
 class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerConsistentTensorImpl);
-  EagerConsistentTensorImpl(const std::shared_ptr<const Shape>& shape,
-                            const std::shared_ptr<const DType>& dtype,
-                            const std::shared_ptr<const compatible_py::Distribute>& distribute,
-                            const std::shared_ptr<const ParallelDesc>& parallel_desc,
-                            bool requires_grad, bool is_leaf, bool retain_grad)
+  EagerConsistentTensorImpl(
+      const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
+      const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad, bool is_leaf,
+      bool retain_grad)
       : ConsistentTensorImpl(parallel_desc, requires_grad, is_leaf, retain_grad),
         shape_(shape),
         dtype_(dtype),
-        distribute_(distribute) {}
+        sbp_descripiton_(sbp_descripiton) {}
   ~EagerConsistentTensorImpl() override = default;
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
-  const std::shared_ptr<const compatible_py::Distribute>& distribute() const override {
-    return distribute_;
+  const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton() const override {
+    return sbp_descripiton_;
   }
   bool is_lazy() const override { return false; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
-  void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) override {
-    distribute_ = distribute;
+  void set_sbp_descripiton(
+      const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton) override {
+    sbp_descripiton_ = sbp_descripiton;
   }
 
   // Getters to be deprecated
@@ -290,7 +292,7 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
  private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
-  std::shared_ptr<const compatible_py::Distribute> distribute_;
+  std::shared_ptr<const compatible_py::SbpDescription> sbp_descripiton_;
   std::shared_ptr<compatible_py::BlobObject> blob_object_;
 };
 

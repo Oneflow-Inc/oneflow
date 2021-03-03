@@ -31,7 +31,7 @@ namespace compatible_py {
 class ConsistentBlob : public BlobDesc {
  public:
   ConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi, const std::string& job_name,
-                 const std::shared_ptr<Distribute>& distribute);
+                 const std::shared_ptr<SbpDescription>& sbp_descripiton);
   ConsistentBlob(const ConsistentBlob& consistent_blob) = default;
   ~ConsistentBlob() = default;
 
@@ -49,7 +49,7 @@ class ConsistentBlob : public BlobDesc {
 class LazyConsistentBlob : public ConsistentBlob {
  public:
   LazyConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi, const std::string& job_name,
-                     const std::shared_ptr<Distribute>& distribute);
+                     const std::shared_ptr<SbpDescription>& sbp_descripiton);
   LazyConsistentBlob(const LazyConsistentBlob& lazy_consistent_blob) = default;
   ~LazyConsistentBlob() = default;
 
@@ -72,7 +72,7 @@ class LazyConsistentBlob : public ConsistentBlob {
 class MirroredBlob : public BlobDesc {
  public:
   MirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi, const std::string& job_name,
-               const std::shared_ptr<Distribute>& distribute);
+               const std::shared_ptr<SbpDescription>& sbp_descripiton);
   MirroredBlob(const MirroredBlob& mirrored_blob) = default;
   ~MirroredBlob() = default;
 
@@ -90,7 +90,7 @@ class MirroredBlob : public BlobDesc {
 class LazyMirroredBlob : public MirroredBlob {
  public:
   LazyMirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi, const std::string& job_name,
-                   const std::shared_ptr<Distribute>& distribute);
+                   const std::shared_ptr<SbpDescription>& sbp_descripiton);
   LazyMirroredBlob(const LazyMirroredBlob& lazy_mirrored_blob) = default;
   ~LazyMirroredBlob() = default;
 
@@ -144,7 +144,8 @@ class EagerConsistentBlob : public EagerBlobTrait, public ConsistentBlob {
   EagerConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
                       const std::shared_ptr<BlobObject>& blob_object,
                       const std::shared_ptr<BlobRegister>& blob_register,
-                      const std::string& job_name, const std::shared_ptr<Distribute>& distribute);
+                      const std::string& job_name,
+                      const std::shared_ptr<SbpDescription>& sbp_descripiton);
   ~EagerConsistentBlob() override = default;
 };
 
@@ -153,7 +154,7 @@ class EagerMirroredBlob : public EagerBlobTrait, public MirroredBlob {
   EagerMirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
                     const std::shared_ptr<BlobObject>& blob_object,
                     const std::shared_ptr<BlobRegister>& blob_register, const std::string& job_name,
-                    const std::shared_ptr<Distribute>& distribute);
+                    const std::shared_ptr<SbpDescription>& sbp_descripiton);
   ~EagerMirroredBlob() override = default;
 };
 
