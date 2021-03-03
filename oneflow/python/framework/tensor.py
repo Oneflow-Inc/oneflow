@@ -24,7 +24,7 @@ class Tensor:
         self,
         shape,
         dtype,
-        device=None,
+        device=oneflow_api.device("cpu", 0),
         requires_grad=False,
         retain_grad=False,
         is_leaf=True,
@@ -135,6 +135,13 @@ class Tensor:
             return self.local_or_consistent_tensor.is_consistent
         else:
             return self.undetermined_tensor.is_consistent
+
+    @property
+    def sbp(self):
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.sbp
+        else:
+            return self.undetermined_tensor.sbp
 
     def size(self):
         return self.shape
