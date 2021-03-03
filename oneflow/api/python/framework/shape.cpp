@@ -47,7 +47,6 @@ struct ShapeExportUtil final {
     ss << "])";
     return ss.str();
   }
-
 };
 
 }  // namespace
