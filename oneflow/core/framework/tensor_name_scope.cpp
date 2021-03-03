@@ -18,8 +18,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-static constexpr char _PositionalPlaceholderPrefix[] = "#^Placeholder_";
-
 /*static*/ TensorNameScope* TensorNameScope::Global() {
   static TensorNameScope scope;
   return &scope;
