@@ -43,6 +43,8 @@ def import_oneflow_internal2():
 
 oneflow_api = import_oneflow_internal2()
 
+Size = oneflow_api.Size
+
 # define dtype at the begining of oneflow init
 
 locals()["dtype"] = oneflow_api.dtype
@@ -61,7 +63,6 @@ locals()["long"] = oneflow_api.int64
 locals()["uint8"] = oneflow_api.uint8
 locals()["record"] = oneflow_api.record
 locals()["tensor_buffer"] = oneflow_api.tensor_buffer
-locals()["Size"] = oneflow_api.Size
 
 del import_secondary_module
 del import_oneflow_internal2
