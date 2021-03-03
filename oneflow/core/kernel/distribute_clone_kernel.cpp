@@ -20,7 +20,7 @@ namespace oneflow {
 
 namespace {
 
-void CheckSizeAndCopyBlob(DeviceCtx *ctx, Blob *dst, const Blob *src) {
+void CheckSizeAndCopyBlob(DeviceCtx* ctx, Blob* dst, const Blob* src) {
   dst->CopyDataContentFrom(ctx, src);
 }
 
@@ -34,23 +34,23 @@ class DistributeCloneKernel final : public KernelIf<device_type> {
   ~DistributeCloneKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx &,
-                          std::function<Blob *(const std::string &)>) const override;
-  Blob *GetOutBlob(std::function<Blob *(const std::string &)> BnInOp2Blob) const;
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
+  Blob* GetOutBlob(std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 };
 
 template<DeviceType device_type>
 void DistributeCloneKernel<device_type>::ForwardDataContent(
-    const KernelCtx &ctx, std::function<Blob *(const std::string &)> BnInOp2Blob) const {
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CheckSizeAndCopyBlob(ctx.device_ctx, GetOutBlob(BnInOp2Blob), BnInOp2Blob("in"));
 }
 
 template<DeviceType device_type>
-Blob *DistributeCloneKernel<device_type>::GetOutBlob(
-    std::function<Blob *(const std::string &)> BnInOp2Blob) const {
-  Blob *out_blob = nullptr;
+Blob* DistributeCloneKernel<device_type>::GetOutBlob(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* out_blob = nullptr;
   FOR_RANGE(int, i, 0, this->op_attribute().output_bns().size()) {
-    Blob *cur_blob = BnInOp2Blob(this->op_attribute().output_bns().Get(i));
+    Blob* cur_blob = BnInOp2Blob(this->op_attribute().output_bns().Get(i));
     if (cur_blob != nullptr && cur_blob != out_blob) {
       CHECK_ISNULL(out_blob);
       out_blob = cur_blob;

@@ -59,7 +59,6 @@ class DType;
 namespace one {
 
 class FunctionNode;
-class DeterminedTensor;
 
 class Tensor {
  public:
@@ -68,11 +67,10 @@ class Tensor {
   // Getters
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual const std::shared_ptr<const DType>& dtype() const = 0;
-  virtual Maybe<const ParallelDesc> parallel_desc() const = 0;
-  virtual Maybe<const Device> device() const = 0;
-  virtual Maybe<bool> is_consistent() const = 0;
+  virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
+  virtual const std::shared_ptr<const Device>& device() const = 0;
+  virtual bool is_consistent() const = 0;
   virtual bool is_lazy() const = 0;
-  virtual Maybe<DeterminedTensor> DetermineAndDestroySelf() = 0;
 
   // Getters for autograd
   virtual bool requires_grad() const = 0;
@@ -90,74 +88,14 @@ class Tensor {
 class ConsistentTensor;
 class MirroredTensor;
 
-class UndeterminedTensor final : public Tensor {
+template<typename DerivedT>
+class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<DerivedT>> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(UndeterminedTensor);
-  UndeterminedTensor(const std::shared_ptr<const Shape>& shape,
-                     const std::shared_ptr<const DType>& dtype, bool is_lazy, bool requires_grad,
-                     bool is_leaf, bool retain_grad)
-      : shape_(shape),
-        dtype_(dtype),
-        is_lazy_(is_lazy),
-        requires_grad_(requires_grad),
-        is_leaf_(is_leaf),
-        retain_grad_(retain_grad),
-        consistent_(Error::ValueError("Consistent/Mirrored undetermined")) {}
-
-  // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return shape_; }
-  Maybe<bool> is_consistent() const override { return consistent_; }
-  const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
-  Maybe<const compatible_py::Distribute> distribute() const;
-  Maybe<const ParallelDesc> parallel_desc() const override;
-  Maybe<const Device> device() const override;
-  bool is_lazy() const override { return is_lazy_; }
-
-  // Setters
-  void set_shape(const std::shared_ptr<const Shape>& shape) { shape_ = shape; }
-  void set_consistent(bool consistent) { consistent_ = consistent; }
-  void set_dtype(const std::shared_ptr<const DType>& dtype) { dtype_ = dtype; }
-  const void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) {
-    distribute_ = distribute;
-  }
-  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-    parallel_desc_ = parallel_desc;
-  }
-  void set_device(const std::shared_ptr<const Device>& device) { device_ = device; }
-
-  // Getters for autograd
-  bool is_leaf() const override { return is_leaf_; }
-  bool requires_grad() const override { return requires_grad_; }
-  bool retain_grad() const override { return retain_grad_; }
-
-  // Setters for autograd
-  void set_requires_grad(bool requires_grad) override { requires_grad_ = requires_grad; }
-  void set_retain_grad(bool retain_grad) override { retain_grad_ = retain_grad; }
-
-  Maybe<DeterminedTensor> DetermineAndDestroySelf() override;
-
- private:
-  std::shared_ptr<const Shape> shape_;
-  std::shared_ptr<const DType> dtype_;
-  bool is_lazy_;
-  std::shared_ptr<const ParallelDesc> parallel_desc_;
-  std::shared_ptr<const Device> device_;
-  std::shared_ptr<const compatible_py::Distribute> distribute_;
-  bool requires_grad_;
-  bool is_leaf_;
-  bool retain_grad_;
-  Maybe<bool> consistent_;
-};
-
-class DeterminedTensor : public Tensor, public std::enable_shared_from_this<DeterminedTensor> {
- public:
-  virtual ~DeterminedTensor() = default;
-
-  Maybe<DeterminedTensor> DetermineAndDestroySelf() override { return shared_from_this(); }
+  virtual ~TensorIf() = default;
 
   // Getters
   virtual int64_t ndim() const = 0;
-  virtual Maybe<bool> is_cuda() const = 0;
+  virtual bool is_cuda() const = 0;
   virtual int64_t nelement() const = 0;
   virtual int64_t dim(int64_t index) const = 0;
 
@@ -167,6 +105,13 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
   virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
   virtual const std::shared_ptr<TensorArg>& now_grad_arg() const = 0;
   const std::shared_ptr<const FunctionNode>& grad_fn_node() const { return grad_fn_node_; }
+  // used by pybind11 only
+  Maybe<DerivedT> api_acc_grad() const {
+    if (acc_grad()) { return std::shared_ptr<DerivedT>(); }
+    const auto& ptr = std::dynamic_pointer_cast<DerivedT>(acc_grad());
+    CHECK_OR_RETURN(ptr) << Error::ValueError("Tensor Cast Error");
+    return ptr;
+  }
 
   // Setters for autograd
   virtual void set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
@@ -181,11 +126,11 @@ class DeterminedTensor : public Tensor, public std::enable_shared_from_this<Dete
   virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 
  protected:
-  DeterminedTensor() = default;
+  TensorIf() = default;
   std::shared_ptr<const FunctionNode> grad_fn_node_;
 };
 
-class MirroredTensor final : public DeterminedTensor {
+class MirroredTensor final : public TensorIf<MirroredTensor> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
   MirroredTensor() = default;
@@ -195,12 +140,14 @@ class MirroredTensor final : public DeterminedTensor {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   const std::shared_ptr<const DType>& dtype() const override { return impl_->dtype(); }
-  Maybe<const ParallelDesc> parallel_desc() const override { UNIMPLEMENTED(); }
-  Maybe<const Device> device() const override { return impl_->device(); }
+  const std::shared_ptr<const ParallelDesc>& parallel_desc() const override {
+    return impl_->parallel_desc();
+  }
+  const std::shared_ptr<const Device>& device() const override { return impl_->device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
-  Maybe<bool> is_consistent() const override { return false; }
+  bool is_consistent() const override { return false; }
   int64_t ndim() const override;
-  Maybe<bool> is_cuda() const override;
+  bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
 
@@ -236,7 +183,7 @@ class MirroredTensor final : public DeterminedTensor {
   std::shared_ptr<MirroredTensorImpl> impl_;
 };
 
-class ConsistentTensor final : public DeterminedTensor {
+class ConsistentTensor final : public TensorIf<ConsistentTensor> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConsistentTensor);
   ConsistentTensor() = default;
@@ -246,15 +193,17 @@ class ConsistentTensor final : public DeterminedTensor {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   const std::shared_ptr<const DType>& dtype() const override { return impl_->dtype(); }
-  Maybe<const ParallelDesc> parallel_desc() const override { return impl_->parallel_desc(); }
-  Maybe<const Device> device() const override { UNIMPLEMENTED(); }
+  const std::shared_ptr<const ParallelDesc>& parallel_desc() const override {
+    return impl_->parallel_desc();
+  }
+  const std::shared_ptr<const Device>& device() const override { return impl_->device(); }
   const std::shared_ptr<const compatible_py::Distribute>& distribute() const {
     return impl_->distribute();
   }
   bool is_lazy() const override { return impl_->is_lazy(); }
-  Maybe<bool> is_consistent() const override { return true; }
+  bool is_consistent() const override { return true; }
   int64_t ndim() const override;
-  Maybe<bool> is_cuda() const override;
+  bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
 
