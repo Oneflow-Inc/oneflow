@@ -48,8 +48,6 @@ from typing import Callable
 import inspect
 import oneflow
 import oneflow_api
-import oneflow_api.oneflow.core.vm.instruction as instr_cfg
-import oneflow_api.oneflow.core.eager.eager_symbol as eager_symbol_cfg
 import traceback
 
 
