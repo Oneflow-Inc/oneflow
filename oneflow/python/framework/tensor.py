@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow_api
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.device as oneflow_device
+import oneflow_api
 
 @oneflow_export("tensor")
 class Tensor:
@@ -24,7 +24,7 @@ class Tensor:
         shape,
         dtype,
         device=None,
-        requires_grad=True,
+        requires_grad=False,
         retain_grad=False,
         is_leaf=True,
         placement=None,
@@ -181,6 +181,9 @@ class Tensor:
     def __sizeof__(self):
         TODO()
 
+    def __deepcopy__(self):
+        TODO()
+
     def determine(self, determining_initializer=None):
         assert not self.is_determined
         if determining_initializer is None:
@@ -229,7 +232,7 @@ class UndeterminedTensor:
         shape,
         dtype,
         device=None,
-        requires_grad=True,
+        requires_grad=False,
         retain_grad=False,
         is_leaf=True,
         placement=None,
@@ -240,7 +243,7 @@ class UndeterminedTensor:
         if not isinstance(shape, oneflow_api.Size):
             if not isinstance(shape, tuple):
                 shape = tuple(shape)
-            shape = oneflow.api.Size(shape)
+            shape = oneflow_api.Size(shape)
         self.shape = shape
         self.dtype = dtype
         self.device = device
