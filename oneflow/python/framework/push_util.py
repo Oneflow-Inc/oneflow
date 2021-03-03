@@ -16,7 +16,6 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.input_blob_def as input_blob_def
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.python_callback as python_callback
@@ -24,9 +23,7 @@ import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.boxing_util as boxing_util
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
@@ -34,7 +31,7 @@ import oneflow_api
 import numpy
 from functools import reduce
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 def AsyncPush(session, job_func, *arg):
@@ -114,7 +111,7 @@ def FeedValueToEagerBlob(blob_object, blob_def, ndarray):
     for i, physical_blob_object in enumerate(physical_blob_objects):
         feed_ctx.set_rank(i)
         _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, physical_blob_object)
-    blob_cache_util.TryDisableBlobCache(blob_object)
+    oneflow_api.TryDisableBlobCache(blob_object)
 
 
 def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
@@ -155,19 +152,15 @@ def _MakeInputBlobObject(arg_blob_def):
             str(op_attribute)
         )
         builder.StatelessCall(
-            cfg_op_attribute,
-            parallel_conf,
-            bn_in_op2blob_object,
-            boxing_util.BoxingTo,
-            vm_util._FindOrCreateDelegateBlobObject,
+            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
         )
 
-    vm_util.LogicalRun(BuildInputInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInputInstruction)
     return bn_in_op2blob_object["out"], lbi
 
 
 def _GetPhysicalBlobObjects(logical_blob_object, lbi):
-    blob_register = blob_register_util.GetDefaultBlobRegister()
+    blob_register = oneflow_api.GetDefaultBlobRegister()
     physical_blob_objects = None
 
     def BuildLogical2PhysicalInstruction(builder):
@@ -176,7 +169,7 @@ def _GetPhysicalBlobObjects(logical_blob_object, lbi):
             logical_blob_object
         )
 
-    vm_util.LogicalRun(BuildLogical2PhysicalInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildLogical2PhysicalInstruction)
     return physical_blob_objects
 
 
@@ -281,7 +274,7 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
             blob_object.object_id, python_callback.GetIdForRegisteredCallback(FeedBlob)
         )
 
-    vm_util.PhysicalRun(BuildFeedInstruction)
+    oneflow_api.deprecated.PhysicalRun(BuildFeedInstruction)
 
 
 def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):
