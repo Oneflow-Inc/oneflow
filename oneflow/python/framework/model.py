@@ -18,7 +18,6 @@ from __future__ import absolute_import
 __all__ = ["CheckpointConfig", "Callback", "NumpyDataModule", "Model"]
 
 from abc import ABC
-from collections import OrderedDict
 from typing import Optional, Union, Tuple
 
 import inspect
@@ -30,6 +29,7 @@ from oneflow.python.framework.check_point_v2 import (
     GetCheckpoint,
 )
 from oneflow.python.framework.function_util import api_oneflow_function
+from oneflow.python.framework.local_blob import LocalMirroredTensor
 from oneflow.python.framework.module import Module
 from oneflow.python.framework.session_util import api_clear_default_session
 from oneflow.python.oneflow_export import oneflow_export
@@ -58,9 +58,7 @@ class Callback(ABC):
 
     def on_training_step_end(
         self,
-        outputs: Optional[
-            Union[oneflow_typing.Numpy, Tuple[oneflow_typing.Numpy, ...]]
-        ],
+        outputs: Optional[Union[LocalMirroredTensor, Tuple[LocalMirroredTensor, ...]]],
         step_idx: int = 0,
         optimizer_idx: int = 0,
     ):
@@ -68,9 +66,7 @@ class Callback(ABC):
 
     def on_validation_step_end(
         self,
-        outputs: Optional[
-            Union[oneflow_typing.Numpy, Tuple[oneflow_typing.Numpy, ...]]
-        ],
+        outputs: Optional[Union[LocalMirroredTensor, Tuple[LocalMirroredTensor, ...]]],
         step_idx: int = 0,
     ):
         pass

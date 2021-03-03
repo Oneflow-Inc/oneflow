@@ -13,12 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import argparse
 import os
 from datetime import datetime
 import unittest
 
-import numpy
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util

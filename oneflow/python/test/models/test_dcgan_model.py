@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-import oneflow.typing as oft
 import numpy as np
 import os
 import unittest
@@ -30,14 +29,14 @@ class DCGAN(flow.Model):
 
     def _generator(self, z, const_init=False, trainable=True):
         # (n, 256, 7, 7)
-        h0 = layers.dense(
+        h0 = Layers.dense(
             z, 7 * 7 * 256, name="g_fc1", const_init=const_init, trainable=trainable
         )
-        h0 = layers.batchnorm(h0, axis=1, name="g_bn1")
+        h0 = Layers.batchnorm(h0, axis=1, name="g_bn1")
         h0 = flow.nn.leaky_relu(h0, 0.3)
         h0 = flow.reshape(h0, (-1, 256, 7, 7))
         # (n, 128, 7, 7)
-        h1 = layers.deconv2d(
+        h1 = Layers.deconv2d(
             h0,
             128,
             5,
@@ -46,10 +45,10 @@ class DCGAN(flow.Model):
             const_init=const_init,
             trainable=trainable,
         )
-        h1 = layers.batchnorm(h1, name="g_bn2")
+        h1 = Layers.batchnorm(h1, name="g_bn2")
         h1 = flow.nn.leaky_relu(h1, 0.3)
         # (n, 64, 14, 14)
-        h2 = layers.deconv2d(
+        h2 = Layers.deconv2d(
             h1,
             64,
             5,
@@ -58,10 +57,10 @@ class DCGAN(flow.Model):
             const_init=const_init,
             trainable=trainable,
         )
-        h2 = layers.batchnorm(h2, name="g_bn3")
+        h2 = Layers.batchnorm(h2, name="g_bn3")
         h2 = flow.nn.leaky_relu(h2, 0.3)
         # (n, 1, 28, 28)
-        out = layers.deconv2d(
+        out = Layers.deconv2d(
             h2,
             1,
             5,
@@ -75,7 +74,7 @@ class DCGAN(flow.Model):
 
     def _discriminator(self, img, const_init=False, trainable=True, reuse=False):
         # (n, 1, 28, 28)
-        h0 = layers.conv2d(
+        h0 = Layers.conv2d(
             img,
             64,
             5,
@@ -87,7 +86,7 @@ class DCGAN(flow.Model):
         h0 = flow.nn.leaky_relu(h0, 0.3)
         # h0 = flow.nn.dropout(h0, rate=0.3)
         # (n, 64, 14, 14)
-        h1 = layers.conv2d(
+        h1 = Layers.conv2d(
             h0,
             128,
             5,
@@ -101,7 +100,7 @@ class DCGAN(flow.Model):
         # (n, 128 * 7 * 7)
         out = flow.reshape(h1, (self.batch_size, -1))
         # (n, 1)
-        out = layers.dense(
+        out = Layers.dense(
             out, 1, name="d_fc", const_init=const_init, trainable=trainable, reuse=reuse
         )
         return out
@@ -219,7 +218,7 @@ class DCGANCompare:
         dcgan_md.fit(max_steps=2, training_data=train_data)
 
 
-class layers:
+class Layers:
     @staticmethod
     def deconv2d(
         input,
@@ -232,7 +231,7 @@ class layers:
         const_init=False,
         use_bias=False,
     ):
-        name_ = name if reuse == False else name + "_reuse"
+        name_ = name if not reuse else name + "_reuse"
         # weight : [in_channels, out_channels, height, width]
         weight_shape = (input.shape[1], filters, size, size)
         output_shape = (
@@ -289,7 +288,7 @@ class layers:
         const_init=False,
         use_bias=True,
     ):
-        name_ = name if reuse == False else name + "_reuse"
+        name_ = name if not reuse else name + "_reuse"
 
         # (output_dim, k_h, k_w, input.shape[3]) if NHWC
         weight_shape = (filters, input.shape[1], size, size)
@@ -336,7 +335,7 @@ class layers:
         reuse=False,
         const_init=False,
     ):
-        name_ = name if reuse == False else name + "_reuse"
+        name_ = name if not reuse else name + "_reuse"
 
         in_shape = input.shape
         in_num_axes = len(in_shape)
@@ -377,5 +376,5 @@ class layers:
 
     @staticmethod
     def batchnorm(input, name, axis=1, reuse=False):
-        name_ = name if reuse == False else name + "_reuse"
+        name_ = name if not reuse else name + "_reuse"
         return flow.layers.batch_normalization(input, axis=axis, name=name_)
