@@ -60,10 +60,10 @@ def EagerLogicalBlob(lbi, **kw):
     blob_object = None
     if "blob_object" in kw:
         blob_object = kw["blob_object"]
-    distribute = oneflow_api.sbp_descriptor.auto()
-    if "distribute" in kw:
-        distribute = kw["distribute"]
-    return blob_type(lbi, blob_object, blob_register, job_name, distribute)
+    sbp = oneflow_api.sbp.auto()
+    if "sbp" in kw:
+        sbp = kw["sbp"]
+    return blob_type(lbi, blob_object, blob_register, job_name, sbp)
 
 
 @enable_if.condition(~hob.eager_execution_enabled)
@@ -81,10 +81,10 @@ def LazyRemoteBlob(lbi, **kw):
     job_name = ""
     if ("job_name" in kw) and (kw["job_name"] is not None):
         job_name = kw["job_name"]
-    distribute = oneflow_api.sbp_descriptor.auto()
-    if "distribute" in kw:
-        distribute = kw["distribute"]
-    return blob_type(lbi, job_name, distribute)
+    sbp = oneflow_api.sbp.auto()
+    if "sbp" in kw:
+        distribute = kw["sbp"]
+    return blob_type(lbi, job_name, sbp)
 
 
 @property
@@ -95,8 +95,8 @@ def dtype(self):
 
 
 def with_distribute(self, distribute):
-    new = type(self)(self.lbi, self.job_name, oneflow_api.sbp_descriptor.auto())
-    new.set_sbp_descriptor(distribute)
+    new = type(self)(self.lbi, self.job_name, oneflow_api.sbp.auto())
+    new.set_sbp(distribute)
     return new
 
 
@@ -272,9 +272,9 @@ def eager_with_distribute(self, distribute):
         blob_object=self.blob_object,
         blob_register=blob_register,
         job_name=self.job_name,
-        sbp_descriptor=self.sbp_descriptor,
+        sbp=self.sbp,
     )
-    new.set_sbp_descriptor(distribute)
+    new.set_sbp(distribute)
     return new
 
 

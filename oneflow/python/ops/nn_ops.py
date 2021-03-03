@@ -2079,9 +2079,7 @@ def sparse_cross_entropy(
     else:
         assert len(labels.shape) == len(prediction.shape) - 1
 
-    if prediction.distribute is oneflow_api.sbp_descriptor.split(
-        len(prediction.shape) - 1
-    ):
+    if prediction.distribute is oneflow_api.sbp.split(len(prediction.shape) - 1):
         return (
             flow.user_op_builder(
                 name if name is not None else id_util.UniqueStr("SparseCrossEntropyMs_")
@@ -2238,7 +2236,7 @@ def sparse_softmax_cross_entropy_with_logits(
     else:
         assert len(labels.shape) == len(logits.shape) - 1
 
-    if logits.distribute is oneflow_api.sbp_descriptor.split(len(logits.shape) - 1):
+    if logits.distribute is oneflow_api.sbp.split(len(logits.shape) - 1):
         prob, out = (
             flow.user_op_builder(
                 name

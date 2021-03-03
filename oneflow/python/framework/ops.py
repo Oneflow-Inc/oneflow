@@ -132,8 +132,8 @@ def pack(input, pack_num, name=None):
 def api_parallel_cast(
     input: oneflow_api.BlobDesc,
     name: Optional[str] = None,
-    distribute: Optional[oneflow_api.sbp_descriptor.SbpDescriptor] = None,
-    gradient_distribute: Optional[oneflow_api.sbp_descriptor.SbpDescriptor] = None,
+    distribute: Optional[oneflow_api.sbp.Sbp] = None,
+    gradient_distribute: Optional[oneflow_api.sbp.Sbp] = None,
 ) -> oneflow_api.BlobDesc:
     func = enable_if.unique([parallel_cast])
     return func(
@@ -150,9 +150,9 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
         dist_str = ""
         if dist is None:
             pass
-        elif type(dist) is oneflow_api.sbp_descriptor.SplitSbpDescriptor:
+        elif type(dist) is oneflow_api.sbp.SplitSbp:
             dist_str = "S({})".format(dist.axis)
-        elif type(dist) is oneflow_api.sbp_descriptor.BroadcastSbpDescriptor:
+        elif type(dist) is oneflow_api.sbp.BroadcastSbp:
             dist_str = "B"
         else:
             raise ValueError("unsupported distribute")

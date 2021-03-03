@@ -44,25 +44,23 @@ class TrampLazyMirroredBlob : public LazyMirroredBlob {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.attr("INVALID_SPLIT_AXIS") = INVALID_SPLIT_AXIS;
 
-  py::module_ sbp_descriptor = m.def_submodule("sbp_descriptor");
-  py::class_<SbpDescriptor, std::shared_ptr<SbpDescriptor>>(sbp_descriptor, "SbpDescriptor");
-  py::class_<AutoSbpDescriptor, SbpDescriptor, std::shared_ptr<AutoSbpDescriptor>>(
-      sbp_descriptor, "AutoSbpDescriptor");
+  py::module_ sbp = m.def_submodule("sbp");
+  py::class_<SbpDescriptor, std::shared_ptr<SbpDescriptor>>(sbp, "Sbp");
+  py::class_<AutoSbpDescriptor, SbpDescriptor, std::shared_ptr<AutoSbpDescriptor>>(sbp, "AutoSbp");
   py::class_<BroadcastSbpDescriptor, SbpDescriptor, std::shared_ptr<BroadcastSbpDescriptor>>(
-      sbp_descriptor, "BroadcastSbpDescriptor");
-  py::class_<SplitSbpDescriptor, SbpDescriptor, std::shared_ptr<SplitSbpDescriptor>>(
-      sbp_descriptor, "SplitSbpDescriptor")
+      sbp, "BroadcastSbp");
+  py::class_<SplitSbpDescriptor, SbpDescriptor, std::shared_ptr<SplitSbpDescriptor>>(sbp,
+                                                                                     "SplitSbp")
       .def_property_readonly("axis", &SplitSbpDescriptor::axis);
-  sbp_descriptor.def("auto", &GlobalAutoSbpDescriptor);
-  sbp_descriptor.def("broadcast", &GlobalBroadcastSbpDescriptor);
-  sbp_descriptor.def("split",
-                     [](int axis) { return GlobalSplitSbpDescriptor(axis).GetPtrOrThrow(); });
+  sbp.def("auto", &GlobalAutoSbpDescriptor);
+  sbp.def("broadcast", &GlobalBroadcastSbpDescriptor);
+  sbp.def("split", [](int axis) { return GlobalSplitSbpDescriptor(axis).GetPtrOrThrow(); });
 
   py::class_<BlobDesc, std::shared_ptr<BlobDesc>>(m, "BlobDesc")
-      .def(py::init([](std::shared_ptr<cfg::LogicalBlobId> lbi,
-                       std::shared_ptr<SbpDescriptor> sbp_descriptor) {
-        return std::make_shared<BlobDesc>(lbi, sbp_descriptor);
-      }))
+      .def(
+          py::init([](std::shared_ptr<cfg::LogicalBlobId> lbi, std::shared_ptr<SbpDescriptor> sbp) {
+            return std::make_shared<BlobDesc>(lbi, sbp);
+          }))
       .def_property_readonly("lbi", &BlobDesc::lbi)
       .def_property_readonly("logical_blob_name", &BlobDesc::logical_blob_name)
       .def_property_readonly("op_name", &BlobDesc::op_name)
@@ -72,14 +70,14 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_dynamic", &BlobDesc::is_dynamic)
       .def_property_readonly("is_tensor_list", &BlobDesc::is_tensor_list)
       .def_property_readonly("parallel_conf", &BlobDesc::parallel_conf)
-      .def_property_readonly("sbp_descriptor", &BlobDesc::sbp_descriptor)
+      .def_property_readonly("sbp", &BlobDesc::sbp_descriptor)
       .def_property_readonly("unique_name", &BlobDesc::unique_name)
-      .def("set_sbp_descriptor", &BlobDesc::set_sbp_descriptor);
+      .def("set_sbp", &BlobDesc::set_sbp_descriptor);
 
   py::class_<ConsistentBlob, BlobDesc, std::shared_ptr<ConsistentBlob>>(m, "ConsistentBlob")
       .def(py::init([](std::shared_ptr<cfg::LogicalBlobId> lbi, std::string job_name,
-                       std::shared_ptr<SbpDescriptor> sbp_descriptor) {
-        return std::make_shared<ConsistentBlob>(lbi, job_name, sbp_descriptor);
+                       std::shared_ptr<SbpDescriptor> sbp) {
+        return std::make_shared<ConsistentBlob>(lbi, job_name, sbp);
       }))
       .def_property_readonly("lbi", &ConsistentBlob::lbi)
       .def_property_readonly("logical_blob_name", &ConsistentBlob::logical_blob_name)
@@ -90,7 +88,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_dynamic", &ConsistentBlob::is_dynamic)
       .def_property_readonly("is_tensor_list", &ConsistentBlob::is_tensor_list)
       .def_property_readonly("parallel_conf", &ConsistentBlob::parallel_conf)
-      .def_property_readonly("sbp_descriptor", &ConsistentBlob::sbp_descriptor)
+      .def_property_readonly("sbp", &ConsistentBlob::sbp_descriptor)
       .def_property_readonly("unique_name", &ConsistentBlob::unique_name)
       .def_property_readonly("job_name", &ConsistentBlob::job_name)
       .def_property_readonly("parallel_size", &ConsistentBlob::parallel_size)
@@ -99,8 +97,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<LazyConsistentBlob, TrampLazyConsistentBlob, ConsistentBlob,
              std::shared_ptr<LazyConsistentBlob>>(m, "LazyConsistentBlob")
       .def(py::init([](std::shared_ptr<cfg::LogicalBlobId> lbi, std::string job_name,
-                       std::shared_ptr<SbpDescriptor> sbp_descriptor) {
-        return std::make_shared<TrampLazyConsistentBlob>(lbi, job_name, sbp_descriptor);
+                       std::shared_ptr<SbpDescriptor> sbp) {
+        return std::make_shared<TrampLazyConsistentBlob>(lbi, job_name, sbp);
       }))
       .def_property_readonly("shape",
                              [](const std::shared_ptr<LazyConsistentBlob>& x) {
@@ -123,8 +121,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   py::class_<MirroredBlob, BlobDesc, std::shared_ptr<MirroredBlob>>(m, "MirroredBlob")
       .def(py::init([](std::shared_ptr<cfg::LogicalBlobId> lbi, std::string job_name,
-                       std::shared_ptr<SbpDescriptor> sbp_descriptor) {
-        return std::make_shared<MirroredBlob>(lbi, job_name, sbp_descriptor);
+                       std::shared_ptr<SbpDescriptor> sbp) {
+        return std::make_shared<MirroredBlob>(lbi, job_name, sbp);
       }))
       .def_property_readonly("lbi", &MirroredBlob::lbi)
       .def_property_readonly("logical_blob_name", &MirroredBlob::logical_blob_name)
@@ -135,7 +133,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_dynamic", &MirroredBlob::is_dynamic)
       .def_property_readonly("is_tensor_list", &MirroredBlob::is_tensor_list)
       .def_property_readonly("parallel_conf", &MirroredBlob::parallel_conf)
-      .def_property_readonly("sbp_descriptor", &MirroredBlob::sbp_descriptor)
+      .def_property_readonly("sbp", &MirroredBlob::sbp_descriptor)
       .def_property_readonly("unique_name", &MirroredBlob::unique_name)
       .def_property_readonly("job_name", &MirroredBlob::job_name)
       .def_property_readonly("parallel_size", &MirroredBlob::parallel_size)
@@ -144,8 +142,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<LazyMirroredBlob, TrampLazyMirroredBlob, MirroredBlob,
              std::shared_ptr<LazyMirroredBlob>>(m, "LazyMirroredBlob")
       .def(py::init([](std::shared_ptr<cfg::LogicalBlobId> lbi, std::string job_name,
-                       std::shared_ptr<SbpDescriptor> sbp_descriptor) {
-        return std::make_shared<TrampLazyMirroredBlob>(lbi, job_name, sbp_descriptor);
+                       std::shared_ptr<SbpDescriptor> sbp) {
+        return std::make_shared<TrampLazyMirroredBlob>(lbi, job_name, sbp);
       }))
       .def_property_readonly("shape",
                              [](const std::shared_ptr<LazyMirroredBlob>& x) {
@@ -198,26 +196,24 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init([](const std::shared_ptr<cfg::LogicalBlobId>& lbi,
                        const std::shared_ptr<BlobObject>& blob_object,
                        const std::shared_ptr<BlobRegister>& blob_register,
-                       const std::string& job_name,
-                       const std::shared_ptr<SbpDescriptor>& sbp_descriptor) {
+                       const std::string& job_name, const std::shared_ptr<SbpDescriptor>& sbp) {
              return std::make_shared<EagerConsistentBlob>(lbi, blob_object, blob_register, job_name,
-                                                          sbp_descriptor);
+                                                          sbp);
            }),
            py::arg("lbi"), py::arg("blob_object"), py::arg("blob_register"),
-           py::arg("job_name") = "", py::arg("sbp_descriptor") = GlobalAutoSbpDescriptor());
+           py::arg("job_name") = "", py::arg("sbp") = GlobalAutoSbpDescriptor());
 
   py::class_<EagerMirroredBlob, EagerBlobTrait, MirroredBlob, std::shared_ptr<EagerMirroredBlob>>(
       m, "EagerMirroredBlob")
       .def(py::init([](const std::shared_ptr<cfg::LogicalBlobId>& lbi,
                        const std::shared_ptr<BlobObject>& blob_object,
                        const std::shared_ptr<BlobRegister>& blob_register,
-                       const std::string& job_name,
-                       const std::shared_ptr<SbpDescriptor>& sbp_descriptor) {
+                       const std::string& job_name, const std::shared_ptr<SbpDescriptor>& sbp) {
              return std::make_shared<EagerMirroredBlob>(lbi, blob_object, blob_register, job_name,
-                                                        sbp_descriptor);
+                                                        sbp);
            }),
            py::arg("lbi"), py::arg("blob_object"), py::arg("blob_register"),
-           py::arg("job_name") = "", py::arg("sbp_descriptor") = GlobalAutoSbpDescriptor());
+           py::arg("job_name") = "", py::arg("sbp") = GlobalAutoSbpDescriptor());
 }
 
 }  // namespace compatible_py

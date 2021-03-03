@@ -52,7 +52,7 @@ def api_get_variable(
     trainable: Optional[bool] = None,
     model_name: Optional[str] = None,
     random_seed: Optional[int] = None,
-    distribute: oneflow_api.sbp_descriptor.SbpDescriptor = oneflow_api.sbp_descriptor.broadcast(),
+    distribute: oneflow_api.sbp.Sbp = oneflow_api.sbp.broadcast(),
     reuse: bool = True,
 ) -> oneflow_api.BlobDesc:
     r"""Create a variable or retrieve an existing one.
@@ -175,7 +175,7 @@ def get_eager_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=oneflow_api.sbp_descriptor.broadcast(),
+    distribute=oneflow_api.sbp.broadcast(),
     reuse=True,
 ):
     assert isinstance(name, str)
@@ -236,7 +236,7 @@ def get_lazy_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=oneflow_api.sbp_descriptor.broadcast(),
+    distribute=oneflow_api.sbp.broadcast(),
     reuse=True,
 ):
     assert isinstance(name, str)
@@ -291,7 +291,7 @@ def GenerateVariableOpConf(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=oneflow_api.sbp_descriptor.broadcast(),
+    distribute=oneflow_api.sbp.broadcast(),
 ):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
@@ -328,7 +328,7 @@ def GenerateVariableOpConf(
     if model_name is not None:
         op_conf.variable_conf.model_name = model_name
 
-    if type(distribute) is oneflow_api.sbp_descriptor.SplitSbpDescriptor:
+    if type(distribute) is oneflow_api.sbp.SplitSbp:
         op_conf.variable_conf.split_axis.value = distribute.axis
     else:
         op_conf.variable_conf.split_axis.ClearField("value")

@@ -39,7 +39,7 @@ import traceback
 
 class ArgBlobDef(object):
     def __init__(
-        self, shape, dtype, name=None, distribute=oneflow_api.sbp_descriptor.auto(),
+        self, shape, dtype, name=None, sbp=oneflow_api.sbp.auto(),
     ):
         lbi = lbi_util.LogicalBlobId()
         if name is None:
@@ -53,7 +53,7 @@ class ArgBlobDef(object):
             assert dim > 0
         self.shape_ = shape
         self.dtype_ = dtype
-        self.sbp_descriptor_ = distribute
+        self.sbp_ = sbp
 
     @property
     def lbi(self):
@@ -123,16 +123,11 @@ class ArgBlobDef(object):
         return interface_blob_conf
 
     def _SbpDescripiton2Str(self):
-        if type(self.sbp_descriptor_) is oneflow_api.sbp_descriptor.AutoSbpDescriptor:
+        if type(self.sbp_) is oneflow_api.sbp.AutoSbp:
             return ""
-        elif (
-            type(self.sbp_descriptor_) is oneflow_api.sbp_descriptor.SplitSbpDescriptor
-        ):
-            return ":S" + str(self.sbp_descriptor_.axis)
-        elif (
-            type(self.sbp_descriptor_)
-            is oneflow_api.sbp_descriptor.BroadcastSbpDescriptor
-        ):
+        elif type(self.sbp_) is oneflow_api.sbp.SplitSbp:
+            return ":S" + str(self.sbp_.axis)
+        elif type(self.sbp_) is oneflow_api.sbp.BroadcastSbp:
             return ":B"
         else:
             raise NotImplementedError
@@ -299,7 +294,7 @@ def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
         lbi.set_op_name(sub_lbi.op_name)
         lbi.set_blob_name(sub_lbi.blob_name)
         sub_consistent_blob_list.append(
-            oneflow_api.ConsistentBlob(lbi, "", oneflow_api.sbp_descriptor.auto())
+            oneflow_api.ConsistentBlob(lbi, "", oneflow_api.sbp.auto())
         )
 
 
