@@ -17,6 +17,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.device as oneflow_device
 import oneflow_api
 
+
 @oneflow_export("tensor")
 class Tensor:
     def __init__(
@@ -35,7 +36,9 @@ class Tensor:
     ):
         self.local_or_consistent_tensor = None
         self.undetermined_tensor = UndeterminedTensor(
-            shape, dtype, device,
+            shape,
+            dtype,
+            device,
             requires_grad=requires_grad,
             retain_grad=retain_grad,
             is_leaf=is_leaf,
@@ -188,7 +191,9 @@ class Tensor:
         assert not self.is_determined
         if determining_initializer is None:
             determining_initializer = self.determining_initializer
-        self.local_or_consistent_tensor = determining_initializer(self.undetermined_tensor)
+        self.local_or_consistent_tensor = determining_initializer(
+            self.undetermined_tensor
+        )
         self.undetermined_tensor = None
 
     @property
