@@ -25,7 +25,7 @@ class BoxingIdentityTaskNode : public TaskNode {
   BoxingIdentityTaskNode() = default;
   ~BoxingIdentityTaskNode() override = default;
 
-  void Init(int64_t machine_id, int64_t thrd_id, int64_t area_id, const LogicalBlobId& lbi);
+  void Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi);
   TaskType GetTaskType() const override { return TaskType::kBoxingIdentity; }
 
  private:

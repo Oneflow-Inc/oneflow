@@ -72,7 +72,6 @@ REGISTER_USER_OP("assign")
     .Input("ref")
     .Input("value")
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn(GetSbpSignatures)
     .SetInputArgModifyFn(InputArgModifierFn);
 
@@ -81,7 +80,6 @@ REGISTER_USER_OP("assign_if")
     .Input("value")
     .Input("condition")
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn(GetSbpSignatures)
     .SetInputArgModifyFn(InputArgModifierFn);
 
@@ -90,7 +88,6 @@ REGISTER_USER_OP("assign_if_not")
     .Input("value")
     .Input("condition")
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn(GetSbpSignatures)
     .SetInputArgModifyFn(InputArgModifierFn);
 

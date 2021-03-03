@@ -53,7 +53,7 @@ void RepeatCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void RepeatCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<Operator> sole_op = this->logical_node()->SoleOp();
+  std::shared_ptr<const Operator> sole_op = this->logical_node()->SoleOp();
   node->mut_op() = sole_op;
   node->BindBnWithRegst(sole_op->SoleIbn(), GetSoleConsumedRegst("in"));
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
@@ -75,6 +75,5 @@ void RepeatCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("repeat", RepeatCompTaskNode);
-REGISTER_USER_OP_INDEPENDENT_AREA_ID("repeat");
 
 }  // namespace oneflow

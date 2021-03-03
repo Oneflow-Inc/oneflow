@@ -29,11 +29,14 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetSerializedInterUserJobInfo", &GetSerializedInterUserJobInfo);
   m.def("GetSerializedJobSet", &GetSerializedJobSet);
   m.def("GetSerializedStructureGraph", &GetSerializedStructureGraph);
+  m.def("GetSerializedCurrentJob", &GetSerializedCurrentJob);
 
   m.def("GetFunctionConfigDef", &GetFunctionConfigDef);
   m.def("GetScopeConfigDef", &GetScopeConfigDef);
   m.def("GetMachine2DeviceIdListOFRecordFromParallelConf",
         &GetMachine2DeviceIdListOFRecordFromParallelConf);
+
+  m.def("LoadSavedModel", &LoadSavedModel);
 
   m.def("EagerExecutionEnabled", []() { return oneflow::EagerExecutionEnabled(); });
   m.def("LoadLibraryNow", &LoadLibraryNow);

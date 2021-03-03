@@ -82,13 +82,6 @@ DataType LazyConsistentBlob::dtype() const {
   return CHECK_JUST(ctx->GetDataType(logical_blob_name()));
 }
 
-int64_t LazyConsistentBlob::batch_axis() const {
-  auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
-  auto opt_int64 = CHECK_JUST(ctx->GetBatchAxis(logical_blob_name()));
-  if (opt_int64->has_value()) { return opt_int64->value(); }
-  return INVALID_BATCH_AXIS;
-}
-
 int64_t LazyConsistentBlob::split_axis() const {
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
   auto opt_int64 = CHECK_JUST(ctx->GetSplitAxisFromProducerView(logical_blob_name()));
@@ -113,8 +106,8 @@ std::shared_ptr<cfg::ParallelConf> LazyConsistentBlob::parallel_conf() const {
 
 bool LazyConsistentBlob::IdenticalTo(const std::shared_ptr<LazyConsistentBlob>& rhs) const {
   return true && unique_name() == rhs->unique_name() && *shape() == *rhs->shape()
-         && batch_axis() == rhs->batch_axis() && split_axis() == rhs->split_axis()
-         && is_dynamic() == rhs->is_dynamic() && is_tensor_list() == rhs->is_tensor_list();
+         && split_axis() == rhs->split_axis() && is_dynamic() == rhs->is_dynamic()
+         && is_tensor_list() == rhs->is_tensor_list();
 }
 
 MirroredBlob::MirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
@@ -177,13 +170,6 @@ DataType LazyMirroredBlob::dtype() const {
   return CHECK_JUST(ctx->MirroredBlobGetDataType(logical_blob_name()));
 }
 
-int64_t LazyMirroredBlob::batch_axis() const {
-  auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
-  auto opt_int64 = CHECK_JUST(ctx->MirroredBlobGetBatchAxis(logical_blob_name()));
-  if (opt_int64->has_value()) { return opt_int64->value(); }
-  return INVALID_BATCH_AXIS;
-}
-
 int64_t LazyMirroredBlob::split_axis() const {
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
   auto opt_int64 = CHECK_JUST(ctx->MirroredBlobGetSplitAxisFromProducerView(logical_blob_name()));
@@ -227,15 +213,6 @@ std::shared_ptr<Shape> EagerBlobTrait::shape() const {
 
 cfg::DataType EagerBlobTrait::dtype() const {
   return blob_object()->op_arg_blob_attr()->get_dtype();
-}
-
-int64_t EagerBlobTrait::batch_axis() const {
-  auto opt_batch_axis = blob_object()->op_arg_blob_attr()->batch_axis();
-  if (opt_batch_axis->has_value()) {
-    return opt_batch_axis->value();
-  } else {
-    return INVALID_BATCH_AXIS;
-  }
 }
 
 int64_t EagerBlobTrait::split_axis() const {

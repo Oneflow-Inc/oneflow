@@ -46,7 +46,6 @@ class JobBuildAndInferCtx {
   Maybe<bool> IsDynamic(const std::string& lbn) const;
   Maybe<bool> DisableBoxing(const std::string& lbn) const;
   Maybe<bool> IsTensorList(const std::string& lbn) const;
-  Maybe<OptInt64> GetBatchAxis(const std::string& lbn) const;
   Maybe<OptInt64> GetSplitAxisFromProducerView(const std::string& lbn) const;
   Maybe<const ParallelDesc*> GetParallelDescFromProducerView(const std::string& lbn) const;
 
@@ -58,7 +57,6 @@ class JobBuildAndInferCtx {
   Maybe<DataType> MirroredBlobGetDataType(const std::string& lbn_with_hint) const;
   Maybe<bool> MirroredBlobIsDynamic(const std::string& lbn_with_hint) const;
   Maybe<bool> MirroredBlobIsTensorList(const std::string& lbn_with_hint) const;
-  Maybe<OptInt64> MirroredBlobGetBatchAxis(const std::string& lbn_with_hint) const;
   Maybe<OptInt64> MirroredBlobGetSplitAxisFromProducerView(const std::string& lbn_with_hint) const;
   Maybe<const ParallelDesc*> MirroredBlobGetParallelDescFromProducerView(
       const std::string& lbn_with_hint) const;
@@ -66,6 +64,9 @@ class JobBuildAndInferCtx {
   const Job& job() const;
   Maybe<void> CheckJob() const;
   std::string GetJobStructureGraphJson(const std::string& job_name) const;
+  Maybe<void> CheckLbnValidAndExist(const std::string& lbn) const;
+  Maybe<void> Rebuild();
+  Maybe<std::string> GetOpBlobLbn(const std::string& op_name, const std::string& bn_in_op) const;
 
   virtual Maybe<void> Complete() = 0;
 
@@ -122,7 +123,6 @@ class JobBuildAndInferCtx {
   Maybe<void> CheckOpBlobSplitability(Operator*, int64_t parallel_num);
   Maybe<void> CheckPlacement() const;
   Maybe<void> CheckJobConf() const;
-  Maybe<void> CheckLbnValidAndExist(const std::string& lbn) const;
   Maybe<LogicalBlobId> GetMirroredLbi(const std::string& lbn_with_hint) const;
   bool HasAnyMirroredBlobInput(const Operator& op) const;
   Maybe<void> CheckAllInputsConvertableToMirroredBlob(const Operator& op) const;

@@ -59,6 +59,7 @@ class Session(object):
     def __init__(self):
         self.id_ = oneflow_api.NewSessionId()
         self.job_name2function_desc_ = {}
+        self.job_name2job_ = {}
         self.status_ = SessionStatus.OPEN
         self.cond_var_ = threading.Condition()
         self.running_job_cnt_ = 0
@@ -261,6 +262,25 @@ class Session(object):
         assert self.status_ is SessionStatus.OPEN
         assert isinstance(function_desc, FunctionDesc)
         self.job_name2function_desc_[function_desc.job_func.__name__] = function_desc
+
+    def StashJob(self, job_name=None):
+        assert self.status_ is SessionStatus.RUNNING, "current status {}".format(
+            self.status_
+        )
+        job = c_api_util.GetCurrentJob()
+        if job_name is not None:
+            assert (
+                job.job_conf.job_name == job_name
+            ), "{} is not current job name".format(job_name)
+        else:
+            job_name = job.job_conf.job_name
+        self.job_name2job_[job_name] = job
+
+    def Job(self, job_name):
+        assert self.status_ is SessionStatus.RUNNING
+        if job_name not in self.job_name2job_:
+            return None
+        return self.job_name2job_[job_name]
 
     def Sync(self):
         assert self.status_ is SessionStatus.RUNNING
