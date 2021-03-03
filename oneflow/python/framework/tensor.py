@@ -205,6 +205,7 @@ class Tensor:
         assert isinstance(placement, oneflow_api.Placement)
         assert self.local_or_consistent_tensor is None
         assert self.undetermined_tensor is not None
+        assert self.undetermined_tensor.device is None
         self.undetermined_tensor.placement = placement
 
     def set_sbp(self, sbp):
@@ -254,6 +255,17 @@ class UndeterminedTensor:
         self.sbp = sbp
         self.is_consistent = is_consistent
         self.is_lazy = is_lazy
+
+    @property
+    def is_cuda(self):
+        device_type = None
+        if self.placement is not None:
+            device_type = self.placement.device_tag
+        elif self.device is not None:
+            device_type = self.device.type
+        else:
+            raise ValueError("Neither Placement nor device found.")
+        return device_type == "gpu" or device_type == "cuda"
 
 
 def _default_initializer_for_determining(undetermined_tensor):
