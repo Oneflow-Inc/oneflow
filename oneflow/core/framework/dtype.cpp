@@ -53,7 +53,10 @@ Maybe<DType> DType::GetDTypeByDataType(const DataType& data_type) {
 
 Maybe<size_t> DType::bytes() const {
   // DataType::OFRecord and DataType::TensorBuffer don't have stable byte size
-  if (data_type() == DataType::kInvalidDataType) { OF_UNIMPLEMENTED(); }
+  if (data_type() == DataType::kInvalidDataType || data_type() == DataType::kOFRecord
+      || data_type() == DataType::kTensorBuffer) {
+    OF_UNIMPLEMENTED();
+  }
   return SwitchGetDataTypeBytes(SwitchCase(data_type()));
 }
 
