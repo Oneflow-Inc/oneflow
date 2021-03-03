@@ -35,28 +35,29 @@ struct ShapeExportUtil final {
   static std::shared_ptr<Shape> ApiMakeShape(const py::tuple& py_shape) {
     return MakeShape(py_shape).GetPtrOrThrow();
   }
-};
 
-std::string ShapeToString(const Shape& shape) {
-  std::stringstream ss;
-  int32_t idx = 0;
-  auto dim_vec = shape.dim_vec();
-  ss << "flow.Size([";
-  for (int64_t dim : dim_vec) {
-    ss << dim;
-    if (++idx != dim_vec.size() || dim_vec.size() == 1) { ss << ","; }
+  static std::string ToString(const Shape& shape) {
+    std::stringstream ss;
+    int32_t idx = 0;
+    auto dim_vec = shape.dim_vec();
+    ss << "flow.Size([";
+    for (int64_t dim : dim_vec) {
+      ss << dim;
+      if (++idx != dim_vec.size() || dim_vec.size() == 1) { ss << ","; }
+    }
+    ss << "])";
+    return ss.str();
   }
-  ss << "])";
-  return ss.str();
-}
+
+};
 
 }
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Shape, std::shared_ptr<Shape>>(m, "Size")
       .def(py::init(&ShapeExportUtil::ApiMakeShape))
-      .def("__str__", &ShapeToString)
-      .def("__repr__", &ShapeToString)
+      .def("__str__", &ShapeExportUtil::ToString)
+      .def("__repr__", &ShapeExportUtil::ToString)
       .def("__getitem__", [](const Shape& shape, int idx) { return shape.At(idx); })
       .def(
           "__iter__",
