@@ -27,21 +27,19 @@ class Tensor:
         device=None,
         requires_grad=False,
         retain_grad=False,
-        is_leaf=True,
         placement=None,
         sbp=None,
         is_consistent=False,
         is_lazy=False,
         determining_initializer=None,
     ):
-        self.local_or_consistent_tensor = None
-        self.undetermined_tensor = UndeterminedTensor(
+        self._local_or_consistent_tensor = None
+        self._undetermined_tensor = UndeterminedTensor(
             shape,
             dtype,
             device,
             requires_grad=requires_grad,
             retain_grad=retain_grad,
-            is_leaf=is_leaf,
             placement=placement,
             sbp=sbp,
             is_consistent=is_consistent,
@@ -49,21 +47,21 @@ class Tensor:
         )
         if determining_initializer is None:
             determining_initializer = _default_initializer_for_determining
-        self.determining_initializer = determining_initializer
+        self._determining_initializer = determining_initializer
 
     @property
     def shape(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.shape
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.shape
         else:
-            return self.undetermined_tensor.shape
+            return self._undetermined_tensor.shape
 
     @property
     def device(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.device
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.device
         else:
-            return self.undetermined_tensor.device
+            return self._undetermined_tensor.device
 
     @property
     def ndim(self):
@@ -71,17 +69,17 @@ class Tensor:
 
     @property
     def is_cuda(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.is_cuda
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.is_cuda
         else:
-            return self.undetermined_tensor.is_cuda
+            return self._undetermined_tensor.is_cuda
 
     @property
     def dtype(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.dtype
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.dtype
         else:
-            return self.undetermined_tensor.dtype
+            return self._undetermined_tensor.dtype
 
     @property
     def data(self):
@@ -89,31 +87,31 @@ class Tensor:
 
     @property
     def grad(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.grad
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.grad
         else:
             return None
 
     @property
     def grad_fn(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.grad_fn
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.grad_fn
         else:
             return None
 
     @property
     def requires_grad(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.requires_grad
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.requires_grad
         else:
-            return self.undetermined_tensor.requires_grad
+            return self._undetermined_tensor.requires_grad
 
     @property
     def is_leaf(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.is_leaf
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.is_leaf
         else:
-            return self.undetermined_tensor.is_leaf
+            return True
 
     def size(self):
         return self.shape
@@ -125,10 +123,10 @@ class Tensor:
         return self.ndim
 
     def get_device(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.device
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.device
         else:
-            return self.undetermined_tensor.device
+            return self._undetermined_tensor.device
 
     def nelemenet(self):
         prod = 1
@@ -169,73 +167,73 @@ class Tensor:
     def determine(self, determining_initializer=None):
         assert not self.is_determined
         if determining_initializer is None:
-            determining_initializer = self.determining_initializer
-        self.local_or_consistent_tensor = determining_initializer(
-            self.undetermined_tensor
+            determining_initializer = self._determining_initializer
+        self._local_or_consistent_tensor = determining_initializer(
+            self._undetermined_tensor
         )
-        self.undetermined_tensor = None
+        self._undetermined_tensor = None
 
     @property
     def is_determined(self):
-        if self.local_or_consistent_tensor is not None:
-            assert self.undetermined_tensor is None
+        if self._local_or_consistent_tensor is not None:
+            assert self._undetermined_tensor is None
             return True
         else:
-            assert self.undetermined_tensor is not None
+            assert self._undetermined_tensor is not None
             return False
 
     def set_placement(self, placement):
         assert isinstance(placement, oneflow_api.Placement)
-        assert self.local_or_consistent_tensor is None
-        assert self.undetermined_tensor is not None
-        assert self.undetermined_tensor.device is None
-        self.undetermined_tensor.placement = placement
+        assert self._local_or_consistent_tensor is None
+        assert self._undetermined_tensor is not None
+        assert self._undetermined_tensor.device is None
+        self._undetermined_tensor.placement = placement
 
     def set_sbp(self, sbp):
         assert isinstance(sbp, oneflow_api.Distribute)
-        assert self.local_or_consistent_tensor is None
-        assert self.undetermined_tensor is not None
-        self.undetermined_tensor.sbp = sbp
+        assert self._local_or_consistent_tensor is None
+        assert self._undetermined_tensor is not None
+        self._undetermined_tensor.sbp = sbp
 
     def set_is_consistent(self, is_consistent):
         assert isinstance(is_consistent, bool)
-        assert self.local_or_consistent_tensor is None
-        assert self.undetermined_tensor is not None
-        self.undetermined_tensor.is_consistent = is_consistent
+        assert self._local_or_consistent_tensor is None
+        assert self._undetermined_tensor is not None
+        self._undetermined_tensor.is_consistent = is_consistent
 
     def set_is_lazy(self, is_lazy):
         assert isinstance(is_lazy, bool)
-        assert self.local_or_consistent_tensor is None
-        assert self.undetermined_tensor is not None
-        self.undetermined_tensor.is_lazy = is_lazy
+        assert self._local_or_consistent_tensor is None
+        assert self._undetermined_tensor is not None
+        self._undetermined_tensor.is_lazy = is_lazy
 
     @property
     def placement(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.placement
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.placement
         else:
-            return self.undetermined_tensor.placement
+            return self._undetermined_tensor.placement
 
     @property
     def is_lazy(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.is_lazy
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.is_lazy
         else:
-            return self.undetermined_tensor.is_lazy
+            return self._undetermined_tensor.is_lazy
 
     @property
     def is_consistent(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.is_consistent
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.is_consistent
         else:
-            return self.undetermined_tensor.is_consistent
+            return self._undetermined_tensor.is_consistent
 
     @property
     def sbp(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.sbp
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.sbp
         else:
-            return self.undetermined_tensor.sbp
+            return self._undetermined_tensor.sbp
 
 
 class UndeterminedTensor:
@@ -246,7 +244,6 @@ class UndeterminedTensor:
         device=None,
         requires_grad=False,
         retain_grad=False,
-        is_leaf=True,
         placement=None,
         sbp=None,
         is_consistent=False,
@@ -261,7 +258,6 @@ class UndeterminedTensor:
         self.device = device
         self.requires_grad = requires_grad
         self.retain_grad = retain_grad
-        self.is_leaf = is_leaf
         self.placement = placement
         self.sbp = sbp
         self.is_consistent = is_consistent
