@@ -340,8 +340,8 @@ class InceptionV3(nn.Module):
         x = self.linear(x)
         return x
 
-from absl import app
-from absl.testing import absltest
+# from absl import app
+# from absl.testing import absltest
 
 def test_inception_v3(test_case):
     load_pytorch_module_and_check(
@@ -351,5 +351,5 @@ def test_inception_v3(test_case):
         train_flag=False,
     )
 
-test_case = absltest.TestCase
-test_inception_v3(test_case)
+# test_case = absltest.TestCase
+# test_inception_v3(test_case)
