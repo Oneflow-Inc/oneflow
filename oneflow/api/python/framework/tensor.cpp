@@ -65,7 +65,6 @@ void ExportTensor(py::module& m, const char* name) {
       // Properties of pytorch
       .def_property_readonly("shape", &T::shape)
       .def_property_readonly("device", &T::device)
-      .def_property_readonly("ndim", &T::ndim)
       .def_property_readonly("is_cuda", &T::is_cuda)
       .def_property_readonly("dtype", &T::dtype)
       .def_property_readonly("data", []() { TODO(); })
@@ -74,11 +73,6 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("requires_grad", &T::requires_grad)
       .def_property_readonly("is_leaf", &T::is_leaf)
       // Methods of pytorch
-      .def("size", &T::shape)
-      .def("dim", &T::dim)
-      .def("ndimension", &T::ndim)
-      .def("get_device", &T::device)
-      .def("nelement", &T::nelement)
       .def("data_ptr", []() { TODO(); })
       .def("element_size", []() { TODO(); })
       .def("numpy", []() { TODO(); })
