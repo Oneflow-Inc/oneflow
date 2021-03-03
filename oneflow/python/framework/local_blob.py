@@ -21,20 +21,10 @@ import oneflow_api
 import traceback
 
 
-class LocalMirroredTensor(object):
-    def __init__(self, ndarray_list, is_dynamic, concat_axis=None):
-        self.ndarray_list_ = ndarray_list
+class LocalTensor(object):
+    def __init__(self, ndarray, is_dynamic):
+        self.ndarray_ = ndarray
         self.is_dynamic_ = is_dynamic
-        self.concat_axis_ = concat_axis
-        self.ndarray_ = None
-        if not is_dynamic:
-            if len(self.ndarray_list_) == 1:
-                self.ndarray_ = self.ndarray_list_[0]
-            elif concat_axis is not None:
-                self.ndarray_ = np.concatenate(self.ndarray_list_, axis=concat_axis)
-            else:
-                # do nothing
-                pass
 
     @property
     def is_dynamic(self):
@@ -43,48 +33,32 @@ class LocalMirroredTensor(object):
     def ndarray(self):
         print(
             "WARNING:",
-            "LocalMirroredTensor.ndarray is deprecated, please use LocalMirroredTensor.numpy\n",
+            "LocalTensor.ndarray is deprecated, please use LocalTensor.numpy\n",
             traceback.format_stack()[-2],
         )
         return self.numpy()
 
-    def numpy(self, parallel_id=None):
-        if parallel_id is None:
-            assert self.ndarray_ is not None
-            return self.ndarray_
-        else:
-            assert parallel_id >= 0
-            assert len(self.ndarray_list_) > parallel_id
-            return self.ndarray_list_[parallel_id]
-
-    def parallel_num(self):
-        return len(self.ndarray_list_)
+    def numpy(self):
+        return self.ndarray_
 
     def __getattr__(self, attr):
         return getattr(self.numpy(), attr)
 
 
-def MakeLocalBlob(ndarray_lists, consistent_blob):
+def MakeLocalBlob(ndarray, consistent_blob):
     assert isinstance(consistent_blob, oneflow_api.ConsistentBlob), type(
         consistent_blob
     )
-    print("HAHA cclog: MakeLocalBLob tensor id", id(ndarray_lists[0][0]))
-    print("HAHA cclog: MakeLocalBLob tensor shape", ndarray_lists[0][0].shape)
-    assert len(ndarray_lists) == 1
-    return LocalMirroredTensor(
-        ndarray_lists[0],
-        is_dynamic=consistent_blob.is_dynamic,
-        concat_axis=consistent_blob.split_axis,
-    )
+    return LocalTensor(ndarray, is_dynamic=consistent_blob.is_dynamic,)
 
 
 def MergeLocalBlobs(local_blob_list, mirrored_blob):
     assert isinstance(mirrored_blob, oneflow_api.MirroredBlob)
     # NOTE(chengcheng): concat_axis=split_axis just to be sure. Will delete in multi-client.
-    return LocalMirroredTensor(
+    return LocalTensor(
         [x.numpy() for x in local_blob_list],
         is_dynamic=mirrored_blob.is_dynamic,
-        concat_axis=mirrored_blob.split_axis,
+        # concat_axis=mirrored_blob.split_axis,
     )
 
 
@@ -92,15 +66,13 @@ def MakeLocalBlob4EagerBlob(eager_blob):
     assert isinstance(eager_blob, oneflow_api.EagerBlobTrait)
     if isinstance(eager_blob, oneflow_api.EagerMirroredBlob):
         # NOTE(chengcheng): concat_axis=split_axis just to be sure. Will delete in multi-client.
-        return LocalMirroredTensor(
+        return LocalTensor(
             [eager_blob.numpy(i) for i in range(eager_blob.numpy_size())],
             is_dynamic=eager_blob.is_dynamic,
-            concat_axis=eager_blob.split_axis,
+            # concat_axis=eager_blob.split_axis,
         )
     elif isinstance(eager_blob, oneflow_api.EagerConsistentBlob):
-        return LocalMirroredTensor(
-            [eager_blob.numpy()], is_dynamic=False, concat_axis=0
-        )
+        return LocalTensor([eager_blob.numpy()], is_dynamic=False, concat_axis=0)
     else:
         raise NotImplementedError
 
@@ -127,7 +99,7 @@ non_override_field = set(
 
 def MakeBlobMethod(field_name):
     def ConvertOtherArgs(args):
-        return [x.numpy() if isinstance(x, LocalMirroredTensor) else x for x in args]
+        return [x.numpy() if isinstance(x, LocalTensor) else x for x in args]
 
     return lambda self, *args: getattr(self.numpy(), field_name)(
         *ConvertOtherArgs(args)
@@ -139,5 +111,5 @@ for field_name in dir(np.ndarray):
         continue
     if field_name in non_override_field:
         continue
-    if hasattr(LocalMirroredTensor, field_name) == False:
-        setattr(LocalMirroredTensor, field_name, MakeBlobMethod(field_name))
+    if hasattr(LocalTensor, field_name) == False:
+        setattr(LocalTensor, field_name, MakeBlobMethod(field_name))

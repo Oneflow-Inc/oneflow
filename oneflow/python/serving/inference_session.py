@@ -499,17 +499,8 @@ class InferenceSession(object):
         )
 
         def pull_fn(ofblob):
-            ndarray_lists = ofblob.CopyToNdarrayLists()
-            assert len(ndarray_lists) == 1
-            ndarray_list = ndarray_lists[0]
-            if len(ndarray_list) == 1:
-                self.event_loop_.call_soon_threadsafe(
-                    future.set_result, ndarray_list[0]
-                )
-            else:
-                assert split_axis is not None
-                pull_result = np.concatenate(ndarray_list, axis=split_axis)
-                self.event_loop_.call_soon_threadsafe(future.set_result, pull_result)
+            ndarray = ofblob.CopyToNdarray()
+            self.event_loop_.call_soon_threadsafe(future.set_result, ndarray)
 
         return pull_fn
 

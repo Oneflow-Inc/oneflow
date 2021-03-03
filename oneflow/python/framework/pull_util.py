@@ -186,7 +186,7 @@ class _ConsistentBlobPuller(_BlobPuller):
     def AsyncPull(self, pull_cb):
         def PullCallback(of_blob):
             self.result_ = local_blob_util.MakeLocalBlob(
-                [of_blob.CopyToNdarray()], self.consistent_blob_
+                of_blob.CopyToNdarray(), self.consistent_blob_
             )
             pull_cb()
 
@@ -205,13 +205,16 @@ class _MirroredBlobPuller(_BlobPuller):
 
     @property
     def result(self):
-        if self.local_mirrored_blob_ is not None:
-            return self.local_mirrored_blob_
-        local_blob_list = [x.result for x in self.sub_pullers_]
-        self.local_mirrored_blob_ = local_blob_util.MergeLocalBlobs(
-            local_blob_list, self.mirrored_blob_
-        )
-        return self.local_mirrored_blob_
+        # TODO(chengcheng, lixinqi)
+        # if self.local_mirrored_blob_ is not None:
+        #     return self.local_mirrored_blob_
+        # local_blob_list = [x.result for x in self.sub_pullers_]
+        # self.local_mirrored_blob_ = local_blob_util.MergeLocalBlobs(
+        #     local_blob_list, self.mirrored_blob_
+        # )
+        # return self.local_mirrored_blob_
+        raise NotImplementedError
+        return None
 
     def FlatConsistentBlobPullers(self):
         for x in self.sub_pullers_:

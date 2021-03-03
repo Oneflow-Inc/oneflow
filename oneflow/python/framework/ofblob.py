@@ -75,8 +75,6 @@ class OfBlob(object):
             shape_tensor = np.zeros(self.num_axes, dtype=np.int64)
             oneflow_api.OfBlob_CopyShapeTo(self.of_blob_ptr_, shape_tensor)
             shape = tuple(shape_tensor.tolist())
-            print("HAHA cclog: numpy shape = ", src_ndarray.shape)
-            print("HAHA cclog: ofblob shape = ", shape)
             assert src_ndarray.shape == shape
         return self._CopyBodyFromNdarray(src_ndarray)
 
@@ -96,11 +94,8 @@ class OfBlob(object):
         shape_tensor = np.zeros(self.num_axes, dtype=np.int64)
         oneflow_api.OfBlob_CopyShapeTo(self.of_blob_ptr_, shape_tensor)
         shape = tuple(shape_tensor.tolist())
-        print("HAHA cclog: CopyToNdarray ofblob shape = ", shape)
         tensor = np.zeros(
             shape, dtype=flow.convert_oneflow_dtype_to_numpy_dtype(self.dtype)
         )
         copy_method(self.of_blob_ptr_, tensor)
-        print("HAHA cclog: CopyToNdarray tensor shape = ", tensor.shape)
-        print("HAHA cclog: CopyToNdarray tensor id", id(tensor))
-        return [tensor]
+        return tensor

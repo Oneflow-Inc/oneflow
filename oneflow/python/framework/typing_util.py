@@ -200,7 +200,7 @@ def TransformReturnedBundle(bundle_blob, annotation):
     the returned bundle blob could be the form like x, [x], (x, ),
     {"key": x} or the mixed form of them.
     """
-    if isinstance(bundle_blob, (local_blob_util.LocalMirroredTensor),):
+    if isinstance(bundle_blob, (local_blob_util.LocalTensor),):
         return TransformReturnedLocalBlob(bundle_blob, annotation.__args__[0])
     elif isinstance(bundle_blob, (list, tuple)):
         return type(bundle_blob)(
