@@ -40,17 +40,16 @@ struct ShapeExportUtil final {
 std::string ShapeToString(const Shape& shape) {
   std::stringstream ss;
   int32_t idx = 0;
-  auto dim_vec = shape.dim_vec();
   ss << "flow.Size([";
-  for (int64_t dim : dim_vec) {
+  for (int64_t dim : shape.dim_vec()) {
     ss << dim;
-    if (++idx != dim_vec.size() || dim_vec.size() == 1) { ss << ","; }
+    if (++idx != shape.dim_vec().size()) { ss << ","; }
   }
   ss << "])";
   return ss.str();
 }
 
-}
+}  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Shape, std::shared_ptr<Shape>>(m, "Size")
