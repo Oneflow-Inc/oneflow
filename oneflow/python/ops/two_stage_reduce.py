@@ -163,6 +163,6 @@ def _check_axis(axis, shape):
 
 def check_x_dictribute(x, axis):
     for i in axis:
-        if x.distribute is oneflow_api.sbp_descripiton.split(i):
+        if x.distribute is oneflow_api.sbp_descriptor.split(i):
             return True
     return False

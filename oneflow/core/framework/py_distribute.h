@@ -25,12 +25,12 @@ namespace compatible_py {
 
 static const int64_t HAS_NO_AXIS = -1;
 
-class SbpDescription {
+class SbpDescriptor {
  public:
-  SbpDescription() : sbp_parallel_(std::make_shared<cfg::SbpParallel>()) {}
-  SbpDescription(const SbpDescription&) = delete;
-  SbpDescription(SbpDescription&&) = delete;
-  virtual ~SbpDescription() = default;
+  SbpDescriptor() : sbp_parallel_(std::make_shared<cfg::SbpParallel>()) {}
+  SbpDescriptor(const SbpDescriptor&) = delete;
+  SbpDescriptor(SbpDescriptor&&) = delete;
+  virtual ~SbpDescriptor() = default;
 
   virtual int64_t axis() const { return HAS_NO_AXIS; }
 
@@ -38,37 +38,37 @@ class SbpDescription {
   std::shared_ptr<cfg::SbpParallel> sbp_parallel_;
 };
 
-class AutoSbpDescription : public SbpDescription {
+class AutoSbpDescriptor : public SbpDescriptor {
  public:
-  AutoSbpDescription() : SbpDescription() {}
-  AutoSbpDescription(const AutoSbpDescription&) = delete;
-  AutoSbpDescription(AutoSbpDescription&&) = delete;
-  ~AutoSbpDescription() override = default;
+  AutoSbpDescriptor() : SbpDescriptor() {}
+  AutoSbpDescriptor(const AutoSbpDescriptor&) = delete;
+  AutoSbpDescriptor(AutoSbpDescriptor&&) = delete;
+  ~AutoSbpDescriptor() override = default;
 };
 
-class BroadcastSbpDescription : public SbpDescription {
+class BroadcastSbpDescriptor : public SbpDescriptor {
  public:
-  BroadcastSbpDescription() : SbpDescription() { sbp_parallel_->mutable_broadcast_parallel(); }
-  BroadcastSbpDescription(const BroadcastSbpDescription&) = delete;
-  BroadcastSbpDescription(BroadcastSbpDescription&&) = delete;
-  ~BroadcastSbpDescription() override = default;
+  BroadcastSbpDescriptor() : SbpDescriptor() { sbp_parallel_->mutable_broadcast_parallel(); }
+  BroadcastSbpDescriptor(const BroadcastSbpDescriptor&) = delete;
+  BroadcastSbpDescriptor(BroadcastSbpDescriptor&&) = delete;
+  ~BroadcastSbpDescriptor() override = default;
 };
 
-class SplitSbpDescription : public SbpDescription {
+class SplitSbpDescriptor : public SbpDescriptor {
  public:
-  SplitSbpDescription(int axis) : SbpDescription() {
+  SplitSbpDescriptor(int axis) : SbpDescriptor() {
     sbp_parallel_->mutable_split_parallel()->set_axis(axis);
   }
-  SplitSbpDescription(const SplitSbpDescription&) = delete;
-  SplitSbpDescription(SplitSbpDescription&&) = delete;
-  ~SplitSbpDescription() override = default;
+  SplitSbpDescriptor(const SplitSbpDescriptor&) = delete;
+  SplitSbpDescriptor(SplitSbpDescriptor&&) = delete;
+  ~SplitSbpDescriptor() override = default;
 
   int64_t axis() const override { return sbp_parallel_->split_parallel().axis(); }
 };
 
-std::shared_ptr<AutoSbpDescription> GlobalAutoSbpDescription();
-std::shared_ptr<BroadcastSbpDescription> GlobalBroadcastSbpDescription();
-Maybe<SplitSbpDescription> GlobalSplitSbpDescription(int axis);
+std::shared_ptr<AutoSbpDescriptor> GlobalAutoSbpDescriptor();
+std::shared_ptr<BroadcastSbpDescriptor> GlobalBroadcastSbpDescriptor();
+Maybe<SplitSbpDescriptor> GlobalSplitSbpDescriptor(int axis);
 
 }  // namespace compatible_py
 

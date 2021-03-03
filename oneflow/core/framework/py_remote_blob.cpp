@@ -38,8 +38,8 @@ Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) 
 
 ConsistentBlob::ConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
                                const std::string& job_name,
-                               const std::shared_ptr<SbpDescription>& sbp_descripiton)
-    : BlobDesc(lbi, sbp_descripiton), parallel_size_(0) {
+                               const std::shared_ptr<SbpDescriptor>& sbp_descriptor)
+    : BlobDesc(lbi, sbp_descriptor), parallel_size_(0) {
   if (job_name.empty()) {
     auto* mgr = CHECK_JUST(GlobalJobBuildAndInferCtxMgr());
     job_name_ = *CHECK_JUST(mgr->GetCurrentJobName());
@@ -65,8 +65,8 @@ void ConsistentBlob::set_job_name(std::string job_name) { job_name_ = job_name; 
 
 LazyConsistentBlob::LazyConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
                                        const std::string& job_name,
-                                       const std::shared_ptr<SbpDescription>& sbp_descripiton)
-    : ConsistentBlob(lbi, job_name, sbp_descripiton) {}
+                                       const std::shared_ptr<SbpDescriptor>& sbp_descriptor)
+    : ConsistentBlob(lbi, job_name, sbp_descriptor) {}
 
 std::string LazyConsistentBlob::get_lazy_shape_log_warning() const { return std::string(""); }
 
@@ -112,8 +112,8 @@ bool LazyConsistentBlob::IdenticalTo(const std::shared_ptr<LazyConsistentBlob>& 
 
 MirroredBlob::MirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
                            const std::string& job_name,
-                           const std::shared_ptr<SbpDescription>& sbp_descripiton)
-    : BlobDesc(lbi, sbp_descripiton), parallel_size_(0) {
+                           const std::shared_ptr<SbpDescriptor>& sbp_descriptor)
+    : BlobDesc(lbi, sbp_descriptor), parallel_size_(0) {
   if (job_name.empty()) {
     auto* mgr = CHECK_JUST(GlobalJobBuildAndInferCtxMgr());
     job_name_ = *CHECK_JUST(mgr->GetCurrentJobName());
@@ -139,15 +139,15 @@ void MirroredBlob::set_job_name(std::string job_name) { job_name_ = job_name; }
 
 LazyMirroredBlob::LazyMirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
                                    const std::string& job_name,
-                                   const std::shared_ptr<SbpDescription>& sbp_descripiton)
-    : MirroredBlob(lbi, job_name, sbp_descripiton) {
+                                   const std::shared_ptr<SbpDescriptor>& sbp_descriptor)
+    : MirroredBlob(lbi, job_name, sbp_descriptor) {
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(this->job_name()));
   int lbi_num = CHECK_JUST(ctx->MirroredBlobGetNumSubLbi(this->logical_blob_name()));
   for (int i = 0; i < lbi_num; ++i) {
     std::shared_ptr<cfg::LogicalBlobId> sub_lbi = std::make_shared<cfg::LogicalBlobId>(
         *CHECK_JUST(ctx->MirroredBlobGetSubLbi(this->logical_blob_name(), i)));
     sub_consistent_blob_list_.emplace_back(
-        std::make_shared<LazyConsistentBlob>(sub_lbi, "", GlobalAutoSbpDescription()));
+        std::make_shared<LazyConsistentBlob>(sub_lbi, "", GlobalAutoSbpDescriptor()));
   }
 }
 
@@ -271,8 +271,8 @@ EagerConsistentBlob::EagerConsistentBlob(const std::shared_ptr<cfg::LogicalBlobI
                                          const std::shared_ptr<BlobObject>& blob_object,
                                          const std::shared_ptr<BlobRegister>& blob_register,
                                          const std::string& job_name,
-                                         const std::shared_ptr<SbpDescription>& sbp_descripiton)
-    : EagerBlobTrait(), ConsistentBlob(lbi, job_name, sbp_descripiton) {
+                                         const std::shared_ptr<SbpDescriptor>& sbp_descriptor)
+    : EagerBlobTrait(), ConsistentBlob(lbi, job_name, sbp_descriptor) {
   std::string logical_blob_name = lbi->op_name() + "/" + lbi->blob_name();
   _Init(logical_blob_name, blob_object, blob_register);
 }
@@ -281,8 +281,8 @@ EagerMirroredBlob::EagerMirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& 
                                      const std::shared_ptr<BlobObject>& blob_object,
                                      const std::shared_ptr<BlobRegister>& blob_register,
                                      const std::string& job_name,
-                                     const std::shared_ptr<SbpDescription>& sbp_descripiton)
-    : EagerBlobTrait(), MirroredBlob(lbi, job_name, sbp_descripiton) {
+                                     const std::shared_ptr<SbpDescriptor>& sbp_descriptor)
+    : EagerBlobTrait(), MirroredBlob(lbi, job_name, sbp_descriptor) {
   std::string logical_blob_name = lbi->op_name() + "/" + lbi->blob_name();
   _Init(logical_blob_name, blob_object, blob_register);
 }

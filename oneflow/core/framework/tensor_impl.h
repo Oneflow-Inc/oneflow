@@ -27,7 +27,7 @@ namespace oneflow {
 
 namespace compatible_py {
 
-class SbpDescription;
+class SbpDescriptor;
 }
 
 class Device;
@@ -111,14 +111,14 @@ class ConsistentTensorImpl : public TensorImpl {
   // Getters
   const std::shared_ptr<const Device>& device() const { return device_ /* always nullptr*/; }
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; };
-  virtual const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton() const = 0;
+  virtual const std::shared_ptr<const compatible_py::SbpDescriptor>& sbp_descriptor() const = 0;
 
   // Setters
   void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
     parallel_desc_ = parallel_desc;
   }
-  virtual void set_sbp_descripiton(
-      const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton) = 0;
+  virtual void set_sbp_descriptor(
+      const std::shared_ptr<const compatible_py::SbpDescriptor>& sbp_descriptor) = 0;
 
  protected:
   ConsistentTensorImpl(const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad,
@@ -208,29 +208,29 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
   OF_DISALLOW_COPY_AND_MOVE(LazyConsistentTensorImpl);
   LazyConsistentTensorImpl(
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-      const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton,
+      const std::shared_ptr<const compatible_py::SbpDescriptor>& sbp_descriptor,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad, bool is_leaf,
       bool retain_grad)
       : ConsistentTensorImpl(parallel_desc, requires_grad, is_leaf, retain_grad),
         shape_(shape),
         dtype_(dtype),
-        sbp_descripiton_(sbp_descripiton) {}
+        sbp_descriptor_(sbp_descriptor) {}
   ~LazyConsistentTensorImpl() override = default;
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
-  const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton() const override {
-    return sbp_descripiton_;
+  const std::shared_ptr<const compatible_py::SbpDescriptor>& sbp_descriptor() const override {
+    return sbp_descriptor_;
   }
   bool is_lazy() const override { return true; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
-  void set_sbp_descripiton(
-      const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton) override {
-    sbp_descripiton_ = sbp_descripiton;
+  void set_sbp_descriptor(
+      const std::shared_ptr<const compatible_py::SbpDescriptor>& sbp_descriptor) override {
+    sbp_descriptor_ = sbp_descriptor;
   }
 
   // Getters to be deprecated
@@ -246,7 +246,7 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
  private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
-  std::shared_ptr<const compatible_py::SbpDescription> sbp_descripiton_;
+  std::shared_ptr<const compatible_py::SbpDescriptor> sbp_descriptor_;
 };
 
 class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
@@ -254,29 +254,29 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   OF_DISALLOW_COPY_AND_MOVE(EagerConsistentTensorImpl);
   EagerConsistentTensorImpl(
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-      const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton,
+      const std::shared_ptr<const compatible_py::SbpDescriptor>& sbp_descriptor,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad, bool is_leaf,
       bool retain_grad)
       : ConsistentTensorImpl(parallel_desc, requires_grad, is_leaf, retain_grad),
         shape_(shape),
         dtype_(dtype),
-        sbp_descripiton_(sbp_descripiton) {}
+        sbp_descriptor_(sbp_descriptor) {}
   ~EagerConsistentTensorImpl() override = default;
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
-  const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton() const override {
-    return sbp_descripiton_;
+  const std::shared_ptr<const compatible_py::SbpDescriptor>& sbp_descriptor() const override {
+    return sbp_descriptor_;
   }
   bool is_lazy() const override { return false; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
-  void set_sbp_descripiton(
-      const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton) override {
-    sbp_descripiton_ = sbp_descripiton;
+  void set_sbp_descriptor(
+      const std::shared_ptr<const compatible_py::SbpDescriptor>& sbp_descriptor) override {
+    sbp_descriptor_ = sbp_descriptor;
   }
 
   // Getters to be deprecated
@@ -292,7 +292,7 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
  private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
-  std::shared_ptr<const compatible_py::SbpDescription> sbp_descripiton_;
+  std::shared_ptr<const compatible_py::SbpDescriptor> sbp_descriptor_;
   std::shared_ptr<compatible_py::BlobObject> blob_object_;
 };
 

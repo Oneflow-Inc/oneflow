@@ -50,7 +50,7 @@ class Tensor {
 
 namespace compatible_py {
 
-class SbpDescription;
+class SbpDescriptor;
 }
 
 class Device;
@@ -197,8 +197,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->parallel_desc();
   }
   const std::shared_ptr<const Device>& device() const override { return impl_->device(); }
-  const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton() const {
-    return impl_->sbp_descripiton();
+  const std::shared_ptr<const compatible_py::SbpDescriptor>& sbp_descriptor() const {
+    return impl_->sbp_descriptor();
   }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
@@ -231,7 +231,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   static std::shared_ptr<ConsistentTensor> MakeTensor(
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-      const std::shared_ptr<const compatible_py::SbpDescription>& sbp_descripiton,
+      const std::shared_ptr<const compatible_py::SbpDescriptor>& sbp_descriptor,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
       bool is_leaf, bool retain_grad);
 

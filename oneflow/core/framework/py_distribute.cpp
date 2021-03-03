@@ -24,25 +24,25 @@ static const int64_t kAxisNumMax = 20;
 
 namespace {
 
-std::vector<std::shared_ptr<SplitSbpDescription>> MakeSplitSbpDescriptions(int64_t axis_num_max) {
-  std::vector<std::shared_ptr<SplitSbpDescription>> ret(axis_num_max);
-  for (int i = 0; i < axis_num_max; ++i) { ret[i].reset(new SplitSbpDescription(i)); }
+std::vector<std::shared_ptr<SplitSbpDescriptor>> MakeSplitSbpDescriptors(int64_t axis_num_max) {
+  std::vector<std::shared_ptr<SplitSbpDescriptor>> ret(axis_num_max);
+  for (int i = 0; i < axis_num_max; ++i) { ret[i].reset(new SplitSbpDescriptor(i)); }
   return ret;
 }
 
 }  // namespace
 
-std::shared_ptr<AutoSbpDescription> g_auto(new AutoSbpDescription());
+std::shared_ptr<AutoSbpDescriptor> g_auto(new AutoSbpDescriptor());
 
-std::shared_ptr<BroadcastSbpDescription> g_broadcast(new BroadcastSbpDescription());
+std::shared_ptr<BroadcastSbpDescriptor> g_broadcast(new BroadcastSbpDescriptor());
 
-std::vector<std::shared_ptr<SplitSbpDescription>> g_split(MakeSplitSbpDescriptions(kAxisNumMax));
+std::vector<std::shared_ptr<SplitSbpDescriptor>> g_split(MakeSplitSbpDescriptors(kAxisNumMax));
 
-std::shared_ptr<AutoSbpDescription> GlobalAutoSbpDescription() { return g_auto; }
+std::shared_ptr<AutoSbpDescriptor> GlobalAutoSbpDescriptor() { return g_auto; }
 
-std::shared_ptr<BroadcastSbpDescription> GlobalBroadcastSbpDescription() { return g_broadcast; }
+std::shared_ptr<BroadcastSbpDescriptor> GlobalBroadcastSbpDescriptor() { return g_broadcast; }
 
-Maybe<SplitSbpDescription> GlobalSplitSbpDescription(int axis) {
+Maybe<SplitSbpDescriptor> GlobalSplitSbpDescriptor(int axis) {
   return JUST(VectorAt(g_split, axis));
 }
 

@@ -20,8 +20,8 @@ namespace oneflow {
 namespace compatible_py {
 
 BlobDesc::BlobDesc(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
-                   const std::shared_ptr<SbpDescription>& sbp_descripiton)
-    : lbi_(lbi), sbp_descripiton_(sbp_descripiton) {
+                   const std::shared_ptr<SbpDescriptor>& sbp_descriptor)
+    : lbi_(lbi), sbp_descriptor_(sbp_descriptor) {
   lbn_ = lbi->op_name() + "/" + lbi->blob_name();
 }
 
@@ -35,20 +35,20 @@ std::shared_ptr<cfg::ParallelConf> BlobDesc::parallel_conf() const { UNIMPLEMENT
 
 bool BlobDesc::is_dynamic() const { UNIMPLEMENTED(); }
 bool BlobDesc::is_tensor_list() const { UNIMPLEMENTED(); }
-std::shared_ptr<SbpDescription> BlobDesc::sbp_descripiton() const { return sbp_descripiton_; }
-std::string BlobDesc::unique_name() const { return lbn_ + *CHECK_JUST(SbpDescription2Str()); }
+std::shared_ptr<SbpDescriptor> BlobDesc::sbp_descriptor() const { return sbp_descriptor_; }
+std::string BlobDesc::unique_name() const { return lbn_ + *CHECK_JUST(SbpDescriptor2Str()); }
 
-void BlobDesc::set_sbp_descripiton(const std::shared_ptr<SbpDescription> sbp_descripiton) {
-  sbp_descripiton_ = sbp_descripiton;
+void BlobDesc::set_sbp_descriptor(const std::shared_ptr<SbpDescriptor> sbp_descriptor) {
+  sbp_descriptor_ = sbp_descriptor;
 }
 
-Maybe<std::string> BlobDesc::SbpDescription2Str() const {
-  if (std::dynamic_pointer_cast<AutoSbpDescription>(sbp_descripiton_)) {
+Maybe<std::string> BlobDesc::SbpDescriptor2Str() const {
+  if (std::dynamic_pointer_cast<AutoSbpDescriptor>(sbp_descriptor_)) {
     return std::string("");
-  } else if (std::dynamic_pointer_cast<BroadcastSbpDescription>(sbp_descripiton_)) {
+  } else if (std::dynamic_pointer_cast<BroadcastSbpDescriptor>(sbp_descriptor_)) {
     return std::string(":B");
-  } else if (std::dynamic_pointer_cast<SplitSbpDescription>(sbp_descripiton_)) {
-    return std::string(":S") + std::to_string(sbp_descripiton_->axis());
+  } else if (std::dynamic_pointer_cast<SplitSbpDescriptor>(sbp_descriptor_)) {
+    return std::string(":S") + std::to_string(sbp_descriptor_->axis());
   } else {
     OF_UNIMPLEMENTED();
   }

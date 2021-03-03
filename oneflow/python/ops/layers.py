@@ -42,7 +42,7 @@ def dense(
     bias_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: bool = True,
     name: str = "Dense",
-    model_distribute: oneflow_api.sbp_descripiton.SbpDescription = oneflow_api.sbp_descripiton.broadcast(),
+    model_distribute: oneflow_api.sbp_descriptor.SbpDescriptor = oneflow_api.sbp_descriptor.broadcast(),
 ) -> oneflow_api.BlobDesc:
     r"""Fully-connected layer. 
 
@@ -59,7 +59,7 @@ def dense(
         bias_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for the bias vector. Defaults to None.
         trainable (bool, optional): A boolean specifies whether to train the variables. Defaults to True.
         name (Optional[str], optional): This layer's name. Defaults to None.
-        model_distribute (oneflow_api.sbp_descripiton.SbpDescription, optional): Define the way to ditribute the model. Defaults to oneflow_api.sbp_descripiton.broadcast().
+        model_distribute (oneflow_api.sbp_descriptor.SbpDescriptor, optional): Define the way to ditribute the model. Defaults to oneflow_api.sbp_descriptor.broadcast().
 
     Returns:
         oneflow_api.BlobDesc:  A N-D `Blob` with the shape of (batch_size, units).
@@ -103,12 +103,12 @@ def dense(
     assert in_num_axes >= 2
 
     assert (
-        model_distribute is oneflow_api.sbp_descripiton.auto()
-        or model_distribute is oneflow_api.sbp_descripiton.broadcast()
-        or model_distribute is oneflow_api.sbp_descripiton.split(0)
+        model_distribute is oneflow_api.sbp_descriptor.auto()
+        or model_distribute is oneflow_api.sbp_descriptor.broadcast()
+        or model_distribute is oneflow_api.sbp_descriptor.split(0)
     )
 
-    if model_distribute is oneflow_api.sbp_descripiton.split(0):
+    if model_distribute is oneflow_api.sbp_descriptor.split(0):
         assert in_num_axes == 2  # model distribute is hard for reshape split dim 1
 
     if in_num_axes > 2:
@@ -830,7 +830,7 @@ def layer_norm(
                 initializer=flow.constant_initializer(0.0),
                 trainable=trainable,
                 model_name="beta",
-                distribute=oneflow_api.sbp_descripiton.broadcast(),
+                distribute=oneflow_api.sbp_descriptor.broadcast(),
                 reuse=False,
             )
 
@@ -843,7 +843,7 @@ def layer_norm(
                 initializer=flow.constant_initializer(1.0),
                 trainable=trainable,
                 model_name="gamma",
-                distribute=oneflow_api.sbp_descripiton.broadcast(),
+                distribute=oneflow_api.sbp_descriptor.broadcast(),
                 reuse=False,
             )
 
@@ -1014,7 +1014,7 @@ def _get_batch_normalization_variables(
                 initializer=beta_initializer or flow.zeros_initializer(),
                 regularizer=beta_regularizer,
                 trainable=trainable,
-                distribute=oneflow_api.sbp_descripiton.broadcast(),
+                distribute=oneflow_api.sbp_descriptor.broadcast(),
                 reuse=False,
             )
         else:
@@ -1036,7 +1036,7 @@ def _get_batch_normalization_variables(
                 initializer=gamma_initializer or flow.ones_initializer(),
                 regularizer=gamma_regularizer,
                 trainable=trainable,
-                distribute=oneflow_api.sbp_descripiton.broadcast(),
+                distribute=oneflow_api.sbp_descriptor.broadcast(),
                 reuse=False,
             )
         else:
@@ -1056,7 +1056,7 @@ def _get_batch_normalization_variables(
             dtype=params_dtype,
             initializer=moving_mean_initializer or flow.zeros_initializer(),
             trainable=False,
-            distribute=oneflow_api.sbp_descripiton.broadcast(),
+            distribute=oneflow_api.sbp_descriptor.broadcast(),
             reuse=False,
         )
         return moving_mean
@@ -1074,7 +1074,7 @@ def _get_batch_normalization_variables(
             dtype=params_dtype,
             initializer=moving_variance_initializer or flow.ones_initializer(),
             trainable=False,
-            distribute=oneflow_api.sbp_descripiton.broadcast(),
+            distribute=oneflow_api.sbp_descriptor.broadcast(),
             reuse=False,
         )
         return moving_variance

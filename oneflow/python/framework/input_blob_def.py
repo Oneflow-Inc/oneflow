@@ -39,7 +39,7 @@ import traceback
 
 class ArgBlobDef(object):
     def __init__(
-        self, shape, dtype, name=None, distribute=oneflow_api.sbp_descripiton.auto(),
+        self, shape, dtype, name=None, distribute=oneflow_api.sbp_descriptor.auto(),
     ):
         lbi = lbi_util.LogicalBlobId()
         if name is None:
@@ -53,7 +53,7 @@ class ArgBlobDef(object):
             assert dim > 0
         self.shape_ = shape
         self.dtype_ = dtype
-        self.sbp_descripiton_ = sbp_descripiton
+        self.sbp_descriptor_ = distribute
 
     @property
     def lbi(self):
@@ -87,7 +87,7 @@ class ArgBlobDef(object):
     def is_tensor_list(self):
         raise NotImplementedError
 
-    def with_distribute(self, sbp_descripiton):
+    def with_distribute(self, sbp_descriptor):
         return type(self)(shape=self.shape_, dtype=self.dtype_, name=self.op_name,)
 
     def Clone(self, op_name=None):
@@ -123,19 +123,15 @@ class ArgBlobDef(object):
         return interface_blob_conf
 
     def _SbpDescripiton2Str(self):
-        if (
-            type(self.sbp_descripiton_)
-            is oneflow_api.sbp_descripiton.AutoSbpDescription
-        ):
+        if type(self.sbp_descriptor_) is oneflow_api.sbp_descriptor.AutoSbpDescriptor:
             return ""
         elif (
-            type(self.sbp_descripiton_)
-            is oneflow_api.sbp_descripiton.SplitSbpDescription
+            type(self.sbp_descriptor_) is oneflow_api.sbp_descriptor.SplitSbpDescriptor
         ):
-            return ":S" + str(self.sbp_descripiton_.axis)
+            return ":S" + str(self.sbp_descriptor_.axis)
         elif (
-            type(self.sbp_descripiton_)
-            is oneflow_api.sbp_descripiton.BroadcastSbpDescription
+            type(self.sbp_descriptor_)
+            is oneflow_api.sbp_descriptor.BroadcastSbpDescriptor
         ):
             return ":B"
         else:
@@ -303,7 +299,7 @@ def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
         lbi.set_op_name(sub_lbi.op_name)
         lbi.set_blob_name(sub_lbi.blob_name)
         sub_consistent_blob_list.append(
-            oneflow_api.ConsistentBlob(lbi, "", oneflow_api.sbp_descripiton.auto())
+            oneflow_api.ConsistentBlob(lbi, "", oneflow_api.sbp_descriptor.auto())
         )
 
 

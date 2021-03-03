@@ -60,10 +60,10 @@ def EagerLogicalBlob(lbi, **kw):
     blob_object = None
     if "blob_object" in kw:
         blob_object = kw["blob_object"]
-    sbp_descripiton = oneflow_api.sbp_descripiton.auto()
-    if "sbp_descripiton" in kw:
-        sbp_descripiton = kw["sbp_descripiton"]
-    return blob_type(lbi, blob_object, blob_register, job_name, sbp_descripiton)
+    sbp_descriptor = oneflow_api.sbp_descriptor.auto()
+    if "sbp_descriptor" in kw:
+        sbp_descriptor = kw["sbp_descriptor"]
+    return blob_type(lbi, blob_object, blob_register, job_name, sbp_descriptor)
 
 
 @enable_if.condition(~hob.eager_execution_enabled)
@@ -81,10 +81,10 @@ def LazyRemoteBlob(lbi, **kw):
     job_name = ""
     if ("job_name" in kw) and (kw["job_name"] is not None):
         job_name = kw["job_name"]
-    sbp_descripiton = oneflow_api.sbp_descripiton.auto()
-    if "sbp_descripiton" in kw:
-        sbp_descripiton = kw["sbp_descripiton"]
-    return blob_type(lbi, job_name, sbp_descripiton)
+    sbp_descriptor = oneflow_api.sbp_descriptor.auto()
+    if "sbp_descriptor" in kw:
+        sbp_descriptor = kw["sbp_descriptor"]
+    return blob_type(lbi, job_name, sbp_descriptor)
 
 
 @property
@@ -94,14 +94,14 @@ def dtype(self):
     return ret
 
 
-def with_distribute(self, sbp_descripiton):
-    new = type(self)(self.lbi, self.job_name, oneflow_api.sbp_descripiton.auto())
-    new.set_sbp_descripiton(sbp_descripiton)
+def with_distribute(self, sbp_descriptor):
+    new = type(self)(self.lbi, self.job_name, oneflow_api.sbp_descriptor.auto())
+    new.set_sbp_descriptor(sbp_descriptor)
     return new
 
 
-def with_gradient_distribute(self, sbp_descripiton):
-    return oneflow.parallel_cast(self, gradient_distribute=sbp_descripiton)
+def with_gradient_distribute(self, sbp_descriptor):
+    return oneflow.parallel_cast(self, gradient_distribute=sbp_descriptor)
 
 
 def get_lazy_shape_log_warning(self):
@@ -266,15 +266,15 @@ def RegisterMethod4EagerBlobTrait():
     oneflow_api.EagerBlobTrait.numpy = numpy
 
 
-def eager_with_distribute(self, sbp_descripiton):
+def eager_with_distribute(self, sbp_descriptor):
     new = type(self)(
         self.lbi,
         blob_object=self.blob_object,
         blob_register=blob_register,
         job_name=self.job_name,
-        sbp_descripiton=self.sbp_descripiton,
+        sbp_descriptor=self.sbp_descriptor,
     )
-    new.set_sbp_descripiton(sbp_descripiton)
+    new.set_sbp_descriptor(sbp_descriptor)
     return new
 
 

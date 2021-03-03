@@ -34,7 +34,7 @@ def prelu(
     shared_axes: Optional[Sequence[int]] = None,
     trainable: bool = True,
     name: str = "PRelu",
-    model_distribute: oneflow_api.sbp_descripiton.SbpDescription = oneflow_api.sbp_descripiton.broadcast(),
+    model_distribute: oneflow_api.sbp_descriptor.SbpDescriptor = oneflow_api.sbp_descriptor.broadcast(),
 ) -> oneflow_api.BlobDesc:
     r"""The Prelu(Parametric Rectified Linear Unit) activation. 
     
@@ -53,7 +53,7 @@ def prelu(
         shared_axes (Optional[Sequence[int]], optional): The axis along which to share learnable parameters for the prelu activation function. Defaults to None.
         trainable (bool, optional): Whether to train the parameter :math:`\alpha`. Defaults to True.
         name (str, optional): The name for the operation. Defaults to "PRelu".
-        model_distribute (oneflow_api.sbp_descripiton.SbpDescription, optional): Define the way to ditribute the model. Defaults to oneflow_api.sbp_descripiton.broadcast().
+        model_distribute (oneflow_api.sbp_descriptor.SbpDescriptor, optional): Define the way to ditribute the model. Defaults to oneflow_api.sbp_descriptor.broadcast().
 
     Returns:
         oneflow_api.BlobDesc: The activated Blob
