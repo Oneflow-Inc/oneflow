@@ -24,8 +24,8 @@ import oneflow.core.job.placement_pb2 as placement_pb
 from google.protobuf import text_format
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.scope_util as scope_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.symbol_storage as symbol_storage
+import oneflow_api
 
 
 def MakeScopeSymbol(job_conf, parallel_conf, is_mirrored):
@@ -44,7 +44,7 @@ def MakeParallelDescSymbol(parallel_conf):
         nonlocal symbol_id
         symbol_id = builder.GetParallelDescSymbol(parallel_conf).symbol_id
 
-    vm_util.LogicalRun(BuildInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInstruction)
     return symbol_id
 
 
