@@ -34,7 +34,7 @@ import oneflow.python.eager.blob_register as blob_register_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 def InputOpByArgBlobDef(blob_def):
@@ -92,7 +92,6 @@ def EagerReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
                 remote_blob.blob_object.parallel_desc_symbol.parallel_conf,
                 bn_in_op2blob_object,
                 boxing_util.BoxingTo,
-                blob_cache_util.FindOrCreateDelegateBlobObject,
             )
 
     oneflow_api.deprecated.LogicalRun(BuildInstruction)
