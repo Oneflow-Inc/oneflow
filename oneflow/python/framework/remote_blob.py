@@ -24,9 +24,7 @@ from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
 import oneflow.python.eager.eager_blob_util as eager_blob_util
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
@@ -35,7 +33,7 @@ import oneflow_api
 import traceback
 import sys
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 def RemoteBlob(lbi, **kw):
@@ -213,14 +211,14 @@ def _Numpy(self):
             if not blob_register.HasObject4BlobName(consistent_blob_name):
                 blob_register.SetObject4BlobName(consistent_blob_name, tmp_blob_object)
 
-        vm_util.LogicalRun(BoxingToSingleDevice)
+        oneflow_api.deprecated.LogicalRun(BoxingToSingleDevice)
         return oneflow_api.EagerPhysicalBlob(
             consistent_blob_name,
             blob_register,
             eager_blob_util._GetPhysicalBlobHeaderCache,
         ).numpy()
 
-    blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object)
+    blob_cache = oneflow_api.FindOrCreateBlobCache(self.blob_object)
     return blob_cache.GetCachedNumpy(FetchBlobNumpy)
 
 
@@ -247,13 +245,13 @@ def _NumpyMirroredList(self):
         )
 
     def FetchBlobNumpyMirroredList(blob_object):
-        vm_util.LogicalRun(UnpackLogicalBlobToPhysicalBlobs)
+        oneflow_api.deprecated.LogicalRun(UnpackLogicalBlobToPhysicalBlobs)
         return [
             GetPhyBlobNumpy(i, phy_blob_object)
             for i, phy_blob_object in enumerate(physical_blob_objects)
         ]
 
-    blob_cache = blob_cache_util.FindOrCreateBlobCache(self.blob_object)
+    blob_cache = oneflow_api.FindOrCreateBlobCache(self.blob_object)
     return blob_cache.GetCachedNumpyMirroredList(FetchBlobNumpyMirroredList)
 
 
