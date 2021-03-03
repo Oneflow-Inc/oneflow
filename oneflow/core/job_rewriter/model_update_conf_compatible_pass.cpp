@@ -42,7 +42,11 @@ class ModelUpdateConfCompatiblePass final : public JobPass {
 Maybe<void> ModelUpdateConfCompatiblePass::Apply(const OpGraph& op_graph, Job* job) const {
   JobBuilder job_builder(job);
   const TrainConf& train_conf = job->job_conf().train_conf();
-  if (!train_conf.has_model_update_conf()) { return Maybe<void>::Ok(); }
+  const bool use_model_update_conf =
+      train_conf.has_model_update_conf() || train_conf.has_primary_lr()
+      || train_conf.has_primary_lr_lbn() || train_conf.has_secondary_lr()
+      || train_conf.has_secondary_lr_lbn();
+  if (!use_model_update_conf) { return Maybe<void>::Ok(); }
   CHECK_OR_RETURN(train_conf.optimizer_conf_size() == 0);
   const NormalModelUpdateOpUserConf& model_update_conf = train_conf.model_update_conf();
   OptimizerConf* optimizer_conf =
@@ -88,6 +92,12 @@ Maybe<void> ModelUpdateConfCompatiblePass::Apply(const OpGraph& op_graph, Job* j
   } else {
     UNIMPLEMENTED();
   }
+  TrainConf* mutable_train_conf = job->mutable_job_conf()->mutable_train_conf();
+  mutable_train_conf->clear_model_update_conf();
+  mutable_train_conf->clear_primary_lr();
+  mutable_train_conf->clear_primary_lr_lbn();
+  mutable_train_conf->clear_secondary_lr();
+  mutable_train_conf->clear_secondary_lr_lbn();
   return Maybe<void>::Ok();
 }
 

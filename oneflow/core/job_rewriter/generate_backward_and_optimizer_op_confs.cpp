@@ -208,7 +208,11 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     JUST(CountNotFiniteIfNeeded(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi));
     RegularizeGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     const TrainConf& train_conf = job->job_conf().train_conf();
-    CHECK_OR_RETURN(!train_conf.has_model_update_conf());
+    const bool use_model_update_conf =
+        train_conf.has_model_update_conf() || train_conf.has_primary_lr()
+        || train_conf.has_primary_lr_lbn() || train_conf.has_secondary_lr()
+        || train_conf.has_secondary_lr_lbn();
+    CHECK_OR_RETURN(!use_model_update_conf);
     for (const auto& optimizer_conf : train_conf.optimizer_conf()) {
       HashMap<LogicalBlobId, LogicalBlobId> cur_model_lbi2model_diff_lbi;
       FilterCurModelLbi2ModelDiffLbiByName(optimizer_conf.variable_op_names(),

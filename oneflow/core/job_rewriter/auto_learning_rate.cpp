@@ -42,7 +42,11 @@ class AutoLearningRate final : public JobPass {
 Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
   JobBuilder job_builder(job);
   const TrainConf& train_conf = job->job_conf().train_conf();
-  CHECK_OR_RETURN(!train_conf.has_model_update_conf());
+  const bool use_model_update_conf =
+      train_conf.has_model_update_conf() || train_conf.has_primary_lr()
+      || train_conf.has_primary_lr_lbn() || train_conf.has_secondary_lr()
+      || train_conf.has_secondary_lr_lbn();
+  CHECK_OR_RETURN(!use_model_update_conf);
   auto AddScheduleOp = [&](const OptimizerConf& optimizer_conf,
                            const std::string& op_name) -> std::string {
     const class oneflow::OpNode* op_node =
