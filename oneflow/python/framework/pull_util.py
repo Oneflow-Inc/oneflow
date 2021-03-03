@@ -186,7 +186,7 @@ class _ConsistentBlobPuller(_BlobPuller):
     def AsyncPull(self, pull_cb):
         def PullCallback(of_blob):
             self.result_ = local_blob_util.MakeLocalBlob(
-                of_blob.CopyToNdarrayLists(), self.consistent_blob_
+                [of_blob.CopyToNdarray()], self.consistent_blob_
             )
             pull_cb()
 

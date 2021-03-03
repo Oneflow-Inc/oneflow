@@ -68,6 +68,8 @@ def MakeLocalBlob(ndarray_lists, consistent_blob):
     assert isinstance(consistent_blob, oneflow_api.ConsistentBlob), type(
         consistent_blob
     )
+    print("HAHA cclog: MakeLocalBLob tensor id", id(ndarray_lists[0][0]))
+    print("HAHA cclog: MakeLocalBLob tensor shape", ndarray_lists[0][0].shape)
     assert len(ndarray_lists) == 1
     return LocalMirroredTensor(
         ndarray_lists[0],
