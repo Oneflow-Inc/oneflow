@@ -65,6 +65,32 @@ class TestSize(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
+    def test_numel(test_case):
+        size = flow.Size([1, 2, 3, 4])
+        test_case.assertEqual(size.numel(), 24)
+
+    def test_count(test_case):
+        size = flow.Size([2, 2, 3, 4])
+        test_case.assertEqual(size.count(1), 0)
+        test_case.assertEqual(size.count(2), 2)
+        test_case.assertEqual(size.count(3), 1)
+        test_case.assertEqual(size.count(4), 1)
+
+    def test_index(test_case):
+        size = flow.Size([2, 3, 2, 4, 4])
+        test_case.assertEqual(size.index(2), 0)
+        test_case.assertEqual(size.index(2, start=0), 0)
+        test_case.assertEqual(size.index(2, start=0, end=20), 0)
+        test_case.assertEqual(size.index(2, start=1, end=20), 2)
+        test_case.assertEqual(size.index(4), 3)
+        test_case.assertEqual(size.index(4, start=4), 4)
+
+        with test_case.assertRaises(ValueError):
+            size.index(5)
+            
+        with test_case.assertRaises(ValueError):
+            size.index(2, start=3)
+
 
 if __name__ == "__main__":
     unittest.main()
