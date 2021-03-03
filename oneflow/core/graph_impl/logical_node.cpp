@@ -19,6 +19,20 @@ limitations under the License.
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
 #include "oneflow/core/graph/distribute_concat_compute_task_node.h"
 #include "oneflow/core/graph/distribute_split_compute_task_node.h"
+#include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
+#include "oneflow/core/graph/foreign_input_compute_task_node.h"
+#include "oneflow/core/graph/foreign_output_compute_task_node.h"
+#include "oneflow/core/graph/callback_notify_compute_task_node.h"
+#include "oneflow/core/graph/reentrant_lock_compute_task_node.h"
+#include "oneflow/core/graph/src_subset_tick_compute_task_node.h"
+#include "oneflow/core/graph/dst_subset_tick_compute_task_node.h"
+#include "oneflow/core/graph/source_tick_compute_task_node.h"
+#include "oneflow/core/graph/tick_compute_task_node.h"
+#include "oneflow/core/graph/device_tick_compute_task_node.h"
+#include "oneflow/core/graph/acc_tick_compute_task_node.h"
+#include "oneflow/core/graph/case_compute_task_node.h"
+#include "oneflow/core/graph/esac_compute_task_node.h"
+#include "oneflow/core/graph/decode_h2d_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/framework/framework.h"
@@ -128,77 +142,16 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
-      ProcessId process_id{static_cast<uint32_t>(machine_id)};
-
-      auto device_index = parallel_desc_->device_type() == DeviceType::kCPU ? 0 : dev_phy_id;
-      DeviceId device_id{process_id, parallel_desc_->device_type(),
-                         static_cast<uint32_t>(device_index)};
+      DeviceId::device_index_t device_index =
+          parallel_desc_->device_type() == DeviceType::kCPU
+              ? DeviceId::kCPUDeviceIndex
+              : static_cast<DeviceId::device_index_t>(dev_phy_id);
+      DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), parallel_desc_->device_type(),
+                         device_index};
       auto stream_index_getter = StreamIndexGetterRegistryManager::Get().GetStreamIndexGetterFunc(
           parallel_desc_->device_type(), comp_task_node->GetTaskType());
-      uint32_t stream_index = stream_index_getter(device_id);
+      StreamId::stream_index_t stream_index = stream_index_getter(device_id);
       comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
-
-      //       if (parallel_desc_->device_type() == DeviceType::kGPU) {
-      // #ifdef WITH_CUDA
-      //         DeviceId device_id{process_id, DeviceType::kGPU,
-      //         static_cast<uint32_t>(dev_phy_id)}; uint32_t stream_index = 0; auto*
-      //         cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
-      //             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-      //         CHECK_NOTNULL(cuda_stream_index_generator);
-      //         switch (comp_task_node->GetCudaWorkType()) {
-      //           case CudaWorkType::kCompute: {
-      //             stream_index = cuda_stream_index_generator->GenerateComputeStreamIndex();
-      //             break;
-      //           }
-      //           case CudaWorkType::kCopyH2D: {
-      //             stream_index = cuda_stream_index_generator->GenerateH2DStreamIndex();
-      //             break;
-      //           }
-      //           case CudaWorkType::kCopyD2H: {
-      //             stream_index = cuda_stream_index_generator->GenerateD2HStreamIndex();
-      //             break;
-      //           }
-      //           case CudaWorkType::kNccl: {
-      //             stream_index = cuda_stream_index_generator->GenerateNcclStreamIndex();
-      //             break;
-      //           }
-      //           case CudaWorkType::kMix: {
-      //             stream_index = cuda_stream_index_generator->GenerateMixStreamIndex();
-      //             break;
-      //           }
-      //           case CudaWorkType::kDecodeH2D: {
-      //             stream_index = cuda_stream_index_generator->GenerateDecodeH2DStreamIndex();
-      //             break;
-      //           }
-      //           default: { UNIMPLEMENTED(); }
-      //         }
-      //         comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id,
-      //         stream_index}));
-      // #else
-      //         UNIMPLEMENTED();
-      // #endif
-      //       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
-      //         DeviceId device_id{process_id, DeviceType::kCPU, kCPUDeviceIndex};
-      //         auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
-      //             Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-      //         CHECK_NOTNULL(cpu_stream_index_generator);
-      //         uint32_t stream_index = 0;
-      //         if (comp_task_node->IsIndependent()) {
-      //           TaskType task_type = comp_task_node->GetTaskType();
-      //           if (IsClassRegistered<int32_t, TickTockTaskType>(task_type)) {
-      //             stream_index = cpu_stream_index_generator->GenerateTickTockStreamIndex();
-      //           } else {
-      //             stream_index =
-      //                 cpu_stream_index_generator->GenerateIndependentTaskStreamIndex(task_type);
-      //           }
-      //         } else {
-      //           stream_index = cpu_stream_index_generator->GenerateComputeStreamIndex();
-      //         }
-      //         comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id,
-      //         stream_index}));
-      //       } else {
-      //         UNIMPLEMENTED();
-      //       }
       comp_task_node->set_logical_node(this);
       Handler(comp_task_node);
     }
@@ -289,16 +242,10 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
                               "DecodeH2D",
                               &TaskGraph::BldSubTskGphNormalForwardToDecodeH2D);
 
-#define LOGICAL_TYPE_SEQ                                   \
-  OF_PP_MAKE_TUPLE_SEQ(DistributeConcat, kDataForwardArea) \
-  OF_PP_MAKE_TUPLE_SEQ(DistributeSplit, kDataForwardArea)  \
-  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)  \
-  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)
+#define DEFINE_VIRTUAL_METHOD(x)                              \
+  std::string x##LogicalNode::TypeName() const { return #x; } \
+  CompTaskNode* x##LogicalNode::NewCompTaskNode() const { return new x##CompTaskNode; }
 
-#define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
-  std::string x##LogicalNode::TypeName() const { return #x; }                           \
-  CompTaskNode* x##LogicalNode::NewCompTaskNode() const { return new x##CompTaskNode; } \
-  int64_t x##LogicalNode::GetAreaId() const { return area_type; }
 OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, LOGICAL_TYPE_SEQ);
 
 std::string NormalForwardLogicalNode::TypeName() const { return "NormalForward"; }
@@ -318,33 +265,5 @@ CompTaskNode* NormalForwardLogicalNode::NewCompTaskNode() const {
     return new NormalForwardCompTaskNode;
   }
 }
-
-int64_t NormalForwardLogicalNode::GetAreaId() const {
-  if (this->SoleOp()->op_conf().has_user_conf()) {
-    const std::string& op_type_name = this->SoleOp()->op_conf().user_conf().op_type_name();
-    if (IsClassRegistered<std::string, UserOpAreaIdCreator>(op_type_name)) {
-      return std::unique_ptr<UserOpAreaIdCreator>(
-                 NewObj<std::string, UserOpAreaIdCreator>(op_type_name))
-          ->GetAreaId();
-    } else {
-      return AreaType::kDataForwardArea;
-    }
-  } else {
-    return AreaType::kDataForwardArea;
-  }
-}
-
-int64_t NewAreaId() {
-  static int64_t next_area_id = AreaType_ARRAYSIZE;
-  return ++next_area_id;
-}
-
-REGISTER_USER_OP_AREA_ID("sgd_update", AreaType::kMdUpdtArea)
-REGISTER_USER_OP_AREA_ID("indexed_slices_sgd_update", AreaType::kMdUpdtArea)
-REGISTER_USER_OP_AREA_ID("momentum_update", AreaType::kMdUpdtArea)
-REGISTER_USER_OP_AREA_ID("indexed_slices_momentum_update", AreaType::kMdUpdtArea)
-REGISTER_USER_OP_AREA_ID("adam_update", AreaType::kMdUpdtArea)
-REGISTER_USER_OP_AREA_ID("indexed_slices_adam_update", AreaType::kMdUpdtArea)
-REGISTER_USER_OP_AREA_ID("lamb_update", AreaType::kMdUpdtArea)
 
 }  // namespace oneflow

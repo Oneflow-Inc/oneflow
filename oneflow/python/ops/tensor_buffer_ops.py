@@ -16,7 +16,6 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow as flow
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 
@@ -28,7 +27,7 @@ import oneflow_api
 @oneflow_export("tensor_buffer_to_tensor")
 def tensor_buffer_to_tensor(
     x: oneflow_api.BlobDesc,
-    dtype: dtype_util.dtype,
+    dtype: flow.dtype,
     instance_shape: Sequence[int],
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
@@ -42,7 +41,7 @@ def tensor_buffer_to_tensor(
 
     Args:
         x (oneflow_api.BlobDesc): Input `Blob`.
-        dtype (dtype_util.dtype): The data dtype.
+        dtype (flow.dtype): The data dtype.
         instance_shape (Sequence[int]): The shape of each TensorBuffer instance.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 

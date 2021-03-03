@@ -22,9 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 // TaskId encode (may be extended to 128 bit in future)
-// | node_index | process_index |                                                         |
-// | --- 12 --- | ----- 7 ----- |                                                         |
-// |         ProcessId          | device_type | device_index  |                           |
+// |            rank            | device_type | device_index  |                           |
 // | ----------- 19 ----------- | ---- 5 ---- | ----- 7 ----- |                           |
 // |                        DeviceId                          | stream_index |            |
 // | ------------------------- 31 --------------------------- | ---- 12 ---- |            |
@@ -33,81 +31,51 @@ namespace oneflow {
 // |                                      TaskId                                          |
 // | ----------------------------------- 64 bit ----------------------------------------- |
 
-using node_index_t = uint32_t;
-using process_index_t = uint32_t;
-using device_index_t = uint32_t;
-using stream_index_t = uint32_t;
-using task_index_t = uint32_t;
-constexpr device_index_t kCPUDeviceIndex = 0;
-
-class ProcessId {
- public:
-  constexpr static size_t kNodeIndexBits = 12;
-  constexpr static size_t kProcessIndexBits = 7;
-  constexpr static node_index_t kMaxNodeIndex =
-      (node_index_t{1} << kNodeIndexBits) - node_index_t{1};
-  constexpr static process_index_t kMaxProcessIndex =
-      (process_index_t{1} << kProcessIndexBits) - process_index_t{1};
-
-  ProcessId(node_index_t node_index, process_index_t process_index)
-      : node_index_(node_index), process_index_(process_index) {
-    CHECK_LE(node_index, kMaxNodeIndex);
-    CHECK_LE(process_index, kMaxProcessIndex);
-  }
-  ProcessId(node_index_t node_index) : ProcessId(node_index, 0) {}
-  node_index_t node_index() const { return node_index_; }
-  process_index_t process_index() const { return process_index_; }
-  bool operator==(const ProcessId& rhs) const {
-    return node_index_ == rhs.node_index_ && process_index_ == rhs.process_index_;
-  }
-  bool operator!=(const ProcessId& rhs) const { return !(*this == rhs); }
-  size_t hash() const {
-    size_t hash = std::hash<node_index_t>{}(node_index_);
-    HashCombine(&hash, std::hash<process_index_t>{}(process_index_));
-    return hash;
-  }
-
- private:
-  node_index_t node_index_;
-  process_index_t process_index_;
-};
-
 class DeviceId {
  public:
+  using rank_t = uint32_t;
+  using device_index_t = uint32_t;
+
+  constexpr static size_t kRankBits = 19;
   constexpr static size_t kDeviceTypeBits = 5;
   constexpr static size_t kDeviceIndexBits = 7;
+  constexpr static rank_t kMaxRank = (rank_t{1} << kRankBits) - rank_t{1};
   constexpr static size_t kMaxDeviceTypeVal = (size_t{1} << kDeviceTypeBits) - size_t{1};
   constexpr static device_index_t kMaxDeviceIndex =
       (device_index_t{1} << kDeviceIndexBits) - device_index_t{1};
+  constexpr static device_index_t kCPUDeviceIndex = 0;
 
-  DeviceId(const ProcessId& process_id, DeviceType device_type, device_index_t device_index)
-      : process_id_(process_id), device_type_(device_type), device_index_(device_index) {
+  DeviceId(rank_t rank, DeviceType device_type, device_index_t device_index)
+      : rank_(rank), device_type_(device_type), device_index_(device_index) {
+    CHECK_LE(rank, kMaxRank);
     CHECK_LE(static_cast<size_t>(device_type), kMaxDeviceTypeVal);
     CHECK_LE(device_index, kMaxDeviceIndex);
   }
-  const ProcessId& process_id() const { return process_id_; }
+  rank_t rank() const { return rank_; }
   DeviceType device_type() const { return device_type_; }
   device_index_t device_index() const { return device_index_; }
   bool operator==(const DeviceId& rhs) const {
-    return process_id_ == rhs.process_id_ && device_type_ == rhs.device_type_
+    return rank_ == rhs.rank_ && device_type_ == rhs.device_type_
            && device_index_ == rhs.device_index_;
   }
   bool operator!=(const DeviceId& rhs) const { return !(*this == rhs); }
   size_t hash() const {
-    size_t hash = process_id_.hash();
+    size_t hash = std::hash<rank_t>{}(rank_);
     HashCombine(&hash, std::hash<size_t>{}(static_cast<size_t>(device_type_)));
     HashCombine(&hash, std::hash<device_index_t>{}(device_index_));
     return hash;
   }
 
  private:
-  ProcessId process_id_;
+  rank_t rank_;
   DeviceType device_type_;
   device_index_t device_index_;
 };
 
 class StreamId {
  public:
+  using stream_index_t = uint32_t;
+
   constexpr static size_t kStreamIndexBits = 12;
   constexpr static stream_index_t kMaxStreamIndex =
       (stream_index_t{1} << kStreamIndexBits) - stream_index_t{1};
@@ -135,6 +103,8 @@ class StreamId {
 
 class TaskId {
  public:
+  using task_index_t = uint32_t;
+
   const static size_t kTaskIndexBits = 21;
   constexpr static task_index_t kMaxTaskIndex =
       (task_index_t{1} << kTaskIndexBits) - task_index_t{1};
@@ -162,6 +132,8 @@ class TaskId {
 
 class MemZoneId {
  public:
+  using device_index_t = uint32_t;
+
   constexpr static size_t kDeviceTypeBits = 5;
   constexpr static size_t kDeviceIndexBits = 7;
   constexpr static size_t kMaxDeviceTypeVal = (size_t{1} << kDeviceTypeBits) - size_t{1};
@@ -197,11 +169,6 @@ class MemZoneId {
 }  // namespace oneflow
 
 namespace std {
-
-template<>
-struct hash<oneflow::ProcessId> {
-  size_t operator()(const oneflow::ProcessId& process_id) const { return process_id.hash(); }
-};
 
 template<>
 struct hash<oneflow::DeviceId> {

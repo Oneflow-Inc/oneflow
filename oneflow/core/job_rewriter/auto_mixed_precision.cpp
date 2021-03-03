@@ -271,32 +271,32 @@ void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
                 << " to upstream_or_part_of_white";
       });
 
-  DfsTopoGraphTraversal(op_graph, false, IsWhiteAndAllowedToRunHalf,
-                        [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
-                        [&](OpNode* node) { return IsKeyFound(*white_set, node); },
-                        [&](OpNode* node) {
-                          INSERT_CHECK(white_set->insert(node));
-                          VLOG(2) << "FillWhiteSet(): Insert " << node->op().op_name()
-                                  << " to white_set";
-                        });
+  DfsTopoGraphTraversal(
+      op_graph, false, IsWhiteAndAllowedToRunHalf,
+      [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
+      [&](OpNode* node) { return IsKeyFound(*white_set, node); },
+      [&](OpNode* node) {
+        INSERT_CHECK(white_set->insert(node));
+        VLOG(2) << "FillWhiteSet(): Insert " << node->op().op_name() << " to white_set";
+      });
 }
 
 void AutoMixedPrecision::PropagateWhiteThroughClearNodes(
     const OpGraph& op_graph, std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
     const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set) const {
   auto PropagateIntoOneDirection = [&](bool is_downward) {
-    DfsTopoGraphTraversal(op_graph, !is_downward, [&](OpNode* node) { return false; },
-                          [&](OpNode* node) {
-                            return !IsKeyFound(*white_set, node) && !IsKeyFound(black_set, node)
-                                   && IsNodeInList(clear_list_, node)
-                                   && IsAllowedToRunWithHalf(node);
-                          },
-                          [&](OpNode* node) { return IsKeyFound(*white_set, node); },
-                          [&](OpNode* node) {
-                            INSERT_CHECK(white_set->insert(node));
-                            VLOG(2) << "PropagateWhiteThroughNonListNodes(): Insert "
-                                    << node->op().op_name() << " to white_set";
-                          });
+    DfsTopoGraphTraversal(
+        op_graph, !is_downward, [&](OpNode* node) { return false; },
+        [&](OpNode* node) {
+          return !IsKeyFound(*white_set, node) && !IsKeyFound(black_set, node)
+                 && IsNodeInList(clear_list_, node) && IsAllowedToRunWithHalf(node);
+        },
+        [&](OpNode* node) { return IsKeyFound(*white_set, node); },
+        [&](OpNode* node) {
+          INSERT_CHECK(white_set->insert(node));
+          VLOG(2) << "PropagateWhiteThroughNonListNodes(): Insert " << node->op().op_name()
+                  << " to white_set";
+        });
   };
   PropagateIntoOneDirection(true);
   PropagateIntoOneDirection(false);

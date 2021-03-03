@@ -18,9 +18,17 @@ limitations under the License.
 
 namespace oneflow {
 
+void AccTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
+  SoleOutDataEdge()->AddRegst("out", ProduceRegst("out", false));
+}
+
+void AccTickCompTaskNode::ConsumeAllRegsts() {
+  ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
+}
+
 void AccTickCompTaskNode::InferProducedDataRegstTimeShape() {
   auto TimeShape4Ibn = [&](const std::string& ibn) -> const Shape* {
-    return GetSoleConsumedRegst("one")->data_regst_time_shape().get();
+    return GetSoleConsumedRegst("in")->data_regst_time_shape().get();
   };
   std::shared_ptr<Shape> time_shape(new Shape());
   logical_node()->SoleOp()->InferOutputBlobTimeShape(TimeShape4Ibn, parallel_ctx(),
@@ -31,14 +39,14 @@ void AccTickCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 void AccTickCompTaskNode::BuildExecGphAndRegst() {
-  std::shared_ptr<RegstDesc> one_regst = GetSoleConsumedRegst("one");
-  std::shared_ptr<RegstDesc> acc_regst = GetProducedRegst("acc");
+  std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
+  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   std::shared_ptr<const Operator> op = logical_node()->SoleOp();
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = op;
-  exec_node->BindBnWithRegst(op->SoleIbn(), one_regst);
-  acc_regst->AddLbi(op->BnInOp2Lbi(op->SoleObn()));
-  exec_node->BindBnWithRegst(op->SoleObn(), acc_regst);
+  exec_node->BindBnWithRegst(op->SoleIbn(), in_regst);
+  out_regst->AddLbi(op->BnInOp2Lbi(op->SoleObn()));
+  exec_node->BindBnWithRegst(op->SoleObn(), out_regst);
   exec_node->InferBlobDescs(parallel_ctx());
 }
 
