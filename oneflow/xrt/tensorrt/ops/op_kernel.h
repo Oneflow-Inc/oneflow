@@ -28,7 +28,7 @@ namespace tensorrt {
 
 class TrtOpKernel : public OpKernel<TrtOpContext> {
  public:
-  virtual void Compile(TrtOpContext *ctx) = 0;
+  virtual void Compile(TrtOpContext* ctx) = 0;
 
   TrtOpKernel() = default;
   virtual ~TrtOpKernel() = default;
@@ -41,9 +41,9 @@ using TrtOpKernelPtr = std::shared_ptr<OpKernel<TrtOpContext>>;
       OpKernelRegistrar<TrtOpContext>(#OpName)                                                \
           .SetField(XrtEngine::TENSORRT)                                                      \
           .SetDevice({XrtDevice::GPU_CUDA})                                                   \
-          .SetFactory([]() -> OpKernel<TrtOpContext> * { return new KernelType; })
+          .SetFactory([]() -> OpKernel<TrtOpContext>* { return new KernelType; })
 
-inline TrtOpKernelPtr BuildOpKernel(const std::string &op_name) {
+inline TrtOpKernelPtr BuildOpKernel(const std::string& op_name) {
   auto field = MakeXrtField(XrtDevice::GPU_CUDA, XrtEngine::TENSORRT);
   return TrtOpKernelPtr(OpKernelBuilder<TrtOpContext>()(field, op_name));
 }

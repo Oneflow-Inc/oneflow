@@ -23,7 +23,7 @@ namespace tensorrt {
 
 class ConcatOp : public TrtOpKernel {
  public:
-  void Compile(TrtOpContext *ctx) override {
+  void Compile(TrtOpContext* ctx) override {
     int num_inputs = ctx->num_inputs();
     CHECK_GE(num_inputs, 2) << "Concat needs 2 inputs at least.";
     Shape in_shape = ctx->InputShape("in_0");
@@ -32,9 +32,9 @@ class ConcatOp : public TrtOpKernel {
     CHECK_GE(axis, 0);
     CHECK_LT(axis, in_shape.NumAxes());
 
-    std::vector<nvinfer1::ITensor *> in(num_inputs);
+    std::vector<nvinfer1::ITensor*> in(num_inputs);
     for (int i = 0; i < num_inputs; ++i) { in[i] = ctx->Input(absl::StrCat("in_", i)); }
-    auto *layer = ctx->builder()->addConcatenation(in.data(), num_inputs);
+    auto* layer = ctx->builder()->addConcatenation(in.data(), num_inputs);
     layer->setAxis(axis);
     layer->setName(ctx->op_name().c_str());
     ctx->SetSoleOutput(layer->getOutput(0));
