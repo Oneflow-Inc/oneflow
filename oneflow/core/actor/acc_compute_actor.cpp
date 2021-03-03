@@ -39,8 +39,8 @@ class AccCompActor final : public CompActor {
 
 void AccCompActor::VirtualCompActorInit(const TaskProto& proto) {
   const Shape& in_time_shape = Global<RegstMgr>::Get()
-                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("in"))
-                                    .data_regst_time_shape();
+                                   ->RegstDesc4RegstDescId(Name2SoleRegstDescId("in"))
+                                   .data_regst_time_shape();
   const Shape& out_time_shape = Global<RegstMgr>::Get()
                                     ->RegstDesc4RegstDescId(Name2SoleRegstDescId("out"))
                                     .data_regst_time_shape();
