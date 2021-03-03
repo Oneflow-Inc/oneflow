@@ -115,7 +115,6 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
 };
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("ssp_variable_proxy", SspVariableProxyCompTaskNode);
-REGISTER_USER_OP_INDEPENDENT_AREA_ID("ssp_variable_proxy");
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kSspVariableProxy)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {

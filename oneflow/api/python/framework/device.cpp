@@ -13,19 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/accumulate_kernel.h"
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/to_string.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-void AccumulateKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("one");
-  Blob* out_blob = BnInOp2Blob("acc");
-  KernelUtil<device_type, T>::Axpy(ctx.device_ctx, in_blob->shape().elem_cnt(), GetOneVal<T>(),
-                                   in_blob->dptr<T>(), 1, out_blob->mut_dptr<T>(), 1);
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::class_<Device, std::shared_ptr<Device>>(m, "device")
+      .def(py::init([](const std::string& type, int device_id) {
+        return std::make_shared<Device>(type, device_id);
+      }))
+      .def_property_readonly("type", &Device::type)
+      .def_property_readonly("index", &Device::device_id)
+      .def("__str__", &Device::ToString)
+      .def("__repr__", &Device::ToString);
 }
-
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAccumulateConf, AccumulateKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

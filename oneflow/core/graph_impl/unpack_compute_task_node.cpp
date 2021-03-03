@@ -68,7 +68,6 @@ void UnpackCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("unpack", UnpackCompTaskNode);
-REGISTER_USER_OP_INDEPENDENT_AREA_ID("unpack")
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kUnpack)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {

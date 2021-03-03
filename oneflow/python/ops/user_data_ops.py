@@ -16,7 +16,6 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow as flow
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.module as module_util
@@ -33,7 +32,7 @@ def OFRecordRawDecoder(
     input_blob: oneflow_api.BlobDesc,
     blob_name: str,
     shape: Sequence[int],
-    dtype: dtype_util.dtype,
+    dtype: flow.dtype,
     dim1_varying_length: bool = False,
     auto_zero_padding: bool = False,
     name: Optional[str] = None,
@@ -285,7 +284,7 @@ def api_image_resize(
     keep_aspect_ratio: bool = False,
     resize_side: str = "shorter",
     channels: int = 3,
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     interpolation_type: str = "auto",
     name: Optional[str] = None,
     # deprecated params, reserve for backward compatible
@@ -615,7 +614,7 @@ def CropMirrorNormalize(
     crop_pos_x: float = 0.5,
     mean: Sequence[float] = [0.0],
     std: Sequence[float] = [1.0],
-    output_dtype: dtype_util.dtype = dtype_util.float,
+    output_dtype: flow.dtype = flow.float,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """This operator performs the cropping, normalization, and horizontal flip for input Blob. 
@@ -643,7 +642,7 @@ def CropMirrorNormalize(
         crop_pos_x (float, optional): The horizontal position of the image cropping window, the value range is normalized to (0.0, 1.0). Defaults to 0.5.
         mean (Sequence[float], optional): The mean value for normalization. Defaults to [0.0].
         std (Sequence[float], optional): The standard deviation values for normalization. Defaults to [1.0].
-        output_dtype (dtype_util.dtype, optional): The datatype of output Blob. Defaults to dtype_util.float.
+        output_dtype (flow.dtype, optional): The datatype of output Blob. Defaults to flow.float.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Raises:
@@ -707,9 +706,9 @@ def CropMirrorNormalize(
     if name is None:
         name = id_util.UniqueStr("CropMirrorNormalize_")
     op_type_name = ""
-    if input_blob.dtype is dtype_util.tensor_buffer:
+    if input_blob.dtype is flow.tensor_buffer:
         op_type_name = "crop_mirror_normalize_from_tensorbuffer"
-    elif input_blob.dtype is dtype_util.uint8:
+    elif input_blob.dtype is flow.uint8:
         op_type_name = "crop_mirror_normalize_from_uint8"
     else:
         print(
@@ -1006,7 +1005,7 @@ class CoinFlipModule(module_util.Module):
 @oneflow_export("image.decode", "image_decode")
 def image_decode(
     images_bytes_buffer: oneflow_api.BlobDesc,
-    dtype: dtype_util.dtype = dtype_util.uint8,
+    dtype: flow.dtype = flow.uint8,
     color_space: str = "BGR",
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
@@ -1014,7 +1013,7 @@ def image_decode(
 
     Args:
         images_bytes_buffer (oneflow_api.BlobDesc): The input Blob. Its type should be `kTensorBuffer`. More details please refer to the code example. 
-        dtype (dtype_util.dtype, optional): The data type. Defaults to dtype_util.uint8.
+        dtype (flow.dtype, optional): The data type. Defaults to flow.uint8.
         color_space (str, optional): The color space. Defaults to "BGR".
         name (Optional[str], optional): The name for the opreation. Defaults to None.
 
@@ -1087,7 +1086,7 @@ def image_decode(
 def image_batch_align(
     images: oneflow_api.BlobDesc,
     shape: Sequence[int],
-    dtype: dtype_util.dtype,
+    dtype: flow.dtype,
     alignment: int,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
@@ -1104,7 +1103,7 @@ def image_batch_align(
     Args:
         images (oneflow_api.BlobDesc): The images. 
         shape (Sequence[int]): The maximum static shape of input images. 
-        dtype (dtype_util.dtype): The data type. 
+        dtype (flow.dtype): The data type. 
         alignment (int): The align factor. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 

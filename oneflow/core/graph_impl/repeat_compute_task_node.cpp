@@ -75,7 +75,6 @@ void RepeatCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("repeat", RepeatCompTaskNode);
-REGISTER_USER_OP_INDEPENDENT_AREA_ID("repeat");
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kRepeat)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {

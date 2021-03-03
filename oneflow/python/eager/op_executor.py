@@ -25,10 +25,10 @@ import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.eager.symbol_storage as symbol_storage
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
@@ -69,10 +69,15 @@ def OpKernelCall(opkernel_object, op_attribute, blob_register):
         with blob_register_util.BnInOp2BlobObjectScope(
             blob_register, op_attribute
         ) as bn_in_op2blob_object:
+            cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+                str(op_attribute)
+            )
             builder.StatefulCall(
-                op_attribute,
-                opkernel_object=opkernel_object,
-                bn_in_op2blob_object=bn_in_op2blob_object,
+                cfg_op_attribute,
+                opkernel_object,
+                bn_in_op2blob_object,
+                boxing_util.BoxingTo,
+                vm_util._FindOrCreateDelegateBlobObject,
             )
 
     vm_util.LogicalRun(BuildInstruction)
@@ -325,8 +330,12 @@ def _MakeModelIOPathInputBuilds(op_conf, path, bn_in_op2blob_object):
 
     def BuildFeedPathInstruction(builder):
         blob_object = bn_in_op2blob_object["out"]
-        builder.FeedBlob(blob_object, FeedPath)
-        builder.InsertRemoveForeignCallbackInstruction(blob_object.object_id, FeedPath)
+        builder.FeedBlob(
+            blob_object, python_callback.GetIdForRegisteredCallback(FeedPath)
+        )
+        builder.InsertRemoveForeignCallbackInstruction(
+            blob_object.object_id, python_callback.GetIdForRegisteredCallback(FeedPath)
+        )
 
     return BuildModelIOPathInputInstruction, BuildFeedPathInstruction
 
@@ -459,7 +468,7 @@ def _GenModelIOPathInputOpConfAndRetLbi():
 
     blob_conf = inter_face_blob_conf_util.InterfaceBlobConf()
     blob_conf.shape.dim.append(65536)
-    blob_conf.data_type = dtype_util.int8.oneflow_proto_dtype
+    blob_conf.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(oneflow.int8)
     blob_conf.is_dynamic = True
     op_conf.input_conf.blob_conf.CopyFrom(blob_conf)
 

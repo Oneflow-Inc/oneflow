@@ -60,11 +60,11 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         int64_t thrd_id;
         if (out_parallel_desc.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-          ProcessId process_id{static_cast<uint32_t>(out_machine_id)};
-          DeviceId device_id{process_id, DeviceType::kGPU, static_cast<uint32_t>(out_dev_phy_id)};
+          DeviceId device_id{static_cast<DeviceId::rank_t>(out_machine_id), DeviceType::kGPU,
+                             static_cast<DeviceId::device_index_t>(out_dev_phy_id)};
           auto* stream_index_generator =
               Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
-          uint32_t stream_index = stream_index_generator->GenerateComputeStreamIndex();
+          auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
           thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
 #else
           UNIMPLEMENTED();
@@ -75,7 +75,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
           UNIMPLEMENTED();
         }
         auto* zeros_node = ctx->task_graph()->NewNode<BoxingZerosTaskNode>();
-        zeros_node->Init(out_machine_id, thrd_id, NewAreaId(), lbi, logical_blob_desc.shape(),
+        zeros_node->Init(out_machine_id, thrd_id, lbi, logical_blob_desc.shape(),
                          logical_blob_desc.data_type(), time_shape);
         nearest_in_node->BuildCtrlRegstDesc(zeros_node);
         Connect<TaskNode>(nearest_in_node, ctx->task_graph()->NewEdge(), zeros_node);

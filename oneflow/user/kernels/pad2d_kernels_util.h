@@ -35,7 +35,7 @@ namespace user_op {
 
 template<typename T>
 struct DeviceAdd {
-  OF_DEVICE_FUNC static void Invoke(const T *x, T *y) {
+  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
 #if defined(__CUDA_ARCH__)
     cuda::atomic::Add(y, *x);
 #else
@@ -46,23 +46,23 @@ struct DeviceAdd {
 
 template<DeviceType device_type, typename IN_T>
 struct ReflectionPad2dFunctor final {
-  void operator()(DeviceCtx *ctx, const IN_T *src, IN_T *dest,
-                  const NdIndexOffsetHelper<int64_t, 4> &index_helper, int64_t n_batch,
+  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
                   int64_t x_width, int64_t pad_left, int64_t pad_top);
 };
 
 template<DeviceType device_type, typename IN_T>
 struct ReflectionPad2dGradFunctor final {
-  void operator()(DeviceCtx *ctx, const IN_T *src, IN_T *dest,
-                  const NdIndexOffsetHelper<int64_t, 4> &index_helper, int64_t n_batch,
+  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
                   int64_t dx_width, int64_t pad_left, int64_t pad_top);
 };
 
 template<typename IN_T>
-OF_DEVICE_FUNC void DoReflectionPad2d(const IN_T *src, IN_T *dest,
-                                      const NdIndexOffsetHelper<int64_t, 4> &index_helper,
+OF_DEVICE_FUNC void DoReflectionPad2d(const IN_T* src, IN_T* dest,
+                                      const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                       int64_t elem_num, int64_t src_num, int64_t dest_num,
                                       int64_t y_height, int64_t y_width, int64_t x_height,
                                       int64_t x_width, int64_t pad_left, int64_t pad_top) {
@@ -98,8 +98,8 @@ OF_DEVICE_FUNC void DoReflectionPad2d(const IN_T *src, IN_T *dest,
 }
 
 template<typename IN_T>
-OF_DEVICE_FUNC void DoReflectionPad2dGrad(const IN_T *src, IN_T *dest,
-                                          const NdIndexOffsetHelper<int64_t, 4> &index_helper,
+OF_DEVICE_FUNC void DoReflectionPad2dGrad(const IN_T* src, IN_T* dest,
+                                          const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                           int64_t elem_num, int64_t src_num, int64_t dest_num,
                                           int64_t dy_height, int64_t dy_width, int64_t dx_height,
                                           int64_t dx_width, int64_t pad_left, int64_t pad_top) {
@@ -144,23 +144,23 @@ OF_DEVICE_FUNC void DoReflectionPad2dGrad(const IN_T *src, IN_T *dest,
 
 template<DeviceType device_type, typename IN_T>
 struct ReplicationPad2dFunctor final {
-  void operator()(DeviceCtx *ctx, const IN_T *src, IN_T *dest,
-                  const NdIndexOffsetHelper<int64_t, 4> &index_helper, int64_t n_batch,
+  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
                   int64_t x_width, int64_t pad_left, int64_t pad_top);
 };
 
 template<DeviceType device_type, typename IN_T>
 struct ReplicationPad2dGradFunctor final {
-  void operator()(DeviceCtx *ctx, const IN_T *src, IN_T *dest,
-                  const NdIndexOffsetHelper<int64_t, 4> &index_helper, int64_t n_batch,
+  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
                   int64_t dx_width, int64_t pad_left, int64_t pad_top);
 };
 
 template<typename IN_T>
-OF_DEVICE_FUNC void DoReplicationPad2d(const IN_T *src, IN_T *dest,
-                                       const NdIndexOffsetHelper<int64_t, 4> &index_helper,
+OF_DEVICE_FUNC void DoReplicationPad2d(const IN_T* src, IN_T* dest,
+                                       const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                        int64_t elem_num, int64_t src_num, int64_t dest_num,
                                        int64_t y_height, int64_t y_width, int64_t x_height,
                                        int64_t x_width, int64_t pad_left, int64_t pad_top) {
@@ -197,8 +197,8 @@ OF_DEVICE_FUNC void DoReplicationPad2d(const IN_T *src, IN_T *dest,
 }
 
 template<typename IN_T>
-OF_DEVICE_FUNC void DoReplicationPad2dGrad(const IN_T *src, IN_T *dest,
-                                           const NdIndexOffsetHelper<int64_t, 4> &index_helper,
+OF_DEVICE_FUNC void DoReplicationPad2dGrad(const IN_T* src, IN_T* dest,
+                                           const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                            int64_t elem_num, int64_t src_num, int64_t dest_num,
                                            int64_t dy_height, int64_t dy_width, int64_t dx_height,
                                            int64_t dx_width, int64_t pad_left, int64_t pad_top) {
@@ -243,23 +243,23 @@ OF_DEVICE_FUNC void DoReplicationPad2dGrad(const IN_T *src, IN_T *dest,
 
 template<DeviceType device_type, typename IN_T>
 struct ConstantPad2dFunctor final {
-  void operator()(DeviceCtx *ctx, const IN_T *src, IN_T *dest,
-                  const NdIndexOffsetHelper<int64_t, 4> &index_helper, int64_t n_batch,
+  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
                   int64_t x_width, int64_t pad_left, int64_t pad_top, IN_T constant_value);
 };
 
 template<DeviceType device_type, typename IN_T>
 struct ConstantPad2dGradFunctor final {
-  void operator()(DeviceCtx *ctx, const IN_T *src, IN_T *dest,
-                  const NdIndexOffsetHelper<int64_t, 4> &index_helper, int64_t n_batch,
+  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
                   int64_t dx_width, int64_t pad_left, int64_t pad_top);
 };
 
 template<typename IN_T>
-OF_DEVICE_FUNC void DoConstantPad2d(const IN_T *src, IN_T *dest,
-                                    const NdIndexOffsetHelper<int64_t, 4> &index_helper,
+OF_DEVICE_FUNC void DoConstantPad2d(const IN_T* src, IN_T* dest,
+                                    const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                     int64_t elem_num, int64_t src_num, int64_t dest_num,
                                     int64_t y_height, int64_t y_width, int64_t x_height,
                                     int64_t x_width, int64_t pad_left, int64_t pad_top,
@@ -287,8 +287,8 @@ OF_DEVICE_FUNC void DoConstantPad2d(const IN_T *src, IN_T *dest,
 }
 
 template<typename IN_T>
-OF_DEVICE_FUNC void DoConstantPad2dGrad(const IN_T *src, IN_T *dest,
-                                        const NdIndexOffsetHelper<int64_t, 4> &index_helper,
+OF_DEVICE_FUNC void DoConstantPad2dGrad(const IN_T* src, IN_T* dest,
+                                        const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                         int64_t elem_num, int64_t src_num, int64_t dest_num,
                                         int64_t dy_height, int64_t dy_width, int64_t dx_height,
                                         int64_t dx_width, int64_t pad_left, int64_t pad_top) {

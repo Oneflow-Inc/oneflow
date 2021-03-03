@@ -95,12 +95,12 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                                      CudaWorkType work_type) -> int64_t {
     int64_t thrd_id = -1;
 #ifdef WITH_CUDA
-    ProcessId process_id{static_cast<uint32_t>(machine_id)};
-    DeviceId device_id{process_id, DeviceType::kGPU, static_cast<uint32_t>(dev_id)};
+    DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
+                       static_cast<DeviceId::device_index_t>(dev_id)};
     auto* generator = dynamic_cast<CudaStreamIndexGenerator*>(
         Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
     CHECK_NOTNULL(generator);
-    uint32_t stream_index = 0;
+    StreamId::stream_index_t stream_index = 0;
     if (work_type == CudaWorkType::kCopyH2D) {
       stream_index = generator->GenerateH2DStreamIndex();
     } else if (work_type == CudaWorkType::kCopyD2H) {

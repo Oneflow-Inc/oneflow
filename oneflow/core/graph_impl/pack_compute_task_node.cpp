@@ -68,7 +68,6 @@ void PackCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("pack", PackCompTaskNode);
-REGISTER_USER_OP_INDEPENDENT_AREA_ID("pack")
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kPack)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {

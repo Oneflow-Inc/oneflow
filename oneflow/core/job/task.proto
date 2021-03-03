@@ -41,22 +41,11 @@ enum TaskType {
   kBoxingZeros = 64;
 };
 
-enum AreaType {
-  kInvalidArea = 0;
-  kDataPreprocessArea = 1;
-  kDataForwardArea = 2;
-  // TODO: rename to OptimizerArea
-  kMdUpdtArea = 4;
-  kPrintArea = 6;
-  kBoundaryArea = 7;
-}
-
 message RegstDescIdSet {
   repeated int64 regst_desc_id = 1;
 }
 
 message TaskSetInfo {
-  required int64 area_id = 1;
   required int64 chain_id = 4;
   required int64 order_in_graph = 5;
 }
