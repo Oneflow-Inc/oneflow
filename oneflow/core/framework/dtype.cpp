@@ -13,10 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "half.hpp"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/switch_func.h"
+#include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/device_register_cpu.h"
 
 namespace oneflow {
+
+namespace {
+
+template<typename T>
+std::size_t GetDataTypeBytes() {
+  return sizeof(T);
+}
+
+#define MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY(func_name, T) func_name<T>
+DEFINE_STATIC_SWITCH_FUNC(std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ));
+
+}  // namespace
 
 Maybe<DType> DType::GetDTypeByDataType(const DataType& data_type) {
   switch (data_type) {
@@ -36,12 +53,8 @@ Maybe<DType> DType::GetDTypeByDataType(const DataType& data_type) {
 
 Maybe<size_t> DType::bytes() const {
   // DataType::OFRecord and DataType::TensorBuffer don't have stable byte size
-  static const HashMap<DataType, size_t> data_type2bytes = {
-      {DataType::kInvalidDataType, 0}, {DataType::kChar, 1},   {DataType::kFloat16, 2},
-      {DataType::kFloat, 4},           {DataType::kDouble, 8}, {DataType::kInt8, 1},
-      {DataType::kInt32, 4},           {DataType::kInt64, 8},  {DataType::kUInt8, 1}};
-  if (data_type2bytes.find(data_type()) == data_type2bytes.end()) { OF_UNIMPLEMENTED(); }
-  return data_type2bytes.at(data_type());
+  if (data_type() == DataType::kInvalidDataType) { OF_UNIMPLEMENTED(); }
+  return SwitchGetDataTypeBytes(SwitchCase(data_type()));
 }
 
 Maybe<DType> DType::InvalidDataType() {
