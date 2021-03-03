@@ -20,7 +20,12 @@ import os
 import random
 import oneflow.typing as oft
 from collections import OrderedDict
-from test_util import GenArgList, GenArgDict, type_name_to_flow_type, type_name_to_np_type
+from test_util import (
+    GenArgList,
+    GenArgDict,
+    type_name_to_flow_type,
+    type_name_to_np_type,
+)
 
 
 def _compare_with_np(
