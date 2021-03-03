@@ -61,6 +61,7 @@ locals()["long"] = oneflow_api.int64
 locals()["uint8"] = oneflow_api.uint8
 locals()["record"] = oneflow_api.record
 locals()["tensor_buffer"] = oneflow_api.tensor_buffer
+locals()["Size"] = oneflow_api.Size
 
 del import_secondary_module
 del import_oneflow_internal2
