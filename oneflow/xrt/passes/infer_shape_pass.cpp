@@ -54,7 +54,7 @@ void InferShape(XrtGraph *graph, const XrtPassOptions &options, const JobDesc *j
       };
 
       util::Map<std::string, std::unique_ptr<BlobDesc>> lbn2logical_blob_desc;
-      for (const auto pair : *lbn2logical_blob_desc_proto) {
+      for (const auto& pair : *lbn2logical_blob_desc_proto) {
         lbn2logical_blob_desc[pair.first].reset(new BlobDesc(pair.second));
       }
       auto GetLogicalBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {

@@ -262,9 +262,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
       (*launch_conf->mutable_input_output_mapping())[arg_value] = arg_proto.value();
     }
 
-    auto CopyLogicalBlobDesc4LbnOnEdge = [&](const XrtEdge *edge) -> void {
-      const Argument &argument = edge->argument();
-      const std::string& lbn = argument.name();
+    auto CopyLogicalBlobDesc4Lbn = [&](const std::string& lbn) -> void {
       const auto& src_map = builder_->job().helper().lbn2logical_blob_desc();
       auto* dst_map = launch_conf->mutable_lbn2logical_blob_desc();
       const auto src_it = src_map.find(lbn);
@@ -276,12 +274,16 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
         (*dst_map)[lbn] = src_it->second;
       }
     };
+
+    const auto& op_name2arg_signature = builder_->job().helper().op_name2arg_signature();
     for (const XrtNode *sub_node : node->sub_graph()->Nodes()) {
-      for (const XrtEdge *edge : sub_node->in_edges()) {
-        CopyLogicalBlobDesc4LbnOnEdge(edge);
-      }
-      for (const XrtEdge *edge : sub_node->out_edges()) {
-        CopyLogicalBlobDesc4LbnOnEdge(edge);
+      if (sub_node->IsArgumentNode()) { continue; }
+      const auto op_name2arg_signature_it = op_name2arg_signature.find(sub_node->name());
+      CHECK(op_name2arg_signature_it != op_name2arg_signature.end());
+      for(const auto& pair : op_name2arg_signature_it->second.bn_in_op2lbi()) {
+        const LogicalBlobId &lbi = pair.second;
+        std::string blob_name = xrt::BlobIdToName(lbi);
+        CopyLogicalBlobDesc4Lbn(blob_name);
       }
     }
 
