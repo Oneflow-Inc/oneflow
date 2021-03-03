@@ -67,20 +67,6 @@ void FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierF
   moving_variance_modifier->set_requires_grad(false);
 }
 
-Maybe<void> FwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
-  const OptInt64* x_batch_axis = ctx->BatchAxis4ArgNameAndIndex("x", 0);
-  *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *x_batch_axis;
-  const auto ClearBatchAxis = [ctx](const std::string& name) {
-    if (ctx->user_op_conf().has_output(name, 0)) {
-      ctx->BatchAxis4ArgNameAndIndex(name, 0)->clear_value();
-    }
-  };
-  ClearBatchAxis("mean");
-  ClearBatchAxis("inv_variance");
-  ClearBatchAxis("reserve_space");
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
   std::vector<user_op::OpArg> split_args;
   split_args.emplace_back("x", 0);
@@ -170,7 +156,6 @@ REGISTER_USER_OP("normalization")
     .Attr<float>("momentum")
     .SetInputArgModifyFn(FwInputArgModifyFn)
     .SetTensorDescInferFn(MakeFwTensorDescInferFn())
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
     .SetGetSbpFn(FwGetSbpFn);
 
 REGISTER_USER_OP("normalization_add_relu")
@@ -188,7 +173,22 @@ REGISTER_USER_OP("normalization_add_relu")
     .Attr<float>("epsilon")
     .Attr<float>("momentum")
     .SetInputArgModifyFn(FwInputArgModifyFn)
-    .SetTensorDescInferFn(
+    .SetLogicalTensorDescInferFn(
+        MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
+          const auto* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          const auto& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+          size_t reserve_space_bits = x_desc->shape().elem_cnt();
+          if (x_sbp.has_split_parallel()) {
+            CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
+            reserve_space_bits = reserve_space_bits / ctx->parallel_num();
+          }
+          *reserve_space->mut_data_type() = DataType::kInt32;
+          *reserve_space->mut_shape() =
+              Shape({static_cast<int64_t>(RoundUp(reserve_space_bits, 32) / 32)});
+          return Maybe<void>::Ok();
+        }))
+    .SetPhysicalTensorDescInferFn(
         MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
           const auto* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
@@ -197,10 +197,21 @@ REGISTER_USER_OP("normalization_add_relu")
               Shape({static_cast<int64_t>(RoundUp(x_desc->shape().elem_cnt(), 32) / 32)});
           return Maybe<void>::Ok();
         }))
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
     .SetGetSbpFn(FwGetSbpFn);
 
 #if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
+
+void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int64_t n, int64_t c,
+                                int64_t h, int64_t w, size_t* reserve_space_size) {
+  cudnnHandle_t cudnn_handle;
+  OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle));
+  CudnnTensorDesc xy_desc(CUDNN_TENSOR_NHWC, data_type, n, c, h, w);
+  CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
+  OF_CUDNN_CHECK(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
+      cudnn_handle, CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops, activation_desc.Get(), xy_desc.Get(),
+      reserve_space_size));
+  OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle));
+}
 
 REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
     .Input("x")
@@ -217,7 +228,7 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
     .Attr<float>("epsilon")
     .Attr<float>("momentum")
     .SetInputArgModifyFn(FwInputArgModifyFn)
-    .SetTensorDescInferFn(
+    .SetLogicalTensorDescInferFn(
         MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
           const Shape& x_shape = x->shape();
@@ -227,27 +238,47 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
           int64_t h = x_shape.Count(1, axis);
           int64_t w = 1;
           int64_t c = x_shape.At(axis);
-          cudnnHandle_t cudnn_handle;
-          size_t reserve_space_size;
-          OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle));
-          CudnnTensorDesc xy_desc(CUDNN_TENSOR_NHWC, x->data_type(), n, c, h, w);
-          CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
+          const auto& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+          if (x_sbp.has_split_parallel()) {
+            CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
+            n = n / ctx->parallel_num();
+          }
           cudnnBatchNormOps_t ops;
           if (ctx->user_op_conf().has_input("addend", 0)) {
             ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
           } else {
             ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
           }
-          OF_CUDNN_CHECK(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
-              cudnn_handle, CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops, activation_desc.Get(),
-              xy_desc.Get(), &reserve_space_size));
+          size_t reserve_space_size;
+          InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
           reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
           *reserve_space->mut_data_type() = DataType::kChar;
           *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
-          OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle));
           return Maybe<void>::Ok();
         }))
-    .SetBatchAxisInferFn(FwBatchAxisInferFn)
+    .SetPhysicalTensorDescInferFn(
+        MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
+                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
+          const Shape& x_shape = x->shape();
+          const auto axis = ctx->Attr<int32_t>("axis");
+          CHECK_EQ_OR_RETURN(x_shape.Count(axis + 1), 1);
+          int64_t n = x_shape.At(0);
+          int64_t h = x_shape.Count(1, axis);
+          int64_t w = 1;
+          int64_t c = x_shape.At(axis);
+          cudnnBatchNormOps_t ops;
+          if (ctx->user_op_conf().has_input("addend", 0)) {
+            ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
+          } else {
+            ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
+          }
+          size_t reserve_space_size;
+          InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
+          reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
+          *reserve_space->mut_data_type() = DataType::kChar;
+          *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
+          return Maybe<void>::Ok();
+        }))
     .SetGetSbpFn(FwGetSbpFn);
 
 #endif
@@ -282,17 +313,6 @@ Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
   JUST(CheckParamTensorDesc("beta"));
   JUST(SetParamTensorDesc("gamma_diff"));
   JUST(SetParamTensorDesc("beta_diff"));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> BwBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
-  const OptInt64* dy_batch_axis = ctx->BatchAxis4ArgNameAndIndex("dy", 0);
-  *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *dy_batch_axis;
-  if (ctx->user_op_conf().has_output("addend_diff", 0)) {
-    *ctx->BatchAxis4ArgNameAndIndex("addend_diff", 0) = *dy_batch_axis;
-  }
-  ctx->BatchAxis4ArgNameAndIndex("gamma_diff", 0)->clear_value();
-  ctx->BatchAxis4ArgNameAndIndex("beta_diff", 0)->clear_value();
   return Maybe<void>::Ok();
 }
 
@@ -336,7 +356,6 @@ REGISTER_USER_OP("normalization_grad")
     .Attr<int32_t>("axis")
     .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
 
 REGISTER_USER_OP("normalization_add_relu_grad")
@@ -355,7 +374,6 @@ REGISTER_USER_OP("normalization_add_relu_grad")
     .Attr<int32_t>("axis")
     .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
 
 #if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
@@ -376,7 +394,6 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu_grad")
     .Attr<int32_t>("axis")
     .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
-    .SetBatchAxisInferFn(BwBatchAxisInferFn)
     .SetGetSbpFn(BwGetSbpFn);
 
 #endif

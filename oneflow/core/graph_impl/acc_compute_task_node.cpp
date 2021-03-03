@@ -61,6 +61,5 @@ void AccCompTaskNode::BuildExecGphAndRegst() {
 }
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("acc", AccCompTaskNode);
-REGISTER_USER_OP_INDEPENDENT_AREA_ID("acc")
 
 }  // namespace oneflow

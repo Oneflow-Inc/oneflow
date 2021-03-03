@@ -47,6 +47,7 @@ class CtrlCall final : public CtrlCallIf {
   CtrlRequest<ctrl_method>* mut_request() { return &request_; }
   CtrlResponse<ctrl_method>* mut_response() { return &response_; }
   grpc::ServerContext* mut_server_ctx() { return &server_ctx_; }
+  const grpc::ServerContext& server_ctx() const { return server_ctx_; }
   grpc::ServerAsyncResponseWriter<CtrlResponse<ctrl_method>>* mut_responder() {
     return &responder_;
   }

@@ -17,8 +17,8 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job_rewriter/autotick.h"
-#include "oneflow/core/job_rewriter/add_keep_header_only_op_conf.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/job_rewriter/xrt_compilation.h"
@@ -96,16 +96,15 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
 void JobCompleter::Complete(Job* job) const {
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
-  WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
-  if (GlobalJobDesc().enable_keep_header_only()) {
-    WithOpGraphAndMutJobBuilder(job, &AddKeepHeaderOnlyOp);
+  // NOTE(chengcheng): disable this pass for reduce boxing memory life cycle to memory cost.
+  if (!Global<ResourceDesc, ForSession>::Get()->resource().disable_group_boxing_by_dst_parallel()) {
+    WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
   }
   WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp);
   // complete tick ops
-  WithOpGraphAndMutJobBuilder(job, &AutoSourceTick);
+  WithOpGraphAndMutJobBuilder(job, &AutoPrependTick);
   WithOpGraphAndMutJobBuilder(job, &AddTickForTimeShape);
-  WithOpGraphAndMutJobBuilder(job, &AutoSinkTick);
-  AddGlobalTotalJobCriticalSection(*job);
+  WithOpGraphAndMutJobBuilder(job, &AutoSourceAndSinkTick);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
   JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
@@ -116,6 +115,13 @@ void JobCompleter::Complete(Job* job) const {
     LOG(WARNING) << "It will not use XLA or TensorRT since WITH_XLA or "
                     "WITH_TENSORRT was not enabled when compiling the project.";
 #endif  // OF_WITH_XRT
+  }
+
+  if (Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+    // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
+    JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx);
+    // NOTE(chengcheng): Becasue insert new logical nccl op, MUST dump time shape, sbp again.
+    JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
   }
   CheckOpGraph(OpGraph(*job));
 }

@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
@@ -44,8 +44,7 @@ ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
   msg.dst_actor_id_ = consumer;
   msg.msg_type_ = ActorMsgType::kRegstMsg;
   msg.regst_wrapper_.regst = regst_raw_ptr;
-  if (Global<IDMgr>::Get()->MachineId4ActorId(consumer)
-      == Global<MachineCtx>::Get()->this_machine_id()) {
+  if (Global<IDMgr>::Get()->MachineId4ActorId(consumer) == GlobalProcessCtx::Rank()) {
     msg.regst_wrapper_.comm_net_token = nullptr;
   } else {
     msg.regst_wrapper_.comm_net_token = regst_raw_ptr->comm_net_token();
@@ -103,8 +102,7 @@ Regst* ActorMsg::regst() const {
 
 int64_t ActorMsg::regst_desc_id() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
-  if (Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_)
-      == Global<MachineCtx>::Get()->this_machine_id()) {
+  if (Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_) == GlobalProcessCtx::Rank()) {
     return regst_wrapper_.regst->regst_desc_id();
   } else {
     return regst_wrapper_.regst_status.regst_desc_id;

@@ -134,8 +134,6 @@ void ChainActSubGraph::InitNodes(
     const TaskProto& task_proto = GetTaskProto(act_event->actor_id());
     int64_t chain_id = task_proto.task_set_info().chain_id();
     std::pair<int64_t, int64_t> chain_act_id_pair(chain_id, act_id);
-    // kMdUpdtArea regst num will always be 1
-    if (task_proto.task_set_info().area_id() == kMdUpdtArea) { continue; }
     chain_id_with_act_id2act_events[chain_act_id_pair].push_back(std::move(act_event));
   }
   for (auto& pair : chain_id_with_act_id2act_events) {

@@ -33,9 +33,6 @@ REGISTER_USER_OP("add_n")
       *out = *in_0;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      return user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis(ctx);
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) {
       int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
       for (int64_t i = 0; i < num_axes; ++i) {

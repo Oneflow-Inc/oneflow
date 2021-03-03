@@ -46,14 +46,14 @@ class BlobObject : public Object {
 
   std::shared_ptr<OpArgBlobAttribute> op_arg_blob_attr() const;
 
-  void add_releaser(std::function<void(BlobObject*)> release);
+  void add_releaser(const std::function<void(Object*)>& release);
 
   void ForceReleaseAll();
 
  private:
   std::shared_ptr<OpArgParallelAttribute> op_arg_parallel_attr_;
   std::shared_ptr<OpArgBlobAttribute> op_arg_blob_attr_;
-  std::vector<std::function<void(BlobObject*)>> release_;
+  std::vector<std::function<void(Object*)>> release_;
 };
 
 }  // namespace compatible_py

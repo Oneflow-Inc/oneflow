@@ -37,16 +37,6 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
 
-  const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
-  if (ctx->parallel_ctx().parallel_num() != 1 && out_sbp.has_split_parallel()) {
-    FOR_RANGE(int, i, 0, ndim) {
-      if (out_sbp.split_parallel().axis() == i) {
-        CHECK_OR_RETURN(
-            IsFullSlice(start_vec.at(i), stop_vec.at(i), step_vec.at(i), x_shape->At(i)));
-      }
-    }
-  }
-
   DimVector dim_vec(ndim);
   FOR_RANGE(size_t, i, 0, dim_vec.size()) {
     const int64_t dim_size = x_shape->At(i);
@@ -105,16 +95,6 @@ Maybe<void> InferSliceGradOpTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
 
-  const SbpParallel& dx_sbp = ctx->SbpParallel4ArgNameAndIndex("dx", 0);
-  if (ctx->parallel_ctx().parallel_num() != 1 && dx_sbp.has_split_parallel()) {
-    FOR_RANGE(int, i, 0, ndim) {
-      if (dx_sbp.split_parallel().axis() == i) {
-        CHECK_OR_RETURN(
-            IsFullSlice(start_vec.at(i), stop_vec.at(i), step_vec.at(i), like_shape->At(i)));
-      }
-    }
-  }
-
   *ctx->Shape4ArgNameAndIndex("dx", 0) = *like_shape;
   *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
   return Maybe<void>::Ok();
@@ -156,7 +136,6 @@ void InferSliceGradInputArgModifier(user_op::GetInputArgModifier GetInputArgModi
   dy_modifier->set_requires_grad(false);
   user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
   CHECK_NOTNULL(like_modifier);
-  like_modifier->set_use_header_only(true);
   like_modifier->set_requires_grad(false);
 }
 
@@ -192,15 +171,6 @@ Maybe<void> InferSliceUpdateOpTensorDesc(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(sliced_dim_size, update_desc->shape().At(i))
         << "sliced dim size " << sliced_dim_size << " at axis " << i
         << " not equal to the update shape " << update_desc->shape().ToString();
-  }
-  // the split axis can't be sliced
-  const SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
-  if (ctx->parallel_ctx().parallel_num() != 1 && x_sbp.has_split_parallel()) {
-    const int64_t split_axis = x_sbp.split_parallel().axis();
-    CHECK_GE_OR_RETURN(split_axis, 0);
-    CHECK_LT_OR_RETURN(split_axis, ndim);
-    CHECK_OR_RETURN(IsFullSlice(start_vec.at(split_axis), stop_vec.at(split_axis),
-                                step_vec.at(split_axis), x_desc->shape().At(split_axis)));
   }
 
   auto* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);

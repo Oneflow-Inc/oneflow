@@ -253,7 +253,6 @@ class EagerFutureRemoteBlobs(FutureRemoteBlobs):
         if isinstance(getter, _EagerBlobGetter):
             return getter.result
         elif isinstance(getter, (list, tuple)):
-            print
             return type(getter)(self._GetResultLocalBlob(g) for g in getter)
         elif isinstance(getter, dict):
             return {k: self._GetResultLocalBlob(v) for k, v in getter.items()}
