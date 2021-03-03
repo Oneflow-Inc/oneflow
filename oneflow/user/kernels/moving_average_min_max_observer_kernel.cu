@@ -26,11 +26,11 @@ namespace {
 // NOTE(Liang Depeng): refer to
 // https://stackoverflow.com/questions/17371275/implementing-max-reduce-in-cuda
 template<typename T>
-__global__ void ReduceMaxMinPerLayer(const T *input_ptr, const int64_t elements, T *max_ptr,
-                                     T *min_ptr) {
+__global__ void ReduceMaxMinPerLayer(const T* input_ptr, const int64_t elements, T* max_ptr,
+                                     T* min_ptr) {
   extern __shared__ unsigned char shared_max_min_memory[];
-  T *shared_max = reinterpret_cast<T *>(shared_max_min_memory);
-  T *shared_min = shared_max + blockDim.x;
+  T* shared_max = reinterpret_cast<T*>(shared_max_min_memory);
+  T* shared_min = shared_max + blockDim.x;
 
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
@@ -59,7 +59,7 @@ __global__ void ReduceMaxMinPerLayer(const T *input_ptr, const int64_t elements,
 }
 
 template<typename T>
-__global__ void InitMaxMin(const int64_t elements, T *max_ptr, T *min_ptr) {
+__global__ void InitMaxMin(const int64_t elements, T* max_ptr, T* min_ptr) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
@@ -72,9 +72,9 @@ __global__ void InitMaxMin(const int64_t elements, T *max_ptr, T *min_ptr) {
 
 template<typename T>
 __global__ void CalScaleZeroPointSymmetric(const int64_t elements, const double quantization_bit,
-                                           const float momentum, const T *max_ptr, const T *min_ptr,
-                                           T *moving_max_ptr, T *moving_min_ptr, T *scale,
-                                           T *zero_point) {
+                                           const float momentum, const T* max_ptr, const T* min_ptr,
+                                           T* moving_max_ptr, T* moving_min_ptr, T* scale,
+                                           T* zero_point) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
@@ -99,8 +99,8 @@ __global__ void CalScaleZeroPointSymmetric(const int64_t elements, const double 
 template<typename T>
 __global__ void CalFreezeScaleZeroPointSymmetric(const int64_t elements,
                                                  const double quantization_bit,
-                                                 const float momentum, const T *moving_max_ptr,
-                                                 T *scale, T *zero_point) {
+                                                 const float momentum, const T* moving_max_ptr,
+                                                 T* scale, T* zero_point) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
@@ -114,9 +114,9 @@ __global__ void CalFreezeScaleZeroPointSymmetric(const int64_t elements,
 
 template<typename T>
 __global__ void CalScaleZeroPointAffine(const int64_t elements, const double quantization_bit,
-                                        const float momentum, const T *max_ptr, const T *min_ptr,
-                                        T *moving_max_ptr, T *moving_min_ptr, T *scale,
-                                        T *zero_point) {
+                                        const float momentum, const T* max_ptr, const T* min_ptr,
+                                        T* moving_max_ptr, T* moving_min_ptr, T* scale,
+                                        T* zero_point) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
@@ -144,8 +144,8 @@ __global__ void CalScaleZeroPointAffine(const int64_t elements, const double qua
 
 template<typename T>
 __global__ void CalFreezeScaleZeroPointAffine(const int64_t elements, const double quantization_bit,
-                                              const float momentum, const T *moving_max_ptr,
-                                              const T *moving_min_ptr, T *scale, T *zero_point) {
+                                              const float momentum, const T* moving_max_ptr,
+                                              const T* moving_min_ptr, T* scale, T* zero_point) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
@@ -163,9 +163,9 @@ __global__ void CalFreezeScaleZeroPointAffine(const int64_t elements, const doub
 
 template<typename T>
 __global__ void CalScaleZeroPointCambricon(const int64_t elements, const double quantization_bit,
-                                           const float momentum, const T *max_ptr, const T *min_ptr,
-                                           T *moving_max_ptr, T *moving_min_ptr, T *scale,
-                                           T *zero_point) {
+                                           const float momentum, const T* max_ptr, const T* min_ptr,
+                                           T* moving_max_ptr, T* moving_min_ptr, T* scale,
+                                           T* zero_point) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
@@ -189,8 +189,8 @@ __global__ void CalScaleZeroPointCambricon(const int64_t elements, const double 
 template<typename T>
 __global__ void CalFreezeScaleZeroPointCambricon(const int64_t elements,
                                                  const double quantization_bit,
-                                                 const float momentum, const T *moving_max_ptr,
-                                                 T *scale, T *zero_point) {
+                                                 const float momentum, const T* moving_max_ptr,
+                                                 T* scale, T* zero_point) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
@@ -215,15 +215,15 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
   ~GpuMovingAverageMinMaxObserverKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext *ctx) const override {
-    const user_op::Tensor *in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    const user_op::Tensor *current_train_step =
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const user_op::Tensor* current_train_step =
         ctx->Tensor4ArgNameAndIndex("current_train_step", 0);
-    user_op::Tensor *moving_max = ctx->Tensor4ArgNameAndIndex("moving_max", 0);
-    user_op::Tensor *moving_min = ctx->Tensor4ArgNameAndIndex("moving_min", 0);
-    user_op::Tensor *scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
-    user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
-    user_op::Tensor *tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    user_op::Tensor* moving_max = ctx->Tensor4ArgNameAndIndex("moving_max", 0);
+    user_op::Tensor* moving_min = ctx->Tensor4ArgNameAndIndex("moving_min", 0);
+    user_op::Tensor* scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
+    user_op::Tensor* zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     const bool is_training = ctx->Attr<bool>("training");
     const int64_t stop_update_after_iters = ctx->Attr<int64_t>("stop_update_after_iters");
@@ -233,10 +233,10 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     const std::string quantization_formula = ctx->Attr<std::string>("quantization_formula");
 
     int64_t elements = in->shape().elem_cnt();
-    T *max_ptr = tmp_buffer->mut_dptr<T>();
-    T *min_ptr = max_ptr + 1;
+    T* max_ptr = tmp_buffer->mut_dptr<T>();
+    T* min_ptr = max_ptr + 1;
 
-    int64_t *host_current_train_step_ptr = new int64_t[current_train_step->shape().elem_cnt()];
+    int64_t* host_current_train_step_ptr = new int64_t[current_train_step->shape().elem_cnt()];
     OF_CUDA_CHECK(cudaMemcpy(host_current_train_step_ptr, current_train_step->dptr<int64_t>(),
                              current_train_step->shape().elem_cnt() * sizeof(int64_t),
                              cudaMemcpyDefault));
@@ -299,7 +299,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
       .SetCreateFn<GpuMovingAverageMinMaxObserverKernel<dtype>>()                      \
       .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                   \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext *ctx) -> size_t { return 2 * sizeof(dtype); })
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t { return 2 * sizeof(dtype); })
 
 REGISTER_MOVING_AVERAGE_MIN_MAX_OBSERVER_KERNEL(float);
 REGISTER_MOVING_AVERAGE_MIN_MAX_OBSERVER_KERNEL(double);
