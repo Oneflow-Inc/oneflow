@@ -92,14 +92,12 @@ void ExportTensor(py::module& m, const char* name) {
       .def(py::init(&TensorExportUtil<T>::ApiMakeTensor))
       // Properties of pytorch
       .def_property_readonly("shape", &T::shape)
-      .def_property_readonly("device",
-                             [](const T& tensor) { return tensor.device().GetPtrOrThrow(); })
+      .def_property_readonly("device", &T::device)
       .def_property_readonly("ndim", &T::ndim)
-      .def_property_readonly("is_cuda",
-                             [](const T& tensor) { return tensor.is_cuda().GetOrThrow(); })
+      .def_property_readonly("is_cuda", &T::is_cuda)
       .def_property_readonly("dtype", &T::dtype)
       .def_property_readonly("data", []() { TODO(); })
-      .def_property_readonly("grad", &T::acc_grad)
+      .def_property_readonly("grad", [](const T& t) { return t.api_acc_grad().GetPtrOrThrow(); })
       .def_property_readonly("grad_fn", &T::grad_fn_node)
       .def_property_readonly("requires_grad", &T::requires_grad)
       .def_property_readonly("is_leaf", &T::is_leaf)
@@ -119,11 +117,9 @@ void ExportTensor(py::module& m, const char* name) {
       .def("__array__", []() { TODO(); })
       .def("__sizeof__", []() { TODO(); })
       // OneFlow tensor properties other than pytorch tensor
-      .def_property_readonly("placement",
-                             [](const T& tensor) { return tensor.parallel_desc().GetPtrOrThrow(); })
-      .def_property_readonly("is_lazy", [](const T& tensor) { return tensor.is_lazy(); })
-      .def_property_readonly("is_consistent",
-                             [](const T& tensor) { return tensor.is_consistent().GetOrThrow(); });
+      .def_property_readonly("placement", &T::parallel_desc)
+      .def_property_readonly("is_lazy", &T::is_lazy)
+      .def_property_readonly("is_consistent", &T::is_consistent);
 }
 
 }  // namespace

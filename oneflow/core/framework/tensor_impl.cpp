@@ -15,4 +15,22 @@ limitations under the License.
 */
 #include "oneflow/core/framework/tensor_impl.h"
 
-namespace oneflow {}  // namespace oneflow
+namespace oneflow {
+namespace one {
+
+namespace {
+
+std::shared_ptr<const ParallelDesc> MakeParallelDescByDevice(const Device& device) {
+  TODO();  // liyurui
+  return std::shared_ptr<const ParallelDesc>();
+}
+
+}  // namespace
+
+void MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
+  device_ = device;
+  parallel_desc_ = MakeParallelDescByDevice(*device);
+}
+
+}  // namespace one
+}  // namespace oneflow

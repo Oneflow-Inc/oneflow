@@ -276,11 +276,12 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   py::class_<BnInOp2BlobObject, std::shared_ptr<BnInOp2BlobObject>>(m, "BnInOp2BlobObject")
       .def(py::init<>())
       .def("__len__", [](const std::shared_ptr<BnInOp2BlobObject>& x) { return x->size(); })
-      .def("items",
-           [](std::shared_ptr<BnInOp2BlobObject>& x) {
-             return py::make_iterator(x->begin(), x->end());
-           },
-           py::keep_alive<0, 1>())
+      .def(
+          "items",
+          [](std::shared_ptr<BnInOp2BlobObject>& x) {
+            return py::make_iterator(x->begin(), x->end());
+          },
+          py::keep_alive<0, 1>())
       .def("__getitem__", (BnInOp2BlobObject::mapped_type
                            & (BnInOp2BlobObject::*)(const BnInOp2BlobObject::key_type& pos))
                               & BnInOp2BlobObject::operator[])
@@ -294,11 +295,12 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
                x->emplace(k, v);
              }
            })
-      .def("__iter__",
-           [](std::shared_ptr<BnInOp2BlobObject>& x) {
-             return py::make_iterator(x->begin(), x->end());
-           },
-           py::keep_alive<0, 1>());
+      .def(
+          "__iter__",
+          [](std::shared_ptr<BnInOp2BlobObject>& x) {
+            return py::make_iterator(x->begin(), x->end());
+          },
+          py::keep_alive<0, 1>());
 
   py::class_<InstructionsBuilder, std::shared_ptr<InstructionsBuilder>>(m, "InstructionsBuilder")
       .def(py::init([](const std::shared_ptr<vm::IdGenerator>& id_generator,
@@ -347,17 +349,19 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("RawStatelessCall", &RawStatelessCall)
       .def("Build121To", &Build121To);
 
-  m.def("LogicalRun",
-        [](const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
-          return LogicalRun(Build).GetOrThrow();
-        },
-        py::call_guard<py::gil_scoped_release>());
+  m.def(
+      "LogicalRun",
+      [](const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
+        return LogicalRun(Build).GetOrThrow();
+      },
+      py::call_guard<py::gil_scoped_release>());
 
-  m.def("PhysicalRun",
-        [](const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
-          return PhysicalRun(Build).GetOrThrow();
-        },
-        py::call_guard<py::gil_scoped_release>());
+  m.def(
+      "PhysicalRun",
+      [](const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
+        return PhysicalRun(Build).GetOrThrow();
+      },
+      py::call_guard<py::gil_scoped_release>());
 }
 
 }  // namespace oneflow
