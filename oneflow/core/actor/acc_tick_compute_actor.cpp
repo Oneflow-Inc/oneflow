@@ -18,21 +18,21 @@ limitations under the License.
 namespace oneflow {
 
 void AccTickCompActor::VirtualCompActorInit(const TaskProto& proto) {
-  const Shape& one_time_shape = Global<RegstMgr>::Get()
-                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("one"))
+  const Shape& in_time_shape = Global<RegstMgr>::Get()
+                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("in"))
                                     .data_regst_time_shape();
-  const Shape& acc_time_shape = Global<RegstMgr>::Get()
-                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("acc"))
+  const Shape& out_time_shape = Global<RegstMgr>::Get()
+                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("out"))
                                     .data_regst_time_shape();
-  CHECK_EQ(one_time_shape.elem_cnt() % acc_time_shape.elem_cnt(), 0);
+  CHECK_EQ(in_time_shape.elem_cnt() % out_time_shape.elem_cnt(), 0);
 
   acc_cnt_ = 0;
-  max_acc_cnt_ = one_time_shape.elem_cnt() / acc_time_shape.elem_cnt();
+  max_acc_cnt_ = in_time_shape.elem_cnt() / out_time_shape.elem_cnt();
   OF_SET_MSG_HANDLER(&AccTickCompActor::HandlerNormal);
 }
 
 int64_t AccTickCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
-  return regst_desc_id == Name2SoleRegstDescId("acc") ? max_acc_cnt_ : 1;
+  return regst_desc_id == Name2SoleRegstDescId("out") ? max_acc_cnt_ : 1;
 }
 
 void AccTickCompActor::Act() { acc_cnt_ += 1; }

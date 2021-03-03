@@ -38,14 +38,14 @@ class AccCompActor final : public CompActor {
 };
 
 void AccCompActor::VirtualCompActorInit(const TaskProto& proto) {
-  const Shape& one_time_shape = Global<RegstMgr>::Get()
-                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("one"))
+  const Shape& in_time_shape = Global<RegstMgr>::Get()
+                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("in"))
                                     .data_regst_time_shape();
-  const Shape& acc_time_shape = Global<RegstMgr>::Get()
-                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("acc"))
+  const Shape& out_time_shape = Global<RegstMgr>::Get()
+                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("out"))
                                     .data_regst_time_shape();
-  CHECK_GE(one_time_shape.elem_cnt(), acc_time_shape.elem_cnt());
-  Init(proto, one_time_shape.elem_cnt() / acc_time_shape.elem_cnt());
+  CHECK_GE(in_time_shape.elem_cnt(), out_time_shape.elem_cnt());
+  Init(proto, in_time_shape.elem_cnt() / out_time_shape.elem_cnt());
 }
 
 void AccCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt) {
@@ -66,11 +66,11 @@ void AccCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt) {
 }
 
 int64_t AccCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
-  return regst_desc_id == Name2SoleRegstDescId("acc") ? max_acc_cnt_ : 1;
+  return regst_desc_id == Name2SoleRegstDescId("out") ? max_acc_cnt_ : 1;
 }
 
 void AccCompActor::Act() {
-  Regst* out_regst = GetNaiveCurWriteable("acc");
+  Regst* out_regst = GetNaiveCurWriteable("out");
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   if (acc_cnt_ == 0) {
     Blob* out_blob = out_regst->packed_blob();
