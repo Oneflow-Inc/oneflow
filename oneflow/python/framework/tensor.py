@@ -115,27 +115,6 @@ class Tensor:
         else:
             return self.undetermined_tensor.is_leaf
 
-    @property
-    def placement(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.placement
-        else:
-            return self.undetermined_tensor.placement
-
-    @property
-    def is_lazy(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.is_lazy
-        else:
-            return self.undetermined_tensor.is_lazy
-
-    @property
-    def is_consistent(self):
-        if self.local_or_consistent_tensor is not None:
-            return self.local_or_consistent_tensor.is_consistent
-        else:
-            return self.undetermined_tensor.is_consistent
-
     def size(self):
         return self.shape
 
@@ -230,6 +209,33 @@ class Tensor:
         assert self.undetermined_tensor is not None
         self.undetermined_tensor.is_lazy = is_lazy
 
+    @property
+    def placement(self):
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.placement
+        else:
+            return self.undetermined_tensor.placement
+
+    @property
+    def is_lazy(self):
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.is_lazy
+        else:
+            return self.undetermined_tensor.is_lazy
+
+    @property
+    def is_consistent(self):
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.is_consistent
+        else:
+            return self.undetermined_tensor.is_consistent
+
+    @property
+    def sbp(self):
+        if self.local_or_consistent_tensor is not None:
+            return self.local_or_consistent_tensor.sbp
+        else:
+            return self.undetermined_tensor.sbp
 
 class UndeterminedTensor:
     def __init__(
