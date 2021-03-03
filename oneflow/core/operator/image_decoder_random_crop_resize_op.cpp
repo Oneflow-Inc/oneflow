@@ -35,8 +35,7 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
   }
 
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override {
+                                const ParallelContext* parallel_ctx) const override {
     const ImageDecoderRandomCropResizeOpConf& conf =
         this->op_conf().image_decoder_random_crop_resize_conf();
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
@@ -54,7 +53,7 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
 
   Maybe<void> InferInternalBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const override {
+      const ParallelContext* parallel_ctx) const override {
     const ImageDecoderRandomCropResizeOpConf& conf =
         this->op_conf().image_decoder_random_crop_resize_conf();
     BlobDesc* tmp = GetBlobDesc4BnInOp("tmp");
