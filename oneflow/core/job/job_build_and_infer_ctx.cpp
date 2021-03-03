@@ -915,6 +915,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
   };
   if (GlobalJobDesc().Bool("__is_user_function__")) {
+    JUST(DoPass("ModelUpdateConfCompatiblePass"));
     JUST(DoPass("SetDefaultVariableConf"));
     JUST(DoPass("AddInputOutputOpsPass"));
 #ifdef WITH_CUDA
