@@ -1105,7 +1105,7 @@ class SGD(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
             optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
@@ -1215,7 +1215,7 @@ class SGDW(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
             optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
@@ -1348,7 +1348,7 @@ class Adam(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
             optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
@@ -1489,7 +1489,7 @@ class AdamW(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
             optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
@@ -1610,7 +1610,7 @@ class RMSProp(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
             optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
@@ -1698,7 +1698,7 @@ class LARS(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
             optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
@@ -1794,7 +1794,7 @@ class LazyAdam(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
             optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
@@ -1870,7 +1870,7 @@ class LAMB(Optimizer):
             self.variables = list(variables)
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizers_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.optimizer_conf.add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
             optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)

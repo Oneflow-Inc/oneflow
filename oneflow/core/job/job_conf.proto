@@ -72,10 +72,6 @@ message WeightDecayConf {
   }
 }
 
-message OptimizersConf {
-  repeated OptimizerConf optimizer_conf = 1;
-}
-
 message OptimizerConf {
   repeated string variable_op_names = 1;
   optional float base_learning_rate = 2;
@@ -95,13 +91,11 @@ message OptimizerConf {
   }
 }
 
-message LegacyModelUpdateConf {
+message NormalModelUpdateOpUserConf {
   optional LearningRateDecayConf learning_rate_decay = 1;
   optional WarmupConf warmup_conf = 2;
   optional ClipConf clip_conf = 3;
   optional WeightDecayConf weight_decay_conf = 4;
-  optional float primary_lr = 5;
-  optional float secondary_lr = 6;
   oneof normal_mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
@@ -120,16 +114,18 @@ message DynamicLossScalePolicy {
 }
 
 message TrainConf {
-  oneof optimization_conf {
-    OptimizersConf optimizers_conf = 1;
-    LegacyModelUpdateConf legacy_model_update_conf = 2;
-  }
+  repeated OptimizerConf optimizer_conf = 1;
+  optional NormalModelUpdateOpUserConf model_update_conf = 2;
   repeated string loss_lbn = 3;
   optional string train_step_lbn = 4;
+  optional string primary_lr_lbn = 5;
+  optional string secondary_lr_lbn = 6;
   oneof loss_scale_policy {
-    float loss_scale_factor = 5 [default = 1];
-    DynamicLossScalePolicy dynamic_loss_scale_policy = 6;
+    float loss_scale_factor = 7 [default = 1];
+    DynamicLossScalePolicy dynamic_loss_scale_policy = 8;
   }
+  optional float primary_lr = 101;
+  optional float secondary_lr = 102;
 }
 
 message PredictConf {
