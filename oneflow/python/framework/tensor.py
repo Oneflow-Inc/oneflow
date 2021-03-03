@@ -192,6 +192,7 @@ class Tensor:
         self.local_or_consistent_tensor = determining_initializer(self.undetermined_tensor)
         self.undetermined_tensor = None
 
+    @property
     def is_determined(self):
         if self.local_or_consistent_tensor is not None:
             assert self.undetermined_tensor is None
