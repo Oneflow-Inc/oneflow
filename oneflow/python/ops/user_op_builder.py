@@ -30,7 +30,6 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.hob as hob
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import random
@@ -475,7 +474,7 @@ class EagerLogicalUserOpModule(UserOpModule, UserOp):
                 )
             self.set_opkernel_object(builder.NewOpKernelObject(cfg_op_conf))
 
-        vm_util.LogicalRun(BuildInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildInstruction)
 
     def InferAndTryRun(self):
         assert hob.in_global_mode(None)
@@ -541,7 +540,7 @@ class EagerConsistentUserOpModule(UserOpModule, UserOp):
                 )
             self.set_opkernel_object(builder.NewOpKernelObject(cfg_op_conf))
 
-        vm_util.LogicalRun(BuildInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildInstruction)
 
     def InferAndTryRun(self):
         assert hob.in_global_mode(None)
