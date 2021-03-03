@@ -268,7 +268,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
       const auto src_it = src_map.find(lbn);
       CHECK(src_it != src_map.end());
       auto dst_it = dst_map->find(lbn);
-      if(dst_it != dst_map->end()) {
+      if (dst_it != dst_map->end()) {
         CHECK(dst_it->second == src_it->second);
       } else {
         (*dst_map)[lbn] = src_it->second;
@@ -276,12 +276,12 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
     };
 
     const auto& op_name2arg_signature = builder_->job().helper().op_name2arg_signature();
-    for (const XrtNode *sub_node : node->sub_graph()->Nodes()) {
+    for (const XrtNode* sub_node : node->sub_graph()->Nodes()) {
       if (sub_node->IsArgumentNode()) { continue; }
       const auto op_name2arg_signature_it = op_name2arg_signature.find(sub_node->name());
       CHECK(op_name2arg_signature_it != op_name2arg_signature.end());
-      for(const auto& pair : op_name2arg_signature_it->second.bn_in_op2lbi()) {
-        const LogicalBlobId &lbi = pair.second;
+      for (const auto& pair : op_name2arg_signature_it->second.bn_in_op2lbi()) {
+        const LogicalBlobId& lbi = pair.second;
         std::string blob_name = xrt::BlobIdToName(lbi);
         CopyLogicalBlobDesc4Lbn(blob_name);
       }
