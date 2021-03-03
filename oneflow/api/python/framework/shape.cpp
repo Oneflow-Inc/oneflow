@@ -47,6 +47,17 @@ struct ShapeExportUtil final {
     ss << "])";
     return ss.str();
   }
+
+  static int GetIndexOrError(const Shape& shape, int64_t value, int start = 0,
+                             int end = SHAPE_MAX_AXIS_SIZE) {
+    if (end > shape.dim_vec().size()) { end = shape.dim_vec().size(); }
+    const auto& it =
+        std::find(shape.dim_vec().begin() + start, shape.dim_vec().begin() + end, value);
+    if (it == shape.dim_vec().end()) {
+      throw std::invalid_argument("tuple.index(x): x not in tuple");
+    }
+    return it - shape.dim_vec().begin();
+  }
 };
 
 }  // namespace
@@ -66,16 +77,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("__len__", [](const Shape& shape) { return shape.NumAxes(); })
       .def("numel", [](const Shape& shape) { return shape.elem_cnt(); })
       .def("count",
-           [](const Shape& shape, int value) {
+           [](const Shape& shape, int64_t value) {
              return std::count(shape.dim_vec().begin(), shape.dim_vec().end(), value);
            })
-      .def("index", [](const Shape& shape, int value) {
-        const auto& it = std::find(shape.dim_vec().begin(), shape.dim_vec().end(), value);
-        if (it == shape.dim_vec().end()) {
-          throw std::invalid_argument("tuple.index(x): x not in tuple");
-        }
-        return *it;
-      });
+      .def("index", &ShapeExportUtil::GetIndexOrError);
 }
 
 }  // namespace oneflow
