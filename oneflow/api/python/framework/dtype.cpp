@@ -26,6 +26,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_signed", &DType::is_signed)
       .def_property_readonly("is_complex", &DType::is_complex)
       .def_property_readonly("is_floating_point", &DType::is_floating_point)
+      .def_property_readonly(
+          "bytes", [](const std::shared_ptr<DType>& x) { return x->bytes().GetOrThrow(); })
       .def("__str__", &DType::name)
       .def("__repr__", &DType::name);
 
