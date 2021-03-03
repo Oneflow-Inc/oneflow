@@ -13,26 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_ACCUMULATE_COMPUTE_TASK_NODE_H_
-#define ONEFLOW_CORE_GRAPH_ACCUMULATE_COMPUTE_TASK_NODE_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
+#define ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
 
-#include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
-class AccumulateCompTaskNode : public CompTaskNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(AccumulateCompTaskNode);
-  AccumulateCompTaskNode() = default;
-  virtual ~AccumulateCompTaskNode() = default;
+Maybe<bool> IsShuttingDown();
 
-  void ProduceAllRegstsAndBindEdges() override;
-  void ConsumeAllRegsts() override;
-  virtual void BuildExecGphAndRegst() override;
-
- private:
-};
+Maybe<void> SetShuttingDown();
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_ACCUMULATE_COMPUTE_TASK_NODE_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
