@@ -21,7 +21,37 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InferReduceDeviceStageTensorDescFn(user_op::InferContext* ctx) {
+Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx) {
+  Shape* input_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+  const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
+  const int64_t num_axes = input_shape->NumAxes();
+  Shape* output_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+  if (axis.empty()) {
+    *output_shape = Shape::Ones(num_axes);
+  } else {
+    const int64_t parallel_num = ctx->parallel_num();
+    const auto& input_sbp = ctx->SbpParallel4ArgNameAndIndex("in", 0);
+    DimVector dim_vec = input_shape->dim_vec();
+    for (auto i : axis) {
+      const int64_t regular_axis = ShiftNegativeAxis(i, num_axes);
+      dim_vec.at(regular_axis) =
+          (input_sbp.has_split_parallel() && input_sbp.split_parallel().axis() == regular_axis)
+              ? parallel_num
+              : 1;
+    }
+    *output_shape = Shape(dim_vec);
+  }
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+  *ctx->Shape4ArgNameAndIndex("mask", 0) = *input_shape;
+  *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
+
+  *ctx->Shape4ArgNameAndIndex("count", 0) = *output_shape;
+  *ctx->Dtype4ArgNameAndIndex("count", 0) = DataType::kInt32;
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferReduceDeviceStagePhysicalTensorDescFn(user_op::InferContext* ctx) {
   Shape* input_shape = ctx->Shape4ArgNameAndIndex("in", 0);
   const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
   Shape* output_shape = ctx->Shape4ArgNameAndIndex("out", 0);
@@ -147,14 +177,15 @@ Maybe<void> GetReduceDeviceStageGradSbpFn(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-#define REGISTER_REDUCE_DEVICE_STAGE_USER_OP(op_name)           \
-  REGISTER_USER_OP(op_name)                                     \
-      .Input("in")                                              \
-      .Output("out")                                            \
-      .Output("mask")                                           \
-      .Output("count")                                          \
-      .Attr<std::vector<int32_t>>("axis")                       \
-      .SetTensorDescInferFn(InferReduceDeviceStageTensorDescFn) \
+#define REGISTER_REDUCE_DEVICE_STAGE_USER_OP(op_name)                           \
+  REGISTER_USER_OP(op_name)                                                     \
+      .Input("in")                                                              \
+      .Output("out")                                                            \
+      .Output("mask")                                                           \
+      .Output("count")                                                          \
+      .Attr<std::vector<int32_t>>("axis")                                       \
+      .SetLogicalTensorDescInferFn(InferReduceDeviceStageLogicalTensorDescFn)   \
+      .SetPhysicalTensorDescInferFn(InferReduceDeviceStagePhysicalTensorDescFn) \
       .SetGetSbpFn(GetReduceDeviceStageSbpFn);
 
 REGISTER_REDUCE_DEVICE_STAGE_USER_OP("reduce_min_device_stage")

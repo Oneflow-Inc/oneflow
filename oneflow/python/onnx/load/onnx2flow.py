@@ -1,12 +1,9 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -67,6 +64,7 @@ def from_onnx(
         ), "Please use input dict if the model has multiple inputs"
         inputs = {input_names[0]: inputs}
     if do_onnxsim and has_onnxsim:
+        dict(zip(input_names, [x.shape for x in inputs.values()]))
         onnx_model, _ = onnxsim.simplify(
             onnx_model,
             skip_shape_inference=False,
@@ -76,6 +74,11 @@ def from_onnx(
         logger.info(
             "We recommend installing onnx-simplifier so that OneFlow can remove the redundant ONNX nodes"
         )
+
+    # if not os.path.exists("/home/zhangxiaoyu/temp_onnx"):
+    #     os.makedirs("/home/zhangxiaoyu/temp_onnx")
+    # onnx.save(onnx_model, "/home/zhangxiaoyu/temp_onnx/temp.onnx")
+
     if os.path.exists(model_weight_dir):
         shutil.rmtree(model_weight_dir)
     BackendHandler.WEIGHT_SAVE_DIR = model_weight_dir
@@ -138,10 +141,6 @@ def from_pytorch(
         training=train_flag,
     )
     model_str = f.getvalue()
-    # if not os.path.exists('/home/zhangxiaoyu/temp_onnx'):
-    #     os.makedirs('/home/zhangxiaoyu/temp_onnx')
-    # with open("/home/zhangxiaoyu/temp_onnx/temp.onnx", "wb") as f:
-    #     f.write(model_str)
     onnx_model = onnx.load_model_from_string(model_str)
     return from_onnx(
         onnx_model,
@@ -154,7 +153,6 @@ def from_pytorch(
 def get_all_backend_handlers(opset_dict):
     """ Get a dict of all backend handler classes.
   e.g. {'domain': {'Abs': Abs handler class}, ...}, }.
-
   :param opset_dict: A dict of opset. e.g. {'domain': version, ...}
   :return: Dict.
   """
@@ -207,7 +205,6 @@ class OneflowBackend(Backend):
         **kwargs
     ):
         """Prepare an ONNX model for Oneflow Backend.
-
     :param model: The ONNX model to be converted.
     :param device: The device to execute this model on.
     :param strict: Whether to enforce semantic equivalence between the original model
@@ -216,7 +213,6 @@ class OneflowBackend(Backend):
       Currently, the strict flag only affects the behavior of MaxPool and AveragePool ops.
     :param logging_level: The logging level, default is INFO. Change it to DEBUG
       to see more conversion details or to WARNING to see less
-
     :returns: The variable dict of the converted oneflow model
     """
         super(OneflowBackend, cls).prepare(model, device, **kwargs)
@@ -227,7 +223,6 @@ class OneflowBackend(Backend):
     @classmethod
     def onnx_model_to_oneflow(cls, model, strict, blob_dict=None):
         """ Convert ONNX model to oneflow.
-
     :param model: ONNX ModelProto object.
     :param strict: whether to enforce semantic equivalence between the original model
       and the converted oneflow model.
@@ -249,7 +244,6 @@ class OneflowBackend(Backend):
     @classmethod
     def _onnx_graph_to_oneflow(cls, graph_def, opset, strict, blob_dict=None):
         """ Convert ONNX graph to oneflow.
-
         :param graph_def: ONNX GraphProto object.
         :param opset: ONNX OperatorSetIdProto list.
         :param strict: whether to enforce semantic equivalence between the original model
@@ -323,7 +317,6 @@ class OneflowBackend(Backend):
     @classmethod
     def _onnx_initializer_to_input_dict_items(cls, initializer):
         """ Convert ONNX graph initializer to input dict items.
-
     :param initializer: ONNX graph initializer, list of TensorProto.
     :return: List of input dict items.
     """
@@ -353,7 +346,6 @@ class OneflowBackend(Backend):
     ):
         """
     Convert onnx node to oneflow op.
-
     Args:
       node: Onnx node object.
       tensor_dict: Tensor dict of graph.
@@ -379,7 +371,6 @@ class OneflowBackend(Backend):
     @classmethod
     def _get_handlers(cls, opset):
         """ Get all backend handlers with opset.
-
     :param opset: ONNX OperatorSetIdProto list.
     :return: All backend handlers.
     """

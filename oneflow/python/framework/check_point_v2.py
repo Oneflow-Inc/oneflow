@@ -31,6 +31,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
@@ -58,7 +59,7 @@ class FileBackendVariableBlob:
     def __init__(
         self,
         var_dir: str,
-        dtype: Optional[dtype_util.dtype] = None,
+        dtype: Optional[oneflow.dtype] = None,
         shape: Optional[Sequence[int]] = None,
     ):
         data_path = os.path.join(var_dir, DATA_FILENAME)
@@ -108,7 +109,7 @@ class FileBackendVariableBlob:
         raise NotImplementedError()
 
     @property
-    def dtype(self) -> dtype_util.dtype:
+    def dtype(self) -> oneflow.dtype:
         return self.dtype_
 
     def numpy(self) -> np.ndarray:
@@ -255,7 +256,7 @@ def SaveVarDict(
     for name, var in var_dict.items():
         meta_info = variable_meta_info_pb.VariableMetaInfo()
         meta_info.shape.dim[:] = var.shape
-        meta_info.data_type = var.dtype.oneflow_proto_dtype
+        meta_info.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(var.dtype)
         var_dir = os.path.join(path, name)
         param_path = os.path.join(var_dir, DATA_FILENAME)
         os.makedirs(os.path.dirname(param_path))
@@ -301,10 +302,15 @@ def _LogicalSlice(
             op_attribute = op_infer_util.Infer(
                 op_conf, bn_in_op2blob_object, scope_symbol_id
             )
+            cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+                str(op_attribute)
+            )
             builder.StatelessCall(
-                op_attribute,
-                parallel_conf=parallel_conf,
-                bn_in_op2blob_object=bn_in_op2blob_object,
+                cfg_op_attribute,
+                parallel_conf,
+                bn_in_op2blob_object,
+                boxing_util.BoxingTo,
+                vm_util._FindOrCreateDelegateBlobObject,
             )
             Yield(bn_in_op2blob_object["y_0"])
 
@@ -326,7 +332,7 @@ def _LogicalSlice(
 
 
 def _GetCpu0VariableBlobFromNumpy(
-    np_array: np.ndarray, dtype: dtype_util.dtype
+    np_array: np.ndarray, dtype: oneflow.dtype
 ) -> oneflow_api.EagerConsistentBlob:
     """
     Add a variable on cpu 0, and feed the value of `np_array`
@@ -394,10 +400,15 @@ def _LogicalSliceAssign(
         op_attribute = op_infer_util.Infer(
             op_conf, bn_in_op2blob_object, scope_symbol_id
         )
+        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+            str(op_attribute)
+        )
         builder.StatelessCall(
-            op_attribute,
-            parallel_conf=parallel_conf,
-            bn_in_op2blob_object=bn_in_op2blob_object,
+            cfg_op_attribute,
+            parallel_conf,
+            bn_in_op2blob_object,
+            boxing_util.BoxingTo,
+            vm_util._FindOrCreateDelegateBlobObject,
         )
 
     vm_util.LogicalRun(BuildAssignInstruction)

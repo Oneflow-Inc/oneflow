@@ -139,7 +139,14 @@ REGISTER_USER_OP("TestMultiOutputOrder")
 REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
     .Output("out")
     .Attr<int64_t>("out_num")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      int64_t out_num = ctx->Attr<int64_t>("out_num");
+      *out_shape = Shape({out_num});
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
+      return Maybe<void>::Ok();
+    })
+    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       int64_t out_num = ctx->Attr<int64_t>("out_num");
       const ParallelContext& parallel_ctx = ctx->parallel_ctx();

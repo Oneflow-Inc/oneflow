@@ -21,7 +21,6 @@ import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -127,7 +126,7 @@ class BlobConf(object):
         self,
         name: str,
         shape: Sequence[int],
-        dtype: dtype_util.dtype,
+        dtype: flow.dtype,
         codec: Union[ImageCodec, RawCodec],
         preprocessors: Optional[Sequence[Union[NormByChannelPreprocessor,]]] = None,
     ) -> None:
@@ -359,7 +358,7 @@ def ofrecord_reader(
 @oneflow_export("data.decode_random")
 def decode_random(
     shape: Sequence[int],
-    dtype: dtype_util.dtype,
+    dtype: flow.dtype,
     batch_size: int = 1,
     initializer: Optional[initializer_conf_util.InitializerConf] = None,
     tick: Optional[oneflow_api.BlobDesc] = None,
@@ -376,7 +375,11 @@ def decode_random(
     op_conf.decode_random_conf.shape.dim.extend(shape)
 
     assert dtype is not None
-    setattr(op_conf.decode_random_conf, "data_type", dtype.oneflow_proto_dtype)
+    setattr(
+        op_conf.decode_random_conf,
+        "data_type",
+        oneflow_api.deprecated.GetProtoDtype4OfDtype(dtype),
+    )
 
     op_conf.decode_random_conf.batch_size = batch_size
 

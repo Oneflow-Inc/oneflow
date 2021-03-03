@@ -555,8 +555,10 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
 
   // infer logical blob desc
   JUST(GenOpProducedEmptyLogicalBlobDesc(op));
-  JUST(op->InferLogicalOutBlobDescsIf(GetBlobDesc4BnInOp, parallel_desc));
-  JUST(op->FillLogicalOutBlobDesc(GetBlobDesc4BnInOp));
+  JUST(op->InferLogicalOutBlobDescsIf());
+  for (const auto& bn : op->output_bns()) {
+    *lbi2logical_blob_desc_.at(op->BnInOp2Lbi(bn)) = *JUST(op->GetLogicalBlobDesc4Obn(bn));
+  }
   // Infer ParallelDesc for output blobs.
   auto ParallelDesc4Obn = [&](const std::string& obn) -> ParallelDesc* {
     const auto& lbi = op->BnInOp2Lbi(obn);

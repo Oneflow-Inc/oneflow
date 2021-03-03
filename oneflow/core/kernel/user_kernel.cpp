@@ -113,7 +113,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   explicit UserKernelInitContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                  const JobDesc& job_desc)
       : user_op::KernelInitContext(
-            user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         sbp_signature_(&(kernel_conf.user_conf().sbp_sig())),
@@ -234,6 +234,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
     }
   }
 
+  int64_t parallel_num() const override { return parallel_ctx_.parallel_num(); }
+
  private:
   const JobDesc& job_desc_;
   ArgVec inputs_;
@@ -248,7 +250,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   explicit UserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                   const JobDesc& job_desc)
       : user_op::KernelInferContext(
-            user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         op_infer_ctx_(kernel_conf.op_attribute().op_conf(), job_desc) {
@@ -266,7 +268,11 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     const auto* op_reg_val = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(
         kernel_conf.op_attribute().op_conf().user_conf().op_type_name());
     CHECK_NOTNULL(op_reg_val);
-    tensor_desc_infer_fn_ = op_reg_val->tensor_desc_infer_fn;
+    if (op_reg_val->physical_tensor_desc_infer_fn) {
+      tensor_desc_infer_fn_ = op_reg_val->physical_tensor_desc_infer_fn;
+    } else {
+      UNIMPLEMENTED();
+    }
   }
   ~UserKernelInferContext() = default;
 
@@ -353,7 +359,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   explicit UserKernelComputeContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                     const JobDesc& job_desc)
       : user_op::KernelComputeContext(
-            user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(std::move(UserKernelBaseContext(kernel_conf, job_desc))) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {

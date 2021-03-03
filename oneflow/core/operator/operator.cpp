@@ -56,6 +56,9 @@ void Operator::Init(const OperatorConf& op_conf, const JobDesc* conf_job_desc) {
   *this_op_conf = op_conf;
   if (has_job_desc() && job_desc().IsPredict()) { this_op_conf->set_trainable(false); }
   InitFromOpConf();
+  *op_attribute_.mutable_input_bns() = input_bns_;
+  *op_attribute_.mutable_output_bns() = output_bns_;
+  *op_attribute_.mutable_tmp_bns() = tmp_bns_;
   input_output_bns_.Reserve(input_bns().size() + output_bns().size());
   for (const auto& bn : input_bns()) { *input_output_bns_.Add() = bn; }
   for (const auto& bn : output_bns()) { *input_output_bns_.Add() = bn; }
@@ -65,15 +68,6 @@ LogicalNode* Operator::NewProperLogicalNode() const { return new NormalForwardLo
 
 const LogicalBlobId& Operator::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute_.arg_signature().bn_in_op2lbi().at(bn_in_op);
-}
-
-LogicalBlobId* Operator::MutBnInOp2Lbi(const std::string& bn_in_op) {
-  auto it = op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi()->find(bn_in_op);
-  if (it == op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi()->end()) {
-    return nullptr;
-  } else {
-    return &(it->second);
-  }
 }
 
 DeviceType Operator::device_type() const {
@@ -100,6 +94,14 @@ Maybe<const std::string*> Operator::obn4lbi(const LogicalBlobId& lbi) const {
       << "no logical blob id found. lbn: " << lbi.op_name() << "/" << lbi.blob_name();
   return &iter->second;
 }
+
+const PbRpf<std::string>& Operator::input_bns() const { return input_bns_; }
+
+const PbRpf<std::string>& Operator::output_bns() const { return output_bns_; }
+
+const PbRpf<std::string>& Operator::tmp_bns() const { return tmp_bns_; }
+
+const PbRpf<std::string>& Operator::input_output_bns() const { return input_output_bns_; }
 
 Maybe<void> Operator::InferParallelSignatureIf() {
   JUST(InferBlobParallelDesc());
@@ -137,7 +139,10 @@ Maybe<void> Operator::FillBlobParallelDesc(
   CHECK_OR_RETURN(!bn2parallel_desc_);
   bn2parallel_desc_.reset(new HashMap<std::string, std::shared_ptr<const ParallelDesc>>);
   for (const auto& bn : input_output_bns()) {
-    CHECK(bn2parallel_desc_->emplace(bn, JUST(ParallelDesc4Bn(bn))).second);
+    auto blob_parallel_desc = JUST(ParallelDesc4Bn(bn));
+    (*op_attribute_.mutable_parallel_conf_signature()->mutable_bn_in_op2parallel_conf())[bn] =
+        blob_parallel_desc->parallel_conf();
+    CHECK(bn2parallel_desc_->emplace(bn, blob_parallel_desc).second);
   }
   return Maybe<void>::Ok();
 }
@@ -151,6 +156,8 @@ Maybe<void> Operator::InferBlobParallelDesc() {
 Maybe<void> Operator::FillOpParallelDesc(const ParallelDesc& parallel_desc) {
   CHECK_OR_RETURN(!op_parallel_desc_);
   op_parallel_desc_.reset(new ParallelDesc(parallel_desc));
+  *op_attribute_.mutable_parallel_conf_signature()->mutable_op_parallel_conf() =
+      op_parallel_desc_->parallel_conf();
   return Maybe<void>::Ok();
 }
 
@@ -257,6 +264,23 @@ Maybe<void> Operator::FillLogicalOutBlobDesc(
 
 Maybe<const BlobDesc> Operator::GetLogicalBlobDesc4Obn(const std::string& obn) const {
   return GetLogicalBlobDesc(obn, obn2logical_blob_desc_);
+}
+
+Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
+  HashMap<std::string, std::shared_ptr<BlobDesc>> bn2blob_desc;
+  for (const auto& ibn : input_bns()) {
+    bn2blob_desc[ibn].reset(new BlobDesc(*JUST(GetLogicalBlobDesc4Ibn(ibn))));
+  }
+  for (const auto& obn : output_bns()) {
+    // TODO(liujuncheng) : use GlobalJobDesc().DefaultDataType() or DataType::kInvalidDataType
+    bn2blob_desc[obn].reset(new BlobDesc(DataType::kFloat));
+  }
+  auto BlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
+    return bn2blob_desc.at(bn).get();
+  };
+  JUST(InferLogicalOutBlobDescs(BlobDesc4BnInOp, *JUST(GetOpParallelDesc())));
+  JUST(FillLogicalOutBlobDesc(BlobDesc4BnInOp));
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferLogicalOutBlobDescs(
@@ -612,6 +636,7 @@ void Operator::GenKernelConf(
     }
     kernel_conf->set_data_type(data_type);
   }
+  if (parallel_ctx != nullptr) { *(kernel_conf->mutable_parallel_ctx()) = *parallel_ctx; }
 
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
@@ -641,7 +666,7 @@ LogicalBlobId Operator::tbn2lbi(const std::string& tmp_bn) const {
 }
 
 void Operator::EnrollTmpBn(const std::string& tbn) {
-  *(mut_tmp_bns()->Add()) = tbn;
+  *tmp_bns_.Add() = tbn;
   CHECK(mut_bn_in_op2lbi()->insert({tbn, tbn2lbi(tbn)}).second);
 }
 
@@ -649,7 +674,7 @@ InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff
   LogicalBlobId lbi = lbi4ibn(ibn);
   auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_ibn2input_blob_modifier();
   CHECK(map->insert({ibn, InputBlobModifier()}).second);
-  *(mut_input_bns()->Add()) = ibn;
+  *input_bns_.Add() = ibn;
   CHECK(mut_bn_in_op2lbi()->insert({ibn, lbi}).second);
   auto* ret = MutInputBlobModifier4Ibn(ibn);
   ret->set_requires_grad(has_diff);
@@ -700,7 +725,7 @@ OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_di
   EmplaceLbi2Obn(lbi, obn);
   auto* map = op_attribute_.mutable_arg_modifier_signature()->mutable_obn2output_blob_modifier();
   CHECK(map->insert({obn, OutputBlobModifier()}).second);
-  *(mut_output_bns()->Add()) = obn;
+  *output_bns_.Add() = obn;
   CHECK(mut_bn_in_op2lbi()->insert({obn, lbi}).second);
   auto* ret = MutOutputBlobModifier4Obn(obn);
   ret->set_requires_grad(has_diff);
@@ -1048,16 +1073,26 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
   // iner sbp
   JUST(InferOpOutSbpParallel(op.get(), upstream_signature, ConstBlobDesc4Ibn, sbp_sig_conf,
                              parallel_desc));
-  const auto& BlobDesc4BnInOp = [&](const std::string& bn_in_op) -> BlobDesc* {
-    if (!bn_in_op2blob_desc[bn_in_op]) {
-      bn_in_op2blob_desc[bn_in_op].reset(new BlobDesc(DataType::kInvalidDataType));
-    }
-    return bn_in_op2blob_desc[bn_in_op].get();
-  };
   // infer logical blob_desc
-  JUST(op->InferLogicalOutBlobDescsIf(BlobDesc4BnInOp, parallel_desc));
-  JUST(op->FillLogicalOutBlobDesc(BlobDesc4BnInOp));
+  JUST(op->InferLogicalOutBlobDescsIf());
   return op;
+}
+
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const SbpParallel& sbp_parallel,
+                              const int64_t parallel_num, const int64_t parallel_id) {
+  CHECK_LT_OR_RETURN(parallel_id, parallel_num);
+  std::shared_ptr<Shape> physical = std::make_shared<Shape>(logical_shape);
+  if (sbp_parallel.has_split_parallel()) {
+    const int64_t axis = sbp_parallel.split_parallel().axis();
+    CHECK_GE_OR_RETURN(logical_shape.At(axis), parallel_num);
+    const BalancedSplitter bs(logical_shape.At(axis), parallel_num);
+    physical->Set(axis, bs.At(parallel_id).size());
+  } else if (sbp_parallel.has_broadcast_parallel() || sbp_parallel.has_partial_sum_parallel()) {
+    // do nothing
+  } else {
+    UNIMPLEMENTED();
+  }
+  return physical;
 }
 
 }  // namespace oneflow

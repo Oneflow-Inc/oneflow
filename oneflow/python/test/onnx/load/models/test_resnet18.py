@@ -17,8 +17,8 @@ import torchvision
 
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
-# from absl import app
-# from absl.testing import absltest
+from absl import app
+from absl.testing import absltest
 
 
 def test_resnet18(test_case):
@@ -30,5 +30,5 @@ def test_resnet18(test_case):
     )
 
 
-# test_case = absltest.TestCase
-# test_resnet18(test_case)
+test_case = absltest.TestCase
+test_resnet18(test_case)
