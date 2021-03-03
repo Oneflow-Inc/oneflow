@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from __future__ import absolute_import
-import oneflow.python.framework.python_interpreter_util as python_interpreter_util
 
 
 def FindOrCreateBlobCache(blob_object):
@@ -30,6 +29,13 @@ def TryDisableBlobCache(blob_object):
     if blob_object.object_id not in object_id2blob_cache:
         return
     del object_id2blob_cache[blob_object.object_id]
+
+
+def FindOrCreateDelegateBlobObject(Fetch, x_blob_object, op_arg_parallel_attr):
+    if x_blob_object.op_arg_parallel_attr == op_arg_parallel_attr:
+        return x_blob_object
+    blob_cache = FindOrCreateBlobCache(x_blob_object)
+    return blob_cache.GetCachedDelegateBlobObject(op_arg_parallel_attr, Fetch)
 
 
 class BlobCache(object):
@@ -71,12 +77,8 @@ class BlobCache(object):
             self.numpy_ = fetch(self.blob_object_)
         return self.numpy_
 
-    def __del__(self, is_shutting_down=python_interpreter_util.IsShuttingDown):
-        # Bind `python_interpreter_util.IsShuttingDown` early.
-        # See the comments of `python_interpreter_util.IsShuttingDown`
+    def __del__(self):
         for key in list(self.delegate_blob_object_.keys()):
-            if is_shutting_down():
-                return
             if self.delegate_blob_object_[key] is not None:
                 del self.delegate_blob_object_[key]
 
