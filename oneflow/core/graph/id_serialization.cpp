@@ -66,7 +66,8 @@ MemZoneId DeserializeMemZoneIdFromInt64(int64_t mem_zone_id) {
   int64_t device_type = (mem_zone_id & stream_id_const::kMemZoneIdDeviceTypeInt64Mask)
                         >> stream_id_const::kDeviceTypeShift;
   int64_t device_index = mem_zone_id & stream_id_const::kMemZoneIdDeviceIndexInt64Mask;
-  return MemZoneId(static_cast<DeviceType>(device_type), static_cast<device_index_t>(device_index));
+  return MemZoneId(static_cast<DeviceType>(device_type),
+                   static_cast<MemZoneId::device_index_t>(device_index));
 }
 
 int64_t SerializeStreamIdToInt64(const StreamId& stream_id) {
