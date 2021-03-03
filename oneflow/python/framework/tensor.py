@@ -237,6 +237,7 @@ class Tensor:
         else:
             return self.undetermined_tensor.sbp
 
+
 class UndeterminedTensor:
     def __init__(
         self,
