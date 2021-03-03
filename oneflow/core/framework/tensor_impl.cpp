@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor_impl.h"
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 namespace one {
@@ -21,8 +22,11 @@ namespace one {
 namespace {
 
 std::shared_ptr<const ParallelDesc> MakeParallelDescByDevice(const Device& device) {
-  TODO();  // liyurui
-  return std::shared_ptr<const ParallelDesc>();
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag(device.type());
+  const std::string machine_id = "0";
+  parallel_conf.add_device_name(machine_id + ":" + std::to_string(device.device_id()));
+  return std::make_shared<const ParallelDesc>(parallel_conf);
 }
 
 }  // namespace
