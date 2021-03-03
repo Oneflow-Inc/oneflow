@@ -22,8 +22,8 @@ namespace user_op {
 
 template<typename IN_T>
 struct ReflectionPad2dFunctor<DeviceType::kCPU, IN_T> final {
-  void operator()(DeviceCtx *ctx, const IN_T *src, IN_T *dest,
-                  const NdIndexOffsetHelper<int64_t, 4> &index_helper, int64_t n_batch,
+  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
                   int64_t x_width, int64_t pad_left, int64_t pad_top) {
     int64_t dest_num = n_channel * y_height * y_width;
@@ -36,8 +36,8 @@ struct ReflectionPad2dFunctor<DeviceType::kCPU, IN_T> final {
 
 template<typename IN_T>
 struct ReflectionPad2dGradFunctor<DeviceType::kCPU, IN_T> final {
-  void operator()(DeviceCtx *ctx, const IN_T *src, IN_T *dest,
-                  const NdIndexOffsetHelper<int64_t, 4> &index_helper, int64_t n_batch,
+  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
                   int64_t dx_width, int64_t pad_left, int64_t pad_top) {
     int64_t dest_num = n_channel * dx_height * dx_width;
@@ -56,8 +56,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REFLECTION_PAD2D_GRAD_FUNCTOR, (Dev
 
 template<typename IN_T>
 struct ReplicationPad2dFunctor<DeviceType::kCPU, IN_T> final {
-  void operator()(DeviceCtx *ctx, const IN_T *src, IN_T *dest,
-                  const NdIndexOffsetHelper<int64_t, 4> &index_helper, int64_t n_batch,
+  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
                   int64_t x_width, int64_t pad_left, int64_t pad_top) {
     int64_t dest_num = n_channel * y_height * y_width;
@@ -70,8 +70,8 @@ struct ReplicationPad2dFunctor<DeviceType::kCPU, IN_T> final {
 
 template<typename IN_T>
 struct ReplicationPad2dGradFunctor<DeviceType::kCPU, IN_T> final {
-  void operator()(DeviceCtx *ctx, const IN_T *src, IN_T *dest,
-                  const NdIndexOffsetHelper<int64_t, 4> &index_helper, int64_t n_batch,
+  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
                   int64_t dx_width, int64_t pad_left, int64_t pad_top) {
     int64_t dest_num = n_channel * dx_height * dx_width;
@@ -90,8 +90,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD2D_GRAD_FUNCTOR, (De
 
 template<typename IN_T>
 struct ConstantPad2dFunctor<DeviceType::kCPU, IN_T> final {
-  void operator()(DeviceCtx *ctx, const IN_T *src, IN_T *dest,
-                  const NdIndexOffsetHelper<int64_t, 4> &index_helper, int64_t n_batch,
+  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
                   int64_t x_width, int64_t pad_left, int64_t pad_top, IN_T constant_value) {
     int64_t dest_num = n_channel * y_height * y_width;
@@ -104,8 +104,8 @@ struct ConstantPad2dFunctor<DeviceType::kCPU, IN_T> final {
 
 template<typename IN_T>
 struct ConstantPad2dGradFunctor<DeviceType::kCPU, IN_T> final {
-  void operator()(DeviceCtx *ctx, const IN_T *src, IN_T *dest,
-                  const NdIndexOffsetHelper<int64_t, 4> &index_helper, int64_t n_batch,
+  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
                   int64_t dx_width, int64_t pad_left, int64_t pad_top) {
     int64_t dest_num = n_channel * dx_height * dx_width;
