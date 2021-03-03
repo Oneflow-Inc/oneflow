@@ -49,6 +49,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
             return py::make_iterator(shape.dim_vec().begin(), shape.dim_vec().end());
           },
           py::keep_alive<0, 1>())
+      .def("__list__", [](const Shape& shape) { return shape.dim_vec(); })
       .def("__len__", [](const Shape& shape) { return shape.NumAxes(); });
 }
 
