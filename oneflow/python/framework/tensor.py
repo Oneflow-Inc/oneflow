@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,17 +12,13 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#include <pybind11/pybind11.h>
-#include <string>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/vm/run_instruction.h"
+"""
+import oneflow_api
+import oneflow.python.framework.dtype as dtype_util
+from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.framework.device as oneflow_device
 
-namespace py = pybind11;
 
-ONEFLOW_API_PYBIND11_MODULE("vm", m) {
-  using namespace oneflow;
-  m.def("RunLogicalInstruction", &RunLogicalInstruction, py::call_guard<py::gil_scoped_release>());
-  m.def("RunPhysicalInstruction", &RunPhysicalInstruction,
-        py::call_guard<py::gil_scoped_release>());
-}
+oneflow_export("LocalTensor")(oneflow_api.LocalTensor)
+
+oneflow_export("ConsistentTensor")(oneflow_api.ConsistentTensor)

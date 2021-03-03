@@ -13,26 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_ACCUMULATE_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_ACCUMULATE_KERNEL_H_
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/python_interpreter_util.h"
 
-#include "oneflow/core/kernel/kernel.h"
+namespace py = pybind11;
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-class AccumulateKernel final : public KernelIf<device_type> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(AccumulateKernel);
-  AccumulateKernel() = default;
-  ~AccumulateKernel() = default;
-
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
-
- private:
-};
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("SetShuttingDown", []() { return SetShuttingDown().GetOrThrow(); });
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_KERNEL_ACCUMULATE_KERNEL_H_

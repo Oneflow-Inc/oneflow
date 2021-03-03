@@ -13,17 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/operator/accumulate_op.h"
+#include <sstream>
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 
-void AccumulateOp::InitFromOpConf() {
-  CHECK(op_conf().has_accumulate_conf());
-
-  EnrollInputBn("one", false);
-  EnrollOutputBn("acc", false);
+std::string Device::ToString() const {
+  std::stringstream ss;
+  ss << "device(type=";
+  ss << type_;
+  ss << ", index=";
+  ss << device_id_;
+  ss << ")";
+  return ss.str();
 }
-
-REGISTER_OP(OperatorConf::kAccumulateConf, AccumulateOp);
 
 }  // namespace oneflow
