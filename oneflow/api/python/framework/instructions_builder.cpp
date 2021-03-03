@@ -190,15 +190,6 @@ void FeedBlob(const std::shared_ptr<InstructionsBuilder>& x,
   return x->FeedBlob(blob_object, callback_id).GetOrThrow();
 }
 
-// signature of python fun _FindOrCreateDelegateBlobObject, it will be removed after blobcache is
-// migrated
-using FindOrCreateDelegateBlobObjectFun = std::function<std::shared_ptr<compatible_py::BlobObject>(
-    const std::function<std::shared_ptr<compatible_py::BlobObject>(
-        const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&,
-    const std::shared_ptr<compatible_py::BlobObject>&,
-    const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>;
-
 void StatefulCall(
     const std::shared_ptr<InstructionsBuilder>& x,
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
@@ -208,11 +199,8 @@ void StatefulCall(
     const std::function<std::shared_ptr<compatible_py::BlobObject>(
         const std::shared_ptr<InstructionsBuilder>&,
         const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo,
-    const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject) {
-  return x
-      ->StatefulCall(op_attribute, opkernel_object, bn_in_op2blob_object, BoxingTo,
-                     FindOrCreateDelegateBlobObject)
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo) {
+  return x->StatefulCall(op_attribute, opkernel_object, bn_in_op2blob_object, BoxingTo)
       .GetOrThrow();
 }
 
@@ -225,12 +213,8 @@ void StatelessCall(
     const std::function<std::shared_ptr<compatible_py::BlobObject>(
         const std::shared_ptr<InstructionsBuilder>&,
         const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo,
-    const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject) {
-  return x
-      ->StatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object, BoxingTo,
-                      FindOrCreateDelegateBlobObject)
-      .GetOrThrow();
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo) {
+  return x->StatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object, BoxingTo).GetOrThrow();
 }
 
 void NoBoxingStatelessCall(
@@ -238,12 +222,8 @@ void NoBoxingStatelessCall(
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn_in_op2blob_object,
-    const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject) {
-  return x
-      ->NoBoxingStatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object,
-                              FindOrCreateDelegateBlobObject)
-      .GetOrThrow();
+        bn_in_op2blob_object) {
+  return x->NoBoxingStatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object).GetOrThrow();
 }
 
 void NoBoxingCudaD2HStatelessCall(

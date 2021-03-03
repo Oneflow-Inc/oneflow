@@ -56,12 +56,12 @@ def FetchTensorBlobAsNumpy(parallel_size, blob_object):
 
 
 def _GetPhysicalBlobHeaderCache(blob_object):
-    blob_cache = blob_cache_util.FindOrCreateBlobCache(blob_object)
+    blob_cache = oneflow_api.FindOrCreateBlobCache(blob_object)
     return blob_cache.GetHeaderCache(_FetchBlobHeader)
 
 
 def _GetPhysicalBlobBodyCache(blob_object):
-    blob_cache = blob_cache_util.FindOrCreateBlobCache(blob_object)
+    blob_cache = oneflow_api.FindOrCreateBlobCache(blob_object)
     return blob_cache.GetBodyCache(_FetchPhysicalBlobBody)
 
 

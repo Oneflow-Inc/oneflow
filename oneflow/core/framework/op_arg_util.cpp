@@ -64,10 +64,10 @@ void OpArgBlobAttribute::DumpToInterfaceBlobConf(
 
 void OpArgBlobAttribute::DumpToOpNodeSignature(
     std::string bn_in_op, std::shared_ptr<cfg::OpNodeSignature> op_node_signature) const {
-  auto& blob_sig =
-      *(op_node_signature->mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc());
-  CHECK(blob_sig.find(bn_in_op) == blob_sig.end());
-  blob_sig[bn_in_op].CopyFrom(*blob_desc_);
+  auto* blob_sig =
+      op_node_signature->mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc();
+  CHECK(blob_sig->find(bn_in_op) == blob_sig->end());
+  (*blob_sig)[bn_in_op].CopyFrom(*blob_desc_);
 }
 
 OpArgParallelAttribute::OpArgParallelAttribute(
@@ -122,19 +122,19 @@ void OpArgParallelAttribute::DumpToInterfaceBlobConf(
 
 void OpArgParallelAttribute::DumpToOpNodeSignature(
     std::string bn_in_op, std::shared_ptr<cfg::OpNodeSignature> op_node_signature) const {
-  auto& sbp_sig = *(op_node_signature->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel());
-  CHECK(sbp_sig.find(bn_in_op) == sbp_sig.end());
-  sbp_sig[bn_in_op].CopyFrom(*sbp_parallel_);
+  auto* sbp_sig = op_node_signature->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
+  CHECK(sbp_sig->find(bn_in_op) == sbp_sig->end());
+  (*sbp_sig)[bn_in_op].CopyFrom(*sbp_parallel_);
 
-  auto& mirrored_sig =
-      *(op_node_signature->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel());
-  CHECK(mirrored_sig.find(bn_in_op) == mirrored_sig.end());
-  mirrored_sig[bn_in_op].CopyFrom(*opt_mirrored_parallel_);
+  auto* mirrored_sig =
+      op_node_signature->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel();
+  CHECK(mirrored_sig->find(bn_in_op) == mirrored_sig->end());
+  (*mirrored_sig)[bn_in_op].CopyFrom(*opt_mirrored_parallel_);
 
-  auto& parallel_sig = *(
-      op_node_signature->mutable_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id());
-  CHECK(parallel_sig.find(bn_in_op) == parallel_sig.end());
-  parallel_sig[bn_in_op] = CHECK_JUST(parallel_desc_->symbol_id());
+  auto* parallel_sig =
+      op_node_signature->mutable_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id();
+  CHECK(parallel_sig->find(bn_in_op) == parallel_sig->end());
+  (*parallel_sig)[bn_in_op] = CHECK_JUST(parallel_desc_->symbol_id());
 }
 
 std::string OpArgParallelAttribute::ToString() const {
@@ -148,9 +148,10 @@ Maybe<OpArgBlobAttribute> GetOpArgBlobAttribute(const OpAttribute& op_attribute,
   if (!op_attribute.has_logical_blob_desc_signature()) {
     return std::shared_ptr<OpArgBlobAttribute>();
   }
-  auto& blob_desc_signature_map = op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc();
-  auto& arg_signature_map = op_attribute.arg_signature().bn_in_op2lbi();
-  auto& lbi = arg_signature_map.at(bn_in_op);
+  const auto& blob_desc_signature_map =
+      op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc();
+  const auto& arg_signature_map = op_attribute.arg_signature().bn_in_op2lbi();
+  const auto& lbi = arg_signature_map.at(bn_in_op);
   std::shared_ptr<cfg::BlobDescProto> blob_desc = std::make_shared<cfg::BlobDescProto>();
   if (blob_desc_signature_map.find(bn_in_op) != blob_desc_signature_map.end()) {
     blob_desc.reset(new cfg::BlobDescProto(blob_desc_signature_map.at(bn_in_op)));
@@ -161,8 +162,9 @@ Maybe<OpArgBlobAttribute> GetOpArgBlobAttribute(const OpAttribute& op_attribute,
 Maybe<OpArgParallelAttribute> GetOpArgParallelAttribute(
     const std::shared_ptr<ParallelDesc>& parallel_desc_symbol, const OpAttribute& op_attribute,
     const std::string& bn_in_op) {
-  auto& sbp_signature_map = op_attribute.sbp_signature().bn_in_op2sbp_parallel();
-  auto& mirrored_signature_map = op_attribute.mirrored_signature().bn_in_op2opt_mirrored_parallel();
+  const auto& sbp_signature_map = op_attribute.sbp_signature().bn_in_op2sbp_parallel();
+  const auto& mirrored_signature_map =
+      op_attribute.mirrored_signature().bn_in_op2opt_mirrored_parallel();
   std::shared_ptr<cfg::SbpParallel> sbp_parallel = std::make_shared<cfg::SbpParallel>();
   if (sbp_signature_map.find(bn_in_op) != sbp_signature_map.end()) {
     sbp_parallel.reset(new cfg::SbpParallel(sbp_signature_map.at(bn_in_op)));

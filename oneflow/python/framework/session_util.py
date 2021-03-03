@@ -43,7 +43,6 @@ from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.framework.check_point import SnapshotManager
 import oneflow.python.framework.check_point_v2 as check_point_v2
-import oneflow.python.eager.blob_register as blob_register_util
 from contextlib import contextmanager
 from typing import Callable
 import inspect
@@ -84,9 +83,7 @@ class Session(object):
         self.scope_attr_name2default_val_ = {}
         self._UpdateScopeAttrName2DefaultVal()
         self.sess_ = oneflow_api.RegsiterSession(sess_id)
-        self.backward_blob_register_ = oneflow_api.BlobRegister(
-            blob_cache_util.TryDisableBlobCache
-        )
+        self.backward_blob_register_ = oneflow_api.BlobRegister()
         self.snapshot_mgr_ = SnapshotManager()
         self.eager_config_proto_ctx_ = None
 
@@ -292,7 +289,7 @@ class Session(object):
         self.op_name2lazy_blob_cache_.clear()
 
     def ForceReleaseEagerBlobs(self):
-        blob_register_util.GetDefaultBlobRegister().ForceReleaseAll()
+        oneflow_api.GetDefaultBlobRegister().ForceReleaseAll()
         self.backward_blob_register_.ForceReleaseAll()
 
     def LazyRun(self, job_func, *arg):
