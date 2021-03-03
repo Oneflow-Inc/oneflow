@@ -95,9 +95,9 @@ def _make_gather_nd_fn(
 
         @flow.global_function(type=fn_type, function_config=func_config)
         def gather_nd_fn(
-            x: flow.typing.ListNumpy.Placeholder(x_shape, dtype=x_dtype),
-            index: flow.typing.ListNumpy.Placeholder(index_shape, dtype=index_type),
-        ) -> flow.typing.ListNumpy:
+            x: flow.typing.Numpy.Placeholder(x_shape, dtype=x_dtype),
+            index: flow.typing.Numpy.Placeholder(index_shape, dtype=index_type),
+        ) -> flow.typing.Numpy:
             return do_gather_nd(x, index)
 
     else:
@@ -188,7 +188,7 @@ def _compare_with_np(
             y.append(y_)
             dx.append(dx_)
 
-        def comp_diff(dx_blob: flow.typing.ListNumpy):
+        def comp_diff(dx_blob: flow.typing.Numpy):
             for dx_blob_, dx_ in zip(dx_blob, dx):
                 test_case.assertTrue(np.array_equal(dx_blob_, dx_))
 
@@ -231,7 +231,8 @@ class TestGatherNd(flow.unittest.TestCase):
         arg_dict["dtype"] = ["float32", "int32", "double"]
         arg_dict["index_dtype"] = ["int32", "int64"]
         arg_dict["device_type"] = ["gpu", "cpu"]
-        arg_dict["dynamic"] = [False, True]
+        # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+        # arg_dict["dynamic"] = [False, True]
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
@@ -244,6 +245,8 @@ class TestGatherNd(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
+    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_gather_nd_case_2(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(10, 8, 4)]
@@ -264,7 +267,8 @@ class TestGatherNd(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_gather_nd_case_4(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(128, 64, 2, 16, 7)]
@@ -274,6 +278,8 @@ class TestGatherNd(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
+    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_with_dynamic_x(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(32, 16)]
@@ -283,6 +289,8 @@ class TestGatherNd(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
+    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_with_dynamic_index(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(25, 10)]
@@ -292,6 +300,8 @@ class TestGatherNd(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
+    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_with_empty_index(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(12, 13, 7)]
@@ -312,7 +322,8 @@ class TestGatherNdParallel(flow.unittest.TestCase):
         arg_dict["index_dtype"] = ["int32", "int64"]
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["device_num"] = [4]
-        arg_dict["dynamic"] = [True, False]
+        # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+        # arg_dict["dynamic"] = [True, False]
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 

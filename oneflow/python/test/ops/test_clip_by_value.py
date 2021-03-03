@@ -77,9 +77,7 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
         func_config.default_logical_view(flow.scope.mirrored_view())
 
         @flow.global_function(type=func_config_type, function_config=func_config)
-        def clip_fn(
-            values_def: oft.Numpy.Placeholder(values.shape, dtype=data_type)
-        ):
+        def clip_fn(values_def: oft.Numpy.Placeholder(values.shape, dtype=data_type)):
             return clip(values_def)
 
         return clip_fn(values).get().numpy()
@@ -101,11 +99,7 @@ def _compare_with_tf(test_case, values, min, max, device_type, dynamic):
     dy = t.gradient(y, x)
 
     def compare_dy(dy_blob):
-        test_case.assertTrue(
-            np.array_equal(
-                dy.numpy(), dy_blob.numpy()
-            )
-        )
+        test_case.assertTrue(np.array_equal(dy.numpy(), dy_blob.numpy()))
 
     of_y = _of_clip_by_value(
         values=values,

@@ -47,12 +47,14 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
         test_case.assertEqual(of_ret.numpy().min(), 1)
         test_case.assertTrue(np.allclose(of_ret.numpy(), data))
 
+    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_MirroredTensorDef(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
 
         @flow.global_function(function_config=func_config)
-        def Foo(x: oft.ListNumpy.Placeholder((2, 5))):
+        def Foo(x: oft.Numpy.Placeholder((2, 5))):
             return x
 
         data = np.ones((1, 5), dtype=np.float32)
@@ -60,20 +62,8 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
         test_case.assertEqual(len(ndarray_list), 1)
         test_case.assertTrue(np.allclose(ndarray_list[0], data))
 
-    def test_MirroredTensorListDef(test_case):
-        func_config = flow.FunctionConfig()
-        func_config.default_logical_view(flow.scope.mirrored_view())
-
-        @flow.global_function(function_config=func_config)
-        def Foo(x: oft.ListListNumpy.Placeholder((2, 5))):
-            return x
-
-        data = np.ones((1, 5), dtype=np.float32)
-        ndarray_list = Foo([[data]]).get().numpy_lists()
-        test_case.assertEqual(len(ndarray_list), 1)
-        test_case.assertEqual(len(ndarray_list[0]), 1)
-        test_case.assertTrue(np.allclose(ndarray_list[0][0], data))
-
+    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_MirroredTensorDef_4_device(test_case):
         flow.config.gpu_device_num(4)
         func_config = flow.FunctionConfig()
@@ -85,8 +75,7 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(
             image_label: Tuple[
-                oft.ListNumpy.Placeholder(image_shape),
-                oft.ListNumpy.Placeholder(label_shape),
+                oft.Numpy.Placeholder(image_shape), oft.Numpy.Placeholder(label_shape),
             ]
         ):
             return image_label

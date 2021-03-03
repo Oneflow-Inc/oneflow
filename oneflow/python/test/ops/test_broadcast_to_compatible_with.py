@@ -131,7 +131,6 @@ class TestBroadcastToCompatibleWith(flow.unittest.TestCase):
         expected_ret = np.broadcast_to(x, [4, 5, 2])
         test_case.assertTrue(np.array_equal(expected_ret, ret))
 
-
     # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
     @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_dynamic_broadcast_to_compatible_with(test_case):

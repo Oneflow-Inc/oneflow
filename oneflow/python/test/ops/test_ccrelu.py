@@ -58,5 +58,6 @@ class TestCcrelu(flow.unittest.TestCase):
         func_config.default_logical_view(flow.scope.consistent_view())
         fixed_tensor_def_test(test_case, func_config)
 
+
 if __name__ == "__main__":
     unittest.main()

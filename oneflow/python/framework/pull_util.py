@@ -205,16 +205,15 @@ class _MirroredBlobPuller(_BlobPuller):
 
     @property
     def result(self):
-        # TODO(chengcheng, lixinqi)
-        # if self.local_mirrored_blob_ is not None:
-        #     return self.local_mirrored_blob_
-        # local_blob_list = [x.result for x in self.sub_pullers_]
-        # self.local_mirrored_blob_ = local_blob_util.MergeLocalBlobs(
-        #     local_blob_list, self.mirrored_blob_
-        # )
-        # return self.local_mirrored_blob_
-        raise NotImplementedError
-        return None
+        if self.local_mirrored_blob_ is not None:
+            return self.local_mirrored_blob_
+        local_blob_list = [x.result for x in self.sub_pullers_]
+        # TODO(chengcheng): check list length = 1 and Donot merge. fix after multi-client
+        assert len(local_blob_list) == 1
+        self.local_mirrored_blob_ = local_blob_util.MakeLocalBlob(
+            local_blob_list[0].numpy(), self.mirrored_blob_
+        )
+        return self.local_mirrored_blob_
 
     def FlatConsistentBlobPullers(self):
         for x in self.sub_pullers_:

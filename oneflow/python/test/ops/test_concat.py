@@ -109,12 +109,8 @@ def _of_dynamic_concat(
 
     @flow.global_function(type="train", function_config=func_config)
     def dynamic_concat_job(
-        input_0_def: oft.Numpy.Placeholder(
-            shape=input_static_shape, dtype=flow.float
-        ),
-        input_1_def: oft.Numpy.Placeholder(
-            shape=input_static_shape, dtype=flow.float
-        ),
+        input_0_def: oft.Numpy.Placeholder(shape=input_static_shape, dtype=flow.float),
+        input_1_def: oft.Numpy.Placeholder(shape=input_static_shape, dtype=flow.float),
     ):
         var_0 = flow.get_variable(
             "Var0",

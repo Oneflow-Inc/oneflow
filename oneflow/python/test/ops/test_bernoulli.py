@@ -38,5 +38,6 @@ class TestBernoulli(flow.unittest.TestCase):
         y = BernoulliJob(x).get().numpy()
         test_case.assertTrue(np.array_equal(y, x))
 
+
 if __name__ == "__main__":
     unittest.main()

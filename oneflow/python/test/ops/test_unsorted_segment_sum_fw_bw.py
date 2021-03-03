@@ -68,10 +68,8 @@ def _make_unsorted_segment_sum_fn(
 
         @flow.global_function(type="train", function_config=func_config)
         def unsorted_segment_sum_fn(
-            data_def: oft.ListNumpy.Placeholder(data.shape, dtype=flow.float),
-            segment_ids_def: oft.ListNumpy.Placeholder(
-                segment_ids.shape, dtype=flow.int32
-            ),
+            data_def: oft.Numpy.Placeholder(data.shape, dtype=flow.float),
+            segment_ids_def: oft.Numpy.Placeholder(segment_ids.shape, dtype=flow.int32),
         ):
             return do_unsorted_segment_sum(data_def, segment_ids_def)
 

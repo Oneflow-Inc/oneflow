@@ -30,10 +30,27 @@ class LocalTensor(object):
     def is_dynamic(self):
         return self.is_dynamic_
 
+    def ndarray_list(self):
+        print(
+            "WARNING:",
+            "LocalTensor.ndarray_list is deprecated, please use LocalTensor.numpy()\n",
+            traceback.format_stack()[-2],
+        )
+        return self.numpy_list()
+
+    def numpy_list(self):
+        print(
+            "WARNING:",
+            "LocalTensor.numpy_list is deprecated, it will return [LocalTensor.numpy()].",
+            "please use LocalTensor.numpy()\n",
+            traceback.format_stack()[-2],
+        )
+        return [self.ndarray_]
+
     def ndarray(self):
         print(
             "WARNING:",
-            "LocalTensor.ndarray is deprecated, please use LocalTensor.numpy\n",
+            "LocalTensor.ndarray is deprecated, please use LocalTensor.numpy()\n",
             traceback.format_stack()[-2],
         )
         return self.numpy()
@@ -46,18 +63,19 @@ class LocalTensor(object):
 
 
 def MakeLocalBlob(ndarray, consistent_blob):
-    assert isinstance(consistent_blob, oneflow_api.ConsistentBlob), type(
-        consistent_blob
-    )
+    # NOTE(chengcheng): tmp support mirror blob using LocalTensor in 1 device.
+    # assert isinstance(consistent_blob, oneflow_api.ConsistentBlob), type(
+    #     consistent_blob
+    # )
     return LocalTensor(ndarray, is_dynamic=consistent_blob.is_dynamic,)
 
 
 def MergeLocalBlobs(local_blob_list, mirrored_blob):
     assert isinstance(mirrored_blob, oneflow_api.MirroredBlob)
-    # NOTE(chengcheng): concat_axis=split_axis just to be sure. Will delete in multi-client.
     return LocalTensor(
-        [x.numpy() for x in local_blob_list],
+        local_blob_list[0].numpy(),
         is_dynamic=mirrored_blob.is_dynamic,
+        # NOTE(chengcheng): concat_axis=split_axis just to be sure. Will delete in multi-client.
         # concat_axis=mirrored_blob.split_axis,
     )
 

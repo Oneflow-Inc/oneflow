@@ -150,7 +150,6 @@ class TestBatchGather(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_gather_with_tf(test_case, *arg)
 
-
     # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
     @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_batch_gather_case_2(test_case):
