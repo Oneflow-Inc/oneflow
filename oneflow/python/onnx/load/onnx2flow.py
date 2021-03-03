@@ -69,7 +69,7 @@ def from_onnx(
     if do_onnxsim and has_onnxsim:
         onnx_model, _ = onnxsim.simplify(
             onnx_model,
-            skip_shape_inference=True,
+            skip_shape_inference=False,
             input_shapes=dict(zip(input_names, [x.shape for x in inputs.values()])),
         )
     elif do_onnxsim:

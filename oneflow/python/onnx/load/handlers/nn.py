@@ -104,11 +104,21 @@ class PoolMixin(object):
         kernel_shape = node.attrs["kernel_shape"]
         strides = node.attrs.get("strides", [1] * spatial_size)
         dilations = node.attrs.get("dilations", [1] * spatial_size)
+        ceil_mode = node.attrs.get("ceil_mode")
         pads = node.attrs.get("auto_pad", "NOTSET")
         if pads == "NOTSET":
             pads = node.attrs.get("pads", [0] * spatial_size * 2)
             pads = np.reshape(pads, [2, spatial_size]).T.tolist()
             pads = [[0, 0], [0, 0]] + pads
+
+        # oneflow now not support ceil_mode pool, so this is a temporary solution
+        if ceil_mode == 1:
+
+            if (x.shape[2] + pads[2][0] + pads[2][1] - 1) % strides[0] != 0:
+                pads[2][1] = pads[2][1] + (strides[0] - 1)
+
+            if (x.shape[3] + pads[3][0] + pads[3][1] - 1) % strides[1] != 0:
+                pads[3][1] = pads[3][1] + (strides[1] - 1)
 
         count_include_pad = bool(node.attrs.get("count_include_pad", 0))
         if count_include_pad != 0:
