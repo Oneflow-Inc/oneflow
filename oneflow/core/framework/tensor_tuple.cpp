@@ -13,17 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/operator/accumulate_op.h"
+
+#include "oneflow/core/framework/tensor_tuple.h"
 
 namespace oneflow {
+namespace one {
 
-void AccumulateOp::InitFromOpConf() {
-  CHECK(op_conf().has_accumulate_conf());
+TensorTuple::TensorTuple(std::vector<std::shared_ptr<Tensor>>::size_type size) { resize(size); }
 
-  EnrollInputBn("one", false);
-  EnrollOutputBn("acc", false);
-}
-
-REGISTER_OP(OperatorConf::kAccumulateConf, AccumulateOp);
-
+}  // namespace one
 }  // namespace oneflow

@@ -25,7 +25,7 @@ class CollectiveBoxingPackTaskNode : public TaskNode {
   CollectiveBoxingPackTaskNode() = default;
   ~CollectiveBoxingPackTaskNode() override = default;
 
-  void Init(int64_t machine_id, int64_t thrd_id, int64_t area_id, const LogicalBlobId& lbi,
+  void Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi,
             const Shape& logical_shape, const SbpParallel& src_sbp_parallel,
             const SbpParallel& dst_sbp_parallel, const int64_t parallel_num);
   TaskType GetTaskType() const override { return TaskType::kCollectiveBoxingPack; }
