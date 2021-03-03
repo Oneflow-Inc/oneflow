@@ -32,7 +32,7 @@ Maybe<EagerPhysicalBlobHeader> CreateEagerPhysicalBlobHeader(const py::tuple& py
                                                              int dtype, bool is_tensor_list) {
   DimVector static_shape_dims;
   CHECK_OR_RETURN(py::isinstance<py::tuple>(py_static_shape));
-  for (auto dim : py_static_shape) { static_shape_dims.emplace_back(dim.cast<int64_t>()); }
+  for (const auto& dim : py_static_shape) { static_shape_dims.emplace_back(dim.cast<int64_t>()); }
   std::shared_ptr<Shape> static_shape = std::make_shared<Shape>(static_shape_dims);
   CHECK_OR_RETURN(py::isinstance<py::list>(py_shape_list));
   std::shared_ptr<std::vector<std::shared_ptr<Shape>>> shape_list =
@@ -40,7 +40,7 @@ Maybe<EagerPhysicalBlobHeader> CreateEagerPhysicalBlobHeader(const py::tuple& py
   for (const auto& py_shape : py_shape_list) {
     CHECK_OR_RETURN(py::isinstance<py::tuple>(py_shape));
     DimVector sub_shape_dims;
-    for (auto dim : py_shape) { sub_shape_dims.emplace_back(dim.cast<int64_t>()); }
+    for (const auto& dim : py_shape) { sub_shape_dims.emplace_back(dim.cast<int64_t>()); }
     shape_list->emplace_back(std::make_shared<Shape>(sub_shape_dims));
   }
   return std::make_shared<EagerPhysicalBlobHeader>(static_shape, shape_list,

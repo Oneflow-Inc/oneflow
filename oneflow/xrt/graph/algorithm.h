@@ -24,17 +24,17 @@ namespace algorithm {
 
 template<typename GraphType>
 struct GraphTypeTrait {
-  typedef typename GraphType::NodeType *pNodeType;
-  typedef typename GraphType::EdgeType *pEdgeType;
+  typedef typename GraphType::NodeType* pNodeType;
+  typedef typename GraphType::EdgeType* pEdgeType;
 };
 
 template<typename NodeType>
 struct NodeTypeTrait {
-  typedef typename NodeType::EdgeType *pEdgeType;
+  typedef typename NodeType::EdgeType* pEdgeType;
 };
 
 template<typename GraphType, typename UserFunc>
-inline void TopologyVisit(GraphType &graph, UserFunc func) {
+inline void TopologyVisit(GraphType& graph, UserFunc func) {
   typedef typename GraphTypeTrait<GraphType>::pNodeType pNodeType;
   typedef typename GraphTypeTrait<GraphType>::pEdgeType pEdgeType;
 
@@ -69,8 +69,8 @@ inline void TopologyVisit(GraphType &graph, UserFunc func) {
 };
 
 template<typename NodeType>
-inline bool IsReachable(NodeType *start, NodeType *dest) {
-  typedef NodeType *pNodeType;
+inline bool IsReachable(NodeType* start, NodeType* dest) {
+  typedef NodeType* pNodeType;
   typedef typename NodeTypeTrait<NodeType>::pEdgeType pEdgeType;
 
   util::Set<pNodeType> visited_nodes;

@@ -39,7 +39,7 @@ void InferShape(XrtGraph *graph, const XrtPassOptions &options, const JobDesc *j
   algorithm::TopologyVisit(*graph, [&](XrtNode *node) {
     if (!node->IsArgumentNode()) {
       DeviceType device_type = XrtDeviceToDeviceType(node->device());
-      const auto &conf = *dynamic_cast<const OperatorConf *>(&node->param());
+      const auto& conf = *dynamic_cast<const OperatorConf*>(&node->param());
       auto op = ConstructOp(conf, device_type, job_desc);
       CHECK_JUST(op->FillOpParallelDesc(*parallel_desc));
       auto get_blob_desc_fn = [&](const std::string &bn) -> BlobDesc * {
@@ -71,11 +71,11 @@ void InferShape(XrtGraph *graph, const XrtPassOptions &options, const JobDesc *j
       CHECK_JUST(op->InferOutBlobDescsIf(get_blob_desc_fn, parallel_ctx, &sbp_signature));
     }
     // Update blob desc on the output edges.
-    for (XrtEdge *edge : node->out_edges()) {
+    for (XrtEdge* edge : node->out_edges()) {
       std::string name = edge->argument().name();
       auto it = blob_descs->find(name);
       CHECK(it != blob_descs->end());
-      const auto &metadata = edge->argument().meta_data();
+      const auto& metadata = edge->argument().meta_data();
       Argument argument(name, it->second.shape(), it->second.data_type(), metadata);
       edge->SetArgument(argument);
     }

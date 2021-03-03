@@ -33,24 +33,24 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<BlobName2Object, std::shared_ptr<BlobName2Object>>(m, "BlobName2Object")
       .def(py::init<>())
       .def("__len__", [](const std::shared_ptr<BlobName2Object>& v) { return v->size(); })
-      .def("items",
-           [](std::shared_ptr<BlobName2Object>& v) {
-             return py::make_iterator(v->begin(), v->end());
-           },
-           py::keep_alive<0, 1>())
+      .def(
+          "items",
+          [](std::shared_ptr<BlobName2Object>& v) {
+            return py::make_iterator(v->begin(), v->end());
+          },
+          py::keep_alive<0, 1>())
       .def("__getitem__", (BlobName2Object::mapped_type
                            & (BlobName2Object::*)(const BlobName2Object::key_type& pos))
                               & BlobName2Object::operator[])
-      .def("__iter__",
-           [](std::shared_ptr<BlobName2Object>& v) {
-             return py::make_iterator(v->begin(), v->end());
-           },
-           py::keep_alive<0, 1>());
+      .def(
+          "__iter__",
+          [](std::shared_ptr<BlobName2Object>& v) {
+            return py::make_iterator(v->begin(), v->end());
+          },
+          py::keep_alive<0, 1>());
 
   py::class_<BlobRegister, std::shared_ptr<BlobRegister>>(m, "BlobRegister")
-      .def(py::init([](const std::function<void(std::shared_ptr<BlobObject>)>& release) {
-        return std::make_shared<BlobRegister>(release);
-      }))
+      .def(py::init<>())
       .def_property_readonly("blob_name2object", &BlobRegister::blob_name2object)
       .def("OpenRegisteredBlobAccess", &BlobRegister::OpenRegisteredBlobAccess)
       .def("CloseRegisteredBlobAccess", &BlobRegister::CloseRegisteredBlobAccess)
@@ -83,6 +83,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("blob_register", &RegisteredBlobAccess::blob_register)
       .def("increase_reference_counter", &RegisteredBlobAccess::increase_reference_counter)
       .def("decrease_reference_counter", &RegisteredBlobAccess::decrease_reference_counter);
+
+  m.def("GetDefaultBlobRegister", []() { return GetDefaultBlobRegister().GetPtrOrThrow(); });
 }
 
 }  // namespace compatible_py

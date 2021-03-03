@@ -79,10 +79,10 @@ class ReflectionPad2dKernel final : public OpKernel {
   ~ReflectionPad2dKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext *ctx) const override {
-    const Tensor *x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    Tensor *y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const auto &padding = ctx->Attr<std::vector<int64_t>>("padding");
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
     const int64_t ndims = x->shape().NumAxes();
     CHECK_EQ(padding.size(), ndims);
     const int64_t n_idx = 0;
@@ -100,8 +100,8 @@ class ReflectionPad2dKernel final : public OpKernel {
     const int64_t x_height = x->shape().At(h_idx);
     const int64_t x_width = x->shape().At(w_idx);
 
-    IN_T *dest = y->mut_dptr<IN_T>();
-    const IN_T *src = x->dptr<IN_T>();
+    IN_T* dest = y->mut_dptr<IN_T>();
+    const IN_T* src = x->dptr<IN_T>();
     DimVector y_vector;
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
@@ -120,10 +120,10 @@ class ReflectionPad2dGradKernel final : public OpKernel {
   ~ReflectionPad2dGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext *ctx) const override {
-    const Tensor *dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    Tensor *dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const auto &padding = ctx->Attr<std::vector<int64_t>>("padding");
+  void Compute(KernelComputeContext* ctx) const override {
+    const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
     const int64_t ndims = dy->shape().NumAxes();
     CHECK_EQ(padding.size(), ndims);
 
@@ -141,8 +141,8 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     int64_t dx_height = dx->shape().At(h_idx);
     int64_t dx_width = dx->shape().At(w_idx);
 
-    const IN_T *src = dy->dptr<IN_T>();
-    IN_T *dest = dx->mut_dptr<IN_T>();
+    const IN_T* src = dy->dptr<IN_T>();
+    IN_T* dest = dx->mut_dptr<IN_T>();
     DimVector dy_vector;
     dy->shape().ToDimVector(&dy_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
@@ -185,10 +185,10 @@ class ReplicationPad2dKernel final : public OpKernel {
   ~ReplicationPad2dKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext *ctx) const override {
-    const Tensor *x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    Tensor *y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const auto &padding = ctx->Attr<std::vector<int64_t>>("padding");
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
     const int64_t ndims = x->shape().NumAxes();
     CHECK_EQ(padding.size(), ndims);
     const int64_t n_idx = 0;
@@ -206,8 +206,8 @@ class ReplicationPad2dKernel final : public OpKernel {
     const int64_t x_height = x->shape().At(h_idx);
     const int64_t x_width = x->shape().At(w_idx);
 
-    IN_T *dest = y->mut_dptr<IN_T>();
-    const IN_T *src = x->dptr<IN_T>();
+    IN_T* dest = y->mut_dptr<IN_T>();
+    const IN_T* src = x->dptr<IN_T>();
     DimVector y_vector;
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
@@ -226,10 +226,10 @@ class ReplicationPad2dGradKernel final : public OpKernel {
   ~ReplicationPad2dGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext *ctx) const override {
-    const Tensor *dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    Tensor *dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const auto &padding = ctx->Attr<std::vector<int64_t>>("padding");
+  void Compute(KernelComputeContext* ctx) const override {
+    const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
     const int64_t ndims = dy->shape().NumAxes();
     CHECK_EQ(padding.size(), ndims);
 
@@ -247,8 +247,8 @@ class ReplicationPad2dGradKernel final : public OpKernel {
     int64_t dx_height = dx->shape().At(h_idx);
     int64_t dx_width = dx->shape().At(w_idx);
 
-    const IN_T *src = dy->dptr<IN_T>();
-    IN_T *dest = dx->mut_dptr<IN_T>();
+    const IN_T* src = dy->dptr<IN_T>();
+    IN_T* dest = dx->mut_dptr<IN_T>();
     DimVector dy_vector;
     dy->shape().ToDimVector(&dy_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
@@ -291,10 +291,10 @@ class ConstantPad2dKernel final : public OpKernel {
   ~ConstantPad2dKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext *ctx) const override {
-    const Tensor *x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    Tensor *y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const auto &padding = ctx->Attr<std::vector<int64_t>>("padding");
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
     const IN_T constant_value = GetDtypeMatchedValue<IN_T>(ctx->Attr<double>("floating_value"),
                                                            ctx->Attr<int64_t>("integral_value"));
     const int64_t ndims = x->shape().NumAxes();
@@ -314,8 +314,8 @@ class ConstantPad2dKernel final : public OpKernel {
     const int64_t x_height = x->shape().At(h_idx);
     const int64_t x_width = x->shape().At(w_idx);
 
-    IN_T *dest = y->mut_dptr<IN_T>();
-    const IN_T *src = x->dptr<IN_T>();
+    IN_T* dest = y->mut_dptr<IN_T>();
+    const IN_T* src = x->dptr<IN_T>();
     DimVector y_vector;
     y->shape().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
@@ -334,10 +334,10 @@ class ConstantPad2dGradKernel final : public OpKernel {
   ~ConstantPad2dGradKernel() = default;
 
  private:
-  void Compute(KernelComputeContext *ctx) const override {
-    const Tensor *dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    Tensor *dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const auto &padding = ctx->Attr<std::vector<int64_t>>("padding");
+  void Compute(KernelComputeContext* ctx) const override {
+    const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
     const int64_t ndims = dy->shape().NumAxes();
     CHECK_EQ(padding.size(), ndims);
 
@@ -355,8 +355,8 @@ class ConstantPad2dGradKernel final : public OpKernel {
     int64_t dx_height = dx->shape().At(h_idx);
     int64_t dx_width = dx->shape().At(w_idx);
 
-    const IN_T *src = dy->dptr<IN_T>();
-    IN_T *dest = dx->mut_dptr<IN_T>();
+    const IN_T* src = dy->dptr<IN_T>();
+    IN_T* dest = dx->mut_dptr<IN_T>();
     DimVector dy_vector;
     dy->shape().ToDimVector(&dy_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
