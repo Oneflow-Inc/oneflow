@@ -19,9 +19,10 @@ limitations under the License.
 
 namespace std {
 
-#if __GNUG__ && __GNUC__ < 5
+#if __GNUG__ && __GNUC__ < 5 && !__clang__
 // copied from
 // https://llvm.org/doxygen/type__traits_8h_source.html
+
 namespace detail {
 /// Internal utility to detect trivial copy construction.
 template<typename T>
