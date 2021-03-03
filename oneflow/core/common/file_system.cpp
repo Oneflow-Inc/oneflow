@@ -33,10 +33,10 @@ static_assert(0, "File system only support windows and posix platform.");
 #endif
 
 #ifndef S_ISDIR
-#define S_ISDIR(mode) (((mode) & _S_IFMT) == _S_IFDIR)
+#define S_ISDIR(mode) (((mode)&_S_IFMT) == _S_IFDIR)
 #endif  // S_ISDIR
 #ifndef S_ISREG
-#define S_ISREG(mode) (((mode) & _S_IFMT) == _S_IFDIR)
+#define S_ISREG(mode) (((mode)&_S_IFMT) == _S_IFDIR)
 #endif  // S_ISREG
 
 namespace oneflow {

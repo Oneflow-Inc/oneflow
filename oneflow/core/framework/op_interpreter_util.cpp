@@ -196,6 +196,17 @@ OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
   return LogicalRun(build_assign_instruction);
 }
 
+/*static*/ Maybe<compatible_py::BlobObject> OpInterpUtil::GetTensorBlobObject(
+    const std::shared_ptr<Tensor>& tensor) {
+  if (auto* mirrored_tensor = dynamic_cast<MirroredTensor*>(tensor.get())) {
+    return mirrored_tensor->blob_object();
+  } else if (auto* consistent_tensor = dynamic_cast<ConsistentTensor*>(tensor.get())) {
+    return consistent_tensor->blob_object();
+  } else {
+    CHECK_OR_RETURN(false) << "The tensor should be either Mirrored Tensor or Consistent Tensor.";
+  }
+}
+
 /*static*/ Maybe<void> OpInterpUtil::InitVariableOutputBlob(const std::shared_ptr<Session>& session,
                                                             const std::shared_ptr<Tensor>& output,
                                                             const OpAttribute& op_attribute) {
@@ -208,7 +219,7 @@ OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
   } else {
     temp_blob_object = JUST(OpInterpUtil::EagerRunModelLoad(op_conf, snapshot_path));
   }
-  auto target_blob_object = dynamic_cast<DeterminedTensor*>(output.get())->blob_object();
+  auto target_blob_object = JUST(GetTensorBlobObject(output));
   return OpInterpUtil::Assign(target_blob_object, temp_blob_object);
 }
 

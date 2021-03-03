@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/snapshot_manager.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
 

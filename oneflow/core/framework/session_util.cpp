@@ -65,7 +65,7 @@ Maybe<int64_t> GetDefaultSessionId() { return *(DefaultSessionId()); }
 
 Maybe<void> RegsiterSession(int64_t id, const std::shared_ptr<Session>& sess) {
   std::unique_lock<std::mutex> lock(*GlobalSessionUtilMutex());
-  auto* id2session_map = JUST(GlobalId2SessionMap());
+  auto* id2session_map = GlobalId2SessionMap();
   CHECK_OR_RETURN(id2session_map->find(id) == id2session_map->end());
   (*id2session_map)[id] = sess;
   JUST(SetDefaultSessionId(id));
