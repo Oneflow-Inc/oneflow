@@ -43,11 +43,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("__repr__", &Shape::ToString)
       .def("__getitem__", [](const Shape& shape, int idx) { return shape.At(idx); })
       .def("__setitem__", [](Shape& shape, int idx, int val) { shape.Set(idx, val); })
-      .def("__iter__",
-           [](const Shape& shape) {
-             return py::make_iterator(shape.dim_vec().begin(), shape.dim_vec().end());
-           },
-           py::keep_alive<0, 1>())
+      .def(
+          "__iter__",
+          [](const Shape& shape) {
+            return py::make_iterator(shape.dim_vec().begin(), shape.dim_vec().end());
+          },
+          py::keep_alive<0, 1>())
       .def("__len__", [](const Shape& shape) { return shape.NumAxes(); });
 }
 

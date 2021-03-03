@@ -19,6 +19,7 @@ import numpy as np
 import os
 import random
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestSize(flow.unittest.TestCase):
     def test_size(test_case):
@@ -35,6 +36,7 @@ class TestSize(flow.unittest.TestCase):
         test_case.assertEqual(two, 2)
         test_case.assertEqual(three, 3)
         test_case.assertEqual(four, 4)
+
 
 if __name__ == "__main__":
     unittest.main()
