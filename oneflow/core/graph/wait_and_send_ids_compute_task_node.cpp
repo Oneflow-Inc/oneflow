@@ -44,20 +44,13 @@ void WaitAndSendIdsCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kWaitAndSendIds)
-    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
-      auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
-          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-      CHECK_NOTNULL(cuda_stream_index_generator);
-      return cuda_stream_index_generator->GenerateComputeStreamIndex();
+    .SetStreamIndexGetterFnNew([](CudaStreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateComputeStreamIndex();
     });
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kWaitAndSendIds)
-    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
-      auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
-          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-      CHECK_NOTNULL(cpu_stream_index_generator);
-      return cpu_stream_index_generator->GenerateIndependentTaskStreamIndex(
-          TaskType::kWaitAndSendIds);
+    .SetStreamIndexGetterFnNew([](CPUStreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateIndependentTaskStreamIndex(TaskType::kWaitAndSendIds);
     });
 
 }  // namespace oneflow

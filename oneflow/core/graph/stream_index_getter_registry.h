@@ -42,10 +42,29 @@ class StreamIndexGetterRegistry final {
  public:
   StreamIndexGetterRegistry(DeviceType dev_type, TaskType task_type)
       : dev_task_type_(std::make_pair(dev_type, task_type)) {}
+  template<class T>
+  StreamIndexGetterRegistry& SetStreamIndexGetterFnNew(T&& func) {
+    // "+ trick": https://stackoverflow.com/a/43843606
+    // It is used to convert lambda to a plain function pointer
+    // (NOTE: only lambda function without capture can be converted)
+    // and thus "GeneratorType" can be deduced
+    return SetStreamIndexGetterFnNewImpl(+func);
+  }
   StreamIndexGetterRegistry& SetStreamIndexGetterFn(StreamIndexGetterFn func);
 
  private:
   std::pair<DeviceType, TaskType> dev_task_type_;
+
+  template<class GeneratorType>
+  StreamIndexGetterRegistry& SetStreamIndexGetterFnNewImpl(uint32_t (*func)(GeneratorType)) {
+    auto new_func = [func](DeviceId device_id) -> uint32_t {
+      auto* generator = dynamic_cast<GeneratorType>(
+          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
+      CHECK_NOTNULL(generator);
+      return func(generator);
+    };
+    return SetStreamIndexGetterFn(new_func);
+  }
 };
 
 };  // namespace oneflow
