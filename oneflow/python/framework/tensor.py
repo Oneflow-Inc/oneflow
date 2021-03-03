@@ -33,11 +33,12 @@ class Tensor:
         is_lazy=False,
         determining_initializer=None,
     ):
+        device = device if device is not None else oneflow_api.device("cpu", 0)
         self._local_or_consistent_tensor = None
         self._undetermined_tensor = UndeterminedTensor(
             shape,
             dtype,
-            device,
+            device=device,
             requires_grad=requires_grad,
             retain_grad=retain_grad,
             placement=placement,
@@ -253,6 +254,7 @@ class UndeterminedTensor:
             if not isinstance(shape, tuple):
                 shape = tuple(shape)
             shape = oneflow_api.Size(shape)
+        device = device if device is not None else oneflow_api.device("cpu", 0)
         self.shape = shape
         self.dtype = dtype
         self.device = device
