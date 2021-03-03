@@ -69,15 +69,16 @@ def _of_argwhere(x, index_dtype, device_type="gpu", device_num=1, dynamic=False)
     )
 
     if dynamic is True:
+        # TODO(jiangxuefei, zhangwenxiao): support dynamic
         func_config.default_logical_view(flow.scope.mirrored_view())
 
         @flow.global_function("predict", function_config=func_config)
         def argwhere_fn(
-            x: flow.typing.ListNumpy.Placeholder(x.shape, dtype=data_type)
-        ) -> flow.typing.ListNumpy:
+            x: flow.typing.Numpy.Placeholder(x.shape, dtype=data_type)
+        ) -> flow.typing.Numpy:
             return flow.argwhere(x, dtype=out_data_type)
 
-        return argwhere_fn([x] * device_num)[0]
+        return argwhere_fn([x] * device_num)
 
     else:
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -85,10 +86,10 @@ def _of_argwhere(x, index_dtype, device_type="gpu", device_num=1, dynamic=False)
         @flow.global_function("predict", function_config=func_config)
         def argwhere_fn(
             x: flow.typing.Numpy.Placeholder(x.shape, dtype=data_type)
-        ) -> flow.typing.ListNumpy:
+        ) -> flow.typing.Numpy:
             return flow.argwhere(x, dtype=out_data_type)
 
-        return argwhere_fn(x)[0]
+        return argwhere_fn(x)
 
 
 def _compare_with_np(
@@ -140,17 +141,17 @@ def _dynamic_multi_iter_compare(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(data_type)
     func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
-    func_config.default_logical_view(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
 
     @flow.global_function("predict", function_config=func_config)
     def argwhere_fn(
-        x: flow.typing.Numpy.Placeholder(tuple(shape), dtype=data_type)
-    ) -> flow.typing.ListNumpy:
+        x: flow.typing.Numpy.Placeholder(shape, dtype=data_type)
+    ) -> flow.typing.Numpy:
         return flow.argwhere(x, dtype=out_data_type)
 
     results = []
     for x_ in x:
-        y_ = argwhere_fn(x_)[0]
+        y_ = argwhere_fn(x_)
         results.append(y_)
 
     for i, result in enumerate(results):
@@ -162,11 +163,11 @@ class TestArgwhere(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_argwhere(test_case):
         arg_dict = OrderedDict()
-        arg_dict["shape"] = [(10), (30, 4), (8, 256, 20)]
+        arg_dict["shape"] = [(30, 4)]
         arg_dict["value_dtype"] = [np.float32, np.int32, np.int8]
         arg_dict["index_dtype"] = [np.int32, np.int64]
         arg_dict["device_type"] = ["cpu", "gpu"]
-        arg_dict["dynamic"] = [True, False]
+        arg_dict["dynamic"] = [False]
         arg_dict["verbose"] = [False]
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)

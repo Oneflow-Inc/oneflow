@@ -168,9 +168,6 @@ def _CheckReturnByAnnotation(function_name, ret, annotation):
             _CheckReturnByAnnotation(function_name, val, annotation.__args__[1])
     elif oft.OriginFrom(annotation, oft.Numpy):
         assert isinstance(ret, oneflow_api.BlobDesc), "type(ret): %s" % type(ret)
-        assert (
-            not ret.is_dynamic
-        ), "only fixed shaped blob compatible to oneflow.typing.Numpy. "
     else:
         raise NotImplementedError("invalid return annotation %s found" % annotation)
 

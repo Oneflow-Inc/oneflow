@@ -38,10 +38,7 @@ def compare_with_tensorflow(device_type, in_shape, axis, data_type):
 
     @flow.global_function(function_config=func_config)
     def ArgMaxJob(
-        input: oft.Numpy.Placeholder(
-            tuple([dim + 10 for dim in in_shape]),
-            dtype=type_name_to_flow_type[data_type],
-        )
+        input: oft.Numpy.Placeholder(in_shape, dtype=type_name_to_flow_type[data_type],)
     ):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.argmax(input, axis)
