@@ -26,11 +26,11 @@ namespace {
 // NOTE(Liang Depeng): refer to
 // https://stackoverflow.com/questions/17371275/implementing-max-reduce-in-cuda
 template<typename T>
-__global__ void ReduceMaxMinPerLayer(const T *input_ptr, const int64_t elements, T *max_ptr,
-                                     T *min_ptr) {
+__global__ void ReduceMaxMinPerLayer(const T* input_ptr, const int64_t elements, T* max_ptr,
+                                     T* min_ptr) {
   extern __shared__ unsigned char shared_max_min_memory[];
-  T *shared_max = reinterpret_cast<T *>(shared_max_min_memory);
-  T *shared_min = shared_max + blockDim.x;
+  T* shared_max = reinterpret_cast<T*>(shared_max_min_memory);
+  T* shared_min = shared_max + blockDim.x;
 
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
@@ -59,12 +59,12 @@ __global__ void ReduceMaxMinPerLayer(const T *input_ptr, const int64_t elements,
 }
 
 template<typename T>
-__global__ void ReduceMaxMinPerChannel(const T *input_ptr, const int64_t elements,
+__global__ void ReduceMaxMinPerChannel(const T* input_ptr, const int64_t elements,
                                        const int64_t num_channels, const int64_t panel_size,
-                                       T *max_ptr, T *min_ptr) {
+                                       T* max_ptr, T* min_ptr) {
   extern __shared__ unsigned char shared_max_min_memory[];
-  T *shared_max = reinterpret_cast<T *>(shared_max_min_memory);
-  T *shared_min = shared_max + blockDim.x;
+  T* shared_max = reinterpret_cast<T*>(shared_max_min_memory);
+  T* shared_min = shared_max + blockDim.x;
 
   int64_t cur_channel = blockIdx.x;
   int64_t tid = threadIdx.x;
@@ -102,7 +102,7 @@ __global__ void ReduceMaxMinPerChannel(const T *input_ptr, const int64_t element
 }
 
 template<typename T>
-__global__ void InitMaxMin(const int64_t elements, T *max_ptr, T *min_ptr) {
+__global__ void InitMaxMin(const int64_t elements, T* max_ptr, T* min_ptr) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
@@ -114,9 +114,9 @@ __global__ void InitMaxMin(const int64_t elements, T *max_ptr, T *min_ptr) {
 }
 
 template<typename T>
-__global__ void CalScaleZeroPointSymmetric(const T *max_ptr, const T *min_ptr,
+__global__ void CalScaleZeroPointSymmetric(const T* max_ptr, const T* min_ptr,
                                            const int64_t elements, const double quantization_bit,
-                                           T *scale, T *zero_point) {
+                                           T* scale, T* zero_point) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
@@ -130,8 +130,8 @@ __global__ void CalScaleZeroPointSymmetric(const T *max_ptr, const T *min_ptr,
 }
 
 template<typename T>
-__global__ void CalScaleZeroPointAffine(const T *max_ptr, const T *min_ptr, const int64_t elements,
-                                        const double quantization_bit, T *scale, T *zero_point) {
+__global__ void CalScaleZeroPointAffine(const T* max_ptr, const T* min_ptr, const int64_t elements,
+                                        const double quantization_bit, T* scale, T* zero_point) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
@@ -146,9 +146,9 @@ __global__ void CalScaleZeroPointAffine(const T *max_ptr, const T *min_ptr, cons
 }
 
 template<typename T>
-__global__ void CalScaleZeroPointCambricon(const T *max_ptr, const T *min_ptr,
+__global__ void CalScaleZeroPointCambricon(const T* max_ptr, const T* min_ptr,
                                            const int64_t elements, const double quantization_bit,
-                                           T *scale, T *zero_point) {
+                                           T* scale, T* zero_point) {
   int64_t tid = threadIdx.x;
   int64_t gid = (blockDim.x * blockIdx.x) + tid;
 
@@ -174,11 +174,11 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
   ~GpuMinMaxObserverKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext *ctx) const override {
-    const user_op::Tensor *in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor *scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
-    user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
-    user_op::Tensor *tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
+    user_op::Tensor* zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     const std::string quantization_scheme = ctx->Attr<std::string>("quantization_scheme");
     const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
@@ -188,8 +188,8 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
     const int64_t elements = in->shape().elem_cnt();
     const int64_t channel = scale->shape().At(0);
     const int64_t panel_size = elements / channel;
-    T *max_ptr = tmp_buffer->mut_dptr<T>();
-    T *min_ptr = max_ptr + channel;
+    T* max_ptr = tmp_buffer->mut_dptr<T>();
+    T* min_ptr = max_ptr + channel;
 
     LAUNCH_CUDA_KERNEL((InitMaxMin<T>), ctx->device_ctx(), channel, 0, channel, max_ptr, min_ptr);
 
@@ -232,10 +232,10 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
       .SetCreateFn<GpuMinMaxObserverKernel<dtype>>()                                   \
       .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                   \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext *ctx) -> size_t {                    \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                    \
         size_t tmp_buffer_size = 1;                                                    \
         if (ctx->Attr<bool>("per_layer_quantization") == false) {                      \
-          const Shape *in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                 \
+          const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                 \
           tmp_buffer_size = in_shape->At(0);                                           \
         }                                                                              \
         return 2 * tmp_buffer_size * sizeof(dtype);                                    \

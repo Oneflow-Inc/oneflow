@@ -13,26 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_ACCUMULATE_COMPUTE_TASK_NODE_H_
-#define ONEFLOW_CORE_GRAPH_ACCUMULATE_COMPUTE_TASK_NODE_H_
-
-#include "oneflow/core/graph/compute_task_node.h"
+#include <sstream>
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 
-class AccumulateCompTaskNode : public CompTaskNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(AccumulateCompTaskNode);
-  AccumulateCompTaskNode() = default;
-  virtual ~AccumulateCompTaskNode() = default;
-
-  void ProduceAllRegstsAndBindEdges() override;
-  void ConsumeAllRegsts() override;
-  virtual void BuildExecGphAndRegst() override;
-
- private:
-};
+std::string Device::ToString() const {
+  std::stringstream ss;
+  ss << "device(type=";
+  ss << type_;
+  ss << ", index=";
+  ss << device_id_;
+  ss << ")";
+  return ss.str();
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_GRAPH_ACCUMULATE_COMPUTE_TASK_NODE_H_

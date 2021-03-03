@@ -31,17 +31,17 @@ class BlobCache {
   BlobCache(const std::shared_ptr<BlobObject>& blob_object) : blob_object_(blob_object) {}
   ~BlobCache() = default;
 
-  std::shared_ptr<BlobObject> blob_object() const { return blob_object_; }
+  Maybe<BlobObject> blob_object() const { return blob_object_; }
 
-  std::shared_ptr<EagerPhysicalBlobHeader> GetHeaderCache(
-      std::function<std::shared_ptr<EagerPhysicalBlobHeader>(const std::shared_ptr<BlobObject>&)>&
-          fetch);
+  Maybe<EagerPhysicalBlobHeader> GetHeaderCache(
+      const std::function<
+          std::shared_ptr<EagerPhysicalBlobHeader>(const std::shared_ptr<BlobObject>&)>& Fetch);
 
-  std::shared_ptr<BlobObject> GetCachedDelegateBlobObject(
+  Maybe<BlobObject> GetCachedDelegateBlobObject(
       const std::shared_ptr<OpArgParallelAttribute>& op_arg_parallel_attr,
       const std::function<std::shared_ptr<BlobObject>(
           const std::shared_ptr<BlobObject>&, const std::shared_ptr<OpArgParallelAttribute>&)>&
-          fetch);
+          Fetch);
 
  private:
   std::shared_ptr<BlobObject> blob_object_;
@@ -53,9 +53,9 @@ Maybe<BlobCache> FindOrCreateBlobCache(const std::shared_ptr<BlobObject>& blob_o
 
 Maybe<void> TryDisableBlobCache(const std::shared_ptr<BlobObject>& blob_object);
 
-std::shared_ptr<BlobObject> FindOrCreateDelegateBlobObject(
+Maybe<BlobObject> FindOrCreateDelegateBlobObject(
     const std::function<std::shared_ptr<BlobObject>(
-        const std::shared_ptr<BlobObject>&, const std::shared_ptr<OpArgParallelAttribute>&)>& fetch,
+        const std::shared_ptr<BlobObject>&, const std::shared_ptr<OpArgParallelAttribute>&)>& Fetch,
     const std::shared_ptr<BlobObject>& x_blob_object,
     const std::shared_ptr<OpArgParallelAttribute>& op_arg_parallel_attr);
 

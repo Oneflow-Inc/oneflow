@@ -26,8 +26,8 @@ class BoxingZerosTaskNode : public TaskNode {
   BoxingZerosTaskNode() = default;
   ~BoxingZerosTaskNode() override = default;
 
-  void Init(int64_t machine_id, int64_t thrd_id, int64_t area_id, const LogicalBlobId& lbi,
-            const Shape& shape, DataType data_type, const Shape& time_shape);
+  void Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi, const Shape& shape,
+            DataType data_type, const Shape& time_shape);
   TaskType GetTaskType() const override { return TaskType::kBoxingZeros; }
 
  private:

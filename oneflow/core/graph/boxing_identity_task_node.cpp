@@ -18,12 +18,10 @@ limitations under the License.
 
 namespace oneflow {
 
-void BoxingIdentityTaskNode::Init(int64_t machine_id, int64_t thrd_id, int64_t area_id,
-                                  const LogicalBlobId& lbi) {
+void BoxingIdentityTaskNode::Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi) {
   lbi_ = lbi;
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
-  set_area_id(area_id);
 }
 
 void BoxingIdentityTaskNode::ProduceAllRegstsAndBindEdges() {

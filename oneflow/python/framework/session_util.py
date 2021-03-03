@@ -55,7 +55,6 @@ import traceback
 class Session(oneflow_api.Session):
     def __init__(self, sess_id):
         oneflow_api.Session.__init__(self, sess_id)
-        # self.id_ = oneflow_api.NewSessionId()
         self.job_name2function_desc_ = {}
         self.job_name2job_ = {}
         self.status_ = SessionStatus.OPEN
@@ -87,6 +86,10 @@ class Session(oneflow_api.Session):
         self.eager_config_proto_ctx_ = None
 
         oneflow_api.RegsiterSession(sess_id, self)
+
+    @property
+    def id(self):
+        return self.id_
 
     @property
     def status(self):

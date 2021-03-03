@@ -26,8 +26,8 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-xla::XlaOp GenericGather(const xla::XlaOp &input, const xla::XlaOp &indices,
-                         const Shape &input_shape, const Shape &indices_shape, int64_t axis) {
+xla::XlaOp GenericGather(const xla::XlaOp& input, const xla::XlaOp& indices,
+                         const Shape& input_shape, const Shape& indices_shape, int64_t axis) {
   int64_t index_vector_dim = indices_shape.NumAxes();
   xla::GatherDimensionNumbers dim_numbers;
   std::vector<long long> slice_sizes(input_shape.NumAxes());
@@ -55,10 +55,10 @@ xla::XlaOp GenericGather(const xla::XlaOp &input, const xla::XlaOp &indices,
   return xla::Gather(input, indices, dim_numbers, slice_sizes);
 }
 xla::XlaOp GenericGatherGrad(
-    const xla::XlaOp &buffer, const xla::XlaOp &updates, const xla::XlaOp &indices,
+    const xla::XlaOp& buffer, const xla::XlaOp& updates, const xla::XlaOp& indices,
     bool indices_are_vectors,
-    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder *)> &combiner,
-    xla::XlaBuilder *builder) {
+    const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp, xla::XlaBuilder*)>& combiner,
+    xla::XlaBuilder* builder) {
   MOLA_CHECK_AND_ASSIGN(xla::Shape buffer_shape, builder->GetShape(buffer));
   MOLA_CHECK_AND_ASSIGN(xla::Shape updates_shape, builder->GetShape(updates));
   MOLA_CHECK_AND_ASSIGN(xla::Shape indices_shape, builder->GetShape(indices));
@@ -125,7 +125,7 @@ xla::XlaOp GenericGatherGrad(
 
 class GatherOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext *ctx) override {
+  void Compile(XlaOpContext* ctx) override {
     Shape input_shape = ctx->InputShape("in_0");
     Shape indices_shape = ctx->InputShape("indices_0");
     CHECK_GT(input_shape.NumAxes(), 0);
@@ -146,17 +146,17 @@ class GatherOp : public XlaOpKernel {
     ctx->SetOutput("out_0", output);
   }
 
-  virtual int GatherAxis(XlaOpContext *ctx) const { return ctx->Attr<int64_t>("axis"); }
-  virtual int GatherBatchDims(XlaOpContext *ctx) const { return 0; }
+  virtual int GatherAxis(XlaOpContext* ctx) const { return ctx->Attr<int64_t>("axis"); }
+  virtual int GatherBatchDims(XlaOpContext* ctx) const { return 0; }
 };
 
 class BatchGatherOp : public GatherOp {
  public:
-  int GatherAxis(XlaOpContext *ctx) const override {
+  int GatherAxis(XlaOpContext* ctx) const override {
     Shape indices_shape = ctx->InputShape("indices_0");
     return indices_shape.NumAxes() - 1;
   }
-  int GatherBatchDims(XlaOpContext *ctx) const override {
+  int GatherBatchDims(XlaOpContext* ctx) const override {
     Shape indices_shape = ctx->InputShape("indices_0");
     return indices_shape.NumAxes() - 1;
   }

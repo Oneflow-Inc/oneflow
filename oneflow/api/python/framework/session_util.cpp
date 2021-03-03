@@ -46,18 +46,14 @@ class PySession : public Session {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Session, PySession>(m, "Session")
       .def(py::init<int64_t>())
-      .def_property_readonly("id", &Session::id)
+      .def_property_readonly("id_", &Session::id)
       .def("instruction_list_", &Session::instruction_list)
       .def("eager_symbol_list_", &Session::eager_symbol_list)
       .def("snapshot_mgr_", &Session::snapshot_mgr)
       .def("TryGetVariableBlobOfJobFromStash", &Session::TryGetVariableBlobOfJobFromStash)
       .def("GetJobNameScopePrefix", &Session::GetJobNameScopePrefix);
 
-  m.def("GetDefaultSessionId", []() {
-    int64_t default_sess_id = *GetDefaultSessionId().GetOrThrow();
-    return default_sess_id;
-  });
-  m.def("SetDefaultSessionId", [](int64_t val) { return SetDefaultSessionId(val).GetOrThrow(); });
+  m.def("GetDefaultSessionId", []() { return GetDefaultSessionId().GetOrThrow(); });
   m.def("RegsiterSession", [](int64_t id, py::object object) {
     /*object.inc_ref();*/
     Session* sess = object.cast<Session*>();
@@ -65,12 +61,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         id, std::shared_ptr<Session>(sess, [/*object*/](Session* p) { /*object.dec_ref();*/ }))
         .GetOrThrow();
   });
-
   m.def("GetDefaultSession", []() { return GetDefaultSession().GetPtrOrThrow(); });
-  m.def("ClearDefaultSession", []() { return ClearDefaultSession().GetOrThrow(); });
-
   m.def("ClearSessionById", [](int64_t id) { return ClearSessionById(id).GetOrThrow(); });
-  m.def("ClearAllSession", []() { return ClearAllSession().GetOrThrow(); });
 }
 
 }  // namespace oneflow
