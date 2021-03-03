@@ -187,9 +187,6 @@ class Tensor:
         self._local_or_consistent_tensor = determining_initializer(self)
         self._undetermined_tensor = None
 
-    def _determine(self):
-        self._local_or_consistent_tensor.set_blob_object(self._blob.blob_object)
-
     @property
     def is_determined(self):
         if self._local_or_consistent_tensor is not None:
@@ -324,5 +321,5 @@ def _default_initializer_for_determining(tensor):
         True,
         undetermined_tensor.retain_grad,
     )
-    determined_tensor.set_blob_object(tensor._blob.blob_object)
+    determined_tensor._set_blob_object(tensor._blob.blob_object)
     return determined_tensor

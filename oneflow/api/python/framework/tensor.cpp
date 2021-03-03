@@ -87,8 +87,8 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("is_lazy", &T::is_lazy)
       .def_property_readonly("is_consistent", &T::is_consistent)
       // OneFlow tensor methods other than pytorch tensor
-      .def("blob_object", &T::blob_object)
-      .def("set_blob_object", &T::set_blob_object);
+      .def("_blob_object", &T::blob_object)
+      .def("_set_blob_object", &T::set_blob_object);
 }
 
 }  // namespace

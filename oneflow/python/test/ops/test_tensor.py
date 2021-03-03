@@ -32,9 +32,9 @@ def fake_flow_ones(shape):
 class TestTensor(flow.unittest.TestCase):
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
-        "blob_object doesn't work in eager mode",
+        "numpy doesn't work in lazy mode",
     )
-    def test_tensor(test_case):
+    def test_numpy(test_case):
         @flow.global_function()
         def job():
             shape = (2, 3)
