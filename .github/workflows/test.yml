@@ -262,3 +262,5 @@ jobs:
         if: always()
         run: |
           docker rm -f ${container_name} || true
+
+# TODO clean up pips if the pr is closed
