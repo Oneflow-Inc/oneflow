@@ -275,7 +275,9 @@ void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
       device_ctx_.reset(new FakeDeviceDeviceCtx());
       break;
     }
-    default: { UNIMPLEMENTED(); }
+    default: {
+      UNIMPLEMENTED();
+    }
   }
 }
 
