@@ -25,13 +25,34 @@ namespace oneflow {
 namespace compatible_py {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
+  // To enable dynamic attributes for C++ classes, add 'py::dynamic_attr' tag
+  // to py::class_ constructor
   py::class_<BlobCache, std::shared_ptr<BlobCache>>(m, "BlobCache", py::dynamic_attr())
       .def(py::init([](const std::shared_ptr<BlobObject>& blob_object) {
         return std::make_shared<BlobCache>(blob_object);
       }))
-      .def_property_readonly("blob_object", &BlobCache::blob_object)
-      .def("GetHeaderCache", &BlobCache::GetHeaderCache)
-      .def("GetCachedDelegateBlobObject", &BlobCache::GetCachedDelegateBlobObject);
+      .def_property_readonly(
+          "blob_object",
+          [](const std::shared_ptr<BlobCache>& blob_cache) -> std::shared_ptr<BlobObject> {
+            return blob_cache->blob_object().GetPtrOrThrow();
+          })
+      .def("GetHeaderCache",
+           [](const std::shared_ptr<BlobCache>& blob_cache,
+              const std::function<std::shared_ptr<EagerPhysicalBlobHeader>(
+                  const std::shared_ptr<BlobObject>&)>& Fetch)
+               -> std::shared_ptr<EagerPhysicalBlobHeader> {
+             return blob_cache->GetHeaderCache(Fetch).GetPtrOrThrow();
+           })
+      .def("GetCachedDelegateBlobObject",
+           [](const std::shared_ptr<BlobCache>& blob_cache,
+              const std::shared_ptr<OpArgParallelAttribute>& op_arg_parallel_attr,
+              const std::function<std::shared_ptr<BlobObject>(
+                  const std::shared_ptr<BlobObject>&,
+                  const std::shared_ptr<OpArgParallelAttribute>&)>& Fetch)
+               -> std::shared_ptr<BlobObject> {
+             return blob_cache->GetCachedDelegateBlobObject(op_arg_parallel_attr, Fetch)
+                 .GetPtrOrThrow();
+           });
 
   m.def("FindOrCreateBlobCache", [](const std::shared_ptr<BlobObject>& blob_object) {
     return FindOrCreateBlobCache(blob_object).GetPtrOrThrow();

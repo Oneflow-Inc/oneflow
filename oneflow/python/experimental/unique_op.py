@@ -25,7 +25,6 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow_api
 
@@ -33,7 +32,7 @@ import oneflow_api
 @oneflow_export("experimental.unique_with_counts")
 def unique_with_counts(
     x: input_blob_util.ArgBlobDef,
-    out_idx: dtype_util.dtype = dtype_util.int32,
+    out_idx: flow.dtype = flow.int32,
     name: Optional[str] = None,
 ) -> Tuple[oneflow_api.BlobDesc]:
     op_conf = op_conf_util.OperatorConf()
@@ -47,7 +46,9 @@ def unique_with_counts(
     op_conf.unique_with_counts_conf.idx = "idx"
     op_conf.unique_with_counts_conf.count = "count"
     op_conf.unique_with_counts_conf.num_unique = "num_unique"
-    op_conf.unique_with_counts_conf.out_idx = out_idx.oneflow_proto_dtype
+    op_conf.unique_with_counts_conf.out_idx = oneflow_api.deprecated.GetProtoDtype4OfDtype(
+        out_idx
+    )
 
     interpret_util.Forward(op_conf)
     y_lbi = logical_blob_id_util.LogicalBlobId()

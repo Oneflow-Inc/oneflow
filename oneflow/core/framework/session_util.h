@@ -16,11 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
 #define ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
 
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/framework/object.h"
 #include "oneflow/core/framework/snapshot_manager.h"
-#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
 
@@ -56,13 +53,10 @@ class Session {
   std::shared_ptr<SnapshotManager> snapshot_mgr_;
 };
 
-Maybe<int64_t*> GetDefaultSessionId();
-Maybe<void> SetDefaultSessionId(int64_t val);
-Maybe<void> RegsiterSession(int64_t id, const std::shared_ptr<Session>& sess);
+Maybe<int64_t> GetDefaultSessionId();
 Maybe<Session> GetDefaultSession();
-Maybe<void> ClearDefaultSession();
+Maybe<void> RegsiterSession(int64_t id, const std::shared_ptr<Session>& sess);
 Maybe<void> ClearSessionById(int64_t id);
-Maybe<void> ClearAllSession();
 
 }  // namespace oneflow
 

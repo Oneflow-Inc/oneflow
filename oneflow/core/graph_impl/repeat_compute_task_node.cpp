@@ -75,6 +75,5 @@ void RepeatCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("repeat", RepeatCompTaskNode);
-REGISTER_USER_OP_INDEPENDENT_AREA_ID("repeat");
 
 }  // namespace oneflow
