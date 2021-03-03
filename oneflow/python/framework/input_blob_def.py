@@ -87,7 +87,7 @@ class ArgBlobDef(object):
     def is_tensor_list(self):
         raise NotImplementedError
 
-    def with_distribute(self, sbp_descriptor):
+    def with_distribute(self, distribute):
         return type(self)(shape=self.shape_, dtype=self.dtype_, name=self.op_name,)
 
     def Clone(self, op_name=None):
