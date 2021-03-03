@@ -26,24 +26,24 @@ namespace one {
 
 using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
 
-/*static*/ std::shared_ptr<cfg::OpAttribute> OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
+/*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
     const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled) {
-  std::shared_ptr<OpAttribute> op_attribute = [&]() {
-    auto infer_ctx = GetCurInferCtx().GetOrThrow();
+  std::shared_ptr<OpAttribute> op_attribute = JUST([&]() -> Maybe<OpAttribute> {
+    auto infer_ctx = JUST(GetCurInferCtx());
     if (is_mirrored_strategy_enabled) {
-      return infer_ctx->AddAndInferMirroredOp(op_conf).GetPtrOrThrow();
+      return infer_ctx->AddAndInferMirroredOp(op_conf);
     } else {
-      return infer_ctx->AddAndInferConsistentOp(op_conf).GetPtrOrThrow();
+      return infer_ctx->AddAndInferConsistentOp(op_conf);
     }
-  }();
+  }());
   return std::make_shared<cfg::OpAttribute>(*op_attribute);
 }
 
-/*static*/ std::shared_ptr<cfg::OpAttribute> OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
+/*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
     const BuiltinOpExpr* op_expr, const std::shared_ptr<Scope>& scope,
     const bool is_mirrored_strategy_enabled) {
-  auto op_conf = OpInterpUtil::GenBuiltinOpConf(op_expr);
-  int64_t symbol_id = scope->symbol_id().GetOrThrow();
+  auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr));
+  int64_t symbol_id = JUST(scope->symbol_id());
   op_conf->set_scope_symbol_id(symbol_id);
   if (!op_conf->has_device_tag()) {
     op_conf->set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
@@ -51,15 +51,13 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   return OpInterpUtil::AddBuiltinOpAndInferOpAttribute(*op_conf, is_mirrored_strategy_enabled);
 }
 
-/*static*/ std::shared_ptr<OperatorConf> OpInterpUtil::GenBuiltinOpConf(
-    const BuiltinOpExpr* op_expr) {
+/*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr* op_expr) {
   auto* op_conf = new OperatorConf;
   op_expr->BuildOpConf(op_conf);
   return std::shared_ptr<OperatorConf>(op_conf);
 }
 
-/*static*/ std::shared_ptr<OperatorConf> OpInterpUtil::GenModelInitOpConf(
-    const OperatorConf& variable_conf) {
+/*static*/ Maybe<OperatorConf> OpInterpUtil::GenModelInitOpConf(const OperatorConf& variable_conf) {
   auto* model_init_op_conf = new OperatorConf;
   model_init_op_conf->set_name("model_init");
   model_init_op_conf->set_device_tag("cpu");
@@ -71,7 +69,7 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   return std::shared_ptr<OperatorConf>(model_init_op_conf);
 }
 
-/*static*/ std::shared_ptr<OperatorConf> OpInterpUtil::GenModelIOPathInputOpConf() {
+/*static*/ Maybe<OperatorConf> OpInterpUtil::GenModelIOPathInputOpConf() {
   auto* path_input_op_conf = new OperatorConf;
   path_input_op_conf->set_name("model_io_path_input");
   path_input_op_conf->set_device_tag("cpu");
@@ -86,7 +84,7 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   return std::shared_ptr<OperatorConf>(path_input_op_conf);
 }
 
-/*static*/ std::shared_ptr<OperatorConf> OpInterpUtil::GenModelLoadOpConf(
+/*static*/ Maybe<OperatorConf> OpInterpUtil::GenModelLoadOpConf(
     const OperatorConf& variable_conf, const OperatorConf& path_input_op_conf) {
   auto* model_load_op_conf = new OperatorConf;
   model_load_op_conf->set_name("model_load");
@@ -104,81 +102,87 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   return std::shared_ptr<OperatorConf>(model_load_op_conf);
 }
 
-/*static*/ std::function<void(const std::shared_ptr<InstructionsBuilder>&)>
+/*static*/ Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
 OpInterpUtil::BuildModelInitOrIOPathInputInstruction(
     const OperatorConf& op_conf, const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object) {
   using namespace std::placeholders;
-  return [=](const std::shared_ptr<InstructionsBuilder>& builder) {
-    auto scope = GetCurrentScope().GetPtrOrThrow();
-    auto op_attribute = OpInterpUtil::InferOpAttribute(op_conf, scope, Bn2BlobObjectMap{});
+  auto build_instruction = [=](const std::shared_ptr<InstructionsBuilder>& builder) {
+    const auto& scope = CHECK_JUST(GetCurrentScope());
+    const auto& op_attribute =
+        CHECK_JUST(OpInterpUtil::InferOpAttribute(op_conf, scope, Bn2BlobObjectMap{}));
     auto parallel_conf =
         std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
     const auto* boxing_util = Global<ForeignBoxingUtil>::Get();
-    builder->StatelessCall(op_attribute, parallel_conf, bn2blob_object,
-                           std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util, _1, _2, _3));
+    CHECK_JUST(
+        builder->StatelessCall(op_attribute, parallel_conf, bn2blob_object,
+                               std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util, _1, _2, _3)));
   };
+  return std::function<void(const std::shared_ptr<InstructionsBuilder>&)>(build_instruction);
 }
 
-/*static*/ std::function<void(const std::shared_ptr<InstructionsBuilder>&)>
+/*static*/ Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
 OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
                                        const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object) {
   int64_t callback_id = Global<ForeignCallback>::Get()->FeedPath(path);
-  return [=](const std::shared_ptr<InstructionsBuilder>& builder) {
+  auto build_instruction = [=](const std::shared_ptr<InstructionsBuilder>& builder) {
     const auto& blob_object = bn2blob_object->at("out");
-    builder->FeedBlob(blob_object, callback_id);
-    builder->InsertRemoveForeignCallbackInstruction(blob_object->object_id(), callback_id);
+    CHECK_JUST(builder->FeedBlob(blob_object, callback_id));
+    CHECK_JUST(
+        builder->InsertRemoveForeignCallbackInstruction(blob_object->object_id(), callback_id));
   };
+  return std::function<void(const std::shared_ptr<InstructionsBuilder>&)>(build_instruction);
 }
 
-/*static*/ std::shared_ptr<compatible_py::BlobObject> OpInterpUtil::EagerRunModelInit(
+/*static*/ Maybe<compatible_py::BlobObject> OpInterpUtil::EagerRunModelInit(
     const OperatorConf& op_conf) {
-  auto model_init_conf = GenModelInitOpConf(op_conf);
+  auto model_init_conf = JUST(GenModelInitOpConf(op_conf));
   std::shared_ptr<Bn2BlobObjectMap> bn2blob_object(new Bn2BlobObjectMap{});
 
-  auto BuildModelInitInstruction =
-      BuildModelInitOrIOPathInputInstruction(*model_init_conf, bn2blob_object);
-  LogicalRun(BuildModelInitInstruction).GetOrThrow();
+  auto build_model_init_instruction =
+      JUST(BuildModelInitOrIOPathInputInstruction(*model_init_conf, bn2blob_object));
+  JUST(LogicalRun(*build_model_init_instruction));
   return bn2blob_object->at("out_0");
 }
 
-/*static*/ std::shared_ptr<compatible_py::BlobObject> OpInterpUtil::EagerRunModelLoad(
+/*static*/ Maybe<compatible_py::BlobObject> OpInterpUtil::EagerRunModelLoad(
     const OperatorConf& op_conf, const std::string& snapshot_path) {
   using namespace std::placeholders;
-  CHECK(file_system::basename(snapshot_path) == "out");
-  CHECK(file_system::dirname(snapshot_path) == op_conf.name());
+  CHECK_OR_RETURN(file_system::basename(snapshot_path) == "out");
+  CHECK_OR_RETURN(file_system::dirname(snapshot_path) == op_conf.name());
 
-  auto path_input_op_conf = GenModelIOPathInputOpConf();
+  const auto& path_input_op_conf = JUST(GenModelIOPathInputOpConf());
 
   std::shared_ptr<Bn2BlobObjectMap> bn2blob_object(new Bn2BlobObjectMap{});
   auto build_model_io_path_input_instruction =
-      BuildModelInitOrIOPathInputInstruction(*path_input_op_conf, bn2blob_object);
-  auto build_feed_path_instruction = BuildFeedPathInstruction(snapshot_path, bn2blob_object);
+      JUST(BuildModelInitOrIOPathInputInstruction(*path_input_op_conf, bn2blob_object));
+  auto build_feed_path_instruction = JUST(BuildFeedPathInstruction(snapshot_path, bn2blob_object));
 
   std::shared_ptr<Bn2BlobObjectMap> model_load_blob_objects(new Bn2BlobObjectMap{});
-  auto&& model_load_op_conf = GenModelLoadOpConf(op_conf, *path_input_op_conf);
+  const auto& model_load_op_conf = JUST(GenModelLoadOpConf(op_conf, *path_input_op_conf));
   auto build_model_load_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    auto&& scope = GetCurrentScope().GetPtrOrThrow();
+    const auto& scope = CHECK_JUST(GetCurrentScope());
     const auto& blob_object = bn2blob_object->at("out");
     (*model_load_blob_objects)["path"] = blob_object;
-    auto op_attribute =
-        OpInterpUtil::InferOpAttribute(*model_load_op_conf, scope, *model_load_blob_objects);
+    const auto& op_attribute = CHECK_JUST(
+        OpInterpUtil::InferOpAttribute(*model_load_op_conf, scope, *model_load_blob_objects));
     auto parallel_conf =
         std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
     const auto* boxing_util = Global<ForeignBoxingUtil>::Get();
-    builder->StatelessCall(op_attribute, parallel_conf, model_load_blob_objects,
-                           std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util, _1, _2, _3));
+    CHECK_JUST(
+        builder->StatelessCall(op_attribute, parallel_conf, model_load_blob_objects,
+                               std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util, _1, _2, _3)));
   };
 
-  LogicalRun(build_model_io_path_input_instruction).GetOrThrow();
-  LogicalRun(build_feed_path_instruction).GetOrThrow();
-  LogicalRun(build_model_load_instruction).GetOrThrow();
+  JUST(LogicalRun(*build_model_io_path_input_instruction));
+  JUST(LogicalRun(*build_feed_path_instruction));
+  JUST(LogicalRun(build_model_load_instruction));
   return model_load_blob_objects->at("out_0");
 }
 
-/*static*/ void OpInterpUtil::Assign(
+/*static*/ Maybe<void> OpInterpUtil::Assign(
     const std::shared_ptr<compatible_py::BlobObject>& target_blob_object,
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  auto BuildAssignInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+  auto build_assign_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
     const auto* boxing_util = Global<ForeignBoxingUtil>::Get();
     auto new_parallel_desc_symbol = boxing_util->TryReplaceDeviceTag(
         builder, target_blob_object->parallel_desc_symbol(), "cpu");
@@ -189,31 +193,32 @@ OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
         boxing_util->BoxingTo(builder, blob_object, consumer_op_arg_parallel_attr);
     boxing_util->Assign(builder, target_blob_object, tmp_blob_object);
   };
-  LogicalRun(BuildAssignInstruction).GetOrThrow();
+  return LogicalRun(build_assign_instruction);
 }
 
-/*static*/ void OpInterpUtil::InitVariableOutputBlob(const std::shared_ptr<Session>& session,
-                                                     const std::shared_ptr<Tensor>& output,
-                                                     const OpAttribute& op_attribute) {
+/*static*/ Maybe<void> OpInterpUtil::InitVariableOutputBlob(const std::shared_ptr<Session>& session,
+                                                            const std::shared_ptr<Tensor>& output,
+                                                            const OpAttribute& op_attribute) {
   const auto& op_conf = op_attribute.op_conf();
   const auto& snapshot_path = session->snapshot_mgr()->GetSnapshotPath(op_conf.name());
 
   std::shared_ptr<compatible_py::BlobObject> temp_blob_object;
   if (snapshot_path.empty()) {
-    temp_blob_object = OpInterpUtil::EagerRunModelInit(op_conf);
+    temp_blob_object = JUST(OpInterpUtil::EagerRunModelInit(op_conf));
   } else {
-    temp_blob_object = OpInterpUtil::EagerRunModelLoad(op_conf, snapshot_path);
+    temp_blob_object = JUST(OpInterpUtil::EagerRunModelLoad(op_conf, snapshot_path));
   }
   auto target_blob_object = dynamic_cast<DeterminedTensor*>(output.get())->blob_object();
-  OpInterpUtil::Assign(target_blob_object, temp_blob_object);
+  return OpInterpUtil::Assign(target_blob_object, temp_blob_object);
 }
 
-/*static*/ std::shared_ptr<cfg::OpAttribute> OpInterpUtil::InferOpAttribute(
+/*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::InferOpAttribute(
     const OperatorConf& op_conf, const std::shared_ptr<Scope>& scope,
     const Bn2BlobObjectMap& ibn2blob_object) {
   // TODO(): Remove const_cast.
   auto& mutable_op_conf = const_cast<OperatorConf&>(op_conf);
-  mutable_op_conf.set_scope_symbol_id(scope->symbol_id().GetOrThrow());
+  const auto& symbol_id = JUST(scope->symbol_id());
+  mutable_op_conf.set_scope_symbol_id(symbol_id);
   OpNodeSignature upstream_signature;
   if (ibn2blob_object.size()) {
     std::shared_ptr<cfg::OpNodeSignature> cfg_upstream_signature(new cfg::OpNodeSignature);
@@ -223,8 +228,7 @@ OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
     }
     cfg_upstream_signature->ToProto(&upstream_signature);
   }
-  const auto&& op =
-      ConstructAndInferOp(mutable_op_conf, upstream_signature, *scope).GetPtrOrThrow();
+  const auto& op = JUST(ConstructAndInferOp(mutable_op_conf, upstream_signature, *scope));
   const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
   return std::make_shared<cfg::OpAttribute>(*op_attribute);
 }
