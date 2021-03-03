@@ -1,6 +1,8 @@
 include(python)
 # main cpp
+if (NOT APPLE)
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
+endif()
 
 function(oneflow_add_executable)
   if (BUILD_CUDA)
