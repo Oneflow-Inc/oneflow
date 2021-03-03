@@ -40,7 +40,6 @@ class ModelUpdateConfCompatiblePass final : public JobPass {
 };
 
 Maybe<void> ModelUpdateConfCompatiblePass::Apply(const OpGraph& op_graph, Job* job) const {
-  JobBuilder job_builder(job);
   const TrainConf& train_conf = job->job_conf().train_conf();
   const bool use_model_update_conf =
       train_conf.has_model_update_conf() || train_conf.has_primary_lr()
