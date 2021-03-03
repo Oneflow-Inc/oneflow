@@ -17,12 +17,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_RPC_INCLUDE_CLIENT_
 #define ONEFLOW_CORE_RPC_INCLUDE_CLIENT_
 
-#ifdef RPC_CLIENT_GRPC
+#ifdef RPC_BACKEND_GRPC
 #include "oneflow/core/rpc/include/gprc/rpc_client.h"
-#endif  // RPC_CLIENT_GRPC
+#endif  // RPC_BACKEND_GRPC
 
-#ifdef RPC_CLIENT_LOCAL
+#ifdef RPC_BACKEND_LOCAL
 #include "oneflow/core/rpc/include/local/rpc_client.h"
-#endif  // RPC_CLIENT_LOCAL
+#endif  // RPC_BACKEND_LOCAL
 
 #endif  // ONEFLOW_CORE_RPC_INCLUDE_CLIENT_

@@ -89,7 +89,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.h$")
-    if((NOT RPC_CLIENT STREQUAL "GRPC") AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/control/.*")
+    if((NOT RPC_BACKEND STREQUAL "GRPC") AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/control/.*")
       # pass
     else()
       list(APPEND of_all_obj_cc ${oneflow_single_file})
@@ -152,7 +152,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
       list(APPEND of_all_test_cc ${oneflow_single_file})
     elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/graph/.*\\.cpp$")
     elseif(APPLE AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/comm_network/.*")
-    elseif((NOT RPC_CLIENT STREQUAL "GRPC") AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/control.*")
+    elseif((NOT RPC_BACKEND STREQUAL "GRPC") AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/control.*")
     else()
       # not test file
       list(FIND of_main_cc ${oneflow_single_file} main_found)

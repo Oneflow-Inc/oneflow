@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CONTROL_RPC_CLIENT_H_
-#define ONEFLOW_CORE_CONTROL_RPC_CLIENT_H_
+#ifndef ONEFLOW_CORE_CONTROL_RPC_BACKEND_H_
+#define ONEFLOW_CORE_CONTROL_RPC_BACKEND_H_
 
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/common/protobuf.h"
@@ -82,4 +82,4 @@ class RpcClient {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CONTROL_RPC_CLIENT_H_
+#endif  // ONEFLOW_CORE_CONTROL_RPC_BACKEND_H_
