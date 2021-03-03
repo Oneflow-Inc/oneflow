@@ -369,17 +369,19 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("RawStatelessCall", &RawStatelessCall)
       .def("Build121To", &Build121To);
 
-  m.def("LogicalRun",
-        [](const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
-          return LogicalRun(Build).GetOrThrow();
-        },
-        py::call_guard<py::gil_scoped_release>());
+  m.def(
+      "LogicalRun",
+      [](const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
+        return LogicalRun(Build).GetOrThrow();
+      },
+      py::call_guard<py::gil_scoped_release>());
 
-  m.def("PhysicalRun",
-        [](const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
-          return PhysicalRun(Build).GetOrThrow();
-        },
-        py::call_guard<py::gil_scoped_release>());
+  m.def(
+      "PhysicalRun",
+      [](const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
+        return PhysicalRun(Build).GetOrThrow();
+      },
+      py::call_guard<py::gil_scoped_release>());
 }
 
 }  // namespace oneflow
