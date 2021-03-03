@@ -90,6 +90,8 @@ class TestSize(flow.unittest.TestCase):
         test_case.assertEqual(size.index(4), 3)
         test_case.assertEqual(size.index(4, start=4), 4)
         with test_case.assertRaises(ValueError):
+            size.index(4, start=0, end=3)
+        with test_case.assertRaises(ValueError):
             size.index(5)
         with test_case.assertRaises(ValueError):
             size.index(2, start=3)

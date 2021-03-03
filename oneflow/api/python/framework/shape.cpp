@@ -57,7 +57,7 @@ struct ShapeExportUtil final {
     if (end > shape.dim_vec().size()) { end = shape.dim_vec().size(); }
     const auto& it =
         std::find(shape.dim_vec().begin() + start, shape.dim_vec().begin() + end, value);
-    if (it == shape.dim_vec().end()) {
+    if (it == shape.dim_vec().begin() + end) {
       throw std::invalid_argument("tuple.index(x): x not in tuple");
     }
     return std::distance(shape.dim_vec().begin(), it);
