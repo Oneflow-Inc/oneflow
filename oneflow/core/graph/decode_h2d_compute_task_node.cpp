@@ -43,7 +43,7 @@ void DecodeH2DCompTaskNode::BuildExecGphAndRegst() {
 void DecodeH2DCompTaskNode::InferProducedDataRegstTimeShape() {
   NaiveInferProducedDataRegstTimeShape();
 }
-
+#ifdef WITH_CUDA
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDecodeH2D)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
       auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
@@ -51,6 +51,7 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDeco
       CHECK_NOTNULL(cuda_stream_index_generator);
       return cuda_stream_index_generator->GenerateDecodeH2DStreamIndex();
     });
+#endif
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kDecodeH2D)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {

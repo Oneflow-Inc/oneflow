@@ -70,6 +70,7 @@ void AccCompTaskNode::BuildExecGphAndRegst() {
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("acc", AccCompTaskNode);
 
+#ifdef WITH_CUDA
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kAcc)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
       auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
@@ -77,6 +78,7 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kAcc)
       CHECK_NOTNULL(cuda_stream_index_generator);
       return cuda_stream_index_generator->GenerateComputeStreamIndex();
     });
+#endif
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kAcc)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {

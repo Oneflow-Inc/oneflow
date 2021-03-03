@@ -195,6 +195,7 @@ void NormalForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
+#ifdef WITH_CUDA
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kNormalForward)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
       auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
@@ -202,6 +203,7 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kNorm
       CHECK_NOTNULL(cuda_stream_index_generator);
       return cuda_stream_index_generator->GenerateComputeStreamIndex();
     });
+#endif
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kNormalForward)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {

@@ -19,6 +19,7 @@ namespace oneflow {
 
 REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kCallbackNotify, 1);
 
+#ifdef WITH_CUDA
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kCallbackNotify)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
       auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
@@ -26,6 +27,7 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kCall
       CHECK_NOTNULL(cuda_stream_index_generator);
       return cuda_stream_index_generator->GenerateComputeStreamIndex();
     });
+#endif
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCallbackNotify)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {

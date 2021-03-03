@@ -64,6 +64,8 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kFAKEDEVICE, TaskType
       return generator->GenerateComputeStreamIndex();
     });
 
+
+#ifdef WITH_CUDA
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDeviceTick)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
       auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
@@ -71,6 +73,7 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDevi
       CHECK_NOTNULL(cuda_stream_index_generator);
       return cuda_stream_index_generator->GenerateComputeStreamIndex();
     });
+#endif
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kDeviceTick)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {

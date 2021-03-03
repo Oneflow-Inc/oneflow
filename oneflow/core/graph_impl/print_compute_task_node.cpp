@@ -22,6 +22,7 @@ REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kPrint, []() -> size_t {
   return Global<ResourceDesc, ForSession>::Get()->MaxMdSaveWorkerNum();
 });
 
+#ifdef WITH_CUDA
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kPrint)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
       auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
@@ -29,6 +30,7 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kPrin
       CHECK_NOTNULL(cuda_stream_index_generator);
       return cuda_stream_index_generator->GenerateComputeStreamIndex();
     });
+#endif
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kPrint)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
