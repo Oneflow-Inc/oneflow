@@ -47,8 +47,8 @@ class OpExprInterpreter {
   OpExprInterpreter() : self_state_(new OpExprInterpState) {}
   virtual ~OpExprInterpreter() = default;
 
-  virtual void Apply(const OpExpr* op, const TensorList& inputs, TensorList& outputs,
-                     const OpExprInterpState* state) = 0;
+  virtual Maybe<void> Apply(const OpExpr* op, const TensorList& inputs, TensorList& outputs,
+                            const OpExprInterpState* state) = 0;
 
   void ResetSelfState();
   std::shared_ptr<OpExprInterpState> state() const { return self_state_; }
@@ -81,17 +81,17 @@ class NormalInterpreter : public OpExprInterpreter {
   std::shared_ptr<OpExprInterpContext> context_;
 };
 
-#define DECLARE_NORMAL_APPLY_FUNC(op_type)                                                         \
-  virtual void Apply_(const op_type##Expr* op_expr, const TensorList& inputs, TensorList& outputs, \
-                      const OpExprInterpState* state);
+#define DECLARE_NORMAL_APPLY_FUNC(op_type)                                           \
+  virtual Maybe<void> Apply_(const op_type##Expr* op_expr, const TensorList& inputs, \
+                             TensorList& outputs, const OpExprInterpState* state);
 
 class LazyInterpreter : public NormalInterpreter {
  public:
   LazyInterpreter(const std::shared_ptr<OpExprInterpContext>& context)
       : NormalInterpreter(context) {}
 
-  void Apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
-             const OpExprInterpState* state) override;
+  Maybe<void> Apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
+                    const OpExprInterpState* state) override;
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(BuiltinOp);
@@ -103,8 +103,8 @@ class EagerInterpreter : public NormalInterpreter {
   EagerInterpreter(const std::shared_ptr<OpExprInterpContext>& context)
       : NormalInterpreter(context) {}
 
-  void Apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
-             const OpExprInterpState* state) override;
+  Maybe<void> Apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
+                    const OpExprInterpState* state) override;
 
  private:
   FOR_ALL_OPS(DECLARE_NORMAL_APPLY_FUNC);
@@ -119,8 +119,8 @@ class AutogradInterpreter : public OpExprInterpreter {
   AutogradInterpreter(NormalInterpreter* normal_interp)
       : OpExprInterpreter(), normal_interp_(normal_interp) {}
 
-  void Apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
-             const OpExprInterpState* state) override;
+  Maybe<void> Apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
+                    const OpExprInterpState* state) override;
 
  private:
   NormalInterpreter* normal_interp_ = nullptr;

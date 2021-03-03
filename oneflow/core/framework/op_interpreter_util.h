@@ -30,45 +30,46 @@ using TensorList = std::vector<std::shared_ptr<Tensor>>;
 
 class OpInterpUtil {
  public:
-  static std::shared_ptr<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr* op_expr);
+  static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr* op_expr);
 
-  static std::shared_ptr<cfg::OpAttribute> AddBuiltinOpAndInferOpAttribute(
+  static Maybe<cfg::OpAttribute> AddBuiltinOpAndInferOpAttribute(
       const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled);
 
-  static std::shared_ptr<cfg::OpAttribute> AddBuiltinOpAndInferOpAttribute(
+  static Maybe<cfg::OpAttribute> AddBuiltinOpAndInferOpAttribute(
       const BuiltinOpExpr* op_expr, const std::shared_ptr<Scope>& scope,
       const bool is_mirrored_strategy_enabled);
 
-  static void InitVariableOutputBlob(const std::shared_ptr<Session>& session,
-                                     const std::shared_ptr<Tensor>& output,
-                                     const OpAttribute& op_attribute);
+  static Maybe<void> InitVariableOutputBlob(const std::shared_ptr<Session>& session,
+                                            const std::shared_ptr<Tensor>& output,
+                                            const OpAttribute& op_attribute);
 
  private:
-  static std::shared_ptr<OperatorConf> GenModelInitOpConf(const OperatorConf& variable_conf);
-  static std::shared_ptr<OperatorConf> GenModelIOPathInputOpConf();
-  static std::shared_ptr<OperatorConf> GenModelLoadOpConf(const OperatorConf& variable_conf,
-                                                          const OperatorConf& path_input_op_conf);
+  static Maybe<OperatorConf> GenModelInitOpConf(const OperatorConf& variable_conf);
+  static Maybe<OperatorConf> GenModelIOPathInputOpConf();
+  static Maybe<OperatorConf> GenModelLoadOpConf(const OperatorConf& variable_conf,
+                                                const OperatorConf& path_input_op_conf);
 
   using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
 
-  static std::shared_ptr<cfg::OpAttribute> InferOpAttribute(
-      const OperatorConf& op_conf, const std::shared_ptr<Scope>& scope,
-      const Bn2BlobObjectMap& ibn2blob_object);
+  static Maybe<cfg::OpAttribute> InferOpAttribute(const OperatorConf& op_conf,
+                                                  const std::shared_ptr<Scope>& scope,
+                                                  const Bn2BlobObjectMap& ibn2blob_object);
 
-  static std::function<void(const std::shared_ptr<InstructionsBuilder>&)>
+  static Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
   BuildModelInitOrIOPathInputInstruction(const OperatorConf& op_conf,
                                          const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object);
 
-  static std::function<void(const std::shared_ptr<InstructionsBuilder>&)> BuildFeedPathInstruction(
-      const std::string& path, const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object);
+  static Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
+  BuildFeedPathInstruction(const std::string& path,
+                           const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object);
 
-  static std::shared_ptr<compatible_py::BlobObject> EagerRunModelInit(const OperatorConf& op_conf);
+  static Maybe<compatible_py::BlobObject> EagerRunModelInit(const OperatorConf& op_conf);
 
-  static std::shared_ptr<compatible_py::BlobObject> EagerRunModelLoad(
-      const OperatorConf& op_conf, const std::string& snapshot_path);
+  static Maybe<compatible_py::BlobObject> EagerRunModelLoad(const OperatorConf& op_conf,
+                                                            const std::string& snapshot_path);
 
-  static void Assign(const std::shared_ptr<compatible_py::BlobObject>& target_blob_object,
-                     const std::shared_ptr<compatible_py::BlobObject>& blob_object);
+  static Maybe<void> Assign(const std::shared_ptr<compatible_py::BlobObject>& target_blob_object,
+                            const std::shared_ptr<compatible_py::BlobObject>& blob_object);
 };
 
 }  // namespace one
