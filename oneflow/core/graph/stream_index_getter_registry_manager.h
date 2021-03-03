@@ -35,6 +35,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_stream_index.h"
 #endif
+#include "oneflow/core/device/fake_device_stream_index.h"
 
 namespace oneflow {
 

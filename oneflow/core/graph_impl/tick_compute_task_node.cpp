@@ -56,8 +56,13 @@ void TickCompTaskNode::InferProducedDataRegstTimeShape() {
 
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kTick);
 
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kFAKEDEVICE, TaskType::kTick)
-    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t { return 0; });
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kFAKEDEVICE, TaskType::kDeviceTick)
+    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
+      auto* generator = dynamic_cast<FakeDeviceStreamIndexGenerator*>(
+          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
+      CHECK_NOTNULL(generator);
+      return generator->GenerateComputeStreamIndex();
+    });
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kTick)
     .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 
+#include "oneflow/core/device/fake_device_stream_index.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/logical_node.h"
@@ -211,6 +212,11 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kNorm
     });
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kFAKEDEVICE, TaskType::kNormalForward)
-    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t { return 0; });
+    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
+      auto* generator = dynamic_cast<FakeDeviceStreamIndexGenerator*>(
+          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
+      CHECK_NOTNULL(generator);
+      return generator->GenerateComputeStreamIndex();
+    });
 
 }  // namespace oneflow

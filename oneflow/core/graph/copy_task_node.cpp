@@ -63,15 +63,13 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, Devi
   set_machine_id(machine_id);
   DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
                      static_cast<DeviceId::device_index_t>(dev_phy_id)};
-  // auto* stream_index_generator =
-  //     Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
+  auto* stream_index_generator =
+      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
   StreamId::stream_index_t stream_index = 0;
   if (copy_type == CopyHdOpConf::H2D) {
-    // stream_index = stream_index_generator->GenerateH2DStreamIndex();
-    stream_index = 1;
+    stream_index = stream_index_generator->GenerateH2DStreamIndex();
   } else if (copy_type == CopyHdOpConf::D2H) {
-    // stream_index = stream_index_generator->GenerateD2HStreamIndex();
-    stream_index = 2;
+    stream_index = stream_index_generator->GenerateD2HStreamIndex();
   } else {
     UNIMPLEMENTED();
   }
