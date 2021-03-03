@@ -42,7 +42,7 @@ struct ShapeExportUtil final {
     ss << "flow.Size([";
     for (int64_t dim : shape.dim_vec()) {
       ss << dim;
-      if (++idx != dim_vec.size()) { ss << ", "; }
+      if (++idx != shape.dim_vec().size()) { ss << ", "; }
     }
     ss << "])";
     return ss.str();
