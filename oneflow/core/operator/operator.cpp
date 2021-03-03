@@ -414,12 +414,12 @@ Maybe<void> Operator::InferSbpSignatureIf(
     for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0); }
     for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0); }
   } else if (parallel_desc.parallel_num() > 1) {
-    InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
-                      parallel_desc);
+    JUST(InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
+                           parallel_desc));
   } else {
     UNIMPLEMENTED();
   }
-  FillSbpSignature(signature);
+  JUST(FillSbpSignature(signature));
   return Maybe<void>::Ok();
 }
 
