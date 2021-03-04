@@ -149,6 +149,7 @@ jobs:
         env:
           test_suite: ${{matrix.test_suite }}
         run: |
+          set -x
           cat build.${{ matrix.test_suite }}.env >> $GITHUB_ENV
           extra_docker_args=""
           extra_docker_args+=" --name ${container_name}"
