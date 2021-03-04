@@ -21,7 +21,9 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/control.pb.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/rpc/include/base.h"
+#include "oneflow/core/rpc/include/base/rpc.h"
+#include "oneflow/core/common/function_traits.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -74,6 +76,34 @@ class RpcClient : RpcClientBase {
 
   std::mutex done_names_mtx_;
   HashSet<std::string> done_names_;
+};
+
+class RpcServer : RpcServerBase {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RpcServer);
+  virtual ~RpcServer();
+
+ protected:
+  RpcServer() {}
+  void HandleRpcs();
+  void Init();
+
+  void EnqueueRequests() {}
+
+  template<typename F>
+  void Add(F f) {
+    using args_type = typename function_traits<F>::args_type;
+    using arg_type =
+        typename std::remove_pointer<typename std::tuple_element<0, args_type>::type>::type;
+  }
+
+  std::thread loop_thread_;
+  // TryLock, NotifyDone, WaitUntilDone
+  HashMap<std::string, void*> name2lock_status_;
+  // PushKV, ClearKV, PullKV
+  HashMap<std::string, std::string> kv_;
+  // IncreaseCount, EraseCount
+  HashMap<std::string, int32_t> count_;
 };
 
 }  // namespace oneflow

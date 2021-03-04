@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CONTROL_CTRL_CLIENT_H_
 #define ONEFLOW_CORE_CONTROL_CTRL_CLIENT_H_
 
-#include "oneflow/core/rpc/include/client.h"
+#include "oneflow/core/control/rpc_client.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 
 namespace oneflow {

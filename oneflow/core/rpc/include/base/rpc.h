@@ -59,6 +59,31 @@ class RpcClientBase {
   HashSet<std::string> done_names_;
 };
 
+class RpcServerBase {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RpcServerBase);
+  virtual ~RpcServerBase();
+
+ protected:
+  RpcServerBase() {}
+  virtual void HandleRpcs() = 0;
+  virtual void Init() = 0;
+
+  virtual void EnqueueRequests() {}
+
+  template<typename F>
+  void Add(F f) {}
+
+  std::thread loop_thread_;
+  // Barrier
+  // TryLock, NotifyDone, WaitUntilDone
+  HashMap<std::string, void*> name2lock_status_;
+  // PushKV, ClearKV, PullKV
+  HashMap<std::string, std::string> kv_;
+  // IncreaseCount, EraseCount
+  HashMap<std::string, int32_t> count_;
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_RPC_INCLUDE_BASE_
