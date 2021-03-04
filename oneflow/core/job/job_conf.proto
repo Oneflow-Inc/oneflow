@@ -91,6 +91,21 @@ message OptimizerConf {
   }
 }
 
+message NormalModelUpdateOpUserConf {
+  optional LearningRateDecayConf learning_rate_decay = 1;
+  optional WarmupConf warmup_conf = 2;
+  optional ClipConf clip_conf = 3;
+  optional WeightDecayConf weight_decay_conf = 4;
+  oneof normal_mdupdt {
+    NaiveModelUpdateConf naive_conf = 1000;
+    MomentumModelUpdateConf momentum_conf = 1001;
+    RMSPropModelUpdateConf rmsprop_conf = 1002;
+    LARSModelUpdateConf lars_conf = 1003;
+    AdamModelUpdateConf adam_conf = 1004;
+    LazyAdamModelUpdateConf lazy_adam_conf = 1005;
+    LambModelUpdateConf lamb_conf = 1006;
+  }
+}
 
 message DynamicLossScalePolicy {
   optional float initial_loss_scale = 1 [default = 1073741824.0];
@@ -106,6 +121,12 @@ message TrainConf {
     float loss_scale_factor = 4 [default = 1];
     DynamicLossScalePolicy dynamic_loss_scale_policy = 5;
   }
+  // Deprecated model update conf, will be removed later.
+  optional NormalModelUpdateOpUserConf model_update_conf = 101;
+  optional float primary_lr = 102;
+  optional float secondary_lr = 103;
+  optional string primary_lr_lbn = 104;
+  optional string secondary_lr_lbn = 105;
 }
 
 message PredictConf {

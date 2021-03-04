@@ -53,8 +53,7 @@ class ModelInitV2Op : public Operator {
   }
 
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override {
+                                const ParallelContext* parallel_ctx) const override {
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     out->set_data_type(DataType::kFloat);
     out->mut_shape() = Shape({1});
@@ -95,8 +94,7 @@ class ModelLoadV2Op : public Operator {
   }
 
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override {
+                                const ParallelContext* parallel_ctx) const override {
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     out->set_data_type(DataType::kFloat);
     out->mut_shape() = Shape({1});
@@ -142,8 +140,7 @@ class ModelSaveV2Op final : public Operator {
   }
 
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override {
+                                const ParallelContext* parallel_ctx) const override {
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     out->set_data_type(DataType::kFloat);
     out->mut_shape() = Shape({1});
