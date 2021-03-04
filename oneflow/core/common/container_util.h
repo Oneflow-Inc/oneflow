@@ -16,21 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_CONTAINER_UTIL_H_
 #define ONEFLOW_CORE_COMMON_CONTAINER_UTIL_H_
 
-#include <unordered_map>
-#include <unordered_set>
+#include "oneflow/core/common/using.h"
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
-
-#ifndef USING_HASH_CONTAINER
-template<typename Key, typename T, typename Hash = std::hash<Key>>
-using HashMap = std::unordered_map<Key, T, Hash>;
-
-template<typename Key, typename Hash = std::hash<Key>>
-using HashSet = std::unordered_set<Key, Hash>;
-#define USING_HASH_CONTAINER
-#endif  // USING_HASH_CONTAINER
 
 template<typename MapT, typename KeyT>
 scalar_or_const_ref_t<typename MapT::mapped_type> MapAtOrDefault(const MapT& map, const KeyT& key) {
