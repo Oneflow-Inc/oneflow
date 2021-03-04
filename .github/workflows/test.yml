@@ -105,7 +105,7 @@ jobs:
         if: always()
         run: |
           docker rm -f ${container_name} || true
-      - name: Setting shared env
+      - name: Saving shared env
         run: |
           mkdir -p $sha_dir/whl
           cp -r ${wheelhouse_dir} $sha_dir/whl
@@ -117,7 +117,7 @@ jobs:
             cp -r ${bin_dir} $sha_dir/bin
             echo "remote_bin_dir=$(hostname):$sha_dir/bin" >> build.${{ matrix.test_suite }}.env
           fi
-      - name: Upload math result for job 1
+      - name: Upload shared env
         uses: actions/upload-artifact@v2
         with:
           name: build.${{ matrix.test_suite }}.env
@@ -141,7 +141,7 @@ jobs:
     runs-on: [self-hosted, linux, release]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - name: Download env result
+      - name: Download shared env
         uses: actions/download-artifact@v2
         with:
           name: build.${{ matrix.test_suite }}.env
