@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/common/str_util.h"
 
 namespace py = pybind11;
 
@@ -36,9 +37,7 @@ struct DeviceExportUtil final {
     int device_id = 0;
     if (pos < type_and_id.size()) {
       std::string id = type_and_id.substr(pos + 1);
-      for (const auto& c : id) {
-        if (!std::isalnum(c)) { throw std::runtime_error("Invalid device string: " + type_and_id); }
-      }
+      if (!IsStrInt(id)) { throw std::runtime_error("Invalid device string: " + type_and_id); }
       device_id = std::stoi(id);
       if (type == "cpu" && device_id != 0) {
         throw std::runtime_error("CPU device index must be 0");
