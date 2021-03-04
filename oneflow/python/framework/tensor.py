@@ -34,7 +34,7 @@ class Tensor:
         determining_initializer=None,
     ):
         dtype = dtype if dtype is not None else oneflow_api.float32
-        device = device if device is not None else oneflow_api.device("cpu", 0)
+        device = device if device is not None else oneflow_api.device("cpu:0")
         self._local_or_consistent_tensor = None
         self._undetermined_tensor = UndeterminedTensor(
             shape,

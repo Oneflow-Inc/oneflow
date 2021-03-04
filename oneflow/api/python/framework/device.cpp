@@ -22,11 +22,22 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+namespace {
+
+struct DeviceExportUtil final {
+  static std::shared_ptr<Device> MakeDevice(const std::string& type_and_id) {
+
+    std::string type = "";
+    int device_id = 0;
+    return std::make_shared<Device>(type, device_id);
+  }
+};
+
+}
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Device, std::shared_ptr<Device>>(m, "device")
-      .def(py::init([](const std::string& type, int device_id) {
-        return std::make_shared<Device>(type, device_id);
-      }))
+      .def(py::init(&DeviceExportUtil::MakeDevice)) 
       .def_property_readonly("type", &Device::type)
       .def_property_readonly("index", &Device::device_id)
       .def("__str__", &Device::ToString)
