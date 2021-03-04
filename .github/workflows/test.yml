@@ -279,5 +279,3 @@ jobs:
         run: |
           ssh $builder_host rm -rf $sha_dir
           docker rm -f ${container_name} || true
-
-# TODO clean up pips if the pr is closed
