@@ -135,14 +135,6 @@ class Session(object):
         return self.job_name2name_scope_stack_
 
     @property
-    def instruction_list(self):
-        return self.sess_.instruction_list()
-
-    @property
-    def eager_symbol_list(self):
-        return self.sess_.eager_symbol_list()
-
-    @property
     def backward_blob_register(self):
         return self.backward_blob_register_
 
