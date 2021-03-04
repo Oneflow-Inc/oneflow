@@ -145,6 +145,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void DumpLogicalBlobDesc(Job* job) const;
   void DumpSbpSignature(Job* job) const;
   void DumpOpTimeShape(Job* job) const;
+  void DumpArgSignature(Job* job) const;
 
   Maybe<void> Init(const Job& job);
 

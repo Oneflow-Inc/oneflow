@@ -30,11 +30,10 @@ class IndexedSlicesReduceSumOp final : public Operator {
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override;
+                                const ParallelContext* parallel_ctx) const override;
   Maybe<void> InferInternalBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const override;
+      const ParallelContext* parallel_ctx) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
@@ -86,13 +85,13 @@ Maybe<void> IndexedSlicesReduceSumOp::InferLogicalOutBlobDescs(
 
 Maybe<void> IndexedSlicesReduceSumOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> IndexedSlicesReduceSumOp::InferInternalBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc* x_indices = GetBlobDesc4BnInOp("x_indices");
   const BlobDesc* x_values = GetBlobDesc4BnInOp("x_values");
   CHECK_LT_OR_RETURN(x_indices->shape().NumAxes(), x_values->shape().NumAxes());
