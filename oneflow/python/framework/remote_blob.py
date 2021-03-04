@@ -150,7 +150,8 @@ def sub_consistent_blob_list(self):
     raise NotImplementedError
 
 
-def numpy(self):
+def numpy(self, rank=None):
+    assert rank is None or rank == 0
     return self._Numpy()
 
 

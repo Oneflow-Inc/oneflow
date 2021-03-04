@@ -429,4 +429,8 @@ def _MakeHandler4ParallelIdAndLocalBlob(blob_watched, handler):
 
 
 def GetTypeAnnotation(blob_watched):
-    return oft.Numpy
+    # TODO(chengcheng): oft.Numpy support dynamic
+    if not blob_watched.is_dynamic:
+        return oft.Numpy
+    else:
+        return oft.ListNumpy
