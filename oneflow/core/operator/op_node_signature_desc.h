@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_OPERATOR_SIG_DESC_H_
 #define ONEFLOW_CORE_OPERATOR_SIG_DESC_H_
 
-#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/job/parallel_signature.pb.h"
 #include "oneflow/core/register/blob_desc.h"
@@ -24,12 +24,21 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace cfg {
+
+class OpNodeSignature;
+}
+
 class OpNodeSignatureDesc final {
  public:
   OpNodeSignatureDesc(const OpNodeSignatureDesc&) = delete;
   OpNodeSignatureDesc(OpNodeSignatureDesc&&) = delete;
-  OpNodeSignatureDesc(const OpNodeSignature& op_node_signature);
+  OpNodeSignatureDesc(int64_t symbol_id, const OpNodeSignature& op_node_signature);
 
+  const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
+  const std::shared_ptr<cfg::OpNodeSignature>& cfg_op_node_signature() const {
+    return cfg_op_node_signature_;
+  }
   const SbpSignature& sbp_signature() const { return op_node_signature_.sbp_signature(); }
   const ParallelSignature& parallel_signature() const {
     return op_node_signature_.parallel_signature();
@@ -38,7 +47,9 @@ class OpNodeSignatureDesc final {
   Maybe<const BlobDesc&> LogicalBlobDesc4BnInOp(const std::string& bn_in_op) const;
 
  private:
+  Maybe<int64_t> symbol_id_;
   OpNodeSignature op_node_signature_;
+  std::shared_ptr<cfg::OpNodeSignature> cfg_op_node_signature_;
   HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc_;
 };
 

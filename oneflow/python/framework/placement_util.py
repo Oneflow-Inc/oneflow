@@ -23,6 +23,7 @@ from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow
 import traceback
+import oneflow_api
 
 
 @oneflow_export("device_prior_placement", "fixed_placement")
@@ -54,18 +55,18 @@ def api_placement(
 
     For example:
 
-    If you run program on single machine, you can assign the specified device like this: 
+    If you run program on single machine, you can assign the specified device like this:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         with flow.scope.placement("gpu", "0:0"):
             logits = lenet(images, train=False)
             loss = flow.nn.sparse_softmax_cross_entropy_with_logits(labels, logits, name="softmax_loss")
             flow.losses.add_loss(loss)
 
-    Or you run distributed program, you can assign the specified devices like this: 
+    Or you run distributed program, you can assign the specified devices like this:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         # configure machines ids, ips, etc.
         with flow.scope.placement("gpu", ['0:0-7', '1:0-7']):
@@ -74,9 +75,8 @@ def api_placement(
             flow.losses.add_loss(loss)
 
     """
-    from oneflow.python_gen.compatibility import with_cuda
 
-    if with_cuda == False:
+    if oneflow_api.flags.with_cuda() == False:
         device_tag = "cpu"
     func = enable_if.unique(
         [
@@ -97,10 +97,14 @@ def GetEmptyPlacementScope(device_tag, machine_device_ids):
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
 def GetNormalModePlacementScope(device_tag, machine_device_ids):
+    if isinstance(machine_device_ids, tuple):
+        machine_device_ids = list(machine_device_ids)
+    if not isinstance(machine_device_ids, list):
+        machine_device_ids = [machine_device_ids]
     sess = session_ctx.GetDefaultSession()
     scope = scope_util.MakeScope(
-        lambda old_scope, builder: old_scope.BuildWithNewParallelDesc(
-            builder, device_tag, machine_device_ids
+        lambda old_scope, builder: builder.BuildScopeWithNewParallelDesc(
+            old_scope, device_tag, machine_device_ids
         )
     )
     return scope_util.ScopeContext(scope)
@@ -113,8 +117,8 @@ def GetGlobalModePlacementScope(device_tag, machine_device_ids):
     sess = session_ctx.GetDefaultSession()
 
     def BuildScope(old_scope, builder):
-        return old_scope.BuildWithNewParallelDesc(
-            builder, device_tag, machine_device_ids
+        return builder.BuildScopeWithNewParallelDesc(
+            old_scope, device_tag, machine_device_ids
         )
 
     scope_ctx = scope_util.ScopeContext(scope_util.MakeScope(BuildScope))

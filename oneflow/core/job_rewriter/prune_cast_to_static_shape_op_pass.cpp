@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 
@@ -49,13 +50,16 @@ Maybe<void> PruneCastToStaticShapeOpsPass::Apply(const OpGraph& op_graph,
   });
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
-    if (!op_conf.has_cast_to_static_shape_conf()) { return; }
+    if (!op_conf.has_user_conf()) { return; }
+    const std::string& op_type_name = op_conf.user_conf().op_type_name();
+    if (op_type_name != "cast_to_static_shape") { return; }
     if (!op_conf.ctrl_in_op_name().empty()) { return; }
     if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return; }
     if (op_node->in_edges().size() != 1) { return; }
-    const OpNode* producer = op_node->SoleInEdge()->src_node();
-    const LogicalBlobId& cast_in_lbi = op_node->op().BnInOp2Lbi("in");
-    const LogicalBlobId& cast_out_lbi = op_node->op().BnInOp2Lbi("out");
+    const user_op::UserOpConfWrapper user_op_conf(op_conf);
+    const LogicalBlobId& cast_in_lbi = GenLogicalBlobId(user_op_conf.input("input", 0));
+    const LogicalBlobId& cast_out_lbi = GenLogicalBlobId(user_op_conf.output("output", 0));
+    const OpNode* producer = op_graph.OpNode4OpName(cast_in_lbi.op_name());
     const BlobDesc& cast_in_logical_blob_desc = producer->LogicalBlobDesc4Lbi(cast_in_lbi);
     if (cast_in_logical_blob_desc.is_dynamic()) { return; }
     for (const OpEdge* out_edge : op_node->out_edges()) {

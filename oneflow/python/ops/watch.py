@@ -18,7 +18,6 @@ from __future__ import absolute_import
 import uuid
 from typing import Callable, Optional, Union
 
-import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_ctx
@@ -32,16 +31,17 @@ import oneflow.python.framework.typing_util as oft_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
 from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
-from oneflow.python.framework.remote_blob import ConsistentBlob, MirroredBlob
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager as eager_util
 import oneflow
+from oneflow_api import ConsistentBlob, MirroredBlob
+import oneflow_api
 import inspect
 
 
 @oneflow_export("watch")
 def Watch(
-    blob_watched: remote_blob_util.BlobDef,
+    blob_watched: oneflow_api.BlobDesc,
     handler_or_prompt: Optional[Union[Callable, str]] = None,
 ) -> None:
     r"""Register callback for a blob. The callback function will be called after the computation produce the blob finishes. We can use it to watch the values of Blob. 
@@ -159,7 +159,7 @@ def LazyConsistentWatch(blob_watched, handler):
     op_conf.name = id_util.UniqueStr("ForeignWatch_")
     setattr(op_conf.foreign_watch_conf, "in", blob_watched.unique_name)
     op_conf.foreign_watch_conf.handler_uuid = handler_uuid
-    device_name = blob_watched.parallel_conf.device_name[0]
+    device_name = blob_watched.parallel_conf.device_name(0)
     with oneflow.scope.placement("cpu", "0:0"):
         compile_context.CurJobAddOp(op_conf)
     watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)
@@ -167,7 +167,7 @@ def LazyConsistentWatch(blob_watched, handler):
 
 @oneflow_export("watch_diff")
 def WatchDiff(
-    blob_watched: remote_blob_util.BlobDef,
+    blob_watched: oneflow_api.BlobDesc,
     handler_or_prompt: Optional[Union[Callable, str]] = None,
 ) -> None:
     r"""Register callback for gradient of a blob. The callback will be called after the computation produce the gradient blob finishes.
@@ -334,7 +334,9 @@ def EagerWatchDiff(blob_watched, handler_or_prompt=None):
     handler = _CheckOrMakeHandler(blob_watched, handler_or_prompt)
     handler_uuid = str(uuid.uuid1())
     lbi_and_uuid = LbiAndDiffWatcherUuidPair()
-    lbi_and_uuid.lbi.CopyFrom(blob_watched.lbi)
+    # Copy cfg LBI to proto LBI
+    lbi_and_uuid.lbi.op_name = blob_watched.lbi.op_name()
+    lbi_and_uuid.lbi.blob_name = blob_watched.lbi.blob_name()
     lbi_and_uuid.watcher_uuid = handler_uuid
     c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
     uuid2watch_handler = session_ctx.GetDefaultSession().uuid2watch_handler
@@ -360,7 +362,9 @@ def LazyWatchDiff(blob_watched, handler_or_prompt=None):
 def LazyConsistentWatchDiff(blob_watched, handler):
     handler_uuid = str(uuid.uuid1())
     lbi_and_uuid = LbiAndDiffWatcherUuidPair()
-    lbi_and_uuid.lbi.CopyFrom(blob_watched.lbi)
+    # Copy cfg LBI to proto LBI
+    lbi_and_uuid.lbi.op_name = blob_watched.lbi.op_name()
+    lbi_and_uuid.lbi.blob_name = blob_watched.lbi.blob_name()
     lbi_and_uuid.watcher_uuid = handler_uuid
     c_api_util.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid)
     watcher_util.BindUuidAndHandler(handler_uuid, blob_watched, handler)

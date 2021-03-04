@@ -36,6 +36,19 @@ class IdCache final {
   IdCache() = default;
   ~IdCache() = default;
 
+  bool Has(const T& symbol_data) const {
+    std::unique_lock<std::mutex> lock(mutex_);
+    const auto& iter = symbol_data2id_.find(symbol_data);
+    return iter != symbol_data2id_.end();
+  }
+
+  Maybe<int64_t> Get(const T& symbol_data) const {
+    std::unique_lock<std::mutex> lock(mutex_);
+    const auto& iter = symbol_data2id_.find(symbol_data);
+    CHECK_OR_RETURN(iter != symbol_data2id_.end());
+    return iter->second;
+  }
+
   Maybe<int64_t> FindOrCreate(const T& symbol_data, const std::function<Maybe<int64_t>()>& Create) {
     {
       std::unique_lock<std::mutex> lock(mutex_);

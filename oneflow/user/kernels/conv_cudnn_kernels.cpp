@@ -165,7 +165,6 @@ class ConvGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-
     CudnnConvArgsAndAlgo<cudnnConvolutionFwdAlgoPerf_t> args_and_algo(
         in, weight, out, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
         job_desc.job_conf().has_cudnn_conv_force_fwd_algo(),

@@ -1,6 +1,7 @@
 #ifndef {{ util.module_header_macro_lock(module) }}
 #define {{ util.module_header_macro_lock(module) }}
 
+#include <functional>
 #include <memory>
 #include <vector>
 #include <map>
@@ -163,6 +164,7 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     {{ util.field_type_name_with_cfg_namespace(field) }}* add_{{ util.field_name(field) }}();
   {% else %}
     void add_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value);
+    void set_{{ util.field_name(field) }}(::std::size_t index, const {{ util.field_type_name_with_cfg_namespace(field) }}& value);
   {% endif %}{# field message type #}
    protected:
     ::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> {{ util.field_name(field) }}_;
@@ -225,16 +227,17 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
     int compare(const _{{ util.class_name(cls) }}_& other);
 
     bool operator==(const _{{ util.class_name(cls) }}_& other) const;
+    std::size_t __CalcHash__() const;
 
     bool operator<(const _{{ util.class_name(cls) }}_& other) const;
   };
 
-  Const{{ util.class_name(cls) }}(const ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>>& data);
+  Const{{ util.class_name(cls) }}(const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& data);
   Const{{ util.class_name(cls) }}(const Const{{ util.class_name(cls) }}&);
   Const{{ util.class_name(cls) }}(Const{{ util.class_name(cls) }}&&) noexcept;
   Const{{ util.class_name(cls) }}();
   Const{{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
-  ~Const{{ util.class_name(cls) }}() override;
+  virtual ~Const{{ util.class_name(cls) }}() override;
 
   using PbMessage = ::google::protobuf::Message;
   void ToProto(PbMessage* proto_{{ util.class_name(cls).lower() }}) const override;
@@ -295,40 +298,38 @@ class Const{{ util.class_name(cls) }} : public ::oneflow::cfg::Message {
 {% endif %}{# field label type #}
 {% endfor %}{# field #}
 {% for oneof in util.message_type_oneofs(cls) %}
+ public:
   {{ util.oneof_enum_name(oneof) }} {{ util.oneof_name(oneof) }}_case() const;
-
+ protected:
   bool has_{{ util.oneof_name(oneof) }}() const;
 {% endfor %}{# oneofs #}
 
+ public:
   ::std::shared_ptr<Const{{ util.class_name(cls) }}> __SharedConst__() const;
   int64_t __Id__() const;
-  // the data of `this` will be moved to the result which is mutable
-  ::std::shared_ptr<{{ util.class_name(cls) }}> __Move__();
- public:
   bool operator==(const Const{{ util.class_name(cls) }}& other) const;
+  std::size_t __CalcHash__() const;
 
   bool operator<(const Const{{ util.class_name(cls) }}& other) const;
  protected:
-  const ::std::unique_ptr<_{{ util.class_name(cls) }}_>& __SharedPtrOrDefault__() const;
-  const ::std::unique_ptr<_{{ util.class_name(cls) }}_>& __SharedPtr__();
-  const ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>>& __SharedUniquePtr__();
+  const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& __SharedPtrOrDefault__() const;
+  const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& __SharedPtr__();
   // use a protected member method to avoid someone change member variable(data_) by Const{{ util.class_name(cls) }}
   void BuildFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }});
-  // use ::std::shared_ptr for sharing reference between mutable object and const object
-  // use ::std::unique_ptr for moving ownership 
-  ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>> data_;
+  
+  ::std::shared_ptr<_{{ util.class_name(cls) }}_> data_;
 };
 
 class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} {
  public:
-  {{ util.class_name(cls) }}(const ::std::shared_ptr<::std::unique_ptr<_{{ util.class_name(cls) }}_>>& data);
+  {{ util.class_name(cls) }}(const ::std::shared_ptr<_{{ util.class_name(cls) }}_>& data);
   {{ util.class_name(cls) }}(const {{ util.class_name(cls) }}& other);
   // enable nothrow for ::std::vector<{{ util.class_name(cls) }}> resize 
   {{ util.class_name(cls) }}({{ util.class_name(cls) }}&&) noexcept;
   {{ util.class_name(cls) }}();
   {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
 
-  ~{{ util.class_name(cls) }}();
+  ~{{ util.class_name(cls) }}() override;
 
   void InitFromProto(const PbMessage& proto_{{ util.class_name(cls).lower() }}) override;
   
@@ -336,6 +337,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
 
 
   bool operator==(const {{ util.class_name(cls) }}& other) const;
+  std::size_t __CalcHash__() const;
   bool operator<(const {{ util.class_name(cls) }}& other) const;
   void Clear();
   void CopyFrom(const {{ util.class_name(cls) }}& other);
@@ -369,6 +371,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   void add_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value);
   // used by pybind11 only
   ::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> shared_mutable_{{ util.field_name(field) }}();
+  void set_{{ util.field_name(field) }}(::std::size_t index, const {{ util.field_type_name_with_cfg_namespace(field) }}& value);
 {% endif %}{# field message type #}
 {% elif util.field_has_oneof_label(field) %}
   void clear_{{ util.field_name(field) }}();
@@ -386,7 +389,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
  public:
   void clear_{{ util.field_name(field) }}();
 
-  const {{ util.field_map_container_name(field) }} & {{ util.field_name(field) }}();
+  const {{ util.field_map_container_name(field) }} & {{ util.field_name(field) }}() const;
 
   {{ util.field_map_container_name(field) }}* mutable_{{ util.field_name(field) }}();
 
@@ -417,6 +420,7 @@ class Const{{ util.field_repeated_container_name(field) }} : public ::oneflow::c
   ~Const{{ util.field_repeated_container_name(field) }}();
 
   bool operator==(const Const{{ util.field_repeated_container_name(field) }}& other) const;
+  std::size_t __CalcHash__() const;
   bool operator<(const Const{{ util.field_repeated_container_name(field) }}& other) const;
   // used by pybind11 only
   ::std::shared_ptr<Const{{ util.field_repeated_container_name(field) }}> __SharedConst__() const;
@@ -432,6 +436,7 @@ class {{ util.field_repeated_container_name(field) }} final : public Const{{ uti
   void CopyFrom(const Const{{ util.field_repeated_container_name(field) }}& other);
   void CopyFrom(const {{ util.field_repeated_container_name(field) }}& other);
   bool operator==(const {{ util.field_repeated_container_name(field) }}& other) const;
+  std::size_t __CalcHash__() const;
   bool operator<(const {{ util.field_repeated_container_name(field) }}& other) const;
   // used by pybind11 only
   ::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> __SharedMutable__();
@@ -452,6 +457,7 @@ class Const{{ util.field_map_container_name(field) }} : public ::oneflow::cfg::_
   ~Const{{ util.field_map_container_name(field) }}();
 
   bool operator==(const Const{{ util.field_map_container_name(field) }}& other) const;
+  std::size_t __CalcHash__() const;
   bool operator<(const Const{{ util.field_map_container_name(field) }}& other) const;
   // used by pybind11 only
   const {{ util.field_map_value_type_name_with_cfg_namespace(field) }}& Get(const {{ util.field_map_key_type_name(field) }}& key) const;
@@ -477,6 +483,7 @@ class {{ util.field_map_container_name(field) }} final : public Const{{ util.fie
   void CopyFrom(const Const{{ util.field_map_container_name(field) }}& other);
   void CopyFrom(const {{ util.field_map_container_name(field) }}& other);
   bool operator==(const {{ util.field_map_container_name(field) }}& other) const;
+  std::size_t __CalcHash__() const;
   bool operator<(const {{ util.field_map_container_name(field) }}& other) const;
   // used by pybind11 only
   ::std::shared_ptr<{{ util.field_map_container_name(field) }}> __SharedMutable__();
@@ -498,12 +505,6 @@ class {{ util.field_map_container_name(field) }} final : public Const{{ util.fie
 {% endfor %}{# field #}
 
 
-inline ::std::shared_ptr<{{ util.class_name(cls) }}> Const{{ util.class_name(cls) }}::__Move__() {
-  if (__Empty__()) { return ::std::make_shared<{{ util.class_name(cls) }}>(); }
-  auto data = ::std::make_shared<::std::unique_ptr<_{{ util.class_name(cls) }}_>>();
-  *data = ::std::move(*data_);
-  return ::std::make_shared<{{ util.class_name(cls) }}>(data);
-}
 {% endif %}{# cls is not entry #}
 {% endfor %}{# cls #}
 
@@ -512,4 +513,45 @@ inline ::std::shared_ptr<{{ util.class_name(cls) }}> Const{{ util.class_name(cls
 {% for package in util.module_package_list(module) %}
 } // namespace {{ package }}
 {% endfor %}{# package #}
+
+namespace std {
+
+{% for enm in util.module_enum_types(module) %}
+template<>
+struct hash<{{ util.module_package_cfg_namespace(module)}}::{{ util.enum_name(enm) }}> {
+  std::size_t operator()({{ util.module_package_cfg_namespace(module)}}::{{ util.enum_name(enm) }} enum_value) const {
+    return static_cast<std::size_t>(enum_value);
+  }
+};
+{% endfor %}{# enm #}
+
+{% for cls in util.module_nested_message_types(module) %}
+{% if not util.class_is_map_entry(cls) %}
+{% for enm in util.message_type_enums(cls) %}
+template<>
+struct hash<{{ util.module_package_cfg_namespace(module)}}::{{ util.enum_name(enm) }}> {
+  std::size_t operator()({{ util.module_package_cfg_namespace(module)}}::{{ util.enum_name(enm) }} enum_value) const {
+    return static_cast<std::size_t>(enum_value);
+  }
+};
+{% endfor %}{# enm #}
+
+template<>
+struct hash<{{ util.module_package_cfg_namespace(module)}}::Const{{ util.class_name(cls) }}> {
+  std::size_t operator()(const {{ util.module_package_cfg_namespace(module)}}::Const{{ util.class_name(cls) }}& s) const {
+    return s.__CalcHash__();
+  }
+};
+
+template<>
+struct hash<{{ util.module_package_cfg_namespace(module)}}::{{ util.class_name(cls) }}> {
+  std::size_t operator()(const {{ util.module_package_cfg_namespace(module)}}::{{ util.class_name(cls) }}& s) const {
+    return s.__CalcHash__();
+  }
+};
+{% endif  %}
+{% endfor %}{# cls #}
+
+}
+
 #endif  // {{ util.module_header_macro_lock(module) }}

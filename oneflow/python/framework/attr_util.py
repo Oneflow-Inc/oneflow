@@ -20,16 +20,16 @@ def SetAttrValue(attr_value, py_value, default_attr_value):
         if py_value is None:
             py_value = True
         assert type(py_value) is bool
-        attr_value.at_bool = py_value
+        attr_value.set_at_bool(py_value)
     elif default_attr_value.HasField("at_int64"):
         assert type(py_value) is int
-        attr_value.at_int64 = py_value
+        attr_value.set_at_int64(py_value)
     elif default_attr_value.HasField("at_double"):
         assert type(py_value) is float
-        attr_value.at_double = py_value
+        attr_value.set_at_double(py_value)
     elif default_attr_value.HasField("at_string"):
         assert type(py_value) is str
-        attr_value.at_string = py_value
+        attr_value.set_at_string(py_value)
     else:
         raise ValueError(
             "config with type %s is invalid. supported types: [bool, int, float, str]"

@@ -25,8 +25,6 @@ struct RegstStatus {
   int64_t regst_desc_id;
   int64_t piece_id;
   int64_t act_id;
-  int32_t col_id;
-  int32_t max_col_id;
 };
 
 class Regst final {
@@ -38,8 +36,6 @@ class Regst final {
   const RegstStatus& status() const { return status_; }
   int64_t piece_id() const { return status_.piece_id; }
   int64_t act_id() const { return status_.act_id; }
-  int32_t col_id() const { return status_.col_id; }
-  int32_t max_col_id() const { return status_.max_col_id; }
   int64_t regst_desc_id() const {
     CHECK_NE(status_.regst_desc_id, -1);
     return status_.regst_desc_id;
@@ -54,14 +50,11 @@ class Regst final {
   Blob* GetMutSoleBlob();
   int64_t GetBlobSize() const { return sorted_blob_vec_.size(); }
   Blob* packed_blob() { return packed_blob_.get(); }
-  bool IsMaxCol() const { return col_id() == max_col_id(); }
   void* comm_net_token() const { return comm_net_token_; }
 
   // Setters
   void set_piece_id(int64_t val) { status_.piece_id = val; }
   void set_act_id(int64_t val) { status_.act_id = val; }
-  void set_col_id(int32_t val) { status_.col_id = val; }
-  void set_max_col_id(int32_t val) { status_.max_col_id = val; }
 
  private:
   friend class RegstMgr;

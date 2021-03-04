@@ -95,9 +95,6 @@ def _run_test(
             )
         return good_step_counter, loss_scale
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-
     count_not_finite = np.array([op_param["count_not_finite"]]).astype(np.int64)
     schedule_job(count_not_finite).get()
     good_step_counter, loss_scale = fetch_job().get()

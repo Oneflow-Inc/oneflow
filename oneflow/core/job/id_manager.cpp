@@ -15,77 +15,37 @@ limitations under the License.
 */
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
-int64_t IDMgr::GetGpuH2DThrdId(int64_t dev_phy_id) const { return gpu_device_num_ + dev_phy_id; }
-int64_t IDMgr::GetGpuD2HThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * 2 + dev_phy_id;
-}
-int64_t IDMgr::GetGpuNcclThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * 3 + dev_phy_id;
-}
-int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * 4 + dev_phy_id;
-}
-int64_t IDMgr::GetGpuDecodeH2DThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * 5 + dev_phy_id;
-}
-int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * GetCudaWorkTypeSize() + dev_phy_id;
-}
-int64_t IDMgr::CommNetThrdId() const {
-  return gpu_device_num_ * GetCudaWorkTypeSize() + cpu_device_num_;
-}
-int64_t IDMgr::TickTockThrdId() const { return CommNetThrdId() + 1; }
-int64_t IDMgr::BaseIndependentThrdId() const { return base_independent_thrd_id_; }
-void IDMgr::UpdateBaseIndependentThrdId(int64_t val) {
-  if (val >= base_independent_thrd_id_) { base_independent_thrd_id_ = val + 1; }
-}
-
-int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id) {
-  int64_t machine_thrd_id = GetMachineThrdId(machine_id, thrd_id);
-  CHECK_LT(machine_thrd_id2num_of_tasks_[machine_thrd_id],
-           (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
-  CHECK_LT(local_work_stream_id, static_cast<int64_t>(1) << local_work_stream_id_bit_num_);
-  return machine_thrd_id | (local_work_stream_id << task_id_bit_num_)
-         | (machine_thrd_id2num_of_tasks_[machine_thrd_id]++);
-}
-
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
-  if (thrd_id < GetCudaWorkTypeSize() * gpu_device_num_) {
-    return DeviceType::kGPU;
-  } else {
-    return DeviceType::kCPU;
-  }
+  return DeserializeStreamIdFromInt64(thrd_id).device_id().device_type();
 }
 
 int64_t IDMgr::GetGpuPhyIdFromThrdId(int64_t thrd_id) const {
-  CHECK_LT(thrd_id, GetCudaWorkTypeSize() * gpu_device_num_);
-  return thrd_id % gpu_device_num_;
+  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id);
+  DeviceId device_id = stream_id.device_id();
+  CHECK_EQ(device_id.device_type(), DeviceType::kGPU);
+  return device_id.device_index();
 }
 
 DeviceType IDMgr::GetDeviceTypeFromActorId(int64_t actor_id) const {
-  int64_t thrd_id = ThrdId4ActorId(actor_id);
-  return GetDeviceTypeFromThrdId(thrd_id);
+  return DeserializeTaskIdFromInt64(actor_id).stream_id().device_id().device_type();
 }
 
 int64_t IDMgr::MachineId4ActorId(int64_t actor_id) const {
-  return actor_id >> (63 - machine_id_bit_num_);
+  // TODO: change this inferface semantics, rank does not indicate machine_id in multi-client
+  return DeserializeTaskIdFromInt64(actor_id).stream_id().device_id().rank();
 }
 
 int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
-  int64_t tmp = (actor_id << machine_id_bit_num_);
-  tmp &= ~(static_cast<int64_t>(1) << 63);
-  return tmp >> (63 - thread_id_bit_num_);
-}
-
-int64_t IDMgr::AllocateLocalWorkStreamId(int64_t machine_id, int64_t thrd_id) {
-  return 100 + (machine_thrd_id2stream_id_cnt_[GetMachineThrdId(machine_id, thrd_id)]++);
+  return SerializeStreamIdToInt64(DeserializeTaskIdFromInt64(actor_id).stream_id());
 }
 
 int64_t IDMgr::GlobalWorkStreamId4TaskId(int64_t task_id) const {
-  return (task_id >> task_id_bit_num_) << task_id_bit_num_;
+  return SerializeStreamIdToInt64(DeserializeTaskIdFromInt64(task_id).stream_id());
 }
 
 int64_t IDMgr::GlobalWorkStreamId4ActorId(int64_t actor_id) const {
@@ -93,28 +53,15 @@ int64_t IDMgr::GlobalWorkStreamId4ActorId(int64_t actor_id) const {
 }
 
 int64_t IDMgr::GlobalThrdId4TaskId(int64_t task_id) const {
-  int shift = local_work_stream_id_bit_num_ + task_id_bit_num_;
-  return (task_id >> shift) << shift;
-}
-
-int64_t IDMgr::LocalWorkStreamId4TaskId(int64_t task_id) const {
-  int64_t tmp = (task_id << (machine_id_bit_num_ + thread_id_bit_num_));
-  tmp &= ~(static_cast<int64_t>(1) << 63);
-  return tmp >> (63 - local_work_stream_id_bit_num_);
-}
-
-int64_t IDMgr::LocalWorkStreamId4ActorId(int64_t actor_id) const {
-  return LocalWorkStreamId4TaskId(actor_id);
-}
-
-int64_t IDMgr::AllocateChainId(int64_t global_work_stream_id) {
-  CHECK_LT(stream_id2chain_cnt_[global_work_stream_id],
-           (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
-  return global_work_stream_id | (stream_id2chain_cnt_[global_work_stream_id]++);
+  return SerializeStreamIdToInt64(DeserializeTaskIdFromInt64(task_id).stream_id());
 }
 
 int64_t IDMgr::PickCpuThrdIdEvenly(int64_t machine_id) {
-  return GetCpuDeviceThrdId(machine_id2num_cpu_thrd_id_picked_[machine_id]++ % cpu_device_num_);
+  DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kCPU,
+                     DeviceId::kCPUDeviceIndex};
+  auto* stream_index_generator = GetStreamIndexGeneratorManager()->GetGenerator(device_id);
+  StreamId stream_id{device_id, stream_index_generator->GenerateComputeStreamIndex()};
+  return SerializeStreamIdToInt64(stream_id);
 }
 
 IDMgr::IDMgr() {
@@ -126,14 +73,6 @@ IDMgr::IDMgr() {
   regst_desc_id_count_ = 0;
   mem_block_id_count_ = 0;
   chunk_id_count_ = 0;
-  base_independent_thrd_id_ = TickTockThrdId() + 1;
-}
-
-int64_t IDMgr::GetMachineThrdId(int64_t machine_id, int64_t thrd_id) {
-  int64_t machine_id64bit = machine_id << (63 - machine_id_bit_num_);
-  int64_t thread_id64bit = thrd_id << (local_work_stream_id_bit_num_ + task_id_bit_num_);
-  int64_t machine_thread_id = machine_id64bit | thread_id64bit;
-  return machine_thread_id;
 }
 
 }  // namespace oneflow

@@ -15,24 +15,44 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/job/scope.cfg.h"
+#include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/vm/symbol_storage.h"
 
 namespace oneflow {
 
-Scope::Scope(const ScopeProto& scope_proto) : scope_proto_(scope_proto) {
+Scope::Scope(const ScopeProto& scope_proto)
+    : auto_increment_id_(0), symbol_id_(Error::SymbolIdUninitialized()), scope_proto_(scope_proto) {
   CHECK_OK(Init()) << scope_proto_.DebugString();
+}
+
+Scope::Scope(int64_t symbol_id, const ScopeProto& scope_proto)
+    : auto_increment_id_(0), symbol_id_(symbol_id), scope_proto_(scope_proto) {}
+
+Maybe<Scope> Scope::New(int64_t symbol_id, const ScopeProto& scope_proto) {
+  auto* ptr = new Scope(symbol_id, scope_proto);
+  std::shared_ptr<Scope> scope(ptr);
+  JUST(scope->Init());
+  return scope;
 }
 
 Maybe<void> Scope::Init() {
   {
-    const auto& storage = *Global<vm::SymbolStorage<JobDesc>>::Get();
-    job_desc_ = storage.GetPtr(scope_proto_.job_desc_symbol_id());
+    const auto& storage = *Global<symbol::Storage<JobDesc>>::Get();
+    job_desc_ = JUST(storage.MaybeGetPtr(scope_proto_.job_desc_symbol_id()));
   }
   {
-    const auto& storage = *Global<vm::SymbolStorage<ParallelDesc>>::Get();
-    device_parallel_desc_ = storage.GetPtr(scope_proto_.device_parallel_desc_symbol_id());
-    host_parallel_desc_ = storage.GetPtr(scope_proto_.host_parallel_desc_symbol_id());
+    const auto& storage = *Global<symbol::Storage<ParallelDesc>>::Get();
+    device_parallel_desc_ =
+        JUST(storage.MaybeGetPtr(scope_proto_.device_parallel_desc_symbol_id()));
+    host_parallel_desc_ = JUST(storage.MaybeGetPtr(scope_proto_.host_parallel_desc_symbol_id()));
+  }
+  {
+    const auto& storage = *Global<symbol::Storage<Scope>>::Get();
+    if (scope_proto_.has_parent_scope_symbol_id()) {
+      parent_scope_symbol_ = JUST(storage.MaybeGetPtr(scope_proto_.parent_scope_symbol_id()));
+    }
   }
   return Maybe<void>::Ok();
 }
@@ -65,6 +85,12 @@ const AttrValue& Scope::GetAttrValue(const std::string& attr_name) const {
   const auto& def_iter = attr_name2attr_def.find(attr_name);
   CHECK(def_iter != attr_name2attr_def.end());
   return def_iter->second.default_val();
+}
+
+Maybe<cfg::ScopeProto> Scope::MakeChildScopeProto() const {
+  auto child = std::make_shared<cfg::ScopeProto>(scope_proto_);
+  child->set_parent_scope_symbol_id(JUST(symbol_id()));
+  return child;
 }
 
 }  // namespace oneflow

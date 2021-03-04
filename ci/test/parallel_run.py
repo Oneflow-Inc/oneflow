@@ -22,6 +22,14 @@ def find_free_port():
         return s.getsockname()[1]
 
 
+def split_and_print(prefix, text):
+    lines = text.splitlines(keepends=True)
+    prefixed = ""
+    for l in lines:
+        prefixed += f"{prefix} {l}"
+    print(prefixed, flush=True)
+
+
 def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
     "CUDA_VISIBLE_DEVICES"
     if gpu_num > 0:
@@ -44,29 +52,44 @@ def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
                 cmd = cmds.pop()
                 cuda_visible_devices = ",".join([str(i) for i in gpu_ids_to_occupy])
                 if verbose:
-                    print("cuda_visible_devices:", cuda_visible_devices, "cmd:", cmd)
+                    print(
+                        "cuda_visible_devices:",
+                        cuda_visible_devices,
+                        "cmd:",
+                        cmd,
+                        flush=True,
+                    )
                 proc = subprocess.Popen(
                     cmd,
                     env=dict(
                         os.environ,
                         CUDA_VISIBLE_DEVICES=cuda_visible_devices,
-                        ONEFLOW_TEST_CTRL_PORT=str(find_free_port()),
+                        ONEFLOW_TEST_MASTER_PORT=str(find_free_port()),
                         ONEFLOW_TEST_LOG_DIR=("./unittest-log-" + str(uuid.uuid4())),
                     ),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    encoding="utf-8",
                     shell=True,
                 )
                 proc2gpu_ids[proc] = gpu_ids_to_occupy
 
             procs_to_release = []
             for proc, gpu_ids in proc2gpu_ids.items():
+                outs = None
+                errs = None
                 try:
-                    proc.wait(timeout=timeout)
+                    outs, errs = proc.communicate(timeout=1)
+                    if outs:
+                        split_and_print(f"[{proc.args}][stdout]", outs)
+                    if errs:
+                        split_and_print(f"[{proc.args}][stderr]", errs)
                     if proc.returncode == 0:
                         procs_to_release.append(proc)
                     else:
-                        for proc in proc2gpu_ids.keys():
-                            proc.kill()
-                            proc.wait()
+                        for proc_to_kill in proc2gpu_ids.keys():
+                            proc_to_kill.kill()
+                            proc_to_kill.wait()
                         raise ValueError("non-zero returncode found", proc.args)
                 except TimeoutExpired:
                     pass

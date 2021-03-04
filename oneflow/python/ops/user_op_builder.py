@@ -30,17 +30,15 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.hob as hob
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
-import oneflow.python.vm.id_util as id_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import random
 import oneflow.python.eager.gradient_util as gradient_util
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow as flow
+import oneflow_api
 import traceback
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 class UserOp(object):
@@ -79,7 +77,12 @@ class UserOp(object):
                 lbi = logical_blob_id_util.LogicalBlobId()
                 lbi.op_name = self.op_conf_.name
                 lbi.blob_name = "{}_{}".format(output_arg_name, i)
-                remote_blob_list.append(self.MakeRemoteBlob(lbi))
+                remote_blob_obj = self.MakeRemoteBlob(lbi)
+                remote_blob_list.append(remote_blob_obj)
+                if flow.eager_execution_enabled():
+                    gradient_util.GetDefaultBackwardBlobRegister().TrySetObject4BlobName(
+                        remote_blob_obj.logical_blob_name, remote_blob_obj.blob_object
+                    )
 
         return tuple(remote_blob_list)
 
@@ -130,7 +133,7 @@ def api_user_op_builder(op_name):
 
     For instance::
         def myargmax(
-            input: remote_blob_util.BlobDef) -> remote_blob_util.BlobDef:
+            input: oneflow_api.BlobDesc) -> oneflow_api.BlobDesc:
             return (
             flow.user_op_builder("myargmax")
             .Op("argmax")
@@ -153,7 +156,7 @@ def api_user_op_builder(op_name):
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_user_op_builder(op_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
     return UserOpConfBuilder(LazyUserOp, op_name, None)
 
@@ -172,7 +175,7 @@ class LazyUserOp(UserOp):
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_user_op_builder(op_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
     return UserOpConfBuilder(EagerUserOp, op_name, None)
 
@@ -191,7 +194,7 @@ class EagerUserOp(UserOp):
 
 @oneflow_export("consistent_user_op_builder")
 def api_consistent_user_op_builder(op_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
     return UserOpConfBuilder(ConsistentUserOp, op_name, None)
 
@@ -229,7 +232,7 @@ class UserOpConfBuilder(object):
         return self.CheckAndComplete().user_op_
 
     def OpName(self, op_name):
-        job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
         op_name = name_scope.GetJobNameScopePrefix(job_name) + op_name
 
         self.user_op_.op_conf_.name = op_name
@@ -326,7 +329,7 @@ class UserOpConfBuilder(object):
 
         attribute = attr_value_pb.AttrValue()
         assert isinstance(attr_name, str)
-        attr_type = c_api_util.GetUserOpAttrType(
+        attr_type = oneflow_api.GetUserOpAttrType(
             self.user_op_.op_conf_.user_conf.op_type_name, attr_name
         )
         if attr_type == attr_value_pb.kAtInt32:
@@ -353,10 +356,14 @@ class UserOpConfBuilder(object):
             attribute.at_shape.dim[:] = list(attr_value)
         elif attr_type == attr_value_pb.kAtDataType:
             assert (
-                isinstance(attr_value.oneflow_proto_dtype, int)
+                isinstance(
+                    oneflow_api.deprecated.GetProtoDtype4OfDtype(attr_value), int
+                )
                 and attr_value in oneflow.dtypes()
             )
-            attribute.at_data_type = attr_value.oneflow_proto_dtype
+            attribute.at_data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(
+                attr_value
+            )
         elif attr_type == attr_value_pb.kAtListInt32:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
@@ -372,11 +379,12 @@ class UserOpConfBuilder(object):
         elif attr_type == attr_value_pb.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
             assert all(
-                isinstance(x.oneflow_proto_dtype, int) and x in oneflow.dtypes()
+                isinstance(oneflow_api.deprecated.GetProtoDtype4OfDtype(x), int)
+                and x in oneflow.dtypes()
                 for x in attr_value
             )
             attribute.at_list_data_type.val[:] = list(
-                [x.oneflow_proto_dtype for x in attr_value]
+                [oneflow_api.deprecated.GetProtoDtype4OfDtype(x) for x in attr_value]
             )
         elif attr_type == attr_value_pb.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
@@ -423,14 +431,14 @@ class UserOpModuleBuilder(UserOpConfBuilder):
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_user_op_module_builder(op_type_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
     return UserOpModuleBuilder(LazyUserOpModule, op_name, op_type_name)
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_logical_user_op_module_builder(op_type_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
     return UserOpModuleBuilder(EagerLogicalUserOpModule, op_name, op_type_name)
 
@@ -457,9 +465,15 @@ class EagerLogicalUserOpModule(UserOpModule, UserOp):
 
     def InitOpKernel(self):
         def BuildInstruction(builder):
-            self.set_opkernel_object(builder.NewOpKernelObject(self.op_conf))
+            if not isinstance(
+                self.op_conf, oneflow_api.oneflow.core.operator.op_conf.OperatorConf
+            ):
+                cfg_op_conf = oneflow_api.deprecated.MakeOpConfByString(
+                    str(self.op_conf)
+                )
+            self.set_opkernel_object(builder.NewOpKernelObject(cfg_op_conf))
 
-        vm_util.LogicalRun(BuildInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildInstruction)
 
     def InferAndTryRun(self):
         assert hob.in_global_mode(None)
@@ -483,14 +497,14 @@ def api_consistent_user_op_module_builder(op_type_name):
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_consistent_user_op_module_builder(op_type_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
     return UserOpModuleBuilder(LazyConsistentUserOpModule, op_name, op_type_name)
 
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def eager_consistent_user_op_module_builder(op_type_name):
-    job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
     return UserOpModuleBuilder(EagerConsistentUserOpModule, op_name, op_type_name)
 
@@ -517,9 +531,15 @@ class EagerConsistentUserOpModule(UserOpModule, UserOp):
 
     def InitOpKernel(self):
         def BuildInstruction(builder):
-            self.set_opkernel_object(builder.NewOpKernelObject(self.op_conf))
+            if not isinstance(
+                self.op_conf, oneflow_api.oneflow.core.operator.op_conf.OperatorConf
+            ):
+                cfg_op_conf = oneflow_api.deprecated.MakeOpConfByString(
+                    str(self.op_conf)
+                )
+            self.set_opkernel_object(builder.NewOpKernelObject(cfg_op_conf))
 
-        vm_util.LogicalRun(BuildInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildInstruction)
 
     def InferAndTryRun(self):
         assert hob.in_global_mode(None)

@@ -27,6 +27,8 @@ class TmpBufferManager final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TmpBufferManager);
   TmpBufferManager(void* ptr, const int64_t num_indices, const int64_t num_values) : ptr_(ptr) {
+    CHECK_NE(num_indices, 0);
+    CHECK_NE(num_values, 0);
     const size_t unique_diff_indices_bytes = GetCudaAlignedSize(num_indices * sizeof(K));
     const size_t unique_diff_values_bytes = GetCudaAlignedSize(num_values * sizeof(T));
     const size_t num_unique_diff_indices_bytes = GetCudaAlignedSize(1 * sizeof(int32_t));
@@ -159,6 +161,18 @@ REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename K>
+user_op::InferTmpSizeFn GenInferTmpSizeFn() {
+  return [](user_op::InferContext* ctx) {
+    const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
+    const user_op::TensorDesc* values = ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
+    const int64_t num_indices = indices->shape().elem_cnt();
+    const int64_t num_values = values->shape().elem_cnt();
+    TmpBufferManager<device_type, T, K> buffer_manager(nullptr, num_indices, num_values);
+    return buffer_manager.GetTotalBufferSize();
+  };
+}
+
+template<DeviceType device_type, typename T, typename K>
 class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
  public:
   IndexedSlicesSGDUpdateKernel() = default;
@@ -170,19 +184,41 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
   }
 
  private:
+  using ReduceSumUtilT = IndexedSlicesReduceSumKernelUtil<device_type, K, T, int32_t>;
+  using MdUpdateUtilT = IndexedSlicesSGDUpdateKernelUtil<device_type, T, K, int32_t>;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff_indices =
         ctx->Tensor4ArgNameAndIndex("model_diff_indices", 0);
     const user_op::Tensor* model_diff_values = ctx->Tensor4ArgNameAndIndex("model_diff_values", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
+    const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const int64_t num_indices = model_diff_indices->shape().elem_cnt();
+    const int64_t num_values = model_diff_values->shape().elem_cnt();
+    if (num_indices == 0) {
+      CHECK_EQ(num_values, 0);
+      return;
+    }
+    CHECK_NE(num_values, 0);
+    CHECK_EQ(num_values % num_indices, 0);
+    const int64_t feature_size = num_values / num_indices;
     auto* kernel_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
     CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
-    IndexedSlicesSGDUpdateKernelUtil<device_type, T, K>::Update(
-        ctx->device_ctx(), model_diff_indices->shape().elem_cnt(), model->shape().At(0),
-        model->shape().Count(1), kernel_state->lower(), learning_rate->dptr<float>(),
-        model_diff_indices->dptr<K>(), model_diff_values->dptr<T>(), model->mut_dptr<T>());
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    TmpBufferManager<device_type, T, K> buffer_manager(tmp_buffer->mut_dptr(), num_indices,
+                                                       num_values);
+    CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
+    ReduceSumUtilT::ReduceSum(
+        ctx->device_ctx(), num_indices, feature_size, model_diff_indices->dptr<K>(),
+        model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
+        buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
+        buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
+    MdUpdateUtilT::Update(ctx->device_ctx(), weight_decay, num_indices, feature_size,
+                          kernel_state->lower(), kernel_state->upper(),
+                          buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate->dptr<float>(),
+                          buffer_manager.UniqueDiffIndicesPtr(),
+                          buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -197,22 +233,12 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
           & (user_op::HobDataType("model", 0) == OF_PP_PAIR_SECOND(data_type_pair))              \
           & (user_op::HobDataType("model_diff_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))  \
           & (user_op::HobDataType("model_diff_indices", 0)                                       \
-             == OF_PP_PAIR_SECOND(indices_type_pair)));
+             == OF_PP_PAIR_SECOND(indices_type_pair)))                                           \
+      .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),      \
+                                           OF_PP_PAIR_FIRST(indices_type_pair)>());
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_INDEXED_SLICES_SGD_UPDATE_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
-
-template<DeviceType device_type, typename T, typename K>
-user_op::InferTmpSizeFn GenInferTmpSizeFn() {
-  return [](user_op::InferContext* ctx) {
-    const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
-    const user_op::TensorDesc* values = ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-    const int64_t num_indices = indices->shape().elem_cnt();
-    const int64_t num_values = values->shape().elem_cnt();
-    TmpBufferManager<device_type, T, K> buffer_manager(nullptr, num_indices, num_values);
-    return buffer_manager.GetTotalBufferSize();
-  };
-}
 
 template<DeviceType device_type, typename T, typename G>
 class MomentumUpdateKernel final : public user_op::OpKernel {
@@ -301,8 +327,14 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
     const auto beta = ctx->Attr<float>("beta");
+    const auto weight_decay = ctx->Attr<float>("weight_decay");
     const int64_t num_indices = model_diff_indices->shape().elem_cnt();
     const int64_t num_values = model_diff_values->shape().elem_cnt();
+    if (num_indices == 0) {
+      CHECK_EQ(num_values, 0);
+      return;
+    }
+    CHECK_NE(num_values, 0);
     CHECK_EQ(num_values % num_indices, 0);
     const int64_t feature_size = num_values / num_indices;
     CHECK_EQ(feature_size, model_diff_values->shape().Count(model_diff_indices->shape().NumAxes()));
@@ -312,17 +344,17 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager<device_type, T, K> buffer_manager(tmp_buffer->mut_dptr(), num_indices,
                                                        num_values);
-    CHECK_EQ(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
+    CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
     ReduceSumUtilT::ReduceSum(
         ctx->device_ctx(), num_indices, feature_size, model_diff_indices->dptr<K>(),
         model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
-    MdUpdateUtilT::Update(ctx->device_ctx(), beta, num_indices, feature_size, kernel_state->lower(),
-                          kernel_state->upper(), buffer_manager.NumUniqueDiffIndicesPtr(),
-                          learning_rate->dptr<float>(), buffer_manager.UniqueDiffIndicesPtr(),
-                          buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(),
-                          momentum->mut_dptr<T>());
+    MdUpdateUtilT::Update(
+        ctx->device_ctx(), beta, weight_decay, num_indices, feature_size, kernel_state->lower(),
+        kernel_state->upper(), buffer_manager.NumUniqueDiffIndicesPtr(),
+        learning_rate->dptr<float>(), buffer_manager.UniqueDiffIndicesPtr(),
+        buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -424,18 +456,24 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     const auto beta1 = ctx->Attr<float>("beta1");
     const auto beta2 = ctx->Attr<float>("beta2");
     const auto epsilon = ctx->Attr<float>("epsilon");
+    const auto weight_decay = ctx->Attr<float>("weight_decay");
     auto* kernel_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
     CHECK_EQ(model->shape().At(0), kernel_state->upper() - kernel_state->lower());
     const int64_t num_indices = model_diff_indices->shape().elem_cnt();
     const int64_t num_values = model_diff_values->shape().elem_cnt();
+    if (num_indices == 0) {
+      CHECK_EQ(num_values, 0);
+      return;
+    }
+    CHECK_NE(num_values, 0);
     CHECK_EQ(num_values % num_indices, 0);
     const int64_t feature_size = num_values / num_indices;
     CHECK_EQ(feature_size, model_diff_values->shape().Count(model_diff_indices->shape().NumAxes()));
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager<device_type, T, K> buffer_manager(tmp_buffer->mut_dptr(), num_indices,
                                                        num_values);
-    CHECK_EQ(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
+    CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
 
     ReduceSumUtilT::ReduceSum(
         ctx->device_ctx(), num_indices, feature_size, model_diff_indices->dptr<K>(),
@@ -443,8 +481,8 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
 
-    MdUpdateUtilT::Update(ctx->device_ctx(), beta1, beta2, epsilon, num_indices, feature_size,
-                          kernel_state->lower(), kernel_state->upper(),
+    MdUpdateUtilT::Update(ctx->device_ctx(), beta1, beta2, epsilon, weight_decay, num_indices,
+                          feature_size, kernel_state->lower(), kernel_state->upper(),
                           buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate->dptr<float>(),
                           buffer_manager.UniqueDiffIndicesPtr(),
                           buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(),

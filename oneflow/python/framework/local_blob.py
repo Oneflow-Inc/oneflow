@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 import numpy as np
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow_api
 import traceback
 
 
@@ -106,7 +107,7 @@ class LocalMirroredTensorList(object):
 
 
 def MakeLocalBlob(ndarray_lists, consistent_blob):
-    assert isinstance(consistent_blob, remote_blob_util.ConsistentBlob), type(
+    assert isinstance(consistent_blob, oneflow_api.ConsistentBlob), type(
         consistent_blob
     )
     if consistent_blob.is_tensor_list:
@@ -120,29 +121,31 @@ def MakeLocalBlob(ndarray_lists, consistent_blob):
 
 
 def MergeLocalBlobs(local_blob_list, mirrored_blob):
-    assert isinstance(mirrored_blob, remote_blob_util.MirroredBlob)
+    assert isinstance(mirrored_blob, oneflow_api.MirroredBlob)
     if mirrored_blob.is_tensor_list:
         for local_blob in local_blob_list:
             assert type(local_blob) is LocalMirroredTensorList
         return LocalMirroredTensorList([x.numpy_lists()[0] for x in local_blob_list])
+    # NOTE(chengcheng): concat_axis=split_axis just to be sure. Will delete in multi-client.
     return LocalMirroredTensor(
         [x.numpy_list()[0] for x in local_blob_list],
         is_dynamic=mirrored_blob.is_dynamic,
-        concat_axis=mirrored_blob.batch_axis,
+        concat_axis=mirrored_blob.split_axis,
     )
 
 
 def MakeLocalBlob4EagerBlob(eager_blob):
-    assert isinstance(eager_blob, remote_blob_util.EagerBlobTrait)
+    assert isinstance(eager_blob, oneflow_api.EagerBlobTrait)
     if eager_blob.is_tensor_list:
         return LocalMirroredTensorList(eager_blob.numpy_list())
-    elif isinstance(eager_blob, remote_blob_util.EagerMirroredBlob):
+    elif isinstance(eager_blob, oneflow_api.EagerMirroredBlob):
+        # NOTE(chengcheng): concat_axis=split_axis just to be sure. Will delete in multi-client.
         return LocalMirroredTensor(
             [eager_blob.numpy(i) for i in range(eager_blob.numpy_size())],
             is_dynamic=eager_blob.is_dynamic,
-            concat_axis=eager_blob.batch_axis,
+            concat_axis=eager_blob.split_axis,
         )
-    elif isinstance(eager_blob, remote_blob_util.EagerConsistentBlob):
+    elif isinstance(eager_blob, oneflow_api.EagerConsistentBlob):
         return LocalMirroredTensor(
             [eager_blob.numpy()], is_dynamic=False, concat_axis=0
         )

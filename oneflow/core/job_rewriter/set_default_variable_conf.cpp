@@ -30,7 +30,6 @@ class SetDefaultVariableConf final : public JobPass {
   }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
-    auto BlobDesc4ModelLbi = op_graph.MakeGetterBlobDesc4ModelLbi();
     op_graph.ForEachNode([&](OpNode* op_node) {
       if (op_node->op().op_conf().has_variable_conf()) {
         OperatorConf variable_op_conf(op_node->op().op_conf());

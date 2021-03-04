@@ -30,8 +30,10 @@ class NaiveActor : public Actor {
     OF_SET_MSG_HANDLER(&NaiveActor::HandlerNormal);
   }
 
+ protected:
+  void Act() override;
+
  private:
-  void Act() override final;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };
 

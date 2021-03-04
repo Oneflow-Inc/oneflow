@@ -68,7 +68,7 @@ chmod 777 {dotssh_dir}/*
         f.write(bash_cmd)
         f.flush()
         subprocess.check_call(
-            f"docker run -v /tmp:/host/tmp -v {dotssh_dir}:{dotssh_dir} -w $PWD oneflow-test:$USER bash /host/{f_name}",
+            f"docker run --rm -v /tmp:/host/tmp -v {dotssh_dir}:{dotssh_dir} -w $PWD oneflow-test:$USER bash /host/{f_name}",
             shell=True,
         )
     config_content = """Host *
@@ -123,10 +123,10 @@ sleep {survival_time}
         subprocess.check_call(
             f"scp {f_name} {hostname}:{workspace_dir}/launch_ssh_server.sh", shell=True,
         )
-    docker_cmd = f"""docker run --privileged --network host --shm-size=8g --rm -v {workspace_dir}/dotssh:/root/.ssh -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash launch_ssh_server.sh
+    docker_cmd = f"""docker run --privileged --cidfile {workspace_dir}/worker.cid --network host --shm-size=8g --rm -v {workspace_dir}/dotssh:/root/.ssh -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash launch_ssh_server.sh
 """
     ssh_cmd = f"ssh {hostname} {docker_cmd}"
-    print(ssh_cmd)
+    print(ssh_cmd, flush=True)
     proc = subprocess.Popen(ssh_cmd, shell=True,)
     try:
         proc.wait(timeout=10)
@@ -135,7 +135,8 @@ sleep {survival_time}
         survival_time_min = survival_time / 60
         survival_time_min = int(survival_time_min)
         print(
-            f"remote container launched, host: {hostname}, ssh port: {docker_ssh_port}, .ssh dir: {dotssh_dir}, survival: {survival_time_min} mins"
+            f"remote container launched, host: {hostname}, ssh port: {docker_ssh_port}, .ssh dir: {dotssh_dir}, survival: {survival_time_min} mins",
+            flush=True,
         )
 
 
@@ -154,11 +155,13 @@ def run_bash_script(
     ctrl_port = find_free_port()
     data_port = find_free_port()
     exports = f"""
-export ONEFLOW_TEST_CTRL_PORT={ctrl_port}
+export ONEFLOW_TEST_MASTER_PORT={ctrl_port}
 export ONEFLOW_TEST_DATA_PORT={data_port}
 export ONEFLOW_TEST_SSH_PORT={ssh_port}
 export ONEFLOW_TEST_LOG_DIR={log_dir}
 export ONEFLOW_TEST_NODE_LIST="{this_host},{remote_host}"
+export ONEFLOW_WORKER_KEEP_LOG=1
+export ONEFLOW_TEST_TMP_DIR="./distributed-tmp"
 export NCCL_DEBUG=INFO
 """
     if oneflow_worker_bin:
@@ -172,13 +175,37 @@ cp -r /dotssh ~/.ssh
 {FIX_SSH_PERMISSION}
 bash {bash_script}
 """
-    with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
+    artifact_cmd = f"""set -ex
+{exports}
+rm -rf ~/.ssh
+cp -r /dotssh ~/.ssh
+{FIX_SSH_PERMISSION}
+mkdir -p oneflow_temp
+rm -rf oneflow_temp/{remote_host}
+scp -P {ssh_port} -r {remote_host}:~/oneflow_temp oneflow_temp/{remote_host}
+rm -f oneflow_temp/{remote_host}/*/oneflow_worker
+chmod -R o+w oneflow_temp
+chmod -R o+r oneflow_temp
+"""
+    returncode = None
+
+    def get_docker_cmd(f, cmd):
         f_name = f.name
-        f.write(bash_cmd)
+        print(cmd, flush=True)
+        f.write(cmd)
         f.flush()
-        docker_cmd = f"docker run --privileged --network host --shm-size=8g --rm -v /tmp:/host/tmp -v $PWD:$PWD -v $HOME:$HOME -w $PWD -v {dotssh_dir}:/dotssh -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash /host{f_name}"
-        print(docker_cmd)
-        subprocess.check_call(docker_cmd, shell=True, timeout=timeout)
+        return f"docker run --privileged --network host --shm-size=8g --rm -v /tmp:/host/tmp -v $PWD:$PWD -v $HOME:$HOME -w $PWD -v {dotssh_dir}:/dotssh -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash /host{f_name}"
+
+    with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
+        run_docker_cmd = get_docker_cmd(f, bash_cmd)
+        returncode = subprocess.call(run_docker_cmd, shell=True, timeout=timeout)
+
+    with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
+        artifact_docker_cmd = get_docker_cmd(f, artifact_cmd)
+        subprocess.check_call(artifact_docker_cmd, shell=True, timeout=timeout)
+
+    if returncode != 0:
+        raise ValueError(run_docker_cmd)
 
 
 if __name__ == "__main__":
@@ -206,7 +233,7 @@ if __name__ == "__main__":
     parser.add_argument("--oneflow_worker_bin", type=str, required=False, default=None)
     parser.add_argument("--oneflow_wheel_path", type=str, required=False, default=None)
     parser.add_argument("--ssh_port", type=int, required=False, default=None)
-    parser.add_argument("--timeout", type=int, required=False, default=10 * 60)
+    parser.add_argument("--timeout", type=int, required=False, default=6 * 60 * 60)
     args = parser.parse_args()
 
     ssh_port = None
@@ -233,7 +260,7 @@ if __name__ == "__main__":
         remote_host = affiliations[0]
         remote_host = socket.gethostbyname(remote_host)
 
-    print(f"this_host: {this_host}, remote_host: {remote_host}")
+    print(f"this_host: {this_host}, remote_host: {remote_host}", flush=True)
     workspace_dir = os.path.join(
         os.path.expanduser("~"), "distributed_run_workspace", str(uuid.uuid4())
     )

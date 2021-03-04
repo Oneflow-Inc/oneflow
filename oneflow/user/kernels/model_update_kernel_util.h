@@ -50,11 +50,11 @@ struct SGDUpdateKernelUtil {
                      const G* model_diff, T* model);
 };
 
-template<DeviceType device_type, typename T, typename K>
+template<DeviceType device_type, typename T, typename K, typename IDX>
 struct IndexedSlicesSGDUpdateKernelUtil final {
-  static void Update(DeviceCtx* ctx, int64_t num_indices, int64_t num_features,
-                     int64_t feature_size, int64_t feature_id_offset, const float* learning_rate,
-                     const K* indices, const T* values, T* model);
+  static void Update(DeviceCtx* ctx, float weight_decay, int64_t num_indices, int64_t feature_size,
+                     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
+                     const float* learning_rate, const K* indices, const T* values, T* model);
 };
 
 template<typename T, typename G>
@@ -101,7 +101,7 @@ struct LambGradFunctor {
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
     const T next_m = beta1 * *m + (1 - beta1) * model_diff_t;
     const T next_v = beta2 * *v + (1 - beta2) * model_diff_t * model_diff_t;
-    *adam_diff = (next_m / (1 - *beta1_t)) / std::sqrt(next_v / (1 - *beta2_t) + epsilon);
+    *adam_diff = (next_m / (1 - *beta1_t)) / (std::sqrt(next_v / (1 - *beta2_t)) + epsilon);
     *m = next_m;
     *v = next_v;
   }
@@ -140,10 +140,10 @@ struct MomentumUpdateKernelUtil {
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
 struct IndexedSlicesMomentumMdUpdateKernelUtil {
-  static void Update(DeviceCtx* ctx, T beta, int64_t num_instance, int64_t feature_size,
-                     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
-                     const float* learning_rate, const K* indices, const T* values, T* model,
-                     T* momentum);
+  static void Update(DeviceCtx* ctx, T beta, float weight_decay, int64_t num_instance,
+                     int64_t feature_size, int64_t lower_bound, int64_t upper_bound,
+                     const IDX* num_unique_instance, const float* learning_rate, const K* indices,
+                     const T* values, T* model, T* momentum);
 };
 
 template<DeviceType device_type, typename T, typename G>
@@ -156,10 +156,11 @@ struct AdamUpdateKernelUtil {
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
 struct IndexedSlicesAdamMdUpdateKernelUtil {
-  static void Update(DeviceCtx* ctx, float beta1, float beta2, float epsilon, int64_t num_instance,
-                     int64_t feature_size, int64_t lower_bound, int64_t upper_bound,
-                     const IDX* num_unique_instance, const float* learning_rate, const K* indices,
-                     const T* values, T* model, T* m, T* v);
+  static void Update(DeviceCtx* ctx, float beta1, float beta2, float epsilon, float weight_decay,
+                     int64_t num_instance, int64_t feature_size, int64_t lower_bound,
+                     int64_t upper_bound, const IDX* num_unique_instance,
+                     const float* learning_rate, const K* indices, const T* values, T* model, T* m,
+                     T* v);
 };
 
 template<DeviceType device_type, typename T, typename G>

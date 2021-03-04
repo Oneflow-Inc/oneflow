@@ -20,24 +20,24 @@ import os
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 from typing import Optional, Union
 
 
 @oneflow_export("one_hot")
 def one_hot(
-    indices: remote_blob_util.BlobDef,
+    indices: oneflow_api.BlobDesc,
     depth: int,
     on_value: Union[int, float] = 1,
     off_value: Union[int, float] = 0,
     axis: int = -1,
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator generates a onehot Blob from input Blob. 
     
     If input Blob's rank is `N`, the corresponding onehot Blob's rank is `N+1`. The new axis is generated on the specified dimension according to the parameter `axis`. 
@@ -45,12 +45,12 @@ def one_hot(
     The locations represented by `indices` take value `on_value`, while other locations take `off_value`
 
     Args:
-        indices (remote_blob_util.BlobDef): The input Blob. 
+        indices (oneflow_api.BlobDesc): The input Blob. 
         depth (int): The length of onehot Blob. 
         on_value (Union[int, float], optional): The fill value when `indices[i] == i`. Defaults to 1.
         off_value (Union[int, float], optional): The fill value when `indice[i] != i`. Defaults to 0.
         axis (int, optional): The specified dimension that the new axis is generated on. Defaults to -1.
-        dtype (Optional[dtype_util.dtype], optional): The output data type, it can be "oneflow.int32", "oneflow.int64", "oneflow.float", "oneflow.double". Defaults to None.
+        dtype (Optional[flow.dtype], optional): The output data type, it can be "oneflow.int32", "oneflow.int64", "oneflow.float", "oneflow.double". Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Note: 
@@ -113,7 +113,7 @@ def one_hot(
         #      [0 0 0 0]]
 
     Returns:
-        remote_blob_util.BlobDef: [description]
+        oneflow_api.BlobDesc: [description]
     """
     out_ndims = len(indices.shape) + 1
     if axis < 0:

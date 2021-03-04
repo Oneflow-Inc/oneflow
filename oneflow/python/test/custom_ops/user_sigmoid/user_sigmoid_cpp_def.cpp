@@ -19,7 +19,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("user_sigmoid")
+REGISTER_USER_OP("user_sigmoid_forward")
     .Input("x")
     .Output("y")
     .Attr<std::string>("device_sub_tag", "py")
@@ -27,10 +27,6 @@ REGISTER_USER_OP("user_sigmoid")
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("y", 0);
       *out_shape = *in_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -41,7 +37,7 @@ REGISTER_USER_OP("user_sigmoid")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("user_sigmoid_grad")
+REGISTER_USER_OP("user_sigmoid_backward")
     .Input("y")
     .Input("dy")
     .Output("dx")
@@ -52,10 +48,6 @@ REGISTER_USER_OP("user_sigmoid_grad")
       Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
       CHECK(*dy_shape == *y_shape);
       *dx_shape = *dy_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("y", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -70,11 +62,11 @@ REGISTER_USER_OP("user_sigmoid_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("user_sigmoid")
+REGISTER_USER_OP_GRAD("user_sigmoid_forward")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
       const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
       const auto& grad_op_func = [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("user_sigmoid_grad")
+        return builder.OpTypeName("user_sigmoid_backward")
             .InputBind("y", ctx->FwOp().output("y", 0))
             .InputBind("dy", ctx->FwOp().output_grad("y", 0))
             .Output("dx")

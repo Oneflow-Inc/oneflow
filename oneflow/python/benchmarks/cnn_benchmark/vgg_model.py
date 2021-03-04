@@ -17,6 +17,7 @@ from __future__ import absolute_import, division, print_function
 
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 from model_util import conv2d_layer
 
 
@@ -54,12 +55,12 @@ def vgg16(images, trainable=True):
     pool5 = flow.nn.max_pool2d(conv5[-1], 2, 2, "VALID", "NCHW", name="pool5")
 
     def _get_kernel_initializer():
-        kernel_initializer = op_conf_util.InitializerConf()
+        kernel_initializer = initializer_conf_util.InitializerConf()
         kernel_initializer.truncated_normal_conf.std = 0.816496580927726
         return kernel_initializer
 
     def _get_bias_initializer():
-        bias_initializer = op_conf_util.InitializerConf()
+        bias_initializer = initializer_conf_util.InitializerConf()
         bias_initializer.constant_conf.value = 0.0
         return bias_initializer
 

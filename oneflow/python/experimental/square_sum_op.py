@@ -26,14 +26,15 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow_api
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional
 
 
 @oneflow_export("experimental.square_sum")
 def square_sum(
-    x: remote_blob_util.BlobDef, name: Optional[str] = None
-) -> remote_blob_util.BlobDef:
+    x: oneflow_api.BlobDesc, name: Optional[str] = None
+) -> oneflow_api.BlobDesc:
 
     return (
         flow.user_op_builder(

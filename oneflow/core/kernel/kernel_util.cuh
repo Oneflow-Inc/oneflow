@@ -18,39 +18,40 @@ limitations under the License.
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
-
 template<typename T>
-__device__ T gpu_atomic_add(T* address, const T val);
-
-template<typename T>
-__device__ T gpu_atomic_max(T* address, const T val);
-
-template<typename T>
-__host__ __device__ T MaxWithLogThreshold(T x) {
+OF_DEVICE_FUNC T MaxWithLogThreshold(T x) {
   const T threshold = 1e-20;
   return x > threshold ? x : threshold;
 }
 
-template<typename T>
-__host__ __device__ T SafeLog(T x) {
-  return logf(MaxWithLogThreshold(x));
-}
-
+#if defined(__CUDACC__)
+__device__ __forceinline__ half MaxWithLogThreshold(half x) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  half threshold = hexp2(__float2half(-14.0));
+  if (__hgt(x, threshold)) { return x; }
+  return threshold;
 #else
-
-template<typename T>
-T MaxWithLogThreshold(T x) {
-  const T threshold = 1e-20;
-  return x > threshold ? x : threshold;
+  printf("use half need nvcc arch >= 530");
+  assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
+#endif
 
 template<typename T>
-T SafeLog(T x) {
+OF_DEVICE_FUNC T SafeLog(T x) {
   return logf(MaxWithLogThreshold(x));
 }
 
-#endif  // WITH_CUDA
+#if defined(__CUDACC__)
+__device__ __forceinline__ half SafeLog(half x) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  return hlog(MaxWithLogThreshold(x));
+#else
+  printf("use half need nvcc arch >= 530");
+  assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
+}
+#endif
 
 }  // namespace oneflow
 

@@ -49,7 +49,8 @@ int64_t TestUtil::NewParallelDesc(InstructionMsgList* instr_msg_list, const std:
   parallel_conf.set_device_tag(device_tag);
   parallel_conf.add_device_name(device_name);
   int64_t parallel_desc_symbol_id = IdUtil::NewLogicalSymbolId();
-  Global<SymbolStorage<ParallelDesc>>::Get()->Add(parallel_desc_symbol_id, parallel_conf);
+  CHECK_JUST(
+      Global<symbol::Storage<ParallelDesc>>::Get()->Add(parallel_desc_symbol_id, parallel_conf));
   instr_msg_list->EmplaceBack(
       NewInstruction("NewParallelDescSymbol")->add_int64_operand(parallel_desc_symbol_id));
   return parallel_desc_symbol_id;
@@ -73,7 +74,7 @@ int64_t TestUtil::NewSymbol(InstructionMsgList* instr_msg_list) {
 
 int64_t TestUtil::NewStringSymbol(InstructionMsgList* instr_msg_list, const std::string& str) {
   int64_t str_id = NewSymbol(instr_msg_list);
-  Global<SymbolStorage<std::string>>::Get()->Add(str_id, str);
+  CHECK_JUST(Global<symbol::Storage<StringSymbol>>::Get()->Add(str_id, str));
   instr_msg_list->EmplaceBack(NewInstruction("InitStringSymbol")->add_init_symbol_operand(str_id));
   return str_id;
 }

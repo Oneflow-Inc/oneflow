@@ -26,12 +26,6 @@ REGISTER_USER_OP("zero_like")
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
       return Maybe<void>::Ok();
     })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
-      CHECK(like_arg_modifier != nullptr);
-      like_arg_modifier->set_use_header_only(true);
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& like_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0);

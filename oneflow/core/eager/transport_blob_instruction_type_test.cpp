@@ -25,14 +25,14 @@ limitations under the License.
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/object_wrapper.h"
-#include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/test_util.h"
@@ -131,14 +131,14 @@ using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 int64_t NewJobDescSymbol(InstructionMsgList* list,
                          const std::shared_ptr<JobConfigProto>& job_conf) {
   int64_t job_desc_id = vm::TestUtil::NewSymbol(list);
-  Global<vm::SymbolStorage<JobDesc>>::Get()->Add(job_desc_id, *job_conf);
+  CHECK_JUST(Global<symbol::Storage<JobDesc>>::Get()->Add(job_desc_id, *job_conf));
   list->EmplaceBack(vm::NewInstruction("InitJobDescSymbol")->add_init_symbol_operand(job_desc_id));
   return job_desc_id;
 }
 
 int64_t NewOpConfSymbol(InstructionMsgList* list, const std::shared_ptr<OperatorConf>& op_conf) {
   int64_t op_conf_id = vm::TestUtil::NewSymbol(list);
-  Global<vm::SymbolStorage<OperatorConf>>::Get()->Add(op_conf_id, *op_conf);
+  CHECK_JUST(Global<symbol::Storage<OperatorConfSymbol>>::Get()->Add(op_conf_id, *op_conf));
   list->EmplaceBack(
       vm::NewInstruction("InitOperatorConfSymbol")->add_init_symbol_operand(op_conf_id));
   return op_conf_id;
@@ -168,8 +168,8 @@ int64_t NewOpNodeSignature(InstructionMsgList* list, const std::vector<std::stri
     SetFakeLogicalBlobDesc(obns[i]);
   }
   int64_t op_node_signature_id = vm::TestUtil::NewSymbol(list);
-  Global<vm::SymbolStorage<OpNodeSignatureDesc>>::Get()->Add(op_node_signature_id,
-                                                             op_node_signature);
+  CHECK_JUST(Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->Add(op_node_signature_id,
+                                                                      op_node_signature));
   list->EmplaceBack(vm::NewInstruction("InitOpNodeSignatureDescSymbol")
                         ->add_init_symbol_operand(op_node_signature_id));
   return op_node_signature_id;

@@ -23,40 +23,12 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
+#include "oneflow/core/job_rewriter/pass_util.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
 namespace {
-
-#define INSERT_CHECK(expr) CHECK(expr.second)
-
-template<typename MapT, typename KeyT>
-bool IsKeyFound(const MapT& m, const KeyT& k) {
-  return m.find(k) != m.end();
-}
-
-bool IsNodeInList(const AMPList& amp_list, OpNode* node) {
-  if (node->op().op_conf().has_user_conf() == false) { return false; }
-  const std::string op_type = node->op().op_conf().user_conf().op_type_name();
-  return IsKeyFound(amp_list, op_type);
-}
-
-template<typename ContainerT, typename ElemT>
-std::string Container2Str(const ContainerT& container,
-                          std::function<std::string(const ElemT&)> elem2str) {
-  std::string ret;
-  bool is_first = true;
-  for (const ElemT& elem : container) {
-    if (is_first) {
-      is_first = false;
-    } else {
-      ret += ",\n";
-    }
-    ret += elem2str(elem);
-  }
-  return ret;
-}
 
 void VerifyAMPList(const AMPList& amp_list) {
   for (const auto& op_type : amp_list) {
@@ -81,51 +53,13 @@ bool FindInNoCastRegisry(const std::string& op_type, const OpArg& op_arg) {
   return false;
 }
 
-void DfsTopoGraphTraversal(const OpGraph& graph, bool reversed,
-                           std::function<bool(OpNode*)> IsCurNodeStartNode,
-                           std::function<bool(OpNode*)> IsCurNodeSatisfied,
-                           std::function<bool(OpNode*)> IsFatherNodeSatisfied,
-                           std::function<void(OpNode*)> NodeHandler) {
-  auto start_nodes = reversed ? graph.sink_nodes() : graph.source_nodes();
-  std::function<void(OpNode*, std::function<void(OpNode*)>)> NodeOnInEdge =
-      reversed ? &OpNode::ForEachNodeOnOutEdge : &OpNode::ForEachNodeOnInEdge;
-  std::function<void(OpNode*, std::function<void(OpNode*)>)> NodeOnOutEdge =
-      reversed ? &OpNode::ForEachNodeOnInEdge : &OpNode::ForEachNodeOnOutEdge;
-  graph.DfsTopoForEachNode(start_nodes, NodeOnInEdge, NodeOnOutEdge, [&](OpNode* node) {
-    if (IsCurNodeStartNode(node)) {
-      NodeHandler(node);
-      return;
-    }
-    if (IsCurNodeSatisfied(node)) {
-      bool is_one_father_of_node_satisfied = false;
-      NodeOnInEdge(node, [&](OpNode* father_node) {
-        if (is_one_father_of_node_satisfied) { return; }
-        if (IsFatherNodeSatisfied(father_node)) { is_one_father_of_node_satisfied = true; }
-      });
-      if (is_one_father_of_node_satisfied) { NodeHandler(node); }
-    }
-  });
-}
-
 std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph& op_graph) {
   auto allowed_set = std::make_shared<HashSet<OpNode*>>();
   op_graph.ForEachNode([&](OpNode* node) {
     if (node->parallel_desc().device_type() != DeviceType::kGPU) { return; }
-    for (const std::string& obn : node->op().output_bns()) {
-      LogicalBlobId lbi = node->op().BnInOp2Lbi(obn);
-      // TODO(niuchong): this isn't right for fw-bw-opgraph, but right for fw-opgraph
-      if (CHECK_JUST(node->BatchAxis4Lbi(lbi))->has_value()) {
-        INSERT_CHECK(allowed_set->insert(node));
-        return;
-      }
-    }
+    if (node->op().output_bns().size() > 0) { INSERT_CHECK(allowed_set->insert(node)); }
   });
   return [allowed_set](OpNode* node) -> bool { return IsKeyFound(*allowed_set, node); };
-}
-
-std::string ReplaceSlashToDash4Lbn(std::string lbn) {
-  std::replace(lbn.begin(), lbn.end(), '/', '-');
-  return lbn;
 }
 
 void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
@@ -337,32 +271,32 @@ void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
                 << " to upstream_or_part_of_white";
       });
 
-  DfsTopoGraphTraversal(op_graph, false, IsWhiteAndAllowedToRunHalf,
-                        [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
-                        [&](OpNode* node) { return IsKeyFound(*white_set, node); },
-                        [&](OpNode* node) {
-                          INSERT_CHECK(white_set->insert(node));
-                          VLOG(2) << "FillWhiteSet(): Insert " << node->op().op_name()
-                                  << " to white_set";
-                        });
+  DfsTopoGraphTraversal(
+      op_graph, false, IsWhiteAndAllowedToRunHalf,
+      [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
+      [&](OpNode* node) { return IsKeyFound(*white_set, node); },
+      [&](OpNode* node) {
+        INSERT_CHECK(white_set->insert(node));
+        VLOG(2) << "FillWhiteSet(): Insert " << node->op().op_name() << " to white_set";
+      });
 }
 
 void AutoMixedPrecision::PropagateWhiteThroughClearNodes(
     const OpGraph& op_graph, std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
     const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set) const {
   auto PropagateIntoOneDirection = [&](bool is_downward) {
-    DfsTopoGraphTraversal(op_graph, !is_downward, [&](OpNode* node) { return false; },
-                          [&](OpNode* node) {
-                            return !IsKeyFound(*white_set, node) && !IsKeyFound(black_set, node)
-                                   && IsNodeInList(clear_list_, node)
-                                   && IsAllowedToRunWithHalf(node);
-                          },
-                          [&](OpNode* node) { return IsKeyFound(*white_set, node); },
-                          [&](OpNode* node) {
-                            INSERT_CHECK(white_set->insert(node));
-                            VLOG(2) << "PropagateWhiteThroughNonListNodes(): Insert "
-                                    << node->op().op_name() << " to white_set";
-                          });
+    DfsTopoGraphTraversal(
+        op_graph, !is_downward, [&](OpNode* node) { return false; },
+        [&](OpNode* node) {
+          return !IsKeyFound(*white_set, node) && !IsKeyFound(black_set, node)
+                 && IsNodeInList(clear_list_, node) && IsAllowedToRunWithHalf(node);
+        },
+        [&](OpNode* node) { return IsKeyFound(*white_set, node); },
+        [&](OpNode* node) {
+          INSERT_CHECK(white_set->insert(node));
+          VLOG(2) << "PropagateWhiteThroughNonListNodes(): Insert " << node->op().op_name()
+                  << " to white_set";
+        });
   };
   PropagateIntoOneDirection(true);
   PropagateIntoOneDirection(false);

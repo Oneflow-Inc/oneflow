@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/kernel_helper.h"
 
 namespace oneflow {
 
@@ -38,7 +39,6 @@ void FillTensorDescWithBlob(const Blob* blob, user_op::TensorDesc* tensor_desc) 
   blob->blob_desc().header_pod_desc().ToProto(proto.mutable_header());
   blob->blob_desc().body().ToProto(proto.mutable_body());
   proto.set_is_tensor_list(blob->blob_desc().is_tensor_list());
-  proto.set_is_body_disabled(blob->blob_desc().is_body_disabled());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   proto.set_header_is_opaque(blob->blob_desc().header_is_opaque());
   *tensor_desc = proto;
@@ -113,7 +113,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   explicit UserKernelInitContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                  const JobDesc& job_desc)
       : user_op::KernelInitContext(
-            user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         sbp_signature_(&(kernel_conf.user_conf().sbp_sig())),
@@ -234,6 +234,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
     }
   }
 
+  int64_t parallel_num() const override { return parallel_ctx_.parallel_num(); }
+
  private:
   const JobDesc& job_desc_;
   ArgVec inputs_;
@@ -248,7 +250,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   explicit UserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                   const JobDesc& job_desc)
       : user_op::KernelInferContext(
-            user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         op_infer_ctx_(kernel_conf.op_attribute().op_conf(), job_desc) {
@@ -266,7 +268,11 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     const auto* op_reg_val = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(
         kernel_conf.op_attribute().op_conf().user_conf().op_type_name());
     CHECK_NOTNULL(op_reg_val);
-    tensor_desc_infer_fn_ = op_reg_val->tensor_desc_infer_fn;
+    if (op_reg_val->physical_tensor_desc_infer_fn) {
+      tensor_desc_infer_fn_ = op_reg_val->physical_tensor_desc_infer_fn;
+    } else {
+      UNIMPLEMENTED();
+    }
   }
   ~UserKernelInferContext() = default;
 
@@ -353,7 +359,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   explicit UserKernelComputeContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                     const JobDesc& job_desc)
       : user_op::KernelComputeContext(
-            user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(std::move(UserKernelBaseContext(kernel_conf, job_desc))) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
@@ -501,7 +507,7 @@ void UserKernel::ForwardShape(const KernelCtx& ctx,
       const auto& out_arg_pair = infer_ctx_->outputs().at(i);
       MutShapeView* mut_shape_view =
           infer_ctx_->MutShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
-      mut_shape_view->set_shape(*cache_value_ptr->obn_idx2shape_sym.at(i));
+      if (mut_shape_view) { mut_shape_view->set_shape(*cache_value_ptr->obn_idx2shape_sym.at(i)); }
     }
   }
 }
@@ -545,6 +551,12 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
     UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
     new_opkernel_state = kernel_->CreateOpKernelState(&init_ctx);
   }
+
+  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
+      && !kernel_->AlwaysComputeWhenAllOutputsEmpty()) {
+    return new_opkernel_state;
+  }
+
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
   UserKernelComputeContext compute_ctx(device_ctx, kernel_conf(), job_desc());
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);

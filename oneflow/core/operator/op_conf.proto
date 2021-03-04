@@ -3,7 +3,7 @@ package oneflow;
 
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
-import "oneflow/core/record/image.proto";
+import "oneflow/core/common/device_type.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
@@ -11,124 +11,18 @@ import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/framework/user_op_conf.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/graph/boxing/collective_boxing.proto";
+import "oneflow/core/job/initializer_conf.proto";
+import "oneflow/core/job/regularizer_conf.proto";
+import "oneflow/core/job/learning_rate_schedule_conf.proto";
+import "oneflow/core/operator/interface_blob_conf.proto";
+import "oneflow/core/register/blob_desc.proto";
+
 
 enum ActivationType {
   kNone = 0;
   kTanH = 1;
   kSigmoid = 2;
   kRelu = 3;
-}
-
-message ConstantInitializerConf {
-  optional float value = 1 [default = 0];
-}
-
-message ConstantIntInitializerConf {
-  optional int64 value = 1 [default = 0];
-}
-
-message RandomUniformInitializerConf {
-  optional float min = 1 [default = 0];
-  optional float max = 2 [default = 1];
-}
-
-message RandomUniformIntInitializerConf {
-  optional int32 min = 1 [default = 0];
-  optional int32 max = 2 [default = 1];
-}
-
-message RandomNormalInitializerConf {
-  optional float mean = 1 [default = 0];
-  optional float std = 2 [default = 1];
-}
-
-message TruncatedNormalInitializerConf {
-  optional float mean = 1 [default = 0.0];
-  optional float std = 2 [default = 0.05];
-}
-
-enum VarianceNorm {
-  kFanIn = 0;
-  kFanOut = 1;
-  kAverage = 2;
-}
-
-enum RandomDistribution {
-  kRandomUniform = 0;
-  kRandomNormal = 1;
-  kTruncatedNormal = 2;
-}
-
-message XavierInitializerConf {
-  required VarianceNorm variance_norm = 1;
-  required string data_format = 2;
-}
-
-message MsraInitializerConf {
-  required VarianceNorm variance_norm = 1;
-  required string data_format = 2;
-}
-
-//output[D_0 ... D_(axis - 1) i D_(axis + 1) ... D_n] = start + i * stride
-message RangeInitializerConf {
-  optional double start = 1 [default = 0];
-  optional double stride = 2 [default = 1];
-  optional int64 axis = 3 [default = -1];
-}
-
-message IntRangeInitializerConf {
-  optional int64 start = 1 [default = 0];
-  optional int64 stride = 2 [default = 1];
-  optional int64 axis = 3 [default = -1];
-}
-
-message VarianceScalingInitializerConf {
-  required float scale = 1;
-  required VarianceNorm variance_norm = 2;
-  required RandomDistribution distribution = 3;
-  required string data_format = 4;
-}
-
-message InitializerConf {
-  oneof type {
-    ConstantInitializerConf constant_conf = 1;
-    ConstantIntInitializerConf constant_int_conf = 2;
-    RandomUniformInitializerConf random_uniform_conf = 3;
-    RandomUniformIntInitializerConf random_uniform_int_conf = 4;
-    RandomNormalInitializerConf random_normal_conf = 5;
-    TruncatedNormalInitializerConf truncated_normal_conf = 6;
-    XavierInitializerConf xavier_conf = 7;
-    MsraInitializerConf msra_conf = 8;
-    RangeInitializerConf range_conf = 9;
-    IntRangeInitializerConf int_range_conf = 10;
-    VarianceScalingInitializerConf variance_scaling_conf = 11;
-  }
-}
-
-message L1L2RegularizerConf {
-  optional float l1 = 1 [default = 0.0];
-  optional float l2 = 2 [default = 0.0];
-}
-
-message RegularizerConf {
-  oneof type {
-    L1L2RegularizerConf l1_l2_conf = 1;
-  }
-}
-
-message SigmoidCrossEntropyOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string loss = 3;
-  required DataType label_type = 4;
-}
-
-message SigmoidCrossEntropyGradOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string prediction_diff = 3;
-  required string loss_diff = 4;
-  required DataType label_type = 5;
 }
 
 message DistributeConcatOpConf {
@@ -197,172 +91,6 @@ message BoxingOpConf {
   }
 }
 
-message NaiveModelUpdateConf {
-}
-
-message MomentumModelUpdateConf {
-  optional float beta = 1 [default = 0.9];
-}
-
-message RMSPropModelUpdateConf {
-  optional float decay_rate = 1 [default = 0.99];
-  optional float epsilon = 2 [default = 1e-8];
-  optional bool centered = 3 [default = false];
-}
-
-message LARSModelUpdateConf {
-  optional float momentum_beta = 1 [default = 0.9];
-  optional float epsilon = 2 [default = 1e-9];
-  optional float lars_coefficient = 3 [default = 0.0001];
-}
-
-message AdamModelUpdateConf {
-  optional float beta1 = 1 [default = 0.9];
-  optional float beta2 = 2 [default = 0.999];
-  optional float epsilon = 3 [default = 1e-8];
-  optional bool do_bias_correction = 4 [default = false];
-}
-
-message LazyAdamModelUpdateConf {
-  optional float beta1 = 1 [default = 0.9];
-  optional float beta2 = 2 [default = 0.999];
-  optional float epsilon = 3 [default = 1e-8];
-}
-
-message LambModelUpdateConf {
-  required float beta1 = 1;
-  required float beta2 = 2;
-  required float epsilon = 3;
-}
-
-message ExponentialDecayConf {
-  required int64 decay_batches = 1;
-  required double decay_rate = 2;
-  optional bool staircase = 3 [default = false];
-}
-
-message InverseTimeDecayConf {
-  required int64 decay_batches = 1;
-  required double decay_rate = 2;
-  optional bool staircase = 3 [default = false];
-}
-
-message NaturalExpDecayConf {
-  required int64 decay_batches = 1;
-  required double decay_rate = 2;
-  optional bool staircase = 3 [default = false];
-}
-
-message PiecewiseConstantConf {
-  repeated int64 boundaries = 1;
-  repeated double values = 2;
-}
-
-message PolynomialDecayConf {
-  required int64 decay_batches = 1;
-  optional double end_learning_rate = 2 [default = 0.0001];
-  optional double power = 3 [default = 1.0];
-  optional bool cycle = 4 [default = false];
-}
-
-message CosineDecayConf {
-  required int64 decay_batches = 1;
-  optional double alpha = 2 [default = 0.0];
-}
-
-message LinearCosineDecayConf {
-  required int64 decay_batches = 1;
-  optional double num_periods = 2 [default = 0.5];
-  optional double alpha = 3 [default = 0.0];
-  optional double beta = 4 [default = 0.001];
-}
-
-message PiecewiseScalingConf {
-  repeated int64 boundaries = 1;
-  repeated double scales = 2;
-}
-
-message LearningRateDecayConf {
-  oneof type {
-    ExponentialDecayConf exponential_conf = 2000;
-    InverseTimeDecayConf inverse_time_conf = 2001;
-    NaturalExpDecayConf natural_exp_conf = 2002;
-    PiecewiseConstantConf piecewise_constant_conf = 2003;
-    PolynomialDecayConf polynomial_conf = 2004;
-    CosineDecayConf cosine_conf = 2005;
-    LinearCosineDecayConf linear_cosine_conf = 2006;
-    PiecewiseScalingConf piecewise_scaling_conf = 2007;
-  }
-}
-
-message ConstantWarmupConf {
-  required int64 warmup_batches = 1;
-  required double multiplier = 2;
-}
-
-message LinearWarmupConf {
-  required int64 warmup_batches = 1;
-  required double start_multiplier = 2;
-}
-
-message WarmupConf {
-  oneof type {
-    ConstantWarmupConf constant_conf = 3000;
-    LinearWarmupConf linear_conf = 3001;
-  }
-}
-
-message ClipByGlobalNormConf {
-  required float clip_norm = 1;
-  optional float global_norm = 2;
-}
-
-message ClipConf {
-  oneof type {
-    ClipByGlobalNormConf clip_by_global_norm = 1;
-  }
-}
-
-message WeightDecayFilterPatternSet {
-  repeated string pattern = 1;
-}
-
-message WeightDecayConf {
-  required float weight_decay_rate = 1;
-  oneof weight_decay_filter_type {
-    WeightDecayFilterPatternSet includes = 2;
-    WeightDecayFilterPatternSet excludes = 3;
-  }
-}
-
-message NormalModelUpdateOpUserConf {
-  optional LearningRateDecayConf learning_rate_decay = 1;
-  optional WarmupConf warmup_conf = 2;
-  optional ClipConf clip_conf = 3;
-  optional WeightDecayConf weight_decay_conf = 4;
-  oneof normal_mdupdt {
-    NaiveModelUpdateConf naive_conf = 1000;
-    MomentumModelUpdateConf momentum_conf = 1001;
-    RMSPropModelUpdateConf rmsprop_conf = 1002;
-    LARSModelUpdateConf lars_conf = 1003;
-    AdamModelUpdateConf adam_conf = 1004;
-    LazyAdamModelUpdateConf lazy_adam_conf = 1005;
-    LambModelUpdateConf lamb_conf = 1006;
-  }
-}
-
-message NormalModelUpdateOpConf {
-  required NormalModelUpdateOpUserConf user_conf = 1;
-  required string model_diff = 2;
-  required string model = 4;
-  required string train_step = 5;
-  required string learning_rate = 6;
-  optional float weight_decay = 7 [default = 0.0];
-}
-
-message AccumulateOpConf {
-}
-
 message DynamicReshapeOpConf {
   required string in = 1;
   required string out = 2;
@@ -373,15 +101,6 @@ message DynamicReshapeLikeOpConf {
   required string x = 1;
   required string y = 2;
   required string like = 3;
-}
-
-message InterfaceBlobConf {
-  required ShapeProto shape = 1;
-  required DataType data_type = 2;
-  optional OptInt64 split_axis = 3;
-  required OptInt64 batch_axis = 4;
-  optional bool is_dynamic = 5;
-  optional bool is_tensor_list = 6 [default = false];
 }
 
 message InputOpConf {
@@ -418,11 +137,6 @@ message ForeignWatchOpConf {
   required string handler_uuid = 2;
 }
 
-message InitializeWithSnapshotConf {
-  required string path = 1;
-  optional string key = 2;
-}
-
 message VariableOpConf {
   optional string tick = 1;
   required string out = 2;
@@ -436,85 +150,6 @@ message VariableOpConf {
   required OptInt64 split_axis = 8;
   optional int64 random_seed = 9;
   optional RegularizerConf regularizer = 10;
-}
-
-message EncodeConf {
-  oneof encode {
-    EncodeRaw raw = 1;
-    EncodeJpeg jpeg = 2;
-    EncodeBytesList bytes_list = 3;
-  }
-}
-
-message EncodeBytesList {
-}
-
-message EncodeRaw {
-  optional bool dim1_varying_length = 1 [default = false];
-  optional bool auto_zero_padding = 2 [default = false];
-}
-
-message EncodeJpeg {
-  repeated ImagePreprocess preprocess = 1;
-}
-
-message SubtractPreprocessConf {
-  required float value = 1;
-}
-
-message NormByChannelPreprocessConf {
-  repeated float mean_value = 1;
-  repeated float std_value = 2;
-  required string data_format = 3;
-}
-
-message ScalePreprocessConf {
-  required float value = 1;
-}
-
-message PreprocessConf {
-  oneof type {
-    SubtractPreprocessConf subtract_conf = 1;
-    NormByChannelPreprocessConf norm_by_channel_conf = 2;
-    ScalePreprocessConf scale_conf = 3;
-  }
-}
-
-message RandomShuffleConf {
-  optional int32 buffer_size = 1 [default = 1024];
-}
-
-message RecordLoadOpConf {
-  optional string tick  = 1;
-  required string out = 2;
-  required string data_dir = 3;
-  required int32 data_part_num = 4;
-  optional string part_name_prefix = 5 [default = "part-"];
-  optional int32 part_name_suffix_length = 6 [default = -1];
-  optional RandomShuffleConf random_shuffle_conf = 7;
-  required int64 batch_size = 8;
-}
-
-message BlobConf {
-  required string name = 1;
-  required ShapeProto shape = 2;
-  required DataType data_type = 3;
-  optional int32 max_sequence_size = 4 [default = 1];
-  required EncodeConf encode_case = 5;
-  repeated PreprocessConf preprocess = 6;
-  optional int32 tensor_list_variable_axis = 7 [default = -1];
-  optional bool is_dynamic = 9 [default = false];
-}
-
-message DecodeOFRecordOpConf {
-  required string data_dir = 1;
-  required int32 data_part_num = 2; // piece_size % data_part_num = 0
-  optional string part_name_prefix = 3 [default = "part-"];
-  optional int32 part_name_suffix_length = 4 [default = -1];
-  optional string in = 5;
-  repeated BlobConf blob = 6;
-  optional RandomShuffleConf random_shuffle_conf = 7;
-  required int64 batch_size = 8;
 }
 
 message DecodeRandomOpConf {
@@ -555,6 +190,16 @@ message ReentrantLockOpConf {
   repeated Int64List lock_id2intersecting_lock_ids = 4;
 }
 
+message SrcSubsetTickOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
+message DstSubsetTickOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
 message SourceTickOpConf {
   required string out = 1;
 }
@@ -562,11 +207,6 @@ message SourceTickOpConf {
 message SinkTickOpConf {
   repeated string tick = 1;
   required string out = 2;
-}
-
-message KeepHeaderOnlyOpConf {
-  repeated string in = 1;
-  repeated string out = 2;
 }
 
 message TotalLossInstanceNumOpConf {
@@ -650,11 +290,6 @@ message EsacOpConf {
   optional DataType data_type = 3 [default=kInt32];
 }
 
-message PartialTickOpConf {
-  required string tick = 1;
-  required string out = 2;
-}
-
 message AssignOpConf {
   required string ref = 1;
   required string value = 2;
@@ -709,10 +344,10 @@ message XrtLaunchOpConf {
   map<string, bool> input_mutability = 5;
   // Mapping launch op's input and output names into function.
   map<string, string> input_output_mapping = 6;
-  map<string, OptInt64> batch_axis = 7;
   // Sbp signatures of each function node.
   map<string, SbpSignature> sbp_signatures = 8;
   optional bool model_update = 9 [default = false];
+  map<string, BlobDescProto> lbn2logical_blob_desc = 10;
 }
 
 message ModelInitV2OpConf {
@@ -732,7 +367,6 @@ message ModelLoadV2OpConf {
   required string tick = 6;
 }
 
-
 message ModelSaveV2OpConf {
   required string path = 1;
   required string in = 2;
@@ -740,28 +374,6 @@ message ModelSaveV2OpConf {
   required VariableOpConf original_variable_conf = 4;
   required string out = 5;
   required string tick = 6;
-}
-
-message ParallelCastOpConf {
-  required string in = 1;
-  required string out = 2;
-  optional OptInt64 split_axis = 3;
-  optional OptInt64 gradient_split_axis = 4;
-}
-
-message DynamicBinarySplitOpConf {
-  required string in = 1;
-  repeated string out = 2;
-  required int32 base_shift = 3;
-}
-
-message DynamicBinaryConcatOpConf {
-  repeated string in = 1;
-  required string out = 2;
-  required DataType out_data_type = 3;
-  required ShapeProto out_shape = 4;
-  required OptInt64 out_batch_axis = 5;
-  required SbpParallel out_sbp = 6;
 }
 
 message UniqueWithCountsOpConf {
@@ -799,13 +411,6 @@ message SyncDynamicResizeOpConf {
   optional bool eager = 5 [default = false];
 }
 
-message ArgWhereOpConf {
-  required string in = 1;
-  required string out = 2;
-  required string out_size = 3;
-  optional DataType data_type = 4 [default = kInt32];
-}
-
 message BroadcastToCompatibleWithOpConf {
   required string x = 1;
   repeated string compatible = 2;
@@ -838,21 +443,18 @@ message BoxingIdentityOpConf {
   required LogicalBlobId lbi = 1;
 }
 
-message CastToStaticShapeOpConf {
-  required string in = 1;
-  required string out = 2;
+message CollectiveBoxingPackOpConf {
+  required LogicalBlobId lbi = 1;
+  required SbpParallel src_sbp_parallel = 2;
+  required SbpParallel dst_sbp_parallel = 3;
+  required int64 num_ranks = 4;
+  required ShapeProto logical_shape = 5;
 }
 
-message BoxingS2SAll2AllPackOpConf {
+message CollectiveBoxingUnpackOpConf {
   required LogicalBlobId lbi = 1;
-  required int64 dst_split_axis = 2;
-  required int64 num_ranks = 3;
-}
-
-message BoxingS2SAll2AllUnpackOpConf {
-  required LogicalBlobId lbi = 1;
-  required int64 src_split_axis = 2;
-  required int64 dst_split_axis = 3;
+  required SbpParallel src_sbp_parallel = 2;
+  required SbpParallel dst_sbp_parallel = 3;
   required int64 num_ranks = 4;
   required ShapeProto logical_shape = 5;
 }
@@ -873,6 +475,12 @@ message ImageDecoderRandomCropResizeOpConf {
   optional float random_aspect_ratio_max = 13 [default = 1.333333];
 }
 
+message BoxingZerosOpConf {
+  required LogicalBlobId lbi = 1;
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional bool trainable = 3 [default = true];
@@ -881,19 +489,16 @@ message OperatorConf {
   optional int64 scope_symbol_id = 8;
   oneof op_type {
     // system op
-    DecodeOFRecordOpConf decode_ofrecord_conf = 101;
     DecodeRandomOpConf decode_random_conf = 102;
-    RecordLoadOpConf record_load_conf = 103;
     CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
     BoxingOpConf boxing_conf = 108;
-    AccumulateOpConf accumulate_conf = 117;
-    NormalModelUpdateOpConf normal_mdupdt_conf = 118;
     VariableOpConf variable_conf = 122;
     TickOpConf tick_conf = 124;
-    KeepHeaderOnlyOpConf keep_header_only_conf = 125;
     TotalLossInstanceNumOpConf total_loss_instance_num_conf = 126;
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
+    SrcSubsetTickOpConf src_subset_tick_conf = 133;
+    DstSubsetTickOpConf dst_subset_tick_conf = 134;
     SourceTickOpConf source_tick_conf = 135;
     SinkTickOpConf sink_tick_conf = 136;
     InputOpConf input_conf = 137;
@@ -905,15 +510,12 @@ message OperatorConf {
     ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
     ReturnOpConf return_conf = 146;
-    PartialTickOpConf partial_tick_conf = 149;
     ForeignWatchOpConf foreign_watch_conf = 151;
     DistributeConcatOpConf distribute_concat_conf = 155;
     DistributeSplitOpConf distribute_split_conf = 156;
     DistributeCloneOpConf distribute_clone_conf = 157;
     DistributeAddOpConf distribute_add_conf = 158;
     DeviceTickOpConf device_tick_conf = 159;
-    DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
-    DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
     SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
     SliceBoxingAddOpConf slice_boxing_add_conf = 167;
     TensorBufferToTensorListOpConf tensor_buffer_to_tensor_list_conf = 168;
@@ -921,14 +523,13 @@ message OperatorConf {
     CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
     BoxingIdentityOpConf boxing_identity_conf = 171;
     TensorListSplitOpConf tensor_list_split_conf = 172;
-    CastToStaticShapeOpConf cast_to_static_shape_conf = 173;
-    BoxingS2SAll2AllPackOpConf boxing_s2s_all2all_pack_conf = 174;
-    BoxingS2SAll2AllUnpackOpConf boxing_s2s_all2all_unpack_conf = 175;
+    CollectiveBoxingPackOpConf collective_boxing_pack_conf = 174;
+    CollectiveBoxingUnpackOpConf collective_boxing_unpack_conf = 175;
+    BoxingZerosOpConf boxing_zeros_conf = 176;
     UserOpConf user_conf = 199;
 
     // domain op
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-    SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
@@ -938,13 +539,10 @@ message OperatorConf {
     ModelSaveOpConf model_save_conf = 297;
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
     ModelLoadOpConf model_load_conf = 301;
-    SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 317;
-    ParallelCastOpConf parallel_cast_conf = 336;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
-    ArgWhereOpConf arg_where_conf = 342;
     CopyOpConf copy_conf = 343;
     CastToMirroredOpConf cast_to_mirrored_conf = 344;
     CastFromMirroredOpConf cast_from_mirrored_conf = 345;
@@ -958,10 +556,6 @@ message OperatorConf {
     BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
 
   }
-}
-
-message OpNameSet {
-  repeated string op_name = 1;
 }
 
 message OpNameRelations {

@@ -25,7 +25,7 @@ void ScalarOpBase::InitFromOpConf() {
   ;
 }
 
-Maybe<void> ScalarOpBase::InferBlobDescs(
+Maybe<void> ScalarOpBase::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");

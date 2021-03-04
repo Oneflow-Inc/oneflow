@@ -180,7 +180,6 @@ void GenMemChainTasksAndRegsts(
       CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
       return lhs_order_in_graph < rhs_order_in_graph;
     });
-    // merge
     for (MemoryChain* mem_chain : mem_chains) {
       if (!TryMergeMemChain2MergedChains(&merged_chains, mem_chain, IsStrictOrderL2R)) {
         merged_chains.push_back(mem_chain);

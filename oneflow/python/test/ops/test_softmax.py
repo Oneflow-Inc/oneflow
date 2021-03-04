@@ -45,9 +45,11 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
                 "x",
                 shape=x_shape,
                 dtype=dtype,
-                initializer=flow.random_uniform_initializer(minval=-0.1, maxval=0.1),
+                initializer=flow.random_uniform_initializer(minval=-1.0, maxval=1.0),
                 trainable=True,
             )
+            x1 = x
+            x = flow.identity(x)
             if data_type == "float16":
                 loss = flow.cast(
                     flow.nn.softmax(flow.cast(x, dtype=flow.float16), axis=axis),
@@ -55,20 +57,21 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
                 )
             else:
                 loss = flow.nn.softmax(x, axis=axis)
-            flow.optimizer.SGD(
-                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
-            ).minimize(loss)
 
             flow.watch(x, test_global_storage.Setter("x"))
             flow.watch_diff(x, test_global_storage.Setter("x_diff"))
             flow.watch(loss, test_global_storage.Setter("loss"))
             flow.watch_diff(loss, test_global_storage.Setter("loss_diff"))
 
+            total_loss = loss * x1
+
+            flow.optimizer.SGD(
+                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+            ).minimize(total_loss)
+
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = SoftmaxJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
@@ -92,7 +95,8 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSoftmax(flow.unittest.TestCase):
-    def test_softmax(test_case):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_softmax_shape(test_case):
         if flow.eager_execution_enabled():
             print("\nSkip under erger mode!")
             return
@@ -100,19 +104,37 @@ class TestSoftmax(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["x_shape"] = [
             (10, 10, 20, 30),
+            (10, 20, 13),
             (10, 20, 30),
             (10, 20),
+            (10, 60),
+            (32, 12, 128),
             (10, 960),
+            (12, 2001),
             (10, 4096),
             (10, 8092),
             (256, 1001),
+            (100, 65536),
+            (10, 65535),
         ]
         arg_dict["data_type"] = ["float32", "double", "float16"]
-        arg_dict["axis"] = [-1, 1, 2, 3]
+        arg_dict["axis"] = [-1]
         for arg in GenArgList(arg_dict):
             if arg[0] == "cpu" and arg[2] == "float16":
                 continue
-            if arg[3] >= len(arg[1]):
+            compare_with_tensorflow(*arg)
+
+    def test_softmax_axis(test_case):
+        if flow.eager_execution_enabled():
+            print("\nSkip under erger mode!")
+            return
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["x_shape"] = [(10, 20, 30, 40)]
+        arg_dict["data_type"] = ["float32", "double", "float16"]
+        arg_dict["axis"] = [-4, -3, -2, -1, 0, 1, 2, 3]
+        for arg in GenArgList(arg_dict):
+            if arg[0] == "cpu" and arg[2] == "float16":
                 continue
             compare_with_tensorflow(*arg)
 

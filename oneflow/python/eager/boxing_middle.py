@@ -15,10 +15,10 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.python.framework.op_arg_util as op_arg_util
-import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
+import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api
 import random
 
 
@@ -53,14 +53,16 @@ def MiddleOpArgParallelAttr(get_parallel_desc_symbol, get_sbp_parallel):
     def GetOpArgParallelAttr(
         builder, produced_blob_object, consumer_op_arg_parallel_attr
     ):
-        return op_arg_util.OpArgParallelAttribute(
+        return oneflow_api.OpArgParallelAttribute(
             get_parallel_desc_symbol(
                 builder, produced_blob_object, consumer_op_arg_parallel_attr
             ),
-            get_sbp_parallel(
-                builder, produced_blob_object, consumer_op_arg_parallel_attr
+            str(
+                get_sbp_parallel(
+                    builder, produced_blob_object, consumer_op_arg_parallel_attr
+                )
             ),
-            produced_blob_object.op_arg_parallel_attr.opt_mirrored_parallel,
+            str(produced_blob_object.op_arg_parallel_attr.opt_mirrored_parallel),
         )
 
     return GetOpArgParallelAttr
@@ -137,12 +139,12 @@ def TryReplaceDeviceTag(builder, parallel_desc_symbol, device_tag):
 
 def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
     assert parallel_desc_symbol.device_tag != device_tag
-    parallel_conf = placement_pb.ParallelConf()
-    parallel_conf.device_tag = device_tag
-    for device_name in parallel_desc_symbol.parallel_conf.device_name:
-        parallel_conf.device_name.append(device_name)
+    parallel_conf = placement_cfg.ParallelConf()
+    parallel_conf.set_device_tag(device_tag)
+    for device_name in parallel_desc_symbol.parallel_conf.device_name():
+        parallel_conf.add_device_name(device_name)
     if builder is None:
-        return symbol_util.ParallelDescSymbol(
+        return oneflow_api.PlacementSymbol(
             parallel_desc_symbol.symbol_id, parallel_conf
         )
     else:
@@ -151,15 +153,15 @@ def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
 
 def RandomParallelIdPerMachine(parallel_desc_symbol, device_tag=None, builder=None):
     if device_tag is None:
-        device_tag = parallel_desc_symbol.parallel_conf.device_tag
+        device_tag = parallel_desc_symbol.parallel_conf.device_tag()
     assert device_tag is not None
-    parallel_conf = placement_pb.ParallelConf()
-    parallel_conf.device_tag = device_tag
+    parallel_conf = placement_cfg.ParallelConf()
+    parallel_conf.set_device_tag(device_tag)
     for machine_id, dev_ids in parallel_desc_symbol.machine_id2device_id_list.items():
         dev_id = dev_ids[random.randint(0, len(dev_ids) - 1)]
-        parallel_conf.device_name.append("%s:%s" % (machine_id, dev_id))
+        parallel_conf.add_device_name("%s:%s" % (machine_id, dev_id))
     if builder is None:
-        return symbol_util.ParallelDescSymbol(
+        return oneflow_api.PlacementSymbol(
             parallel_desc_symbol.symbol_id, parallel_conf
         )
     else:

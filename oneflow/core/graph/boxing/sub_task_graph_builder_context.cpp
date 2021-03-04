@@ -57,7 +57,7 @@ TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, int64_t src_mem_
             GetProxyNode(src_node, src_mem_zone_id, src_node->machine_id(),
                          Global<IDMgr>::Get()->CpuMemZoneId());
         CopyCommNetTaskNode* copy_comm_net_task = task_graph()->NewNode<CopyCommNetTaskNode>();
-        copy_comm_net_task->Init(dst_machine_id, proxy_on_src_host->machine_id());
+        copy_comm_net_task->Init(dst_machine_id);
         Connect<TaskNode>(proxy_on_src_host, task_graph()->NewEdge(), copy_comm_net_task);
         node2proxies_[src_node][key] = copy_comm_net_task;
         return copy_comm_net_task;
@@ -66,6 +66,25 @@ TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, int64_t src_mem_
       UNIMPLEMENTED();
     }
   }
+}
+
+TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, const int64_t src_mem_zone_id,
+                                            const ParallelDesc& dst_parallel_desc,
+                                            const int64_t dst_parallel_id) {
+  const int64_t dst_machine_id =
+      CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(dst_parallel_id));
+  int64_t dst_mem_zone_id;
+  const IDMgr* id_mgr = Global<IDMgr>::Get();
+  if (dst_parallel_desc.device_type() == DeviceType::kCPU) {
+    dst_mem_zone_id = id_mgr->CpuMemZoneId();
+  } else if (dst_parallel_desc.device_type() == DeviceType::kGPU) {
+    const int64_t dst_dev_phy_id =
+        CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(dst_parallel_id));
+    dst_mem_zone_id = id_mgr->GpuMemZoneId(dst_dev_phy_id);
+  } else {
+    UNIMPLEMENTED();
+  }
+  return GetProxyNode(src_node, src_mem_zone_id, dst_machine_id, dst_mem_zone_id);
 }
 
 }  // namespace oneflow

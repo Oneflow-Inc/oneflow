@@ -215,17 +215,22 @@ void PyCompute(user_op::KernelComputeContext* ctx, const std::string& py_func_na
   PyObject *py_str, *py_module, *py_func;
   PyObject *py_inputs, *py_outputs;
 
-  // load python kernel
-  const std::string grad_suffix = "_grad";
-  std::string forward_op_type_name = op_type_name;
-  if (op_type_name.size() > grad_suffix.size()
-      && op_type_name.rfind(grad_suffix) == (op_type_name.size() - grad_suffix.size())) {
-    forward_op_type_name = op_type_name.substr(0, op_type_name.size() - grad_suffix.size());
+  // get python kernel
+  static const std::string forward_suffix = "_forward";
+  static const std::string backward_suffix = "_backward";
+  std::string op_module_name = op_type_name;
+  if (op_type_name.size() > forward_suffix.size()
+      && op_type_name.rfind(forward_suffix) == (op_type_name.size() - forward_suffix.size())) {
+    op_module_name = op_type_name.substr(0, op_type_name.size() - forward_suffix.size());
   }
-  py_str = PyUnicode_DecodeFSDefault(forward_op_type_name.c_str());
+  if (op_type_name.size() > backward_suffix.size()
+      && op_type_name.rfind(backward_suffix) == (op_type_name.size() - backward_suffix.size())) {
+    op_module_name = op_type_name.substr(0, op_type_name.size() - backward_suffix.size());
+  }
+  py_str = PyUnicode_DecodeFSDefault(op_module_name.c_str());
   CHECK(py_kernels_dic) << "py_kernels_dic should not be nullptr.";
   py_module = PyDict_GetItem(py_kernels_dic, py_str);
-  CHECK(py_module) << forward_op_type_name << " has no python kernel.";
+  CHECK(py_module) << op_module_name << " has no python kernel.";
   Py_DECREF(py_str);
 
   // get func

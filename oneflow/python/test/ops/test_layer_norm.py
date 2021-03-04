@@ -45,10 +45,22 @@ class TestLayerNorm(flow.unittest.TestCase):
         arg_dict["center"] = [True, False]
         arg_dict["scale"] = [True, False]
         arg_dict["epsilon"] = [1e-5, 1e-10]
+        arg_dict["fuse_add_to_output"] = [True, False]
 
         for case in GenArgList(arg_dict):
-            (device_type, confs, data_type, trainable, center, scale, epsilon) = case
+            (
+                device_type,
+                confs,
+                data_type,
+                trainable,
+                center,
+                scale,
+                epsilon,
+                fuse_add_to_output,
+            ) = case
             if device_type == "cpu" and data_type == "float16":
+                continue
+            if device_type == "cpu" and fuse_add_to_output == True:
                 continue
             x_shape = confs["x_shape"]
             begin_norm_axis = confs["begin_norm_axis"]
@@ -91,13 +103,14 @@ class TestLayerNorm(flow.unittest.TestCase):
                     trainable=trainable,
                 )
                 y_tf = layer(x_tf)
+                z_tf = y_tf + x_tf
             if data_type == "float16":
                 dx_tf = tape.gradient(
-                    y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape, dtype=tf.float16)
+                    z_tf, x_tf, tf.constant(1.0, shape=z_tf.shape, dtype=tf.float16)
                 )
             else:
-                dx_tf = tape.gradient(y_tf, x_tf, tf.constant(1.0, shape=y_tf.shape))
-            grad = tape.gradient(y_tf, layer.trainable_variables)
+                dx_tf = tape.gradient(z_tf, x_tf, tf.constant(1.0, shape=z_tf.shape))
+            grad = tape.gradient(z_tf, layer.trainable_variables)
             if trainable:
                 if scale and center:
                     tf_gamma_diff = grad[0]
@@ -115,7 +128,7 @@ class TestLayerNorm(flow.unittest.TestCase):
                 diff = dx_tf.numpy() - b.numpy()
                 max_diff = np.max(np.abs(diff))
                 if data_type == "float16":
-                    tolerance = 2e-3
+                    tolerance = 3e-3
                 else:
                     tolerance = 1e-5
                 assert np.allclose(
@@ -153,6 +166,7 @@ class TestLayerNorm(flow.unittest.TestCase):
 
             func_config = flow.FunctionConfig()
             func_config.default_data_type(flow.float)
+            func_config.enable_fuse_add_to_output(fuse_add_to_output)
 
             @flow.global_function(type="train", function_config=func_config)
             def test_job(x: oft.Numpy.Placeholder(x_shape, dtype=dtype)):
@@ -207,6 +221,7 @@ class TestLayerNorm(flow.unittest.TestCase):
                                     flow.watch_diff(gamma, assert_grad_gamma)
                             if data_type == "float16":
                                 gamma = flow.cast(gamma, dtype=flow.float16)
+                    x = flow.identity(x)
 
                     y = flow.nn.layer_norm(
                         x,
@@ -216,16 +231,16 @@ class TestLayerNorm(flow.unittest.TestCase):
                         begin_params_axis=begin_params_axis,
                         epsilon=epsilon,
                     )
+                    z = y + x
                 if data_type == "float16":
                     y = flow.cast(y, dtype=flow.float)
+                    z = flow.cast(z, dtype=flow.float)
 
                 flow.optimizer.SGD(
                     flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
-                ).minimize(y)
+                ).minimize(z)
                 return y
 
-            check_point = flow.train.CheckPoint()
-            check_point.init()
             y = test_job(x).get()
 
             assert y.numpy().shape == y_tf.numpy().shape, (

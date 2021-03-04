@@ -18,15 +18,21 @@ limitations under the License.
 
 #include <sstream>
 #include <vector>
-#include "oneflow/core/common/error.pb.h"
+#include "oneflow/core/common/error.cfg.h"
 
 namespace oneflow {
 
 class Error final {
  public:
-  Error(const std::shared_ptr<ErrorProto>& error_proto) : error_proto_(error_proto) {}
+  Error(const std::shared_ptr<cfg::ErrorProto>& error_proto) : error_proto_(error_proto) {}
   Error(const Error&) = default;
   ~Error() = default;
+
+  std::shared_ptr<cfg::ErrorProto> error_proto() const { return error_proto_; }
+  const cfg::ErrorProto* operator->() const { return error_proto_.get(); }
+  cfg::ErrorProto* operator->() { return error_proto_.get(); }
+  operator std::string() const;
+  void Assign(const Error& other) { error_proto_ = other.error_proto_; }
 
   // r-value reference is used to supporting expressions like `Error().AddStackFrame("foo.cpp",
   // "Bar") << "invalid value"` because operator<<() need r-value reference
@@ -36,6 +42,7 @@ class Error final {
   static Error ProtoParseFailedError();
   static Error JobSetEmptyError();
   static Error DeviceTagNotFoundError();
+  static Error ValueError(const std::string& error_summary);
   static Error JobNameExistError();
   static Error JobNameEmptyError();
   static Error JobNameNotEqualError();
@@ -69,15 +76,17 @@ class Error final {
   // gradient
   static Error GradientFunctionNotFound();
 
-  std::shared_ptr<ErrorProto> error_proto() const { return error_proto_; }
-  const ErrorProto* operator->() const { return error_proto_.get(); }
-  ErrorProto* operator->() { return error_proto_.get(); }
-  operator std::string() const;
-  void Assign(const Error& other) { error_proto_ = other.error_proto_; }
+  // symbol
+  static Error SymbolIdUninitialized();
+
+  static Error CompileOptionWrong();
 
  private:
-  std::shared_ptr<ErrorProto> error_proto_;
+  std::shared_ptr<cfg::ErrorProto> error_proto_;
 };
+
+void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error);
+const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError();
 
 // r-value reference is used to supporting expressions like `Error() << "invalid value"`
 template<typename T>

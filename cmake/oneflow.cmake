@@ -86,11 +86,6 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.i$")
-    list(APPEND of_all_swig ${oneflow_single_file})
-    set(group_this ON)
-  endif()
-
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.h$")
     list(APPEND of_all_obj_cc ${oneflow_single_file})
     set(group_this ON)
@@ -147,6 +142,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
     elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
+    elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/graph/.*\\.cpp$")
     else()
       # not test file
       list(FIND of_main_cc ${oneflow_single_file} main_found)
@@ -167,7 +163,7 @@ endforeach()
 # clang format
 add_custom_target(of_format
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
-  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix --quiet
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix --quiet
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR} --fix
   )
 
@@ -221,8 +217,9 @@ add_dependencies(of_cfgobj of_protoobj)
 # cc obj lib
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
+add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/core)
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
-target_link_libraries(of_ccobj ${oneflow_third_party_libs})
+target_link_libraries(of_ccobj of_graph ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
 add_dependencies(of_ccobj of_cfgobj)
 if (BUILD_GIT_VERSION)
@@ -232,7 +229,7 @@ if (USE_CLANG_FORMAT)
   add_dependencies(of_ccobj of_format)
 endif()
 
-oneflow_add_library(of_pyext_obj ${of_pyext_obj_cc})
+add_library(of_pyext_obj ${of_pyext_obj_cc})
 target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 target_link_libraries(of_pyext_obj of_ccobj)
 add_dependencies(of_pyext_obj of_ccobj)
@@ -246,22 +243,12 @@ elseif(WIN32)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
 endif()
 
-# build swig
-foreach(swig_name ${of_all_swig})
-  file(RELATIVE_PATH swig_rel_name ${PROJECT_SOURCE_DIR} ${swig_name})
-  list(APPEND of_all_rel_swigs ${swig_rel_name})
-endforeach()
-
-RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
-                          ${PROJECT_SOURCE_DIR}
-                          ${of_all_rel_swigs})
-
-pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc} ${PYBIND_REGISTRY_CC})
+pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${of_main_cc} ${PYBIND_REGISTRY_CC})
 set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
 add_dependencies(oneflow_internal of_cfgobj)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
-target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj)
+target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj ${oneflow_exe_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
@@ -275,28 +262,8 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python_gen"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/python_gen/__init__.py"
-    COMMAND echo "generated_compile_flags = []" > "${of_pyscript_dir}/oneflow/python_gen/sysconfig.py"
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python_gen/__export_symbols__.py")
-if (BUILD_CUDA)
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "with_cuda=True" >> "${of_pyscript_dir}/oneflow/python_gen/compatibility.py"
-        COMMAND echo "\"generated_compile_flags.append('-DWITH_CUDA')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
-        )
-else()
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "with_cuda=False" >> "${of_pyscript_dir}/oneflow/python_gen/compatibility.py")
-endif()
-
-if (USE_CXX11_ABI)
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "\"generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=1')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
-        )
-else()
-  add_custom_command(TARGET of_pyscript_copy POST_BUILD
-        COMMAND echo "\"generated_compile_flags.append('-D_GLIBCXX_USE_CXX11_ABI=0')\"" >> ${of_pyscript_dir}/oneflow/python_gen/sysconfig.py
-        )
-endif()
 
 add_dependencies(of_pyscript_copy of_protoobj)
 add_custom_target(generate_api ALL
@@ -323,7 +290,7 @@ set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 foreach(cc ${of_main_cc})
   get_filename_component(main_name ${cc} NAME_WE)
   oneflow_add_executable(${main_name} ${cc})
-  target_link_libraries(${main_name} ${of_libs} ${oneflow_third_party_libs})
+  target_link_libraries(${main_name} ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
   set_target_properties(${main_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 endforeach()
 
@@ -332,7 +299,7 @@ if(BUILD_TESTING)
   if(BUILD_CUDA)
     if (of_all_test_cc)
       oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
-      target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
+      target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
       set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
       add_test(NAME oneflow_test COMMAND oneflow_testexe)
       #  foreach(cc ${of_all_test_cc})
@@ -347,7 +314,7 @@ if(BUILD_TESTING)
         get_filename_component(test_name ${cc} NAME_WE)
         string(CONCAT test_exe_name ${test_name} exe)
         oneflow_add_executable(${test_exe_name} ${cc})
-        target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+        target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
       endforeach()
     endif()
   endif()
@@ -358,7 +325,7 @@ foreach(cc ${of_transport_test_cc})
   get_filename_component(transport_test_name ${cc} NAME_WE)
   string(CONCAT transport_test_exe_name ${transport_test_name} _exe)
   oneflow_add_executable(${transport_test_exe_name} ${cc})
-  target_link_libraries(${transport_test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+  target_link_libraries(${transport_test_exe_name} ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
   set_target_properties(${transport_test_exe_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 endforeach()
 
@@ -379,7 +346,24 @@ foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
   copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 endforeach()
 
+set(DEVICE_REG_HEADERS "${PROJECT_SOURCE_DIR}/oneflow/core/framework/device_register_*.h")
+set(AUTO_GEN_DEV_REG_HEADER "${PROJECT_BINARY_DIR}/oneflow/core/framework/auto_gen_device_registry.h")
+set(AUTO_GEN_DEV_REG_MACRO_ID "ONEFLOW_CORE_FRAMEWORK_AUTO_GEN_DEVICE_REGISTRY_H_")
+
+message(STATUS "auto generated header file: ${AUTO_GEN_DEV_REG_HEADER}")
+set(AUTO_GEN_DEV_REG_HEADER_CONTENT "#ifndef ${AUTO_GEN_DEV_REG_MACRO_ID}\n#define ${AUTO_GEN_DEV_REG_MACRO_ID}\n")
+file(GLOB_RECURSE DEVICE_REGISTER_HEADERS ${DEVICE_REG_HEADERS})
+foreach(item ${DEVICE_REGISTER_HEADERS})
+    file(RELATIVE_PATH item ${PROJECT_SOURCE_DIR} ${item})
+    message(STATUS "device register header file found: " ${item})
+    set(AUTO_GEN_DEV_REG_HEADER_CONTENT "${AUTO_GEN_DEV_REG_HEADER_CONTENT}#include \"${item}\"\n")
+endforeach()
+set(AUTO_GEN_DEV_REG_HEADER_CONTENT "${AUTO_GEN_DEV_REG_HEADER_CONTENT}#endif //${AUTO_GEN_DEV_REG_MACRO_ID}\n\n")
+write_file_if_different(${AUTO_GEN_DEV_REG_HEADER} ${AUTO_GEN_DEV_REG_HEADER_CONTENT})
+list(APPEND PROTO_HDRS ${AUTO_GEN_DEV_REG_HEADER})
+
 copy_files("${PROTO_HDRS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
+copy_files("${CFG_HRCS}" "${PROJECT_BINARY_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 
 set(OF_CORE_HDRS)
 list(APPEND of_core_dir_name_list "common" "device" "framework" "kernel/util" "persistence")

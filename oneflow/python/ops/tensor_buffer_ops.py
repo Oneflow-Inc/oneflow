@@ -19,20 +19,20 @@ import functools
 import operator
 
 import oneflow as flow
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Sequence
+import oneflow_api
 
 
 @oneflow_export("tensor_buffer_to_tensor")
 def tensor_buffer_to_tensor(
-    x: remote_blob_util.BlobDef,
-    dtype: dtype_util.dtype,
+    x: oneflow_api.BlobDesc,
+    dtype: flow.dtype,
     instance_shape: Sequence[int],
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator converts the Blob's type from TensorBuffer to Tensor. 
     Some operator's output data type is `TensorBuffer`, you can use this operator to convert back
     to `Tensor`. 
@@ -42,13 +42,13 @@ def tensor_buffer_to_tensor(
 
 
     Args:
-        x (BlobDef): Input `Blob`.
-        dtype (dtype_util.dtype): The data dtype.
+        x (oneflow_api.BlobDesc): Input `Blob`.
+        dtype (flow.dtype): The data dtype.
         instance_shape (Sequence[int]): The shape of each TensorBuffer instance.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        BlobDef: A `Blob`.
+        oneflow_api.BlobDesc: A `Blob`.
 
     For example: 
 
@@ -91,8 +91,8 @@ def tensor_buffer_to_tensor(
 
 @oneflow_export("tensor_to_tensor_buffer")
 def tensor_to_tensor_buffer(
-    x: remote_blob_util.BlobDef, instance_dims: int, name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+    x: oneflow_api.BlobDesc, instance_dims: int, name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
     r"""This operator converts the Blob's type from Tensor to TensorBuffer. 
 
     Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
@@ -100,12 +100,12 @@ def tensor_to_tensor_buffer(
 
 
     Args:
-        x (BlobDef): Input `Blob`.
+        x (oneflow_api.BlobDesc): Input `Blob`.
         instance_dims (int): The dimensions of dynamic tensor instance. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
 
     For example: 
 

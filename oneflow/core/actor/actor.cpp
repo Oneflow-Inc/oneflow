@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/actor/actor.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
-#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
@@ -35,16 +35,6 @@ void CheckInplaceRegstDescId(const TaskProto& task_proto) {
 }
 
 }  // namespace
-
-bool IsFirstRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
-  return (order == ColIdOrder::kAscending && regst->col_id() == 0)
-         || (order == ColIdOrder::kDescending && regst->IsMaxCol());
-}
-
-bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
-  return (order == ColIdOrder::kAscending && regst->IsMaxCol())
-         || (order == ColIdOrder::kDescending && regst->col_id() == 0);
-}
 
 void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
                  const ThreadCtx& thread_ctx) {
@@ -269,20 +259,20 @@ int64_t Actor::GetPieceId4NaiveOrInplaceCurReadableDataRegst() const {
 void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
-      CHECK_EQ(GetLocalWorkStreamId(), 0);
       device_ctx_.reset(new CpuDeviceCtx());
       break;
     }
 #ifdef WITH_CUDA
     case DeviceType::kGPU: {
       CudaStreamHandle* cuda_handle = nullptr;
-      CHECK_EQ(GetLocalWorkStreamId(), 0);
       cuda_handle = thread_ctx.g_cuda_stream.get();
       device_ctx_.reset(new CudaDeviceCtx(cuda_handle));
       break;
     }
 #endif
-    default: { UNIMPLEMENTED(); }
+    default: {
+      UNIMPLEMENTED();
+    }
   }
 }
 
@@ -319,7 +309,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       NormalProcessCustomizedEordMsg(msg);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (msg.SrcMachineId() == Global<MachineCtx>::Get()->this_machine_id()) {
+    if (msg.SrcMachineId() == GlobalProcessCtx::Rank()) {
       Regst* regst = msg.regst();
       if (naive_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
         CHECK_EQ(0, naive_consumed_rs_.TryPushBackRegst(regst));
@@ -721,10 +711,6 @@ void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
 
 int64_t Actor::GetGlobalWorkStreamId() const {
   return Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(actor_id_);
-}
-
-int64_t Actor::GetLocalWorkStreamId() const {
-  return Global<IDMgr>::Get()->LocalWorkStreamId4ActorId(actor_id_);
 }
 
 Regst* Actor::GetNaiveOrInplaceCurReadable(int64_t regst_desc_id) const {

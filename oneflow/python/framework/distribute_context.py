@@ -28,7 +28,7 @@ class DistributeStrategy(object):
         if sess.is_running and len(sess.is_mirrored_strategy_enabled_stack) > 0:
 
             def BuildScope(old_scope, builder):
-                return old_scope.BuildWithNewIsMirrored(builder, is_mirrored)
+                return builder.BuildScopeWithNewIsMirrored(old_scope, is_mirrored)
 
             self.scope_context_ = scope_util.ScopeContext(
                 scope_util.MakeScope(BuildScope)

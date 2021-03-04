@@ -17,6 +17,7 @@ import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import oneflow_api
 from typing import Tuple
 
 
@@ -32,24 +33,6 @@ class TestFunctionInputOutput(flow.unittest.TestCase):
         test_case.assertEqual(of_ret.numpy().max(), 1)
         test_case.assertEqual(of_ret.numpy().min(), 1)
         test_case.assertTrue(np.allclose(of_ret.numpy(), data))
-
-    def test_FixedTensorDef_batch_axis(test_case):
-        @flow.global_function()
-        def Foo(x: oft.Numpy.Placeholder((2, 5), batch_axis=1)):
-            test_case.assertEqual(x.batch_axis, 1)
-            return x
-
-        data = np.ones((2, 5), dtype=np.float32)
-        Foo(np.ones((2, 5), dtype=np.float32)).get()
-
-    def test_FixedTensorDef_no_batch_axis(test_case):
-        @flow.global_function()
-        def Foo(x: oft.Numpy.Placeholder((2, 5), batch_axis=None)):
-            test_case.assertTrue(x.batch_axis is None)
-            return x
-
-        data = np.ones((2, 5), dtype=np.float32)
-        Foo(np.ones((2, 5), dtype=np.float32)).get()
 
     def test_FixedTensorDef_2_device(test_case):
         flow.config.gpu_device_num(2)

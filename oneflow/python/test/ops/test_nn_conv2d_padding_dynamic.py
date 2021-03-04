@@ -54,7 +54,6 @@ def compare_with_tensorflow(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-
     func_config.default_logical_view(flow.scope.mirrored_view())
 
     if data_format == "NCHW":
@@ -109,8 +108,6 @@ def compare_with_tensorflow(
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     data = [np.random.rand(*x_shape).astype(np.float32)]
     of_out = DynamicConvJob(data).get().numpy_list()[0]
     # TensorFlow

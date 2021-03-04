@@ -25,7 +25,8 @@ void OpKernel::InferShape(KernelInferContext* ctx) const {
   ctx->GetOpInferFn()(op_infer_ctx);
   for (const auto& arg_pair : ctx->outputs()) {
     const Shape& shape = *op_infer_ctx->Shape4ArgNameAndIndex(arg_pair.first, arg_pair.second);
-    ctx->MutShapeView4ArgNameAndIndex(arg_pair.first, arg_pair.second)->set_shape(shape);
+    auto* mut_shape_view = ctx->MutShapeView4ArgNameAndIndex(arg_pair.first, arg_pair.second);
+    if (mut_shape_view) { mut_shape_view->set_shape(shape); }
   }
 }
 

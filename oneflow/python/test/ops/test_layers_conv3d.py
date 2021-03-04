@@ -115,8 +115,6 @@ def compare_with_tensorflow(
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = ConvJob().get()
 
     # TensorFlow

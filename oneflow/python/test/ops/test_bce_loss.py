@@ -26,6 +26,7 @@ import os
 def _compare_bceloss_with_np(
     input_shape, target_shape, weight_shape, device_type, machine_ids, device_counts
 ):
+    # random is clip to 0-1
     input = np.random.random(size=input_shape).astype(np.float32)
     target = np.random.random(size=target_shape).astype(np.float32)
     weight = np.random.random(size=weight_shape).astype(np.float32)
@@ -33,25 +34,17 @@ def _compare_bceloss_with_np(
     assert device_type in ["cpu", "gpu"]
 
     flow.clear_default_session()
-    flow.env.init()
     if device_type == "cpu":
         flow.config.cpu_device_num(device_counts)
     else:
         flow.config.gpu_device_num(device_counts)
 
     func_config = flow.FunctionConfig()
-
-    def _np_sigmoid_fn(x):
-        # Compute sigmoid function
-        return 1 / (1 + np.exp(-x))
+    func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
 
     def np_bceloss(np_input, np_target, np_weight):
-        np_sigmoid_input = _np_sigmoid_fn(np_input)
         np_bce = -np_weight * (
-            (
-                np_target * np.log(np_sigmoid_input)
-                + (1 - np_target) * (np.log(1 - np_sigmoid_input))
-            )
+            (np_target * np.log(np_input) + (1 - np_target) * (np.log(1 - np_input)))
         )
 
         np_bce_mean = np.mean(np_bce)
@@ -67,14 +60,10 @@ def _compare_bceloss_with_np(
         # Use numpy to compute diff
         elemcnt = np_target.size
 
-        # TODO: If you want to get the grad when the reduction = "sum", you can use the follow code
-
-        # np_bce_grad_sum = -(np_weight) * (
-        # np_target - (np.exp(np_input) / (1 + np.exp(np_input)))
-        # )
-
-        np_bce_grad_mean = -(np_weight / elemcnt) * (
-            np_target - (np.exp(np_input) / (1 + np.exp(np_input)))
+        np_bce_grad_mean = (
+            -(np_weight / elemcnt)
+            * (np_target - np_input)
+            / ((1 - np_input) * np_input)
         )
 
         return {
@@ -100,9 +89,9 @@ def _compare_bceloss_with_np(
     ) -> Dict[str, tp.Numpy]:
         with flow.scope.placement(device_type, "0:0"):
             v = flow.get_variable(
-                shape=target.shape,
+                shape=input.shape,
                 dtype=flow.float32,
-                initializer=flow.constant_initializer(1),
+                initializer=flow.zeros_initializer(),
                 name="v",
             )
 
@@ -166,7 +155,7 @@ def _gen_arg_dict(shape, device_type, machine_ids, device_counts):
 class Testbceloss1n1d(flow.unittest.TestCase):
     def test_bceloss_cpu(test_case):
         arg_dict = _gen_arg_dict(
-            shape=(3, 16), device_type="cpu", machine_ids="0:0", device_counts=1
+            shape=(3, 3), device_type="cpu", machine_ids="0:0", device_counts=1
         )
 
         for arg in GenArgList(arg_dict):

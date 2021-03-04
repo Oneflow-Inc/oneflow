@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/sbp_context.h"
-#include "oneflow/core/framework/batch_axis_context.h"
 
 namespace oneflow {
 
@@ -142,12 +141,18 @@ OpRegistry& OpRegistry::DefaultedAttr(const std::string& name, AttrType type,
 }
 
 OpRegistry& OpRegistry::SetTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
-  result_.tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
+  SetLogicalTensorDescInferFn(tensor_desc_infer_fn);
+  SetPhysicalTensorDescInferFn(tensor_desc_infer_fn);
   return *this;
 }
 
-OpRegistry& OpRegistry::SetBatchAxisInferFn(BatchAxisInferFn batch_axis_infer_fn) {
-  result_.batch_axis_infer_fn = std::move(batch_axis_infer_fn);
+OpRegistry& OpRegistry::SetLogicalTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
+  result_.logical_tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetPhysicalTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
+  result_.physical_tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
   return *this;
 }
 
@@ -183,12 +188,11 @@ OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
 }
 
 OpRegistry& OpRegistry::Finish() {
-  CHECK(result_.tensor_desc_infer_fn != nullptr)
-      << "No TensorDescInfer function for " << result_.op_type_name;
+  CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
+      << "No logical TensorDescInfer function for " << result_.op_type_name;
+  CHECK(result_.physical_tensor_desc_infer_fn != nullptr)
+      << "No physical TensorDescInfer function for " << result_.op_type_name;
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
-  if (result_.batch_axis_infer_fn == nullptr) {
-    result_.batch_axis_infer_fn = BatchAxisInferFnUtil::DefaultAsFirstHasValueInput;
-  }
   if (result_.get_sbp_fn == nullptr) {
     result_.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
   }
