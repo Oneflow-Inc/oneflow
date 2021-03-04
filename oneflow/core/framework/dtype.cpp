@@ -53,12 +53,11 @@ Maybe<DType> DType::GetDTypeByDataType(const DataType& data_type) {
 
 Maybe<size_t> DType::bytes() const {
   // DataType::OFRecord and DataType::TensorBuffer don't have stable byte size
-  static const HashMap<DataType, size_t> data_type2bytes = {
-      {DataType::kInvalidDataType, 0}, {DataType::kChar, 1},   {DataType::kFloat16, 2},
-      {DataType::kFloat, 4},           {DataType::kDouble, 8}, {DataType::kInt8, 1},
-      {DataType::kInt32, 4},           {DataType::kInt64, 8},  {DataType::kUInt8, 1}};
-  if (data_type2bytes.find(data_type()) == data_type2bytes.end()) { OF_UNIMPLEMENTED(); }
-  return data_type2bytes.at(data_type());
+  if (data_type() == DataType::kInvalidDataType || data_type() == DataType::kOFRecord
+      || data_type() == DataType::kTensorBuffer) {
+    OF_UNIMPLEMENTED();
+  }
+  return SwitchGetDataTypeBytes(SwitchCase(data_type()));
 }
 
 Maybe<DType> DType::InvalidDataType() {
