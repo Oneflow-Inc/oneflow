@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/env.pb.h"
 #include "oneflow/core/rpc/include/ctrl.h"
-#include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/rpc/include/local/ctrl.h"
 #include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/control/ctrl_util.h"
 #include "oneflow/core/control/global_process_ctx.h"

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/rpc/include/local/ctrl.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/job/profiler.h"

@@ -3,6 +3,7 @@
 
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/rpc/include/local/rpc.h"
+#include "oneflow/core/rpc/include/base/ctrl.h"
 
 namespace oneflow {
 
@@ -61,6 +62,60 @@ static void OfCallOnce(const std::string& name, F f, Arg&& arg, Args&&... args) 
   std::function<void()> fn = std::bind(f, std::forward<Arg>(arg), std::forward<Args>(args)...);
   OfCallOnce(name, std::move(fn));
 }
+
+template<CtrlMethod ctrl_method>
+class CtrlCall final : public CtrlCallIf {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CtrlCall);
+  CtrlCall() : status_(Status::kBeforeHandleRequest) {}
+  ~CtrlCall() = default;
+
+  static constexpr const size_t value = (size_t)ctrl_method;
+
+  const CtrlRequest<ctrl_method>& request() const { return request_; }
+  CtrlRequest<ctrl_method>* mut_request() { return &request_; }
+  CtrlResponse<ctrl_method>* mut_response() { return &response_; }
+  void set_request_handler(std::function<void()> val) { request_handler_ = val; }
+
+  void Process() override {
+    switch (status_) {
+      case Status::kBeforeHandleRequest: {
+        request_handler_();
+        return;
+      }
+      case Status::kBeforeDelete: {
+        delete this;
+        return;
+      }
+    }
+  }
+
+  void SendResponse() override { status_ = Status::kBeforeDelete; }
+
+ private:
+  enum class Status { kBeforeHandleRequest, kBeforeDelete };
+
+  Status status_;
+  CtrlRequest<ctrl_method> request_;
+  CtrlResponse<ctrl_method> response_;
+  std::function<void()> request_handler_;
+};
+
+class CtrlServer final : public RpcServer {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CtrlServer);
+  ~CtrlServer() override {}
+
+  CtrlServer();
+  // port may be configured in bootstrap_conf
+  CtrlServer(int ctrl_port);
+
+  int64_t port() const { return port_; }
+
+ private:
+  void OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call);
+  int port_;
+};
 
 }  // namespace oneflow
 

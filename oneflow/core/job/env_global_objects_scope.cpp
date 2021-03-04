@@ -19,7 +19,7 @@ limitations under the License.
 #include <thread>
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/rpc/include/local/ctrl.h"
 #include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/rpc/include/ctrl.h"
 #include "oneflow/core/control/global_process_ctx.h"
