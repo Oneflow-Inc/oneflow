@@ -37,6 +37,7 @@ import oneflow
 from oneflow_api import ConsistentBlob, MirroredBlob
 import oneflow_api
 import inspect
+import numpy as np
 
 
 @oneflow_export("watch")
@@ -419,10 +420,12 @@ def _MakeHandler4ParallelIdAndLocalBlob(blob_watched, handler):
             parallel_id2consistent_local_blob[parallel_id]
             for i in range(len_sub_remote_blobs)
         ]
-        assert len(local_blob_list) == 1
-        local_blob = local_blob_util.LocalBlob(
-            local_blob_list[0].numpy(), blob_watched.is_dynamic
-        )
+        local_numpy = local_blob_list[0].numpy()
+        if len(local_blob_list) > 1:
+            print("WARNING: watch return tensor list will concat as axis = 0.")
+            local_numpy_list = [x.numpy() for x in local_blob_list]
+            local_numpy = np.concatenate(local_numpy_list, axis=0)
+        local_blob = local_blob_util.LocalBlob(local_numpy, blob_watched.is_dynamic)
         handler(oft_util.TransformWatchedBlob(local_blob, handler))
 
     return HandlerParallelIdAndLocalBlob
