@@ -117,18 +117,6 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr* op_expr, const TensorList& inp
                          << " has not been supported in EagerInterpreter::Apply.";
 }
 
-static Maybe<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>> MakeBn2BlobObjectMap(
-    const BuiltinOpExpr* op_expr, const TensorList& inputs, const TensorList& outputs) {
-  auto* bn2blob_object(new HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>{});
-  for (int i = 0; i < inputs.size(); ++i) {
-    const auto& ibn = op_expr->indexed_ibns().at(i);
-    const auto& blob_object = JUST(OpInterpUtil::GetTensorBlobObject(inputs[i]));
-    bn2blob_object->emplace(ibn, blob_object);
-  }
-  return std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>(
-      bn2blob_object);
-}
-
 static Maybe<Tensor> BuildTensorFromBlobObject(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   std::shared_ptr<Tensor> tensor;
@@ -159,7 +147,8 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr* op_expr, const TensorList
                                   const std::shared_ptr<cfg::OpAttribute>& op_attribute,
                                   const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
   auto BuildInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    const auto& bn2blob_object = CHECK_JUST(MakeBn2BlobObjectMap(op_expr, inputs, outputs));
+    const auto& bn2blob_object =
+        CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr->indexed_ibns(), inputs));
     CHECK_JUST(builder->NoBoxingStatelessCall(op_attribute, parallel_conf, bn2blob_object));
     for (int i = 0; i < outputs.size(); ++i) {
       const std::string& obn = op_expr->indexed_obns().at(i);
@@ -172,8 +161,7 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr* op_expr, const TensorList
 Maybe<void> EagerInterpreter::Apply_(const UserOpExpr* op_expr, const TensorList& inputs,
                                      TensorList& outputs, const OpExprInterpState* state) {
   const auto& scope = JUST(GetCurrentScope());
-  const auto& op_attribute = JUST(OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
-      op_expr, scope, context()->is_mirrored_strategy_enabled));
+  const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, scope, inputs));
   auto parallel_conf =
       std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
   return NaiveInterpret(op_expr, inputs, outputs, op_attribute, parallel_conf);
@@ -195,8 +183,7 @@ Maybe<void> EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const Tensor
     return Maybe<void>::Ok();
   }
   const auto& scope = JUST(GetCurrentScope());
-  const auto& op_attribute = JUST(OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
-      op_expr, scope, context()->is_mirrored_strategy_enabled));
+  const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, scope, inputs));
   auto parallel_conf =
       std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
   JUST(NaiveInterpret(op_expr, inputs, outputs, op_attribute, parallel_conf));
@@ -227,10 +214,10 @@ static Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
 BuildMirroredCastInstruction(const BuiltinOpExpr* op_expr, const TensorList& inputs,
                              TensorList& outputs, const OpExprInterpContext* ctx) {
   const auto& scope = JUST(GetCurrentScope());
-  const auto& op_attribute = JUST(OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
-      op_expr, scope, ctx->is_mirrored_strategy_enabled));
+  const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, scope, inputs));
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    const auto& bn2blob_object = CHECK_JUST(MakeBn2BlobObjectMap(op_expr, inputs, outputs));
+    const auto& bn2blob_object =
+        CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr->indexed_ibns(), inputs));
     const auto& in_blob_object = (*bn2blob_object)["in"];
     const auto& parallel_desc_symbol = in_blob_object->parallel_desc_symbol();
     OpAttribute proto_op_attribute;
@@ -276,12 +263,12 @@ static Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
 BuildDistributeSplitOrCloneInstruction(const BuiltinOpExpr* op_expr, const TensorList& inputs,
                                        TensorList& outputs, const OpExprInterpContext* ctx) {
   const auto& scope = JUST(GetCurrentScope());
-  const auto& op_attribute = JUST(OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
-      op_expr, scope, ctx->is_mirrored_strategy_enabled));
-  OpAttribute proto_op_attribute;
-  op_attribute->ToProto(&proto_op_attribute);
+  const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, scope, inputs));
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    const auto& bn2blob_object = CHECK_JUST(MakeBn2BlobObjectMap(op_expr, inputs, outputs));
+    OpAttribute proto_op_attribute;
+    op_attribute->ToProto(&proto_op_attribute);
+    const auto& bn2blob_object =
+        CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr->indexed_ibns(), inputs));
     const auto& logical_in_blob_object =
         CHECK_JUST(GetInBlobObject(builder, proto_op_attribute, "in", *bn2blob_object));
     const auto& physical_out_blob_objects =
@@ -311,19 +298,19 @@ static Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
 BuildDistributeConcatAndAddInstruction(const BuiltinOpExpr* op_expr, const TensorList& inputs,
                                        TensorList& outputs, const OpExprInterpContext* ctx) {
   const auto& scope = JUST(GetCurrentScope());
-  const auto& op_attribute = JUST(OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
-      op_expr, scope, ctx->is_mirrored_strategy_enabled));
-  OpAttribute proto_op_attribute;
-  op_attribute->ToProto(&proto_op_attribute);
-  const auto& op_parallel_desc_sym = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(
-      proto_op_attribute.parallel_signature().op_parallel_desc_symbol_id()));
-  const auto& op_arg_parallel_attr = JUST(
-      compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, proto_op_attribute, "out"));
-  const auto& op_arg_blob_attr =
-      JUST(compatible_py::GetOpArgBlobAttribute(proto_op_attribute, "out"));
+  const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, scope, inputs));
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+    OpAttribute proto_op_attribute;
+    op_attribute->ToProto(&proto_op_attribute);
+    const auto& op_parallel_desc_sym = CHECK_JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(
+        proto_op_attribute.parallel_signature().op_parallel_desc_symbol_id()));
+    const auto& op_arg_parallel_attr = CHECK_JUST(
+        compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, proto_op_attribute, "out"));
+    const auto& op_arg_blob_attr =
+        CHECK_JUST(compatible_py::GetOpArgBlobAttribute(proto_op_attribute, "out"));
     int input_size = op_expr->indexed_ibns().size();
-    const auto& bn2blob_object = CHECK_JUST(MakeBn2BlobObjectMap(op_expr, inputs, outputs));
+    const auto& bn2blob_object =
+        CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr->indexed_ibns(), inputs));
     std::vector<std::shared_ptr<compatible_py::BlobObject>> in_blob_objects(input_size);
     for (int i = 0; i < input_size; ++i) {
       in_blob_objects[i] = CHECK_JUST(

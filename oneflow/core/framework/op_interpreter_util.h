@@ -39,6 +39,10 @@ class OpInterpUtil {
       const BuiltinOpExpr* op_expr, const std::shared_ptr<Scope>& scope,
       const bool is_mirrored_strategy_enabled);
 
+  static Maybe<cfg::OpAttribute> InferOpAttribute(const BuiltinOpExpr* op_expr,
+                                                  const std::shared_ptr<Scope>& scope,
+                                                  const TensorList& inputs);
+
   static Maybe<compatible_py::BlobObject> GetTensorBlobObject(
       const std::shared_ptr<Tensor>& tensor);
 
@@ -46,13 +50,16 @@ class OpInterpUtil {
                                             const std::shared_ptr<Tensor>& output,
                                             const OpAttribute& op_attribute);
 
+  using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
+
+  static Maybe<Bn2BlobObjectMap> MakeBn2BlobObjectMap(const std::vector<std::string>& indexed_ibns,
+                                                      const TensorList& inputs);
+
  private:
   static Maybe<OperatorConf> GenModelInitOpConf(const OperatorConf& variable_conf);
   static Maybe<OperatorConf> GenModelIOPathInputOpConf();
   static Maybe<OperatorConf> GenModelLoadOpConf(const OperatorConf& variable_conf,
                                                 const OperatorConf& path_input_op_conf);
-
-  using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
 
   static Maybe<cfg::OpAttribute> InferOpAttribute(const OperatorConf& op_conf,
                                                   const std::shared_ptr<Scope>& scope,

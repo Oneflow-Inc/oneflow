@@ -51,6 +51,19 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   return OpInterpUtil::AddBuiltinOpAndInferOpAttribute(*op_conf, is_mirrored_strategy_enabled);
 }
 
+/*static*/ Maybe<Bn2BlobObjectMap> OpInterpUtil::MakeBn2BlobObjectMap(
+    const std::vector<std::string>& indexed_ibns, const TensorList& inputs) {
+  CHECK_EQ_OR_RETURN(indexed_ibns.size(), inputs.size());
+  auto* bn2blob_object(new HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>{});
+  for (int i = 0; i < inputs.size(); ++i) {
+    const auto& ibn = indexed_ibns.at(i);
+    const auto& blob_object = JUST(OpInterpUtil::GetTensorBlobObject(inputs[i]));
+    bn2blob_object->emplace(ibn, blob_object);
+  }
+  return std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>(
+      bn2blob_object);
+}
+
 /*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr* op_expr) {
   auto* op_conf = new OperatorConf;
   op_expr->BuildOpConf(op_conf);
@@ -106,7 +119,7 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
 OpInterpUtil::BuildModelInitOrIOPathInputInstruction(
     const OperatorConf& op_conf, const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object) {
   using namespace std::placeholders;
-  auto build_instruction = [=](const std::shared_ptr<InstructionsBuilder>& builder) {
+  auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
     const auto& scope = CHECK_JUST(GetCurrentScope());
     const auto& op_attribute =
         CHECK_JUST(OpInterpUtil::InferOpAttribute(op_conf, scope, Bn2BlobObjectMap{}));
@@ -123,8 +136,8 @@ OpInterpUtil::BuildModelInitOrIOPathInputInstruction(
 /*static*/ Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
 OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
                                        const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object) {
-  int64_t callback_id = Global<ForeignCallback>::Get()->FeedPath(path);
-  auto build_instruction = [=](const std::shared_ptr<InstructionsBuilder>& builder) {
+  auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+    int64_t callback_id = Global<ForeignCallback>::Get()->FeedPath(path);
     const auto& blob_object = bn2blob_object->at("out");
     CHECK_JUST(builder->FeedBlob(blob_object, callback_id));
     CHECK_JUST(
@@ -242,6 +255,18 @@ OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
   const auto& op = JUST(ConstructAndInferOp(mutable_op_conf, upstream_signature, *scope));
   const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
   return std::make_shared<cfg::OpAttribute>(*op_attribute);
+}
+
+/*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::InferOpAttribute(
+    const BuiltinOpExpr* op_expr, const std::shared_ptr<Scope>& scope, const TensorList& inputs) {
+  auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr));
+  int64_t symbol_id = JUST(scope->symbol_id());
+  op_conf->set_scope_symbol_id(symbol_id);
+  if (!op_conf->has_device_tag()) {
+    op_conf->set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
+  }
+  const auto& ibn2blob_object = JUST(MakeBn2BlobObjectMap(op_expr->indexed_ibns(), inputs));
+  return OpInterpUtil::InferOpAttribute(*op_conf, scope, *ibn2blob_object);
 }
 
 }  // namespace one
