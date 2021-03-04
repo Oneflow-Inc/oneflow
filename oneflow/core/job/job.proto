@@ -30,6 +30,7 @@ message JobHelperConf {
   map<string, int64> lbn2logical_object_id = 5;
   optional OpBlobArgPairs identical_sbp_oba_pairs = 7;
   optional LbiDiffWatcherInfo lbi_diff_watcher_info = 8;
+  map<string, ArgSignature> op_name2arg_signature = 9;
 }
 
 message Job {

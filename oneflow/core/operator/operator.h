@@ -105,14 +105,14 @@ class Operator {
   // Read: shape of input_blobs
   // Write: shape of output_blobs
   Maybe<void> InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext*, const SbpSignature* sbp_signature) const;
+                               const ParallelContext*) const;
 
   Maybe<void> InferOutBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext*, const SbpSignature* sbp_signature) const;
+                                  const ParallelContext*) const;
 
   Maybe<void> InferInternalBlobDescsIf(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const;
+      const ParallelContext* parallel_ctx) const;
 
   Maybe<void> InferInplaceObn2IbnIf(
       HashMap<std::string, std::string>* mut_inplace_obn2ibn,
@@ -170,11 +170,11 @@ class Operator {
       const std::function<Maybe<const ParallelDesc>(const std::string&)>& ParallelDesc4Bn);
   virtual Maybe<void> InferBlobParallelDesc();
   virtual Maybe<void> InferOutBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      const SbpSignature* sbp_signature) const;
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext*) const;
   virtual Maybe<void> InferInternalBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const;
+      const ParallelContext* parallel_ctx) const;
   virtual Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
@@ -392,7 +392,7 @@ bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
 Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope);
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const SbpParallel& sbp_parallel,
-                              const int64_t parallel_num, const int64_t parallel_id);
+                              int64_t parallel_num, int64_t parallel_id);
 
 }  // namespace oneflow
 

@@ -288,43 +288,39 @@ Maybe<void> Operator::InferLogicalOutBlobDescs(
   ParallelContext parallel_ctx;
   parallel_ctx.set_parallel_id(0);
   parallel_ctx.set_parallel_num(1);
-  SbpSignature sbp_signature;
-  auto* map = sbp_signature.mutable_bn_in_op2sbp_parallel();
-  for (const auto& ibn : input_bns()) { (*map)[ibn].mutable_split_parallel()->set_axis(0); }
-  for (const auto& obn : output_bns()) { (*map)[obn].mutable_split_parallel()->set_axis(0); }
-  return InferOutBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, &sbp_signature);
+  return InferOutBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx);
 }
 
 Maybe<void> Operator::InferBlobDescsIf(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  JUST(InferOutBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature));
-  JUST(InferInternalBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature));
+    const ParallelContext* parallel_ctx) const {
+  JUST(InferOutBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx));
+  JUST(InferInternalBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferOutBlobDescsIf(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  return InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature);
+    const ParallelContext* parallel_ctx) const {
+  return InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
 Maybe<void> Operator::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   UNIMPLEMENTED() << typeid(*this).name();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferInternalBlobDescsIf(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  return InferInternalBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature);
+    const ParallelContext* parallel_ctx) const {
+  return InferInternalBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
 Maybe<void> Operator::InferInternalBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   return Maybe<void>::Ok();
 }
 
