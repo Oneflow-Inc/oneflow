@@ -60,7 +60,7 @@ Maybe<void> GetOpNames(const Job& job, HashSet<std::string>* op_names) {
 
 Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
                         void (ForeignCallback::*interpret)(
-                            const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+                            const std::string& op_attribute_str,
                             const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const) {
   const auto& op_graph = JUST(OpGraph::New(job));
   const auto* foreign_callback = JUST(GlobalMaybe<ForeignCallback>());
@@ -69,11 +69,10 @@ Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
     const auto& op_attribute = op_node.op().GetOpAttributeWithoutOpNameAndLbn();
     const auto& parallel_conf = op_node.parallel_desc().parallel_conf();
     {
-      const std::shared_ptr<cfg::OpAttribute>& cfg_op_attribute =
-          std::make_shared<cfg::OpAttribute>(*op_attribute);
+      const std::string& op_attribute_str = PbMessage2TxtString(*op_attribute);
       const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
           std::make_shared<cfg::ParallelConf>(parallel_conf);
-      (foreign_callback->*interpret)(cfg_op_attribute, cfg_parallel_conf);
+      (foreign_callback->*interpret)(op_attribute_str, cfg_parallel_conf);
     }
     return Maybe<void>::Ok();
   }));
@@ -897,11 +896,10 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   const auto& parallel_conf = parallel_desc.parallel_conf();
   const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf));
   {
-    const std::shared_ptr<cfg::OpAttribute>& cfg_op_attribute =
-        std::make_shared<cfg::OpAttribute>(*op_attribute);
+    const std::string& op_attribute_str = PbMessage2TxtString(*op_attribute);
     const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
         std::make_shared<cfg::ParallelConf>(parallel_conf);
-    JUST(GlobalMaybe<ForeignCallback>())->EagerMirroredCast(cfg_op_attribute, cfg_parallel_conf);
+    JUST(GlobalMaybe<ForeignCallback>())->EagerMirroredCast(op_attribute_str, cfg_parallel_conf);
   }
   return mirrored_lbi;
 }

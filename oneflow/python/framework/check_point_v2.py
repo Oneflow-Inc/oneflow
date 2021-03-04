@@ -300,11 +300,8 @@ def _LogicalSlice(
             op_attribute = op_infer_util.Infer(
                 op_conf, bn_in_op2blob_object, scope_symbol_id
             )
-            cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
-                str(op_attribute)
-            )
             builder.StatelessCall(
-                cfg_op_attribute,
+                str(op_attribute),
                 parallel_conf,
                 bn_in_op2blob_object,
                 boxing_util.BoxingTo,
@@ -397,11 +394,11 @@ def _LogicalSliceAssign(
         op_attribute = op_infer_util.Infer(
             op_conf, bn_in_op2blob_object, scope_symbol_id
         )
-        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
-            str(op_attribute)
-        )
         builder.StatelessCall(
-            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
+            str(op_attribute),
+            parallel_conf,
+            bn_in_op2blob_object,
+            boxing_util.BoxingTo,
         )
 
     oneflow_api.deprecated.LogicalRun(BuildAssignInstruction)

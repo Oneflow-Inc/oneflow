@@ -16,12 +16,6 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/operator/op_attribute.pb.h"
-#include "oneflow/core/operator/op_attribute.cfg.h"
-
-#include "oneflow/core/operator/op_conf.cfg.h"
-#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/dtype.h"
 
 namespace py = pybind11;
@@ -29,13 +23,6 @@ namespace py = pybind11;
 namespace oneflow {
 
 namespace {
-
-Maybe<cfg::OpAttribute> MakeOpAttribute(const std::string& op_attribute_str) {
-  OpAttribute op_attribute;
-  CHECK_OR_RETURN(TxtString2PbMessage(op_attribute_str, &op_attribute))
-      << "op_attribute parse failed";
-  return std::make_shared<cfg::OpAttribute>(op_attribute);
-}
 
 Maybe<int> GetProtoDtype4OfDtype(const std::shared_ptr<DType>& x) {
   // int is the compatible data type of DType used in python code.
@@ -45,9 +32,6 @@ Maybe<int> GetProtoDtype4OfDtype(const std::shared_ptr<DType>& x) {
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
-  m.def("MakeOpAttributeByString",
-        [](const std::string& str) { return MakeOpAttribute(str).GetPtrOrThrow(); });
-
   m.def("GetProtoDtype4OfDtype",
         [](const std::shared_ptr<DType>& x) { return GetProtoDtype4OfDtype(x).GetOrThrow(); });
 

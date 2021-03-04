@@ -19,6 +19,11 @@ limitations under the License.
 #include <functional>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/op_attribute.cfg.h"
+#include "oneflow/core/operator/op_conf.cfg.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace py = pybind11;
 
@@ -33,6 +38,13 @@ Maybe<cfg::OperatorConf> MakeOpConf(const std::string& serialized_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &op_conf)) << "op_conf parse failed";
   return std::make_shared<cfg::OperatorConf>(op_conf);
+}
+
+Maybe<cfg::OpAttribute> MakeOpAttribute(const std::string& op_attribute_str) {
+  OpAttribute op_attribute;
+  CHECK_OR_RETURN(TxtString2PbMessage(op_attribute_str, &op_attribute))
+      << "op_attribute parse failed";
+  return std::make_shared<cfg::OpAttribute>(op_attribute);
 }
 
 std::shared_ptr<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
@@ -158,8 +170,10 @@ std::shared_ptr<compatible_py::OpKernelObject> NewOpKernelObject(
 
 std::shared_ptr<compatible_py::BlobObject> MakeLazyRefBlobObject(
     const std::shared_ptr<InstructionsBuilder>& x, const std::string& interface_op_name,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::string& serialized_op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+  std::shared_ptr<cfg::OpAttribute> op_attribute =
+      CHECK_JUST(MakeOpAttribute(serialized_op_attribute));
   return x->MakeLazyRefBlobObject(interface_op_name, op_attribute, parallel_conf).GetPtrOrThrow();
 }
 
@@ -197,8 +211,7 @@ void FeedBlob(const std::shared_ptr<InstructionsBuilder>& x,
 }
 
 void StatefulCall(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<InstructionsBuilder>& x, const std::string& serialized_op_attribute,
     const std::shared_ptr<compatible_py::OpKernelObject>& opkernel_object,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object,
@@ -206,13 +219,14 @@ void StatefulCall(
         const std::shared_ptr<InstructionsBuilder>&,
         const std::shared_ptr<compatible_py::BlobObject>&,
         const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo) {
+  std::shared_ptr<cfg::OpAttribute> op_attribute =
+      CHECK_JUST(MakeOpAttribute(serialized_op_attribute));
   return x->StatefulCall(op_attribute, opkernel_object, bn_in_op2blob_object, BoxingTo)
       .GetOrThrow();
 }
 
 void StatelessCall(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<InstructionsBuilder>& x, const std::string& serialized_op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object,
@@ -220,27 +234,31 @@ void StatelessCall(
         const std::shared_ptr<InstructionsBuilder>&,
         const std::shared_ptr<compatible_py::BlobObject>&,
         const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo) {
+  std::shared_ptr<cfg::OpAttribute> op_attribute =
+      CHECK_JUST(MakeOpAttribute(serialized_op_attribute));
   return x->StatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object, BoxingTo).GetOrThrow();
 }
 
 void NoBoxingStatelessCall(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<InstructionsBuilder>& x, const std::string& serialized_op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object) {
+  std::shared_ptr<cfg::OpAttribute> op_attribute =
+      CHECK_JUST(MakeOpAttribute(serialized_op_attribute));
   return x->NoBoxingStatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object).GetOrThrow();
 }
 
 void NoBoxingCudaD2HStatelessCall(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<InstructionsBuilder>& x, const std::string& serialized_op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& in_parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object,
     const std::function<std::shared_ptr<ParallelDesc>(const std::shared_ptr<InstructionsBuilder>&,
                                                       const std::shared_ptr<ParallelDesc>&,
                                                       const std::string&)>& TryReplaceDeviceTag) {
+  std::shared_ptr<cfg::OpAttribute> op_attribute =
+      CHECK_JUST(MakeOpAttribute(serialized_op_attribute));
   return x
       ->NoBoxingCudaD2HStatelessCall(op_attribute, in_parallel_conf, bn_in_op2blob_object,
                                      TryReplaceDeviceTag)
@@ -248,21 +266,23 @@ void NoBoxingCudaD2HStatelessCall(
 }
 
 void NoBoxingCudaH2DStatelessCall(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<InstructionsBuilder>& x, const std::string& serialized_op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& out_parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object) {
+  std::shared_ptr<cfg::OpAttribute> op_attribute =
+      CHECK_JUST(MakeOpAttribute(serialized_op_attribute));
   return x->NoBoxingCudaH2DStatelessCall(op_attribute, out_parallel_conf, bn_in_op2blob_object)
       .GetOrThrow();
 }
 
 void RawStatelessCall(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    const std::shared_ptr<InstructionsBuilder>& x, const std::string& serialized_op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object) {
+  std::shared_ptr<cfg::OpAttribute> op_attribute =
+      CHECK_JUST(MakeOpAttribute(serialized_op_attribute));
   return x->RawStatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object).GetOrThrow();
 }
 

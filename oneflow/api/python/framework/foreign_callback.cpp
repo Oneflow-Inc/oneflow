@@ -29,19 +29,19 @@ class PyForeignCallback : public ForeignCallback {
   using ForeignCallback::ForeignCallback;
 
   // Trampoline (need one for each virtual function)
-  void EagerMirroredCast(const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+  void EagerMirroredCast(const std::string& op_attribute_str,
                          const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const override {
     PYBIND11_OVERRIDE(void,              /* Return type */
                       ForeignCallback,   /* Parent class */
                       EagerMirroredCast, /* Name of function in C++ (must match Python name) */
-                      op_attribute, parallel_conf /* Argument(s) */
+                      op_attribute_str, parallel_conf /* Argument(s) */
     );
   }
 
   void EagerInterpretCompletedOp(
-      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::string& op_attribute_str,
       const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const override {
-    PYBIND11_OVERRIDE(void, ForeignCallback, EagerInterpretCompletedOp, op_attribute,
+    PYBIND11_OVERRIDE(void, ForeignCallback, EagerInterpretCompletedOp, op_attribute_str,
                       parallel_conf);
   }
 
