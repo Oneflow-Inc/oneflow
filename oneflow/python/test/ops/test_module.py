@@ -188,16 +188,16 @@ class TestModule(flow.unittest.TestCase):
             if type(m) == flow.nn.Linear:
                 m.weight.fill_(1.0)
                 print(m.weight)
+
         net = flow.nn.Sequential(flow.nn.Linear(2, 2), flow.nn.Linear(2, 2))
         net.apply(init_weights)
         children = list(net.children())
 
-        m1 =flow.nn.Linear(2, 2)
+        m1 = flow.nn.Linear(2, 2)
         m1.weight.fill_(1.0)
-       
+
         test_case.assertEqual(m1.weight, children[0].weight)
         test_case.assertEqual(m1.weight, children[1].weight)
-        
 
     # TODO: add more tests about module api
 
