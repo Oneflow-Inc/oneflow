@@ -28,7 +28,7 @@ namespace {
 struct DeviceExportUtil final {
   static std::shared_ptr<Device> MakeDevice(const std::string& type_and_id) {
     std::string str;
-    size_t pos = type_and_id.find(':');
+    std::size_t pos = type_and_id.find(':');
     std::string type = type_and_id.substr(0, pos);
     if (Device::type_supported.find(type) == Device::type_supported.end()) {
       std::string error_msg =
@@ -37,7 +37,7 @@ struct DeviceExportUtil final {
     }
     int device_id = 0;
     if (pos < type_and_id.size()) {
-      std::string id = type_and_id.substr(pos+1);
+      std::string id = type_and_id.substr(pos + 1);
       for (const auto& c : id) {
         if (!std::isalnum(c)) {
           throw std::invalid_argument("Invalid device string: " + type_and_id);
