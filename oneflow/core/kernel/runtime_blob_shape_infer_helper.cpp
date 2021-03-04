@@ -93,8 +93,7 @@ void RuntimeBlobShapeInferHelper::InferShape(std::function<Blob*(const std::stri
       if (blob == nullptr) { return nullptr; }
       return BlobDesc4BnInOp(bn_in_op, blob->blob_desc());
     });
-    CHECK_JUST(
-        op_->InferOutBlobDescsIf(CachedBlobDesc4BnInOp, parallel_ctx_.get(), sbp_signature_.get()));
+    CHECK_JUST(op_->InferOutBlobDescsIf(CachedBlobDesc4BnInOp, parallel_ctx_.get()));
     auto* ret = new OpInferCacheValue();
     ret->obn_idx2shape_sym.resize(op_->output_bns().size());
     FOR_RANGE(int, i, 0, op_->output_bns().size()) {
