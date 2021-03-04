@@ -216,9 +216,6 @@ class MobileNetV1(nn.Module):
         x = self.fc(x)
         return x
 
-# from absl import app
-# from absl.testing import absltest
-
 def test_mobilenet_v1(test_case):
     load_pytorch_module_and_check(
         test_case,
@@ -226,7 +223,3 @@ def test_mobilenet_v1(test_case):
         input_size=(1, 3, 32, 32),
         train_flag=False,
     )
-
-
-# test_case = absltest.TestCase
-# test_mobilenet_v1(test_case)

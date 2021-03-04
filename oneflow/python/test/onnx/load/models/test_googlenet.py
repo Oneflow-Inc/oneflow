@@ -116,9 +116,6 @@ class GoogLeNet(nn.Module):
         out = self.linear(out)
         return out
 
-# from absl import app
-# from absl.testing import absltest
-
 def test_googlenet(test_case):
     load_pytorch_module_and_check(
         test_case,
@@ -126,6 +123,3 @@ def test_googlenet(test_case):
         input_size=(1, 3, 32, 32),
         train_flag=False,
     )
-
-# test_case = absltest.TestCase
-# test_googlenet(test_case)

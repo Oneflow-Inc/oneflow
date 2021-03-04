@@ -17,9 +17,6 @@ import torchvision
 
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
-# from absl import app
-# from absl.testing import absltest
-
 
 def test_alexnet(test_case):
     load_pytorch_module_and_check(
@@ -28,7 +25,3 @@ def test_alexnet(test_case):
         input_size=(1, 3, 224, 224),
         train_flag=False,
     )
-
-
-# test_case = absltest.TestCase
-# test_alexnet(test_case)

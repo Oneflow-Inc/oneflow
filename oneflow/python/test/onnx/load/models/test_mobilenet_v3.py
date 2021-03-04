@@ -202,9 +202,6 @@ class MobileNetV3_Small(nn.Module):
         out = self.linear4(out)
         return out
 
-# from absl import app
-# from absl.testing import absltest
-
 def test_MobileNetV3_Large(test_case):
     load_pytorch_module_and_check(
         test_case,
@@ -220,7 +217,3 @@ def test_MobileNetV3_Small(test_case):
         input_size=(1, 3, 224, 224),
         train_flag=False,
     )
-
-# test_case = absltest.TestCase
-# test_MobileNetV3_Large(test_case)
-# test_MobileNetV3_Small(test_case)
