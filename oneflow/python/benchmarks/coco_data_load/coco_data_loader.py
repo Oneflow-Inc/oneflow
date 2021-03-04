@@ -165,4 +165,4 @@ def _benchmark(iter_num, drop_first_iters, verbose=False):
 
 
 if __name__ == "__main__":
-    _benchmark(500, 10, True)
+    _benchmark(500, 10)
