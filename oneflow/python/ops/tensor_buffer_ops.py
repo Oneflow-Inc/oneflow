@@ -19,11 +19,10 @@ import functools
 import operator
 
 import oneflow as flow
-import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.remote_blob as remote_blob_util
-from oneflow.python.oneflow_export import oneflow_export
-from typing import Optional, Sequence
 import oneflow_api
+import oneflow.python.framework.id_util as id_util
+from oneflow.python.oneflow_export import oneflow_export
+from typing import Optional, Sequence, List
 
 
 @oneflow_export("tensor_buffer_to_tensor")
@@ -156,21 +155,18 @@ def gen_tensor_buffer(
 ) -> oneflow_api.BlobDesc:
     r"""This operator generates a tensor buffer blob.
 
-    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
-    for more about TensorBuffer. 
-
     Args:
         shape (Sequence[int]): shape of output blob
         shape_list ( Sequence[Sequence[int]]): shapes for tensor buffer in output blob
         value_list (Sequence[float]): values for tensor buffer in output blob
-        dynamic_out: if output is dynamic blob
+        data_type (Optional[flow.dtype]): data types for tensor buffer in output blob
+        dynamic_out (Optional[bool]): if output a is dynamic blob
         name (Optional[str]): The name for the operation. Defaults to None.
 
     Returns:
         BlobDesc: The result Blob.
 
-    For example: 
-
+    For example:
     .. code-block:: python 
 
         import oneflow as flow
@@ -208,25 +204,21 @@ def tensor_buffer_to_list_of_tensors(
     out_dtype: flow.dtype,
     dynamic_out: Optional[bool] = False,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> List[oneflow_api.BlobDesc]:
     r"""This operator converts the Blob of TensorBuffer to list of Tensors. Every element in x will be converted
     to a Tensor and output will be flatten to a list.
-
-    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
-    for more about TensorBuffer. 
 
     Args:
         x (BlobDesc): Input `Blob`, data type must be tensor buffer.
         out_shape (Sequence[int]): max shape for a tensor buffer in x
-        out_dtype (type_util.dtype,): output data type
-        dynamic_out (Optioinal[bool]): if output is dynamic blob. Default to False.
-        name (Optional[str]): The name for the operation. Defaults to None.
+        out_dtype (flow.dtype,): output data type
+        dynamic_out (Optional[bool]): if output is dynamic blob. Default to False.
+        name (Optional[str]): The name for the operation. Default to None.
 
     Returns:
         BlobDesc: The result Blob.
 
-    For example: 
-
+    For example:
     .. code-block:: python 
         # the same with `gen_tensor_buffer` op
     """
@@ -236,13 +228,13 @@ def tensor_buffer_to_list_of_tensors(
             if name is not None
             else id_util.UniqueStr("TensorBufferToListOfTensors_")
         )
-            .Op("tensor_buffer_to_list_of_tensors")
-            .Input("in", [x])
-            .Output("out", functools.reduce(operator.mul, x.shape, 1))
-            .Attr("out_dtype", out_dtype)
-            .Attr("out_shape", out_shape)
-            .Attr("dynamic_out", dynamic_out)
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()
+        .Op("tensor_buffer_to_list_of_tensors")
+        .Input("in", [x])
+        .Output("out", functools.reduce(operator.mul, x.shape, 1))
+        .Attr("out_dtype", out_dtype)
+        .Attr("out_shape", out_shape)
+        .Attr("dynamic_out", dynamic_out)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
     )
