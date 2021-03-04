@@ -39,7 +39,7 @@ Maybe<void> InputOp::InferLogicalOutBlobDescs(
 
 Maybe<void> InputOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   JUST(InterfaceOpUtil::InferOutBlobDesc(op_conf().input_conf().blob_conf(), out_blob_desc,
                                          parallel_ctx));

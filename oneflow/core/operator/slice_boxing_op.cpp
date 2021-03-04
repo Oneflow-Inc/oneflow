@@ -27,8 +27,7 @@ class SliceBoxingOp : public Operator {
 
   void InitFromOpConf() override;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override;
+                                const ParallelContext* parallel_ctx) const override;
 
  protected:
   virtual const SliceBoxingConf& GetCustomizedBoxingConf() const = 0;
@@ -65,7 +64,7 @@ class SliceBoxingAddOp final : public SliceBoxingOp {
   void VirtualInitFromOpConf() override;
   Maybe<void> InferInternalBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const override;
+      const ParallelContext* parallel_ctx) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 };
 
@@ -85,7 +84,7 @@ LogicalBlobId SliceBoxingOp::lbi4obn(const std::string& output_bn) const {
 
 Maybe<void> SliceBoxingOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   const SliceBoxingConf& slice_boxing_conf = GetCustomizedBoxingConf();
   const PbRpf<TensorSliceViewProto>& in_slice_proto = slice_boxing_conf.in_slice();
   const TensorSliceViewProto& out_slice_proto = slice_boxing_conf.out_slice();
@@ -127,7 +126,7 @@ void SliceBoxingAddOp::VirtualInitFromOpConf() { EnrollTmpBn("buf"); }
 
 Maybe<void> SliceBoxingAddOp::InferInternalBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("buf") = *GetBlobDesc4BnInOp("out");
   return Maybe<void>::Ok();
 }
