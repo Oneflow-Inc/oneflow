@@ -57,7 +57,7 @@ class TestModule(flow.unittest.TestCase):
             print(m(x).numpy())
 
         job()
-        m.load_state_dict({"x_2": np.ones((2, 3), dtype=np.float32)})
+        m.load_state_dict({"x_6": np.ones((2, 3), dtype=np.float32)})
         job()
 
     def test_parameter(test_case):
@@ -208,6 +208,147 @@ class TestModule(flow.unittest.TestCase):
         job()
 
     # TODO: add more tests about module api
+
+    def test_parameter_and_buffer(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.param1 = flow.nn.Parameter((1, 3))
+                self.b1 = flow.Tensor((1,))
+                self.register_parameter("param2", self.param1)
+                self.register_parameter("param3", flow.nn.Parameter((2, 3)))
+                self.register_buffer("buffer1", self.b1)
+                self.register_buffer("buffer2", flow.nn.Parameter((3, 2)))
+
+            def forward(self, x):
+                return x
+        
+
+        @flow.global_function()
+        def job() -> None:
+            x = flow.Tensor((2,3))
+            print("\n>>>>>>>>>>>>>>>>>test_parameter_and_buffer<<<<<<<<<<<<<<<<<<<\n", m(x).numpy())
+
+        m = CustomModule()
+        print("\n=================m.state_dict()=================\n",m.state_dict())
+        print("=================m._parameters=================\n",m._parameters)
+        print("=================m._buffers=================\n",m._buffers)
+        print("=================m.named_parameters()=================\n",m.named_parameters())
+        print("=================m.named_buffers()=================\n",m.named_buffers())
+        print("=================m.__getattr__()=================\n",m.__getattr__("param3"))
+        job()
+
+
+    
+    def test_module_and_children(test_case):
+        class CustomModule1(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.m1_param1 = flow.nn.Parameter((1, 3))
+                self.register_buffer("m1_buffer1", flow.nn.Parameter((3, 2)))
+
+            def forward(self, x):
+                print("CustomModule1 floward >>>>>>>>>>>>>>>>>>>>>>>>> ", x.numpy)
+                return x
+
+        class CustomModule2(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.m2_param1 = flow.nn.Parameter((1, 3))
+                self.module1 = CustomModule1()
+                self.register_buffer("m2_buffer1", flow.nn.Parameter((3, 2)))
+
+            def forward(self, x):
+                y = self.module1(x)
+                print("CustomModule2 floward >>>>>>>>>>>>>>>>>>>>>>>>> ", y.numpy)
+                return y
+        
+
+        @flow.global_function()
+        def job() -> None:
+            x = flow.Tensor((2,3))
+            y = model(x)
+            print("\n>>>>>>>>>>>>>>>> test_module_and_children <<<<<<<<<<<<<<<\n", y.numpy())
+        
+        model = CustomModule2()
+        print("\n=================model.state_dict()=================\n",model.state_dict())
+        print("=================model.modules()=================\n",model.modules())
+        print("=================model.named_modules()=================\n",model.named_modules())
+        print("=================model.children()=================\n",model.children())
+        print("=================model.named_children()=================\n",model.named_children())
+        job()
+
+    
+    def test_lenet(test_case):
+        class LeNet(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.m1_param1 = flow.nn.Parameter((1, 3))
+                self.register_buffer("m1_buffer1", flow.nn.Parameter((3, 2)))
+
+            def forward(self, x):
+                initializer = flow.truncated_normal(0.1)
+                conv1 = flow.layers.conv2d(
+                    x,
+                    32,
+                    5,
+                    padding="SAME",
+                    activation=flow.nn.relu,
+                    name="conv1",
+                    kernel_initializer=initializer,
+                )
+                pool1 = flow.nn.max_pool2d(
+                    conv1, ksize=2, strides=2, padding="SAME", name="pool1", data_format="NCHW"
+                )
+                conv2 = flow.layers.conv2d(
+                    pool1,
+                    64,
+                    5,
+                    padding="SAME",
+                    activation=flow.nn.relu,
+                    name="conv2",
+                    kernel_initializer=initializer,
+                )
+                pool2 = flow.nn.max_pool2d(
+                    conv2, ksize=2, strides=2, padding="SAME", name="pool2", data_format="NCHW"
+                )
+                reshape = flow.reshape(pool2, [pool2.shape[0], -1])
+                hidden = flow.layers.dense(
+                    reshape,
+                    512,
+                    activation=flow.nn.relu,
+                    kernel_initializer=initializer,
+                    name="dense1",
+                )
+                if self.training == True:
+                    hidden = flow.nn.dropout(hidden, rate=0.5, name="dropout")
+                return flow.layers.dense(hidden, 10, kernel_initializer=initializer, name="dense2")
+
+
+            
+        @flow.global_function(type="train")
+        def train_job(
+            images: tp.Numpy.Placeholder((100, 1, 28, 28), dtype=flow.float),
+            labels: tp.Numpy.Placeholder((100,), dtype=flow.int32),
+        ) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                logits = model(images)
+                loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels, logits, name="softmax_loss"
+                )
+            lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
+            flow.optimizer.SGD(lr_scheduler, momentum=0).minimize(loss)
+            return loss
+        
+        model = LeNet()
+        (train_images, train_labels), (test_images, test_labels) = flow.data.load_mnist(100,100)
+        for epoch in range(1):
+            for i, (images, labels) in enumerate(zip(train_images, train_labels)):
+                loss = train_job(images, labels)
+                if i % 20 == 0:
+                    print(loss.mean())
+        flow.checkpoint.save("./lenet_models_1")  # need remove the existed folder
+        print("model saved")
 
 
 if __name__ == "__main__":
