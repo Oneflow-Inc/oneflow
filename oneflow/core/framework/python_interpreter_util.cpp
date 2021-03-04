@@ -13,19 +13,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/accumulate_kernel.h"
+#include <vector>
+#include "oneflow/core/framework/python_interpreter_util.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-void AccumulateKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("one");
-  Blob* out_blob = BnInOp2Blob("acc");
-  KernelUtil<device_type, T>::Axpy(ctx.device_ctx, in_blob->shape().elem_cnt(), GetOneVal<T>(),
-                                   in_blob->dptr<T>(), 1, out_blob->mut_dptr<T>(), 1);
+namespace {
+
+Maybe<std::vector<bool>*> GetShuttingDown() {
+  static std::vector<bool> shutting_down{false};
+  return &shutting_down;
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAccumulateConf, AccumulateKernel, FLOATING_DATA_TYPE_SEQ);
+}  // namespace
+
+Maybe<bool> IsShuttingDown() {
+  auto* shutting_down = JUST(GetShuttingDown());
+  CHECK_EQ_OR_RETURN(shutting_down->size(), 1);
+  bool is_interpreter_shutdown = (*shutting_down)[0];
+  return is_interpreter_shutdown;
+}
+
+Maybe<void> SetShuttingDown() {
+  auto* shutting_down = JUST(GetShuttingDown());
+  CHECK_EQ_OR_RETURN(shutting_down->size(), 1);
+  (*shutting_down)[0] = true;
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

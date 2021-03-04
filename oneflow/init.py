@@ -43,6 +43,8 @@ def import_oneflow_internal2():
 
 oneflow_api = import_oneflow_internal2()
 
+Size = oneflow_api.Size
+
 # define dtype at the begining of oneflow init
 
 locals()["dtype"] = oneflow_api.dtype
@@ -79,7 +81,6 @@ import oneflow.python_gen.__export_symbols__
 
 import atexit
 import oneflow.python.framework.c_api_util
-import oneflow.python.framework.python_interpreter_util
 import oneflow.python.framework.register_class_method_util as register_class_method_util
 import oneflow_api
 
@@ -89,7 +90,7 @@ register_class_method_util.RegisterMethod4Class()
 
 atexit.register(oneflow_api.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
-atexit.register(oneflow.python.framework.python_interpreter_util.SetShuttingDown)
+atexit.register(oneflow_api.SetShuttingDown)
 del atexit
 
 import sys
