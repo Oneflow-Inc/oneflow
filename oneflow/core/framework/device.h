@@ -31,7 +31,8 @@ class Device final {
   std::string of_type() const;
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
-  static std::unordered_set<std::string> type_supported;
+
+  static const std::unordered_set<std::string> type_supported;
 
  private:
   const std::string type_;
