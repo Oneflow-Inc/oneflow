@@ -32,8 +32,7 @@ class ModelSaveOp final : public Operator {
     return Maybe<void>::Ok();
   }
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override {
+                                const ParallelContext* parallel_ctx) const override {
     return Maybe<void>::Ok();
   }
 
