@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/rpc/include/ctrl.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/compiler.h"

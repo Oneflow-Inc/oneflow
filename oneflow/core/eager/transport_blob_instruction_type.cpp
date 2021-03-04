@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/rpc/include/ctrl.h"
 
 namespace oneflow {
 namespace eager {

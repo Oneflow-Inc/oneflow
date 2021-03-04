@@ -39,7 +39,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/eager/transport_blob_instruction_type.h"
-#include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/rpc/include/ctrl.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_util.h"
 

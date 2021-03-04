@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/rpc/include/ctrl.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/eager/eager_symbol.pb.h"

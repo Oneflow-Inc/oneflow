@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/env.pb.h"
-#include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/rpc/include/ctrl.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/control/ctrl_util.h"
