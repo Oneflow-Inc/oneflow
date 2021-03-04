@@ -18,12 +18,12 @@ import oneflow.python.framework.device as oneflow_device
 import oneflow_api
 
 
-@oneflow_export("tensor")
+@oneflow_export("Tensor")
 class Tensor:
     def __init__(
         self,
-        shape,
-        dtype,
+        *shape,
+        dtype=None,
         device=None,
         requires_grad=False,
         retain_grad=False,
@@ -33,6 +33,7 @@ class Tensor:
         is_lazy=False,
         determining_initializer=None,
     ):
+        dtype = dtype if dtype is not None else oneflow_api.float32
         device = device if device is not None else oneflow_api.device("cpu", 0)
         self._local_or_consistent_tensor = None
         self._undetermined_tensor = UndeterminedTensor(
