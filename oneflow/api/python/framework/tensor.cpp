@@ -93,6 +93,7 @@ void ExportTensor(py::module& m, const char* name) {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   ExportTensor<MirroredTensor>(m, "LocalTensor");
   ExportTensor<ConsistentTensor>(m, "ConsistentTensor");
+  py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor");
 }
 
 }  // namespace one
