@@ -285,15 +285,8 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
 Maybe<void> Operator::InferLogicalOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc& parallel_desc) const {
-<<<<<<< HEAD
   UNIMPLEMENTED() << typeid(*this).name();
   return Maybe<void>::Ok();
-=======
-  ParallelContext parallel_ctx;
-  parallel_ctx.set_parallel_id(0);
-  parallel_ctx.set_parallel_num(1);
-  return InferOutBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx);
->>>>>>> master
 }
 
 Maybe<void> Operator::InferBlobDescsIf(
@@ -312,8 +305,7 @@ Maybe<void> Operator::InferOutBlobDescsIf(
 
 Maybe<void> Operator::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-<<<<<<< HEAD
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   if (parallel_ctx->parallel_num() == 1) {
     JUST(InferLogicalOutBlobDescs(GetBlobDesc4BnInOp, *JUST(GetOpParallelDesc())));
   } else {
@@ -336,10 +328,6 @@ Maybe<void> Operator::InferOutBlobDescs(
       }
     }
   }
-=======
-    const ParallelContext* parallel_ctx) const {
-  UNIMPLEMENTED() << typeid(*this).name();
->>>>>>> master
   return Maybe<void>::Ok();
 }
 
