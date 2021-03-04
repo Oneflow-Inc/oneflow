@@ -254,7 +254,7 @@ class UndeterminedTensor:
             if not isinstance(shape, tuple):
                 shape = tuple(shape)
             shape = oneflow_api.Size(shape)
-        device = device if device is not None else oneflow_api.device("cpu", 0)
+        device = device if device is not None else oneflow_api.device("cpu:0")
         self.shape = shape
         self.dtype = dtype
         self.device = device
