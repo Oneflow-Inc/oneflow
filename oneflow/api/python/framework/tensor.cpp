@@ -86,8 +86,8 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("placement", &T::parallel_desc)
       .def_property_readonly("is_lazy", &T::is_lazy)
       .def_property_readonly("is_consistent", &T::is_consistent)
+      .def_property_readonly("_blob_object", &T::blob_object)
       // OneFlow tensor methods other than pytorch tensor
-      .def("_blob_object", &T::blob_object)
       .def("_set_blob_object", &T::set_blob_object);
 }
 
