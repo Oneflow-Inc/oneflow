@@ -97,11 +97,14 @@ bool operator==(const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {
   return lhs.lock().get() == rhs.lock().get();
 }
 
+#ifndef USING_HASH_CONTAINER
 template<typename Key, typename T, typename Hash = std::hash<Key>>
 using HashMap = std::unordered_map<Key, T, Hash>;
 
 template<typename Key, typename Hash = std::hash<Key>>
 using HashSet = std::unordered_set<Key, Hash>;
+#define USING_HASH_CONTAINER
+#endif  // USING_HASH_CONTAINER
 
 template<typename T>
 void SortAndRemoveDuplication(std::vector<T>* vec) {
