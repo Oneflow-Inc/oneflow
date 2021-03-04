@@ -107,15 +107,14 @@ jobs:
           docker rm -f ${container_name} || true
       - name: Saving shared env
         run: |
-          mkdir -p $sha_dir/whl
-          cp -r ${wheelhouse_dir} $sha_dir/whl
-          echo "remote_whl_dir=$(hostname):$sha_dir/whl" >> build.${{ matrix.test_suite }}.env
+          mkdir -p $sha_dir
+          cp -r ${wheelhouse_dir} $sha_dir
+          echo "remote_whl_dir=$(hostname):$sha_dir/$(basename ${wheelhouse_dir})" >> build.${{ matrix.test_suite }}.env
           echo "builder_host=$(hostname)" >> build.${{ matrix.test_suite }}.env
           echo "sha_dir=${sha_dir}" >> build.${{ matrix.test_suite }}.env
           if [ "$test_suite" == "cuda" ]; then
-            mkdir -p $sha_dir/bin
-            cp -r ${bin_dir} $sha_dir/bin
-            echo "remote_bin_dir=$(hostname):$sha_dir/bin" >> build.${{ matrix.test_suite }}.env
+            cp -r ${bin_dir} $sha_dir
+            echo "remote_bin_dir=$(hostname):$sha_dir/$(basename ${bin_dir}" >> build.${{ matrix.test_suite }}.env
           fi
       - name: Upload shared env
         uses: actions/upload-artifact@v2
@@ -153,23 +152,27 @@ jobs:
           extra_docker_args=""
           extra_docker_args+=" --name ${container_name}"
 
+          # dowload whl and bin
           source build.${{ matrix.test_suite }}.env
           scp -r $remote_whl_dir wheel_tmp
           if [ "$test_suite" == "cuda" ]; then
             scp -r $remote_bin_dir bin_tmp
           fi
-          extra_docker_args+=" --env ONEFLOW_WHEEL_PATH=wheel_tmp"
+
+          # rm sha_dir
+          ssh ${builder_host} "[ -d ${sha_dir} ]"
+          ssh ${builder_host} rm -rf ${sha_dir}
+
+          extra_docker_args+=" --env ONEFLOW_WHEEL_PATH=${PWD}/wheel_tmp"
 
           echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
 
           echo "test_suite=${test_suite}" >> $GITHUB_ENV
-          sha_sub_dir=pr/${{ github.event.pull_request.number }}/$GITHUB_SHA/${{matrix.test_suite }}
-          sha_dir=$HOME/ci-static/$sha_sub_dir
           mkdir -p $sha_dir
           if [ "$test_suite" == "cuda" ]; then
             export suffix="cu102"
             scp -r ${{ secrets.CI_LOCAL_STATIC_HOST }}:$sha_dir/bin $sha_dir
-            echo "bin_dir=bin_tmp" >> $GITHUB_ENV
+            echo "bin_dir=${PWD}/bin_tmp" >> $GITHUB_ENV
           fi
           if [ "$test_suite" == "xla" ]; then
             export suffix="cu101_xla"
