@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <string>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/to_string.h"
@@ -26,18 +27,40 @@ namespace {
 
 struct DeviceExportUtil final {
   static std::shared_ptr<Device> MakeDevice(const std::string& type_and_id) {
-
-    std::string type = "";
+    std::vector<std::string> str_vec;
+    std::stringstream ss(type_and_id);
+    std::string str;
+    while (std::getline(ss, str, ':')) { str_vec.emplace_back(str); }
+    if (str_vec.size() > 2) {
+      throw std::invalid_argument("Invalid device string: " + type_and_id);
+    }
+    std::string type = str_vec[0];
+    if (Device::type_supported.find(type) == Device::type_supported.end()) {
+      std::string error_msg =
+          "Expected one of cpu, cuda device type at start of device string " + type;
+      throw std::invalid_argument(error_msg);
+    }
     int device_id = 0;
+    if (str_vec.size() > 1) {
+      for (const auto& c : str_vec[1]) {
+        if (!std::isalnum(c)) {
+          throw std::invalid_argument("Invalid device string: " + type_and_id);
+        }
+      }
+      device_id = std::stoi(str_vec[1]);
+      if (type == "cpu" && device_id != 0) {
+        throw std::invalid_argument("cpu device index must be 0");
+      }
+    }
     return std::make_shared<Device>(type, device_id);
   }
 };
 
-}
+}  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Device, std::shared_ptr<Device>>(m, "device")
-      .def(py::init(&DeviceExportUtil::MakeDevice)) 
+      .def(py::init(&DeviceExportUtil::MakeDevice))
       .def_property_readonly("type", &Device::type)
       .def_property_readonly("index", &Device::device_id)
       .def("__str__", &Device::ToString)

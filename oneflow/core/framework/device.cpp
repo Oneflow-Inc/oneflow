@@ -18,6 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
+std::unordered_set<std::string> Device::type_supported({"cuda", "cpu"});
+
 std::string Device::of_type() const {
   if (type_ == "cuda") {
     return "gpu";
