@@ -141,6 +141,10 @@ jobs:
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
+      - name: Fix permissions
+        run: |
+          docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+      - uses: actions/checkout@v2
       - name: Download shared env
         uses: actions/download-artifact@v2
         with:
@@ -185,10 +189,6 @@ jobs:
           container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
           extra_docker_args+=" --name ${container_name}"
           echo "container_name=${container_name}" >> $GITHUB_ENV
-      - name: Fix permissions
-        run: |
-          docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
-      - uses: actions/checkout@v2
       - name: Build docker image for testing
         run: |
           bash docker/ci/test/build.sh
