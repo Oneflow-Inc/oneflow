@@ -39,7 +39,7 @@ import traceback
 
 class ArgBlobDef(object):
     def __init__(
-        self, shape, dtype, name=None, distribute=oneflow_api.distribute.auto(),
+        self, shape, dtype, name=None, sbp=oneflow_api.sbp.auto(),
     ):
         lbi = lbi_util.LogicalBlobId()
         if name is None:
@@ -53,7 +53,7 @@ class ArgBlobDef(object):
             assert dim > 0
         self.shape_ = shape
         self.dtype_ = dtype
-        self.distribute_ = distribute
+        self.sbp_ = sbp
 
     @property
     def lbi(self):
@@ -69,7 +69,7 @@ class ArgBlobDef(object):
 
     @property
     def unique_name(self):
-        return self.op_name + "/" + self.blob_name + self._Distribute2Str()
+        return self.op_name + "/" + self.blob_name + self._SbpDescripiton2Str()
 
     @property
     def shape(self):
@@ -122,12 +122,12 @@ class ArgBlobDef(object):
         interface_blob_conf.split_axis.value = 0
         return interface_blob_conf
 
-    def _Distribute2Str(self):
-        if type(self.distribute_) is oneflow_api.distribute.AutoDistribute:
+    def _SbpDescripiton2Str(self):
+        if type(self.sbp_) is oneflow_api.sbp.AutoSbp:
             return ""
-        elif type(self.distribute_) is oneflow_api.distribute.SplitDistribute:
-            return ":S" + str(self.distribute_.axis)
-        elif type(self.distribute_) is oneflow_api.distribute.BroadcastDistribute:
+        elif type(self.sbp_) is oneflow_api.sbp.SplitSbp:
+            return ":S" + str(self.sbp_.axis)
+        elif type(self.sbp_) is oneflow_api.sbp.BroadcastSbp:
             return ":B"
         else:
             raise NotImplementedError
@@ -294,7 +294,7 @@ def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
         lbi.set_op_name(sub_lbi.op_name)
         lbi.set_blob_name(sub_lbi.blob_name)
         sub_consistent_blob_list.append(
-            oneflow_api.ConsistentBlob(lbi, "", oneflow_api.distribute.auto())
+            oneflow_api.ConsistentBlob(lbi, "", oneflow_api.sbp.auto())
         )
 
 

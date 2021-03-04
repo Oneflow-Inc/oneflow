@@ -20,8 +20,8 @@ namespace oneflow {
 namespace compatible_py {
 
 BlobDesc::BlobDesc(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
-                   const std::shared_ptr<Distribute>& distribute)
-    : lbi_(lbi), distribute_(distribute) {
+                   const std::shared_ptr<SbpDescriptor>& sbp_descriptor)
+    : lbi_(lbi), sbp_descriptor_(sbp_descriptor) {
   lbn_ = lbi->op_name() + "/" + lbi->blob_name();
 }
 
@@ -35,20 +35,20 @@ std::shared_ptr<cfg::ParallelConf> BlobDesc::parallel_conf() const { UNIMPLEMENT
 
 bool BlobDesc::is_dynamic() const { UNIMPLEMENTED(); }
 bool BlobDesc::is_tensor_list() const { UNIMPLEMENTED(); }
-std::shared_ptr<Distribute> BlobDesc::distribute() const { return distribute_; }
-std::string BlobDesc::unique_name() const { return lbn_ + *CHECK_JUST(Distribute2Str()); }
+std::shared_ptr<SbpDescriptor> BlobDesc::sbp_descriptor() const { return sbp_descriptor_; }
+std::string BlobDesc::unique_name() const { return lbn_ + *CHECK_JUST(SbpDescriptor2Str()); }
 
-void BlobDesc::set_distribute(const std::shared_ptr<Distribute> distribute) {
-  distribute_ = distribute;
+void BlobDesc::set_sbp_descriptor(const std::shared_ptr<SbpDescriptor> sbp_descriptor) {
+  sbp_descriptor_ = sbp_descriptor;
 }
 
-Maybe<std::string> BlobDesc::Distribute2Str() const {
-  if (std::dynamic_pointer_cast<AutoDistribute>(distribute_)) {
+Maybe<std::string> BlobDesc::SbpDescriptor2Str() const {
+  if (std::dynamic_pointer_cast<AutoSbpDescriptor>(sbp_descriptor_)) {
     return std::string("");
-  } else if (std::dynamic_pointer_cast<BroadcastDistribute>(distribute_)) {
+  } else if (std::dynamic_pointer_cast<BroadcastSbpDescriptor>(sbp_descriptor_)) {
     return std::string(":B");
-  } else if (std::dynamic_pointer_cast<SplitDistribute>(distribute_)) {
-    return std::string(":S") + std::to_string(distribute_->axis());
+  } else if (std::dynamic_pointer_cast<SplitSbpDescriptor>(sbp_descriptor_)) {
+    return std::string(":S") + std::to_string(sbp_descriptor_->axis());
   } else {
     OF_UNIMPLEMENTED();
   }
