@@ -216,7 +216,7 @@ def tensor_buffer_to_list_of_tensors(
         name (Optional[str]): The name for the operation. Default to None.
 
     Returns:
-        BlobDesc: The result Blob.
+        List[BlobDesc]: result blobs
 
     For example:
     .. code-block:: python 
