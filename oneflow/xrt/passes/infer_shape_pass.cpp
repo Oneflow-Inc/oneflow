@@ -67,7 +67,7 @@ void InferShape(XrtGraph* graph, const XrtPassOptions& options, const JobDesc* j
       CHECK_JUST(op->FillLogicalOutBlobDesc(GetLogicalBlobDesc4BnInOp));
       const SbpSignature& sbp_signature = sbp_signatures->at(node->name());
       CHECK_JUST(op->FillSbpSignature(sbp_signature));
-      CHECK_JUST(op->InferOutBlobDescsIf(get_blob_desc_fn, parallel_ctx, &sbp_signature));
+      CHECK_JUST(op->InferOutBlobDescsIf(get_blob_desc_fn, parallel_ctx));
     }
     // Update blob desc on the output edges.
     for (XrtEdge* edge : node->out_edges()) {
