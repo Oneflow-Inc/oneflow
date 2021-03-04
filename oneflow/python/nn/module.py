@@ -22,10 +22,11 @@ import itertools
 
 import numpy as np
 
-import oneflow
+import oneflow as flow
 import oneflow_api
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.ops import parallel_cast
+from oneflow.python.framework.tensor import Tensor
 from oneflow.python.ops.get_variable import api_get_variable as get_variable
 from oneflow.python.ops import initializer_util
 
@@ -43,49 +44,11 @@ def get_var_helper(shape, name=None):
     global _counter
     if name is None:
         name = "x_" + str(_counter)
-    var = oneflow.get_variable(
-        name, shape=shape, initializer=oneflow.kaiming_initializer(shape)
+    var = flow.get_variable(
+        name, shape=shape, initializer=flow.kaiming_initializer(shape)
     )
     _counter += 1
     return var
-
-
-@oneflow_export("Tensor")
-class Tensor:
-    def __init__(self, shape_or_var):
-        if isinstance(shape_or_var, oneflow_api.EagerConsistentBlob):
-            self._variable = shape_or_var
-            self._var_name = None
-            self._shape = shape_or_var.shape
-        else:
-            self._variable = None
-            self._var_name = None
-            self._shape = shape_or_var
-
-    @property
-    def shape(self):
-        return self._shape
-
-    def determinize(self):
-        if self._var_name is None:
-            self._var_name = get_var_helper(self._shape).lbi.op_name()
-        return self
-
-    def __add__(self, other):
-        return Tensor(self._var + other._var)
-
-    def numpy(self):
-        return self._var.numpy()
-
-    @property
-    def _var(self):
-        self.determinize()
-        if self._variable is not None:
-            return self._variable
-        return get_var_helper(self.shape, name=self._var_name)
-
-    def _get_var_name(self):
-        return self._var_name
 
 
 @oneflow_export("nn.Parameter")
@@ -425,7 +388,7 @@ class Module(object):
         if strict and len(state_dict) != len(state_dict_overlapped):
             # TODO:
             raise RuntimeError()
-        oneflow.load_variables(state_dict_overlapped)
+        flow.load_variables(state_dict_overlapped)
 
     def state_dict(
         self, destination=None, prefix="", keep_vars=False
