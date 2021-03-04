@@ -152,7 +152,6 @@ jobs:
           set -x
           cat build.${{ matrix.test_suite }}.env >> $GITHUB_ENV
           extra_docker_args=""
-          extra_docker_args+=" --name ${container_name}"
 
           ssh -o StrictHostKeyChecking=no ${builder_host} "[ -d ${sha_dir} ]"
           # dowload whl and bin
@@ -183,7 +182,9 @@ jobs:
             export suffix="cpu"
             echo "ONEFLOW_TEST_CPU_ONLY=1" >> $GITHUB_ENV
           fi
+
           container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
+          extra_docker_args+=" --name ${container_name}"
           echo "container_name=${container_name}" >> $GITHUB_ENV
       - name: Fix permissions
         run: |
