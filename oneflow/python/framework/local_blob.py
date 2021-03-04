@@ -56,7 +56,8 @@ class LocalBlob(object):
         )
         return self.numpy()
 
-    def numpy(self):
+    def numpy(self, parallel_id=None):
+        assert parallel_id is None or parallel_id == 0
         return self.ndarray_
 
     def parallel_num(self):

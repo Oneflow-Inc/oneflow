@@ -79,7 +79,6 @@ class OfBlob(object):
         return self._CopyBodyFromNdarray(src_ndarray)
 
     def _CopyBodyFromNdarray(self, src_ndarray):
-        assert not self.is_dynamic
         method_name = oneflow_api.Dtype_GetOfBlobCopyFromBufferFuncName(
             oneflow_api.deprecated.GetProtoDtype4OfDtype(self.dtype)
         )
