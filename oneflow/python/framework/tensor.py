@@ -16,7 +16,9 @@ limitations under the License.
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.device as oneflow_device
+import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow_api
+import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
 import oneflow as flow
 
@@ -157,7 +159,13 @@ class Tensor:
 
     @_auto_determine
     def numpy(self):
-        return self._blob.numpy()
+        parallel_conf = placement_cfg.ParallelConf()
+        parallel_conf.set_device_tag(self.device.type)
+        machine_id = 0
+        parallel_conf.add_device_name("{}:{}".format(machine_id, self.device.index))
+        return remote_blob_util.BlobObjectNumpy(
+            self._local_or_consistent_tensor._blob_object, parallel_conf
+        )
 
     def tolist(self):
         TODO()
@@ -169,7 +177,7 @@ class Tensor:
         TODO()
 
     def __repr__(self):
-        TODO()
+        return "[Tensor shape={} dtype={}]".format(self.shape, self.dtype)
 
     def __array__(self):
         TODO()
@@ -184,7 +192,9 @@ class Tensor:
         assert not self.is_determined
         if determining_initializer is None:
             determining_initializer = self._determining_initializer
-        self._local_or_consistent_tensor = determining_initializer(self)
+        self._local_or_consistent_tensor = determining_initializer(
+            self._undetermined_tensor
+        )
         self._undetermined_tensor = None
 
     @property
@@ -304,9 +314,8 @@ class UndeterminedTensor:
         return device_type == "gpu" or device_type == "cuda"
 
 
-def _default_initializer_for_determining(tensor):
-    undetermined_tensor = tensor._undetermined_tensor
-    tensor._blob = flow.get_variable(
+def _default_initializer_for_determining(undetermined_tensor):
+    blob = flow.get_variable(
         name=id_util.UniqueStr("tensor_"),
         shape=tuple(undetermined_tensor.shape),
         dtype=undetermined_tensor.dtype,
@@ -321,5 +330,5 @@ def _default_initializer_for_determining(tensor):
         True,
         undetermined_tensor.retain_grad,
     )
-    determined_tensor._set_blob_object(tensor._blob.blob_object)
+    determined_tensor._set_blob_object(blob.blob_object)
     return determined_tensor
