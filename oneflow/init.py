@@ -43,6 +43,8 @@ def import_oneflow_internal2():
 
 oneflow_api = import_oneflow_internal2()
 
+Size = oneflow_api.Size
+
 # define dtype at the begining of oneflow init
 
 locals()["dtype"] = oneflow_api.dtype
