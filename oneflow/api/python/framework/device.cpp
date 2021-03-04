@@ -27,27 +27,23 @@ namespace {
 
 struct DeviceExportUtil final {
   static std::shared_ptr<Device> MakeDevice(const std::string& type_and_id) {
-    std::vector<std::string> str_vec;
-    std::stringstream ss(type_and_id);
     std::string str;
-    while (std::getline(ss, str, ':')) { str_vec.emplace_back(str); }
-    if (str_vec.size() > 2) {
-      throw std::invalid_argument("Invalid device string: " + type_and_id);
-    }
-    std::string type = str_vec[0];
+    size_t pos = type_and_id.find(':');
+    std::string type = type_and_id.substr(0, pos);
     if (Device::type_supported.find(type) == Device::type_supported.end()) {
       std::string error_msg =
           "Expected one of cpu, cuda device type at start of device string " + type;
       throw std::invalid_argument(error_msg);
     }
     int device_id = 0;
-    if (str_vec.size() > 1) {
-      for (const auto& c : str_vec[1]) {
+    if (pos < type_and_id.size()) {
+      std::string id = type_and_id.substr(pos+1);
+      for (const auto& c : id) {
         if (!std::isalnum(c)) {
           throw std::invalid_argument("Invalid device string: " + type_and_id);
         }
       }
-      device_id = std::stoi(str_vec[1]);
+      device_id = std::stoi(id);
       if (type == "cpu" && device_id != 0) {
         throw std::invalid_argument("cpu device index must be 0");
       }
