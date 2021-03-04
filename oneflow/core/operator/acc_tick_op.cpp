@@ -26,7 +26,7 @@ void AccTickOp::InitFromOpConf() {
 
 Maybe<void> AccTickOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("acc") = *GetBlobDesc4BnInOp("one");
   GetBlobDesc4BnInOp("acc")->mut_shape() = Shape({1LL});
   return Maybe<void>::Ok();
