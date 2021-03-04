@@ -576,6 +576,21 @@ void OpGraph::DumpOpTimeShape(Job* job) const {
   });
 }
 
+void OpGraph::DumpArgSignature(Job* job) const {
+  ForEachNode([&](const OpNode* node) {
+    auto* op_arg_signature =
+        &(*job->mutable_helper()->mutable_op_name2arg_signature())[node->op().op_name()];
+    for (const auto& ibn : node->op().input_bns()) {
+      const auto& lbi = node->op().BnInOp2Lbi(ibn);
+      (*op_arg_signature->mutable_bn_in_op2lbi())[ibn] = lbi;
+    }
+    for (const auto& obn : node->op().output_bns()) {
+      const auto& lbi = node->op().BnInOp2Lbi(obn);
+      (*op_arg_signature->mutable_bn_in_op2lbi())[obn] = lbi;
+    }
+  });
+}
+
 Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&)>& DoEach) const {
   HashMap<LogicalBlobId, bool> visited;
   for (const auto& op_name : op_names_) {
