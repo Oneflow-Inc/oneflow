@@ -18,6 +18,14 @@ limitations under the License.
 
 namespace oneflow {
 
+std::string Device::of_type() const {
+  if (type_ == "cuda") {
+    return "gpu";
+  } else {
+    return type_;
+  }
+}
+
 std::string Device::ToString() const {
   std::stringstream ss;
   ss << "device(type=";

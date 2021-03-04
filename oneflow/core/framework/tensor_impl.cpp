@@ -29,7 +29,7 @@ Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device) {
   int64_t device_id = device.device_id();
   std::string machine_device_id = std::to_string(machine_id) + ":" + std::to_string(device_id);
   std::vector<std::string> machine_device_ids({machine_device_id});
-  Maybe<cfg::ParallelConf> conf = MakeParallelConf(device.type(), machine_device_ids);
+  Maybe<cfg::ParallelConf> conf = MakeParallelConf(device.of_type(), machine_device_ids);
   return std::make_shared<const ParallelDesc>(JUST(conf));
 }
 
