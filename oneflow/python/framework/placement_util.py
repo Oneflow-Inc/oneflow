@@ -103,8 +103,11 @@ def GetNormalModePlacementScope(device_tag, machine_device_ids, hierarchy=None):
         machine_device_ids = [machine_device_ids]
     sess = session_ctx.GetDefaultSession()
     assert isinstance(hierarchy, (list, tuple)) or hierarchy is None
-    if type(hierarchy) is list:
-        hierarchy = tuple(hierarchy)
+    if hierarchy is not None:
+        if type(hierarchy) is list:
+            hierarchy = tuple(hierarchy)
+        hierarchy = oneflow_api.Size(hierarchy)
+
     scope = scope_util.MakeScope(
         lambda old_scope, builder: builder.BuildScopeWithNewParallelDesc(
             old_scope, device_tag, machine_device_ids, hierarchy
@@ -119,8 +122,10 @@ def GetGlobalModePlacementScope(device_tag, machine_device_ids, hierarchy=None):
         machine_device_ids = [machine_device_ids]
     sess = session_ctx.GetDefaultSession()
     assert isinstance(hierarchy, (list, tuple)) or hierarchy is None
-    if type(hierarchy) is list:
-        hierarchy = tuple(hierarchy)
+    if hierarchy is not None:
+        if type(hierarchy) is list:
+            hierarchy = tuple(hierarchy)
+        hierarchy = oneflow_api.Size(hierarchy)
 
     def BuildScope(old_scope, builder):
         return builder.BuildScopeWithNewParallelDesc(
