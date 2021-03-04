@@ -590,7 +590,7 @@ Maybe<Scope> InstructionsBuilder::BuildInitialScope(
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
     const std::shared_ptr<Scope>& scope, const std::string& device_tag,
-    const std::vector<std::string>& machine_device_ids) {
+    const std::vector<std::string>& machine_device_ids, const std::shared_ptr<Shape>& shape) {
   const auto SetScopeProto =
       [this, &device_tag,
        &machine_device_ids](const std::shared_ptr<cfg::ScopeProto>& scope_proto) -> Maybe<void> {
@@ -613,7 +613,8 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelConf(
     const std::shared_ptr<Scope>& scope, const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
   std::pair<std::string, std::vector<std::string>> tag_and_dev_ids =
       *JUST(GetDeviceTagAndMachineDeviceIds(parallel_conf));
-  return BuildScopeWithNewParallelDesc(scope, tag_and_dev_ids.first, tag_and_dev_ids.second);
+  return BuildScopeWithNewParallelDesc(scope, tag_and_dev_ids.first, tag_and_dev_ids.second,
+                                       std::shared_ptr<Shape>());
 }
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope,

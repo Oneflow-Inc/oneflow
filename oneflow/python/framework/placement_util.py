@@ -96,29 +96,35 @@ def GetEmptyPlacementScope(device_tag, machine_device_ids):
 
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
-def GetNormalModePlacementScope(device_tag, machine_device_ids):
+def GetNormalModePlacementScope(device_tag, machine_device_ids, hierarchy=None):
     if isinstance(machine_device_ids, tuple):
         machine_device_ids = list(machine_device_ids)
     if not isinstance(machine_device_ids, list):
         machine_device_ids = [machine_device_ids]
     sess = session_ctx.GetDefaultSession()
+    assert isinstance(hierarchy, (list, tuple)) or hierarchy is None
+    if type(hierarchy) is list:
+        hierarchy = tuple(hierarchy)
     scope = scope_util.MakeScope(
         lambda old_scope, builder: builder.BuildScopeWithNewParallelDesc(
-            old_scope, device_tag, machine_device_ids
+            old_scope, device_tag, machine_device_ids, hierarchy
         )
     )
     return scope_util.ScopeContext(scope)
 
 
 @enable_if.condition(hob.in_global_mode)
-def GetGlobalModePlacementScope(device_tag, machine_device_ids):
+def GetGlobalModePlacementScope(device_tag, machine_device_ids, hierarchy=None):
     if isinstance(machine_device_ids, (list, tuple)) == False:
         machine_device_ids = [machine_device_ids]
     sess = session_ctx.GetDefaultSession()
+    assert isinstance(hierarchy, (list, tuple)) or hierarchy is None
+    if type(hierarchy) is list:
+        hierarchy = tuple(hierarchy)
 
     def BuildScope(old_scope, builder):
         return builder.BuildScopeWithNewParallelDesc(
-            old_scope, device_tag, machine_device_ids
+            old_scope, device_tag, machine_device_ids, hierarchy
         )
 
     scope_ctx = scope_util.ScopeContext(scope_util.MakeScope(BuildScope))
