@@ -446,6 +446,8 @@ def _check_empty_anno_img_ids(anno_file):
     print("empty_anno_img_ids:", empty_anno_img_ids)
 
 
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+"""
 if __name__ == "__main__":
     # _check_empty_anno_img_ids("/dataset/mscoco_2017/annotations/instances_val2017.json")
     of_mask_list, mask_list = _poly_to_mask_with_of_and_cv(
@@ -459,7 +461,7 @@ if __name__ == "__main__":
         print_debug_info=True,
     )
     _vis_img_segm_mask_cmp(of_mask_list, mask_list)
-
+"""
 
 # @flow.unittest.skip_unless_1n1d()
 # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
