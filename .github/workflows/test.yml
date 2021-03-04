@@ -138,7 +138,7 @@ jobs:
           - test_suite: cpu
             experimental: false
     needs: [build, wait_for_gpu_slot]
-    runs-on: [self-hosted, linux, release]
+    runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - name: Download shared env
