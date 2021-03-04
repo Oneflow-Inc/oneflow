@@ -36,7 +36,7 @@ limitations under the License.
 #include <thread>
 #include <utility>
 
-#include "oneflow/core/common/using.h"
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/meta_util.hpp"
 #include "oneflow/core/common/global.h"
 
