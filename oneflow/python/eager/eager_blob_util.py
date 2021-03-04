@@ -32,12 +32,17 @@ def numpy(self):
     return _GetPhysicalBlobBodyCache(self.blob_object)
 
 
+def numpy_list(self):
+    return _GetPhysicalBlobBodyCache(self.blob_object)
+
+
 def RegisterMethod4EagerPhysicalBlob():
     oneflow_api.EagerPhysicalBlob.dtype = dtype
     oneflow_api.EagerPhysicalBlob.numpy = numpy
+    oneflow_api.EagerPhysicalBlob.numpy_list = numpy_list
 
 
-def FetchTensorBlobAsNumpy(parallel_size, blob_object):
+def FetchTensorBlobAsNumpyList(parallel_size, blob_object):
     def AsyncFetchBlobBody(Yield):
         fetcher = _MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield)
 
@@ -84,7 +89,7 @@ def _FetchBlobHeader(blob_object):
 
 
 def _FetchPhysicalBlobBody(blob_object):
-    return FetchTensorBlobAsNumpy(1, blob_object)[0]
+    return FetchTensorBlobAsNumpyList(1, blob_object)[0]
 
 
 def _MakeFetcherEagerPhysicalBlobHeaderFromOfBlob(Yield):

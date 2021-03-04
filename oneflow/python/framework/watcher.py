@@ -50,7 +50,7 @@ def _WatcherHandler(handler_uuid, of_blob_ptr):
     blob_watched, handler = uuid2handler[handler_uuid]
     assert callable(handler)
     ndarray = ofblob.OfBlob(of_blob_ptr).CopyToNdarray()
-    local_blob = local_blob_util.MakeLocalBlob(ndarray, blob_watched)
+    local_blob = local_blob_util.LocalBlob(ndarray, blob_watched.is_dynamic)
     handler(oft_util.TransformWatchedBlob(local_blob, handler))
 
 

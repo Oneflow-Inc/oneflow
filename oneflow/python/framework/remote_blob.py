@@ -154,6 +154,11 @@ def numpy(self):
     return self._Numpy()
 
 
+def numpy_list(self, rank=None):
+    assert rank is None or rank == 0
+    return [self._Numpy()]
+
+
 def _Numpy(self):
     def FetchBlobNumpy(blob_object):
         consistent_blob_name = None
@@ -195,6 +200,7 @@ def RegisterMethod4EagerBlobTrait():
     oneflow_api.EagerBlobTrait.dtype = dtype
     oneflow_api.EagerBlobTrait._Numpy = _Numpy
     oneflow_api.EagerBlobTrait.numpy = numpy
+    oneflow_api.EagerBlobTrait.numpy_list = numpy_list
 
 
 def eager_with_distribute(self, distribute):

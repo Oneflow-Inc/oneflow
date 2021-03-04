@@ -268,7 +268,15 @@ class DeprecatedMirroredTensorDef(MirroredTensorDef):
     def __init__(self, *args, **kwargs):
         running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
         if not running_script.endswith('input_blob_def.py"'):
-            print("WARNING: oneflow.MirroredTensorDef has been deprecated. ")
+            print(
+                "WARNING: oneflow.MirroredTensorDef has been deprecated. "
+                "Please use oneflow.typing.ListNumpy.Placeholder instead."
+            )
+            print(
+                """For instance:
+            - def job_func(images=oneflow.MirroredTensorDef((32, 1, 28, 28), dtype=flow.float))
+            + def job_func(images:oneflow.typing.ListNumpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"""
+            )
             print(traceback.format_stack()[-2])
 
         super().__init__(*args, **kwargs)
