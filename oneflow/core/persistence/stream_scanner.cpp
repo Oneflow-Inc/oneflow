@@ -55,8 +55,9 @@ bool StreamScanner::IsEof() const { return whole_file_pos_ == whole_file_size_; 
 
 uint64_t StreamScanner::UpdateBuffer(std::vector<char>* buffer) {
   if (cur_stream_id_ == stream_num_) return 0;
-  uint64_t n = std::min(buffer->size() - 1, streams_[cur_stream_id_]->file_size()
-                                                - streams_[cur_stream_id_]->cur_file_pos());
+  uint64_t n =
+      std::min(static_cast<uint64_t>(buffer->size() - 1),
+               streams_[cur_stream_id_]->file_size() - streams_[cur_stream_id_]->cur_file_pos());
   if (n == 0) { return 0; }
   streams_[cur_stream_id_]->Read(buffer->data(), n);
   AddNForCurFilePos(n);
