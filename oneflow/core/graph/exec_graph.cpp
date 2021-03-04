@@ -113,7 +113,7 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
         std::bind(&Operator::GetLogicalBlobDesc4Ibn, op().get(), std::placeholders::_1),
         sbp_signature, parallel_ctx, GetBlobDesc4BnInOp);
   }
-  CHECK_JUST(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature));
+  CHECK_JUST(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx));
   if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && sbp_signature != nullptr) {
     CheckPhysicalBlobDesc(
         *op(), op()->output_bns(),

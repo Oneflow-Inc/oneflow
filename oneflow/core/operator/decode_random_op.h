@@ -31,8 +31,7 @@ class DecodeRandomOp final : public Operator {
   LogicalNode* NewProperLogicalNode() const override { return new DecodeRandomLogicalNode; }
 
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override;
+                                const ParallelContext* parallel_ctx) const override;
 
  private:
   Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
