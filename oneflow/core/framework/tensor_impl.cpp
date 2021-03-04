@@ -23,7 +23,7 @@ namespace one {
 
 namespace {
 
-Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device) {
+std::shared_ptr<const ParallelDesc> MakeParallelDescByDevice(const Device& device) {
   int64_t machine_id = GlobalProcessCtx::Rank();
   int64_t device_id = device.device_id();
   std::string machine_device_id = std::to_string(machine_id) + ":" + std::to_string(device_id);
@@ -35,10 +35,9 @@ Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device) {
 
 }  // namespace
 
-Maybe<void> MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
+void MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
   device_ = device;
-  parallel_desc_ = JUST(MakeParallelDescByDevice(*device));
-  return Maybe<void>::Ok();
+  parallel_desc_ = MakeParallelDescByDevice(*device);
 }
 
 }  // namespace one
