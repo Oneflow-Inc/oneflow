@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_CONTAINER_UTIL_H_
 #define ONEFLOW_CORE_COMMON_CONTAINER_UTIL_H_
 
-#include "oneflow/core/common/using.h"
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/maybe.h"
 
