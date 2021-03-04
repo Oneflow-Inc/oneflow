@@ -83,7 +83,7 @@ class ArgMetaDataUpdater {
   std::shared_ptr<Operator> BuildOp(const XrtNode* node) {
     DeviceType device_type = XrtDeviceToDeviceType(node->device());
     const auto& conf = *dynamic_cast<const OperatorConf*>(&node->param());
-    return ConstructOp(conf, device_type, job_desc_);
+    return ConstructOp(conf, device_type);
   }
 
   virtual ~ArgMetaDataUpdater() = default;
