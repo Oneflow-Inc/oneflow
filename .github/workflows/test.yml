@@ -288,5 +288,4 @@ jobs:
       - name: Remove container
         if: always()
         run: |
-          ssh $builder_host rm -rf $sha_dir
           docker rm -f ${container_name} || true
