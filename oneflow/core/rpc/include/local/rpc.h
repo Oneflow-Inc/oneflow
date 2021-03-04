@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_RPC_INCLUDE_LOCAL_CLIENT_
-#define ONEFLOW_CORE_RPC_INCLUDE_LOCAL_CLIENT_
+#ifndef ONEFLOW_CORE_RPC_INCLUDE_LOCAL_RPC_
+#define ONEFLOW_CORE_RPC_INCLUDE_LOCAL_RPC_
 
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/common/protobuf.h"
@@ -108,4 +108,4 @@ class RpcServer : RpcServerBase {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_RPC_INCLUDE_LOCAL_CLIENT_
+#endif  // ONEFLOW_CORE_RPC_INCLUDE_LOCAL_RPC_

@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_RPC_INCLUDE_CLIENT_
-#define ONEFLOW_CORE_RPC_INCLUDE_CLIENT_
+#ifndef ONEFLOW_CORE_RPC_INCLUDE_RPC_
+#define ONEFLOW_CORE_RPC_INCLUDE_RPC_
 
 #ifdef RPC_BACKEND_GRPC
 #include "oneflow/core/rpc/include/gprc/rpc.h"
@@ -25,4 +25,4 @@ limitations under the License.
 #include "oneflow/core/rpc/include/local/rpc.h"
 #endif  // RPC_BACKEND_LOCAL
 
-#endif  // ONEFLOW_CORE_RPC_INCLUDE_CLIENT_
+#endif  // ONEFLOW_CORE_RPC_INCLUDE_RPC_

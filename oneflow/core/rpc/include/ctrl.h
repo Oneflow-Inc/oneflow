@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_RPC_INCLUDE_SERVER_
-#define ONEFLOW_CORE_RPC_INCLUDE_SERVER_
+#ifndef ONEFLOW_CORE_RPC_INCLUDE_CTRL_
+#define ONEFLOW_CORE_RPC_INCLUDE_CTRL_
 
 #ifdef RPC_BACKEND_GRPC
 #include "oneflow/core/rpc/include/gprc/ctrl.h"
@@ -25,4 +25,4 @@ limitations under the License.
 #include "oneflow/core/rpc/include/local/ctrl.h"
 #endif  // RPC_BACKEND_LOCAL
 
-#endif  // ONEFLOW_CORE_RPC_INCLUDE_SERVER_
+#endif  // ONEFLOW_CORE_RPC_INCLUDE_CTRL_
