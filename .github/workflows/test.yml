@@ -105,8 +105,9 @@ jobs:
         if: always()
         run: |
           docker rm -f ${container_name} || true
-      - name: Saving shared env
+      - name: Save shared env
         run: |
+          set -x
           mkdir -p $sha_dir
           cp -r ${wheelhouse_dir} $sha_dir
           echo "remote_whl_dir=$(hostname):$sha_dir/$(basename ${wheelhouse_dir})" >> build.${{ matrix.test_suite }}.env
