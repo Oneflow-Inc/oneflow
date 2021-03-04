@@ -82,11 +82,11 @@ Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
 
 void UpdateOpName2AncestorsNeedNoGrad(
     const Operator& op, const std::function<const Operator*(const std::string&)>& Op4OpName,
-    HashMap<std::string, bool>* op_name2ancestors_need_no_grad) {
-  bool no_grad = op.job_desc().IsPredict();
+    const bool is_train, HashMap<std::string, bool>* op_name2ancestors_need_no_grad) {
+  bool no_grad = !is_train;
   auto IsTrainableVariableLbi = [&](const LogicalBlobId& lbi) {
     const auto& op_conf = Op4OpName(lbi.op_name())->op_conf();
-    return op_conf.has_variable_conf() && op_conf.trainable();
+    return op_conf.has_variable_conf() && op_conf.variable_conf().trainable();
   };
   for (const auto& ibn : op.input_bns()) {
     const auto& lbi = op.BnInOp2Lbi(ibn);
@@ -454,7 +454,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf
   const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
   const auto* job_desc = JUST(scope.job_desc());
   const auto& parallel_desc = JUST(scope.GetParallelDesc(op_conf));
-  auto op = ConstructOp(op_conf, parallel_desc.device_type(), job_desc);
+  auto op = ConstructOp(op_conf, parallel_desc.device_type());
   JUST(CheckAllInputsConvertableToMirroredBlob(*op));
   int32_t parallel_num = parallel_desc.parallel_num();
   JUST(CheckAllInputsWithSameParallelNum(*op, parallel_num));
@@ -525,7 +525,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   CHECK_NE_OR_RETURN(op_conf.device_tag(), "invalid_device")
       << Error::OpConfDeviceTagNoSetError() << "op_name: " << op_name << " not set device tag";
 
-  op_name2op_.emplace(op_name, ConstructOp(op_conf, job_desc));
+  op_name2op_.emplace(op_name, ConstructOp(op_conf));
   Operator* op = op_name2op_.at(op_name).get();
 
   SbpSignature sbp_sig_conf;
@@ -965,12 +965,13 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(Operator* op) {
 
 void JobBuildAndInferCtx::InferBlobBackwardSignature(
     const Operator& op, std::function<bool(const LogicalBlobId&)>* IsLbiBackwardUsed) {
-  if (op.job_desc().IsPredict()) {
+  const bool is_train = job().job_conf().has_train_conf();
+  if (is_train) {
     *IsLbiBackwardUsed = [](const LogicalBlobId&) { return false; };
     return;
   }
   const auto& Op4Name = [&](const std::string& op_name) { return CHECK_JUST(Op4OpName(op_name)); };
-  UpdateOpName2AncestorsNeedNoGrad(op, Op4Name, &op_name2ancestors_need_no_grad_);
+  UpdateOpName2AncestorsNeedNoGrad(op, Op4Name, is_train, &op_name2ancestors_need_no_grad_);
   // always return true if output_size > 1
   if (op.output_bns().size() > 1) {
     *IsLbiBackwardUsed = [](const LogicalBlobId&) { return true; };
@@ -1013,7 +1014,7 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(
   // find backward used logical blob ids
   auto backward_used_lbis = std::make_shared<HashSet<LogicalBlobId>>();
   for (const auto& bw_op_conf : bw_op_confs) {
-    const auto& bw_op = ConstructOp(bw_op_conf, op.device_type(), Global<JobDesc>::Get());
+    const auto& bw_op = ConstructOp(bw_op_conf, op.device_type());
     for (const auto& ibn : bw_op->input_bns()) {
       const auto& lbi = bw_op->BnInOp2Lbi(ibn);
       if (FwLogicalBlobDescPtr4Lbi(lbi) != nullptr) { backward_used_lbis->insert(lbi); }
