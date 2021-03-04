@@ -153,9 +153,9 @@ jobs:
           cat build.${{ matrix.test_suite }}.env >> $GITHUB_ENV
           extra_docker_args=""
 
+          source build.${{ matrix.test_suite }}.env
           ssh -o StrictHostKeyChecking=no ${builder_host} "[ -d ${sha_dir} ]"
           # dowload whl and bin
-          source build.${{ matrix.test_suite }}.env
           scp -r $remote_whl_dir wheel_tmp
           if [ "$test_suite" == "cuda" ]; then
             scp -r $remote_bin_dir bin_tmp
