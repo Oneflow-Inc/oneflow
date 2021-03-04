@@ -24,7 +24,7 @@ namespace oneflow {
 RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_conf,
                                                          const KernelConf& kernel_conf,
                                                          const JobDesc* job_desc) {
-  op_ = ConstructOp(op_conf, job_desc);
+  op_ = ConstructOp(op_conf);
   const OpAttribute& op_attribute = kernel_conf.op_attribute();
   if (op_attribute.has_sbp_signature()) {
     sbp_signature_.reset(new SbpSignature(op_attribute.sbp_signature()));

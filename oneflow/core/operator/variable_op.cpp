@@ -39,7 +39,7 @@ Maybe<OptInt64> GetSplitAxis(const VariableOpConf& variable_conf) {
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
   if (op_conf().variable_conf().has_tick()) { EnrollInputBn("tick", false); }
-  bool is_trainable = job_desc().IsTrain() && op_conf().trainable();
+  bool is_trainable = op_conf().variable_conf().trainable();
   EnrollOutputBn("out", is_trainable)->set_is_mutable(true);
 }
 
@@ -49,8 +49,8 @@ Maybe<void> VariableOp::InferLogicalOutBlobDescs(
   const VariableOpConf& variable_conf = op_conf().variable_conf();
   BlobDesc* out_blob_desc = BlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(variable_conf.shape());
-  out_blob_desc->set_data_type(variable_conf.has_data_type() ? variable_conf.data_type()
-                                                             : job_desc().DefaultDataType());
+  CHECK_OR_RETURN(variable_conf.has_data_type());
+  out_blob_desc->set_data_type(variable_conf.data_type());
   return Maybe<void>::Ok();
 }
 
@@ -58,14 +58,10 @@ Maybe<void> VariableOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();
-  CHECK_OR_RETURN(job_desc().job_conf().has_default_initializer_conf()
-                  || job_desc().job_conf().has_default_initialize_with_snapshot_path()
-                  || variable_conf.has_initializer()
-                  || variable_conf.has_initialize_with_snapshot());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(variable_conf.shape());
-  out_blob_desc->set_data_type(variable_conf.has_data_type() ? variable_conf.data_type()
-                                                             : job_desc().DefaultDataType());
+  CHECK_OR_RETURN(variable_conf.has_data_type());
+  out_blob_desc->set_data_type(variable_conf.data_type());
   const auto& opt_split_axis = JUST(GetSplitAxis(variable_conf));
   if (opt_split_axis->has_value()) {
     int32_t model_split_axis = opt_split_axis->value();
