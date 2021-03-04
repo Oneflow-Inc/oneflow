@@ -153,6 +153,7 @@ jobs:
           extra_docker_args=""
           extra_docker_args+=" --name ${container_name}"
 
+          ssh -o StrictHostKeyChecking=no ${builder_host} "[ -d ${sha_dir} ]"
           # dowload whl and bin
           source build.${{ matrix.test_suite }}.env
           scp -r $remote_whl_dir wheel_tmp
@@ -161,7 +162,6 @@ jobs:
           fi
 
           # rm sha_dir
-          ssh ${builder_host} "[ -d ${sha_dir} ]"
           ssh ${builder_host} rm -rf ${sha_dir}
 
           extra_docker_args+=" --env ONEFLOW_WHEEL_PATH=${PWD}/wheel_tmp"
