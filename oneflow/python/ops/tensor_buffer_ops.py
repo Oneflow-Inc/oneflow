@@ -159,7 +159,7 @@ def gen_tensor_buffer(
         shape (Sequence[int]): shape of output blob
         shape_list ( Sequence[Sequence[int]]): shapes for tensor buffer in output blob
         value_list (Sequence[float]): values for tensor buffer in output blob
-        data_type (Optional[flow.dtype]): data types for tensor buffer in output blob
+        data_type (Optional[flow.dtype]): data type for tensor buffer in output blob
         dynamic_out (Optional[bool]): if output is a dynamic blob
         name (Optional[str]): The name for the operation. Defaults to None.
 
