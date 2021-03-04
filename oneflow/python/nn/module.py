@@ -150,8 +150,9 @@ class Module(object):
         if "_buffers" not in self.__dict__:
             raise AttributeError("cannot assign buffer before Module.__init__() call")
         elif not isinstance(name, str):
-            raise TypeError("buffer name should be a string. "
-                            "Got {}".format(type(name)))
+            raise TypeError(
+                "buffer name should be a string. " "Got {}".format(type(name))
+            )
         elif "." in name:
             raise KeyError('buffer name can\'t contain "."')
         elif name == "":
@@ -176,8 +177,9 @@ class Module(object):
                 "cannot assign parameter before Module.__init__() call"
             )
         elif not isinstance(name, str):
-            raise TypeError("parameter name should be a string. "
-                            "Got {}".format(type(name)))
+            raise TypeError(
+                "parameter name should be a string. " "Got {}".format(type(name))
+            )
         elif "." in name:
             raise KeyError('parameter name can\'t contain "."')
         elif name == "":
@@ -401,7 +403,9 @@ class Module(object):
 
                 if param.grad is not None:
                     assert param.grad.is_leaf
-                    self._parameters[key].grad = grad_applied.requires_grad_(param.grad.requires_grad)
+                    self._parameters[key].grad = grad_applied.requires_grad_(
+                        param.grad.requires_grad
+                    )
 
         for key, buf in self._buffers.items():
             if buf is not None:
