@@ -27,7 +27,7 @@ void ScalarOpBase::InitFromOpConf() {
 
 Maybe<void> ScalarOpBase::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const BlobDesc* scalar_blob_desc = GetBlobDesc4BnInOp("scalar");
   CHECK_EQ_OR_RETURN(in_blob_desc->data_type(), scalar_blob_desc->data_type());
