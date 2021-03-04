@@ -50,6 +50,7 @@ class DType final {
   bool is_complex() const { return is_complex_; }
   bool is_floating_point() const { return is_floating_point_; }
   const std::string& name() const { return name_; }
+  Maybe<size_t> bytes() const;
 
   static Maybe<DType> GetDTypeByDataType(const DataType&);
 
