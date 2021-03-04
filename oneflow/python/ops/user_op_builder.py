@@ -465,13 +465,7 @@ class EagerLogicalUserOpModule(UserOpModule, UserOp):
 
     def InitOpKernel(self):
         def BuildInstruction(builder):
-            if not isinstance(
-                self.op_conf, oneflow_api.oneflow.core.operator.op_conf.OperatorConf
-            ):
-                cfg_op_conf = oneflow_api.deprecated.MakeOpConfByString(
-                    str(self.op_conf)
-                )
-            self.set_opkernel_object(builder.NewOpKernelObject(cfg_op_conf))
+            self.set_opkernel_object(builder.NewOpKernelObject(str(self.op_conf)))
 
         oneflow_api.deprecated.LogicalRun(BuildInstruction)
 
@@ -531,13 +525,7 @@ class EagerConsistentUserOpModule(UserOpModule, UserOp):
 
     def InitOpKernel(self):
         def BuildInstruction(builder):
-            if not isinstance(
-                self.op_conf, oneflow_api.oneflow.core.operator.op_conf.OperatorConf
-            ):
-                cfg_op_conf = oneflow_api.deprecated.MakeOpConfByString(
-                    str(self.op_conf)
-                )
-            self.set_opkernel_object(builder.NewOpKernelObject(cfg_op_conf))
+            self.set_opkernel_object(builder.NewOpKernelObject(str(self.op_conf)))
 
         oneflow_api.deprecated.LogicalRun(BuildInstruction)
 

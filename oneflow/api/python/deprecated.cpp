@@ -30,12 +30,6 @@ namespace oneflow {
 
 namespace {
 
-Maybe<cfg::OperatorConf> MakeOpConf(const std::string& serialized_str) {
-  OperatorConf op_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &op_conf)) << "op_conf parse failed";
-  return std::make_shared<cfg::OperatorConf>(op_conf);
-}
-
 Maybe<cfg::OpAttribute> MakeOpAttribute(const std::string& op_attribute_str) {
   OpAttribute op_attribute;
   CHECK_OR_RETURN(TxtString2PbMessage(op_attribute_str, &op_attribute))
@@ -51,9 +45,6 @@ Maybe<int> GetProtoDtype4OfDtype(const std::shared_ptr<DType>& x) {
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
-  m.def("MakeOpConfByString",
-        [](const std::string& str) { return MakeOpConf(str).GetPtrOrThrow(); });
-
   m.def("MakeOpAttributeByString",
         [](const std::string& str) { return MakeOpAttribute(str).GetPtrOrThrow(); });
 

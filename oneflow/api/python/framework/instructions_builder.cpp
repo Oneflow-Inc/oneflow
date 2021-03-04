@@ -29,6 +29,12 @@ namespace oneflow {
 
 namespace {
 
+Maybe<cfg::OperatorConf> MakeOpConf(const std::string& serialized_str) {
+  OperatorConf op_conf;
+  CHECK_OR_RETURN(TxtString2PbMessage(serialized_str, &op_conf)) << "op_conf parse failed";
+  return std::make_shared<cfg::OperatorConf>(op_conf);
+}
+
 std::shared_ptr<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
     const std::shared_ptr<InstructionsBuilder>& x,
     std::vector<std::shared_ptr<compatible_py::BlobObject>> physical_blob_objects,
@@ -145,8 +151,8 @@ void CudaHostUnregisterBlob(const std::shared_ptr<InstructionsBuilder>& x,
 }
 
 std::shared_ptr<compatible_py::OpKernelObject> NewOpKernelObject(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OperatorConf>& op_conf) {
+    const std::shared_ptr<InstructionsBuilder>& x, const std::string& serialized_op_conf) {
+  std::shared_ptr<cfg::OperatorConf> op_conf = CHECK_JUST(MakeOpConf(serialized_op_conf));
   return x->NewOpKernelObject(op_conf).GetPtrOrThrow();
 }
 
