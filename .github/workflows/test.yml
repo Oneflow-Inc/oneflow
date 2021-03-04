@@ -169,10 +169,9 @@ jobs:
           echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
 
           echo "test_suite=${test_suite}" >> $GITHUB_ENV
-          mkdir -p $sha_dir
+
           if [ "$test_suite" == "cuda" ]; then
             export suffix="cu102"
-            scp -r ${{ secrets.CI_LOCAL_STATIC_HOST }}:$sha_dir/bin $sha_dir
             echo "bin_dir=${PWD}/bin_tmp" >> $GITHUB_ENV
           fi
           if [ "$test_suite" == "xla" ]; then
