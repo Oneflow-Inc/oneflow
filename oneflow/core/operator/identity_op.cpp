@@ -46,8 +46,7 @@ class IdentityOpTpl final : public Operator {
     return InferBlobDescs(BlobDesc4BnInOp);
   }
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override {
+                                const ParallelContext* parallel_ctx) const override {
     return InferBlobDescs(GetBlobDesc4BnInOp);
   }
 
@@ -85,8 +84,7 @@ class MirroredCastOp : public Operator {
     return InferBlobDescs(BlobDesc4BnInOp);
   }
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override {
+                                const ParallelContext* parallel_ctx) const override {
     return InferBlobDescs(GetBlobDesc4BnInOp);
   }
 
