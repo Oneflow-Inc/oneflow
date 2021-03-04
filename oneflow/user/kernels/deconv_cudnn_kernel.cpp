@@ -134,7 +134,7 @@ class DeConvGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                    \
-        const JobDesc& job_desc = ctx->job_desc();                                     \
+        const JobDesc& job_desc = *ctx->job_desc();                                    \
         const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);                     \
         const auto* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);             \
         const auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);                   \
