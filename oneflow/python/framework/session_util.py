@@ -29,7 +29,6 @@ import oneflow.python.framework.job_instance as job_instance_util
 import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.op_executor as op_executor
 from oneflow.python.experimental import interface_op_read_and_write
 from oneflow.core.job.job_set_pb2 import ConfigProto
@@ -56,8 +55,7 @@ import traceback
 
 
 class Session(object):
-    def __init__(self):
-        self.id_ = oneflow_api.NewSessionId()
+    def __init__(self, sess_id):
         self.job_name2function_desc_ = {}
         self.job_name2job_ = {}
         self.status_ = SessionStatus.OPEN
@@ -85,8 +83,7 @@ class Session(object):
         self._UpdateFunctionFlagName2DefaultVal()
         self.scope_attr_name2default_val_ = {}
         self._UpdateScopeAttrName2DefaultVal()
-        self.instruction_list_ = instr_cfg.InstructionListProto()
-        self.eager_symbol_list_ = eager_symbol_cfg.EagerSymbolList()
+        self.sess_ = oneflow_api.RegsiterSession(sess_id)
         self.backward_blob_register_ = oneflow_api.BlobRegister(
             blob_cache_util.TryDisableBlobCache
         )
@@ -95,7 +92,7 @@ class Session(object):
 
     @property
     def id(self):
-        return self.id_
+        return self.sess_.id
 
     @property
     def status(self):
@@ -144,11 +141,11 @@ class Session(object):
 
     @property
     def instruction_list(self):
-        return self.instruction_list_
+        return self.sess_.instruction_list()
 
     @property
     def eager_symbol_list(self):
-        return self.eager_symbol_list_
+        return self.sess_.eager_symbol_list()
 
     @property
     def backward_blob_register(self):
@@ -257,6 +254,7 @@ class Session(object):
         self.resource_ = None
         if self.eager_config_proto_ctx_:
             del self.eager_config_proto_ctx_
+        oneflow_api.ClearSessionById(self.id)
 
     def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN
@@ -487,7 +485,7 @@ def api_clear_default_session() -> None:
 @enable_if.condition(hob.in_normal_mode)
 def clear_default_session():
     session_ctx.TryCloseDefaultSession()
-    session_ctx.OpenDefaultSession(Session())
+    session_ctx.OpenDefaultSession(Session(oneflow_api.NewSessionId()))
 
 
 @oneflow_export("sync_default_session")
@@ -522,4 +520,4 @@ def _GetDefaultConfigProto():
     return config_proto
 
 
-session_ctx.OpenDefaultSession(Session())
+session_ctx.OpenDefaultSession(Session(oneflow_api.NewSessionId()))

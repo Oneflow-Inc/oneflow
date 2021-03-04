@@ -15,6 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
+from contextlib import contextmanager
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
@@ -34,15 +35,6 @@ import random
 import oneflow
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api
-
-
-def _FindOrCreateDelegateBlobObject(
-    builder, Fetch, x_blob_object, op_arg_parallel_attr
-):
-    if x_blob_object.op_arg_parallel_attr == op_arg_parallel_attr:
-        return x_blob_object
-    blob_cache = blob_cache_util.FindOrCreateBlobCache(x_blob_object)
-    return blob_cache.GetCachedDelegateBlobObject(op_arg_parallel_attr, Fetch)
 
 
 def BoxingTo(builder, produced_blob_object, consumer_op_arg_parallel_attr):
@@ -378,7 +370,7 @@ def GpuNcclAllReduce(builder, produced_blob_object, consumer_op_arg_parallel_att
         cfg_op_attribute,
         parallel_conf,
         bn_in_op2blob_object,
-        _FindOrCreateDelegateBlobObject,
+        blob_cache_util.FindOrCreateDelegateBlobObject,
     )
     y_blob_object = bn_in_op2blob_object["out_0"]
     y_blob_object.op_arg_parallel_attr.Assign(consumer_op_arg_parallel_attr)
@@ -559,7 +551,7 @@ def BuildNaiveCpuBoxing(
         cfg_op_attribute,
         boxing_parallel_desc_symbol.parallel_conf,
         bn_in_op2blob_object,
-        _FindOrCreateDelegateBlobObject,
+        blob_cache_util.FindOrCreateDelegateBlobObject,
     )
     return [bn_in_op2blob_object["out_%s" % i] for i in range(out_parallel_num)]
 
@@ -702,6 +694,15 @@ def _MakeCopyHdOpConfAndRetLbi():
     return op_conf, lbi
 
 
+@contextmanager
+def _CudaHostPinBlob(build, blob_object):
+    build.CudaHostRegisterBlob(blob_object)
+    try:
+        yield
+    finally:
+        build.CudaHostUnregisterBlob(blob_object)
+
+
 def _BuildCopyInstruction(builder, produced_blob_object, op_conf, to_device_tag):
     x_devices = produced_blob_object.parallel_desc_symbol.machine_id2device_id_list
     x_device_tag = produced_blob_object.parallel_desc_symbol.device_tag
@@ -720,7 +721,7 @@ def _BuildCopyInstruction(builder, produced_blob_object, op_conf, to_device_tag)
             builder, produced_blob_object.parallel_desc_symbol, to_device_tag
         )
         out_parallel_conf = out_parallel_desc_symbol.parallel_conf
-        with builder.CudaHostPinBlob(produced_blob_object):
+        with _CudaHostPinBlob(builder, produced_blob_object):
             builder.NoBoxingCudaH2DStatelessCall(
                 cfg_op_attribute, out_parallel_conf, bn_in_op2blob_object,
             )
@@ -765,7 +766,7 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
             cfg_op_attribute,
             ref_parallel_conf,
             bn_in_op2blob_object,
-            _FindOrCreateDelegateBlobObject,
+            blob_cache_util.FindOrCreateDelegateBlobObject,
         )
     elif ref_device_tag == "cpu" and value_device_tag == "gpu":
         value_parallel_conf = value_blob_object.parallel_desc_symbol.parallel_conf
@@ -776,7 +777,7 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
             TryReplaceDeviceTag,
         )
     elif ref_device_tag == "gpu" and value_device_tag == "cpu":
-        with builder.CudaHostPinBlob(value_blob_object):
+        with _CudaHostPinBlob(builder, value_blob_object):
             builder.NoBoxingCudaH2DStatelessCall(
                 cfg_op_attribute, ref_parallel_conf, bn_in_op2blob_object,
             )

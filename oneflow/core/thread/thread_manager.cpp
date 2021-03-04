@@ -22,48 +22,39 @@ limitations under the License.
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
 ThreadMgr::~ThreadMgr() {
-  for (size_t i = 0; i < threads_.size(); ++i) {
+  for (auto& thread_pair : threads_) {
     ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
-    threads_[i]->GetMsgChannelPtr()->Send(msg);
-    delete threads_[i];
-    LOG(INFO) << "actor thread " << i << " finish";
+    thread_pair.second->GetMsgChannelPtr()->Send(msg);
+    thread_pair.second.reset();
+    LOG(INFO) << "actor thread " << thread_pair.first << " finish";
   }
 }
 
-Thread* ThreadMgr::GetThrd(int64_t thrd_id) { return threads_.at(thrd_id); }
+Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
+  auto iter = threads_.find(thrd_id);
+  CHECK(iter != threads_.end()) << "thread " << thrd_id << " not found";
+  return iter->second.get();
+}
 
 ThreadMgr::ThreadMgr(const Plan& plan) {
-  int64_t thrd_id = 0;
-
-#ifdef WITH_CUDA
-  FOR_RANGE(int64_t, i, 0, GetCudaWorkTypeSize()) {
-    FOR_RANGE(int64_t, dev_phy_id, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
-      threads_.push_back(new GpuThread(thrd_id++, dev_phy_id));
-    }
-  }
-#endif
-  FOR_RANGE(int64_t, i, 0, (Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum())) {
-    threads_.push_back(new CpuThread(thrd_id++));
-  }
-  threads_.push_back(new CpuThread(thrd_id++));  // comm_net
-  CreatePersistenceThrd(plan, thrd_id);
-}
-
-void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {
-  const int64_t this_machine_id = GlobalProcessCtx::Rank();
-
-  int64_t max_thrd_id = 0;
+  const int64_t this_rank = GlobalProcessCtx::Rank();
   for (const TaskProto& task : plan.task()) {
-    if (task.machine_id() == this_machine_id) {
-      if (max_thrd_id < task.thrd_id()) { max_thrd_id = task.thrd_id(); }
-    }
+    TaskId task_id = DeserializeTaskIdFromInt64(task.task_id());
+    StreamId stream_id = task_id.stream_id();
+    if (stream_id.device_id().rank() != this_rank) { continue; }
+    int64_t thrd_id = SerializeStreamIdToInt64(stream_id);
+    if (threads_.find(thrd_id) != threads_.end()) { continue; }
+    Thread* thread =
+        NewObj<int, Thread, const StreamId&>(stream_id.device_id().device_type(), stream_id);
+    CHECK_NOTNULL(thread);
+    threads_[thrd_id].reset(thread);
   }
-
-  for (int64_t i = thrd_id; i <= max_thrd_id; i++) { threads_.push_back(new CpuThread(i)); }
 }
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback) {

@@ -13,26 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_ACCUMULATE_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_ACCUMULATE_KERNEL_H_
 
-#include "oneflow/core/kernel/kernel.h"
+#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_TUPLE_H_
+#define ONEFLOW_CORE_FRAMEWORK_TENSOR_TUPLE_H_
+
+#include <memory>
+#include <vector>
 
 namespace oneflow {
+namespace one {
 
-template<DeviceType device_type, typename T>
-class AccumulateKernel final : public KernelIf<device_type> {
+class Tensor;
+
+class TensorTuple final : public std::vector<std::shared_ptr<Tensor>>,
+                          public std::enable_shared_from_this<TensorTuple> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AccumulateKernel);
-  AccumulateKernel() = default;
-  ~AccumulateKernel() = default;
-
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
-
- private:
+  TensorTuple(const TensorTuple&) = delete;
+  TensorTuple(TensorTuple&) = delete;
+  TensorTuple() = default;
+  ~TensorTuple() = default;
+  TensorTuple(std::vector<std::shared_ptr<Tensor>>::size_type size);
 };
 
+}  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_ACCUMULATE_KERNEL_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_TUPLE_H_

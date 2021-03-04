@@ -30,7 +30,6 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
@@ -310,11 +309,11 @@ def _LogicalSlice(
                 parallel_conf,
                 bn_in_op2blob_object,
                 boxing_util.BoxingTo,
-                vm_util._FindOrCreateDelegateBlobObject,
+                blob_cache_util.FindOrCreateDelegateBlobObject,
             )
             Yield(bn_in_op2blob_object["y_0"])
 
-        vm_util.LogicalRun(build)
+        oneflow_api.deprecated.LogicalRun(build)
 
     lbi = lbi_util.LogicalBlobId()
     lbi.set_op_name(op_name)
@@ -408,10 +407,10 @@ def _LogicalSliceAssign(
             parallel_conf,
             bn_in_op2blob_object,
             boxing_util.BoxingTo,
-            vm_util._FindOrCreateDelegateBlobObject,
+            blob_cache_util.FindOrCreateDelegateBlobObject,
         )
 
-    vm_util.LogicalRun(BuildAssignInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildAssignInstruction)
     blob_cache_util.TryDisableBlobCache(ref_blob_object)
 
 
