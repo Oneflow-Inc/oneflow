@@ -20,6 +20,7 @@ limitations under the License.
 #include <initializer_list>
 #include <vector>
 #include <glog/logging.h>
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
@@ -90,38 +91,38 @@ class fixed_vector final {
   }
 
   reference at(size_type pos) {
-    CheckPos(pos);
+    CHECK_JUST(CheckPos(pos));
     return data_.at(pos);
   }
   const_reference at(size_type pos) const {
-    CheckPos(pos);
+    CHECK_JUST(CheckPos(pos));
     return data_.at(pos);
   }
 
   reference operator[](size_type pos) {
-    CheckPos(pos);
+    CHECK_JUST(CheckPos(pos));
     return data_[pos];
   }
   const_reference operator[](size_type pos) const {
-    CheckPos(pos);
+    CHECK_JUST(CheckPos(pos));
     return data_[pos];
   }
 
   reference front() {
-    CheckPos(0);
+    CHECK_JUST(CheckPos(0));
     return data_.at(0);
   }
   const_reference front() const {
-    CheckPos(0);
+    CHECK_JUST(CheckPos(0));
     return data_.at(0);
   }
 
   reference back() {
-    CheckPos(0);
+    CHECK_JUST(CheckPos(0));
     return data_.at(size_ - 1);
   }
   const_reference back() const {
-    CheckPos(0);
+    CHECK_JUST(CheckPos(0));
     return data_.at(size_ - 1);
   }
 
@@ -244,9 +245,15 @@ class fixed_vector final {
   }
 
  private:
-  void CheckSize() const { CheckSize(size_); }
-  void CheckSize(size_t size) const { CHECK_LE(size, kMaxSize); }
-  void CheckPos(size_t pos) const { CHECK_LT(pos, size_); }
+  void CheckSize() const { CHECK_JUST(CheckSize(size_)); }
+  Maybe<void> CheckSize(size_t size) const {
+    if (size > kMaxSize) { return Error::OutOfRangeError(); }
+    return Maybe<void>::Ok();
+  }
+  Maybe<void> CheckPos(size_t pos) const {
+    if (pos >= size_) { return Error::OutOfRangeError(); }
+    return Maybe<void>::Ok();
+  }
   void MoveNToEnd(iterator first, size_t N) {
     CheckSize(size_ + N);
     iterator old_end = end();
@@ -255,7 +262,7 @@ class fixed_vector final {
     std::copy_backward(first, old_end, new_end);
   }
   void MoveNToBegin(iterator last, size_t N) {
-    CheckPos(last - N - begin());
+    CHECK_JUST(CheckPos(last - N - begin()));
     iterator old_end = end();
     size_ -= N;
     std::copy(last, old_end, last - N);

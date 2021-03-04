@@ -255,6 +255,12 @@ Error Error::CompileOptionWrong() {
   return error;
 }
 
+Error Error::OutOfRangeError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_out_of_range_error();
+  return error;
+}
+
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
   *MutThreadLocalError() = error;
   CHECK_NE(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);

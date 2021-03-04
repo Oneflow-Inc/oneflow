@@ -121,6 +121,8 @@ message SymbolIdUninitializedError {}
 
 message ValueError {}
 
+message OutOfRangeError {}
+
 message ErrorProto {
   optional string error_summary = 1 [default = ""];
   optional string msg = 2 [default = ""];
@@ -161,5 +163,6 @@ message ErrorProto {
     SymbolIdUninitializedError symbol_id_uninitialized_error = 700;
     UnknownError unknown_error = 900;
     CompileOptionWrongError compile_option_wrong_error = 950;
+    OutOfRangeError out_of_range_error = 951;
   }
 }

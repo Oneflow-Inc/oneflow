@@ -81,6 +81,8 @@ class Error final {
 
   static Error CompileOptionWrong();
 
+  static Error OutOfRangeError();
+
  private:
   std::shared_ptr<cfg::ErrorProto> error_proto_;
 };
