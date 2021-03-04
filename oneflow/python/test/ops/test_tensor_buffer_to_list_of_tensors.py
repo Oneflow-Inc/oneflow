@@ -24,7 +24,7 @@ from test_util import GenArgList, type_name_to_flow_type
 def _run_test(shape, shape_list, value_list, data_type):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_logical_view(flow.scope.mirrored_view())
+    func_config.default_logical_view(flow.scope.consistent_view())
     func_config.default_data_type(flow.float)
 
     @flow.global_function(function_config=func_config)
