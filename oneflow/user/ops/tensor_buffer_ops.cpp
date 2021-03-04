@@ -105,10 +105,6 @@ REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
-      return Maybe<void>::Ok();
     });
 
 REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
@@ -144,12 +140,6 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
               .Split(user_op::OpArg("out", j), 0)
               .Build();
         }
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      FOR_RANGE(int64_t, i, 0, ctx->user_op_conf().output_size("out")) {
-        ctx->BatchAxis4ArgNameAndIndex("out", i)->set_value(0);
       }
       return Maybe<void>::Ok();
     })
