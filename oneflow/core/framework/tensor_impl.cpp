@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
@@ -28,9 +27,10 @@ Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device) {
   int64_t machine_id = GlobalProcessCtx::Rank();
   int64_t device_id = device.device_id();
   std::string machine_device_id = std::to_string(machine_id) + ":" + std::to_string(device_id);
-  std::vector<std::string> machine_device_ids({machine_device_id});
-  Maybe<cfg::ParallelConf> conf = MakeParallelConf(device.of_type(), machine_device_ids);
-  return std::make_shared<const ParallelDesc>(JUST(conf));
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag(device.of_type());
+  parallel_conf.add_device_name(machine_device_id);
+  return std::make_shared<const ParallelDesc>(parallel_conf);
 }
 
 }  // namespace
