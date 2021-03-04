@@ -90,9 +90,7 @@ def _compare_dim_gather_with_samples(test_case, inputshape, indexshape, dim, max
     )
 
 
-# @flow.unittest.skip_unless_1n1d()
-# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+@flow.unittest.skip_unless_1n1d()
 class TestDynamicDimGather(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dynamic_dim_gather(test_case):

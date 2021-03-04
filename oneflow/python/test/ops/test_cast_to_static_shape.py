@@ -102,9 +102,7 @@ def _check_cast_to_static_shape(test_case, shape, data_type, device_type, device
         raise ValueError
 
 
-# @flow.unittest.skip_unless_1n1d()
-# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+@flow.unittest.skip_unless_1n1d()
 class TestCastToStaticShape(flow.unittest.TestCase):
     def test_case_1(test_case):
         arg_dict = OrderedDict()
@@ -116,7 +114,7 @@ class TestCastToStaticShape(flow.unittest.TestCase):
             _check_cast_to_static_shape(test_case, **arg)
 
 
-# @flow.unittest.skip_unless_1n1d()
+# @flow.unittest.skip_unless_1n4d()
 # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
 @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
 class TestCastToStaticShapeParallel(flow.unittest.TestCase):

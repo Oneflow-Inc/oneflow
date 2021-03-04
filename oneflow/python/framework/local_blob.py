@@ -40,12 +40,6 @@ class LocalBlob(object):
         return self.numpy_list()
 
     def numpy_list(self):
-        print(
-            "WARNING:",
-            "LocalBlob.numpy_list() is deprecated, it will return [LocalBlob.numpy()].",
-            "please use LocalBlob.numpy()\n",
-            traceback.format_stack()[-2],
-        )
         return [self.numpy()]
 
     def ndarray(self):

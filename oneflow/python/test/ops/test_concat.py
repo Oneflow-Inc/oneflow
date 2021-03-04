@@ -35,8 +35,7 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, dtype, axis):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    # func_config.default_logical_view(flow.scope.mirrored_view())
-    func_config.default_logical_view(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
     @flow.global_function(type="train", function_config=func_config)
@@ -103,14 +102,17 @@ def _of_dynamic_concat(
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    # func_config.default_logical_view(flow.scope.mirrored_view())
-    func_config.default_logical_view(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
 
     @flow.global_function(type="train", function_config=func_config)
     def dynamic_concat_job(
-        input_0_def: oft.Numpy.Placeholder(shape=input_static_shape, dtype=flow.float),
-        input_1_def: oft.Numpy.Placeholder(shape=input_static_shape, dtype=flow.float),
+        input_0_def: oft.ListNumpy.Placeholder(
+            shape=input_static_shape, dtype=flow.float
+        ),
+        input_1_def: oft.ListNumpy.Placeholder(
+            shape=input_static_shape, dtype=flow.float
+        ),
     ):
         var_0 = flow.get_variable(
             "Var0",
@@ -152,8 +154,8 @@ def _of_dynamic_concat(
         flow.watch_diff(var_1, make_watch_diff_cb(1))
         return result
 
-    ret = dynamic_concat_job(inputs[0], inputs[1]).get()
-    return ret.numpy()
+    ret = dynamic_concat_job([inputs[0]], [inputs[1]]).get()
+    return ret.numpy(0)
 
 
 def _rand_part_range(start, stop, part_num):
@@ -288,8 +290,8 @@ def _test_hybrid_concat(
 
     @flow.global_function(type="train", function_config=func_config)
     def hybrid_concat_job(
-        input_0_def: oft.Numpy.Placeholder(shape=static_shape, dtype=flow.float),
-        input_1_def: oft.Numpy.Placeholder(shape=static_shape, dtype=flow.float),
+        input_0_def: oft.ListNumpy.Placeholder(shape=static_shape, dtype=flow.float),
+        input_1_def: oft.ListNumpy.Placeholder(shape=static_shape, dtype=flow.float),
     ):
         var = flow.get_variable(
             "var",
@@ -357,23 +359,17 @@ class TestConcat(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dynamic_concat_case_0(test_case):
         _test_dynamic_concat(test_case, (64, 4), 0, "gpu")
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_dynamic_concat_case_1(test_case):
         _test_dynamic_concat(test_case, (2, 10), 1, "cpu")
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dynamic_concat_case_2(test_case):
         _test_dynamic_concat(test_case, (4, 7, 128), 2, "gpu")
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_dynamic_concat_case_3(test_case):
         _test_dynamic_concat(test_case, (16,), 0, "cpu")
 
@@ -383,18 +379,12 @@ class TestConcat(flow.unittest.TestCase):
     def test_static_concat_case_1(test_case):
         _test_static_concat(test_case, (3, 8, 4), 1)
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_hybrid_concat_case_0(test_case):
         _test_hybrid_concat(test_case, (64, 4), 0)
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_hybrid_concat_case_1(test_case):
         _test_hybrid_concat(test_case, (10,), 0, 30)
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_hybrid_concat_case_2(test_case):
         _test_hybrid_concat(test_case, (10, 7, 5), 1, 21)
 

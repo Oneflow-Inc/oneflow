@@ -419,7 +419,10 @@ def _MakeHandler4ParallelIdAndLocalBlob(blob_watched, handler):
             parallel_id2consistent_local_blob[parallel_id]
             for i in range(len_sub_remote_blobs)
         ]
-        local_blob = local_blob_util.MergeLocalBlobs(local_blob_list, blob_watched)
+        assert len(local_blob_list) == 1
+        local_blob = local_blob_util.LocalBlob(
+            local_blob_list[0].numpy(), blob_watched.is_dynamic
+        )
         handler(oft_util.TransformWatchedBlob(local_blob, handler))
 
     return HandlerParallelIdAndLocalBlob

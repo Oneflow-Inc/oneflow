@@ -70,8 +70,8 @@ def _make_gather_fn(
 
         @flow.global_function(type="train", function_config=func_config)
         def gather_fn(
-            params_def: oft.Numpy.Placeholder(params.shape, dtype=flow.float32),
-            indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),
+            params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float32),
+            indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
         ):
             return do_gather(params_def, indices_def)
 
@@ -102,12 +102,11 @@ def _compare_gather_with_tf(
         x = tf.Variable(params.astype(np.float32))
         y = tf.gather(x, i, axis=axis, batch_dims=axis)
     dy = t.gradient(y, x)
-    # TODO(jiangxuefei, zhangwenxiao): support mirror
     if mirrored:
 
         def compare_dy(params_grad):
             test_case.assertTrue(
-                np.allclose(dy, params_grad.numpy(), atol=1e-5, rtol=1e-5)
+                np.allclose(dy, params_grad.numpy_list()[0], atol=1e-5, rtol=1e-5)
             )
 
     else:
@@ -122,7 +121,7 @@ def _compare_gather_with_tf(
     )
 
     if mirrored:
-        of_y = gather_fn(params, indices).get().numpy()
+        of_y = gather_fn([params], [indices]).get().numpy_list()[0]
     else:
         of_y = gather_fn(params, indices).get().numpy()
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
@@ -150,8 +149,6 @@ class TestBatchGather(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_gather_with_tf(test_case, *arg)
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_batch_gather_case_2(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
@@ -163,8 +160,6 @@ class TestBatchGather(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_gather_with_tf(test_case, *arg)
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_batch_gather_case_3(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]

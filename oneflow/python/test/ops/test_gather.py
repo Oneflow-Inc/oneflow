@@ -67,8 +67,8 @@ def _make_gather_fn(
 
         @flow.global_function(type="train", function_config=func_config)
         def gather_fn(
-            params_def: oft.Numpy.Placeholder(params.shape, dtype=flow.float),
-            indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),
+            params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
+            indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
         ):
             return do_gather(params_def, indices_def)
 
@@ -154,8 +154,6 @@ class TestGather(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_gather_with_tf(test_case, *arg)
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_gather_case_2(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "gpu"]
@@ -167,8 +165,6 @@ class TestGather(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_gather_with_tf(test_case, *arg)
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_gather_case_3(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]

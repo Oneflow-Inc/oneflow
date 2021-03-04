@@ -31,7 +31,7 @@ class TestDynamicReshape(flow.unittest.TestCase):
         func_config.default_logical_view(flow.scope.mirrored_view())
 
         @flow.global_function(type="train", function_config=func_config)
-        def DynamicReshapeJob(x: oft.Numpy.Placeholder(data_shape)):
+        def DynamicReshapeJob(x: oft.ListNumpy.Placeholder(data_shape)):
             reshape_out1 = flow.reshape(x, (-1, 20))
             my_model = flow.get_variable(
                 "my_model",

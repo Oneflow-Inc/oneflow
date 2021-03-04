@@ -66,8 +66,8 @@ def _make_slice_dynamic_func(
 
     @flow.global_function(type="predict", function_config=func_cfg)
     def slice_dynamic_job(
-        x: otp.Numpy.Placeholder(shape=input_shape, dtype=dtype)
-    ) -> tp.List[otp.Numpy]:
+        x: otp.ListNumpy.Placeholder(shape=input_shape, dtype=dtype)
+    ) -> tp.List[otp.ListNumpy]:
         return _do_slice(x, slice_args, name="SliceDynamic")
 
     return slice_dynamic_job
@@ -442,8 +442,6 @@ class TestSliceV2(flow.unittest.TestCase):
             np.allclose(outputs[0], of_outputs[0], rtol=1e-03, atol=1e-04)
         )
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_slice_dynamic_base(test_case):
         input = np.random.rand(2, 4, 4)
         slice_args = [[(None, None, None), (1, None, None)]]
@@ -464,8 +462,6 @@ class TestSliceV2(flow.unittest.TestCase):
                 test_case, input, slice_args, outputs, static_shape=(2, 5, 5), **kwarg
             )
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_slice_dynamic_at_two_dims(test_case):
         input = np.random.rand(2, 3, 2, 2)
         slice_args = [
@@ -476,8 +472,6 @@ class TestSliceV2(flow.unittest.TestCase):
             test_case, input, slice_args, outputs, static_shape=(2, 5, 3, 3)
         )
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_slice_dynamic_at_first_dim_and_last_dim(test_case):
         input = np.random.rand(3, 6, 3, 3)
         slice_args = [
@@ -488,32 +482,24 @@ class TestSliceV2(flow.unittest.TestCase):
             test_case, input, slice_args, outputs, static_shape=(4, 5, 5, 3)
         )
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_slice_dynamic_neg_start(test_case):
         input = np.random.rand(2, 10)
         slice_args = [[(None, None, None), (-5, None, None)]]
         outputs = [input[:, -5:]]
         _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(3, 7))
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_slice_dynamic_neg_step(test_case):
         input = np.random.rand(2, 10)
         slice_args = [[(None, None, None), (None, -5, -1)]]
         outputs = [input[:, :-5:-1]]
         _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(3, 7))
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_slice_dynamic_anomaly(test_case):
         input = np.random.rand(4, 7)
         slice_args = [[(None, None, None), (2, None, None)]]
         outputs = [input[:, 2:]]
         _test_slice_dynamic(test_case, input, slice_args, outputs, static_shape=(5, 6))
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_slice_dynamic_empty_blob(test_case):
         input = np.random.rand(5, 0, 5)
         slice_args = [[(None, None, None), (None, None, None), (2, 3, None)]]

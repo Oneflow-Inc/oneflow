@@ -90,8 +90,8 @@ def _make_scatter_nd_fn(indices, updates, shape, device_type, mirrored, compare_
 
         @flow.global_function(type="train", function_config=func_config)
         def scatter_nd_fn(
-            indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),
-            updates_def: oft.Numpy.Placeholder(updates.shape, dtype=flow.float),
+            indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
+            updates_def: oft.ListNumpy.Placeholder(updates.shape, dtype=flow.float),
         ):
             return do_scatter_nd(indices_def, updates_def)
 
@@ -285,9 +285,9 @@ def _of_tensor_scatter_nd_add(
 
         @flow.global_function(type="train", function_config=func_config)
         def tensor_scatter_nd_add_fn(
-            params_def: oft.Numpy.Placeholder(params.shape, dtype=flow.float),
-            indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),
-            updates_def: oft.Numpy.Placeholder(updates.shape, dtype=flow.float),
+            params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
+            indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
+            updates_def: oft.ListNumpy.Placeholder(updates.shape, dtype=flow.float),
         ):
             return do_tensor_scatter_nd_add(params_def, indices_def, updates_def)
 
@@ -369,8 +369,8 @@ def _of_scatter_nd_dynamic_indices(
 
     @flow.global_function(function_config=func_config)
     def scatter_nd_fn(
-        indices_def: oft.Numpy.Placeholder(indices_static_shape, dtype=flow.int32),
-        updates_def: oft.Numpy.Placeholder(updates_static_shape, dtype=flow.float),
+        indices_def: oft.ListNumpy.Placeholder(indices_static_shape, dtype=flow.int32),
+        updates_def: oft.ListNumpy.Placeholder(updates_static_shape, dtype=flow.float),
     ):
         with flow.scope.placement("gpu", "0:0"):
             return flow.scatter_nd(indices_def, updates_def, params_shape)
@@ -408,9 +408,9 @@ def _of_tensor_scatter_nd_update_dynamic_indices(
 
     @flow.global_function(function_config=func_config)
     def tensor_scatter_nd_update_fn(
-        params_def: oft.Numpy.Placeholder(params.shape, dtype=flow.float),
-        indices_def: oft.Numpy.Placeholder(indices_static_shape, dtype=flow.int32),
-        updates_def: oft.Numpy.Placeholder(updates_static_shape, dtype=flow.float),
+        params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
+        indices_def: oft.ListNumpy.Placeholder(indices_static_shape, dtype=flow.int32),
+        updates_def: oft.ListNumpy.Placeholder(updates_static_shape, dtype=flow.float),
     ):
         with flow.scope.placement("gpu", "0:0"):
             return flow.tensor_scatter_nd_update(params_def, indices_def, updates_def)
@@ -455,9 +455,9 @@ def _of_tensor_scatter_nd_add_dynamic_indices(
 
     @flow.global_function(function_config=func_config)
     def tensor_scatter_nd_add_fn(
-        params_def: oft.Numpy.Placeholder(params.shape, dtype=flow.float),
-        indices_def: oft.Numpy.Placeholder(indices_static_shape, dtype=flow.int32),
-        updates_def: oft.Numpy.Placeholder(updates_static_shape, dtype=flow.float),
+        params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
+        indices_def: oft.ListNumpy.Placeholder(indices_static_shape, dtype=flow.int32),
+        updates_def: oft.ListNumpy.Placeholder(updates_static_shape, dtype=flow.float),
     ):
         with flow.scope.placement("gpu", "0:0"):
             return flow.tensor_scatter_nd_add(params_def, indices_def, updates_def)
@@ -498,9 +498,7 @@ class TestScatterNd(flow.unittest.TestCase):
         arg_dict["params_shape"] = [(10,)]
         arg_dict["indices_shape"] = [(5, 1)]
         arg_dict["updates_shape"] = [(5,)]
-        # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-        # arg_dict["mirrored"] = [True, False]
-        arg_dict["mirrored"] = [False]
+        arg_dict["mirrored"] = [True, False]
         for arg in GenArgList(arg_dict):
             _compare_scatter_nd_with_tf(test_case, *arg)
 
@@ -528,9 +526,7 @@ class TestScatterNd(flow.unittest.TestCase):
         arg_dict["params_shape"] = [(24, 25, 32, 10, 12)]
         arg_dict["indices_shape"] = [(3, 4, 2)]
         arg_dict["updates_shape"] = [(3, 4, 32, 10, 12)]
-        # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-        # arg_dict["mirrored"] = [True, False]
-        arg_dict["mirrored"] = [False]
+        arg_dict["mirrored"] = [True, False]
         for arg in GenArgList(arg_dict):
             _compare_scatter_nd_with_tf(test_case, *arg)
 
@@ -587,9 +583,7 @@ class TestScatterNd(flow.unittest.TestCase):
         arg_dict["indices_shape"] = [(7, 1)]
         arg_dict["updates_shape"] = [(7,)]
         arg_dict["device_type"] = ["gpu", "cpu"]
-        # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-        # arg_dict["mirrored"] = [True, False]
-        arg_dict["mirrored"] = [False]
+        arg_dict["mirrored"] = [True, False]
         for arg in GenArgList(arg_dict):
             _compare_tensor_scatter_nd_add_with_tf(test_case, *arg)
 
@@ -599,9 +593,7 @@ class TestScatterNd(flow.unittest.TestCase):
         arg_dict["indices_shape"] = [(17, 2)]
         arg_dict["updates_shape"] = [(17, 9)]
         arg_dict["device_type"] = ["gpu", "cpu"]
-        # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-        # arg_dict["mirrored"] = [True, False]
-        arg_dict["mirrored"] = [False]
+        arg_dict["mirrored"] = [True, False]
         for arg in GenArgList(arg_dict):
             _compare_tensor_scatter_nd_add_with_tf(test_case, *arg)
 
@@ -611,15 +603,11 @@ class TestScatterNd(flow.unittest.TestCase):
         arg_dict["indices_shape"] = [(20, 9, 3)]
         arg_dict["updates_shape"] = [(20, 9, 41, 33)]
         arg_dict["device_type"] = ["gpu", "cpu"]
-        # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-        # arg_dict["mirrored"] = [True, False]
-        arg_dict["mirrored"] = [False]
+        arg_dict["mirrored"] = [True, False]
         for arg in GenArgList(arg_dict):
             _compare_tensor_scatter_nd_add_with_tf(test_case, *arg)
 
-    # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_scatter_nd_dynamic_indices(test_case):
         arg_dict = OrderedDict()
         arg_dict["indices_shape"] = [(12, 10, 2)]
@@ -630,9 +618,7 @@ class TestScatterNd(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_scatter_nd_dynamic_indices_with_tf(test_case, *arg)
 
-    # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_scatter_nd_empty_indices(test_case):
         arg_dict = OrderedDict()
         arg_dict["indices_shape"] = [(0, 1)]
@@ -643,9 +629,7 @@ class TestScatterNd(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_scatter_nd_dynamic_indices_with_tf(test_case, *arg)
 
-    # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_tensor_scatter_nd_update_dynamic_indices(test_case):
         arg_dict = OrderedDict()
         arg_dict["params_shape"] = [(32, 33, 4, 5)]
@@ -656,9 +640,7 @@ class TestScatterNd(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_tensor_scatter_nd_update_dynamic_indices_with_tf(test_case, *arg)
 
-    # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_tensor_scatter_nd_update_empty_indices(test_case):
         arg_dict = OrderedDict()
         arg_dict["params_shape"] = [(37, 14)]
@@ -669,9 +651,7 @@ class TestScatterNd(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_tensor_scatter_nd_update_dynamic_indices_with_tf(test_case, *arg)
 
-    # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_tensor_scatter_nd_add_dynamic_indices(test_case):
         arg_dict = OrderedDict()
         arg_dict["params_shape"] = [(2, 9, 7, 5, 4)]
@@ -682,9 +662,7 @@ class TestScatterNd(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_tensor_scatter_nd_add_dynamic_indices_with_tf(test_case, *arg)
 
-    # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_tensor_scatter_nd_add_empty_indices(test_case):
         arg_dict = OrderedDict()
         arg_dict["params_shape"] = [(24, 30, 14)]

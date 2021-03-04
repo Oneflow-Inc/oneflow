@@ -36,8 +36,7 @@ def compare_with_tensorflow(
 
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    # func_config.default_logical_view(flow.scope.mirrored_view())
-    func_config.default_logical_view(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
     instance_num = predictions_shape[0]
@@ -53,16 +52,18 @@ def compare_with_tensorflow(
 
     @flow.global_function(function_config=func_config)
     def IntopkJob(
-        targets: tp.Numpy.Placeholder(
-            (instance_num,), dtype=type_name_to_flow_type[target_dtype]
+        targets: tp.ListNumpy.Placeholder(
+            (instance_num + 10,), dtype=type_name_to_flow_type[target_dtype]
         ),
-        predictions: tp.Numpy.Placeholder(predictions_shape, dtype=flow.float),
+        predictions: tp.ListNumpy.Placeholder(
+            tuple([dim + 5 for dim in predictions_shape]), dtype=flow.float
+        ),
     ):
         with flow.scope.placement(device_type, "0:0"):
             return flow.math.in_top_k(targets, predictions, k=k)
 
     # OneFlow
-    of_out = IntopkJob(targets, predictions).get().numpy()
+    of_out = IntopkJob([targets], [predictions]).get().numpy_list()[0]
     # TensorFlow
     tf_out = tf.math.in_top_k(targets, predictions, k=k)
     assert np.array_equal(of_out, tf_out)

@@ -95,9 +95,9 @@ def _of_where(
 
         @flow.global_function(type=func_config_type, function_config=func_config)
         def where_fn(
-            condition_def: oft.Numpy.Placeholder(condition.shape, dtype=flow.int32),
-            x_def: oft.Numpy.Placeholder(x.shape, dtype=flow.float),
-            y_def: oft.Numpy.Placeholder(y.shape, dtype=flow.float),
+            condition_def: oft.ListNumpy.Placeholder(condition.shape, dtype=flow.int32),
+            x_def: oft.ListNumpy.Placeholder(x.shape, dtype=flow.float),
+            y_def: oft.ListNumpy.Placeholder(y.shape, dtype=flow.float),
         ):
             return do_where(condition_def, x_def, y_def)
 
@@ -209,13 +209,17 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
         func_config.default_logical_view(flow.scope.mirrored_view())
 
         @flow.global_function(function_config=func_config)
-        def where_fn(input_def: oft.Numpy.Placeholder(input_shape, dtype=flow.float)):
+        def where_fn(
+            input_def: oft.ListNumpy.Placeholder(input_shape, dtype=flow.float)
+        ):
             return flow.where(input_def)
 
     return where_fn([input]).get().numpy_list()[0]
 
 
-@flow.unittest.skip_unless_1n4d()
+# @flow.unittest.skip_unless_1n4d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
 class TestWhere(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_where(test_case):
@@ -224,9 +228,7 @@ class TestWhere(flow.unittest.TestCase):
         arg_dict["x_shape"] = [[5, 10]]
         arg_dict["y_shape"] = [[5, 10]]
         arg_dict["device_type"] = ["gpu", "cpu"]
-        # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-        # arg_dict["dynamic"] = [True, False]
-        arg_dict["dynamic"] = [False]
+        arg_dict["dynamic"] = [True, False]
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
@@ -237,8 +239,7 @@ class TestWhere(flow.unittest.TestCase):
         arg_dict["x_shape"] = [[1, 5, 8]]
         arg_dict["y_shape"] = [[4, 1, 8]]
         arg_dict["device_type"] = ["gpu", "cpu"]
-        # arg_dict["dynamic"] = [True, False]
-        arg_dict["dynamic"] = [False]
+        arg_dict["dynamic"] = [True, False]
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
@@ -249,8 +250,7 @@ class TestWhere(flow.unittest.TestCase):
         arg_dict["x_shape"] = [[20, 10, 7, 9]]
         arg_dict["y_shape"] = [[20, 10, 1, 1]]
         arg_dict["device_type"] = ["gpu", "cpu"]
-        # arg_dict["dynamic"] = [True, False]
-        arg_dict["dynamic"] = [False]
+        arg_dict["dynamic"] = [True, False]
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
@@ -261,8 +261,7 @@ class TestWhere(flow.unittest.TestCase):
         arg_dict["x_shape"] = [[12, 1, 6]]
         arg_dict["y_shape"] = [[25, 1]]
         arg_dict["device_type"] = ["gpu", "cpu"]
-        # arg_dict["dynamic"] = [True, False]
-        arg_dict["dynamic"] = [False]
+        arg_dict["dynamic"] = [True, False]
         for arg in GenArgDict(arg_dict):
             _compare_with_np(test_case, **arg)
 
@@ -274,8 +273,7 @@ class TestWhere(flow.unittest.TestCase):
         arg_dict["y_shape"] = [[10]]
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["machine_device_ids"] = ["0:0"]
-        # arg_dict["dynamic"] = [True, False]
-        arg_dict["dynamic"] = [False]
+        arg_dict["dynamic"] = [True, False]
         for arg in GenArgDict(arg_dict):
             _compare_with_tf(test_case, **arg)
 
@@ -286,8 +284,7 @@ class TestWhere(flow.unittest.TestCase):
         arg_dict["x_shape"] = [[3, 1, 10]]
         arg_dict["y_shape"] = [[7, 10]]
         arg_dict["device_type"] = ["gpu", "cpu"]
-        # arg_dict["dynamic"] = [True, False]
-        arg_dict["dynamic"] = [False]
+        arg_dict["dynamic"] = [True, False]
         for arg in GenArgDict(arg_dict):
             _compare_with_tf(test_case, **arg)
 
@@ -298,8 +295,7 @@ class TestWhere(flow.unittest.TestCase):
         arg_dict["x_shape"] = [[4, 1, 20]]
         arg_dict["y_shape"] = [[8, 4, 16, 20]]
         arg_dict["device_type"] = ["gpu", "cpu"]
-        # arg_dict["dynamic"] = [True, False]
-        arg_dict["dynamic"] = [False]
+        arg_dict["dynamic"] = [True, False]
         for arg in GenArgDict(arg_dict):
             _compare_with_tf(test_case, **arg)
 
@@ -315,8 +311,7 @@ class TestWhere(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _compare_with_tf(test_case, **arg)
 
-    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_where_argwhere(test_case):
         rand_input = np.random.random_sample((11, 3, 5)).astype(np.float32)
         rand_input[np.nonzero(rand_input < 0.5)] = 0.0

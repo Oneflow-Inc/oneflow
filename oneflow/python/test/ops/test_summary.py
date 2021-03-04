@@ -22,8 +22,7 @@ import time
 
 from test_util import GenArgList
 
-# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-"""
+
 def _read_images_by_cv(image_files):
     images = [
         cv2.cvtColor(cv2.imread(image_file), cv2.COLOR_BGR2RGB).astype(np.uint8)
@@ -175,4 +174,3 @@ def summary_demo():
 
     graph = flow.summary.Graph(logdir)
     graph.write_structure_graph()
-"""

@@ -64,7 +64,7 @@ def compare_with_tensorflow(
         weight_data_transpose = (1, 2, 3, 0)
 
     @flow.global_function(type="train", function_config=func_config)
-    def DynamicConvJob(x: oft.Numpy.Placeholder((10, 3, 100, 100))):
+    def DynamicConvJob(x: oft.ListNumpy.Placeholder((10, 3, 100, 100))):
         with flow.scope.placement(device_type, "0:0"):
             x_var = flow.get_variable(
                 name="v1",
@@ -158,10 +158,8 @@ def compare_with_tensorflow(
     )
 
 
-# @flow.unittest.skip_unless_1n1d()
-# @unittest.skip("skip_for_ci")
-# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
-@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+@flow.unittest.skip_unless_1n1d()
+@unittest.skip("skip_for_ci")
 class TestNnConv2dPaddingDynamic(flow.unittest.TestCase):
     def test_padding_valid(test_case):
         arg_dict = OrderedDict()

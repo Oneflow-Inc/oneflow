@@ -33,12 +33,12 @@ def compare_with_tensorflow(device_type, in_shape, axis, direction, data_type):
     assert data_type in ["float32", "double", "int8", "int32", "int64"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_logical_view(flow.scope.consistent_view())
+    func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_data_type(flow.float)
 
     @flow.global_function(function_config=func_config)
     def ArgSortJob(
-        input: oft.Numpy.Placeholder(
+        input: oft.ListNumpy.Placeholder(
             tuple([dim + 10 for dim in in_shape]),
             dtype=type_name_to_flow_type[data_type],
         )
@@ -48,7 +48,7 @@ def compare_with_tensorflow(device_type, in_shape, axis, direction, data_type):
 
     input = (np.random.random(in_shape) * 100).astype(type_name_to_np_type[data_type])
     # OneFlow
-    of_out = ArgSortJob(input).get().numpy()
+    of_out = ArgSortJob([input]).get().numpy_list()[0]
     # TensorFlow
     tf_out = tf.argsort(input, axis, direction)
 
