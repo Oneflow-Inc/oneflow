@@ -17,6 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
 
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
 
@@ -52,6 +54,9 @@ class DeviceCtx {
 
  private:
 };
+
+#define REGISTER_DEVICE_CONTEXT(device, creator) \
+  REGISTER_CLASS_CREATOR(int, device, DeviceCtx, creator, const ThreadCtx&)
 
 }  // namespace oneflow
 
