@@ -31,8 +31,8 @@ jobs:
     steps:
       - uses: Oneflow-Inc/github-workflow-schedule@main
         name: Wait for GPU slot
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
+        run: |
+          echo hello
 
   build:
     name: Build
