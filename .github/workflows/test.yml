@@ -21,6 +21,7 @@ jobs:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
         run: |
+          set -x
           if [ -z "$OSS_ACCESS_KEY_ID" ]
           then
             exit 0
