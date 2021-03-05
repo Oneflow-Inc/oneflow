@@ -57,7 +57,8 @@ void CopyTaskNode::BuildExecGphAndRegst() {
 
 void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
-void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int64_t dev_phy_id) {
+void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, DeviceType dev_type,
+                          int64_t dev_phy_id) {
   copy_type_ = copy_type;
   set_machine_id(machine_id);
   DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
@@ -79,7 +80,14 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   if (copy_type_ == CopyHdOpConf::H2D) {
     TaskNode::InitProducedRegstMemCase(mem_case);
   } else if (copy_type_ == CopyHdOpConf::D2H) {
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
+    DeviceType dev_type = DeserializeStreamIdFromInt64(thrd_id()).device_id().device_type();
+    if (dev_type == DeviceType::kGPU) {
+      mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
+    } else if (dev_type == DeviceType::kFAKEDEVICE) {
+      mem_case->mutable_fake_dev_mem();
+    } else {
+      UNIMPLEMENTED();
+    }
   } else {
     UNIMPLEMENTED();
   }

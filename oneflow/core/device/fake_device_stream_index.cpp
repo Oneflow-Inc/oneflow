@@ -13,20 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
-#define ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
-
-#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/device/fake_device_stream_index.h"
 
 namespace oneflow {
-
-int64_t SerializeStreamIdToInt64(const StreamId&);
-StreamId DeserializeStreamIdFromInt64(int64_t);
-int64_t SerializeTaskIdToInt64(const TaskId&);
-TaskId DeserializeTaskIdFromInt64(int64_t);
-int64_t SerializeMemZoneIdToInt64(const MemZoneId&);
-MemZoneId DeserializeMemZoneIdFromInt64(int64_t);
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
+REGISTER_STREAM_INDEX_GENERATOR(DeviceType::kFAKEDEVICE, FakeDeviceStreamIndexGenerator);
+}

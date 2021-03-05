@@ -13,20 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
-#define ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
+#ifndef ONEFLOW_CORE_THREAD_FAKE_DEVICE_THREAD_H_
+#define ONEFLOW_CORE_THREAD_FAKE_DEVICE_THREAD_H_
 
-#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/thread/thread.h"
 
 namespace oneflow {
 
-int64_t SerializeStreamIdToInt64(const StreamId&);
-StreamId DeserializeStreamIdFromInt64(int64_t);
-int64_t SerializeTaskIdToInt64(const TaskId&);
-TaskId DeserializeTaskIdFromInt64(int64_t);
-int64_t SerializeMemZoneIdToInt64(const MemZoneId&);
-MemZoneId DeserializeMemZoneIdFromInt64(int64_t);
+class FakeDeviceThread final : public Thread {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(FakeDeviceThread);
+  FakeDeviceThread() = delete;
+  ~FakeDeviceThread() = default;
+
+  FakeDeviceThread(int64_t thrd_id);
+
+ private:
+};
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
+#endif  // ONEFLOW_CORE_THREAD_FAKE_DEVICE_THREAD_H_

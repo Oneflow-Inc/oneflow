@@ -35,6 +35,7 @@ inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
   if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
     return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();
   }
+  if (lhs.has_fake_dev_mem() && rhs.has_fake_dev_mem()) { return true; }
   return false;
 }
 

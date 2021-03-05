@@ -29,6 +29,6 @@ void OutputKernel<device_type>::ForwardHeader(
   BnInOp2Blob("out")->CopyHeaderFrom(ctx.device_ctx, BnInOp2Blob("in"));
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kOutputConf, OutputKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR_INCLUDING_FAKE(OperatorConf::kOutputConf, OutputKernel);
 
 }  // namespace oneflow

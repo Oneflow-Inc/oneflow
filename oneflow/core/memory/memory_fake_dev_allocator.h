@@ -13,20 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
-#define ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
-
-#include "oneflow/core/common/id_util.h"
+#ifndef ONEFLOW_CORE_MEMORY_MEMORY_FAKE_DEV_ALLOCATOR_H_
+#define ONEFLOW_CORE_MEMORY_MEMORY_FAKE_DEV_ALLOCATOR_H_
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 namespace oneflow {
 
-int64_t SerializeStreamIdToInt64(const StreamId&);
-StreamId DeserializeStreamIdFromInt64(int64_t);
-int64_t SerializeTaskIdToInt64(const TaskId&);
-TaskId DeserializeTaskIdFromInt64(int64_t);
-int64_t SerializeMemZoneIdToInt64(const MemZoneId&);
-MemZoneId DeserializeMemZoneIdFromInt64(int64_t);
-
+struct FakeDevMemoryAllocatorImpl final {
+  static void* Allocate(MemoryCase& mem_case, size_t size);
+  static void Deallocate(void* ptr, MemoryCase mem_case);
+};
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
+#endif  // ONEFLOW_CORE_MEMORY_MEMORY_FAKE_DEV_ALLOCATOR_H_

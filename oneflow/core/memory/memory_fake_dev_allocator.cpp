@@ -13,20 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
-#define ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
-
-#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/memory/memory_fake_dev_allocator.h"
+#include "oneflow/core/framework/device_register_fakedev.h"
 
 namespace oneflow {
+void* FakeDevMemoryAllocatorImpl::Allocate(MemoryCase& mem_case, size_t size) {
+  void* ptr = nullptr;
+  ptr = malloc(size + sizeof(FAKE_MAGIC_CODE));
+  memcpy(ptr, &FAKE_MAGIC_CODE, sizeof(FAKE_MAGIC_CODE));
+  CHECK_NOTNULL(ptr);
+  return static_cast<char*>(ptr) + 4;
+}
 
-int64_t SerializeStreamIdToInt64(const StreamId&);
-StreamId DeserializeStreamIdFromInt64(int64_t);
-int64_t SerializeTaskIdToInt64(const TaskId&);
-TaskId DeserializeTaskIdFromInt64(int64_t);
-int64_t SerializeMemZoneIdToInt64(const MemZoneId&);
-MemZoneId DeserializeMemZoneIdFromInt64(int64_t);
-
+void FakeDevMemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
+  free(static_cast<char*>(ptr) - 4);
+}
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
