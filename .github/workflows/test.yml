@@ -25,6 +25,7 @@ jobs:
           then
             exit 0
           fi
+          python3 -m pip install -U pip
           python3 -m pip install setuptools wheel
           python3 -m pip install oss2
           python3 tools/package_mirror.py -i cmake
