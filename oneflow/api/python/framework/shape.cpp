@@ -32,12 +32,16 @@ struct ShapeExportUtil final {
     return std::make_shared<Shape>(shape_dims);
   }
 
-  static std::shared_ptr<Shape> ApiMakeShapeByTuple(const py::tuple& py_shape) {
-    return MakeShape(py_shape).GetPtrOrThrow();
-  }
-
-  static std::shared_ptr<Shape> ApiMakeShapeByList(const py::list& py_shape) {
-    return MakeShape(py::tuple(py_shape)).GetPtrOrThrow();
+  static std::shared_ptr<Shape> ApiMakeShape(const py::object& py_obj) {
+    if (py::isinstance<Shape>(py_obj)) {
+      return std::make_shared<Shape>(py_obj.cast<Shape>().dim_vec());
+    } else if (py::isinstance<py::tuple>(py_obj)) {
+      return MakeShape(py_obj.cast<py::tuple>()).GetPtrOrThrow();
+    } else if (py::isinstance<py::list>(py_obj)) {
+      return MakeShape(py::tuple(py_obj.cast<py::tuple>())).GetPtrOrThrow();
+    } else {
+      throw py::type_error();
+    }
   }
 
   static std::string ToString(const Shape& shape) {
@@ -63,17 +67,20 @@ struct ShapeExportUtil final {
     return std::distance(shape.dim_vec().begin(), it);
   }
 
-  static bool IsEqualWithShape(const Shape& shape, const Shape& other) {
-    if (shape.NumAxes() != other.NumAxes()) { return false; }
+  static bool IsEqual(const Shape& shape, const py::object& py_obj) {
+    std::shared_ptr<Shape> other;
+    if (py::isinstance<Shape>(py_obj)) {
+      other = std::make_shared<Shape>(py_obj.cast<Shape>());
+    } else if (py::isinstance<py::tuple>(py_obj)) {
+      other = ApiMakeShape(py_obj.cast<py::tuple>());
+    } else {
+      return false;
+    }
+    if (shape.NumAxes() != other->NumAxes()) { return false; }
     for (int i = 0; i < shape.NumAxes(); i++) {
-      if (shape.At(i) != other.At(i)) { return false; }
+      if (shape.At(i) != other->At(i)) { return false; }
     }
     return true;
-  }
-
-  static bool IsEqualWithPyTuple(const Shape& shape, const py::tuple& py_tuple) {
-    auto other_shape = ApiMakeShapeByTuple(py_tuple);
-    return IsEqualWithShape(shape, *other_shape);
   }
 };
 
@@ -81,8 +88,7 @@ struct ShapeExportUtil final {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Shape, std::shared_ptr<Shape>>(m, "Size")
-      .def(py::init(&ShapeExportUtil::ApiMakeShapeByTuple))
-      .def(py::init(&ShapeExportUtil::ApiMakeShapeByList))
+      .def(py::init(&ShapeExportUtil::ApiMakeShape))
       .def("__str__", &ShapeExportUtil::ToString)
       .def("__repr__", &ShapeExportUtil::ToString)
       .def("__getitem__", [](const Shape& shape, int idx) { return shape.At(idx); })
@@ -93,9 +99,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           },
           py::keep_alive<0, 1>())
       .def("__len__", [](const Shape& shape) { return shape.NumAxes(); })
-      .def("__eq__", &ShapeExportUtil::IsEqualWithShape)
-      .def("__eq__", &ShapeExportUtil::IsEqualWithPyTuple)
-      .def("__eq__", [](const Shape& shape, const py::object& py_obj) { return false; })
+      .def("__eq__", &ShapeExportUtil::IsEqual)
       .def("numel", [](const Shape& shape) { return shape.elem_cnt(); })
       .def("count",
            [](const Shape& shape, int64_t value) {
