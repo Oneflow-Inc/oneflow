@@ -31,6 +31,8 @@ bool CompareVariableOpConf(const VariableOpConf& lhs, const VariableOpConf& rhs)
   var_conf_b.clear_tick();
   var_conf_a.clear_out();
   var_conf_b.clear_out();
+  var_conf_a.clear_trainable();
+  var_conf_b.clear_trainable();
   return PbMd::Equals(var_conf_a, var_conf_b);
 }
 
