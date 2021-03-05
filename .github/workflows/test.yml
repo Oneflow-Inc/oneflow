@@ -74,7 +74,7 @@ jobs:
       - name: Fix permissions
         run: |
           sex -x
-          docker run --rm -v $(PWD):$(PWD) -w $(PWD) busybox chmod -R o+w .
+          docker run --rm -v $(pwd):$(pwd) -w $(pwd) busybox chmod -R o+w .
       - uses: actions/checkout@v2
       - name: Build OneFlow
         uses: ./.github/actions/whl
@@ -141,7 +141,7 @@ jobs:
       - name: Fix permissions
         run: |
           sex -x
-          docker run --rm -v $(PWD):$(PWD) -w $(PWD) busybox chmod -R o+w .
+          docker run --rm -v $(pwd):$(pwd) -w $(pwd) busybox chmod -R o+w .
       - uses: actions/checkout@v2
       - name: Download shared env
         uses: actions/download-artifact@v2
