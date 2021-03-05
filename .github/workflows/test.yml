@@ -73,7 +73,8 @@ jobs:
           echo "" >> $GITHUB_ENV
       - name: Fix permissions
         run: |
-          docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+          sex -x
+          docker run --rm -v $(PWD):$(PWD) -w $(PWD) busybox chmod -R o+w .
       - uses: actions/checkout@v2
       - name: Build OneFlow
         uses: ./.github/actions/whl
@@ -139,7 +140,8 @@ jobs:
     steps:
       - name: Fix permissions
         run: |
-          docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+          sex -x
+          docker run --rm -v $(PWD):$(PWD) -w $(PWD) busybox chmod -R o+w .
       - uses: actions/checkout@v2
       - name: Download shared env
         uses: actions/download-artifact@v2
