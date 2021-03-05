@@ -56,7 +56,6 @@ jobs:
 
   build:
     name: Build
-    continue-on-error: ${{ matrix.experimental }}
     strategy:
       max-parallel: 5
       matrix:
@@ -75,6 +74,7 @@ jobs:
             extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --cpu
             experimental: false
     needs: [check_license_and_format, mirror_third_party]
+    continue-on-error: ${{ matrix.experimental }}
     runs-on: [self-hosted, linux, release]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
