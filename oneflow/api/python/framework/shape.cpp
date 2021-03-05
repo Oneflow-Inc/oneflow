@@ -62,6 +62,19 @@ struct ShapeExportUtil final {
     }
     return std::distance(shape.dim_vec().begin(), it);
   }
+
+  static bool IsEqualWithShape(const Shape& shape, const Shape& other) {
+    if (shape.NumAxes() != other.NumAxes()) { return false; }
+    for (int i = 0; i < shape.NumAxes(); i++) {
+      if (shape.At(i) != other.At(i)) { return false; }
+    }
+    return true;
+  }
+
+  static bool IsEqualWithPyTuple(const Shape& shape, const py::tuple& py_tuple) {
+    auto other_shape = ApiMakeShapeByTuple(py_tuple);
+    return IsEqualWithShape(shape, *other_shape);
+  }
 };
 
 }  // namespace
@@ -80,6 +93,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           },
           py::keep_alive<0, 1>())
       .def("__len__", [](const Shape& shape) { return shape.NumAxes(); })
+      .def("__eq__", &ShapeExportUtil::IsEqualWithShape)
+      .def("__eq__", &ShapeExportUtil::IsEqualWithPyTuple)
+      .def("__eq__", [](const Shape& shape, const py::object& py_obj) { return false; })
       .def("numel", [](const Shape& shape) { return shape.elem_cnt(); })
       .def("count",
            [](const Shape& shape, int64_t value) {
