@@ -45,7 +45,7 @@ void BoxingZerosTaskNode::BuildExecGphAndRegst() {
   *op_conf.mutable_boxing_zeros_conf()->mutable_lbi() = lbi_;
   shape_.ToProto(op_conf.mutable_boxing_zeros_conf()->mutable_shape());
   op_conf.mutable_boxing_zeros_conf()->set_data_type(data_type_);
-  std::shared_ptr<Operator> sole_op = ConstructOp(op_conf, &GlobalJobDesc());
+  std::shared_ptr<Operator> sole_op = ConstructOp(op_conf);
   node->mut_op() = sole_op;
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleObn()));
