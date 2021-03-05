@@ -1,16 +1,19 @@
 inputs:
-    tmp_dir:
-      description: 'tmp dir'
-      required: true
-    cuda_version:
-      description: 'cuda_version'
-      default: '10.2'
-    python_version:
-      description: 'python_version'
-      default: '3.6'
-    extra_flags:
-      description: 'flags like --xla'
-      default: ''
+  tmp_dir:
+    description: "tmp dir"
+    required: true
+  cuda_version:
+    description: "cuda_version"
+    default: "10.2"
+  python_version:
+    description: "python_version"
+    default: "3.6"
+  extra_flags:
+    description: "flags like --xla"
+    default: ""
+  extra_docker_args:
+    description: ""
+    default: ""
 runs:
   using: "composite"
   steps:
@@ -26,5 +29,6 @@ runs:
             --python_version=${{ inputs.python_version }} \
             --use_tuna --use_system_proxy --use_aliyun_mirror \
             --wheel_house_dir=${tmp_dir}/wheelhouse \
-            --oneflow_src_dir=${src_dir} ${{ inputs.extra_flags }}
+            --oneflow_src_dir=${src_dir} ${{ inputs.extra_flags }} \
+            --extra_docker_args "${extra_docker_args}"
       shell: bash
