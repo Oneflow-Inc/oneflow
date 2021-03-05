@@ -318,12 +318,9 @@ Maybe<void> Operator::InferOutBlobDescs(
     for (const auto& bn : output_bns()) {
       BlobDesc* desc = GetBlobDesc4BnInOp(bn);
       *desc = *JUST(GetLogicalBlobDesc4Obn(bn));
-      if (parallel_ctx->parallel_num() > 1) {
-        const auto& sbp_parallel = sbp_signature->bn_in_op2sbp_parallel().at(bn);
-        desc->mut_shape() =
-            *JUST(GetPhysicalShape(desc->shape(), sbp_parallel, parallel_ctx->parallel_num(),
-                                   parallel_ctx->parallel_id()));
-      }
+      const auto& sbp_parallel = sbp_signature->bn_in_op2sbp_parallel().at(bn);
+      desc->mut_shape() = *JUST(GetPhysicalShape(
+          desc->shape(), sbp_parallel, parallel_ctx->parallel_num(), parallel_ctx->parallel_id()));
     }
   }
   return Maybe<void>::Ok();

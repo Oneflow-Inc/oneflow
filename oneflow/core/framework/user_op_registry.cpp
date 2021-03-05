@@ -211,12 +211,10 @@ OpRegistry& OpRegistry::Finish() {
         for (const auto& pair : ctx->outputs()) {
           TensorDesc* desc = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
           *desc = *ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
-          if (ctx->parallel_ctx().parallel_num() > 1) {
-            const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex(pair.first, pair.second);
-            *desc->mut_shape() = *JUST(GetPhysicalShape(desc->shape(), sbp_parallel,
-                                                        ctx->parallel_ctx().parallel_num(),
-                                                        ctx->parallel_ctx().parallel_id()));
-          }
+          const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex(pair.first, pair.second);
+          *desc->mut_shape() = *JUST(GetPhysicalShape(desc->shape(), sbp_parallel,
+                                                      ctx->parallel_ctx().parallel_num(),
+                                                      ctx->parallel_ctx().parallel_id()));
         }
       }
       return Maybe<void>::Ok();
