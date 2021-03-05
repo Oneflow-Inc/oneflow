@@ -107,6 +107,7 @@ jobs:
           set -x
           echo "builder_host=$(hostname)" >> build.${{ matrix.test_suite }}.env
           echo "sha_dir=${sha_dir}" >> build.${{ matrix.test_suite }}.env
+          rm -rf $sha_dir
           mkdir -p $sha_dir
           cp -r ${wheelhouse_dir} $sha_dir
           echo "remote_whl_dir=$(hostname):$sha_dir/$(basename ${wheelhouse_dir})" >> build.${{ matrix.test_suite }}.env
