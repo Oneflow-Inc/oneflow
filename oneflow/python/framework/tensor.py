@@ -135,11 +135,15 @@ class Tensor:
             prod *= dim
         return prod
 
+    def retain_grad(self):
+        assert self.is_determined
+        self._local_or_consistent_tensor.retain_grad()
+
     def data_ptr(self):
         TODO()
 
     def element_size(self):
-        TODO()
+        return self.dtype.bytes
 
     def numpy(self):
         TODO()
@@ -147,8 +151,11 @@ class Tensor:
     def tolist(self):
         TODO()
 
-    def backward(self):
-        TODO()
+    def backward(
+        self, gradient=None, retain_graph=False, create_graph=False, inputs=None
+    ):
+        assert self.is_determined
+        TODO()  # liyurui
 
     def __str__(self):
         TODO()
@@ -162,7 +169,7 @@ class Tensor:
     def __sizeof__(self):
         TODO()
 
-    def __deepcopy__(self):
+    def __deepcopy__(self, memo):
         TODO()
 
     def determine(self, determining_initializer=None):
