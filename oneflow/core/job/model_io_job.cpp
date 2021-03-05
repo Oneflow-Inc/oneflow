@@ -51,7 +51,6 @@ OperatorConf GenForeignInputOpConf(const std::string& job_name, const int64_t in
 void SetModelIoDefaultJobConf(JobConfigProto* job_conf, const std::string& job_name) {
   job_conf->set_job_name(job_name);
   job_conf->mutable_predict_conf();
-  job_conf->set_total_batch_num(1);
 }
 
 OperatorConf GenOutputOpConf(const std::string& op_name, const std::string& in,
