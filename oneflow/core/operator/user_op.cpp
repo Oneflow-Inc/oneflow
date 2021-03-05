@@ -414,9 +414,9 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
       BlobDesc4BnInOp(obn)->CopyFrom(*first_in_blob_desc);
     }
   }
-
-  UserOpInferContext infer_ctx(op_conf(), nullptr, CHECK_JUST(sbp_signature()), job_desc(),
-                               BlobDesc4BnInOp, nullptr, nullptr, parallel_desc.parallel_num());
+  const auto sbp_signature = JUST(this->sbp_signature());
+  UserOpInferContext infer_ctx(op_conf(), nullptr, sbp_signature, job_desc(), BlobDesc4BnInOp,
+                               nullptr, nullptr, parallel_desc.parallel_num());
 
   JUST(val_->logical_tensor_desc_infer_fn(&infer_ctx));
   for (const auto& pair : infer_ctx.outputs()) {
@@ -436,7 +436,7 @@ Maybe<void> UserOp::InferOutBlobDescs(
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
   if (!val_->physical_tensor_desc_infer_fn) {
-    return Operator::InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, sbp_signature);
+    return Operator::InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
   } else {
     // default method set output blob desc (such as Dtype, is_dynamic, is_tensor_list)
     // set out blob desc attr as first input blob desc (if has)
@@ -452,6 +452,7 @@ Maybe<void> UserOp::InferOutBlobDescs(
     auto LogicalBlobDesc4Obn = [&](const std::string& bn) -> const BlobDesc& {
       return *CHECK_JUST(GetLogicalBlobDesc4Obn(bn));
     };
+    const auto sbp_signature = JUST(this->sbp_signature());
     UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
                                  GetBlobDesc4BnInOp, LogicalBlobDesc4Ibn, LogicalBlobDesc4Obn,
                                  parallel_ctx->parallel_num());

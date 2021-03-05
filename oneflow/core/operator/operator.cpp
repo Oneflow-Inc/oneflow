@@ -309,6 +309,7 @@ Maybe<void> Operator::InferOutBlobDescs(
   if (parallel_ctx->parallel_num() == 1) {
     JUST(InferLogicalOutBlobDescs(GetBlobDesc4BnInOp, *JUST(GetOpParallelDesc())));
   } else {
+    const auto sbp_signature = JUST(this->sbp_signature());
     for (const auto& bn : input_bns()) {
       const auto& sbp_parallel = sbp_signature->bn_in_op2sbp_parallel().at(bn);
       std::shared_ptr<const BlobDesc> in_logical = JUST(GetLogicalBlobDesc4Ibn(bn));
