@@ -1,12 +1,12 @@
 inputs:
-    src_path:
-      required: true
-    oss_dst_path:
-      required: true
-    oss_access_key_id:
-      required: true
-    oss_access_key_secret:
-      required: true
+  src_path:
+    required: true
+  oss_dst_path:
+    required: true
+  oss_access_key_id:
+    required: true
+  oss_access_key_secret:
+    required: true
 runs:
   using: "composite"
   steps:
