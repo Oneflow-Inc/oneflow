@@ -169,8 +169,8 @@ class Operator {
       const std::function<Maybe<const ParallelDesc>(const std::string&)>& ParallelDesc4Bn);
   virtual Maybe<void> InferBlobParallelDesc();
   virtual Maybe<void> InferOutBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*) const;
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const;
   virtual Maybe<void> InferInternalBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx, const JobDesc* job_desc) const;

@@ -409,7 +409,7 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> UserOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";

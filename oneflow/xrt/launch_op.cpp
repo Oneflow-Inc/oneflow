@@ -66,7 +66,7 @@ Maybe<void> XrtLaunchOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> XrtLaunchOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
   const auto& launch_conf = op_conf().xrt_launch_conf();
   const auto& io_mapping = launch_conf.input_output_mapping();

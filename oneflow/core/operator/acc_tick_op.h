@@ -30,8 +30,9 @@ class AccTickOp final : public Operator {
   void InitFromOpConf() override;
   LogicalNode* NewProperLogicalNode() const override { return new AccTickLogicalNode; }
 
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
   Maybe<void> InferOutputBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
       const ParallelContext* parallel_ctx, Shape* time_shape) const override;
