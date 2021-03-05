@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/device/cuda_device_context.h"
+#include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
 

@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/auto_registration_factory.h"
-#include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
 
