@@ -40,16 +40,12 @@ jobs:
     strategy:
       max-parallel: 5
       matrix:
-        test_suite: ["cuda", "xla", "cpu"]
+        test_suite: ["cuda", "cpu"]
         include:
           - test_suite: cuda
             cuda_version: 10.2
             extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\"
             experimental: false
-          - test_suite: xla
-            cuda_version: 10.1
-            extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --xla
-            experimental: true
           - test_suite: cpu
             cuda_version: 10.2
             extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --cpu
