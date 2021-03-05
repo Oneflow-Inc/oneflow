@@ -282,10 +282,8 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
 Maybe<void> Operator::InferLogicalOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc& parallel_desc) const {
-  ParallelContext parallel_ctx;
-  parallel_ctx.set_parallel_id(0);
-  parallel_ctx.set_parallel_num(1);
-  return InferOutBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx);
+  UNIMPLEMENTED() << typeid(*this).name();
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferBlobDescsIf(
@@ -305,7 +303,26 @@ Maybe<void> Operator::InferOutBlobDescsIf(
 Maybe<void> Operator::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  UNIMPLEMENTED() << typeid(*this).name();
+  if (parallel_ctx->parallel_num() == 1) {
+    JUST(InferLogicalOutBlobDescs(GetBlobDesc4BnInOp, *JUST(GetOpParallelDesc())));
+  } else {
+    const auto sbp_signature = JUST(this->sbp_signature());
+    for (const auto& bn : input_bns()) {
+      const auto& sbp_parallel = sbp_signature->bn_in_op2sbp_parallel().at(bn);
+      std::shared_ptr<const BlobDesc> in_logical = JUST(GetLogicalBlobDesc4Ibn(bn));
+      CHECK_OR_RETURN(
+          *JUST(GetPhysicalShape(in_logical->shape(), sbp_parallel, parallel_ctx->parallel_num(),
+                                 parallel_ctx->parallel_id()))
+          == GetBlobDesc4BnInOp(bn)->shape());
+    }
+    for (const auto& bn : output_bns()) {
+      BlobDesc* desc = GetBlobDesc4BnInOp(bn);
+      *desc = *JUST(GetLogicalBlobDesc4Obn(bn));
+      const auto& sbp_parallel = sbp_signature->bn_in_op2sbp_parallel().at(bn);
+      desc->mut_shape() = *JUST(GetPhysicalShape(
+          desc->shape(), sbp_parallel, parallel_ctx->parallel_num(), parallel_ctx->parallel_id()));
+    }
+  }
   return Maybe<void>::Ok();
 }
 
