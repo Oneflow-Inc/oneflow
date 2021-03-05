@@ -39,22 +39,19 @@ DataType GetDataTypeFromBnInOpVec(
   return DataType::kInvalidDataType;
 }
 
-std::shared_ptr<Operator> CheckAndConstructOp(const OperatorConf& op_conf,
-                                              const JobDesc* job_desc) {
+std::shared_ptr<Operator> CheckAndConstructOp(const OperatorConf& op_conf) {
   Operator* rptr = NewObj<int32_t, Operator>(op_conf.op_type_case(), op_conf);
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf.device_tag()));
   if (IsCpuOnly(op_conf)) { CHECK_EQ(device_type, DeviceType::kCPU); }
-  rptr->Init(op_conf, job_desc);
+  rptr->Init(op_conf);
   return std::shared_ptr<Operator>(rptr);
 }
 
 }  // namespace
 
-void Operator::Init(const OperatorConf& op_conf, const JobDesc* conf_job_desc) {
-  job_desc_ = conf_job_desc;
+void Operator::Init(const OperatorConf& op_conf) {
   OperatorConf* this_op_conf = op_attribute_.mutable_op_conf();
   *this_op_conf = op_conf;
-  if (has_job_desc() && job_desc().IsPredict()) { this_op_conf->set_trainable(false); }
   InitFromOpConf();
   *op_attribute_.mutable_input_bns() = input_bns_;
   *op_attribute_.mutable_output_bns() = output_bns_;
@@ -290,10 +287,10 @@ Maybe<void> Operator::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> Operator::InferBlobDescsIf(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const JobDesc* job_desc) const {
   JUST(InferOutBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx));
-  JUST(InferInternalBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx));
+  JUST(InferInternalBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, job_desc));
   return Maybe<void>::Ok();
 }
 
@@ -333,14 +330,14 @@ Maybe<void> Operator::InferOutBlobDescs(
 }
 
 Maybe<void> Operator::InferInternalBlobDescsIf(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  return InferInternalBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const JobDesc* job_desc) const {
+  return InferInternalBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, job_desc);
 }
 
 Maybe<void> Operator::InferInternalBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const JobDesc* job_desc) const {
   return Maybe<void>::Ok();
 }
 
@@ -389,8 +386,7 @@ Maybe<void> Operator::InferOutputBlobTimeShape(
   if (input_bns().empty() == false) {
     *time_shape = *GetTimeShape4BnInOp(input_bns().Get(0));
   } else {
-    CHECK_OR_RETURN(has_job_desc());
-    *time_shape = Shape({job_desc().TotalBatchNum(), job_desc().NumOfPiecesInBatch()});
+    *time_shape = Shape({1, 1});
   }
   return Maybe<void>::Ok();
 }
@@ -813,16 +809,15 @@ bool IsCpuOnly(const OperatorConf& op_conf) {
   return registration_val->cpu_only_supported;
 }
 
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type,
-                                      const JobDesc* job_desc) {
+std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
   OperatorConf dev_op_conf = op_conf;
   dev_op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type)));
-  return CheckAndConstructOp(dev_op_conf, job_desc);
+  return CheckAndConstructOp(dev_op_conf);
 }
 
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, const JobDesc* job_desc) {
-  if (IsCpuOnly(op_conf)) { return ConstructOp(op_conf, DeviceType::kCPU, job_desc); }
-  return CheckAndConstructOp(op_conf, job_desc);
+std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
+  if (IsCpuOnly(op_conf)) { return ConstructOp(op_conf, DeviceType::kCPU); }
+  return CheckAndConstructOp(op_conf);
 }
 
 void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -1070,7 +1065,7 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope) {
   const auto& parallel_desc = JUST(scope.GetParallelDesc(op_conf));
   bool is_mirrored = scope.opt_mirrored_parallel_conf().has_mirrored_parallel();
-  const auto& op = ConstructOp(op_conf, JUST(scope.job_desc()));
+  const auto& op = ConstructOp(op_conf);
   JUST(CheckOpInputSignature(*op, upstream_signature));
   JUST(op->FillOpParallelDesc(parallel_desc));
   HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc;
