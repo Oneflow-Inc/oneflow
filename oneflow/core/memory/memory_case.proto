@@ -5,8 +5,15 @@ message CudaPinnedMemory {
   required int64 device_id = 1;
 }
 
+message FakeDevicePinnedMemory {
+  optional int64 reserved = 1;
+}
+
 message HostMemory {
-  optional CudaPinnedMemory cuda_pinned_mem = 1;
+  oneof page_lock_case {
+    CudaPinnedMemory cuda_pinned_mem = 1;
+    FakeDevicePinnedMemory fake_dev_pinned_mem = 3;
+  }
   optional bool used_by_network = 2 [default = false];
 }
 
