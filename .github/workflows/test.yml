@@ -25,8 +25,8 @@ jobs:
           then
             exit 0
           fi
-          python3 -m pip install setuptools wheel
-          python3 -m pip install oss2==2.13.0
+          python3 -m pip install -U pip setuptools wheel
+          python3 -m pip install oss2
           python3 tools/package_mirror.py -i cmake
 
   check_license_and_format:
