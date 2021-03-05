@@ -58,68 +58,7 @@ jobs:
         env:
           test_suite: ${{ matrix.test_suite }}
         run: |
-          echo "test_suite=${test_suite}" >> $GITHUB_ENV
-          export ci_tmp_dir=$HOME/ci-cache/test_suite/${test_suite}
-          mkdir -p $ci_tmp_dir
-          echo "ci_tmp_dir=${ci_tmp_dir}" >> $GITHUB_ENV
-          echo "wheelhouse_dir=${ci_tmp_dir}/wheelhouse" >> $GITHUB_ENV
-          echo "sha_dir=$HOME/ci-static/pr/${{ github.event.pull_request.number }}/$GITHUB_SHA/${{matrix.test_suite }}" >> $GITHUB_ENV
-          echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
-          extra_docker_args=""
-          container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
-          echo "container_name=${container_name}" >> $GITHUB_ENV
-          extra_docker_args+=" --name ${container_name}"
-          echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
-          echo "" >> $GITHUB_ENV
-      - name: Fix permissions
-        run: |
-          set -x
-          docker run --rm -v $(pwd):$(pwd) -w $(pwd) busybox chmod -R o+w .
-      - uses: actions/checkout@v2
-      - name: Build OneFlow
-        uses: ./.github/actions/whl
-        with:
-          tmp_dir: ${ci_tmp_dir}
-          extra_flags: ${{ matrix.extra_flags }}
-          cuda_version: ${{ matrix.cuda_version }}
-          extra_docker_args: $extra_docker_args
-      - name: Custom Op test (run by oneflow build docker)
-        if: matrix.test_suite == 'cpu'
-        run: |
-          docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-            $extra_docker_args \
-            -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-            oneflow:manylinux2014-cuda10.2 \
-            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
-      - name: Upload wheel to cloud
-        uses: ./.github/actions/upload_oss
-        with:
-          src_path: ${wheelhouse_dir}
-          oss_dst_path: oss://oneflow-staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-${test_suite}
-          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-      - name: Remove container
-        if: always()
-        run: |
-          docker rm -f ${container_name} || true
-      - name: Save shared env
-        run: |
-          set -x
-          echo "builder_host=$(hostname)" >> build.${{ matrix.test_suite }}.env
-          echo "sha_dir=${sha_dir}" >> build.${{ matrix.test_suite }}.env
-          rm -rf $sha_dir
-          mkdir -p $sha_dir
-          cp -r ${wheelhouse_dir} $sha_dir
-          echo "remote_whl_dir=$(hostname):$sha_dir/$(basename ${wheelhouse_dir})" >> build.${{ matrix.test_suite }}.env
-          if [ "$test_suite" == "cuda" ]; then
-            cp -r ${bin_dir} $sha_dir
-            echo "remote_bin_dir=$(hostname):$sha_dir/$(basename ${bin_dir})" >> build.${{ matrix.test_suite }}.env
-          fi
-      - name: Upload shared env
-        uses: actions/upload-artifact@v2
-        with:
-          name: build.${{ matrix.test_suite }}.env
-          path: build.${{ matrix.test_suite }}.env
+          echo hello
 
   test:
     name: Test suite
@@ -136,12 +75,13 @@ jobs:
           - test_suite: cpu
             experimental: false
     needs: [build, wait_for_gpu_slot]
-    runs-on: [self-hosted, linux, gpu]
+    runs-on: [self-hosted, linux, provisioning]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - name: Fix permissions
         run: |
           set -x
+          echo ${PATH}
           docker run --rm -v $(pwd):$(pwd) -w $(pwd) busybox chmod -R o+w .
       - uses: actions/checkout@v2
       - name: Download shared env
