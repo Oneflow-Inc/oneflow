@@ -386,13 +386,8 @@ Maybe<void> UserOp::InferInternalBlobDescs(
     const ParallelContext* parallel_ctx, const JobDesc* job_desc) const {
   // tmp buffer size must be inferred after out shape/dtype
   const auto sbp_signature = JUST(this->sbp_signature());
-<<<<<<< HEAD
-  UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc(),
-                               GetBlobDesc4BnInOp, nullptr, nullptr, parallel_ctx->parallel_num());
-=======
   UserOpInferContext infer_ctx(op_conf(), parallel_ctx, sbp_signature, job_desc, GetBlobDesc4BnInOp,
-                               parallel_ctx->parallel_num());
->>>>>>> a9fef3e8a3895ce8f859ac0a2f3e2e8dbc83e1c9
+                               nullptr, nullptr, parallel_ctx->parallel_num());
   const user_op::OpKernelRegistryResult* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
           op_conf().user_conf().op_type_name(),
@@ -423,15 +418,9 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
       BlobDesc4BnInOp(obn)->CopyFrom(*first_in_blob_desc);
     }
   }
-<<<<<<< HEAD
   const auto sbp_signature = JUST(this->sbp_signature());
-  UserOpInferContext infer_ctx(op_conf(), nullptr, sbp_signature, job_desc(), BlobDesc4BnInOp,
-                               nullptr, nullptr, parallel_desc.parallel_num());
-=======
-
-  UserOpInferContext infer_ctx(op_conf(), nullptr, CHECK_JUST(sbp_signature()), nullptr,
-                               BlobDesc4BnInOp, parallel_desc.parallel_num());
->>>>>>> a9fef3e8a3895ce8f859ac0a2f3e2e8dbc83e1c9
+  UserOpInferContext infer_ctx(op_conf(), nullptr, sbp_signature, nullptr, BlobDesc4BnInOp, nullptr,
+                               nullptr, parallel_desc.parallel_num());
 
   JUST(val_->logical_tensor_desc_infer_fn(&infer_ctx));
   for (const auto& pair : infer_ctx.outputs()) {
