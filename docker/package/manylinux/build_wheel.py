@@ -250,7 +250,7 @@ if __name__ == "__main__":
         "--use_aliyun_mirror", default=False, action="store_true", required=False
     )
     parser.add_argument("--cpu", default=False, action="store_true", required=False)
-    parser.add_argument("--retry", default=1, type=int)
+    parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
     extra_oneflow_cmake_args = args.extra_oneflow_cmake_args
 
