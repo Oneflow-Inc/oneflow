@@ -29,6 +29,7 @@ def glob_by_pattern(dir_path, pattern):
 
 def scan_urls(dir_path):
     cmakes = glob_by_pattern(dir_path, "**/*.cmake")
+    cmakes += glob_by_pattern(dir_path, "**/*.bzl")
     urls = []
     for cmake_path in cmakes:
         with open(cmake_path) as f:
@@ -62,6 +63,12 @@ def should_be_mirrored(url: str):
         and not parsed.query
         and not parsed.params
         and url.endswith(("gz", "tar", "zip"))
+        and url
+        not in [
+            "https://mirror.bazel.build/github.com/aws/aws-sdk-cpp/archive/1.7.336.tar.gz",
+        ]
+        and not url.startswith("https://mirror.tensorflow.org")
+        and not url.startswith("https://storage.googleapis.com/mirror.tensorflow.org")
     )
 
 
@@ -72,7 +79,7 @@ def calculate_data_md5(data):
     return base64.b64encode(digest)
 
 
-def upload_one_to_aliyun(url):
+def upload_one_to_aliyun(url: str):
     ki = os.getenv("OSS_ACCESS_KEY_ID")
     ks = os.getenv("OSS_ACCESS_KEY_SECRET")
     auth = oss2.Auth(ki, ks)
@@ -90,7 +97,7 @@ def upload_one_to_aliyun(url):
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
                 encode_md5 = calculate_data_md5(f.read())
-                os.system("md5sum " + f.name)
+                os.system("md5 " + f.name)
                 headers = {}
                 # TODO: md5 check doesn't work. please check it in cmake
                 # headers = {"Content-MD5": encode_md5.decode("utf-8")}
