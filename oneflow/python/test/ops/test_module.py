@@ -39,27 +39,43 @@ def get_var_helper(shape):
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    @unittest.skip("tensor __add__ is not implemented now")
-    def test_x(test_case):
+    def test_load_state_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
                 self.w = flow.nn.Parameter(flow.Tensor((2, 3), dtype=flow.float32))
 
             def forward(self, x):
-                return x + self.w
+                return self.w
 
         m = CustomModule()
-        print(m.state_dict())
 
         @flow.global_function()
         def job() -> None:
             x = flow.Tensor((2, 3), dtype=flow.float32)
-            print(m(x).numpy())
+            global y
+            y = m(x).numpy()
 
         job()
-        m.load_state_dict({"x_2": np.ones((2, 3), dtype=np.float32)})
+        ones = np.ones((2, 3), dtype=np.float32)
+        m.load_state_dict({"w": ones})
         job()
+        test_case.assertTrue(np.array_equal(y, ones))
+
+    def test_state_dict(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self, param1, param2):
+                super().__init__()
+                self.param1 = param1
+                self.param2 = param2
+
+        tensor0 = flow.nn.Parameter(flow.Tensor((2, 3), dtype=flow.float32))
+        tensor1 = flow.nn.Parameter(flow.Tensor((2, 3), dtype=flow.float32))
+        sub_module = CustomModule(tensor0, tensor1)
+        m = CustomModule(tensor1, sub_module)
+
+        state_dict = m.state_dict()
+        test_case.assertEqual(state_dict, {'param2.param1': tensor0, 'param2.param2': tensor1, 'param1': tensor1})
 
     def test_parameter(test_case):
         shape = (3, 4)
@@ -136,8 +152,8 @@ class TestModule(flow.unittest.TestCase):
                 self.param1 = param1
                 self.param2 = param2
 
-        param0 = flow.nn.Parameter((2, 3))
-        param1 = flow.nn.Parameter((2, 3))
+        param0 = flow.nn.Parameter(flow.Tensor((2, 3), dtype=flow.float32))
+        param1 = flow.nn.Parameter(flow.Tensor((2, 3), dtype=flow.float32))
         param2 = CustomModule(param0, param1)
         m = CustomModule(param1, param2)
 
@@ -158,22 +174,7 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertEqual(child_params[0], param0)
         test_case.assertEqual(child_params[1], param1)
 
-    def test_state_dict(test_case):
-        class CustomModule(flow.nn.Module):
-            def __init__(self, param1, param2):
-                super().__init__()
-                self.param1 = param1
-                self.param2 = param2
-
-        param0 = flow.nn.Parameter((2, 3))
-        param1 = flow.nn.Parameter((2, 3))
-        param2 = CustomModule(param0, param1)
-        m = CustomModule(param1, param2)
-
-        state_dict = m.state_dict()
-        print(state_dict)
-        test_case.assertEqual(len(state_dict), 3)
-
+    @unittest.skip("it is not related to module itself")
     def test_consistent_mirrored(test_case):
         flow.config.gpu_device_num(flow.unittest.env.device_num())
 
@@ -206,6 +207,28 @@ class TestModule(flow.unittest.TestCase):
             x8 = flow.advanced.distribute_concat(x_list)
             flow.watch(x8, lambda x: print(x.numpy()))
 
+        job()
+
+    @unittest.skip("tensor __add__ is not implemented now")
+    def test_x(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.w = flow.nn.Parameter(flow.Tensor((2, 3), dtype=flow.float32))
+
+            def forward(self, x):
+                return x + self.w
+
+        m = CustomModule()
+        print(m.state_dict())
+
+        @flow.global_function()
+        def job() -> None:
+            x = flow.Tensor((2, 3), dtype=flow.float32)
+            print(m(x).numpy())
+
+        job()
+        m.load_state_dict({"x_2": np.ones((2, 3), dtype=np.float32)})
         job()
 
     # TODO: add more tests about module api
