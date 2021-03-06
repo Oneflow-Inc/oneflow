@@ -302,7 +302,9 @@ class TestGatherNd(flow.unittest.TestCase):
             _compare_with_np(test_case, **arg)
 
 
-@flow.unittest.skip_unless_1n4d()
+# @flow.unittest.skip_unless_1n4d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
 class TestGatherNdParallel(flow.unittest.TestCase):
     def test_case_1(test_case):
         arg_dict = OrderedDict()

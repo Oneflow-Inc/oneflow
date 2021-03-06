@@ -13,16 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/blob_trait.h"
+#include "oneflow/core/device/cpu_device_context.h"
+#include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
-
-namespace compatible_py {
-
-std::shared_ptr<Shape> BlobHeaderTrait::static_shape() const { UNIMPLEMENTED(); }
-std::shared_ptr<Shape> BlobHeaderTrait::shape() const { UNIMPLEMENTED(); }
-DataType BlobHeaderTrait::dtype() const { UNIMPLEMENTED(); }
-
-}  // namespace compatible_py
-
-}  // namespace oneflow
+REGISTER_DEVICE_CONTEXT(DeviceType::kCPU, ([](const ThreadCtx& thread_ctx) -> DeviceCtx* {
+                          return new CpuDeviceCtx();
+                        }));
+}
