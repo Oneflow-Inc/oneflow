@@ -59,7 +59,6 @@ message KernelConf {
   required OpAttribute op_attribute = 1;
   required DataType data_type = 2;
   optional bool need_do_opaque_header = 4 [default = false];
-  optional bool need_do_tensor_list = 5 [default = false];
   optional bool need_do_shape = 6 [default = false];
   required DTypeSignature dtype_signature = 7;
   optional ParallelContext parallel_ctx = 8;

@@ -186,7 +186,9 @@ class TestArgwhere(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n4d()
 class TestArgwhere4D(flow.unittest.TestCase):
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    # TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+    @unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
     def test_argwhere(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(10, 5)]

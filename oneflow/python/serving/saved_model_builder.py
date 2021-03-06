@@ -311,14 +311,12 @@ def GetInterfaceBlobConf(job_name, lbn, blob_conf=None):
         job_name, lbn
     )
     is_dynamic = c_api_util.JobBuildAndInferCtx_IsDynamic(job_name, lbn)
-    is_tensor_list = c_api_util.JobBuildAndInferCtx_IsTensorList(job_name, lbn)
 
     blob_conf.shape.dim.extend(shape)
     blob_conf.data_type = dtype
     if split_axis is not None:
         blob_conf.split_axis.value = split_axis
     blob_conf.is_dynamic = is_dynamic
-    blob_conf.is_tensor_list = is_tensor_list
     return blob_conf
 
 
