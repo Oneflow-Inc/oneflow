@@ -97,11 +97,7 @@ def upload_one_to_aliyun(url: str):
             with tempfile.NamedTemporaryFile() as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
-                encode_md5 = calculate_data_md5(f.read())
-                os.system("md5 " + f.name)
                 headers = {}
-                # TODO: md5 check doesn't work. please check it in cmake
-                # headers = {"Content-MD5": encode_md5.decode("utf-8")}
                 bucket.put_object_from_file(key, f.name, headers=headers)
 
 
