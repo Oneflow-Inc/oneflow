@@ -52,8 +52,8 @@ def convert_url_to_oss_key(url):
     return ret
 
 
-def convert_url_to_oss_key1(url: str):
-    path = url[len("https://") :]
+def convert_url_to_oss_key1(url):
+    path = url[len("https://") : :]
     return "/".join(["third_party_mirror", "https", path])
 
 
