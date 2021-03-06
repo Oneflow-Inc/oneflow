@@ -6,7 +6,6 @@ import "oneflow/core/register/pod.proto";
 message BlobDescProto {
   required StructPodProto header = 1;
   required TensorPodProto body = 2;
-  required bool is_tensor_list = 3;
   required bool is_dynamic = 5;
   required bool header_is_opaque = 6;
 }

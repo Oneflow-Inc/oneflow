@@ -19,6 +19,7 @@ import threading
 import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow_api
+import numpy as np
 
 
 class FutureRemoteBlobs(object):
@@ -185,8 +186,8 @@ class _ConsistentBlobPuller(_BlobPuller):
 
     def AsyncPull(self, pull_cb):
         def PullCallback(of_blob):
-            self.result_ = local_blob_util.MakeLocalBlob(
-                of_blob.CopyToNdarrayLists(), self.consistent_blob_
+            self.result_ = local_blob_util.LocalBlob(
+                of_blob.CopyToNdarray(), self.consistent_blob_.is_dynamic
             )
             pull_cb()
 
@@ -207,9 +208,14 @@ class _MirroredBlobPuller(_BlobPuller):
     def result(self):
         if self.local_mirrored_blob_ is not None:
             return self.local_mirrored_blob_
-        local_blob_list = [x.result for x in self.sub_pullers_]
-        self.local_mirrored_blob_ = local_blob_util.MergeLocalBlobs(
-            local_blob_list, self.mirrored_blob_
+        local_blob_list = [x.result.numpy() for x in self.sub_pullers_]
+        local_numpy = local_blob_list[0]
+        # TODO(chengcheng): check list length = 1 in single client. fix after multi-client
+        if len(local_blob_list) > 1:
+            print("WARNING: return tensor list will concat as axis = 0.")
+            local_numpy = np.concatenate(local_blob_list, axis=0)
+        self.local_mirrored_blob_ = local_blob_util.LocalBlob(
+            local_numpy, self.mirrored_blob_.is_dynamic
         )
         return self.local_mirrored_blob_
 
