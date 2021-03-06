@@ -116,10 +116,7 @@ def GetInterfaceBlobValue(op_name):
                 remote_blob = oneflow_api.EagerConsistentBlob(
                     lbi, blob_object, blob_register, job_name
                 )
-            if blob_object.op_arg_blob_attr.is_tensor_list:
-                value = remote_blob.numpy_list()
-            else:
-                value = remote_blob.numpy()
+            value = remote_blob.numpy()
             Yield(value)
 
         oneflow_api.deprecated.LogicalRun(build)
@@ -131,12 +128,7 @@ def FeedValueToInterfaceBlobObject(blob_object, ndarray):
     flow.sync_default_session()
 
     def build(builder):
-        if blob_object.op_arg_blob_attr.is_tensor_list:
-            input_blob_def = input_blob_def_util.MirroredTensorListDef(
-                [x.shape for x in ndarray],
-                dtype=dtype_util.convert_numpy_dtype_to_oneflow_dtype(ndarray.dtype),
-            )
-        elif blob_object.op_arg_parallel_attr.is_mirrored():
+        if blob_object.op_arg_parallel_attr.is_mirrored():
             input_blob_def = input_blob_def_util.MirroredTensorDef(
                 ndarray.shape,
                 dtype=dtype_util.convert_numpy_dtype_to_oneflow_dtype(ndarray.dtype),

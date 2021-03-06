@@ -52,8 +52,6 @@ class OpArgBlobAttribute {
 
   cfg::DataType get_dtype() const;
 
-  bool is_tensor_list() const;
-
   bool is_dynamic() const;
 
   bool operator==(const OpArgBlobAttribute& other) const;

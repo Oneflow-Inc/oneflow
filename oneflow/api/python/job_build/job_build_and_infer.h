@@ -139,12 +139,6 @@ inline Maybe<bool> JobBuildAndInferCtx_DisableBoxing(const std::string& job_name
   return ctx->DisableBoxing(lbn);
 }
 
-inline Maybe<bool> JobBuildAndInferCtx_IsTensorList(const std::string& job_name,
-                                                    const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return ctx->IsTensorList(lbn);
-}
-
 inline Maybe<std::string> JobBuildAndInferCtx_GetSplitAxisFromProducerView(
     const std::string& job_name, const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
