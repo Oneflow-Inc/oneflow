@@ -67,8 +67,9 @@ def should_be_mirrored(url: str):
         not in [
             "https://mirror.bazel.build/github.com/aws/aws-sdk-cpp/archive/1.7.336.tar.gz",
         ]
-        and not url.startswith("https://mirror.tensorflow.org")
-        and not url.startswith("https://storage.googleapis.com/mirror.tensorflow.org")
+        and not "mirror.tensorflow.org" in url
+        and not "mirror.bazel.build" in url
+        and not "aliyuncs.com" in url
     )
 
 
