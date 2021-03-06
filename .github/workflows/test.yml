@@ -141,7 +141,6 @@ jobs:
 
   test:
     name: Test suite
-    continue-on-error: ${{ matrix.experimental }}
     strategy:
       max-parallel: 5
       matrix:
