@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/comm_network/epoll/socket_helper.h"
+#ifdef __linux__
 
-#ifdef OF_PLATFORM_POSIX
+#include "oneflow/core/comm_network/epoll/socket_helper.h"
 
 namespace oneflow {
 
