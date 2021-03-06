@@ -66,7 +66,7 @@ list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_core.so)
 link_directories(${TENSORFLOW_INSTALL_DIR}/lib)
 
 if(NOT XRT_TF_URL)
-  set(XRT_TF_URL https://github.com/Oneflow-Inc/tensorflow/archive/797818e58b807689ae443ada6e0675a5a3ee25d9.zip)
+  set(XRT_TF_URL https://github.com/Oneflow-Inc/tensorflow/archive/8bffb83d701c08d31fc2ac310ad4fe5db43853ef.zip)
   use_mirror(VARIABLE XRT_TF_URL URL ${XRT_TF_URL})
 endif()
 if (THIRD_PARTY)

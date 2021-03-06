@@ -47,7 +47,16 @@ def convert_url_to_oss_key(url):
     assert not parsed.fragment
     assert parsed.path.startswith("/")
     path = parsed.path[1::]
-    return os.path.join("third_party_mirror", parsed.scheme, parsed.netloc, path)
+    ret = os.path.join("third_party_mirror", parsed.scheme, parsed.netloc, path)
+    assert convert_url_to_oss_key1(url) == ret
+    return ret
+
+
+def convert_url_to_oss_key1(url: str):
+    https = "https://"
+    assert url.startswith(https)
+    path = url[len(https) :]
+    return "/".join(["third_party_mirror", "https", path])
 
 
 def convert_url_to_oss_https_url(url):
@@ -66,7 +75,6 @@ def should_be_mirrored(url: str):
         and not parsed.query
         and not parsed.params
         and url.endswith(("gz", "tar", "zip"))
-        and url
         and not "mirror.tensorflow.org" in url
         and not "mirror.bazel.build" in url
         and not "aliyuncs.com" in url
