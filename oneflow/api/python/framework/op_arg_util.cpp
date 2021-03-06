@@ -104,7 +104,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       }))
       .def_property_readonly("blob_desc", &OpArgBlobAttribute::blob_desc)
       .def_property_readonly("logical_blob_name", &OpArgBlobAttribute::logical_blob_name)
-      .def_property_readonly("is_tensor_list", &OpArgBlobAttribute::is_tensor_list)
       .def_property_readonly("is_dynamic", &OpArgBlobAttribute::is_dynamic)
       .def_property_readonly("shape",
                              [](const std::shared_ptr<OpArgBlobAttribute>& x) {
