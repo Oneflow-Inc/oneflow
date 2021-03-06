@@ -6,7 +6,6 @@ import "oneflow/core/common/dtype_signature.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/job/placement.proto";
 import "oneflow/core/register/tensor_slice_view.proto";
-import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/register/blob_desc.proto";
 
 message DecodeRandomKernelConf {
@@ -29,10 +28,6 @@ message ModelIoV2KernelConf {
 
 message UserKernelConf {
   map<string, BlobDescProto> bn_in_op2blob_desc = 1;
-  required ParallelContext parallel_ctx = 2;
-  required SbpSignature sbp_sig = 3;
-  map<string, BlobDescProto> bn_in_op2logical_blob_desc = 4;
-  required ParallelConf parallel_conf = 5;
 }
 
 message XrtLaunchKernelConf {
