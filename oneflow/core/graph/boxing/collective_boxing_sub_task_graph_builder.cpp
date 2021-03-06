@@ -91,9 +91,7 @@ int64_t FindRootParallelId(const ParallelDesc& multi_device, const ParallelDesc&
   return root_parallel_id;
 }
 
-bool IsSourceTimeShape(const Shape& shape) {
-  return shape.elem_cnt() == GlobalJobDesc().TotalBatchNum() * GlobalJobDesc().NumOfPiecesInBatch();
-}
+bool IsSourceTimeShape(const Shape& shape) { return shape.elem_cnt() == 1; }
 
 class NcclCollectiveBoxingAllReduceSubTskGphBuilder final : public SubTskGphBuilder {
  public:
