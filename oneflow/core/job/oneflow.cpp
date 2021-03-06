@@ -321,43 +321,19 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
 Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
   const JobDesc& job_desc = GlobalJobDesc();
   Plan naive_plan;
-  Plan complete_plan;
-  double start = GetCurTime();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
+    double start = GetCurTime();
     Compiler().Compile(job, &naive_plan, need_job_complete);
-    LOG(INFO) << "compile time: " << GetCurTime() - start;
-    complete_plan =
+    *improved_plan =
         *JUST(Improver().GenAndInferMemBlockIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan));
+    LOG(INFO) << "\njob_id: " << job_desc.job_id() << " , job_name: " << job_desc.job_name()
+              << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
-      TeePersistentLogStream::Create("complete_plan")->Write(complete_plan);
+      TeePersistentLogStream::Create(StrCat("subplan_job_", job_desc.job_id()))
+          ->Write(*improved_plan);
     }
-    LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
-  }
-  if (job_desc.enable_experiment_run()) {
-    if (GlobalProcessCtx::IsThisProcessMaster()) {
-      PushPlan("complete_plan", complete_plan);
-    } else {
-      PullPlan("complete_plan", &complete_plan);
-    }
-    OF_SESSION_BARRIER();
-    // Experiment Runtime
-    { Runtime experiment_run(complete_plan, job_desc.piece_num_of_experiment_phase(), true); }
-    // Improve
-    if (GlobalProcessCtx::IsThisProcessMaster()) {
-      TeePersistentLogStream::Create("available_mem_desc")->Write(*Global<AvailableMemDesc>::Get());
-      CHECK_GT(Global<AvailableMemDesc>::Get()->machine_amd_size(), 0);
-      *improved_plan = *JUST(Improver().Improve(
-          *Global<AvailableMemDesc>::Get(), naive_plan,
-          JoinPath(FLAGS_log_dir, ActEventLogger::experiment_act_event_bin_filename())));
-      OF_SESSION_BARRIER();
-      TeePersistentLogStream::Create("improved_plan")->Write(*improved_plan);
-    }
-  } else {
-    *improved_plan = complete_plan;
   }
   GenCollectiveBoxingPlan(job, improved_plan);
-  LOG(INFO) << "compile and improve time: " << GetCurTime() - start;
   return Maybe<void>::Ok();
 }
 
@@ -988,7 +964,6 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
   job_conf->mutable_predict_conf();
-  job_conf->set_total_batch_num(1);
   job_conf->set_default_data_type(data_type);
 }
 
@@ -1028,7 +1003,6 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
   job_conf->mutable_predict_conf();
-  job_conf->set_total_batch_num(1);
   job_conf->set_default_data_type(data_type);
 }
 

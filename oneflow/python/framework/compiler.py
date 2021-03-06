@@ -187,7 +187,7 @@ def _RecusiveMakeInputBlobDef(cls):
             ("\nannotation %s" % cls)
             + "not supported"
             + "\nonly support oneflow.typing.Numpy.Placeholder, "
-            "oneflow.typing.ListNumpy.Placeholder and oneflow.typing.ListListNumpy.Placeholder"
+            "oneflow.typing.ListNumpy.Placeholder"
         )
 
 

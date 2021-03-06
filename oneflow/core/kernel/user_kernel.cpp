@@ -38,7 +38,6 @@ void FillTensorDescWithBlob(const Blob* blob, user_op::TensorDesc* tensor_desc) 
   BlobDescProto proto;
   blob->blob_desc().header_pod_desc().ToProto(proto.mutable_header());
   blob->blob_desc().body().ToProto(proto.mutable_body());
-  proto.set_is_tensor_list(blob->blob_desc().is_tensor_list());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   proto.set_header_is_opaque(blob->blob_desc().header_is_opaque());
   *tensor_desc = proto;
@@ -66,7 +65,7 @@ class UserKernelBaseContext {
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_);
     device_tag_ = kernel_conf.op_attribute().op_conf().device_tag();
     device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
-    parallel_ctx_ = kernel_conf.user_conf().parallel_ctx();
+    parallel_ctx_ = kernel_conf.parallel_ctx();
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
       arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::TensorDesc(pair.second));
     }
@@ -116,9 +115,10 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
           user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
-        sbp_signature_(&(kernel_conf.user_conf().sbp_sig())),
-        parallel_desc_(kernel_conf.user_conf().parallel_conf()) {
-    for (const auto& pair : kernel_conf.user_conf().bn_in_op2logical_blob_desc()) {
+        sbp_signature_(&(kernel_conf.op_attribute().sbp_signature())),
+        parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
+    for (const auto& pair :
+         kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
                                        user_op::TensorDesc(pair.second));
     }
@@ -201,9 +201,6 @@ class UserKernelOpInferContext : public user_op::InferContext {
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
-  }
-  bool* IsTensorList4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_tensor_list();
   }
 
   const ArgVec& inputs() const override { return inputs_; }

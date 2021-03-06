@@ -618,11 +618,6 @@ Maybe<bool> JobBuildAndInferCtx::IsDynamic(const std::string& lbn) const {
   return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->is_dynamic();
 }
 
-Maybe<bool> JobBuildAndInferCtx::IsTensorList(const std::string& lbn) const {
-  JUST(CheckLbnValidAndExist(lbn));
-  return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->is_tensor_list();
-}
-
 Maybe<bool> JobBuildAndInferCtx::DisableBoxing(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   LogicalBlobId lbi(GenLogicalBlobId(lbn));
@@ -707,11 +702,6 @@ Maybe<DataType> JobBuildAndInferCtx::MirroredBlobGetDataType(
 Maybe<bool> JobBuildAndInferCtx::MirroredBlobIsDynamic(const std::string& lbn_with_hint) const {
   const auto& lbi = *JUST(MirroredBlobGetSubLbi(lbn_with_hint, 0));
   return lbi2logical_blob_desc_.at(lbi)->is_dynamic();
-}
-
-Maybe<bool> JobBuildAndInferCtx::MirroredBlobIsTensorList(const std::string& lbn_with_hint) const {
-  const auto& lbi = *JUST(MirroredBlobGetSubLbi(lbn_with_hint, 0));
-  return lbi2logical_blob_desc_.at(lbi)->is_tensor_list();
 }
 
 Maybe<OptInt64> JobBuildAndInferCtx::MirroredBlobGetSplitAxisFromProducerView(
