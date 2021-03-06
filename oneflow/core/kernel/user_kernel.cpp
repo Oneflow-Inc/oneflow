@@ -66,7 +66,8 @@ class UserKernelBaseContext {
     device_tag_ = kernel_conf.op_attribute().op_conf().device_tag();
     device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
     parallel_ctx_ = kernel_conf.parallel_ctx();
-    for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
+    for (const auto& pair :
+         kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
       arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::TensorDesc(pair.second));
     }
   }
@@ -167,8 +168,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
   UserKernelOpInferContext(const KernelConf& kernel_conf, const JobDesc* job_desc)
       : user_op::InferContext(user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         job_desc_(job_desc),
-        parallel_ctx_(kernel_conf.user_conf().parallel_ctx()),
-        sbp_signature_(kernel_conf.user_conf().sbp_sig()) {
+        parallel_ctx_(kernel_conf.parallel_ctx()),
+        sbp_signature_(kernel_conf.op_attribute().sbp_signature()) {
     auto InitTensorDesc = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                               ArgVec* arg_vec) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
@@ -182,7 +183,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
     };
     InitTensorDesc(kernel_conf.op_attribute().op_conf().user_conf().input(), &inputs_);
     InitTensorDesc(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_);
-    for (const auto& pair : kernel_conf.user_conf().bn_in_op2logical_blob_desc()) {
+    for (const auto& pair :
+         kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
                                        user_op::TensorDesc(pair.second));
     }
