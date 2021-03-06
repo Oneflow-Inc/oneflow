@@ -108,4 +108,4 @@ void IOEventPoller::EpollLoop() {
 
 }  // namespace oneflow
 
-#endif  // OF_PLATFORM_POSIX
+#endif  // __linux__

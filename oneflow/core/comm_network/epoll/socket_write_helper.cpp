@@ -146,4 +146,4 @@ void SocketWriteHelper::SetStatusWhenTransportMsgHeadDone() {
 
 }  // namespace oneflow
 
-#endif  // OF_PLATFORM_POSIX
+#endif  // __linux__
