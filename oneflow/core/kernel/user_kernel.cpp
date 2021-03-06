@@ -65,7 +65,7 @@ class UserKernelBaseContext {
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_);
     device_tag_ = kernel_conf.op_attribute().op_conf().device_tag();
     device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
-    parallel_ctx_ = kernel_conf.user_conf().parallel_ctx();
+    parallel_ctx_ = kernel_conf.parallel_ctx();
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
       arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::TensorDesc(pair.second));
     }
@@ -115,9 +115,10 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
           user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
-        sbp_signature_(&(kernel_conf.user_conf().sbp_sig())),
-        parallel_desc_(kernel_conf.user_conf().parallel_conf()) {
-    for (const auto& pair : kernel_conf.user_conf().bn_in_op2logical_blob_desc()) {
+        sbp_signature_(&(kernel_conf.op_attribute().sbp_signature())),
+        parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
+    for (const auto& pair :
+         kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
                                        user_op::TensorDesc(pair.second));
     }
