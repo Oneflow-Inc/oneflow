@@ -418,23 +418,6 @@ message BroadcastToCompatibleWithOpConf {
   required string y = 3;
 }
 
-message TensorBufferToTensorListOpConf {
-  required string in = 1;
-  required string out = 2;
-  required ShapeProto shape = 3;
-  required DataType data_type = 4;
-}
-
-message TensorListToTensorBufferOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message TensorListSplitOpConf {
-  required string in = 1;
-  repeated string out = 2;
-}
-
 message CollectiveBoxingGenericOpConf {
   required LogicalBlobId lbi = 1;
   required boxing.collective.RankDesc rank_desc = 2;
@@ -518,11 +501,8 @@ message OperatorConf {
     DeviceTickOpConf device_tick_conf = 159;
     SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
     SliceBoxingAddOpConf slice_boxing_add_conf = 167;
-    TensorBufferToTensorListOpConf tensor_buffer_to_tensor_list_conf = 168;
-    TensorListToTensorBufferOpConf tensor_list_to_tensor_buffer_conf = 169;
     CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
     BoxingIdentityOpConf boxing_identity_conf = 171;
-    TensorListSplitOpConf tensor_list_split_conf = 172;
     CollectiveBoxingPackOpConf collective_boxing_pack_conf = 174;
     CollectiveBoxingUnpackOpConf collective_boxing_unpack_conf = 175;
     BoxingZerosOpConf boxing_zeros_conf = 176;

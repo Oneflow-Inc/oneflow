@@ -44,15 +44,11 @@ class TensorDesc final {
   bool is_dynamic() const { return is_dynamic_; }
   bool* mut_is_dynamic() { return &is_dynamic_; }
   void set_is_dynamic(bool val) { is_dynamic_ = val; }
-  bool is_tensor_list() const { return is_tensor_list_; }
-  bool* mut_is_tensor_list() { return &is_tensor_list_; }
-  void set_is_tensor_list(bool val) { is_tensor_list_ = val; }
 
  private:
   Shape shape_;
   DataType data_type_;
   bool is_dynamic_;
-  bool is_tensor_list_;
 };
 
 }  // namespace user_op

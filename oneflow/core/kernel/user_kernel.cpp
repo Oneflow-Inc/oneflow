@@ -38,7 +38,6 @@ void FillTensorDescWithBlob(const Blob* blob, user_op::TensorDesc* tensor_desc) 
   BlobDescProto proto;
   blob->blob_desc().header_pod_desc().ToProto(proto.mutable_header());
   blob->blob_desc().body().ToProto(proto.mutable_body());
-  proto.set_is_tensor_list(blob->blob_desc().is_tensor_list());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   proto.set_header_is_opaque(blob->blob_desc().header_is_opaque());
   *tensor_desc = proto;
@@ -201,9 +200,6 @@ class UserKernelOpInferContext : public user_op::InferContext {
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
-  }
-  bool* IsTensorList4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_tensor_list();
   }
 
   const ArgVec& inputs() const override { return inputs_; }

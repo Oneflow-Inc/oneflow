@@ -25,7 +25,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(!ref_desc->is_dynamic());
   CHECK_OR_RETURN(ref_desc->shape() == value_desc->shape());
   CHECK_OR_RETURN(ref_desc->data_type() == value_desc->data_type());
-  CHECK_OR_RETURN(ref_desc->is_tensor_list() == value_desc->is_tensor_list());
   if (ctx->user_op_conf().has_input("condition", 0)) {
     const user_op::TensorDesc* condition = ctx->TensorDesc4ArgNameAndIndex("condition", 0);
     CHECK_OR_RETURN(IsIndexDataType(condition->data_type()));
