@@ -62,8 +62,7 @@ def convert_url_to_oss_key1(url: str):
 def convert_url_to_oss_https_url(url):
     if should_be_mirrored(url):
         key = convert_url_to_oss_key(url)
-        prefix = "https://oneflow-static.oss-cn-beijing.aliyuncs.com/"
-        return os.path.join(prefix, key)
+        return "https://oneflow-static.oss-cn-beijing.aliyuncs.com/" + key
     else:
         return url
 
