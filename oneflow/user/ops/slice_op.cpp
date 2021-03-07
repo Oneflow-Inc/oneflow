@@ -230,7 +230,6 @@ Maybe<void> InferLogicalSliceAssignTensorDesc(user_op::InferContext* ctx) {
     CHECK_GT_OR_RETURN(stop, 0) << "logical_slice_assign stop must be greater than 0";
     CHECK_LT_OR_RETURN(start, stop) << "logical_slice_assign start must be less than stop";
   }
-  CHECK_OR_RETURN(ref_desc->is_tensor_list() == value_desc->is_tensor_list());
   return Maybe<void>::Ok();
 }
 

@@ -94,11 +94,6 @@ bool LazyConsistentBlob::is_dynamic() const {
   return CHECK_JUST(ctx->IsDynamic(logical_blob_name()));
 }
 
-bool LazyConsistentBlob::is_tensor_list() const {
-  auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
-  return CHECK_JUST(ctx->IsTensorList(logical_blob_name()));
-}
-
 std::shared_ptr<cfg::ParallelConf> LazyConsistentBlob::parallel_conf() const {
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
   return CHECK_JUST(ctx->GetParallelDescFromProducerView(logical_blob_name()))->cfg_parallel_conf();
@@ -106,8 +101,7 @@ std::shared_ptr<cfg::ParallelConf> LazyConsistentBlob::parallel_conf() const {
 
 bool LazyConsistentBlob::IdenticalTo(const std::shared_ptr<LazyConsistentBlob>& rhs) const {
   return true && unique_name() == rhs->unique_name() && *shape() == *rhs->shape()
-         && split_axis() == rhs->split_axis() && is_dynamic() == rhs->is_dynamic()
-         && is_tensor_list() == rhs->is_tensor_list();
+         && split_axis() == rhs->split_axis() && is_dynamic() == rhs->is_dynamic();
 }
 
 MirroredBlob::MirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
@@ -182,11 +176,6 @@ bool LazyMirroredBlob::is_dynamic() const {
   return CHECK_JUST(ctx->MirroredBlobIsDynamic(logical_blob_name()));
 }
 
-bool LazyMirroredBlob::is_tensor_list() const {
-  auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
-  return CHECK_JUST(ctx->MirroredBlobIsTensorList(logical_blob_name()));
-}
-
 std::shared_ptr<cfg::ParallelConf> LazyMirroredBlob::parallel_conf() const {
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
   return CHECK_JUST(ctx->MirroredBlobGetParallelDescFromProducerView(logical_blob_name()))
@@ -229,10 +218,6 @@ int64_t EagerBlobTrait::split_axis() const {
 }
 
 bool EagerBlobTrait::is_dynamic() const { return blob_object()->op_arg_blob_attr()->is_dynamic(); }
-
-bool EagerBlobTrait::is_tensor_list() const {
-  return blob_object()->op_arg_blob_attr()->is_tensor_list();
-}
 
 std::shared_ptr<cfg::ParallelConf> EagerBlobTrait::parallel_conf() const {
   return blob_object()->parallel_desc_symbol()->cfg_parallel_conf();

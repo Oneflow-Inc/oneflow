@@ -47,7 +47,6 @@ class BlobDesc : public Tensor {
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const override;
 
   virtual bool is_dynamic() const;
-  virtual bool is_tensor_list() const;
   virtual std::shared_ptr<Distribute> distribute() const;
   virtual std::string unique_name() const;
 

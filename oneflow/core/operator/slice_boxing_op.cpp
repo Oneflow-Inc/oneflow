@@ -63,8 +63,8 @@ class SliceBoxingAddOp final : public SliceBoxingOp {
   }
   void VirtualInitFromOpConf() override;
   Maybe<void> InferInternalBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override;
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const JobDesc* job_desc) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 };
 
@@ -125,8 +125,8 @@ Symbol<OperatorConf> SliceBoxingCopyOp::GetOpConfWithoutOpNameAndLbn() const {
 void SliceBoxingAddOp::VirtualInitFromOpConf() { EnrollTmpBn("buf"); }
 
 Maybe<void> SliceBoxingAddOp::InferInternalBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const JobDesc* job_desc) const {
   *GetBlobDesc4BnInOp("buf") = *GetBlobDesc4BnInOp("out");
   return Maybe<void>::Ok();
 }

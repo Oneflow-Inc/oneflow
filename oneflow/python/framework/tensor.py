@@ -142,6 +142,12 @@ class Tensor:
             prod *= dim
         return prod
 
+    def data_ptr(self):
+        TODO()
+
+    def element_size(self):
+        TODO()
+
     def _auto_determine(func):
         def wrapped_func(*args, **kwargs):
             tensor = args[0]
@@ -150,12 +156,6 @@ class Tensor:
             return func(*args, **kwargs)
 
         return wrapped_func
-
-    def data_ptr(self):
-        TODO()
-
-    def element_size(self):
-        TODO()
 
     @_auto_determine
     def numpy(self):
