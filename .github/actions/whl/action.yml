@@ -30,5 +30,6 @@ runs:
             --use_tuna --use_system_proxy --use_aliyun_mirror \
             --wheel_house_dir=${tmp_dir}/wheelhouse \
             --oneflow_src_dir=${src_dir} ${{ inputs.extra_flags }} \
+            --retry=1 \
             --extra_docker_args "${extra_docker_args}"
       shell: bash
