@@ -40,7 +40,7 @@ void CollectiveBoxingGenericTaskNode::ConsumeAllRegsts() {
 
 void CollectiveBoxingGenericTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<Operator> boxing_op = ConstructOp(op_conf_, &GlobalJobDesc());
+  std::shared_ptr<Operator> boxing_op = ConstructOp(op_conf_);
   node->mut_op() = boxing_op;
   for (const std::string& ibn : boxing_op->input_bns()) {
     node->BindBnWithRegst(ibn, GetSoleConsumedRegst("in"));
@@ -56,10 +56,7 @@ void CollectiveBoxingGenericTaskNode::BuildExecGphAndRegst() {
 
 void CollectiveBoxingGenericTaskNode::InferProducedDataRegstTimeShape() {
   auto out_regst = GetProducedRegst("out");
-  if (out_regst != nullptr) {
-    out_regst->mut_data_regst_time_shape()->reset(
-        new Shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()}));
-  }
+  if (out_regst != nullptr) { out_regst->mut_data_regst_time_shape()->reset(new Shape({1, 1})); }
 }
 
 }  // namespace oneflow

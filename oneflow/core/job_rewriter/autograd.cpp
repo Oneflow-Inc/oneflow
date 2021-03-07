@@ -749,8 +749,7 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
     const auto& lbi = GenLogicalBlobId(loss_lbn);
     CHECK(loss_lbi2op_node.emplace(lbi, LossOpNode4OpName(lbi.op_name())).second);
   }
-  const Shape src_time_shape(
-      {GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
+  const Shape src_time_shape({1, 1});
   const int64_t source_time_shape_elem_cnt = src_time_shape.elem_cnt();
   bool all_loss_time_shape_eq_src = true;
   for (const auto& pair : loss_lbi2op_node) {
