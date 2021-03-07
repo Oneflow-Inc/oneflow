@@ -10,9 +10,6 @@ namespace oneflow {
 
 class RpcClientBase {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RpcClientBase);
-  virtual ~RpcClientBase() = default;
-
   virtual void Barrier(const std::string& barrier_name) = 0;
   virtual void Barrier(const std::string& barrier_name, int32_t barrier_num) = 0;
 
@@ -51,7 +48,6 @@ class RpcClientBase {
   virtual void EraseCount(const std::string& k) = 0;
 
  protected:
-  RpcClientBase() = default;
   virtual void PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter) = 0;
   virtual void PullMasterKV(const std::string& k,
                             std::function<void(const std::string&)> VGetter) = 0;

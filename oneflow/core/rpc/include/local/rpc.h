@@ -70,7 +70,7 @@ class RpcClient : RpcClientBase {
   void EraseCount(const std::string& k);
 
  protected:
-  RpcClient() = default;
+  RpcClient(){};
   void PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter);
   void PullMasterKV(const std::string& k, std::function<void(const std::string&)> VGetter);
 

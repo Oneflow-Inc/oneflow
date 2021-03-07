@@ -10,6 +10,7 @@ namespace oneflow {
 class CtrlClient final : public RpcClient {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CtrlClient);
+  CtrlClient() = default;
   ~CtrlClient();
 
  private:
