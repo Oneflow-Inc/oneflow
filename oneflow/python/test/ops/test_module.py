@@ -183,21 +183,22 @@ class TestModule(flow.unittest.TestCase):
         job()
 
     def test_module_apply(test_case):
-        def init_weights(m):
-            print(m)
-            if type(m) == flow.nn.Linear:
-                m.weight.fill_(1.0)
-                print(m.weight)
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.modules = flow.nn.Module()
+        
+        global module_num
+        module_num = 0
+        def get_module_num(m):
+            global module_num
+            module_num += 1
+            print(module_num)
+        
+        net = CustomModule()
+        net.apply(get_module_num)
 
-        net = flow.nn.Sequential(flow.nn.Linear(2, 2), flow.nn.Linear(2, 2))
-        net.apply(init_weights)
-        children = list(net.children())
-
-        m1 = flow.nn.Linear(2, 2)
-        m1.weight.fill_(1.0)
-
-        test_case.assertEqual(m1.weight, children[0].weight)
-        test_case.assertEqual(m1.weight, children[1].weight)
+        test_case.assertEqual(module_num, 2)
 
     # TODO: add more tests about module api
 
