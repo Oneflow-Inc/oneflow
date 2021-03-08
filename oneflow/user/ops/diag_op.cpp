@@ -61,7 +61,6 @@ REGISTER_USER_OP("diag")
     .Output("out")
     .Attr<int32_t>("dimension", 0)
     .SetTensorDescInferFn(InferForwardTensorDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       int32_t axis = in_tensor.shape().NumAxes();
@@ -79,7 +78,6 @@ REGISTER_USER_OP("diag_grad")
     .Attr<int32_t>("dimension", 0)
     .Output("dx")
     .SetTensorDescInferFn(InferBackwardTensorDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
       int32_t axis = y_tensor.shape().NumAxes();
