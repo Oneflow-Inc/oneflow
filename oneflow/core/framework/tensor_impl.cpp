@@ -24,7 +24,7 @@ namespace one {
 namespace {
 
 std::shared_ptr<const ParallelDesc> MakeParallelDescByDevice(const Device& device) {
-  TODO();
+  TODO(); //liyurui
   return std::shared_ptr<const ParallelDesc>();
 }
 
