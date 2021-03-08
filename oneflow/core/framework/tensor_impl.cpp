@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor_impl.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/framework/device.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 namespace one {
