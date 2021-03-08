@@ -21,34 +21,34 @@ namespace xrt {
 
 namespace graph_builder {
 
-const Shape &InputTimeShape(const OpNode *op_node) {
+const Shape& InputTimeShape(const OpNode* op_node) {
   CHECK_NOTNULL(op_node);
   return *(op_node->GetInputBlobFastestTimeShape());
 }
 
-const Shape &OutputTimeShape(const OpNode *op_node) {
+const Shape& OutputTimeShape(const OpNode* op_node) {
   CHECK_NOTNULL(op_node);
   return *(op_node->out_blob_time_shape());
 }
 
-const SbpParallel &BlobSbpPolicy(const OpNode *op_node, const std::string &name) {
+const SbpParallel& BlobSbpPolicy(const OpNode* op_node, const std::string& name) {
   CHECK_NOTNULL(op_node);
   LogicalBlobId lbi = BlobNameToId(name);
   return op_node->SbpParallel4Lbi(lbi);
 }
 
-GraphBuilder::GraphBuilder(const OpGraph *op_graph) : graph_(std::make_shared<XrtGraph>()) {
-  op_graph->TopoForEachNode([&](const OpNode *op_node) {
-    const Operator *op = &op_node->op();
-    XrtNode *node = graph_->AddNode(op->op_conf());
+GraphBuilder::GraphBuilder(const OpGraph* op_graph) : graph_(std::make_shared<XrtGraph>()) {
+  op_graph->TopoForEachNode([&](const OpNode* op_node) {
+    const Operator* op = &op_node->op();
+    XrtNode* node = graph_->AddNode(op->op_conf());
     SetupXrtNode(node, op->op_conf());
-    auto &input_output_keys = node_info_[node].input_output_keys;
-    for (const std::string &bn : op->output_bns()) {
+    auto& input_output_keys = node_info_[node].input_output_keys;
+    for (const std::string& bn : op->output_bns()) {
       std::string output = BlobIdToName(op->BnInOp2Lbi(bn));
       producers_[output] = node;
       input_output_keys[output] = bn;
     }
-    for (const std::string &bn : op->input_bns()) {
+    for (const std::string& bn : op->input_bns()) {
       std::string input = BlobIdToName(op->BnInOp2Lbi(bn));
       input_output_keys[input] = bn;
       node_info_[node].inputs.insert(input);
@@ -57,32 +57,32 @@ GraphBuilder::GraphBuilder(const OpGraph *op_graph) : graph_(std::make_shared<Xr
   });
 }
 
-GraphBuilder::GraphBuilder(const XrtLaunchOpConf::Function &function, const DeviceType &device_type,
-                           const JobDesc &job_desc)
+GraphBuilder::GraphBuilder(const XrtLaunchOpConf::Function& function, const DeviceType& device_type,
+                           const JobDesc& job_desc)
     : graph_(std::make_shared<XrtGraph>()) {
-  for (const auto &arg_conf : function.argument()) {
-    XrtNode *node = graph_->AddNode(arg_conf);
+  for (const auto& arg_conf : function.argument()) {
+    XrtNode* node = graph_->AddNode(arg_conf);
     SetupXrtNode(node, arg_conf);
     if (node->IsInArgumentNode()) {
       producers_[arg_conf.value()] = node;
     } else {
       node_info_[node].inputs.insert(arg_conf.value());
     }
-    auto &input_output_keys = node_info_[node].input_output_keys;
+    auto& input_output_keys = node_info_[node].input_output_keys;
     input_output_keys = {{arg_conf.value(), "value"}};
   }
 
-  for (const auto &node_conf : function.node()) {
-    XrtNode *node = graph_->AddNode(node_conf);
+  for (const auto& node_conf : function.node()) {
+    XrtNode* node = graph_->AddNode(node_conf);
     SetupXrtNode(node, node_conf);
-    auto &input_output_keys = node_info_[node].input_output_keys;
-    auto op = ConstructOp(node_conf, device_type, &job_desc);
-    for (const std::string &bn : op->output_bns()) {
+    auto& input_output_keys = node_info_[node].input_output_keys;
+    auto op = ConstructOp(node_conf, device_type);
+    for (const std::string& bn : op->output_bns()) {
       std::string output = BlobIdToName(op->BnInOp2Lbi(bn));
       producers_[output] = node;
       input_output_keys[output] = bn;
     }
-    for (const std::string &bn : op->input_bns()) {
+    for (const std::string& bn : op->input_bns()) {
       std::string input = BlobIdToName(op->BnInOp2Lbi(bn));
       input_output_keys[input] = bn;
       node_info_[node].inputs.insert(input);
@@ -90,20 +90,20 @@ GraphBuilder::GraphBuilder(const XrtLaunchOpConf::Function &function, const Devi
   }
 }
 
-void GraphBuilder::MakeMetaData(const XrtNode *start, const XrtNode *end,
-                                const std::string &arg_name, ArgumentMetaData *meta_data) {
-  const auto &prod_keys = node_info_.at(start).input_output_keys;
-  const auto &cons_keys = node_info_.at(end).input_output_keys;
+void GraphBuilder::MakeMetaData(const XrtNode* start, const XrtNode* end,
+                                const std::string& arg_name, ArgumentMetaData* meta_data) {
+  const auto& prod_keys = node_info_.at(start).input_output_keys;
+  const auto& cons_keys = node_info_.at(end).input_output_keys;
   meta_data->produce_key = prod_keys.at(arg_name);
   meta_data->consume_key = cons_keys.at(arg_name);
 }
 
 void GraphBuilder::BuildGraphEdges() {
-  for (const auto &p : node_info_) {
-    const XrtNode *node = p.first;
-    const util::Set<std::string> &inputs = p.second.inputs;
-    for (const std::string &input : inputs) {
-      const auto &it = producers_.find(input);
+  for (const auto& p : node_info_) {
+    const XrtNode* node = p.first;
+    const util::Set<std::string>& inputs = p.second.inputs;
+    for (const std::string& input : inputs) {
+      const auto& it = producers_.find(input);
       if (it != producers_.end() && it->second != node) {
         ArgumentMetaData meta;
         MakeMetaData(it->second, node, input, &meta);
@@ -115,10 +115,10 @@ void GraphBuilder::BuildGraphEdges() {
 }
 
 void GraphBuilder::SetupGraphEdges() {
-  for (XrtEdge *edge : graph_->Edges()) {
-    const OpNode *src = node_info_.at(edge->start()).op_node;
-    const OpNode *dst = node_info_.at(edge->end()).op_node;
-    const std::string &name = edge->argument().name();
+  for (XrtEdge* edge : graph_->Edges()) {
+    const OpNode* src = node_info_.at(edge->start()).op_node;
+    const OpNode* dst = node_info_.at(edge->end()).op_node;
+    const std::string& name = edge->argument().name();
 
     if (nullptr == src || nullptr == dst) { continue; }
     // Set time shape
@@ -134,12 +134,12 @@ void GraphBuilder::SetupGraphEdges() {
   }
 }
 
-std::shared_ptr<XrtGraph> BuildGraph(const XrtLaunchOpConf::Function &function,
-                                     const DeviceType &device_type, const JobDesc &job_desc) {
+std::shared_ptr<XrtGraph> BuildGraph(const XrtLaunchOpConf::Function& function,
+                                     const DeviceType& device_type, const JobDesc& job_desc) {
   return GraphBuilder(function, device_type, job_desc).Build();
 }
 
-std::shared_ptr<XrtGraph> BuildGraph(const OpGraph *op_graph) {
+std::shared_ptr<XrtGraph> BuildGraph(const OpGraph* op_graph) {
   return GraphBuilder(op_graph).Build();
 }
 

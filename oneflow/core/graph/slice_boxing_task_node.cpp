@@ -28,7 +28,6 @@ void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& 
   mem_zone_id_ = mem_zone_id;
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
-  set_area_id(kMdUpdtArea);
 }
 
 void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice,
@@ -70,7 +69,7 @@ void SliceBoxingTaskNode::ConsumeAllRegsts() {
 
 void SliceBoxingTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<Operator> op = ConstructOp(GetBoxingOpConf(), &GlobalJobDesc());
+  std::shared_ptr<Operator> op = ConstructOp(GetBoxingOpConf());
   node->mut_op() = op;
   FOR_RANGE(size_t, i, 0, op->input_bns().size()) {
     const std::string& ibn = op->input_bns().Get(i);

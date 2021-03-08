@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/source_tick_compute_task_node.h"
-#include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -39,8 +38,7 @@ void SourceTickCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void SourceTickCompTaskNode::InferProducedDataRegstTimeShape() {
-  std::shared_ptr<Shape> time_shape(
-      new Shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()}));
+  std::shared_ptr<Shape> time_shape(new Shape({1, 1}));
   ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
     *regst->mut_data_regst_time_shape() = time_shape;
   });

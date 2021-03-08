@@ -28,9 +28,18 @@ void InputOp::InitFromOpConf() {
   modifier->set_header_infered_before_compute(false);
 }
 
+Maybe<void> InputOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  BlobDesc* out_blob_desc = BlobDesc4BnInOp("out");
+  JUST(InterfaceOpUtil::InferLogicalOutBlobDesc(op_conf().input_conf().blob_conf(), out_blob_desc,
+                                                parallel_desc));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InputOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   JUST(InterfaceOpUtil::InferOutBlobDesc(op_conf().input_conf().blob_conf(), out_blob_desc,
                                          parallel_ctx));

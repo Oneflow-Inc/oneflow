@@ -24,11 +24,27 @@ void SinkTickOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  BlobDesc* blob_desc = BlobDesc4BnInOp("out");
+  blob_desc->mut_shape() = Shape({1});
+  blob_desc->set_data_type(DataType::kUInt8);
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+Maybe<void> SinkTickOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(BlobDesc4BnInOp);
+}
+
 Maybe<void> SinkTickOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
-  return Maybe<void>::Ok();
+    const ParallelContext* parallel_ctx) const {
+  return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> SinkTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

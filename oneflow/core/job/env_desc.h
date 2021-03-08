@@ -28,10 +28,16 @@ class EnvDesc final {
   ~EnvDesc() = default;
 
   const EnvProto& env_proto() const { return env_proto_; }
-  size_t TotalMachineNum() const { return env_proto_.machine().size(); }
   const Machine& machine(int32_t idx) const { return env_proto_.machine(idx); }
   int32_t ctrl_port() const { return env_proto_.ctrl_port(); }
   int32_t data_port() const { return env_proto_.data_port(); }
+  bool has_ctrl_bootstrap_conf() const { return env_proto_.has_ctrl_bootstrap_conf(); }
+  bool has_bootstrap_conf_ctrl_port() const {
+    return has_ctrl_bootstrap_conf() && env_proto_.ctrl_bootstrap_conf().has_ctrl_port();
+  }
+  const BootstrapConf& bootstrap_conf() const;
+  int32_t bootstrap_conf_ctrl_port() const;
+  size_t TotalMachineNum() const;
   int64_t GetMachineId(const std::string& addr) const;
 
  private:

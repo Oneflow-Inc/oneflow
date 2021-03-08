@@ -20,11 +20,11 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void GenQuantScalePerLayerSymmetric(const T *in, const int64_t current_train_step,
+void GenQuantScalePerLayerSymmetric(const T* in, const int64_t current_train_step,
                                     const int64_t stop_update_after_iters, const bool is_training,
                                     const int32_t quantization_bit, const int64_t num_elements,
-                                    const float momentum, T *moving_max, T *moving_min, T *scale,
-                                    T *zero_point) {
+                                    const float momentum, T* moving_max, T* moving_min, T* scale,
+                                    T* zero_point) {
   if (current_train_step <= stop_update_after_iters && is_training) {
     T in_max = *std::max_element(in, in + num_elements);
     T in_min = *std::min_element(in, in + num_elements);
@@ -49,11 +49,11 @@ void GenQuantScalePerLayerSymmetric(const T *in, const int64_t current_train_ste
 }
 
 template<typename T>
-void GenQuantScalePerLayerAffine(const T *in, const int64_t current_train_step,
+void GenQuantScalePerLayerAffine(const T* in, const int64_t current_train_step,
                                  const int64_t stop_update_after_iters, const bool is_training,
                                  const int32_t quantization_bit, const int64_t num_elements,
-                                 const float momentum, T *moving_max, T *moving_min, T *scale,
-                                 T *zero_point) {
+                                 const float momentum, T* moving_max, T* moving_min, T* scale,
+                                 T* zero_point) {
   if (current_train_step <= stop_update_after_iters && is_training) {
     T in_max = *std::max_element(in, in + num_elements);
     T in_min = *std::min_element(in, in + num_elements);
@@ -79,11 +79,11 @@ void GenQuantScalePerLayerAffine(const T *in, const int64_t current_train_step,
 }
 
 template<typename T>
-void GenQuantScalePerLayerCambricon(const T *in, const int64_t current_train_step,
+void GenQuantScalePerLayerCambricon(const T* in, const int64_t current_train_step,
                                     const int64_t stop_update_after_iters, const bool is_training,
                                     const int32_t quantization_bit, const int64_t num_elements,
-                                    const float momentum, T *moving_max, T *moving_min, T *scale,
-                                    T *zero_point) {
+                                    const float momentum, T* moving_max, T* moving_min, T* scale,
+                                    T* zero_point) {
   if (current_train_step <= stop_update_after_iters && is_training) {
     T in_max = *std::max_element(in, in + num_elements);
     T in_min = *std::min_element(in, in + num_elements);
@@ -113,14 +113,14 @@ class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
   ~CpuMovingAverageMinMaxObserverKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext *ctx) const override {
-    const user_op::Tensor *in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    const user_op::Tensor *current_train_step =
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const user_op::Tensor* current_train_step =
         ctx->Tensor4ArgNameAndIndex("current_train_step", 0);
-    user_op::Tensor *moving_max = ctx->Tensor4ArgNameAndIndex("moving_max", 0);
-    user_op::Tensor *moving_min = ctx->Tensor4ArgNameAndIndex("moving_min", 0);
-    user_op::Tensor *scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
-    user_op::Tensor *zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
+    user_op::Tensor* moving_max = ctx->Tensor4ArgNameAndIndex("moving_max", 0);
+    user_op::Tensor* moving_min = ctx->Tensor4ArgNameAndIndex("moving_min", 0);
+    user_op::Tensor* scale = ctx->Tensor4ArgNameAndIndex("scale", 0);
+    user_op::Tensor* zero_point = ctx->Tensor4ArgNameAndIndex("zero_point", 0);
 
     const std::string quantization_scheme = ctx->Attr<std::string>("quantization_scheme");
     const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
@@ -129,12 +129,12 @@ class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     const bool is_training = ctx->Attr<bool>("training");
     const std::string quantization_formula = ctx->Attr<std::string>("quantization_formula");
 
-    const T *in_ptr = in->dptr<T>();
-    const int64_t *current_train_step_ptr = current_train_step->dptr<int64_t>();
-    T *moving_max_ptr = moving_max->mut_dptr<T>();
-    T *moving_min_ptr = moving_min->mut_dptr<T>();
-    T *scale_ptr = scale->mut_dptr<T>();
-    T *zero_point_ptr = zero_point->mut_dptr<T>();
+    const T* in_ptr = in->dptr<T>();
+    const int64_t* current_train_step_ptr = current_train_step->dptr<int64_t>();
+    T* moving_max_ptr = moving_max->mut_dptr<T>();
+    T* moving_min_ptr = moving_min->mut_dptr<T>();
+    T* scale_ptr = scale->mut_dptr<T>();
+    T* zero_point_ptr = zero_point->mut_dptr<T>();
 
     int64_t num_elements = in->shape().elem_cnt();
 

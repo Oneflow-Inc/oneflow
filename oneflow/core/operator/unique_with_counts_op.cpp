@@ -26,12 +26,14 @@ class UniqueWithCountsOp final : public Operator {
   ~UniqueWithCountsOp() override = default;
 
   void InitFromOpConf() override;
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override;
+                                const ParallelContext* parallel_ctx) const override;
   Maybe<void> InferInternalBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const override;
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const JobDesc* job_desc) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
@@ -49,30 +51,45 @@ void UniqueWithCountsOp::InitFromOpConf() {
   EnrollTmpBn("workspace");
 }
 
-Maybe<void> UniqueWithCountsOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
-  const BlobDesc* x = GetBlobDesc4BnInOp("x");
+namespace {
+
+Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
+                           const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  const BlobDesc* x = BlobDesc4BnInOp("x");
   CHECK_EQ_OR_RETURN(x->shape().NumAxes(), 1);
-  BlobDesc* y = GetBlobDesc4BnInOp("y");
+  BlobDesc* y = BlobDesc4BnInOp("y");
   *y = *x;
-  const DataType idx_data_type = op_conf().unique_with_counts_conf().out_idx();
+  const DataType idx_data_type = op_conf.unique_with_counts_conf().out_idx();
   CHECK(IsIndexDataType(idx_data_type));
-  BlobDesc* idx = GetBlobDesc4BnInOp("idx");
+  BlobDesc* idx = BlobDesc4BnInOp("idx");
   *idx = *x;
   idx->set_data_type(idx_data_type);
-  BlobDesc* count = GetBlobDesc4BnInOp("count");
+  BlobDesc* count = BlobDesc4BnInOp("count");
   *count = *x;
   count->set_data_type(idx_data_type);
-  BlobDesc* num_unique = GetBlobDesc4BnInOp("num_unique");
+  BlobDesc* num_unique = BlobDesc4BnInOp("num_unique");
   num_unique->mut_shape() = Shape({1});
   num_unique->set_data_type(idx_data_type);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> UniqueWithCountsOp::InferInternalBlobDescs(
+}  // namespace
+
+Maybe<void> UniqueWithCountsOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(op_conf(), BlobDesc4BnInOp);
+}
+
+Maybe<void> UniqueWithCountsOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
+  return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
+}
+
+Maybe<void> UniqueWithCountsOp::InferInternalBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const JobDesc* job_desc) const {
   const BlobDesc* x = GetBlobDesc4BnInOp("x");
   CHECK_EQ_OR_RETURN(x->shape().NumAxes(), 1);
   const DataType idx_data_type = op_conf().unique_with_counts_conf().out_idx();

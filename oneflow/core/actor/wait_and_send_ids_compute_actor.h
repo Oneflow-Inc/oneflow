@@ -46,4 +46,4 @@ class WaitAndSendIdsCompActor final : public CompActor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_RECORD_LOAD_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_WAIT_AND_SEND_IDS_COMPUTE_ACTOR_H_

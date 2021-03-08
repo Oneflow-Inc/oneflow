@@ -62,13 +62,13 @@ Maybe<cfg::BlobDescProto> MakeBlobDescProto(const std::string& serialized_str) {
   return std::make_shared<cfg::BlobDescProto>(blob_desc);
 }
 
-Maybe<OpArgBlobAttribute> CreatOpArgBlobAttribute(const std::string& blob_desc_str,
-                                                  const std::string& logical_blob_name) {
+Maybe<OpArgBlobAttribute> CreateOpArgBlobAttribute(const std::string& blob_desc_str,
+                                                   const std::string& logical_blob_name) {
   const std::shared_ptr<cfg::BlobDescProto>& blob_desc = JUST(MakeBlobDescProto(blob_desc_str));
   return std::make_shared<OpArgBlobAttribute>(blob_desc, logical_blob_name);
 }
 
-Maybe<OpArgParallelAttribute> CreatOpArgParallelAttribute(
+Maybe<OpArgParallelAttribute> CreateOpArgParallelAttribute(
     std::shared_ptr<ParallelDesc> parallel_desc, const std::string& sbp_parallel_str,
     const std::string& opt_mirrored_parallel_str) {
   std::shared_ptr<cfg::SbpParallel> sbp_parallel = JUST(MakeSbpParallel(sbp_parallel_str));
@@ -100,11 +100,10 @@ Maybe<OpArgParallelAttribute> ApiGetOpArgParallelAttribute(
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<OpArgBlobAttribute, std::shared_ptr<OpArgBlobAttribute>>(m, "OpArgBlobAttribute")
       .def(py::init([](const std::string& blob_desc_str, const std::string& logical_blob_name) {
-        return CreatOpArgBlobAttribute(blob_desc_str, logical_blob_name).GetPtrOrThrow();
+        return CreateOpArgBlobAttribute(blob_desc_str, logical_blob_name).GetPtrOrThrow();
       }))
       .def_property_readonly("blob_desc", &OpArgBlobAttribute::blob_desc)
       .def_property_readonly("logical_blob_name", &OpArgBlobAttribute::logical_blob_name)
-      .def_property_readonly("is_tensor_list", &OpArgBlobAttribute::is_tensor_list)
       .def_property_readonly("is_dynamic", &OpArgBlobAttribute::is_dynamic)
       .def_property_readonly("shape",
                              [](const std::shared_ptr<OpArgBlobAttribute>& x) {
@@ -129,8 +128,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init([](std::shared_ptr<ParallelDesc> parallel_desc,
                        const std::string& sbp_parallel_str,
                        const std::string& opt_mirrored_parallel_str) {
-        return CreatOpArgParallelAttribute(parallel_desc, sbp_parallel_str,
-                                           opt_mirrored_parallel_str)
+        return CreateOpArgParallelAttribute(parallel_desc, sbp_parallel_str,
+                                            opt_mirrored_parallel_str)
             .GetPtrOrThrow();
       }))
       .def_property_readonly("parallel_desc_symbol", &OpArgParallelAttribute::parallel_desc_symbol)

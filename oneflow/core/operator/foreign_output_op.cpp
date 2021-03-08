@@ -23,9 +23,16 @@ void ForeignOutputOp::InitFromOpConf() {
   EnrollInputBn("in");
 }
 
+Maybe<void> ForeignOutputOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), 1);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> ForeignOutputOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   return Maybe<void>::Ok();
 }

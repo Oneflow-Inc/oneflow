@@ -15,10 +15,10 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
+import oneflow
 from typing import Sequence, Optional
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.input_blob_def as input_blob_def
-import oneflow.python.framework.dtype as dtype_util
 import typing
 import inspect
 import sys
@@ -42,7 +42,7 @@ class Numpy(PyStructCompatibleToBlob):
         print(loss)
     """
 
-    def Placeholder(shape: Sequence[int], dtype=dtype_util.float):
+    def Placeholder(shape: Sequence[int], dtype=oneflow.float):
         """`Numpy.Placeholder` is a typing function for numpy input of a OneFlow global function.
         A `numpy.ndarray` takes a `Numpy.Placeholder`'s place must have an identical shape.
         For instance::
@@ -77,7 +77,7 @@ class ListNumpy(PyStructCompatibleToBlob):
             print(mirrored_tensors)
     """
 
-    def Placeholder(shape: Sequence[int], dtype=dtype_util.float):
+    def Placeholder(shape: Sequence[int], dtype=oneflow.float):
         """`ListNumpy.Placeholder` is a typing function for numpy input of a OneFlow global function.
         A `list` of `numpy.ndarray` takes a `ListNumpy.Placeholder`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
         For instance::
@@ -102,49 +102,6 @@ class ListNumpy(PyStructCompatibleToBlob):
         )
 
 
-@oneflow_export("typing.ListListNumpy")
-class ListListNumpy(PyStructCompatibleToBlob):
-    """`ListListNumpy` is a type hint for numpy output of a OneFlow global function
-    For instance::
-
-        @oneflow.global_function()
-        def foo() -> oneflow.typing.ListListNumpy:
-            mirrored_tensor_lists = ... # your network
-            return mirrored_tensor_lists
-
-        mirrored_tensor_lists = foo() # get a list of list of numpy.ndarray
-        for tensor_list in mirrored_tensor_lists:
-            for tensor in tensor_list:
-                print(mirrored_tensors)
-    """
-
-    def Placeholder(shape: Sequence[int], dtype=dtype_util.float):
-        """`ListListNumpy.Placeholder` is a typing function for numpy input of a OneFlow global function.
-        A `list` of `list` of `numpy.ndarray` takes a `ListListNumpy.Placeholder`'s place. Each `numpy.ndarray` in the `list` could have any shape as long as it has the same rank and a smaller/equal size.
-        For instance::
-
-            @oneflow.global_function()
-            def foo(
-                image_blob: oneflow.typing.ListListNumpy.Placeholder(
-                    (2, 255, 255, 3), dtype=flow.float32
-                )
-            ):
-                # your network
-
-            input1 = np.random.randn(2, 255, 255, 3).astype(np.float32)
-            input2 = np.random.randn(2, 251, 251, 3).astype(np.float32)
-            foo([[input1]])
-            foo([[input2]])
-
-        """
-        assert type(shape) is tuple, "shape should be a tuple. %s found" % shape
-        return type(
-            "ListListNumpy.Placeholder",
-            (ListOfListOfNumpyDef,),
-            dict(shape=shape, dtype=dtype),
-        )
-
-
 class OneflowNumpyDef(object):
     @classmethod
     def NewInputBlobDef(subclass):
@@ -163,14 +120,6 @@ class ListOfNumpyDef(OneflowNumpyDef):
         return input_blob_def.MirroredTensorDef(subclass.shape, dtype=subclass.dtype)
 
 
-class ListOfListOfNumpyDef(OneflowNumpyDef):
-    @classmethod
-    def NewInputBlobDef(subclass):
-        return input_blob_def.MirroredTensorListDef(
-            subclass.shape, dtype=subclass.dtype
-        )
-
-
 @oneflow_export("typing.Callback")
 class Callback(typing.Generic[typing.TypeVar("T")]):
     pass
@@ -179,7 +128,7 @@ class Callback(typing.Generic[typing.TypeVar("T")]):
 @oneflow_export("typing.Bundle")
 class Bundle(typing.Generic[typing.TypeVar("T")]):
     """
-    One or a collection of  typing.Numpy/typing.ListNumpy/typing.ListListNumpy,
+    One or a collection of  typing.Numpy/typing.ListNumpy,
     such as x, [x], (x,), {"key": x} and the mixed form of them.
     """
 

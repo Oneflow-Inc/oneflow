@@ -16,7 +16,6 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.input_blob_def as input_blob_def
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.python_callback as python_callback
@@ -24,8 +23,7 @@ import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.vm_util as vm_util
-import oneflow.python.eager.blob_register as blob_register_util
+import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
@@ -33,7 +31,7 @@ import oneflow_api
 import numpy
 from functools import reduce
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 def AsyncPush(session, job_func, *arg):
@@ -94,15 +92,6 @@ def _CheckInputArgBlobDefValueMatch(arg_blob_def, arg_value):
             assert isinstance(v, numpy.ndarray)
             assert len(v.shape) == len(arg_blob_def.shape)
             assert numpy.prod(v.shape) <= numpy.prod(arg_blob_def.shape)
-    elif isinstance(arg_blob_def, input_blob_def.MirroredTensorListDef):
-        assert isinstance(arg_value, (list, tuple))
-        for ndarray_list in arg_value:
-            for ndarray in ndarray_list:
-                assert isinstance(ndarray, numpy.ndarray)
-                assert len(ndarray.shape) == len(arg_blob_def.shape)
-                assert numpy.prod(ndarray.shape) <= numpy.prod(
-                    arg_blob_def.shape
-                ), "%s v.s. %s" % (ndarray.shape, arg_blob_def.shape)
     else:
         raise NotImplementedError
 
@@ -113,7 +102,7 @@ def FeedValueToEagerBlob(blob_object, blob_def, ndarray):
     for i, physical_blob_object in enumerate(physical_blob_objects):
         feed_ctx.set_rank(i)
         _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, physical_blob_object)
-    blob_cache_util.TryDisableBlobCache(blob_object)
+    oneflow_api.TryDisableBlobCache(blob_object)
 
 
 def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
@@ -135,8 +124,6 @@ def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
 
     elif isinstance(arg_blob_def, input_blob_def.MirroredTensorDef):
         get_blob = oneflow_api.EagerMirroredBlob
-    elif isinstance(arg_blob_def, input_blob_def.MirroredTensorListDef):
-        get_blob = oneflow_api.EagerMirroredBlob
     else:
         raise NotImplementedError
     return get_blob(lbi, blob_object=arg_blob_object, blob_register=blob_register)
@@ -150,16 +137,19 @@ def _MakeInputBlobObject(arg_blob_def):
         op_attribute = arg_blob_def.EagerAddAndInferOp(input_op_conf)
         scope = oneflow.current_scope()
         parallel_conf = scope.device_parallel_desc_symbol.parallel_conf
+        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+            str(op_attribute)
+        )
         builder.StatelessCall(
-            op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
+            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
         )
 
-    vm_util.LogicalRun(BuildInputInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInputInstruction)
     return bn_in_op2blob_object["out"], lbi
 
 
 def _GetPhysicalBlobObjects(logical_blob_object, lbi):
-    blob_register = blob_register_util.GetDefaultBlobRegister()
+    blob_register = oneflow_api.GetDefaultBlobRegister()
     physical_blob_objects = None
 
     def BuildLogical2PhysicalInstruction(builder):
@@ -168,7 +158,7 @@ def _GetPhysicalBlobObjects(logical_blob_object, lbi):
             logical_blob_object
         )
 
-    vm_util.LogicalRun(BuildLogical2PhysicalInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildLogical2PhysicalInstruction)
     return physical_blob_objects
 
 
@@ -234,19 +224,6 @@ class FeedContext(object):
         assert elem_cnt <= capacity, "%s v.s. %s" % (ndarray.shape, static_shape)
         return self._AsContiguousNdArray(ndarray)
 
-    def GetMirroredTensorList(self, static_shape):
-        assert isinstance(self.arg_ndarray_, (list, tuple))
-        parallel_num = self.op_arg_parallel_attr_.parallel_desc_symbol.parallel_num
-        assert self.rank_ >= 0
-        assert self.rank_ < parallel_num
-        assert len(self.arg_ndarray_) == parallel_num
-        assert all(isinstance(a, (list, tuple)) for a in self.arg_ndarray_)
-        ndarray_list = self.arg_ndarray_[self.rank_]
-        assert all(isinstance(arr, numpy.ndarray) for arr in ndarray_list)
-        capacity = numpy.prod(static_shape)
-        assert all(numpy.prod(arr.shape) <= capacity for arr in ndarray_list)
-        return self._AsContiguousNdArray(ndarray_list)
-
     def _AsContiguousNdArray(self, ndarray):
         if isinstance(ndarray, numpy.ndarray):
             return (
@@ -266,10 +243,14 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
     assert callable(FeedBlob)
 
     def BuildFeedInstruction(builder):
-        builder.FeedBlob(blob_object, FeedBlob)
-        builder.InsertRemoveForeignCallbackInstruction(blob_object.object_id, FeedBlob)
+        builder.FeedBlob(
+            blob_object, python_callback.GetIdForRegisteredCallback(FeedBlob)
+        )
+        builder.InsertRemoveForeignCallbackInstruction(
+            blob_object.object_id, python_callback.GetIdForRegisteredCallback(FeedBlob)
+        )
 
-    vm_util.PhysicalRun(BuildFeedInstruction)
+    oneflow_api.deprecated.PhysicalRun(BuildFeedInstruction)
 
 
 def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):
@@ -294,18 +275,6 @@ def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):
             dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(ofblob.dtype)
             assert ndarray.dtype == dtype, "%s v.s. %s" % (ndarray.dtype, dtype)
             if ofblob.CopyFromNdarray(ndarray) is False:
-                raise ValueError
-
-    elif isinstance(blob_def, input_blob_def.MirroredTensorListDef):
-
-        def FeedBlob(ofblob):
-            assert ofblob.is_tensor_list
-            ndarray_list = feed_ctx.GetMirroredTensorList(ofblob.static_shape)
-            assert isinstance(ndarray_list, (list, tuple))
-            assert all(isinstance(ndarray, numpy.ndarray) for ndarray in ndarray_list)
-            dtype = dtype_util.convert_oneflow_dtype_to_numpy_dtype(ofblob.dtype)
-            assert all(ndarray.dtype == dtype for ndarray in ndarray_list)
-            if ofblob.CopyFromNdarrayList(ndarray_list) is False:
                 raise ValueError
 
     else:
