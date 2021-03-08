@@ -163,7 +163,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   using FindOrCreateDelegateBlobObjectFun =
       std::function<std::shared_ptr<compatible_py::BlobObject>(
-          const std::shared_ptr<InstructionsBuilder>&,
           const std::function<std::shared_ptr<compatible_py::BlobObject>(
               const std::shared_ptr<compatible_py::BlobObject>&,
               const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&,
@@ -419,6 +418,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
   std::function<void(compatible_py::Object*)> release_object_;
 };
+
+Maybe<void> LogicalRun(
+    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
+
+Maybe<void> PhysicalRun(
+    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
 
 }  // namespace oneflow
 
