@@ -146,13 +146,19 @@ jobs:
         with:
           name: build.${{ matrix.test_suite }}.env
           path: build.${{ matrix.test_suite }}.env
+      - name: Upload shared env (cuda_op)
+        uses: actions/upload-artifact@v2
+        if: matrix.test_suite == 'cuda'
+        with:
+          name: build.cuda_op.env
+          path: build.${{ matrix.test_suite }}.env
 
   test:
     name: Test suite
     strategy:
       max-parallel: 5
       matrix:
-        test_suite: ["cuda", "xla", "cpu"]
+        test_suite: ["cuda", "cuda_op", "xla", "cpu"]
     needs: [build, wait_for_gpu_slot]
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
@@ -183,9 +189,6 @@ jobs:
             scp -r $remote_bin_dir bin_tmp
           fi
 
-          # rm sha_dir
-          ssh ${builder_host} rm -rf ${sha_dir}
-
           # set wheelpath
           wheelhouse_dir="${PWD}/wheel_tmp"
           extra_docker_args+=" --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir}"
@@ -194,14 +197,9 @@ jobs:
           # set matrix environment variables
           echo "test_suite=${test_suite}" >> $GITHUB_ENV
           if [ "$test_suite" == "cuda" ]; then
-            export suffix="cu102"
             echo "bin_dir=${PWD}/bin_tmp" >> $GITHUB_ENV
           fi
-          if [ "$test_suite" == "xla" ]; then
-            export suffix="cu101_xla"
-          fi
           if [ "$test_suite" == "cpu" ]; then
-            export suffix="cpu"
             echo "ONEFLOW_TEST_CPU_ONLY=1" >> $GITHUB_ENV
           fi
 
@@ -247,7 +245,7 @@ jobs:
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Op test
-        if: matrix.test_suite != 'xla'
+        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
         run: |
           docker run \
             $extra_docker_args \
