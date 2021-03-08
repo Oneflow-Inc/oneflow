@@ -106,7 +106,6 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
   }
   ProduceRegst("tmp", true);
-  ProduceRegst("const_buf", false, 1, 1);
 }
 
 void NormalForwardCompTaskNode::ConsumeAllRegsts() {
@@ -179,7 +178,6 @@ void NormalForwardCompTaskNode::BuildOutRegst() {
 void NormalForwardCompTaskNode::BuildTmp7BufRegsts() {
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
-    node->AddBnToRegstAndBindIt(&Operator::const_buf_bns, GetProducedRegst("const_buf"));
   });
 }
 
@@ -192,11 +190,7 @@ void NormalForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   }
 
   ForEachProducedDataRegst([in_time_shape](const std::string& name, RegstDesc* regst) {
-    if (name == "const_buf") {
-      regst->mut_data_regst_time_shape()->reset(new Shape({1}));
-    } else {
-      *regst->mut_data_regst_time_shape() = in_time_shape;
-    }
+    *regst->mut_data_regst_time_shape() = in_time_shape;
   });
 }
 

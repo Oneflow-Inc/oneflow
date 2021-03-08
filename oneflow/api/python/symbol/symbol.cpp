@@ -15,8 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/symbol_id_cache.h"
-#include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/scope.h"
@@ -25,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_node_signature.cfg.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
+#include "oneflow/core/vm/string_symbol.h"
 
 namespace py = pybind11;
 
@@ -33,36 +33,8 @@ namespace oneflow {
 namespace {
 
 template<typename SymbolConfT>
-Maybe<bool> HasSymbol(const SymbolConfT& symbol_conf) {
-  const auto& id_cache = *JUST(GlobalMaybe<symbol::IdCache<SymbolConfT>>());
-  return id_cache.Has(symbol_conf);
-}
-
-template<typename SymbolConfT>
 bool ApiHasSymbol(const SymbolConfT& symbol_conf) {
   return HasSymbol(symbol_conf).GetOrThrow();
-}
-
-template<typename SymbolConfT, typename SymbolT>
-Maybe<SymbolT> GetSymbol(const SymbolConfT& symbol_conf) {
-  const auto& id_cache = *JUST(GlobalMaybe<symbol::IdCache<SymbolConfT>>());
-  const auto& symbol_storage = *Global<symbol::Storage<SymbolT>>::Get();
-  int64_t symbol_id = JUST(id_cache.Get(symbol_conf));
-  const auto& ptr = JUST(symbol_storage.MaybeGetPtr(symbol_id));
-  JUST(ptr->symbol_id());
-  return ptr;
-}
-
-// TODO(hanbibin): the second template arg will be moved after symbol_storage is refactored
-template<typename SymbolConfT, typename SymbolPbT, typename SymbolT>
-Maybe<void> AddSymbol(int64_t symbol_id, const SymbolConfT& symbol_conf) {
-  SymbolPbT symbol_pb;
-  symbol_conf.ToProto(&symbol_pb);
-  JUST(Global<symbol::Storage<SymbolT>>::Get()->Add(symbol_id, symbol_pb));
-  auto* id_cache = JUST(GlobalMaybe<symbol::IdCache<SymbolConfT>>());
-  CHECK_OR_RETURN(!id_cache->Has(symbol_conf));
-  JUST(id_cache->FindOrCreate(symbol_conf, [&symbol_id]() -> Maybe<int64_t> { return symbol_id; }));
-  return Maybe<void>::Ok();
 }
 
 template<typename SymbolConfT, typename SymbolPbT, typename SymbolT>
@@ -73,14 +45,6 @@ void ApiAddSymbol(int64_t symbol_id, const SymbolConfT& symbol_conf) {
 template<typename SymbolConfT, typename SymbolT>
 std::shared_ptr<SymbolT> ApiGetSymbol(const SymbolConfT& symbol_conf) {
   return GetSymbol<SymbolConfT, SymbolT>(symbol_conf).GetPtrOrThrow();
-}
-
-template<typename SymbolConfT, typename SymbolT>
-Maybe<SymbolT> GetSymbol(int64_t symbol_id) {
-  const auto& symbol_storage = *Global<symbol::Storage<SymbolT>>::Get();
-  const auto& ptr = JUST(symbol_storage.MaybeGetPtr(symbol_id));
-  JUST(ptr->symbol_id());
-  return ptr;
 }
 
 template<typename SymbolConfT, typename SymbolT>

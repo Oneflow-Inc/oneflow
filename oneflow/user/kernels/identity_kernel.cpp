@@ -40,8 +40,8 @@ class IdentityKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_IDENTITY_KERNEL(device)                                                        \
-  REGISTER_USER_KERNEL("identity")                                                              \
+#define REGISTER_IDENTITY_KERNEL(op, device)                                                    \
+  REGISTER_USER_KERNEL(op)                                                                      \
       .SetCreateFn<IdentityKernel<device>>()                                                    \
       .SetIsMatchedHob(user_op::HobDeviceTag() == device)                                       \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
@@ -50,9 +50,11 @@ class IdentityKernel final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_IDENTITY_KERNEL(DeviceType::kCPU)
+REGISTER_IDENTITY_KERNEL("identity", DeviceType::kCPU)
+REGISTER_IDENTITY_KERNEL("parallel_cast", DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_IDENTITY_KERNEL(DeviceType::kGPU)
+REGISTER_IDENTITY_KERNEL("identity", DeviceType::kGPU)
+REGISTER_IDENTITY_KERNEL("parallel_cast", DeviceType::kGPU)
 #endif
 
 }  // namespace

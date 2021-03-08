@@ -28,50 +28,32 @@ namespace oneflow {
 
 namespace compatible_py {
 
-static int64_t INVALID_BATCH_AXIS = -22;
 static int64_t INVALID_SPLIT_AXIS = -22;
 
 class BlobDesc : public Tensor {
  public:
   BlobDesc(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
-           const std::shared_ptr<Distribute>& distribute)
-      : lbi_(lbi), distribute_(distribute) {
-    lbn_ = lbi->op_name() + "/" + lbi->blob_name();
-  }
+           const std::shared_ptr<Distribute>& distribute);
 
   BlobDesc(const BlobDesc& blob_desc) = default;
   virtual ~BlobDesc() override = default;
 
-  virtual std::shared_ptr<cfg::LogicalBlobId> lbi() const override { return lbi_; }
-  virtual std::string logical_blob_name() const override { return lbn_; }
-  virtual std::string op_name() const override { return lbi_->op_name(); }
-  virtual std::string blob_name() const override { return lbi_->blob_name(); }
-  virtual std::shared_ptr<Shape> shape() const override { UNIMPLEMENTED(); }
-  virtual DataType dtype() const override { UNIMPLEMENTED(); }
-  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const override { UNIMPLEMENTED(); }
+  virtual std::shared_ptr<cfg::LogicalBlobId> lbi() const override;
+  virtual std::string logical_blob_name() const override;
+  virtual std::string op_name() const override;
+  virtual std::string blob_name() const override;
+  virtual std::shared_ptr<Shape> shape() const override;
+  virtual DataType dtype() const override;
+  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const override;
 
-  virtual int64_t batch_axis() const { UNIMPLEMENTED(); }
-  virtual bool has_batch_axis() const { return batch_axis() != INVALID_BATCH_AXIS; }
-  virtual bool is_dynamic() const { UNIMPLEMENTED(); }
-  virtual bool is_tensor_list() const { UNIMPLEMENTED(); }
-  virtual std::shared_ptr<Distribute> distribute() const { return distribute_; }
-  virtual std::string unique_name() const { return lbn_ + *CHECK_JUST(Distribute2Str()); }
+  virtual bool is_dynamic() const;
+  virtual std::shared_ptr<Distribute> distribute() const;
+  virtual std::string unique_name() const;
 
-  void set_distribute(const std::shared_ptr<Distribute> distribute) { distribute_ = distribute; }
+  void set_distribute(const std::shared_ptr<Distribute> distribute);
 
  protected:
-  Maybe<std::string> Distribute2Str() const {
-    if (std::dynamic_pointer_cast<AutoDistribute>(distribute_)) {
-      return std::string("");
-    } else if (std::dynamic_pointer_cast<BroadcastDistribute>(distribute_)) {
-      return std::string(":B");
-    } else if (std::dynamic_pointer_cast<SplitDistribute>(distribute_)) {
-      return std::string(":S") + std::to_string(distribute_->axis());
-    } else {
-      OF_UNIMPLEMENTED();
-    }
-    return std::string("");
-  }
+  Maybe<std::string> Distribute2Str() const;
 
   std::shared_ptr<cfg::LogicalBlobId> lbi_;
   std::shared_ptr<Distribute> distribute_;

@@ -749,8 +749,7 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
     const auto& lbi = GenLogicalBlobId(loss_lbn);
     CHECK(loss_lbi2op_node.emplace(lbi, LossOpNode4OpName(lbi.op_name())).second);
   }
-  const Shape src_time_shape(
-      {GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
+  const Shape src_time_shape({1, 1});
   const int64_t source_time_shape_elem_cnt = src_time_shape.elem_cnt();
   bool all_loss_time_shape_eq_src = true;
   for (const auto& pair : loss_lbi2op_node) {
@@ -782,7 +781,7 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
       CHECK(!cur_blob_desc->is_dynamic());
       const DataType loss_data_type = cur_blob_desc->data_type();
       const int64_t time_shape_elem_cnt = pair.second->out_blob_time_shape()->elem_cnt();
-      // TODO: consider batch_axis or sbp
+      // TODO: consider sbp
       const int64_t loss_elem_cnt =
           cur_blob_desc->shape().elem_cnt() * time_shape_elem_cnt / source_time_shape_elem_cnt;
       if (blob_desc) {
@@ -937,23 +936,18 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
     const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
     if (model_op_node->parallel_desc().parallel_num() <= 1) { continue; }
     int64_t scope_symbol_id = model_op_node->op().op_conf().scope_symbol_id();
-    OperatorConf parallel_cast_op_conf{};
-    parallel_cast_op_conf.set_name("System-AutoGrad-ParallelCast-" + NewUniqueId());
-    ParallelCastOpConf* parallel_cast_conf = parallel_cast_op_conf.mutable_parallel_cast_conf();
-    parallel_cast_conf->set_in(GenLogicalBlobName(diff_lbi));
-    parallel_cast_conf->set_out("out");
     const SbpParallel& model_sbp = model_op_node->SbpParallel4Lbi(lbi);
-    if (model_sbp.has_broadcast_parallel()) {
-      parallel_cast_conf->mutable_split_axis()->clear_value();
-    } else if (model_sbp.has_split_parallel()) {
-      parallel_cast_conf->mutable_split_axis()->set_value(model_sbp.split_parallel().axis());
-    } else {
-      UNIMPLEMENTED();
-    }
-    parallel_cast_op_conf.set_scope_symbol_id(scope_symbol_id);
-    job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(), {parallel_cast_op_conf});
-    diff_lbi.set_op_name(parallel_cast_op_conf.name());
-    diff_lbi.set_blob_name(parallel_cast_conf->out());
+    auto parallel_cast_op =
+        user_op::UserOpConfWrapperBuilder("System-AutoGrad-ParallelCast-" + NewUniqueId())
+            .Op("parallel_cast")
+            .Input("in", GenLogicalBlobName(diff_lbi))
+            .Output("out")
+            .Attr("sbp_parallel", SbpParallelToString(model_sbp))
+            .ScopeSymbolId(scope_symbol_id)
+            .Build();
+    job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),
+                        {parallel_cast_op.op_conf()});
+    diff_lbi = GenLogicalBlobId(parallel_cast_op.output("out", 0));
   }
 }
 

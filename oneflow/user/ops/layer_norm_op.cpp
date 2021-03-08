@@ -71,16 +71,12 @@ REGISTER_USER_OP("layer_norm")
       const Shape param_shape(param_shape_dim_vec);
       if (center) {
         const user_op::TensorDesc* beta = ctx->TensorDesc4ArgNameAndIndex("beta", 0);
-        CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
-                        || ctx->SbpParallel4ArgNameAndIndex("beta", 0).has_broadcast_parallel());
         CHECK_EQ_OR_RETURN(beta->shape(), param_shape);
         CHECK_EQ_OR_RETURN(beta->data_type(), x->data_type());
       }
       if (scale) {
         user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
         const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
-        CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
-                        || ctx->SbpParallel4ArgNameAndIndex("gamma", 0).has_broadcast_parallel());
         CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
         CHECK_EQ_OR_RETURN(gamma->data_type(), x->data_type());
         *normalized = *x;
@@ -90,13 +86,6 @@ REGISTER_USER_OP("layer_norm")
       *mean->mut_shape() = InferBnParamShape(x->shape(), begin_norm_axis);
       *mean->mut_data_type() = InferBnParamDataType(x->data_type());
       *inv_variance = *mean;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      for (const auto& ob : ctx->outputs()) {
-        *ctx->BatchAxis4ArgNameAndIndex(ob.first, ob.second) =
-            *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-      }
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -139,13 +128,6 @@ REGISTER_USER_OP("layer_norm_grad")
         const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output->data_type(), dx->data_type());
         CHECK_EQ_OR_RETURN(add_to_output->shape(), dx->shape());
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      for (const auto& ob : ctx->outputs()) {
-        *ctx->BatchAxis4ArgNameAndIndex(ob.first, ob.second) =
-            *ctx->BatchAxis4ArgNameAndIndex("x", 0);
       }
       return Maybe<void>::Ok();
     })
@@ -213,33 +195,8 @@ REGISTER_USER_OP("layer_norm_param_grad")
       }
       if (has_gamma) {
         const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
-        CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
-                        || ctx->SbpParallel4ArgNameAndIndex("gamma", 0).has_broadcast_parallel())
-            << "parallel_num: " << ctx->parallel_ctx().parallel_num() << ", "
-            << "gamma sbp:" << ctx->SbpParallel4ArgNameAndIndex("gamma", 0).DebugString();
         CHECK_EQ_OR_RETURN(gamma->data_type(), dy->data_type());
         CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      for (const auto& ob : ctx->outputs()) {
-        ctx->BatchAxis4ArgNameAndIndex(ob.first, ob.second)->clear_value();
-      }
-      // TODO: tsai: replace lambda with user op if
-      auto has_tensor = [ctx](const std::string& bn) -> bool {
-        bool ret = false;
-        for (auto t : ctx->inputs()) {
-          if (bn == t.first) { return true; }
-        }
-        for (auto t : ctx->outputs()) {
-          if (bn == t.first) { return true; }
-        }
-        return ret;
-      };
-      if (has_tensor("normalized_diff")) {
-        *ctx->BatchAxis4ArgNameAndIndex("normalized_diff", 0) =
-            *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
       }
       return Maybe<void>::Ok();
     })

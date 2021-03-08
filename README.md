@@ -114,7 +114,7 @@
 
 2. #### Clone Source Code
 
-    - #### Option 1: Clone source code from github
+    - #### Option 1: Clone source code from GitHub
 
       ```bash
       git clone https://github.com/Oneflow-Inc/oneflow --depth=1
@@ -221,7 +221,7 @@ For those who would like to understand the OneFlow internals, please read the do
 * [BERT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/BERT)
 
 ## Communication
-* Github issues : any install, bug, feature issues.
+* GitHub issues : any install, bug, feature issues.
 * [www.oneflow.org](http://www.oneflow.org) : brand related information.
 
 ## Contributing

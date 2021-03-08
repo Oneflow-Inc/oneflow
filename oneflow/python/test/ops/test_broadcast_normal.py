@@ -71,8 +71,6 @@ def RunOneflowOp(device_type, flow_op, x, y, data_type):
             return loss
 
     # Oneflow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     out = FlowJob(x, y).get().numpy()
     x_diff = test_global_storage.Get("x_diff")
     y_diff = test_global_storage.Get("y_diff")
@@ -101,8 +99,8 @@ def compare_with_tensorflow_grad(
     input_maxval=10,
     out_rtol=1e-5,
     out_atol=1e-5,
-    diff_rtol=1e-5,
-    diff_atol=1e-5,
+    diff_rtol=1e-4,
+    diff_atol=1e-3,
 ):
     assert device_type in ["gpu", "cpu"]
 

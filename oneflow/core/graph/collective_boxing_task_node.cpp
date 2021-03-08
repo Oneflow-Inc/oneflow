@@ -18,9 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
-void CollectiveBoxingGenericTaskNode::Init(int64_t machine_id, int64_t thrd_id, int64_t area_id,
+void CollectiveBoxingGenericTaskNode::Init(int64_t machine_id, int64_t thrd_id,
                                            const OperatorConf& op_conf) {
-  set_area_id(area_id);
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
   op_conf_ = op_conf;
@@ -41,7 +40,7 @@ void CollectiveBoxingGenericTaskNode::ConsumeAllRegsts() {
 
 void CollectiveBoxingGenericTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<Operator> boxing_op = ConstructOp(op_conf_, &GlobalJobDesc());
+  std::shared_ptr<Operator> boxing_op = ConstructOp(op_conf_);
   node->mut_op() = boxing_op;
   for (const std::string& ibn : boxing_op->input_bns()) {
     node->BindBnWithRegst(ibn, GetSoleConsumedRegst("in"));
@@ -57,10 +56,7 @@ void CollectiveBoxingGenericTaskNode::BuildExecGphAndRegst() {
 
 void CollectiveBoxingGenericTaskNode::InferProducedDataRegstTimeShape() {
   auto out_regst = GetProducedRegst("out");
-  if (out_regst != nullptr) {
-    out_regst->mut_data_regst_time_shape()->reset(
-        new Shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()}));
-  }
+  if (out_regst != nullptr) { out_regst->mut_data_regst_time_shape()->reset(new Shape({1, 1})); }
 }
 
 }  // namespace oneflow

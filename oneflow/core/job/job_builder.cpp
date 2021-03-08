@@ -50,9 +50,6 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
   for (auto& pair : *(job_parallel_view_conf->mutable_op_name2sbp_signature_conf())) {
     op_name2sbp_signature_conf_.emplace(pair.first, &pair.second);
   }
-  for (auto& pair : *(job->mutable_helper()->mutable_lbn2batch_axis())) {
-    lbn2batch_axis_.emplace(pair.first, &pair.second);
-  }
   auto* helper_conf = job->mutable_helper();
   for (auto& pair : *(helper_conf->mutable_op_name2op_time_shape())) {
     op_name2time_shapes_.emplace(pair.first, &pair.second);
@@ -79,6 +76,20 @@ const ParallelConf& JobBuilder::ParallelConf4Lbi(const LogicalBlobId& lbi) const
   const auto& iter = lbi2blob_parallel_conf_.find(lbi);
   if (iter != lbi2blob_parallel_conf_.end()) { return *iter->second; }
   return ParallelConf4OpName(lbi.op_name());
+}
+
+Maybe<void> JobBuilder::AddOp(const ParallelConf& parallel_conf, const OperatorConf& op_conf) {
+  auto* placemnt_group = job_->mutable_placement()->add_placement_group();
+  *placemnt_group->mutable_parallel_conf() = parallel_conf;
+  CHECK_OR_RETURN(op_name2op_conf_.find(op_conf.name()) == op_name2op_conf_.end());
+  OperatorConf* mut_op_conf = job_->mutable_net()->add_op();
+  *mut_op_conf = op_conf;
+  CHECK_OR_RETURN(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
+  placemnt_group->mutable_op_set()->add_op_name(op_conf.name());
+  CHECK_OR_RETURN(
+      op_name2parallel_conf_.emplace(op_conf.name(), placemnt_group->mutable_parallel_conf())
+          .second);
+  return Maybe<void>::Ok();
 }
 
 void JobBuilder::AddOps(const ParallelConf& parallel_conf,
@@ -155,7 +166,6 @@ void JobBuilder::RemoveOpByName(const std::unordered_set<std::string>& removing_
     // Update time shape
     if (time_shape_conf->count(op_name) > 0) { time_shape_conf->erase(op_name); }
   }
-  // Update batch dim lbis
   // Update identical sbp oba pairs
   if (job_->helper().has_identical_sbp_oba_pairs()) {
     auto identical_sbp_oba_pairs = job_->helper().identical_sbp_oba_pairs().pair();
@@ -172,7 +182,6 @@ void JobBuilder::RemoveOpByName(const std::unordered_set<std::string>& removing_
   op_name2op_conf_.swap(builder.op_name2op_conf_);
   op_name2parallel_conf_.swap(builder.op_name2parallel_conf_);
   op_name2sbp_signature_conf_.swap(builder.op_name2sbp_signature_conf_);
-  lbn2batch_axis_.swap(builder.lbn2batch_axis_);
 }
 
 void JobBuilder::DelOps(const std::vector<std::string>& op_names) {
@@ -185,6 +194,12 @@ void JobBuilder::DelOps(const std::vector<OperatorConf>& op_confs) {
   std::unordered_set<std::string> removing_names;
   for (const auto& op_conf : op_confs) { removing_names.insert(op_conf.name()); }
   RemoveOpByName(removing_names);
+}
+
+Maybe<void> JobBuilder::MutOpOnlyOnce(const OperatorConf& op_conf) {
+  CHECK_OR_RETURN(modified_op_conf_op_names_.emplace(op_conf.name()).second);
+  op_name2op_conf_.at(op_conf.name())->CopyFrom(op_conf);
+  return Maybe<void>::Ok();
 }
 
 void JobBuilder::MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs) {
@@ -214,7 +229,7 @@ void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Han
     auto it = op_name2parallel_conf_.find(pair.first);
     CHECK(it != op_name2parallel_conf_.end()) << "op_name: " << pair.first;
     DeviceType device_type = ParallelDesc(*it->second).device_type();
-    std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type, &GlobalJobDesc());
+    std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type);
     Handler(*op);
   }
 }
@@ -281,22 +296,6 @@ void JobBuilder::AddTimeShape4OpName(const std::string& op_name, const OpTimeSha
     auto* time_shape_conf = job_->mutable_helper()->mutable_op_name2op_time_shape();
     (*time_shape_conf)[op_name] = time_shape;
     op_name2time_shapes_[op_name] = &((*time_shape_conf)[op_name]);
-  }
-}
-
-const OptInt64& JobBuilder::BatchAxis4Lbn(const std::string& lbn) const {
-  const auto& it = lbn2batch_axis_.find(lbn);
-  CHECK(it != lbn2batch_axis_.end());
-  return *(it->second);
-}
-
-void JobBuilder::AddBatchAxis4Lbn(const std::string& lbn, const OptInt64& axis) {
-  bool update =
-      (lbn2batch_axis_.count(lbn) == 0) || (lbn2batch_axis_[lbn]->value() != axis.value());
-  if (update) {
-    auto* batch_axis = job_->mutable_helper()->mutable_lbn2batch_axis();
-    (*batch_axis)[lbn] = axis;
-    lbn2batch_axis_[lbn] = &((*batch_axis)[lbn]);
   }
 }
 

@@ -194,7 +194,7 @@ class ConvGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                    \
-        const JobDesc& job_desc = ctx->job_desc();                                     \
+        const JobDesc& job_desc = *ctx->job_desc();                                    \
         const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);                     \
         const auto* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);             \
         const auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);                   \
@@ -266,7 +266,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))          \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
-        const JobDesc& job_desc = ctx->job_desc();                                              \
+        const JobDesc& job_desc = *ctx->job_desc();                                             \
         const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);                              \
         const auto* filter = ctx->TensorDesc4ArgNameAndIndex("filter", 0);                      \
         const auto* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);                              \
@@ -325,7 +325,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                    \
-        const JobDesc& job_desc = ctx->job_desc();                                     \
+        const JobDesc& job_desc = *ctx->job_desc();                                    \
         const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);                     \
         const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);                       \
         const auto* filter_diff = ctx->TensorDesc4ArgNameAndIndex("filter_diff", 0);   \

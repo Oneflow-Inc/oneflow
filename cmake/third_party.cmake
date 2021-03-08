@@ -100,9 +100,13 @@ else()
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
-set(oneflow_third_party_libs
+# libraries only a top level .so or exe should be linked to
+set(oneflow_exe_third_party_libs
     ${GLOG_STATIC_LIBRARIES}
     ${GFLAGS_STATIC_LIBRARIES}
+)
+
+set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
     ${PROTOBUF_STATIC_LIBRARIES}

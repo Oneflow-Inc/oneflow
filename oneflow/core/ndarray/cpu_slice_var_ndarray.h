@@ -27,7 +27,7 @@ class CpuSliceVarNdarray : public CpuNdarray<typename XT::dtype, XT::ndims> {
  public:
   CpuSliceVarNdarray(XT&& x, std::array<Slice, XT::ndims>&& slices)
       : CpuNdarray<typename XT::dtype, XT::ndims>(
-            BoundedSlices2Shape(BoundSlices(x, std::move(slices)))),
+          BoundedSlices2Shape(BoundSlices(x, std::move(slices)))),
         x_(x),
         slices_(std::move(slices)) {
     SetContiguousLength(slices);

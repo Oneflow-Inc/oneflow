@@ -53,16 +53,11 @@ class JobDesc final {
   bool EnableCudnn() const { return job_conf_.enable_cudnn(); }
   bool IsTrain() const { return job_conf_.has_train_conf(); }
   bool IsPredict() const { return job_conf_.has_predict_conf(); }
-  int64_t piece_num_of_experiment_phase() const;
   bool use_memory_allocation_algorithm_v2() const {
     return job_conf_.use_memory_allocation_algorithm_v2();
   }
-  bool enable_experiment_run() const;
   bool enable_reuse_mem() const { return job_conf_.enable_reuse_mem(); }
   bool enable_inplace() const { return job_conf_.enable_inplace(); }
-  bool enable_float_compute_for_half_gemm() const {
-    return job_conf_.enable_float_compute_for_half_gemm();
-  }
   bool enable_auto_mixed_precision() const { return job_conf_.enable_auto_mixed_precision(); }
   bool do_parallel_cast_before_widening_type_cast() const {
     return job_conf_.do_parallel_cast_before_widening_type_cast();
@@ -70,8 +65,6 @@ class JobDesc final {
   bool prune_parallel_cast_ops() const { return job_conf_.prune_parallel_cast_ops(); }
   bool prune_cast_to_static_shape_ops() const { return job_conf_.prune_cast_to_static_shape_ops(); }
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
-
-  bool enable_keep_header_only() const { return job_conf_.enable_keep_header_only(); }
 
   bool has_xrt_config() const { return job_conf_.has_xrt_config(); }
   const XrtConfig& xrt_config() const { return job_conf_.xrt_config(); }
@@ -86,10 +79,6 @@ class JobDesc final {
   DEFINE_FUNCTION_CONFIG_GETTER(int64_t, Int64, at_int64);
   DEFINE_FUNCTION_CONFIG_GETTER(double, Double, at_double);
   DEFINE_FUNCTION_CONFIG_GETTER(const std::string&, String, at_string);
-
-  // Train conf
-  int64_t TotalBatchNum() const;
-  int64_t NumOfPiecesInBatch() const;
 
  private:
   Maybe<void> Init();

@@ -25,8 +25,8 @@ class BoxingZerosOp : public Operator {
   ~BoxingZerosOp() override = default;
 
   void InitFromOpConf() override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx) const override;
 
  private:
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
@@ -43,7 +43,7 @@ LogicalBlobId BoxingZerosOp::lbi4obn(const std::string& output_bn) const {
   return this->op_conf().boxing_zeros_conf().lbi();
 }
 
-Maybe<void> BoxingZerosOp::InferBlobDescs(
+Maybe<void> BoxingZerosOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BoxingZerosOpConf& conf = this->op_conf().boxing_zeros_conf();

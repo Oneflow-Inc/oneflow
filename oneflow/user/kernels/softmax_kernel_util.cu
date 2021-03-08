@@ -76,27 +76,6 @@ __global__ void BroadcastSubExpGpuImpl(const int64_t num_instances, const int64_
 }
 
 template<typename T>
-__global__ void BroadcastDivGpuImpl(const int64_t num_instances, const int64_t num_classes,
-                                    const T* x, const T* y, T* z) {
-  using ComputeType = typename ComputeDataType<T>::type;
-  const int64_t tid = threadIdx.x;
-  __shared__ ComputeType inv_row_div;
-  for (int64_t row = blockIdx.x; row < num_instances; row += gridDim.x) {
-    const int64_t row_offset = row * num_classes;
-    const T* x_row = x + row_offset;
-    T* z_row = z + row_offset;
-    if (tid == 0) {
-      inv_row_div = static_cast<ComputeType>(1.0) / static_cast<ComputeType>(y[row]);
-    }
-    __syncthreads();
-    const ComputeType inv_row_div_t = inv_row_div;
-    for (int64_t col = tid; col < num_classes; col += kSoftmaxGpuBlockSize) {
-      z_row[col] = static_cast<T>(static_cast<ComputeType>(x_row[col]) * inv_row_div_t);
-    }
-  }
-}
-
-template<typename T>
 int64_t GetMinNumClasses() {
   return 32;
 }
@@ -114,21 +93,6 @@ void BroadcastSubExpGpu<float16>(DeviceCtx* ctx, const int64_t num_instances,
                                  float16* z) {
   BroadcastSubExpGpu<half>(ctx, num_instances, num_classes, reinterpret_cast<const half*>(x),
                            reinterpret_cast<const half*>(y), reinterpret_cast<half*>(z));
-}
-
-template<typename T>
-void BroadcastDivGpu(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
-                     const T* x, const T* y, T* z) {
-  BroadcastDivGpuImpl<<<GetSoftmaxNumBlocks(num_instances), GetSoftmaxBlockSize(), 0,
-                        ctx->cuda_stream()>>>(num_instances, num_classes, x, y, z);
-}
-
-template<>
-void BroadcastDivGpu<float16>(DeviceCtx* ctx, const int64_t num_instances,
-                              const int64_t num_classes, const float16* x, const float16* y,
-                              float16* z) {
-  BroadcastDivGpu<half>(ctx, num_instances, num_classes, reinterpret_cast<const half*>(x),
-                        reinterpret_cast<const half*>(y), reinterpret_cast<half*>(z));
 }
 
 }  // namespace
@@ -173,12 +137,7 @@ struct SoftmaxKernelUtil<DeviceType::kGPU, T> {
     NdarrayUtil<DeviceType::kGPU, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, prob),
                                                 reduce_storage_var);
     // div | prob[i][j] /= tmp[i]
-    if (w >= GetMinNumClasses<T>()) {
-      BroadcastDivGpu(ctx, n, w, prob, tmp, prob);
-    } else {
-      NdarrayUtil<DeviceType::kGPU, T>::InplaceBroadcastDiv(ctx, Var({n, w}, prob),
-                                                            Val({n, 1}, tmp));
-    }
+    NdarrayUtil<DeviceType::kGPU, T>::InplaceBroadcastDiv(ctx, Var({n, w}, prob), Val({n, 1}, tmp));
   }
 
   static void ComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* dy,

@@ -72,8 +72,6 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = SoftmaxJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
@@ -97,6 +95,7 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSoftmax(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_softmax_shape(test_case):
         if flow.eager_execution_enabled():
             print("\nSkip under erger mode!")

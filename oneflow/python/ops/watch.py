@@ -18,7 +18,6 @@ from __future__ import absolute_import
 import uuid
 from typing import Callable, Optional, Union
 
-import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_ctx
@@ -38,6 +37,7 @@ import oneflow
 from oneflow_api import ConsistentBlob, MirroredBlob
 import oneflow_api
 import inspect
+import numpy as np
 
 
 @oneflow_export("watch")
@@ -45,17 +45,17 @@ def Watch(
     blob_watched: oneflow_api.BlobDesc,
     handler_or_prompt: Optional[Union[Callable, str]] = None,
 ) -> None:
-    r"""Register callback for a blob. The callback function will be called after the computation produce the blob finishes. We can use it to watch the values of Blob. 
+    r"""Register callback for a blob. The callback function will be called after the computation produce the blob finishes. We can use it to watch the values of Blob.
 
     Args:
         blob_watched: a `Blob`
         handler_or_prompt: a function has an argument of a `Blob`
-    
-    For example: 
 
-    Example 1: 
+    For example:
 
-    .. code-block:: python 
+    Example 1:
+
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -83,9 +83,9 @@ def Watch(
 
         # out [2.5 2.5 2.5 2.5 2.5]
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -177,11 +177,11 @@ def WatchDiff(
         blob_watched: a `Blob`
         handler_or_prompt: a function has an argument of a `Blob`
 
-    For example: 
+    For example:
 
-    Example 1: 
+    Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -218,7 +218,7 @@ def WatchDiff(
             return loss
 
 
-        if __name__ == "__main__": 
+        if __name__ == "__main__":
             checkpoint = flow.train.CheckPoint()
             checkpoint.init()
             (train_images, train_labels), (test_images, test_labels) = flow.data.load_mnist(
@@ -226,19 +226,19 @@ def WatchDiff(
             )
             for i, (images, labels) in enumerate(zip(train_images, train_labels)):
                 loss = train_job(images, labels)
-    
-        
+
+
         # watch_diff_handler: [[-1.88834548e-01  2.71021971e-03  2.28271242e-02  7.17673637e-03
         #                       4.10183379e-03  8.93106461e-02  2.23669074e-02  3.86103359e-03
         #                       3.12465224e-02  5.23346756e-03] .....
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        import numpy as np 
+        import numpy as np
 
 
         BATCH_SIZE = 20
@@ -269,8 +269,8 @@ def WatchDiff(
             check_point = flow.train.CheckPoint()
             check_point.init()
 
-            x = np.array([[1, 1, 1], 
-                        [1, 1, 1], 
+            x = np.array([[1, 1, 1],
+                        [1, 1, 1],
                         [1, 1, 1]]).astype(np.float32)
             watch_matmul_diff_job(x)
 
@@ -278,13 +278,13 @@ def WatchDiff(
         #                      [3. 3. 3.]
         #                      [3. 3. 3.]]
 
-    Example 3: 
+    Example 3:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        import numpy as np 
+        import numpy as np
 
 
         def watch_diff_handler(blob: tp.Numpy):
@@ -304,7 +304,7 @@ def WatchDiff(
                     initializer=weight_initializer
                 )
                 output = flow.nn.conv2d(images, weight, strides=1, padding="VALID")
-            
+
             lr_scheduler = flow.optimizer.PiecewiseConstantScheduler([], [0.1])
             flow.optimizer.SGD(lr_scheduler, momentum=0.9).minimize(output)
             flow.watch_diff(weight, watch_diff_handler)
@@ -320,7 +320,7 @@ def WatchDiff(
                             [13., 14., 15., 16.]]]]).astype(np.float32)
 
             watch_conv_diff_job(x)
-        
+
         # watch_diff_handler: [[[[14. 18. 22.]
         #                        [30. 34. 38.]
         #                        [46. 50. 54.]]]]
@@ -420,16 +420,20 @@ def _MakeHandler4ParallelIdAndLocalBlob(blob_watched, handler):
             parallel_id2consistent_local_blob[parallel_id]
             for i in range(len_sub_remote_blobs)
         ]
-        local_blob = local_blob_util.MergeLocalBlobs(local_blob_list, blob_watched)
+        local_numpy = local_blob_list[0].numpy()
+        if len(local_blob_list) > 1:
+            print("WARNING: watch return tensor list will concat as axis = 0.")
+            local_numpy_list = [x.numpy() for x in local_blob_list]
+            local_numpy = np.concatenate(local_numpy_list, axis=0)
+        local_blob = local_blob_util.LocalBlob(local_numpy, blob_watched.is_dynamic)
         handler(oft_util.TransformWatchedBlob(local_blob, handler))
 
     return HandlerParallelIdAndLocalBlob
 
 
 def GetTypeAnnotation(blob_watched):
+    # TODO(chengcheng): oft.Numpy support dynamic
     if not blob_watched.is_dynamic:
         return oft.Numpy
-    elif not blob_watched.is_tensor:
-        return oft.ListNumpy
     else:
-        return oft.ListListNumpy
+        return oft.ListNumpy
