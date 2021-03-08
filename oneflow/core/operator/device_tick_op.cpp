@@ -27,7 +27,9 @@ void DeviceTickOp::InitFromOpConf() {
 namespace {
 
 Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
-  BlobDesc4BnInOp("out")->mut_shape() = Shape({1});
+  BlobDesc* blob_desc = BlobDesc4BnInOp("out");
+  blob_desc->mut_shape() = Shape({1});
+  blob_desc->set_data_type(DataType::kUInt8);
   return Maybe<void>::Ok();
 }
 
@@ -41,7 +43,7 @@ Maybe<void> DeviceTickOp::InferLogicalOutBlobDescs(
 
 Maybe<void> DeviceTickOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 

@@ -32,7 +32,6 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.typing as oft
 import oneflow.python.framework.typing_util as oft_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
 import typing
@@ -188,7 +187,7 @@ def _RecusiveMakeInputBlobDef(cls):
             ("\nannotation %s" % cls)
             + "not supported"
             + "\nonly support oneflow.typing.Numpy.Placeholder, "
-            "oneflow.typing.ListNumpy.Placeholder and oneflow.typing.ListListNumpy.Placeholder"
+            "oneflow.typing.ListNumpy.Placeholder"
         )
 
 

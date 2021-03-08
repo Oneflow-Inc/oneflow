@@ -257,21 +257,8 @@ int64_t Actor::GetPieceId4NaiveOrInplaceCurReadableDataRegst() const {
 }
 
 void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
-  switch (GetDeviceType()) {
-    case DeviceType::kCPU: {
-      device_ctx_.reset(new CpuDeviceCtx());
-      break;
-    }
-#ifdef WITH_CUDA
-    case DeviceType::kGPU: {
-      CudaStreamHandle* cuda_handle = nullptr;
-      cuda_handle = thread_ctx.g_cuda_stream.get();
-      device_ctx_.reset(new CudaDeviceCtx(cuda_handle));
-      break;
-    }
-#endif
-    default: { UNIMPLEMENTED(); }
-  }
+  DeviceCtx* dev_ctx = NewObj<int, DeviceCtx, const ThreadCtx&>(GetDeviceType(), thread_ctx);
+  device_ctx_.reset(dev_ctx);
 }
 
 KernelCtx Actor::GenDefaultKernelCtx() const {
