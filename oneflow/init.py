@@ -44,6 +44,7 @@ def import_oneflow_internal2():
 oneflow_api = import_oneflow_internal2()
 
 Size = oneflow_api.Size
+device = oneflow_api.device
 
 # define dtype at the begining of oneflow init
 
