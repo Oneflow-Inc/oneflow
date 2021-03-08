@@ -33,7 +33,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   OF_DISALLOW_COPY_AND_MOVE(OpNode);
   explicit OpNode(const ParallelDesc& parallel_desc, const OperatorConf& op_conf)
       : parallel_desc_(parallel_desc),
-        op_(ConstructOp(op_conf, parallel_desc.device_type(), &GlobalJobDesc())),
+        op_(ConstructOp(op_conf, parallel_desc.device_type())),
         ibns_(op_->input_bns().begin(), op_->input_bns().end()) {}
   ~OpNode() = default;
 

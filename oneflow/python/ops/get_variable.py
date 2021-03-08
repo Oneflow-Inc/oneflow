@@ -322,7 +322,7 @@ def GenerateVariableOpConf(
         op_conf.variable_conf.regularizer.CopyFrom(regularizer)
 
     if trainable is not None:
-        op_conf.trainable = trainable
+        op_conf.variable_conf.trainable = trainable
 
     if model_name is not None:
         op_conf.variable_conf.model_name = model_name

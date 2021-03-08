@@ -23,7 +23,6 @@ REGISTER_USER_OP("cast_to_static_shape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* input_desc = ctx->TensorDesc4ArgNameAndIndex("input", 0);
       user_op::TensorDesc* output_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
-      CHECK_OR_RETURN(!input_desc->is_tensor_list());
       *output_desc = *input_desc;
       output_desc->set_is_dynamic(false);
       return Maybe<void>::Ok();

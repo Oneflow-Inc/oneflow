@@ -22,7 +22,7 @@ Maybe<void> OpKernelObject::ResetOpAndKernel(
     const OpNodeSignatureDesc& op_node_signature, const ParallelContext* parallel_ctx,
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc* parallel_desc) {
-  auto op = ConstructOp(op_conf_, device_type_, job_desc_.get());
+  auto op = ConstructOp(op_conf_, device_type_);
   JUST(op->FillOpParallelDesc(*parallel_desc));
   const auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
     return CHECK_JUST(op_node_signature.LogicalBlobDesc4BnInOp(bn));
@@ -38,7 +38,7 @@ Maybe<void> OpKernelObject::ResetOpAndKernel(
 Maybe<void> OpKernelObject::InferBlobDescs(
     const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx) {
-  JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx));
+  JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()));
   return Maybe<void>::Ok();
 }
 
@@ -55,7 +55,7 @@ Maybe<void> SystemOpKernelObject::ResetKernel(
     const OpNodeSignatureDesc& op_node_signature, const ParallelContext* parallel_ctx,
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc* parallel_desc) {
-  auto op = ConstructOp(op_conf_, device_type_, job_desc_.get());
+  auto op = ConstructOp(op_conf_, device_type_);
   JUST(op->FillOpParallelDesc(*parallel_desc));
   const auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
     return CHECK_JUST(op_node_signature.LogicalBlobDesc4BnInOp(bn));
@@ -71,7 +71,7 @@ Maybe<void> SystemOpKernelObject::ResetKernel(
 Maybe<void> SystemOpKernelObject::InferBlobDescs(
     const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx) {
-  JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx));
+  JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()));
   return Maybe<void>::Ok();
 }
 
