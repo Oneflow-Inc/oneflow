@@ -24,13 +24,8 @@ namespace one {
 namespace {
 
 std::shared_ptr<const ParallelDesc> MakeParallelDescByDevice(const Device& device) {
-  int64_t machine_id = GlobalProcessCtx::Rank();
-  int64_t device_id = device.device_id();
-  std::string machine_device_id = std::to_string(machine_id) + ":" + std::to_string(device_id);
-  ParallelConf parallel_conf;
-  parallel_conf.set_device_tag(device.of_type());
-  parallel_conf.add_device_name(machine_device_id);
-  return std::make_shared<const ParallelDesc>(parallel_conf);
+  TODO();
+  return std::shared_ptr<const ParallelDesc>();
 }
 
 }  // namespace
