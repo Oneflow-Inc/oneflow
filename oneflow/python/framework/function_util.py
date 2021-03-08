@@ -850,9 +850,11 @@ def set_primary_lr(func_desc, value):
         value ([type]): [description]
     """
     print(
-        """WARNING: this API does nothing now. Please replace it by the new optimizer API.
+        """WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.
         """
     )
+    print(traceback.format_stack()[-3])
+    func_desc.job_config_proto.mutable_train_conf().set_primary_lr(value)
 
 
 @oneflow_function_config("train.secondary_lr")
@@ -864,9 +866,11 @@ def set_secondary_lr(func_desc, value):
         value ([type]): [description]
     """
     print(
-        """WARNING: this API does nothing now. Please replace it by the new optimizer API.
+        """WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.
         """
     )
+    print(traceback.format_stack()[-3])
+    func_desc.job_config_proto.mutable_train_conf().set_secondary_lr(value)
 
 
 @oneflow_function_config("default_placement_scope")

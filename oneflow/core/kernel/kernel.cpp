@@ -104,10 +104,6 @@ void Kernel::ForwardHeader(const KernelCtx& ctx,
   if (kernel_conf_.need_do_opaque_header()) {
     ForwardPackedHeader(ctx, BnInOp2Blob);
   } else {
-    CHECK(!this->kernel_conf().need_do_tensor_list())
-        << "Op's kernel (op_name: " << this->op_conf().name()
-        << ", op_type_case: " << this->op_conf().op_type_case()
-        << ") need to override ForwardHeader because of tensor list.";
     if (kernel_conf_.need_do_shape()) { ForwardShape(ctx, BnInOp2Blob); }
   }
 }

@@ -100,8 +100,6 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
   endforeach()
 
   list(APPEND PYBIND11_FILE_CONVERT_PROTO
-      oneflow/core/common/error.proto
-      oneflow/core/vm/instruction.proto
       oneflow/core/job/job_conf.proto
       oneflow/core/job/placement.proto
       oneflow/core/framework/user_op_attr.proto
@@ -110,7 +108,6 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/job/mirrored_parallel.proto
       oneflow/core/operator/op_attribute.proto
       oneflow/core/operator/op_node_signature.proto
-      oneflow/core/job/parallel_signature.proto
       oneflow/core/job/parallel_conf_signature.proto
       oneflow/core/job/initializer_conf.proto
       oneflow/core/job/regularizer_conf.proto
@@ -122,7 +119,6 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/common/shape.proto
       oneflow/core/register/blob_desc.proto
       oneflow/core/register/pod.proto
-      oneflow/core/eager/eager_symbol.proto
       oneflow/core/operator/op_conf.proto
   )
 
