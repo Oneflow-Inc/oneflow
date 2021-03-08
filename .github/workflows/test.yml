@@ -257,7 +257,7 @@ jobs:
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
       - name: Op test (eager)
-        if: matrix.test_suite != 'xla'
+        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
         run: |
           docker run \
             $extra_docker_args \
@@ -266,7 +266,7 @@ jobs:
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh || true"
       - name: Model test
-        if: matrix.test_suite != 'xla'
+        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
         run: |
           docker run \
             $extra_docker_args \
