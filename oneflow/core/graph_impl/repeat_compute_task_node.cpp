@@ -39,7 +39,6 @@ class RepeatCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecGphAndRegst() override;
-  void InferProducedDataRegstTimeShape() override;
 };
 
 void RepeatCompTaskNode::ConsumeAllRegsts() {
@@ -60,18 +59,6 @@ void RepeatCompTaskNode::BuildExecGphAndRegst() {
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleObn()));
   node->BindBnWithRegst(sole_op->SoleObn(), out_regst);
   node->InferBlobDescs(parallel_ctx());
-}
-
-void RepeatCompTaskNode::InferProducedDataRegstTimeShape() {
-  auto TimeShape4Ibn = [&](const std::string& ibn) -> const Shape* {
-    return GetSoleConsumedRegst("in")->data_regst_time_shape().get();
-  };
-  std::shared_ptr<Shape> time_shape(new Shape());
-  logical_node()->SoleOp()->InferOutputBlobTimeShape(TimeShape4Ibn, parallel_ctx(),
-                                                     time_shape.get());
-  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
-    *regst->mut_data_regst_time_shape() = time_shape;
-  });
 }
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("repeat", RepeatCompTaskNode);
