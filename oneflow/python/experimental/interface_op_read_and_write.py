@@ -37,7 +37,6 @@ def _GetInterfaceBlobObject(builder, op_name):
         return sess.var_name2var_blob[op_name].blob_object
     sess = session_ctx.GetDefaultSession()
     op_attribute = sess.OpAttribute4InterfaceOpName(op_name)
-    cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
     parallel_conf = sess.ParallelConf4LazyInterfaceOpName(op_name)
     if not isinstance(
         parallel_conf, oneflow_api.oneflow.core.job.placement.ParallelConf
@@ -48,7 +47,7 @@ def _GetInterfaceBlobObject(builder, op_name):
             parallel_conf_cfg.add_device_name(device_name)
         parallel_conf = parallel_conf_cfg
     blob_object = builder.MakeLazyRefBlobObject(
-        op_name, cfg_op_attribute, parallel_conf
+        op_name, str(op_attribute), parallel_conf
     )
     return blob_object
 

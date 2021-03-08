@@ -18,7 +18,6 @@ from __future__ import absolute_import
 import traceback
 
 import oneflow.python.framework.ofblob as ofblob
-import oneflow_api.oneflow.core.operator.op_attribute as op_attribute_cfg
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api.oneflow.core.job.job_conf as job_conf_cfg
 import oneflow_api.oneflow.core.job.scope as scope_cfg
@@ -57,25 +56,22 @@ class PythonCallback(oneflow_api.ForeignCallback):
             print(traceback.format_exc())
             raise e
 
-    def EagerInterpretCompletedOp(self, op_attribute, parallel_conf):
+    def EagerInterpretCompletedOp(self, op_attribute_str, parallel_conf):
         try:
-            # TODO(hanbinbin): str() will be removed after proto obj is replaced with cfg obj in python side
-            interpreter_callback.InterpretCompletedOp(str(op_attribute), parallel_conf)
+            interpreter_callback.InterpretCompletedOp(op_attribute_str, parallel_conf)
         except Exception as e:
             print(traceback.format_exc())
             raise e
 
-    def EagerMirroredCast(self, op_attribute, parallel_conf):
+    def EagerMirroredCast(self, op_attribute_str, parallel_conf):
         try:
-            # TODO(hanbinbin): str() will be removed after proto obj is replaced with cfg obj in python side
-            interpreter_callback.MirroredCast(str(op_attribute), parallel_conf)
+            interpreter_callback.MirroredCast(op_attribute_str, parallel_conf)
         except Exception as e:
             print(traceback.format_exc())
             raise e
 
     def MakeScopeSymbol(self, job_conf, parallel_conf, is_mirrored):
         try:
-            # TODO(hanbinbin): str() will be removed after proto obj is replaced with cfg obj in python side
             return interpreter_callback.MakeScopeSymbol(
                 job_conf, parallel_conf, is_mirrored
             )

@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_FOREIGN_CALLBACK_H_
 
 #include "oneflow/core/job/placement.cfg.h"
-#include "oneflow/core/operator/op_attribute.cfg.h"
 #include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/scope.cfg.h"
 
@@ -28,12 +27,12 @@ class ForeignCallback {
   ForeignCallback() = default;
   virtual ~ForeignCallback() = default;
 
-  virtual void EagerMirroredCast(const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+  virtual void EagerMirroredCast(const std::string& op_attribute_str,
                                  const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const {
     UNIMPLEMENTED();
   }
   virtual void EagerInterpretCompletedOp(
-      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+      const std::string& op_attribute_str,
       const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const {
     UNIMPLEMENTED();
   }

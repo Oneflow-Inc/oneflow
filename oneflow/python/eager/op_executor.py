@@ -69,11 +69,8 @@ def OpKernelCall(opkernel_object, op_attribute, blob_register):
         with blob_register_util.BnInOp2BlobObjectScope(
             blob_register, op_attribute
         ) as bn_in_op2blob_object:
-            cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
-                str(op_attribute)
-            )
             builder.StatefulCall(
-                cfg_op_attribute,
+                str(op_attribute),
                 opkernel_object,
                 bn_in_op2blob_object,
                 boxing_util.BoxingTo,
@@ -208,11 +205,8 @@ def _NaiveInterpret(op_attribute, parallel_conf, blob_register):
         with blob_register_util.BnInOp2BlobObjectScope(
             blob_register, op_attribute
         ) as bn_in_op2blob_object:
-            cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
-                str(op_attribute)
-            )
             builder.StatelessCall(
-                cfg_op_attribute,
+                str(op_attribute),
                 parallel_conf,
                 bn_in_op2blob_object,
                 boxing_util.BoxingTo,
@@ -288,11 +282,8 @@ def _EagerRunModelInit(var_op_conf):
         parallel_conf = (
             oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
         )
-        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
-            str(op_attribute)
-        )
         builder.StatelessCall(
-            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo
+            str(op_attribute), parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo
         )
 
     sess = session_ctx.GetDefaultSession()
@@ -308,11 +299,11 @@ def _MakeModelIOPathInputBuilds(op_conf, path, bn_in_op2blob_object):
         parallel_conf = (
             oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
         )
-        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
-            str(op_attribute)
-        )
         builder.StatelessCall(
-            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
+            str(op_attribute),
+            parallel_conf,
+            bn_in_op2blob_object,
+            boxing_util.BoxingTo,
         )
 
     def FeedPath(ofblob):
@@ -356,11 +347,8 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
             model_load_op_conf, ibn2blob_object=model_load_blob_objects
         )
         parallel_conf = path_blob_object.parallel_desc_symbol.parallel_conf
-        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
-            str(op_attribute)
-        )
         builder.StatelessCall(
-            cfg_op_attribute,
+            str(op_attribute),
             parallel_conf,
             model_load_blob_objects,
             boxing_util.BoxingTo,
@@ -398,11 +386,8 @@ def _EagerRunModelSave(var_blobs, snapshot_path):
             model_save_op_conf, ibn2blob_object=model_save_blob_objects
         )
         parallel_conf = path_blob_object.parallel_desc_symbol.parallel_conf
-        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
-            str(op_attribute)
-        )
         builder.StatelessCall(
-            cfg_op_attribute,
+            str(op_attribute),
             parallel_conf,
             model_save_blob_objects,
             boxing_util.BoxingTo,

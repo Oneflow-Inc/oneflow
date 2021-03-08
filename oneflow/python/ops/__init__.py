@@ -84,11 +84,8 @@ def EagerReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
     def BuildInstruction(builder):
         get_blob_scope = blob_register_util.BnInOp2BlobObjectScope
         with get_blob_scope(blob_register, op_attribute) as bn_in_op2blob_object:
-            cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
-                str(op_attribute)
-            )
             builder.StatelessCall(
-                cfg_op_attribute,
+                str(op_attribute),
                 remote_blob.blob_object.parallel_desc_symbol.parallel_conf,
                 bn_in_op2blob_object,
                 boxing_util.BoxingTo,

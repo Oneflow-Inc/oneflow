@@ -354,11 +354,11 @@ def CreateEagerVariableBlob(op_attribute, job_name=""):
         parallel_conf = (
             oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
         )
-        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
-            str(op_attribute)
-        )
         builder.StatelessCall(
-            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
+            str(op_attribute),
+            parallel_conf,
+            bn_in_op2blob_object,
+            boxing_util.BoxingTo,
         )
 
     oneflow_api.deprecated.LogicalRun(BuildInstruction)
