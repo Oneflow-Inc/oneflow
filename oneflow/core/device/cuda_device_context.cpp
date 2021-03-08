@@ -13,16 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/blob_trait.h"
+#include "oneflow/core/device/cuda_device_context.h"
+#include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
 
-namespace compatible_py {
+#ifdef WITH_CUDA
 
-std::shared_ptr<Shape> BlobHeaderTrait::static_shape() const { UNIMPLEMENTED(); }
-std::shared_ptr<Shape> BlobHeaderTrait::shape() const { UNIMPLEMENTED(); }
-DataType BlobHeaderTrait::dtype() const { UNIMPLEMENTED(); }
+REGISTER_DEVICE_CONTEXT(DeviceType::kGPU, ([](const ThreadCtx& thread_ctx) -> DeviceCtx* {
+                          CudaStreamHandle* cuda_handle = nullptr;
+                          cuda_handle = thread_ctx.g_cuda_stream.get();
+                          return new CudaDeviceCtx(cuda_handle);
+                        }));
 
-}  // namespace compatible_py
+#endif  // WITH_CUDA
 
 }  // namespace oneflow

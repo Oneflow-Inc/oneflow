@@ -62,8 +62,6 @@ class LazyConsistentBlob : public ConsistentBlob {
 
   bool is_dynamic() const override;
 
-  bool is_tensor_list() const override;
-
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const override;
 
   bool IdenticalTo(const std::shared_ptr<LazyConsistentBlob>& rhs) const;
@@ -106,8 +104,6 @@ class LazyMirroredBlob : public MirroredBlob {
 
   bool is_dynamic() const override;
 
-  bool is_tensor_list() const override;
-
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const override;
 
  private:
@@ -125,7 +121,6 @@ class EagerBlobTrait {
   cfg::DataType dtype() const;
   int64_t split_axis() const;
   bool is_dynamic() const;
-  bool is_tensor_list() const;
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const;
   int64_t parallel_size();
   std::shared_ptr<BlobObject> blob_object() const;

@@ -34,7 +34,6 @@ DataType BlobDesc::dtype() const { UNIMPLEMENTED(); }
 std::shared_ptr<cfg::ParallelConf> BlobDesc::parallel_conf() const { UNIMPLEMENTED(); }
 
 bool BlobDesc::is_dynamic() const { UNIMPLEMENTED(); }
-bool BlobDesc::is_tensor_list() const { UNIMPLEMENTED(); }
 std::shared_ptr<Distribute> BlobDesc::distribute() const { return distribute_; }
 std::string BlobDesc::unique_name() const { return lbn_ + *CHECK_JUST(Distribute2Str()); }
 
