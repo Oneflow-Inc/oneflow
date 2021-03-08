@@ -43,7 +43,8 @@ class FunctionNode {
   virtual void ReleaseGraph() = 0;
 
   // Getters
-  std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>> GetNextFunctions() const {
+  const std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>>& GetNextFunctions()
+      const {
     return next_functions_;
   }
   const std::string& GetOpName() const { return op_name_; }
