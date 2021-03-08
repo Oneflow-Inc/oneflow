@@ -118,6 +118,7 @@ jobs:
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Upload bin to cloud
+        if: matrix.test_suite == 'cuda'
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${bin_dir}
