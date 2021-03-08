@@ -25,7 +25,7 @@ TEST(ParallelConfUtil, MakeParallelConfSuccess) {
   std::vector<std::string> machine_device_ids;
   machine_device_ids.emplace_back("0:0-3");
   machine_device_ids.emplace_back("1:0-3");
-  auto parallel_conf = CHECK_JUST(MakeParallelConf(device_tag, machine_device_ids));
+  auto parallel_conf = CHECK_JUST(MakeParallelConf(device_tag, machine_device_ids, nullptr));
   ASSERT_EQ(parallel_conf->device_tag(), "cpu");
   ASSERT_EQ(parallel_conf->device_name().size(), 2);
 }
@@ -35,7 +35,7 @@ TEST(ParallelConfUtil, MakeParallelConfError) {
   std::vector<std::string> machine_device_ids;
   machine_device_ids.emplace_back("0:0-3");
   machine_device_ids.emplace_back("1:0-");
-  auto parallel_conf = TRY(MakeParallelConf(device_tag, machine_device_ids));
+  auto parallel_conf = TRY(MakeParallelConf(device_tag, machine_device_ids, nullptr));
   ASSERT_EQ(parallel_conf.error()->has_check_failed_error(), true);
 }
 

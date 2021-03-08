@@ -567,17 +567,17 @@ Maybe<void> InstructionsBuilder::ReplaceMirrored(
 Maybe<Scope> InstructionsBuilder::BuildInitialScope(
     int64_t session_id, const std::shared_ptr<cfg::JobConfigProto>& job_conf,
     const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
-    bool is_mirrored) {
+    const std::shared_ptr<Shape>& shape, bool is_mirrored) {
   std::shared_ptr<cfg::ScopeProto> scope_proto = std::make_shared<cfg::ScopeProto>();
   scope_proto->set_session_id(session_id);
   std::shared_ptr<JobDesc> job_conf_sym = JUST(GetJobConfSymbol(job_conf));
   scope_proto->set_job_desc_symbol_id(JUST(job_conf_sym->symbol_id()));
   std::shared_ptr<cfg::ParallelConf> parallel_conf =
-      JUST(MakeParallelConf(device_tag, machine_device_ids));
+      JUST(MakeParallelConf(device_tag, machine_device_ids, shape));
   std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
       JUST(GetParallelDescSymbol(parallel_conf));
   scope_proto->set_device_parallel_desc_symbol_id(JUST(device_parallel_desc_sym->symbol_id()));
-  parallel_conf = JUST(MakeParallelConf("cpu", machine_device_ids));
+  parallel_conf = JUST(MakeParallelConf("cpu", machine_device_ids, shape));
   std::shared_ptr<ParallelDesc> host_parallel_desc_sym = JUST(GetParallelDescSymbol(parallel_conf));
   scope_proto->set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
   if (is_mirrored) {
@@ -590,15 +590,15 @@ Maybe<Scope> InstructionsBuilder::BuildInitialScope(
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
     const std::shared_ptr<Scope>& scope, const std::string& device_tag,
-    const std::vector<std::string>& machine_device_ids) {
+    const std::vector<std::string>& machine_device_ids, const std::shared_ptr<Shape>& shape) {
   const auto SetScopeProto =
-      [this, &device_tag,
-       &machine_device_ids](const std::shared_ptr<cfg::ScopeProto>& scope_proto) -> Maybe<void> {
+      [this, &device_tag, &machine_device_ids,
+       shape](const std::shared_ptr<cfg::ScopeProto>& scope_proto) -> Maybe<void> {
     std::shared_ptr<cfg::ParallelConf> parallel_conf =
-        JUST(MakeParallelConf(device_tag, machine_device_ids));
+        JUST(MakeParallelConf(device_tag, machine_device_ids, shape));
     std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
         JUST(GetParallelDescSymbol(parallel_conf));
-    parallel_conf = JUST(MakeParallelConf("cpu", machine_device_ids));
+    parallel_conf = JUST(MakeParallelConf("cpu", machine_device_ids, shape));
     std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
         JUST(GetParallelDescSymbol(parallel_conf));
     scope_proto->set_device_parallel_desc_symbol_id(JUST(device_parallel_desc_sym->symbol_id()));
@@ -613,7 +613,14 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelConf(
     const std::shared_ptr<Scope>& scope, const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
   std::pair<std::string, std::vector<std::string>> tag_and_dev_ids =
       *JUST(GetDeviceTagAndMachineDeviceIds(parallel_conf));
-  return BuildScopeWithNewParallelDesc(scope, tag_and_dev_ids.first, tag_and_dev_ids.second);
+  std::shared_ptr<Shape> parallel_hierarchy;
+  if (parallel_conf->has_hierarchy()) {
+    ShapeProto shape_proto;
+    parallel_conf->hierarchy().ToProto(&shape_proto);
+    parallel_hierarchy.reset(new Shape(shape_proto));
+  }
+  return BuildScopeWithNewParallelDesc(scope, tag_and_dev_ids.first, tag_and_dev_ids.second,
+                                       parallel_hierarchy);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope,

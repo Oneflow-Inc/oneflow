@@ -85,15 +85,18 @@ std::shared_ptr<Scope> BuildInitialScope(const std::shared_ptr<InstructionsBuild
                                          const std::shared_ptr<cfg::JobConfigProto>& job_conf,
                                          const std::string& device_tag,
                                          const std::vector<std::string>& machine_device_ids,
-                                         bool is_mirrored) {
-  return x->BuildInitialScope(session_id, job_conf, device_tag, machine_device_ids, is_mirrored)
+                                         const std::shared_ptr<Shape>& shape, bool is_mirrored) {
+  return x
+      ->BuildInitialScope(session_id, job_conf, device_tag, machine_device_ids, shape, is_mirrored)
       .GetPtrOrThrow();
 }
 
 std::shared_ptr<Scope> BuildScopeWithNewParallelDesc(
     const std::shared_ptr<InstructionsBuilder>& x, const std::shared_ptr<Scope>& scope,
-    const std::string& device_tag, const std::vector<std::string>& machine_device_ids) {
-  return x->BuildScopeWithNewParallelDesc(scope, device_tag, machine_device_ids).GetPtrOrThrow();
+    const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
+    const std::shared_ptr<Shape>& shape) {
+  return x->BuildScopeWithNewParallelDesc(scope, device_tag, machine_device_ids, shape)
+      .GetPtrOrThrow();
 }
 
 std::shared_ptr<Scope> BuildScopeWithNewParallelConf(
@@ -322,8 +325,13 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("GetPhysicalParallelDescSymbols", &GetPhysicalParallelDescSymbols)
       .def("UnpackLogicalBlobToPhysicalBlobs", &UnpackLogicalBlobToPhysicalBlobs)
       .def("MakeReferenceBlobObject", &MakeReferenceBlobObject)
-      .def("BuildInitialScope", &BuildInitialScope)
-      .def("BuildScopeWithNewParallelDesc", &BuildScopeWithNewParallelDesc)
+      .def("BuildInitialScope", &BuildInitialScope, py::arg("session_id").none(false),
+           py::arg("job_conf").none(false), py::arg("device_tag").none(false),
+           py::arg("machine_device_ids").none(false), py::arg("shape").none(true),
+           py::arg("is_mirrored").none(false))
+      .def("BuildScopeWithNewParallelDesc", &BuildScopeWithNewParallelDesc,
+           py::arg("scope").none(false), py::arg("device_tag").none(false),
+           py::arg("machine_device_ids").none(false), py::arg("shape").none(true))
       .def("BuildScopeWithNewParallelConf", &BuildScopeWithNewParallelConf)
       .def("BuildScopeWithNewIsMirrored", &BuildScopeWithNewIsMirrored)
       .def("BuildScopeWithNewScopeName", &BuildScopeWithNewScopeName)

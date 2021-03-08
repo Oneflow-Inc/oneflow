@@ -129,11 +129,12 @@ Maybe<void> ParallelDesc::GetParallelContext(ParallelContext* parallel_ctx, int6
 
 bool ParallelDesc::Equals(const ParallelDesc& rhs) const {
   return device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
-         && EqualsMachineId2SortedDevPhyIds(rhs);
+         && EqualsMachineId2SortedDevPhyIds(rhs) && hierarchy_ == rhs.hierarchy_;
 }
 
 bool ParallelDesc::EqualsIgnoringDeviceType(const ParallelDesc& rhs) const {
-  return sorted_machine_ids_ == rhs.sorted_machine_ids_ && EqualsMachineId2SortedDevPhyIds(rhs);
+  return sorted_machine_ids_ == rhs.sorted_machine_ids_ && EqualsMachineId2SortedDevPhyIds(rhs)
+         && hierarchy_ == rhs.hierarchy_;
 }
 
 bool ParallelDesc::EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const {
@@ -158,6 +159,13 @@ void ParallelDesc::ClearUp() {
     sorted_machine_ids_.push_back(pair.first);
     SortAndRemoveDuplication((pair.second).get());
     parallel_num_ += pair.second->size();
+  }
+  if (parallel_conf_.has_hierarchy()) {
+    hierarchy_ = Shape(parallel_conf_.hierarchy());
+    CHECK_EQ(hierarchy_.elem_cnt(), parallel_num_);
+  } else {
+    hierarchy_ = Shape({parallel_num_});
+    hierarchy_.ToProto(parallel_conf_.mutable_hierarchy());
   }
   SortAndRemoveDuplication(&sorted_machine_ids_);
   int64_t parallel_id = 0;

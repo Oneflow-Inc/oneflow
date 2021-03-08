@@ -73,7 +73,7 @@ def InterpretScope(session, function_desc, config_proto):
     is_mirrored = isinstance(
         distribute_strategy, distribute_util.DistributeMirroredStrategy
     )
-    scope = scope_util.MakeInitialScope(job_conf, *tag_and_dev_ids, is_mirrored)
+    scope = scope_util.MakeInitialScope(job_conf, *tag_and_dev_ids, None, is_mirrored)
     with _JobBuildAndInferCtx(job_conf.job_name()), distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):

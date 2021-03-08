@@ -30,7 +30,7 @@ std::pair<std::string, std::vector<std::string>> PyGetDeviceTagAndMachineDeviceI
 
 std::shared_ptr<cfg::ParallelConf> PyMakeParallelConf(
     const std::string& device_tag, const std::vector<std::string>& machine_device_ids) {
-  return MakeParallelConf(device_tag, machine_device_ids).GetPtrOrThrow();
+  return MakeParallelConf(device_tag, machine_device_ids, nullptr).GetPtrOrThrow();
 }
 
 }  // namespace

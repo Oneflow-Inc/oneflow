@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
+#include "oneflow/core/common/shape.cfg.h"
+#include "oneflow/core/common/shape.pb.h"
 
 namespace oneflow {
 
@@ -28,7 +30,8 @@ Maybe<std::pair<std::string, std::vector<std::string>>> GetDeviceTagAndMachineDe
 }
 
 Maybe<cfg::ParallelConf> MakeParallelConf(const std::string& device_tag,
-                                          const std::vector<std::string>& machine_device_ids) {
+                                          const std::vector<std::string>& machine_device_ids,
+                                          const std::shared_ptr<Shape>& shape) {
   std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
   parallel_conf->set_device_tag(device_tag);
   for (const std::string& machine_device_id : machine_device_ids) {
@@ -47,6 +50,11 @@ Maybe<cfg::ParallelConf> MakeParallelConf(const std::string& device_tag,
       CHECK_OR_RETURN(IsStrInt(max_id));
     }
     parallel_conf->add_device_name(machine_device_id);
+    if (shape) {
+      ShapeProto proto;
+      shape->ToProto(&proto);
+      parallel_conf->mutable_hierarchy()->CopyFrom(cfg::ShapeProto(proto));
+    }
   }
   return parallel_conf;
 }
