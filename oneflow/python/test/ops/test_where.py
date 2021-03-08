@@ -217,7 +217,9 @@ def _of_where_with_x_and_y_are_none(input, input_shape=None):
     return where_fn([input]).get().numpy_list()[0]
 
 
-@flow.unittest.skip_unless_1n4d()
+# @flow.unittest.skip_unless_1n4d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
 class TestWhere(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_where(test_case):

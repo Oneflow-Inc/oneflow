@@ -229,7 +229,7 @@ void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Han
     auto it = op_name2parallel_conf_.find(pair.first);
     CHECK(it != op_name2parallel_conf_.end()) << "op_name: " << pair.first;
     DeviceType device_type = ParallelDesc(*it->second).device_type();
-    std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type, &GlobalJobDesc());
+    std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type);
     Handler(*op);
   }
 }
