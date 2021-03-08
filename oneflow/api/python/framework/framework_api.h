@@ -27,6 +27,10 @@ inline void RegisterWatcherOnlyOnce(oneflow::ForeignWatcher* watcher) {
   return oneflow::RegisterWatcherOnlyOnce(watcher).GetOrThrow();
 }
 
+inline void RegisterBoxingUtilOnlyOnce(oneflow::ForeignBoxingUtil* boxing_util) {
+  return oneflow::RegisterBoxingUtilOnlyOnce(boxing_util).GetOrThrow();
+}
+
 inline void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   return oneflow::LaunchJob(cb).GetOrThrow();
 }

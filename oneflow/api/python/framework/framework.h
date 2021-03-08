@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/serving/saved_model.cfg.h"
 #include "oneflow/core/serving/saved_model.pb.h"
+#include "oneflow/core/eager/foreign_boxing_util.h"
 
 namespace oneflow {
 
@@ -46,6 +47,12 @@ inline Maybe<void> RegisterForeignCallbackOnlyOnce(ForeignCallback* callback) {
 inline Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
   CHECK_ISNULL_OR_RETURN(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
   Global<ForeignWatcher>::SetAllocated(watcher);
+  return Maybe<void>::Ok();
+}
+
+inline Maybe<void> RegisterBoxingUtilOnlyOnce(ForeignBoxingUtil* boxing_util) {
+  CHECK_ISNULL_OR_RETURN(Global<ForeignBoxingUtil>::Get()) << "Foreign Boxing util registered.";
+  Global<ForeignBoxingUtil>::SetAllocated(boxing_util);
   return Maybe<void>::Ok();
 }
 
