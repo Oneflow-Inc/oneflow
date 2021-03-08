@@ -43,11 +43,16 @@ class FunctionNode {
   virtual void ReleaseGraph() = 0;
 
   // Getters
-  virtual std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>> GetNextFunctions() = 0;
-  virtual const std::string& GetOpName() const = 0;
+  std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>> GetNextFunctions() const {
+    return next_functions_;
+  }
+  const std::string& GetOpName() const { return op_name_; }
 
  protected:
   FunctionNode() = default;
+
+  const std::string op_name_;
+  std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>> next_functions_;
 };
 
 class AutogradEngine {
@@ -77,11 +82,6 @@ class StackFunctionNode final : public FunctionNode {
                     const TensorTuple& inputs, const TensorTuple& outputs);
   ~StackFunctionNode() override = default;
 
-  std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>> GetNextFunctions() override {
-    return next_functions_;
-  }
-  const std::string& GetOpName() const override { return op_name_; }
-
   void ReleaseOutTensorArgs() override;
   void ReleaseGraph() override;
   void Apply(bool create_graph) override;
@@ -96,9 +96,6 @@ class StackFunctionNode final : public FunctionNode {
   // Actual backward function builds in `AutogradInterpreter` to calculate one backward op
   // TODO: add parameters
   std::shared_ptr<const std::function<void()>> backward_fn_;
-
-  const std::string op_name_;
-  std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>> next_functions_;
 };
 
 class StackAutogradEngine final : public AutogradEngine {
