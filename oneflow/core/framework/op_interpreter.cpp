@@ -215,7 +215,8 @@ BuildMirroredCastInstruction(const BuiltinOpExpr* op_expr, const TensorList& inp
                              TensorList& outputs, const OpExprInterpContext* ctx) {
   const auto& scope = JUST(GetCurrentScope());
   const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, scope, inputs));
-  auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+  auto build_instruction = [&, scope,
+                            op_attribute](const std::shared_ptr<InstructionsBuilder>& builder) {
     const auto& bn2blob_object =
         CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr->indexed_ibns(), inputs));
     const auto& in_blob_object = (*bn2blob_object)["in"];
@@ -264,7 +265,8 @@ BuildDistributeSplitOrCloneInstruction(const BuiltinOpExpr* op_expr, const Tenso
                                        TensorList& outputs, const OpExprInterpContext* ctx) {
   const auto& scope = JUST(GetCurrentScope());
   const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, scope, inputs));
-  auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+  auto build_instruction = [&, scope,
+                            op_attribute](const std::shared_ptr<InstructionsBuilder>& builder) {
     OpAttribute proto_op_attribute;
     op_attribute->ToProto(&proto_op_attribute);
     const auto& bn2blob_object =
@@ -299,7 +301,8 @@ BuildDistributeConcatAndAddInstruction(const BuiltinOpExpr* op_expr, const Tenso
                                        TensorList& outputs, const OpExprInterpContext* ctx) {
   const auto& scope = JUST(GetCurrentScope());
   const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, scope, inputs));
-  auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+  auto build_instruction = [&, scope,
+                            op_attribute](const std::shared_ptr<InstructionsBuilder>& builder) {
     OpAttribute proto_op_attribute;
     op_attribute->ToProto(&proto_op_attribute);
     const auto& op_parallel_desc_sym = CHECK_JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(
