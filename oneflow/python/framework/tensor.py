@@ -14,16 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.framework.device as oneflow_device
 import oneflow_api
 
 
-@oneflow_export("tensor")
+@oneflow_export("Tensor")
 class Tensor:
     def __init__(
         self,
-        shape,
-        dtype,
+        *shape,
+        dtype=None,
         device=None,
         requires_grad=False,
         retain_grad=False,
@@ -33,7 +32,8 @@ class Tensor:
         is_lazy=False,
         determining_initializer=None,
     ):
-        device = device if device is not None else oneflow_api.device("cpu", 0)
+        dtype = dtype if dtype is not None else oneflow_api.float32
+        device = device if device is not None else oneflow_api.device("cpu")
         self._local_or_consistent_tensor = None
         self._undetermined_tensor = UndeterminedTensor(
             shape,
@@ -135,11 +135,15 @@ class Tensor:
             prod *= dim
         return prod
 
+    def retain_grad(self):
+        assert self.is_determined
+        self._local_or_consistent_tensor.retain_grad()
+
     def data_ptr(self):
         TODO()
 
     def element_size(self):
-        TODO()
+        return self.dtype.bytes
 
     def numpy(self):
         TODO()
@@ -147,8 +151,11 @@ class Tensor:
     def tolist(self):
         TODO()
 
-    def backward(self):
-        TODO()
+    def backward(
+        self, gradient=None, retain_graph=False, create_graph=False, inputs=None
+    ):
+        assert self.is_determined
+        TODO()  # liyurui
 
     def __str__(self):
         TODO()
@@ -162,7 +169,7 @@ class Tensor:
     def __sizeof__(self):
         TODO()
 
-    def __deepcopy__(self):
+    def __deepcopy__(self, memo):
         TODO()
 
     def determine(self, determining_initializer=None):
@@ -254,7 +261,7 @@ class UndeterminedTensor:
             if not isinstance(shape, tuple):
                 shape = tuple(shape)
             shape = oneflow_api.Size(shape)
-        device = device if device is not None else oneflow_api.device("cpu", 0)
+        device = device if device is not None else oneflow_api.device("cpu")
         self.shape = shape
         self.dtype = dtype
         self.device = device
