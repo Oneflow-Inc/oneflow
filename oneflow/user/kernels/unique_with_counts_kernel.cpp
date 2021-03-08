@@ -17,33 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
-namespace {
-template<DeviceType device_type, typename T, typename U>
-void GetUniqueWorkspaceSizeInBytes(int64_t n, int64_t* workspace_size_in_bytes) {
-  UniqueKernelUtil<device_type, T, U>::GetUniqueWorkspaceSizeInBytes(nullptr, n,
-                                                                     workspace_size_in_bytes);
-}
-
-template<DeviceType device_type, typename T, typename U>
-void GetUniqueWithCountsWorkspaceSizeInBytes(int64_t n, int64_t* workspace_size_in_bytes) {
-  UniqueKernelUtil<device_type, T, U>::GetUniqueWithCountsWorkspaceSizeInBytes(
-      nullptr, n, workspace_size_in_bytes);
-}
-
-struct SwitchUtil final {
-#define SWITCH_ENTRY(func_name, device_type, T, U) func_name<device_type, T, U>
-  DEFINE_STATIC_SWITCH_FUNC(void, GetUniqueWorkspaceSizeInBytes, SWITCH_ENTRY,
-                            MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),
-                            MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ),
-                            MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ));
-  DEFINE_STATIC_SWITCH_FUNC(void, GetUniqueWithCountsWorkspaceSizeInBytes, SWITCH_ENTRY,
-                            MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),
-                            MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ),
-                            MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ));
-#undef SWITCH_ENTRY
-};
-
-}  // namespace
 
 template<DeviceType device_type, typename T, typename K>
 class UniqueWithCountsKernel final : public user_op::OpKernel {
@@ -71,42 +44,25 @@ template<DeviceType device_type, typename T, typename K>
 user_op::InferTmpSizeFn GenInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
     const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-    auto out_idx = ctx->Attr<DataType>("out_idx");
     int64_t workspace_size_in_bytes;
-    SwitchUtil::SwitchGetUniqueWithCountsWorkspaceSizeInBytes(
-        SwitchCase(device_type, x->data_type(), out_idx), x->shape().elem_cnt(),
-        &workspace_size_in_bytes);
+    UniqueKernelUtil<device_type, T, K>::GetUniqueWithCountsWorkspaceSizeInBytes(
+        nullptr, x->shape().elem_cnt(), &workspace_size_in_bytes);
+
     return workspace_size_in_bytes;
   };
 }
 
-#define REGISTER_UNIQUE_WITH_COUNTS_KERNEL(device_type, data_type, indices_type)               \
-  REGISTER_USER_KERNEL("unique_with_counts")                                                   \
-      .SetCreateFn<UniqueWithCountsKernel<device_type, data_type, indices_type>>()             \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type)                                \
-                       & (user_op::HobDataType("x", 0) == GetDataType<data_type>::value)       \
-                       & (user_op::HobDataType("idx", 0) == GetDataType<indices_type>::value)) \
-      .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type, data_type, indices_type>());
+#define REGISTER_UNIQUE_WITH_COUNTS_KERNEL(device_type_v, data_type_pair, indices_type_pair)       \
+  REGISTER_USER_KERNEL("unique_with_counts")                                                       \
+      .SetCreateFn<UniqueWithCountsKernel<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),         \
+                                          OF_PP_PAIR_FIRST(indices_type_pair)>>()                  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == ToString(device_type_v))                        \
+                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))       \
+                       & (user_op::HobDataType("idx", 0) == OF_PP_PAIR_SECOND(indices_type_pair))) \
+      .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),        \
+                                           OF_PP_PAIR_FIRST(indices_type_pair)>());
 
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kGPU, float, int32_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kGPU, float, int64_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kGPU, double, int32_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kGPU, double, int64_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kGPU, int8_t, int32_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kGPU, int8_t, int64_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kGPU, int32_t, int32_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kGPU, int32_t, int64_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kGPU, int64_t, int32_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kGPU, int64_t, int64_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kCPU, float, int32_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kCPU, float, int64_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kCPU, double, int32_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kCPU, double, int64_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kCPU, int8_t, int32_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kCPU, int8_t, int64_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kCPU, int32_t, int32_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kCPU, int32_t, int64_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kCPU, int64_t, int32_t)
-REGISTER_UNIQUE_WITH_COUNTS_KERNEL(DeviceType::kCPU, int64_t, int64_t)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNIQUE_WITH_COUNTS_KERNEL, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

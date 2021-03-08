@@ -23,7 +23,7 @@ REGISTER_USER_OP("unique_with_counts")
     .Output("idx")
     .Output("count")
     .Output("num_unique")
-    .Attr<DataType>("out_idx")
+    .Attr<DataType>("out_idx", DataType::kInt32)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       CHECK_EQ_OR_RETURN(x->shape().NumAxes(), 1);
