@@ -141,6 +141,10 @@ jobs:
             cp -r ${bin_dir} $sha_dir
             echo "remote_bin_dir=$(hostname):$sha_dir/$(basename ${bin_dir})" >> build.${{ matrix.test_suite }}.env
           fi
+          # duplicate one for cuda_op
+          if [ "$test_suite" == "cuda" ]; then
+            ln -s build.cuda.env build.cuda_op.env
+          fi
       - name: Upload shared env
         uses: actions/upload-artifact@v2
         with:
