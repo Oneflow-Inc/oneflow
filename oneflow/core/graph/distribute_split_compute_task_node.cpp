@@ -67,9 +67,4 @@ void DistributeSplitCompTaskNode::BuildOutRegst() {
   }
 }  // namespace oneflow
 
-void DistributeSplitCompTaskNode::InferProducedDataRegstTimeShape() {
-  *GetProducedRegst("out")->mut_data_regst_time_shape() =
-      GetSoleConsumedRegst("in")->data_regst_time_shape();
-}
-
 }  // namespace oneflow
