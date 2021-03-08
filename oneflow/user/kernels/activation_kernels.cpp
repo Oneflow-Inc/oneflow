@@ -25,4 +25,4 @@ namespace oneflow {
 
 REGISTER_ACTIVATION_CPU_KERNEL(float);
 REGISTER_ACTIVATION_CPU_KERNEL(double);
-}
+}  // namespace oneflow

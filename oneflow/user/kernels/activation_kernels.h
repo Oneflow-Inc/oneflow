@@ -111,24 +111,38 @@ struct HardtanhGradFunctor {
   const T max_val;
 };
 
-#define REGISTER_ELU_KERNEL(device, dtype)                                                         \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITH_ATTR(device, "elu", EluFunctor, dtype, dtype, "out",    \
-                                                "in", ctx->Attr<double>("alpha"));                 \
-  REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITH_ATTR(device, "elu_grad", EluGradFunctor, dtype, dtype, \
-                                                 dtype, "dx", "x", "dy",                           \
-                                                 ctx->Attr<double>("alpha"));
+#define REGISTER_ELU_KERNEL(device, dtype)                        \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                            \
+      device, "elu", EluFunctor, dtype, dtype,                    \
+      [](user_op::KernelComputeContext* ctx) {                    \
+        return EluFunctor<dtype>(ctx->Attr<double>("alpha"));     \
+      },                                                          \
+      "out", "in");                                               \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                           \
+      device, "elu_grad", EluGradFunctor, dtype, dtype, dtype,    \
+      [](user_op::KernelComputeContext* ctx) {                    \
+        return EluGradFunctor<dtype>(ctx->Attr<double>("alpha")); \
+      },                                                          \
+      "dx", "x", "dy");
 
-#define REGISTER_HARDSWISH_KERNEL(device, dtype)                                                 \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(device, "hardswish", HardswishFunctor, dtype, \
-                                                   dtype, "out", "in");                          \
-  REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(                                             \
-      device, "hardswish_grad", HardswishGradFunctor, dtype, dtype, dtype, "dx", "x", "dy");
+#define REGISTER_HARDSWISH_KERNEL(device, dtype)                                                   \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                             \
+      device, "hardswish", HardswishFunctor, dtype, dtype,                                         \
+      [](user_op::KernelComputeContext* ctx) { return HardswishFunctor<dtype>(); }, "out", "in");  \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                            \
+      device, "hardswish_grad", HardswishGradFunctor, dtype, dtype, dtype,                         \
+      [](user_op::KernelComputeContext* ctx) { return HardswishGradFunctor<dtype>(); }, "dx", "x", \
+      "dy");
 
-#define REGISTER_HARDSIGMOID_KERNEL(device, dtype)                                            \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(device, "hardsigmoid", HardsigmoidFunctor, \
-                                                   dtype, dtype, "out", "in");                \
-  REGISTER_BINARY_ELEMWISE_USER_KERNEL_WITHOUT_ATTR(                                          \
-      device, "hardsigmoid_grad", HardsigmoidGradFunctor, dtype, dtype, dtype, "dx", "x", "dy");
+#define REGISTER_HARDSIGMOID_KERNEL(device, dtype)                                              \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                          \
+      device, "hardsigmoid", HardsigmoidFunctor, dtype, dtype,                                  \
+      [](user_op::KernelComputeContext* ctx) { return HardsigmoidFunctor<dtype>(); }, "out",    \
+      "in");                                                                                    \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                         \
+      device, "hardsigmoid_grad", HardsigmoidGradFunctor, dtype, dtype, dtype,                  \
+      [](user_op::KernelComputeContext* ctx) { return HardsigmoidGradFunctor<dtype>(); }, "dx", \
+      "x", "dy");
 
 #define REGISTER_HARDTANH_KERNEL(device, dtype)                                                 \
   REGISTER_USER_KERNEL("hardtanh")                                                              \
