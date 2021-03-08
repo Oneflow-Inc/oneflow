@@ -61,6 +61,7 @@ def InterpretScope(session, function_desc, config_proto):
     placement_scope = function_desc.function_attribute.default_placement_scope
     if placement_scope is None:
         tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(session.resource)
+        parallel_hierarchy = None
     else:
         assert isinstance(placement_scope, placement_ctx.EmptyPlacementScope)
         tag_and_dev_ids = (

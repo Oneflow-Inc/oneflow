@@ -102,7 +102,8 @@ def GetNormalModePlacementScope(device_tag, machine_device_ids, hierarchy=None):
     if not isinstance(machine_device_ids, list):
         machine_device_ids = [machine_device_ids]
     sess = session_ctx.GetDefaultSession()
-    assert isinstance(hierarchy, (list, tuple)) or hierarchy is None
+    if hierarchy is not None and isinstance(hierarchy, (list, tuple)) == False:
+        hierarchy = [hierarchy]
     if hierarchy is not None:
         if type(hierarchy) is list:
             hierarchy = tuple(hierarchy)
@@ -121,7 +122,8 @@ def GetGlobalModePlacementScope(device_tag, machine_device_ids, hierarchy=None):
     if isinstance(machine_device_ids, (list, tuple)) == False:
         machine_device_ids = [machine_device_ids]
     sess = session_ctx.GetDefaultSession()
-    assert isinstance(hierarchy, (list, tuple)) or hierarchy is None
+    if hierarchy is not None and isinstance(hierarchy, (list, tuple)) == False:
+        hierarchy = [hierarchy]
     if hierarchy is not None:
         if type(hierarchy) is list:
             hierarchy = tuple(hierarchy)
