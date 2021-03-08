@@ -42,9 +42,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<one::FunctionNode, std::shared_ptr<one::FunctionNode>>(m, "FunctionNode")
       .def("__str__", &FunctionNodeUtil::ToString)
       .def("__repr__", &FunctionNodeUtil::ToString)
+      .def("_register_hook_dict", []() { TODO(); })
       .def_property_readonly(
           "next_functions",
           [](const one::FunctionNode& func_node) { return func_node.GetNextFunctions(); })
+      .def_property_readonly("metadata", []() { TODO(); })
+      .def_property_readonly("requires_grad", []() { TODO(); })
+      .def("register_hook", []() { TODO(); })
       .def("name", [](const one::FunctionNode& func_node) { return func_node.GetOpName(); });
 }
 
