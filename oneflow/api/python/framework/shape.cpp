@@ -26,8 +26,6 @@ namespace {
 struct ShapeExportUtil final {
   static Maybe<Shape> MakeShape(const py::tuple& py_shape) {
     DimVector shape_dims;
-    CHECK_OR_RETURN(py::isinstance<py::tuple>(py_shape))
-        << Error::ValueError("Input shape must be tuple.");
     for (const auto& dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
     return std::make_shared<Shape>(shape_dims);
   }
@@ -40,7 +38,7 @@ struct ShapeExportUtil final {
     } else if (py::isinstance<py::list>(py_obj)) {
       return MakeShape(py::tuple(py_obj.cast<py::tuple>())).GetPtrOrThrow();
     } else {
-      throw py::type_error();
+      throw py::type_error("Input must be Tuple, List or oneflow.Size");
     }
   }
 
