@@ -54,22 +54,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
 
-  mac_build:
-    name: Build (macOS)
-    needs: [check_license_and_format]
-    runs-on: "macos-11.0"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
-    steps:
-      - uses: actions/checkout@v2
-      - name: Build
-        run: |
-          mkdir build
-          cd build
-          cmake .. \
-            -DPython3_EXECUTABLE=$(which python3) \
-            -DBUILD_CUDA=OFF
-          make -j $(nproc)
-
   build:
     name: Build
     strategy:
