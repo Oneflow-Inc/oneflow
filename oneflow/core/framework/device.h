@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
 
 #include <string>
+#include <unordered_set>
 
 namespace oneflow {
 
@@ -27,8 +28,11 @@ class Device final {
   Device(Device&&) = default;
   ~Device() = default;
   const std::string& type() const { return type_; }
+  std::string of_type() const;
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
+
+  static const std::unordered_set<std::string> type_supported;
 
  private:
   const std::string type_;
