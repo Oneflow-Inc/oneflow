@@ -29,16 +29,13 @@ Maybe<std::vector<std::shared_ptr<one::Tensor>>> Interpret(
     const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
   // TODO(): Execute the op by Autograd.
   UNIMPLEMENTED();
-  return std::vector<std::shared_ptr<one::Tensor>>{};
+  return std::make_shared<std::vector<std::shared_ptr<one::Tensor>>>();
 }
 
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::OpExpr, std::shared_ptr<one::OpExpr>>(m, "OpExpr")
-      .def("__call__", [](const std::shared_ptr<one::OpExpr>& op_expr, py::args args) {
-        std::vector<std::shared_ptr<one::Tensor>> inputs(args.size());
-        for (int i = 0; i < args.size(); ++i) {
-          inputs[i] = py::cast<std::shared_ptr<one::Tensor>>(args[i]);
-        }
+      .def("apply", [](const std::shared_ptr<one::OpExpr>& op_expr,
+                       const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
         return Interpret(op_expr, inputs).GetOrThrow();
       });
 
