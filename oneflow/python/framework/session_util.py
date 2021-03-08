@@ -41,7 +41,6 @@ from oneflow.python.framework.pull_util import (
 from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
-from oneflow.python.framework.check_point import SnapshotManager
 import oneflow.python.framework.check_point_v2 as check_point_v2
 from contextlib import contextmanager
 from typing import Callable
@@ -51,8 +50,9 @@ import oneflow_api
 import traceback
 
 
-class Session(object):
+class Session(oneflow_api.Session):
     def __init__(self, sess_id):
+        oneflow_api.Session.__init__(self, sess_id)
         self.job_name2function_desc_ = {}
         self.job_name2job_ = {}
         self.status_ = SessionStatus.OPEN
@@ -80,14 +80,14 @@ class Session(object):
         self._UpdateFunctionFlagName2DefaultVal()
         self.scope_attr_name2default_val_ = {}
         self._UpdateScopeAttrName2DefaultVal()
-        self.sess_ = oneflow_api.RegsiterSession(sess_id)
         self.backward_blob_register_ = oneflow_api.BlobRegister()
-        self.snapshot_mgr_ = SnapshotManager()
         self.eager_config_proto_ctx_ = None
+
+        oneflow_api.RegsiterSession(sess_id, self)
 
     @property
     def id(self):
-        return self.sess_.id
+        return self.id_
 
     @property
     def status(self):
@@ -135,12 +135,20 @@ class Session(object):
         return self.job_name2name_scope_stack_
 
     @property
+    def instruction_list(self):
+        return self.instruction_list_()
+
+    @property
+    def eager_symbol_list(self):
+        return self.eager_symbol_list_()
+
+    @property
     def backward_blob_register(self):
         return self.backward_blob_register_
 
     @property
     def snapshot_mgr(self):
-        return self.snapshot_mgr_
+        return self.snapshot_mgr_()
 
     @property
     def var_name2var_blob(self):
@@ -389,6 +397,23 @@ class Session(object):
         if len(self.eager_global_function_desc_stack_) == 0:
             return None
         return self.eager_global_function_desc_stack_[0]
+
+    def NameScopeStackPush(self, job_name, name):
+        if job_name not in self.job_name2name_scope_stack_:
+            self.job_name2name_scope_stack_[job_name] = []
+        self.job_name2name_scope_stack_[job_name].append(name)
+
+    def NameScopeStackPop(self, job_name):
+        assert job_name in self.job_name2name_scope_stack_
+        assert len(self.job_name2name_scope_stack_[job_name]) > 0
+        return self.job_name2name_scope_stack_[job_name].pop()
+
+    def GetJobNameScopePrefix(self, job_name):
+        if job_name not in self.job_name2name_scope_stack_:
+            return ""
+        if len(self.job_name2name_scope_stack_[job_name]) == 0:
+            return ""
+        return "-".join(self.job_name2name_scope_stack_[job_name]) + "-"
 
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):
