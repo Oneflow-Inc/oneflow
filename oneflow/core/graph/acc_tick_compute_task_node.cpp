@@ -26,18 +26,6 @@ void AccTickCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
 
-void AccTickCompTaskNode::InferProducedDataRegstTimeShape() {
-  auto TimeShape4Ibn = [&](const std::string& ibn) -> const Shape* {
-    return GetSoleConsumedRegst("in")->data_regst_time_shape().get();
-  };
-  std::shared_ptr<Shape> time_shape(new Shape());
-  logical_node()->SoleOp()->InferOutputBlobTimeShape(TimeShape4Ibn, parallel_ctx(),
-                                                     time_shape.get());
-  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
-    *regst->mut_data_regst_time_shape() = time_shape;
-  });
-}
-
 void AccTickCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");

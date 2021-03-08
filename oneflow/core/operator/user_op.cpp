@@ -584,15 +584,15 @@ Maybe<void> UserOp::GetSbpSignatures(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> UserOp::InferOutputBlobTimeShape(
-    std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
-    const ParallelContext* parallel_ctx, Shape* time_shape) const {
+Maybe<void> UserOp::InferOpTimeShape(
+    const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
+    Shape* time_shape) const {
   if (val_->infer_output_blob_time_shape_fn) {
     UserOpInferOutputBlobTimeShapeFnContext infer_output_blob_time_shape_fn_ctx(
         this->op_conf(), GetTimeShape4BnInOp, time_shape);
     return val_->infer_output_blob_time_shape_fn(&infer_output_blob_time_shape_fn_ctx);
   } else {
-    return Operator::InferOutputBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
+    return Operator::InferOpTimeShape(GetTimeShape4BnInOp, time_shape);
   }
 }
 
