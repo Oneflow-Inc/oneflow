@@ -20,10 +20,26 @@ from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, C
 from inspect import signature
 import itertools
 
+import numpy as np
+
+import oneflow as flow
+import oneflow_api
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.ops import parallel_cast
+from oneflow.python.framework.tensor import Tensor
 from oneflow.python.ops.get_variable import api_get_variable as get_variable
 from oneflow.python.ops import initializer_util
+
+
+class _IncompatibleKeys(
+    namedtuple("IncompatibleKeys", ["missing_keys", "unexpected_keys"])
+):
+    def __repr__(self):
+        if not self.missing_keys and not self.unexpected_keys:
+            return "<All keys matched successfully>"
+        return super(_IncompatibleKeys, self).__repr__()
+
+    __str__ = __repr__
 
 
 # See https://mypy.readthedocs.io/en/latest/generics.html#generic-methods-and-generic-self for the use
@@ -32,44 +48,27 @@ from oneflow.python.ops import initializer_util
 T = TypeVar("T", bound="Module")
 
 
-def new_counter():
-    _counter = 0
-
-    def counter():
-        nonlocal _counter
-        while True:
-            yield _counter
-            _counter += 1
-
-    return counter()
+_counter = 0
 
 
-counter = new_counter()
-
-
-# NOTE: temp workaround. Remove when flow.Tensor is ready
-class TensorInternal:
-    def __init__(self, shape):
-        self._shape = shape
-
-
-@oneflow_export("Tensor")
-class Tensor:
-    def __init__(self, shape_or_internal):
-        if isinstance(shape_or_internal, TensorInternal):
-            self._internal = shape_or_internal
-        else:
-            self._internal = TensorInternal(shape_or_internal)
-
-    @property
-    def shape(self):
-        return self._internal._shape
+def get_var_helper(shape, name=None):
+    global _counter
+    if name is None:
+        name = "x_" + str(_counter)
+    var = flow.get_variable(
+        name, shape=shape, initializer=flow.kaiming_initializer(shape)
+    )
+    _counter += 1
+    return var
 
 
 @oneflow_export("nn.Parameter")
 class Parameter(Tensor):
     def __init__(self, data):
-        super().__init__(data._internal)
+        self._data = data
+
+    def __getattr__(self, name):
+        return getattr(self._data, name)
 
 
 class InputConfigs:
@@ -143,6 +142,28 @@ class Module(object):
                 return self.consisten_forward(*args)
         else:
             return self.forward(*args)
+
+    def add_module(self, name: str, module: Optional["Module"]) -> None:
+        r"""Adds a child module to the current module.
+
+        The module can be accessed as an attribute using the given name.
+
+        Args:
+            name (string): name of the child module. The child module can be
+                accessed from this module using the given name
+            module (Module): child module to be added to the module.
+        """
+        if not isinstance(module, Module) and module is not None:
+            raise TypeError("{} is not a Module subclass".format(type(module)))
+        elif not isinstance(name, str):
+            raise TypeError("module name should be a string. Got {}".format(type(name)))
+        elif hasattr(self, name) and name not in self._modules:
+            raise KeyError("attribute '{}' already exists".format(name))
+        elif "." in name:
+            raise KeyError('module name can\'t contain ".", got: {}'.format(name))
+        elif name == "":
+            raise KeyError('module name can\'t be empty string ""')
+        self._modules[name] = module
 
     def register_buffer(
         self, name: str, tensor: Optional[Tensor], persistent: bool = True
@@ -367,6 +388,166 @@ class Module(object):
             if buf is not None and name not in self._non_persistent_buffers_set:
                 # destination[prefix + name] = buf if keep_vars else buf.detach()
                 destination[prefix + name] = buf
+
+    # def load_state_dict(self, state_dict: Dict[str, np.ndarray], strict: bool = True):
+    #     param_buffer_var_names = [x._get_var_name() for x in self.parameters()]
+    #     state_dict_overlapped = {
+    #         key: item
+    #         for key, item in state_dict.items()
+    #         if key in param_buffer_var_names
+    #     }
+    #     if strict and len(state_dict) != len(state_dict_overlapped):
+    #         # TODO:
+    #         raise RuntimeError()
+    #     flow.load_variables(state_dict_overlapped)
+
+    def _load_from_state_dict(
+        self,
+        state_dict,
+        prefix,
+        local_metadata,
+        strict,
+        missing_keys,
+        unexpected_keys,
+        error_msgs,
+    ):
+        for hook in self._load_state_dict_pre_hooks.values():
+            hook(
+                state_dict,
+                prefix,
+                local_metadata,
+                strict,
+                missing_keys,
+                unexpected_keys,
+                error_msgs,
+            )
+
+        persistent_buffers = {
+            k: v
+            for k, v in self._buffers.items()
+            if k not in self._non_persistent_buffers_set
+        }
+        local_name_params = itertools.chain(
+            self._parameters.items(), persistent_buffers.items()
+        )
+        local_state = {k: v for k, v in local_name_params if v is not None}
+
+        for name, param in local_state.items():
+            key = prefix + name
+            if key in state_dict:
+                input_param = state_dict[key]
+
+                if tuple(input_param.shape) != tuple(param.shape):
+                    # local shape should match the one in checkpoint
+                    error_msgs.append(
+                        "size mismatch for {}: copying a param with shape {} from checkpoint, "
+                        "the shape in current model is {}.".format(
+                            key, input_param.shape, param.shape
+                        )
+                    )
+                    continue
+                try:
+                    # with torch.no_grad():
+                    # param.copy_(input_param)
+                    flow.load_variables({param._variable_name: input_param})
+                except Exception as ex:
+                    error_msgs.append(
+                        'While copying the parameter named "{}", '
+                        "whose dimensions in the model are {} and "
+                        "whose dimensions in the checkpoint are {}, "
+                        "an exception occurred : {}.".format(
+                            key, param.shape, input_param.shape, ex.args
+                        )
+                    )
+            elif strict:
+                missing_keys.append(key)
+
+        if strict:
+            for key in state_dict.keys():
+                if key.startswith(prefix):
+                    input_name = key[len(prefix) :]
+                    input_name = input_name.split(".", 1)[
+                        0
+                    ]  # get the name of param/buffer/child
+                    if (
+                        input_name not in self._modules
+                        and input_name not in local_state
+                    ):
+                        unexpected_keys.append(key)
+
+    def load_state_dict(
+        self,
+        state_dict: Union[Dict[str, Tensor], Dict[str, Tensor]],
+        strict: bool = True,
+    ):
+        r"""Copies parameters and buffers from :attr:`state_dict` into
+        this module and its descendants. If :attr:`strict` is ``True``, then
+        the keys of :attr:`state_dict` must exactly match the keys returned
+        by this module's :meth:`~torch.nn.Module.state_dict` function.
+
+        Arguments:
+            state_dict (dict): a dict containing parameters and
+                persistent buffers.
+            strict (bool, optional): whether to strictly enforce that the keys
+                in :attr:`state_dict` match the keys returned by this module's
+                :meth:`~torch.nn.Module.state_dict` function. Default: ``True``
+
+        Returns:
+            ``NamedTuple`` with ``missing_keys`` and ``unexpected_keys`` fields:
+                * **missing_keys** is a list of str containing the missing keys
+                * **unexpected_keys** is a list of str containing the unexpected keys
+        """
+        missing_keys = []
+        unexpected_keys = []
+        error_msgs = []
+
+        # copy state_dict so _load_from_state_dict can modify it
+        metadata = getattr(state_dict, "_metadata", None)
+        state_dict = state_dict.copy()
+        if metadata is not None:
+            state_dict._metadata = metadata
+
+        def load(module, prefix=""):
+            local_metadata = {} if metadata is None else metadata.get(prefix[:-1], {})
+            module._load_from_state_dict(
+                state_dict,
+                prefix,
+                local_metadata,
+                True,
+                missing_keys,
+                unexpected_keys,
+                error_msgs,
+            )
+            for name, child in module._modules.items():
+                if child is not None:
+                    load(child, prefix + name + ".")
+
+        load(self)
+        load = None  # break load->load reference cycle
+
+        if strict:
+            if len(unexpected_keys) > 0:
+                error_msgs.insert(
+                    0,
+                    "Unexpected key(s) in state_dict: {}. ".format(
+                        ", ".join('"{}"'.format(k) for k in unexpected_keys)
+                    ),
+                )
+            if len(missing_keys) > 0:
+                error_msgs.insert(
+                    0,
+                    "Missing key(s) in state_dict: {}. ".format(
+                        ", ".join('"{}"'.format(k) for k in missing_keys)
+                    ),
+                )
+
+        if len(error_msgs) > 0:
+            raise RuntimeError(
+                "Error(s) in loading state_dict for {}:\n\t{}".format(
+                    self.__class__.__name__, "\n\t".join(error_msgs)
+                )
+            )
+        return _IncompatibleKeys(missing_keys, unexpected_keys)
 
     def state_dict(
         self, destination=None, prefix="", keep_vars=False

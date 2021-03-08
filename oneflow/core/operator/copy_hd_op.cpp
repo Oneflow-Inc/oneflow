@@ -25,14 +25,9 @@ class CopyHdOp final : public Operator {
 
   void InitFromOpConf() override;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override;
+                                const ParallelContext* parallel_ctx) const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
-  }
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -55,7 +50,7 @@ void CopyHdOp::InitFromOpConf() {
 
 Maybe<void> CopyHdOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
   return Maybe<void>::Ok();
 }

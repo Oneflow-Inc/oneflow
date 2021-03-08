@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/rpc_client.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
@@ -48,7 +48,6 @@ class ClientCall final {
 }  // namespace
 
 void RpcClient::Barrier(const std::string& barrier_name) {
-  // TODO(hanbinbin): depend world_size of Global<ProcessCtx>
   Barrier(barrier_name, Global<EnvDesc>::Get()->TotalMachineNum());
 }
 
@@ -179,18 +178,22 @@ void RpcClient::EraseCount(const std::string& k) {
 }
 
 void RpcClient::LoadServer(const std::string& server_addr, CtrlService::Stub* stub) {
+  LoadServerRequest request;
+  request.set_addr(server_addr);
+  return LoadServer(request, stub);
+}
+
+void RpcClient::LoadServer(const LoadServerRequest& request, CtrlService::Stub* stub) {
   int32_t retry_idx = 0;
   for (; retry_idx < max_retry_num; ++retry_idx) {
     grpc::ClientContext client_ctx;
-    LoadServerRequest request;
-    request.set_addr(server_addr);
     LoadServerResponse response;
     grpc::Status st = stub->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response);
     if (st.error_code() == grpc::StatusCode::OK) {
-      LOG(INFO) << "LoadServer " << server_addr << " Successful at " << retry_idx << " times";
+      LOG(INFO) << "LoadServer " << request.addr() << " Successful at " << retry_idx << " times";
       break;
     } else if (st.error_code() == grpc::StatusCode::UNAVAILABLE) {
-      LOG(INFO) << "LoadServer " << server_addr << " Failed at " << retry_idx << " times"
+      LOG(INFO) << "LoadServer " << request.addr() << " Failed at " << retry_idx << " times"
                 << " error_code " << st.error_code() << " error_message " << st.error_message();
       std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
       continue;
@@ -201,13 +204,9 @@ void RpcClient::LoadServer(const std::string& server_addr, CtrlService::Stub* st
   CHECK_LT(retry_idx, max_retry_num);
 }
 
-CtrlService::Stub* RpcClient::GetThisStub() {
-  // TODO(hanbinbin): depend rank_id of Global<ProcessCtx>
-  return stubs_[Global<MachineCtx>::Get()->this_machine_id()].get();
-}
+CtrlService::Stub* RpcClient::GetThisStub() { return stubs_[GlobalProcessCtx::Rank()].get(); }
 
 CtrlService::Stub* RpcClient::GetResponsibleStub(const std::string& key) {
-  // TODO(hanbinbin): depend world_size of Global<ProcessCtx>
   int64_t machine_id = (std::hash<std::string>{}(key)) % Global<EnvDesc>::Get()->TotalMachineNum();
   return stubs_[machine_id].get();
 }

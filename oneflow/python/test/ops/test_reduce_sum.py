@@ -113,7 +113,7 @@ class TestReduceSum(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
-    def test_batch_axis_reduced(test_case):
+    def test_split_axis_reduced(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -122,7 +122,6 @@ class TestReduceSum(flow.unittest.TestCase):
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_sum(x)
             test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
-            test_case.assertTrue(y.batch_axis == flow.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 

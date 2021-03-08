@@ -27,15 +27,6 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
       *ctx->Dtype4ArgNameAndIndex("y", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      if (ctx->BatchAxis4ArgNameAndIndex("x", 0)->has_value()
-          && ctx->BatchAxis4ArgNameAndIndex("x", 0)->value() == 0) {
-        ctx->BatchAxis4ArgNameAndIndex("y", 0)->set_value(0);
-      } else {
-        ctx->BatchAxis4ArgNameAndIndex("y", 0)->clear_value();
-      }
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("x", 0))

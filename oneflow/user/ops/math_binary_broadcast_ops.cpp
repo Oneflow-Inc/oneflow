@@ -165,13 +165,12 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-#define REGISTER_BINARY_BROADCAST_USER_OP(op_name, sbp_suffix, tensor_suffix)  \
-  REGISTER_USER_OP(op_name)                                                    \
-      .Input("x")                                                              \
-      .Input("y")                                                              \
-      .Output("z")                                                             \
-      .SetTensorDescInferFn(InferTensorDescBinaryBroadcast##tensor_suffix)     \
-      .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis) \
+#define REGISTER_BINARY_BROADCAST_USER_OP(op_name, sbp_suffix, tensor_suffix) \
+  REGISTER_USER_OP(op_name)                                                   \
+      .Input("x")                                                             \
+      .Input("y")                                                             \
+      .Output("z")                                                            \
+      .SetTensorDescInferFn(InferTensorDescBinaryBroadcast##tensor_suffix)    \
       .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>);
 
 #define REGISTER_BINARY_BROADCAST_NORMAL_USER_OP(op_name, suffix) \

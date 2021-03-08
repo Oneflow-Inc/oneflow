@@ -954,8 +954,8 @@ void {{ util.class_name(cls) }}::clear_{{ util.field_name(field) }}() {
   return __SharedPtr__()->clear_{{ util.field_name(field) }}();
 }
 
-const {{ util.field_map_container_name(field) }} & {{ util.class_name(cls) }}::{{ util.field_name(field) }}() {
-  return __SharedPtr__()->{{ util.field_name(field) }}();
+const {{ util.field_map_container_name(field) }} & {{ util.class_name(cls) }}::{{ util.field_name(field) }}() const {
+  return __SharedConst__()->{{ util.field_name(field) }}();
 }
 
 {{ util.field_map_container_name(field) }}* {{ util.class_name(cls) }}::mutable_{{ util.field_name(field) }}() {

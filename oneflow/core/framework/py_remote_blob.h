@@ -58,13 +58,9 @@ class LazyConsistentBlob : public ConsistentBlob {
 
   DataType dtype() const override;
 
-  int64_t batch_axis() const override;
-
   int64_t split_axis() const;
 
   bool is_dynamic() const override;
-
-  bool is_tensor_list() const override;
 
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const override;
 
@@ -104,13 +100,9 @@ class LazyMirroredBlob : public MirroredBlob {
 
   DataType dtype() const override;
 
-  int64_t batch_axis() const override;
-
   int64_t split_axis() const;
 
   bool is_dynamic() const override;
-
-  bool is_tensor_list() const override;
 
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const override;
 
@@ -127,10 +119,8 @@ class EagerBlobTrait {
   int64_t numpy_list_size() const;
   std::shared_ptr<Shape> shape() const;
   cfg::DataType dtype() const;
-  int64_t batch_axis() const;
   int64_t split_axis() const;
   bool is_dynamic() const;
-  bool is_tensor_list() const;
   std::shared_ptr<cfg::ParallelConf> parallel_conf() const;
   int64_t parallel_size();
   std::shared_ptr<BlobObject> blob_object() const;

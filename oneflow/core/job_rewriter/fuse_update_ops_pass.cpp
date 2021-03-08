@@ -62,6 +62,7 @@ class FuseUpdateOpsPass final : public JobPass {
 
 Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   const auto IsSafeToDelete = MakePredicatorIsSafeToDelete(op_graph);
+  std::vector<std::string> del_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     if (!op_node->op().op_conf().has_user_conf()) { return; }
     const user_op::UserOpConfWrapper user_op_conf(op_node->op().op_conf());
@@ -96,7 +97,7 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         l1 = l1_l2_regularize_gradient_op_conf.attr<float>("l1");
         l2 = l1_l2_regularize_gradient_op_conf.attr<float>("l2");
         model_diff_lbi = GenLogicalBlobId(l1_l2_regularize_gradient_op_conf.input("model_diff", 0));
-        job_builder->DelOps({producer->op().op_conf()});
+        del_op_names.push_back(producer->op().op_name());
         fused = true;
       } while (false);
 
@@ -107,7 +108,7 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         const user_op::UserOpConfWrapper scalar_mul_by_tensor_op_conf(producer->op().op_conf());
         model_diff_lbi = GenLogicalBlobId(scalar_mul_by_tensor_op_conf.input("x", 0));
         scale_by_tensor_lbn = scalar_mul_by_tensor_op_conf.input("scalar", 0);
-        job_builder->DelOps({producer->op().op_conf()});
+        del_op_names.push_back(producer->op().op_name());
         fused = true;
       } while (false);
 
@@ -124,7 +125,7 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
           UNIMPLEMENTED();
         }
         model_diff_lbi = GenLogicalBlobId(scalar_mul_op_conf.input("in", 0));
-        job_builder->DelOps({producer->op().op_conf()});
+        del_op_names.push_back(producer->op().op_name());
         fused = true;
       } while (false);
 
@@ -139,7 +140,7 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
           return;
         }
         model_diff_lbi = GenLogicalBlobId(cast_op_conf.input("in", 0));
-        job_builder->DelOps({producer->op().op_conf()});
+        del_op_names.push_back(producer->op().op_name());
         fused = true;
       } while (false);
     }();
@@ -192,6 +193,7 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     *new_op_conf.mutable_user_conf() = fused_op_builder.Build().op_conf().user_conf();
     job_builder->MutOpsOnlyOnce({new_op_conf});
   });
+  job_builder->DelOps(del_op_names);
   return Maybe<void>::Ok();
 }
 

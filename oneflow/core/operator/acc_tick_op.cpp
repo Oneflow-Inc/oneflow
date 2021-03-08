@@ -26,7 +26,7 @@ void AccTickOp::InitFromOpConf() {
 
 Maybe<void> AccTickOp::InferOutBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("acc") = *GetBlobDesc4BnInOp("one");
   GetBlobDesc4BnInOp("acc")->mut_shape() = Shape({1LL});
   return Maybe<void>::Ok();
@@ -38,12 +38,6 @@ Maybe<void> AccTickOp::InferOutputBlobTimeShape(
   const int32_t max_acc_num = op_conf().acc_tick_conf().max_acc_num();
   CHECK_EQ_OR_RETURN(GetTimeShape4BnInOp("one")->elem_cnt() % max_acc_num, 0);
   *time_shape = Shape({GetTimeShape4BnInOp("one")->elem_cnt() / max_acc_num});
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> AccTickOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("acc")->clear_value();
   return Maybe<void>::Ok();
 }
 

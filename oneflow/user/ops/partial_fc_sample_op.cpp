@@ -25,16 +25,25 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
     .Output("sampled_weight")
     .Attr<int64_t>("num_sample")
     .Attr<int64_t>("seed", -1)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const int64_t num_sample = ctx->Attr<int64_t>("num_sample");
+      const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
+      const user_op::TensorDesc* label = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      user_op::TensorDesc* sampled_weight = ctx->TensorDesc4ArgNameAndIndex("sampled_weight", 0);
+      user_op::TensorDesc* sampled_label = ctx->TensorDesc4ArgNameAndIndex("sampled_label", 0);
+      *ctx->TensorDesc4ArgNameAndIndex("mapped_label", 0) = *label;
+      *sampled_weight = *weight;
+      sampled_weight->mut_shape()->Set(0, num_sample);
+      *sampled_label = *label;
+      sampled_label->mut_shape()->Set(0, num_sample);
+      return Maybe<void>::Ok();
+    })
+    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const int64_t num_sample = ctx->Attr<int64_t>("num_sample");
       const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
       CHECK_EQ_OR_RETURN(num_sample % parallel_num, 0);
       const int64_t num_sample_per_rank = num_sample / parallel_num;
       const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
-      const SbpParallel& weight_sbp = ctx->SbpParallel4ArgNameAndIndex("weight", 0);
-      CHECK_OR_RETURN(
-          parallel_num == 1
-          || (weight_sbp.has_split_parallel() && weight_sbp.split_parallel().axis() == 0));
       const user_op::TensorDesc* label = ctx->TensorDesc4ArgNameAndIndex("label", 0);
       user_op::TensorDesc* sampled_weight = ctx->TensorDesc4ArgNameAndIndex("sampled_weight", 0);
       user_op::TensorDesc* sampled_label = ctx->TensorDesc4ArgNameAndIndex("sampled_label", 0);
@@ -43,13 +52,6 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
       sampled_weight->mut_shape()->Set(0, num_sample_per_rank);
       *sampled_label = *label;
       sampled_label->mut_shape()->Set(0, num_sample_per_rank);
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("mapped_label", 0) =
-          *ctx->BatchAxis4ArgNameAndIndex("label", 0);
-      ctx->BatchAxis4ArgNameAndIndex("sampled_label", 0)->clear_value();
-      ctx->BatchAxis4ArgNameAndIndex("sampled_weight", 0)->clear_value();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -75,15 +77,27 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
     .Output("boxing_disabled_sampled_weight_diff")
     .Output("boxing_disabled_sampled_label")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* boxing_disabled_sampled_weight_diff =
+          ctx->TensorDesc4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0);
+      *boxing_disabled_sampled_weight_diff =
+          *ctx->TensorDesc4ArgNameAndIndex("sampled_weight_diff", 0);
+      CHECK_EQ_OR_RETURN(boxing_disabled_sampled_weight_diff->shape().At(0) % ctx->parallel_num(),
+                         0);
+      boxing_disabled_sampled_weight_diff->mut_shape()->Set(
+          0, boxing_disabled_sampled_weight_diff->shape().At(0) / ctx->parallel_num());
+      user_op::TensorDesc* boxing_disabled_sampled_label =
+          ctx->TensorDesc4ArgNameAndIndex("boxing_disabled_sampled_label", 0);
+      *boxing_disabled_sampled_label = *ctx->TensorDesc4ArgNameAndIndex("sampled_label", 0);
+      CHECK_EQ_OR_RETURN(boxing_disabled_sampled_label->shape().At(0) % ctx->parallel_num(), 0);
+      boxing_disabled_sampled_label->mut_shape()->Set(
+          0, boxing_disabled_sampled_label->shape().At(0) / ctx->parallel_num());
+      return Maybe<void>::Ok();
+    })
+    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->TensorDesc4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0) =
           *ctx->TensorDesc4ArgNameAndIndex("sampled_weight_diff", 0);
       *ctx->TensorDesc4ArgNameAndIndex("boxing_disabled_sampled_label", 0) =
           *ctx->TensorDesc4ArgNameAndIndex("sampled_label", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0)->clear_value();
-      ctx->BatchAxis4ArgNameAndIndex("boxing_disabled_sampled_label", 0)->clear_value();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

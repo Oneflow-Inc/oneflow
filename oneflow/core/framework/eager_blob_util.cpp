@@ -19,29 +19,15 @@ namespace oneflow {
 
 namespace compatible_py {
 
-EagerPhysicalBlobHeader::EagerPhysicalBlobHeader(
-    const std::shared_ptr<Shape>& static_shape,
-    const std::vector<std::shared_ptr<Shape>>& shape_list, DataType dtype, bool is_tensor_list)
-    : static_shape_(static_shape),
-      shape_list_(shape_list),
-      dtype_(dtype),
-      is_tensor_list_(is_tensor_list) {}
+EagerPhysicalBlobHeader::EagerPhysicalBlobHeader(const std::shared_ptr<Shape>& static_shape,
+                                                 const std::shared_ptr<Shape>& shape,
+                                                 DataType dtype)
+    : static_shape_(static_shape), shape_(shape), dtype_(dtype) {}
 std::shared_ptr<Shape> EagerPhysicalBlobHeader::static_shape() const { return static_shape_; }
 
-std::shared_ptr<Shape> EagerPhysicalBlobHeader::shape() const {
-  CHECK_EQ(shape_list_.size(), 1);
-  CHECK_EQ(is_tensor_list_, false);
-  return shape_list_.at(0);
-}
-
-std::vector<std::shared_ptr<Shape>> EagerPhysicalBlobHeader::shape_list() const {
-  CHECK_EQ(is_tensor_list_, true);
-  return shape_list_;
-}
+std::shared_ptr<Shape> EagerPhysicalBlobHeader::shape() const { return shape_; }
 
 DataType EagerPhysicalBlobHeader::dtype() const { return dtype_; }
-
-bool EagerPhysicalBlobHeader::is_tensor_list() const { return is_tensor_list_; }
 
 EagerPhysicalBlob::EagerPhysicalBlob(
     const std::string& blob_name, const std::shared_ptr<BlobRegister>& blob_register,
@@ -72,15 +58,11 @@ DataType EagerPhysicalBlob::dtype() const {
 
 bool EagerPhysicalBlob::is_dynamic() const { return true; }
 
-bool EagerPhysicalBlob::is_tensor_list() const {
-  return get_pysical_blob_header_cache_(blob_object_)->is_tensor_list();
-}
-
 std::shared_ptr<BlobObject> EagerPhysicalBlob::blob_object() const { return blob_object_; }
 
 std::string EagerPhysicalBlob::ToString() const {
-  return std::string("EagerPhysicalBlob(shape=") + shape()->ToString() + ", dtype="
-         + DataType_Name(dtype()) + "is_tensor_list=" + (is_tensor_list() ? "True" : "False");
+  return std::string("EagerPhysicalBlob(shape=") + shape()->ToString()
+         + ", dtype=" + DataType_Name(dtype());
 }
 
 }  // namespace compatible_py

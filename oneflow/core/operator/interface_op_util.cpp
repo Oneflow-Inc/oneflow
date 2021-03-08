@@ -58,7 +58,6 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
   CHECK_GT(out_blob_desc->mut_shape().At(0), 0);
   out_blob_desc->set_data_type(blob_conf.data_type());
   out_blob_desc->set_is_dynamic(blob_conf.is_dynamic());
-  out_blob_desc->set_is_tensor_list(blob_conf.is_tensor_list());
   if (blob_conf.split_axis().has_value()) {
     int64_t split_axis = blob_conf.split_axis().value();
     BalancedSplitter bs(out_blob_desc->shape().At(split_axis), parallel_ctx->parallel_num());
@@ -67,9 +66,14 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InterfaceOpUtil::InferBatchAxis(const InterfaceBlobConf& blob_conf,
-                                            OptInt64* batch_axis) {
-  *batch_axis = blob_conf.batch_axis();
+Maybe<void> InterfaceOpUtil::InferLogicalOutBlobDesc(const InterfaceBlobConf& blob_conf,
+                                                     BlobDesc* out_blob_desc,
+                                                     const ParallelDesc& parallel_desc) {
+  out_blob_desc->mut_shape() = Shape(blob_conf.shape());
+  CheckShape(out_blob_desc->shape());
+  CHECK_GT(out_blob_desc->mut_shape().At(0), 0);
+  out_blob_desc->set_data_type(blob_conf.data_type());
+  out_blob_desc->set_is_dynamic(blob_conf.is_dynamic());
   return Maybe<void>::Ok();
 }
 
@@ -95,7 +99,6 @@ Maybe<void> InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
   blob_desc.shape().ToProto(blob_conf->mutable_shape());
   blob_conf->set_data_type(blob_desc.data_type());
   blob_conf->set_is_dynamic(blob_desc.is_dynamic());
-  blob_conf->set_is_tensor_list(blob_desc.is_tensor_list());
   if (parallel_blob_conf.sbp_conf().has_split_parallel()) {
     int64_t axis = parallel_blob_conf.sbp_conf().split_parallel().axis();
     blob_conf->mutable_split_axis()->set_value(axis);
@@ -104,7 +107,6 @@ Maybe<void> InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
   } else {
     OF_UNIMPLEMENTED();
   }
-  *blob_conf->mutable_batch_axis() = parallel_blob_conf.batch_axis();
   return Maybe<void>::Ok();
 }
 

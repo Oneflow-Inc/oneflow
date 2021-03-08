@@ -28,8 +28,7 @@ class ScalarOpBase : public Operator {
 
   void InitFromOpConf() override;
   Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override;
+                                const ParallelContext* parallel_ctx) const override;
 
  protected:
   virtual Maybe<void> VirtualGetSbpSignatures(
@@ -39,10 +38,6 @@ class ScalarOpBase : public Operator {
   }
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
-  }
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;

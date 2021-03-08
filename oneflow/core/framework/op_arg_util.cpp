@@ -19,10 +19,9 @@ namespace oneflow {
 
 namespace compatible_py {
 
-OpArgBlobAttribute::OpArgBlobAttribute(const std::shared_ptr<cfg::OptInt64>& batch_axis,
-                                       const std::shared_ptr<cfg::BlobDescProto>& blob_desc,
+OpArgBlobAttribute::OpArgBlobAttribute(const std::shared_ptr<cfg::BlobDescProto>& blob_desc,
                                        const std::string& logical_blob_name)
-    : batch_axis_(batch_axis), blob_desc_(blob_desc), logical_blob_name_(logical_blob_name) {
+    : blob_desc_(blob_desc), logical_blob_name_(logical_blob_name) {
   ShapeProto shape_proto;
   blob_desc_->body().shape().ToProto(&shape_proto);
   shape_ = std::make_shared<Shape>(shape_proto);
@@ -36,15 +35,10 @@ std::string OpArgBlobAttribute::logical_blob_name() const { return logical_blob_
 
 cfg::DataType OpArgBlobAttribute::get_dtype() const { return blob_desc_->body().data_type(); }
 
-std::shared_ptr<cfg::OptInt64> OpArgBlobAttribute::batch_axis() const { return batch_axis_; }
-
-bool OpArgBlobAttribute::is_tensor_list() const { return blob_desc_->is_tensor_list(); }
-
 bool OpArgBlobAttribute::is_dynamic() const { return blob_desc_->is_dynamic(); }
 
 bool OpArgBlobAttribute::operator==(const OpArgBlobAttribute& other) const {
-  return (*shape_ == *other.shape()) && (*batch_axis_ == *other.batch_axis())
-         && (get_dtype() == other.get_dtype()) && (is_tensor_list() == other.is_tensor_list())
+  return (*shape_ == *other.shape()) && (get_dtype() == other.get_dtype())
          && (is_dynamic() == other.is_dynamic())
          && (logical_blob_name_ == other.logical_blob_name());
 }
@@ -56,7 +50,7 @@ std::shared_ptr<OpArgBlobAttribute> OpArgBlobAttribute::GetPhysicalOpArgBlobAttr
   int64_t physical_len =
       BalancedSplitter(shape_->At(split_axis), parallel_num).At(parallel_id).size();
   blob_desc->mutable_body()->mutable_shape()->set_dim(split_axis, physical_len);
-  return std::make_shared<OpArgBlobAttribute>(batch_axis_, blob_desc, logical_blob_name_);
+  return std::make_shared<OpArgBlobAttribute>(blob_desc, logical_blob_name_);
 }
 
 void OpArgBlobAttribute::DumpToInterfaceBlobConf(
@@ -66,23 +60,14 @@ void OpArgBlobAttribute::DumpToInterfaceBlobConf(
   }
   interface_blob_conf->set_data_type(blob_desc_->body().data_type());
   interface_blob_conf->set_is_dynamic(is_dynamic());
-  interface_blob_conf->set_is_tensor_list(is_tensor_list());
-  if (batch_axis_->has_value()) {
-    interface_blob_conf->mutable_batch_axis()->CopyFrom(*batch_axis_);
-  }
 }
 
 void OpArgBlobAttribute::DumpToOpNodeSignature(
     std::string bn_in_op, std::shared_ptr<cfg::OpNodeSignature> op_node_signature) const {
-  auto& blob_sig =
-      *(op_node_signature->mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc());
-  CHECK(blob_sig.find(bn_in_op) == blob_sig.end());
-  blob_sig[bn_in_op].CopyFrom(*blob_desc_);
-
-  auto& batch_axis_sig =
-      *(op_node_signature->mutable_batch_axis_signature()->mutable_bn_in_op2batch_axis());
-  CHECK(batch_axis_sig.find(bn_in_op) == batch_axis_sig.end());
-  batch_axis_sig[bn_in_op].CopyFrom(*batch_axis_);
+  auto* blob_sig =
+      op_node_signature->mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc();
+  CHECK(blob_sig->find(bn_in_op) == blob_sig->end());
+  (*blob_sig)[bn_in_op].CopyFrom(*blob_desc_);
 }
 
 OpArgParallelAttribute::OpArgParallelAttribute(
@@ -137,19 +122,19 @@ void OpArgParallelAttribute::DumpToInterfaceBlobConf(
 
 void OpArgParallelAttribute::DumpToOpNodeSignature(
     std::string bn_in_op, std::shared_ptr<cfg::OpNodeSignature> op_node_signature) const {
-  auto& sbp_sig = *(op_node_signature->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel());
-  CHECK(sbp_sig.find(bn_in_op) == sbp_sig.end());
-  sbp_sig[bn_in_op].CopyFrom(*sbp_parallel_);
+  auto* sbp_sig = op_node_signature->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
+  CHECK(sbp_sig->find(bn_in_op) == sbp_sig->end());
+  (*sbp_sig)[bn_in_op].CopyFrom(*sbp_parallel_);
 
-  auto& mirrored_sig =
-      *(op_node_signature->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel());
-  CHECK(mirrored_sig.find(bn_in_op) == mirrored_sig.end());
-  mirrored_sig[bn_in_op].CopyFrom(*opt_mirrored_parallel_);
+  auto* mirrored_sig =
+      op_node_signature->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel();
+  CHECK(mirrored_sig->find(bn_in_op) == mirrored_sig->end());
+  (*mirrored_sig)[bn_in_op].CopyFrom(*opt_mirrored_parallel_);
 
-  auto& parallel_sig = *(
-      op_node_signature->mutable_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id());
-  CHECK(parallel_sig.find(bn_in_op) == parallel_sig.end());
-  parallel_sig[bn_in_op] = CHECK_JUST(parallel_desc_->symbol_id());
+  auto* parallel_sig =
+      op_node_signature->mutable_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id();
+  CHECK(parallel_sig->find(bn_in_op) == parallel_sig->end());
+  (*parallel_sig)[bn_in_op] = CHECK_JUST(parallel_desc_->symbol_id());
 }
 
 std::string OpArgParallelAttribute::ToString() const {
@@ -160,31 +145,26 @@ std::string OpArgParallelAttribute::ToString() const {
 
 Maybe<OpArgBlobAttribute> GetOpArgBlobAttribute(const OpAttribute& op_attribute,
                                                 const std::string& bn_in_op) {
-  if (!op_attribute.has_batch_axis_signature()) { return std::shared_ptr<OpArgBlobAttribute>(); }
   if (!op_attribute.has_logical_blob_desc_signature()) {
     return std::shared_ptr<OpArgBlobAttribute>();
   }
-  auto& batch_axis_signature_map = op_attribute.batch_axis_signature().bn_in_op2batch_axis();
-  auto& blob_desc_signature_map = op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc();
-  auto& arg_signature_map = op_attribute.arg_signature().bn_in_op2lbi();
-  auto& lbi = arg_signature_map.at(bn_in_op);
-  std::shared_ptr<cfg::OptInt64> batch_axis = std::make_shared<cfg::OptInt64>();
-  if (batch_axis_signature_map.find(bn_in_op) != batch_axis_signature_map.end()) {
-    batch_axis.reset(new cfg::OptInt64(batch_axis_signature_map.at(bn_in_op)));
-  }
+  const auto& blob_desc_signature_map =
+      op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc();
+  const auto& arg_signature_map = op_attribute.arg_signature().bn_in_op2lbi();
+  const auto& lbi = arg_signature_map.at(bn_in_op);
   std::shared_ptr<cfg::BlobDescProto> blob_desc = std::make_shared<cfg::BlobDescProto>();
   if (blob_desc_signature_map.find(bn_in_op) != blob_desc_signature_map.end()) {
     blob_desc.reset(new cfg::BlobDescProto(blob_desc_signature_map.at(bn_in_op)));
   }
-  return std::make_shared<OpArgBlobAttribute>(batch_axis, blob_desc,
-                                              lbi.op_name() + "/" + lbi.blob_name());
+  return std::make_shared<OpArgBlobAttribute>(blob_desc, lbi.op_name() + "/" + lbi.blob_name());
 }
 
 Maybe<OpArgParallelAttribute> GetOpArgParallelAttribute(
     const std::shared_ptr<ParallelDesc>& parallel_desc_symbol, const OpAttribute& op_attribute,
     const std::string& bn_in_op) {
-  auto& sbp_signature_map = op_attribute.sbp_signature().bn_in_op2sbp_parallel();
-  auto& mirrored_signature_map = op_attribute.mirrored_signature().bn_in_op2opt_mirrored_parallel();
+  const auto& sbp_signature_map = op_attribute.sbp_signature().bn_in_op2sbp_parallel();
+  const auto& mirrored_signature_map =
+      op_attribute.mirrored_signature().bn_in_op2opt_mirrored_parallel();
   std::shared_ptr<cfg::SbpParallel> sbp_parallel = std::make_shared<cfg::SbpParallel>();
   if (sbp_signature_map.find(bn_in_op) != sbp_signature_map.end()) {
     sbp_parallel.reset(new cfg::SbpParallel(sbp_signature_map.at(bn_in_op)));

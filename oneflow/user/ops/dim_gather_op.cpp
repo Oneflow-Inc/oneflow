@@ -39,14 +39,6 @@ REGISTER_USER_OP("dim_gather")
       CHECK_LT_OR_RETURN(dim, input_num_axes);
       CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
 
-      // split_axs should NOT equals dim when in consistent view
-      const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
-      auto is_split = in_sbp.has_split_parallel();
-      if (ctx->parallel_ctx().parallel_num() != 1 && is_split) {
-        int64_t split_axis = in_sbp.split_parallel().axis();
-        CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
-      }
-
       CHECK_EQ_OR_RETURN(in->is_dynamic(), index->is_dynamic());
 
       FOR_RANGE(int64_t, i, 0, input_num_axes) {
@@ -65,17 +57,6 @@ REGISTER_USER_OP("dim_gather")
       user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
       CHECK(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      OptInt64* indices_batch_axis = ctx->BatchAxis4ArgNameAndIndex("index", 0);
-      if (indices_batch_axis->has_value()) {
-        CHECK_GE_OR_RETURN(indices_batch_axis->value(), 0);
-        CHECK_LE_OR_RETURN(
-            indices_batch_axis->value(),
-            ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape().NumAxes() - 1);
-      }
-      *ctx->BatchAxis4ArgNameAndIndex("output", 0) = *indices_batch_axis;
-      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& index_tensor =
@@ -119,13 +100,6 @@ REGISTER_USER_OP("dim_scatter_add_like")
       const TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
 
       const Shape& like_shape = like->shape();
-      int32_t dim = ctx->Attr<int32_t>("dim");
-
-      const SbpParallel& input_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
-      int64_t split_axis = input_sbp.split_parallel().axis();
-      if (ctx->parallel_ctx().parallel_num() != 1 && input_sbp.has_split_parallel()) {
-        CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
-      }
 
       int64_t input_num_axes = input->shape().NumAxes();
       CHECK_GT_OR_RETURN(input_num_axes, 0);
@@ -150,12 +124,6 @@ REGISTER_USER_OP("dim_scatter_add_like")
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_arg_modifier != nullptr);
       like_arg_modifier->set_requires_grad(false);
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("index", 0)
-                      == *ctx->BatchAxis4ArgNameAndIndex("input", 0));
-      *ctx->BatchAxis4ArgNameAndIndex("output", 0) = *ctx->BatchAxis4ArgNameAndIndex("input", 0);
-      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& index_tensor =
