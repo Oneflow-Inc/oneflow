@@ -155,7 +155,7 @@ jobs:
         if: matrix.test_suite == 'cuda'
         with:
           name: build.cuda_op.env
-          path: build.${{ matrix.test_suite }}.env
+          path: build.cuda_op.env
 
   test:
     name: Test suite
