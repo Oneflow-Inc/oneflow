@@ -71,20 +71,6 @@ void LogicalGraph::NaiveBuildFwStruct(
     AddAllocatedNode(cur_node);
     cur_node->mut_op_vec() = {cur_op};
     cur_node->mut_parallel_desc() = parallel_desc_ptr;
-    {
-      const auto& name2shape = job_.helper().op_name2op_time_shape();
-      const auto& op_time_shape_it = name2shape.find(cur_op->op_name());
-      if (op_time_shape_it != name2shape.end()) {
-        const auto& op_time_shape = op_time_shape_it->second;
-        if (op_time_shape.has_out_blob_time_shape()) {
-          cur_node->reset_out_blob_time_shape(new Shape(op_time_shape.out_blob_time_shape()));
-        }
-        if (op_time_shape.has_in_blob_fastest_time_shape()) {
-          cur_node->reset_in_blob_fastest_time_shape(
-              new Shape(op_time_shape.in_blob_fastest_time_shape()));
-        }
-      }
-    }
     for (const std::string& obn : cur_node->SoleOp()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->SoleOp()->BnInOp2Lbi(obn);
       CHECK(lbi2producer.emplace(lbi, cur_node).second);

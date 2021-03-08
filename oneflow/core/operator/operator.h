@@ -121,13 +121,15 @@ class Operator {
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const;
 
-  // Infer out blob's time shape
-  Maybe<void> InferOutputBlobTimeShapeIf(
-      std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
+  Maybe<void> FillInputBlobTimeShape(
+      const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4Ibn);
+  Maybe<void> InferOpTimeShapeIf();
+  virtual Maybe<void> InferOpTimeShape(
+      const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
       Shape* time_shape) const;
-  virtual Maybe<void> InferOutputBlobTimeShape(
-      std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
-      Shape* time_shape) const;
+  Maybe<const Shape> GetOpTimeShape() const;
+  Maybe<const Shape> GetInputBlobFastestTimeShape() const;
+  Maybe<const Shape> GetInputOutputFastestTimeShape() const;
 
   Maybe<void> FillSbpSignature(const SbpSignature& sbp_signature);
   Maybe<void> InferSbpSignatureIf(
@@ -265,6 +267,10 @@ class Operator {
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const ParallelDesc>>> bn2parallel_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> ibn2logical_blob_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> obn2logical_blob_desc_;
+  std::unique_ptr<HashMap<std::string, std::shared_ptr<const Shape>>> ibn2time_shape_;
+  std::shared_ptr<const Shape> input_blob_fastest_time_shape_;
+  std::shared_ptr<const Shape> input_output_fastest_time_shape_;
+  std::shared_ptr<const Shape> op_time_shape_;
   std::shared_ptr<const SbpSignature> sbp_signature_;
   PbRpf<std::string> input_bns_;
   PbRpf<std::string> output_bns_;
