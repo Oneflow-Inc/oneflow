@@ -42,17 +42,6 @@ void CheckFunctionConfig(const JobConfigProto& job_conf) {
 
 }  // namespace
 
-int64_t JobDesc::piece_num_of_experiment_phase() const {
-  return job_conf_.exp_run_conf().piece_num_of_experiment_phase();
-}
-
-bool JobDesc::enable_experiment_run() const {
-  return job_conf_.exp_run_conf().enable_experiment_run();
-}
-
-int64_t JobDesc::TotalBatchNum() const { return job_conf_.total_batch_num(); }
-int64_t JobDesc::NumOfPiecesInBatch() const { return 1; }
-
 JobDesc::JobDesc(const JobConfigProto& job_conf, int64_t job_id)
     : job_conf_(job_conf), job_id_(job_id), symbol_id_(Error::SymbolIdUninitialized()) {
   CHECK_JUST(Init());
@@ -71,16 +60,7 @@ Maybe<void> JobDesc::Init() {
   CHECK_EQ_OR_RETURN((Global<ResourceDesc, ForSession>::Get()->use_rdma()), false)
       << "Please compile ONEFLOW with RDMA";
 #endif
-  int64_t piece_exp = job_conf_.exp_run_conf().piece_num_of_experiment_phase();
-  if (job_conf_.has_train_conf()) {
-    if (piece_exp == -1) { piece_exp = 19 * NumOfPiecesInBatch(); }
-    piece_exp = std::max(piece_exp, NumOfPiecesInBatch());
-    piece_exp = std::min(piece_exp, job_conf_.total_batch_num() * NumOfPiecesInBatch());
-  } else {
-    if (piece_exp == -1) { piece_exp = 19; }
-  }
-  LOG(INFO) << "Set piece_num_of_experiment_phase " << piece_exp;
-  job_conf_.mutable_exp_run_conf()->set_piece_num_of_experiment_phase(piece_exp);
+
 #ifndef WITH_CUDA
   CHECK_EQ_OR_RETURN((Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()), 0);
 #endif

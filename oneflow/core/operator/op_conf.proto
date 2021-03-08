@@ -150,6 +150,7 @@ message VariableOpConf {
   required OptInt64 split_axis = 8;
   optional int64 random_seed = 9;
   optional RegularizerConf regularizer = 10;
+  optional bool trainable = 11 [default = true];
 }
 
 message DecodeRandomOpConf {
@@ -347,7 +348,7 @@ message XrtLaunchOpConf {
   // Sbp signatures of each function node.
   map<string, SbpSignature> sbp_signatures = 8;
   optional bool model_update = 9 [default = false];
-  map<string, BlobDescProto> input_output_logical_blob_desc = 10;
+  map<string, BlobDescProto> lbn2logical_blob_desc = 10;
 }
 
 message ModelInitV2OpConf {
@@ -417,23 +418,6 @@ message BroadcastToCompatibleWithOpConf {
   required string y = 3;
 }
 
-message TensorBufferToTensorListOpConf {
-  required string in = 1;
-  required string out = 2;
-  required ShapeProto shape = 3;
-  required DataType data_type = 4;
-}
-
-message TensorListToTensorBufferOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message TensorListSplitOpConf {
-  required string in = 1;
-  repeated string out = 2;
-}
-
 message CollectiveBoxingGenericOpConf {
   required LogicalBlobId lbi = 1;
   required boxing.collective.RankDesc rank_desc = 2;
@@ -483,7 +467,6 @@ message BoxingZerosOpConf {
 
 message OperatorConf {
   required string name = 1;
-  optional bool trainable = 3 [default = true];
   optional string device_tag = 4 [default = "invalid_device"];
   repeated string ctrl_in_op_name = 7;
   optional int64 scope_symbol_id = 8;
@@ -518,11 +501,8 @@ message OperatorConf {
     DeviceTickOpConf device_tick_conf = 159;
     SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
     SliceBoxingAddOpConf slice_boxing_add_conf = 167;
-    TensorBufferToTensorListOpConf tensor_buffer_to_tensor_list_conf = 168;
-    TensorListToTensorBufferOpConf tensor_list_to_tensor_buffer_conf = 169;
     CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
     BoxingIdentityOpConf boxing_identity_conf = 171;
-    TensorListSplitOpConf tensor_list_split_conf = 172;
     CollectiveBoxingPackOpConf collective_boxing_pack_conf = 174;
     CollectiveBoxingUnpackOpConf collective_boxing_unpack_conf = 175;
     BoxingZerosOpConf boxing_zeros_conf = 176;

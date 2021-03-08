@@ -17,7 +17,6 @@ from __future__ import absolute_import
 from typing import Optional, Sequence
 from oneflow.python.oneflow_export import oneflow_export
 
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -39,7 +38,7 @@ import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow_api
 import os
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 @oneflow_export("get_variable")
@@ -323,7 +322,7 @@ def GenerateVariableOpConf(
         op_conf.variable_conf.regularizer.CopyFrom(regularizer)
 
     if trainable is not None:
-        op_conf.trainable = trainable
+        op_conf.variable_conf.trainable = trainable
 
     if model_name is not None:
         op_conf.variable_conf.model_name = model_name
@@ -359,11 +358,7 @@ def CreateEagerVariableBlob(op_attribute, job_name=""):
             str(op_attribute)
         )
         builder.StatelessCall(
-            cfg_op_attribute,
-            parallel_conf,
-            bn_in_op2blob_object,
-            boxing_util.BoxingTo,
-            blob_cache_util.FindOrCreateDelegateBlobObject,
+            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
         )
 
     oneflow_api.deprecated.LogicalRun(BuildInstruction)

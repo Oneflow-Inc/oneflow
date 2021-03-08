@@ -54,7 +54,7 @@ class ActorMsg final {
   int64_t piece_id() const;
   int64_t act_id() const;
   void* comm_net_token() const;
-  bool has_sole_empty_tensor_in_sole_tensor_list() const;
+  bool has_sole_empty_blob() const;
   int64_t eord_regst_desc_id() const;
 
   // Serialize
@@ -72,7 +72,7 @@ class ActorMsg final {
     Regst* regst;
     void* comm_net_token;
     RegstStatus regst_status;
-    bool has_sole_empty_tensor_in_sole_tensor_list;
+    bool has_sole_empty_blob;
   };
 
   int64_t src_actor_id_;
