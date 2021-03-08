@@ -36,23 +36,6 @@ class TestUnaryElementwiseOps(flow.unittest.TestCase):
         y = AbsJob(x).get().numpy()
         test_case.assertTrue(np.array_equal(y, np.absolute(x)))
 
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_1n2c_mirror_dynamic_abs(test_case):
-        flow.config.gpu_device_num(2)
-        func_config = flow.FunctionConfig()
-        func_config.default_logical_view(flow.scope.mirrored_view())
-        func_config.default_data_type(flow.float)
-
-        @flow.global_function(function_config=func_config)
-        def AbsJob(a: oft.ListNumpy.Placeholder((5, 2))):
-            return flow.math.abs(a)
-
-        x1 = np.random.rand(3, 1).astype(np.float32)
-        x2 = np.random.rand(4, 2).astype(np.float32)
-        y1, y2 = AbsJob([x1, x2]).get().numpy_list()
-        test_case.assertTrue(np.array_equal(y1, np.absolute(x1)))
-        test_case.assertTrue(np.array_equal(y2, np.absolute(x2)))
-
     def test_acos(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_data_type(flow.float)
@@ -107,23 +90,6 @@ class TestUnaryElementwiseOps(flow.unittest.TestCase):
         x = np.random.rand(5, 2).astype(np.double)
         y = AcosJob(x).get().numpy()
         test_case.assertTrue(np.allclose(y, np.arccos(x)))
-
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_1n2c_mirror_dynamic_acos(test_case):
-        flow.config.gpu_device_num(2)
-        func_config = flow.FunctionConfig()
-        func_config.default_logical_view(flow.scope.mirrored_view())
-        func_config.default_data_type(flow.float)
-
-        @flow.global_function(function_config=func_config)
-        def AcosJob(a: oft.ListNumpy.Placeholder((5, 2))):
-            return flow.math.acos(a)
-
-        x1 = np.random.rand(3, 1).astype(np.float32)
-        x2 = np.random.rand(4, 2).astype(np.float32)
-        y1, y2 = AcosJob([x1, x2]).get().numpy_list()
-        test_case.assertTrue(np.allclose(y1, np.arccos(x1)))
-        test_case.assertTrue(np.allclose(y2, np.arccos(x2)))
 
     def test_acosh(test_case):
         func_config = flow.FunctionConfig()

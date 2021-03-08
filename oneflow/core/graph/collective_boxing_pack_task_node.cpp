@@ -53,7 +53,7 @@ void CollectiveBoxingPackTaskNode::BuildExecGphAndRegst() {
   *collective_boxing_pack_conf->mutable_src_sbp_parallel() = src_sbp_parallel_;
   *collective_boxing_pack_conf->mutable_dst_sbp_parallel() = dst_sbp_parallel_;
   collective_boxing_pack_conf->set_num_ranks(parallel_num_);
-  std::shared_ptr<Operator> sole_op = ConstructOp(op_conf, &GlobalJobDesc());
+  std::shared_ptr<Operator> sole_op = ConstructOp(op_conf);
   node->mut_op() = sole_op;
   node->BindBnWithRegst(sole_op->SoleIbn(), GetSoleConsumedRegst("in"));
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");

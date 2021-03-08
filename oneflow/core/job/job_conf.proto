@@ -132,11 +132,6 @@ message TrainConf {
 message PredictConf {
 }
 
-message ExperimentalRunConf {
-  optional int64 piece_num_of_experiment_phase = 1 [default = -1];
-  optional bool enable_experiment_run = 2 [default = false];
-}
-
 message MemoryAllocationAlgorithmConf {
   optional bool use_mem_size_first_algo = 1 [default = true];
   optional bool use_mutual_exclusion_first_algo = 2 [default = true];
@@ -198,14 +193,12 @@ message JobConfigProto {
     TrainConf train_conf = 3;
     PredictConf predict_conf = 4;
   }
-  optional int64 total_batch_num = 7 [default = 1];
   optional DataType default_data_type = 8 [default = kFloat]; // kFloat or kDouble
   oneof default_initialize_conf {
     InitializerConf default_initializer_conf = 10;
     string default_initialize_with_snapshot_path = 11;
   }
 
-  optional ExperimentalRunConf exp_run_conf = 100;
   optional bool use_memory_allocation_algorithm_v2 = 101 [default = true];
   optional MemoryAllocationAlgorithmConf memory_allocation_algorithm_conf = 102;
 

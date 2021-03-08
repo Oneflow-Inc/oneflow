@@ -39,7 +39,7 @@ void InferShape(XrtGraph* graph, const XrtPassOptions& options, const JobDesc* j
     if (!node->IsArgumentNode()) {
       DeviceType device_type = XrtDeviceToDeviceType(node->device());
       const auto& conf = *dynamic_cast<const OperatorConf*>(&node->param());
-      auto op = ConstructOp(conf, device_type, job_desc);
+      auto op = ConstructOp(conf, device_type);
       CHECK_JUST(op->FillOpParallelDesc(*parallel_desc));
       auto get_blob_desc_fn = [&](const std::string& bn) -> BlobDesc* {
         const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
