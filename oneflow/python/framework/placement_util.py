@@ -76,7 +76,7 @@ def api_placement(
 
     """
 
-    if oneflow_api.flags.with_cuda() == False:
+    if oneflow_api.flags.with_cuda() == False and device_tag == "gpu":
         device_tag = "cpu"
     func = enable_if.unique(
         [
