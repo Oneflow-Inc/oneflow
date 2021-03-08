@@ -76,7 +76,7 @@ GraphBuilder::GraphBuilder(const XrtLaunchOpConf::Function& function, const Devi
     XrtNode* node = graph_->AddNode(node_conf);
     SetupXrtNode(node, node_conf);
     auto& input_output_keys = node_info_[node].input_output_keys;
-    auto op = ConstructOp(node_conf, device_type, &job_desc);
+    auto op = ConstructOp(node_conf, device_type);
     for (const std::string& bn : op->output_bns()) {
       std::string output = BlobIdToName(op->BnInOp2Lbi(bn));
       producers_[output] = node;
