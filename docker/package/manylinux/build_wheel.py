@@ -238,7 +238,6 @@ def is_img_existing(tag):
         stderr=subprocess.DEVNULL,
     ).returncode
     if returncode == 0:
-        print("[OK]", tag)
         return True
     else:
         return False
