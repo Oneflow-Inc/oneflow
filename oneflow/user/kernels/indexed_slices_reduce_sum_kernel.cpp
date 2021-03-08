@@ -58,22 +58,19 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn() {
   };
 }
 
-#define REGISTER_INDEXED_SLICES_REDUCE_SUM_KERNEL(device_type, data_type, indices_type)  \
-  REGISTER_USER_KERNEL("indexed_slices_reduce_sum")                                      \
-      .SetCreateFn<IndexedSlicesReduceSumKernel<device_type, data_type, indices_type>>() \
-      .SetIsMatchedHob(                                                                  \
-          (user_op::HobDeviceTag() == device_type)                                       \
-          & (user_op::HobDataType("x_values", 0) == GetDataType<data_type>::value)       \
-          & (user_op::HobDataType("x_indices", 0) == GetDataType<indices_type>::value))  \
-      .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type, data_type, indices_type>());
+#define REGISTER_INDEXED_SLICES_REDUCE_SUM_KERNEL(device_type_v, data_type_pair,                 \
+                                                  indices_type_pair)                             \
+  REGISTER_USER_KERNEL("indexed_slices_reduce_sum")                                              \
+      .SetCreateFn<IndexedSlicesReduceSumKernel<device_type_v, OF_PP_PAIR_FIRST(data_type_pair), \
+                                                OF_PP_PAIR_FIRST(indices_type_pair)>>()          \
+      .SetIsMatchedHob(                                                                          \
+          (user_op::HobDeviceTag() == ToString(device_type_v))                                   \
+          & (user_op::HobDataType("x_values", 0) == OF_PP_PAIR_SECOND(data_type_pair))           \
+          & (user_op::HobDataType("x_indices", 0) == OF_PP_PAIR_SECOND(indices_type_pair)))      \
+      .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),      \
+                                           OF_PP_PAIR_FIRST(indices_type_pair)>());
 
-REGISTER_INDEXED_SLICES_REDUCE_SUM_KERNEL(DeviceType::kGPU, float, int32_t)
-REGISTER_INDEXED_SLICES_REDUCE_SUM_KERNEL(DeviceType::kGPU, float, int64_t)
-REGISTER_INDEXED_SLICES_REDUCE_SUM_KERNEL(DeviceType::kGPU, double, int32_t)
-REGISTER_INDEXED_SLICES_REDUCE_SUM_KERNEL(DeviceType::kGPU, double, int64_t)
-REGISTER_INDEXED_SLICES_REDUCE_SUM_KERNEL(DeviceType::kCPU, float, int32_t)
-REGISTER_INDEXED_SLICES_REDUCE_SUM_KERNEL(DeviceType::kCPU, float, int64_t)
-REGISTER_INDEXED_SLICES_REDUCE_SUM_KERNEL(DeviceType::kCPU, double, int32_t)
-REGISTER_INDEXED_SLICES_REDUCE_SUM_KERNEL(DeviceType::kCPU, double, int64_t)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_INDEXED_SLICES_REDUCE_SUM_KERNEL, DEVICE_TYPE_SEQ,
+                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
