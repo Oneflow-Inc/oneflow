@@ -108,7 +108,7 @@ jobs:
           docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
             $extra_docker_args \
             -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-            oneflow:manylinux2014-cuda10.2 \
+            oneflow-manylinux2014-cuda10.2:0.1 \
             bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
       - name: Upload wheel to cloud
         uses: ./.github/actions/upload_oss
