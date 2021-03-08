@@ -55,8 +55,7 @@ StreamIndexGetterFn StreamIndexGetterRegistryManager::GetStreamIndexGetterFunc(D
   auto strm_idx_getter = StreamIndexGetterRegistryManager::Get().StreamIndexGetterFuncs();
   std::pair<DeviceType, TaskType> dev_task_type(dev_type, task_type);
   if (strm_idx_getter.find(dev_task_type) == strm_idx_getter.end()) {
-    LOG(FATAL) << task_type << " on " << dev_type << " is not registered";
-    UNIMPLEMENTED();
+    return strm_idx_getter[std::make_pair(DeviceType::kInvalidDevice, TaskType::kInvalid)];
   }
 
   return strm_idx_getter[dev_task_type];

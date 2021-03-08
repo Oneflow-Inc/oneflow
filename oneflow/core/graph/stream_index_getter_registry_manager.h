@@ -69,23 +69,10 @@ class StreamIndexGetterRegistryManager final {
   static ::oneflow::StreamIndexGetterRegistry OF_PP_CAT(g_strm_index_get_registry, __COUNTER__) = \
       StreamIndexGetterRegistry(device_type, task_type)
 
-#define REGISTER_COMPUTE_TASK_NODE_GPU_STREAM_INDEX_GETTER(task_type)                         \
-  REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, task_type)                 \
-      .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {                            \
-        auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(          \
-            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id)); \
-        CHECK_NOTNULL(cuda_stream_index_generator);                                           \
-        return cuda_stream_index_generator->GenerateComputeStreamIndex();                     \
-      });
-
-#define REGISTER_COMPUTE_TASK_NODE_CPU_STREAM_INDEX_GETTER(task_type)                         \
-  REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, task_type)                 \
-      .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {                            \
-        auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(            \
-            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id)); \
-        CHECK_NOTNULL(cpu_stream_index_generator);                                            \
-        return cpu_stream_index_generator->GenerateComputeStreamIndex();                      \
-      });
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kInvalidDevice, TaskType::kInvalid)
+    .SetStreamIndexGetterFnNew([](StreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateComputeStreamIndex();
+    });
 
 }  // namespace oneflow
 
