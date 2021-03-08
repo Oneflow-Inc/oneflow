@@ -30,6 +30,7 @@ struct FunctionNodeUtil final {
     std::stringstream ss;
     ss << "<";
     ss << func_node.GetOpName();
+    ss << " at " << &func_node;
     ss << ">";
     return ss.str();
   }
@@ -38,11 +39,13 @@ struct FunctionNodeUtil final {
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<one::FunctionNode, std::shared_ptr<one::FunctionNode>>(m, "Size")
+  py::class_<one::FunctionNode, std::shared_ptr<one::FunctionNode>>(m, "FunctionNode")
       .def("__str__", &FunctionNodeUtil::ToString)
       .def("__repr__", &FunctionNodeUtil::ToString)
-      .def("next_functions",
-           [](const one::FunctionNode& func_node) { return func_node.GetNextFunctions(); });
+      .def_property_readonly(
+          "next_functions",
+          [](const one::FunctionNode& func_node) { return func_node.GetNextFunctions(); })
+      .def("name", [](const one::FunctionNode& func_node) { return func_node.GetOpName(); });
 }
 
 }  // namespace oneflow
