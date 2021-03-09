@@ -72,7 +72,7 @@ Maybe<void> ShapeElemCntOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> ShapeElemCntOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
 }
