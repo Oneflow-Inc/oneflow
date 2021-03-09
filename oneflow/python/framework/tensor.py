@@ -30,7 +30,7 @@ class Tensor:
         sbp=None,
         is_consistent=False,
         is_lazy=False,
-        determining_initializer=None,
+        determining_initializer=None
     ):
         dtype = dtype if dtype is not None else oneflow_api.float32
         device = device if device is not None else oneflow_api.device("cpu")

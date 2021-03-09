@@ -31,7 +31,9 @@ def split_and_print(prefix, text):
 
 
 def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
-    "CUDA_VISIBLE_DEVICES"
+    is_cpu_only = os.getenv("ONEFLOW_TEST_CPU_ONLY")
+    if is_cpu_only:
+        gpu_num = os.cpu_count()
     if gpu_num > 0:
         proc2gpu_ids = {}
         while len(cmds):
@@ -63,7 +65,9 @@ def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
                     cmd,
                     env=dict(
                         os.environ,
-                        CUDA_VISIBLE_DEVICES=cuda_visible_devices,
+                        CUDA_VISIBLE_DEVICES=(
+                            "" if is_cpu_only else cuda_visible_devices
+                        ),
                         ONEFLOW_TEST_MASTER_PORT=str(find_free_port()),
                         ONEFLOW_TEST_LOG_DIR=("./unittest-log-" + str(uuid.uuid4())),
                     ),
