@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import oneflow
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.blob_trait as blob_trait
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
@@ -151,41 +152,18 @@ def sub_consistent_blob_list(self):
 
 
 def numpy(self, rank=None):
-    if rank is None:
-        if self.numpy_size() == 1:
-            return self._NumpyAt(0)
-        else:
-            assert not self.is_dynamic
-            assert not self.is_tensor_list
-            return self._Numpy()
-    else:
-        return self._NumpyAt(rank)
+    assert rank is None or rank == 0
+    return self._Numpy()
 
 
 def numpy_list(self, rank=None):
-    assert self.is_tensor_list
-    assert self.is_dynamic
-    mirrored_list = self._NumpyMirroredList()
-    if rank is None:
-        return mirrored_list
-    else:
-        parallel_num = self.blob_object_.parallel_desc_symbol.parallel_num
-        assert rank >= 0
-        assert rank < parallel_num
-        assert len(mirrored_list) == parallel_num
-        return mirrored_list[rank]
+    assert rank is None or rank == 0
+    return [self._Numpy()]
 
 
-def _NumpyAt(self, rank):
-    assert self.is_tensor_list is not True
-    assert rank >= 0
-    assert rank < self.blob_object.parallel_desc_symbol.parallel_num
-    ndarray_list = self._NumpyMirroredList()
-    return ndarray_list[rank]
-
-
-def _Numpy(self):
-    assert self.is_tensor_list is not True
+def BlobObjectNumpy(blob_object, parallel_conf, tmp_name=None):
+    if tmp_name is None:
+        tmp_name = id_util.UniqueStr("numpy-tmp-")
 
     def FetchBlobNumpy(blob_object):
         consistent_blob_name = None
@@ -201,13 +179,13 @@ def _Numpy(self):
                 str(blob_object.op_arg_parallel_attr.opt_mirrored_parallel),
             )
             with oneflow.scope.placement(
-                self.parallel_conf.device_tag(), list(self.parallel_conf.device_name()),
+                parallel_conf.device_tag(), list(parallel_conf.device_name()),
             ):
                 tmp_blob_object = boxing_util.BoxingTo(
                     builder, blob_object, tmp_op_arg_parallel_attr
                 )
             nonlocal consistent_blob_name
-            consistent_blob_name = "{}-consistent".format(self.logical_blob_name)
+            consistent_blob_name = tmp_name
             if not blob_register.HasObject4BlobName(consistent_blob_name):
                 blob_register.SetObject4BlobName(consistent_blob_name, tmp_blob_object)
 
@@ -218,51 +196,21 @@ def _Numpy(self):
             eager_blob_util._GetPhysicalBlobHeaderCache,
         ).numpy()
 
-    blob_cache = oneflow_api.FindOrCreateBlobCache(self.blob_object)
+    blob_cache = oneflow_api.FindOrCreateBlobCache(blob_object)
     return blob_cache.GetCachedNumpy(FetchBlobNumpy)
 
 
-def _NumpyMirroredList(self):
-    physical_blob_objects = []
-
-    def UnpackLogicalBlobToPhysicalBlobs(builder):
-        nonlocal physical_blob_objects
-        physical_blob_objects = builder.UnpackLogicalBlobToPhysicalBlobs(
-            self.blob_object
-        )
-
-    def GetPhyBlobNumpy(i, phy_blob_object):
-        name = "{}/{}".format(self.logical_blob_name, i)
-        blob_register.SetObject4BlobName(name, phy_blob_object)
-        return (
-            oneflow_api.EagerPhysicalBlob(
-                name, blob_register, eager_blob_util._GetPhysicalBlobHeaderCache
-            ).numpy_list()
-            if self.is_tensor_list
-            else oneflow_api.EagerPhysicalBlob(
-                name, blob_register, eager_blob_util._GetPhysicalBlobHeaderCache
-            ).numpy()
-        )
-
-    def FetchBlobNumpyMirroredList(blob_object):
-        oneflow_api.deprecated.LogicalRun(UnpackLogicalBlobToPhysicalBlobs)
-        return [
-            GetPhyBlobNumpy(i, phy_blob_object)
-            for i, phy_blob_object in enumerate(physical_blob_objects)
-        ]
-
-    blob_cache = oneflow_api.FindOrCreateBlobCache(self.blob_object)
-    return blob_cache.GetCachedNumpyMirroredList(FetchBlobNumpyMirroredList)
+def _Numpy(self):
+    tmp_name = "{}-consistent".format(self.logical_blob_name)
+    return BlobObjectNumpy(self.blob_object, self.parallel_conf, tmp_name)
 
 
 def RegisterMethod4EagerBlobTrait():
     oneflow_api.EagerBlobTrait.sub_consistent_blob_list = sub_consistent_blob_list
     oneflow_api.EagerBlobTrait.dtype = dtype
-    oneflow_api.EagerBlobTrait._NumpyMirroredList = _NumpyMirroredList
     oneflow_api.EagerBlobTrait._Numpy = _Numpy
-    oneflow_api.EagerBlobTrait._NumpyAt = _NumpyAt
-    oneflow_api.EagerBlobTrait.numpy_list = numpy_list
     oneflow_api.EagerBlobTrait.numpy = numpy
+    oneflow_api.EagerBlobTrait.numpy_list = numpy_list
 
 
 def eager_with_distribute(self, distribute):

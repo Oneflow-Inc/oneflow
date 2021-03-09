@@ -83,10 +83,6 @@ class ArgBlobDef(object):
     def is_dynamic(self):
         raise NotImplementedError
 
-    @property
-    def is_tensor_list(self):
-        raise NotImplementedError
-
     def with_distribute(self, distribute):
         return type(self)(shape=self.shape_, dtype=self.dtype_, name=self.op_name,)
 
@@ -116,7 +112,6 @@ class ArgBlobDef(object):
             self.dtype_
         )
         interface_blob_conf.is_dynamic = self.is_dynamic
-        interface_blob_conf.is_tensor_list = self.is_tensor_list
         # NOTE(chengcheng): rm batch_axis, so set split_axis always = 0 for safe. will support
         #     set sbp in future, or will delete in multi-client
         interface_blob_conf.split_axis.value = 0
@@ -146,10 +141,6 @@ class FixedTensorDef(ArgBlobDef):
 
     @property
     def is_dynamic(self) -> bool:
-        return False
-
-    @property
-    def is_tensor_list(self) -> bool:
         return False
 
     def AddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
@@ -193,10 +184,6 @@ class MirroredTensorDef(ArgBlobDef):
     def is_dynamic(self) -> bool:
         return True
 
-    @property
-    def is_tensor_list(self) -> bool:
-        return False
-
     def AddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> None:
         _AddAndInferMirroredOp(
             self.unique_name, op_conf, self.sub_consistent_blob_list_
@@ -224,59 +211,6 @@ class MirroredTensorDef(ArgBlobDef):
             sub_blob = self.sub_consistent_blob_list_[i]
             session.AsyncPush(
                 sub_blob.op_name, _MakePushNdarrayCallback(ndarray_list[i])
-            )
-
-
-class MirroredTensorListDef(ArgBlobDef):
-    def __init__(
-        self,
-        shape: Sequence[int],
-        dtype: oneflow.dtype = oneflow.float,
-        name: Optional[str] = None,
-    ) -> None:
-        assert type(shape) is tuple
-        ArgBlobDef.__init__(self, shape, dtype=dtype, name=name)
-        self.sub_consistent_blob_list_ = []
-
-    @property
-    def is_dynamic(self) -> bool:
-        return True
-
-    @property
-    def is_tensor_list(self) -> bool:
-        return True
-
-    def AddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> None:
-        _AddAndInferMirroredOp(
-            self.unique_name, op_conf, self.sub_consistent_blob_list_
-        )
-
-    def EagerAddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
-        return compile_context.CurJobAddMirroredOp(op_conf)
-
-    def _CheckNdarray(self, ndarray_lists: Sequence[np.ndarray]) -> None:
-        assert isinstance(ndarray_lists, (list, tuple))
-        assert len(self.sub_consistent_blob_list_) == len(ndarray_lists)
-
-        def GetElemCnt(shape):
-            return reduce(lambda x, y: x * y, shape, 1)
-
-        for consistent_blob, ndarray_list in zip(
-            self.sub_consistent_blob_list_, ndarray_lists
-        ):
-            assert type(ndarray_list) is list
-            elem_cnt = 0
-            for ndarray in ndarray_list:
-                assert type(ndarray) is np.ndarray
-                assert len(ndarray.shape) == len(self.shape)
-                elem_cnt += GetElemCnt(ndarray.shape)
-            assert elem_cnt <= GetElemCnt(self.shape)
-
-    def _AsyncPush(self, session: object, ndarray_lists: Sequence[np.ndarray]) -> None:
-        for i in range(len(ndarray_lists)):
-            sub_blob = self.sub_consistent_blob_list_[i]
-            session.AsyncPush(
-                sub_blob.op_name, _MakePushNdarrayListCallback(ndarray_lists[i])
             )
 
 
@@ -308,11 +242,6 @@ def _MakePushNdarrayCallback(ndarray):
         ofblob.CopyFromNdarray(copied)
 
     return Copy
-
-
-def _MakePushNdarrayListCallback(ndarray_list):
-    copied = [np.copy(ndarray) for ndarray in ndarray_list]
-    return lambda ofblob: ofblob.CopyFromNdarrayList(copied)
 
 
 @oneflow_export("FixedTensorDef")
@@ -347,25 +276,6 @@ class DeprecatedMirroredTensorDef(MirroredTensorDef):
                 """For instance:
             - def job_func(images=oneflow.MirroredTensorDef((32, 1, 28, 28), dtype=flow.float))
             + def job_func(images:oneflow.typing.ListNumpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"""
-            )
-            print(traceback.format_stack()[-2])
-
-        super().__init__(*args, **kwargs)
-
-
-@oneflow_export("MirroredTensorListDef")
-class DeprecatedTensorListDef(MirroredTensorListDef):
-    def __init__(self, *args, **kwargs):
-        running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
-        if not running_script.endswith('input_blob_def.py"'):
-            print(
-                "WARNING: oneflow.MirroredTensorListDef has been deprecated. "
-                "Please use oneflow.typing.ListListNumpy.Placeholder instead."
-            )
-            print(
-                """For instance:
-            - def job_func(images=oneflow.MirroredTensorListDef((32, 1, 28, 28), dtype=flow.float))
-            + def job_func(images:oneflow.typing.ListListNumpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"""
             )
             print(traceback.format_stack()[-2])
 

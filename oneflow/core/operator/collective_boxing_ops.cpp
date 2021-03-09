@@ -42,9 +42,9 @@ class CollectiveBoxingGenericOp : public Operator {
     return this->op_conf().collective_boxing_generic_conf().lbi();
   }
 
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext*,
-                                const SbpSignature* sbp_signature) const override {
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
     const RankDesc& rank_desc = op_conf().collective_boxing_generic_conf().rank_desc();
     const DataType data_type = rank_desc.op_desc().data_type();
     if (GenericOpHasInput(rank_desc)) {

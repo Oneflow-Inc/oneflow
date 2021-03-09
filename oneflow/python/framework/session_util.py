@@ -47,8 +47,6 @@ from typing import Callable
 import inspect
 import oneflow
 import oneflow_api
-import oneflow_api.oneflow.core.vm.instruction as instr_cfg
-import oneflow_api.oneflow.core.eager.eager_symbol as eager_symbol_cfg
 import traceback
 
 
@@ -135,14 +133,6 @@ class Session(oneflow_api.Session):
     @property
     def job_name2name_scope_stack(self):
         return self.job_name2name_scope_stack_
-
-    @property
-    def instruction_list(self):
-        return self.instruction_list_()
-
-    @property
-    def eager_symbol_list(self):
-        return self.eager_symbol_list_()
 
     @property
     def backward_blob_register(self):

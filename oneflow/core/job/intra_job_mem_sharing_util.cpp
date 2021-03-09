@@ -130,7 +130,7 @@ void InitMemoryChains(Plan* plan,
 bool TryMergeMemChain2MergedChains(
     std::vector<MemoryChain*>* merged_chains, MemoryChain* mem_chain,
     const std::function<bool(const MemoryChain*, const MemoryChain*)>& IsStrictOrderL2R) {
-  Shape meta_shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
+  Shape meta_shape({1, 1});
   std::sort(merged_chains->begin(), merged_chains->end(), [&](MemoryChain* lhs, MemoryChain* rhs) {
     return lhs->total_mem_reused_size > rhs->total_mem_reused_size;
   });
