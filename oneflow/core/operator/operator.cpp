@@ -302,7 +302,7 @@ Maybe<void> Operator::InferOutBlobDescsIf(
 }
 
 Maybe<void> Operator::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   if (parallel_ctx->parallel_num() == 1) {
     JUST(InferLogicalOutBlobDescs(GetBlobDesc4BnInOp, *JUST(GetOpParallelDesc())));
