@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/logical_node.h"
-#include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include "oneflow/core/graph_impl/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
 #include "oneflow/core/graph/distribute_concat_compute_task_node.h"
 #include "oneflow/core/graph/distribute_split_compute_task_node.h"
-#include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
+#include "oneflow/core/graph_impl/wait_and_send_ids_compute_task_node.h"
 #include "oneflow/core/graph/foreign_input_compute_task_node.h"
 #include "oneflow/core/graph/foreign_output_compute_task_node.h"
 #include "oneflow/core/graph/callback_notify_compute_task_node.h"
@@ -32,7 +32,7 @@ limitations under the License.
 #include "oneflow/core/graph/acc_tick_compute_task_node.h"
 #include "oneflow/core/graph/case_compute_task_node.h"
 #include "oneflow/core/graph/esac_compute_task_node.h"
-#include "oneflow/core/graph/decode_h2d_compute_task_node.h"
+#include "oneflow/core/graph_impl/decode_h2d_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/framework/framework.h"

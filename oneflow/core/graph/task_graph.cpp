@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include "oneflow/core/graph_impl/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_context.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"

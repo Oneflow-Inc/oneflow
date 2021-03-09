@@ -50,14 +50,4 @@ void AccTickCompTaskNode::BuildExecGphAndRegst() {
   exec_node->InferBlobDescs(parallel_ctx());
 }
 
-// REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kWaitAndSendIds)
-//     .SetStreamIndexGetterFnNew([](CudaStreamIndexGenerator* generator) -> uint32_t {
-//       return generator->GenerateComputeStreamIndex();
-//     });
-
-// REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kWaitAndSendIds)
-//     .SetStreamIndexGetterFnNew([](CPUStreamIndexGenerator* generator) -> uint32_t {
-//       return generator->GenerateComputeStreamIndex();
-//     });
-
 }  // namespace oneflow

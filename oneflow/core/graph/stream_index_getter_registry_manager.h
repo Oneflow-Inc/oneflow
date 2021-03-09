@@ -69,11 +69,6 @@ class StreamIndexGetterRegistryManager final {
   static ::oneflow::StreamIndexGetterRegistry OF_PP_CAT(g_strm_index_get_registry, __COUNTER__) = \
       StreamIndexGetterRegistry(device_type, task_type)
 
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kInvalidDevice, TaskType::kInvalid)
-    .SetStreamIndexGetterFnNew([](StreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateComputeStreamIndex();
-    });
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_STREAM_INDEX_GETTER_REGISTRY_MANAGER_H_

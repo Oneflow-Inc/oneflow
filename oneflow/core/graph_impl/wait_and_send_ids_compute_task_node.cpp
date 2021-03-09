@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
+#include "oneflow/core/graph_impl/wait_and_send_ids_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
@@ -43,13 +43,8 @@ void WaitAndSendIdsCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kWaitAndSendIds)
-    .SetStreamIndexGetterFnNew([](CudaStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateComputeStreamIndex();
-    });
-
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kWaitAndSendIds)
-    .SetStreamIndexGetterFnNew([](CPUStreamIndexGenerator* generator) -> uint32_t {
+    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
       return generator->GenerateIndependentTaskStreamIndex(TaskType::kWaitAndSendIds);
     });
 

@@ -57,22 +57,11 @@ void DeviceTickCompTaskNode::InferProducedDataRegstTimeShape() {
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kDeviceTick);
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kFAKEDEVICE, TaskType::kDeviceTick)
-    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t { return 0; });
-
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDeviceTick)
-    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
-      auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
-          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-      CHECK_NOTNULL(cuda_stream_index_generator);
-      return cuda_stream_index_generator->GenerateComputeStreamIndex();
-    });
+    .SetFn([](DeviceId device_id) -> uint32_t { return 0; });
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kDeviceTick)
-    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
-      auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
-          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-      CHECK_NOTNULL(cpu_stream_index_generator);
-      return cpu_stream_index_generator->GenerateTickTockStreamIndex();
+    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateTickTockStreamIndex();
     });
 
 }  // namespace oneflow

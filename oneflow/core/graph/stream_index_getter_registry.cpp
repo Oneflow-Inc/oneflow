@@ -44,8 +44,7 @@ limitations under the License.
 
 namespace oneflow {
 
-StreamIndexGetterRegistry& StreamIndexGetterRegistry::SetStreamIndexGetterFn(
-    StreamIndexGetterFn func) {
+StreamIndexGetterRegistry& StreamIndexGetterRegistry::SetFn(StreamIndexGetterFn func) {
   StreamIndexGetterRegistryManager::Get().StreamIndexGetterFuncs()[dev_task_type_] = func;
   return *this;
 }

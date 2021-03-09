@@ -20,7 +20,7 @@ namespace oneflow {
 REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kCallbackNotify, 1);
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCallbackNotify)
-    .SetStreamIndexGetterFnNew([](CPUStreamIndexGenerator* generator) -> uint32_t {
+    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
       return generator->GenerateIndependentTaskStreamIndex(TaskType::kCallbackNotify);
     });
 

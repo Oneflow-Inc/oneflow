@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include "oneflow/core/graph_impl/normal_forward_compute_task_node.h"
 
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/graph/task_graph.h"
@@ -194,23 +194,7 @@ void NormalForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kNormalForward)
-    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
-      auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
-          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-      CHECK_NOTNULL(cuda_stream_index_generator);
-      return cuda_stream_index_generator->GenerateComputeStreamIndex();
-    });
-
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kNormalForward)
-    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t {
-      auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
-          Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-      CHECK_NOTNULL(cpu_stream_index_generator);
-      return cpu_stream_index_generator->GenerateComputeStreamIndex();
-    });
-
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kFAKEDEVICE, TaskType::kNormalForward)
-    .SetStreamIndexGetterFn([](DeviceId device_id) -> uint32_t { return 0; });
+    .SetFn([](DeviceId device_id) -> uint32_t { return 0; });
 
 }  // namespace oneflow

@@ -55,7 +55,13 @@ StreamIndexGetterFn StreamIndexGetterRegistryManager::GetStreamIndexGetterFunc(D
   auto strm_idx_getter = StreamIndexGetterRegistryManager::Get().StreamIndexGetterFuncs();
   std::pair<DeviceType, TaskType> dev_task_type(dev_type, task_type);
   if (strm_idx_getter.find(dev_task_type) == strm_idx_getter.end()) {
-    return strm_idx_getter[std::make_pair(DeviceType::kInvalidDevice, TaskType::kInvalid)];
+    auto return_compute_stream_index_fn = [](DeviceId device_id) -> uint32_t {
+      return Global<IDMgr>::Get()
+          ->GetStreamIndexGeneratorManager()
+          ->GetGenerator(device_id)
+          ->GenerateComputeStreamIndex();
+    };
+    return return_compute_stream_index_fn;
   }
 
   return strm_idx_getter[dev_task_type];
