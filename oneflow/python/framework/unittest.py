@@ -181,11 +181,17 @@ class TestCase(unittest.TestCase):
                     else:
                         config_world_size = 0
 
+                    config_node_size = -1
+                    env_node_size = os.getenv("ONEFLOW_TEST_NODE_SIZE")
+                    if env_node_size:
+                        config_node_size = int(data_port)
+
                     bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
                         node_list(),
                         int(master_port),
                         config_world_size,
                         config_rank_ctrl_port,
+                        config_node_size,
                     )
 
                     data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
