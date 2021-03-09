@@ -165,15 +165,15 @@ jobs:
         test_suite: ["cuda", "cuda_op", "xla", "cpu"]
       include:
         - test_suite: "cuda"
-          device: gpu
+          os: [self-hosted, linux, gpu]
         - test_suite: "cuda_op"
-          device: gpu
+          os: [self-hosted, linux, gpu]
         - test_suite: "xla"
-          device: gpu
+          os: [self-hosted, linux, gpu]
         - test_suite: "cpu"
-          device: cpu
+          os: [self-hosted, linux, cpu]
     needs: [build, wait_for_gpu_slot]
-    runs-on: [self-hosted, linux, ${{ matrix.device }}]
+    runs-on: ${{ matrix.os }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - name: Fix permissions
