@@ -19,7 +19,9 @@ from oneflow.python.framework.tensor import Tensor
 
 @oneflow_export("nn.Parameter")
 class Parameter(Tensor):
-    def __init__(self, data):
+    def __init__(self, data, requires_grad=True):
+        # TODO: uncomment this line when autograd is ready
+        # data.requires_grad = True
         self._data = data
 
     def __getattr__(self, name):
