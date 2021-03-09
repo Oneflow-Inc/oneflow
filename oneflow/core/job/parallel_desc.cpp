@@ -89,7 +89,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   machine_id2sorted_dev_phy_ids_ =
       std::make_shared<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>();
   for (const std::string& device_name : parallel_conf_.device_name()) {
-    int64_t node_id;
+    int64_t node_id = -1;
     std::string device_id_str;
     JUST(ParseDeviceNameConf(device_name, &node_id, &device_id_str));
     int64_t minus_pos = device_id_str.find("-");
