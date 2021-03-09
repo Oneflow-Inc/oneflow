@@ -46,6 +46,13 @@ int64_t MirroredTensor::dim(int64_t index) const { return shape()->At(index); }
 
 int64_t MirroredTensor::nelement() const { return shape()->elem_cnt(); }
 
+std::shared_ptr<Tensor> MirroredTensor::data() const {
+  std::shared_ptr<MirroredTensor> t =
+      MakeTensor(shape(), dtype(), device(), is_lazy(), false, is_leaf(), false);
+  t->set_blob_object(blob_object());
+  return t;
+}
+
 std::shared_ptr<ConsistentTensor> ConsistentTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
     const std::shared_ptr<const compatible_py::Distribute>& distribute,
@@ -71,6 +78,13 @@ int64_t ConsistentTensor::dim(int64_t index) const { return shape()->At(index); 
 int64_t ConsistentTensor::nelement() const { return shape()->elem_cnt(); }
 
 int64_t ConsistentTensor::ndim() const { return shape()->NumAxes(); }
+
+std::shared_ptr<Tensor> ConsistentTensor::data() const {
+  std::shared_ptr<ConsistentTensor> t = MakeTensor(shape(), dtype(), distribute(), parallel_desc(),
+                                                   is_lazy(), false, is_leaf(), false);
+  t->set_blob_object(blob_object());
+  return t;
+}
 
 }  // namespace one
 

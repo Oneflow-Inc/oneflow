@@ -50,7 +50,7 @@ class Tensor:
             self._local_or_consistent_tensor = oneflow_api.LocalTensor(
                 shape, dtype, device, is_lazy, requires_grad, True, retain_grad
             )
-            # Set blob object for tensor 
+            # Set blob object for tensor
             TODO()
         else:
             shape = args

@@ -67,7 +67,7 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("device", &T::device)
       .def_property_readonly("is_cuda", &T::is_cuda)
       .def_property_readonly("dtype", &T::dtype)
-      .def_property_readonly("data", []() { TODO(); })
+      .def_property_readonly("data", [](const T& t) { return t.api_data().GetPtrOrThrow(); })
       .def_property_readonly("grad", [](const T& t) { return t.api_acc_grad().GetPtrOrThrow(); })
       .def_property_readonly("grad_fn", &T::grad_fn_node)
       .def_property_readonly("requires_grad", &T::requires_grad)
