@@ -34,13 +34,6 @@ class IDMgr final {
   int64_t NewMemBlockId() { return mem_block_id_count_++; }
   int64_t NewChunkId() { return chunk_id_count_++; }
 
-  // MemZoneId
-  int64_t CpuMemZoneId() const;
-  bool IsCpuMemZone(int64_t mem_zone_id) const;
-  bool IsGpuMemZone(int64_t mem_zone_id) const;
-  int64_t GpuMemZoneId(int64_t dev_phy_id) const;
-  int64_t GetGpuPhyIdFromMemZoneId(int64_t mem_zone_id) const;
-
   // GetFromThrdId
   DeviceType GetDeviceTypeFromThrdId(int64_t thrd_id) const;
   int64_t GetGpuPhyIdFromThrdId(int64_t thrd_id) const;

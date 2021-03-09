@@ -72,18 +72,19 @@ TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, const MemZoneId 
                                             const int64_t dst_parallel_id) {
   const int64_t dst_machine_id =
       CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(dst_parallel_id));
-  MemZoneId dst_mem_zone_id;
+  MemZoneId::device_index_t index = 0;
   const IDMgr* id_mgr = Global<IDMgr>::Get();
   if (dst_parallel_desc.device_type() == DeviceType::kCPU) {
-    dst_mem_zone_id = MemZoneId(DeviceType::kCPU, 0);
+    index = MemZoneId::kCPUDeviceIndex;
   } else if (dst_parallel_desc.device_type() == DeviceType::kGPU) {
     const int64_t dst_dev_phy_id =
         CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(dst_parallel_id));
-    dst_mem_zone_id = MemZoneId(DeviceType::kGPU, dst_dev_phy_id);
+    index = static_cast<MemZoneId::device_index_t>(dst_dev_phy_id);
   } else {
     UNIMPLEMENTED();
   }
-  return GetProxyNode(src_node, src_mem_zone_id, dst_machine_id, dst_mem_zone_id);
+  return GetProxyNode(src_node, src_mem_zone_id, dst_machine_id,
+                      MemZoneId(dst_parallel_desc.device_type(), index));
 }
 
 }  // namespace oneflow

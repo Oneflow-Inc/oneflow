@@ -132,6 +132,9 @@ class TaskId {
 
 class MemZoneId {
  public:
+  using device_index_t = uint32_t;
+
+  constexpr static size_t kCPUDeviceIndex = 0;
   constexpr static size_t kDeviceTypeBits = 5;
   constexpr static size_t kDeviceIndexBits = 7;
   constexpr static size_t kMaxDeviceTypeVal = (size_t{1} << kDeviceTypeBits) - size_t{1};
@@ -140,7 +143,7 @@ class MemZoneId {
 
   MemZoneId() {
     device_type_ = DeviceType::kCPU;
-    device_index_ = 0;
+    device_index_ = kCPUDeviceIndex;
   }
   MemZoneId(DeviceType device_type, device_index_t device_index)
       : device_type_(device_type), device_index_(device_index) {

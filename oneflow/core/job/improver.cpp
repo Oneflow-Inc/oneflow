@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
@@ -560,10 +561,8 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
           CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii);
       const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
       if (calc >= available) {
-        const auto* id_mgr = Global<IDMgr>::Get();
-        // TODO(Liang Depeng): remove id_mgr usage
-        const char* device_tag = JUST(DeviceTag4DeviceType(
-            id_mgr->IsGpuMemZone(mem_zone_id) ? DeviceType::kGPU : DeviceType::kCPU));
+        const char* device_tag =
+            JUST(DeviceTag4DeviceType(DeserializeMemZoneIdFromInt64(mem_zone_id).device_type()));
         return Error::MemoryZoneOutOfMemoryError(machine_id, mem_zone_id, calc, available,
                                                  device_tag)
                << "OOM detected at compile time. ";

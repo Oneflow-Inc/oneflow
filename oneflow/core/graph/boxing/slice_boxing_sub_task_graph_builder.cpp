@@ -159,7 +159,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       UNIMPLEMENTED();
     }
     dst_node->Init(lbi, dst_slice, kSliceBoxingTaskModeCopy, src_node->machine_id(), thrd_id,
-                   MemZoneId(DeviceType::kCPU, 0));
+                   MemZoneId(DeviceType::kCPU, MemZoneId::kCPUDeviceIndex));
     dst_node->ConnectToSrcNodeWithSlice(src_node, NewEdge(), src_slice);
     return dst_node;
   };
@@ -426,16 +426,17 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         in_box_node = add_node;
       }
       for (const int64_t out_id : machine_id7out_parallel_ids.second) {
-        MemZoneId mem_zone_id;
+        MemZoneId::device_index_t index = 0;
         if (out_pd.device_type() == DeviceType::kCPU) {
-          mem_zone_id = MemZoneId(DeviceType::kCPU, 0);
+          index = MemZoneId::kCPUDeviceIndex;
         } else if (out_pd.device_type() == DeviceType::kGPU) {
-          mem_zone_id = MemZoneId(DeviceType::kGPU, CHECK_JUST(out_pd.DeviceId4ParallelId(out_id)));
+          index = CHECK_JUST(out_pd.DeviceId4ParallelId(out_id));
         } else {
           UNIMPLEMENTED();
         }
-        (*out_nodes)[out_id] = ctx->GetProxyNode(in_box_node, MemZoneId(DeviceType::kCPU, 0),
-                                                 out_machine_id, mem_zone_id);
+        (*out_nodes)[out_id] =
+            ctx->GetProxyNode(in_box_node, MemZoneId(DeviceType::kCPU, 0), out_machine_id,
+                              MemZoneId(out_pd.device_type(), index));
       }
     }
   };

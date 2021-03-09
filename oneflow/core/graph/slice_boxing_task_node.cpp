@@ -35,15 +35,15 @@ void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& 
                                int64_t thrd_id) {
   IDMgr* global_id_mgr = Global<IDMgr>::Get();
   DeviceType device_type = global_id_mgr->GetDeviceTypeFromThrdId(thrd_id);
-  MemZoneId mem_zone_id;
+  MemZoneId::device_index_t index = 0;
   if (device_type == DeviceType::kCPU) {
-    mem_zone_id = MemZoneId(DeviceType::kCPU, 0);
+    index = MemZoneId::kCPUDeviceIndex;
   } else if (device_type == DeviceType::kGPU) {
-    mem_zone_id = MemZoneId(DeviceType::kGPU, global_id_mgr->GetGpuPhyIdFromThrdId(thrd_id));
+    index = global_id_mgr->GetGpuPhyIdFromThrdId(thrd_id);
   } else {
     UNIMPLEMENTED();
   }
-  Init(lbi, out_slice, mode, machine_id, thrd_id, mem_zone_id);
+  Init(lbi, out_slice, mode, machine_id, thrd_id, MemZoneId(device_type, index));
 }
 
 void SliceBoxingTaskNode::ProduceAllRegstsAndBindEdges() {

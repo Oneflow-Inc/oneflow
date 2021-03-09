@@ -644,26 +644,27 @@ void TaskGraph::BuildTaskPath(CompTaskNode* src, CompTaskNode* dst, MutBufTaskFn
 
 TaskNode* TaskGraph::BuildTaskStep(TaskNode* src, TaskNode* dst, const GetBufTaskFn& GetBufTask,
                                    const SetBufTaskFn& SetBufTask, bool use_buf_task_node) {
-  MemZoneId next_mem_zone_id;
+  MemZoneId next_mem_zone_id(DeviceType::kCPU, MemZoneId::kCPUDeviceIndex);
   TaskNode* next = nullptr;
-  uint32_t src_process_id = static_cast<uint32_t>(src->machine_id());
-  uint32_t dst_process_id = static_cast<uint32_t>(dst->machine_id());
   if (src->MemZoneId121().device_type() != DeviceType::kCPU) {
     next_mem_zone_id = MemZoneId(DeviceType::kCPU, 0);
-    if (!use_buf_task_node || !(next = GetBufTask(src_process_id, next_mem_zone_id))) {
+    if (!use_buf_task_node
+        || !(next = GetBufTask(static_cast<uint32_t>(src->machine_id()), next_mem_zone_id))) {
       next = AddCopyD2HTaskFrom(src);
       Connect<TaskNode>(src, NewEdge(), next);
     }
   } else if (src->machine_id() == dst->machine_id()) {
     next_mem_zone_id = dst->MemZoneId121();
-    if (!use_buf_task_node || !(next = GetBufTask(src_process_id, next_mem_zone_id))) {
+    if (!use_buf_task_node
+        || !(next = GetBufTask(static_cast<uint32_t>(src->machine_id()), next_mem_zone_id))) {
       next = TryAddCopyH2DTaskTo(dst);
       if (next == nullptr) { next = dst; }
       Connect<TaskNode>(src, NewEdge(), next);
     }
   } else if (src->machine_id() != dst->machine_id()) {
     next_mem_zone_id = MemZoneId(DeviceType::kCPU, 0);
-    if (!use_buf_task_node || !(next = GetBufTask(dst_process_id, next_mem_zone_id))) {
+    if (!use_buf_task_node
+        || !(next = GetBufTask(static_cast<uint32_t>(dst->machine_id()), next_mem_zone_id))) {
       next = AddCopyCommNetTaskBetween(src, dst);
       Connect<TaskNode>(src, NewEdge(), next);
     }
@@ -671,8 +672,7 @@ TaskNode* TaskGraph::BuildTaskStep(TaskNode* src, TaskNode* dst, const GetBufTas
     UNIMPLEMENTED();
   }
   if (use_buf_task_node && (src != dst)) {
-    uint32_t next_process_id = static_cast<uint32_t>(next->machine_id());
-    SetBufTask(next_process_id, next_mem_zone_id, next);
+    SetBufTask(static_cast<uint32_t>(next->machine_id()), next_mem_zone_id, next);
   }
   return next;
 }
