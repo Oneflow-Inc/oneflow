@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,8 +12,20 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow_api
-from oneflow.python.oneflow_export import oneflow_export
+*/
+#include "oneflow/core/device/cuda_device_context.h"
+#include "oneflow/core/thread/thread_context.h"
 
-oneflow_export("device")(oneflow_api.device)
+namespace oneflow {
+
+#ifdef WITH_CUDA
+
+REGISTER_DEVICE_CONTEXT(DeviceType::kGPU, ([](const ThreadCtx& thread_ctx) -> DeviceCtx* {
+                          CudaStreamHandle* cuda_handle = nullptr;
+                          cuda_handle = thread_ctx.g_cuda_stream.get();
+                          return new CudaDeviceCtx(cuda_handle);
+                        }));
+
+#endif  // WITH_CUDA
+
+}  // namespace oneflow

@@ -31,7 +31,6 @@ Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
   CHECK_OR_RETURN(conf.has_data_type());
   out_blob_desc->set_data_type(conf.data_type());
   out_blob_desc->set_is_dynamic(conf.is_dynamic());
-  out_blob_desc->set_is_tensor_list(conf.is_tensor_list());
   return Maybe<void>::Ok();
 }
 

@@ -37,6 +37,8 @@ class InferContext {
   virtual ~InferContext() = default;
 
   virtual TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
+                                                              int32_t) const = 0;
   virtual Shape* Shape4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
@@ -55,7 +57,6 @@ class InferContext {
   virtual const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
   virtual bool* IsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
-  virtual bool* IsTensorList4ArgNameAndIndex(const std::string&, int32_t) = 0;
 
   const UserOpConfWrapper& user_op_conf() const { return conf_; }
 

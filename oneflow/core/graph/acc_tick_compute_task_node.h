@@ -29,9 +29,6 @@ class AccTickCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
-
- private:
-  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

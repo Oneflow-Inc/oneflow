@@ -13,29 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <sstream>
-#include "oneflow/core/framework/device.h"
+#include "oneflow/core/device/cpu_device_context.h"
+#include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
-
-const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu"});
-
-std::string Device::of_type() const {
-  if (type_ == "cuda") {
-    return "gpu";
-  } else {
-    return type_;
-  }
+REGISTER_DEVICE_CONTEXT(DeviceType::kCPU, ([](const ThreadCtx& thread_ctx) -> DeviceCtx* {
+                          return new CpuDeviceCtx();
+                        }));
 }
-
-std::string Device::ToString() const {
-  std::stringstream ss;
-  ss << "device(type='";
-  ss << type_;
-  ss << "', index=";
-  ss << device_id_;
-  ss << ")";
-  return ss.str();
-}
-
-}  // namespace oneflow

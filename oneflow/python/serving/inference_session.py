@@ -112,9 +112,6 @@ def _inferface_blob_conf_proto_to_cfg(
     mut_inferface_blob_conf_cfg.mutable_split_axis().CopyFrom(split_axis)
 
     mut_inferface_blob_conf_cfg.set_is_dynamic(inferface_blob_conf_proto.is_dynamic)
-    mut_inferface_blob_conf_cfg.set_is_tensor_list(
-        inferface_blob_conf_proto.is_tensor_list
-    )
 
 
 @oneflow_export("serving.ModelVersionPolicy")
@@ -502,17 +499,8 @@ class InferenceSession(object):
         )
 
         def pull_fn(ofblob):
-            ndarray_lists = ofblob.CopyToNdarrayLists()
-            assert len(ndarray_lists) == 1
-            ndarray_list = ndarray_lists[0]
-            if len(ndarray_list) == 1:
-                self.event_loop_.call_soon_threadsafe(
-                    future.set_result, ndarray_list[0]
-                )
-            else:
-                assert split_axis is not None
-                pull_result = np.concatenate(ndarray_list, axis=split_axis)
-                self.event_loop_.call_soon_threadsafe(future.set_result, pull_result)
+            ndarray = ofblob.CopyToNdarray()
+            self.event_loop_.call_soon_threadsafe(future.set_result, ndarray)
 
         return pull_fn
 
