@@ -47,10 +47,12 @@ def _GetInterfaceBlobObject(builder, op_name):
         parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
         for device_name in parallel_conf.device_name:
             parallel_conf_cfg.add_device_name(device_name)
-        hierarchy = shape_proto_cfg.ShapeProto()
-        for dim in parallel_conf.hierarchy:
-            hierarchy.add_dim(dim)
-        parallel_conf_cfg.mutable_hierarchy().CopyFrom(hierarchy)
+        if parallel_conf.HasField("hierarchy"):
+            hierarchy = shape_proto_cfg.ShapeProto()
+            for dim in parallel_conf.hierarchy.dim:
+                hierarchy.add_dim(dim)
+            assert hierarchy.dim_size() > 0
+            parallel_conf_cfg.mutable_hierarchy().CopyFrom(hierarchy)
         parallel_conf = parallel_conf_cfg
 
     blob_object = builder.MakeLazyRefBlobObject(

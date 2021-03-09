@@ -602,6 +602,7 @@ def GetConcatSplitBoxingParallelDescSymbol(
     hierarchy = shape_proto_cfg.ShapeProto()
     for dim in parallel_desc_symbol.hierarchy:
         hierarchy.add_dim(dim)
+    assert hierarchy.dim_size() > 0
     parallel_conf.mutable_hierarchy().CopyFrom(hierarchy)
     return builder.GetParallelDescSymbol(parallel_conf)
 

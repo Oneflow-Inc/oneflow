@@ -159,7 +159,7 @@ void ParallelDesc::ClearUp() {
     SortAndRemoveDuplication((pair.second).get());
     parallel_num_ += pair.second->size();
   }
-  if (parallel_conf_.has_hierarchy()) {
+  if (parallel_conf_.has_hierarchy() && parallel_conf_.hierarchy().dim_size() != 0) {
     hierarchy_.reset(new Shape(parallel_conf_.hierarchy()));
     CHECK_EQ(hierarchy_->elem_cnt(), parallel_num_);
   } else {

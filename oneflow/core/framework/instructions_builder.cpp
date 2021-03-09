@@ -611,17 +611,18 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelConf(
     const std::shared_ptr<Scope>& scope, const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
-  std::tuple<std::string, std::vector<std::string>, std::shared_ptr<cfg::ShapeProto>>
+  const std::shared_ptr<
+      std::tuple<std::string, std::vector<std::string>, std::shared_ptr<cfg::ShapeProto>>>&
       tag_and_dev_ids_and_hierarchy =
-          *JUST(GetDeviceTagAndMachineDeviceIdsAndHierarchy(parallel_conf));
+          JUST(GetDeviceTagAndMachineDeviceIdsAndHierarchy(parallel_conf));
   std::shared_ptr<Shape> hierarchy;
-  if (std::get<2>(tag_and_dev_ids_and_hierarchy)) {
+  if (std::get<2>(*tag_and_dev_ids_and_hierarchy)) {
     ShapeProto hierarchy_proto;
     parallel_conf->hierarchy().ToProto(&hierarchy_proto);
     hierarchy.reset(new Shape(hierarchy_proto));
   }
-  return BuildScopeWithNewParallelDesc(scope, std::get<0>(tag_and_dev_ids_and_hierarchy),
-                                       std::get<1>(tag_and_dev_ids_and_hierarchy), hierarchy);
+  return BuildScopeWithNewParallelDesc(scope, std::get<0>(*tag_and_dev_ids_and_hierarchy),
+                                       std::get<1>(*tag_and_dev_ids_and_hierarchy), hierarchy);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope,
