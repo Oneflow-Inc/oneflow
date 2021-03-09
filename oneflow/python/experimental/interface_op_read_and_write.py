@@ -26,6 +26,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager.op_executor as op_executor
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
+import oneflow_api.oneflow.core.common.shape as shape_proto_cfg
 import oneflow_api
 
 blob_register = oneflow_api.GetDefaultBlobRegister()
@@ -46,7 +47,12 @@ def _GetInterfaceBlobObject(builder, op_name):
         parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
         for device_name in parallel_conf.device_name:
             parallel_conf_cfg.add_device_name(device_name)
+        hierarchy = shape_proto_cfg.ShapeProto()
+        for dim in parallel_conf.hierarchy:
+            hierarchy.add_dim(dim)
+        parallel_conf_cfg.mutable_hierarchy().CopyFrom(hierarchy)
         parallel_conf = parallel_conf_cfg
+
     blob_object = builder.MakeLazyRefBlobObject(
         op_name, cfg_op_attribute, parallel_conf
     )

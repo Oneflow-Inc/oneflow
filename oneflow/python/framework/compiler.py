@@ -61,14 +61,14 @@ def InterpretScope(session, function_desc, config_proto):
     placement_scope = function_desc.function_attribute.default_placement_scope
     if placement_scope is None:
         tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(session.resource)
-        parallel_hierarchy = None
+        hierarchy = None
     else:
         assert isinstance(placement_scope, placement_ctx.EmptyPlacementScope)
         tag_and_dev_ids = (
             placement_scope.device_tag,
             placement_scope.machine_device_ids,
         )
-        parallel_hierarchy = placement_scope.parallel_hierarchy
+        hierarchy = placement_scope.hierarchy
 
     distribute_strategy = function_desc.function_attribute.default_distribute_strategy
     if distribute_strategy is None:
@@ -76,12 +76,11 @@ def InterpretScope(session, function_desc, config_proto):
     is_mirrored = isinstance(
         distribute_strategy, distribute_util.DistributeMirroredStrategy
     )
-    if parallel_hierarchy is not None:
-        if type(parallel_hierarchy) is list:
-            parallel_hierarchy = tuple(parallel_hierarchy)
-        parallel_hierarchy = oneflow_api.Size(parallel_hierarchy)
+    assert isinstance(hierarchy, (list, tuple)) or hierarchy is None
+    if hierarchy is not None:
+        hierarchy = oneflow_api.Size(tuple(hierarchy))
     scope = scope_util.MakeInitialScope(
-        job_conf, *tag_and_dev_ids, parallel_hierarchy, is_mirrored
+        job_conf, *tag_and_dev_ids, hierarchy, is_mirrored
     )
     with _JobBuildAndInferCtx(job_conf.job_name()), distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
