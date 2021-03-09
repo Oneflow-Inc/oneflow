@@ -75,7 +75,6 @@ TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, const MemZoneId 
   const int64_t dst_machine_id =
       CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(dst_parallel_id));
   MemZoneId::device_index_t index = 0;
-  const IDMgr* id_mgr = Global<IDMgr>::Get();
   if (dst_parallel_desc.device_type() == DeviceType::kCPU) {
     index = MemZoneId::kCPUDeviceIndex;
   } else if (dst_parallel_desc.device_type() == DeviceType::kGPU) {
