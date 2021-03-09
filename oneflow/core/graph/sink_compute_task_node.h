@@ -30,7 +30,6 @@ class SinkCompTaskNode : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
-  void InferProducedDataRegstTimeShape() final{};
 };
 
 }  // namespace oneflow

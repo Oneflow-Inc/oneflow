@@ -95,7 +95,7 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_builder
 
 void JobCompleter::Complete(Job* job) const {
   JobPassCtx job_pass_ctx(GlobalJobDesc());
-  JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
+  JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx);
   // NOTE(chengcheng): disable this pass for reduce boxing memory life cycle to memory cost.
   if (!Global<ResourceDesc, ForSession>::Get()->resource().disable_group_boxing_by_dst_parallel()) {
     WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel);
@@ -107,7 +107,7 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJobBuilder(job, &AutoSourceAndSinkTick);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalInputCriticalSections);
   WithOpGraphAndMutJobBuilder(job, &AddGlobalOutputCriticalSections);
-  JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
+  JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx);
   if (XrtCompilationEnabled(GlobalJobDesc())) {
 #ifdef OF_WITH_XRT
     WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob);
@@ -121,7 +121,7 @@ void JobCompleter::Complete(Job* job) const {
     // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
     JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx);
     // NOTE(chengcheng): Becasue insert new logical nccl op, MUST dump time shape, sbp again.
-    JobPass4Name("DumpTimeShapeAndBlobParallelConfPass")(job, &job_pass_ctx);
+    JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx);
   }
   CheckOpGraph(OpGraph(*job));
 }

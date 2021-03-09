@@ -74,18 +74,18 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("is_leaf", &T::is_leaf)
       // Methods of pytorch
       .def("data_ptr", []() { TODO(); })
-      .def("element_size", []() { TODO(); })
       .def("numpy", []() { TODO(); })
       .def("tolist", []() { TODO(); })
-      .def("backward", []() { TODO(); })
+      .def("retain_grad", [](T& t) { t.set_retain_grad(true); })
       .def("__str__", []() { TODO(); })
       .def("__repr__", []() { TODO(); })
-      .def("__array__", []() { TODO(); })
-      .def("__sizeof__", []() { TODO(); })
       // OneFlow tensor properties other than pytorch tensor
       .def_property_readonly("placement", &T::parallel_desc)
       .def_property_readonly("is_lazy", &T::is_lazy)
-      .def_property_readonly("is_consistent", &T::is_consistent);
+      .def_property_readonly("is_consistent", &T::is_consistent)
+      .def_property_readonly("_blob_object", &T::blob_object)
+      // OneFlow tensor methods other than pytorch tensor
+      .def("_set_blob_object", &T::set_blob_object);
 }
 
 }  // namespace
@@ -93,6 +93,7 @@ void ExportTensor(py::module& m, const char* name) {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   ExportTensor<MirroredTensor>(m, "LocalTensor");
   ExportTensor<ConsistentTensor>(m, "ConsistentTensor");
+  py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor");
 }
 
 }  // namespace one
