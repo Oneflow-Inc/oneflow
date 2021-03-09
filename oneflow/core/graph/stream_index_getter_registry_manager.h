@@ -59,6 +59,9 @@ class StreamIndexGetterRegistryManager final {
 
   StreamIndexKeyMap<StreamIndexGetterFn>& StreamIndexGetterFuncs();
 
+  StreamId::stream_index_t StreamIndex4DeviceIdAndTaskType(DeviceId device_id, TaskType task_type);
+
+ private:
   StreamIndexGetterFn GetStreamIndexGetterFunc(DeviceType dev_type, TaskType task_type);
 
  private:

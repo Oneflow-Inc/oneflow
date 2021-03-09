@@ -46,6 +46,13 @@ StreamIndexGetterRegistryManager& StreamIndexGetterRegistryManager::Get() {
   return mgr;
 }
 
+StreamId::stream_index_t StreamIndexGetterRegistryManager::StreamIndex4DeviceIdAndTaskType(
+    DeviceId device_id, TaskType task_type) {
+  auto index_getter_fn = StreamIndexGetterRegistryManager::GetStreamIndexGetterFunc(
+      device_id.device_type(), task_type);
+  return index_getter_fn(device_id);
+}
+
 StreamIndexKeyMap<StreamIndexGetterFn>& StreamIndexGetterRegistryManager::StreamIndexGetterFuncs() {
   return stream_index_getter_funcs_;
 }

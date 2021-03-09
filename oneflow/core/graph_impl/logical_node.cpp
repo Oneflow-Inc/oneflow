@@ -148,9 +148,9 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
               : static_cast<DeviceId::device_index_t>(dev_phy_id);
       DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), parallel_desc_->device_type(),
                          device_index};
-      auto stream_index_getter = StreamIndexGetterRegistryManager::Get().GetStreamIndexGetterFunc(
-          parallel_desc_->device_type(), comp_task_node->GetTaskType());
-      StreamId::stream_index_t stream_index = stream_index_getter(device_id);
+      StreamId::stream_index_t stream_index =
+          StreamIndexGetterRegistryManager::Get().StreamIndex4DeviceIdAndTaskType(
+              device_id, comp_task_node->GetTaskType());
       comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
       comp_task_node->set_logical_node(this);
       Handler(comp_task_node);
