@@ -19,7 +19,7 @@ import os
 import unittest
 
 
-class DCGAN(flow.Model):
+class DCGAN(flow.model.Model):
     def __init__(self, gpu_num, batch_size, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.gpu_num = gpu_num
@@ -152,7 +152,7 @@ class DCGAN(flow.Model):
         return [generator_opt, discriminator_opt]
 
 
-class LossMoniter(flow.ModelCallback):
+class LossMoniter(flow.model.Callback):
     def __init__(self, result_dir):
         self.result_dir = result_dir
 
@@ -176,7 +176,7 @@ class LossMoniter(flow.ModelCallback):
             ), "{}-{}".format(d_loss.numpy().mean(), tf_d_loss.mean())
 
 
-class NumpyTrainData(flow.nn.NumpyModule):
+class NumpyTrainData(flow.nn.NumpyDataModule):
     def __init__(self, result_dir, batch_size):
         super().__init__()
         self.z = np.load(os.path.join(result_dir, "z.npy"))

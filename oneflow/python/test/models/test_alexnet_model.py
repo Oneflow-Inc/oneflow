@@ -46,7 +46,7 @@ class DLNetSpec(object):
 global_specs = DLNetSpec()
 
 
-class TrainData(flow.nn.Module):
+class TrainData(flow.nn.DataModule):
     def __init__(self, specs):
         super().__init__()
         self.specs = specs
@@ -55,7 +55,7 @@ class TrainData(flow.nn.Module):
         return _data_load_layer(self.specs, self.specs.train_dir)
 
 
-class ValData(flow.nn.Module):
+class ValData(flow.nn.DataModule):
     def __init__(self, specs):
         super().__init__()
         self.specs = specs
@@ -64,7 +64,7 @@ class ValData(flow.nn.Module):
         return _data_load_layer(self.specs, self.specs.eval_dir)
 
 
-class AlexNet(flow.Model):
+class AlexNet(flow.model.Model):
     def __init__(self, specs, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.specs = specs
@@ -158,7 +158,7 @@ class AlexNet(flow.Model):
         )
 
 
-class LossMoniter(flow.ModelCallback):
+class LossMoniter(flow.model.Callback):
     def on_training_step_end(self, step_idx, outputs, optimizer_idx):
         assert optimizer_idx == 0
         loss = outputs.mean()
@@ -185,7 +185,7 @@ def test_1n1c(test_case):
     val_config = flow.ExecutionConfig()
     val_config.default_data_type(flow.float)
 
-    ck_config = flow.ModelCheckpointConfig(
+    ck_config = flow.model.CheckpointConfig(
         load_dirpath=global_specs.model_load_dir,
         save_dirpath=global_specs.model_save_dir,
         save_interval=10,

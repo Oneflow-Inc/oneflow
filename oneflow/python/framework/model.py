@@ -38,7 +38,7 @@ import oneflow.python.framework.typing as oneflow_typing
 import oneflow.python.framework.dtype as dtype_util
 
 
-@oneflow_export("ModelCheckpointConfig")
+@oneflow_export("model.CheckpointConfig")
 class CheckpointConfig(object):
     def __init__(
         self,
@@ -51,7 +51,7 @@ class CheckpointConfig(object):
         self.save_interval = save_interval
 
 
-@oneflow_export("ModelCallback")
+@oneflow_export("model.Callback")
 class Callback(ABC):
     r""" Abstract base class used to build new callbacks.
     """
@@ -72,8 +72,17 @@ class Callback(ABC):
         pass
 
 
-@oneflow_export("nn.NumpyModule")
-class NumpyDataModule(Module):
+@oneflow_export("nn.DataModule")
+class DataModule(Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+    def forward(self, *args):
+        pass
+
+
+@oneflow_export("nn.NumpyDataModule")
+class NumpyDataModule(DataModule):
     def __init__(self, *args, **kwargs):
         super().__init__()
 
@@ -81,7 +90,7 @@ class NumpyDataModule(Module):
         pass
 
 
-@oneflow_export("Model")
+@oneflow_export("Model", "model.Model")
 class Model(
     ABC, Module,
 ):
@@ -132,6 +141,114 @@ class Model(
         Normally you'd need one. But in the case of GANs or similar you might have multiple.
         """
         raise NotImplementedError()
+
+    def fit(
+        self,
+        training_data: Optional[Union[Module, NumpyDataModule]] = None,
+        validation_data: Optional[Union[Module, NumpyDataModule]] = None,
+        validation_interval: int = 1,
+        checkpoint_config: Optional[CheckpointConfig] = None,
+        max_steps: int = 100,
+    ):
+        api_clear_default_session()
+
+        self._max_steps = max_steps
+        self._training_data = training_data
+        self._validation_data = validation_data
+        self._validation_interval = validation_interval
+        self._checkpoint_config = checkpoint_config
+
+        optim_conf = self.configure_optimizers()
+        if isinstance(optim_conf, Optimizer):
+            self._optimizers = [optim_conf]
+        elif isinstance(optim_conf, (list, tuple)):
+            self._optimizers = optim_conf
+
+        self._train_jobs = []
+
+        if self._method_overrided("training_step") and self._training_data is not None:
+            self._need_training = True
+            assert self._training_config is not None, "training_config cannot be None"
+            self._training_is_numpy_input = (
+                True if isinstance(self._training_data, NumpyDataModule) else False
+            )
+
+        if (
+            self._method_overrided("validation_step")
+            and self._validation_data is not None
+        ):
+            self._need_validation = True
+            assert (
+                self._validation_config is not None
+            ), "validation_config cannot be None"
+            self._validation_is_numpy_input = (
+                True if isinstance(self._validation_data, NumpyDataModule) else False
+            )
+
+        if (
+            self._checkpoint_config is not None
+            and self._checkpoint_config.load_dirpath is not None
+        ):
+            self._need_load_checkpoint = True
+
+        if (
+            self._checkpoint_config is not None
+            and self._checkpoint_config.save_dirpath is not None
+        ):
+            self._need_save_checkpoint = True
+
+        if self._need_training:
+            if self._training_is_numpy_input:
+                self._construct_numpy_input_train_jobs()
+            else:
+                self._construct_train_jobs()
+
+        if self._need_validation:
+            if self._validation_is_numpy_input:
+                self._construct_numpy_input_eval_job()
+            else:
+                self._construct_eval_job()
+
+        if self._need_load_checkpoint:
+            self._load_checkpoint(dirpath=self._checkpoint_config.load_dirpath)
+
+        for step_idx in range(0, self._max_steps):
+            if self._need_training:
+                for optimizer_idx in range(0, len(self._optimizers)):
+                    outputs = None
+                    if self._training_is_numpy_input:
+                        batch = self._training_data(step_idx, optimizer_idx)
+                        outputs = self._train_jobs[optimizer_idx](*batch).get()
+                    else:
+                        outputs = self._train_jobs[optimizer_idx]().get()
+                    self._method_callback(
+                        "on_training_step_end",
+                        outputs=outputs,
+                        step_idx=step_idx,
+                        optimizer_idx=optimizer_idx,
+                    )
+
+            if self._need_validation:
+                if (step_idx + 1) % self._validation_interval == 0:
+                    eval_outputs = None
+                    if self._validation_is_numpy_input:
+                        batch = self._validation_data(step_idx)
+                        eval_outputs = self._eval_job(*batch).get()
+                    else:
+                        eval_outputs = self._eval_job().get()
+                    self._method_callback(
+                        "on_validation_step_end",
+                        step_idx=step_idx,
+                        outputs=eval_outputs,
+                    )
+
+            if self._need_save_checkpoint:
+                if (step_idx + 1) % self._checkpoint_config.save_interval == 0:
+                    self._save_checkpoint(
+                        dirpath=self._checkpoint_config.save_dirpath
+                        + "-"
+                        + str(step_idx)
+                    )
 
     def _construct_one_train_job(self, optimizer_idx: int = 0):
         def job():
@@ -281,111 +398,3 @@ class Model(
         for cb in self._callbacks:
             method = getattr(cb, method_name)
             method(*args, **kwargs)
-
-    def fit(
-        self,
-        training_data: Optional[Union[Module, NumpyDataModule]] = None,
-        validation_data: Optional[Union[Module, NumpyDataModule]] = None,
-        validation_interval: int = 1,
-        checkpoint_config: Optional[CheckpointConfig] = None,
-        max_steps: int = 100,
-    ):
-        api_clear_default_session()
-
-        self._max_steps = max_steps
-        self._training_data = training_data
-        self._validation_data = validation_data
-        self._validation_interval = validation_interval
-        self._checkpoint_config = checkpoint_config
-
-        optim_conf = self.configure_optimizers()
-        if isinstance(optim_conf, Optimizer):
-            self._optimizers = [optim_conf]
-        elif isinstance(optim_conf, (list, tuple)):
-            self._optimizers = optim_conf
-
-        self._train_jobs = []
-
-        if self._method_overrided("training_step") and self._training_data is not None:
-            self._need_training = True
-            assert self._training_config is not None, "training_config cannot be None"
-            self._training_is_numpy_input = (
-                True if isinstance(self._training_data, NumpyDataModule) else False
-            )
-
-        if (
-            self._method_overrided("validation_step")
-            and self._validation_data is not None
-        ):
-            self._need_validation = True
-            assert (
-                self._validation_config is not None
-            ), "validation_config cannot be None"
-            self._validation_is_numpy_input = (
-                True if isinstance(self._validation_data, NumpyDataModule) else False
-            )
-
-        if (
-            self._checkpoint_config is not None
-            and self._checkpoint_config.load_dirpath is not None
-        ):
-            self._need_load_checkpoint = True
-
-        if (
-            self._checkpoint_config is not None
-            and self._checkpoint_config.save_dirpath is not None
-        ):
-            self._need_save_checkpoint = True
-
-        if self._need_training:
-            if self._training_is_numpy_input:
-                self._construct_numpy_input_train_jobs()
-            else:
-                self._construct_train_jobs()
-
-        if self._need_validation:
-            if self._validation_is_numpy_input:
-                self._construct_numpy_input_eval_job()
-            else:
-                self._construct_eval_job()
-
-        if self._need_load_checkpoint:
-            self._load_checkpoint(dirpath=self._checkpoint_config.load_dirpath)
-
-        for step_idx in range(0, self._max_steps):
-            if self._need_training:
-                for optimizer_idx in range(0, len(self._optimizers)):
-                    outputs = None
-                    if self._training_is_numpy_input:
-                        batch = self._training_data(step_idx, optimizer_idx)
-                        outputs = self._train_jobs[optimizer_idx](*batch).get()
-                    else:
-                        outputs = self._train_jobs[optimizer_idx]().get()
-                    self._method_callback(
-                        "on_training_step_end",
-                        outputs=outputs,
-                        step_idx=step_idx,
-                        optimizer_idx=optimizer_idx,
-                    )
-
-            if self._need_validation:
-                if (step_idx + 1) % self._validation_interval == 0:
-                    eval_outputs = None
-                    if self._validation_is_numpy_input:
-                        batch = self._validation_data(step_idx)
-                        eval_outputs = self._eval_job(*batch).get()
-                    else:
-                        eval_outputs = self._eval_job().get()
-                    self._method_callback(
-                        "on_validation_step_end",
-                        step_idx=step_idx,
-                        outputs=eval_outputs,
-                    )
-
-            if self._need_save_checkpoint:
-                if (step_idx + 1) % self._checkpoint_config.save_interval == 0:
-                    self._save_checkpoint(
-                        dirpath=self._checkpoint_config.save_dirpath
-                        + "-"
-                        + str(step_idx)
-                    )
