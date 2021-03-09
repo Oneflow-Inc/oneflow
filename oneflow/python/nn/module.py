@@ -571,3 +571,42 @@ class Module(object):
 
     def register_forward_pre_hook(self, hook: Callable[..., None]) -> None:
         self._forward_pre_hooks[len(self._forward_pre_hooks)] = hook
+
+    def _apply(self, fn):
+        for module in self.children():
+            module._apply(fn)
+
+        for key, param in self._parameters.items():
+            if param is not None:
+                assert isinstance(param, Parameter)
+                assert param.is_leaf
+                self._parameters[key] = Parameter(param_applied, param.requires_grad)
+
+                if param.grad is not None:
+                    assert param.grad.is_leaf
+                    self._parameters[key].grad = grad_applied.requires_grad_(
+                        param.grad.requires_grad
+                    )
+
+        for key, buf in self._buffers.items():
+            if buf is not None:
+                self._buffers[key] = fn(buf)
+
+        return self
+
+    def apply(self: T, fn: Callable[["Module"], None]) -> T:
+        r"""Applies ``fn`` recursively to every submodule (as returned by ``.children()``)
+        as well as self. Typical use includes initializing the parameters of a model
+        (see also :ref:`nn-init-doc`).
+
+        Args:
+            fn (:class:`Module` -> None): function to be applied to each submodule
+
+        Returns:
+            Module: self
+
+        """
+        for module in self.children():
+            module.apply(fn)
+        fn(self)
+        return self

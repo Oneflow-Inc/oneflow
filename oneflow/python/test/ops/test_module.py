@@ -330,6 +330,24 @@ class TestModule(flow.unittest.TestCase):
 
         job()
 
+    def test_module_apply(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.modules = flow.nn.Module()
+        
+        global module_num
+        module_num = 0
+        def get_module_num(m):
+            global module_num
+            module_num += 1
+            print(module_num)
+        
+        net = CustomModule()
+        net.apply(get_module_num)
+
+        test_case.assertEqual(module_num, 2)
+
     @unittest.skip("tensor __add__ is not implemented now")
     def test_x(test_case):
         class CustomModule(flow.nn.Module):
@@ -351,6 +369,7 @@ class TestModule(flow.unittest.TestCase):
         job()
         m.load_state_dict({"x_2": np.ones((2, 3), dtype=np.float32)})
         job()
+
 
     # TODO: add more tests about module api
 
