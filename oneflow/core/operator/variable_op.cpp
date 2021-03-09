@@ -55,7 +55,7 @@ Maybe<void> VariableOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> VariableOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
