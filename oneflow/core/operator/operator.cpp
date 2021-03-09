@@ -49,6 +49,8 @@ std::shared_ptr<Operator> CheckAndConstructOp(const OperatorConf& op_conf) {
 
 }  // namespace
 
+Operator::Operator() : device_type_(DeviceType::kInvalidDevice) {}
+
 void Operator::Init(const OperatorConf& op_conf) {
   op_conf_.reset(new OperatorConf(op_conf));
   device_type_ = CHECK_JUST(DeviceType4DeviceTag(op_conf_->device_tag()));
@@ -634,7 +636,7 @@ void Operator::GenKernelConf(
     if (blob_desc == nullptr) { continue; }
     (*dtype_signature->mutable_name2dtype())[ibn] = blob_desc->data_type();
   }
-  ToOpAttribute(kernel_conf->mutable_op_attribute());
+  CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
         return blob_desc->header_is_opaque();
       })) {
@@ -851,7 +853,7 @@ Symbol<OperatorConf> Operator::GetOpConfWithoutOpNameAndLbn() const {
 
 std::shared_ptr<OpAttribute> Operator::GetOpAttributeWithoutOpNameAndLbn() const {
   auto op_attribute = std::make_shared<OpAttribute>();
-  ToOpAttribute(op_attribute.get());
+  CHECK_JUST(ToOpAttribute(op_attribute.get()));
   op_attribute->mutable_sbp_signature();
   *op_attribute->mutable_op_conf() = *GetOpConfWithoutOpNameAndLbn();
   return op_attribute;
@@ -885,12 +887,12 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
     op_attribute->clear_mirrored_signature();
   }
   if (ibn2logical_blob_desc_) {
-    CHECK_JUST(FillLogicalBlobDescSignature(
+    JUST(FillLogicalBlobDescSignature(
         ibn2logical_blob_desc_,
         op_attribute->mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc()));
   }
   if (obn2logical_blob_desc_) {
-    CHECK_JUST(FillLogicalBlobDescSignature(
+    JUST(FillLogicalBlobDescSignature(
         obn2logical_blob_desc_,
         op_attribute->mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc()));
   }

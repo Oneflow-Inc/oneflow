@@ -41,7 +41,7 @@ class Scope;
 class Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Operator);
-  Operator() = default;
+  Operator();
   virtual ~Operator() = default;
 
   //
@@ -274,7 +274,7 @@ class Operator {
   PbRpf<std::string> output_bns_;
   PbRpf<std::string> tmp_bns_;
   PbRpf<std::string> input_output_bns_;
-  DeviceType device_type_ = kInvalidDevice;
+  DeviceType device_type_;
   ArgSignature arg_signature_;
   ArgModifierSignature arg_modifier_signature_;
   std::unique_ptr<BlobLastUsedSignature> blob_last_used_signature_;
