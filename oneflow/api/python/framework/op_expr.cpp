@@ -18,18 +18,29 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/tensor.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
+static std::shared_ptr<one::OpExprInterpContext> interp_ctx(new one::OpExprInterpContext{
+    .is_mirrored_strategy_enabled = true});
+static std::shared_ptr<one::OpExprInterpreter> interpreter(new one::EagerInterpreter(interp_ctx));
+
 Maybe<std::vector<std::shared_ptr<one::Tensor>>> Interpret(
     const std::shared_ptr<one::OpExpr>& op,
     const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
   // TODO(): Execute the op by Autograd.
-  UNIMPLEMENTED();
-  return std::vector<std::shared_ptr<one::Tensor>>{};
+  // UNIMPLEMENTED();
+  // return std::vector<std::shared_ptr<one::Tensor>>{};
+  std::vector<std::shared_ptr<one::Tensor>> outputs(1);
+  outputs[0].reset(new one::MirroredTensor());
+
+  one::OpExprInterpState state;
+  JUST(interpreter->Apply(op.get(), inputs, outputs, &state));
+  return outputs;
 }
 
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
