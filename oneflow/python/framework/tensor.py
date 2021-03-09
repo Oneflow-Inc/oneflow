@@ -35,8 +35,8 @@ class Tensor:
         sbp=None,
         is_consistent=False,
         is_lazy=False,
-        determining_initializer=None,
         data_initializer=None,
+        determining_initializer=None,
     ):
         dtype = dtype if dtype is not None else oneflow_api.float32
         device = device if device is not None else oneflow_api.device("cpu")
@@ -142,6 +142,7 @@ class Tensor:
             prod *= dim
         return prod
 
+    # internal decorator
     def _auto_determine(func):
         def wrapped_func(*args, **kwargs):
             tensor = args[0]
@@ -322,6 +323,7 @@ class UndeterminedTensor:
 
 
 def _default_initializer_for_determining(undetermined_tensor):
+    assert not undetermined_tensor.is_consistent
     blob = flow.get_variable(
         name=id_util.UniqueStr("tensor_"),
         shape=tuple(undetermined_tensor.shape),

@@ -196,7 +196,7 @@ def BlobObjectNumpy(blob_object, parallel_conf, tmp_name=None):
             eager_blob_util._GetPhysicalBlobHeaderCache,
         ).numpy()
 
-    blob_cache = oneflow_api.FindOrCreateBlobCache(self.blob_object)
+    blob_cache = oneflow_api.FindOrCreateBlobCache(blob_object)
     return blob_cache.GetCachedNumpy(FetchBlobNumpy)
 
 

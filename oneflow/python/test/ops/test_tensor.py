@@ -23,7 +23,7 @@ from collections import OrderedDict
 
 
 def fake_flow_ones(shape):
-    tensor = flow.Tensor(shape, dtype=flow.float32)
+    tensor = flow.Tensor(*shape)
     tensor.set_data_initializer(flow.ones_initializer())
     return tensor
 
