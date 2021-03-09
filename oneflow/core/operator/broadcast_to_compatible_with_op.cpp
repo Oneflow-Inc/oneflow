@@ -35,6 +35,21 @@ Maybe<void> GetBroadcastShape(const Shape& a_shape, const Shape& b_shape, Shape*
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
+                           const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  int64_t num_compatibles = op_conf.broadcast_to_compatible_with_conf().compatible_size();
+  const BlobDesc* x_desc = BlobDesc4BnInOp("x");
+  Shape broadcasted_shape(x_desc->shape());
+  FOR_RANGE(int64_t, i, 0, num_compatibles) {
+    const BlobDesc* compatible_i = BlobDesc4BnInOp(GenRepeatedBn("compatible", i));
+    GetBroadcastShape(broadcasted_shape, compatible_i->shape(), &broadcasted_shape);
+  }
+  BlobDesc* y_desc = BlobDesc4BnInOp("y");
+  y_desc->CopyFrom(*x_desc);
+  y_desc->mut_shape() = broadcasted_shape;
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 class BroadcastToCompatibleWithOp final : public Operator {
@@ -50,20 +65,16 @@ class BroadcastToCompatibleWithOp final : public Operator {
     EnrollOutputBn("y");
   }
 
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override {
-    int64_t num_compatibles = op_conf().broadcast_to_compatible_with_conf().compatible_size();
-    const BlobDesc* x_desc = GetBlobDesc4BnInOp("x");
-    Shape broadcasted_shape(x_desc->shape());
-    FOR_RANGE(int64_t, i, 0, num_compatibles) {
-      const BlobDesc* compatible_i = GetBlobDesc4BnInOp(GenRepeatedBn("compatible", i));
-      GetBroadcastShape(broadcasted_shape, compatible_i->shape(), &broadcasted_shape);
-    }
-    BlobDesc* y_desc = GetBlobDesc4BnInOp("y");
-    y_desc->CopyFrom(*x_desc);
-    y_desc->mut_shape() = broadcasted_shape;
-    return Maybe<void>::Ok();
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    return InferBlobDescs(op_conf(), BlobDesc4BnInOp);
+  }
+
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
+    return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
   }
 
  private:
@@ -78,11 +89,6 @@ class BroadcastToCompatibleWithOp final : public Operator {
       if (x_extend_shape.At(i) == 1 && y_desc->shape().At(i) != 1)
         conf->mutable_broadcast_axes()->Add(i);
     }
-  }
-
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    return NaiveInferBatchAxis(BatchAxis4BnInOp);
   }
 
   Maybe<void> GetSbpSignatures(

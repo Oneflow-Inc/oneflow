@@ -17,13 +17,13 @@ limitations under the License.
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/sub_plan.pb.h"
 #include "oneflow/core/job/plan.pb.h"
@@ -158,7 +158,7 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   PrintProtoToTextFile(cluster_thrd_ids, JoinPath(FLAGS_log_dir, cluster_thrd_ids_key(plan_name)));
   HashMap<int64_t, ThrdIds> machine_id2thrd_ids;
   machine_id2thrd_ids = PbMap2HashMap(cluster_thrd_ids.machine_id2thrd_ids());
-  int64_t machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  int64_t machine_id = GlobalProcessCtx::Rank();
   auto thrd_ids_it = machine_id2thrd_ids.find(machine_id);
   CHECK(thrd_ids_it != machine_id2thrd_ids.end());
   std::vector<int64_t> thrd_id_vec = PbRf2StdVec(thrd_ids_it->second.thrd_id());
@@ -321,43 +321,19 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
 Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
   const JobDesc& job_desc = GlobalJobDesc();
   Plan naive_plan;
-  Plan complete_plan;
-  double start = GetCurTime();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
+    double start = GetCurTime();
     Compiler().Compile(job, &naive_plan, need_job_complete);
-    LOG(INFO) << "compile time: " << GetCurTime() - start;
-    complete_plan =
+    *improved_plan =
         *JUST(Improver().GenAndInferMemBlockIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan));
+    LOG(INFO) << "\njob_id: " << job_desc.job_id() << " , job_name: " << job_desc.job_name()
+              << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
-      TeePersistentLogStream::Create("complete_plan")->Write(complete_plan);
+      TeePersistentLogStream::Create(StrCat("subplan_job_", job_desc.job_id()))
+          ->Write(*improved_plan);
     }
-    LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
-  }
-  if (job_desc.enable_experiment_run()) {
-    if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-      PushPlan("complete_plan", complete_plan);
-    } else {
-      PullPlan("complete_plan", &complete_plan);
-    }
-    OF_SESSION_BARRIER();
-    // Experiment Runtime
-    { Runtime experiment_run(complete_plan, job_desc.piece_num_of_experiment_phase(), true); }
-    // Improve
-    if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-      TeePersistentLogStream::Create("available_mem_desc")->Write(*Global<AvailableMemDesc>::Get());
-      CHECK_GT(Global<AvailableMemDesc>::Get()->machine_amd_size(), 0);
-      *improved_plan = *JUST(Improver().Improve(
-          *Global<AvailableMemDesc>::Get(), naive_plan,
-          JoinPath(FLAGS_log_dir, ActEventLogger::experiment_act_event_bin_filename())));
-      OF_SESSION_BARRIER();
-      TeePersistentLogStream::Create("improved_plan")->Write(*improved_plan);
-    }
-  } else {
-    *improved_plan = complete_plan;
   }
   GenCollectiveBoxingPlan(job, improved_plan);
-  LOG(INFO) << "compile and improve time: " << GetCurTime() - start;
   return Maybe<void>::Ok();
 }
 
@@ -545,7 +521,6 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
                                        .at(op_name)
                                        .bn_in_op2sbp_parallel()
                                        .at(obn);
-  *blob_conf->mutable_batch_axis() = job.helper().lbn2batch_axis().at(lbn);
 }
 
 void FilterOpName2ParallelBlobConf(
@@ -741,7 +716,7 @@ Maybe<void> MakeMainJob(Job* main_job,
                         std::vector<std::map<int64_t, std::string>>* identity_tick_op_names,
                         std::vector<ReentrantLockBackEdge>* lock_back_edges) {
   JobBuilder job_builder(main_job);
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0");
@@ -841,7 +816,13 @@ Maybe<void> ConnectCriticalSectionEndToReentrantLockEnd(
   op_attribute->add_input_bns("end");
   (*op_attribute->mutable_arg_signature()->mutable_bn_in_op2lbi())["end"] =
       lock_back_edge.critical_section_sink_lbi;
-
+  const auto& blob_desc_signature_map =
+      op_attribute->logical_blob_desc_signature().bn_in_op2blob_desc();
+  const auto it = blob_desc_signature_map.find("start");
+  CHECK_OR_RETURN(it != blob_desc_signature_map.end());
+  CHECK_OR_RETURN(blob_desc_signature_map.find("end") == blob_desc_signature_map.end());
+  (*op_attribute->mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc())["end"] =
+      it->second;
   auto* reentrant_lock_conf = op_attribute->mutable_op_conf()->mutable_reentrant_lock_conf();
   reentrant_lock_conf->set_end(GenLogicalBlobName(lock_back_edge.critical_section_sink_lbi));
   return Maybe<void>::Ok();
@@ -849,7 +830,7 @@ Maybe<void> ConnectCriticalSectionEndToReentrantLockEnd(
 
 Maybe<void> CompileMainJob(Job* main_job, const std::vector<ReentrantLockBackEdge>& lock_back_edges,
                            int64_t job_id, Plan* main_plan) {
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   {
     auto scope = std::make_unique<GlobalJobDescScope>(main_job->job_conf(), job_id);
     JUST(CompileCurJobOnMaster(main_job, main_plan, false));
@@ -861,7 +842,7 @@ Maybe<void> CompileMainJob(Job* main_job, const std::vector<ReentrantLockBackEdg
 }
 
 void AddJobName2JobId(const std::string& job_name, int64_t job_id) {
-  if (!Global<MachineCtx>::Get()->IsThisMachineMaster()) { return; }
+  if (!GlobalProcessCtx::IsThisProcessMaster()) { return; }
   CHECK(Global<JobName2JobId>::Get()->emplace(job_name, job_id).second);
 }
 
@@ -983,7 +964,6 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
   job_conf->mutable_predict_conf();
-  job_conf->set_total_batch_num(1);
   job_conf->set_default_data_type(data_type);
 }
 
@@ -1023,7 +1003,6 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
   auto* job_conf = job->mutable_job_conf();
   job_conf->set_job_name(job_name);
   job_conf->mutable_predict_conf();
-  job_conf->set_total_batch_num(1);
   job_conf->set_default_data_type(data_type);
 }
 
@@ -1033,7 +1012,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
   std::vector<std::shared_ptr<Job>> jobs(conf_jobs.size());
   FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(conf_jobs.Get(i))); }
   if (jobs.size() > 1) { CheckNonDistributeOptimizerAvailable(jobs); }
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
     HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
     FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,
                                   &var_op_name2parallel_blob_conf);
@@ -1056,7 +1035,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     JobDesc job_desc(jobs.at(i)->job_conf(), i);
     if (job_desc.Bool("__is_user_function__")) { function_jobs.push_back(jobs.at(i)); }
   }
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
     HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
     FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, function_jobs,
                                   &push_op_name2parallel_blob_conf);
@@ -1082,7 +1061,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(i)->job_conf(), i);
     JUST(CompileCurJobOnMaster(jobs.at(i).get(), &sub_plans.at(i), true));
   }
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
     MergeSubPlanWithoutGenNetTopo(plan, sub_plans);
     InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, plan);
     InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, plan);
@@ -1122,7 +1101,7 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   OF_PROFILER_RANGE_PUSH("CompileAndMergePlanOnMaster");
   JUST(CompileAndMergePlanOnMaster(job_set.job(), &plan_));
   OF_PROFILER_RANGE_POP();  // CompileAndMergePlanOnMaster
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
     runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_));
   }
   OF_PROFILER_RANGE_PUSH("new Runtime");
@@ -1132,7 +1111,7 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
 }
 
 Oneflow::~Oneflow() {
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { runtime_buffers_scope_.reset(); }
+  if (GlobalProcessCtx::IsThisProcessMaster()) { runtime_buffers_scope_.reset(); }
   runtime_.reset();
   if (Global<Profiler>::Get() != nullptr) {
     Global<Profiler>::Get()->Profile(

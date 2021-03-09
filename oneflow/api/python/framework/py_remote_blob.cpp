@@ -42,7 +42,6 @@ class TrampLazyMirroredBlob : public LazyMirroredBlob {
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.attr("INVALID_BATCH_AXIS") = INVALID_BATCH_AXIS;
   m.attr("INVALID_SPLIT_AXIS") = INVALID_SPLIT_AXIS;
 
   py::module_ distribute = m.def_submodule("distribute");
@@ -69,9 +68,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("blob_name", &BlobDesc::blob_name)
       .def_property_readonly("shape", &BlobDesc::shape)
       .def_property_readonly("dtype", &BlobDesc::dtype)
-      .def_property_readonly("batch_axis", &BlobDesc::batch_axis)
       .def_property_readonly("is_dynamic", &BlobDesc::is_dynamic)
-      .def_property_readonly("is_tensor_list", &BlobDesc::is_tensor_list)
       .def_property_readonly("parallel_conf", &BlobDesc::parallel_conf)
       .def_property_readonly("distribute", &BlobDesc::distribute)
       .def_property_readonly("unique_name", &BlobDesc::unique_name)
@@ -88,9 +85,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("blob_name", &ConsistentBlob::blob_name)
       .def_property_readonly("shape", &ConsistentBlob::shape)
       .def_property_readonly("dtype", &ConsistentBlob::dtype)
-      .def_property_readonly("batch_axis", &ConsistentBlob::batch_axis)
       .def_property_readonly("is_dynamic", &ConsistentBlob::is_dynamic)
-      .def_property_readonly("is_tensor_list", &ConsistentBlob::is_tensor_list)
       .def_property_readonly("parallel_conf", &ConsistentBlob::parallel_conf)
       .def_property_readonly("distribute", &ConsistentBlob::distribute)
       .def_property_readonly("unique_name", &ConsistentBlob::unique_name)
@@ -116,10 +111,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(
           "get_dtype",
           [](const std::shared_ptr<LazyConsistentBlob>& x) { return static_cast<int>(x->dtype()); })
-      .def_property_readonly("batch_axis", &LazyConsistentBlob::batch_axis)
-      .def_property_readonly("split_axis", &LazyConsistentBlob::batch_axis)
+      .def_property_readonly("split_axis", &LazyConsistentBlob::split_axis)
       .def_property_readonly("is_dynamic", &LazyConsistentBlob::is_dynamic)
-      .def_property_readonly("is_tensor_list", &LazyConsistentBlob::is_tensor_list)
       .def_property_readonly("parallel_conf", &LazyConsistentBlob::parallel_conf)
       .def("IdenticalTo", &LazyConsistentBlob::IdenticalTo)
       .def("get_lazy_shape_log_warning", &LazyConsistentBlob::get_lazy_shape_log_warning);
@@ -135,9 +128,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("blob_name", &MirroredBlob::blob_name)
       .def_property_readonly("shape", &MirroredBlob::shape)
       .def_property_readonly("dtype", &MirroredBlob::dtype)
-      .def_property_readonly("batch_axis", &MirroredBlob::batch_axis)
       .def_property_readonly("is_dynamic", &MirroredBlob::is_dynamic)
-      .def_property_readonly("is_tensor_list", &MirroredBlob::is_tensor_list)
       .def_property_readonly("parallel_conf", &MirroredBlob::parallel_conf)
       .def_property_readonly("distribute", &MirroredBlob::distribute)
       .def_property_readonly("unique_name", &MirroredBlob::unique_name)
@@ -162,10 +153,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                              })
       .def("get_dtype",
            [](const std::shared_ptr<LazyMirroredBlob>& x) { return static_cast<int>(x->dtype()); })
-      .def_property_readonly("batch_axis", &LazyMirroredBlob::batch_axis)
-      .def_property_readonly("split_axis", &LazyMirroredBlob::batch_axis)
+      .def_property_readonly("split_axis", &LazyMirroredBlob::split_axis)
       .def_property_readonly("is_dynamic", &LazyMirroredBlob::is_dynamic)
-      .def_property_readonly("is_tensor_list", &LazyMirroredBlob::is_tensor_list)
       .def_property_readonly("parallel_conf", &LazyMirroredBlob::parallel_conf)
       // The major downside of these implicit conversions is that containers must be converted (i.e.
       // copied) on every C++->Python transition, which can have implications on the program
@@ -189,10 +178,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                }
                                return ret;
                              })
-      .def_property_readonly("batch_axis", &EagerBlobTrait::batch_axis)
       .def_property_readonly("split_axis", &EagerBlobTrait::split_axis)
       .def_property_readonly("is_dynamic", &EagerBlobTrait::is_dynamic)
-      .def_property_readonly("is_tensor_list", &EagerBlobTrait::is_tensor_list)
       .def_property_readonly("parallel_conf", &EagerBlobTrait::parallel_conf)
       .def_property_readonly("parallel_size", &EagerBlobTrait::parallel_size)
       .def("_Init", &EagerBlobTrait::_Init)

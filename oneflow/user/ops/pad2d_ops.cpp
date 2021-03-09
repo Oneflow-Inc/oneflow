@@ -16,15 +16,15 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/nn_util.h"
-#include "pad_2d_seq.h"
+#include "pad2d_seq.h"
 
 namespace oneflow {
 
 namespace {
 
-Maybe<void> GetOpSbpSignature(user_op::SbpContext *ctx) {
-  const user_op::TensorDesc &x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  const auto &padding = ctx->Attr<std::vector<int64_t>>("padding");
+Maybe<void> GetOpSbpSignature(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
   FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
     if (padding[i] == 0) {
       ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
@@ -33,9 +33,9 @@ Maybe<void> GetOpSbpSignature(user_op::SbpContext *ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetOpGradSbpSignature(user_op::SbpContext *ctx) {
-  const user_op::TensorDesc &dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-  const auto &padding = ctx->Attr<std::vector<int64_t>>("padding");
+Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
   FOR_RANGE(int64_t, i, 0, dy_tensor.shape().NumAxes()) {
     if (padding[i] == 0) {
       ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
@@ -51,9 +51,11 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext *ctx) {
       .Input("x")                                                                            \
       .Output("y")                                                                           \
       .Attr<std::vector<int64_t>>("padding")                                                 \
-      .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {                  \
-        Shape *x_shape = ctx->Shape4ArgNameAndIndex("x", 0);                                 \
-        const auto &padding = ctx->Attr<std::vector<int64_t>>("padding");                    \
+      .Attr<double>("floating_value")                                                        \
+      .Attr<int64_t>("integral_value")                                                       \
+      .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                  \
+        Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);                                 \
+        const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");                    \
         CHECK_EQ_OR_RETURN(padding.size(), x_shape->NumAxes());                              \
         const int64_t n_idx = 0;                                                             \
         const int64_t c_idx = 1;                                                             \
@@ -79,8 +81,8 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext *ctx) {
       })                                                                                     \
       .SetGetSbpFn(GetOpSbpSignature)                                                        \
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,            \
-                              const user_op::UserOpConfWrapper &) {                          \
-        user_op::InputArgModifier *x_modifier = GetInputArgModifierFn("x", 0);               \
+                              const user_op::UserOpConfWrapper&) {                           \
+        user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);               \
         CHECK_NOTNULL(x_modifier);                                                           \
         x_modifier->set_requires_grad(true);                                                 \
       });                                                                                    \
@@ -89,9 +91,11 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext *ctx) {
       .Input("dy")                                                                           \
       .Output("dx")                                                                          \
       .Attr<std::vector<int64_t>>("padding")                                                 \
-      .SetTensorDescInferFn([](user_op::InferContext *ctx) -> Maybe<void> {                  \
-        Shape *dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);                               \
-        const auto &padding = ctx->Attr<std::vector<int64_t>>("padding");                    \
+      .Attr<double>("floating_value")                                                        \
+      .Attr<int64_t>("integral_value")                                                       \
+      .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                  \
+        Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);                               \
+        const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");                    \
         CHECK_EQ_OR_RETURN(padding.size(), dy_shape->NumAxes());                             \
         const int64_t n_idx = 0;                                                             \
         const int64_t c_idx = 1;                                                             \
@@ -115,7 +119,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext *ctx) {
       .SetGetSbpFn(GetOpGradSbpSignature);                                                   \
                                                                                              \
   REGISTER_USER_OP_GRAD(pad_2d_type)                                                         \
-      .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper &op, user_op::AddOpFn AddOp) { \
+      .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) { \
         if (op.NeedGenGradTensor4OpInput("x", 0)) {                                          \
           user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");                 \
           user_op::UserOpConfWrapper grad_op =                                               \
@@ -123,6 +127,8 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext *ctx) {
                   .Input("dy", op.GetGradTensorWithOpOutput("y", 0))                         \
                   .Output("dx")                                                              \
                   .Attr("padding", op.attr<std::vector<int64_t>>("padding"))                 \
+                  .Attr("floating_value", op.attr<double>("floating_value"))                 \
+                  .Attr("integral_value", op.attr<int64_t>("integral_value"))                \
                   .Build();                                                                  \
           op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);                     \
           AddOp(grad_op);                                                                    \

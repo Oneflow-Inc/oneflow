@@ -33,10 +33,6 @@ REGISTER_USER_OP("reduce_sum_like")
       *y_tensor = *like_tensor;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       int32_t num_axes = 0;
       HashSet<int32_t> conf_axes;
@@ -44,7 +40,7 @@ REGISTER_USER_OP("reduce_sum_like")
         const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
         num_axes = in_tensor.shape().NumAxes();
         const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
-        conf_axes = {reduced_axes.begin(), reduced_axes.end()};
+        ReduceSbpUtil::GetRegularAxes(num_axes, reduced_axes, &conf_axes);
       }
       const auto& like_num_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();

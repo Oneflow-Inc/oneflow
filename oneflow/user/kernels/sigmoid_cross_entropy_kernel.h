@@ -25,7 +25,7 @@ struct SigmoidCrossEntropyFunctor {
   OF_DEVICE_FUNC PredT operator()(const PredT prediction, const LabelT label) const {
     return -1.f * prediction * (label - (prediction >= 0))
            + LogFunctor<PredT>::Forward(
-                 1 + ExpFunctor<PredT>::Forward(prediction - 2 * prediction * (prediction >= 0)));
+               1 + ExpFunctor<PredT>::Forward(prediction - 2 * prediction * (prediction >= 0)));
   }
 };
 

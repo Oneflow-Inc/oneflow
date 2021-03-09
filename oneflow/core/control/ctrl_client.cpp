@@ -14,14 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
 namespace {
 
 #define GRPC_CHECK(x) CHECK_EQ(x.error_code(), grpc::StatusCode::OK)
-}  // namespace oneflow
+}  // namespace
 
 CtrlClient::~CtrlClient() {
   {
@@ -31,17 +30,12 @@ CtrlClient::~CtrlClient() {
   heartbeat_thread_.join();
 }
 
-CtrlClient::CtrlClient() {
-  stubs_.reserve(Global<EnvDesc>::Get()->TotalMachineNum());
-  int32_t port = -1;
-  std::string addr = "";
-  for (int64_t i = 0; i < Global<EnvDesc>::Get()->TotalMachineNum(); ++i) {
-    const Machine& mchn = Global<EnvDesc>::Get()->machine(i);
-    port = (mchn.ctrl_port_agent() != -1) ? (mchn.ctrl_port_agent())
-                                          : Global<EnvDesc>::Get()->ctrl_port();
-    addr = mchn.addr() + ":" + std::to_string(port);
-    stubs_.push_back(CtrlService::NewStub(addr));
-    LoadServer(mchn.addr(), stubs_[i].get());
+CtrlClient::CtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx) {
+  stubs_.reserve(process_ctx.ctrl_addr_size());
+  for (int64_t i = 0; i < process_ctx.ctrl_addr_size(); ++i) {
+    const Address& address = process_ctx.ctrl_addr(i);
+    stubs_.push_back(CtrlService::NewStub(address.host() + ":" + std::to_string(address.port())));
+    LoadServer(address.host(), stubs_[i].get());
   }
   need_heartbeat_thread_stop_ = false;
   heartbeat_thread_ = std::thread([this]() {
@@ -56,7 +50,7 @@ CtrlClient::CtrlClient() {
       }
       for (size_t i = 0; i < stubs_.size(); ++i) {
         grpc::ClientContext client_ctx;
-        request.set_addr(Global<EnvDesc>::Get()->machine(i).addr());
+        request.set_addr(this->process_ctx().ctrl_addr(i).host());
         GRPC_CHECK(stubs_[i]->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response))
             << "Machine " << i << " lost";
       }

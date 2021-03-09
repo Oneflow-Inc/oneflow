@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_CONTROL_CTRL_CLIENT_H_
 
 #include "oneflow/core/control/rpc_client.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 
 namespace oneflow {
 
@@ -27,8 +28,11 @@ class CtrlClient final : public RpcClient {
 
  private:
   friend class Global<CtrlClient>;
-  CtrlClient();
+  CtrlClient(const ProcessCtx& process_ctx);
 
+  const ProcessCtx& process_ctx() const { return process_ctx_; }
+
+  ProcessCtx process_ctx_;
   bool need_heartbeat_thread_stop_;
   std::mutex need_heartbeat_thread_stop_mtx_;
   std::thread heartbeat_thread_;

@@ -104,6 +104,80 @@ REGISTER_USER_KERNEL("tensor_to_tensor_buffer")
     .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
                      & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
+template<typename T>
+class GenTensorBuffer final : public user_op::OpKernel {
+ public:
+  GenTensorBuffer() = default;
+  ~GenTensorBuffer() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const int64_t num_tensor_buffers = ctx->Attr<Shape>("shape").elem_cnt();
+    const std::vector<Shape>& shape_list = ctx->Attr<std::vector<Shape>>("shape_list");
+    const std::vector<float>& value_list = ctx->Attr<std::vector<float>>("value_list");
+    CHECK_EQ(num_tensor_buffers, shape_list.size());
+    CHECK_EQ(num_tensor_buffers, value_list.size());
+    MultiThreadLoop(num_tensor_buffers, [&](size_t i) {
+      TensorBuffer* tensor_buffer = out->mut_dptr<TensorBuffer>() + i;
+      const Shape& shape = shape_list.at(i);
+      tensor_buffer->Resize(shape, GetDataType<T>::value);
+      T* begin = reinterpret_cast<T*>(tensor_buffer->mut_data());
+      std::fill(begin, begin + shape.elem_cnt(), static_cast<T>(value_list.at(i)));
+    });
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_GEN_TENSOR_BUFFER_KERNEL(dtype)                     \
+  REGISTER_USER_KERNEL("gen_tensor_buffer")                          \
+      .SetCreateFn<GenTensorBuffer<dtype>>()                         \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU) \
+                       & (user_op::HobAttr<DataType>("data_type") == GetDataType<dtype>::value));
+
+REGISTER_GEN_TENSOR_BUFFER_KERNEL(int32_t)
+REGISTER_GEN_TENSOR_BUFFER_KERNEL(int64_t)
+REGISTER_GEN_TENSOR_BUFFER_KERNEL(float)
+REGISTER_GEN_TENSOR_BUFFER_KERNEL(double)
+
+#undef REGISTER_GEN_TENSOR_BUFFER_KERNEL
+
+class TensorBufferToListOfTensors final : public user_op::OpKernel {
+ public:
+  TensorBufferToListOfTensors() = default;
+  ~TensorBufferToListOfTensors() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    CHECK_GT(in->shape().elem_cnt(), 0);
+    CHECK_EQ(in->data_type(), DataType::kTensorBuffer);
+    const DataType out_dtype = ctx->Attr<DataType>("out_dtype");
+    CHECK(IsPODDataType(out_dtype));
+    const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
+    const auto* in_ptr = in->dptr<TensorBuffer>();
+    MultiThreadLoop(in->shape().elem_cnt(), [&](size_t i) {
+      const TensorBuffer* tensor_buffer = in_ptr + i;
+      user_op::Tensor* out_i = ctx->Tensor4ArgNameAndIndex("out", i);
+      CHECK_EQ(out_dtype, tensor_buffer->data_type());
+      if (dynamic_out) {
+        CHECK_LE(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
+        out_i->mut_shape()->set_shape(tensor_buffer->shape());
+      } else {
+        CHECK_EQ(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
+      }
+      Memcpy<DeviceType::kCPU>(ctx->device_ctx(), out_i->mut_dptr<void>(), tensor_buffer->data(),
+                               tensor_buffer->nbytes());
+    });
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+REGISTER_USER_KERNEL("tensor_buffer_to_list_of_tensors")
+    .SetCreateFn<TensorBufferToListOfTensors>()
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
+                     & (user_op::HobDataType("in", 0) == DataType::kTensorBuffer));
+
 }  // namespace
 
 }  // namespace oneflow

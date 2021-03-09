@@ -16,10 +16,11 @@ limitations under the License.
 #include "oneflow/core/framework/interpreter.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/virtual_machine_scope.h"
 
@@ -31,7 +32,8 @@ namespace {
 class TestVirtualMachineScope {
  public:
   TestVirtualMachineScope(int64_t gpu_device_num, int64_t cpu_device_num) {
-    Global<MachineCtx>::New(0);
+    Global<ProcessCtx>::New();
+    Global<ProcessCtx>::Get()->set_rank(0);
     test_resource_desc_scope_.reset(new vm::TestResourceDescScope(gpu_device_num, cpu_device_num));
     virtual_machine_scope_.reset(
         new vm::VirtualMachineScope(Global<ResourceDesc, ForSession>::Get()->resource()));
@@ -40,7 +42,7 @@ class TestVirtualMachineScope {
   ~TestVirtualMachineScope() {
     virtual_machine_scope_.reset();
     test_resource_desc_scope_.reset();
-    Global<MachineCtx>::Delete();
+    Global<ProcessCtx>::Delete();
   }
 
  private:

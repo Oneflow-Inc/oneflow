@@ -29,22 +29,18 @@ namespace compatible_py {
 class EagerPhysicalBlobHeader : public BlobHeaderTrait {
  public:
   EagerPhysicalBlobHeader(const std::shared_ptr<Shape>& static_shape,
-                          const std::vector<std::shared_ptr<Shape>>& shape_list, DataType dtype,
-                          bool is_tensor_list);
+                          const std::shared_ptr<Shape>& shape, DataType dtype);
   EagerPhysicalBlobHeader(const EagerPhysicalBlobHeader& other) = default;
   ~EagerPhysicalBlobHeader() = default;
 
   std::shared_ptr<Shape> static_shape() const override;
   std::shared_ptr<Shape> shape() const override;
-  std::vector<std::shared_ptr<Shape>> shape_list() const override;
   DataType dtype() const override;
-  bool is_tensor_list() const override;
 
  private:
   std::shared_ptr<Shape> static_shape_;
-  std::vector<std::shared_ptr<Shape>> shape_list_;
+  std::shared_ptr<Shape> shape_;
   DataType dtype_;
-  bool is_tensor_list_;
 };
 
 class EagerPhysicalBlob {
@@ -62,7 +58,6 @@ class EagerPhysicalBlob {
   std::shared_ptr<Shape> shape() const;
   DataType dtype() const;
   bool is_dynamic() const;
-  bool is_tensor_list() const;
   std::shared_ptr<BlobObject> blob_object() const;
   std::string ToString() const;
 

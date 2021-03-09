@@ -18,13 +18,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void BoxingZerosTaskNode::Init(int64_t machine_id, int64_t thrd_id, int64_t area_id,
-                               const LogicalBlobId& lbi, const Shape& shape, DataType data_type,
-                               const Shape& time_shape) {
+void BoxingZerosTaskNode::Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi,
+                               const Shape& shape, DataType data_type, const Shape& time_shape) {
   lbi_ = lbi;
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
-  set_area_id(area_id);
   shape_ = shape;
   data_type_ = data_type;
   time_shape_ = time_shape;
@@ -47,7 +45,7 @@ void BoxingZerosTaskNode::BuildExecGphAndRegst() {
   *op_conf.mutable_boxing_zeros_conf()->mutable_lbi() = lbi_;
   shape_.ToProto(op_conf.mutable_boxing_zeros_conf()->mutable_shape());
   op_conf.mutable_boxing_zeros_conf()->set_data_type(data_type_);
-  std::shared_ptr<Operator> sole_op = ConstructOp(op_conf, &GlobalJobDesc());
+  std::shared_ptr<Operator> sole_op = ConstructOp(op_conf);
   node->mut_op() = sole_op;
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleObn()));

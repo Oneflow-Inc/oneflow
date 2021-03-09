@@ -26,13 +26,14 @@ class CtrlServer final : public RpcServer {
   ~CtrlServer() override {}
 
   CtrlServer();
-  const std::string& this_machine_addr() { return this_machine_addr_; }
+  // port may be configured in bootstrap_conf
+  CtrlServer(int ctrl_port);
+
+  int64_t port() const { return port_; }
 
  private:
   void OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) override;
-
-  bool is_first_connect_;
-  std::string this_machine_addr_;
+  int port_;
 };
 
 }  // namespace oneflow

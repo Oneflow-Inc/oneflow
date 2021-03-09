@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/env_desc.h"
@@ -21,31 +22,31 @@ limitations under the License.
 
 namespace oneflow {
 
-CtrlServer::CtrlServer() : RpcServer(), is_first_connect_(true), this_machine_addr_("") {
+CtrlServer::CtrlServer(int ctrl_port) : RpcServer(), port_(ctrl_port) {
   Init();
-  int port = Global<EnvDesc>::Get()->ctrl_port();
   grpc::ServerBuilder server_builder;
   server_builder.SetMaxMessageSize(INT_MAX);
   int bound_port = 0;
-  server_builder.AddListeningPort("0.0.0.0:" + std::to_string(port),
+  server_builder.AddListeningPort("0.0.0.0:" + std::to_string(port_),
                                   grpc::InsecureServerCredentials(), &bound_port);
   grpc_service_.reset(new CtrlService::AsyncService);
   server_builder.RegisterService(grpc_service_.get());
   cq_ = server_builder.AddCompletionQueue();
   grpc_server_ = server_builder.BuildAndStart();
-  CHECK_EQ(port, bound_port) << "Port " << port << " is unavailable";
+  if (port() != 0) {
+    CHECK_EQ(port(), bound_port) << "Port " << port() << " is unavailable";
+  } else {
+    port_ = bound_port;
+    CHECK_NE(port(), 0);
+  }
   LOG(INFO) << "CtrlServer listening on "
-            << "0.0.0.0:" + std::to_string(port);
+            << "0.0.0.0:" + std::to_string(port());
   loop_thread_ = std::thread(&CtrlServer::HandleRpcs, this);
 }
 
+CtrlServer::CtrlServer() : CtrlServer(0) {}
+
 void CtrlServer::OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) {
-  if (this->is_first_connect_) {
-    this->this_machine_addr_ = call->request().addr();
-    this->is_first_connect_ = false;
-  } else {
-    CHECK_EQ(call->request().addr(), this->this_machine_addr_);
-  }
   call->SendResponse();
   EnqueueRequest<CtrlMethod::kLoadServer>();
 }

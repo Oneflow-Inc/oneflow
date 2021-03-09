@@ -24,7 +24,7 @@ namespace mola {
 
 class BatchMatMulOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext *ctx) override {
+  void Compile(XlaOpContext* ctx) override {
     Shape shape_a = ctx->InputShape("a_0");
     Shape shape_b = ctx->InputShape("b_0");
     CHECK_EQ(shape_a.NumAxes(), shape_b.NumAxes());
@@ -55,9 +55,7 @@ class BatchMatMulOp : public XlaOpKernel {
     // ctx->SetOutput("out", xla::BatchDot(lhs, rhs));
 
     xla::XlaOp out = xla::BatchDot(a, transpose_a, b, transpose_b);
-    if (ctx->HasInput("_add_to_output_0")) {
-      out = xla::Add(out, ctx->Input("_add_to_output_0"));
-    } 
+    if (ctx->HasInput("_add_to_output_0")) { out = xla::Add(out, ctx->Input("_add_to_output_0")); }
     ctx->SetOutput("out_0", out);
   }
 };
