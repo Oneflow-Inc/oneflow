@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef __linux__
+
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/transport/transport.h"
 
@@ -374,3 +376,5 @@ void Transport::RecvFromLocalMachine(uint64_t token, void* ptr, std::size_t max_
 }
 
 }  // namespace oneflow
+
+#endif  // __linux__

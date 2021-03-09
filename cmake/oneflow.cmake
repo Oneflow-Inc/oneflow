@@ -1,4 +1,5 @@
 include(python)
+if (NOT APPLE)
 # main cpp
 if (NOT APPLE)
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
@@ -146,9 +147,9 @@ foreach(oneflow_single_file ${oneflow_all_src})
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/transport/transport_test_main\\.cpp$")
-      if(UNIX AND NOT APPLE)
-        list(APPEND of_transport_test_cc ${oneflow_single_file})
-      endif()
+    if(NOT APPLE)
+      list(APPEND of_transport_test_cc ${oneflow_single_file})
+    endif()
     elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})

@@ -83,7 +83,7 @@ jobs:
           mkdir -p $ci_tmp_dir
           echo "ci_tmp_dir=${ci_tmp_dir}" >> $GITHUB_ENV
           echo "wheelhouse_dir=${ci_tmp_dir}/wheelhouse" >> $GITHUB_ENV
-          echo "sha_dir=$HOME/ci-static/pr/${{ github.event.pull_request.number }}/$GITHUB_SHA/${{matrix.test_suite }}" >> $GITHUB_ENV
+          echo "sha_dir=$HOME/ci-static/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}" >> $GITHUB_ENV
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
           extra_docker_args=""
           container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
@@ -108,13 +108,21 @@ jobs:
           docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
             $extra_docker_args \
             -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-            oneflow:manylinux2014-cuda10.2 \
+            oneflow-manylinux2014-cuda10.2:0.1 \
             bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
       - name: Upload wheel to cloud
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${wheelhouse_dir}
-          oss_dst_path: oss://oneflow-staging/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-$(git rev-parse --short "$GITHUB_SHA")-${test_suite}
+          oss_dst_path: oss://oneflow-staging/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
+          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      - name: Upload bin to cloud
+        if: matrix.test_suite == 'cuda'
+        uses: ./.github/actions/upload_oss
+        with:
+          src_path: ${bin_dir}
+          oss_dst_path: oss://oneflow-staging/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/bin
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Remove container
@@ -133,18 +141,28 @@ jobs:
             cp -r ${bin_dir} $sha_dir
             echo "remote_bin_dir=$(hostname):$sha_dir/$(basename ${bin_dir})" >> build.${{ matrix.test_suite }}.env
           fi
+          # duplicate one for cuda_op
+          if [ "$test_suite" == "cuda" ]; then
+            ln -s build.cuda.env build.cuda_op.env
+          fi
       - name: Upload shared env
         uses: actions/upload-artifact@v2
         with:
           name: build.${{ matrix.test_suite }}.env
           path: build.${{ matrix.test_suite }}.env
+      - name: Upload shared env (cuda_op)
+        uses: actions/upload-artifact@v2
+        if: matrix.test_suite == 'cuda'
+        with:
+          name: build.cuda_op.env
+          path: build.cuda_op.env
 
   test:
     name: Test suite
     strategy:
       max-parallel: 5
       matrix:
-        test_suite: ["cuda", "xla", "cpu"]
+        test_suite: ["cuda", "cuda_op", "xla", "cpu"]
     needs: [build, wait_for_gpu_slot]
     runs-on: [self-hosted, linux, gpu]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
@@ -175,9 +193,6 @@ jobs:
             scp -r $remote_bin_dir bin_tmp
           fi
 
-          # rm sha_dir
-          ssh ${builder_host} rm -rf ${sha_dir}
-
           # set wheelpath
           wheelhouse_dir="${PWD}/wheel_tmp"
           extra_docker_args+=" --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir}"
@@ -186,14 +201,9 @@ jobs:
           # set matrix environment variables
           echo "test_suite=${test_suite}" >> $GITHUB_ENV
           if [ "$test_suite" == "cuda" ]; then
-            export suffix="cu102"
             echo "bin_dir=${PWD}/bin_tmp" >> $GITHUB_ENV
           fi
-          if [ "$test_suite" == "xla" ]; then
-            export suffix="cu101_xla"
-          fi
           if [ "$test_suite" == "cpu" ]; then
-            export suffix="cpu"
             echo "ONEFLOW_TEST_CPU_ONLY=1" >> $GITHUB_ENV
           fi
 
@@ -235,11 +245,11 @@ jobs:
         uses: ./.github/actions/upload_oss
         with:
           src_path: oneflow_temp
-          oss_dst_path: oss://oneflow-log/pr/${{ github.event.pull_request.number }}/$(date '+%Y.%m.%d-%H.%M.%S')-${{github.run_id}}/oneflow_temp
+          oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/oneflow_temp
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Op test
-        if: matrix.test_suite != 'xla'
+        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
         run: |
           docker run \
             $extra_docker_args \
@@ -247,7 +257,7 @@ jobs:
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
       - name: Op test (eager)
-        if: matrix.test_suite != 'xla'
+        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
         run: |
           docker run \
             $extra_docker_args \
@@ -256,7 +266,7 @@ jobs:
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh || true"
       - name: Model test
-        if: matrix.test_suite != 'xla'
+        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
         run: |
           docker run \
             $extra_docker_args \

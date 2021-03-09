@@ -30,7 +30,7 @@ void DecodeRandomOp::VirtualGenKernelConf(
 }
 
 Maybe<void> DecodeRandomOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   const DecodeRandomOpConf& conf = op_conf().decode_random_conf();
