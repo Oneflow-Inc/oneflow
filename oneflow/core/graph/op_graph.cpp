@@ -66,9 +66,9 @@ bool OpEdge::CalcIsStrict121Connected() const {
   OpNode* src = src_node();
   OpNode* dst = dst_node();
   if (!src->parallel_desc().Equals(dst->parallel_desc())) { return false; }
-  if (src->IsTimeShapeIdentity() == false) { return false; }
-  if (dst->IsTimeShapeIdentity() == false) { return false; }
-  if (*src->GetInputOutputFastestTimeShape() != *dst->GetInputOutputFastestTimeShape()) {
+  if (!src->IsTimeShapeIdentity()) { return false; }
+  if (!dst->IsTimeShapeIdentity()) { return false; }
+  if (*CHECK_JUST(src->op().GetOpTimeShape()) != *CHECK_JUST(dst->op().GetOpTimeShape())) {
     return false;
   }
   for (const LogicalBlobId& lbi : lbis()) {
@@ -112,9 +112,11 @@ std::string OpNode::VisualStr() const {
     return time_shape_str;
   };
   if (in_edges().empty() == false) {
-    str += "\\n" + GetTimeShapeStr(*GetInputBlobFastestTimeShape(), "in_blob_time_shape");
+    str +=
+        "\\n"
+        + GetTimeShapeStr(*CHECK_JUST(op().GetInputBlobFastestTimeShape()), "in_blob_time_shape");
   }
-  str += "\\n" + GetTimeShapeStr(*out_blob_time_shape(), "out_blob_time_shape");
+  str += "\\n" + GetTimeShapeStr(*CHECK_JUST(op().GetOpTimeShape()), "op_time_shape");
   return str;
 }
 
@@ -128,21 +130,6 @@ BlobDesc* OpNode::MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi) {
     lbi2logical_blob_desc_[lbi].reset(new BlobDesc(GlobalJobDesc().DefaultDataType()));
   }
   return lbi2logical_blob_desc_.at(lbi).get();
-}
-
-const Shape* OpNode::out_blob_time_shape() const {
-  const Shape* ret = out_blob_time_shape_.get();
-  if (ret != nullptr && ret->elem_cnt() == 0) { return nullptr; }
-  return ret;
-}
-
-Shape* OpNode::mut_out_blob_time_shape() {
-  if (!out_blob_time_shape_) { out_blob_time_shape_.reset(new Shape()); }
-  return out_blob_time_shape_.get();
-}
-
-const Shape* OpNode::GetInputBlobTimeShape(const std::string& bn_in_op) const {
-  return MutSrcNode4Ibn(bn_in_op)->out_blob_time_shape();
 }
 
 const OpNode& OpNode::SrcNode4Ibn(const std::string& bn_in_op) const {
@@ -171,23 +158,10 @@ OpNode* OpNode::MutSrcNode4InputLbi(const LogicalBlobId& lbi) const {
 }
 
 bool OpNode::IsTimeShapeIdentity() const {
-  const auto* in_shape = GetInputBlobFastestTimeShape();
-  if (in_shape == nullptr) { return true; }
-  const auto* out_shape = out_blob_time_shape();
-  if (out_shape == nullptr) { return true; }
-  return *in_shape == *out_shape;
-}
-
-const Shape* OpNode::GetInputBlobFastestTimeShape() const {
-  return input_blob_fastest_time_shape_.get();
-}
-
-const Shape* OpNode::GetInputOutputFastestTimeShape() const {
-  const Shape* in = GetInputBlobFastestTimeShape();
-  const Shape* out = out_blob_time_shape();
-  if (in == nullptr) { return out; }
-  if (out == nullptr) { return in; }
-  return in->elem_cnt() > out->elem_cnt() ? in : out;
+  std::shared_ptr<const Shape> in_shape = CHECK_JUST(op().GetInputBlobFastestTimeShape());
+  if (!in_shape) { return true; }
+  std::shared_ptr<const Shape> op_shape = CHECK_JUST(op().GetOpTimeShape());
+  return *in_shape == *op_shape;
 }
 
 const ParallelDesc& OpNode::BlobParallelDesc4Obn(const std::string& obn) const {
@@ -206,18 +180,6 @@ void OpNode::InitLbi2SourceNode() {
       CHECK(lbi2source_node_.emplace(lbi, edge->src_node()).second);
     }
   }
-}
-
-void OpNode::InitInputBlobFastestTimeShape() {
-  const Shape* fastest = nullptr;
-  for (OpEdge* edge : in_edges()) {
-    const Shape* shape = edge->src_node()->out_blob_time_shape();
-    if (fastest == nullptr || shape->elem_cnt() > fastest->elem_cnt()) { fastest = shape; }
-  }
-  for (OpEdge* edge : in_edges()) {
-    CHECK_EQ(fastest->elem_cnt() % edge->src_node()->out_blob_time_shape()->elem_cnt(), 0);
-  }
-  if (fastest != nullptr) { input_blob_fastest_time_shape_.reset(new Shape(fastest->dim_vec())); }
 }
 
 void OpNode::InitLbi2SbpParallel() {
@@ -340,15 +302,11 @@ void OpGraph::InferBlobLastUsed() const {
 
 void OpGraph::InferTimeShape() const {
   TopoForEachNode([&](OpNode* op_node) {
-    ParallelContext parallel_ctx;
-    parallel_ctx.set_parallel_id(0);
-    parallel_ctx.set_parallel_num(op_node->parallel_desc().parallel_num());
     auto GetInputBlobTimeShape = [&](const std::string& bn_in_op) {
-      return op_node->GetInputBlobTimeShape(bn_in_op);
+      return op_node->MutSrcNode4Ibn(bn_in_op)->op().GetOpTimeShape();
     };
-    op_node->InitInputBlobFastestTimeShape();
-    CHECK_JUST(op_node->op().InferOutputBlobTimeShapeIf(GetInputBlobTimeShape, &parallel_ctx,
-                                                        op_node->mut_out_blob_time_shape()));
+    CHECK_JUST(op_node->mut_op()->FillInputBlobTimeShape(GetInputBlobTimeShape));
+    CHECK_JUST(op_node->mut_op()->InferOpTimeShapeIf());
   });
 }
 
@@ -562,16 +520,17 @@ void OpGraph::DumpSbpSignature(Job* job) const {
   });
 }
 
-void OpGraph::DumpOpTimeShape(Job* job) const {
-  ForEachNode([&](OpNode* op_node) {
-    auto* op_time_shape =
-        &(*job->mutable_helper()->mutable_op_name2op_time_shape())[op_node->op().op_name()];
-    if (op_node->out_blob_time_shape() != nullptr) {
-      op_node->out_blob_time_shape()->ToProto(op_time_shape->mutable_out_blob_time_shape());
+void OpGraph::DumpArgSignature(Job* job) const {
+  ForEachNode([&](const OpNode* node) {
+    auto* op_arg_signature =
+        &(*job->mutable_helper()->mutable_op_name2arg_signature())[node->op().op_name()];
+    for (const auto& ibn : node->op().input_bns()) {
+      const auto& lbi = node->op().BnInOp2Lbi(ibn);
+      (*op_arg_signature->mutable_bn_in_op2lbi())[ibn] = lbi;
     }
-    const auto* in_blob_fastest_time_shape = op_node->GetInputBlobFastestTimeShape();
-    if (in_blob_fastest_time_shape != nullptr) {
-      in_blob_fastest_time_shape->ToProto(op_time_shape->mutable_in_blob_fastest_time_shape());
+    for (const auto& obn : node->op().output_bns()) {
+      const auto& lbi = node->op().BnInOp2Lbi(obn);
+      (*op_arg_signature->mutable_bn_in_op2lbi())[obn] = lbi;
     }
   });
 }

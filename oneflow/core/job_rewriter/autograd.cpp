@@ -749,13 +749,11 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
     const auto& lbi = GenLogicalBlobId(loss_lbn);
     CHECK(loss_lbi2op_node.emplace(lbi, LossOpNode4OpName(lbi.op_name())).second);
   }
-  const Shape src_time_shape(
-      {GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
+  const Shape src_time_shape({1, 1});
   const int64_t source_time_shape_elem_cnt = src_time_shape.elem_cnt();
   bool all_loss_time_shape_eq_src = true;
   for (const auto& pair : loss_lbi2op_node) {
-    const Shape* time_shape = pair.second->out_blob_time_shape();
-    const int64_t time_shape_elem_cnt = time_shape->elem_cnt();
+    const int64_t time_shape_elem_cnt = JUST(pair.second->op().GetOpTimeShape())->elem_cnt();
     if (time_shape_elem_cnt != source_time_shape_elem_cnt) {
       CHECK_EQ(time_shape_elem_cnt % source_time_shape_elem_cnt, 0);
       all_loss_time_shape_eq_src = false;
@@ -781,7 +779,7 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
       // TODO: support dynamic
       CHECK(!cur_blob_desc->is_dynamic());
       const DataType loss_data_type = cur_blob_desc->data_type();
-      const int64_t time_shape_elem_cnt = pair.second->out_blob_time_shape()->elem_cnt();
+      const int64_t time_shape_elem_cnt = JUST(pair.second->op().GetOpTimeShape())->elem_cnt();
       // TODO: consider sbp
       const int64_t loss_elem_cnt =
           cur_blob_desc->shape().elem_cnt() * time_shape_elem_cnt / source_time_shape_elem_cnt;

@@ -48,8 +48,8 @@ Maybe<void> CaseOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> CaseOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(*this, GetBlobDesc4BnInOp);
 }
 

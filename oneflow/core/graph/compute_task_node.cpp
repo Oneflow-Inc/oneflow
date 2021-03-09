@@ -92,4 +92,12 @@ std::vector<CompTaskNode*> CompTaskNode::GetPredCompTaskNodesOnEdge(TaskEdge* ed
   return GetCompTaskNodesOnEdge(edge, &TaskEdge::src_node, &TaskNode::ForEachInDataEdge);
 }
 
+void CompTaskNode::InferProducedDataRegstTimeShape() {
+  std::shared_ptr<Shape> op_time_shape(
+      new Shape(*CHECK_JUST(exec_gph().SoleNode()->op()->GetOpTimeShape())));
+  ForEachProducedDataRegst([op_time_shape](const std::string& name, RegstDesc* regst) {
+    *regst->mut_data_regst_time_shape() = op_time_shape;
+  });
+}
+
 }  // namespace oneflow
