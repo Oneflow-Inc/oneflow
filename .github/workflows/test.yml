@@ -245,13 +245,13 @@ jobs:
             --oneflow_wheel_path=${wheelhouse_dir} \
             --oneflow_worker_bin=${bin_dir}/oneflow_worker
       - name: Print backtrace (distributed test)
-        if: matrix.test_suite == 'cuda'
+        if: always() && matrix.test_suite == 'cuda'
         run: |
           docker run \
             $extra_docker_args \
             oneflow-test:$USER bash ci/test/print_stack_from_core.sh python3 distributed-tmp
       - name: Upload log (distributed test)
-        if: matrix.test_suite == 'cuda'
+        if: always() && matrix.test_suite == 'cuda'
         uses: ./.github/actions/upload_oss
         with:
           src_path: oneflow_temp
@@ -288,10 +288,22 @@ jobs:
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_serve_test.sh"
       - name: Print backtrace (serving test)
-        if: matrix.test_suite == 'cuda'
+        if: always() && matrix.test_suite == 'cuda'
         run: |
           docker run $extra_docker_args \
             oneflow-test:$USER bash ci/test/print_stack_from_core.sh python3 serving-tmp
+      - name: Benchmark (mainly for backward compatibility)
+        if: matrix.test_suite == 'cuda'
+        run: |
+          docker run $extra_docker_args \
+            oneflow-test:$USER \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
+      - name: Benchmark FP16 (mainly for backward compatibility)
+        if: matrix.test_suite == 'cuda'
+        run: |
+          docker run $extra_docker_args \
+            oneflow-test:$USER \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
       - name: XLA Test
         if: matrix.test_suite == 'xla'
         run: |
