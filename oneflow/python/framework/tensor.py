@@ -105,7 +105,10 @@ class Tensor:
 
     @property
     def data(self):
-        TODO()
+        if self._local_or_consistent_tensor is not None:
+            return self._local_or_consistent_tensor.data
+        else:
+            return None
 
     @property
     def grad(self):
