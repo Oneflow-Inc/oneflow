@@ -159,7 +159,7 @@ def compare_reduce_sum_with_tensorflow(
 
 
 def compare_reduce_euclidean_norm_with_tensorflow(
-    device_type, input_shape, axis, keepdims, rtol=1e-5, atol=1e-5
+    device_type, input_shape, axis, keepdims, rtol=1e-3, atol=1e-3
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
