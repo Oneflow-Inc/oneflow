@@ -41,7 +41,6 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
   void BuildTmp7BufRegsts();
-  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

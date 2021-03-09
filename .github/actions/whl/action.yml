@@ -31,5 +31,6 @@ runs:
             --wheel_house_dir=${tmp_dir}/wheelhouse \
             --oneflow_src_dir=${src_dir} ${{ inputs.extra_flags }} \
             --retry=1 \
+            --skip_img \
             --extra_docker_args "${extra_docker_args}"
       shell: bash
