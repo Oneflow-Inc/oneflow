@@ -23,7 +23,8 @@ namespace oneflow {
 struct GlobalProcessCtx {
   static int64_t Rank();
   static int64_t NodeSize();
-  static int64_t ThisMachineId();
+  static int64_t ThisNodeId();
+  static int64_t NumOfProcessPerNode();
   static bool IsThisProcessMaster();
   static size_t WorldSize();
   static std::string LogDirEntry();

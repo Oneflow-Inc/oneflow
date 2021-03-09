@@ -29,10 +29,14 @@ int64_t GlobalProcessCtx::NodeSize() {
   return Global<ProcessCtx>::Get()->node_size();
 }
 
-int64_t GlobalProcessCtx::ThisMachineId() {
+int64_t GlobalProcessCtx::ThisNodeId() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  int64_t process_per_node = WorldSize() / NodeSize();
-  return int64_t(Rank() / process_per_node);
+  return int64_t(Rank() / NumOfProcessPerNode());
+}
+
+int64_t GlobalProcessCtx::NumOfProcessPerNode() {
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  return int64_t(WorldSize() / NodeSize());
 }
 
 bool GlobalProcessCtx::IsThisProcessMaster() {
