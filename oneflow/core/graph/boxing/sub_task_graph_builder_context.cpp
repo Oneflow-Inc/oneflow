@@ -68,12 +68,12 @@ TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, int64_t src_mem_
   }
 }
 
-TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, const int64_t  src_mem_zone_id,
+TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, const int64_t src_mem_zone_id,
                                             const ParallelDesc& dst_parallel_desc,
                                             const int64_t dst_parallel_id) {
   const int64_t dst_machine_id =
       CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(dst_parallel_id));
-  int64_t  dst_mem_zone_id;
+  int64_t dst_mem_zone_id;
   const IDMgr* id_mgr = Global<IDMgr>::Get();
   if (dst_parallel_desc.device_type() == DeviceType::kCPU) {
     dst_mem_zone_id = id_mgr->CpuMemZoneId();
