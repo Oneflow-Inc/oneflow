@@ -15,13 +15,15 @@ limitations under the License.
 """
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow_api
+import oneflow as flow
+import numpy as np
 
 
 @oneflow_export("Tensor")
 class Tensor:
     def __init__(
         self,
-        *shape,
+        *args,
         dtype=None,
         device=None,
         requires_grad=False,
@@ -32,23 +34,42 @@ class Tensor:
         is_lazy=False,
         determining_initializer=None,
     ):
+        assert len(args) > 0
         dtype = dtype if dtype is not None else oneflow_api.float32
         device = device if device is not None else oneflow_api.device("cpu")
-        self._local_or_consistent_tensor = None
-        self._undetermined_tensor = UndeterminedTensor(
-            shape,
-            dtype,
-            device=device,
-            requires_grad=requires_grad,
-            retain_grad=retain_grad,
-            placement=placement,
-            sbp=sbp,
-            is_consistent=is_consistent,
-            is_lazy=is_lazy,
-        )
-        if determining_initializer is None:
-            determining_initializer = _default_initializer_for_determining
-        self._determining_initializer = determining_initializer
+        if isinstance(args[0], flow.Tensor):
+            # Copy operator for tensor
+            TODO()
+        elif isinstance(args[0], tuple) or isinstance(args[0], list):
+            assert len(args) == 1
+            numpy_data = np.array(args[0]).astype(
+                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+            )
+            shape = numpy_data.shape
+            # Only local tensor will be created
+            self._local_or_consistent_tensor = oneflow_api.LocalTensor(
+                shape, dtype, device, is_lazy, requires_grad, True, retain_grad
+            )
+            # Set blob object for tensor 
+            TODO()
+        else:
+            shape = args
+            assert all(isinstance(x, int) for x in shape)
+            self._local_or_consistent_tensor = None
+            self._undetermined_tensor = UndeterminedTensor(
+                shape,
+                dtype,
+                device=device,
+                requires_grad=requires_grad,
+                retain_grad=retain_grad,
+                placement=placement,
+                sbp=sbp,
+                is_consistent=is_consistent,
+                is_lazy=is_lazy,
+            )
+            if determining_initializer is None:
+                determining_initializer = _default_initializer_for_determining
+            self._determining_initializer = determining_initializer
 
     @property
     def shape(self):
