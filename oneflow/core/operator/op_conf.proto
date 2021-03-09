@@ -4,7 +4,6 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/common/device_type.proto";
-import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
@@ -16,27 +15,14 @@ import "oneflow/core/job/initializer_conf.proto";
 import "oneflow/core/job/regularizer_conf.proto";
 import "oneflow/core/job/learning_rate_schedule_conf.proto";
 import "oneflow/core/operator/interface_blob_conf.proto";
+import "oneflow/core/register/blob_desc.proto";
+
 
 enum ActivationType {
   kNone = 0;
   kTanH = 1;
   kSigmoid = 2;
   kRelu = 3;
-}
-
-message SigmoidCrossEntropyOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string loss = 3;
-  required DataType label_type = 4;
-}
-
-message SigmoidCrossEntropyGradOpConf {
-  required string prediction = 1;
-  required string label = 2;
-  required string prediction_diff = 3;
-  required string loss_diff = 4;
-  required DataType label_type = 5;
 }
 
 message DistributeConcatOpConf {
@@ -105,9 +91,6 @@ message BoxingOpConf {
   }
 }
 
-message AccumulateOpConf {
-}
-
 message DynamicReshapeOpConf {
   required string in = 1;
   required string out = 2;
@@ -167,85 +150,7 @@ message VariableOpConf {
   required OptInt64 split_axis = 8;
   optional int64 random_seed = 9;
   optional RegularizerConf regularizer = 10;
-}
-
-message EncodeConf {
-  oneof encode {
-    EncodeRaw raw = 1;
-    EncodeJpeg jpeg = 2;
-    EncodeBytesList bytes_list = 3;
-  }
-}
-
-message EncodeBytesList {
-}
-
-message EncodeRaw {
-  optional bool dim1_varying_length = 1 [default = false];
-  optional bool auto_zero_padding = 2 [default = false];
-}
-
-message EncodeJpeg {
-  repeated ImagePreprocess preprocess = 1;
-}
-
-message SubtractPreprocessConf {
-  required float value = 1;
-}
-
-message NormByChannelPreprocessConf {
-  repeated float mean_value = 1;
-  repeated float std_value = 2;
-  required string data_format = 3;
-}
-
-message ScalePreprocessConf {
-  required float value = 1;
-}
-
-message PreprocessConf {
-  oneof type {
-    SubtractPreprocessConf subtract_conf = 1;
-    NormByChannelPreprocessConf norm_by_channel_conf = 2;
-    ScalePreprocessConf scale_conf = 3;
-  }
-}
-
-message RandomShuffleConf {
-  optional int32 buffer_size = 1 [default = 1024];
-}
-
-message RecordLoadOpConf {
-  optional string tick  = 1;
-  required string out = 2;
-  required string data_dir = 3;
-  required int32 data_part_num = 4;
-  optional string part_name_prefix = 5 [default = "part-"];
-  optional int32 part_name_suffix_length = 6 [default = -1];
-  optional RandomShuffleConf random_shuffle_conf = 7;
-  required int64 batch_size = 8;
-}
-
-message BlobConf {
-  required string name = 1;
-  required ShapeProto shape = 2;
-  required DataType data_type = 3;
-  optional int32 max_sequence_size = 4 [default = 1];
-  required EncodeConf encode_case = 5;
-  repeated PreprocessConf preprocess = 6;
-  optional int32 tensor_list_variable_axis = 7 [default = -1];
-  optional bool is_dynamic = 9 [default = false];
-}
-
-message DecodeOFRecordOpConf {
-  required string data_dir = 1;
-  required int32 data_part_num = 2; // piece_size % data_part_num = 0
-  optional string part_name_prefix = 3 [default = "part-"];
-  optional int32 part_name_suffix_length = 4 [default = -1];
-  optional string in = 5;
-  repeated BlobConf blob = 6;
-  optional RandomShuffleConf random_shuffle_conf = 7;
-  required int64 batch_size = 8;
+  optional bool trainable = 11 [default = true];
 }
 
 message DecodeRandomOpConf {
@@ -286,6 +191,16 @@ message ReentrantLockOpConf {
   repeated Int64List lock_id2intersecting_lock_ids = 4;
 }
 
+message SrcSubsetTickOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
+message DstSubsetTickOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
 message SourceTickOpConf {
   required string out = 1;
 }
@@ -293,11 +208,6 @@ message SourceTickOpConf {
 message SinkTickOpConf {
   repeated string tick = 1;
   required string out = 2;
-}
-
-message KeepHeaderOnlyOpConf {
-  repeated string in = 1;
-  repeated string out = 2;
 }
 
 message TotalLossInstanceNumOpConf {
@@ -381,11 +291,6 @@ message EsacOpConf {
   optional DataType data_type = 3 [default=kInt32];
 }
 
-message PartialTickOpConf {
-  required string tick = 1;
-  required string out = 2;
-}
-
 message AssignOpConf {
   required string ref = 1;
   required string value = 2;
@@ -440,10 +345,10 @@ message XrtLaunchOpConf {
   map<string, bool> input_mutability = 5;
   // Mapping launch op's input and output names into function.
   map<string, string> input_output_mapping = 6;
-  map<string, OptInt64> batch_axis = 7;
   // Sbp signatures of each function node.
   map<string, SbpSignature> sbp_signatures = 8;
   optional bool model_update = 9 [default = false];
+  map<string, BlobDescProto> lbn2logical_blob_desc = 10;
 }
 
 message ModelInitV2OpConf {
@@ -470,21 +375,6 @@ message ModelSaveV2OpConf {
   required VariableOpConf original_variable_conf = 4;
   required string out = 5;
   required string tick = 6;
-}
-
-message DynamicBinarySplitOpConf {
-  required string in = 1;
-  repeated string out = 2;
-  required int32 base_shift = 3;
-}
-
-message DynamicBinaryConcatOpConf {
-  repeated string in = 1;
-  required string out = 2;
-  required DataType out_data_type = 3;
-  required ShapeProto out_shape = 4;
-  required OptInt64 out_batch_axis = 5;
-  required SbpParallel out_sbp = 6;
 }
 
 message UniqueWithCountsOpConf {
@@ -526,23 +416,6 @@ message BroadcastToCompatibleWithOpConf {
   required string x = 1;
   repeated string compatible = 2;
   required string y = 3;
-}
-
-message TensorBufferToTensorListOpConf {
-  required string in = 1;
-  required string out = 2;
-  required ShapeProto shape = 3;
-  required DataType data_type = 4;
-}
-
-message TensorListToTensorBufferOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message TensorListSplitOpConf {
-  required string in = 1;
-  repeated string out = 2;
 }
 
 message CollectiveBoxingGenericOpConf {
@@ -594,24 +467,21 @@ message BoxingZerosOpConf {
 
 message OperatorConf {
   required string name = 1;
-  optional bool trainable = 3 [default = true];
   optional string device_tag = 4 [default = "invalid_device"];
   repeated string ctrl_in_op_name = 7;
   optional int64 scope_symbol_id = 8;
   oneof op_type {
     // system op
-    DecodeOFRecordOpConf decode_ofrecord_conf = 101;
     DecodeRandomOpConf decode_random_conf = 102;
-    RecordLoadOpConf record_load_conf = 103;
     CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
     BoxingOpConf boxing_conf = 108;
-    AccumulateOpConf accumulate_conf = 117;
     VariableOpConf variable_conf = 122;
     TickOpConf tick_conf = 124;
-    KeepHeaderOnlyOpConf keep_header_only_conf = 125;
     TotalLossInstanceNumOpConf total_loss_instance_num_conf = 126;
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
+    SrcSubsetTickOpConf src_subset_tick_conf = 133;
+    DstSubsetTickOpConf dst_subset_tick_conf = 134;
     SourceTickOpConf source_tick_conf = 135;
     SinkTickOpConf sink_tick_conf = 136;
     InputOpConf input_conf = 137;
@@ -623,22 +493,16 @@ message OperatorConf {
     ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
     ReturnOpConf return_conf = 146;
-    PartialTickOpConf partial_tick_conf = 149;
     ForeignWatchOpConf foreign_watch_conf = 151;
     DistributeConcatOpConf distribute_concat_conf = 155;
     DistributeSplitOpConf distribute_split_conf = 156;
     DistributeCloneOpConf distribute_clone_conf = 157;
     DistributeAddOpConf distribute_add_conf = 158;
     DeviceTickOpConf device_tick_conf = 159;
-    DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
-    DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
     SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
     SliceBoxingAddOpConf slice_boxing_add_conf = 167;
-    TensorBufferToTensorListOpConf tensor_buffer_to_tensor_list_conf = 168;
-    TensorListToTensorBufferOpConf tensor_list_to_tensor_buffer_conf = 169;
     CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
     BoxingIdentityOpConf boxing_identity_conf = 171;
-    TensorListSplitOpConf tensor_list_split_conf = 172;
     CollectiveBoxingPackOpConf collective_boxing_pack_conf = 174;
     CollectiveBoxingUnpackOpConf collective_boxing_unpack_conf = 175;
     BoxingZerosOpConf boxing_zeros_conf = 176;
@@ -646,7 +510,6 @@ message OperatorConf {
 
     // domain op
     DynamicReshapeOpConf dynamic_reshape_conf = 203;
-    SigmoidCrossEntropyOpConf sigmoid_cross_entropy_conf = 257;
     DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
@@ -656,7 +519,6 @@ message OperatorConf {
     ModelSaveOpConf model_save_conf = 297;
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
     ModelLoadOpConf model_load_conf = 301;
-    SigmoidCrossEntropyGradOpConf sigmoid_cross_entropy_grad_conf = 317;
     UniqueWithCountsOpConf unique_with_counts_conf = 337;
     IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;

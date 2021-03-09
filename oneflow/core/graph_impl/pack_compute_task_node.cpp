@@ -31,7 +31,6 @@ class PackCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecGphAndRegst() override;
-  void InferProducedDataRegstTimeShape() override;
 };
 
 void PackCompTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -55,19 +54,6 @@ void PackCompTaskNode::BuildExecGphAndRegst() {
   exec_node->InferBlobDescs(parallel_ctx());
 }
 
-void PackCompTaskNode::InferProducedDataRegstTimeShape() {
-  auto TimeShape4Ibn = [&](const std::string& ibn) -> const Shape* {
-    return GetSoleConsumedRegst("in")->data_regst_time_shape().get();
-  };
-  std::shared_ptr<Shape> time_shape(new Shape());
-  logical_node()->SoleOp()->InferOutputBlobTimeShape(TimeShape4Ibn, parallel_ctx(),
-                                                     time_shape.get());
-  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
-    *regst->mut_data_regst_time_shape() = time_shape;
-  });
-}
-
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("pack", PackCompTaskNode);
-REGISTER_USER_OP_INDEPENDENT_AREA_ID("pack")
 
 }  // namespace oneflow

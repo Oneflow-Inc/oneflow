@@ -72,6 +72,25 @@ message WeightDecayConf {
   }
 }
 
+message OptimizerConf {
+  repeated string variable_op_names = 1;
+  optional float base_learning_rate = 2;
+  optional WarmupConf warmup_conf = 3;
+  optional LearningRateDecayConf learning_rate_decay = 4;
+  optional string learning_rate_lbn = 5;
+  optional ClipConf clip_conf = 6;
+  optional WeightDecayConf weight_decay_conf = 7;
+  oneof normal_mdupdt {
+    NaiveModelUpdateConf naive_conf = 1000;
+    MomentumModelUpdateConf momentum_conf = 1001;
+    RMSPropModelUpdateConf rmsprop_conf = 1002;
+    LARSModelUpdateConf lars_conf = 1003;
+    AdamModelUpdateConf adam_conf = 1004;
+    LazyAdamModelUpdateConf lazy_adam_conf = 1005;
+    LambModelUpdateConf lamb_conf = 1006;
+  }
+}
+
 message NormalModelUpdateOpUserConf {
   optional LearningRateDecayConf learning_rate_decay = 1;
   optional WarmupConf warmup_conf = 2;
@@ -88,7 +107,6 @@ message NormalModelUpdateOpUserConf {
   }
 }
 
-
 message DynamicLossScalePolicy {
   optional float initial_loss_scale = 1 [default = 1073741824.0];
   optional float increment_period = 2 [default = 2000];
@@ -96,26 +114,22 @@ message DynamicLossScalePolicy {
 }
 
 message TrainConf {
-  optional NormalModelUpdateOpUserConf model_update_conf = 3;
-  repeated string loss_lbn = 6;
-  optional string train_step_lbn = 8;
-  optional string primary_lr_lbn = 9;
-  optional string secondary_lr_lbn = 10;
+  repeated OptimizerConf optimizer_conf = 1;
+  repeated string loss_lbn = 2;
+  optional string train_step_lbn = 3;
   oneof loss_scale_policy {
-    float loss_scale_factor = 11 [default = 1];
-    DynamicLossScalePolicy dynamic_loss_scale_policy = 12;
+    float loss_scale_factor = 4 [default = 1];
+    DynamicLossScalePolicy dynamic_loss_scale_policy = 5;
   }
-
-  optional float primary_lr = 101;
-  optional float secondary_lr = 102;
+  // Deprecated model update conf, will be removed later.
+  optional NormalModelUpdateOpUserConf model_update_conf = 101;
+  optional float primary_lr = 102;
+  optional float secondary_lr = 103;
+  optional string primary_lr_lbn = 104;
+  optional string secondary_lr_lbn = 105;
 }
 
 message PredictConf {
-}
-
-message ExperimentalRunConf {
-  optional int64 piece_num_of_experiment_phase = 1 [default = -1];
-  optional bool enable_experiment_run = 2 [default = false];
 }
 
 message MemoryAllocationAlgorithmConf {
@@ -143,7 +157,8 @@ message QatConfig {
   optional bool per_channel_weight_quantization = 1 [default = false];
   optional bool symmetric = 2 [default = true];
   optional float moving_min_max_momentum = 3 [default = 0.95];
-  optional float moving_min_max_stop_update_after_iters = 4;
+  optional int64 moving_min_max_stop_update_after_iters = 4;
+  optional string target_backend = 5 [default = ""];
 }
 
 message IndexedSlicesOptimizerConf {
@@ -155,7 +170,6 @@ message ParallelBlobConf {
   required BlobDescProto logical_blob_desc_conf = 1;
   required ParallelConf parallel_conf = 2;
   required SbpParallel sbp_conf = 3;
-  required OptInt64 batch_axis = 4;
 }
 
 message JobInputDef {
@@ -179,14 +193,12 @@ message JobConfigProto {
     TrainConf train_conf = 3;
     PredictConf predict_conf = 4;
   }
-  optional int64 total_batch_num = 7 [default = 1];
   optional DataType default_data_type = 8 [default = kFloat]; // kFloat or kDouble
   oneof default_initialize_conf {
     InitializerConf default_initializer_conf = 10;
     string default_initialize_with_snapshot_path = 11;
   }
 
-  optional ExperimentalRunConf exp_run_conf = 100;
   optional bool use_memory_allocation_algorithm_v2 = 101 [default = true];
   optional MemoryAllocationAlgorithmConf memory_allocation_algorithm_conf = 102;
 
@@ -224,8 +236,6 @@ message JobConfigProto {
   optional bool enable_auto_mixed_precision = 602 [default = false];
   optional bool enable_quantization_aware_training = 603 [default = false];
   
-  optional bool enable_keep_header_only = 700 [default = false];
-
   optional int64 concurrency_width = 1000 [default = 128];
 
   map<string, AttrValue> flag_name2flag_value = 2000;

@@ -22,6 +22,17 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 
+namespace std {
+
+template<>
+struct hash<oneflow::TaskType> {
+  std::size_t operator()(const oneflow::TaskType& task_type) const {
+    return std::hash<uint32_t>{}(static_cast<uint32_t>(task_type));
+  }
+};
+
+}  // namespace std
+
 namespace oneflow {
 
 RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
@@ -41,7 +52,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t machine_id() const { return machine_id_; }
   int64_t thrd_id() const { return thrd_id_; }
   int64_t task_id() const { return task_id_; }
-  int64_t area_id() const { return area_id_; }
   int64_t chain_id() const { return chain_id_; }
   int64_t order_in_graph() const { return order_in_graph_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
@@ -56,15 +66,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   }
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
-  int64_t LocalWorkStreamId() const;
   int64_t GlobalWorkStreamId() const;
   int64_t GpuPhyId() const { return Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_); }
-  virtual int64_t AreaId4ChainMerge() const { return area_id(); }
 
   // Setters
   void set_machine_id(int64_t val);
   void set_thrd_id(int64_t val);
-  void set_area_id(int64_t val);
   void set_chain_id(int64_t val);
   void set_order_in_graph(int64_t val);
 
@@ -130,9 +137,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();
-  void FixRegisterNumRange();
-
-  virtual int64_t AllocateLocalWorkStreamId();
 
   virtual void InferProducedDataRegstTimeShape() = 0;
   void NaiveInferProducedDataRegstTimeShape();
@@ -148,7 +152,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t machine_id_;
   int64_t thrd_id_;
   int64_t task_id_;
-  int64_t area_id_;
   int64_t chain_id_;
   int64_t order_in_graph_;
 

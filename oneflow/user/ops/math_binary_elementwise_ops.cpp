@@ -20,8 +20,7 @@ namespace oneflow {
 
 #define MATH_ELEMENTWISE_DEFAULT_SET_FUNC()                       \
   SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged) \
-      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)       \
-      .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
+      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
 
 #define REGISTER_MATH_BINARY_ELEMENTWISE_OP_AND_GRAD(math_binary_elementwise_type, func_prefix) \
   REGISTER_USER_OP(math_binary_elementwise_type)                                                \

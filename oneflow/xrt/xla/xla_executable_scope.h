@@ -23,7 +23,7 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-inline bool SupportMultiStream(const XrtDevice &device) {
+inline bool SupportMultiStream(const XrtDevice& device) {
   switch (device) {
     case XrtDevice::CPU_X86: return false;
     case XrtDevice::GPU_CUDA: return true;
@@ -36,18 +36,18 @@ inline bool SupportMultiStream(const XrtDevice &device) {
 
 class XlaExecutableRunScope {
  public:
-  inline XlaExecutableRunScope(xla::LocalExecutable *executable,
-                               XlaExecutableRunContext &run_context);
+  inline XlaExecutableRunScope(xla::LocalExecutable* executable,
+                               XlaExecutableRunContext& run_context);
 
   inline virtual ~XlaExecutableRunScope();
 
  private:
-  void *launch_stream_ = nullptr;
-  XlaExecutableRunContext &run_context_;
+  void* launch_stream_ = nullptr;
+  XlaExecutableRunContext& run_context_;
 };
 
-XlaExecutableRunScope::XlaExecutableRunScope(xla::LocalExecutable *executable,
-                                             XlaExecutableRunContext &run_context)
+XlaExecutableRunScope::XlaExecutableRunScope(xla::LocalExecutable* executable,
+                                             XlaExecutableRunContext& run_context)
     : run_context_(run_context) {
   // Swap cuda stream between the backend stream and context, so XLA could
   // launch kernel on the specified cuda stream of the context. Note that it

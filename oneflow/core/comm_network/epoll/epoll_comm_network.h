@@ -16,11 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_COMM_NETWORK_H_
 #define ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_COMM_NETWORK_H_
 
+#ifdef __linux__
+
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/socket_helper.h"
 #include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
-
-#ifdef OF_PLATFORM_POSIX
 
 namespace oneflow {
 

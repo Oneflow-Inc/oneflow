@@ -21,7 +21,7 @@ namespace oneflow {
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc) {
-  // TODO(niuchong) : remove PackedBlob
+  // TODO(chengcheng) : remove PackedBlob
   int64_t body_byte_size = 0;
   StructPodDesc opaque_header_pod_desc;
   std::unique_ptr<BlobDesc> ret;
@@ -32,7 +32,6 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     }
     RtBlobDesc rt_blob_desc(*(pair.second));
     // CHECK(!rt_blob_desc.is_dynamic());
-    CHECK(!rt_blob_desc.is_body_disabled());
     body_byte_size += rt_blob_desc.AlignedByteSizeOfBlobBody();
     *opaque_header_pod_desc.MutStructField(NewFieldId(pair.first)) = rt_blob_desc.header_pod_desc();
   }
@@ -48,11 +47,7 @@ bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& r
 }
 
 BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
-    : body_(shape, dtype),
-      is_tensor_list_(false),
-      is_body_disabled_(false),
-      is_dynamic_(false),
-      opaque_header_() {}
+    : body_(shape, dtype), is_dynamic_(false), opaque_header_() {}
 
 BlobDesc::BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
 
@@ -60,8 +55,6 @@ BlobDesc::BlobDesc(const BlobDesc& other) {
   // *body_.mut_shape() = other.body_.shape();
   // body_.set_data_type(other.body_.data_type());
   // header_ = other.header_;
-  // is_tensor_list_ = other.is_tensor_list_;
-  // is_body_disabled_ = other.is_body_disabled_;
   BlobDescProto proto;
   other.ToProto(&proto);
   InitFromProto(proto);
@@ -69,8 +62,6 @@ BlobDesc::BlobDesc(const BlobDesc& other) {
 
 void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   body_.InitFromProto(proto.body());
-  is_tensor_list_ = proto.is_tensor_list();
-  is_body_disabled_ = proto.is_body_disabled();
   is_dynamic_ = proto.is_dynamic();
   if (proto.header_is_opaque()) {
     opaque_header_.reset(new StructPodDesc(proto.header()));
@@ -81,8 +72,6 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   body_.ToProto(proto->mutable_body());
-  proto->set_is_tensor_list(is_tensor_list_);
-  proto->set_is_body_disabled(is_body_disabled_);
   proto->set_is_dynamic(is_dynamic_);
 
   if (opaque_header_) {
@@ -90,30 +79,14 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
     proto->set_header_is_opaque(true);
   } else {
     StructPodDesc header;
-    int64_t shape_num_axes = shape().NumAxes();
-    header.AddField(FieldKey::kTensorListLength,
-                    TensorPodDesc(Shape(DimVector{1LL}), DataType::kInt64));
-    header.AddField(FieldKey::kTensorListSlicesLength,
-                    TensorPodDesc(Shape(DimVector{1LL}), DataType::kInt64));
-    header.AddField(FieldKey::kLastTensorDataOffset,
-                    TensorPodDesc(Shape(DimVector{1LL}), DataType::kInt64));
-    int64_t shape_list_size = 1;
-    if (is_tensor_list_ && shape().NumAxes() > 0) {
-      int32_t batch_axis = 0;  // TODO: batch_axis isn't always 0
-      shape_list_size = shape().At(batch_axis);
-    }
-    header.AddField(
-        FieldKey::kTensorShapeList,
-        TensorPodDesc(Shape(DimVector{shape_list_size * shape_num_axes}), DataType::kInt64));
-    header.AddField(FieldKey::kTensorListSlices,
-                    TensorPodDesc(Shape(DimVector{shape_list_size}), DataType::kInt64));
+    header.AddField(FieldKey::kTensorShape,
+                    TensorPodDesc(Shape(DimVector{shape().NumAxes()}), DataType::kInt64));
     header.ToProto(proto->mutable_header());
     proto->set_header_is_opaque(false);
   }
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& rhs) {
-  CHECK(rhs.is_body_disabled() == false);  // prevent from misuse
   this->CopyFrom(rhs);
   return *this;
 }
@@ -124,28 +97,16 @@ void BlobDesc::CopyFrom(const BlobDesc& other) {
   this->InitFromProto(proto);
 }
 
-// TODO(niuchong) : remove is_body_disabled from blob into register
-void BlobDesc::CopyMetaFrom(const BlobDesc& other) {
-  bool tmp = is_body_disabled_;
-  CopyFrom(other);
-  is_body_disabled_ = tmp;
-}
-
 void BlobDesc::SetOpaqueHeader(const StructPodDesc& header_pod_desc) {
   CHECK(!is_dynamic_);
-  CHECK_EQ(is_tensor_list_, false);
   CHECK_GT(header_pod_desc.ByteSize(), 0);
   opaque_header_.reset(new StructPodDesc(header_pod_desc));
 }
 
-void BlobDesc::set_is_dynamic(bool is_dynamic) {
-  if (!is_dynamic) { CHECK_EQ(false, is_tensor_list_); }
-  is_dynamic_ = is_dynamic;
-}
+void BlobDesc::set_is_dynamic(bool is_dynamic) { is_dynamic_ = is_dynamic; }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
-  return (body_ == rhs.body_) && (is_tensor_list_ == rhs.is_tensor_list_)
-         && (is_body_disabled_ == rhs.is_body_disabled_) && (is_dynamic_ == rhs.is_dynamic_)
+  return (body_ == rhs.body_) && (is_dynamic_ == rhs.is_dynamic_)
          && (opaque_header_ == rhs.opaque_header_);
 }
 

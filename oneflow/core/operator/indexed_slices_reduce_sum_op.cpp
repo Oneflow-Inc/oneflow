@@ -26,15 +26,20 @@ class IndexedSlicesReduceSumOp final : public Operator {
   ~IndexedSlicesReduceSumOp() override = default;
 
   void InitFromOpConf() override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  virtual Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const;
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferInternalBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const JobDesc* job_desc) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
 };
 
 void IndexedSlicesReduceSumOp::InitFromOpConf() {
@@ -47,20 +52,47 @@ void IndexedSlicesReduceSumOp::InitFromOpConf() {
   EnrollTmpBn("workspace");
 }
 
-Maybe<void> IndexedSlicesReduceSumOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  const OptInt64* x_indices_batch_axis = BatchAxis4BnInOp("x_indices");
-  const OptInt64* x_values_batch_axis = BatchAxis4BnInOp("x_values");
-  CHECK_OR_RETURN(*x_indices_batch_axis == *x_values_batch_axis);
-  *BatchAxis4BnInOp("y_indices") = *x_indices_batch_axis;
-  *BatchAxis4BnInOp("y_values") = *x_indices_batch_axis;
-  BatchAxis4BnInOp("num_unique")->clear_value();
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  const BlobDesc* x_indices = BlobDesc4BnInOp("x_indices");
+  const BlobDesc* x_values = BlobDesc4BnInOp("x_values");
+  CHECK_LT_OR_RETURN(x_indices->shape().NumAxes(), x_values->shape().NumAxes());
+  FOR_RANGE(int64_t, i, 0, x_indices->shape().NumAxes()) {
+    CHECK_EQ_OR_RETURN(x_indices->shape().At(i), x_values->shape().At(i));
+  }
+  CHECK_OR_RETURN(IsIndexDataType(x_indices->data_type()));
+  const int64_t n = x_indices->shape().elem_cnt();
+  const int64_t m = x_values->shape().elem_cnt() / n;
+  BlobDesc* y_indices = BlobDesc4BnInOp("y_indices");
+  BlobDesc* y_values = BlobDesc4BnInOp("y_values");
+  *y_indices = *x_indices;
+  y_indices->mut_shape() = Shape({n});
+  *y_values = *x_values;
+  y_values->mut_shape() = Shape({n, m});
+  BlobDesc* num_unique = BlobDesc4BnInOp("num_unique");
+  num_unique->mut_shape() = Shape({1});
+  num_unique->set_data_type(DataType::kInt64);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> IndexedSlicesReduceSumOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+}  // namespace
+
+Maybe<void> IndexedSlicesReduceSumOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(BlobDesc4BnInOp);
+}
+
+Maybe<void> IndexedSlicesReduceSumOp::InferOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
+  return InferBlobDescs(GetBlobDesc4BnInOp);
+}
+
+Maybe<void> IndexedSlicesReduceSumOp::InferInternalBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const JobDesc* job_desc) const {
   const BlobDesc* x_indices = GetBlobDesc4BnInOp("x_indices");
   const BlobDesc* x_values = GetBlobDesc4BnInOp("x_values");
   CHECK_LT_OR_RETURN(x_indices->shape().NumAxes(), x_values->shape().NumAxes());
@@ -70,15 +102,6 @@ Maybe<void> IndexedSlicesReduceSumOp::InferBlobDescs(
   CHECK_OR_RETURN(IsIndexDataType(x_indices->data_type()));
   const int64_t n = x_indices->shape().elem_cnt();
   const int64_t m = x_values->shape().elem_cnt() / n;
-  BlobDesc* y_indices = GetBlobDesc4BnInOp("y_indices");
-  BlobDesc* y_values = GetBlobDesc4BnInOp("y_values");
-  *y_indices = *x_indices;
-  y_indices->mut_shape() = Shape({n});
-  *y_values = *x_values;
-  y_values->mut_shape() = Shape({n, m});
-  BlobDesc* num_unique = GetBlobDesc4BnInOp("num_unique");
-  num_unique->mut_shape() = Shape({1});
-  num_unique->set_data_type(DataType::kInt64);
   BlobDesc* workspace = GetBlobDesc4BnInOp("workspace");
   workspace->set_data_type(DataType::kChar);
   int64_t workspace_size_in_bytes;

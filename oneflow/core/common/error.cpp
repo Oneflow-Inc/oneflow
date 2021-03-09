@@ -63,6 +63,13 @@ Error Error::DeviceTagNotFoundError() {
   return error;
 }
 
+Error Error::ValueError(const std::string& error_summary) {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->set_error_summary(error_summary);
+  error->mutable_value_error();
+  return error;
+}
+
 Error Error::JobNameExistError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_job_name_exist_error();
