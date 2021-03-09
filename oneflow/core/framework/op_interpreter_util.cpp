@@ -15,11 +15,11 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter_util.h"
 
-#include "oneflow/core/common/file_system.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/persistence/file_system.h"
 
 namespace oneflow {
 namespace one {
@@ -160,8 +160,8 @@ OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
 /*static*/ Maybe<compatible_py::BlobObject> OpInterpUtil::EagerRunModelLoad(
     const OperatorConf& op_conf, const std::string& snapshot_path) {
   using namespace std::placeholders;
-  CHECK_OR_RETURN(file_system::basename(snapshot_path) == "out");
-  CHECK_OR_RETURN(file_system::dirname(snapshot_path) == op_conf.name());
+  CHECK_OR_RETURN(Basename(snapshot_path) == "out");
+  CHECK_OR_RETURN(Dirname(snapshot_path) == op_conf.name());
 
   const auto& path_input_op_conf = JUST(GenModelIOPathInputOpConf());
 

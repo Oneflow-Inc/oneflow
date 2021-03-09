@@ -162,6 +162,9 @@ class FileSystem {
   // Returns whether the given path is a directory or not.
   virtual bool IsDirectory(const std::string& fname) = 0;
 
+  // Returns whether the given path is a regular file or not.
+  virtual bool IsRegularFile(const std::string& fname) = 0;
+
  protected:
   FileSystem() = default;
 };
