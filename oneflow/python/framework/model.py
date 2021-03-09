@@ -144,8 +144,8 @@ class Model(
 
     def fit(
         self,
-        training_data: Optional[Union[Module, NumpyDataModule]] = None,
-        validation_data: Optional[Union[Module, NumpyDataModule]] = None,
+        training_data: Optional[Union[DataModule, NumpyDataModule]] = None,
+        validation_data: Optional[Union[DataModule, NumpyDataModule]] = None,
         validation_interval: int = 1,
         checkpoint_config: Optional[CheckpointConfig] = None,
         max_steps: int = 100,
