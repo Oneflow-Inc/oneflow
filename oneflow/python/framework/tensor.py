@@ -159,10 +159,13 @@ class Tensor:
 
     @_auto_determine
     def numpy(self):
-        parallel_conf = placement_cfg.ParallelConf()
-        parallel_conf.set_device_tag(self.device.type)
-        machine_id = 0
-        parallel_conf.add_device_name("{}:{}".format(machine_id, self.device.index))
+        if self.device is not None:
+            parallel_conf = placement_cfg.ParallelConf()
+            parallel_conf.set_device_tag(self.device.type)
+            machine_id = 0
+            parallel_conf.add_device_name("{}:{}".format(machine_id, self.device.index))
+        else:
+            parallel_conf = self.placement.parallel_conf
         return remote_blob_util.BlobObjectNumpy(
             self._local_or_consistent_tensor._blob_object, parallel_conf
         )
@@ -288,7 +291,7 @@ class UndeterminedTensor:
             data_initializer
             if data_initializer is not None
             # TODO: default initializer should be an "empty" initializer like pytorch
-            else flow.zeros_initializer(dtype=dtype)
+            else flow.random_uniform_initializer(minval=-1, maxval=1, dtype=dtype)
         )
         device = device if device is not None else oneflow_api.device("cpu", 0)
         self.shape = shape

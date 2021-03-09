@@ -89,7 +89,7 @@ class InputConfigs:
 
 
 # TODO: rename
-@oneflow_export("nn.Module_v2")
+@oneflow_export("nn.Module")
 class Module(object):
     def __init__(self):
         self.training = True
