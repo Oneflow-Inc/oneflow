@@ -34,7 +34,6 @@ class SourceTickCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kSourceTick; }
 
  private:
-  void InferProducedDataRegstTimeShape() override;
   bool IsIndependent() const override { return true; }
 };
 

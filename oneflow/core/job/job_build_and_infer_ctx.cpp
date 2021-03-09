@@ -931,7 +931,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("FuseUpdateOpsPass"));
     JUST(DoPass("DumpVariableInfoPass"));
   }
-  JUST(DoPass("DumpTimeShapeAndBlobParallelConfPass"));
+  JUST(DoPass("DumpBlobParallelConfPass"));
   return Maybe<void>::Ok();
 }
 
@@ -1208,7 +1208,6 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
     }
   });
   // updata job_helper
-  op_graph.DumpOpTimeShape(job_);
   op_graph.DumpLogicalBlobDesc(job_);
   op_graph.DumpSbpSignature(job_);
   return Maybe<void>::Ok();

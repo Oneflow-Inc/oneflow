@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef __linux__
+
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "glog/logging.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -20,9 +22,6 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/global_for.h"
-
-#ifdef OF_PLATFORM_POSIX
-
 #include <netinet/tcp.h>
 
 namespace oneflow {
@@ -219,4 +218,4 @@ void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token
 
 }  // namespace oneflow
 
-#endif  // OF_PLATFORM_POSIX
+#endif  // __linux__
