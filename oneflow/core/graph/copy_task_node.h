@@ -52,11 +52,12 @@ class CopyHdTaskNode final : public CopyTaskNode {
     if (copy_type_ == CopyHdOpConf::H2D) {
       return TaskNode::MemZoneId121();
     } else if (copy_type_ == CopyHdOpConf::D2H) {
-      return MemZoneId(DeviceType::kCPU, 0);
+      return MemZoneId(DeviceType::kCPU, MemZoneId::kCPUDeviceIndex);
     } else {
       UNIMPLEMENTED();
     }
-    return MemZoneId(DeviceType::kCPU, 0);
+    // NOTE(Liang Depeng): eliminates the compile warning
+    return MemZoneId(DeviceType::kCPU, MemZoneId::kCPUDeviceIndex);
   }
 
  private:

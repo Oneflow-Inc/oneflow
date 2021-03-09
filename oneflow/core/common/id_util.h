@@ -134,7 +134,7 @@ class MemZoneId {
  public:
   using device_index_t = uint32_t;
 
-  constexpr static size_t kCPUDeviceIndex = 0;
+  constexpr static device_index_t kCPUDeviceIndex = 0;
   constexpr static size_t kDeviceTypeBits = 5;
   constexpr static size_t kDeviceIndexBits = 7;
   constexpr static size_t kMaxDeviceTypeVal = (size_t{1} << kDeviceTypeBits) - size_t{1};

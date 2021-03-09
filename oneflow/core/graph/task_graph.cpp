@@ -647,33 +647,28 @@ TaskNode* TaskGraph::BuildTaskStep(TaskNode* src, TaskNode* dst, const GetBufTas
   MemZoneId next_mem_zone_id(DeviceType::kCPU, MemZoneId::kCPUDeviceIndex);
   TaskNode* next = nullptr;
   if (src->MemZoneId121().device_type() != DeviceType::kCPU) {
-    next_mem_zone_id = MemZoneId(DeviceType::kCPU, 0);
-    if (!use_buf_task_node
-        || !(next = GetBufTask(static_cast<uint32_t>(src->machine_id()), next_mem_zone_id))) {
+    next_mem_zone_id = MemZoneId(DeviceType::kCPU, MemZoneId::kCPUDeviceIndex);
+    if (!use_buf_task_node || !(next = GetBufTask(src->machine_id(), next_mem_zone_id))) {
       next = AddCopyD2HTaskFrom(src);
       Connect<TaskNode>(src, NewEdge(), next);
     }
   } else if (src->machine_id() == dst->machine_id()) {
     next_mem_zone_id = dst->MemZoneId121();
-    if (!use_buf_task_node
-        || !(next = GetBufTask(static_cast<uint32_t>(src->machine_id()), next_mem_zone_id))) {
+    if (!use_buf_task_node || !(next = GetBufTask(src->machine_id(), next_mem_zone_id))) {
       next = TryAddCopyH2DTaskTo(dst);
       if (next == nullptr) { next = dst; }
       Connect<TaskNode>(src, NewEdge(), next);
     }
   } else if (src->machine_id() != dst->machine_id()) {
-    next_mem_zone_id = MemZoneId(DeviceType::kCPU, 0);
-    if (!use_buf_task_node
-        || !(next = GetBufTask(static_cast<uint32_t>(dst->machine_id()), next_mem_zone_id))) {
+    next_mem_zone_id = MemZoneId(DeviceType::kCPU, MemZoneId::kCPUDeviceIndex);
+    if (!use_buf_task_node || !(next = GetBufTask(dst->machine_id(), next_mem_zone_id))) {
       next = AddCopyCommNetTaskBetween(src, dst);
       Connect<TaskNode>(src, NewEdge(), next);
     }
   } else {
     UNIMPLEMENTED();
   }
-  if (use_buf_task_node && (src != dst)) {
-    SetBufTask(static_cast<uint32_t>(next->machine_id()), next_mem_zone_id, next);
-  }
+  if (use_buf_task_node && (src != dst)) { SetBufTask(next->machine_id(), next_mem_zone_id, next); }
   return next;
 }
 
