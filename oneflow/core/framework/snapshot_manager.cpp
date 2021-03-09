@@ -14,20 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/snapshot_manager.h"
-#include "oneflow/core/common/file_system.h"
+#include "oneflow/core/common/str_util.h"
+#include "oneflow/core/persistence/file_system.h"
 
 namespace oneflow {
 
 void SnapshotManager::Load(const std::string& root_dir, bool refresh) {
-  CHECK(file_system::is_directory(root_dir));
+  std::shared_ptr<fs::FileSystem> fs(LocalFS());
+  CHECK(fs->IsDirectory(root_dir));
   if (refresh) { variable_name2path_.clear(); }
-  for (const auto& dir : file_system::walk(root_dir)) {
-    if (!file_system::is_directory(dir)) { continue; }
-    std::string dir_basename = file_system::basename(dir);
-    for (const auto& file : file_system::walk(dir)) {
-      std::string file_basename = file_system::basename(file);
-      if (file_basename == "out" && file_system::is_regular_file(file)) {
-        variable_name2path_[dir_basename] = file;
+  for (const auto& dir : fs->ListDir(root_dir)) {
+    std::string absolute_dir = JoinPath(root_dir, dir);
+    if (!fs->IsDirectory(absolute_dir)) { continue; }
+    for (const auto& file : fs->ListDir(absolute_dir)) {
+      std::string absolute_file = JoinPath(absolute_dir, file);
+      if (file == "out" && fs->IsRegularFile(absolute_file)) {
+        variable_name2path_[file] = absolute_file;
       }
     }
   }
