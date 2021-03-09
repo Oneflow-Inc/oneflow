@@ -163,8 +163,17 @@ jobs:
       max-parallel: 5
       matrix:
         test_suite: ["cuda", "cuda_op", "xla", "cpu"]
+        include:
+          - test_suite: "cuda"
+            os: [self-hosted, linux, gpu]
+          - test_suite: "cuda_op"
+            os: [self-hosted, linux, gpu]
+          - test_suite: "xla"
+            os: [self-hosted, linux, gpu]
+          - test_suite: "cpu"
+            os: [self-hosted, linux, cpu]
     needs: [build, wait_for_gpu_slot]
-    runs-on: [self-hosted, linux, gpu]
+    runs-on: ${{ matrix.os }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - name: Fix permissions
@@ -204,7 +213,8 @@ jobs:
             echo "bin_dir=${PWD}/bin_tmp" >> $GITHUB_ENV
           fi
           if [ "$test_suite" == "cpu" ]; then
-            echo "ONEFLOW_TEST_CPU_ONLY=1" >> $GITHUB_ENV
+            extra_docker_args+=" --env ONEFLOW_TEST_CPU_ONLY=1"
+            extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=''"
           fi
 
           # set container_name
@@ -235,13 +245,13 @@ jobs:
             --oneflow_wheel_path=${wheelhouse_dir} \
             --oneflow_worker_bin=${bin_dir}/oneflow_worker
       - name: Print backtrace (distributed test)
-        if: matrix.test_suite == 'cuda'
+        if: always() && matrix.test_suite == 'cuda'
         run: |
           docker run \
             $extra_docker_args \
             oneflow-test:$USER bash ci/test/print_stack_from_core.sh python3 distributed-tmp
       - name: Upload log (distributed test)
-        if: matrix.test_suite == 'cuda'
+        if: always() && matrix.test_suite == 'cuda'
         uses: ./.github/actions/upload_oss
         with:
           src_path: oneflow_temp
@@ -253,24 +263,21 @@ jobs:
         run: |
           docker run \
             $extra_docker_args \
-            --env ONEFLOW_TEST_CPU_ONLY=${ONEFLOW_TEST_CPU_ONLY} \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
       - name: Op test (eager)
-        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
+        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda'
         run: |
           docker run \
             $extra_docker_args \
             --env ONEFLOW_TEST_ENABLE_EAGER=1 \
-            --env ONEFLOW_TEST_CPU_ONLY=${ONEFLOW_TEST_CPU_ONLY} \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh || true"
       - name: Model test
-        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
+        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda'
         run: |
           docker run \
             $extra_docker_args \
-            --env ONEFLOW_TEST_CPU_ONLY=${ONEFLOW_TEST_CPU_ONLY} \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
       - name: Model serve test
@@ -281,10 +288,22 @@ jobs:
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_model_serve_test.sh"
       - name: Print backtrace (serving test)
-        if: matrix.test_suite == 'cuda'
+        if: always() && matrix.test_suite == 'cuda'
         run: |
           docker run $extra_docker_args \
             oneflow-test:$USER bash ci/test/print_stack_from_core.sh python3 serving-tmp
+      - name: Benchmark (mainly for backward compatibility)
+        if: matrix.test_suite == 'cuda'
+        run: |
+          docker run $extra_docker_args \
+            oneflow-test:$USER \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
+      - name: Benchmark FP16 (mainly for backward compatibility)
+        if: matrix.test_suite == 'cuda'
+        run: |
+          docker run $extra_docker_args \
+            oneflow-test:$USER \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
       - name: XLA Test
         if: matrix.test_suite == 'xla'
         run: |
