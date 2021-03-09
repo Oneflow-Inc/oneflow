@@ -35,6 +35,12 @@ void RpcClient::Barrier(const std::string& barrier_name) {
   Barrier(barrier_name, Global<EnvDesc>::Get()->TotalMachineNum());
 }
 
+CtrlServer::CtrlServer(int ctrl_port) : RpcServer(), port_(ctrl_port) {}
+
+CtrlServer::CtrlServer() : CtrlServer(0) {}
+
+void CtrlServer::OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) { call->SendResponse(); }
+
 void RpcClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {}
 
 TryLockResult RpcClient::TryLock(const std::string& name) {}
@@ -87,6 +93,12 @@ void RpcClient::Clear() {}
 int32_t RpcClient::IncreaseCount(const std::string& k, int32_t v) {}
 
 void RpcClient::EraseCount(const std::string& k) {}
+
+RpcServer::~RpcServer() {}
+
+void RpcServer::HandleRpcs() {}
+
+void RpcServer::Init() {}
 
 }  // namespace oneflow
 
