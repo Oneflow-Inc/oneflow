@@ -201,7 +201,7 @@ class Tensor:
         if determining_initializer is None:
             determining_initializer = self._determining_initializer
         self._local_or_consistent_tensor = determining_initializer(
-            self._undetermined_tensor
+            self._undetermined_tensor, self
         )
         self._undetermined_tensor = None
 
@@ -322,10 +322,11 @@ class UndeterminedTensor:
         return device_type == "gpu" or device_type == "cuda"
 
 
-def _default_initializer_for_determining(undetermined_tensor):
+def _default_initializer_for_determining(undetermined_tensor, tensor):
     assert not undetermined_tensor.is_consistent
+    variable_name = id_util.UniqueStr("tensor_")
     blob = flow.get_variable(
-        name=id_util.UniqueStr("tensor_"),
+        name=variable_name,
         shape=tuple(undetermined_tensor.shape),
         dtype=undetermined_tensor.dtype,
         initializer=undetermined_tensor.data_initializer,
@@ -340,4 +341,5 @@ def _default_initializer_for_determining(undetermined_tensor):
         undetermined_tensor.retain_grad,
     )
     determined_tensor._set_blob_object(blob.blob_object)
+    tensor._variable_name = variable_name
     return determined_tensor
