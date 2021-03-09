@@ -160,14 +160,14 @@ Maybe<void> RankInfoCtrlBootstrap::SetCurrentHostByWorker(
 
 Maybe<void> RankInfoCtrlBootstrap::SetNodeSize(ProcessCtx* process_ctx) const {
   if (bootstrap_conf_.has_node_size()) {
-    CHECK_EQ_OR_RETURN(bootstrap_conf_.node_size() % world_size(), 0);
+    CHECK_EQ_OR_RETURN(world_size() % bootstrap_conf_.node_size(), 0);
     process_ctx->set_node_size(bootstrap_conf_.node_size());
     return Maybe<void>::Ok();
   }
   const auto& rank2host = JUST(bootstrap_server_->rank2host());
   std::set<std::string> no_duplicated_host;
   for (const auto& host : rank2host) { no_duplicated_host.insert(host); }
-  CHECK_EQ_OR_RETURN(no_duplicated_host.size() % world_size(), 0);
+  CHECK_EQ_OR_RETURN(world_size() % no_duplicated_host.size(), 0);
   process_ctx->set_node_size(no_duplicated_host.size());
   return Maybe<void>::Ok();
 }
