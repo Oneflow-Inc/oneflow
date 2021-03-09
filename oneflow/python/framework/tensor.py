@@ -13,10 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow_api
-import oneflow as flow
 import numpy as np
+import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow.python.framework.id_util as id_util
+import oneflow as flow
 
 
 @oneflow_export("Tensor")
@@ -32,6 +36,7 @@ class Tensor:
         sbp=None,
         is_consistent=False,
         is_lazy=False,
+        data_initializer=None,
         determining_initializer=None,
     ):
         assert len(args) > 0
@@ -66,6 +71,7 @@ class Tensor:
                 sbp=sbp,
                 is_consistent=is_consistent,
                 is_lazy=is_lazy,
+                data_initializer=data_initializer,
             )
             if determining_initializer is None:
                 determining_initializer = _default_initializer_for_determining
@@ -159,6 +165,16 @@ class Tensor:
             prod *= dim
         return prod
 
+    # internal decorator
+    def _auto_determine(func):
+        def wrapped_func(*args, **kwargs):
+            tensor = args[0]
+            if not tensor.is_determined:
+                tensor.determine()
+            return func(*args, **kwargs)
+
+        return wrapped_func
+
     def retain_grad(self):
         assert self.is_determined
         self._local_or_consistent_tensor.retain_grad()
@@ -169,8 +185,15 @@ class Tensor:
     def element_size(self):
         return self.dtype.bytes
 
+    @_auto_determine
     def numpy(self):
-        TODO()
+        parallel_conf = placement_cfg.ParallelConf()
+        parallel_conf.set_device_tag(self.device.type)
+        machine_id = 0
+        parallel_conf.add_device_name("{}:{}".format(machine_id, self.device.index))
+        return remote_blob_util.BlobObjectNumpy(
+            self._local_or_consistent_tensor._blob_object, parallel_conf
+        )
 
     def tolist(self):
         TODO()
@@ -185,7 +208,7 @@ class Tensor:
         TODO()
 
     def __repr__(self):
-        TODO()
+        return "[Tensor shape={} dtype={}]".format(self.shape, self.dtype)
 
     def __array__(self):
         TODO()
@@ -239,6 +262,12 @@ class Tensor:
         assert self._undetermined_tensor is not None
         self._undetermined_tensor.is_lazy = is_lazy
 
+    def set_data_initializer(self, data_initializer):
+        assert isinstance(data_initializer, initializer_conf_util.InitializerConf)
+        assert self._local_or_consistent_tensor is None
+        assert self._undetermined_tensor is not None
+        self._undetermined_tensor.data_initializer = data_initializer
+
     @property
     def placement(self):
         if self._local_or_consistent_tensor is not None:
@@ -280,11 +309,18 @@ class UndeterminedTensor:
         sbp=None,
         is_consistent=False,
         is_lazy=False,
+        data_initializer=None,
     ):
         if not isinstance(shape, oneflow_api.Size):
             if not isinstance(shape, tuple):
                 shape = tuple(shape)
             shape = oneflow_api.Size(shape)
+        data_initializer = (
+            data_initializer
+            if data_initializer is not None
+            # TODO: default initializer should be an "empty" initializer like pytorch
+            else flow.zeros_initializer(dtype=dtype)
+        )
         device = device if device is not None else oneflow_api.device("cpu")
         self.shape = shape
         self.dtype = dtype
@@ -295,6 +331,7 @@ class UndeterminedTensor:
         self.sbp = sbp
         self.is_consistent = is_consistent
         self.is_lazy = is_lazy
+        self.data_initializer = data_initializer
 
     @property
     def is_cuda(self):
@@ -309,4 +346,21 @@ class UndeterminedTensor:
 
 
 def _default_initializer_for_determining(undetermined_tensor):
-    TODO()
+    assert not undetermined_tensor.is_consistent
+    blob = flow.get_variable(
+        name=id_util.UniqueStr("tensor_"),
+        shape=tuple(undetermined_tensor.shape),
+        dtype=undetermined_tensor.dtype,
+        initializer=undetermined_tensor.data_initializer,
+    )
+    determined_tensor = oneflow_api.LocalTensor(
+        undetermined_tensor.shape,
+        undetermined_tensor.dtype,
+        undetermined_tensor.device,
+        undetermined_tensor.is_lazy,
+        undetermined_tensor.requires_grad,
+        True,
+        undetermined_tensor.retain_grad,
+    )
+    determined_tensor._set_blob_object(blob.blob_object)
+    return determined_tensor
