@@ -36,6 +36,7 @@ int64_t GlobalProcessCtx::ThisNodeId() {
 
 int64_t GlobalProcessCtx::NumOfProcessPerNode() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  CHECK_EQ(WorldSize() % NodeSize(), 0);
   return int64_t(WorldSize() / NodeSize());
 }
 
