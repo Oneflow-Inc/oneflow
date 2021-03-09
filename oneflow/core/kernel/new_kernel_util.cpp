@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/framework/device_register_fakedev.h"
 
 namespace oneflow {
 
@@ -44,17 +43,6 @@ void WithHostBlobAndStreamSynchronizeEnv(DeviceCtx* ctx, Blob* blob,
 #else
   UNIMPLEMENTED();
 #endif
-}
-
-template<>
-void Memcpy<DeviceType::kFAKEDEVICE>(DeviceCtx* ctx, void* dst, const void* src, size_t sz) {
-  if (dst == src) { return; }
-  memcpy(dst, src, sz);
-}
-
-template<>
-void Memset<DeviceType::kFAKEDEVICE>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
-  memset(dst, value, sz);
 }
 
 }  // namespace oneflow

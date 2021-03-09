@@ -17,6 +17,6 @@ limitations under the License.
 
 namespace oneflow {
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR_INCLUDING_FAKE(OperatorConf::kDeviceTickConf, DeviceTickKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kDeviceTickConf, DeviceTickKernel);
 
 }  // namespace oneflow

@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 
-#include "oneflow/core/common/id_util.h"
 #include "oneflow/core/graph/exec_graph.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/task.pb.h"
@@ -99,7 +98,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void ToProto(TaskProto*);
   virtual bool IsIndependent() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
-  virtual MemZoneId MemZoneId121() const;
+  virtual int64_t MemZoneId121() const;
   void BuildCtrlRegstDescIfNeed(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name);

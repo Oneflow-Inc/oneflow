@@ -35,9 +35,6 @@ bool MemoryCaseUtil::GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& 
       common->mutable_host_mem()->set_used_by_network(true);
     }
     return true;
-  } else if (a.has_fake_dev_mem() && b.has_fake_dev_mem()) {
-    *common = a;
-    return true;
   } else {
     return false;
   }
@@ -66,7 +63,6 @@ int64_t MemoryCaseUtil::GenMemZoneId(const MemoryCase& mem_case) {
     }
     return 128;  // CPU host mem
   }
-  if (mem_case.has_fake_dev_mem()) { return 1024; }
   UNIMPLEMENTED();
   return -1;
 }

@@ -57,21 +57,18 @@ void CopyTaskNode::BuildExecGphAndRegst() {
 
 void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
-void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, DeviceType dev_type,
-                          int64_t dev_phy_id) {
+void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int64_t dev_phy_id) {
   copy_type_ = copy_type;
   set_machine_id(machine_id);
   DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
                      static_cast<DeviceId::device_index_t>(dev_phy_id)};
-  // auto* stream_index_generator =
-  //     Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
+  auto* stream_index_generator =
+      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
   StreamId::stream_index_t stream_index = 0;
   if (copy_type == CopyHdOpConf::H2D) {
-    // stream_index = stream_index_generator->GenerateH2DStreamIndex();
-    stream_index = 1;
+    stream_index = stream_index_generator->GenerateH2DStreamIndex();
   } else if (copy_type == CopyHdOpConf::D2H) {
-    // stream_index = stream_index_generator->GenerateD2HStreamIndex();
-    stream_index = 2;
+    stream_index = stream_index_generator->GenerateD2HStreamIndex();
   } else {
     UNIMPLEMENTED();
   }
@@ -82,14 +79,7 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   if (copy_type_ == CopyHdOpConf::H2D) {
     TaskNode::InitProducedRegstMemCase(mem_case);
   } else if (copy_type_ == CopyHdOpConf::D2H) {
-    DeviceType dev_type = DeserializeStreamIdFromInt64(thrd_id()).device_id().device_type();
-    if (dev_type == DeviceType::kGPU) {
-      mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
-    } else if (dev_type == DeviceType::kFAKEDEVICE) {
-      mem_case->mutable_fake_dev_mem();
-    } else {
-      UNIMPLEMENTED();
-    }
+    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
   } else {
     UNIMPLEMENTED();
   }

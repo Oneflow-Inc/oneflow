@@ -230,10 +230,13 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   }
 }
 
-MemZoneId TaskNode::MemZoneId121() const {
-  const auto task_id = DeserializeTaskIdFromInt64(task_id_);
-  const DeviceId& device_id = task_id.stream_id().device_id();
-  return MemZoneId(device_id.device_type(), device_id.device_index());
+int64_t TaskNode::MemZoneId121() const {
+  const IDMgr* id_mgr = Global<IDMgr>::Get();
+  if (device_type() == DeviceType::kCPU) {
+    return id_mgr->CpuMemZoneId();
+  } else {
+    return id_mgr->GpuMemZoneId(id_mgr->GetGpuPhyIdFromThrdId(thrd_id_));
+  }
 }
 
 void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
@@ -309,8 +312,6 @@ void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   } else if (device_type() == DeviceType::kGPU) {
     mem_case->mutable_device_cuda_mem()->set_device_id(
         Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_));
-  } else if (device_type() == DeviceType::kFAKEDEVICE) {
-    mem_case->mutable_fake_dev_mem();
   } else {
     UNIMPLEMENTED();
   }

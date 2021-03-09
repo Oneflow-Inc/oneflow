@@ -14,14 +14,9 @@ message DeviceCudaMemory {
   required int64 device_id = 1;
 }
 
-message FakeDeviceMemory {
-  optional int64 reserved = 1;
-}
-
 message MemoryCase {
   oneof case {
     HostMemory host_mem = 1;
     DeviceCudaMemory device_cuda_mem = 2;
-    FakeDeviceMemory fake_dev_mem = 3;
   }
 }

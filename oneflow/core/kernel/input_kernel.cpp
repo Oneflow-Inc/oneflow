@@ -37,6 +37,6 @@ class InputKernel final : public KernelIf<device_type> {
 
 }  // namespace
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR_INCLUDING_FAKE(OperatorConf::kInputConf, InputKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kInputConf, InputKernel);
 
 }  // namespace oneflow

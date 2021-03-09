@@ -45,18 +45,18 @@ class CopyHdTaskNode final : public CopyTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCopyHd; }
 
-  void Init(CopyHdOpConf::Type, int64_t machine_id, DeviceType dev_type, int64_t dev_phy_id);
+  void Init(CopyHdOpConf::Type, int64_t machine_id, int64_t dev_phy_id);
 
   CopyHdOpConf::Type copy_type() const { return copy_type_; }
-  MemZoneId MemZoneId121() const override {
+  int64_t MemZoneId121() const override {
     if (copy_type_ == CopyHdOpConf::H2D) {
       return TaskNode::MemZoneId121();
     } else if (copy_type_ == CopyHdOpConf::D2H) {
-      return MemZoneId(DeviceType::kCPU, 0);
+      return Global<IDMgr>::Get()->CpuMemZoneId();
     } else {
       UNIMPLEMENTED();
+      return -1;
     }
-    return MemZoneId(DeviceType::kCPU, 0);
   }
 
  private:
