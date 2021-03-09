@@ -18,6 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
 template<DeviceType device_type, typename T, typename K>
 class UniqueWithCountsKernel final : public user_op::OpKernel {
  public:
@@ -40,6 +42,7 @@ class UniqueWithCountsKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
 template<DeviceType device_type, typename T, typename K>
 user_op::InferTmpSizeFn GenInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
@@ -64,5 +67,7 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn() {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNIQUE_WITH_COUNTS_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+}  // namespace
 
 }  // namespace oneflow

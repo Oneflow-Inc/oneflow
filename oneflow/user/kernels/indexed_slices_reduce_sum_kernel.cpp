@@ -18,6 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
 template<DeviceType device_type, typename T, typename K>
 class IndexedSlicesReduceSumKernel final : public user_op::OpKernel {
  public:
@@ -72,5 +74,7 @@ user_op::InferTmpSizeFn GenInferTmpSizeFn() {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_INDEXED_SLICES_REDUCE_SUM_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+}  // namespace
 
 }  // namespace oneflow
