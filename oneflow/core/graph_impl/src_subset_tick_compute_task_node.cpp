@@ -44,16 +44,6 @@ void SrcSubsetTickCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-void SrcSubsetTickCompTaskNode::InferProducedDataRegstTimeShape() {
-  auto time_shape = (*in_edges().begin())->src_node()->GetFastestInputOutputTimeShape();
-  for (TaskEdge* edge : in_edges()) {
-    CHECK(time_shape->elem_cnt() == edge->src_node()->GetFastestInputOutputTimeShape()->elem_cnt());
-  }
-  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
-    *regst->mut_data_regst_time_shape() = time_shape;
-  });
-}
-
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kSrcSubsetTick);
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kSrcSubsetTick)

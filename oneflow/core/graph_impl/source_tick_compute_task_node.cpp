@@ -37,14 +37,6 @@ void SourceTickCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-void SourceTickCompTaskNode::InferProducedDataRegstTimeShape() {
-  std::shared_ptr<Shape> time_shape(
-      new Shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()}));
-  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
-    *regst->mut_data_regst_time_shape() = time_shape;
-  });
-}
-
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kSourceTick);
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kSourceTick)

@@ -161,15 +161,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> FeedBlob(const std::shared_ptr<compatible_py::BlobObject>& blob_object,
                        int64_t callback_id);
 
-  using FindOrCreateDelegateBlobObjectFun =
-      std::function<std::shared_ptr<compatible_py::BlobObject>(
-          const std::shared_ptr<InstructionsBuilder>&,
-          const std::function<std::shared_ptr<compatible_py::BlobObject>(
-              const std::shared_ptr<compatible_py::BlobObject>&,
-              const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&,
-          const std::shared_ptr<compatible_py::BlobObject>&,
-          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>;
-
   Maybe<void> StatefulCall(
       const std::shared_ptr<cfg::OpAttribute>& op_attribute,
       const std::shared_ptr<compatible_py::OpKernelObject>& opkernel_object,
@@ -178,8 +169,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::function<std::shared_ptr<compatible_py::BlobObject>(
           const std::shared_ptr<InstructionsBuilder>&,
           const std::shared_ptr<compatible_py::BlobObject>&,
-          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo,
-      const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject);
+          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo);
 
   Maybe<void> StatelessCall(
       const std::shared_ptr<cfg::OpAttribute>& op_attribute,
@@ -189,15 +179,13 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::function<std::shared_ptr<compatible_py::BlobObject>(
           const std::shared_ptr<InstructionsBuilder>&,
           const std::shared_ptr<compatible_py::BlobObject>&,
-          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo,
-      const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject);
+          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo);
 
   Maybe<void> NoBoxingStatelessCall(
       const std::shared_ptr<cfg::OpAttribute>& op_attribute,
       const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-          bn_in_op2blob_object,
-      const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject);
+          bn_in_op2blob_object);
 
   Maybe<void> NoBoxingCudaD2HStatelessCall(
       const std::shared_ptr<cfg::OpAttribute>& op_attribute,
@@ -419,6 +407,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
   std::function<void(compatible_py::Object*)> release_object_;
 };
+
+Maybe<void> LogicalRun(
+    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
+
+Maybe<void> PhysicalRun(
+    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
 
 }  // namespace oneflow
 

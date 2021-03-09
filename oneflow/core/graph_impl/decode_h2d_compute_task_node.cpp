@@ -40,13 +40,13 @@ void DecodeH2DCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-void DecodeH2DCompTaskNode::InferProducedDataRegstTimeShape() {
-  NaiveInferProducedDataRegstTimeShape();
-}
+#ifdef WITH_CUDA
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDecodeH2D)
     .SetStreamIndexGetterFn([](CudaStreamIndexGenerator* generator) -> uint32_t {
       return generator->GenerateDecodeH2DStreamIndex();
     });
+
+#endif
 
 }  // namespace oneflow

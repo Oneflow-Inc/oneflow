@@ -181,20 +181,4 @@ void NormalForwardCompTaskNode::BuildTmp7BufRegsts() {
   });
 }
 
-void NormalForwardCompTaskNode::InferProducedDataRegstTimeShape() {
-  const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
-  CHECK(!in_regsts.empty());
-  const std::shared_ptr<Shape>& in_time_shape = in_regsts.front()->data_regst_time_shape();
-  for (const auto& regst : in_regsts) {
-    CHECK(*in_time_shape == *(regst->data_regst_time_shape()));
-  }
-
-  ForEachProducedDataRegst([in_time_shape](const std::string& name, RegstDesc* regst) {
-    *regst->mut_data_regst_time_shape() = in_time_shape;
-  });
-}
-
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kFAKEDEVICE, TaskType::kNormalForward)
-    .SetFn([](DeviceId device_id) -> uint32_t { return 0; });
-
 }  // namespace oneflow

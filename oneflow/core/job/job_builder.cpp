@@ -50,10 +50,6 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
   for (auto& pair : *(job_parallel_view_conf->mutable_op_name2sbp_signature_conf())) {
     op_name2sbp_signature_conf_.emplace(pair.first, &pair.second);
   }
-  auto* helper_conf = job->mutable_helper();
-  for (auto& pair : *(helper_conf->mutable_op_name2op_time_shape())) {
-    op_name2time_shapes_.emplace(pair.first, &pair.second);
-  }
   FOR_RANGE(int32_t, i, 0, job->placement().blob_placement_group_size()) {
     auto* blob_pg = job->mutable_placement()->mutable_blob_placement_group(i);
     for (const auto& lbi : blob_pg->lbi()) {
@@ -159,12 +155,9 @@ void JobBuilder::RemoveOpByName(const std::unordered_set<std::string>& removing_
 
   auto* job_parallel_view_conf =
       job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
-  auto* time_shape_conf = job_->mutable_helper()->mutable_op_name2op_time_shape();
   for (const std::string& op_name : removing_names) {
     // Update Sbp
     if (job_parallel_view_conf->count(op_name) > 0) { job_parallel_view_conf->erase(op_name); }
-    // Update time shape
-    if (time_shape_conf->count(op_name) > 0) { time_shape_conf->erase(op_name); }
   }
   // Update identical sbp oba pairs
   if (job_->helper().has_identical_sbp_oba_pairs()) {
@@ -229,7 +222,7 @@ void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Han
     auto it = op_name2parallel_conf_.find(pair.first);
     CHECK(it != op_name2parallel_conf_.end()) << "op_name: " << pair.first;
     DeviceType device_type = ParallelDesc(*it->second).device_type();
-    std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type, &GlobalJobDesc());
+    std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type);
     Handler(*op);
   }
 }
@@ -282,21 +275,6 @@ void JobBuilder::AddSbpSignature4OpName(const std::string& op_name,
       job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
   (*op_name2sbp_signature_conf)[op_name] = sbp_signature;
   op_name2sbp_signature_conf_.emplace(op_name, &(*op_name2sbp_signature_conf)[op_name]);
-}
-
-const OpTimeShape& JobBuilder::TimeShape4OpName(const std::string& op_name) const {
-  const auto& it = op_name2time_shapes_.find(op_name);
-  CHECK(it != op_name2time_shapes_.end());
-  return *(it->second);
-}
-
-void JobBuilder::AddTimeShape4OpName(const std::string& op_name, const OpTimeShape& time_shape) {
-  bool update = (op_name2time_shapes_.count(op_name) == 0);
-  if (update) {
-    auto* time_shape_conf = job_->mutable_helper()->mutable_op_name2op_time_shape();
-    (*time_shape_conf)[op_name] = time_shape;
-    op_name2time_shapes_[op_name] = &((*time_shape_conf)[op_name]);
-  }
 }
 
 }  // namespace oneflow

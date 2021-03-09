@@ -28,23 +28,17 @@ namespace compatible_py {
 namespace {
 
 Maybe<EagerPhysicalBlobHeader> CreateEagerPhysicalBlobHeader(const py::tuple& py_static_shape,
-                                                             const py::list& py_shape_list,
-                                                             int dtype, bool is_tensor_list) {
+                                                             const py::tuple& py_shape, int dtype) {
   DimVector static_shape_dims;
   CHECK_OR_RETURN(py::isinstance<py::tuple>(py_static_shape));
-  for (auto dim : py_static_shape) { static_shape_dims.emplace_back(dim.cast<int64_t>()); }
+  for (const auto& dim : py_static_shape) { static_shape_dims.emplace_back(dim.cast<int64_t>()); }
   std::shared_ptr<Shape> static_shape = std::make_shared<Shape>(static_shape_dims);
-  CHECK_OR_RETURN(py::isinstance<py::list>(py_shape_list));
-  std::shared_ptr<std::vector<std::shared_ptr<Shape>>> shape_list =
-      std::make_shared<std::vector<std::shared_ptr<Shape>>>();
-  for (const auto& py_shape : py_shape_list) {
-    CHECK_OR_RETURN(py::isinstance<py::tuple>(py_shape));
-    DimVector sub_shape_dims;
-    for (auto dim : py_shape) { sub_shape_dims.emplace_back(dim.cast<int64_t>()); }
-    shape_list->emplace_back(std::make_shared<Shape>(sub_shape_dims));
-  }
-  return std::make_shared<EagerPhysicalBlobHeader>(static_shape, shape_list,
-                                                   static_cast<DataType>(dtype), is_tensor_list);
+  CHECK_OR_RETURN(py::isinstance<py::tuple>(py_shape));
+  DimVector sub_shape_dims;
+  for (const auto& dim : py_shape) { sub_shape_dims.emplace_back(dim.cast<int64_t>()); }
+  std::shared_ptr<Shape> shape = std::make_shared<Shape>(sub_shape_dims);
+  return std::make_shared<EagerPhysicalBlobHeader>(static_shape, shape,
+                                                   static_cast<DataType>(dtype));
 }
 
 }  // namespace
@@ -52,10 +46,8 @@ Maybe<EagerPhysicalBlobHeader> CreateEagerPhysicalBlobHeader(const py::tuple& py
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<EagerPhysicalBlobHeader, std::shared_ptr<EagerPhysicalBlobHeader>>(
       m, "EagerPhysicalBlobHeader")
-      .def(py::init([](const py::tuple& py_static_shape, const py::list& py_shape_list, int dtype,
-                       bool is_tensor_list) {
-        return CreateEagerPhysicalBlobHeader(py_static_shape, py_shape_list, dtype, is_tensor_list)
-            .GetPtrOrThrow();
+      .def(py::init([](const py::tuple& py_static_shape, const py::tuple& py_shape, int dtype) {
+        return CreateEagerPhysicalBlobHeader(py_static_shape, py_shape, dtype).GetPtrOrThrow();
         ;
       }))
       .def_property_readonly("static_shape",
@@ -76,20 +68,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                }
                                return ret;
                              })
-      .def_property_readonly("shape_list",
-                             [](const std::shared_ptr<EagerPhysicalBlobHeader>& x) {
-                               const auto& shape_list = x->shape_list();
-                               py::list ret;
-                               for (const auto& sub_shape : *shape_list) {
-                                 py::tuple sub_shape_tuple(sub_shape->NumAxes());
-                                 for (int i = 0; i < sub_shape->NumAxes(); ++i) {
-                                   sub_shape_tuple[i] = sub_shape->At(i);
-                                 }
-                                 ret.append(sub_shape_tuple);
-                               }
-                               return ret;
-                             })
-      .def_property_readonly("is_tensor_list", &EagerPhysicalBlobHeader::is_tensor_list)
       .def("get_dtype", [](const std::shared_ptr<EagerPhysicalBlobHeader>& x) {
         return static_cast<int>(x->dtype());
       });
@@ -123,7 +101,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                return ret;
                              })
       .def_property_readonly("is_dynamic", &EagerPhysicalBlob::is_dynamic)
-      .def_property_readonly("is_tensor_list", &EagerPhysicalBlob::is_tensor_list)
       .def_property_readonly("blob_object", &EagerPhysicalBlob::blob_object)
       .def("get_dtype",
            [](const std::shared_ptr<EagerPhysicalBlob>& x) { return static_cast<int>(x->dtype()); })

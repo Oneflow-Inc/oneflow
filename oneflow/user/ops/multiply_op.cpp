@@ -27,7 +27,6 @@ REGISTER_USER_OP("multiply")
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_OR_RETURN(x->shape() == y->shape());
       CHECK_OR_RETURN(x->data_type() == y->data_type());
-      CHECK_OR_RETURN(x->is_tensor_list() == y->is_tensor_list());
       *out = *x;
       if (x->is_dynamic() || y->is_dynamic()) { *out->mut_is_dynamic() = true; }
       return Maybe<void>::Ok();

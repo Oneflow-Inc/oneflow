@@ -55,6 +55,8 @@ class CompTaskNode : public TaskNode {
   std::vector<CompTaskNode*> GetSuccCompTaskNodesOnEdge(TaskEdge* edge) const;
   std::vector<CompTaskNode*> GetPredCompTaskNodesOnEdge(TaskEdge* edge) const;
 
+  void InferProducedDataRegstTimeShape() override;
+
  private:
   ParallelContext parallel_ctx_;
   const LogicalNode* logical_node_;

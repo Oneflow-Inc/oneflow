@@ -69,7 +69,7 @@ void SliceBoxingTaskNode::ConsumeAllRegsts() {
 
 void SliceBoxingTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<Operator> op = ConstructOp(GetBoxingOpConf(), &GlobalJobDesc());
+  std::shared_ptr<Operator> op = ConstructOp(GetBoxingOpConf());
   node->mut_op() = op;
   FOR_RANGE(size_t, i, 0, op->input_bns().size()) {
     const std::string& ibn = op->input_bns().Get(i);
