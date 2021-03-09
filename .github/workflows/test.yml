@@ -163,15 +163,15 @@ jobs:
       max-parallel: 5
       matrix:
         test_suite: ["cuda", "cuda_op", "xla", "cpu"]
-      include:
-        - test_suite: "cuda"
-          os: [self-hosted, linux, gpu]
-        - test_suite: "cuda_op"
-          os: [self-hosted, linux, gpu]
-        - test_suite: "xla"
-          os: [self-hosted, linux, gpu]
-        - test_suite: "cpu"
-          os: [self-hosted, linux, cpu]
+        include:
+          - test_suite: "cuda"
+            os: [self-hosted, linux, gpu]
+          - test_suite: "cuda_op"
+            os: [self-hosted, linux, gpu]
+          - test_suite: "xla"
+            os: [self-hosted, linux, gpu]
+          - test_suite: "cpu"
+            os: [self-hosted, linux, cpu]
     needs: [build, wait_for_gpu_slot]
     runs-on: ${{ matrix.os }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
