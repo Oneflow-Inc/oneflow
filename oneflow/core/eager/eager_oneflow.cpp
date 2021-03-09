@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/rpc/include/ctrl.h"
-#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/eager/eager_symbol.pb.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"

@@ -15,7 +15,7 @@ limitations under the License.
 */
 #ifdef __linux__
 
-#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/transport/transport.h"
 
 namespace oneflow {

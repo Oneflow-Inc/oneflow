@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/rpc_client.h"
-#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
 #include "oneflow/core/device/cpu_device_context.h"

@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/comm_network/comm_network.h"
-#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/memory/memory_allocator.h"
 

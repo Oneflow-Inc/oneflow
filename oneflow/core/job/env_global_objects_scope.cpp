@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/rpc/include/local/ctrl.h"
 #include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/rpc/include/ctrl.h"
-#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/util.h"
@@ -77,6 +77,7 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
   return resource;
 }
 
+#ifdef RPC_BACKEND_GRPC
 Maybe<CtrlBootstrap> MakeCtrlBootstrap(const EnvDesc& env_desc) {
   std::shared_ptr<CtrlBootstrap> ctrl_bootstrap;
   if (env_desc.has_ctrl_bootstrap_conf()) {
@@ -86,6 +87,7 @@ Maybe<CtrlBootstrap> MakeCtrlBootstrap(const EnvDesc& env_desc) {
   }
   return ctrl_bootstrap;
 }
+#endif  // RPC_BACKEND_GRPC
 
 Maybe<int> GetCtrlPort(const EnvDesc& env_desc) {
   int port = 0;
@@ -103,10 +105,12 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<EnvDesc>::New(env_proto);
   Global<CtrlServer>::New(JUST(GetCtrlPort(*Global<EnvDesc>::Get())));
   Global<ProcessCtx>::New();
-  // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
-  // ~CtrlBootstrap.
+// Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
+// ~CtrlBootstrap.
+#ifdef RPC_BACKEND_GRPC
   CHECK_JUST(JUST(MakeCtrlBootstrap(*Global<EnvDesc>::Get()))
                  ->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+#endif  // RPC_BACKEND_GRPC
   Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
   Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));

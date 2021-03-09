@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/rpc/include/ctrl.h"
-#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/env_global_objects_scope.h"

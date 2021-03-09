@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
-#define ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
+#ifndef ONEFLOW_CORE_RPC_INCLUDE_GLOBAL_PROCESS_CTX_
+#define ONEFLOW_CORE_RPC_INCLUDE_GLOBAL_PROCESS_CTX_
 
 #include <string>
 
@@ -29,4 +29,4 @@ struct GlobalProcessCtx {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
+#endif  // ONEFLOW_CORE_RPC_INCLUDE_GLOBAL_PROCESS_CTX_

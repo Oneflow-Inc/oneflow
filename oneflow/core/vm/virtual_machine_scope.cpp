@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine_scope.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/oneflow_vm.h"
-#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace vm {

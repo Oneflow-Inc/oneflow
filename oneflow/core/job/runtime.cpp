@@ -20,7 +20,7 @@ limitations under the License.
 #endif  // __linux__
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/rpc/include/ctrl.h"
-#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_job_descs.h"
