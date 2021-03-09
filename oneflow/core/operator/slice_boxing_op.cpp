@@ -26,8 +26,9 @@ class SliceBoxingOp : public Operator {
   ~SliceBoxingOp() override = default;
 
   void InitFromOpConf() override;
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 
  protected:
   virtual const SliceBoxingConf& GetCustomizedBoxingConf() const = 0;
@@ -83,7 +84,7 @@ LogicalBlobId SliceBoxingOp::lbi4obn(const std::string& output_bn) const {
 }
 
 Maybe<void> SliceBoxingOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const SliceBoxingConf& slice_boxing_conf = GetCustomizedBoxingConf();
   const PbRpf<TensorSliceViewProto>& in_slice_proto = slice_boxing_conf.in_slice();

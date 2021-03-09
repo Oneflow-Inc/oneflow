@@ -104,7 +104,7 @@ Maybe<void> BoxingOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> BoxingOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(GetBlobDesc4BnInOp, false);
 }

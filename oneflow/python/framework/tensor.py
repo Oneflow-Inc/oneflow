@@ -15,7 +15,6 @@ limitations under the License.
 """
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.framework.device as oneflow_device
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow_api
 import oneflow_api.oneflow.core.job.placement as placement_cfg
@@ -23,12 +22,12 @@ import oneflow.python.framework.id_util as id_util
 import oneflow as flow
 
 
-@oneflow_export("tensor")
+@oneflow_export("Tensor")
 class Tensor:
     def __init__(
         self,
-        shape,
-        dtype,
+        *shape,
+        dtype=None,
         device=None,
         requires_grad=False,
         retain_grad=False,
@@ -39,7 +38,8 @@ class Tensor:
         determining_initializer=None,
         data_initializer=None,
     ):
-        device = device if device is not None else oneflow_api.device("cpu", 0)
+        dtype = dtype if dtype is not None else oneflow_api.float32
+        device = device if device is not None else oneflow_api.device("cpu")
         self._local_or_consistent_tensor = None
         self._undetermined_tensor = UndeterminedTensor(
             shape,
@@ -151,11 +151,15 @@ class Tensor:
 
         return wrapped_func
 
+    def retain_grad(self):
+        assert self.is_determined
+        self._local_or_consistent_tensor.retain_grad()
+
     def data_ptr(self):
         TODO()
 
     def element_size(self):
-        TODO()
+        return self.dtype.bytes
 
     @_auto_determine
     def numpy(self):
@@ -170,8 +174,11 @@ class Tensor:
     def tolist(self):
         TODO()
 
-    def backward(self):
-        TODO()
+    def backward(
+        self, gradient=None, retain_graph=False, create_graph=False, inputs=None
+    ):
+        assert self.is_determined
+        TODO()  # liyurui
 
     def __str__(self):
         TODO()
@@ -185,7 +192,7 @@ class Tensor:
     def __sizeof__(self):
         TODO()
 
-    def __deepcopy__(self):
+    def __deepcopy__(self, memo):
         TODO()
 
     def determine(self, determining_initializer=None):
@@ -290,7 +297,7 @@ class UndeterminedTensor:
             # TODO: default initializer should be an "empty" initializer like pytorch
             else flow.zeros_initializer(dtype=dtype)
         )
-        device = device if device is not None else oneflow_api.device("cpu", 0)
+        device = device if device is not None else oneflow_api.device("cpu")
         self.shape = shape
         self.dtype = dtype
         self.device = device

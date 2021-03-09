@@ -40,7 +40,6 @@ class DecodeH2DCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecGphAndRegst() override;
-  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow
