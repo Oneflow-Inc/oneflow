@@ -27,7 +27,7 @@ static const size_t kMB = 1024 * 1024;
 class ResourceDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ResourceDesc);
-  ResourceDesc(const Resource& resource, size_t num_process_per_node);
+  ResourceDesc(const Resource& resource, int64_t num_process_per_node);
 
   ~ResourceDesc() = default;
 

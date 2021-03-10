@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <algorithm>
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/common/util.h"
 #ifdef WITH_CUDA
@@ -21,7 +22,7 @@ limitations under the License.
 
 namespace oneflow {
 
-ResourceDesc::ResourceDesc(const Resource& resource, size_t num_process_per_node)
+ResourceDesc::ResourceDesc(const Resource& resource, int64_t num_process_per_node)
     : resource_(resource) {
   CHECK_GT(resource_.machine_num(), 0);
   CHECK_LE(resource_.machine_num(), Global<EnvDesc>::Get()->TotalMachineNum());
