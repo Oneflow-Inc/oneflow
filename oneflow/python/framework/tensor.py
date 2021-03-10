@@ -149,6 +149,12 @@ class Tensor:
     def ndimension(self):
         return self.ndim
 
+    def detach(self):
+        if self._local_or_consistent_tensor is not None:
+            return flow.Tensor(self._local_or_consistent_tensor.detach())
+        else:
+            return None
+
     def get_device(self):
         if self._local_or_consistent_tensor is not None:
             return self._local_or_consistent_tensor.device

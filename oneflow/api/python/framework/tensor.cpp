@@ -77,6 +77,7 @@ void ExportTensor(py::module& m, const char* name) {
       .def("numpy", []() { TODO(); })
       .def("tolist", []() { TODO(); })
       .def("retain_grad", [](T& t) { t.set_retain_grad(true); })
+      .def("detach", &T::detach)
       .def("__str__", []() { TODO(); })
       .def("__repr__", []() { TODO(); })
       // OneFlow tensor properties other than pytorch tensor
