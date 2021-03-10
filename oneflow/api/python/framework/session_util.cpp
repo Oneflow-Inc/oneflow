@@ -36,6 +36,13 @@ class PySession : public Session {
   std::string GetJobNameScopePrefix(const std::string& job_name) const override {
     PYBIND11_OVERRIDE(std::string, Session, GetJobNameScopePrefix, job_name);
   }
+
+  bool IsMirroredStrategyEnabled() const override {
+    PYBIND11_OVERRIDE(bool, Session, IsMirroredStrategyEnabled);
+  }
+  bool IsConsistentStrategyEnabled() const override {
+    PYBIND11_OVERRIDE(bool, Session, IsConsistentStrategyEnabled);
+  }
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
@@ -47,7 +54,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("id_", &Session::id)
       .def("snapshot_mgr_", &Session::snapshot_mgr)
       .def("TryGetVariableBlobOfJobFromStash", &Session::TryGetVariableBlobOfJobFromStash)
-      .def("GetJobNameScopePrefix", &Session::GetJobNameScopePrefix);
+      .def("GetJobNameScopePrefix", &Session::GetJobNameScopePrefix)
+      .def("IsMirroredStrategyEnabled", &Session::IsMirroredStrategyEnabled)
+      .def("IsConsistentStrategyEnabled", &Session::IsConsistentStrategyEnabled);
 
   m.def("GetDefaultSessionId", []() { return GetDefaultSessionId().GetOrThrow(); });
   m.def("RegsiterSession", [](int64_t id, const std::shared_ptr<Session>& sess) {

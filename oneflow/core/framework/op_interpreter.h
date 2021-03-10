@@ -18,23 +18,22 @@ limitations under the License.
 
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/job/scope.h"
 
 namespace oneflow {
 namespace one {
 
-using TensorList = std::vector<std::shared_ptr<Tensor>>;
-
 class OpExprInterpState {
  public:
-  const TensorList& SavedTensors() const { return saved_tensors_; }
+  const TensorTuple& SavedTensors() const { return saved_tensors_; }
 
   void SaveTensorForBackward(const std::shared_ptr<Tensor>& tensor) {
     saved_tensors_.push_back(tensor);
   }
 
  private:
-  TensorList saved_tensors_;
+  TensorTuple saved_tensors_;
 };
 
 typedef struct OpExprInterpContext {
@@ -47,7 +46,7 @@ class OpExprInterpreter {
   OpExprInterpreter() : self_state_(new OpExprInterpState) {}
   virtual ~OpExprInterpreter() = default;
 
-  virtual Maybe<void> Apply(const OpExpr* op, const TensorList& inputs, TensorList& outputs,
+  virtual Maybe<void> Apply(const OpExpr* op, const TensorTuple& inputs, TensorTuple& outputs,
                             const OpExprInterpState* state) = 0;
 
   void ResetSelfState();
@@ -81,16 +80,16 @@ class NormalInterpreter : public OpExprInterpreter {
   std::shared_ptr<OpExprInterpContext> context_;
 };
 
-#define DECLARE_NORMAL_APPLY_FUNC(op_type)                                           \
-  virtual Maybe<void> Apply_(const op_type##Expr* op_expr, const TensorList& inputs, \
-                             TensorList& outputs, const OpExprInterpState* state);
+#define DECLARE_NORMAL_APPLY_FUNC(op_type)                                            \
+  virtual Maybe<void> Apply_(const op_type##Expr* op_expr, const TensorTuple& inputs, \
+                             TensorTuple& outputs, const OpExprInterpState* state);
 
 class LazyInterpreter : public NormalInterpreter {
  public:
   LazyInterpreter(const std::shared_ptr<OpExprInterpContext>& context)
       : NormalInterpreter(context) {}
 
-  Maybe<void> Apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
+  Maybe<void> Apply(const OpExpr* op_expr, const TensorTuple& inputs, TensorTuple& outputs,
                     const OpExprInterpState* state) override;
 
  private:
@@ -103,7 +102,7 @@ class EagerInterpreter : public NormalInterpreter {
   EagerInterpreter(const std::shared_ptr<OpExprInterpContext>& context)
       : NormalInterpreter(context) {}
 
-  Maybe<void> Apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
+  Maybe<void> Apply(const OpExpr* op_expr, const TensorTuple& inputs, TensorTuple& outputs,
                     const OpExprInterpState* state) override;
 
  private:
@@ -116,14 +115,14 @@ class EagerInterpreter : public NormalInterpreter {
 class AutogradInterpreter : public OpExprInterpreter {
  public:
   AutogradInterpreter() = delete;
-  AutogradInterpreter(NormalInterpreter* normal_interp)
+  AutogradInterpreter(const std::shared_ptr<NormalInterpreter>& normal_interp)
       : OpExprInterpreter(), normal_interp_(normal_interp) {}
 
-  Maybe<void> Apply(const OpExpr* op_expr, const TensorList& inputs, TensorList& outputs,
+  Maybe<void> Apply(const OpExpr* op_expr, const TensorTuple& inputs, TensorTuple& outputs,
                     const OpExprInterpState* state) override;
 
  private:
-  NormalInterpreter* normal_interp_ = nullptr;
+  std::shared_ptr<NormalInterpreter> normal_interp_;
 };
 
 }  // namespace one

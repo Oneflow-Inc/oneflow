@@ -407,6 +407,15 @@ class Session(oneflow_api.Session):
             return ""
         return "-".join(self.job_name2name_scope_stack_[job_name]) + "-"
 
+    def IsMirroredStrategyEnabled(self):
+        return (
+            len(self.is_mirrored_strategy_enabled_stack) > 0
+            and self.is_mirrored_strategy_enabled_stack[-1]
+        )
+
+    def IsConsistentStrategyEnabled(self):
+        return not self.IsMirroredStrategyEnabled()
+
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):
         assert len(self.backward_blob_register.blob_name2object) == 0

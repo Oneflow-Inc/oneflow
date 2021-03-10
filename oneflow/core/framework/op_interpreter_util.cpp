@@ -24,7 +24,43 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
+// Our system will has only 4 kind interpreters.
+enum class OpInterpKind : int {
+  kLazyConsistent = 0,
+  kLazyMirrored = 1,
+  kEagerConsistent = 2,
+  kEagerMirrored = 3,
+
+  // Interpreter kind size.
+  kOpInterpKindSize = 4
+};
+
+static std::shared_ptr<OpExprInterpreter> BuildInterpreter(const bool& eager_mode,
+                                                           const bool& mirrored_mode) {
+  std::shared_ptr<OpExprInterpContext> context(
+      new OpExprInterpContext{.is_mirrored_strategy_enabled = mirrored_mode});
+  std::shared_ptr<NormalInterpreter> normal_interp;
+  if (eager_mode) {
+    normal_interp = std::make_shared<EagerInterpreter>(context);
+  } else {
+    normal_interp = std::make_shared<LazyInterpreter>(context);
+  }
+  return std::make_shared<AutogradInterpreter>(normal_interp);
+}
+
+/*static*/ Maybe<OpExprInterpreter> OpInterpUtil::GetInterpreter() {
+  thread_local static std::vector<std::shared_ptr<OpExprInterpreter>> all_interpreters(
+      static_cast<int>(OpInterpKind::kOpInterpKindSize));
+  const auto& session = JUST(GetDefaultSession());
+  int mirrored_mode = session->IsMirroredStrategyEnabled();
+  int eager_mode = EagerExecutionEnabled();
+  int kind = (1 >> eager_mode) + mirrored_mode;
+  CHECK_LT_OR_RETURN(kind, static_cast<int>(OpInterpKind::kOpInterpKindSize));
+  if (!all_interpreters[kind].get()) {
+    all_interpreters[kind] = BuildInterpreter(eager_mode, mirrored_mode);
+  }
+  return all_interpreters[kind];
+}
 
 /*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
     const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled) {
@@ -51,8 +87,10 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   return OpInterpUtil::AddBuiltinOpAndInferOpAttribute(*op_conf, is_mirrored_strategy_enabled);
 }
 
+using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
+
 /*static*/ Maybe<Bn2BlobObjectMap> OpInterpUtil::MakeBn2BlobObjectMap(
-    const std::vector<std::string>& indexed_ibns, const TensorList& inputs) {
+    const std::vector<std::string>& indexed_ibns, const TensorTuple& inputs) {
   CHECK_EQ_OR_RETURN(indexed_ibns.size(), inputs.size());
   auto* bn2blob_object(new HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>{});
   for (int i = 0; i < inputs.size(); ++i) {
@@ -258,7 +296,7 @@ OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
 }
 
 /*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::InferOpAttribute(
-    const BuiltinOpExpr* op_expr, const std::shared_ptr<Scope>& scope, const TensorList& inputs) {
+    const BuiltinOpExpr* op_expr, const std::shared_ptr<Scope>& scope, const TensorTuple& inputs) {
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr));
   int64_t symbol_id = JUST(scope->symbol_id());
   op_conf->set_scope_symbol_id(symbol_id);

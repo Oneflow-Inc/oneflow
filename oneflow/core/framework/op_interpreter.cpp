@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
@@ -36,8 +37,8 @@ namespace one {
 
 void OpExprInterpreter::ResetSelfState() { self_state_.reset(new OpExprInterpState); }
 
-Maybe<void> LazyInterpreter::Apply(const OpExpr* op_expr, const TensorList& inputs,
-                                   TensorList& outputs, const OpExprInterpState* state) {
+Maybe<void> LazyInterpreter::Apply(const OpExpr* op_expr, const TensorTuple& inputs,
+                                   TensorTuple& outputs, const OpExprInterpState* state) {
   ResetSelfState();
 
 #define APPLY_IF(op_type)                                             \
@@ -53,8 +54,8 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr* op_expr, const TensorList& inpu
                          << " has not been supported in LazyInterpreter::Apply.";
 }
 
-Maybe<void> LazyInterpreter::Apply_(const BuiltinOpExpr* op_expr, const TensorList& inputs,
-                                    TensorList& outputs, const OpExprInterpState* state) {
+Maybe<void> LazyInterpreter::Apply_(const BuiltinOpExpr* op_expr, const TensorTuple& inputs,
+                                    TensorTuple& outputs, const OpExprInterpState* state) {
   CHECK_EQ_OR_RETURN(inputs.size(), op_expr->input_num());
   const auto& scope = JUST(GetCurrentScope());
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr));
@@ -86,15 +87,15 @@ Maybe<void> LazyInterpreter::Apply_(const BuiltinOpExpr* op_expr, const TensorLi
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LazyInterpreter::Apply_(const FunctionOpExpr* op_expr, const TensorList& inputs,
-                                    TensorList& outputs, const OpExprInterpState* state) {
+Maybe<void> LazyInterpreter::Apply_(const FunctionOpExpr* op_expr, const TensorTuple& inputs,
+                                    TensorTuple& outputs, const OpExprInterpState* state) {
   // TODO
   UNIMPLEMENTED();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerInterpreter::Apply(const OpExpr* op_expr, const TensorList& inputs,
-                                    TensorList& outputs, const OpExprInterpState* state) {
+Maybe<void> EagerInterpreter::Apply(const OpExpr* op_expr, const TensorTuple& inputs,
+                                    TensorTuple& outputs, const OpExprInterpState* state) {
   ResetSelfState();
 
 #define APPLY_IF(op_type)                                             \
@@ -142,8 +143,8 @@ static Maybe<Tensor> BuildTensorFromBlobObject(
   return tensor;
 }
 
-static Maybe<void> NaiveInterpret(const BuiltinOpExpr* op_expr, const TensorList& inputs,
-                                  TensorList& outputs,
+static Maybe<void> NaiveInterpret(const BuiltinOpExpr* op_expr, const TensorTuple& inputs,
+                                  TensorTuple& outputs,
                                   const std::shared_ptr<cfg::OpAttribute>& op_attribute,
                                   const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
   auto BuildInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
@@ -158,8 +159,8 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr* op_expr, const TensorList
   return LogicalRun(BuildInstruction);
 }
 
-Maybe<void> EagerInterpreter::Apply_(const UserOpExpr* op_expr, const TensorList& inputs,
-                                     TensorList& outputs, const OpExprInterpState* state) {
+Maybe<void> EagerInterpreter::Apply_(const UserOpExpr* op_expr, const TensorTuple& inputs,
+                                     TensorTuple& outputs, const OpExprInterpState* state) {
   const auto& scope = JUST(GetCurrentScope());
   const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, scope, inputs));
   auto parallel_conf =
@@ -167,8 +168,8 @@ Maybe<void> EagerInterpreter::Apply_(const UserOpExpr* op_expr, const TensorList
   return NaiveInterpret(op_expr, inputs, outputs, op_attribute, parallel_conf);
 }
 
-Maybe<void> EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const TensorList& inputs,
-                                     TensorList& outputs, const OpExprInterpState* state) {
+Maybe<void> EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const TensorTuple& inputs,
+                                     TensorTuple& outputs, const OpExprInterpState* state) {
   CHECK_EQ_OR_RETURN(inputs.size(), 0);
   CHECK_EQ_OR_RETURN(outputs.size(), 1);
   const auto& job_name = JUST(JobBuildAndInferCtx_GetCurrentJobName());
@@ -211,8 +212,8 @@ Maybe<void> EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const Tensor
 }
 
 static Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
-BuildMirroredCastInstruction(const BuiltinOpExpr* op_expr, const TensorList& inputs,
-                             TensorList& outputs, const OpExprInterpContext* ctx) {
+BuildMirroredCastInstruction(const BuiltinOpExpr* op_expr, const TensorTuple& inputs,
+                             TensorTuple& outputs, const OpExprInterpContext* ctx) {
   const auto& scope = JUST(GetCurrentScope());
   const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, scope, inputs));
   auto build_instruction = [&, scope,
@@ -233,14 +234,14 @@ BuildMirroredCastInstruction(const BuiltinOpExpr* op_expr, const TensorList& inp
   return std::function<void(const std::shared_ptr<InstructionsBuilder>&)>(build_instruction);
 }
 
-Maybe<void> EagerInterpreter::Apply_(const CastToMirroredOpExpr* op_expr, const TensorList& inputs,
-                                     TensorList& outputs, const OpExprInterpState* state) {
+Maybe<void> EagerInterpreter::Apply_(const CastToMirroredOpExpr* op_expr, const TensorTuple& inputs,
+                                     TensorTuple& outputs, const OpExprInterpState* state) {
   auto build_instruction = JUST(BuildMirroredCastInstruction(op_expr, inputs, outputs, context()));
   return LogicalRun(*build_instruction);
 }
 
 Maybe<void> EagerInterpreter::Apply_(const CastFromMirroredOpExpr* op_expr,
-                                     const TensorList& inputs, TensorList& outputs,
+                                     const TensorTuple& inputs, TensorTuple& outputs,
                                      const OpExprInterpState* state) {
   auto build_instruction = JUST(BuildMirroredCastInstruction(op_expr, inputs, outputs, context()));
   return LogicalRun(*build_instruction);
@@ -261,8 +262,8 @@ static Maybe<compatible_py::BlobObject> GetInBlobObject(
 };
 
 static Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
-BuildDistributeSplitOrCloneInstruction(const BuiltinOpExpr* op_expr, const TensorList& inputs,
-                                       TensorList& outputs, const OpExprInterpContext* ctx) {
+BuildDistributeSplitOrCloneInstruction(const BuiltinOpExpr* op_expr, const TensorTuple& inputs,
+                                       TensorTuple& outputs, const OpExprInterpContext* ctx) {
   const auto& scope = JUST(GetCurrentScope());
   const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, scope, inputs));
   auto build_instruction = [&, scope,
@@ -282,23 +283,25 @@ BuildDistributeSplitOrCloneInstruction(const BuiltinOpExpr* op_expr, const Tenso
   return std::function<void(const std::shared_ptr<InstructionsBuilder>&)>(build_instruction);
 }
 
-Maybe<void> EagerInterpreter::Apply_(const DistributeSplitOpExpr* op_expr, const TensorList& inputs,
-                                     TensorList& outputs, const OpExprInterpState* state) {
+Maybe<void> EagerInterpreter::Apply_(const DistributeSplitOpExpr* op_expr,
+                                     const TensorTuple& inputs, TensorTuple& outputs,
+                                     const OpExprInterpState* state) {
   auto build_instruction =
       JUST(BuildDistributeSplitOrCloneInstruction(op_expr, inputs, outputs, context()));
   return LogicalRun(*build_instruction);
 }
 
-Maybe<void> EagerInterpreter::Apply_(const DistributeCloneOpExpr* op_expr, const TensorList& inputs,
-                                     TensorList& outputs, const OpExprInterpState* state) {
+Maybe<void> EagerInterpreter::Apply_(const DistributeCloneOpExpr* op_expr,
+                                     const TensorTuple& inputs, TensorTuple& outputs,
+                                     const OpExprInterpState* state) {
   auto build_instruction =
       JUST(BuildDistributeSplitOrCloneInstruction(op_expr, inputs, outputs, context()));
   return LogicalRun(*build_instruction);
 }
 
 static Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
-BuildDistributeConcatAndAddInstruction(const BuiltinOpExpr* op_expr, const TensorList& inputs,
-                                       TensorList& outputs, const OpExprInterpContext* ctx) {
+BuildDistributeConcatAndAddInstruction(const BuiltinOpExpr* op_expr, const TensorTuple& inputs,
+                                       TensorTuple& outputs, const OpExprInterpContext* ctx) {
   const auto& scope = JUST(GetCurrentScope());
   const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, scope, inputs));
   auto build_instruction = [&, scope,
@@ -327,32 +330,31 @@ BuildDistributeConcatAndAddInstruction(const BuiltinOpExpr* op_expr, const Tenso
 }
 
 Maybe<void> EagerInterpreter::Apply_(const DistributeConcatOpExpr* op_expr,
-                                     const TensorList& inputs, TensorList& outputs,
+                                     const TensorTuple& inputs, TensorTuple& outputs,
                                      const OpExprInterpState* state) {
   auto build_instruction =
       JUST(BuildDistributeConcatAndAddInstruction(op_expr, inputs, outputs, context()));
   return LogicalRun(*build_instruction);
 }
 
-Maybe<void> EagerInterpreter::Apply_(const DistributeAddOpExpr* op_expr, const TensorList& inputs,
-                                     TensorList& outputs, const OpExprInterpState* state) {
+Maybe<void> EagerInterpreter::Apply_(const DistributeAddOpExpr* op_expr, const TensorTuple& inputs,
+                                     TensorTuple& outputs, const OpExprInterpState* state) {
   auto build_instruction =
       JUST(BuildDistributeConcatAndAddInstruction(op_expr, inputs, outputs, context()));
   return LogicalRun(*build_instruction);
 }
 
-Maybe<void> EagerInterpreter::Apply_(const FunctionOpExpr* op_expr, const TensorList& inputs,
-                                     TensorList& outputs, const OpExprInterpState* state) {
+Maybe<void> EagerInterpreter::Apply_(const FunctionOpExpr* op_expr, const TensorTuple& inputs,
+                                     TensorTuple& outputs, const OpExprInterpState* state) {
   // TODO(hjchen2)
   UNIMPLEMENTED();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AutogradInterpreter::Apply(const OpExpr* op_expr, const TensorList& inputs,
-                                       TensorList& outputs, const OpExprInterpState* state) {
+Maybe<void> AutogradInterpreter::Apply(const OpExpr* op_expr, const TensorTuple& inputs,
+                                       TensorTuple& outputs, const OpExprInterpState* state) {
   // TODO(hjchen2)
-  UNIMPLEMENTED();
-  return Maybe<void>::Ok();
+  return normal_interp_->Apply(op_expr, inputs, outputs, state);
 }
 
 }  // namespace one
