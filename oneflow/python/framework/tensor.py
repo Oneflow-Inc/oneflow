@@ -23,6 +23,20 @@ import oneflow.python.framework.id_util as id_util
 import oneflow as flow
 
 
+@oneflow_export("tensor")
+def make_tensor(
+    data=None,
+    dtype=None,
+    device=None,
+    requires_grad=False,
+    retain_grad=False,
+    placement=None,
+    is_lazy=False,
+):
+    assert data is not None
+    return flow.Tensor()
+
+
 @oneflow_export("Tensor")
 class Tensor:
     def __init__(
@@ -42,31 +56,38 @@ class Tensor:
         assert len(args) > 0
         dtype = dtype if dtype is not None else oneflow_api.float32
         device = device if device is not None else oneflow_api.device("cpu")
-        if isinstance(args[0], flow.Tensor):
-            # Copy operator for tensor
-            TODO()
-        elif isinstance(args[0], oneflow_api.LocalTensor) or isinstance(
-            args[0], oneflow_api.ConsistentTensor
-        ):
-            self._local_or_consistent_tensor = args[0]
-            self._undetermined_tensor = None
-        elif isinstance(args[0], tuple) or isinstance(args[0], list):
-            assert len(args) == 1
-            numpy_data = np.array(args[0]).astype(
-                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-            )
-            shape = oneflow_api.Size(tuple(numpy_data.shape))
-            # Only local tensor will be created
-            self._local_or_consistent_tensor = _initialized_job(
-                shape=shape,
-                dtype=dtype,
-                device=device,
-                requires_grad=requires_grad,
-                retain_grad=retain_grad,
-                is_lazy=is_lazy,
-                numpy_data=numpy_data,
-            )
-            self._undetermined_tensor = None
+        if len(args) == 1:
+            if isinstance(args[0], flow.Tensor):
+                # A copy op is needed here
+                TODO()
+            elif isinstance(
+                args[0], (oneflow_api.LocalTensor, oneflow_api.ConsistentTensor)
+            ):
+                self._local_or_consistent_tensor = args[0]
+                self._undetermined_tensor = None
+            else:
+                numpy_data = args[0]
+                if isinstance(args[0], (tuple, list)):
+                    numpy_data = np.array(tuple(args[0])).astype(
+                        flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+                    )
+                else:
+                    assert isinstance(numpy_data, np.ndarray)
+                    numpy_data = np.array(tuple(args[0].tolist())).astype(
+                        flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+                    )
+                shape = oneflow_api.Size(tuple(numpy_data.shape))
+                # Only local tensor will be created
+                self._local_or_consistent_tensor = _initialized_job(
+                    shape=shape,
+                    dtype=dtype,
+                    device=device,
+                    requires_grad=requires_grad,
+                    retain_grad=retain_grad,
+                    is_lazy=is_lazy,
+                    numpy_data=numpy_data,
+                )
+                self._undetermined_tensor = None
         else:
             shape = args
             assert all(isinstance(x, int) for x in shape)
