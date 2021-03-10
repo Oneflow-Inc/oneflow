@@ -182,11 +182,18 @@ void JobBuilder::RemoveOpByName(const std::unordered_set<std::string>& removing_
     if (op_set->op_name().size() > 0) { *(job_->mutable_placement()->add_placement_group()) = p; }
   }
 
-  auto* job_parallel_view_conf =
+  auto* op_name2sbp_signature_conf =
       job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
+  auto* op_name2parallel_distribution_signature_conf =
+      job_->mutable_job_parallel_view_conf()
+          ->mutable_op_name2parallel_distribution_signature_conf();
   for (const std::string& op_name : removing_names) {
-    // Update Sbp
-    if (job_parallel_view_conf->count(op_name) > 0) { job_parallel_view_conf->erase(op_name); }
+    // Update ParallelDistribution, Sbp
+    if (op_name2parallel_distribution_signature_conf->count(op_name) > 0) {
+      op_name2parallel_distribution_signature_conf->erase(op_name);
+      CHECK(op_name2sbp_signature_conf->count(op_name) > 0);
+      op_name2sbp_signature_conf->erase(op_name);
+    }
   }
   // Update identical sbp oba pairs
   if (job_->helper().has_identical_sbp_oba_pairs()) {
