@@ -36,7 +36,7 @@ class FunctionNode {
  public:
   virtual ~FunctionNode() = default;
 
-  virtual void Apply(bool create_graph) = 0;
+  virtual Maybe<void> Apply(bool create_graph) = 0;
   virtual void ReleaseOutTensorArgs() = 0;
   // Releases the eventual c++ std::function for backward if retain_graph=False to avoid calling
   // `Apply` in second time
@@ -85,7 +85,7 @@ class StackFunctionNode final : public FunctionNode {
 
   void ReleaseOutTensorArgs() override;
   void ReleaseGraph() override;
-  void Apply(bool create_graph) override;
+  Maybe<void> Apply(bool create_graph) override;
 
  private:
   // FunctionNode shares Tensor with `inputs_`, and only shares TensorImpl with `outputs_`.
