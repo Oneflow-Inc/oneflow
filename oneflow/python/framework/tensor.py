@@ -42,6 +42,46 @@ class Tensor:
         assert len(args) > 0
         dtype = dtype if dtype is not None else oneflow_api.float32
         device = device if device is not None else oneflow_api.device("cpu")
+        if _input_args_is_other_data(*args):
+            self._immediately_construct(
+                *args,
+                dtype=dtype,
+                device=device,
+                requires_grad=requires_grad,
+                retain_grad=retain_grad,
+                is_lazy=is_lazy,
+            )
+        elif _input_args_is_shape(*args):
+            shape = args
+            self._local_or_consistent_tensor = None
+            self._undetermined_tensor = UndeterminedTensor(
+                shape,
+                dtype,
+                device=device,
+                requires_grad=requires_grad,
+                retain_grad=retain_grad,
+                placement=placement,
+                sbp=sbp,
+                is_consistent=is_consistent,
+                is_lazy=is_lazy,
+                data_initializer=data_initializer,
+            )
+            if determining_initializer is None:
+                determining_initializer = _default_initializer_for_determining
+            self._determining_initializer = determining_initializer
+        else:
+            # Maybe some other arguments to be supported
+            TODO()
+
+    def _immediately_construct(
+        self,
+        *args,
+        dtype=None,
+        device=None,
+        requires_grad=False,
+        retain_grad=False,
+        is_lazy=False
+    ):
         if _input_args_is_tuple_or_list(*args):
             numpy_data = np.array(args[0]).astype(
                 flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
@@ -69,27 +109,6 @@ class Tensor:
         elif _input_args_is_consistent_or_mirrored(*args):
             self._local_or_consistent_tensor = args[0]
             self._undetermined_tensor = None
-        elif _input_args_is_shape(*args):
-            shape = args
-            self._local_or_consistent_tensor = None
-            self._undetermined_tensor = UndeterminedTensor(
-                shape,
-                dtype,
-                device=device,
-                requires_grad=requires_grad,
-                retain_grad=retain_grad,
-                placement=placement,
-                sbp=sbp,
-                is_consistent=is_consistent,
-                is_lazy=is_lazy,
-                data_initializer=data_initializer,
-            )
-            if determining_initializer is None:
-                determining_initializer = _default_initializer_for_determining
-            self._determining_initializer = determining_initializer
-        else:
-            # Maybe some other arguments to be supported
-            TODO()
 
     @property
     def shape(self):
@@ -445,6 +464,14 @@ def _input_args_is_numpy(*args):
 def _input_args_is_consistent_or_mirrored(*args):
     return len(args) == 1 and isinstance(
         args[0], (oneflow_api.ConsistentTensor, oneflow_api.LocalTensor)
+    )
+
+
+def _input_args_is_other_data(*args):
+    return (
+        _input_args_is_consistent_or_mirrored(*args)
+        or _input_args_is_numpy(*args)
+        or _input_args_is_tuple_or_list(*args)
     )
 
 
