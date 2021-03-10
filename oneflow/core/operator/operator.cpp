@@ -896,6 +896,16 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         obn2logical_blob_desc_,
         op_attribute->mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc()));
   }
+  if (op_parallel_desc_) {
+    *op_attribute->mutable_parallel_conf_signature()->mutable_op_parallel_conf() =
+        op_parallel_desc_->parallel_conf();
+  }
+  if (bn2parallel_desc_) {
+    auto* map = op_attribute->mutable_parallel_conf_signature()->mutable_bn_in_op2parallel_conf();
+    for (const auto& pair : *bn2parallel_desc_) {
+      (*map)[pair.first] = pair.second->parallel_conf();
+    }
+  }
   if (op_parallel_desc_ && bn2parallel_desc_) {
     if (op_conf().scope_symbol_id() != 0) {
       const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
@@ -903,12 +913,8 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
       int64_t parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
       auto* parallel_signature = op_attribute->mutable_parallel_signature();
       parallel_signature->set_op_parallel_desc_symbol_id(parallel_desc_symbol_id);
-      auto* parallel_conf_signature = op_attribute->mutable_parallel_conf_signature();
-      *parallel_conf_signature->mutable_op_parallel_conf() = op_parallel_desc_->parallel_conf();
       auto* symbol_map = parallel_signature->mutable_bn_in_op2parallel_desc_symbol_id();
-      auto* conf_map = parallel_conf_signature->mutable_bn_in_op2parallel_conf();
       for (const auto& pair : *bn2parallel_desc_) {
-        (*conf_map)[pair.first] = pair.second->parallel_conf();
         if (*pair.second == *op_parallel_desc_) {
           (*symbol_map)[pair.first] = parallel_desc_symbol_id;
         } else {
