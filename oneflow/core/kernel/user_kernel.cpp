@@ -165,7 +165,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
 class UserKernelOpInferContext : public user_op::InferContext {
  public:
   UserKernelOpInferContext(const KernelConf& kernel_conf, const JobDesc* job_desc)
-      : user_op::InferContext(user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+      : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         job_desc_(job_desc),
         parallel_ctx_(kernel_conf.parallel_ctx()),
         sbp_signature_(kernel_conf.op_attribute().sbp_signature()) {
@@ -188,7 +188,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
                                        user_op::TensorDesc(pair.second));
     }
   }
-  ~UserKernelOpInferContext() = default;
+  ~UserKernelOpInferContext() override = default;
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                int32_t index) const override {
@@ -246,7 +246,10 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
   int64_t parallel_num() const override { return parallel_ctx_.parallel_num(); }
 
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
  private:
+  user_op::UserOpConfWrapper user_op_conf_;
   const JobDesc* job_desc_;
   ArgVec inputs_;
   ArgVec outputs_;
