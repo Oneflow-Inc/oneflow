@@ -43,8 +43,13 @@ class OpNode final : public Node<OpNode, OpEdge> {
   std::shared_ptr<const Operator> shared_op() const { return op_; }
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
   const SbpSignature& sbp_signature() const { return *CHECK_JUST(op().sbp_signature()); }
+  const ParallelDistributionSignature& parallel_distribution_signature() const {
+    return *CHECK_JUST(op().parallel_distribution_signature());
+  }
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
+  const ParallelDistribution& ParallelDistribution4Lbi(const LogicalBlobId& lbi) const;
+  const ParallelDistribution& ParallelDistribution4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& SrcNode4Ibn(const std::string& bn_in_op) const;
@@ -64,6 +69,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   void InferBlobParallelDesc();
   void InitLbi2SourceNode();
   void InitLbi2SbpParallel();
+  void InitLbi2ParallelDistribution();
 
   ParallelDesc parallel_desc_;
   HashMap<std::string, ParallelDesc> obn2blob_parallel_desc_;
@@ -71,7 +77,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashSet<std::string> ibns_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
-  HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_;
+  // HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_;
+  HashMap<LogicalBlobId, ParallelDistribution> lbi2parallel_distribution_;
   std::unique_ptr<Shape> parallel_hierarchy_;
 };
 
@@ -136,6 +143,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void DumpLogicalBlobDesc(Job* job) const;
   void DumpSbpSignature(Job* job) const;
   void DumpArgSignature(Job* job) const;
+  void DumpParallelDistributionSignature(Job* job) const;
 
   Maybe<void> Init(const Job& job);
 
@@ -147,6 +155,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferBlobLastUsed() const;
   void InferTimeShape() const;
   void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
+  void InferOpNodeParallelDistributionSignature(
+      OpNode* op_node, const ParallelDistributionSignature& parallel_distribution_sig_conf) const;
   Maybe<void> InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const;
   Maybe<void> InferLogicalBlobDesc(const Job& job) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;

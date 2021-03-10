@@ -148,11 +148,14 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
       OpBlobArg cast_in_op_blob_arg;
       cast_in_op_blob_arg.set_op_name(cast_op.op_name());
       cast_in_op_blob_arg.set_bn_in_op(GenRepeatedBn("in", 0));
-      job_builder->MutSbpParallel4Oba(cast_in_op_blob_arg)->mutable_broadcast_parallel();
+      // job_builder->MutSbpParallel4Oba(cast_in_op_blob_arg)->mutable_broadcast_parallel();
+      SbpParallel sbp_parallel;
+      sbp_parallel.mutable_broadcast_parallel();
+      job_builder->SetSbpParallel4Oba(cast_in_op_blob_arg, sbp_parallel);
       OpBlobArg cast_out_op_blob_arg;
       cast_out_op_blob_arg.set_op_name(cast_op.op_name());
       cast_out_op_blob_arg.set_bn_in_op(GenRepeatedBn("out", 0));
-      job_builder->MutSbpParallel4Oba(cast_out_op_blob_arg)->mutable_broadcast_parallel();
+      job_builder->SetSbpParallel4Oba(cast_out_op_blob_arg, sbp_parallel);
       op_confs->push_back(cast_op.op_conf());
       loss_scale_val_lbn = cast_op.output("out", 0);
     }

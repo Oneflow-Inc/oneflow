@@ -416,6 +416,12 @@ Maybe<void> Operator::FillSbpSignature(const SbpSignature& sbp_signature) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> Operator::FillParallelDistributionSignature(
+    const ParallelDistributionSignature& signature) {
+  parallel_distribution_signature_.reset(new ParallelDistributionSignature(signature));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> Operator::InferSbpSignatureIf(
     const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -519,6 +525,45 @@ Maybe<void> Operator::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> Operator::InferParallelDistributionSignatureIf(
+    const ParallelDistributionSignature& parallel_distribution_sig_conf,
+    const ParallelDesc& parallel_desc,
+    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+        ParallelDistributionInferHint4Ibn) {
+  ParallelDistributionSignature signature;
+  JUST(InferParallelDistributionSignature(&signature, parallel_distribution_sig_conf, parallel_desc,
+                                          ParallelDistributionInferHint4Ibn));
+  JUST(FillParallelDistributionSignature(signature));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> Operator::InferParallelDistributionSignature(
+    ParallelDistributionSignature* signature,
+    const ParallelDistributionSignature& parallel_distribution_sig_conf,
+    const ParallelDesc& parallel_desc,
+    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+        ParallelDistributionInferHint4Ibn) {
+  const auto parallel_hierarchy = parallel_desc.hierarchy();
+  CHECK_GT(parallel_hierarchy->NumAxes(), 0);
+  if (parallel_hierarchy->NumAxes() == 1) {
+    HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
+    for (const auto& ibn : input_bns()) {
+      const ParallelDistributionInferHint* hint = JUST(ParallelDistributionInferHint4Ibn(ibn));
+      CHECK_EQ(hint->parallel_distribution().sbp_parallel_size(), 1);
+      ibn2sbp_infer_hint.emplace(ibn,
+                                 SbpInferHint(&hint->parallel_desc(), &hint->logical_blob_desc(),
+                                              &hint->parallel_distribution().sbp_parallel(0)));
+    }
+    SbpSignature sbp_sig_conf;
+    ParallelDistributionSignatureToSbpSignature(parallel_distribution_sig_conf, &sbp_sig_conf);
+    CHECK_JUST(InferOpSbpSignature(this, sbp_sig_conf, parallel_desc, ibn2sbp_infer_hint));
+    SbpSignatureToParallelDistributionSignature(*sbp_signature_, signature);
+    return Maybe<void>::Ok();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 Maybe<void> Operator::InferMirroredSignatureIf(
     std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
     bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc) {
@@ -578,6 +623,12 @@ Maybe<const SbpSignature*> Operator::sbp_signature() const {
   return sbp_signature_.get();
 }
 
+Maybe<const ParallelDistributionSignature*> Operator::parallel_distribution_signature() const {
+  CHECK_OR_RETURN(parallel_distribution_signature_)
+      << "parallel distribution signature not infered";
+  return parallel_distribution_signature_.get();
+}
+
 BlobLastUsedSignature* Operator::mut_blob_last_used_signature() {
   if (!blob_last_used_signature_) { blob_last_used_signature_.reset(new BlobLastUsedSignature()); }
   return blob_last_used_signature_.get();
@@ -595,6 +646,17 @@ Maybe<const SbpParallel*> Operator::SbpParallel4BnInOp(const std::string& bn_in_
   const auto& map = sbp_signature_->bn_in_op2sbp_parallel();
   const auto& iter = map.find(bn_in_op);
   CHECK_OR_RETURN(iter != map.end()) << "blob_name " << bn_in_op << " not found in sbp signature";
+  return &iter->second;
+}
+
+Maybe<const ParallelDistribution*> Operator::ParallelDistribution4BnInOp(
+    const std::string& bn_in_op) const {
+  CHECK_OR_RETURN(parallel_distribution_signature_)
+      << "parallel distribution signature not infered";
+  const auto& map = parallel_distribution_signature_->bn_in_op2parallel_distribution();
+  const auto& iter = map.find(bn_in_op);
+  CHECK_OR_RETURN(iter != map.end())
+      << "blob_name " << bn_in_op << " not found in parallel distribution";
   return &iter->second;
 }
 
@@ -881,6 +943,11 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
     *op_attribute->mutable_sbp_signature() = *sbp_signature_;
   } else {
     op_attribute->clear_sbp_signature();
+  }
+  if (parallel_distribution_signature_) {
+    *op_attribute->mutable_parallel_distribution_signature() = *parallel_distribution_signature_;
+  } else {
+    op_attribute->clear_parallel_distribution_signature();
   }
   if (mirrored_signature_) {
     *op_attribute->mutable_mirrored_signature() = *mirrored_signature_;

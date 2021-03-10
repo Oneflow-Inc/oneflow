@@ -82,8 +82,10 @@ void SetSbpSignatureHintByIdenticalSbpObaPairs(const OpGraph& op_graph, JobBuild
     } else {
       UNIMPLEMENTED();
     }
-    *job_builder->MutSbpParallel4Oba(pair.first()) = *sbp_parallel;
-    *job_builder->MutSbpParallel4Oba(pair.second()) = *sbp_parallel;
+    //*job_builder->MutSbpParallel4Oba(pair.first()) = *sbp_parallel;
+    //*job_builder->MutSbpParallel4Oba(pair.second()) = *sbp_parallel;
+    job_builder->SetSbpParallel4Oba(pair.first(), *sbp_parallel);
+    job_builder->SetSbpParallel4Oba(pair.second(), *sbp_parallel);
   }
 }
 

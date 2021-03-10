@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/kernel/kernel.pb.h"
+#include "oneflow/core/job/parallel_distribution_infer_hint.h"
 
 namespace oneflow {
 
@@ -132,11 +133,17 @@ class Operator {
   Maybe<const Shape> GetInputOutputFastestTimeShape() const;
 
   Maybe<void> FillSbpSignature(const SbpSignature& sbp_signature);
+  Maybe<void> FillParallelDistributionSignature(const ParallelDistributionSignature& signature);
   Maybe<void> InferSbpSignatureIf(
       const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc);
+  Maybe<void> InferParallelDistributionSignatureIf(
+      const ParallelDistributionSignature& parallel_distribution_sig_conf,
+      const ParallelDesc& parallel_desc,
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+          ParallelDistributionInferHint4Ibn);
   // Infer blob's MirroredSignature
   Maybe<void> InferMirroredSignatureIf(
       std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
@@ -147,6 +154,7 @@ class Operator {
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
   Maybe<const SbpParallel*> SbpParallel4BnInOp(const std::string& bn_in_op) const;
+  Maybe<const ParallelDistribution*> ParallelDistribution4BnInOp(const std::string& bn_in_op) const;
   Maybe<const OptMirroredParallel*> OptMirroredParallel4BnInOp(const std::string& bn_in_op) const;
 
   Maybe<void> GetSbpSignaturesIf(
@@ -159,6 +167,7 @@ class Operator {
   std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
 
   Maybe<const SbpSignature*> sbp_signature() const;
+  Maybe<const ParallelDistributionSignature*> parallel_distribution_signature() const;
   BlobLastUsedSignature* mut_blob_last_used_signature();
   BlobBackwardUsedSignature* mut_blob_backward_used_signature();
 
@@ -189,6 +198,12 @@ class Operator {
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
+  virtual Maybe<void> InferParallelDistributionSignature(
+      ParallelDistributionSignature* signature,
+      const ParallelDistributionSignature& parallel_distribution_sig_conf,
+      const ParallelDesc& parallel_desc,
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+          ParallelDistributionInferHint4Ibn);
   virtual Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
     UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
     return Maybe<void>::Ok();
@@ -270,6 +285,7 @@ class Operator {
   std::shared_ptr<const Shape> input_output_fastest_time_shape_;
   std::shared_ptr<const Shape> op_time_shape_;
   std::shared_ptr<const SbpSignature> sbp_signature_;
+  std::shared_ptr<const ParallelDistributionSignature> parallel_distribution_signature_;
   PbRpf<std::string> input_bns_;
   PbRpf<std::string> output_bns_;
   PbRpf<std::string> tmp_bns_;
