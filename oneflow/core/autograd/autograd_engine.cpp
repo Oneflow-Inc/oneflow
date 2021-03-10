@@ -22,23 +22,24 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-StackFunctionNode::StackFunctionNode(const std::shared_ptr<const std::function<void()>>& backward_fn,
-                    const TensorTuple& inputs, const TensorTuple& outputs) {
-    inputs_ = std::make_shared<TensorTuple>(inputs.size());
-    in_grads_.resize(inputs.size());
-    for(int i=0; i<inputs.size(); i++) {
-        inputs_->at(i) = inputs[i];
-        in_grads_[i] = inputs[i]->now_grad_arg();
-    }
+StackFunctionNode::StackFunctionNode(
+    const std::shared_ptr<const std::function<Maybe<void>()>>& backward_fn,
+    const TensorTuple& inputs, const TensorTuple& outputs) {
+  inputs_ = std::make_shared<TensorTuple>(inputs.size());
+  in_grads_.resize(inputs.size());
+  for (int i = 0; i < inputs.size(); i++) {
+    inputs_->at(i) = inputs[i];
+    in_grads_[i] = inputs[i]->now_grad_arg();
+  }
 
-    outputs_ = std::make_shared<TensorTuple>(outputs.size());
-    out_grads_.resize(outputs.size());
-    for(int i=0; i<outputs.size(); i++) {
-        TODO();  // shares data with output tensors but not grad_fn
-        out_grads_[i] = outputs[i]->now_grad_arg();
-    }
+  outputs_ = std::make_shared<TensorTuple>(outputs.size());
+  out_grads_.resize(outputs.size());
+  for (int i = 0; i < outputs.size(); i++) {
+    TODO();  // shares data with output tensors but not grad_fn
+    out_grads_[i] = outputs[i]->now_grad_arg();
+  }
 
-    backward_fn_ = backward_fn;
+  backward_fn_ = backward_fn;
 }
 
 void StackFunctionNode::ReleaseOutTensorArgs() {
@@ -54,7 +55,9 @@ void StackFunctionNode::ReleaseGraph() {
 }
 
 Maybe<void> StackFunctionNode::Apply(bool create_graph) {
-  TODO();  // wangyinggang: run backward_fn
+  CHECK(!backward_fn_) << "This FunctionNode with name `" << GetOpName() << "` has been released.";
+  TODO();  // wangyinggang: Calls backward_fn_ and pass arguments according AutogradInterpreter
+           // design
   return Maybe<void>::Ok();
 }
 
@@ -62,18 +65,38 @@ Maybe<TensorTuple> StackAutogradEngine::Execute(const TensorTuple& outputs,
                                                 const TensorTuple& inputs,
                                                 const TensorTuple& out_grads, bool retain_graph,
                                                 bool create_graph) {
+  bool is_capture_grads = !inputs.empty();
   std::shared_ptr<TensorTuple> captured_tensors = std::make_shared<TensorTuple>(inputs.size());
-  TODO();  // wangyinggang: run each FunctionNode and capture input grads
+  auto it = node_list_.begin();
+  while (it != node_list_.end()) {
+    // Skips node when already released
+    if (!it->lock()) {
+      node_list_.erase(it);
+      continue;
+    }
+    JUST(it->lock()->Apply(create_graph));
+    if (is_capture_grads) {
+      TODO();  // wangyinggang: Captures grads in out_grads
+    } else {
+      TODO();  // wangyinggang: Accumulates grads for leaf or retain_grad tensors
+    }
+    it->lock()->ReleaseOutTensorArgs();
+    if (retain_graph) {
+      it++;
+    } else {
+      it->lock()->ReleaseGraph();
+      node_list_.erase(it);
+    }
+  }
   return captured_tensors;
 }
 
 const std::shared_ptr<FunctionNode>& StackAutogradEngine::AddBackwardFuncPtr(
     const std::shared_ptr<const std::function<void()>>& backward_fn, const TensorTuple& inputs,
     TensorTuple& outputs) {
-  std::shared_ptr<FunctionNode> func_node = std::make_shared<StackFunctionNode>(backward_fn, inputs, outputs);
-  for (std::shared_ptr<Tensor>& out_tensor : outputs) {
-      out_tensor->set_grad_fn_node(func_node);
-  }
+  std::shared_ptr<FunctionNode> func_node =
+      std::make_shared<StackFunctionNode>(backward_fn, inputs, outputs);
+  for (std::shared_ptr<Tensor>& out_tensor : outputs) { out_tensor->set_grad_fn_node(func_node); }
   node_list_.push_front(func_node);
   return std::move(func_node);
 }
