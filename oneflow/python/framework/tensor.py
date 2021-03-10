@@ -23,20 +23,6 @@ import oneflow.python.framework.id_util as id_util
 import oneflow as flow
 
 
-@oneflow_export("tensor")
-def make_tensor(
-    data=None,
-    dtype=None,
-    device=None,
-    requires_grad=False,
-    retain_grad=False,
-    placement=None,
-    is_lazy=False,
-):
-    assert data is not None
-    TODO()
-
-
 @oneflow_export("Tensor")
 class Tensor:
     def __init__(
@@ -56,41 +42,35 @@ class Tensor:
         assert len(args) > 0
         dtype = dtype if dtype is not None else oneflow_api.float32
         device = device if device is not None else oneflow_api.device("cpu")
-        if len(args) == 1:
-            if isinstance(args[0], flow.Tensor):
-                # A copy op is needed here
-                TODO()
-            elif isinstance(
-                args[0], (oneflow_api.LocalTensor, oneflow_api.ConsistentTensor)
-            ):
-                self._local_or_consistent_tensor = args[0]
-                self._undetermined_tensor = None
-            else:
-                numpy_data = args[0]
-                if isinstance(args[0], (tuple, list)):
-                    numpy_data = np.array(args[0]).astype(
-                        flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-                    )
-                else:
-                    assert isinstance(numpy_data, np.ndarray)
-                    numpy_data = numpy_data.astype(
-                        flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-                    )
-                shape = oneflow_api.Size(tuple(numpy_data.shape))
-                # Only local tensor will be created
-                self._local_or_consistent_tensor = _initialized_job(
-                    shape=shape,
-                    dtype=dtype,
-                    device=device,
-                    requires_grad=requires_grad,
-                    retain_grad=retain_grad,
-                    is_lazy=is_lazy,
-                    numpy_data=numpy_data,
-                )
-                self._undetermined_tensor = None
-        else:
+        if _input_args_is_tuple_or_list(*args):
+            numpy_data = np.array(args[0]).astype(
+                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+            )
+            self._construct_determined_tensor_with_numpy(
+                dtype=dtype,
+                device=device,
+                requires_grad=requires_grad,
+                retain_grad=retain_grad,
+                is_lazy=is_lazy,
+                numpy_data=numpy_data,
+            )
+        elif _input_args_is_numpy(*args):
+            numpy_data = args[0].astype(
+                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+            )
+            self._construct_determined_tensor_with_numpy(
+                dtype=dtype,
+                device=device,
+                requires_grad=requires_grad,
+                retain_grad=retain_grad,
+                is_lazy=is_lazy,
+                numpy_data=numpy_data,
+            )
+        elif _input_args_is_consistent_or_mirrored(*args):
+            self._local_or_consistent_tensor = args[0]
+            self._undetermined_tensor = None
+        elif _input_args_is_shape(*args):
             shape = args
-            assert all(isinstance(x, int) for x in shape)
             self._local_or_consistent_tensor = None
             self._undetermined_tensor = UndeterminedTensor(
                 shape,
@@ -107,6 +87,9 @@ class Tensor:
             if determining_initializer is None:
                 determining_initializer = _default_initializer_for_determining
             self._determining_initializer = determining_initializer
+        else:
+            # Maybe some other arguments to be supported
+            TODO()
 
     @property
     def shape(self):
@@ -327,6 +310,28 @@ class Tensor:
         else:
             return self._undetermined_tensor.sbp
 
+    def _construct_determined_tensor_with_numpy(
+        self,
+        dtype=None,
+        device=None,
+        requires_grad=False,
+        retain_grad=False,
+        is_lazy=False,
+        numpy_data=None,
+    ):
+        shape = oneflow_api.Size(tuple(numpy_data.shape))
+        # Only local tensor will be created
+        self._local_or_consistent_tensor = _initialized_job(
+            shape=shape,
+            dtype=dtype,
+            device=device,
+            requires_grad=requires_grad,
+            retain_grad=retain_grad,
+            is_lazy=is_lazy,
+            numpy_data=numpy_data,
+        )
+        self._undetermined_tensor = None
+
 
 class UndeterminedTensor:
     def __init__(
@@ -427,3 +432,21 @@ def _initialized_job(
     )
     determined_tensor._set_blob_object(blob.blob_object)
     return determined_tensor
+
+
+def _input_args_is_tuple_or_list(*args):
+    return len(args) == 1 and isinstance(args[0], (tuple, list))
+
+
+def _input_args_is_numpy(*args):
+    return len(args) == 1 and isinstance(args[0], np.ndarray)
+
+
+def _input_args_is_consistent_or_mirrored(*args):
+    return len(args) == 1 and isinstance(
+        args[0], (oneflow_api.ConsistentTensor, oneflow_api.LocalTensor)
+    )
+
+
+def _input_args_is_shape(*args):
+    return all(isinstance(x, int) for x in args)

@@ -98,14 +98,6 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   virtual bool is_cuda() const = 0;
   virtual int64_t nelement() const = 0;
   virtual int64_t dim(int64_t index) const = 0;
-  virtual std::shared_ptr<Tensor> data() const = 0;
-  // used by pybind11 only
-  Maybe<DerivedT> api_data() const {
-    if (data()) { return std::shared_ptr<DerivedT>(); }
-    const auto& ptr = std::dynamic_pointer_cast<DerivedT>(data());
-    CHECK_OR_RETURN(ptr) << Error::ValueError("Tensor Cast Error");
-    return ptr;
-  }
 
   // Getters for autograd
   // acc_grad is tensor's accumulated grad in more than once backward operation,
@@ -158,7 +150,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
-  std::shared_ptr<Tensor> data() const override;
+  std::shared_ptr<MirroredTensor> data() const;
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
@@ -215,7 +207,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
-  std::shared_ptr<Tensor> data() const override;
+  std::shared_ptr<ConsistentTensor> data() const;
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
