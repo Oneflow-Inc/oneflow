@@ -2,6 +2,7 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/common/shape.proto";
 
 message ParallelContext {
   required int64 parallel_id = 1;
@@ -11,6 +12,7 @@ message ParallelContext {
 message ParallelConf {
   repeated string device_name = 1;
   required string device_tag = 2;
+  optional ShapeProto hierarchy = 3;
 }
 
 message OpNameSet {
