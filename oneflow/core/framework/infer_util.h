@@ -46,7 +46,7 @@ class InferContext {
 
   template<typename T>
   T Attr(const std::string& attr_name) const {
-    return conf_.attr<T>(attr_name);
+    return user_op_conf().attr<T>(attr_name);
   }
 
   virtual const ParallelContext& parallel_ctx() const = 0;
@@ -58,17 +58,9 @@ class InferContext {
 
   virtual bool* IsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
 
-  const UserOpConfWrapper& user_op_conf() const { return conf_; }
+  virtual const UserOpConfWrapper& user_op_conf() const = 0;
 
   virtual int64_t parallel_num() const = 0;
-
- protected:
-  InferContext(UserOpConfWrapper&& conf) : conf_(std::move(conf)) {}
-  InferContext(const InferContext&) = delete;
-  InferContext(InferContext&&) = delete;
-
- private:
-  UserOpConfWrapper conf_;
 };
 
 struct TensorDescInferFnUtil {
