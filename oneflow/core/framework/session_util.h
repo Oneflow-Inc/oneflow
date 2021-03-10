@@ -47,6 +47,9 @@ class Session {
 
   virtual std::string GetJobNameScopePrefix(const std::string& job_name) const { UNIMPLEMENTED(); }
 
+  virtual bool IsMirroredStrategyEnabled() const { UNIMPLEMENTED(); }
+  virtual bool IsConsistentStrategyEnabled() const { UNIMPLEMENTED(); }
+
  private:
   int64_t id_;
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list_;

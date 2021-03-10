@@ -19,17 +19,19 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 
 namespace oneflow {
 namespace one {
 
-using TensorList = std::vector<std::shared_ptr<Tensor>>;
-
 class OpInterpUtil {
  public:
+  static Maybe<OpExprInterpreter> GetInterpreter();
+
   static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr* op_expr);
 
   static Maybe<cfg::OpAttribute> AddBuiltinOpAndInferOpAttribute(
@@ -41,7 +43,7 @@ class OpInterpUtil {
 
   static Maybe<cfg::OpAttribute> InferOpAttribute(const BuiltinOpExpr* op_expr,
                                                   const std::shared_ptr<Scope>& scope,
-                                                  const TensorList& inputs);
+                                                  const TensorTuple& inputs);
 
   static Maybe<compatible_py::BlobObject> GetTensorBlobObject(
       const std::shared_ptr<Tensor>& tensor);
@@ -53,7 +55,7 @@ class OpInterpUtil {
   using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
 
   static Maybe<Bn2BlobObjectMap> MakeBn2BlobObjectMap(const std::vector<std::string>& indexed_ibns,
-                                                      const TensorList& inputs);
+                                                      const TensorTuple& inputs);
 
  private:
   static Maybe<OperatorConf> GenModelInitOpConf(const OperatorConf& variable_conf);
