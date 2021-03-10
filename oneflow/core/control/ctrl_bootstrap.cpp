@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <map>
+#include <set>
 #include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/control/worker_process_info.pb.h"
 #include "oneflow/core/control/host_list_bootstrap_server.h"
@@ -63,6 +64,7 @@ Maybe<void> CtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_
       addr->set_port(worker_process_info.port());
       JUST(SetHostByMaster(addr, worker_process_info.rank()));
     }
+    JUST(SetNodeSize(ret_process_ctx));
     mut_bootstrap_client()->PushMasterKV("BroadcastProcessCtx", *ret_process_ctx);
   } else {
     mut_bootstrap_client()->PullMasterKV("BroadcastProcessCtx", ret_process_ctx);
@@ -102,6 +104,11 @@ Maybe<void> HostListCtrlBootstrap::SetCurrentHostByMaster(
 Maybe<void> HostListCtrlBootstrap::SetCurrentHostByWorker(
     WorkerProcessInfo* worker_process_info) const {
   worker_process_info->set_host(host());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> HostListCtrlBootstrap::SetNodeSize(ProcessCtx* process_ctx) const {
+  process_ctx->set_node_size(world_size());
   return Maybe<void>::Ok();
 }
 
@@ -148,6 +155,20 @@ Maybe<void> RankInfoCtrlBootstrap::SetCurrentHostByWorker(
     WorkerProcessInfo* worker_process_info) const {
   CHECK_NE_OR_RETURN(rank(), 0);
   if (bootstrap_conf_.has_host()) { worker_process_info->set_host(bootstrap_conf_.host()); }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> RankInfoCtrlBootstrap::SetNodeSize(ProcessCtx* process_ctx) const {
+  if (bootstrap_conf_.has_node_size()) {
+    CHECK_EQ_OR_RETURN(world_size() % bootstrap_conf_.node_size(), 0);
+    process_ctx->set_node_size(bootstrap_conf_.node_size());
+    return Maybe<void>::Ok();
+  }
+  const auto& rank2host = JUST(bootstrap_server_->rank2host());
+  std::set<std::string> no_duplicated_host;
+  for (const auto& host : rank2host) { no_duplicated_host.insert(host); }
+  CHECK_EQ_OR_RETURN(world_size() % no_duplicated_host.size(), 0);
+  process_ctx->set_node_size(no_duplicated_host.size());
   return Maybe<void>::Ok();
 }
 
