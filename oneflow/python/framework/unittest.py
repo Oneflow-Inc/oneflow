@@ -243,14 +243,14 @@ class TestCase(unittest.TestCase):
                     and env_proto.HasField("ctrl_bootstrap_conf") == 1
                 )
                 print(env_proto)
-                _temp_run_dir = os.getenv("HOME") + "/oneflow_temp/" + str(uuid.uuid1())
-                os.makedirs(_temp_run_dir)
-                shutil.copy(oneflow_worker_path, _temp_run_dir)
+                _log_dir = "./log"
+                if not os.path.exists(_log_dir):
+                    os.makedirs(_log_dir)
                 for rank in range(1, config_world_size):
                     worker_env_proto = EnvProto()
                     worker_env_proto.CopyFrom(env_proto)
                     worker_env_proto.ctrl_bootstrap_conf.rank = rank
-                    worker_env_proto.cpp_logging_conf.log_dir = "./log_" + str(rank)
+                    worker_env_proto.cpp_logging_conf.log_dir = env_proto.cpp_logging_conf.log_dir + "/log_" + str(rank)
                     env_file = NamedTemporaryFile(delete=False)
                     print(worker_env_proto)
                     if sys.version_info >= (3, 0):
@@ -260,27 +260,11 @@ class TestCase(unittest.TestCase):
                     env_file.close()
                     shutil.copy(
                         env_file.name,
-                        _temp_run_dir + "/env_proto_" + str(rank) + ".proto",
+                        _log_dir + "/env_proto_" + str(rank) + ".proto",
                     )
-                    # oneflow_cmd = (
-                    #     '"cd '
-                    #     + _temp_run_dir
-                    #     + "; "
-                    #     + "nohup ./oneflow_worker -v=0 -logbuflevel=-1 "
-                    #     + "-env_proto="
-                    #     + "/env_proto_" + str(rank) + ".proto"
-                    #     + " "
-                    #     + ' 1>/dev/null 2>&1 </dev/null & "'
-                    # )
-                    # subprocess.Popen(oneflow_cmd, shell=True)
-
+                    subprocess.Popen(oneflow_worker_path + " -env_proto=" + _log_dir + "/env_proto_" + str(rank) + ".proto", shell=True)
                     os.remove(env_file.name)
-                # proc = subprocess.Popen(
-                #     stdout=subprocess.PIPE,
-                #     stderr=subprocess.PIPE,
-                #     encoding="utf-8",
-                #     shell=True,
-                # )
+
 
         log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
         if log_dir:
