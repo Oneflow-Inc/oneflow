@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -87,9 +88,9 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   machine_id2sorted_dev_phy_ids_ =
       std::make_shared<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>();
   for (const std::string& device_name : parallel_conf_.device_name()) {
-    int64_t mchn_id;
+    int64_t node_id = -1;
     std::string device_id_str;
-    JUST(ParseDeviceNameConf(device_name, &mchn_id, &device_id_str));
+    JUST(ParseDeviceNameConf(device_name, &node_id, &device_id_str));
     int64_t minus_pos = device_id_str.find("-");
     if (minus_pos == std::string::npos) {
       device_id_str = device_id_str + "-" + device_id_str;
@@ -98,10 +99,12 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     int64_t min_id = oneflow_cast<int64_t>(device_id_str.substr(0, minus_pos));
     int64_t max_id = oneflow_cast<int64_t>(device_id_str.substr(minus_pos + 1));
     CHECK_LE_OR_RETURN(min_id, max_id);
-    if (!(*machine_id2sorted_dev_phy_ids_)[mchn_id]) {
-      (*machine_id2sorted_dev_phy_ids_)[mchn_id] = std::make_shared<std::vector<int64_t>>();
-    }
+    int64_t num_of_process_per_node = GlobalProcessCtx::NumOfProcessPerNode();
     for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
+      int64_t mchn_id = dev_phy_id % num_of_process_per_node + node_id * num_of_process_per_node;
+      if (!(*machine_id2sorted_dev_phy_ids_)[mchn_id]) {
+        (*machine_id2sorted_dev_phy_ids_)[mchn_id] = std::make_shared<std::vector<int64_t>>();
+      }
       (*machine_id2sorted_dev_phy_ids_)[mchn_id]->push_back(dev_phy_id);
     }
   }

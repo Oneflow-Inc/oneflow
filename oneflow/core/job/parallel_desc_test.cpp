@@ -16,20 +16,36 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 
 namespace oneflow {
+
 namespace test {
 
+namespace {
+
+void InitNumProcessPerNode() {
+  Global<NumProcessPerNode>::New();
+  Global<NumProcessPerNode>::Get()->set_value(1);
+}
+
+void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+
+}  // namespace
+
 TEST(ParallelDesc, continuous_1n4d) {
+  InitNumProcessPerNode();
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 4);
+  DestroyNumProcessPerNode();
 }
 
 TEST(ParallelDesc, discrete_1n4d) {
+  InitNumProcessPerNode();
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-1");
@@ -37,9 +53,11 @@ TEST(ParallelDesc, discrete_1n4d) {
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 4);
+  DestroyNumProcessPerNode();
 }
 
 TEST(ParallelDesc, continuous_2n8d) {
+  InitNumProcessPerNode();
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
@@ -47,9 +65,11 @@ TEST(ParallelDesc, continuous_2n8d) {
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 8);
+  DestroyNumProcessPerNode();
 }
 
 TEST(ParallelDesc, discrete_2n8d) {
+  InitNumProcessPerNode();
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-1");
@@ -59,6 +79,7 @@ TEST(ParallelDesc, discrete_2n8d) {
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 8);
+  DestroyNumProcessPerNode();
 }
 
 }  // namespace test
