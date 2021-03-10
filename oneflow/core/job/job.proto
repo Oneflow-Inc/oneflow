@@ -8,7 +8,6 @@ import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/register/op_blob_arg.proto";
 import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/operator/op_conf.proto";
-import "oneflow/core/common/shape.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/job/lbi_diff_watcher_info.proto";
 
