@@ -24,9 +24,23 @@ namespace one {
 
 namespace {
 
-bool CheckAll
-
+bool IsReadyToRun(const std::vector<std::shared_ptr<TensorArg>>& out_grads) {
+  return std::any_of(
+      out_grads.begin(), out_grads.end(),
+      [](const std::shared_ptr<TensorArg>& tensor_arg) { return !tensor_arg->Empty(); });
 }
+
+Maybe<void> InitEmptyTensorArgs2ZerosTensor(
+    const TensorTuple& outputs, const std::vector<std::shared_ptr<TensorArg>>& out_grads) {
+  for (int i = 0; i < out_grads.size(); i++) {
+    if (out_grads[i]->Empty()) {
+      TODO();  // wangyinggang: out_grads[i]->PushPartialTensor(Tensor.zeros_like(outputs[i]));
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
 
 StackFunctionNode::StackFunctionNode(
     const std::shared_ptr<const std::function<Maybe<void>()>>& backward_fn,
@@ -49,7 +63,7 @@ StackFunctionNode::StackFunctionNode(
 }
 
 void StackFunctionNode::ReleaseOutTensorArgs() {
-  for (std::shared_ptr<TensorArg>& tensor_arg : out_grads_) { tensor_arg->Release(); }
+  for (const std::shared_ptr<TensorArg>& tensor_arg : out_grads_) { tensor_arg->Release(); }
 }
 
 void StackFunctionNode::ReleaseGraph() {
@@ -62,6 +76,8 @@ void StackFunctionNode::ReleaseGraph() {
 
 Maybe<void> StackFunctionNode::Apply(bool create_graph) {
   CHECK(!backward_fn_) << "This FunctionNode with name `" << GetOpName() << "` has been released.";
+  if (!IsReadyToRun(out_grads_)) { return Maybe<void>::Ok(); }
+  InitEmptyTensorArgs2ZerosTensor(*outputs_, out_grads_);
   TODO();  // wangyinggang: Calls backward_fn_ and pass arguments according to AutogradInterpreter
   return Maybe<void>::Ok();
 }
@@ -72,8 +88,8 @@ Maybe<TensorTuple> StackAutogradEngine::Execute(const TensorTuple& outputs,
                                                 bool create_graph) {
   bool is_capture_grads = !inputs.empty();
   std::shared_ptr<TensorTuple> captured_tensors = std::make_shared<TensorTuple>(inputs.size());
-  for(int i=0; i<outputs.size(); i++) {
-      outputs[i]->now_grad_arg()->PushPartialTensor(out_grads[i]);
+  for (int i = 0; i < outputs.size(); i++) {
+    outputs[i]->now_grad_arg()->PushPartialTensor(out_grads[i]);
   }
   auto it = node_list_.begin();
   while (it != node_list_.end()) {
@@ -104,7 +120,9 @@ const std::shared_ptr<FunctionNode>& StackAutogradEngine::AddBackwardFuncPtr(
     TensorTuple& outputs) {
   std::shared_ptr<FunctionNode> func_node =
       std::make_shared<StackFunctionNode>(backward_fn, inputs, outputs);
-  for (std::shared_ptr<Tensor>& out_tensor : outputs) { out_tensor->set_grad_fn_node(func_node); }
+  for (const std::shared_ptr<Tensor>& out_tensor : outputs) {
+    out_tensor->set_grad_fn_node(func_node);
+  }
   node_list_.push_front(func_node);
   return std::move(func_node);
 }
