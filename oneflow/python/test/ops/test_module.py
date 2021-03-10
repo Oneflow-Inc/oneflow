@@ -45,6 +45,18 @@ def _wrapper(func):
     return wrapped_func
     
 
+class Sigmoid(flow.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self._op = (
+                flow.builtin_op("sigmoid").Name("sigmoid").Input("in").Output("out").Build()
+            )
+        @_wrapper
+        def forward(self, x):
+            res = self._op(x)[0]
+            return res
+
+
 class Relu(flow.nn.Module):
     def __init__(self):
         super().__init__()
@@ -142,6 +154,22 @@ class TestModule(flow.unittest.TestCase):
             print(y.numpy())
 
         job()
+
+    
+    def test_sigmoid(test_case):
+        m = Sigmoid()
+
+        @flow.global_function()
+        def job() -> None:
+            x = flow.Tensor((1, 3), dtype=flow.float32)
+            global y
+            print("test_sigmoid >> input:", x.numpy())
+            y = m(x)
+
+        job()
+        print("test_sigmoid >> output", y.numpy())
+
+
 
     def test_relu(test_case):
         relu = Relu()
