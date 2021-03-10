@@ -1640,9 +1640,17 @@ class LARS(Optimizer):
         epsilon (float, optional): A small float constant value for numerical stability (:math:`\epsilon`). Defaults to 1e-9.
         lars_coefficient (float, optional): The coefficient factor, it defines how much we trust the layer to change its weights (:math:`lars\_coeff`). Defaults to 0.0001.
         loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
+        weight_decay (Optional[float], optional): The weight decay factor (In the equation is :math:`\lambda`). Defaults to None.
+        weight_decay_includes (Optional[Union[Sequence[Text], Text]], optional): The name of the model parameters that use weight decay. Defaults to None.
+        weight_decay_excludes (Optional[Union[Sequence[Text], Text]], optional): The name of the model parameters that do not use weight decay. Defaults to None.
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
         loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
+
+    Note:
+
+        Only one of `weight_decay_includes` and `weight_decay_excludes` can be set. If both are None,
+        all the model parameters will use weight decay.
 
     For example:
 
@@ -1692,6 +1700,13 @@ class LARS(Optimizer):
         self.momentum_beta = momentum_beta
         self.epsilon = epsilon
         self.lars_coefficient = lars_coefficient
+        self.weight_decay = weight_decay
+        if isinstance(weight_decay_includes, str):
+            weight_decay_includes = [weight_decay_includes]
+        if isinstance(weight_decay_excludes, str):
+            weight_decay_excludes = [weight_decay_excludes]
+        self.weight_decay_includes = weight_decay_includes
+        self.weight_decay_excludes = weight_decay_excludes
         if callable(variables):
             self.variables = list(variables())
         else:
@@ -1705,6 +1720,20 @@ class LARS(Optimizer):
         optimizer_conf.lars_conf.momentum_beta = self.momentum_beta
         optimizer_conf.lars_conf.epsilon = self.epsilon
         optimizer_conf.lars_conf.lars_coefficient = self.lars_coefficient
+        if self.weight_decay is not None:
+            optimizer_conf.weight_decay_conf.weight_decay_rate = self.weight_decay
+            assert not (
+                self.weight_decay_excludes is not None
+                and self.weight_decay_includes is not None
+            )
+            if self.weight_decay_includes is not None:
+                optimizer_conf.weight_decay_conf.includes.pattern.extend(
+                    self.weight_decay_includes
+                )
+            elif self.weight_decay_excludes is not None:
+                optimizer_conf.weight_decay_conf.excludes.pattern.extend(
+                    self.weight_decay_excludes
+                )
         optimizer_conf.variable_op_names.extend(self.variables)
 
 
