@@ -668,7 +668,9 @@ TaskNode* TaskGraph::BuildTaskStep(TaskNode* src, TaskNode* dst, const GetBufTas
   } else {
     UNIMPLEMENTED();
   }
-  if (use_buf_task_node && (src != dst)) { SetBufTask(next->machine_id(), next_mem_zone_id, next); }
+  if (use_buf_task_node && (next != dst)) {
+    SetBufTask(next->machine_id(), next_mem_zone_id, next);
+  }
   return next;
 }
 
