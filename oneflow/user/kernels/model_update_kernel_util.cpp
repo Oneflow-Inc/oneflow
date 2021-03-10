@@ -314,7 +314,8 @@ void LarsUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
   } else {
     local_learning_rate = static_cast<T>(1);
   }
-
+  LOG(INFO) << "lars local learning rate" << local_learning_rate;
+  LOG(INFO) << "weight decay rate" << weight_decay;
   FOR_RANGE(int64_t, i, 0, n) {
     LarsUpdateFunctor<T>()(model_diff_tmp + i, model + i, momentum_beta, momentum + i, weight_decay,
                            local_learning_rate);

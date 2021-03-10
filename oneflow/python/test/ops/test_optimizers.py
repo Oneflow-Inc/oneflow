@@ -327,9 +327,7 @@ def compare_with_numpy_lars(
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(type="train", function_config=func_config)
-    def testLars(
-        random_mask: flow.typing.Numpy.Placeholder(x_shape, dtype=flow.float32)
-    ) -> flow.typing.Numpy:
+    def testLars() -> flow.typing.Numpy:
         with flow.scope.placement(device_type, "0:0-0"):
             x = flow.get_variable(
                 name="x",
@@ -338,8 +336,7 @@ def compare_with_numpy_lars(
                 initializer=flow.random_uniform_initializer(minval=0, maxval=100),
                 trainable=True,
             )
-            loss = flow.math.reduce_mean(x * random_mask)
-
+            loss = flow.math.reduce_mean(x)
             flow.optimizer.LARS(
                 flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
                 momentum_beta=momentum_beta,
@@ -349,21 +346,15 @@ def compare_with_numpy_lars(
             ).minimize(loss)
             return x
 
-    # generate random number sequences
-    random_masks_seq = []
-    for i in range(train_iters + 1):
-        random_masks_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
-
     init_value = None
     for i in range(train_iters + 1):
-        x = testLars(random_masks_seq[i])
+        x = testLars()
         if i == 0:
             init_value = np.copy(x)
 
     def lars_update_numpy(
         param,
         gradient,
-        iter,
         momentum,
         learning_rate=0.001,
         momentum_beta=0.9,
@@ -387,6 +378,9 @@ def compare_with_numpy_lars(
 
         local_learning_rate = learning_rate * lars
 
+        print("u" * 50)
+        print(local_learning_rate)
+
         momentum_t = momentum_beta * momentum - local_learning_rate * gradient
 
         param_t = param + momentum_t - local_learning_rate * weight_decay * param
@@ -395,13 +389,12 @@ def compare_with_numpy_lars(
 
     param = init_value
     gradient = np.full(param.shape, 1.0 / np.prod(param.shape))
-    momentum = np.ones(param.shape)
+    momentum = np.zeros(param.shape)
 
     for i in range(train_iters):
         param, momentum = lars_update_numpy(
             param,
-            gradient * random_masks_seq[i],
-            i,
+            gradient,
             momentum,
             learning_rate,
             momentum_beta,
@@ -409,6 +402,8 @@ def compare_with_numpy_lars(
             epsilon,
             lars_coefficient,
         )
+
+    print(x.flatten() - param.flatten())
     assert np.allclose(x.flatten(), param.flatten(), rtol=1e-4, atol=1e-4,)
 
 
@@ -1014,7 +1009,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["epsilon"] = [1e-9]
         arg_dict["lars_coefficient"] = [0.0001]
         arg_dict["learning_rate"] = [1]
-        arg_dict["weight_decay"] = [0.0001]
+        arg_dict["weight_decay"] = [0.1]
         arg_dict["train_iters"] = [10]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_lars(*arg)
