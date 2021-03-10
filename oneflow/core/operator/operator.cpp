@@ -132,6 +132,7 @@ Maybe<void> Operator::InferBlobParallelDesc() {
 
 Maybe<void> Operator::FillOpParallelDesc(const ParallelDesc& parallel_desc) {
   CHECK_OR_RETURN(!op_parallel_desc_);
+  CHECK_EQ_OR_RETURN(parallel_desc.hierarchy()->NumAxes(), 1);
   op_parallel_desc_.reset(new ParallelDesc(parallel_desc));
   return Maybe<void>::Ok();
 }
