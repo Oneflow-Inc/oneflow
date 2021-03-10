@@ -80,7 +80,6 @@ Maybe<ParallelDesc> ParallelDesc::New(int64_t symbol_id, const ParallelConf& par
 
 Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   parallel_conf_ = user_conf;
-  cfg_parallel_conf_.reset(new cfg::ParallelConf(user_conf));
   device_type_ = DeviceType::kInvalidDevice;
   const std::string& device_tag = parallel_conf_.device_tag();
   DeviceType device_type = JUST(DeviceType4DeviceTag(device_tag));
@@ -132,11 +131,12 @@ Maybe<void> ParallelDesc::GetParallelContext(ParallelContext* parallel_ctx, int6
 
 bool ParallelDesc::Equals(const ParallelDesc& rhs) const {
   return device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
-         && EqualsMachineId2SortedDevPhyIds(rhs);
+         && EqualsMachineId2SortedDevPhyIds(rhs) && *hierarchy_ == *rhs.hierarchy_;
 }
 
 bool ParallelDesc::EqualsIgnoringDeviceType(const ParallelDesc& rhs) const {
-  return sorted_machine_ids_ == rhs.sorted_machine_ids_ && EqualsMachineId2SortedDevPhyIds(rhs);
+  return sorted_machine_ids_ == rhs.sorted_machine_ids_ && EqualsMachineId2SortedDevPhyIds(rhs)
+         && *hierarchy_ == *rhs.hierarchy_;
 }
 
 bool ParallelDesc::EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const {
@@ -162,6 +162,14 @@ void ParallelDesc::ClearUp() {
     SortAndRemoveDuplication((pair.second).get());
     parallel_num_ += pair.second->size();
   }
+  if (parallel_conf_.has_hierarchy() && parallel_conf_.hierarchy().dim_size() != 0) {
+    hierarchy_.reset(new Shape(parallel_conf_.hierarchy()));
+    CHECK_EQ(hierarchy_->elem_cnt(), parallel_num_);
+  } else {
+    hierarchy_.reset(new Shape({parallel_num_}));
+    hierarchy_->ToProto(parallel_conf_.mutable_hierarchy());
+  }
+  cfg_parallel_conf_.reset(new cfg::ParallelConf(parallel_conf_));
   SortAndRemoveDuplication(&sorted_machine_ids_);
   int64_t parallel_id = 0;
   for (int64_t machine_id : sorted_machine_ids_) {
