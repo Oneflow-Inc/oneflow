@@ -229,7 +229,7 @@ class Tensor:
     def __deepcopy__(self, memo):
         TODO()
 
-    def _determine(self, determining_initializer=None):
+    def determine(self, determining_initializer=None):
         assert not self.is_determined
         if determining_initializer is None:
             determining_initializer = self._determining_initializer
@@ -385,8 +385,8 @@ def _initialized_job(
     is_lazy=False,
     numpy_data=None,
 ):
-    variable_name = id_util.UniqueStr("tensor_")
     assert numpy_data is not None
+    variable_name = id_util.UniqueStr("tensor_")
 
     @flow.global_function()
     def set_data():
