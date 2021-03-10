@@ -37,7 +37,6 @@ class DistributeConcatCompTaskNode final : public CompTaskNode {
   void BuildExecGphAndRegst() override;
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
-  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

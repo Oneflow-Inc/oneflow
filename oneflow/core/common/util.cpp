@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/platform.h"
 #include <csignal>
 
-#ifdef OF_PLATFORM_POSIX
+#ifdef __linux__
 #include <sys/sysinfo.h>
 #endif
 

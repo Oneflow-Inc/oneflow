@@ -192,12 +192,6 @@ const OpNode* GetSrcSubsetTickOpNode(const OpGraph& op_graph) {
   return src_subset_tick;
 }
 
-const Shape& GetOpTimeShape(const OpNode* op_node) {
-  const Shape* output_shape = op_node->out_blob_time_shape();
-  if (output_shape == nullptr) { output_shape = op_node->GetInputBlobFastestTimeShape(); }
-  return *output_shape;
-};
-
 OperatorConf MakeTickOpConf(const std::string& tick_name) {
   OperatorConf tick_op_conf;
   tick_op_conf.set_name(std::string("System-AutoTick-" + tick_name + "Tick_") + NewUniqueId());
@@ -252,8 +246,8 @@ OperatorConf PrependTick(const HashSet<const OpNode*>& op_nodes, JobBuilder* job
 
 OperatorConf AppendAccTick(const Shape& src_shape, const std::list<const OpNode*>& op_nodes,
                            JobBuilder* job_builder) {
-  const auto& tick_shape = GetOpTimeShape(op_nodes.front());
-  CHECK_EQ(tick_shape.elem_cnt() % src_shape.elem_cnt(), 0);
+  std::shared_ptr<const Shape> tick_shape = CHECK_JUST(op_nodes.front()->op().GetOpTimeShape());
+  CHECK_EQ(tick_shape->elem_cnt() % src_shape.elem_cnt(), 0);
   const OperatorConf& tick_op_conf = AppendTick("AppendAcc", op_nodes, job_builder);
   OperatorConf acc_op_conf;
   {
@@ -262,7 +256,7 @@ OperatorConf AppendAccTick(const Shape& src_shape, const std::list<const OpNode*
     CHECK(tick_op_conf.has_device_tick_conf());
     acc_conf->set_one(tick_op_conf.name() + "/" + tick_op_conf.device_tick_conf().out());
     acc_conf->set_acc("acc");
-    acc_conf->set_max_acc_num(tick_shape.elem_cnt() / src_shape.elem_cnt());
+    acc_conf->set_max_acc_num(tick_shape->elem_cnt() / src_shape.elem_cnt());
   }
   OperatorConf last_device_tick_op_conf;
   {
@@ -330,7 +324,8 @@ std::vector<OperatorConf> AddTickForTimeShape(const Shape& src_time_shape,
   HashMap<std::pair<ParallelDesc, std::pair<Shape, Shape>>, std::list<const OpNode*>>
       pd7ts2op_nodes;
   for (const OpNode* op_node : op_nodes) {
-    auto ts = std::make_pair(*op_node->GetInputOutputFastestTimeShape(), GetOpTimeShape(op_node));
+    auto ts = std::make_pair(*CHECK_JUST(op_node->op().GetInputOutputFastestTimeShape()),
+                             *CHECK_JUST(op_node->op().GetOpTimeShape()));
     pd7ts2op_nodes[{op_node->parallel_desc(), ts}].push_back(op_node);
   }
   std::vector<OperatorConf> op_confs;
@@ -405,7 +400,7 @@ void AutoPrependTick(const OpGraph& op_graph, JobBuilder* job_builder) {
 }
 
 void AddTickForTimeShape(const OpGraph& op_graph, JobBuilder* job_builder) {
-  const auto& src_time_shape = *GetSrcSubsetTickOpNode(op_graph)->out_blob_time_shape();
+  const auto& src_time_shape = *CHECK_JUST(GetSrcSubsetTickOpNode(op_graph)->op().GetOpTimeShape());
   HashSet<const OpNode*> sink_op_nodes;
   op_graph.ForEachNode([&](OpNode* op_node) {
     CHECK(!op_node->op().op_conf().has_sink_tick_conf());
@@ -421,14 +416,14 @@ void AutoSourceAndSinkTick(const OpGraph& op_graph, JobBuilder* job_builder) {
       Global<CriticalSectionDesc>::Get()->AddCriticalSection(GlobalJobDesc().job_id());
   critical_section->mutable_total_job_critical_section();
   op_graph.ForEachNode([&](OpNode* node) { CHECK(!node->op().op_conf().has_sink_tick_conf()); });
-  const auto& src_time_shape = *GetSrcSubsetTickOpNode(op_graph)->out_blob_time_shape();
+  const auto& src_time_shape = *CHECK_JUST(GetSrcSubsetTickOpNode(op_graph)->op().GetOpTimeShape());
   HashSet<LogicalBlobId> tick_lbis;
   op_graph.ForEachNode([&](OpNode* op_node) {
     size_t out_cnt = 0;
     op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
     if (out_cnt > 0) { return; }
     CHECK(op_node->op().op_conf().has_device_tick_conf());
-    CHECK(*op_node->out_blob_time_shape() == src_time_shape);
+    CHECK(*CHECK_JUST(op_node->op().GetOpTimeShape()) == src_time_shape);
     CHECK(tick_lbis.emplace(op_node->op().BnInOp2Lbi(op_node->op().SoleObn())).second);
   });
   OperatorConf src_subset_tick = CHECK_JUST(FindSrcSubsetTickOpConf(job_builder->job()));

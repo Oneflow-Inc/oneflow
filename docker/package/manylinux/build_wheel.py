@@ -2,6 +2,7 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
+import getpass
 
 
 def get_arg_env(env_var_name: str, mode="run"):
@@ -229,6 +230,19 @@ auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
         )
 
 
+def is_img_existing(tag):
+    returncode = subprocess.run(
+        f"docker image inspect {tag}",
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    ).returncode
+    if returncode == 0:
+        return True
+    else:
+        return False
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -306,11 +320,20 @@ if __name__ == "__main__":
         def build():
             img_tag = None
             skip_img = args.skip_img
+            img_prefix = f"oneflow-manylinux2014-cuda{cuda_version}"
+            user = getpass.getuser()
+            versioned_img_tag = f"{img_prefix}:0.1"
+            user_img_tag = f"{img_prefix}:{user}"
             if args.custom_img_tag:
                 img_tag = args.custom_img_tag
                 skip_img = True
+            elif skip_img:
+                assert is_img_existing(versioned_img_tag)
+                img_tag = versioned_img_tag
             else:
-                img_tag = f"oneflow:manylinux2014-cuda{cuda_version}"
+                img_tag = user_img_tag
+            assert img_tag is not None
+            print("using", img_tag)
             if skip_img == False:
                 build_img(
                     cuda_version,
