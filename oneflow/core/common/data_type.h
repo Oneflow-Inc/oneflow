@@ -103,18 +103,30 @@ OF_DEVICE_FUNC T GetMinVal();
 template<typename T, typename std::enable_if<!IsFloat16<T>::value>::type* = nullptr>
 OF_DEVICE_FUNC T GetMaxVal();
 
-#define MAX_VAL_SEQ                             \
-  OF_PP_MAKE_TUPLE_SEQ(int8_t, CHAR_MAX)        \
-  OF_PP_MAKE_TUPLE_SEQ(int16_t, SHRT_MAX)       \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, INT_MAX)        \
-  OF_PP_MAKE_TUPLE_SEQ(int64_t, LLONG_MAX)      \
-  OF_PP_MAKE_TUPLE_SEQ(uint8_t, UCHAR_MAX)      \
-  OF_PP_MAKE_TUPLE_SEQ(uint16_t, USHRT_MAX)     \
-  OF_PP_MAKE_TUPLE_SEQ(uint32_t, UINT_MAX)      \
-  OF_PP_MAKE_TUPLE_SEQ(unsigned long, UINT_MAX) \
-  OF_PP_MAKE_TUPLE_SEQ(uint64_t, ULLONG_MAX)    \
-  OF_PP_MAKE_TUPLE_SEQ(float, FLT_MAX)          \
+#ifdef __APPLE__
+#define APPLE_MAX_VAL_SEQ OF_PP_MAKE_TUPLE_SEQ(unsigned long, UINT_MAX)
+#else
+#define APPLE_MAX_VAL_SEQ
+#endif
+
+#define MAX_VAL_SEQ                          \
+  OF_PP_MAKE_TUPLE_SEQ(int8_t, CHAR_MAX)     \
+  OF_PP_MAKE_TUPLE_SEQ(int16_t, SHRT_MAX)    \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, INT_MAX)     \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, LLONG_MAX)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint8_t, UCHAR_MAX)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint16_t, USHRT_MAX)  \
+  OF_PP_MAKE_TUPLE_SEQ(uint32_t, UINT_MAX)   \
+  APPLE_MAX_VAL_SEQ                          \
+  OF_PP_MAKE_TUPLE_SEQ(uint64_t, ULLONG_MAX) \
+  OF_PP_MAKE_TUPLE_SEQ(float, FLT_MAX)       \
   OF_PP_MAKE_TUPLE_SEQ(double, DBL_MAX)
+
+#ifdef __APPLE__
+#define APPLE_MIN_VAL_SEQ OF_PP_MAKE_TUPLE_SEQ(unsigned long, 0)
+#else
+#define APPLE_MIN_VAL_SEQ
+#endif
 
 #define MIN_VAL_SEQ                        \
   OF_PP_MAKE_TUPLE_SEQ(int8_t, CHAR_MIN)   \
@@ -124,7 +136,7 @@ OF_DEVICE_FUNC T GetMaxVal();
   OF_PP_MAKE_TUPLE_SEQ(uint8_t, 0)         \
   OF_PP_MAKE_TUPLE_SEQ(uint16_t, 0)        \
   OF_PP_MAKE_TUPLE_SEQ(uint32_t, 0)        \
-  OF_PP_MAKE_TUPLE_SEQ(unsigned long, 0)   \
+  APPLE_MIN_VAL_SEQ                        \
   OF_PP_MAKE_TUPLE_SEQ(uint64_t, 0)        \
   OF_PP_MAKE_TUPLE_SEQ(float, -FLT_MAX)    \
   OF_PP_MAKE_TUPLE_SEQ(double, -DBL_MAX)
