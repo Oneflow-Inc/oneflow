@@ -250,7 +250,9 @@ class TestCase(unittest.TestCase):
                     worker_env_proto = EnvProto()
                     worker_env_proto.CopyFrom(env_proto)
                     worker_env_proto.ctrl_bootstrap_conf.rank = rank
-                    worker_env_proto.cpp_logging_conf.log_dir = env_proto.cpp_logging_conf.log_dir + "/log_" + str(rank)
+                    worker_env_proto.cpp_logging_conf.log_dir = (
+                        env_proto.cpp_logging_conf.log_dir + "/log_" + str(rank)
+                    )
                     env_file = NamedTemporaryFile(delete=False)
                     print(worker_env_proto)
                     if sys.version_info >= (3, 0):
@@ -259,12 +261,18 @@ class TestCase(unittest.TestCase):
                         env_file.write(pbtxt.MessageToString(worker_env_proto))
                     env_file.close()
                     shutil.copy(
-                        env_file.name,
-                        _log_dir + "/env_proto_" + str(rank) + ".proto",
+                        env_file.name, _log_dir + "/env_proto_" + str(rank) + ".proto",
                     )
-                    subprocess.Popen(oneflow_worker_path + " -env_proto=" + _log_dir + "/env_proto_" + str(rank) + ".proto", shell=True)
+                    subprocess.Popen(
+                        oneflow_worker_path
+                        + " -env_proto="
+                        + _log_dir
+                        + "/env_proto_"
+                        + str(rank)
+                        + ".proto",
+                        shell=True,
+                    )
                     os.remove(env_file.name)
-
 
         log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
         if log_dir:
