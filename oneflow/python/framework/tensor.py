@@ -73,43 +73,6 @@ class Tensor:
             # Maybe some other arguments to be supported
             TODO()
 
-    def _immediately_construct(
-        self,
-        *args,
-        dtype=None,
-        device=None,
-        requires_grad=False,
-        retain_grad=False,
-        is_lazy=False
-    ):
-        if _input_args_is_tuple_or_list(*args):
-            numpy_data = np.array(args[0]).astype(
-                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-            )
-            self._construct_determined_tensor_with_numpy(
-                dtype=dtype,
-                device=device,
-                requires_grad=requires_grad,
-                retain_grad=retain_grad,
-                is_lazy=is_lazy,
-                numpy_data=numpy_data,
-            )
-        elif _input_args_is_numpy(*args):
-            numpy_data = args[0].astype(
-                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-            )
-            self._construct_determined_tensor_with_numpy(
-                dtype=dtype,
-                device=device,
-                requires_grad=requires_grad,
-                retain_grad=retain_grad,
-                is_lazy=is_lazy,
-                numpy_data=numpy_data,
-            )
-        elif _input_args_is_consistent_or_mirrored(*args):
-            self._local_or_consistent_tensor = args[0]
-            self._undetermined_tensor = None
-
     @property
     def shape(self):
         if self._local_or_consistent_tensor is not None:
@@ -350,6 +313,43 @@ class Tensor:
             numpy_data=numpy_data,
         )
         self._undetermined_tensor = None
+
+    def _immediately_construct(
+        self,
+        *args,
+        dtype=None,
+        device=None,
+        requires_grad=False,
+        retain_grad=False,
+        is_lazy=False
+    ):
+        if _input_args_is_tuple_or_list(*args):
+            numpy_data = np.array(args[0]).astype(
+                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+            )
+            self._construct_determined_tensor_with_numpy(
+                dtype=dtype,
+                device=device,
+                requires_grad=requires_grad,
+                retain_grad=retain_grad,
+                is_lazy=is_lazy,
+                numpy_data=numpy_data,
+            )
+        elif _input_args_is_numpy(*args):
+            numpy_data = args[0].astype(
+                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+            )
+            self._construct_determined_tensor_with_numpy(
+                dtype=dtype,
+                device=device,
+                requires_grad=requires_grad,
+                retain_grad=retain_grad,
+                is_lazy=is_lazy,
+                numpy_data=numpy_data,
+            )
+        elif _input_args_is_consistent_or_mirrored(*args):
+            self._local_or_consistent_tensor = args[0]
+            self._undetermined_tensor = None
 
 
 class UndeterminedTensor:
