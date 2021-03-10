@@ -25,7 +25,6 @@ class ModelSaveOp final : public Operator {
   ~ModelSaveOp() override = default;
 
   void InitFromOpConf() override;
-  LogicalNode* NewProperLogicalNode() const override { return new PrintLogicalNode; }
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override {
