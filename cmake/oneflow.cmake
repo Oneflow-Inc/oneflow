@@ -257,9 +257,6 @@ elseif(WIN32)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
 endif()
 
-oneflow_add_library(OneFlowCore SHARED ${PROJECT_SOURCE_DIR}/oneflow/api/cpp/oneflow_core.cpp)
-target_link_libraries(OneFlowCore ${of_libs} ${oneflow_exe_third_party_libs})
-
 pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${of_main_cc} ${PYBIND_REGISTRY_CC})
 set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
 add_dependencies(oneflow_internal of_cfgobj)
