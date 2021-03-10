@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 ResourceDesc::ResourceDesc(const Resource& resource, size_t num_process_per_node)
-  : resource_(resource) {
+    : resource_(resource) {
   CHECK_GT(resource_.machine_num(), 0);
   CHECK_LE(resource_.machine_num(), Global<EnvDesc>::Get()->TotalMachineNum());
   for (int i = 0; i < resource_.machine_num(); ++i) {

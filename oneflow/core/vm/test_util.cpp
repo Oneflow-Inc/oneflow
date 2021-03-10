@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 
 namespace oneflow {
@@ -33,13 +34,13 @@ TestResourceDescScope::TestResourceDescScope(int64_t gpu_device_num, int64_t cpu
   resource.set_machine_num(machine_num);
   resource.set_gpu_device_num(gpu_device_num);
   resource.set_cpu_device_num(cpu_device_num);
-  Global<NumOfProcessPerNode>::New()->set_value(1);
-  Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
+  Global<NumProcessPerNode>::New()->set_value(1);
+  Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumProcessPerNode());
 }
 
 TestResourceDescScope::~TestResourceDescScope() {
   Global<ResourceDesc, ForSession>::Delete();
-  Global<NumOfProcessPerNode>::Delete();
+  Global<NumProcessPerNode>::Delete();
 }
 
 ObjectMsgPtr<VmResourceDesc> TestUtil::NewVmResourceDesc(int64_t device_num, int64_t machine_num) {

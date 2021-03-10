@@ -174,9 +174,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   const auto& process_ranks = Global<ResourceDesc, ForSession>::Get()->process_ranks();
   size_t gpu_device_num = Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
   std::map<int64_t, std::vector<std::vector<std::string>>> machine_id2device_id2node_list;
-  for (size_t i : process_ranks) {
-    machine_id2device_id2node_list[i].resize(gpu_device_num);
-  }
+  for (size_t i : process_ranks) { machine_id2device_id2node_list[i].resize(gpu_device_num); }
   std::map<int64_t, std::vector<std::string>> machine_id2host_node_list;
   HashSet<int64_t> ctrl_regst_desc_ids;
   HashMap<int64_t, HashMap<int64_t, std::string>> task_id2consumer_regst_id2name;
