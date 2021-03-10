@@ -389,7 +389,7 @@ def compare_with_numpy_lars(
 
         momentum_t = momentum_beta * momentum - local_learning_rate * gradient
 
-        param_t = param + momentum_t
+        param_t = param + momentum_t - local_learning_rate * weight_decay * param
 
         return param_t, momentum_t
 
@@ -409,7 +409,6 @@ def compare_with_numpy_lars(
             epsilon,
             lars_coefficient,
         )
-
     assert np.allclose(x.flatten(), param.flatten(), rtol=1e-4, atol=1e-4,)
 
 
@@ -1015,6 +1014,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["epsilon"] = [1e-9]
         arg_dict["lars_coefficient"] = [0.0001]
         arg_dict["learning_rate"] = [1]
+        arg_dict["weight_decay"] = [0.0001]
         arg_dict["train_iters"] = [10]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_lars(*arg)

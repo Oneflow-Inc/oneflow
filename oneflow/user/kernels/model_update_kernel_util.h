@@ -218,10 +218,9 @@ struct LarsUpdateFunctor {
   void operator()(T* model_diff_tmp, T* model, float momentum_beta, T* momentum, float weight_decay,
                   const T local_learning_rate) const {
     const T model_val = *model;
-    T reg_diff = *model_diff_tmp + *model * weight_decay;
-    T next_momentum = *momentum * momentum_beta - local_learning_rate * reg_diff;
+    T next_momentum = *momentum * momentum_beta - local_learning_rate * *model_diff_tmp;
     *momentum = next_momentum;
-    *model = model_val + next_momentum;
+    *model = model_val + next_momentum - local_learning_rate * weight_decay * model_val;
   }
 };
 
