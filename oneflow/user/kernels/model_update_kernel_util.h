@@ -220,7 +220,8 @@ struct LarsUpdateFunctor {
     const T model_val = *model;
     T next_momentum = *momentum * momentum_beta - local_learning_rate * *model_diff_tmp;
     *momentum = next_momentum;
-    *model = model_val + next_momentum - local_learning_rate * weight_decay * model_val;
+    const T next_model = model_val + next_momentum - local_learning_rate * weight_decay * model_val;
+    *model = next_model;
   }
 };
 

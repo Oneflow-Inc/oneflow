@@ -395,7 +395,7 @@ def compare_with_numpy_lars(
 
     param = init_value
     gradient = np.full(param.shape, 1.0 / np.prod(param.shape))
-    momentum = np.zeros(param.shape)
+    momentum = np.ones(param.shape)
 
     for i in range(train_iters):
         param, momentum = lars_update_numpy(
