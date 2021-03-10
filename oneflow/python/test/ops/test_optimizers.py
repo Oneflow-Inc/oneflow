@@ -347,10 +347,13 @@ def compare_with_numpy_lars(
             return x
 
     init_value = None
+    of_results = []
     for i in range(train_iters + 1):
         x = testLars()
         if i == 0:
             init_value = np.copy(x)
+        else:
+            of_results.append(x)
 
     def lars_update_numpy(
         param,
@@ -378,9 +381,6 @@ def compare_with_numpy_lars(
 
         local_learning_rate = learning_rate * lars
 
-        print("u" * 50)
-        print(local_learning_rate)
-
         momentum_t = momentum_beta * momentum - local_learning_rate * gradient
 
         param_t = param + momentum_t - local_learning_rate * weight_decay * param
@@ -391,6 +391,7 @@ def compare_with_numpy_lars(
     gradient = np.full(param.shape, 1.0 / np.prod(param.shape))
     momentum = np.zeros(param.shape)
 
+    numpy_results = []
     for i in range(train_iters):
         param, momentum = lars_update_numpy(
             param,
@@ -402,9 +403,14 @@ def compare_with_numpy_lars(
             epsilon,
             lars_coefficient,
         )
+        numpy_results.append(param)
 
-    print(x.flatten() - param.flatten())
-    assert np.allclose(x.flatten(), param.flatten(), rtol=1e-4, atol=1e-4,)
+    assert len(of_results) == len(numpy_results)
+    for i in range(len(of_results)):
+        x = of_results[i]
+        param = numpy_results[i]
+        print(x.flatten() - param.flatten())
+        assert np.allclose(x.flatten(), param.flatten(), rtol=1e-4, atol=1e-4,)
 
 
 def compare_with_tensorflow_sgd(
@@ -1003,7 +1009,7 @@ class TestOptimizers(flow.unittest.TestCase):
 
     def test_lars(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["device_type"] = ["cpu"]
         arg_dict["x_shape"] = [(10,)]
         arg_dict["momentum_beta"] = [0.9]
         arg_dict["epsilon"] = [1e-9]
