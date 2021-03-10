@@ -26,5 +26,9 @@ void TensorArg::Release() {
   acc_tensor_.reset();
 }
 
+void TensorArg::PushPartialTensor(const std::shared_ptr<Tensor>& partial_tensor) {
+    partial_sum_tensors_.push_back(partial_tensor);
+}
+
 }  // namespace one
 }  // namespace oneflow

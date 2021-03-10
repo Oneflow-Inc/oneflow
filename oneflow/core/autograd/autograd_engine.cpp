@@ -22,6 +22,12 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+namespace {
+
+bool CheckAll
+
+}
+
 StackFunctionNode::StackFunctionNode(
     const std::shared_ptr<const std::function<Maybe<void>()>>& backward_fn,
     const TensorTuple& inputs, const TensorTuple& outputs) {
@@ -56,8 +62,7 @@ void StackFunctionNode::ReleaseGraph() {
 
 Maybe<void> StackFunctionNode::Apply(bool create_graph) {
   CHECK(!backward_fn_) << "This FunctionNode with name `" << GetOpName() << "` has been released.";
-  TODO();  // wangyinggang: Calls backward_fn_ and pass arguments according AutogradInterpreter
-           // design
+  TODO();  // wangyinggang: Calls backward_fn_ and pass arguments according to AutogradInterpreter
   return Maybe<void>::Ok();
 }
 
@@ -67,6 +72,9 @@ Maybe<TensorTuple> StackAutogradEngine::Execute(const TensorTuple& outputs,
                                                 bool create_graph) {
   bool is_capture_grads = !inputs.empty();
   std::shared_ptr<TensorTuple> captured_tensors = std::make_shared<TensorTuple>(inputs.size());
+  for(int i=0; i<outputs.size(); i++) {
+      outputs[i]->now_grad_arg()->PushPartialTensor(out_grads[i]);
+  }
   auto it = node_list_.begin();
   while (it != node_list_.end()) {
     // Skips node when already released
