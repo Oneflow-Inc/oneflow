@@ -49,7 +49,7 @@ Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id
   std::string mchn_id_and_device_id = "";
   if (device_name.at(0) == '@') {
     size_t pos = device_name.find(":");
-    rank = oneflow_cast<int64_t>(device_name.substr(1, pos));
+    rank = oneflow_cast<int64_t>(device_name.substr(1, pos - 1));
     mchn_id_and_device_id = device_name.substr(pos + 1);
   } else {
     mchn_id_and_device_id = device_name;
