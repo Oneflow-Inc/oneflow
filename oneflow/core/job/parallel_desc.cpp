@@ -102,7 +102,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     CHECK_LE_OR_RETURN(min_id, max_id);
     int64_t num_of_process_per_node = GlobalProcessCtx::NumOfProcessPerNode();
     for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
-      int64_t mchn_id = dev_phy_id % num_process_per_node + node_id * num_of_process_per_node;
+      int64_t mchn_id = dev_phy_id % num_of_process_per_node + node_id * num_of_process_per_node;
       if (!(*machine_id2sorted_dev_phy_ids_)[mchn_id]) {
         (*machine_id2sorted_dev_phy_ids_)[mchn_id] = std::make_shared<std::vector<int64_t>>();
       }
