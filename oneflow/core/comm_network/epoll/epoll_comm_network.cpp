@@ -58,7 +58,7 @@ int64_t GetMachineId(const sockaddr_in& sa) {
   char addr[INET_ADDRSTRLEN];
   memset(addr, '\0', sizeof(addr));
   PCHECK(inet_ntop(AF_INET, &(sa.sin_addr), addr, INET_ADDRSTRLEN));
-  for (int64_t i = 0; i < Global<ResourceDesc, ForSession>::Get()->TotalMachineNum(); ++i) {
+  for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
     if (Global<ResourceDesc, ForSession>::Get()->machine(i).addr() == addr) { return i; }
   }
   UNIMPLEMENTED();
@@ -135,7 +135,7 @@ EpollCommNet::EpollCommNet(const Plan& plan) : CommNetIf(plan) {
 void EpollCommNet::InitSockets() {
   int64_t this_machine_id = GlobalProcessCtx::Rank();
   auto this_machine = Global<ResourceDesc, ForSession>::Get()->machine(this_machine_id);
-  int64_t total_machine_num = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
+  int64_t total_machine_num = Global<ResourceDesc, ForSession>::Get()->process_ranks().size();
   machine_id2sockfd_.assign(total_machine_num, -1);
   sockfd2helper_.clear();
   size_t poller_idx = 0;

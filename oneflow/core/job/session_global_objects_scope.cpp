@@ -58,7 +58,7 @@ void PushAvailableMemDescOfThisMachine() {
 AvailableMemDesc PullAvailableMemDesc() {
   AvailableMemDesc ret;
   AvailableMemDescOfMachine machine_amd_i;
-  FOR_RANGE(int64_t, i, 0, (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())) {
+  for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
     Global<CtrlClient>::Get()->PullKV(GetAmdCtrlKey(i), ret.add_machine_amd());
   }
   return ret;
@@ -72,7 +72,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   session_id_ = config_proto.session_id();
   Global<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
-  Global<ResourceDesc, ForSession>::New(config_proto.resource());
+  Global<ResourceDesc, ForSession>::New(config_proto.resource(), GlobalProcessCtx::NumOfProcessPerNode());
   Global<const IOConf>::New(config_proto.io_conf());
   Global<const IOConf>::SessionNew(config_proto.session_id(), config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
@@ -112,7 +112,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   Global<const IOConf>::Delete();
   Global<const IOConf>::SessionDelete(session_id_);
   Global<ResourceDesc, ForSession>::Delete();
-  Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource());
+  Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(), GlobalProcessCtx::NumOfProcessPerNode());
 }
 
 }  // namespace oneflow

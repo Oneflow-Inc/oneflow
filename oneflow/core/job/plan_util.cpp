@@ -171,13 +171,13 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
 }
 
 void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
-  size_t machine_num = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
+  const auto& process_ranks = Global<ResourceDesc, ForSession>::Get()->process_ranks();
   size_t gpu_device_num = Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
-  std::vector<std::vector<std::vector<std::string>>> machine_id2device_id2node_list(machine_num);
-  for (size_t i = 0; i < machine_num; ++i) {
+  std::map<int64_t, std::vector<std::vector<std::string>>> machine_id2device_id2node_list;
+  for (size_t i : process_ranks) {
     machine_id2device_id2node_list[i].resize(gpu_device_num);
   }
-  std::vector<std::vector<std::string>> machine_id2host_node_list(machine_num);
+  std::map<int64_t, std::vector<std::string>> machine_id2host_node_list;
   HashSet<int64_t> ctrl_regst_desc_ids;
   HashMap<int64_t, HashMap<int64_t, std::string>> task_id2consumer_regst_id2name;
   HashMap<int64_t, std::string> task_id2op_name;
@@ -257,7 +257,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   log_stream << "#ranksep=1.3;\n";
   log_stream << "node[color=\"gray\"];\n";
   // sub graph
-  for (size_t machine_id = 0; machine_id < machine_num; ++machine_id) {
+  for (size_t machine_id : process_ranks) {
     std::string machine_name = "machine_" + std::to_string(machine_id);
     log_stream << "subgraph cluster_" << machine_name << " { label = \"" << machine_name << "\";\n";
     log_stream << "style=\"rounded\";\n";

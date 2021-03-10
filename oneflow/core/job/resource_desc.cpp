@@ -21,17 +21,23 @@ limitations under the License.
 
 namespace oneflow {
 
-size_t ResourceDesc::TotalMachineNum() const {
+ResourceDesc::ResourceDesc(const Resource& resource, size_t num_process_per_node)
+  : resource_(resource) {
   CHECK_GT(resource_.machine_num(), 0);
   CHECK_LE(resource_.machine_num(), Global<EnvDesc>::Get()->TotalMachineNum());
-  return resource_.machine_num();
+  for (int i = 0; i < resource_.machine_num(); ++i) {
+    for (int j = 0; j < num_process_per_node; ++j) {
+      CHECK(process_ranks_.emplace(i * num_process_per_node + j).second);
+    }
+  }
 }
 
 Machine ResourceDesc::machine(int32_t idx) const {
   CHECK_GE(idx, 0);
-  CHECK_LT(idx, TotalMachineNum());
+  CHECK(process_ranks().find(idx) != process_ranks().end());
   if (Global<EnvDesc>::Get()->has_ctrl_bootstrap_conf()) {
-    CHECK_EQ(Global<ProcessCtx>::Get()->ctrl_addr().size(), TotalMachineNum());
+    CHECK_NOTNULL(Global<ProcessCtx>::Get());
+    CHECK_GE(Global<ProcessCtx>::Get()->ctrl_addr().size(), process_ranks().size());
     Machine machine;
     const Address& addr = Global<ProcessCtx>::Get()->ctrl_addr(idx);
     machine.set_addr(addr.host());

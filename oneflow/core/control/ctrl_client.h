@@ -43,7 +43,7 @@ class CtrlClient final : public RpcClient {
 #define OF_ENV_BARRIER() Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR)
 #define OF_SESSION_BARRIER()                        \
   Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR, \
-                                     Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())
+                                     Global<ResourceDesc, ForSession>::Get()->process_ranks().size())
 
 static void OfCallOnce(const std::string& name, std::function<void()> f) {
   TryLockResult lock_ret = Global<CtrlClient>::Get()->TryLock(name);

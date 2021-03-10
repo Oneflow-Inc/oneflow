@@ -64,8 +64,8 @@ TEST(CtrlServer, new_delete) {
   CHECK_JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
                  .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
   Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
-  Global<ResourceDesc, ForEnv>::New(GetResource());
-  Global<ResourceDesc, ForSession>::New(GetResource());
+  Global<ResourceDesc, ForEnv>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
+  Global<ResourceDesc, ForSession>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
 
   // do test
   // OF_ENV_BARRIER();

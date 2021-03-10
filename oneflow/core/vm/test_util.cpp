@@ -33,10 +33,14 @@ TestResourceDescScope::TestResourceDescScope(int64_t gpu_device_num, int64_t cpu
   resource.set_machine_num(machine_num);
   resource.set_gpu_device_num(gpu_device_num);
   resource.set_cpu_device_num(cpu_device_num);
-  Global<ResourceDesc, ForSession>::New(resource);
+  Global<NumOfProcessPerNode>::New()->set_value(1);
+  Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
 }
 
-TestResourceDescScope::~TestResourceDescScope() { Global<ResourceDesc, ForSession>::Delete(); }
+TestResourceDescScope::~TestResourceDescScope() {
+  Global<ResourceDesc, ForSession>::Delete();
+  Global<NumOfProcessPerNode>::Delete();
+}
 
 ObjectMsgPtr<VmResourceDesc> TestUtil::NewVmResourceDesc(int64_t device_num, int64_t machine_num) {
   HashMap<std::string, int64_t> map{{"cpu", device_num}, {"gpu", device_num}};

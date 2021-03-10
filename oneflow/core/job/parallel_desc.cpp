@@ -214,11 +214,10 @@ Maybe<void> ParallelDesc::CheckWithResourceDesc(const ResourceDesc& resource_des
 
 ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) const {
   ParallelConf parallel_conf;
-  int64_t rank = CHECK_JUST(MachineId4ParallelId(parallel_id));
-  std::string node_id = std::to_string(rank / GlobalProcessCtx::NumOfProcessPerNode());
+  std::string rank = std::to_string(CHECK_JUST(MachineId4ParallelId(parallel_id)));
   std::string device_id = std::to_string(CHECK_JUST(DeviceId4ParallelId(parallel_id)));
   parallel_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type())));
-  parallel_conf.add_device_name(node_id + ":" + device_id);
+  parallel_conf.add_device_name(std::string("@") + rank + ":" + device_id);
   return parallel_conf;
 }
 
@@ -270,8 +269,8 @@ ParallelConf GenParallelConfOfCpuZeroOnMaster() {
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
-  FOR_RANGE(int64_t, i, 0, (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())) {
-    parallel_conf.add_device_name(std::to_string(i) + ":0");
+  for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
+    parallel_conf.add_device_name(std::string("@") + std::to_string(i) + ":0");
   }
   return parallel_conf;
 }

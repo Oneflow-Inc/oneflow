@@ -108,8 +108,8 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   CHECK_JUST(JUST(MakeCtrlBootstrap(*Global<EnvDesc>::Get()))
                  ->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
   Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
-  Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
-  Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));
+  Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto), GlobalProcessCtx::NumOfProcessPerNode());
+  Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto), GlobalProcessCtx::NumOfProcessPerNode());
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
   Global<EagerJobBuildAndInferCtxMgr>::New();
