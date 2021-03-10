@@ -18,11 +18,19 @@ from __future__ import absolute_import
 import imp
 import inspect
 import os
+import sys
+import uuid
+import shutil
 import unittest
 import atexit
+from tempfile import NamedTemporaryFile
+import google.protobuf.text_format as pbtxt
 import oneflow
+import oneflow.python.framework.env_util as env_util
+from oneflow.core.job.env_pb2 import EnvProto
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Any, Dict, Callable
+import subprocess
 
 
 class _ClearDefaultSession(object):
@@ -150,6 +158,7 @@ _unittest_worker_initilized = False
 @oneflow_export("unittest.TestCase")
 class TestCase(unittest.TestCase):
     def setUp(self):
+        print("\n*********************")
         global _unittest_env_initilized
         global _unittest_worker_initilized
         if has_node_list():
@@ -210,6 +219,68 @@ class TestCase(unittest.TestCase):
                         oneflow.deprecated.delete_worker_by_bootstrap, ssh_port=ssh_port
                     )
                     _unittest_worker_initilized = True
+        else:
+            if not enable_init_by_host_list():
+                oneflow_worker_path = os.getenv("ONEFLOW_WORKER_BIN")
+                assert (
+                    oneflow_worker_path is not None
+                ), "please set env ONEFLOW_WORKER_BIN"
+                assert os.path.isfile(
+                    oneflow_worker_path
+                ), "binary oneflow_worker not found, please check your environment variable ONEFLOW_WORKER_BIN, path: {}".format(
+                    oneflow_worker_path
+                )
+                master_port = os.getenv("ONEFLOW_TEST_MASTER_PORT")
+                assert master_port, "env var ONEFLOW_TEST_MASTER_PORT not set"
+                oneflow.env.ctrl_port(int(master_port))
+                config_world_size = device_num()
+                bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
+                    ["127.0.0.1"], int(master_port), config_world_size
+                )
+                env_proto = env_util.default_env_proto
+                assert (
+                    len(env_proto.machine) == 1
+                    and env_proto.HasField("ctrl_bootstrap_conf") == 1
+                )
+                print(env_proto)
+                _temp_run_dir = os.getenv("HOME") + "/oneflow_temp/" + str(uuid.uuid1())
+                os.makedirs(_temp_run_dir)
+                shutil.copy(oneflow_worker_path, _temp_run_dir)
+                for rank in range(1, config_world_size):
+                    worker_env_proto = EnvProto()
+                    worker_env_proto.CopyFrom(env_proto)
+                    worker_env_proto.ctrl_bootstrap_conf.rank = rank
+                    worker_env_proto.cpp_logging_conf.log_dir = "./log_" + str(rank)
+                    env_file = NamedTemporaryFile(delete=False)
+                    print(worker_env_proto)
+                    if sys.version_info >= (3, 0):
+                        env_file.write(pbtxt.MessageToString(worker_env_proto).encode())
+                    else:
+                        env_file.write(pbtxt.MessageToString(worker_env_proto))
+                    env_file.close()
+                    shutil.copy(
+                        env_file.name,
+                        _temp_run_dir + "/env_proto_" + str(rank) + ".proto",
+                    )
+                    # oneflow_cmd = (
+                    #     '"cd '
+                    #     + _temp_run_dir
+                    #     + "; "
+                    #     + "nohup ./oneflow_worker -v=0 -logbuflevel=-1 "
+                    #     + "-env_proto="
+                    #     + "/env_proto_" + str(rank) + ".proto"
+                    #     + " "
+                    #     + ' 1>/dev/null 2>&1 </dev/null & "'
+                    # )
+                    # subprocess.Popen(oneflow_cmd, shell=True)
+
+                    os.remove(env_file.name)
+                # proc = subprocess.Popen(
+                #     stdout=subprocess.PIPE,
+                #     stderr=subprocess.PIPE,
+                #     encoding="utf-8",
+                #     shell=True,
+                # )
 
         log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
         if log_dir:
