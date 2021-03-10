@@ -283,17 +283,16 @@ template<typename T, typename G>
 struct LarsUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta,
                      float epsilon, float lars_coefficient, float weight_decay,
-                     const float* learning_rate, const int64_t* train_step, const T* scale_by_ptr,
-                     const int64_t* skip_if, const G* model_diff, T* model, T* momentum,
-                     T* data_tmp, T* model_diff_tmp);
+                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+                     const G* model_diff, T* model, T* momentum, T* data_tmp, T* model_diff_tmp);
 };
 
 template<typename T, typename G>
 void LarsUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta, float epsilon,
-    float lars_coefficient, float weight_decay, const float* learning_rate,
-    const int64_t* train_step, const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
-    T* model, T* momentum, T* data_tmp, T* model_diff_tmp) {
+    float lars_coefficient, float weight_decay, const float* learning_rate, const T* scale_by_ptr,
+    const int64_t* skip_if, const G* model_diff, T* model, T* momentum, T* data_tmp,
+    T* model_diff_tmp) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   T model_norm = data_tmp[0];
@@ -309,12 +308,11 @@ void LarsUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
   model_norm = std::sqrt(model_norm / n);
   model_diff_norm = std::sqrt(model_diff_norm / n);
   T local_learning_rate = 0;
-  if (*train_step == 0) {
-    local_learning_rate =
-        *learning_rate * lars_coefficient * model_norm / (epsilon + model_diff_norm);
-  } else {
+  if (model_norm > 0 && model_diff_norm > 0) {
     local_learning_rate = *learning_rate * lars_coefficient * model_norm
                           / (epsilon + model_diff_norm + weight_decay * model_norm);
+  } else {
+    local_learning_rate = static_cast<T>(1);
   }
 
   FOR_RANGE(int64_t, i, 0, n) {

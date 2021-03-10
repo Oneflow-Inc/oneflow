@@ -318,6 +318,7 @@ def compare_with_numpy_lars(
     epsilon,
     lars_coefficient,
     learning_rate,
+    weight_decay,
     train_iters,
 ):
     assert device_type in ["gpu", "cpu"]
@@ -344,6 +345,7 @@ def compare_with_numpy_lars(
                 momentum_beta=momentum_beta,
                 epsilon=epsilon,
                 lars_coefficient=lars_coefficient,
+                weight_decay=weight_decay,
             ).minimize(loss)
             return x
 
@@ -365,6 +367,7 @@ def compare_with_numpy_lars(
         momentum,
         learning_rate=0.001,
         momentum_beta=0.9,
+        weight_decay=0.0001,
         epsilon=1e-9,
         lars_coefficient=0.0001,
     ):
@@ -373,9 +376,16 @@ def compare_with_numpy_lars(
         model_norm = math.sqrt(np.mean(param * param))
         model_diff_norm = math.sqrt(np.mean(gradient * gradient))
 
-        local_learning_rate = (
-            learning_rate * lars_coefficient * model_norm / (epsilon + model_diff_norm)
-        )
+        if model_norm > 0 and model_diff_norm > 0:
+            lars = (
+                lars_coefficient
+                * model_norm
+                / (model_diff_norm + weight_decay * model_norm + epsilon)
+            )
+        else:
+            lars = 1.0
+
+        local_learning_rate = learning_rate * lars
 
         momentum_t = momentum_beta * momentum - local_learning_rate * gradient
 
@@ -395,6 +405,7 @@ def compare_with_numpy_lars(
             momentum,
             learning_rate,
             momentum_beta,
+            weight_decay,
             epsilon,
             lars_coefficient,
         )
