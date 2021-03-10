@@ -54,7 +54,8 @@ void SbpSignatureToParallelDistributionSignature(
 void ParallelDistributionSignatureToSbpSignature(
     const ParallelDistributionSignature& parallel_distribution_signature,
     SbpSignature* sbp_signature);
-
+void CheckSbpSignatureAndParallelDistributionEquals(
+    const SbpSignature& sbp_sig, const ParallelDistributionSignature& parallel_distribution_sig);
 }  // namespace oneflow
 
 namespace std {

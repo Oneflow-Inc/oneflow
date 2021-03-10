@@ -68,7 +68,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   OpNode* MutSrcNode4InputLbi(const LogicalBlobId& lbi) const;
   void InferBlobParallelDesc();
   void InitLbi2SourceNode();
-  void InitLbi2SbpParallel();
   void InitLbi2ParallelDistribution();
 
   ParallelDesc parallel_desc_;
@@ -77,7 +76,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashSet<std::string> ibns_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
-  // HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_;
   HashMap<LogicalBlobId, ParallelDistribution> lbi2parallel_distribution_;
   std::unique_ptr<Shape> parallel_hierarchy_;
 };

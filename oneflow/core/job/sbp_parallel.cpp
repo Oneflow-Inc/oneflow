@@ -218,4 +218,17 @@ void ParallelDistributionSignatureToSbpSignature(
   }
 }
 
+void CheckSbpSignatureAndParallelDistributionEquals(
+    const SbpSignature& sbp_sig, const ParallelDistributionSignature& parallel_distribution_sig) {
+  CHECK_EQ(sbp_sig.bn_in_op2sbp_parallel_size(),
+           parallel_distribution_sig.bn_in_op2parallel_distribution_size());
+  for (const auto& pair : parallel_distribution_sig.bn_in_op2parallel_distribution()) {
+    const auto& bn_in_op2sbp_parallel = sbp_sig.bn_in_op2sbp_parallel();
+    const auto it = bn_in_op2sbp_parallel.find(pair.first);
+    CHECK(it != bn_in_op2sbp_parallel.end());
+    CHECK_EQ(pair.second.sbp_parallel_size(), 1);
+    CHECK(pair.second.sbp_parallel(0) == it->second);
+  }
+}
+
 }  // namespace oneflow
