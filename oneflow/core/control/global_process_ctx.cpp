@@ -24,6 +24,22 @@ int64_t GlobalProcessCtx::Rank() {
   return Global<ProcessCtx>::Get()->rank();
 }
 
+int64_t GlobalProcessCtx::NodeSize() {
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  return Global<ProcessCtx>::Get()->node_size();
+}
+
+int64_t GlobalProcessCtx::ThisNodeId() {
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  return int64_t(Rank() / NumOfProcessPerNode());
+}
+
+int64_t GlobalProcessCtx::NumOfProcessPerNode() {
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  CHECK_EQ(WorldSize() % NodeSize(), 0);
+  return int64_t(WorldSize() / NodeSize());
+}
+
 bool GlobalProcessCtx::IsThisProcessMaster() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->rank() == 0;

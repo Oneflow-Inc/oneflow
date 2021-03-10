@@ -281,12 +281,17 @@ def _MakeBootstrapConf(bootstrap_info: dict):
     global config_bootstrap_ctrl_port
     if config_bootstrap_ctrl_port != 0:
         bootstrap_conf.ctrl_port = config_bootstrap_ctrl_port
+    global config_node_size
+    if config_node_size != 0:
+        bootstrap_conf.node_size = config_node_size
     return bootstrap_conf
 
 
 # only used by CI
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def MakeBootstrapConfs(node_list, master_port, world_size=0, ctrl_port=-1):
+def MakeBootstrapConfs(
+    node_list, master_port, world_size=0, ctrl_port=-1, node_size=-1
+):
     r"""Set ctrl_bootstrap_conf' info.
 
     For instance:
@@ -314,6 +319,9 @@ def MakeBootstrapConfs(node_list, master_port, world_size=0, ctrl_port=-1):
     global config_bootstrap_ctrl_port
     if ctrl_port != -1:
         config_bootstrap_ctrl_port = ctrl_port
+    global config_node_size
+    if node_size != -1:
+        config_node_size = node_size
     rank = 0
     for rank_host in node_list:
         assert isinstance(rank_host, str)
@@ -362,5 +370,7 @@ config_master_addr = ctrl_bootstrap_pb.Address()
 config_world_size = 0
 
 config_bootstrap_ctrl_port = 0
+
+config_node_size = 0
 
 global_ctrl_bootstrap_confs = []

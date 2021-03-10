@@ -27,12 +27,15 @@ class UserOp final : public Operator {
   UserOp() = default;
   ~UserOp() = default;
 
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
   void InitFromOpConf() override;
   Maybe<void> InferInternalBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx, const JobDesc* job_desc) const override;
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext*) const override;
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
@@ -42,6 +45,9 @@ class UserOp final : public Operator {
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
+  const user_op::UserOpConfWrapper& user_op_conf() const;
+  const ArgVec& inputs() const { return inputs_; }
+  const ArgVec& outputs() const { return outputs_; }
 
  private:
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
@@ -54,14 +60,17 @@ class UserOp final : public Operator {
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override;
-  Maybe<void> InferOutputBlobTimeShape(
-      std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
+  Maybe<void> InferOpTimeShape(
+      const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
       Shape* time_shape) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
 
   const user_op::OpRegistryResult* val_;
+  std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
+  ArgVec inputs_;
+  ArgVec outputs_;
 };
 
 }  // namespace oneflow

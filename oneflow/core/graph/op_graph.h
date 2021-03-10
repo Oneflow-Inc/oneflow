@@ -38,9 +38,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   ~OpNode() = default;
 
   // Getters
-  const Shape* GetInputBlobFastestTimeShape() const;
-  const Shape* GetInputOutputFastestTimeShape() const;
-  const Shape* out_blob_time_shape() const;
   bool IsTimeShapeIdentity() const;
   const Operator& op() const { return *op_; }
   std::shared_ptr<const Operator> shared_op() const { return op_; }
@@ -58,28 +55,22 @@ class OpNode final : public Node<OpNode, OpEdge> {
  private:
   friend class OpGraph;
   friend class OpEdge;
-  // Getters
-  const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
 
   // Setters
   Operator* mut_op() { return op_.get(); }
-  Shape* mut_out_blob_time_shape();
   BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
   OpNode* MutSrcNode4Ibn(const std::string& bn_in_op) const;
   OpNode* MutSrcNode4InputLbi(const LogicalBlobId& lbi) const;
   void InferBlobParallelDesc();
   void InitLbi2SourceNode();
-  void InitInputBlobFastestTimeShape();
   void InitLbi2SbpParallel();
 
   ParallelDesc parallel_desc_;
   HashMap<std::string, ParallelDesc> obn2blob_parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
-  std::unique_ptr<Shape> out_blob_time_shape_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
-  std::unique_ptr<Shape> input_blob_fastest_time_shape_;
   HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_;
   std::unique_ptr<Shape> parallel_hierarchy_;
 };
@@ -144,7 +135,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   void DumpLogicalBlobDesc(Job* job) const;
   void DumpSbpSignature(Job* job) const;
-  void DumpOpTimeShape(Job* job) const;
   void DumpArgSignature(Job* job) const;
 
   Maybe<void> Init(const Job& job);

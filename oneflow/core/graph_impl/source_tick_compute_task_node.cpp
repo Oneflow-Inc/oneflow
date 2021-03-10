@@ -37,13 +37,6 @@ void SourceTickCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-void SourceTickCompTaskNode::InferProducedDataRegstTimeShape() {
-  std::shared_ptr<Shape> time_shape(new Shape({1, 1}));
-  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
-    *regst->mut_data_regst_time_shape() = time_shape;
-  });
-}
-
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kSourceTick);
 
 }  // namespace oneflow
