@@ -37,7 +37,7 @@ class Tensor:
         is_consistent=False,
         is_lazy=False,
         data_initializer=None,
-        determining_initializer=None,
+        determining_initializer=None
     ):
         assert len(args) > 0
         dtype = dtype if dtype is not None else oneflow_api.float32
@@ -45,18 +45,28 @@ class Tensor:
         if isinstance(args[0], flow.Tensor):
             # Copy operator for tensor
             TODO()
+        elif isinstance(args[0], oneflow_api.LocalTensor) or isinstance(
+            args[0], oneflow_api.ConsistentTensor
+        ):
+            self._local_or_consistent_tensor = args[0]
+            self._undetermined_tensor = None
         elif isinstance(args[0], tuple) or isinstance(args[0], list):
             assert len(args) == 1
             numpy_data = np.array(args[0]).astype(
                 flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
             )
-            shape = numpy_data.shape
+            shape = oneflow_api.Size(tuple(numpy_data.shape))
             # Only local tensor will be created
-            self._local_or_consistent_tensor = oneflow_api.LocalTensor(
-                shape, dtype, device, is_lazy, requires_grad, True, retain_grad
+            self._local_or_consistent_tensor = _initialized_job(
+                shape=shape,
+                dtype=dtype,
+                device=device,
+                requires_grad=requires_grad,
+                retain_grad=retain_grad,
+                is_lazy=is_lazy,
+                numpy_data=numpy_data,
             )
-            # Set blob object for tensor
-            TODO()
+            self._undetermined_tensor = None
         else:
             shape = args
             assert all(isinstance(x, int) for x in shape)
@@ -112,14 +122,14 @@ class Tensor:
     @property
     def data(self):
         if self._local_or_consistent_tensor is not None:
-            return self._local_or_consistent_tensor.data
+            return flow.Tensor(self._local_or_consistent_tensor.data)
         else:
             return None
 
     @property
     def grad(self):
         if self._local_or_consistent_tensor is not None:
-            return self._local_or_consistent_tensor.grad
+            return flow.Tensor(self._local_or_consistent_tensor.grad)
         else:
             return None
 
@@ -219,7 +229,7 @@ class Tensor:
     def __deepcopy__(self, memo):
         TODO()
 
-    def determine(self, determining_initializer=None):
+    def _determine(self, determining_initializer=None):
         assert not self.is_determined
         if determining_initializer is None:
             determining_initializer = self._determining_initializer
@@ -361,6 +371,38 @@ def _default_initializer_for_determining(undetermined_tensor):
         undetermined_tensor.requires_grad,
         True,
         undetermined_tensor.retain_grad,
+    )
+    determined_tensor._set_blob_object(blob.blob_object)
+    return determined_tensor
+
+
+def _initialized_job(
+    shape=None,
+    dtype=None,
+    device=None,
+    requires_grad=None,
+    retain_grad=None,
+    is_lazy=False,
+    numpy_data=None,
+):
+    variable_name = id_util.UniqueStr("tensor_")
+    assert numpy_data is not None
+
+    @flow.global_function()
+    def set_data():
+        flow.get_variable(
+            name=variable_name,
+            shape=tuple(shape),
+            dtype=dtype,
+            initializer=flow.zeros_initializer(dtype=dtype),
+        )
+
+    if not is_lazy:
+        set_data()
+    flow.load_variables({variable_name: numpy_data})
+    blob = flow.get_all_variables()[variable_name]
+    determined_tensor = oneflow_api.LocalTensor(
+        shape, dtype, device, is_lazy, requires_grad, True, retain_grad,
     )
     determined_tensor._set_blob_object(blob.blob_object)
     return determined_tensor
