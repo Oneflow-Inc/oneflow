@@ -15,15 +15,34 @@ limitations under the License.
 */
 
 #include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
 namespace one {
 
+StackFunctionNode::StackFunctionNode(const std::shared_ptr<const std::function<void()>>& backward_fn,
+                    const TensorTuple& inputs, const TensorTuple& outputs) {
+    inputs_ = std::make_shared<TensorTuple>(inputs.size());
+    in_grads_.resize(inputs.size());
+    for(int i=0; i<inputs.size(); i++) {
+        inputs_->at(i) = inputs[i];
+        in_grads_[i] = inputs[i]->now_grad_arg();
+    }
+
+    outputs_ = std::make_shared<TensorTuple>(outputs.size());
+    out_grads_.resize(outputs.size());
+    for(int i=0; i<outputs.size(); i++) {
+        TODO();  // shares data with output tensors but not grad_fn
+        out_grads_[i] = outputs[i]->now_grad_arg();
+    }
+
+    backward_fn_ = backward_fn;
+}
+
 void StackFunctionNode::ReleaseOutTensorArgs() {
-  for (std::shared_ptr<TensorArg> tensor_arg : out_grads_) { tensor_arg->Release(); }
+  for (std::shared_ptr<TensorArg>& tensor_arg : out_grads_) { tensor_arg->Release(); }
 }
 
 void StackFunctionNode::ReleaseGraph() {
@@ -50,11 +69,12 @@ Maybe<TensorTuple> StackAutogradEngine::Execute(const TensorTuple& outputs,
 
 const std::shared_ptr<FunctionNode>& StackAutogradEngine::AddBackwardFuncPtr(
     const std::shared_ptr<const std::function<void()>>& backward_fn, const TensorTuple& inputs,
-    const TensorTuple& outputs) {
-  std::shared_ptr<FunctionNode> func_node = std::make_shared<StackFunctionNode>();
-  for (std::shared_ptr<Tensor> out_tensor : outputs) {
-    TODO();  // setter grad_fn for output tensors
+    TensorTuple& outputs) {
+  std::shared_ptr<FunctionNode> func_node = std::make_shared<StackFunctionNode>(backward_fn, inputs, outputs);
+  for (std::shared_ptr<Tensor>& out_tensor : outputs) {
+      out_tensor->set_grad_fn_node(func_node);
   }
+  node_list_.push_front(func_node);
   return std::move(func_node);
 }
 
