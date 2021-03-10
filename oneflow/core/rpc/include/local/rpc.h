@@ -90,13 +90,6 @@ class RpcServer : RpcServerBase {
 
   void EnqueueRequests() {}
 
-  template<typename F>
-  void Add(F f) {
-    using args_type = typename function_traits<F>::args_type;
-    using arg_type =
-        typename std::remove_pointer<typename std::tuple_element<0, args_type>::type>::type;
-  }
-
   std::thread loop_thread_;
   // TryLock, NotifyDone, WaitUntilDone
   HashMap<std::string, void*> name2lock_status_;
