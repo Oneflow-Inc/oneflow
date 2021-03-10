@@ -34,7 +34,7 @@ def make_tensor(
     is_lazy=False,
 ):
     assert data is not None
-    return flow.Tensor()
+    TODO()
 
 
 @oneflow_export("Tensor")
@@ -68,12 +68,12 @@ class Tensor:
             else:
                 numpy_data = args[0]
                 if isinstance(args[0], (tuple, list)):
-                    numpy_data = np.array(tuple(args[0])).astype(
+                    numpy_data = np.array(args[0]).astype(
                         flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
                     )
                 else:
                     assert isinstance(numpy_data, np.ndarray)
-                    numpy_data = np.array(tuple(args[0].tolist())).astype(
+                    numpy_data = numpy_data.astype(
                         flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
                     )
                 shape = oneflow_api.Size(tuple(numpy_data.shape))
