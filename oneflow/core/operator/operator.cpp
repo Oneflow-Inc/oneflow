@@ -147,12 +147,12 @@ namespace {
 Maybe<void> FillLogicalBlobDesc(
     const std::function<Maybe<const BlobDesc>(int32_t)>& BlobDesc4Index,
     const PbRpf<std::string>& bns,
-    std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>>* bn2logical_blob_desc_ptr) {
-  CHECK_OR_RETURN(!(*bn2logical_blob_desc_ptr));
-  bn2logical_blob_desc_ptr->reset(new std::vector<std::shared_ptr<const BlobDesc>>());
-  (*bn2logical_blob_desc_ptr)->reserve(bns.size());
+    std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>>* index2logical_blob_desc_ptr) {
+  CHECK_OR_RETURN(!(*index2logical_blob_desc_ptr));
+  index2logical_blob_desc_ptr->reset(new std::vector<std::shared_ptr<const BlobDesc>>());
+  (*index2logical_blob_desc_ptr)->reserve(bns.size());
   for (int32_t i = 0; i < bns.size(); ++i) {
-    (*bn2logical_blob_desc_ptr)->emplace_back(JUST(BlobDesc4Index(i)));
+    (*index2logical_blob_desc_ptr)->emplace_back(JUST(BlobDesc4Index(i)));
   }
   return Maybe<void>::Ok();
 }
@@ -160,13 +160,13 @@ Maybe<void> FillLogicalBlobDesc(
 Maybe<void> FillLogicalBlobDesc(
     const std::function<const BlobDesc&(const std::string&)>& BlobDesc4BnInOp,
     const PbRpf<std::string>& bns,
-    std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>>* bn2logical_blob_desc_ptr) {
-  CHECK_OR_RETURN(!(*bn2logical_blob_desc_ptr));
-  bn2logical_blob_desc_ptr->reset(new std::vector<std::shared_ptr<const BlobDesc>>());
-  (*bn2logical_blob_desc_ptr)->reserve(bns.size());
+    std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>>* index2logical_blob_desc_ptr) {
+  CHECK_OR_RETURN(!(*index2logical_blob_desc_ptr));
+  index2logical_blob_desc_ptr->reset(new std::vector<std::shared_ptr<const BlobDesc>>());
+  (*index2logical_blob_desc_ptr)->reserve(bns.size());
   for (const auto& bn : bns) {
     const BlobDesc& blob_desc = BlobDesc4BnInOp(bn);
-    (*bn2logical_blob_desc_ptr)->emplace_back(std::make_shared<const BlobDesc>(blob_desc));
+    (*index2logical_blob_desc_ptr)->emplace_back(std::make_shared<const BlobDesc>(blob_desc));
   }
   return Maybe<void>::Ok();
 }
@@ -174,25 +174,15 @@ Maybe<void> FillLogicalBlobDesc(
 Maybe<void> FillLogicalBlobDesc(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const PbRpf<std::string>& bns,
-    std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>>* bn2logical_blob_desc_ptr) {
+    std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>>* index2logical_blob_desc_ptr) {
   JUST(FillLogicalBlobDesc(
       [&](const std::string& bn) -> const BlobDesc& {
         const BlobDesc* blob_desc = BlobDesc4BnInOp(bn);
         CHECK_NOTNULL(blob_desc);
         return *blob_desc;
       },
-      bns, bn2logical_blob_desc_ptr));
+      bns, index2logical_blob_desc_ptr));
   return Maybe<void>::Ok();
-}
-
-Maybe<const BlobDesc> GetLogicalBlobDesc(
-    const std::string& bn,
-    const std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>>&
-        bn2logical_blob_desc_ptr) {
-  CHECK_OR_RETURN(bn2logical_blob_desc_ptr);
-  const auto& it = bn2logical_blob_desc_ptr->find(bn);
-  CHECK_OR_RETURN(it != bn2logical_blob_desc_ptr->cend());
-  return it->second;
 }
 
 Maybe<const BlobDesc> GetLogicalBlobDesc(
