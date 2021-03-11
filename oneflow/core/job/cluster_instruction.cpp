@@ -16,7 +16,7 @@ limitations under the License.
 #include <mutex>
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/cluster_instruction.pb.h"
-#include "oneflow/core/rpc/include/local/ctrl.h"
+#include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/env_desc.h"

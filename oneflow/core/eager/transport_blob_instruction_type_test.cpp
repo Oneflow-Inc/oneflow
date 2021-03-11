@@ -41,7 +41,6 @@ limitations under the License.
 #include "oneflow/core/eager/transport_blob_instruction_type.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
-#include "oneflow/core/rpc/include/local/ctrl.h"
 #include "oneflow/core/control/ctrl_util.h"
 
 namespace oneflow {

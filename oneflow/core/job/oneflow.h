@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/rpc/include/local/ctrl.h"
+#include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/job/runtime_buffers_scope.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"

@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/rpc/include/local/ctrl.h"
+#include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
