@@ -10,7 +10,7 @@ set(OPENCV_URL https://github.com/Oneflow-Inc/opencv/archive/51cef2651.tar.gz)
 use_mirror(VARIABLE OPENCV_URL URL ${OPENCV_URL})
 
 if(WIN32)
-elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
+# pass
 else()
     include(GNUInstallDirs)
     set(OPENCV_BUILD_INCLUDE_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR})
