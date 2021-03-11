@@ -19,20 +19,20 @@ namespace oneflow {
 namespace {
 Maybe<void> InferForwardTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  const int32_t dimension = ctx->Attr<int32_t>("dimension");
+  const int32_t diagonal = ctx->Attr<int32_t>("diagonal");
   const ShapeView& in_shape = in->shape();
   const int32_t in_dim = in_shape.NumAxes();
   DimVector out_dim_vec = {0};
 
   if (in_dim == 1) {
-    int32_t out_tensor_size = in_shape.At(0) + std::abs(dimension);
+    int32_t out_tensor_size = in_shape.At(0) + std::abs(diagonal);
     out_dim_vec[0] = out_tensor_size;
     out_dim_vec.push_back(out_tensor_size);
   } else {
-    if (dimension >= 0) {
-      out_dim_vec[0] = std::min(in_shape.At(0), in_shape.At(1) - dimension);
+    if (diagonal >= 0) {
+      out_dim_vec[0] = std::min(in_shape.At(0), in_shape.At(1) - diagonal);
     } else {
-      out_dim_vec[0] = std::min(in_shape.At(0) + dimension, in_shape.At(1));
+      out_dim_vec[0] = std::min(in_shape.At(0) + diagonal, in_shape.At(1));
     }
   }
 
@@ -59,7 +59,7 @@ Maybe<void> InferBackwardTensorDesc(user_op::InferContext* ctx) {
 REGISTER_USER_OP("diag")
     .Input("in")
     .Output("out")
-    .Attr<int32_t>("dimension", 0)
+    .Attr<int32_t>("diagonal", 0)
     .SetTensorDescInferFn(InferForwardTensorDesc)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
@@ -75,7 +75,7 @@ REGISTER_USER_OP("diag")
 REGISTER_USER_OP("diag_grad")
     .Input("dy")
     .Input("in")
-    .Attr<int32_t>("dimension", 0)
+    .Attr<int32_t>("diagonal", 0)
     .Output("dx")
     .SetTensorDescInferFn(InferBackwardTensorDesc)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -95,7 +95,7 @@ REGISTER_USER_OP_GRAD("diag").SetBackwardOpConfGenFn([](user_op::BackwardOpConfC
     return builder.OpTypeName("diag_grad")
         .InputBind("in", ctx->FwOp().input("in", 0))
         .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-        .Attr<int32_t>("dimension", ctx->FwOp().attr<int32_t>("dimension"))
+        .Attr<int32_t>("diagonal", ctx->FwOp().attr<int32_t>("diagonal"))
         .Output("dx")
         .Build();
   });

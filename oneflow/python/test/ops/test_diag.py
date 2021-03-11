@@ -25,12 +25,7 @@ from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as tp
 
 
-def _random_input(x_shape):
-    x = np.random.standard_normal(x_shape).astype(np.float32)
-    return x
-
-
-def diag_grad_np(input_tensor, dim, output, grad):
+def diag_grad_np(input_tensor, diagonal, output, grad):
     input_shape = input_tensor.shape
     output_shape = output.shape
     grad_output = np.zeros(input_shape)
@@ -38,42 +33,42 @@ def diag_grad_np(input_tensor, dim, output, grad):
     if len(input_shape) == 1:
         stride1 = 1
         stride0 = output_shape[1]
-        beg = stride1 * dim if dim >= 0 else stride0 * abs(dim)
+        beg = stride1 * diagonal if diagonal >= 0 else stride0 * abs(diagonal)
         for i in range(input_shape[0]):
             if i > 0:
                 beg += stride1 + stride0
 
-            if dim >= 0:
+            if diagonal >= 0:
                 grad_output[i] = grad[i][int(beg % stride0)]
-            if dim < 0:
+            if diagonal < 0:
                 grad_output[i] = grad[int((beg - i) / stride0)][i]
 
         return grad_output
     else:
         stride1 = 1
         stride01 = input_shape[1]
-        beg = stride1 * dim if dim >= 0 else stride01 * abs(dim)
+        beg = stride1 * diagonal if diagonal >= 0 else stride01 * abs(diagonal)
         for i in range(output.shape[0]):
             if i > 0:
                 beg += stride1 + stride01
 
-            if dim >= 0:
+            if diagonal >= 0:
                 grad_output[i][int(beg % stride01)] = grad[i]
-            if dim < 0:
+            if diagonal < 0:
                 stride02 = input_shape[0]
                 grad_output[int(beg / stride02)][i] = grad[i]
 
         return grad_output
 
 
-def compare_with_np(device_type, input_tensor, dim, dtype):
+def compare_with_np(device_type, input_tensor, diagonal, dtype):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
-    func_config.default_logical_view(flow.scope.mirrored_view())
+    # func_config.default_logical_view(flow.scope.mirrored_view())
     func_config.default_placement_scope(flow.scope.placement(device_type, "0:0"))
 
-    output_np = np.diag(input_tensor, dim)
+    output_np = np.diag(input_tensor, diagonal)
     output_shape = output_np.shape
     input_shape = input_tensor.shape
     output_dtype = output_np.dtype
@@ -94,7 +89,7 @@ def compare_with_np(device_type, input_tensor, dim, dtype):
         input_tensor = input_tensor + input_var
         input_tensor = flow.cast_to_current_logical_view(input_tensor)
         input_tensor = flow.cast(input_tensor, type_name_to_flow_type[dtype])
-        output = flow.diag(input_tensor, dim)
+        output = flow.diag(input_tensor, diagonal)
         if (
             output.dtype == flow.int64
             or output.dtype == flow.int8
@@ -113,23 +108,21 @@ def compare_with_np(device_type, input_tensor, dim, dtype):
         return output
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     output_of = diag_job(input_tensor)
     output_diff = test_global_storage.Get("output_diff").astype(dtype)
     x_diff_of = test_global_storage.Get("x_diff").astype(dtype)
 
     # np
-    x_diff_np = diag_grad_np(input_tensor, dim, output_np, output_diff)
+    x_diff_np = diag_grad_np(input_tensor, diagonal, output_np, output_diff)
 
     assert np.allclose(output_of, output_np)
     assert np.allclose(x_diff_of, x_diff_np)
 
 
-def test_fun(device_type, input_shape, dim, dtype):
+def test_fun(device_type, input_shape, diagonal, dtype):
     input_tensor = np.random.random(input_shape).astype(np.float32)
     input_tensor = input_tensor.reshape(input_shape).astype(dtype)
-    compare_with_np(device_type, input_tensor, dim, dtype)
+    compare_with_np(device_type, input_tensor, diagonal, dtype)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -138,7 +131,7 @@ class TestCast(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
         arg_dict["input_shape"] = [(3)]
-        arg_dict["dim"] = [0, 2, -3]
+        arg_dict["diagonal"] = [0, 2, -3]
         arg_dict["dtype"] = ["float32", "double"]
         for arg in GenArgList(arg_dict):
             test_fun(*arg)
@@ -147,7 +140,7 @@ class TestCast(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
         arg_dict["input_shape"] = [(3, 3)]
-        arg_dict["dim"] = [1, -1, 0]
+        arg_dict["diagonal"] = [1, -1, 0]
         arg_dict["dtype"] = ["float32", "double"]
         for arg in GenArgList(arg_dict):
             test_fun(*arg)
@@ -156,7 +149,7 @@ class TestCast(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["input_shape"] = [(3)]
-        arg_dict["dim"] = [0, 2, -3]
+        arg_dict["diagonal"] = [0, 2, -3]
         arg_dict["dtype"] = ["float32", "double"]
         for arg in GenArgList(arg_dict):
             test_fun(*arg)
@@ -165,7 +158,7 @@ class TestCast(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["input_shape"] = [(3, 3)]
-        arg_dict["dim"] = [1, -1, 0]
+        arg_dict["diagonal"] = [1, -1, 0]
         arg_dict["dtype"] = ["float32", "double"]
         for arg in GenArgList(arg_dict):
             test_fun(*arg)
@@ -174,7 +167,7 @@ class TestCast(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu"]
         arg_dict["input_shape"] = [(3)]
-        arg_dict["dim"] = [-2]
+        arg_dict["diagonal"] = [-2]
         arg_dict["dtype"] = ["int64", "int8", "int32"]
         for arg in GenArgList(arg_dict):
             test_fun(*arg)

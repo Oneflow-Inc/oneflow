@@ -26,17 +26,16 @@ import oneflow_api
 @oneflow_export("diag")
 def diag(
     input: oneflow_api.BlobDesc,
-    dimension: Optional[int] = 0,
+    diagonal: Optional[int] = 0,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """This operator compute diagonal. 
 
-    Refer to `Concept Explanation <https://pytorch.org/docs/stable/generated/torch.diag.html>`_ 
-    for more about Diag. 
-
+    If input is a vector, then returns a square matrix with the elements of input as the diagonal.
+    If input is a matrix, then returns a vector with the diagonal elements of input.
     Args:
-        input (remote_blob_util.BlobDef): The input `in`. 
-        dimension (Optional[int], 0): dimension for compute. Defaults to 0.
+        input (remote_blob_util.BlobDef): The input Blob.
+        diagonal (Optional[int], 0): The diagonal to consider. If diagonal = 0, it is the main diagonal. If diagonal > 0, it is above the main diagonal. If diagonal < 0, it is below the main diagonal. Defaults to 0.
 
     Returns:
         remote_blob_util.BlobDef: The result Blob. 
@@ -70,7 +69,7 @@ def diag(
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Diag_"))
         .Op("diag")
         .Input("in", [input])
-        .Attr("dimension", int(dimension))
+        .Attr("diagonal", int(diagonal))
         .Output("out")
         .Build()
         .InferAndTryRun()
