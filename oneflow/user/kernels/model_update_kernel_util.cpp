@@ -304,9 +304,8 @@ void LarsUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
   KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model, 1, model, 1, &model_norm);
   KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model_diff_tmp, 1, model_diff_tmp, 1,
                                        &model_diff_norm);
-
-  model_norm = std::sqrt(model_norm / n);
-  model_diff_norm = std::sqrt(model_diff_norm / n);
+  model_norm = std::sqrt(model_norm);
+  model_diff_norm = std::sqrt(model_diff_norm);
   T lars = 0;
   if (model_norm > 0 && model_diff_norm > 0) {
     lars = lars_coefficient * model_norm / (epsilon + model_diff_norm + weight_decay * model_norm);

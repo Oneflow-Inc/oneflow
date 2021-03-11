@@ -333,7 +333,7 @@ def compare_with_numpy_lars(
                 name="x",
                 shape=x_shape,
                 dtype=flow.float32,
-                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
+                initializer=flow.ones_initializer(),
                 trainable=True,
             )
             loss = flow.math.reduce_mean(x)
@@ -359,16 +359,16 @@ def compare_with_numpy_lars(
         param,
         gradient,
         momentum,
-        learning_rate=0.001,
-        momentum_beta=0.9,
-        weight_decay=0.0001,
-        epsilon=1e-9,
-        lars_coefficient=0.0001,
+        learning_rate,
+        momentum_beta,
+        weight_decay,
+        epsilon,
+        lars_coefficient,
     ):
         import math
 
-        model_norm = math.sqrt(np.mean(param * param))
-        model_diff_norm = math.sqrt(np.mean(gradient * gradient))
+        model_norm = math.sqrt(np.sum(param * param))
+        model_diff_norm = math.sqrt(np.sum(gradient * gradient))
 
         if model_norm > 0 and model_diff_norm > 0:
             lars = (
@@ -409,6 +409,9 @@ def compare_with_numpy_lars(
     for i in range(len(of_results)):
         x = of_results[i]
         param = numpy_results[i]
+        print("x" * 50)
+        print(x.flatten())
+        print(param.flatten())
         print(x.flatten() - param.flatten())
         assert np.allclose(x.flatten(), param.flatten(), rtol=1e-4, atol=1e-4,)
 
@@ -1009,15 +1012,16 @@ class TestOptimizers(flow.unittest.TestCase):
 
     def test_lars(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu"]
+        arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["x_shape"] = [(10,)]
         arg_dict["momentum_beta"] = [0.9]
         arg_dict["epsilon"] = [1e-9]
         arg_dict["lars_coefficient"] = [0.0001]
         arg_dict["learning_rate"] = [1]
-        arg_dict["weight_decay"] = [0.1]
+        arg_dict["weight_decay"] = [0.9]
         arg_dict["train_iters"] = [10]
         for arg in GenArgList(arg_dict):
+            print("y" * 100)
             compare_with_numpy_lars(*arg)
 
     def test_sgd(test_case):
