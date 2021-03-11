@@ -295,7 +295,7 @@ class Operator {
   std::unique_ptr<BlobBackwardUsedSignature> blob_backward_used_signature_;
   std::unique_ptr<MirroredSignature> mirrored_signature_;
 
-  HashMap<std::string, std::pair<BlobNameTag, int32_t>> bn2index_;
+  HashMap<std::string, std::pair<BlobNameTag, int32_t>> bn2index_pair_;
   HashMap<LogicalBlobId, int32_t> lbi2output_index_;
 };
 

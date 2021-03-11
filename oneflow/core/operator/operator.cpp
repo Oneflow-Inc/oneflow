@@ -261,8 +261,8 @@ Maybe<const BlobDesc*> Operator::GetLogicalBlobDescPtr4OutputIndex(int32_t index
 }
 
 Maybe<const BlobDesc> Operator::GetLogicalBlobDesc4BnInOp(const std::string& bn) const {
-  const auto& it = bn2index_.find(bn);
-  CHECK_OR_RETURN(it != bn2index_.end());
+  const auto& it = bn2index_pair_.find(bn);
+  CHECK_OR_RETURN(it != bn2index_pair_.end());
   if (it->second.first == BlobNameTag::kInputBlobName) {
     return GetLogicalBlobDesc4InputIndex(it->second.second);
   } else if (it->second.first == BlobNameTag::kOutputBlobName) {
@@ -283,8 +283,8 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
   std::vector<std::shared_ptr<BlobDesc>> in_logical_blob_desc_vec;
   in_logical_blob_desc_vec.resize(input_bns().size());
   auto BlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
-    const auto& it = bn2index_.find(bn);
-    CHECK(it != bn2index_.end());
+    const auto& it = bn2index_pair_.find(bn);
+    CHECK(it != bn2index_pair_.end());
     if (it->second.first == BlobNameTag::kInputBlobName) {
       auto& ptr = in_logical_blob_desc_vec.at(it->second.second);
       if (!ptr) { ptr.reset(new BlobDesc(*input_index2logical_blob_desc_->at(it->second.second))); }
@@ -755,7 +755,8 @@ InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff
   auto* map = arg_modifier_signature_.mutable_ibn2input_blob_modifier();
   CHECK(map->insert({ibn, InputBlobModifier()}).second);
   const int32_t input_index = input_bns_.size();
-  CHECK(bn2index_.emplace(ibn, std::make_pair(BlobNameTag::kInputBlobName, input_index)).second);
+  CHECK(
+      bn2index_pair_.emplace(ibn, std::make_pair(BlobNameTag::kInputBlobName, input_index)).second);
   *input_bns_.Add() = ibn;
   CHECK(mut_bn_in_op2lbi()->insert({ibn, lbi}).second);
   auto* ret = MutInputBlobModifier4Ibn(ibn);
@@ -808,7 +809,8 @@ OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_di
   auto* map = arg_modifier_signature_.mutable_obn2output_blob_modifier();
   CHECK(map->insert({obn, OutputBlobModifier()}).second);
   const int32_t output_index = output_bns_.size();
-  CHECK(bn2index_.emplace(obn, std::make_pair(BlobNameTag::kOutputBlobName, output_index)).second);
+  CHECK(bn2index_pair_.emplace(obn, std::make_pair(BlobNameTag::kOutputBlobName, output_index))
+            .second);
   CHECK(lbi2output_index_.emplace(lbi, output_index).second);
   *output_bns_.Add() = obn;
   CHECK(mut_bn_in_op2lbi()->insert({obn, lbi}).second);
@@ -914,15 +916,15 @@ std::shared_ptr<OpAttribute> Operator::GetOpAttributeWithoutOpNameAndLbn() const
 }
 
 Maybe<int32_t> Operator::GetInputIndex(const std::string& ibn) const {
-  auto it = bn2index_.find(ibn);
-  CHECK_OR_RETURN(it != bn2index_.end());
+  auto it = bn2index_pair_.find(ibn);
+  CHECK_OR_RETURN(it != bn2index_pair_.end());
   CHECK_EQ_OR_RETURN(it->second.first, BlobNameTag::kInputBlobName);
   return it->second.second;
 }
 
 Maybe<int32_t> Operator::GetOutputIndex(const std::string& obn) const {
-  auto it = bn2index_.find(obn);
-  CHECK_OR_RETURN(it != bn2index_.end());
+  auto it = bn2index_pair_.find(obn);
+  CHECK_OR_RETURN(it != bn2index_pair_.end());
   CHECK_EQ_OR_RETURN(it->second.first, BlobNameTag::kOutputBlobName);
   return it->second.second;
 }
