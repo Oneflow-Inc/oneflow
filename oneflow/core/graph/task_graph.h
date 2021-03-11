@@ -44,8 +44,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
 
-  void AcyclicTopoForEachNode(const std::function<void(TaskNode* node)>& Handler) const;
-
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
@@ -58,9 +56,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D);
 
  private:
-  void AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
-                              const std::function<void(TaskNode* node)>& Handler) const;
-
   void BuildTaskPath(
       CompTaskNode* src, CompTaskNode* dst,
       std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>

@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
-#include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
 #include "oneflow/core/graph/distribute_concat_compute_task_node.h"
 #include "oneflow/core/graph/distribute_split_compute_task_node.h"
