@@ -415,7 +415,9 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope);
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const SbpParallel& sbp_parallel,
                               int64_t parallel_num, int64_t parallel_id);
-
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
+                              const ParallelDistribution& parallel_distribution,
+                              const Shape& parallel_hierarchy, int64_t parallel_id);
 }  // namespace oneflow
 
 namespace std {

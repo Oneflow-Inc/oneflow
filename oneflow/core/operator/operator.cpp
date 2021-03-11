@@ -271,21 +271,25 @@ Maybe<void> Operator::InferOutBlobDescs(
   if (parallel_ctx->parallel_num() == 1) {
     JUST(InferLogicalOutBlobDescs(GetBlobDesc4BnInOp, *JUST(GetOpParallelDesc())));
   } else {
-    const auto sbp_signature = JUST(this->sbp_signature());
+    const auto parallel_distribution_signature = JUST(this->parallel_distribution_signature());
+    const auto parallel_desc = JUST(this->GetOpParallelDesc());
     for (const auto& bn : input_bns()) {
-      const auto& sbp_parallel = sbp_signature->bn_in_op2sbp_parallel().at(bn);
+      const auto& parallel_distribution =
+          parallel_distribution_signature->bn_in_op2parallel_distribution().at(bn);
       std::shared_ptr<const BlobDesc> in_logical = JUST(GetLogicalBlobDesc4Ibn(bn));
       CHECK_OR_RETURN(
-          *JUST(GetPhysicalShape(in_logical->shape(), sbp_parallel, parallel_ctx->parallel_num(),
-                                 parallel_ctx->parallel_id()))
+          *JUST(GetPhysicalShape(in_logical->shape(), parallel_distribution,
+                                 *parallel_desc->hierarchy(), parallel_ctx->parallel_id()))
           == GetBlobDesc4BnInOp(bn)->shape());
     }
     for (const auto& bn : output_bns()) {
       BlobDesc* desc = GetBlobDesc4BnInOp(bn);
       *desc = *JUST(GetLogicalBlobDesc4Obn(bn));
-      const auto& sbp_parallel = sbp_signature->bn_in_op2sbp_parallel().at(bn);
-      desc->mut_shape() = *JUST(GetPhysicalShape(
-          desc->shape(), sbp_parallel, parallel_ctx->parallel_num(), parallel_ctx->parallel_id()));
+      const auto& parallel_distribution =
+          parallel_distribution_signature->bn_in_op2parallel_distribution().at(bn);
+      desc->mut_shape() =
+          *JUST(GetPhysicalShape(desc->shape(), parallel_distribution, *parallel_desc->hierarchy(),
+                                 parallel_ctx->parallel_id()));
     }
   }
   return Maybe<void>::Ok();
@@ -1250,6 +1254,28 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const SbpParallel& sbp
     UNIMPLEMENTED();
   }
   return physical;
+}
+
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
+                              const ParallelDistribution& parallel_distribution,
+                              const Shape& parallel_hierarchy, int64_t parallel_id) {
+  CHECK_LT_OR_RETURN(parallel_id, parallel_hierarchy.elem_cnt());
+  CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), parallel_distribution.sbp_parallel_size());
+  if (parallel_hierarchy.NumAxes() == 1) {
+    return GetPhysicalShape(logical_shape, parallel_distribution.sbp_parallel(0),
+                            parallel_hierarchy.elem_cnt(), parallel_id);
+  } else {
+    std::shared_ptr<Shape> physical = std::make_shared<Shape>(logical_shape);
+    FOR_RANGE(int64_t, i, 0, parallel_hierarchy.NumAxes()) {
+      const SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(i);
+      if (sbp_parallel.has_split_parallel()) {
+        const int64_t split_axis = sbp_parallel.split_parallel().axis();
+        CHECK_EQ_OR_RETURN(physical->At(split_axis) % parallel_hierarchy.At(i), 0);
+        physical->Set(split_axis, physical->At(split_axis) / parallel_hierarchy.At(i));
+      }
+    }
+    return physical;
+  }
 }
 
 }  // namespace oneflow

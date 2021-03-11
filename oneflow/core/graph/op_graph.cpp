@@ -95,10 +95,11 @@ bool OpEdge::CalcIsStrict121Connected() const {
     return false;
   }
   for (const LogicalBlobId& lbi : lbis()) {
-    const SbpParallel& obn_sbp = src->SbpParallel4BnInOp(lbi2obn().at(lbi));
+    const ParallelDistribution& obn_distribution =
+        src->ParallelDistribution4BnInOp(lbi2obn().at(lbi));
     for (const std::string& ibn : lbi2ibns().at(lbi)) {
-      const SbpParallel& ibn_sbp = dst->SbpParallel4BnInOp(ibn);
-      if (obn_sbp != ibn_sbp) { return false; }
+      const ParallelDistribution& ibn_distribution = dst->ParallelDistribution4BnInOp(ibn);
+      if (obn_distribution != ibn_distribution) { return false; }
     }
   }
   return true;
@@ -461,6 +462,12 @@ const SbpParallel& OpGraph::GetSbpParallel(const std::string& op_name,
                                            const LogicalBlobId& lbi) const {
   return op_name2op_node_.at(GetOpNameKey(op_name, lbi))
       ->SbpParallel4Lbi(GetLogicalBlobIdKey(op_name, lbi));
+}
+
+const ParallelDistribution& OpGraph::GetParallelDistribution(const std::string& op_name,
+                                                             const LogicalBlobId& lbi) const {
+  return op_name2op_node_.at(GetOpNameKey(op_name, lbi))
+      ->ParallelDistribution4Lbi(GetLogicalBlobIdKey(op_name, lbi));
 }
 
 DataType OpGraph::GetBlobDataType(const LogicalBlobId& lbi) const {
