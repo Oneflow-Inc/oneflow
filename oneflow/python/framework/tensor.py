@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow.python.framework.hob as hob
+import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -37,7 +39,6 @@ class Tensor:
         is_lazy=False,
         data_initializer=None,
         determining_initializer=None,
-        data_initializer=None,
     ):
         dtype = dtype if dtype is not None else oneflow_api.float32
         device = device if device is not None else oneflow_api.device("cpu")
@@ -147,8 +148,7 @@ class Tensor:
     def _auto_determine(func):
         def wrapped_func(*args, **kwargs):
             tensor = args[0]
-            if not tensor.is_determined:
-                tensor.determine()
+            tensor._determine_if_needed()
             return func(*args, **kwargs)
 
         return wrapped_func
@@ -199,6 +199,10 @@ class Tensor:
 
     def __deepcopy__(self, memo):
         TODO()
+
+    def _determine_if_needed(self, determining_initializer=None):
+        if not self.is_determined:
+            self.determine(determining_initializer)
 
     def determine(self, determining_initializer=None):
         assert not self.is_determined
@@ -326,9 +330,8 @@ class UndeterminedTensor:
         return device_type == "gpu" or device_type == "cuda"
 
 
-def _default_initializer_for_determining(undetermined_tensor, tensor):
-    assert not undetermined_tensor.is_consistent
-    variable_name = id_util.UniqueStr("tensor_")
+@enable_if.condition(hob.in_global_mode)
+def global_get_determined_tensor(variable_name, undetermined_tensor):
     blob = flow.get_variable(
         name=variable_name,
         shape=tuple(undetermined_tensor.shape),
@@ -345,5 +348,45 @@ def _default_initializer_for_determining(undetermined_tensor, tensor):
         undetermined_tensor.retain_grad,
     )
     determined_tensor._set_blob_object(blob.blob_object)
+    return determined_tensor
+
+
+@enable_if.condition(hob.in_normal_mode)
+def normal_get_determined_tensor(variable_name, undetermined_tensor):
+    determined_tensor = None
+
+    @flow.global_function()
+    def job():
+        nonlocal determined_tensor
+        blob = flow.get_variable(
+            name=variable_name,
+            shape=tuple(undetermined_tensor.shape),
+            dtype=undetermined_tensor.dtype,
+            initializer=undetermined_tensor.data_initializer,
+        )
+        determined_tensor = oneflow_api.LocalTensor(
+            undetermined_tensor.shape,
+            undetermined_tensor.dtype,
+            undetermined_tensor.device,
+            undetermined_tensor.is_lazy,
+            undetermined_tensor.requires_grad,
+            True,
+            undetermined_tensor.retain_grad,
+        )
+        determined_tensor._set_blob_object(blob.blob_object)
+
+    job()
+    return determined_tensor
+
+
+def get_variable_for_tensor(variable_name, undetermined_tensor):
+    api = enable_if.unique([global_get_determined_tensor, normal_get_determined_tensor])
+    return api(variable_name, undetermined_tensor)
+
+
+def _default_initializer_for_determining(undetermined_tensor, tensor):
+    assert not undetermined_tensor.is_consistent
+    variable_name = id_util.UniqueStr("tensor_")
+    determined_tensor = get_variable_for_tensor(variable_name, undetermined_tensor)
     tensor._variable_name = variable_name
     return determined_tensor
