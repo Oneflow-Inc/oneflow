@@ -60,7 +60,7 @@ struct TensorExportUtil<ConsistentTensor> final {
 
 template<typename T>
 void ExportTensor(py::module& m, const char* name) {
-  py::class_<T, std::shared_ptr<T>>(m, name)
+  py::class_<T, Tensor, std::shared_ptr<T>>(m, name)
       .def(py::init(&TensorExportUtil<T>::MakeTensor))
       // Properties of pytorch
       .def_property_readonly("shape", &T::shape)
@@ -91,9 +91,10 @@ void ExportTensor(py::module& m, const char* name) {
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor");
+
   ExportTensor<MirroredTensor>(m, "LocalTensor");
   ExportTensor<ConsistentTensor>(m, "ConsistentTensor");
-  py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor");
 }
 
 }  // namespace one
