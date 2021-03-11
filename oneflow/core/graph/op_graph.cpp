@@ -254,14 +254,16 @@ void OpGraph::InitEdges() {
     HashMap<std::string, HashSet<LogicalBlobId>> producer_op_name2lbis;
     std::shared_ptr<HashMap<LogicalBlobId, std::vector<std::string>>> consumer_lbi2ibns(
         new HashMap<LogicalBlobId, std::vector<std::string>>);
-    op_node->input_index2producer_info_.reserve(op_node->op().input_bns().size());
+    op_node->input_index2producer_and_output_index_.reserve(op_node->op().input_bns().size());
     for (const auto& ibn : op_node->op().input_bns()) {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
       producer_op_name2lbis[lbi.op_name()].insert(lbi);
       (*consumer_lbi2ibns)[lbi].push_back(ibn);
-      const auto* producer = lbi2producer.at(lbi);
-      const int32_t output_index = CHECK_JUST(producer->op().GetOutputIndex(lbi));
-      op_node->input_index2producer_info_.emplace_back(producer, output_index);
+      auto producer_it = lbi2producer.find(lbi);
+      CHECK(producer_it != lbi2producer.end()) << "producer not found: " << GenLogicalBlobName(lbi);
+      const int32_t output_index = CHECK_JUST(producer_it->second->op().GetOutputIndex(lbi));
+      op_node->input_index2producer_and_output_index_.emplace_back(producer_it->second,
+                                                                   output_index);
     }
     for (const auto& pair : producer_op_name2lbis) {
       std::shared_ptr<std::vector<LogicalBlobId>> lbis(
@@ -363,7 +365,8 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
   }
   JUST(TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
     auto LogicalBlobDesc4InputIndex = [&](int32_t index) -> Maybe<const BlobDesc> {
-      const auto& producer_info = op_node->input_index2producer_info_.at(index);
+      CHECK_LT_OR_RETURN(index, op_node->input_index2producer_and_output_index_.size());
+      const auto& producer_info = op_node->input_index2producer_and_output_index_.at(index);
       return producer_info.first->op().GetLogicalBlobDesc4OutputIndex(producer_info.second);
     };
     JUST(op_node->mut_op()->FillOpParallelDesc(op_node->parallel_desc()));

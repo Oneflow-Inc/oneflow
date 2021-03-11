@@ -70,8 +70,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashSet<std::string> ibns_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
   HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_;
-  std::unique_ptr<Shape> parallel_hierarchy_;
-  std::vector<std::pair<const OpNode*, int32_t>> input_index2producer_info_;
+  std::vector<std::pair<const OpNode*, int32_t>> input_index2producer_and_output_index_;
 };
 
 class OpEdge final : public Edge<OpNode, OpEdge> {
