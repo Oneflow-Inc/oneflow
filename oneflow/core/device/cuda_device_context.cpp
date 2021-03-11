@@ -13,12 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/print_compute_task_node.h"
-#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/device/cuda_device_context.h"
+#include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
 
-REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kPrint, []() -> size_t {
-  return Global<ResourceDesc, ForSession>::Get()->MaxMdSaveWorkerNum();
-});
-}
+#ifdef WITH_CUDA
+
+REGISTER_DEVICE_CONTEXT(DeviceType::kGPU, ([](const ThreadCtx& thread_ctx) -> DeviceCtx* {
+                          CudaStreamHandle* cuda_handle = nullptr;
+                          cuda_handle = thread_ctx.g_cuda_stream.get();
+                          return new CudaDeviceCtx(cuda_handle);
+                        }));
+
+#endif  // WITH_CUDA
+
+}  // namespace oneflow

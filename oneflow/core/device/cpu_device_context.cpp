@@ -13,25 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_PRINT_COMPUTE_TASK_NODE_H_
-#define ONEFLOW_CORE_GRAPH_PRINT_COMPUTE_TASK_NODE_H_
-
-#include "oneflow/core/graph/sink_compute_task_node.h"
+#include "oneflow/core/device/cpu_device_context.h"
+#include "oneflow/core/thread/thread_context.h"
 
 namespace oneflow {
-
-class PrintCompTaskNode final : public SinkCompTaskNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(PrintCompTaskNode);
-  PrintCompTaskNode() = default;
-  ~PrintCompTaskNode() = default;
-
-  TaskType GetTaskType() const override { return TaskType::kPrint; }
-  bool IsIndependent() const override { return true; }
-
- private:
-};
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_GRAPH_PRINT_COMPUTE_TASK_NODE_H_
+REGISTER_DEVICE_CONTEXT(DeviceType::kCPU, ([](const ThreadCtx& thread_ctx) -> DeviceCtx* {
+                          return new CpuDeviceCtx();
+                        }));
+}

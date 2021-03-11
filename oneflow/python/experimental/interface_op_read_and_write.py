@@ -26,6 +26,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager.op_executor as op_executor
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
+import oneflow_api.oneflow.core.common.shape as shape_proto_cfg
 import oneflow_api
 
 blob_register = oneflow_api.GetDefaultBlobRegister()
@@ -46,7 +47,14 @@ def _GetInterfaceBlobObject(builder, op_name):
         parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
         for device_name in parallel_conf.device_name:
             parallel_conf_cfg.add_device_name(device_name)
+        if parallel_conf.HasField("hierarchy"):
+            hierarchy = shape_proto_cfg.ShapeProto()
+            for dim in parallel_conf.hierarchy.dim:
+                hierarchy.add_dim(dim)
+            assert hierarchy.dim_size() > 0
+            parallel_conf_cfg.mutable_hierarchy().CopyFrom(hierarchy)
         parallel_conf = parallel_conf_cfg
+
     blob_object = builder.MakeLazyRefBlobObject(
         op_name, cfg_op_attribute, parallel_conf
     )
@@ -116,10 +124,7 @@ def GetInterfaceBlobValue(op_name):
                 remote_blob = oneflow_api.EagerConsistentBlob(
                     lbi, blob_object, blob_register, job_name
                 )
-            if blob_object.op_arg_blob_attr.is_tensor_list:
-                value = remote_blob.numpy_list()
-            else:
-                value = remote_blob.numpy()
+            value = remote_blob.numpy()
             Yield(value)
 
         oneflow_api.deprecated.LogicalRun(build)
@@ -131,12 +136,7 @@ def FeedValueToInterfaceBlobObject(blob_object, ndarray):
     flow.sync_default_session()
 
     def build(builder):
-        if blob_object.op_arg_blob_attr.is_tensor_list:
-            input_blob_def = input_blob_def_util.MirroredTensorListDef(
-                [x.shape for x in ndarray],
-                dtype=dtype_util.convert_numpy_dtype_to_oneflow_dtype(ndarray.dtype),
-            )
-        elif blob_object.op_arg_parallel_attr.is_mirrored():
+        if blob_object.op_arg_parallel_attr.is_mirrored():
             input_blob_def = input_blob_def_util.MirroredTensorDef(
                 ndarray.shape,
                 dtype=dtype_util.convert_numpy_dtype_to_oneflow_dtype(ndarray.dtype),

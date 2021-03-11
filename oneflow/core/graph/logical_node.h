@@ -38,13 +38,9 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::shared_ptr<const ParallelDesc>& mut_parallel_desc() { return parallel_desc_; }
 
   // time_shape
-  const Shape* out_blob_time_shape() const { return out_blob_time_shape_.get(); }
-  void reset_out_blob_time_shape(const Shape* time_shape) {
-    out_blob_time_shape_.reset(time_shape);
-  }
-  const Shape* in_blob_fastest_time_shape() const { return in_blob_fastest_time_shape_.get(); }
-  void reset_in_blob_fastest_time_shape(const Shape* time_shape) {
-    in_blob_fastest_time_shape_.reset(time_shape);
+  const Shape* out_blob_time_shape() const { return CHECK_JUST(SoleOp()->GetOpTimeShape()).get(); }
+  const Shape* in_blob_fastest_time_shape() const {
+    return CHECK_JUST(SoleOp()->GetInputBlobFastestTimeShape()).get();
   }
 
   // Lbis
@@ -68,8 +64,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::shared_ptr<const ParallelDesc> parallel_desc_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
-  std::unique_ptr<const Shape> in_blob_fastest_time_shape_;
-  std::unique_ptr<const Shape> out_blob_time_shape_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
@@ -131,8 +125,7 @@ DECLARE_LOGICAL_NODE(NormalForward);
   OF_PP_MAKE_TUPLE_SEQ(DecodeH2D)        \
   OF_PP_MAKE_TUPLE_SEQ(DistributeConcat) \
   OF_PP_MAKE_TUPLE_SEQ(DistributeSplit)  \
-  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom)     \
-  OF_PP_MAKE_TUPLE_SEQ(Print)
+  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom)
 
 OF_PP_FOR_EACH_TUPLE(DECLARE_LOGICAL_NODE, LOGICAL_TYPE_SEQ);
 

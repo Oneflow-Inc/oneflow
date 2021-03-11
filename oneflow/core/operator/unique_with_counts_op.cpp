@@ -29,11 +29,12 @@ class UniqueWithCountsOp final : public Operator {
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const override;
-  Maybe<void> InferInternalBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferInternalBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const JobDesc* job_desc) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
@@ -82,14 +83,14 @@ Maybe<void> UniqueWithCountsOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> UniqueWithCountsOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
 }
 
 Maybe<void> UniqueWithCountsOp::InferInternalBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const JobDesc* job_desc) const {
   const BlobDesc* x = GetBlobDesc4BnInOp("x");
   CHECK_EQ_OR_RETURN(x->shape().NumAxes(), 1);
   const DataType idx_data_type = op_conf().unique_with_counts_conf().out_idx();

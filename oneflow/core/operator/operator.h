@@ -41,11 +41,11 @@ class Scope;
 class Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Operator);
-  Operator() = default;
+  Operator();
   virtual ~Operator() = default;
 
   //
-  void Init(const OperatorConf& op_conf, const JobDesc* job_desc);
+  void Init(const OperatorConf& op_conf);
   virtual void InitFromOpConf() = 0;
 
   virtual LogicalNode* NewProperLogicalNode() const;
@@ -56,7 +56,7 @@ class Operator {
   // Getters
   const std::string& op_name() const { return op_conf().name(); }
   DeviceType device_type() const;
-  const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
+  const OperatorConf& op_conf() const;
   const PbMessage& GetCustomizedConf() const {
     return GetMessageInPbMessage(op_conf(), op_conf().op_type_case());
   }
@@ -104,15 +104,16 @@ class Operator {
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs
-  Maybe<void> InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext*) const;
+  Maybe<void> InferBlobDescsIf(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext*, const JobDesc* job_desc) const;
 
   Maybe<void> InferOutBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const;
 
   Maybe<void> InferInternalBlobDescsIf(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const;
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const JobDesc* job_desc) const;
 
   Maybe<void> InferInplaceObn2IbnIf(
       HashMap<std::string, std::string>* mut_inplace_obn2ibn,
@@ -120,13 +121,15 @@ class Operator {
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const;
 
-  // Infer out blob's time shape
-  Maybe<void> InferOutputBlobTimeShapeIf(
-      std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
+  Maybe<void> FillInputBlobTimeShape(
+      const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4Ibn);
+  Maybe<void> InferOpTimeShapeIf();
+  virtual Maybe<void> InferOpTimeShape(
+      const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
       Shape* time_shape) const;
-  virtual Maybe<void> InferOutputBlobTimeShape(
-      std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
-      Shape* time_shape) const;
+  Maybe<const Shape> GetOpTimeShape() const;
+  Maybe<const Shape> GetInputBlobFastestTimeShape() const;
+  Maybe<const Shape> GetInputOutputFastestTimeShape() const;
 
   Maybe<void> FillSbpSignature(const SbpSignature& sbp_signature);
   Maybe<void> InferSbpSignatureIf(
@@ -150,31 +153,27 @@ class Operator {
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const;
 
-  const JobDesc& job_desc() const { return *job_desc_; }
-
   void ForEachBnInOp(std::function<void(const std::string&)>) const;
 
   virtual Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const;
   std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
 
   Maybe<const SbpSignature*> sbp_signature() const;
-  BlobLastUsedSignature* mut_blob_last_used_signature() {
-    return op_attribute_.mutable_blob_last_used_signature();
-  }
-  BlobBackwardUsedSignature* mut_blob_backward_used_signature() {
-    return op_attribute_.mutable_blob_backward_used_signature();
-  }
+  BlobLastUsedSignature* mut_blob_last_used_signature();
+  BlobBackwardUsedSignature* mut_blob_backward_used_signature();
+
+  Maybe<void> ToOpAttribute(OpAttribute* op_attribute) const;
 
  protected:
   Maybe<void> FillBlobParallelDesc(
       const std::function<Maybe<const ParallelDesc>(const std::string&)>& ParallelDesc4Bn);
   virtual Maybe<void> InferBlobParallelDesc();
   virtual Maybe<void> InferOutBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*) const;
-  virtual Maybe<void> InferInternalBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const;
+  virtual Maybe<void> InferInternalBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const JobDesc* job_desc) const;
   virtual Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
@@ -255,24 +254,32 @@ class Operator {
   LogicalBlobId tbn2lbi(const std::string& data_tmp_bn) const;
   std::string Bn2ConfName(const std::string& bn) const;
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
-    return op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi();
+    return arg_signature_.mutable_bn_in_op2lbi();
   }
 
   virtual void EmplaceLbi2Obn(const LogicalBlobId& lbi, const std::string& obn);
-  bool has_job_desc() const { return job_desc_ != nullptr; }
 
-  OpAttribute op_attribute_;
-  const JobDesc* job_desc_;
+  std::unique_ptr<const OperatorConf> op_conf_;
   HashMap<LogicalBlobId, std::string> lbi2obn_;
   std::shared_ptr<const ParallelDesc> op_parallel_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const ParallelDesc>>> bn2parallel_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> ibn2logical_blob_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> obn2logical_blob_desc_;
+  std::unique_ptr<HashMap<std::string, std::shared_ptr<const Shape>>> ibn2time_shape_;
+  std::shared_ptr<const Shape> input_blob_fastest_time_shape_;
+  std::shared_ptr<const Shape> input_output_fastest_time_shape_;
+  std::shared_ptr<const Shape> op_time_shape_;
   std::shared_ptr<const SbpSignature> sbp_signature_;
   PbRpf<std::string> input_bns_;
   PbRpf<std::string> output_bns_;
   PbRpf<std::string> tmp_bns_;
   PbRpf<std::string> input_output_bns_;
+  DeviceType device_type_;
+  ArgSignature arg_signature_;
+  ArgModifierSignature arg_modifier_signature_;
+  std::unique_ptr<BlobLastUsedSignature> blob_last_used_signature_;
+  std::unique_ptr<BlobBackwardUsedSignature> blob_backward_used_signature_;
+  std::unique_ptr<MirroredSignature> mirrored_signature_;
 };
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
@@ -339,9 +346,8 @@ struct IsTickTockOpTypeCase final {};
   REGISTER_CLASS_CREATOR(int32_t, op_type_case, IsTickTockOpTypeCase, \
                          ([] { return new IsTickTockOpTypeCase; }))
 
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, const JobDesc*);
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type,
-                                      const JobDesc*);
+std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
+std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type);
 
 void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                        PbRpf<std::string>* bns);

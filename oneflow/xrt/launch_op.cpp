@@ -66,8 +66,8 @@ Maybe<void> XrtLaunchOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> XrtLaunchOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const auto& launch_conf = op_conf().xrt_launch_conf();
   const auto& io_mapping = launch_conf.input_output_mapping();
   const auto& lbn2logical_blob_desc = launch_conf.lbn2logical_blob_desc();
@@ -77,7 +77,7 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
   for (const std::string& bn : this->input_bns()) {
     const LogicalBlobId& lbi = this->BnInOp2Lbi(bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
-    BlobDesc blob_desc(this->job_desc().DefaultDataType());
+    BlobDesc blob_desc(GlobalJobDesc().DefaultDataType());
     blob_desc.CopyFrom(*GetBlobDesc4BnInOp(bn));
 
     const std::string& mapping_input = io_mapping.at(blob_name);
@@ -89,9 +89,9 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
     const auto& sbp_signatures = launch_conf.sbp_signatures();
     auto options = xrt::CreateDefaultXrtPassOptions();
     DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf().device_tag()));
-    auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type, this->job_desc());
+    auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type, GlobalJobDesc());
     const ParallelDesc& op_parallel_desc = *JUST(GetOpParallelDesc());
-    xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(), parallel_ctx,
+    xrt::RunXrtPass("InferShape", graph.get(), options, &GlobalJobDesc(), parallel_ctx,
                     &op_parallel_desc, &sbp_signatures, &lbn2logical_blob_desc, &blob_descs);
   }
 

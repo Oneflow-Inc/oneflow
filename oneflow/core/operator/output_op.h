@@ -27,8 +27,9 @@ class OutputOp final : public Operator {
   ~OutputOp() override = default;
 
   void InitFromOpConf() override;
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 
  private:
   Maybe<void> InferLogicalOutBlobDescs(

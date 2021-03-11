@@ -37,6 +37,8 @@ class InferContext {
   virtual ~InferContext() = default;
 
   virtual TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
+                                                              int32_t) const = 0;
   virtual Shape* Shape4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
@@ -44,27 +46,21 @@ class InferContext {
 
   template<typename T>
   T Attr(const std::string& attr_name) const {
-    return conf_.attr<T>(attr_name);
+    return user_op_conf().attr<T>(attr_name);
   }
 
   virtual const ParallelContext& parallel_ctx() const = 0;
-  virtual const JobDesc& job_desc() const = 0;
+  virtual const JobDesc* job_desc() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  };
   virtual const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
   virtual bool* IsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
-  virtual bool* IsTensorList4ArgNameAndIndex(const std::string&, int32_t) = 0;
 
-  const UserOpConfWrapper& user_op_conf() const { return conf_; }
+  virtual const UserOpConfWrapper& user_op_conf() const = 0;
 
   virtual int64_t parallel_num() const = 0;
-
- protected:
-  InferContext(UserOpConfWrapper&& conf) : conf_(std::move(conf)) {}
-  InferContext(const InferContext&) = delete;
-  InferContext(InferContext&&) = delete;
-
- private:
-  UserOpConfWrapper conf_;
 };
 
 struct TensorDescInferFnUtil {
