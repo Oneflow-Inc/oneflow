@@ -22,7 +22,6 @@ from oneflow.python.nn.modules.utils import (
     _pair,
     _triple,
     _reverse_repeat_tuple,
-    _wrapper,
 )
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
@@ -67,7 +66,6 @@ class Conv2d(Module):
             .Output("out")
             .Build()
         )
-        self._op = _wrapper(self._op)
 
     def forward(self, x):
         res = self._op(x, self.weight)[0]
