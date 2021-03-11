@@ -229,7 +229,6 @@ Maybe<void> InferLarsUpdateTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckTensorDescLike(momentum, model));
   const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
   JUST(CheckLearningRateTenserDesc(learning_rate));
-  const user_op::TensorDesc* train_step = ctx->TensorDesc4ArgNameAndIndex("train_step", 0);
   if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
     const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarTensorDesc(scale_by_tensor, data_type));

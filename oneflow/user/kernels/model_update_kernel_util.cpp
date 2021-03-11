@@ -307,15 +307,13 @@ void LarsUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
 
   model_norm = std::sqrt(model_norm / n);
   model_diff_norm = std::sqrt(model_diff_norm / n);
-  T local_learning_rate = 0;
+  T lars = 0;
   if (model_norm > 0 && model_diff_norm > 0) {
-    local_learning_rate = *learning_rate * lars_coefficient * model_norm
-                          / (epsilon + model_diff_norm + weight_decay * model_norm);
+    lars = lars_coefficient * model_norm / (epsilon + model_diff_norm + weight_decay * model_norm);
   } else {
-    local_learning_rate = static_cast<T>(1);
+    lars = static_cast<T>(1);
   }
-  LOG(INFO) << "lars local learning rate" << local_learning_rate;
-  LOG(INFO) << "weight decay rate" << weight_decay;
+  T local_learning_rate = *learning_rate * lars;
   FOR_RANGE(int64_t, i, 0, n) {
     LarsUpdateFunctor<T>()(model_diff_tmp + i, model + i, momentum_beta, momentum + i, weight_decay,
                            local_learning_rate);
