@@ -27,7 +27,7 @@ import oneflow_api
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.ops import parallel_cast
 from oneflow.python.framework.tensor import Tensor
-from oneflow.python.nn.modules.utils import _wrapper
+from oneflow.python.nn.modules.utils import _wrapper, global_function_or_identity
 from oneflow.python.ops.get_variable import api_get_variable as get_variable
 from oneflow.python.ops import initializer_util
 
@@ -132,7 +132,7 @@ class Module(object):
 
         res = None
 
-        @flow.global_function()
+        @global_function_or_identity()
         def job():
             nonlocal res
             nonlocal args

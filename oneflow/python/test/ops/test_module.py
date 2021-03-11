@@ -29,6 +29,20 @@ import oneflow.typing as tp
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
+    def test_nested_module(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.relu = flow.nn.ReLU()
+
+            def forward(self, x):
+                return self.relu(x)
+
+        m = CustomModule()
+        x = flow.Tensor(1, 3, 4, 5)
+        y = m(x)
+        print(y.numpy())
+
     def test_conv2d(test_case):
         conv2d = flow.nn.Conv2d(3, 3, 3)
         x = flow.Tensor(1, 3, 4, 5)
