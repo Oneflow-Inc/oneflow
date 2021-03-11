@@ -24,107 +24,6 @@ import oneflow as flow
 import oneflow.typing as tp
 
 
-def _wrapper(func):
-    def wrapped_func(*args):
-        args = list(args)
-        for i in range(len(args)):
-            arg = args[i]
-            if isinstance(arg, flow.Tensor):
-                if not arg.is_determined:
-                    arg.determine()
-                args[i] = arg._local_or_consistent_tensor
-
-        res = func(*args)
-
-        tensor = flow.Tensor(shape=res.shape, dtype=res.dtype)
-        tensor._local_or_consistent_tensor = res
-        tensor._undetermined_tensor = None
-
-        return tensor
-
-    return wrapped_func
-    
-
-class Sigmoid(flow.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self._op = (
-            flow.builtin_op("sigmoid").Name("sigmoid").Input("in").Output("out").Build()
-        )
-    @_wrapper
-    def forward(self, x):
-        res = self._op(x)[0]
-        return res
-
-
-class Relu(flow.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self._op = (
-            flow.builtin_op("relu").Name("relu").Input("in").Output("out").Build()
-        )
-
-    
-    @_wrapper
-    def forward(self, x):
-        res = self._op(x)[0]
-        return res
-
-
-_size_2_t = Union[int, Tuple[int, int]]
-
-def _ntuple(n):
-    def parse(x):
-        if isinstance(x, collections.abc.Iterable):
-            return x
-        return tuple(repeat(x, n))
-    return parse
-
-_single = _ntuple(1)
-_pair = _ntuple(2)
-
-class Conv2d(flow.nn.Module):
-    def __init__(self, 
-        in_channels: int,
-        out_channels: int,
-        kernel_size: _size_2_t,
-        stride: _size_2_t = 1,
-        padding: _size_2_t = 0,
-        dilation: _size_2_t = 1,
-        groups: int = 1,
-        bias: bool = True,
-        padding_mode: str = 'zeros'  # TODO: refine this type
-            ):
-        super().__init__()
-
-        assert padding_mode == "zeros"
-        kernel_size = _pair(kernel_size)
-        stride = _pair(stride)
-        padding = _pair(padding)
-        dilation = _pair(dilation)
-        self.weight = flow.nn.Parameter(flow.Tensor((out_channels, in_channels // groups, *kernel_size), dtype=flow.float32))
-        self._op = (
-            flow.builtin_op("conv2d").Name("conv2d")
-            .Input("in")
-            .Input("weight")
-            .Attr('filters', out_channels)
-            .Attr("padding_before", padding)
-            .Attr("strides", stride)
-            .Attr("kernel_size", kernel_size)
-            .Attr("dilation_rate", dilation)
-            .Attr("groups", groups)
-            .Attr("data_format", 'channels_first')
-            .Output("out").Build()
-        )
-    
-    @_wrapper
-    def forward(self, x):
-        if not self.weight.is_determined:
-            self.weight.determine()
-        res = self._op(x, self.weight._local_or_consistent_tensor)[0]
-        return res
-
-
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in eager mode",
@@ -137,21 +36,14 @@ class TestModule(flow.unittest.TestCase):
         print(y.numpy())
         print(conv2d.weight.numpy())
 
-    
     def test_sigmoid(test_case):
-        m = Sigmoid()
+        m = flow.nn.Sigmoid()
 
-        @flow.global_function()
-        def job() -> None:
-            x = flow.Tensor((1, 3), dtype=flow.float32)
-            global y
-            print("test_sigmoid >> input:", x.numpy())
-            y = m(x)
+        x = flow.Tensor(1, 3)
+        print("test_sigmoid >> input:", x.numpy())
+        y = m(x)
 
-        job()
         print("test_sigmoid >> output", y.numpy())
-
-
 
     def test_relu(test_case):
         relu = flow.nn.ReLU()
