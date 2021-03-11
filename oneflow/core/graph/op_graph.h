@@ -122,9 +122,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   DataType GetBlobDataType(const LogicalBlobId& lbi) const;
   const BlobDesc& GetLogicalBlobDesc(const LogicalBlobId& lbi) const;
 
-  // a set of nodes is called a chain family if they can divided into several connected chains
-  void ForEachChainFamily(const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
-
   std::function<bool(const std::string&, const std::string&)>
   MakePredicatorIsOpNameDataOrCtrlReachable() const;
 

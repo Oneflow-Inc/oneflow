@@ -419,20 +419,6 @@ const BlobDesc& OpGraph::GetLogicalBlobDesc(const LogicalBlobId& lbi) const {
       ->LogicalBlobDesc4Lbi(GetLogicalBlobIdKey(lbi.op_name(), lbi));
 }
 
-void OpGraph::ForEachChainFamily(
-    const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
-  auto ForEachConnectedWithSameSbp7ParallelDesc7TimeShape =
-      [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
-        for (OpEdge* edge : node->in_edges()) {
-          if (edge->is_strict_121()) { Handler(edge->src_node()); }
-        }
-        for (OpEdge* edge : node->out_edges()) {
-          if (edge->is_strict_121()) { Handler(edge->dst_node()); }
-        }
-      };
-  ForEachConnectedComponent(ForEachConnectedWithSameSbp7ParallelDesc7TimeShape, Handler);
-}
-
 std::string OpGraph::GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const {
   CHECK(!lbi.has_is_packed_id());
   if (op_name2op_node_.find(op_name) != op_name2op_node_.end()) {
