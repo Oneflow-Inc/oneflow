@@ -46,17 +46,15 @@ StackFunctionNode::StackFunctionNode(
     const std::shared_ptr<const std::function<Maybe<void>()>>& backward_fn,
     const TensorTuple& inputs, const TensorTuple& outputs) {
   inputs_ = std::make_shared<TensorTuple>(inputs.size());
-  in_grads_.resize(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
     inputs_->at(i) = inputs[i];
-    in_grads_[i] = inputs[i]->now_grad_arg();
+    in_grads_.emplace_back(inputs[i]->now_grad_arg());
   }
 
   outputs_ = std::make_shared<TensorTuple>(outputs.size());
-  out_grads_.resize(outputs.size());
   for (int i = 0; i < outputs.size(); i++) {
     TODO();  // shares data with output tensors but not grad_fn
-    out_grads_[i] = outputs[i]->now_grad_arg();
+    out_grads_.emplace_back(outputs[i]->now_grad_arg());
   }
 
   backward_fn_ = backward_fn;
@@ -75,10 +73,10 @@ void StackFunctionNode::ReleaseGraph() {
 }
 
 Maybe<void> StackFunctionNode::Apply(bool create_graph) {
-  CHECK(!backward_fn_) << "This FunctionNode with name `" << GetOpName() << "` has been released.";
+  CHECK_OR_RETURN(!backward_fn_) << "This FunctionNode with name `" << GetOpName() << "` has been released.";
   if (!IsReadyToRun(out_grads_)) { return Maybe<void>::Ok(); }
   InitEmptyTensorArgs2ZerosTensor(*outputs_, out_grads_);
-  TODO();  // wangyinggang: Calls backward_fn_ and pass arguments according to AutogradInterpreter
+  TODO();  // wangyinggang: Calls backward_fn_ and passes arguments according to AutogradInterpreter
   return Maybe<void>::Ok();
 }
 
