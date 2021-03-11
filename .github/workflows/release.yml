@@ -16,6 +16,7 @@ jobs:
     name: Staging Release
     timeout-minutes: 1200
     runs-on: [self-hosted, linux, release]
+    if: github.repository == 'Oneflow-Inc/oneflow'
     strategy:
       fail-fast: false
       max-parallel: 5
@@ -164,7 +165,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Pack OneFlow source code
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/master' && github.repository == 'Oneflow-Inc/oneflow'
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
