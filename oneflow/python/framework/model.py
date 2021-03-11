@@ -105,7 +105,13 @@ class NumpyDataModule(DataModule):
             numpy_placeholder = oneflow_typing.Numpy.Placeholder(
                 shape=item.shape, dtype=of_dtype
             )
-            para_name = self.__class__.__name__ + "_opt_" + str(optimizer_idx) + "_para_" + str(i)
+            para_name = (
+                self.__class__.__name__
+                + "_opt_"
+                + str(optimizer_idx)
+                + "_para_"
+                + str(i)
+            )
             para_list.append(
                 inspect.Parameter(
                     name=para_name,
@@ -242,7 +248,6 @@ class Model(
                 batch = self._validation_data(0)
                 self._construct_numpy_input_eval_job(batch)
                 self._numpy_input_first_val_batch = batch
-                
 
         if self._need_load_checkpoint:
             self._load_checkpoint(dirpath=self._checkpoint_config.load_dirpath)

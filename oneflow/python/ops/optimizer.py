@@ -994,7 +994,7 @@ class Optimizer:
             self.loss_scale_policy = StaticLossScalePolicy(loss_scale_factor)
         else:
             self.loss_scale_policy = loss_scale_policy
-        
+
         self._variables_list_init = False
 
     def Variables(self) -> List[Text]:
@@ -1903,7 +1903,7 @@ class CombinedOptimizer(Optimizer):
             loss_scale_factor, train_step_lbn, loss_scale_policy,
         )
         self.optimizers = optimizers
-    
+
     def Variables(self) -> List[Text]:
         if not self._variables_list_init:
             self.variables = []

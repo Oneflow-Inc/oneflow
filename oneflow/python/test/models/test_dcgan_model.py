@@ -152,7 +152,6 @@ class DCGAN(flow.model.Model):
         h0 = flow.nn.leaky_relu(h0, 0.3)
         return h0
 
-
     def configure_optimizers(self):
         generator_opt = flow.optimizer.SGD(
             flow.optimizer.PiecewiseConstantScheduler([], [self.lr]), momentum=0
@@ -192,7 +191,6 @@ class LossMoniter(flow.model.Callback):
         print(fmt_str.format(step_idx, "validation h0:", h0.numpy().mean()))
 
 
-
 class NumpyTrainData(flow.model.NumpyDataModule):
     def __init__(self, result_dir, batch_size):
         super().__init__()
@@ -204,6 +202,7 @@ class NumpyTrainData(flow.model.NumpyDataModule):
             return (self.z,)
         else:
             return (self.z, self.images)
+
 
 class NumpyValData(flow.model.NumpyDataModule):
     def __init__(self, result_dir, batch_size):
