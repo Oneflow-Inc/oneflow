@@ -54,30 +54,33 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
     CHECK(op_name2op_conf_.emplace(job->net().op(i).name(), job->mutable_net()->mutable_op(i))
               .second);
   }
+  bool all_ops_1d_hierarchy = true;
   FOR_RANGE(int32_t, i, 0, job->placement().placement_group_size()) {
     auto* placemnt_group = job->mutable_placement()->mutable_placement_group(i);
     for (const auto& op_name : placemnt_group->op_set().op_name()) {
       CHECK(
           op_name2parallel_conf_.emplace(op_name, placemnt_group->mutable_parallel_conf()).second);
     }
+    if (placemnt_group->parallel_conf().has_hierarchy()
+        && placemnt_group->parallel_conf().hierarchy().dim_size() > 1) {
+      all_ops_1d_hierarchy = false;
+    }
   }
   auto* job_parallel_view_conf = job->mutable_job_parallel_view_conf();
-  CHECK_EQ(job_parallel_view_conf->op_name2sbp_signature_conf_size(),
-           job_parallel_view_conf->op_name2parallel_distribution_signature_conf_size());
-  for (const auto& pair : job_parallel_view_conf->op_name2parallel_distribution_signature_conf()) {
-    const auto* parallel_conf = op_name2parallel_conf_.at(pair.first);
-    if (!parallel_conf->has_hierarchy() || parallel_conf->hierarchy().dim_size() == 1) {
+  for (auto& pair :
+       *(job_parallel_view_conf->mutable_op_name2parallel_distribution_signature_conf())) {
+    op_name2parallel_distribution_signature_conf_.emplace(pair.first, &pair.second);
+  }
+  if (all_ops_1d_hierarchy) {
+    CHECK_EQ(job_parallel_view_conf->op_name2sbp_signature_conf_size(),
+             job_parallel_view_conf->op_name2parallel_distribution_signature_conf_size());
+    for (const auto& pair :
+         job_parallel_view_conf->op_name2parallel_distribution_signature_conf()) {
       const auto& op_name2sbp_sig = job_parallel_view_conf->op_name2sbp_signature_conf();
       const auto it = op_name2sbp_sig.find(pair.first);
       CHECK(it != op_name2sbp_sig.end());
       CheckSbpSignatureAndParallelDistributionEquals(it->second, pair.second);
-    } else {
-      UNIMPLEMENTED();
     }
-  }
-  for (auto& pair :
-       *(job_parallel_view_conf->mutable_op_name2parallel_distribution_signature_conf())) {
-    op_name2parallel_distribution_signature_conf_.emplace(pair.first, &pair.second);
   }
   FOR_RANGE(int32_t, i, 0, job->placement().blob_placement_group_size()) {
     auto* blob_pg = job->mutable_placement()->mutable_blob_placement_group(i);

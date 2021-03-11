@@ -570,8 +570,12 @@ void OpGraph::DumpLogicalBlobDesc(Job* job) const {
 
 void OpGraph::DumpSbpSignature(Job* job) const {
   ForEachNode([&](const OpNode* node) {
-    (*job->mutable_job_parallel_view_conf()
-          ->mutable_op_name2sbp_signature_conf())[node->op().op_name()] = node->sbp_signature();
+    if (node->parallel_desc().hierarchy()->NumAxes() == 1) {
+      (*job->mutable_job_parallel_view_conf()
+            ->mutable_op_name2sbp_signature_conf())[node->op().op_name()] = node->sbp_signature();
+    } else {
+      UNIMPLEMENTED();
+    }
   });
 }
 
