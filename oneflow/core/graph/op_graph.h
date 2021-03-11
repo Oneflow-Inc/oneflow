@@ -58,7 +58,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
 
   // Setters
   Operator* mut_op() { return op_.get(); }
-  BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
   OpNode* MutSrcNode4Ibn(const std::string& bn_in_op) const;
   OpNode* MutSrcNode4InputLbi(const LogicalBlobId& lbi) const;
   void InferBlobParallelDesc();
@@ -69,10 +68,10 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<std::string, ParallelDesc> obn2blob_parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
-  HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
   HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_;
   std::unique_ptr<Shape> parallel_hierarchy_;
+  std::vector<std::pair<const OpNode*, int32_t>> input_index2producer_info_;
 };
 
 class OpEdge final : public Edge<OpNode, OpEdge> {
