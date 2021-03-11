@@ -60,12 +60,22 @@ StackFunctionNode::StackFunctionNode(
   backward_fn_ = backward_fn;
 }
 
-Maybe<void> StackFunctionNode::RetainOutTensorArgs() {
+Maybe<void> StackFunctionNode::AccOutTensorArgs4RetainGradTensor() {
     for(int i=0; i<outputs_->size(); ++i) {
-        if (outputs_->at(i)->retain_grad()) {
+        if (outputs_->at(i)->retain_grad() && outputs_->at(i)->requires_grad()) {
             TODO();  // wangyinggang: Accumulates out_grad to output.acc_grad
         }
     }
+    return Maybe<void>::Ok();
+}
+
+Maybe<void> StackFunctionNode::AccOutTensorArgs4LeafTensor() {
+    for(int i=0; i<outputs_->size(); ++i) {
+        if (outputs_->at(i)->is_leaf() && outputs_->at(i)->requires_grad()) {
+            TODO();  // wangyinggang: Accumulates out_grad to output.acc_grad
+        }
+    }
+    return Maybe<void>::Ok();
 }
 
 void StackFunctionNode::ReleaseOutTensorArgs() {
@@ -107,9 +117,9 @@ Maybe<TensorTuple> StackAutogradEngine::Execute(const TensorTuple& outputs,
         if (capture_grads) {
           TODO();  // wangyinggang: Captures grads in out_grads
         } else {
-          TODO();  // wangyinggang: Accumulates grads for leaf tensor
+            JUST(it->lock()->AccOutTensorArgs4LeafTensor());
         }
-        it->lock()->RetainOutTensorArgs();
+        JUST(it->lock()->AccOutTensorArgs4RetainGradTensor());
         it->lock()->ReleaseOutTensorArgs();
     }
     ++it;

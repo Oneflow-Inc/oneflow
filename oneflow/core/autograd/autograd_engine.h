@@ -37,7 +37,8 @@ class FunctionNode {
   virtual ~FunctionNode() = default;
 
   virtual Maybe<void> Apply(bool create_graph) = 0;
-  virtual Maybe<void> RetainOutTensorArgs() = 0;
+  virtual Maybe<void> AccOutTensorArgs4LeafTensor() = 0;
+  virtual Maybe<void> AccOutTensorArgs4RetainGradTensor() = 0;
   virtual void ReleaseOutTensorArgs() = 0;
   // Releases the eventual c++ std::function for backward if retain_graph=False to avoid calling
   // `Apply` in second time
@@ -85,7 +86,8 @@ class StackFunctionNode final : public FunctionNode {
   StackFunctionNode() = delete;
   ~StackFunctionNode() override = default;
 
-  Maybe<void> RetainOutTensorArgs() override;
+  Maybe<void> AccOutTensorArgs4LeafTensor() override;
+  Maybe<void> AccOutTensorArgs4RetainGradTensor() override;
   void ReleaseOutTensorArgs() override;
   void ReleaseData() override;
   Maybe<void> Apply(bool create_graph) override;
