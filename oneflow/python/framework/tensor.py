@@ -70,8 +70,8 @@ class Tensor:
                 determining_initializer = _default_initializer_for_determining
             self._determining_initializer = determining_initializer
         else:
-            # Maybe some other arguments to be supported
-            TODO()
+            # Maybe some other arguments to be supported, reported as error for now
+            raise TypeError("new() received an invalid combination of arguments")
 
     @property
     def shape(self):
