@@ -46,7 +46,7 @@ class DLNetSpec(object):
 global_specs = DLNetSpec()
 
 
-class TrainData(flow.nn.DataModule):
+class TrainData(flow.model.DataModule):
     def __init__(self, specs):
         super().__init__()
         self.specs = specs
@@ -55,7 +55,7 @@ class TrainData(flow.nn.DataModule):
         return _data_load_layer(self.specs, self.specs.train_dir)
 
 
-class ValData(flow.nn.DataModule):
+class ValData(flow.model.DataModule):
     def __init__(self, specs):
         super().__init__()
         self.specs = specs

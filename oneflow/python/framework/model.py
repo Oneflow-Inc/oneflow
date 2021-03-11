@@ -18,7 +18,7 @@ from __future__ import absolute_import
 __all__ = ["CheckpointConfig", "Callback", "NumpyDataModule", "Model"]
 
 from abc import ABC
-from typing import Optional, Union, Tuple
+from typing import Optional, Any, Union, Tuple
 
 import inspect
 import numpy as np
@@ -29,7 +29,7 @@ from oneflow.python.framework.check_point_v2 import (
     GetCheckpoint,
 )
 from oneflow.python.framework.function_util import api_oneflow_function
-from oneflow.python.framework.local_blob import LocalMirroredTensor
+from oneflow.python.framework.local_blob import LocalBlob
 from oneflow.python.framework.module import Module
 from oneflow.python.framework.session_util import api_clear_default_session
 from oneflow.python.oneflow_export import oneflow_export
@@ -58,7 +58,7 @@ class Callback(ABC):
 
     def on_training_step_end(
         self,
-        outputs: Optional[Union[LocalMirroredTensor, Tuple[LocalMirroredTensor, ...]]],
+        outputs: Optional[Union[LocalBlob, Tuple[LocalBlob, ...]]],
         step_idx: int = 0,
         optimizer_idx: int = 0,
     ):
@@ -66,13 +66,13 @@ class Callback(ABC):
 
     def on_validation_step_end(
         self,
-        outputs: Optional[Union[LocalMirroredTensor, Tuple[LocalMirroredTensor, ...]]],
+        outputs: Optional[Union[LocalBlob, Tuple[LocalBlob, ...]]],
         step_idx: int = 0,
     ):
         pass
 
 
-@oneflow_export("nn.DataModule")
+@oneflow_export("model.DataModule")
 class DataModule(Module):
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -80,14 +80,40 @@ class DataModule(Module):
     def forward(self, *args):
         pass
 
+    def inspect_data4model_construct(
+        self, batch: Tuple[Any] = None, optimizer_idx: int = 0
+    ):
+        return None
 
-@oneflow_export("nn.NumpyDataModule")
+
+@oneflow_export("model.NumpyDataModule")
 class NumpyDataModule(DataModule):
     def __init__(self, *args, **kwargs):
         super().__init__()
 
     def forward(self, step_idx: int = 0, optimizer_idx: int = 0):
         pass
+
+    def inspect_data4model_construct(
+        self, batch: Tuple[np.ndarray, ...] = None, optimizer_idx: int = 0
+    ):
+        assert isinstance(batch, tuple), "model.NumpyDataModule must return a tuple."
+        para_list = []
+        for i, item in enumerate(batch):
+            assert isinstance(item, np.ndarray)
+            of_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(item.dtype)
+            numpy_placeholder = oneflow_typing.Numpy.Placeholder(
+                shape=item.shape, dtype=of_dtype
+            )
+            para_name = self.__class__.__name__ + "_opt_" + str(optimizer_idx) + "_para_" + str(i)
+            para_list.append(
+                inspect.Parameter(
+                    name=para_name,
+                    kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    annotation=numpy_placeholder,
+                )
+            )
+        return para_list
 
 
 @oneflow_export("Model", "model.Model")
@@ -150,6 +176,8 @@ class Model(
         checkpoint_config: Optional[CheckpointConfig] = None,
         max_steps: int = 100,
     ):
+        r""" Runs the full training and validation routine.
+        """
         api_clear_default_session()
 
         self._max_steps = max_steps
@@ -198,16 +226,23 @@ class Model(
             self._need_save_checkpoint = True
 
         if self._need_training:
-            if self._training_is_numpy_input:
-                self._construct_numpy_input_train_jobs()
-            else:
+            if not self._training_is_numpy_input:
                 self._construct_train_jobs()
+            else:
+                self._numpy_input_first_train_batch = []
+                for optimizer_idx in range(0, len(self._optimizers)):
+                    batch = self._training_data(0, optimizer_idx)
+                    self._construct_numpy_input_train_job(batch, optimizer_idx)
+                    self._numpy_input_first_train_batch.insert(optimizer_idx, batch)
 
         if self._need_validation:
-            if self._validation_is_numpy_input:
-                self._construct_numpy_input_eval_job()
-            else:
+            if not self._validation_is_numpy_input:
                 self._construct_eval_job()
+            else:
+                batch = self._validation_data(0)
+                self._construct_numpy_input_eval_job(batch)
+                self._numpy_input_first_val_batch = batch
+                
 
         if self._need_load_checkpoint:
             self._load_checkpoint(dirpath=self._checkpoint_config.load_dirpath)
@@ -217,9 +252,15 @@ class Model(
                 for optimizer_idx in range(0, len(self._optimizers)):
                     outputs = None
                     if self._training_is_numpy_input:
-                        batch = self._training_data(step_idx, optimizer_idx)
+                        batch = None
+                        if step_idx == 0:
+                            batch = self._numpy_input_first_train_batch[optimizer_idx]
+                        else:
+                            batch = self._training_data(step_idx, optimizer_idx)
                         outputs = self._train_jobs[optimizer_idx](*batch).get()
                     else:
+                        # TODO(strint): Same job call for op data & numpy data.
+                        #               If input data is blob, merge data graph into compute job
                         outputs = self._train_jobs[optimizer_idx]().get()
                     self._method_callback(
                         "on_training_step_end",
@@ -232,9 +273,15 @@ class Model(
                 if (step_idx + 1) % self._validation_interval == 0:
                     eval_outputs = None
                     if self._validation_is_numpy_input:
-                        batch = self._validation_data(step_idx)
+                        batch = None
+                        if step_idx == 0:
+                            batch = self._numpy_input_first_val_batch
+                        else:
+                            batch = self._validation_data(step_idx)
                         eval_outputs = self._eval_job(*batch).get()
                     else:
+                        # TODO(strint): Same job call for op data & numpy data
+                        #               If input data is blob, merge data graph into compute job
                         eval_outputs = self._eval_job().get()
                     self._method_callback(
                         "on_validation_step_end",
@@ -286,11 +333,9 @@ class Model(
         )
         self._eval_job = deco(job)
 
-    def _construct_one_numpy_input_train_job(
-        self, optimizer_idx, job_func_para_annotations
-    ):
-        def job(*batch):
-            outputs = self.training_step(batch=batch, optimizer_idx=optimizer_idx)
+    def _construct_numpy_input_train_job(self, batch, optimizer_idx):
+        def job(*input_batch):
+            outputs = self.training_step(batch=input_batch, optimizer_idx=optimizer_idx)
             loss = None
             if isinstance(outputs, tuple) and len(outputs) > 0:
                 loss = outputs[0]
@@ -299,16 +344,10 @@ class Model(
             self._optimizers[optimizer_idx].minimize(loss)
             return outputs
 
-        para_list = []
-        for i in range(len(job_func_para_annotations)):
-            para_name = "train_para_" + str(i)
-            para_list.append(
-                inspect.Parameter(
-                    name=para_name,
-                    kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                    annotation=job_func_para_annotations[i],
-                )
-            )
+        para_list = self._training_data.inspect_data4model_construct(
+            batch, optimizer_idx
+        )
+
         origin_sig = inspect.signature(job)
         new_sig = origin_sig.replace(parameters=para_list)
         job.__oneflow_function_signature__ = new_sig
@@ -319,40 +358,11 @@ class Model(
         train_job = deco(job)
         self._train_jobs.insert(optimizer_idx, train_job)
 
-    def _construct_numpy_input_train_jobs(self):
-        for optimizer_idx in range(0, len(self._optimizers)):
-            batch = self._training_data(0, optimizer_idx)
-            assert isinstance(
-                batch, tuple
-            ), "nn.NumpyModule training_data for optimizer_idx {} must return a tuple".format(
-                optimizer_idx
-            )
-            job_func_para_annotations = []
-            for item in batch:
-                assert isinstance(item, np.ndarray)
-                of_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(item.dtype)
-                numpy_placeholder = oneflow_typing.Numpy.Placeholder(
-                    shape=item.shape, dtype=of_dtype
-                )
-                job_func_para_annotations.append(numpy_placeholder)
-            self._construct_one_numpy_input_train_job(
-                optimizer_idx, job_func_para_annotations
-            )
+    def _construct_numpy_input_eval_job(self, batch: Tuple[np.ndarray, ...] = None):
+        def job(*input_batch):
+            return self.validation_step(batch=input_batch)
 
-    def _construct_one_numpy_input_eval_job(self, job_func_para_annotations):
-        def job(*batch):
-            return self.validation_step(batch=batch)
-
-        para_list = []
-        for i in range(len(job_func_para_annotations)):
-            para_name = "eval_para_" + str(i)
-            para_list.append(
-                inspect.Parameter(
-                    name=para_name,
-                    kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                    annotation=job_func_para_annotations[i],
-                )
-            )
+        para_list = self._validation_data.inspect_data4model_construct(batch, 0)
         origin_sig = inspect.signature(job)
         new_sig = origin_sig.replace(parameters=para_list)
         job.__oneflow_function_signature__ = new_sig
@@ -361,21 +371,6 @@ class Model(
             type="predict", function_config=self._validation_config
         )
         self._eval_job = deco(job)
-
-    def _construct_numpy_input_eval_job(self):
-        batch = self._validation_data(0, 0)
-        assert isinstance(
-            batch, tuple
-        ), "nn.NumpyModule validation_data must return a tuple"
-        job_func_para_annotations = []
-        for item in batch:
-            assert isinstance(item, np.ndarray)
-            of_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(item.dtype)
-            numpy_placeholder = oneflow_typing.Numpy.Placeholder(
-                shape=item.shape, dtype=of_dtype
-            )
-            job_func_para_annotations.append(numpy_placeholder)
-        self._construct_one_numpy_input_eval_job(job_func_para_annotations)
 
     def _save_checkpoint(
         self, dirpath: str,

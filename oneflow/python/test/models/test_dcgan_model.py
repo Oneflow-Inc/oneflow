@@ -142,6 +142,17 @@ class DCGAN(flow.model.Model):
             d_loss = d_loss_fake + d_loss_real
             return d_loss
 
+    def validation_step(self, batch):
+        (z,) = batch
+        # (n, 256, 7, 7)
+        h0 = Layers.dense(
+            z, 7 * 7 * 256, name="g_fc1", const_init=True, trainable=False
+        )
+        h0 = Layers.batchnorm(h0, axis=1, name="g_bn1")
+        h0 = flow.nn.leaky_relu(h0, 0.3)
+        return h0
+
+
     def configure_optimizers(self):
         generator_opt = flow.optimizer.SGD(
             flow.optimizer.PiecewiseConstantScheduler([], [self.lr]), momentum=0
@@ -175,8 +186,14 @@ class LossMoniter(flow.model.Callback):
                 d_loss.numpy(), tf_d_loss, rtol=1e-2, atol=1e-1
             ), "{}-{}".format(d_loss.numpy().mean(), tf_d_loss.mean())
 
+    def on_validation_step_end(self, step_idx, outputs):
+        h0 = outputs
+        fmt_str = "{:>12}  {:>12}  {:>12.6f}"
+        print(fmt_str.format(step_idx, "validation h0:", h0.numpy().mean()))
 
-class NumpyTrainData(flow.nn.NumpyDataModule):
+
+
+class NumpyTrainData(flow.model.NumpyDataModule):
     def __init__(self, result_dir, batch_size):
         super().__init__()
         self.z = np.load(os.path.join(result_dir, "z.npy"))
@@ -187,6 +204,14 @@ class NumpyTrainData(flow.nn.NumpyDataModule):
             return (self.z,)
         else:
             return (self.z, self.images)
+
+class NumpyValData(flow.model.NumpyDataModule):
+    def __init__(self, result_dir, batch_size):
+        super().__init__()
+        self.z = np.load(os.path.join(result_dir, "z.npy"))
+
+    def forward(self, step_idx):
+        return (self.z,)
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -205,17 +230,23 @@ class DCGANCompare:
         train_config.default_data_type(flow.float)
         train_config.default_logical_view(flow.scope.consistent_view())
 
+        val_config = flow.ExecutionConfig()
+        val_config.default_data_type(flow.float)
+        val_config.default_logical_view(flow.scope.consistent_view())
+
         loss_monitor = LossMoniter(result_dir)
         dcgan_md = DCGAN(
             gpu_num,
             batch_size,
             is_function_style=True,
             training_config=train_config,
+            validation_config=val_config,
             callbacks=[loss_monitor],
         )
 
         train_data = NumpyTrainData(result_dir, batch_size)
-        dcgan_md.fit(max_steps=2, training_data=train_data)
+        val_data = NumpyValData(result_dir, batch_size)
+        dcgan_md.fit(max_steps=3, training_data=train_data, validation_data=val_data)
 
 
 class Layers:
