@@ -35,6 +35,43 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+namespace {
+
+Maybe<Tensor> BuildTensorFromAttr(
+    const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
+    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
+    const bool is_lazy) {
+  const auto& dtype = JUST(DType::GetDTypeByDataType(DataType(blob_attr->get_dtype())));
+  if (parallel_attr->is_mirrored()) {
+    // TOOD(hjchen2): Use the right device.
+    return static_cast<std::shared_ptr<Tensor>>(
+        MirroredTensor::MakeTensor(blob_attr->shape(), dtype, std::make_shared<Device>("cpu", 0),
+                                   is_lazy, /*requires_grad=*/false, /*is_leaf=*/false,
+                                   /*retain_grad=*/false));
+  } else {
+    const auto& distribute =
+        compatible_py::MakeDistribute(*(parallel_attr->sbp_parallel())).GetPtrOrThrow();
+    return static_cast<std::shared_ptr<Tensor>>(ConsistentTensor::MakeTensor(
+        blob_attr->shape(), dtype, distribute, parallel_attr->parallel_desc_symbol(), is_lazy,
+        /*requires_grad=*/false, /*is_leaf=*/false, /*retain_grad=*/false));
+  }
+}
+
+Maybe<Tensor> BuildTensorFromBlobObject(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+  const auto& blob_attr = blob_object->op_arg_blob_attr();
+  const auto& parallel_attr = blob_object->op_arg_parallel_attr();
+  const auto& tensor = JUST(BuildTensorFromAttr(blob_attr, parallel_attr, /*is_lazy=*/false));
+  if (parallel_attr->is_mirrored()) {
+    dynamic_cast<MirroredTensor*>(tensor.get())->set_blob_object(blob_object);
+  } else {
+    dynamic_cast<ConsistentTensor*>(tensor.get())->set_blob_object(blob_object);
+  }
+  return tensor;
+}
+
+}  // namespace
+
 void OpExprInterpreter::ResetState() { state_.reset(new OpExprInterpState); }
 
 Maybe<void> LazyInterpreter::Apply(const OpExpr* op_expr, const TensorTuple& inputs,
@@ -74,14 +111,22 @@ Maybe<void> LazyInterpreter::Apply_(const BuiltinOpExpr* op_expr, const TensorTu
   OpAttribute proto_op_attribute;
   op_attribute->ToProto(&proto_op_attribute);
 
+  int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
+  const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
+      JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
+
   // Check outputs num and setup output tensor properties.
   CHECK_EQ_OR_RETURN(outputs.size(), op_expr->output_num());
   for (int i = 0; i < op_expr->output_num(); ++i) {
-    const auto& bn_in_op2blob_desc =
-        proto_op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc();
     const std::string& obn = op_expr->indexed_obns().at(i);
-    BlobDesc blob_desc(bn_in_op2blob_desc.at(obn));
-    // outputs[i]->set_blob_desc(blob_desc);
+    const auto& parallel_attr = JUST(
+        compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, proto_op_attribute, obn));
+    const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(proto_op_attribute, obn));
+    if (!(outputs[i].get())) {
+      outputs[i] = JUST(BuildTensorFromAttr(blob_attr, parallel_attr, /*is_lazy=*/true));
+    } else {
+      // TODO(hjchen2) Set shape, dtype, ...
+    }
     TensorNameScope::Global()->Record(outputs[i], op_expr->op_name() + "/" + obn);
   }
   return Maybe<void>::Ok();
@@ -116,31 +161,6 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr* op_expr, const TensorTuple& in
 
   CHECK_OR_RETURN(false) << "The type " << op_expr->type()
                          << " has not been supported in EagerInterpreter::Apply.";
-}
-
-static Maybe<Tensor> BuildTensorFromBlobObject(
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  std::shared_ptr<Tensor> tensor;
-  const auto& blob_attr = blob_object->op_arg_blob_attr();
-  const auto& parallel_attr = blob_object->op_arg_parallel_attr();
-  const auto& dtype = JUST(DType::GetDTypeByDataType(DataType(blob_attr->get_dtype())));
-  if (parallel_attr->is_mirrored()) {
-    // TOOD(hjchen2): Use the right device.
-    auto impl = std::make_shared<EagerMirroredTensorImpl>(
-        blob_attr->shape(), dtype, std::make_shared<Device>("cpu", 0), /*requires_grad=*/false,
-        /*is_leaf=*/false, /*retain_grad=*/false);
-    tensor = std::make_shared<MirroredTensor>(impl);
-    dynamic_cast<MirroredTensor*>(tensor.get())->set_blob_object(blob_object);
-  } else {
-    const auto& distribute =
-        compatible_py::MakeDistribute(*(parallel_attr->sbp_parallel())).GetPtrOrThrow();
-    auto impl = std::make_shared<EagerConsistentTensorImpl>(
-        blob_attr->shape(), dtype, distribute, parallel_attr->parallel_desc_symbol(),
-        /*requires_grad=*/false, /*is_leaf=*/false, /*retain_grad=*/false);
-    tensor = std::make_shared<ConsistentTensor>(impl);
-    dynamic_cast<ConsistentTensor*>(tensor.get())->set_blob_object(blob_object);
-  }
-  return tensor;
 }
 
 static Maybe<void> NaiveInterpret(const BuiltinOpExpr* op_expr, const TensorTuple& inputs,
@@ -192,22 +212,11 @@ Maybe<void> EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const Tensor
   op_attribute->ToProto(&proto_op_attribute);
 
   const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(proto_op_attribute, "out"));
-  const auto& dtype = JUST(DType::GetDTypeByDataType(DataType(blob_attr->get_dtype())));
-  const auto& mirrored_sig_map =
-      proto_op_attribute.mirrored_signature().bn_in_op2opt_mirrored_parallel();
-  if (mirrored_sig_map.at("out").has_mirrored_parallel()) {
-    auto impl = std::make_shared<EagerMirroredTensorImpl>(
-        blob_attr->shape(), dtype, std::make_shared<Device>("cpu", 0), /*requires_grad=*/false,
-        /*is_leaf=*/false, /*retain_grad=*/false);
-    outputs[0].reset(new MirroredTensor(impl));
-  } else {
-    auto parallel_desc =
-        std::make_shared<ParallelDesc>(scope->device_parallel_desc_symbol()->parallel_conf());
-    auto impl = std::make_shared<EagerConsistentTensorImpl>(
-        blob_attr->shape(), dtype, compatible_py::GlobalAutoDistribute(), parallel_desc,
-        /*requires_grad=*/false, /*is_leaf=*/false, /*retain_grad=*/false);
-    outputs[0].reset(new ConsistentTensor(impl));
-  }
+  auto parallel_desc =
+      std::make_shared<ParallelDesc>(scope->device_parallel_desc_symbol()->parallel_conf());
+  const auto& parallel_attr =
+      JUST(compatible_py::GetOpArgParallelAttribute(parallel_desc, proto_op_attribute, "out"));
+  outputs[0] = JUST(BuildTensorFromAttr(blob_attr, parallel_attr, /*is_lazy=*/false));
   return OpInterpUtil::InitVariableOutputBlob(session, outputs[0], proto_op_attribute);
 }
 
