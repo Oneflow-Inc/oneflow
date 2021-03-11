@@ -88,7 +88,6 @@ class InputConfigs:
         return self._configs
 
 
-# TODO: rename
 @oneflow_export("nn.Module")
 class Module(object):
     def __init__(self):
@@ -127,21 +126,30 @@ class Module(object):
                     result = (result,)
                 args = result
 
-        if self.consistent:
-            is_force_mirrored_overloaded = (
-                Module.__dict__["force_mirrored_forward"]
-                != self.__class__.__dict__["force_mirrored_forward"]
-            )
-            if is_force_mirrored_overloaded:
-                return self.force_mirrored_forward(*args)
+        res = None
+
+        @flow.global_function()
+        def job():
+            nonlocal res
+            nonlocal args
+            if self.consistent:
+                is_force_mirrored_overloaded = (
+                    Module.__dict__["force_mirrored_forward"]
+                    != self.__class__.__dict__["force_mirrored_forward"]
+                )
+                if is_force_mirrored_overloaded:
+                    res = self.force_mirrored_forward(*args)
+                else:
+                    print(self.input_configs._to_dict())
+                    args = list(args)
+                    for key, value in self.input_configs._to_dict().items():
+                        args[key] = parallel_cast(args[key], distribute=value)
+                    res = self.consisten_forward(*args)
             else:
-                print(self.input_configs._to_dict())
-                args = list(args)
-                for key, value in self.input_configs._to_dict().items():
-                    args[key] = parallel_cast(args[key], distribute=value)
-                return self.consisten_forward(*args)
-        else:
-            return self.forward(*args)
+                res = self.forward(*args)
+
+        job()
+        return res
 
     def add_module(self, name: str, module: Optional["Module"]) -> None:
         r"""Adds a child module to the current module.
@@ -449,7 +457,10 @@ class Module(object):
                 try:
                     # with torch.no_grad():
                     # param.copy_(input_param)
-                    flow.load_variables({param._variable_name: input_param})
+                    param._determine_if_needed()
+                    flow.load_variables(
+                        {param._variable_name: input_param}, ignore_mismatch=False
+                    )
                 except Exception as ex:
                     error_msgs.append(
                         'While copying the parameter named "{}", '

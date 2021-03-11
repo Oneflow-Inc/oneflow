@@ -94,7 +94,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor");
   ExportTensor<MirroredTensor>(m, "LocalTensor");
   ExportTensor<ConsistentTensor>(m, "ConsistentTensor");
-  py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor");
 }
 
 }  // namespace one
