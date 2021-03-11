@@ -7,13 +7,16 @@ set(FLATBUFFERS_INSTALL_INCLUDEDIR include)
 set(FLATBUFFERS_INSTALL_LIBDIR lib)
 set(FLATBUFFERS_INSTALL_BINDIR bin)
 
+if (XCODE)
+    set(CUSTOMIZED_UPDATE_COMMAND bash -c '[ -f BUILD ] && rm BUILD')
+endif()
 if (THIRD_PARTY)
 
     ExternalProject_Add(flatbuffers
             PREFIX flatbuffers
             URL ${FLATBUFFERS_URL}
             URL_MD5 c62ffefb3d4548b127cca14ce047f16c
-            UPDATE_COMMAND [ -f BUILD ] && rm BUILD
+            UPDATE_COMMAND ${CUSTOMIZED_UPDATE_COMMAND}
             BUILD_IN_SOURCE 1
             SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/flatbuffers/src/flatbuffers
             CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}

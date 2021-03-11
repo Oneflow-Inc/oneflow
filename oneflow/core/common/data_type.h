@@ -104,7 +104,7 @@ template<typename T, typename std::enable_if<!IsFloat16<T>::value>::type* = null
 OF_DEVICE_FUNC T GetMaxVal();
 
 #ifdef __APPLE__
-#define APPLE_MAX_VAL_SEQ OF_PP_MAKE_TUPLE_SEQ(unsigned long, UINT_MAX)
+#define APPLE_MAX_VAL_SEQ OF_PP_MAKE_TUPLE_SEQ(unsigned long, ULONG_MAX)
 #else
 #define APPLE_MAX_VAL_SEQ
 #endif
