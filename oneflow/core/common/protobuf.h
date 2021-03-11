@@ -242,6 +242,18 @@ struct hash<oneflow::SbpParallel> {
   }
 };
 
+template<>
+struct hash<oneflow::ParallelDistribution> {
+  size_t operator()(const oneflow::ParallelDistribution& parallel_distribution) const {
+    const auto& sbp_hash = std::hash<oneflow::SbpParallel>();
+    size_t ret = 0;
+    for (int i = 0; i < parallel_distribution.sbp_parallel_size(); ++i) {
+      ret ^= sbp_hash(parallel_distribution.sbp_parallel(i));
+    }
+    return ret;
+  }
+};
+
 }  // namespace std
 
 #endif  // ONEFLOW_CORE_COMMON_PROTOBUF_H_
