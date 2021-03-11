@@ -304,28 +304,51 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
 }
 
 Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t parallel_num) {
-  HashSet<std::string> obns(op->output_bns().begin(), op->output_bns().end());
-  auto GetParallelNum = [&](const std::string& bn_in_op) {
-    if (obns.find(bn_in_op) == obns.end()) { return parallel_num; }
-    return lbi2parallel_desc_from_producer_view_.at(op->BnInOp2Lbi(bn_in_op)).parallel_num();
-  };
-  for (const auto& pair : JUST(op->sbp_signature())->bn_in_op2sbp_parallel()) {
-    if (!pair.second.has_split_parallel()) { continue; }
-    if (JUST(op->OptMirroredParallel4BnInOp(pair.first))->has_mirrored_parallel()) { continue; }
-    int64_t axis = pair.second.split_parallel().axis();
-    const LogicalBlobId& lbi = op->BnInOp2Lbi(pair.first);
-    int64_t blob_parallel_num = GetParallelNum(pair.first);
-    const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
-    int64_t num_axes = logical_blob_desc.shape().NumAxes();
-    if (axis < 0) { axis += num_axes; }
-    CHECK_GE_OR_RETURN(axis, 0);
-    CHECK_LT_OR_RETURN(axis, num_axes)
-        << "op: " << op->op_name() << ", blob: " << pair.first << ", axis: " << axis
-        << ", shape: " << logical_blob_desc.shape();
-    CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
-        << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
-        << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
+  const auto parallel_hierarchy = JUST(op->GetOpParallelDesc())->hierarchy();
+  if (parallel_hierarchy->NumAxes() == 1) {
+    HashSet<std::string> obns(op->output_bns().begin(), op->output_bns().end());
+    auto GetParallelNum = [&](const std::string& bn_in_op) {
+      if (obns.find(bn_in_op) == obns.end()) { return parallel_num; }
+      return lbi2parallel_desc_from_producer_view_.at(op->BnInOp2Lbi(bn_in_op)).parallel_num();
+    };
+    for (const auto& pair : JUST(op->sbp_signature())->bn_in_op2sbp_parallel()) {
+      if (!pair.second.has_split_parallel()) { continue; }
+      if (JUST(op->OptMirroredParallel4BnInOp(pair.first))->has_mirrored_parallel()) { continue; }
+      int64_t axis = pair.second.split_parallel().axis();
+      const LogicalBlobId& lbi = op->BnInOp2Lbi(pair.first);
+      int64_t blob_parallel_num = GetParallelNum(pair.first);
+      const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
+      int64_t num_axes = logical_blob_desc.shape().NumAxes();
+      if (axis < 0) { axis += num_axes; }
+      CHECK_GE_OR_RETURN(axis, 0);
+      CHECK_LT_OR_RETURN(axis, num_axes)
+          << "op: " << op->op_name() << ", blob: " << pair.first << ", axis: " << axis
+          << ", shape: " << logical_blob_desc.shape();
+      CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
+          << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
+          << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
+    }
+  } else {
+    for (const auto& pair :
+         JUST(op->parallel_distribution_signature())->bn_in_op2parallel_distribution()) {
+      if (JUST(op->OptMirroredParallel4BnInOp(pair.first))->has_mirrored_parallel()) { continue; }
+      const LogicalBlobId& lbi = op->BnInOp2Lbi(pair.first);
+      const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
+      Shape current_shape = logical_blob_desc.shape();
+      for (int64_t i = 0; i < pair.second.sbp_parallel_size(); ++i) {
+        const SbpParallel& sbp_parallel = pair.second.sbp_parallel(i);
+        if (sbp_parallel.has_split_parallel()) {
+          const int64_t axis = sbp_parallel.split_parallel().axis();
+          CHECK_GE_OR_RETURN(current_shape.At(axis) % parallel_hierarchy->At(i), 0)
+              << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
+              << " cannot split blob by parallel_num: "
+              << std::to_string(parallel_hierarchy->At(i));
+          current_shape.Set(axis, current_shape.At(axis) / parallel_hierarchy->At(i));
+        }
+      }
+    }
   }
+
   return Maybe<void>::Ok();
 }
 

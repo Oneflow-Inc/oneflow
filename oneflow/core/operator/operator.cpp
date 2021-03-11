@@ -418,6 +418,7 @@ Maybe<void> Operator::FillSbpSignature(const SbpSignature& sbp_signature) {
 
 Maybe<void> Operator::FillParallelDistributionSignature(
     const ParallelDistributionSignature& signature) {
+  CHECK_OR_RETURN(!parallel_distribution_signature_);
   parallel_distribution_signature_.reset(new ParallelDistributionSignature(signature));
   return Maybe<void>::Ok();
 }
