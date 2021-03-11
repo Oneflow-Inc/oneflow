@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/rpc/include/ctrl.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/id_manager.h"

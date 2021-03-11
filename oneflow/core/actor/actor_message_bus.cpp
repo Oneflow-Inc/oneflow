@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/actor/actor_message_bus.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/comm_network/comm_network.h"

@@ -20,7 +20,7 @@ limitations under the License.
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/rpc/include/ctrl.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/cluster_instruction.h"
