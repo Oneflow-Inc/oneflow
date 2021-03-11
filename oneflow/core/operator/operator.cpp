@@ -919,8 +919,10 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         if (*pair.second == *op_parallel_desc_) {
           (*symbol_map)[pair.first] = parallel_desc_symbol_id;
         } else {
-          (*symbol_map)[pair.first] = Global<ForeignCallback>::Get()->MakeParallelDescSymbol(
-              std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf()));
+          (*symbol_map)[pair.first] =
+              (*Global<std::shared_ptr<ForeignCallback>>::Get())
+                  ->MakeParallelDescSymbol(
+                      std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf()));
         }
       }
       for (const auto& tbn : tmp_bns()) { (*symbol_map)[tbn] = parallel_desc_symbol_id; }

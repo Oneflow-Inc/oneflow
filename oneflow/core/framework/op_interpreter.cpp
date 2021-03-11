@@ -265,8 +265,8 @@ static Maybe<compatible_py::BlobObject> GetInBlobObject(
   const auto& in_op_arg_parallel_attr =
       JUST(compatible_py::GetOpArgParallelAttribute(in_op_parallel_desc_sym, op_attribute, ibn));
   const auto& origin_blob_object = bn2blob_object.at(ibn);
-  return Global<ForeignBoxingUtil>::Get()->BoxingTo(builder, origin_blob_object,
-                                                    in_op_arg_parallel_attr);
+  return (*Global<std::shared_ptr<ForeignBoxingUtil>>::Get())
+      ->BoxingTo(builder, origin_blob_object, in_op_arg_parallel_attr);
 };
 
 static Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
