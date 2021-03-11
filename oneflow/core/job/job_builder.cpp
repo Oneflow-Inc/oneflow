@@ -353,29 +353,25 @@ const SbpSignature JobBuilder::SbpSignature4OpName(const std::string& op_name) c
 
 void JobBuilder::AddSbpSignature4OpName(const std::string& op_name,
                                         const SbpSignature& sbp_signature) {
-  CHECK_EQ(GetParallelHierarchyNumAxes(op_name2parallel_conf_, op_name), 1);
-
   ParallelDistributionSignature parallel_distribution_signature;
   SbpSignatureToParallelDistributionSignature(sbp_signature, &parallel_distribution_signature);
 
   const auto& it = op_name2parallel_distribution_signature_conf_.find(op_name);
   if (it != op_name2parallel_distribution_signature_conf_.end()) {
     *(it->second) = parallel_distribution_signature;
-    auto* op_name2sbp_signature_conf =
-        job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
-    (*op_name2sbp_signature_conf)[op_name] = sbp_signature;
-    return;
+  } else {
+    auto* op_name2parallel_distribution_signature_conf =
+        job_->mutable_job_parallel_view_conf()
+            ->mutable_op_name2parallel_distribution_signature_conf();
+    (*op_name2parallel_distribution_signature_conf)[op_name] = parallel_distribution_signature;
+    op_name2parallel_distribution_signature_conf_.emplace(
+        op_name, &(*op_name2parallel_distribution_signature_conf)[op_name]);
   }
+
+  CHECK_EQ(GetParallelHierarchyNumAxes(op_name2parallel_conf_, op_name), 1);
   auto* op_name2sbp_signature_conf =
       job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
   (*op_name2sbp_signature_conf)[op_name] = sbp_signature;
-
-  auto* op_name2parallel_distribution_signature_conf =
-      job_->mutable_job_parallel_view_conf()
-          ->mutable_op_name2parallel_distribution_signature_conf();
-  (*op_name2parallel_distribution_signature_conf)[op_name] = parallel_distribution_signature;
-  op_name2parallel_distribution_signature_conf_.emplace(
-      op_name, &(*op_name2parallel_distribution_signature_conf)[op_name]);
 }
 
 const ParallelDistributionSignature& JobBuilder::ParallelDistributionSignature4OpName(
@@ -391,15 +387,14 @@ void JobBuilder::AddParallelDistributionSignature4OpName(
   const auto& it = op_name2parallel_distribution_signature_conf_.find(op_name);
   if (it != op_name2parallel_distribution_signature_conf_.end()) {
     *(it->second) = parallel_distribution_signature;
-    return;
+  } else {
+    auto* op_name2parallel_distribution_signature_conf =
+        job_->mutable_job_parallel_view_conf()
+            ->mutable_op_name2parallel_distribution_signature_conf();
+    (*op_name2parallel_distribution_signature_conf)[op_name] = parallel_distribution_signature;
+    op_name2parallel_distribution_signature_conf_.emplace(
+        op_name, &(*op_name2parallel_distribution_signature_conf)[op_name]);
   }
-  auto* op_name2parallel_distribution_signature_conf =
-      job_->mutable_job_parallel_view_conf()
-          ->mutable_op_name2parallel_distribution_signature_conf();
-  (*op_name2parallel_distribution_signature_conf)[op_name] = parallel_distribution_signature;
-  op_name2parallel_distribution_signature_conf_.emplace(
-      op_name, &(*op_name2parallel_distribution_signature_conf)[op_name]);
-
   if (GetParallelHierarchyNumAxes(op_name2parallel_conf_, op_name) == 1) {
     SbpSignature sbp_signature;
     ParallelDistributionSignatureToSbpSignature(parallel_distribution_signature, &sbp_signature);
