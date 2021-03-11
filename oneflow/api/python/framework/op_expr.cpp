@@ -36,9 +36,8 @@ Maybe<std::vector<std::shared_ptr<one::Tensor>>> Interpret(
   one::TensorTuple input_list(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) { input_list[i] = inputs[i]; }
   auto output_list = std::make_shared<one::TensorTuple>(op->output_num());
-  one::OpExprInterpState state;
   auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
-  JUST(interperter->Apply(op.get(), input_list, *output_list, &state));
+  JUST(interperter->Apply(op.get(), input_list, *output_list));
   return static_cast<std::shared_ptr<std::vector<std::shared_ptr<one::Tensor>>>>(output_list);
 }
 
