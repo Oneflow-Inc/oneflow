@@ -62,6 +62,7 @@ class Callback(ABC):
         step_idx: int = 0,
         optimizer_idx: int = 0,
     ):
+        # Do nothing, to be overrided by subclass.
         pass
 
     def on_validation_step_end(
@@ -69,6 +70,7 @@ class Callback(ABC):
         outputs: Optional[Union[LocalBlob, Tuple[LocalBlob, ...]]],
         step_idx: int = 0,
     ):
+        # Do nothing, to be overrided by subclass.
         pass
 
 
@@ -78,6 +80,7 @@ class DataModule(Module):
         super().__init__()
 
     def forward(self, *args):
+        # Do nothing, to be overrided by subclass.
         pass
 
     def inspect_data4model_construct(
@@ -92,6 +95,7 @@ class NumpyDataModule(DataModule):
         super().__init__()
 
     def forward(self, step_idx: int = 0, optimizer_idx: int = 0):
+        # Do nothing, to be overrided by subclass.
         pass
 
     def inspect_data4model_construct(
