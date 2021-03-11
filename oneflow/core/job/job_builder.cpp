@@ -358,6 +358,9 @@ void JobBuilder::AddSbpSignature4OpName(const std::string& op_name,
   const auto& it = op_name2parallel_distribution_signature_conf_.find(op_name);
   if (it != op_name2parallel_distribution_signature_conf_.end()) {
     *(it->second) = parallel_distribution_signature;
+    auto* op_name2sbp_signature_conf =
+        job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
+    (*op_name2sbp_signature_conf)[op_name] = sbp_signature;
     return;
   }
   auto* op_name2sbp_signature_conf =
