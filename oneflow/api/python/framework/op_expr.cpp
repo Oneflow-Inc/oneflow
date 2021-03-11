@@ -19,7 +19,9 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter.h"
+#include "oneflow/core/framework/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 
 namespace py = pybind11;
 
@@ -32,24 +34,21 @@ static std::shared_ptr<one::OpExprInterpreter> interpreter(new one::EagerInterpr
 Maybe<std::vector<std::shared_ptr<one::Tensor>>> Interpret(
     const std::shared_ptr<one::OpExpr>& op,
     const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
-  // TODO(): Execute the op by Autograd.
-  // UNIMPLEMENTED();
-  // return std::vector<std::shared_ptr<one::Tensor>>{};
-  std::vector<std::shared_ptr<one::Tensor>> outputs(1);
-  outputs[0].reset(new one::MirroredTensor());
-
-  one::OpExprInterpState state;
-  JUST(interpreter->Apply(op.get(), inputs, outputs, &state));
-  return outputs;
+  CHECK_EQ_OR_RETURN(op->input_num(), inputs.size())
+      << "The operation requires " << op->input_num() << " inputs, but " << inputs.size()
+      << " is given.";
+  one::TensorTuple input_list(inputs.size());
+  for (int i = 0; i < inputs.size(); ++i) { input_list[i] = inputs[i]; }
+  auto output_list = std::make_shared<one::TensorTuple>(op->output_num());
+  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
+  JUST(interperter->Apply(op.get(), input_list, *output_list));
+  return static_cast<std::shared_ptr<std::vector<std::shared_ptr<one::Tensor>>>>(output_list);
 }
 
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::OpExpr, std::shared_ptr<one::OpExpr>>(m, "OpExpr")
-      .def("__call__", [](const std::shared_ptr<one::OpExpr>& op_expr, py::args args) {
-        std::vector<std::shared_ptr<one::Tensor>> inputs(args.size());
-        for (int i = 0; i < args.size(); ++i) {
-          inputs[i] = py::cast<std::shared_ptr<one::Tensor>>(args[i]);
-        }
+      .def("apply", [](const std::shared_ptr<one::OpExpr>& op_expr,
+                       const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
         return Interpret(op_expr, inputs).GetOrThrow();
       });
 

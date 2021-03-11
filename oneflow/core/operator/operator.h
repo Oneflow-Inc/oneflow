@@ -41,7 +41,7 @@ class Scope;
 class Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Operator);
-  Operator() = default;
+  Operator();
   virtual ~Operator() = default;
 
   //
@@ -56,7 +56,7 @@ class Operator {
   // Getters
   const std::string& op_name() const { return op_conf().name(); }
   DeviceType device_type() const;
-  const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
+  const OperatorConf& op_conf() const;
   const PbMessage& GetCustomizedConf() const {
     return GetMessageInPbMessage(op_conf(), op_conf().op_type_case());
   }
@@ -159,12 +159,10 @@ class Operator {
   std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
 
   Maybe<const SbpSignature*> sbp_signature() const;
-  BlobLastUsedSignature* mut_blob_last_used_signature() {
-    return op_attribute_.mutable_blob_last_used_signature();
-  }
-  BlobBackwardUsedSignature* mut_blob_backward_used_signature() {
-    return op_attribute_.mutable_blob_backward_used_signature();
-  }
+  BlobLastUsedSignature* mut_blob_last_used_signature();
+  BlobBackwardUsedSignature* mut_blob_backward_used_signature();
+
+  Maybe<void> ToOpAttribute(OpAttribute* op_attribute) const;
 
  protected:
   Maybe<void> FillBlobParallelDesc(
@@ -256,12 +254,12 @@ class Operator {
   LogicalBlobId tbn2lbi(const std::string& data_tmp_bn) const;
   std::string Bn2ConfName(const std::string& bn) const;
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
-    return op_attribute_.mutable_arg_signature()->mutable_bn_in_op2lbi();
+    return arg_signature_.mutable_bn_in_op2lbi();
   }
 
   virtual void EmplaceLbi2Obn(const LogicalBlobId& lbi, const std::string& obn);
 
-  OpAttribute op_attribute_;
+  std::unique_ptr<const OperatorConf> op_conf_;
   HashMap<LogicalBlobId, std::string> lbi2obn_;
   std::shared_ptr<const ParallelDesc> op_parallel_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const ParallelDesc>>> bn2parallel_desc_;
@@ -276,6 +274,12 @@ class Operator {
   PbRpf<std::string> output_bns_;
   PbRpf<std::string> tmp_bns_;
   PbRpf<std::string> input_output_bns_;
+  DeviceType device_type_;
+  ArgSignature arg_signature_;
+  ArgModifierSignature arg_modifier_signature_;
+  std::unique_ptr<BlobLastUsedSignature> blob_last_used_signature_;
+  std::unique_ptr<BlobBackwardUsedSignature> blob_backward_used_signature_;
+  std::unique_ptr<MirroredSignature> mirrored_signature_;
 };
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);

@@ -80,14 +80,14 @@ def MakeScope(build_func):
     return scope
 
 
-def MakeInitialScope(job_conf, device_tag, machine_device_ids, is_mirrored):
+def MakeInitialScope(job_conf, device_tag, machine_device_ids, hierarchy, is_mirrored):
     scope = None
 
     def BuildInitialScope(builder):
         nonlocal scope
         session_id = session_ctx.GetDefaultSession().id
         scope = builder.BuildInitialScope(
-            session_id, job_conf, device_tag, machine_device_ids, is_mirrored
+            session_id, job_conf, device_tag, machine_device_ids, hierarchy, is_mirrored
         )
 
     oneflow_api.deprecated.LogicalRun(BuildInitialScope)
@@ -98,7 +98,7 @@ def InitScopeStack():
     job_conf = job_conf_cfg.JobConfigProto()
     job_conf.mutable_predict_conf()
     job_conf.set_job_name("")
-    scope = MakeInitialScope(job_conf, "cpu", ["0:0"], is_mirrored=False)
+    scope = MakeInitialScope(job_conf, "cpu", ["0:0"], None, is_mirrored=False)
     oneflow_api.InitGlobalScopeStack(scope)
 
 
