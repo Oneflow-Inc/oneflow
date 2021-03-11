@@ -67,7 +67,7 @@ TEST(ParallelDesc, continuous_1n4d_multi_process_with_rank) {
   Global<NumProcessPerNode>::Get()->set_value(4);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
-  parallel_conf.add_device_name("@1:0:0-3");
+  parallel_conf.add_device_name("@0:0-3");
   ParallelDesc parallel_desc(parallel_conf);
   const std::vector<int64_t>& machine_ids = parallel_desc.sorted_machine_ids();
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");

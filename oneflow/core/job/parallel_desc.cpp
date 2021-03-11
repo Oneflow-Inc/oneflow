@@ -45,24 +45,17 @@ bool GlobalDeviceIdsContaining(const MachineId2DeviceIdList& bigger,
 
 Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
                                 std::string* device_id_str, int64_t* num_of_process_per_node) {
-  int64_t rank = -1;
-  std::string mchn_id_and_device_id = "";
-  if (device_name.at(0) == '@') {
-    size_t pos = device_name.find(":");
-    rank = oneflow_cast<int64_t>(device_name.substr(1, pos - 1));
-    mchn_id_and_device_id = device_name.substr(pos + 1);
-  } else {
-    mchn_id_and_device_id = device_name;
-  }
-  size_t delimiter_pos = mchn_id_and_device_id.rfind(":");
+  size_t delimiter_pos = device_name.rfind(":");
   CHECK_NE_OR_RETURN(delimiter_pos, std::string::npos);
-  *mchn_id = oneflow_cast<int64_t>(mchn_id_and_device_id.substr(0, delimiter_pos));
-  *device_id_str = mchn_id_and_device_id.substr(delimiter_pos + 1);
-  if (rank != -1) {
+  if (device_name.at(0) == '@') {
+    int64_t rank = oneflow_cast<int64_t>(device_name.substr(1, delimiter_pos - 1));
+    *mchn_id = rank / GlobalProcessCtx::NumOfProcessPerNode();
     *num_of_process_per_node = 1;
   } else {
+    *mchn_id = oneflow_cast<int64_t>(device_name.substr(0, delimiter_pos));
     *num_of_process_per_node = GlobalProcessCtx::NumOfProcessPerNode();
   }
+  *device_id_str = device_name.substr(delimiter_pos + 1);
   return Maybe<void>::Ok();
 }
 
