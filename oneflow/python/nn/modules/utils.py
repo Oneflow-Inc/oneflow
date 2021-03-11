@@ -19,6 +19,7 @@ import collections.abc as container_abcs
 from itertools import repeat
 
 import oneflow as flow
+import oneflow.python.framework.runtime_mode as rt_mode
 
 
 def _ntuple(n):
@@ -78,3 +79,12 @@ def _wrapper(func):
         return out_list
 
     return wrapped_func
+
+
+def global_function_or_identity(*args, **kwargs):
+    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        return flow.global_function(*args, **kwargs)
+    else:
+        assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
+        identity_decorator = lambda func: func
+        return identity_decorator

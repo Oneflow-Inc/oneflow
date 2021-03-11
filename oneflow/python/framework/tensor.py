@@ -21,6 +21,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow_api
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
+from oneflow.python.nn.modules.utils import global_function_or_identity
 import oneflow as flow
 
 
@@ -330,32 +331,12 @@ class UndeterminedTensor:
         return device_type == "gpu" or device_type == "cuda"
 
 
-@enable_if.condition(hob.in_global_mode)
-def global_get_determined_tensor(variable_name, undetermined_tensor):
-    blob = flow.get_variable(
-        name=variable_name,
-        shape=tuple(undetermined_tensor.shape),
-        dtype=undetermined_tensor.dtype,
-        initializer=undetermined_tensor.data_initializer,
-    )
-    determined_tensor = oneflow_api.LocalTensor(
-        undetermined_tensor.shape,
-        undetermined_tensor.dtype,
-        undetermined_tensor.device,
-        undetermined_tensor.is_lazy,
-        undetermined_tensor.requires_grad,
-        True,
-        undetermined_tensor.retain_grad,
-    )
-    determined_tensor._set_blob_object(blob.blob_object)
-    return determined_tensor
-
-
-@enable_if.condition(hob.in_normal_mode)
-def normal_get_determined_tensor(variable_name, undetermined_tensor):
+def _default_initializer_for_determining(undetermined_tensor, tensor):
+    assert not undetermined_tensor.is_consistent
+    variable_name = id_util.UniqueStr("tensor_")
     determined_tensor = None
 
-    @flow.global_function()
+    @global_function_or_identity()
     def job():
         nonlocal determined_tensor
         blob = flow.get_variable(
@@ -376,17 +357,5 @@ def normal_get_determined_tensor(variable_name, undetermined_tensor):
         determined_tensor._set_blob_object(blob.blob_object)
 
     job()
-    return determined_tensor
-
-
-def get_variable_for_tensor(variable_name, undetermined_tensor):
-    api = enable_if.unique([global_get_determined_tensor, normal_get_determined_tensor])
-    return api(variable_name, undetermined_tensor)
-
-
-def _default_initializer_for_determining(undetermined_tensor, tensor):
-    assert not undetermined_tensor.is_consistent
-    variable_name = id_util.UniqueStr("tensor_")
-    determined_tensor = get_variable_for_tensor(variable_name, undetermined_tensor)
     tensor._variable_name = variable_name
     return determined_tensor
