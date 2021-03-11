@@ -20,8 +20,8 @@ import oneflow_api
 import numpy as np
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow as flow
-
 
 @oneflow_export("Tensor")
 class Tensor:
@@ -427,6 +427,14 @@ def _default_initializer_for_determining(undetermined_tensor):
     return determined_tensor
 
 
+def global_function_or_identity(*args, **kwargs):
+    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        return flow.global_function(*args, **kwargs)
+    else:
+        assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
+        identity_decorator = lambda func: func
+        return identity_decorator
+
 def _initialized_job(
     shape=None,
     dtype=None,
@@ -439,7 +447,7 @@ def _initialized_job(
     assert numpy_data is not None
     variable_name = id_util.UniqueStr("tensor_")
 
-    @flow.global_function()
+    @global_function_or_identity()
     def set_data():
         flow.get_variable(
             name=variable_name,
