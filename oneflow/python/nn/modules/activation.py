@@ -15,7 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.nn.modules.utils import _wrapper
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -26,7 +25,6 @@ class ReLU(Module):
         self._op = (
             flow.builtin_op("relu").Name("relu").Input("in").Output("out").Build()
         )
-        self._op = _wrapper(self._op)
 
     def forward(self, x):
         res = self._op(x)[0]
