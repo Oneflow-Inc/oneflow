@@ -23,6 +23,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow as flow
 
+
 @oneflow_export("Tensor")
 class Tensor:
     def __init__(
@@ -434,6 +435,7 @@ def global_function_or_identity(*args, **kwargs):
         assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
         identity_decorator = lambda func: func
         return identity_decorator
+
 
 def _initialized_job(
     shape=None,
