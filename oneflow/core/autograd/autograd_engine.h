@@ -37,8 +37,8 @@ class FunctionNode {
   virtual ~FunctionNode() = default;
 
   virtual Maybe<void> Apply(bool create_graph) = 0;
-  virtual Maybe<void> AccOutTensorArgs4LeafTensor() = 0;
-  virtual Maybe<void> AccOutTensorArgs4RetainGradTensor() = 0;
+  virtual Maybe<void> AccGrad4LeafTensor() = 0;
+  virtual Maybe<void> AccGrad4RetainGradTensor() = 0;
   virtual void ReleaseOutTensorArgs() = 0;
   // Releases the eventual c++ std::function for backward if retain_graph=False to avoid calling
   // `Apply` in second time
@@ -62,10 +62,15 @@ class AutogradEngine {
  public:
   virtual ~AutogradEngine() = default;
 
-  // Calls every `FunctionNode.Apply()` and capture grad in this calling for `inputs`
-  virtual Maybe<TensorTuple> Execute(const TensorTuple& outputs, const TensorTuple& inputs,
-                                     const TensorTuple& out_grads, bool retain_graph,
-                                     bool create_graph) = 0;
+  virtual Maybe<void> RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
+                                                         const TensorTuple& out_grads,
+                                                         bool retain_graph, bool create_graph) = 0;
+  virtual Maybe<TensorTuple> RunBackwardAndReturnInputsTensorGrad(const TensorTuple& outputs,
+                                                                  const TensorTuple& inputs,
+                                                                  const TensorTuple& out_grads,
+                                                                  bool retain_graph,
+                                                                  bool create_graph) = 0;
+  virtual void ClearEngine();
   // Builds FunctionNode, binding to all `outputs_` tensors and saving in AutogradEngine
   // TODO: add parameters for `backward_fn`
   virtual std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
@@ -86,8 +91,8 @@ class StackFunctionNode final : public FunctionNode {
   StackFunctionNode() = delete;
   ~StackFunctionNode() override = default;
 
-  Maybe<void> AccOutTensorArgs4LeafTensor() override;
-  Maybe<void> AccOutTensorArgs4RetainGradTensor() override;
+  Maybe<void> AccGrad4LeafTensor() override;
+  Maybe<void> AccGrad4RetainGradTensor() override;
   void ReleaseOutTensorArgs() override;
   void ReleaseData() override;
   Maybe<void> Apply(bool create_graph) override;
@@ -110,9 +115,15 @@ class StackAutogradEngine final : public AutogradEngine {
   StackAutogradEngine() = default;
   ~StackAutogradEngine() override = default;
 
-  Maybe<TensorTuple> Execute(const TensorTuple& outputs, const TensorTuple& inputs,
-                             const TensorTuple& out_grads, bool retain_graph,
-                             bool create_graph) override;
+  Maybe<void> RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
+                                                 const TensorTuple& out_grads, bool retain_graph,
+                                                 bool create_graph) override;
+  Maybe<TensorTuple> RunBackwardAndReturnInputsTensorGrad(const TensorTuple& outputs,
+                                                          const TensorTuple& inputs,
+                                                          const TensorTuple& out_grads,
+                                                          bool retain_graph,
+                                                          bool create_graph) override;
+  void ClearEngine() override;
   std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
       const std::shared_ptr<const std::function<void()>>& backward_fn, const TensorTuple& inputs,
       TensorTuple* outputs) override;
