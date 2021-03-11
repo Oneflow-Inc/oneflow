@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/rpc/include/ctrl.h"
+#include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 
 namespace oneflow {

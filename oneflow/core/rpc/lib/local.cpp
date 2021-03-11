@@ -17,7 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_RPC_LIB_LOCAL_
 #define ONEFLOW_CORE_RPC_LIB_LOCAL_
 #include "oneflow/core/job/env_desc.h"
-#include "oneflow/core/rpc/include/ctrl.h"
+#include "oneflow/core/control/ctrl_client.h"
 
 namespace oneflow {
 

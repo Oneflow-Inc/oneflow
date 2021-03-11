@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/env.pb.h"
-#include "oneflow/core/rpc/include/ctrl.h"
+#include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/rpc/include/local/ctrl.h"
 #include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/job/resource_desc.h"
