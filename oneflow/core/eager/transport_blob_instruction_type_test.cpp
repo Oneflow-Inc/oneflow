@@ -249,9 +249,17 @@ class SendRecvUtil {
   std::string recv_instr_name_;
 };
 
+void InitNumProcessPerNode() {
+  Global<NumProcessPerNode>::New();
+  Global<NumProcessPerNode>::Get()->set_value(1);
+}
+
+void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+
 }  // namespace
 
 TEST(SendReceiveInstructionType, naive) {
+  InitNumProcessPerNode();
   vm::TestResourceDescScope scope(1, 1, 2);
   auto vm0 = MakeVM(0);
   int64_t src_blob_id = 0;
@@ -292,6 +300,7 @@ TEST(SendReceiveInstructionType, naive) {
   ASSERT_TRUE(token2recv_request.find(header_token) != token2recv_request.end());
   ASSERT_TRUE(token2send_request.find(body_token) != token2send_request.end());
   ASSERT_TRUE(token2recv_request.find(body_token) != token2recv_request.end());
+  DestroyNumProcessPerNode();
 }
 
 }  // namespace test
