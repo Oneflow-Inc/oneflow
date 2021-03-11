@@ -1016,9 +1016,9 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["x_shape"] = [(10,)]
         arg_dict["momentum_beta"] = [0.9]
         arg_dict["epsilon"] = [1e-9]
-        arg_dict["lars_coefficient"] = [0.0001]
+        arg_dict["lars_coefficient"] = [0.01]
         arg_dict["learning_rate"] = [1]
-        arg_dict["weight_decay"] = [0.9]
+        arg_dict["weight_decay"] = [100]
         arg_dict["train_iters"] = [10]
         for arg in GenArgList(arg_dict):
             print("y" * 100)

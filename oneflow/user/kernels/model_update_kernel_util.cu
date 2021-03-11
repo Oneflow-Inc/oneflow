@@ -535,7 +535,7 @@ __global__ void LarsGetLocalLearningRateGpu(const float* learning_rate, T weight
   T lars = 0;
   if (*model_norm > 0 && *model_diff_norm > 0) {
     lars = lars_coefficient * (*model_norm)
-           / (epsilon + (*model_diff_norm) + weight_decay * (*model_diff_norm));
+           / (epsilon + (*model_diff_norm) + weight_decay * (*model_norm));
   } else {
     lars = static_cast<T>(1);
   }
