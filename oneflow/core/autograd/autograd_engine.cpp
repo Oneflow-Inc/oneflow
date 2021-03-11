@@ -33,8 +33,8 @@ bool IsReadyToRun(const std::vector<std::shared_ptr<TensorArg>>& out_grads) {
 Maybe<void> InitEmptyTensorArgs2ZerosTensor(
     const TensorTuple& outputs, const std::vector<std::shared_ptr<TensorArg>>& out_grads) {
   for (int i = 0; i < out_grads.size(); ++i) {
-    if (out_grads[i]->Empty()) {
-      TODO();  // wangyinggang: out_grads[i]->PushPartialTensor(Tensor.zeros_like(outputs[i]));
+    if (out_grads.at(i)->Empty()) {
+      TODO();  // wangyinggang: out_grads.at(i)->PushPartialTensor(Tensor.zeros_like(outputs.at(i)));
     }
   }
   return Maybe<void>::Ok();
@@ -58,6 +58,14 @@ StackFunctionNode::StackFunctionNode(
   }
 
   backward_fn_ = backward_fn;
+}
+
+Maybe<void> StackFunctionNode::RetainOutTensorArgs() {
+    for(int i=0; i<outputs_->size(); ++i) {
+        if (outputs_->at(i)->retain_grad()) {
+            TODO();  // wangyinggang: Accumulates out_grad to output.acc_grad
+        }
+    }
 }
 
 void StackFunctionNode::ReleaseOutTensorArgs() {
@@ -99,8 +107,9 @@ Maybe<TensorTuple> StackAutogradEngine::Execute(const TensorTuple& outputs,
         if (capture_grads) {
           TODO();  // wangyinggang: Captures grads in out_grads
         } else {
-          TODO();  // wangyinggang: Accumulates grads for leaf or retain_grad tensors
+          TODO();  // wangyinggang: Accumulates grads for leaf tensor
         }
+        it->lock()->RetainOutTensorArgs();
         it->lock()->ReleaseOutTensorArgs();
     }
     ++it;

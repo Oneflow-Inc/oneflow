@@ -37,6 +37,7 @@ class FunctionNode {
   virtual ~FunctionNode() = default;
 
   virtual Maybe<void> Apply(bool create_graph) = 0;
+  virtual Maybe<void> RetainOutTensorArgs() = 0;
   virtual void ReleaseOutTensorArgs() = 0;
   // Releases the eventual c++ std::function for backward if retain_graph=False to avoid calling
   // `Apply` in second time
@@ -78,13 +79,13 @@ class AutogradEngine {
 class StackFunctionNode final : public FunctionNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StackFunctionNode);
-  friend class StackAutogradEngine;
   // TODO: update constructor according to op_builder interface
   StackFunctionNode(const std::shared_ptr<const std::function<Maybe<void>()>>& backward_fn,
                     const TensorTuple& inputs, const TensorTuple& outputs);
   StackFunctionNode() = delete;
   ~StackFunctionNode() override = default;
 
+  Maybe<void> RetainOutTensorArgs() override;
   void ReleaseOutTensorArgs() override;
   void ReleaseData() override;
   Maybe<void> Apply(bool create_graph) override;
