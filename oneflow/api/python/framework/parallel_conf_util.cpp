@@ -23,20 +23,23 @@ namespace oneflow {
 
 namespace {
 
-std::pair<std::string, std::vector<std::string>> PyGetDeviceTagAndMachineDeviceIds(
+std::tuple<std::string, std::vector<std::string>, std::shared_ptr<cfg::ShapeProto>>
+PyGetDeviceTagAndMachineDeviceIdsAndHierarchy(
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
-  return *(GetDeviceTagAndMachineDeviceIds(parallel_conf).GetPtrOrThrow());
+  return *(GetDeviceTagAndMachineDeviceIdsAndHierarchy(parallel_conf).GetPtrOrThrow());
 }
 
 std::shared_ptr<cfg::ParallelConf> PyMakeParallelConf(
-    const std::string& device_tag, const std::vector<std::string>& machine_device_ids) {
-  return MakeParallelConf(device_tag, machine_device_ids).GetPtrOrThrow();
+    const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
+    const std::shared_ptr<Shape>& hierarchy) {
+  return MakeParallelConf(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
 }
 
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("GetDeviceTagAndMachineDeviceIds", &PyGetDeviceTagAndMachineDeviceIds);
+  m.def("GetDeviceTagAndMachineDeviceIdsAndHierarchy",
+        &PyGetDeviceTagAndMachineDeviceIdsAndHierarchy);
   m.def("MakeParallelConf", &PyMakeParallelConf);
 }
 

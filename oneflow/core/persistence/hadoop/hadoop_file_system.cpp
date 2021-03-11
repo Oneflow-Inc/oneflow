@@ -357,6 +357,16 @@ bool HadoopFileSystem::IsDirectory(const std::string& fname) {
   return true;
 }
 
+bool HadoopFileSystem::IsRegularFile(const std::string& fname) {
+  hdfsFS fs = nullptr;
+  CHECK(Connect(&fs));
+
+  hdfsFileInfo* info = hdfs_->hdfsGetPathInfo(fs, TranslateName(fname).c_str());
+  if (info == nullptr || info->mKind != kObjectKindFile) { return false; }
+  hdfs_->hdfsFreeFileInfo(info, 1);
+  return true;
+}
+
 }  // namespace fs
 
 }  // namespace oneflow

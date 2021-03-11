@@ -135,14 +135,6 @@ class Session(oneflow_api.Session):
         return self.job_name2name_scope_stack_
 
     @property
-    def instruction_list(self):
-        return self.instruction_list_()
-
-    @property
-    def eager_symbol_list(self):
-        return self.eager_symbol_list_()
-
-    @property
     def backward_blob_register(self):
         return self.backward_blob_register_
 
@@ -414,6 +406,15 @@ class Session(oneflow_api.Session):
         if len(self.job_name2name_scope_stack_[job_name]) == 0:
             return ""
         return "-".join(self.job_name2name_scope_stack_[job_name]) + "-"
+
+    def IsMirroredStrategyEnabled(self):
+        return (
+            len(self.is_mirrored_strategy_enabled_stack) > 0
+            and self.is_mirrored_strategy_enabled_stack[-1]
+        )
+
+    def IsConsistentStrategyEnabled(self):
+        return not self.IsMirroredStrategyEnabled()
 
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):

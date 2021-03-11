@@ -50,11 +50,7 @@ inline Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> RegisterBoxingUtilOnlyOnce(ForeignBoxingUtil* boxing_util) {
-  CHECK_ISNULL_OR_RETURN(Global<ForeignBoxingUtil>::Get()) << "Foreign Boxing util registered.";
-  Global<ForeignBoxingUtil>::SetAllocated(boxing_util);
-  return Maybe<void>::Ok();
-}
+Maybe<void> RegisterBoxingUtilOnlyOnce(ForeignBoxingUtil* boxing_util);
 
 inline Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());

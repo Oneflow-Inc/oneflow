@@ -21,6 +21,20 @@ limitations under the License.
 
 namespace py = pybind11;
 
+namespace oneflow {
+
+Maybe<void> RegisterBoxingUtilOnlyOnce(ForeignBoxingUtil* boxing_util) {
+  CHECK_ISNULL_OR_RETURN(Global<ForeignBoxingUtil>::Get()) << "Foreign Boxing util registered.";
+  Global<ForeignBoxingUtil>::SetAllocated(boxing_util);
+  return Maybe<void>::Ok();
+}
+
+}  // namespace oneflow
+
+void RegisterBoxingUtilOnlyOnce(oneflow::ForeignBoxingUtil* boxing_util) {
+  return oneflow::RegisterBoxingUtilOnlyOnce(boxing_util).GetOrThrow();
+}
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("RegisterForeignCallbackOnlyOnce", &RegisterForeignCallbackOnlyOnce);
   m.def("RegisterWatcherOnlyOnce", &RegisterWatcherOnlyOnce);
