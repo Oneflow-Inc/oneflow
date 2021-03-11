@@ -2,6 +2,7 @@ import glob
 import sys
 import os
 import re
+import importlib
 
 project_source_dir = sys.argv[1]
 python_dir = project_source_dir + "/oneflow/python"
@@ -38,5 +39,9 @@ for py_script in RecursiveFindPythonFile(python_dir):
 
 python_scripts = "from __future__ import absolute_import\n"
 for filepath in import_filepaths:
+    if "onnx" in filepath:
+        onnx = importlib.util.find_spec("onnx")
+        if onnx is None:
+            continue
     python_scripts += "import oneflow.python.%s\n" % GetImportPath(filepath)
 open(output_filepath, "w").write(python_scripts)
