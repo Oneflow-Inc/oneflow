@@ -40,7 +40,7 @@ class FunctionNode {
   virtual void ReleaseOutTensorArgs() = 0;
   // Releases the eventual c++ std::function for backward if retain_graph=False to avoid calling
   // `Apply` in second time
-  virtual void ReleaseGraph() = 0;
+  virtual void ReleaseData() = 0;
 
   // Getters
   const std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>>& GetNextFunctions()
@@ -86,7 +86,7 @@ class StackFunctionNode final : public FunctionNode {
   ~StackFunctionNode() override = default;
 
   void ReleaseOutTensorArgs() override;
-  void ReleaseGraph() override;
+  void ReleaseData() override;
   Maybe<void> Apply(bool create_graph) override;
 
  private:

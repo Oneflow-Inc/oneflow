@@ -32,7 +32,7 @@ bool IsReadyToRun(const std::vector<std::shared_ptr<TensorArg>>& out_grads) {
 
 Maybe<void> InitEmptyTensorArgs2ZerosTensor(
     const TensorTuple& outputs, const std::vector<std::shared_ptr<TensorArg>>& out_grads) {
-  for (int i = 0; i < out_grads.size(); i++) {
+  for (int i = 0; i < out_grads.size(); ++i) {
     if (out_grads[i]->Empty()) {
       TODO();  // wangyinggang: out_grads[i]->PushPartialTensor(Tensor.zeros_like(outputs[i]));
     }
@@ -46,15 +46,15 @@ StackFunctionNode::StackFunctionNode(
     const std::shared_ptr<const std::function<Maybe<void>()>>& backward_fn,
     const TensorTuple& inputs, const TensorTuple& outputs) {
   inputs_ = std::make_shared<TensorTuple>(inputs.size());
-  for (int i = 0; i < inputs.size(); i++) {
-    inputs_->at(i) = inputs[i];
-    in_grads_.emplace_back(inputs[i]->now_grad_arg());
+  for (int i = 0; i < inputs.size(); ++i) {
+    inputs_->at(i) = inputs.at(i);
+    in_grads_.emplace_back(inputs.at(i)->now_grad_arg());
   }
 
   outputs_ = std::make_shared<TensorTuple>(outputs.size());
-  for (int i = 0; i < outputs.size(); i++) {
+  for (int i = 0; i < outputs.size(); ++i) {
     TODO();  // shares data with output tensors but not grad_fn
-    out_grads_.emplace_back(outputs[i]->now_grad_arg());
+    out_grads_.emplace_back(outputs.at(i)->now_grad_arg());
   }
 
   backward_fn_ = backward_fn;
@@ -64,7 +64,7 @@ void StackFunctionNode::ReleaseOutTensorArgs() {
   for (const std::shared_ptr<TensorArg>& tensor_arg : out_grads_) { tensor_arg->Release(); }
 }
 
-void StackFunctionNode::ReleaseGraph() {
+void StackFunctionNode::ReleaseData() {
   inputs_.reset();
   outputs_.reset();
   in_grads_.clear();
@@ -84,31 +84,37 @@ Maybe<TensorTuple> StackAutogradEngine::Execute(const TensorTuple& outputs,
                                                 const TensorTuple& inputs,
                                                 const TensorTuple& out_grads, bool retain_graph,
                                                 bool create_graph) {
-  bool is_capture_grads = !inputs.empty();
+  // If `inputs` is empty, it will accumulates temporary grad into `Tensor.acc_grad` for leaf tensors.
+  // If `inputs` is not empty, it will capture temporary grad and return(and not accumulated into `Tensor.grad`).
+  bool capture_grads = !inputs.empty();
   std::shared_ptr<TensorTuple> captured_tensors = std::make_shared<TensorTuple>(inputs.size());
-  for (int i = 0; i < outputs.size(); i++) {
-    outputs[i]->now_grad_arg()->PushPartialTensor(out_grads[i]);
+  for (int i = 0; i < outputs.size(); ++i) {
+    outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i));
   }
   auto it = node_list_.begin();
+  // Runs each FunctionNode
   while (it != node_list_.end()) {
-    // Skips node when already released
-    if (!it->lock()) {
-      node_list_.erase(it);
-      continue;
+    if (it->lock()) {
+        JUST(it->lock()->Apply(create_graph));
+        if (capture_grads) {
+          TODO();  // wangyinggang: Captures grads in out_grads
+        } else {
+          TODO();  // wangyinggang: Accumulates grads for leaf or retain_grad tensors
+        }
+        it->lock()->ReleaseOutTensorArgs();
     }
-    JUST(it->lock()->Apply(create_graph));
-    if (is_capture_grads) {
-      TODO();  // wangyinggang: Captures grads in out_grads
-    } else {
-      TODO();  // wangyinggang: Accumulates grads for leaf or retain_grad tensors
-    }
-    it->lock()->ReleaseOutTensorArgs();
-    if (retain_graph) {
-      it++;
-    } else {
-      it->lock()->ReleaseGraph();
-      node_list_.erase(it);
-    }
+    ++it;
+  }
+  // Releases data and clears node_list_ if retain_graph is false
+  if (!retain_graph) {
+      it = node_list_.begin();
+      while (it != node_list_.end()) {
+          if (it->lock()) {
+              it->lock()->ReleaseData();
+          }
+          ++it;
+      }
+      node_list_.clear();
   }
   return captured_tensors;
 }
