@@ -52,7 +52,7 @@ import traceback
 
 class Session(oneflow_api.deprecated.Session):
     def __init__(self, sess_id):
-        oneflow_api.Session.__init__(self, sess_id)
+        oneflow_api.deprecated.Session.__init__(self, sess_id)
         self.job_name2function_desc_ = {}
         self.job_name2job_ = {}
         self.status_ = SessionStatus.OPEN
@@ -83,7 +83,7 @@ class Session(oneflow_api.deprecated.Session):
         self.backward_blob_register_ = oneflow_api.BlobRegister()
         self.eager_config_proto_ctx_ = None
 
-        oneflow_api.RegsiterSession(sess_id, self)
+        oneflow_api.deprecated.RegsiterSession(sess_id, self)
 
     @property
     def id(self):
@@ -241,7 +241,7 @@ class Session(oneflow_api.deprecated.Session):
         self.resource_ = None
         if self.eager_config_proto_ctx_:
             del self.eager_config_proto_ctx_
-        oneflow_api.ClearSessionById(self.id)
+        oneflow_api.deprecated.ClearSessionById(self.id)
 
     def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN
