@@ -83,8 +83,7 @@ void ConstantInitializer(const T& value, Blob* blob) {
 }
 
 template<typename T>
-void EmptyInitializer() {
-}
+void EmptyInitializer() {}
 
 template<typename T>
 void RandomUniformInitializer(const RandomUniformInitializerConf& initializer_conf,
