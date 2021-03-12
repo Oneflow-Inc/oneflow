@@ -70,7 +70,7 @@ class AutogradEngine {
                                                                   const TensorTuple& out_grads,
                                                                   bool retain_graph,
                                                                   bool create_graph) = 0;
-  virtual void ClearEngine();
+  virtual void ClearEngine() = 0;
   // Builds FunctionNode, binding to all `outputs_` tensors and saving in AutogradEngine
   // TODO: add parameters for `backward_fn`
   virtual std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
