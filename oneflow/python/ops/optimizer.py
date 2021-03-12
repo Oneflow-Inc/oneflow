@@ -1619,20 +1619,7 @@ class RMSProp(Optimizer):
         optimizer_conf.rmsprop_conf.centered = self.centered
         optimizer_conf.variable_op_names.extend(self.variables)
 
-if model_norm > 0 and model_diff_norm > 0:
-    lars = (
-            lars_coefficient
-            * model_norm
-            / (model_diff_norm + weight_decay * model_norm + epsilon)
-    )
-else:
-    lars = 1.0
 
-local_learning_rate = learning_rate * lars
-
-momentum_t = momentum_beta * momentum - local_learning_rate * gradient
-
-param_t = param + momentum_t - local_learning_rate * weight_decay * param
 @oneflow_export("optimizer.LARS")
 class LARS(Optimizer):
     r"""The optimizer of the LARS algorithm.
