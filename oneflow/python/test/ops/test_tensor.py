@@ -46,6 +46,31 @@ class TestTensor(flow.unittest.TestCase):
 
         job()
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_init(test_case):
+        shape = (2, 3)
+        x = flow.Tensor(*shape)
+
+        x.uniform_()
+        @flow.global_function()
+        def job():
+            print(x.numpy())
+        job()
+
+        x.uniform_(minval=-1, maxval=1)
+        @flow.global_function()
+        def job():
+            print(x.numpy())
+        job()
+
+        x.fill_(5)
+        @flow.global_function()
+        def job():
+            print(x.numpy())
+        job()
 
 if __name__ == "__main__":
     unittest.main()

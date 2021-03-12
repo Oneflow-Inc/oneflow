@@ -18,20 +18,21 @@ from flow import Tensor
 
 
 def uniform_(tensor, a=0.0, b=1.0):
-    TODO()
+    # TODO(jianhao): add with torch.no_grad() when autograd is ready
+    tensor.uniform_(a, b)
 
 
 def normal_(tensor, mean=0.0, std=1.0):
-    TODO()
+    tensor.normal_(mean, std)
 
 
 def constant_(tensor, val):
-    TODO()
+    tensor.fill_(val)
 
 
 def ones_(tensor):
-    TODO()
+    tensor.fill_(1)
 
 
 def zeros_(tensor):
-    TODO()
+    tensor.fill_(0)

@@ -24,6 +24,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.ops.initializer_util as initializer_util
+import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -511,6 +512,38 @@ def _ForEachSlice(
             start_idx = stop_idx
 
 
+def InitByInitializerConf(
+    var_blob: EagerBlobTrait,
+    initializer_conf: initializer_conf_util.InitializerConf,
+    sync_between_multi_machine: bool,
+    random_seed=0,
+):
+    g = initializer_util.GetInitializer(initializer_conf, random_seed, var_blob.shape)
+
+    def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx):
+        np_dtype = np.dtype(
+            dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
+        )
+        length = _ElemCnt(np.array(stop_nd_idx) - np.array(start_nd_idx))
+        vals = (
+            np.array(g(length))
+            .astype(np_dtype)
+            .reshape(np.array(stop_nd_idx) - np.array(start_nd_idx))
+        )
+
+        slice_value_blob = _GetCpu0VariableBlobFromNumpy(vals, var_blob.dtype)
+        _LogicalSliceAssign(
+            var_blob, slice_value_blob, start_nd_idx, stop_nd_idx,
+        )
+
+    # we just want to run f on every slice without caring about the return value
+    for _ in _ForEachSlice(var_blob, GenerateValueAndAssign):
+        pass
+
+    if sync_between_multi_machine:
+        oneflow_api.eager.Sync()
+
+
 def Init() -> None:
     oneflow.sync_default_session()
 
@@ -533,27 +566,9 @@ def Init() -> None:
             )
             LoadVariables({op_name: GetCheckpoint(var_dir)})
             continue
-        g = initializer_util.GetInitializer(
-            var_conf.initializer, var_conf.random_seed, var_blob.shape
+
+        InitByInitializerConf(
+            var_blob, var_conf.initializer, False, var_conf.random_seed
         )
 
-        def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx):
-            np_dtype = np.dtype(
-                dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
-            )
-            length = _ElemCnt(np.array(stop_nd_idx) - np.array(start_nd_idx))
-            vals = (
-                np.array(g(length))
-                .astype(np_dtype)
-                .reshape(np.array(stop_nd_idx) - np.array(start_nd_idx))
-            )
-
-            slice_value_blob = _GetCpu0VariableBlobFromNumpy(vals, var_blob.dtype)
-            _LogicalSliceAssign(
-                var_blob, slice_value_blob, start_nd_idx, stop_nd_idx,
-            )
-
-        # we just want to run f on every slice without caring about the return value
-        for _ in _ForEachSlice(var_blob, GenerateValueAndAssign):
-            pass
     oneflow_api.eager.Sync()

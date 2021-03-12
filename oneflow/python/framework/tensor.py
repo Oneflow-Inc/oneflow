@@ -19,6 +19,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow_api
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.check_point_v2 as check_point_v2
 import oneflow as flow
 
 
@@ -41,6 +42,7 @@ class Tensor:
         dtype = dtype if dtype is not None else oneflow_api.float32
         device = device if device is not None else oneflow_api.device("cpu")
         self._local_or_consistent_tensor = None
+        self._variable_name = None
         self._undetermined_tensor = UndeterminedTensor(
             shape,
             dtype,
@@ -200,7 +202,7 @@ class Tensor:
         assert not self.is_determined
         if determining_initializer is None:
             determining_initializer = self._determining_initializer
-        self._local_or_consistent_tensor = determining_initializer(
+        self._local_or_consistent_tensor, self._variable_name = determining_initializer(
             self._undetermined_tensor
         )
         self._undetermined_tensor = None
@@ -273,6 +275,32 @@ class Tensor:
         else:
             return self._undetermined_tensor.sbp
 
+    def _InitByInitializerConf(self, initializer_conf):
+        if self.is_determined:
+            variable = flow.get_all_variables()[self._variable_name]
+            check_point_v2.InitByInitializerConf(variable, initializer_conf, True)
+        else:
+            self.set_data_initializer(initializer_conf)
+        return self
+
+    def uniform_(self, a=0, b=1):
+        initializer_conf = flow.random_uniform_initializer(
+                                minval=a, maxval=b, dtype=self.dtype
+                            )
+        return self._InitByInitializerConf(initializer_conf)
+
+    def normal_(self, mean = 0, std = 1):
+        initializer_conf = flow.random_normal_initializer(
+                                mean=mean, stddev=std, dtype=self.dtype
+                            )
+        return self._InitByInitializerConf(initializer_conf)
+
+    def fill_(self, value):
+        initializer_conf = flow.constant_initializer(
+                                value=value, dtype=self.dtype
+                            )
+        return self._InitByInitializerConf(initializer_conf)
+
 
 class UndeterminedTensor:
     def __init__(
@@ -324,8 +352,10 @@ class UndeterminedTensor:
 
 def _default_initializer_for_determining(undetermined_tensor):
     assert not undetermined_tensor.is_consistent
+    # TODO(jianhao): update checkpoint to only depend on blob object
+    variable_name = id_util.UniqueStr("tensor_")
     blob = flow.get_variable(
-        name=id_util.UniqueStr("tensor_"),
+        name=variable_name,
         shape=tuple(undetermined_tensor.shape),
         dtype=undetermined_tensor.dtype,
         initializer=undetermined_tensor.data_initializer,
@@ -340,4 +370,4 @@ def _default_initializer_for_determining(undetermined_tensor):
         undetermined_tensor.retain_grad,
     )
     determined_tensor._set_blob_object(blob.blob_object)
-    return determined_tensor
+    return determined_tensor, variable_name
