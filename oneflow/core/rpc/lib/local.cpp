@@ -94,7 +94,7 @@ void RpcClient::PullMasterKV(const std::string& k, PbMessage* msg) {
   PullMasterKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
-void RpcClient::Clear() { UNIMPLEMENTED(); }
+void RpcClient::Clear() { kv_.clear(); }
 
 int32_t RpcClient::IncreaseCount(const std::string& k, int32_t v) { UNIMPLEMENTED(); }
 
