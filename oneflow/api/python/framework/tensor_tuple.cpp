@@ -79,6 +79,7 @@ struct TensorTupleUtil final {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<TensorTuple, std::shared_ptr<TensorTuple>>(m, "TensorTuple")
+      .def(py::init([]() { return std::make_shared<TensorTuple>(); }))
       .def(py::init(&TensorTupleUtil::MakeTensorTuple))
       .def("__str__", &TensorTupleUtil::ToString)
       .def("__repr__", &TensorTupleUtil::ToString)
