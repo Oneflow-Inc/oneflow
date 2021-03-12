@@ -32,11 +32,12 @@ class PlacementScope(object):
 
 
 class EmptyPlacementScope(PlacementScope):
-    def __init__(self, device_tag, machine_device_ids):
+    def __init__(self, device_tag, machine_device_ids, hierarchy):
         if isinstance(machine_device_ids, (list, tuple)) == False:
             machine_device_ids = [machine_device_ids]
         self.device_tag_ = device_tag
         self.machine_device_ids_ = machine_device_ids
+        self.hierarchy_ = hierarchy
 
     @property
     def device_tag(self):
@@ -45,6 +46,10 @@ class EmptyPlacementScope(PlacementScope):
     @property
     def machine_device_ids(self):
         return self.machine_device_ids_
+
+    @property
+    def hierarchy(self):
+        return self.hierarchy_
 
     def __enter__(self):
         # do nothing
