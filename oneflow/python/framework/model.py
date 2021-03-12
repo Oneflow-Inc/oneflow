@@ -266,41 +266,14 @@ class Model(
     ):
         r""" Runs the full training and validation routine.
         """
+        self._max_steps = max_steps
         api_clear_default_session()
-
-        self._model_stages = []
-
-        self._train_stage = TrainStage(training_config, self, callbacks)
-        if self._train_stage.is_valid:
-            self._model_stages.append(self._train_stage)
-        else:
-            print(
-                self._train_stage.error_msg,
-                " {} will not do training.".format(self.__class__.__name__),
-            )
-
-        self._val_stage = ValidationStage(validation_config, self, callbacks)
-        if self._val_stage.is_valid:
-            self._model_stages.append(self._val_stage)
-        else:
-            print(
-                self._val_stage.error_msg,
-                " {} will not do validation.".format(self.__class__.__name__),
-            )
+        self._model_stages = self._get_and_check_stages(
+            training_config, validation_config, checkpoint_config, callbacks
+        )
 
         if len(self._model_stages) == 0:
             return
-
-        self._checkpoint_stage = CheckpointStage(checkpoint_config, self, callbacks)
-        if self._checkpoint_stage.is_valid:
-            self._model_stages.append(self._checkpoint_stage)
-        else:
-            print(
-                self._checkpoint_stage.error_msg,
-                " {} will not do checkpoint.".format(self.__class__.__name__),
-            )
-
-        self._max_steps = max_steps
 
         if self._checkpoint_stage.is_valid:
             self._checkpoint_stage.load()
@@ -314,6 +287,48 @@ class Model(
 
     def method_overrided(self, method_name: str = None) -> bool:
         return getattr(self.__class__, method_name) != getattr(Model, method_name)
+
+    def _get_and_check_stages(
+        self,
+        training_config: Optional[TrainingConfig] = None,
+        validation_config: Optional[ValidationConfig] = None,
+        checkpoint_config: Optional[CheckpointConfig] = None,
+        callbacks: Optional[Union[Callback, List[Callback]]] = None,
+    ):
+        stages = []
+
+        self._train_stage = TrainStage(training_config, self, callbacks)
+        if self._train_stage.is_valid:
+            stages.append(self._train_stage)
+        else:
+            print(
+                self._train_stage.error_msg,
+                " {} will not do training.".format(self.__class__.__name__),
+            )
+
+        self._val_stage = ValidationStage(validation_config, self, callbacks)
+        if self._val_stage.is_valid:
+            stages.append(self._val_stage)
+        else:
+            print(
+                self._val_stage.error_msg,
+                " {} will not do validation.".format(self.__class__.__name__),
+            )
+
+        if len(stages) == 0:
+            print(" {}'s fit() will not do nothing.".format(self.__class__.__name__))
+            return stages
+
+        self._checkpoint_stage = CheckpointStage(checkpoint_config, self, callbacks)
+        if self._checkpoint_stage.is_valid:
+            stages.append(self._checkpoint_stage)
+        else:
+            print(
+                self._checkpoint_stage.error_msg,
+                " {} will not do checkpoint.".format(self.__class__.__name__),
+            )
+
+        return stages
 
 
 class ModelStage(ABC):
@@ -401,8 +416,6 @@ class TrainStage(ModelStage):
                     batch = self._cfg.data(step_idx, optimizer_idx)
                 outputs = self._jobs[optimizer_idx](*batch).get()
             else:
-                # TODO(strint): Same job call for op data & numpy data.
-                #               If input data is blob, merge data graph into compute job
                 outputs = self._jobs[optimizer_idx]().get()
 
             self._method_callback(
@@ -442,7 +455,7 @@ class TrainStage(ModelStage):
         return True
 
     def _get_and_check_jobs(self):
-        # TOOD(strint): rm numpy in Model
+        # TOOD(strint): rm numpy in Stage
         self._is_numpy_input = (
             True if isinstance(self._cfg.data, NumpyDataModule) else False
         )
@@ -536,8 +549,6 @@ class ValidationStage(ModelStage):
                     batch = self._cfg.data(step_idx)
                 outputs = self._job(*batch).get()
             else:
-                # TODO(strint): Same job call for op data & numpy data
-                #               If input data is blob, merge data graph into compute job
                 outputs = self._job().get()
             self._method_callback(
                 "on_validation_step_end", step_idx=step_idx, outputs=outputs,
@@ -551,7 +562,7 @@ class ValidationStage(ModelStage):
             return True
 
     def _get_and_check_job(self):
-        # TOOD(strint): rm numpy in Model
+        # TOOD(strint): rm numpy in Stage
         self._is_numpy_input = (
             True if isinstance(self._cfg.data, NumpyDataModule) else False
         )
