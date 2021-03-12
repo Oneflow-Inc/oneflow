@@ -50,15 +50,6 @@ class TestModule(flow.unittest.TestCase):
         print(y.numpy())
         print(conv2d.weight.numpy())
 
-    def test_sigmoid(test_case):
-        m = flow.nn.Sigmoid()
-
-        x = flow.Tensor(1, 3)
-        print("test_sigmoid >> input:", x.numpy())
-        y = m(x)
-
-        print("test_sigmoid >> output", y.numpy())
-
     def test_relu(test_case):
         relu = flow.nn.ReLU()
 
