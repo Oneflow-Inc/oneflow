@@ -45,7 +45,7 @@ class PySession : public Session {
   }
 };
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
+ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   py::class_<Session, PySession, std::shared_ptr<Session>>(m, "Session")
       .def(py::init([](int64_t id) {
         return std::make_shared<PySession>(id, std::make_shared<vm::cfg::InstructionListProto>(),

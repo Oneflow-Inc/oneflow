@@ -23,15 +23,16 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-Maybe<void> RegisterBoxingUtilOnlyOnce(ForeignBoxingUtil* boxing_util) {
-  CHECK_ISNULL_OR_RETURN(Global<ForeignBoxingUtil>::Get()) << "Foreign Boxing util registered.";
-  Global<ForeignBoxingUtil>::SetAllocated(boxing_util);
+Maybe<void> RegisterBoxingUtilOnlyOnce(const std::shared_ptr<ForeignBoxingUtil>& boxing_util) {
+  CHECK_ISNULL_OR_RETURN(Global<std::shared_ptr<ForeignBoxingUtil>>::Get())
+      << "Foreign Boxing util registered.";
+  Global<std::shared_ptr<ForeignBoxingUtil>>::New(boxing_util);
   return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow
 
-void RegisterBoxingUtilOnlyOnce(oneflow::ForeignBoxingUtil* boxing_util) {
+void RegisterBoxingUtilOnlyOnce(const std::shared_ptr<oneflow::ForeignBoxingUtil>& boxing_util) {
   return oneflow::RegisterBoxingUtilOnlyOnce(boxing_util).GetOrThrow();
 }
 
