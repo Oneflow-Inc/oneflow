@@ -538,6 +538,8 @@ def Init() -> None:
         )
 
         def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx):
+            if g is None:
+                return
             np_dtype = np.dtype(
                 dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
             )

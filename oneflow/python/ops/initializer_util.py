@@ -1225,4 +1225,4 @@ def EmptyInitializerImpl(
     random_seed: int,
     var_blob_shape: Sequence[int],
 ):
-    return lambda length: np.empty((length,))
+    return None
