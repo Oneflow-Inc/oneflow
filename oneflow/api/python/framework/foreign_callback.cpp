@@ -64,6 +64,10 @@ class PyForeignCallback : public ForeignCallback {
       const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const override {
     PYBIND11_OVERRIDE(int64_t, ForeignCallback, MakeParallelDescSymbol, parallel_conf);
   }
+
+  int64_t FeedPath(const std::string& path) const override {
+    PYBIND11_OVERRIDE(int64_t, ForeignCallback, FeedPath, path);
+  }
 };
 
 }  // namespace oneflow
@@ -71,12 +75,14 @@ class PyForeignCallback : public ForeignCallback {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   using namespace oneflow;
 
-  py::class_<ForeignCallback, PyForeignCallback>(m, "ForeignCallback")
+  py::class_<ForeignCallback, PyForeignCallback, std::shared_ptr<ForeignCallback>>(
+      m, "ForeignCallback")
       .def(py::init<>())
       .def("EagerMirroredCast", &ForeignCallback::EagerMirroredCast)
       .def("EagerInterpretCompletedOp", &ForeignCallback::EagerInterpretCompletedOp)
       .def("OfBlobCall", &ForeignCallback::OfBlobCall)
       .def("RemoveForeignCallback", &ForeignCallback::RemoveForeignCallback)
       .def("MakeScopeSymbol", &ForeignCallback::MakeScopeSymbol)
-      .def("MakeParallelDescSymbol", &ForeignCallback::MakeParallelDescSymbol);
+      .def("MakeParallelDescSymbol", &ForeignCallback::MakeParallelDescSymbol)
+      .def("FeedPath", &ForeignCallback::FeedPath);
 }
