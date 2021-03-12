@@ -112,7 +112,7 @@ class JobBuildAndInferCtx {
       const Operator& op, SbpSignature* sbp_sig_conf,
       HashMap<std::string, bool>* ibn2disable_boxing) const;
   void AddOpAndUpdateJobParallelViewConf(
-      const OperatorConf& operator_conf,
+      const OperatorConf& operator_conf, const ParallelDesc& parallel_desc,
       const ParallelDistributionSignature& parallel_distribution_signature,
       bool is_mirrored_parallel_view) const;
   Maybe<void> InferMirroredSignature(Operator*, bool is_mirrored_parallel_view_conf,

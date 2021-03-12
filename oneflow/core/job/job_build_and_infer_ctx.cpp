@@ -172,7 +172,7 @@ Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
 }
 
 void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(
-    const OperatorConf& operator_conf,
+    const OperatorConf& operator_conf, const ParallelDesc& parallel_desc,
     const ParallelDistributionSignature& parallel_distribution_signature,
     bool is_mirrored_parallel_view) const {
   auto* op_name2sbp_sig =
@@ -182,13 +182,11 @@ void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(
           ->mutable_op_name2parallel_distribution_signature_conf();
   if (parallel_distribution_signature.bn_in_op2parallel_distribution().size() > 0) {
     (*op_name2parallel_distribution_sig)[operator_conf.name()] = parallel_distribution_signature;
-
-    SbpSignature sbp_signature;
-    for (const auto& pair : parallel_distribution_signature.bn_in_op2parallel_distribution()) {
-      CHECK_EQ(pair.second.sbp_parallel_size(), 1);
-      (*sbp_signature.mutable_bn_in_op2sbp_parallel())[pair.first] = pair.second.sbp_parallel(0);
+    if (parallel_desc.hierarchy()->NumAxes() == 1) {
+      SbpSignature sbp_signature;
+      ParallelDistributionSignatureToSbpSignature(parallel_distribution_signature, &sbp_signature);
+      (*op_name2sbp_sig)[operator_conf.name()] = sbp_signature;
     }
-    (*op_name2sbp_sig)[operator_conf.name()] = sbp_signature;
   }
   auto* op_name2is_mirrored_parallel_view =
       job_->mutable_job_parallel_view_conf()->mutable_op_name2is_mirrored_parallel_view();
@@ -304,7 +302,7 @@ Maybe<void> JobBuildAndInferCtx::GenOpProducedEmptyLogicalBlobDesc(Operator* op)
 }
 
 Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t parallel_num) {
-  const auto parallel_hierarchy = JUST(op->GetOpParallelDesc())->hierarchy();
+  const auto& parallel_hierarchy = JUST(op->GetOpParallelDesc())->hierarchy();
   if (parallel_hierarchy->NumAxes() == 1) {
     HashSet<std::string> obns(op->output_bns().begin(), op->output_bns().end());
     auto GetParallelNum = [&](const std::string& bn_in_op) {
@@ -339,9 +337,10 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t p
         const SbpParallel& sbp_parallel = pair.second.sbp_parallel(i);
         if (sbp_parallel.has_split_parallel()) {
           const int64_t axis = sbp_parallel.split_parallel().axis();
-          CHECK_GE_OR_RETURN(current_shape.At(axis) % parallel_hierarchy->At(i), 0)
+          CHECK_GT_OR_RETURN(current_shape.At(axis), 0);
+          CHECK_EQ_OR_RETURN(current_shape.At(axis) % parallel_hierarchy->At(i), 0)
               << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
-              << " cannot split blob by parallel_num: "
+              << " cannot split blob by parallel_hierarchy: "
               << std::to_string(parallel_hierarchy->At(i));
           current_shape.Set(axis, current_shape.At(axis) / parallel_hierarchy->At(i));
         }
@@ -577,11 +576,6 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   HashMap<std::string, bool> ibn2disable_boxing;
   InitIbn2DisableBoxing(*op, &ibn2disable_boxing);
   auto new_op_conf = JUST(DecodeLbiHintAndReturnNewOpConf(*op, &sbp_sig_conf, &ibn2disable_boxing));
-
-  ParallelDistributionSignature parallel_distribution_sig_conf;
-  SbpSignatureToParallelDistributionSignature(sbp_sig_conf, &parallel_distribution_sig_conf);
-  AddOpAndUpdateJobParallelViewConf(*new_op_conf, parallel_distribution_sig_conf,
-                                    is_mirrored_parallel_view);
   auto parallel_conf = JUST(InferOpParallelConf(*op, origin_parallel_conf, ibn2disable_boxing));
   ParallelDesc parallel_desc(*parallel_conf);
   JUST(op->FillOpParallelDesc(parallel_desc));
@@ -599,7 +593,12 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
 
   // infer mirrored signature
   JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
-  // infer sbp signature
+
+  // infer parallel_distribution signature
+  ParallelDistributionSignature parallel_distribution_sig_conf;
+  SbpSignatureToParallelDistributionSignature(sbp_sig_conf, &parallel_distribution_sig_conf);
+  AddOpAndUpdateJobParallelViewConf(*new_op_conf, parallel_desc, parallel_distribution_sig_conf,
+                                    is_mirrored_parallel_view);
   JUST(InferOpOutParallelDistribution(op, parallel_distribution_sig_conf, parallel_desc));
 
   // infer logical blob desc
@@ -686,8 +685,10 @@ Maybe<Operator*> JobBuildAndInferCtx::Op4OpName(const std::string& op_name) cons
 Maybe<OptInt64> JobBuildAndInferCtx::GetSplitAxisFromProducerView(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   OptInt64 ret;
-  const auto& sbp =
-      lbi2parallel_distribution_from_producer_view_.at(GenLogicalBlobId(lbn)).sbp_parallel(0);
+  const auto& parallel_distribution =
+      lbi2parallel_distribution_from_producer_view_.at(GenLogicalBlobId(lbn));
+  CHECK_EQ_OR_RETURN(parallel_distribution.sbp_parallel_size(), 1);
+  const auto& sbp = parallel_distribution.sbp_parallel(0);
   if (sbp.has_split_parallel()) { ret.set_value(sbp.split_parallel().axis()); }
   return ret;
 }
@@ -758,7 +759,9 @@ Maybe<OptInt64> JobBuildAndInferCtx::MirroredBlobGetSplitAxisFromProducerView(
     const std::string& lbn_with_hint) const {
   const auto& lbi = *JUST(MirroredBlobGetSubLbi(lbn_with_hint, 0));
   OptInt64 ret;
-  const auto& sbp = lbi2parallel_distribution_from_producer_view_.at(lbi).sbp_parallel(0);
+  const auto& parallel_distribution = lbi2parallel_distribution_from_producer_view_.at(lbi);
+  CHECK_EQ_OR_RETURN(parallel_distribution.sbp_parallel_size(), 1);
+  const auto& sbp = parallel_distribution.sbp_parallel(0);
   if (sbp.has_split_parallel()) { ret.set_value(sbp.split_parallel().axis()); }
   return ret;
 }
@@ -952,7 +955,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    LOG(INFO) << "DoPass " << pass_name;
     return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
   };
   if (GlobalJobDesc().Bool("__is_user_function__")) {
