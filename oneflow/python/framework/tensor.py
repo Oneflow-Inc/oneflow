@@ -390,6 +390,7 @@ class UndeterminedTensor:
             if data_initializer is not None
             # TODO: default initializer should be an "empty" initializer like pytorch
             else flow.random_uniform_initializer(minval=-1, maxval=1, dtype=dtype)
+            else flow.empty_initializer(dtype=dtype)
         )
         device = device if device is not None else oneflow_api.device("cpu")
         self.shape = shape
