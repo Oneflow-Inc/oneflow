@@ -83,6 +83,10 @@ void ConstantInitializer(const T& value, Blob* blob) {
 }
 
 template<typename T>
+void EmptyInitializer() {
+}
+
+template<typename T>
 void RandomUniformInitializer(const RandomUniformInitializerConf& initializer_conf,
                               uint32_t random_seed, Blob* blob) {
   CHECK(blob->shape().elem_cnt());
@@ -523,6 +527,8 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     RangeInitializer<T>(initializer_conf.range_conf(), random_seed, blob);
   } else if (initializer_conf.has_variance_scaling_conf()) {
     VarianceScalingInitializer<T>(initializer_conf.variance_scaling_conf(), random_seed, blob);
+  } else if (initializer_conf.has_empty_conf()) {
+    EmptyInitializer<T>();
   } else {
     UNIMPLEMENTED();
   }

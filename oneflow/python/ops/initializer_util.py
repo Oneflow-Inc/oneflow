@@ -26,6 +26,13 @@ import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Sequence, Union
 
+@oneflow_export("empty_initializer")
+def empty_initializer(dtype: flow.dtype = flow.float) -> initializer_conf_util.InitializerConf:
+    initializer = initializer_conf_util.InitializerConf()
+    empty_conf = initializer_conf_util.EmptyInitializerConf();
+    initializer.empty_conf.CopyFrom(empty_conf)
+    return initializer
+
 
 @oneflow_export("constant_initializer")
 def constant_initializer(
@@ -1083,6 +1090,7 @@ def GetInitializer(initializer_conf, random_seed, var_blob_shape):
     f = None
     for m in _init_map:
         if initializer_conf.HasField(m):
+            print(m)
             f = _init_map[m]
             break
     assert f is not None, initializer_conf
@@ -1207,3 +1215,12 @@ def VarianceScalingInitializerImpl(
         return lambda length: rng.uniform(low=-limit, high=limit, size=length)
     else:
         raise NotImplemented()
+
+@register_initializer("empty_conf")
+def EmptyInitializerImpl(
+    initializer_conf: initializer_conf_util.EmptyInitializerConf,
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
+    return lambda length: np.empty((length,))
+
