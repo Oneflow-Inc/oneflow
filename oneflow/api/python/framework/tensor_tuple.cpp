@@ -35,14 +35,13 @@ struct TensorTupleUtil final {
     ss << "TensorTuple(";
     for (const std::shared_ptr<Tensor>& tensor : tensor_tuple) {
       ss << tensor;
-      if (++idx != tensor_tuple.size()) { ss << ", "; }
+      if (++idx != tensor_tuple.size() || tensor_tuple.size() == 1) { ss << ", "; }
     }
     ss << ")";
     return ss.str();
   }
 
-  static void AppendTensorTuple(std::shared_ptr<TensorTuple>& tensor_tuple,
-                                const TensorTuple& other) {
+  static void MergeFrom(std::shared_ptr<TensorTuple>& tensor_tuple, const TensorTuple& other) {
     for (const auto& tensor : other) { tensor_tuple->emplace_back(tensor); }
   }
 
@@ -77,7 +76,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           },
           py::keep_alive<0, 1>())
       .def("__len__", [](const TensorTuple& tensor_tuple) { return tensor_tuple.size(); })
-      .def("append", &TensorTupleUtil::AppendTensorTuple)
+      .def("merge_from", &TensorTupleUtil::MergeFrom)
       .def("append", &TensorTupleUtil::AppendTensor);
 }
 
