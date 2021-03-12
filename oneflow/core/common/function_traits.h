@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_FUNCTION_TRAITS_H_
 #define ONEFLOW_CORE_COMMON_FUNCTION_TRAITS_H_
 
-#include <tuple>
 namespace oneflow {
 
 template<typename... Args>
