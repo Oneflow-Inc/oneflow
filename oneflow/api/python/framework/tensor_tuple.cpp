@@ -48,7 +48,7 @@ struct TensorTupleUtil final {
     } else if (py::isinstance<py::list>(py_obj)) {
       return MakeTensorTupleByPyTuple(py::tuple(py_obj.cast<py::list>()));
     } else {
-      throw py::type_error("Input must be Tuple or List");
+      throw py::type_error("Input must be other TensorTuple, Tuple or List");
     }
   }
 
