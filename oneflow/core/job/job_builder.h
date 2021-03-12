@@ -88,7 +88,6 @@ class JobBuilder final {
   HashSet<std::string> modified_op_conf_op_names_;
   HashSet<std::string> modified_parallel_conf_op_names_;
 
-  // HashMap<std::string, SbpSignature*> op_name2sbp_signature_conf_;
   HashMap<std::string, ParallelDistributionSignature*>
       op_name2parallel_distribution_signature_conf_;
 };

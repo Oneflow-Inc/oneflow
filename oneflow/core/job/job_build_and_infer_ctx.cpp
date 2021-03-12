@@ -1260,7 +1260,6 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
   });
   // updata job_helper
   op_graph.DumpLogicalBlobDesc(job_);
-  op_graph.DumpSbpSignature(job_);
   op_graph.DumpParallelDistributionSignature(job_);
   return Maybe<void>::Ok();
 }

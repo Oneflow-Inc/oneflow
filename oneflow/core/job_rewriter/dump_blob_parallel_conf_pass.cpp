@@ -31,7 +31,6 @@ class DumpBlobParallelConfPass final : public JobPass {
 
   Maybe<void> Apply(const OpGraph& op_graph, Job* job) const {
     op_graph.DumpLogicalBlobDesc(job);
-    op_graph.DumpSbpSignature(job);
     op_graph.DumpArgSignature(job);
     op_graph.DumpParallelDistributionSignature(job);
     return Maybe<void>::Ok();

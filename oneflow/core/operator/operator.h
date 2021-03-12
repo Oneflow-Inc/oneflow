@@ -138,6 +138,8 @@ class Operator {
   Maybe<const Shape> GetInputBlobFastestTimeShape() const;
   Maybe<const Shape> GetInputOutputFastestTimeShape() const;
 
+  Maybe<void> InferSbpSignature(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+                                const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint);
   Maybe<void> FillSbpSignature(const SbpSignature& sbp_signature);
   Maybe<void> FillParallelDistributionSignature(const ParallelDistributionSignature& signature);
   Maybe<void> InferSbpSignatureIf(
@@ -427,11 +429,10 @@ bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
 
 Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope);
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const SbpParallel& sbp_parallel,
-                              int64_t parallel_num, int64_t parallel_id);
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
                               const ParallelDistribution& parallel_distribution,
-                              const Shape& parallel_hierarchy, int64_t parallel_id);
+                              const ParallelDesc& parallel_desc,
+                              const ParallelContext& parallel_ctx);
 }  // namespace oneflow
 
 namespace std {

@@ -121,7 +121,6 @@ void SetBroadcastParallel4OpNodeIbn(JobBuilder* builder, const OpNode* node,
   OpBlobArg op_blob_arg;
   op_blob_arg.set_op_name(node->op().op_name());
   op_blob_arg.set_bn_in_op(ibn);
-  // builder->MutSbpParallel4Oba(op_blob_arg)->mutable_broadcast_parallel();
   SbpParallel sbp_parallel;
   sbp_parallel.mutable_broadcast_parallel();
   builder->SetSbpParallel4Oba(op_blob_arg, sbp_parallel);

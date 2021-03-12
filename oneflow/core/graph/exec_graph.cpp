@@ -71,21 +71,13 @@ void ExecNode::ToProto(const ParallelContext* parallel_ctx, ExecNodeProto* ret) 
 
 namespace {
 
-Maybe<void> CheckPhysicalBlobDesc(const BlobDesc& logical, const SbpParallel& sbp_parallel,
-                                  const ParallelContext* parallel_ctx, const BlobDesc& physical) {
-  CHECK_EQ_OR_RETURN(physical.shape(), *CHECK_JUST(GetPhysicalShape(logical.shape(), sbp_parallel,
-                                                                    parallel_ctx->parallel_num(),
-                                                                    parallel_ctx->parallel_id())));
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> CheckPhysicalBlobDesc(const BlobDesc& logical,
                                   const ParallelDistribution& parallel_distribution,
-                                  const Shape& parallel_hierarchy,
+                                  const ParallelDesc& parallel_desc,
                                   const ParallelContext* parallel_ctx, const BlobDesc& physical) {
-  CHECK_EQ_OR_RETURN(physical.shape(), *CHECK_JUST(GetPhysicalShape(
-                                           logical.shape(), parallel_distribution,
-                                           parallel_hierarchy, parallel_ctx->parallel_id())));
+  CHECK_EQ_OR_RETURN(physical.shape(),
+                     *CHECK_JUST(GetPhysicalShape(logical.shape(), parallel_distribution,
+                                                  parallel_desc, *parallel_ctx)));
   return Maybe<void>::Ok();
 }
 
@@ -106,7 +98,7 @@ Maybe<void> CheckPhysicalBlobDesc(
       CHECK_JUST(CheckPhysicalBlobDesc(
           *CHECK_JUST(GetLogicalBlobDesc(bn)),
           parallel_distribution_signature->bn_in_op2parallel_distribution().at(bn),
-          *op_parallel_desc->hierarchy(), parallel_ctx, *physical_blob_desc));
+          *op_parallel_desc, parallel_ctx, *physical_blob_desc));
     }
   }
   return Maybe<void>::Ok();

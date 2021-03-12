@@ -139,7 +139,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   std::list<OpNode*> DataOrCtrlSourceNodes() const;
 
   void DumpLogicalBlobDesc(Job* job) const;
-  void DumpSbpSignature(Job* job) const;
   void DumpArgSignature(Job* job) const;
   void DumpParallelDistributionSignature(Job* job) const;
 

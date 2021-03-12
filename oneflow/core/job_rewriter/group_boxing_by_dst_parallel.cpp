@@ -22,7 +22,7 @@ namespace oneflow {
 void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) {
   HashMap<LogicalBlobId, HashMap<std::pair<ParallelDesc, ParallelDistribution>,
                                  std::vector<std::pair<const OpNode*, std::string>>>>
-      lbi2consumer_grouped_by_parallel_distribution;
+      lbi2consumer_grouped_by_parallel;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   op_graph.ForEachNode([&](const OpNode* node) {
     OperatorConf::OpTypeCase op_type_case = node->op().op_conf().op_type_case();
@@ -38,16 +38,16 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
       if (producer.parallel_desc() != node->parallel_desc()
           || (node->parallel_desc().parallel_num() != 1
               && producer_parallel_distribution != consumer_parallel_distribution)) {
-        lbi2consumer_grouped_by_parallel_distribution[lbi][{node->parallel_desc(),
-                                                            consumer_parallel_distribution}]
-            .push_back({node, ibn});
+        lbi2consumer_grouped_by_parallel[lbi]
+                                        [{node->parallel_desc(), consumer_parallel_distribution}]
+                                            .push_back({node, ibn});
         if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
           op_node2op_conf[node] = node->op().op_conf();
         }
       }
     }
   });
-  for (const auto& lbi7groups : lbi2consumer_grouped_by_parallel_distribution) {
+  for (const auto& lbi7groups : lbi2consumer_grouped_by_parallel) {
     const LogicalBlobId& lbi = lbi7groups.first;
     for (const auto& parallel7group : lbi7groups.second) {
       if (parallel7group.second.size() < 2) { continue; }

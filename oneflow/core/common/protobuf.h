@@ -246,11 +246,11 @@ template<>
 struct hash<oneflow::ParallelDistribution> {
   size_t operator()(const oneflow::ParallelDistribution& parallel_distribution) const {
     const auto& sbp_hash = std::hash<oneflow::SbpParallel>();
-    size_t ret = 0;
+    size_t hash = 0;
     for (int i = 0; i < parallel_distribution.sbp_parallel_size(); ++i) {
-      ret ^= sbp_hash(parallel_distribution.sbp_parallel(i));
+      oneflow::HashCombine(&hash, sbp_hash(parallel_distribution.sbp_parallel(i)));
     }
-    return ret;
+    return hash;
   }
 };
 
