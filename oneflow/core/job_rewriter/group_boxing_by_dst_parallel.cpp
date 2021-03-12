@@ -32,7 +32,8 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
       const SbpParallel& producer_sbp = producer.SbpParallel4Lbi(lbi);
       const SbpParallel& consumer_sbp = node->SbpParallel4BnInOp(ibn);
-      if (producer.parallel_desc() != node->parallel_desc() || producer_sbp != consumer_sbp) {
+      if (producer.parallel_desc() != node->parallel_desc()
+          || (node->parallel_desc().parallel_num() != 1 && producer_sbp != consumer_sbp)) {
         lbi2consumer_grouped_by_parallel_sbp[lbi][{node->parallel_desc(), consumer_sbp}].push_back(
             {node, ibn});
         if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
