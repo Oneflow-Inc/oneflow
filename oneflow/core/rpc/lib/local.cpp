@@ -52,9 +52,17 @@ TryLockResult RpcClient::TryLock(const std::string& name) {
   }
 }
 
-void RpcClient::NotifyDone(const std::string& name) {}
+void RpcClient::NotifyDone(const std::string& name) {
+  std::unique_lock<std::mutex> lck(done_names_mtx_);
+  done_names_.insert(name);
+  done_names_cv_.notify_all();
+}
 
-void RpcClient::WaitUntilDone(const std::string& name) {}
+void RpcClient::WaitUntilDone(const std::string& name) {
+  std::unique_lock<std::mutex> lck(done_names_mtx_);
+  done_names_cv_.wait(lck);
+  CHECK(done_names_.find(name) != done_names_.end());
+}
 
 void RpcClient::PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {
   VSetter(&kv_[k]);

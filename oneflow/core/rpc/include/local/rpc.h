@@ -77,6 +77,7 @@ class RpcClient : RpcClientBase {
 
   HashMap<std::string, std::string> kv_;
   std::mutex done_names_mtx_;
+  std::condition_variable done_names_cv_;
   HashSet<std::string> done_names_;
 };
 
