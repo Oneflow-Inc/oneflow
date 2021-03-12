@@ -35,8 +35,15 @@ struct TensorTupleUtil final {
     }
     return tensor_tuple;
   }
+
   static std::shared_ptr<TensorTuple> MakeTensorTuple(const py::object& py_obj) {
-    if (py::isinstance<py::tuple>(py_obj)) {
+    if (py::isinstance<TensorTuple>(py_obj)) {
+      std::shared_ptr<TensorTuple> tensor_tuple = std::make_shared<TensorTuple>();
+      for (const auto& tensor : py_obj) {
+        tensor_tuple->emplace_back(tensor.cast<std::shared_ptr<Tensor>>());
+      }
+      return tensor_tuple;
+    } else if (py::isinstance<py::tuple>(py_obj)) {
       return MakeTensorTupleByPyTuple(py_obj.cast<py::tuple>());
     } else if (py::isinstance<py::list>(py_obj)) {
       return MakeTensorTupleByPyTuple(py::tuple(py_obj.cast<py::list>()));
@@ -56,6 +63,16 @@ struct TensorTupleUtil final {
     ss << ")";
     return ss.str();
   }
+
+  static void AppendTensorTuple(std::shared_ptr<TensorTuple>& tensor_tuple,
+                                const TensorTuple& other) {
+    for (const auto& tensor : other) { tensor_tuple->emplace_back(tensor); }
+  }
+
+  static void AppendTensor(std::shared_ptr<TensorTuple>& tensor_tuple,
+                           const std::shared_ptr<Tensor>& tensor) {
+    tensor_tuple->push_back(tensor);
+  }
 };
 
 }  // namespace
@@ -72,11 +89,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
               const std::shared_ptr<Tensor>& tensor) { tensor_tuple->at(idx) = tensor; })
       .def(
           "__iter__",
-          [](const TensorTuple& tensor_tuple, int idx) {
+          [](const TensorTuple& tensor_tuple) {
             return py::make_iterator(tensor_tuple.begin(), tensor_tuple.end());
           },
           py::keep_alive<0, 1>())
-      .def("__len__", [](const TensorTuple& tensor_tuple) { return tensor_tuple.size(); });
+      .def("__len__", [](const TensorTuple& tensor_tuple) { return tensor_tuple.size(); })
+      .def("append", &TensorTupleUtil::AppendTensorTuple)
+      .def("append", &TensorTupleUtil::AppendTensor);
 }
 
 }  // namespace one
