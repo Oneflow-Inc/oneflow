@@ -16,42 +16,46 @@ limitations under the License.
 
 #ifndef ONEFLOW_CORE_RPC_LIB_LOCAL_
 #define ONEFLOW_CORE_RPC_LIB_LOCAL_
+#include "glog/logging.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/rpc/include/local/ctrl.h"
 
 namespace oneflow {
 
-CtrlClient::~CtrlClient() {
-  {
-    std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
-    need_heartbeat_thread_stop_ = true;
-  }
-  heartbeat_thread_.join();
+CtrlClient::~CtrlClient() {}
+
+CtrlClient::CtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx) {
+  CHECK(process_ctx.ctrl_addr_size() == 0);
+  CHECK(process_ctx.node_size() == 0);
 }
 
-CtrlClient::CtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx) {}
+CtrlServer::CtrlServer(int /* ctrl_port */) : RpcServer() {}
+
+CtrlServer::CtrlServer() : CtrlServer(0) {}
 
 void RpcClient::Barrier(const std::string& barrier_name) {
   Barrier(barrier_name, Global<EnvDesc>::Get()->TotalMachineNum());
 }
 
-CtrlServer::CtrlServer(int ctrl_port) : RpcServer(), port_(ctrl_port) {}
-
-CtrlServer::CtrlServer() : CtrlServer(0) {}
-
 void CtrlServer::OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) { call->SendResponse(); }
 
-void RpcClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {}
+void RpcClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
+  CHECK(barrier_num == 1);
+}
 
-TryLockResult RpcClient::TryLock(const std::string& name) {}
+TryLockResult RpcClient::TryLock(const std::string& name) { UNIMPLEMENTED(); }
 
-void RpcClient::NotifyDone(const std::string& name) {}
+void RpcClient::NotifyDone(const std::string& name) { UNIMPLEMENTED(); }
 
-void RpcClient::WaitUntilDone(const std::string& name) {}
+void RpcClient::WaitUntilDone(const std::string& name) { UNIMPLEMENTED(); }
 
-void RpcClient::PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {}
+void RpcClient::PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {
+  VSetter(&kv_[k]);
+}
 
-void RpcClient::PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter) {}
+void RpcClient::PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter) {
+  PushKV(k, VSetter);
+}
 
 void RpcClient::PushKV(const std::string& k, const std::string& v) {
   PushKV(k, [&](std::string* o) { *o = v; });
@@ -65,14 +69,18 @@ void RpcClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
   PushMasterKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
 
-void RpcClient::ClearKV(const std::string& k) {}
+void RpcClient::ClearKV(const std::string& k) { kv_.erase(k); }
 
-void RpcClient::ClearMasterKV(const std::string& k) {}
+void RpcClient::ClearMasterKV(const std::string& k) { ClearKV(k); }
 
-void RpcClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {}
+void RpcClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
+  VGetter(kv_.at(k));
+}
 
 void RpcClient::PullMasterKV(const std::string& k,
-                             std::function<void(const std::string&)> VGetter) {}
+                             std::function<void(const std::string&)> VGetter) {
+  PullKV(k, VGetter);
+}
 
 void RpcClient::PullKV(const std::string& k, std::string* v) {
   PullKV(k, [&](const std::string& i) { *v = i; });
@@ -86,19 +94,17 @@ void RpcClient::PullMasterKV(const std::string& k, PbMessage* msg) {
   PullMasterKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
-void RpcClient::PushActEvent(const ActEvent& act_event) {}
+void RpcClient::Clear() { UNIMPLEMENTED(); }
 
-void RpcClient::Clear() {}
+int32_t RpcClient::IncreaseCount(const std::string& k, int32_t v) { UNIMPLEMENTED(); }
 
-int32_t RpcClient::IncreaseCount(const std::string& k, int32_t v) {}
-
-void RpcClient::EraseCount(const std::string& k) {}
+void RpcClient::EraseCount(const std::string& k) { UNIMPLEMENTED(); }
 
 RpcServer::~RpcServer() {}
 
-void RpcServer::HandleRpcs() {}
+void RpcServer::HandleRpcs() { UNIMPLEMENTED(); }
 
-void RpcServer::Init() {}
+void RpcServer::Init() { UNIMPLEMENTED(); }
 
 }  // namespace oneflow
 

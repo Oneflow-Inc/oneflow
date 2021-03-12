@@ -18,6 +18,7 @@ limitations under the License.
 #define ONEFLOW_CORE_RPC_INCLUDE_LOCAL_RPC_
 
 #include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/control.pb.h"
 #include "oneflow/core/job/global_for.h"
@@ -62,7 +63,7 @@ class RpcClient : RpcClientBase {
     *v = oneflow_cast<T>(v_str);
   }
 
-  void PushActEvent(const ActEvent&);
+  void PushActEvent(const ActEvent&){};
   void Clear();
 
   int32_t IncreaseCount(const std::string& k, int32_t v);
@@ -74,8 +75,7 @@ class RpcClient : RpcClientBase {
   void PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter);
   void PullMasterKV(const std::string& k, std::function<void(const std::string&)> VGetter);
 
-  std::mutex done_names_mtx_;
-  HashSet<std::string> done_names_;
+  HashMap<std::string, std::string> kv_;
 };
 
 class RpcServer : RpcServerBase {

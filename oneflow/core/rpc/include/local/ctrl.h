@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_RPC_INCLUDE_LOCAL_CTRL_
 #define ONEFLOW_CORE_RPC_INCLUDE_LOCAL_CTRL_
 
+#include <string>
+#include <unordered_map>
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/rpc/include/local/rpc.h"
 #include "oneflow/core/rpc/include/base/ctrl.h"
@@ -20,9 +22,6 @@ class CtrlClient final : public RpcClient {
   const ProcessCtx& process_ctx() const { return process_ctx_; }
 
   ProcessCtx process_ctx_;
-  bool need_heartbeat_thread_stop_;
-  std::mutex need_heartbeat_thread_stop_mtx_;
-  std::thread heartbeat_thread_;
 };
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
