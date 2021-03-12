@@ -111,6 +111,13 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   CHECK_JUST(JUST(MakeCtrlBootstrap(*Global<EnvDesc>::Get()))
                  ->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
 #endif  // RPC_BACKEND_GRPC
+#ifdef RPC_BACKEND_LOCAL
+  Address* addr = Global<ProcessCtx>::Get()->add_ctrl_addr();
+  addr->set_host("localhost");
+  addr->set_port(Global<CtrlServer>::Get()->port());
+  Global<ProcessCtx>::Get()->set_rank(0);
+  Global<ProcessCtx>::Get()->set_node_size(1);
+#endif  // RPC_BACKEND_LOCAL
   Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
   Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));

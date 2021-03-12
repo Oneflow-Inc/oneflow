@@ -76,6 +76,8 @@ class RpcClient : RpcClientBase {
   void PullMasterKV(const std::string& k, std::function<void(const std::string&)> VGetter);
 
   HashMap<std::string, std::string> kv_;
+  std::mutex done_names_mtx_;
+  HashSet<std::string> done_names_;
 };
 
 class RpcServer : RpcServerBase {

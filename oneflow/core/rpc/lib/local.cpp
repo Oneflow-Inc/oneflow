@@ -25,8 +25,8 @@ namespace oneflow {
 CtrlClient::~CtrlClient() {}
 
 CtrlClient::CtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx) {
-  CHECK(process_ctx.ctrl_addr_size() == 0);
-  CHECK(process_ctx.node_size() == 0);
+  CHECK(process_ctx.ctrl_addr_size() == 1);
+  CHECK(process_ctx.node_size() == 1);
 }
 
 CtrlServer::CtrlServer(int /* ctrl_port */) : RpcServer() {}
@@ -43,11 +43,18 @@ void RpcClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
   CHECK(barrier_num == 1);
 }
 
-TryLockResult RpcClient::TryLock(const std::string& name) { UNIMPLEMENTED(); }
+TryLockResult RpcClient::TryLock(const std::string& name) {
+  std::unique_lock<std::mutex> lck(done_names_mtx_);
+  if (done_names_.find(name) != done_names_.end()) {
+    return TryLockResult::kDone;
+  } else {
+    return TryLockResult::kLocked;
+  }
+}
 
-void RpcClient::NotifyDone(const std::string& name) { UNIMPLEMENTED(); }
+void RpcClient::NotifyDone(const std::string& name) {}
 
-void RpcClient::WaitUntilDone(const std::string& name) { UNIMPLEMENTED(); }
+void RpcClient::WaitUntilDone(const std::string& name) {}
 
 void RpcClient::PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {
   VSetter(&kv_[k]);
@@ -94,7 +101,11 @@ void RpcClient::PullMasterKV(const std::string& k, PbMessage* msg) {
   PullMasterKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
-void RpcClient::Clear() { kv_.clear(); }
+void RpcClient::Clear() {
+  std::unique_lock<std::mutex> lck(done_names_mtx_);
+  done_names_.clear();
+  kv_.clear();
+}
 
 int32_t RpcClient::IncreaseCount(const std::string& k, int32_t v) { UNIMPLEMENTED(); }
 
