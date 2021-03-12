@@ -160,5 +160,11 @@ std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
   return func_node;
 }
 
+
+AutogradEngine* GetThreadLocalAutogradEngine() {
+    thread_local static StackAutogradEngine autograd_engine;
+    return &autograd_engine;
+}
+
 }  // namespace one
 }  // namespace oneflow

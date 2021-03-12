@@ -134,6 +134,8 @@ class StackAutogradEngine final : public AutogradEngine {
   std::list<std::weak_ptr<FunctionNode>> node_list_;
 };
 
+AutogradEngine* GetThreadLocalAutogradEngine();
+
 }  // namespace one
 
 }  // namespace oneflow

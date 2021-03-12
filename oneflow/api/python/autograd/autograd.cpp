@@ -19,6 +19,7 @@ limitations under the License.
 #include <vector>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -37,32 +38,23 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
   return gradients;
 }
 
-Maybe<one::TensorTuple> RunBackward(const one::TensorTuple& outputs,
-                                    const one::TensorTuple& intputs,
-                                    const one::TensorTuple& out_grads, bool retain_graph,
-                                    bool create_graph) {
-  if (create_graph) { retain_graph = true; }
-  std::shared_ptr<one::TensorTuple> res_grads;
-  TODO();  // Wang Yinggang. Checks could run backward or not
-  TODO();  // Wang Yinggang. Calls `AutogradEngine.Execute()` to do backward
-  return res_grads;
-}
-
 }  // namespace
 
 Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::TensorTuple& out_grads,
                                  bool retain_graph, bool create_graph) {
+  if (create_graph) { retain_graph = true; }
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
-  auto inputs = std::make_shared<one::TensorTuple>(0);
-  return RunBackward(outputs, *inputs, *gradients, retain_graph, create_graph);
+  JUST(one::GetThreadLocalAutogradEngine()->RunBackwardAndSaveGrads4LeafTensor(outputs, *gradients, retain_graph, create_graph));
+  return std::make_shared<one::TensorTuple>(0);
 }
 
 Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorTuple& inputs,
                              const one::TensorTuple& out_grads, bool retain_graph,
                              bool create_graph) {
+  if (create_graph) { retain_graph = true; }
   if (inputs.empty()) { return Backward(outputs, out_grads, retain_graph, create_graph); }
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
-  return RunBackward(outputs, inputs, *gradients, retain_graph, create_graph);
+  return one::GetThreadLocalAutogradEngine()->RunBackwardAndReturnInputsTensorGrad(outputs, inputs, *gradients, retain_graph, create_graph);
 }
 
 }  // namespace autograd
