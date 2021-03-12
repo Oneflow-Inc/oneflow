@@ -225,27 +225,31 @@ class DCGANCompare:
 
         flow.config.gpu_device_num(gpu_num)
 
-        train_config = flow.ExecutionConfig()
-        train_config.default_data_type(flow.float)
-        train_config.default_logical_view(flow.scope.consistent_view())
+        train_exe_config = flow.ExecutionConfig()
+        train_exe_config.default_data_type(flow.float)
+        train_exe_config.default_logical_view(flow.scope.consistent_view())
+        train_config = flow.model.TrainingConfig()
+        train_config.config_exe(train_exe_config)
+        train_config.config_data(NumpyTrainData(result_dir, batch_size))
 
-        val_config = flow.ExecutionConfig()
-        val_config.default_data_type(flow.float)
-        val_config.default_logical_view(flow.scope.consistent_view())
+        val_exe_config = flow.ExecutionConfig()
+        val_exe_config.default_data_type(flow.float)
+        val_exe_config.default_logical_view(flow.scope.consistent_view())
+        val_config = flow.model.ValidationConfig()
+        val_config.config_data(NumpyValData(result_dir, batch_size))
+        val_config.config_exe(val_exe_config)
+        val_config.config_step_interval(1)
 
-        loss_monitor = LossMoniter(result_dir)
-        dcgan_md = DCGAN(
-            gpu_num,
-            batch_size,
-            is_deprecated_function_style=True,
+        loss_monitor_cb = LossMoniter(result_dir)
+
+        dcgan_md = DCGAN(gpu_num, batch_size, is_deprecated_function_style=True,)
+
+        dcgan_md.fit(
             training_config=train_config,
             validation_config=val_config,
-            callbacks=[loss_monitor],
+            callbacks=[loss_monitor_cb],
+            max_steps=3,
         )
-
-        train_data = NumpyTrainData(result_dir, batch_size)
-        val_data = NumpyValData(result_dir, batch_size)
-        dcgan_md.fit(max_steps=3, training_data=train_data, validation_data=val_data)
 
 
 class Layers:

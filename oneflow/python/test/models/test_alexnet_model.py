@@ -51,7 +51,7 @@ class TrainData(flow.model.DataModule):
         super().__init__()
         self.specs = specs
 
-    def forward(self):
+    def forward(self, *args):
         return _data_load_layer(self.specs, self.specs.train_dir)
 
 
@@ -60,7 +60,7 @@ class ValData(flow.model.DataModule):
         super().__init__()
         self.specs = specs
 
-    def forward(self):
+    def forward(self, *args):
         return _data_load_layer(self.specs, self.specs.eval_dir)
 
 
@@ -178,37 +178,34 @@ def test_1n1c(test_case):
     flow.config.machine_num(global_specs.num_nodes)
     flow.config.gpu_device_num(global_specs.gpu_num_per_node)
 
-    train_config = flow.ExecutionConfig()
-    train_config.default_logical_view(flow.scope.consistent_view())
-    train_config.default_data_type(flow.float)
+    train_exe_config = flow.ExecutionConfig()
+    train_exe_config.default_logical_view(flow.scope.consistent_view())
+    train_exe_config.default_data_type(flow.float)
+    train_config = flow.model.TrainingConfig()
+    train_config.config_exe(train_exe_config)
+    train_config.config_data(TrainData(global_specs))
 
-    val_config = flow.ExecutionConfig()
-    val_config.default_data_type(flow.float)
+    val_exe_config = flow.ExecutionConfig()
+    val_exe_config.default_logical_view(flow.scope.consistent_view())
+    val_exe_config.default_data_type(flow.float)
+    val_config = flow.model.ValidationConfig()
+    val_config.config_exe(val_exe_config)
+    val_config.config_data(ValData(global_specs))
+    val_config.config_step_interval(10)
 
-    ck_config = flow.model.CheckpointConfig(
-        load_dirpath=global_specs.model_load_dir,
-        save_dirpath=global_specs.model_save_dir,
-        save_interval=10,
-    )
+    ck_config = flow.model.CheckpointConfig()
+    ck_config.config_load(dirpath=global_specs.model_load_dir)
+    ck_config.config_save(dirpath=global_specs.model_save_dir, step_interval=10)
 
-    loss_monitor = LossMoniter()
+    loss_monitor_cb = LossMoniter()
 
-    alexnet_md = AlexNet(
-        global_specs,
-        is_deprecated_function_style=True,
-        training_config=train_config,
-        validation_config=val_config,
-        callbacks=[loss_monitor],
-    )
-
-    train_data = TrainData(global_specs)
-    val_data = ValData(global_specs)
+    alexnet_md = AlexNet(global_specs, is_deprecated_function_style=True,)
 
     alexnet_md.fit(
-        training_data=train_data,
-        validation_data=val_data,
-        validation_interval=10,
+        training_config=train_config,
+        validation_config=val_config,
         checkpoint_config=ck_config,
+        callbacks=[loss_monitor_cb],
         max_steps=20,
     )
 
