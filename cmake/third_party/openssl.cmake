@@ -4,9 +4,9 @@ set(OPENSSL_INSTALL ${THIRD_PARTY_DIR}/openssl)
 set(OPENSSL_INCLUDE_DIR ${THIRD_PARTY_DIR}/openssl/include)
 set(OPENSSL_LIBRARY_DIR ${THIRD_PARTY_DIR}/openssl/lib)
 
-set(OPENSSL_TAR_URL https://www.openssl.org/source/openssl-1.1.1j.tar.gz)
+set(OPENSSL_TAR_URL https://github.com/openssl/openssl/archive/OpenSSL_1_1_1g.tar.gz)
 use_mirror(VARIABLE OPENSSL_TAR_URL URL ${OPENSSL_TAR_URL})
-set(OPENSSL_URL_HASH cccaa064ed860a2b4d1303811bf5c682)
+set(OPENSSL_URL_HASH dd32f35dd5d543c571bc9ebb90ebe54e)
 set(OPENSSL_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/openssl)
 
 if(WIN32)
@@ -40,3 +40,4 @@ ExternalProject_Add(openssl
 )
 
 endif(THIRD_PARTY)
+
