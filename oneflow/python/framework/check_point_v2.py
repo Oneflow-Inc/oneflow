@@ -512,7 +512,7 @@ def _ForEachSlice(
             start_idx = stop_idx
 
 
-def InitByInitializerConf(
+def init_by_initializer_conf(
     var_blob: EagerBlobTrait,
     initializer_conf: initializer_conf_util.InitializerConf,
     sync_between_multi_machine: bool,

@@ -28,14 +28,6 @@ def fake_flow_ones(shape):
     return tensor
 
 
-def print_numpy(tensor):
-    @flow.global_function()
-    def job():
-        print(tensor.numpy())
-
-    job()
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestTensor(flow.unittest.TestCase):
     @unittest.skipIf(
@@ -62,19 +54,17 @@ class TestTensor(flow.unittest.TestCase):
         shape = (2, 3)
         x = flow.Tensor(*shape)
 
-        x.uniform_()
-        print_numpy(x)
-
-        x.uniform_(-1, 1)
-        print_numpy(x)
-
         x.fill_(5)
-        print_numpy(x)
-        test_case.assertTrue(np.array_equal(x.numpy(), 5 * np.ones(x.shape)))
+        @flow.global_function()
+        def job():
+            test_case.assertTrue(np.array_equal(x.numpy(), 5 * np.ones(x.shape)))
+        job()
 
         flow.nn.init.ones_(x)
-        print_numpy(x)
-        test_case.assertTrue(np.array_equal(x.numpy(), np.ones(x.shape)))
+        @flow.global_function()
+        def job():
+            test_case.assertTrue(np.array_equal(x.numpy(), np.ones(x.shape)))
+        job()
 
 
 if __name__ == "__main__":
