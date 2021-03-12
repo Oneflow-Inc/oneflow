@@ -50,7 +50,7 @@ import oneflow_api
 import traceback
 
 
-class Session(oneflow_api.Session):
+class Session(oneflow_api.deprecated.Session):
     def __init__(self, sess_id):
         oneflow_api.Session.__init__(self, sess_id)
         self.job_name2function_desc_ = {}
