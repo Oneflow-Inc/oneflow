@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType>
-struct ArithemeticIf;
+class ArithemeticIf;
 
 }  // namespace oneflow
 
