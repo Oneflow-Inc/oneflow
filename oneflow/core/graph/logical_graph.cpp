@@ -30,16 +30,6 @@ LogicalGraph::LogicalGraph(const Job& job) : job_(job) {
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
-template<typename LogicalNodeType>
-void LogicalGraph::ForEachLogicalNode(std::function<void(LogicalNodeType*)> func) {
-  std::vector<LogicalNodeType*> valid_nodes;
-  ForEachNode([&](LogicalNode* logical_node) {
-    auto valid_node = dynamic_cast<LogicalNodeType*>(logical_node);
-    if (valid_node != nullptr) { valid_nodes.push_back(valid_node); }
-  });
-  for (LogicalNodeType* valid_node : valid_nodes) { func(valid_node); }
-}
-
 void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
