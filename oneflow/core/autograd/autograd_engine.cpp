@@ -118,12 +118,11 @@ Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
   // Runs each FunctionNode
   for (const auto& weak_func_node : node_list_) {
     const auto& func_node = weak_func_node.lock();
-    if (func_node) {
-      JUST(func_node->Apply(create_graph));
-      JUST(func_node->AccGrad4LeafTensor());
-      JUST(func_node->AccGrad4RetainGradTensor());
-      func_node->ReleaseOutTensorArgs();
-    }
+    if (!func_node) { continue; }
+    JUST(func_node->Apply(create_graph));
+    JUST(func_node->AccGrad4LeafTensor());
+    JUST(func_node->AccGrad4RetainGradTensor());
+    func_node->ReleaseOutTensorArgs();
   }
   if (!retain_graph) { ClearEngine(); }
   return Maybe<void>::Ok();
@@ -139,12 +138,11 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   // Runs each FunctionNode
   for (const auto& weak_func_node : node_list_) {
     const auto& func_node = weak_func_node.lock();
-    if (func_node) {
-      JUST(func_node->Apply(create_graph));
-      TODO();  // wangyinggang: Get grads in out_grads to input_now_grads
-      JUST(func_node->AccGrad4RetainGradTensor());
-      func_node->ReleaseOutTensorArgs();
-    }
+    if (!func_node) { continue; }
+    JUST(func_node->Apply(create_graph));
+    TODO();  // wangyinggang: Get grads in out_grads to input_now_grads
+    JUST(func_node->AccGrad4RetainGradTensor());
+    func_node->ReleaseOutTensorArgs();
   }
   if (!retain_graph) { ClearEngine(); }
   return input_now_grads;
