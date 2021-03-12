@@ -19,7 +19,8 @@ from google.protobuf import text_format
 
 import oneflow
 import oneflow_api
-import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
+import oneflow_api.oneflow.core.common.shape as shape_cfg
+import oneflow_api.oneflow.core.framework.user_op_attr as user_op_attr_cfg
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -119,75 +120,77 @@ class BuiltinOp(object):
             )
             print(traceback.format_stack()[-2])
 
-        attribute = attr_value_pb.AttrValue()
+        attribute = user_op_attr_cfg.AttrValue()
         assert isinstance(attr_name, str)
         assert self._op_type_name is not None
         attr_type = oneflow_api.GetUserOpAttrType(self._op_type_name, attr_name)
-        if attr_type == attr_value_pb.kAtInt32:
+        if attr_type == user_op_attr_cfg.kAtInt32:
             assert isinstance(attr_value, int)
-            attribute.at_int32 = attr_value
-        elif attr_type == attr_value_pb.kAtInt64:
+            attribute.set_at_int32(attr_value)
+        elif attr_type == user_op_attr_cfg.kAtInt64:
             assert isinstance(attr_value, int)
-            attribute.at_int64 = attr_value
-        elif attr_type == attr_value_pb.kAtBool:
+            attribute.set_at_int64(attr_value)
+        elif attr_type == user_op_attr_cfg.kAtBool:
             assert isinstance(attr_value, bool)
-            attribute.at_bool = attr_value
-        elif attr_type == attr_value_pb.kAtFloat:
+            attribute.set_at_bool(attr_value)
+        elif attr_type == user_op_attr_cfg.kAtFloat:
             assert isinstance(attr_value, float)
-            attribute.at_float = attr_value
-        elif attr_type == attr_value_pb.kAtDouble:
+            attribute.set_at_float(attr_value)
+        elif attr_type == user_op_attr_cfg.kAtDouble:
             assert isinstance(attr_value, float)
-            attribute.at_double = attr_value
-        elif attr_type == attr_value_pb.kAtString:
+            attribute.set_at_double(attr_value)
+        elif attr_type == user_op_attr_cfg.kAtString:
             assert isinstance(attr_value, str)
-            attribute.at_string = attr_value
-        elif attr_type == attr_value_pb.kAtShape:
+            attribute.set_at_string(attr_value)
+        elif attr_type == user_op_attr_cfg.kAtShape:
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, int) for x in attr_value)
-            attribute.at_shape.dim[:] = list(attr_value)
-        elif attr_type == attr_value_pb.kAtDataType:
+            for x in attr_value:
+                assert isinstance(x, int)
+                attribute.mutable_at_shape().add_dim(x)
+        elif attr_type == user_op_attr_cfg.kAtDataType:
             assert (
                 isinstance(attr_value.oneflow_proto_dtype, int)
                 and attr_value in oneflow.dtypes()
             )
-            attribute.at_data_type = attr_value.oneflow_proto_dtype
-        elif attr_type == attr_value_pb.kAtListInt32:
+            attribute.set_at_data_type(attr_value.oneflow_proto_dtype)
+        elif attr_type == user_op_attr_cfg.kAtListInt32:
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, int) for x in attr_value)
-            attribute.at_list_int32.val[:] = list(attr_value)
-        elif attr_type == attr_value_pb.kAtListInt64:
+            for x in attr_value:
+                assert isinstance(x, int)
+                attribute.mutable_at_list_int32.add_val(x)
+        elif attr_type == user_op_attr_cfg.kAtListInt64:
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, int) for x in attr_value)
-            attribute.at_list_int64.val[:] = list(attr_value)
-        elif attr_type == attr_value_pb.kAtListFloat:
+            for x in attr_value:
+                assert isinstance(x, int)
+                attribute.mutable_at_list_int64.add_val(x)
+        elif attr_type == user_op_attr_cfg.kAtListFloat:
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, float) for x in attr_value)
-            attribute.at_list_float.val[:] = list(attr_value)
-        elif attr_type == attr_value_pb.kAtListDataType:
+            for x in attr_value:
+                assert isinstance(x, float)
+                attribute.mutable_at_list_float.add_val(x)
+        elif attr_type == user_op_attr_cfg.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
-            assert all(
-                isinstance(x.oneflow_proto_dtype, int) and x in oneflow.dtypes()
-                for x in attr_value
-            )
-            attribute.at_list_data_type.val[:] = list(
-                [x.oneflow_proto_dtype for x in attr_value]
-            )
-        elif attr_type == attr_value_pb.kAtListShape:
+            for x in attr_value:
+                assert isinstance(x.oneflow_proto_dtype, int)
+                attribute.mutable_at_list_data_type.add_val(x.oneflow_proto_dtype)
+        elif attr_type == user_op_attr_cfg.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, tuple) or isinstance(x, list) for x in attr_value)
-            for i in range(len(attr_value)):
-                shape = shape_util.ShapeProto()
-                shape.dim[:] = list(attr_value[i])
-                attribute.at_list_shape.val.append(shape)
-        elif attr_type == attr_value_pb.kAtListString:
+            for x in attr_value:
+                assert isinstance(x, tuple) or isinstance(x, list)
+                shape = shape_cfg.ShapeProto()
+                for dim in x:
+                    shape.add_dim(dim)
+                attribute.mutable_at_list_shape.add_val(shape)
+        elif attr_type == user_op_attr_cfg.kAtListString:
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, str) for x in attr_value)
-            attribute.at_list_string.val[:] = list(attr_value)
+            for x in attr_value:
+                assert isinstance(x, str)
+                attribute.mutable_at_list_string.add_val(x)
         else:
             raise ValueError("Invalid op attribute type {}".format(attr_type))
 
-        serialized_attr_value = str(text_format.MessageToString(attribute))
-        self._builder.attr(attr_name, serialized_attr_value)
+        self._builder.attr(attr_name, attribute)
         return self
 
     def Build(self):
