@@ -27,12 +27,14 @@ def fake_flow_ones(shape):
     tensor.set_data_initializer(flow.ones_initializer())
     return tensor
 
+
 def print_numpy(tensor):
     @flow.global_function()
     def job():
         print(tensor.numpy())
 
     job()
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensor(flow.unittest.TestCase):
