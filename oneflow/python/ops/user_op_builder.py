@@ -23,6 +23,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
+import oneflow_api.oneflow.core.framework.user_op_attr as user_op_attr_cfg
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.core.common.shape_pb2 as shape_util
 import oneflow
@@ -327,34 +328,34 @@ class UserOpConfBuilder(object):
             )
             print(traceback.format_stack()[-2])
 
-        attribute = attr_value_pb.AttrValue()
+        attribute = user_op_attr_cfg.AttrValue()
         assert isinstance(attr_name, str)
         attr_type = oneflow_api.GetUserOpAttrType(
             self.user_op_.op_conf_.user_conf.op_type_name, attr_name
         )
-        if attr_type == attr_value_pb.kAtInt32:
+        if attr_type == user_op_attr_cfg.kAtInt32:
             assert isinstance(attr_value, int)
             attribute.at_int32 = attr_value
-        elif attr_type == attr_value_pb.kAtInt64:
+        elif attr_type == user_op_attr_cfg.kAtInt64:
             assert isinstance(attr_value, int)
             attribute.at_int64 = attr_value
-        elif attr_type == attr_value_pb.kAtBool:
+        elif attr_type == user_op_attr_cfg.kAtBool:
             assert isinstance(attr_value, bool)
             attribute.at_bool = attr_value
-        elif attr_type == attr_value_pb.kAtFloat:
+        elif attr_type == user_op_attr_cfg.kAtFloat:
             assert isinstance(attr_value, float)
             attribute.at_float = attr_value
-        elif attr_type == attr_value_pb.kAtDouble:
+        elif attr_type == user_op_attr_cfg.kAtDouble:
             assert isinstance(attr_value, float)
             attribute.at_double = attr_value
-        elif attr_type == attr_value_pb.kAtString:
+        elif attr_type == user_op_attr_cfg.kAtString:
             assert isinstance(attr_value, str)
             attribute.at_string = attr_value
-        elif attr_type == attr_value_pb.kAtShape:
+        elif attr_type == user_op_attr_cfg.kAtShape:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_shape.dim[:] = list(attr_value)
-        elif attr_type == attr_value_pb.kAtDataType:
+        elif attr_type == user_op_attr_cfg.kAtDataType:
             assert (
                 isinstance(
                     oneflow_api.deprecated.GetProtoDtype4OfDtype(attr_value), int
@@ -364,19 +365,19 @@ class UserOpConfBuilder(object):
             attribute.at_data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(
                 attr_value
             )
-        elif attr_type == attr_value_pb.kAtListInt32:
+        elif attr_type == user_op_attr_cfg.kAtListInt32:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_list_int32.val[:] = list(attr_value)
-        elif attr_type == attr_value_pb.kAtListInt64:
+        elif attr_type == user_op_attr_cfg.kAtListInt64:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
             attribute.at_list_int64.val[:] = list(attr_value)
-        elif attr_type == attr_value_pb.kAtListFloat:
+        elif attr_type == user_op_attr_cfg.kAtListFloat:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, float) for x in attr_value)
             attribute.at_list_float.val[:] = list(attr_value)
-        elif attr_type == attr_value_pb.kAtListDataType:
+        elif attr_type == user_op_attr_cfg.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
             assert all(
                 isinstance(oneflow_api.deprecated.GetProtoDtype4OfDtype(x), int)
@@ -386,14 +387,14 @@ class UserOpConfBuilder(object):
             attribute.at_list_data_type.val[:] = list(
                 [oneflow_api.deprecated.GetProtoDtype4OfDtype(x) for x in attr_value]
             )
-        elif attr_type == attr_value_pb.kAtListShape:
+        elif attr_type == user_op_attr_cfg.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, tuple) or isinstance(x, list) for x in attr_value)
             for i in range(len(attr_value)):
                 shape = shape_util.ShapeProto()
                 shape.dim[:] = list(attr_value[i])
                 attribute.at_list_shape.val.append(shape)
-        elif attr_type == attr_value_pb.kAtListString:
+        elif attr_type == user_op_attr_cfg.kAtListString:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, str) for x in attr_value)
             attribute.at_list_string.val[:] = list(attr_value)

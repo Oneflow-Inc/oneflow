@@ -22,7 +22,9 @@ namespace py = pybind11;
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("IsOpTypeCaseCpuSupportOnly", &IsOpTypeCaseCpuSupportOnly);
   m.def("IsOpTypeNameCpuSupportOnly", &IsOpTypeNameCpuSupportOnly);
-  m.def("GetUserOpAttrType", &GetUserOpAttrType);
+  m.def("GetUserOpAttrType", [](const std::string& op_type_name, const std::string& attr_name) {
+    return static_cast<int>(GetUserOpAttrType(op_type_name, attr_name));
+  });
 
   m.def("InferOpConf", &InferOpConf);
   m.def("GetSerializedOpAttributes", &GetSerializedOpAttributes);
