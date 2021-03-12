@@ -56,6 +56,7 @@ class Tensor:
         elif _input_args_is_shape(*args):
             shape = args
             self._local_or_consistent_tensor = None
+            # TODO(jianhao): update checkpoint to remove this attr
             self._variable_name = None
             self._undetermined_tensor = UndeterminedTensor(
                 shape,
@@ -435,7 +436,6 @@ class UndeterminedTensor:
 
 def _default_initializer_for_determining(undetermined_tensor):
     assert not undetermined_tensor.is_consistent
-    # TODO(jianhao): update checkpoint to only depend on blob object
     variable_name = id_util.UniqueStr("tensor_")
     blob = flow.get_variable(
         name=variable_name,
