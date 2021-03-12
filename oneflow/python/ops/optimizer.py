@@ -30,7 +30,14 @@ import oneflow_api
 
 def GetVariablesForCurrentJob() -> List[Text]:
     sess = session_ctx.GetDefaultSession()
-    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = ""
+    try:
+        job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+    except Exception as e:
+        print(
+            "Optimizer's Variables() or minimize() method should be called inside a Job Function to implicitly get variables from a job."
+        )
+        raise e
     return list(sess.job_name2var_name2var_blob_[job_name].keys())
 
 
@@ -1902,6 +1909,18 @@ class CombinedOptimizer(Optimizer):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
         )
+        for optimizer in optimizers:
+            assert not isinstance(
+                optimizer, CombinedOptimizer
+            ), "Forbid constructing CombinedOptimizer recursively"
+            assert optimizer.train_step_lbn is None, (
+                "Only one train step lbn among multi optimizers, please set this"
+                "parameter in CombinedOptimizer"
+            )
+            assert optimizer.loss_scale_policy is None, (
+                "Only one loss scale policy among multi optimizers, please set this"
+                "parameter in CombinedOptimizer"
+            )
         self.optimizers = optimizers
 
     def Variables(self) -> List[Text]:
@@ -1909,17 +1928,6 @@ class CombinedOptimizer(Optimizer):
             self.variables = []
             for optimizer in self.optimizers:
                 self.variables.append(optimizer.Variables())
-                assert not isinstance(
-                    optimizer, CombinedOptimizer
-                ), "Forbid constructing CombinedOptimizer recursively"
-                assert optimizer.train_step_lbn is None, (
-                    "Only one train step lbn among multi optimizers, please set this"
-                    "parameter in CombinedOptimizer"
-                )
-                assert optimizer.loss_scale_policy is None, (
-                    "Only one loss scale policy among multi optimizers, please set this"
-                    "parameter in CombinedOptimizer"
-                )
             self._variables_list_init = True
 
         return self.variables

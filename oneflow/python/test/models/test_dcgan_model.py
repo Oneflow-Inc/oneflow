@@ -237,7 +237,7 @@ class DCGANCompare:
         dcgan_md = DCGAN(
             gpu_num,
             batch_size,
-            is_function_style=True,
+            is_deprecated_function_style=True,
             training_config=train_config,
             validation_config=val_config,
             callbacks=[loss_monitor],
