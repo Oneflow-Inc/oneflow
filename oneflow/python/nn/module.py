@@ -121,7 +121,7 @@ class Module(object):
 
     def __call__(self, *args):
         # if hasattr(self, "_op") and isinstance(self._op, oneflow_api.one.UserOpExpr):
-            # self._op = _wrapper(self._op)
+        # self._op = _wrapper(self._op)
 
         for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args)
