@@ -102,8 +102,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::unique_ptr<BoxingLogger> boxing_logger_;
 };
 
-bool IsBackEdge(TaskNode* src, TaskNode* dst);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
