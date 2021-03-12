@@ -49,7 +49,7 @@ class PyForeignBoxingUtil : public ForeignBoxingUtil {
   }
 };
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
+ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   using namespace oneflow;
   py::class_<ForeignBoxingUtil, PyForeignBoxingUtil, std::shared_ptr<ForeignBoxingUtil>>(
       m, "ForeignBoxingUtil")
