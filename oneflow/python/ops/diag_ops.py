@@ -48,21 +48,15 @@ def diag(
         import numpy as np
         import oneflow.typing as tp
 
-        func_config = flow.FunctionConfig()
-        func_config.default_data_type(flow.float)
-        func_config.default_logical_view(flow.scope.mirrored_view())
-        
-        @flow.global_function(function_config=func_config)
-        def diag_Job(x: tp.ListListNumpy.Placeholder(shape=(2, 5), dtype=flow.float32),
-        ) -> tp.ListListNumpy:
-            x = flow.tensor_list_to_tensor_buffer(input=x)
-            return flow.diag(x, dim)
 
-        x = np.random.rand(3, 3).astype(np.float32)
-        dim = 0
-        out = diag_Job(x, dim)
+        @flow.global_function()
+        def Diag_Job(input: tp.Numpy.Placeholder((2, 2), dtype=flow.float32),) -> tp.Numpy:
+            return flow.diag(input)
 
-        # out[0][0].shape (3)
+
+        input = np.array([[1.0, 2.0], [3.0, 4.0],], dtype=np.float32)
+        out = Diag_Job(input)
+        # out [1. 4.]
 
     """
     return (

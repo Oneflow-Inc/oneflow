@@ -16,51 +16,40 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
-namespace {
-Maybe<void> InferForwardTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  const int32_t diagonal = ctx->Attr<int32_t>("diagonal");
-  const ShapeView& in_shape = in->shape();
-  const int32_t in_dim = in_shape.NumAxes();
-  DimVector out_dim_vec = {0};
-
-  if (in_dim == 1) {
-    int32_t out_tensor_size = in_shape.At(0) + std::abs(diagonal);
-    out_dim_vec[0] = out_tensor_size;
-    out_dim_vec.push_back(out_tensor_size);
-  } else {
-    if (diagonal >= 0) {
-      out_dim_vec[0] = std::min(in_shape.At(0), in_shape.At(1) - diagonal);
-    } else {
-      out_dim_vec[0] = std::min(in_shape.At(0) + diagonal, in_shape.At(1));
-    }
-  }
-
-  user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  out_desc->set_is_dynamic(false);
-  *out_desc->mut_shape() = Shape(out_dim_vec);
-  *out_desc->mut_data_type() = oneflow::kFloat;
-  *out_desc->mut_data_type() = in->data_type();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferBackwardTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-  const Shape& in_shape = in->shape();
-  user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
-  *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
-  *dx_desc->mut_data_type() = dy_desc->data_type();
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
 
 REGISTER_USER_OP("diag")
     .Input("in")
     .Output("out")
     .Attr<int32_t>("diagonal", 0)
-    .SetTensorDescInferFn(InferForwardTensorDesc)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const int32_t diagonal = ctx->Attr<int32_t>("diagonal");
+      const ShapeView& in_shape = in->shape();
+      const int32_t in_dim = in_shape.NumAxes();
+      CHECK_GE_OR_RETURN(in_dim, 1);
+      CHECK_LE_OR_RETURN(in_dim, 2);
+
+      DimVector out_dim_vec = {0};
+      if (in_dim == 1) {
+        int32_t out_tensor_size = in_shape.At(0) + std::abs(diagonal);
+        out_dim_vec[0] = out_tensor_size;
+        out_dim_vec.push_back(out_tensor_size);
+      } else {
+        if (diagonal >= 0) {
+          out_dim_vec[0] = std::min(in_shape.At(0), in_shape.At(1) - diagonal);
+        } else {
+          out_dim_vec[0] = std::min(in_shape.At(0) + diagonal, in_shape.At(1));
+        }
+        CHECK_GT_OR_RETURN(out_dim_vec[0], 0);
+      }
+
+      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      out_desc->set_is_dynamic(false);
+      *out_desc->mut_shape() = Shape(out_dim_vec);
+      *out_desc->mut_data_type() = oneflow::kFloat;
+      *out_desc->mut_data_type() = in->data_type();
+      return Maybe<void>::Ok();
+    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       int32_t axis = in_tensor.shape().NumAxes();
@@ -77,7 +66,15 @@ REGISTER_USER_OP("diag_grad")
     .Input("in")
     .Attr<int32_t>("diagonal", 0)
     .Output("dx")
-    .SetTensorDescInferFn(InferBackwardTensorDesc)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      const Shape& in_shape = in->shape();
+      user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+      *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
+      *dx_desc->mut_data_type() = dy_desc->data_type();
+      return Maybe<void>::Ok();
+    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
       int32_t axis = y_tensor.shape().NumAxes();

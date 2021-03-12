@@ -24,24 +24,24 @@ namespace {
 
 template<typename T>
 struct DiagFunctor<DeviceType::kCPU, T> final {
-  void operator()(DeviceCtx* ctx, T* out_buf, const T* in_buf, int32_t size, int32_t strideSum,
+  void operator()(DeviceCtx* ctx, T* out_buf, const T* in_buf, int32_t size, int32_t stride,
                   int32_t in_dim) {
     if (in_dim == 1) {
-      FOR_RANGE(int32_t, i, 0, size) { out_buf[i * strideSum] = in_buf[i]; }
+      FOR_RANGE(int32_t, i, 0, size) { out_buf[i * stride] = in_buf[i]; }
     } else {
-      FOR_RANGE(int32_t, i, 0, size) { out_buf[i] = in_buf[i * strideSum]; }
+      FOR_RANGE(int32_t, i, 0, size) { out_buf[i] = in_buf[i * stride]; }
     }
   }
 };
 
 template<typename T>
 struct DiagGradFunctor<DeviceType::kCPU, T> final {
-  void operator()(DeviceCtx* ctx, T* dx_buf, const T* dy_buf, int32_t dx_num_cnt,
-                  int32_t dy_num_cnt, int32_t strideSum, int32_t in_dim) {
+  void operator()(DeviceCtx* ctx, T* dx_buf, const T* dy_buf, int32_t dx_cnt, int32_t dy_cnt,
+                  int32_t stride, int32_t in_dim) {
     if (in_dim == 1) {
-      FOR_RANGE(int32_t, i, 0, dx_num_cnt) { dx_buf[i] = dy_buf[i * strideSum]; }
+      FOR_RANGE(int32_t, i, 0, dx_cnt) { dx_buf[i] = dy_buf[i * stride]; }
     } else {
-      FOR_RANGE(int32_t, i, 0, dy_num_cnt) { dx_buf[i * strideSum] = dy_buf[i]; }
+      FOR_RANGE(int32_t, i, 0, dy_cnt) { dx_buf[i * stride] = dy_buf[i]; }
     }
   }
 };

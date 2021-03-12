@@ -23,14 +23,14 @@ namespace oneflow {
 namespace {
 template<DeviceType device_type, typename T>
 struct DiagFunctor final {
-  void operator()(DeviceCtx* ctx, T* out_buf, const T* in_buf, int32_t size, int32_t strideSum,
+  void operator()(DeviceCtx* ctx, T* out_buf, const T* in_buf, int32_t size, int32_t stride,
                   int32_t in_dim);
 };
 
 template<DeviceType device_type, typename T>
 struct DiagGradFunctor final {
-  void operator()(DeviceCtx* ctx, T* dx_buf, const T* dy_buf, int32_t dx_num_cnt,
-                  int32_t dy_num_cnt, int32_t strideSum, int32_t in_dim);
+  void operator()(DeviceCtx* ctx, T* dx_buf, const T* dy_buf, int32_t dx_cnt, int32_t dy_cnt,
+                  int32_t stride, int32_t in_dim);
 };
 }  // namespace
 
@@ -48,32 +48,27 @@ class DiagKernel final : public user_op::OpKernel {
     const ShapeView& out_shape = out->shape();
     const ShapeView& in_shape = in->shape();
     int32_t in_dim = in_shape.NumAxes();
-
-    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0, out_shape.elem_cnt() * sizeof(T));
-
     const T* in_buf = in->dptr<T>();
     T* out_buf = out->mut_dptr<T>();
 
-    int32_t stride_0 = 0;
-    int32_t stride_1 = 0;
-    int32_t sz = 0;
+    Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0, out_shape.elem_cnt() * sizeof(T));
+
     if (in_dim == 1) {
-      stride_0 = out_shape.At(1);
-      stride_1 = 1;
-      sz = in_shape.elem_cnt();
-      out_buf += (diagonal >= 0 ? diagonal * stride_1 : -diagonal * stride_0);
+      int32_t size = in_shape.elem_cnt();
+      out_buf += (diagonal >= 0 ? diagonal : -diagonal * out_shape.At(1));
+      DiagFunctor<device_type, T>()(ctx->device_ctx(), out_buf, in_buf, size, out_shape.At(1) + 1,
+                                    in_dim);
     } else {
-      stride_0 = in_shape.At(1);
-      stride_1 = 1;
-      in_buf += (diagonal >= 0 ? diagonal * stride_1 : -diagonal * stride_0);
+      int32_t size = 0;
+      in_buf += (diagonal >= 0 ? diagonal : -diagonal * in_shape.At(1));
       if (diagonal >= 0) {
-        sz = std::min(in_shape.At(0), in_shape.At(1) - diagonal);
+        size = std::min(in_shape.At(0), in_shape.At(1) - diagonal);
       } else {
-        sz = std::min(in_shape.At(0) + diagonal, in_shape.At(1));
+        size = std::min(in_shape.At(0) + diagonal, in_shape.At(1));
       }
+      DiagFunctor<device_type, T>()(ctx->device_ctx(), out_buf, in_buf, size, in_shape.At(1) + 1,
+                                    in_dim);
     }
-    DiagFunctor<device_type, T>()(ctx->device_ctx(), out_buf, in_buf, sz, stride_0 + stride_1,
-                                  in_dim);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -92,29 +87,22 @@ class DiagBackwardKernel final : public user_op::OpKernel {
     const ShapeView& dx_shape = dx->shape();
     const ShapeView& dy_shape = dy->shape();
     int32_t in_dim = dx_shape.NumAxes();
-    int32_t dy_num_cnt = dy_shape.At(0);
-    int32_t dx_num_cnt = dx_shape.Count(0);
+    int32_t dy_cnt = dy_shape.Count(0);
+    int32_t dx_cnt = dx_shape.Count(0);
     T* dx_buf = dx->mut_dptr<T>();
     const T* dy_buf = dy->dptr<T>();
 
     Memset<device_type>(ctx->device_ctx(), dx->mut_dptr<T>(), 0, dx_shape.elem_cnt() * sizeof(T));
 
-    int32_t stride_1 = 0;
-    int32_t stride_0 = 0;
     if (in_dim == 1) {
-      stride_1 = 1;
-      stride_0 = dy_shape.At(1);
-
-      dy_buf += (diagonal >= 0 ? diagonal * stride_1 : -diagonal * stride_0);
-      for (int32_t i = 0; i < dx_num_cnt; i++) { dx_buf[i] = dy_buf[i * (stride_0 + stride_1)]; }
+      dy_buf += (diagonal >= 0 ? diagonal : -diagonal * dy_shape.At(1));
+      DiagGradFunctor<device_type, T>()(ctx->device_ctx(), dx_buf, dy_buf, dx_cnt, dy_cnt,
+                                        dy_shape.At(1) + 1, in_dim);
     } else {
-      stride_0 = dx_shape.At(1);
-      stride_1 = 1;
-      dx_buf += (diagonal >= 0 ? diagonal * stride_1 : -diagonal * stride_0);
-      for (int32_t i = 0; i < dy_num_cnt; i++) { dx_buf[i * (stride_0 + stride_1)] = dy_buf[i]; }
+      dx_buf += (diagonal >= 0 ? diagonal : -diagonal * dx_shape.At(1));
+      DiagGradFunctor<device_type, T>()(ctx->device_ctx(), dx_buf, dy_buf, dx_cnt, dy_cnt,
+                                        dx_shape.At(1) + 1, in_dim);
     }
-    DiagGradFunctor<device_type, T>()(ctx->device_ctx(), dx_buf, dy_buf, dx_num_cnt, dy_num_cnt,
-                                      stride_0 + stride_1, in_dim);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
