@@ -536,6 +536,9 @@ def Init() -> None:
         g = initializer_util.GetInitializer(
             var_conf.initializer, var_conf.random_seed, var_blob.shape
         )
+        # g is None if and only if the initializer is empty_initializer
+        if g is None:
+            continue
 
         def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx):
             np_dtype = np.dtype(
