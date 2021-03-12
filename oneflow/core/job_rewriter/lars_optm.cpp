@@ -40,7 +40,6 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
       .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
       .Input("model_diff", model_diff_lbn)
       .Input("learning_rate", optimizer_conf.learning_rate_lbn())
-      .Input("train_step", job_builder->job().job_conf().train_conf().train_step_lbn())
       .Input("momentum",
              GenLogicalBlobName(momentum_var_op_name, momentum_var.variable_conf().out()))
       .Attr<float>("momentum_beta", optimizer_conf.lars_conf().momentum_beta())
