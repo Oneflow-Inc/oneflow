@@ -152,6 +152,8 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
+  std::shared_ptr<MirroredTensor> data() const;
+  std::shared_ptr<MirroredTensor> detach() const;
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
@@ -208,6 +210,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
+  std::shared_ptr<ConsistentTensor> data() const;
+  std::shared_ptr<ConsistentTensor> detach() const;
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
