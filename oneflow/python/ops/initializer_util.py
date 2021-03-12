@@ -1090,7 +1090,6 @@ def GetInitializer(initializer_conf, random_seed, var_blob_shape):
     f = None
     for m in _init_map:
         if initializer_conf.HasField(m):
-            print(m)
             f = _init_map[m]
             break
     assert f is not None, initializer_conf
