@@ -337,31 +337,34 @@ void UserOp::InitFromOpConf() {
     }
   }
   EnrollTmpBn(GenRepeatedBn("tmp_buffer", 0));
+  user_op_conf_.reset(new user_op::UserOpConfWrapper(shared_op_conf()));
   val_ =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf().user_conf().op_type_name());
   if (val_ != nullptr) {
-    user_op::UserOpConfWrapper user_conf_wrapper(op_conf());
-    user_op::GetInputArgModifier GetInputArgModifierFn =
-        [&](const std::string& in_arg_name, int32_t in_arg_index) -> user_op::InputArgModifier* {
-      std::string ibn = GenRepeatedBn(in_arg_name, in_arg_index);
-      if (std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end()) {
-        return MutInputBlobModifier4Ibn(ibn);
-      }
-      return nullptr;
-    };
-    val_->input_arg_modify_fn(GetInputArgModifierFn, user_conf_wrapper);
-
-    user_op::GetOutputArgModifier GetOutputArgModifierFn =
-        [&](const std::string& out_arg_name, int32_t out_arg_index) -> user_op::OutputArgModifier* {
-      std::string obn = GenRepeatedBn(out_arg_name, out_arg_index);
-      if (std::find(output_bns().begin(), output_bns().end(), obn) != output_bns().end()) {
-        return MutOutputBlobModifier4Obn(obn);
-      }
-      return nullptr;
-    };
-    val_->output_arg_modify_fn(GetOutputArgModifierFn, user_conf_wrapper);
+    if (val_->input_arg_modify_fn) {
+      user_op::GetInputArgModifier GetInputArgModifierFn =
+          [&](const std::string& in_arg_name, int32_t in_arg_index) -> user_op::InputArgModifier* {
+        std::string ibn = GenRepeatedBn(in_arg_name, in_arg_index);
+        if (std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end()) {
+          return MutInputBlobModifier4Ibn(ibn);
+        }
+        return nullptr;
+      };
+      val_->input_arg_modify_fn(GetInputArgModifierFn, *user_op_conf_);
+    }
+    if (val_->output_arg_modify_fn) {
+      user_op::GetOutputArgModifier GetOutputArgModifierFn =
+          [&](const std::string& out_arg_name,
+              int32_t out_arg_index) -> user_op::OutputArgModifier* {
+        std::string obn = GenRepeatedBn(out_arg_name, out_arg_index);
+        if (std::find(output_bns().begin(), output_bns().end(), obn) != output_bns().end()) {
+          return MutOutputBlobModifier4Obn(obn);
+        }
+        return nullptr;
+      };
+      val_->output_arg_modify_fn(GetOutputArgModifierFn, *user_op_conf_);
+    }
   }
-  user_op_conf_.reset(new user_op::UserOpConfWrapper(op_conf()));
 }
 
 Maybe<void> UserOp::InferInternalBlobDescs(

@@ -224,12 +224,6 @@ OpRegistry& OpRegistry::Finish() {
   if (result_.get_sbp_fn == nullptr) {
     result_.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
   }
-  if (result_.input_arg_modify_fn == nullptr) {
-    result_.input_arg_modify_fn = [](GetInputArgModifier, const UserOpConfWrapper&) {};
-  }
-  if (result_.output_arg_modify_fn == nullptr) {
-    result_.output_arg_modify_fn = [](GetOutputArgModifier, const UserOpConfWrapper&) {};
-  }
   return *this;
 }
 
