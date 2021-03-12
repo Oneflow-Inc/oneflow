@@ -44,7 +44,8 @@ Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::Ten
                                  bool retain_graph, bool create_graph) {
   if (create_graph) { retain_graph = true; }
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
-  JUST(one::GetThreadLocalAutogradEngine()->RunBackwardAndSaveGrads4LeafTensor(outputs, *gradients, retain_graph, create_graph));
+  JUST(one::GetThreadLocalAutogradEngine()->RunBackwardAndSaveGrads4LeafTensor(
+      outputs, *gradients, retain_graph, create_graph));
   return std::make_shared<one::TensorTuple>(0);
 }
 
@@ -54,7 +55,8 @@ Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorT
   if (create_graph) { retain_graph = true; }
   if (inputs.empty()) { return Backward(outputs, out_grads, retain_graph, create_graph); }
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
-  return one::GetThreadLocalAutogradEngine()->RunBackwardAndReturnInputsTensorGrad(outputs, inputs, *gradients, retain_graph, create_graph);
+  return one::GetThreadLocalAutogradEngine()->RunBackwardAndReturnInputsTensorGrad(
+      outputs, inputs, *gradients, retain_graph, create_graph);
 }
 
 }  // namespace autograd
