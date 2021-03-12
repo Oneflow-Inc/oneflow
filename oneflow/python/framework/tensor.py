@@ -285,20 +285,18 @@ class Tensor:
 
     def uniform_(self, a=0, b=1):
         initializer_conf = flow.random_uniform_initializer(
-                                minval=a, maxval=b, dtype=self.dtype
-                            )
+            minval=a, maxval=b, dtype=self.dtype
+        )
         return self._InitByInitializerConf(initializer_conf)
 
-    def normal_(self, mean = 0, std = 1):
+    def normal_(self, mean=0, std=1):
         initializer_conf = flow.random_normal_initializer(
-                                mean=mean, stddev=std, dtype=self.dtype
-                            )
+            mean=mean, stddev=std, dtype=self.dtype
+        )
         return self._InitByInitializerConf(initializer_conf)
 
     def fill_(self, value):
-        initializer_conf = flow.constant_initializer(
-                                value=value, dtype=self.dtype
-                            )
+        initializer_conf = flow.constant_initializer(value=value, dtype=self.dtype)
         return self._InitByInitializerConf(initializer_conf)
 
 
