@@ -236,6 +236,8 @@ void OpGraph::CheckIsDAG() const {
   CHECK(!FindFirstNontrivialSCC(ForEachIn, ForEachOut));
 }
 
+namespace {
+
 std::function<std::shared_ptr<const ParallelDesc>(const std::string&)>
 MakeGetterParallelDesc4OpName(const Placement& placement) {
   auto op_name2parallel_desc =
@@ -253,6 +255,8 @@ MakeGetterParallelDesc4OpName(const Placement& placement) {
     return op_name2parallel_desc->at(op_name);
   };
 }
+
+}  // namespace
 
 void OpGraph::InitNodes(const Job& job) {
   auto ParallelDesc4OpName = MakeGetterParallelDesc4OpName(job.placement());
