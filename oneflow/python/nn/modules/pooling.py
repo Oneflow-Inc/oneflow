@@ -25,6 +25,8 @@ from oneflow.python.nn.modules.utils import (
 )
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
+from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
+import oneflow.python.framework.id_util as id_util
 
 
 @oneflow_export("nn.AvgPool2d")
@@ -39,24 +41,48 @@ class AvgPool2d(Module):
         stride: Optional[_size_2_t] = None,
         padding: _size_2_t = 0,
         ceil_mode: bool = False,
-        count_include_pad: bool = True,
+        count_include_pad: bool = None,
         divisor_override: Optional[int] = None,
-    ) -> None:
+    ):
         super().__init__()
-        self.kernel_size = kernel_size
-        self.stride = stride if (stride is not None) else kernel_size
-        self.padding = padding
-        self.ceil_mode = ceil_mode
-        self.count_include_pad = count_include_pad
-        self.divisor_override = divisor_override
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride) if (stride is not None) else kernel_size
+        if padding == 0:
+            padding = "SAME"
+        else:
+            raise ValueError("padding != 0 not supported yet")
 
-    def forward(self, input: Tensor) -> Tensor:
-        return F.avg_pool2d(
-            input,
-            self.kernel_size,
-            self.stride,
-            self.padding,
-            self.ceil_mode,
-            self.count_include_pad,
-            self.divisor_override,
+        ceil_mode = ceil_mode
+
+        assert count_include_pad is None, "count_include_pad not supported yet"
+        assert divisor_override is None, "divisor_override not supported yet"
+        count_include_pad = count_include_pad
+        divisor_override = divisor_override
+
+        _opname = id_util.UniqueStr("Module_AvgPool2D_")
+        _channel_pos = "channels_first"
+
+        _padding_type, _pads_list = calc_pool_padding(
+            padding, get_dhw_offset(_channel_pos), 2
         )
+        _padding_before = [pad[0] for pad in _pads_list]
+        _padding_after = [pad[1] for pad in _pads_list]
+
+        self._op = (
+            flow.builtin_op("avg_pool_2d")
+            .Name(_opname)
+            .Attr("data_format", _channel_pos)
+            .Attr("pool_size", kernel_size)
+            .Attr("strides", stride)
+            .Attr("ceil_mode", ceil_mode)
+            .Attr("padding", _padding_type)
+            .Attr("padding_before", _padding_before)
+            .Attr("padding_after", _padding_after)
+            .Input("x")
+            .Output("y")
+            .Build()
+        )
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
