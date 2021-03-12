@@ -231,6 +231,11 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || std::is
     return *maybe_ptr_.GetDataAndSerializedErrorProto(error_str, static_cast<PtrT>(nullptr));
   }
 
+  T GetOrThrow() const {
+    if (!IsOk()) { ThrowError(error()); }
+    return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+  }
+
  private:
   Maybe<PtrT> maybe_ptr_;
 };

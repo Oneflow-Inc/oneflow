@@ -91,12 +91,18 @@ class Operator {
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
   Maybe<void> FillLogicalInBlobDesc(
       const std::function<const BlobDesc&(const std::string&)>& BlobDesc4BnInOp);
+  Maybe<void> FillLogicalInBlobDesc(
+      const std::function<Maybe<const BlobDesc>(int32_t)>& BlobDesc4InputIndex);
   Maybe<const BlobDesc> GetLogicalBlobDesc4Ibn(const std::string& ibn) const;
+  Maybe<const BlobDesc> GetLogicalBlobDesc4InputIndex(int32_t index) const;
   Maybe<void> FillLogicalOutBlobDesc(
       const std::function<const BlobDesc&(const std::string&)>& BlobDesc4BnInOp);
   Maybe<void> FillLogicalOutBlobDesc(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp);
   Maybe<const BlobDesc> GetLogicalBlobDesc4Obn(const std::string& obn) const;
+  Maybe<const BlobDesc> GetLogicalBlobDesc4OutputIndex(int32_t index) const;
+  Maybe<const BlobDesc*> GetLogicalBlobDescPtr4OutputIndex(int32_t index) const;
+  Maybe<const BlobDesc> GetLogicalBlobDesc4BnInOp(const std::string& bn) const;
   Maybe<void> InferLogicalOutBlobDescsIf();
   virtual Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
@@ -161,6 +167,10 @@ class Operator {
   Maybe<const SbpSignature*> sbp_signature() const;
   BlobLastUsedSignature* mut_blob_last_used_signature();
   BlobBackwardUsedSignature* mut_blob_backward_used_signature();
+
+  Maybe<int32_t> GetInputIndex(const std::string& ibn) const;
+  Maybe<int32_t> GetOutputIndex(const std::string& obn) const;
+  Maybe<int32_t> GetOutputIndex(const LogicalBlobId& lbi) const;
 
   Maybe<void> ToOpAttribute(OpAttribute* op_attribute) const;
 
@@ -246,6 +256,10 @@ class Operator {
   OptMirroredParallel* MutOptMirroredParallel(const std::string& bn_in_op);
 
  private:
+  enum BlobNameTag {
+    kInputBlobName,
+    kOutputBlobName,
+  };
   Maybe<void> FilterAndCheckValidSbpSignatureListByLogicalShape(
       const SbpSignatureList& total_sbp_sig_list,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
@@ -263,8 +277,8 @@ class Operator {
   HashMap<LogicalBlobId, std::string> lbi2obn_;
   std::shared_ptr<const ParallelDesc> op_parallel_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const ParallelDesc>>> bn2parallel_desc_;
-  std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> ibn2logical_blob_desc_;
-  std::unique_ptr<HashMap<std::string, std::shared_ptr<const BlobDesc>>> obn2logical_blob_desc_;
+  std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>> input_index2logical_blob_desc_;
+  std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>> output_index2logical_blob_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const Shape>>> ibn2time_shape_;
   std::shared_ptr<const Shape> input_blob_fastest_time_shape_;
   std::shared_ptr<const Shape> input_output_fastest_time_shape_;
@@ -280,6 +294,9 @@ class Operator {
   std::unique_ptr<BlobLastUsedSignature> blob_last_used_signature_;
   std::unique_ptr<BlobBackwardUsedSignature> blob_backward_used_signature_;
   std::unique_ptr<MirroredSignature> mirrored_signature_;
+
+  HashMap<std::string, std::pair<BlobNameTag, int32_t>> bn2index_pair_;
+  HashMap<LogicalBlobId, int32_t> lbi2output_index_;
 };
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
@@ -348,9 +365,6 @@ struct IsTickTockOpTypeCase final {};
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type);
-
-void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                       PbRpf<std::string>* bns);
 
 inline LogicalBlobId GenPackedLbi() {
   LogicalBlobId lbi;
