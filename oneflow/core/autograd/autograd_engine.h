@@ -74,8 +74,8 @@ class AutogradEngine {
   // Builds FunctionNode, binding to all `outputs_` tensors and saving in AutogradEngine
   // TODO: add parameters for `backward_fn`
   virtual std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
-      const std::shared_ptr<const std::function<void()>>& backward_fn, const TensorTuple& inputs,
-      TensorTuple* outputs) = 0;
+      const std::shared_ptr<const std::function<Maybe<void>()>>& backward_fn,
+      const TensorTuple& inputs, TensorTuple* outputs) = 0;
 
  protected:
   AutogradEngine() = default;
@@ -125,8 +125,8 @@ class StackAutogradEngine final : public AutogradEngine {
                                                           bool create_graph) override;
   void ClearEngine() override;
   std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
-      const std::shared_ptr<const std::function<void()>>& backward_fn, const TensorTuple& inputs,
-      TensorTuple* outputs) override;
+      const std::shared_ptr<const std::function<Maybe<void>()>>& backward_fn,
+      const TensorTuple& inputs, TensorTuple* outputs) override;
 
  protected:
   // StackFunctionNode must be saved in engine, because any node in list may be released at any
