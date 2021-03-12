@@ -16,6 +16,7 @@ limitations under the License.
 
 #include <vector>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor.h"
@@ -28,30 +29,6 @@ namespace one {
 namespace {
 
 struct TensorTupleUtil final {
-  static std::shared_ptr<TensorTuple> MakeTensorTupleByPyTuple(const py::tuple& py_tuple) {
-    std::shared_ptr<TensorTuple> tensor_tuple = std::make_shared<TensorTuple>();
-    for (const auto& tensor : py_tuple) {
-      tensor_tuple->emplace_back(tensor.cast<std::shared_ptr<Tensor>>());
-    }
-    return tensor_tuple;
-  }
-
-  static std::shared_ptr<TensorTuple> MakeTensorTuple(const py::object& py_obj) {
-    if (py::isinstance<TensorTuple>(py_obj)) {
-      std::shared_ptr<TensorTuple> tensor_tuple = std::make_shared<TensorTuple>();
-      for (const auto& tensor : py_obj) {
-        tensor_tuple->emplace_back(tensor.cast<std::shared_ptr<Tensor>>());
-      }
-      return tensor_tuple;
-    } else if (py::isinstance<py::tuple>(py_obj)) {
-      return MakeTensorTupleByPyTuple(py_obj.cast<py::tuple>());
-    } else if (py::isinstance<py::list>(py_obj)) {
-      return MakeTensorTupleByPyTuple(py::tuple(py_obj.cast<py::list>()));
-    } else {
-      throw py::type_error("Input must be other TensorTuple, Tuple or List");
-    }
-  }
-
   static std::string ToString(const TensorTuple& tensor_tuple) {
     std::stringstream ss;
     int32_t idx = 0;
@@ -80,7 +57,12 @@ struct TensorTupleUtil final {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<TensorTuple, std::shared_ptr<TensorTuple>>(m, "TensorTuple")
       .def(py::init([]() { return std::make_shared<TensorTuple>(); }))
-      .def(py::init(&TensorTupleUtil::MakeTensorTuple))
+      .def(py::init([](const std::shared_ptr<TensorTuple>& other) { return other; }))
+      .def(py::init([](const std::vector<std::shared_ptr<Tensor>>& list) {
+        auto tensor_tuple = std::make_shared<TensorTuple>();
+        for (const auto& t : list) { tensor_tuple->emplace_back(t); }
+        return tensor_tuple;
+      }))
       .def("__str__", &TensorTupleUtil::ToString)
       .def("__repr__", &TensorTupleUtil::ToString)
       .def("__getitem__",
