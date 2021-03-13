@@ -41,6 +41,7 @@ DataType GetDataTypeFromBnInOpVec(
 
 std::shared_ptr<Operator> CheckAndConstructOp(const OperatorConf& op_conf) {
   Operator* rptr = NewObj<int32_t, Operator>(op_conf.op_type_case(), op_conf);
+  if (op_conf.device_tag() != "cpu") { LOG(ERROR) << "op_conf:\n" << op_conf.DebugString(); }
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf.device_tag()));
   if (IsCpuOnly(op_conf)) { CHECK_EQ(device_type, DeviceType::kCPU); }
   rptr->Init(op_conf);
@@ -887,7 +888,7 @@ bool IsCpuOnly(const OperatorConf& op_conf) {
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
   OperatorConf dev_op_conf = op_conf;
-  dev_op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type)));
+  dev_op_conf.set_device_tag(DeviceRegistryMgr::Get().DeviceType4Tag().at(device_type));
   return CheckAndConstructOp(dev_op_conf);
 }
 
