@@ -48,7 +48,7 @@ class AvgPool2d(Module):
         kernel_size = _pair(kernel_size)
         stride = _pair(stride) if (stride is not None) else kernel_size
         if padding == 0:
-            padding = "SAME"
+            padding = "VALID"
         else:
             raise ValueError("padding != 0 not supported yet")
 
