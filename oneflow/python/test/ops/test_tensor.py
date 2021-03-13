@@ -55,15 +55,19 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.Tensor(*shape)
 
         x.fill_(5)
+
         @flow.global_function()
         def job():
             test_case.assertTrue(np.array_equal(x.numpy(), 5 * np.ones(x.shape)))
+
         job()
 
         flow.nn.init.ones_(x)
+
         @flow.global_function()
         def job():
             test_case.assertTrue(np.array_equal(x.numpy(), np.ones(x.shape)))
+
         job()
 
 

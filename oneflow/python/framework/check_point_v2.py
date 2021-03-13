@@ -518,7 +518,9 @@ def init_by_initializer_conf(
     sync_between_multi_machine: bool,
     random_seed=0,
 ):
-    initializer = initializer_util.GetInitializer(initializer_conf, random_seed, var_blob.shape)
+    initializer = initializer_util.GetInitializer(
+        initializer_conf, random_seed, var_blob.shape
+    )
     # initializer is None if and only if the initializer_conf is empty_initializer
     if initializer is None:
         return
