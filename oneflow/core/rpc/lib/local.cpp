@@ -98,6 +98,7 @@ void RpcClient::PullKV(const std::string& k, std::function<void(const std::strin
   while (true) {
     auto it = kv_.find(k);
     if (it == kv_.end()) {
+      LOG(ERROR) << "waiting for key: " << k;
       kv_cv_.wait(lck);
     } else {
       VGetter(kv_.at(k));
