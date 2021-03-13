@@ -47,10 +47,12 @@ class AvgPool2d(Module):
         super().__init__()
         kernel_size = _pair(kernel_size)
         stride = _pair(stride) if (stride is not None) else kernel_size
-        if padding == 0:
-            padding = "VALID"
+        if isinstance(padding, int):
+            padding = [0, 0, padding, padding]
+        elif isinstance(padding, tuple):
+            padding = [0, 0, *padding]
         else:
-            raise ValueError("padding != 0 not supported yet")
+            raise ValueError("padding should only be a int or a tuple of 2 ints")
 
         ceil_mode = ceil_mode
 
