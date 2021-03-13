@@ -72,6 +72,10 @@ class Tensor {
   virtual bool is_consistent() const = 0;
   virtual bool is_lazy() const = 0;
 
+  // Setters
+  virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
+  virtual void set_dtype(const std::shared_ptr<const DType>& dtype) = 0;
+
   // Getters for autograd
   virtual bool requires_grad() const = 0;
   virtual bool is_leaf() const = 0;
@@ -123,7 +127,7 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
 
   // Setters to be deprecated
-  virtual void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
+  virtual Maybe<void> set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 
  protected:
   TensorIf() = default;
@@ -153,6 +157,12 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   std::shared_ptr<MirroredTensor> data() const;
   std::shared_ptr<MirroredTensor> detach() const;
 
+  // Setters
+  void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
+  void set_dtype(const std::shared_ptr<const DType>& dtype) override { impl_->set_dtype(dtype); }
+  void set_device(const std::shared_ptr<const Device>& device) { impl_->set_device(device); }
+  Maybe<void> set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc);
+
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
   const std::shared_ptr<TensorArg>& now_grad_arg() const override { return impl_->now_grad_arg(); }
@@ -171,8 +181,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   }
 
   // Setters to be deprecated
-  void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
-    impl_->set_blob_object(blob_object);
+  Maybe<void> set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
+    JUST(impl_->set_blob_object(blob_object));
+    return Maybe<void>::Ok();
   }
 
   static std::shared_ptr<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
@@ -211,6 +222,12 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   std::shared_ptr<ConsistentTensor> data() const;
   std::shared_ptr<ConsistentTensor> detach() const;
 
+  // Setters
+  void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
+  void set_dtype(const std::shared_ptr<const DType>& dtype) override { impl_->set_dtype(dtype); }
+  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) { impl_->set_parallel_desc(parallel_desc); }
+  void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) { impl_->set_distribute(distribute); }
+
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
   const std::shared_ptr<TensorArg>& now_grad_arg() const override { return impl_->now_grad_arg(); }
@@ -229,8 +246,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   }
 
   // Setters to be deprecated
-  void set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
-    impl_->set_blob_object(blob_object);
+  Maybe<void> set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
+    JUST(impl_->set_blob_object(blob_object));
+    return Maybe<void>::Ok();
   }
 
   static std::shared_ptr<ConsistentTensor> MakeTensor(
