@@ -75,10 +75,12 @@ class RpcClient : RpcClientBase {
   void PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter);
   void PullMasterKV(const std::string& k, std::function<void(const std::string&)> VGetter);
 
-  HashMap<std::string, std::string> kv_;
+  HashSet<std::string> done_names_;
   std::mutex done_names_mtx_;
   std::condition_variable done_names_cv_;
-  HashSet<std::string> done_names_;
+  HashMap<std::string, std::string> kv_;
+  std::mutex kv_mtx_;
+  std::condition_variable kv_cv_;
 };
 
 class RpcServer : RpcServerBase {

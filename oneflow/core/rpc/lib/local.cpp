@@ -65,7 +65,9 @@ void RpcClient::WaitUntilDone(const std::string& name) {
 }
 
 void RpcClient::PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {
+  std::unique_lock<std::mutex> lck(kv_mtx_);
   VSetter(&kv_[k]);
+  kv_cv_.notify_all();
 }
 
 void RpcClient::PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter) {
@@ -84,12 +86,24 @@ void RpcClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
   PushMasterKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
 
-void RpcClient::ClearKV(const std::string& k) { kv_.erase(k); }
+void RpcClient::ClearKV(const std::string& k) {
+  std::unique_lock<std::mutex> lck(kv_mtx_);
+  kv_.erase(k);
+}
 
 void RpcClient::ClearMasterKV(const std::string& k) { ClearKV(k); }
 
 void RpcClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
-  VGetter(kv_.at(k));
+  std::unique_lock<std::mutex> lck(kv_mtx_);
+  while (true) {
+    auto it = kv_.find(k);
+    if (it == kv_.end()) {
+      kv_cv_.wait(lck);
+    } else {
+      VGetter(kv_.at(k));
+      break;
+    }
+  }
 }
 
 void RpcClient::PullMasterKV(const std::string& k,
@@ -110,9 +124,16 @@ void RpcClient::PullMasterKV(const std::string& k, PbMessage* msg) {
 }
 
 void RpcClient::Clear() {
-  std::unique_lock<std::mutex> lck(done_names_mtx_);
-  done_names_.clear();
-  kv_.clear();
+  {
+    std::unique_lock<std::mutex> lck(done_names_mtx_);
+    done_names_.clear();
+    done_names_cv_.notify_all();
+  }
+  {
+    std::unique_lock<std::mutex> lck(kv_mtx_);
+    kv_.clear();
+    kv_cv_.notify_all();
+  }
 }
 
 int32_t RpcClient::IncreaseCount(const std::string& k, int32_t v) { UNIMPLEMENTED(); }
