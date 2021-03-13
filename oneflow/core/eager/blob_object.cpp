@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/eager/blob_object.h"
+#include <string>
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
@@ -22,7 +24,7 @@ namespace eager {
 Maybe<void> BlobObject::CheckMemCase(const ParallelDesc& parallel_desc, int64_t machine_id) const {
   CHECK_OR_RETURN(parallel_desc.HasMachineId(machine_id))
       << "ParallelDesc does not contain machine_id: " << machine_id;
-  const char* device_tag = JUST(DeviceTag4DeviceType(parallel_desc.device_type()));
+  const std::string& device_tag = *CHECK_JUST(DeviceTag4DeviceType(parallel_desc.device_type()));
   if (parallel_desc.device_type() == DeviceType::kCPU) {
     CHECK_OR_RETURN(this->mem_case_->has_host_mem())
         << "DeviceType: " << device_tag

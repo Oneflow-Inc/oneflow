@@ -14,18 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <map>
+#include <string>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/device_registry_manager.h"
 
 namespace oneflow {
 
-Maybe<const char*> DeviceTag4DeviceType(DeviceType device_type) {
+Maybe<std::string> DeviceTag4DeviceType(DeviceType device_type) {
   auto device_type_to_tag = DeviceRegistryMgr::Get().DeviceType4Tag();
-  if (device_type_to_tag.find(device_type) == device_type_to_tag.end()) {
+  auto it = device_type_to_tag.find(device_type);
+  if (it == device_type_to_tag.end()) {
     return Error::DeviceTagNotFoundError() << "invalid_device";
+  } else {
+    return it->second;
   }
-  return device_type_to_tag[device_type].c_str();
 }
 
 Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
