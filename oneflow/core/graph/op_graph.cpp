@@ -130,8 +130,7 @@ std::string OpNode::VisualStr() const {
   std::string str = op().op_name();
   {
     for (int64_t machine_id : parallel_desc().sorted_machine_ids()) {
-      const std::string& dev_type =
-          *CHECK_JUST(DeviceTag4DeviceType(parallel_desc().device_type()));
+      const std::string dev_type = *CHECK_JUST(DeviceTag4DeviceType(parallel_desc().device_type()));
 
       std::string parallel_desc_str = std::to_string(machine_id) + ":" + dev_type + ":";
       const auto& dev_phy_ids = parallel_desc().sorted_dev_phy_ids(machine_id);
