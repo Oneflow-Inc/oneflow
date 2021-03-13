@@ -518,7 +518,10 @@ def init_by_initializer_conf(
     sync_between_multi_machine: bool,
     random_seed=0,
 ):
-    g = initializer_util.GetInitializer(initializer_conf, random_seed, var_blob.shape)
+    initializer = initializer_util.GetInitializer(initializer_conf, random_seed, var_blob.shape)
+    # initializer is None if and only if the initializer_conf is empty_initializer
+    if initializer is None:
+        return
 
     def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx):
         np_dtype = np.dtype(
@@ -526,7 +529,7 @@ def init_by_initializer_conf(
         )
         length = _ElemCnt(np.array(stop_nd_idx) - np.array(start_nd_idx))
         vals = (
-            np.array(g(length))
+            np.array(initializer(length))
             .astype(np_dtype)
             .reshape(np.array(stop_nd_idx) - np.array(start_nd_idx))
         )
@@ -567,7 +570,7 @@ def Init() -> None:
             LoadVariables({op_name: GetCheckpoint(var_dir)})
             continue
 
-        InitByInitializerConf(
+        init_by_initializer_conf(
             var_blob, var_conf.initializer, False, var_conf.random_seed
         )
 
