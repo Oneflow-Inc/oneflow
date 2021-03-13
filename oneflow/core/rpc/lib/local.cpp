@@ -61,6 +61,7 @@ void RpcClient::NotifyDone(const std::string& name) {
 void RpcClient::WaitUntilDone(const std::string& name) {
   std::unique_lock<std::mutex> lck(done_names_mtx_);
   done_names_cv_.wait(lck);
+  LOG(ERROR) << "waiting for name: " << name;
   CHECK(done_names_.find(name) != done_names_.end());
 }
 
