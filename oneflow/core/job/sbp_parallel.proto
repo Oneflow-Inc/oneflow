@@ -66,6 +66,14 @@ message SbpSignature {
   map<string, SbpParallel> bn_in_op2sbp_parallel = 1;
 }
 
+message ParallelDistribution {
+  repeated SbpParallel sbp_parallel = 1;
+}
+
+message ParallelDistributionSignature {
+  map<string, ParallelDistribution> bn_in_op2parallel_distribution = 1;
+}
+
 message SbpSignatureList {
   repeated SbpSignature sbp_signature = 1;
 }
