@@ -51,14 +51,7 @@ BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
 
 BlobDesc::BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
 
-BlobDesc::BlobDesc(const BlobDesc& other) {
-  // *body_.mut_shape() = other.body_.shape();
-  // body_.set_data_type(other.body_.data_type());
-  // header_ = other.header_;
-  BlobDescProto proto;
-  other.ToProto(&proto);
-  InitFromProto(proto);
-}
+BlobDesc::BlobDesc(const BlobDesc& other) { CopyFrom(other); }
 
 void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   body_.InitFromProto(proto.body());
@@ -92,9 +85,14 @@ BlobDesc& BlobDesc::operator=(const BlobDesc& rhs) {
 }
 
 void BlobDesc::CopyFrom(const BlobDesc& other) {
-  BlobDescProto proto;
-  other.ToProto(&proto);
-  this->InitFromProto(proto);
+  *body_.mut_shape() = other.body_.shape();
+  body_.set_data_type(other.body_.data_type());
+  is_dynamic_ = other.is_dynamic_;
+  if (other.opaque_header_) {
+    opaque_header_.reset(new StructPodDesc(*other.opaque_header_));
+  } else {
+    opaque_header_.reset();
+  }
 }
 
 void BlobDesc::SetOpaqueHeader(const StructPodDesc& header_pod_desc) {

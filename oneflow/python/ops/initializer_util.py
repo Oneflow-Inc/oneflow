@@ -27,6 +27,16 @@ from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Sequence, Union
 
 
+@oneflow_export("empty_initializer")
+def empty_initializer(
+    dtype: flow.dtype = flow.float,
+) -> initializer_conf_util.InitializerConf:
+    initializer = initializer_conf_util.InitializerConf()
+    empty_conf = initializer_conf_util.EmptyInitializerConf()
+    initializer.empty_conf.CopyFrom(empty_conf)
+    return initializer
+
+
 @oneflow_export("constant_initializer")
 def constant_initializer(
     value: float = 0, dtype: flow.dtype = flow.float
@@ -1207,3 +1217,12 @@ def VarianceScalingInitializerImpl(
         return lambda length: rng.uniform(low=-limit, high=limit, size=length)
     else:
         raise NotImplemented()
+
+
+@register_initializer("empty_conf")
+def EmptyInitializerImpl(
+    initializer_conf: initializer_conf_util.EmptyInitializerConf,
+    random_seed: int,
+    var_blob_shape: Sequence[int],
+):
+    return None

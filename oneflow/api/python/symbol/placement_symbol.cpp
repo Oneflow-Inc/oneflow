@@ -42,6 +42,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("device_tag", &ParallelDesc::device_tag)
       .def_property_readonly("machine_id2device_id_list",
                              &ParallelDesc::machine_id2sorted_dev_phy_ids)
+      .def_property_readonly("hierarchy", &ParallelDesc::hierarchy)
       .def("Containing", &ParallelDesc::Bigger)
       .def(py::self == py::self)
       .def(py::hash(py::self));
