@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"
@@ -818,7 +819,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompati
   };
   OperatorConf op_conf;
   op_conf.set_scope_symbol_id(scope_symbol_id);
-  op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(parallel_desc.device_type())));
+  op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(parallel_desc.device_type())));
   if (sbp.has_broadcast_parallel()) {
     op_conf.set_name(kAutoMirroredBlobNamePrefix + "-DistributeClone-" + NewUniqueId());
     auto* distribute_clone = op_conf.mutable_distribute_clone_conf();
@@ -872,8 +873,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
     op_conf.set_scope_symbol_id(producer_op_conf.scope_symbol_id());
   }
   op_conf.set_scope_symbol_id(scope_symbol_id);
-  // const char* device_tag = JUST(DeviceTag4DeviceType(parallel_desc.device_type()));
-  op_conf.set_device_tag(JUST(DeviceTag4DeviceType(parallel_desc.device_type())));
+  op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(parallel_desc.device_type())));
   op_conf.set_name(kAutoMirroredBlobNamePrefix + "-CastToMirrored-" + NewUniqueId());
   auto* cast_to_mirrored_conf = op_conf.mutable_cast_to_mirrored_conf();
   cast_to_mirrored_conf->set_in(lbn);
