@@ -24,7 +24,7 @@ namespace eager {
 Maybe<void> BlobObject::CheckMemCase(const ParallelDesc& parallel_desc, int64_t machine_id) const {
   CHECK_OR_RETURN(parallel_desc.HasMachineId(machine_id))
       << "ParallelDesc does not contain machine_id: " << machine_id;
-  const std::string& device_tag = *JUST(DeviceTag4DeviceType(parallel_desc.device_type()));
+  const std::string device_tag = *JUST(DeviceTag4DeviceType(parallel_desc.device_type()));
   if (parallel_desc.device_type() == DeviceType::kCPU) {
     CHECK_OR_RETURN(this->mem_case_->has_host_mem())
         << "DeviceType: " << device_tag
