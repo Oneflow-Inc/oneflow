@@ -33,7 +33,7 @@ inline std::string ToString(const DataType& data_type) {
 
 template<>
 inline std::string ToString(const DeviceType& device_type) {
-  return DeviceTag4DeviceType(device_type).GetOrThrow();
+  return *CHECK_JUST(DeviceTag4DeviceType(device_type));
 }
 
 template<>
