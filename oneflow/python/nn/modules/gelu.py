@@ -15,24 +15,26 @@ from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export
 
-@oneflow_export("nn.Tanh")
-class Tanh(Module):
-    r"""Applies the element-wise function:
+@oneflow_export("nn.Gelu")
+class GELU(Module):
+    r"""Applies the Gaussian Error Linear Units function:
 
-    .. math::
-        \text{Tanh}(x) = \tanh(x) = \frac{\exp(x) - \exp(-x)} {\exp(x) + \exp(-x)}
+    .. math:: \text{GELU}(x) = x * \Phi(x)
+
+    where :math:`\Phi(x)` is the Cumulative Distribution Function for Gaussian Distribution.
 
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
 
+    .. image:: ../scripts/activation_images/GELU.png
+
     Examples::
 
-        >>> m = nn.Tanh()
-        >>> input = flow.randn(2)
+        >>> m = nn.GELU()
+        >>> input = torch.randn(2)
         >>> output = m(input)
     """
-
     def forward(self, input: Tensor) -> Tensor:
-        return flow.tanh(input)
+        return F.gelu(input)
