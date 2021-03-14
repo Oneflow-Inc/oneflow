@@ -31,17 +31,15 @@ class OpGraph;
 class OpNode final : public Node<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpNode);
-  explicit OpNode(const ParallelDesc& parallel_desc, const OperatorConf& op_conf)
-      : parallel_desc_(parallel_desc),
-        op_(ConstructOp(op_conf, parallel_desc.device_type())),
-        ibns_(op_->input_bns().begin(), op_->input_bns().end()) {}
+  explicit OpNode(const std::shared_ptr<const ParallelDesc>& parallel_desc,
+                  const OperatorConf& op_conf);
   ~OpNode() = default;
 
   // Getters
   bool IsTimeShapeIdentity() const;
   const Operator& op() const { return *op_; }
   std::shared_ptr<const Operator> shared_op() const { return op_; }
-  const ParallelDesc& parallel_desc() const { return parallel_desc_; }
+  const ParallelDesc& parallel_desc() const { return *parallel_desc_; }
   const SbpSignature& sbp_signature() const { return *CHECK_JUST(op().sbp_signature()); }
   const ParallelDistributionSignature& parallel_distribution_signature() const {
     return *CHECK_JUST(op().parallel_distribution_signature());
@@ -69,7 +67,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   void InitLbi2SourceNode();
   void InitLbi2ParallelDistribution();
 
-  ParallelDesc parallel_desc_;
+  std::shared_ptr<const ParallelDesc> parallel_desc_;
   HashMap<std::string, ParallelDesc> obn2blob_parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
