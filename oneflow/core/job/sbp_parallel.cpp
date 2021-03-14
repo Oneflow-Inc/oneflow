@@ -45,6 +45,24 @@ SbpParallel GetDualSbpParallel(const SbpParallel& sbp_parallel) {
   return ret;
 }
 
+bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
+  return PbMd().Equals(lhs, rhs);
+}
+
+bool operator!=(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
+  return !(lhs == rhs);
+}
+
+bool operator==(const ParallelDistributionSignature& lhs,
+                const ParallelDistributionSignature& rhs) {
+  return PbMd().Equals(lhs, rhs);
+}
+
+bool operator!=(const ParallelDistributionSignature& lhs,
+                const ParallelDistributionSignature& rhs) {
+  return !(lhs == rhs);
+}
+
 bool IsSbpSignatureContaining(const SbpSignature& bigger, const SbpSignature& smaller) {
   auto& bn2sbp = bigger.bn_in_op2sbp_parallel();
   for (const auto& pair : smaller.bn_in_op2sbp_parallel()) {
@@ -180,6 +198,37 @@ std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
     UNIMPLEMENTED();
   }
   return sbp_str;
+}
+
+void SbpSignatureToParallelDistributionSignature(
+    const SbpSignature& sbp_signature,
+    ParallelDistributionSignature* parallel_distribution_signature) {
+  for (const auto& pair : sbp_signature.bn_in_op2sbp_parallel()) {
+    *((*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[pair.first]
+          .add_sbp_parallel()) = pair.second;
+  }
+}
+
+void ParallelDistributionSignatureToSbpSignature(
+    const ParallelDistributionSignature& parallel_distribution_signature,
+    SbpSignature* sbp_signature) {
+  for (const auto& pair : parallel_distribution_signature.bn_in_op2parallel_distribution()) {
+    CHECK_EQ(pair.second.sbp_parallel_size(), 1);
+    (*sbp_signature->mutable_bn_in_op2sbp_parallel())[pair.first] = pair.second.sbp_parallel(0);
+  }
+}
+
+void CheckSbpSignatureAndParallelDistributionEquals(
+    const SbpSignature& sbp_sig, const ParallelDistributionSignature& parallel_distribution_sig) {
+  CHECK_EQ(sbp_sig.bn_in_op2sbp_parallel_size(),
+           parallel_distribution_sig.bn_in_op2parallel_distribution_size());
+  for (const auto& pair : parallel_distribution_sig.bn_in_op2parallel_distribution()) {
+    const auto& bn_in_op2sbp_parallel = sbp_sig.bn_in_op2sbp_parallel();
+    const auto it = bn_in_op2sbp_parallel.find(pair.first);
+    CHECK(it != bn_in_op2sbp_parallel.end());
+    CHECK_EQ(pair.second.sbp_parallel_size(), 1);
+    CHECK(pair.second.sbp_parallel(0) == it->second);
+  }
 }
 
 }  // namespace oneflow

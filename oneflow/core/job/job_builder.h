@@ -60,15 +60,23 @@ class JobBuilder final {
 
   SbpParallel* MutSbpParallel4Oba(const OpBlobArg& oba) const;
   void BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpBlobArg& second);
-
+  void SetSbpParallel4Oba(const OpBlobArg& oba, const SbpParallel& sbp_parallel);
+  void SetParallelDistribution4Oba(const OpBlobArg& oba,
+                                   const ParallelDistribution& parallel_distribution);
   void ForEachOperator(const std::function<void(const Operator&)>& Handler) const;
 
   const ParallelConf& ParallelConf4Lbi(const LogicalBlobId& lbi) const;
   const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;
   void AddParallelConf4OpName(const std::string& op_name, const ParallelConf& parallel_conf);
 
-  const SbpSignature& SbpSignature4OpName(const std::string& op_name) const;
+  const SbpSignature SbpSignature4OpName(const std::string& op_name) const;
   void AddSbpSignature4OpName(const std::string& op_name, const SbpSignature& sbp_signature);
+
+  const ParallelDistributionSignature& ParallelDistributionSignature4OpName(
+      const std::string& op_name) const;
+  void AddParallelDistributionSignature4OpName(
+      const std::string& op_name,
+      const ParallelDistributionSignature& parallel_distribution_signature);
 
  private:
   PlacementGroup* FindPlacementGroup(const std::string& op_name) const;
@@ -80,7 +88,8 @@ class JobBuilder final {
   HashSet<std::string> modified_op_conf_op_names_;
   HashSet<std::string> modified_parallel_conf_op_names_;
 
-  HashMap<std::string, SbpSignature*> op_name2sbp_signature_conf_;
+  HashMap<std::string, ParallelDistributionSignature*>
+      op_name2parallel_distribution_signature_conf_;
 };
 
 }  // namespace oneflow
