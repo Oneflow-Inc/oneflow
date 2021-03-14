@@ -70,6 +70,21 @@ class TestTensor(flow.unittest.TestCase):
 
         job()
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_creating_consistent_tensor(test_case):
+        shape = (2, 3)
+        x = flow.Tensor(*shape, placement=flow.placement("cpu", ["0:0"], None))
+        x.set_is_consistent(True)
+        test_case.assertTrue(not x.is_cuda)
+
+        @flow.global_function()
+        def job():
+            x.determine()
+        job()
+
 
 if __name__ == "__main__":
     unittest.main()
