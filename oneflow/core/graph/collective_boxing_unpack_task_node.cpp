@@ -46,7 +46,7 @@ void CollectiveBoxingUnpackTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf op_conf;
   op_conf.set_name("System-Collective-Boxing-Unpack-" + NewUniqueId());
-  op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
+  op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
   auto* collective_boxing_unpack_conf = op_conf.mutable_collective_boxing_unpack_conf();
   *collective_boxing_unpack_conf->mutable_lbi() = lbi_;
   logical_shape_.ToProto(collective_boxing_unpack_conf->mutable_logical_shape());
