@@ -103,6 +103,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   // this code should be called before Runtime::NewAllGlobal, maybe after Eager ENV init
   // and should be called before Global<Transport>::New()
   if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {
+#ifdef RPC_BACKEND_GRPC
 #ifdef __linux__
     // NOTE(chengcheng): Global<EpollCommNet> will new in any case.
     // if use RDMA,
@@ -120,6 +121,7 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
     } else {
       Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
     }
+#endif
 #endif
   }
   Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
@@ -143,6 +145,7 @@ void Runtime::DeleteAllGlobal() {
 
   // should be called after Global<Transport>::Delete()
   if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {
+#ifdef RPC_BACKEND_GRPC
 #ifdef __linux__
     if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
@@ -162,6 +165,7 @@ void Runtime::DeleteAllGlobal() {
       // then only need delete once.
     }
     Global<EpollCommNet>::Delete();
+#endif
 #endif
   }
 
