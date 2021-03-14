@@ -525,20 +525,19 @@ __global__ void LarsScaleModelDiffGpu(int64_t n, T scale, float l1, float l2, co
 template<typename T>
 __global__ void LarsGetLocalLearningRateGpu(const float* learning_rate, T weight_decay, T epsilon,
                                             T lars_coefficient, const int64_t* skip_if,
-                                            const int64_t* train_step, T* data_tmp) {
+                                            T* data_tmp) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   T* model_norm = &data_tmp[0];
   T* model_diff_norm = &data_tmp[1];
   T* local_learning_rate = &data_tmp[2];
   *model_norm = std::sqrt(*model_norm);
   *model_diff_norm = std::sqrt(*model_diff_norm);
-  if (*train_step == 0) {
-    *local_learning_rate =
-        *learning_rate * lars_coefficient * (*model_norm) / (epsilon + (*model_diff_norm));
-  } else {
-    *local_learning_rate = *learning_rate * lars_coefficient * (*model_norm)
-                           / (epsilon + (*model_diff_norm) + weight_decay * (*model_diff_norm));
+  T lars = static_cast<T>(1);
+  if (*model_norm > 0 && *model_diff_norm > 0) {
+    lars = lars_coefficient * (*model_norm)
+           / (epsilon + (*model_diff_norm) + weight_decay * (*model_norm));
   }
+  *local_learning_rate = *learning_rate * lars;
 }
 
 template<typename T>
@@ -557,17 +556,16 @@ template<typename T, typename G>
 struct LarsUpdateKernelUtil<DeviceType::kGPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta,
                      float epsilon, float lars_coefficient, float weight_decay,
-                     const float* learning_rate, const int64_t* train_step, const T* scale_by_ptr,
-                     const int64_t* skip_if, const G* model_diff, T* model, T* momentum,
-                     T* data_tmp, T* model_diff_tmp);
+                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+                     const G* model_diff, T* model, T* momentum, T* data_tmp, T* model_diff_tmp);
 };
 
 template<typename T, typename G>
 void LarsUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta, float epsilon,
-    float lars_coefficient, float weight_decay, const float* learning_rate,
-    const int64_t* train_step, const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
-    T* model, T* momentum, T* data_tmp, T* model_diff_tmp) {
+    float lars_coefficient, float weight_decay, const float* learning_rate, const T* scale_by_ptr,
+    const int64_t* skip_if, const G* model_diff, T* model, T* momentum, T* data_tmp,
+    T* model_diff_tmp) {
   LarsScaleModelDiffGpu<T, G>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           n, scale, l1, l2, scale_by_ptr, skip_if, model_diff, model, model_diff_tmp);
@@ -578,7 +576,7 @@ void LarsUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
   KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff_tmp, 1, model_diff_tmp, 1,
                                        model_diff_norm);
   LarsGetLocalLearningRateGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(
-      learning_rate, weight_decay, epsilon, lars_coefficient, skip_if, train_step, data_tmp);
+      learning_rate, weight_decay, epsilon, lars_coefficient, skip_if, data_tmp);
   LarsUpdateGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, momentum_beta, momentum, weight_decay, skip_if, local_learning_rate, model_diff_tmp,
       model);
@@ -588,21 +586,21 @@ template<typename T>
 struct LarsUpdateKernelUtil<DeviceType::kGPU, T, float16> {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta,
                      float epsilon, float lars_coefficient, float weight_decay,
-                     const float* learning_rate, const int64_t* train_step, const T* scale_by_ptr,
-                     const int64_t* skip_if, const float16* model_diff, T* model, T* momentum,
-                     T* data_tmp, T* model_diff_tmp);
+                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+                     const float16* model_diff, T* model, T* momentum, T* data_tmp,
+                     T* model_diff_tmp);
 };
 
 template<typename T>
 void LarsUpdateKernelUtil<DeviceType::kGPU, T, float16>::Update(
     DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta, float epsilon,
-    float lars_coefficient, float weight_decay, const float* learning_rate,
-    const int64_t* train_step, const T* scale_by_ptr, const int64_t* skip_if,
-    const float16* model_diff, T* model, T* momentum, T* data_tmp, T* model_diff_tmp) {
+    float lars_coefficient, float weight_decay, const float* learning_rate, const T* scale_by_ptr,
+    const int64_t* skip_if, const float16* model_diff, T* model, T* momentum, T* data_tmp,
+    T* model_diff_tmp) {
   LarsUpdateKernelUtil<DeviceType::kGPU, T, half>::Update(
       ctx, n, scale, l1, l2, momentum_beta, epsilon, lars_coefficient, weight_decay, learning_rate,
-      train_step, scale_by_ptr, skip_if, reinterpret_cast<const half*>(model_diff), model, momentum,
-      data_tmp, model_diff_tmp);
+      scale_by_ptr, skip_if, reinterpret_cast<const half*>(model_diff), model, momentum, data_tmp,
+      model_diff_tmp);
 }
 
 template struct LarsUpdateKernelUtil<DeviceType::kGPU, float, float>;
