@@ -20,9 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class SubTskGphBuilder;
-class SubTskGphBuilderCtx;
-
 class HierarchicalSubTskGphBuilder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(HierarchicalSubTskGphBuilder);
