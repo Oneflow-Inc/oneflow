@@ -167,6 +167,9 @@ class UserOpInferContext : public user_op::InferContext {
   const ArgVec& inputs() const override { return op_->inputs(); }
   const ArgVec& outputs() const override { return op_->outputs(); }
   const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; };
+  const ParallelDesc& parallel_desc() const override {
+    return *CHECK_JUST(op_->GetOpParallelDesc());
+  };
   const JobDesc* job_desc() const override {
     CHECK_NOTNULL(job_desc_);
     return job_desc_;
@@ -174,10 +177,21 @@ class UserOpInferContext : public user_op::InferContext {
 
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                  int32_t index) const override {
+    CHECK_EQ(CHECK_JUST(op_->GetOpParallelDesc())->hierarchy()->NumAxes(), 1);
     const auto& bn2sbp = CHECK_JUST(op_->sbp_signature())->bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2sbp.find(bn);
     CHECK(it != bn2sbp.end());
+    return it->second;
+  }
+
+  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
+                                                                   int32_t index) const override {
+    const auto& bn2parallel_distribution =
+        CHECK_JUST(op_->parallel_distribution_signature())->bn_in_op2parallel_distribution();
+    std::string bn = GenRepeatedBn(arg_name, index);
+    auto it = bn2parallel_distribution.find(bn);
+    CHECK(it != bn2parallel_distribution.end());
     return it->second;
   }
 
