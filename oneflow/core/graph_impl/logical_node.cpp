@@ -57,8 +57,8 @@ const LogicalEdge* GetConnectedEdge(const LogicalNode* src_node, const LogicalNo
   return connect_edge;
 }
 
-static bool IsConnectedLbisAllSameSbpParallel(const LogicalNode* src_node,
-                                              const LogicalNode* dst_node) {
+static bool IsConnectedLbisAllSameParallelDistribution(const LogicalNode* src_node,
+                                                       const LogicalNode* dst_node) {
   if (src_node->parallel_desc()->parallel_num() != dst_node->parallel_desc()->parallel_num()) {
     return false;
   }
@@ -69,9 +69,11 @@ static bool IsConnectedLbisAllSameSbpParallel(const LogicalNode* src_node,
   const std::string& dst_op_name = dst_node->SoleOp()->op_name();
   HashSet<bool> predicators;
   for (const LogicalBlobId& lbi : connect_edge->lbis()) {
-    const auto& src_sbp = Global<OpGraph>::Get()->GetSbpParallel(src_op_name, lbi);
-    const auto& dst_sbp = Global<OpGraph>::Get()->GetSbpParallel(dst_op_name, lbi);
-    predicators.insert(src_sbp == dst_sbp);
+    const ParallelDistribution& src_parallel_distribution =
+        Global<OpGraph>::Get()->GetParallelDistribution(src_op_name, lbi);
+    const ParallelDistribution& dst_parallel_distribution =
+        Global<OpGraph>::Get()->GetParallelDistribution(dst_op_name, lbi);
+    predicators.insert(src_parallel_distribution == dst_parallel_distribution);
   }
   CHECK_EQ(predicators.size(), 1);
   return *predicators.begin();
@@ -276,7 +278,8 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
   if (src_pd->parallel_num() == dst_pd->parallel_num()
-      && IsConnectedLbisAllSameSbpParallel(src_node, dst_node)) {
+      && *src_pd->hierarchy() == *dst_pd->hierarchy()
+      && IsConnectedLbisAllSameParallelDistribution(src_node, dst_node)) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
   return &TaskGraph::BldSubTskGphByBoxing;
