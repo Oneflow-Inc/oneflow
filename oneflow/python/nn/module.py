@@ -17,18 +17,14 @@ limitations under the License.
 from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
-from inspect import signature
 import itertools
 
 import numpy as np
 
 import oneflow as flow
-import oneflow_api
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.parameter import Parameter
-from oneflow.python.ops.get_variable import api_get_variable as get_variable
-from oneflow.python.ops import initializer_util
 
 
 class _IncompatibleKeys(
@@ -136,7 +132,7 @@ class Module(object):
             else:
                 self._non_persistent_buffers_set.add(name)
 
-    def register_parameter(self, name: str, param: Optional["Parameter"]) -> None:
+    def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
         if "_parameters" not in self.__dict__:
             raise AttributeError(
                 "cannot assign parameter before Module.__init__() call"
@@ -260,7 +256,7 @@ class Module(object):
                 name = module_prefix + ("." if module_prefix else "") + k
                 yield name, v
 
-    def parameters(self, recurse: bool = True) -> Iterator["Parameter"]:
+    def parameters(self, recurse: bool = True) -> Iterator[Parameter]:
         for name, param in self.named_parameters(recurse=recurse):
             yield param
 
@@ -380,6 +376,7 @@ class Module(object):
                     )
                     continue
                 try:
+                    # TODO(jianhao): uncomment these lines when autograd is ready
                     # with torch.no_grad():
                     # param.copy_(input_param)
                     flow.load_variables({param._variable_name: input_param})

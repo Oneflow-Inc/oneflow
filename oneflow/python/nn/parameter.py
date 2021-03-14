@@ -22,6 +22,7 @@ class Parameter(Tensor):
     def __init__(self, data, requires_grad=True):
         # TODO: uncomment this line when autograd is ready
         # data.requires_grad = True
+        data.set_is_consistent(True)
         self._data = data
 
     def __getattr__(self, name):
