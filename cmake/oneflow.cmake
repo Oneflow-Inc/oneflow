@@ -86,9 +86,6 @@ foreach(oneflow_single_file ${oneflow_all_src})
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.h$")
     if((NOT RPC_BACKEND STREQUAL "GRPC") AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/control/.*")
-    # pass
-    # elseif(APPLE AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/comm_network/.*")
-      # pass
     else()
       list(APPEND of_all_obj_cc ${oneflow_single_file})
       set(group_this ON)
@@ -154,7 +151,6 @@ foreach(oneflow_single_file ${oneflow_all_src})
       list(APPEND of_all_test_cc ${oneflow_single_file})
     elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/graph/.*\\.cpp$")
     elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/rpc/.*\\.cpp$")
-    # elseif(APPLE AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/comm_network/.*")
     elseif((NOT RPC_BACKEND STREQUAL "GRPC") AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/transport/.*")
     elseif((NOT RPC_BACKEND STREQUAL "GRPC") AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/control.*")
     else()
