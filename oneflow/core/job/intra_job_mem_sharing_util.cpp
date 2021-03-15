@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/thread/thread_pool.h"
+#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
@@ -64,6 +65,20 @@ void GenRegstDescId2RegstDesc(Plan* plan,
       int64_t regst_desc_id = pair.second.regst_desc_id();
       regst_desc_id2regst_desc->insert({regst_desc_id, &pair.second});
     }
+  }
+}
+
+void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* src_task_proto, TaskProto* dst_task_proto) {
+  RegstDescProto* ctrl_regst_desc =
+      FindOrCreateProducedCtrlRegstDesc(src_task_proto, "out_ctrl_shared_mem_safe_guard");
+  int64_t dst_task_id = dst_task_proto->task_id();
+  if (!IsInRepeatedField(ctrl_regst_desc->consumer_task_id(), dst_task_id)) {
+    ctrl_regst_desc->add_consumer_task_id(dst_task_id);
+    int64_t ctrl_regst_desc_id = ctrl_regst_desc->regst_desc_id();
+    RegstDescIdSet* consumed_ctrl_regst_desc_ids =
+        FindOrCreateConsumedCtrlRegstDescIdSet(dst_task_proto, "in_ctrl");
+    CHECK(!IsInRepeatedField(consumed_ctrl_regst_desc_ids->regst_desc_id(), ctrl_regst_desc_id));
+    consumed_ctrl_regst_desc_ids->add_regst_desc_id(ctrl_regst_desc_id);
   }
 }
 
@@ -151,7 +166,8 @@ bool TryMergeMemChain2MergedChains(
 }
 
 void GenMemChainTasksAndRegsts(
-    Plan* plan, const PlanTaskGraph& plan_task_graph,
+    Plan* plan,
+    const std::function<bool(const std::string&, const std::string&)>& IsOpNameDataOrCtrlReachable,
     HashMap<int64_t, std::vector<TaskProto*>>* mem_chain2sorted_tasks,
     HashMap<int64_t, HashSet<RegstDescProto*>>* mem_chain2mem_reused_regsts) {
   mem_chain2sorted_tasks->clear();
@@ -159,11 +175,29 @@ void GenMemChainTasksAndRegsts(
   HashMap<int64_t, HashMap<int64_t, MemoryChain>> device2chain2mem_chain;
   InitMemoryChains(plan, &device2chain2mem_chain);
 
+  auto TryGetTaskNodeLogicalOpName = [&](const TaskProto* task_proto,
+                                         std::string* op_name) -> bool {
+    if (task_proto->task_type() == TaskType::kNormalForward
+        && task_proto->exec_sequence().exec_node_size() == 1) {
+      *op_name =
+          task_proto->exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf().name();
+      return true;
+    }
+    return false;
+  };
+
   auto IsStrictOrderL2R = [&](const MemoryChain* lhs, const MemoryChain* rhs) -> bool {
     const TaskProto* l_chain_sink_task_node = lhs->sorted_tasks.back();
     const TaskProto* r_chain_source_task_node = rhs->sorted_tasks.front();
-    return plan_task_graph.IsReachable(l_chain_sink_task_node->task_id(),
-                                       r_chain_source_task_node->task_id());
+    std::string l_op_name;
+    std::string r_op_name;
+    if (TryGetTaskNodeLogicalOpName(l_chain_sink_task_node, &l_op_name)
+        && TryGetTaskNodeLogicalOpName(r_chain_source_task_node, &r_op_name)) {
+      CHECK(!l_op_name.empty());
+      CHECK(!r_op_name.empty());
+      return IsOpNameDataOrCtrlReachable(l_op_name, r_op_name);
+    }
+    return false;
   };
 
   int64_t mem_chain_id = 0;
@@ -195,6 +229,14 @@ void GenMemChainTasksAndRegsts(
       mem_reused_regsts->insert(merged_chain->mem_reused_regsts.begin(),
                                 merged_chain->mem_reused_regsts.end());
       ++mem_chain_id;
+    }
+  }
+
+  // NOTE(chengcheng): add ctrl safe guard for each mem chain
+  for (auto& pair : *mem_chain2sorted_tasks) {
+    std::vector<TaskProto*>* sorted_tasks = &(pair.second);
+    if (sorted_tasks->size() >= 2) {
+      TryConnectWithMemSafeGuardCtrlRegstDesc(sorted_tasks->front(), sorted_tasks->back());
     }
   }
 
@@ -643,12 +685,13 @@ void InitAlgo2Result(HashMap<MemAllocAlgoType, MemBlockResultInfo>* algo2result)
 
 }  // namespace
 
-void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
-                                                            const PlanTaskGraph& plan_task_graph) {
+void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
+    Plan* plan, const std::function<bool(const std::string&, const std::string&)>&
+                    IsOpNameDataOrCtrlReachable) {
   // 1 device 1 mem chain
   HashMap<int64_t, std::vector<TaskProto*>> mem_chain2sorted_tasks;
   HashMap<int64_t, HashSet<RegstDescProto*>> mem_chain2mem_reused_regsts;
-  GenMemChainTasksAndRegsts(plan, plan_task_graph, &mem_chain2sorted_tasks,
+  GenMemChainTasksAndRegsts(plan, IsOpNameDataOrCtrlReachable, &mem_chain2sorted_tasks,
                             &mem_chain2mem_reused_regsts);
   if (mem_chain2mem_reused_regsts.empty()) { return; }
   HashSet<int64_t> mem_chains;
@@ -726,6 +769,25 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(Plan* plan,
       CHECK_NE(inplaced_regst_desc->mem_block_offset(), -1);
       consumer_regst_desc->set_mem_block_id(inplaced_regst_desc->mem_block_id());
       consumer_regst_desc->set_mem_block_offset(inplaced_regst_desc->mem_block_offset());
+    }
+
+    // set inplace hint and check
+    for (auto& consumer_inplace_pair : mem_chain2consumer2inplaced_regst.at(pair.first)) {
+      RegstDescProto* consumer_regst_desc = consumer_inplace_pair.first;
+      RegstDescProto* inplaced_regst_desc = consumer_inplace_pair.second;
+      CHECK(consumer_regst_desc->has_inplace_consumed_regst_desc_id() == false);
+      CHECK(consumer_regst_desc->has_hint_inplace_consumed_regst_desc_id());
+      int64_t hint = consumer_regst_desc->hint_inplace_consumed_regst_desc_id();
+      // NOTE(chengcheng): hint regst desc id may NOT the inplaced_regst_desc_id
+      //   because of nest inplace.
+      auto hint_it = regst_desc_id2regst_desc.find(hint);
+      CHECK(hint_it != regst_desc_id2regst_desc.end());
+      RegstDescProto* in_regst_desc = hint_it->second;
+      CHECK_EQ(consumer_regst_desc->mem_block_id(), in_regst_desc->mem_block_id());
+      CHECK_EQ(consumer_regst_desc->mem_block_offset(), in_regst_desc->mem_block_offset());
+      CHECK_EQ(in_regst_desc->mem_block_offset(), inplaced_regst_desc->mem_block_offset());
+      CHECK_EQ(consumer_regst_desc->register_num(), in_regst_desc->register_num());
+      consumer_regst_desc->set_inplace_consumed_regst_desc_id(hint);
     }
   }
 }

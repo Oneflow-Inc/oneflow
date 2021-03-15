@@ -36,162 +36,6 @@ namespace oneflow {
 
 namespace {
 
-bool IsSharableRegstWithoutConsumer(const RegstDescProto& regst_desc) {
-  return regst_desc.mem_block_id() == -1 && regst_desc.consumer_task_id_size() == 0
-         && regst_desc.enable_reuse_mem();
-}
-
-bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
-                                       const std::function<int64_t(int64_t)>& ChainId4TaskId) {
-  int64_t producer_chain_id = ChainId4TaskId(regst_desc.producer_task_id());
-  for (int64_t consumer_task_id : regst_desc.consumer_task_id()) {
-    if (ChainId4TaskId(consumer_task_id) != producer_chain_id) { return false; }
-  }
-  return true;
-}
-
-void ForEachSharableStreamRegstDescsWithoutConsumer(
-    const Plan& plan,
-    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
-  HashMap<int64_t, std::vector<const RegstDescProto*>> global_work_stream_id2regst_descs;
-  for (const auto& task : plan.task()) {
-    int64_t global_work_stream_id = Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task.task_id());
-    for (const auto& pair : task.produced_regst_desc()) {
-      if (IsSharableRegstWithoutConsumer(pair.second)) {
-        global_work_stream_id2regst_descs[global_work_stream_id].push_back(&pair.second);
-      }
-    }
-  }
-  for (const auto& pair : global_work_stream_id2regst_descs) {
-    if (pair.second.size() > 1) { Handler(pair.second); }
-  }
-}
-
-void ForEachSameColoredStreamRegstDescWithoutConsumer(
-    const Plan& plan,
-    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
-  auto GetProducerTaskId = [](const RegstDescProto* regst_desc, HashSet<int64_t>* ret_actor_ids) {
-    CHECK(regst_desc->enable_reuse_mem());
-    ret_actor_ids->insert(regst_desc->producer_task_id());
-  };
-  ForEachSharableStreamRegstDescsWithoutConsumer(
-      plan, [&](const std::vector<const RegstDescProto*>& regst_descs) {
-        RegstLifetimeGraph(regst_descs, GetProducerTaskId).ForEachSameColoredRegstDescs(Handler);
-      });
-}
-
-void ForEachSameColoredChainRegstDescs(
-    const SharableMemBlockGraph& sharable_mem_block_gph,
-    const std::function<std::vector<const RegstDescProto*>(
-        const std::vector<const SharableMemBlockNode*>&)>& GetRegstDescs,
-    const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
-        ComputeLifetimeSameChainActorIds,
-    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
-  std::vector<std::vector<const SharableMemBlockNode*>> sharable_mem_blocks_vec;
-  sharable_mem_block_gph.ForEachSourceNodeGroup(
-      &SharableMemBlockNode::chain_id,
-      [&](const std::vector<const SharableMemBlockNode*>& sharable_mem_blocks) {
-        sharable_mem_blocks_vec.push_back(sharable_mem_blocks);
-      });
-  std::vector<std::vector<std::vector<const RegstDescProto*>>> same_colored_regst_descs_vec(
-      sharable_mem_blocks_vec.size());
-  int64_t cpu_num = std::thread::hardware_concurrency();
-  int64_t thread_pool_size = std::min<int64_t>(sharable_mem_blocks_vec.size(), cpu_num);
-  BlockingCounter counter(sharable_mem_blocks_vec.size());
-  ThreadPool thread_pool(thread_pool_size);
-  FOR_RANGE(int64_t, i, 0, sharable_mem_blocks_vec.size()) {
-    thread_pool.AddWork([i, &GetRegstDescs, &ComputeLifetimeSameChainActorIds,
-                         &sharable_mem_blocks_vec, &same_colored_regst_descs_vec, &counter]() {
-      const auto& sharable_mem_blocks = sharable_mem_blocks_vec.at(i);
-      RegstLifetimeGraph(GetRegstDescs(sharable_mem_blocks), ComputeLifetimeSameChainActorIds)
-          .ForEachSameColoredRegstDescs([&](const std::vector<const RegstDescProto*>& regst_descs) {
-            same_colored_regst_descs_vec.at(i).push_back(regst_descs);
-          });
-      counter.Decrease();
-    });
-  }
-  counter.WaitUntilCntEqualZero();
-  for (const auto& regst_descs_vec : same_colored_regst_descs_vec) {
-    for (const auto& regst_descs : regst_descs_vec) { Handler(regst_descs); }
-  }
-}
-
-void ForEachSameColoredChainRegstDescWithConsumer(
-    const PlanTaskGraph& plan_task_graph,
-    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
-  // construct SharableMemBlockGraph
-  auto ChainId4TaskId = [&](int64_t task_id) {
-    return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().chain_id();
-  };
-  auto IsSharableRegstWithConsumer = [&](const RegstDescProto& regst_desc) {
-    return regst_desc.mem_block_id() == -1 && regst_desc.consumer_task_id_size() > 0
-           && regst_desc.enable_reuse_mem() && regst_desc.register_num() == 1
-           && IsConsumersAndProducerInSameChain(regst_desc, ChainId4TaskId);
-  };
-  SharableMemBlockGraph sharable_mem_block_gph(plan_task_graph, IsSharableRegstWithConsumer);
-  // group regst_descs for pre-colored regst_descs.
-  // example:
-  // given dlnet: A -> B -> C -> D -> E -> F -> H -> I, where D is a inplace op.
-  // Regst(C) and Regst(D) are pre-colored with same color as a group, which
-  // then shares memory with other regsts like A, B, E, ...
-  HashMap<const RegstDescProto*, std::vector<const RegstDescProto*>> header2members;
-  for (const SharableMemBlockNode* sharable_mem_block : sharable_mem_block_gph.source_nodes()) {
-    auto regst_descs = sharable_mem_block->regst_descs();
-    HashMap<const RegstDescProto*, size_t> regst_desc2mem_size;
-    for (const RegstDescProto* regst_desc : regst_descs) {
-      size_t size = RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst();
-      CHECK(regst_desc2mem_size.emplace(regst_desc, size).second);
-    }
-    std::sort(regst_descs.begin(), regst_descs.end(),
-              [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
-                return regst_desc2mem_size.at(lhs) > regst_desc2mem_size.at(rhs);
-              });
-    header2members.emplace(regst_descs.at(0), regst_descs);
-  }
-  auto GetRegstDescs = [&](const std::vector<const SharableMemBlockNode*>& sharable_mem_blocks) {
-    std::vector<const RegstDescProto*> ret;
-    for (const SharableMemBlockNode* sharable_mem_block : sharable_mem_blocks) {
-      for (const RegstDescProto* regst_desc : sharable_mem_block->regst_descs()) {
-        if (header2members.find(regst_desc) != header2members.end()) {
-          ret.push_back(regst_desc);
-          break;
-        }
-      }
-    }
-    return ret;
-  };
-  auto ComputeLifetimeSameChainActorIds = [&](const RegstDescProto* regst_desc,
-                                              HashSet<int64_t>* ret_actor_ids) {
-    CHECK(regst_desc->enable_reuse_mem());
-    ret_actor_ids->clear();
-    for (const RegstDescProto* member : header2members.at(regst_desc)) {
-      plan_task_graph.ComputeLifetimeSameChainActorIds(member, ret_actor_ids);
-    }
-  };
-  auto AppendGroupMembers = [&](const std::vector<const RegstDescProto*>& regst_descs) {
-    std::vector<const RegstDescProto*> members;
-    for (const auto* header : regst_descs) {
-      for (const auto* member : header2members.at(header)) { members.push_back(member); }
-    }
-    Handler(members);
-  };
-  ForEachSameColoredChainRegstDescs(sharable_mem_block_gph, GetRegstDescs,
-                                    ComputeLifetimeSameChainActorIds, AppendGroupMembers);
-}
-
-void ForEachInferredMemBlockId(const PlanTaskGraph& plan_task_graph,
-                               const std::function<void(int64_t, int64_t)>& Handler) {
-  const Plan& plan = plan_task_graph.plan();
-  auto HandleMemBlockId = [&](const std::vector<const RegstDescProto*>& regst_descs) {
-    int64_t mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
-    for (const RegstDescProto* regst_desc : regst_descs) {
-      Handler(regst_desc->regst_desc_id(), mem_block_id);
-    }
-  };
-  ForEachSameColoredStreamRegstDescWithoutConsumer(plan, HandleMemBlockId);
-  ForEachSameColoredChainRegstDescWithConsumer(plan_task_graph, HandleMemBlockId);
-}
-
 double CalcRegstNum(double regst_desc_duration, double ii, double ii_scale) {
   return ((ii_scale - 1) * ii + regst_desc_duration) / (ii_scale * ii);
 }
@@ -643,40 +487,12 @@ Maybe<void> Improver::ForEachImprovedRegstNum(
   return Maybe<void>::Ok();
 }
 
-void Improver::ForEachInferredMemBlockCriticalSection(
-    const Plan& plan, const std::function<int64_t(int64_t)>& OrderInGraph4TaskId,
-    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) const {
-  HashMap<int32_t, std::vector<const RegstDescProto*>> mem_block_id2regst_descs;
-  for (const auto& task : plan.task()) {
-    for (const auto& pair : task.produced_regst_desc()) {
-      int32_t mem_block_id = pair.second.mem_block_id();
-      if (mem_block_id > start_mem_block_id_ && pair.second.consumer_task_id_size() > 0) {
-        CHECK(pair.second.enable_reuse_mem());
-        mem_block_id2regst_descs[mem_block_id].push_back(&pair.second);
-      }
-    }
-  }
-  for (auto& pair : mem_block_id2regst_descs) {
-    std::sort(pair.second.begin(), pair.second.end(),
-              [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
-                int64_t lhs_order_in_graph = OrderInGraph4TaskId(lhs->producer_task_id());
-                int64_t rhs_order_in_graph = OrderInGraph4TaskId(rhs->producer_task_id());
-                if (lhs_order_in_graph == rhs_order_in_graph) {
-                  CHECK_NE(lhs->mem_block_offset(), rhs->mem_block_offset());
-                  return lhs->mem_block_offset() < rhs->mem_block_offset();
-                }
-                CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
-                return lhs_order_in_graph < rhs_order_in_graph;
-              });
-    Handler(pair.second);
-  }
-}
-
 void Improver::Init(const AvailableMemDesc& amd, const Plan& naive_plan) {
   start_mem_block_id_ = Global<IDMgr>::Get()->NewMemBlockId();
   amd_ = amd;
 }
 
+/*
 Maybe<Plan> Improver::GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd,
                                                 const Plan& naive_plan) {
   Init(amd, naive_plan);
@@ -743,5 +559,5 @@ Plan Improver::GenAndInferMemBlockId(const Plan& naive_plan) const {
   }
   return plan;
 }
-
+*/
 }  // namespace oneflow
