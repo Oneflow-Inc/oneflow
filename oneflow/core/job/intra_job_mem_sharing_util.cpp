@@ -193,8 +193,6 @@ void GenMemChainTasksAndRegsts(
     std::string r_op_name;
     if (TryGetTaskNodeLogicalOpName(l_chain_sink_task_node, &l_op_name)
         && TryGetTaskNodeLogicalOpName(r_chain_source_task_node, &r_op_name)) {
-      CHECK(!l_op_name.empty());
-      CHECK(!r_op_name.empty());
       return IsOpNameDataOrCtrlReachable(l_op_name, r_op_name);
     }
     return false;
