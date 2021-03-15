@@ -78,9 +78,9 @@ def from_onnx(
             "We recommend installing onnx-simplifier so that OneFlow can remove the redundant ONNX nodes"
         )
 
-    # if not os.path.exists("/home/zhangxiaoyu/temp_onnx"):
-    #     os.makedirs("/home/zhangxiaoyu/temp_onnx")
-    # onnx.save(onnx_model, "/home/zhangxiaoyu/temp_onnx/temp.onnx")
+    if not os.path.exists("/home/zhangxiaoyu/temp_onnx"):
+        os.makedirs("/home/zhangxiaoyu/temp_onnx")
+    onnx.save(onnx_model, "/home/zhangxiaoyu/temp_onnx/temp.onnx")
 
     if os.path.exists(model_weight_dir):
         shutil.rmtree(model_weight_dir)

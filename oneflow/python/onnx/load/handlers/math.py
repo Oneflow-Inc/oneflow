@@ -124,6 +124,22 @@ class Tanh(BasicMathMixin, BackendHandler):
         return [cls.run_onnx_node(node, tensor_dict, **kwargs)]
 
 
+@onnx_op("Sigmoid")
+@flow_func(math_ops.sigmoid)
+class Sigmoid(BackendHandler):
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls.run_onnx_node(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_6(cls, node, tensor_dict, **kwargs):
+        return cls.run_onnx_node(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_13(cls, node, tensor_dict, **kwargs):
+        return cls.run_onnx_node(node, tensor_dict, **kwargs)
+
+
 @onnx_op("Gemm")
 class Gemm(BackendHandler):
     @classmethod

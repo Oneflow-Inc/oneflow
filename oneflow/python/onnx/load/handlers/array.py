@@ -132,12 +132,45 @@ class Unsqueeze(BackendHandler):
     def version_11(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
 
+# TODO(BBuf) add expand op: https://github.com/Oneflow-Inc/oneflow/pull/4164
+# This is a temporary solution of senet
+
+@onnx_op("Expand")
+@flow_func(array_ops.broadcast_like)
+class Expand(BackendHandler):
+    @classmethod
+    def _common(cls, node, tensor_dict, **kwargs):
+        import oneflow as flow
+        x = tensor_dict[node.input_tensor_names[0]]
+        init_dict = kwargs["init_dict"]
+        shape = init_dict[node.input_tensor_names[1]].tolist()
+        like_tensor = flow.constant(value=1.0,
+                                dtype=flow.float32,
+                                shape=(shape[0], shape[1], shape[2], shape[3]))
+        return array_ops.broadcast_like(x, like=like_tensor, broadcast_axes=(2, 3))
+
+    @classmethod
+    def version_8(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+    
+    @classmethod
+    def version_13(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+    
+
 
 @onnx_op("Transpose")
 @flow_func(array_ops.transpose)
 class Transpose(BackendHandler):
     @classmethod
-    def version_1(cls, node, tensor_dict, **kwargs):
+    def _common(cls, node, tensor_dict, **kwargs):
+        axes = node.attrs.pop("axes")
+        if len(axes) != 1:
+            x = tensor_dict[node.input_tensor_names[0]]
+            for axis in sorted(axes):
+                x = array_ops.expand_dims(x, axis=axis)
+            return x
+        node.attrs["axis"] = axes[0]
         return cls.run_onnx_node(node, tensor_dict, **kwargs)
 
 
