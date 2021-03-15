@@ -78,6 +78,7 @@ class Embedding(Module):
         self.scale_grad_by_freq = scale_grad_by_freq
         if _weight is None:
             self.weight = flow.nn.Parameter(Tensor(num_embeddings, embedding_dim))
+            # TODO(Liangdepeng)
             # self.reset_parameters()
         else:
             assert list(_weight.shape) == [
@@ -85,6 +86,7 @@ class Embedding(Module):
                 embedding_dim,
             ], "Shape of weight does not match num_embeddings and embedding_dim"
             self.weight = flow.nn.Parameter(_weight)
+            # TODO(Liangdepeng)
             # self._fill_padding_idx_with_zero()
         self.sparse = sparse
 
