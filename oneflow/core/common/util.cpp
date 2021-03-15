@@ -92,10 +92,12 @@ size_t GetAvailableCpuMemSize() {
     return mem_available * 1024;
   }
   LOG(FATAL) << "can't find MemAvailable in /proc/meminfo";
+  return 0;
 #elif defined(__APPLE__)
   // macOS will eagerly make use of all memory so there is no point querying it
   return std::numeric_limits<size_t>::max();
 #else
+  UNIMPLEMENTED();
   return 0;
 #endif
 }
