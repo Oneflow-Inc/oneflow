@@ -17,8 +17,6 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 
-
-
 namespace py = pybind11;
 namespace oneflow {
 
@@ -67,9 +65,10 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("TryReplaceDeviceTag", &ForeignBoxingUtil::TryReplaceDeviceTag)
       .def("Assign", &ForeignBoxingUtil::Assign);
 
-  m.def("RegisterBoxingUtilOnlyOnce", [](const std::shared_ptr<oneflow::ForeignBoxingUtil>& boxing_util) {
-    oneflow::RegisterBoxingUtilOnlyOnce(boxing_util).GetOrThrow();
-  });
+  m.def("RegisterBoxingUtilOnlyOnce",
+        [](const std::shared_ptr<oneflow::ForeignBoxingUtil>& boxing_util) {
+          oneflow::RegisterBoxingUtilOnlyOnce(boxing_util).GetOrThrow();
+        });
 }
 
 }  // namespace oneflow
