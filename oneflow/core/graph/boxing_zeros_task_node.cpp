@@ -41,11 +41,11 @@ void BoxingZerosTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf op_conf;
   op_conf.set_name("System-Boxing-Zeros-" + NewUniqueId());
-  op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
+  op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
   *op_conf.mutable_boxing_zeros_conf()->mutable_lbi() = lbi_;
   shape_.ToProto(op_conf.mutable_boxing_zeros_conf()->mutable_shape());
   op_conf.mutable_boxing_zeros_conf()->set_data_type(data_type_);
-  std::shared_ptr<Operator> sole_op = ConstructOp(op_conf, &GlobalJobDesc());
+  std::shared_ptr<Operator> sole_op = ConstructOp(op_conf);
   node->mut_op() = sole_op;
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleObn()));

@@ -21,6 +21,26 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
+                           const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  const ImageDecoderRandomCropResizeOpConf& conf = op_conf.image_decoder_random_crop_resize_conf();
+  const BlobDesc* in = BlobDesc4BnInOp("in");
+  BlobDesc* out = BlobDesc4BnInOp("out");
+  CHECK_EQ_OR_RETURN(in->data_type(), DataType::kTensorBuffer);
+  *out = *in;
+  out->set_data_type(DataType::kUInt8);
+  DimVector out_dim_vec = in->shape().dim_vec();
+  out_dim_vec.push_back(conf.target_height());
+  out_dim_vec.push_back(conf.target_width());
+  out_dim_vec.push_back(3);
+  out->mut_shape() = Shape(out_dim_vec);
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 class ImageDecoderRandomCropResizeOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ImageDecoderRandomCropResizeOp);
@@ -34,27 +54,21 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     EnrollTmpBn("tmp");
   }
 
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override {
-    const ImageDecoderRandomCropResizeOpConf& conf =
-        this->op_conf().image_decoder_random_crop_resize_conf();
-    const BlobDesc* in = GetBlobDesc4BnInOp("in");
-    BlobDesc* out = GetBlobDesc4BnInOp("out");
-    CHECK_EQ_OR_RETURN(in->data_type(), DataType::kTensorBuffer);
-    *out = *in;
-    out->set_data_type(DataType::kUInt8);
-    DimVector out_dim_vec = in->shape().dim_vec();
-    out_dim_vec.push_back(conf.target_height());
-    out_dim_vec.push_back(conf.target_width());
-    out_dim_vec.push_back(3);
-    out->mut_shape() = Shape(out_dim_vec);
-    return Maybe<void>::Ok();
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    return InferBlobDescs(this->op_conf(), BlobDesc4BnInOp);
+  }
+
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
+    return InferBlobDescs(this->op_conf(), GetBlobDesc4BnInOp);
   }
 
   Maybe<void> InferInternalBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const override {
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const JobDesc* job_desc) const override {
     const ImageDecoderRandomCropResizeOpConf& conf =
         this->op_conf().image_decoder_random_crop_resize_conf();
     BlobDesc* tmp = GetBlobDesc4BnInOp("tmp");

@@ -85,15 +85,20 @@ std::shared_ptr<Scope> BuildInitialScope(const std::shared_ptr<InstructionsBuild
                                          const std::shared_ptr<cfg::JobConfigProto>& job_conf,
                                          const std::string& device_tag,
                                          const std::vector<std::string>& machine_device_ids,
+                                         const std::shared_ptr<Shape>& hierarchy,
                                          bool is_mirrored) {
-  return x->BuildInitialScope(session_id, job_conf, device_tag, machine_device_ids, is_mirrored)
+  return x
+      ->BuildInitialScope(session_id, job_conf, device_tag, machine_device_ids, hierarchy,
+                          is_mirrored)
       .GetPtrOrThrow();
 }
 
 std::shared_ptr<Scope> BuildScopeWithNewParallelDesc(
     const std::shared_ptr<InstructionsBuilder>& x, const std::shared_ptr<Scope>& scope,
-    const std::string& device_tag, const std::vector<std::string>& machine_device_ids) {
-  return x->BuildScopeWithNewParallelDesc(scope, device_tag, machine_device_ids).GetPtrOrThrow();
+    const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
+    const std::shared_ptr<Shape>& hierarchy) {
+  return x->BuildScopeWithNewParallelDesc(scope, device_tag, machine_device_ids, hierarchy)
+      .GetPtrOrThrow();
 }
 
 std::shared_ptr<Scope> BuildScopeWithNewParallelConf(
@@ -190,16 +195,6 @@ void FeedBlob(const std::shared_ptr<InstructionsBuilder>& x,
   return x->FeedBlob(blob_object, callback_id).GetOrThrow();
 }
 
-// signature of python fun _FindOrCreateDelegateBlobObject, it will be removed after blobcache is
-// migrated
-using FindOrCreateDelegateBlobObjectFun = std::function<std::shared_ptr<compatible_py::BlobObject>(
-    const std::shared_ptr<InstructionsBuilder>&,
-    const std::function<std::shared_ptr<compatible_py::BlobObject>(
-        const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&,
-    const std::shared_ptr<compatible_py::BlobObject>&,
-    const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>;
-
 void StatefulCall(
     const std::shared_ptr<InstructionsBuilder>& x,
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
@@ -209,11 +204,8 @@ void StatefulCall(
     const std::function<std::shared_ptr<compatible_py::BlobObject>(
         const std::shared_ptr<InstructionsBuilder>&,
         const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo,
-    const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject) {
-  return x
-      ->StatefulCall(op_attribute, opkernel_object, bn_in_op2blob_object, BoxingTo,
-                     FindOrCreateDelegateBlobObject)
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo) {
+  return x->StatefulCall(op_attribute, opkernel_object, bn_in_op2blob_object, BoxingTo)
       .GetOrThrow();
 }
 
@@ -226,12 +218,8 @@ void StatelessCall(
     const std::function<std::shared_ptr<compatible_py::BlobObject>(
         const std::shared_ptr<InstructionsBuilder>&,
         const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo,
-    const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject) {
-  return x
-      ->StatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object, BoxingTo,
-                      FindOrCreateDelegateBlobObject)
-      .GetOrThrow();
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo) {
+  return x->StatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object, BoxingTo).GetOrThrow();
 }
 
 void NoBoxingStatelessCall(
@@ -239,12 +227,8 @@ void NoBoxingStatelessCall(
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn_in_op2blob_object,
-    const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject) {
-  return x
-      ->NoBoxingStatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object,
-                              FindOrCreateDelegateBlobObject)
-      .GetOrThrow();
+        bn_in_op2blob_object) {
+  return x->NoBoxingStatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object).GetOrThrow();
 }
 
 void NoBoxingCudaD2HStatelessCall(
@@ -343,8 +327,13 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("GetPhysicalParallelDescSymbols", &GetPhysicalParallelDescSymbols)
       .def("UnpackLogicalBlobToPhysicalBlobs", &UnpackLogicalBlobToPhysicalBlobs)
       .def("MakeReferenceBlobObject", &MakeReferenceBlobObject)
-      .def("BuildInitialScope", &BuildInitialScope)
-      .def("BuildScopeWithNewParallelDesc", &BuildScopeWithNewParallelDesc)
+      .def("BuildInitialScope", &BuildInitialScope, py::arg("session_id").none(false),
+           py::arg("job_conf").none(false), py::arg("device_tag").none(false),
+           py::arg("machine_device_ids").none(false), py::arg("hierarchy").none(true),
+           py::arg("is_mirrored").none(false))
+      .def("BuildScopeWithNewParallelDesc", &BuildScopeWithNewParallelDesc,
+           py::arg("scope").none(false), py::arg("device_tag").none(false),
+           py::arg("machine_device_ids").none(false), py::arg("hierarchy").none(true))
       .def("BuildScopeWithNewParallelConf", &BuildScopeWithNewParallelConf)
       .def("BuildScopeWithNewIsMirrored", &BuildScopeWithNewIsMirrored)
       .def("BuildScopeWithNewScopeName", &BuildScopeWithNewScopeName)
@@ -369,6 +358,20 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("NoBoxingCudaH2DStatelessCall", &NoBoxingCudaH2DStatelessCall)
       .def("RawStatelessCall", &RawStatelessCall)
       .def("Build121To", &Build121To);
+
+  m.def(
+      "LogicalRun",
+      [](const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
+        return LogicalRun(Build).GetOrThrow();
+      },
+      py::call_guard<py::gil_scoped_release>());
+
+  m.def(
+      "PhysicalRun",
+      [](const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
+        return PhysicalRun(Build).GetOrThrow();
+      },
+      py::call_guard<py::gil_scoped_release>());
 }
 
 }  // namespace oneflow

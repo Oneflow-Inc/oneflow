@@ -21,18 +21,18 @@ namespace oneflow {
 
 namespace {
 
-class DumpTimeShapeAndBlobParallelConfPass final : public JobPass {
+class DumpBlobParallelConfPass final : public JobPass {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DumpTimeShapeAndBlobParallelConfPass);
-  DumpTimeShapeAndBlobParallelConfPass() = default;
-  ~DumpTimeShapeAndBlobParallelConfPass() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(DumpBlobParallelConfPass);
+  DumpBlobParallelConfPass() = default;
+  ~DumpBlobParallelConfPass() override = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const { return true; }
 
   Maybe<void> Apply(const OpGraph& op_graph, Job* job) const {
-    op_graph.DumpOpTimeShape(job);
     op_graph.DumpLogicalBlobDesc(job);
-    op_graph.DumpSbpSignature(job);
+    op_graph.DumpArgSignature(job);
+    op_graph.DumpParallelDistributionSignature(job);
     return Maybe<void>::Ok();
   }
 
@@ -42,7 +42,7 @@ class DumpTimeShapeAndBlobParallelConfPass final : public JobPass {
   }
 };
 
-REGISTER_JOB_PASS("DumpTimeShapeAndBlobParallelConfPass", DumpTimeShapeAndBlobParallelConfPass);
+REGISTER_JOB_PASS("DumpBlobParallelConfPass", DumpBlobParallelConfPass);
 
 }  // namespace
 

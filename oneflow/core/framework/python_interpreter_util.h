@@ -13,12 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/print_compute_task_node.h"
-#include "oneflow/core/job/global_for.h"
+#ifndef ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
+#define ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
+
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
-REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kPrint, []() -> size_t {
-  return Global<ResourceDesc, ForSession>::Get()->MaxMdSaveWorkerNum();
-});
-}
+Maybe<bool> IsShuttingDown();
+
+Maybe<void> SetShuttingDown();
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_

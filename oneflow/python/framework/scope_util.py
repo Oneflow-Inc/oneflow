@@ -16,7 +16,6 @@ limitations under the License.
 import traceback
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.attr_util as attr_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow_api.oneflow.core.job.job_conf as job_conf_cfg
 from contextlib import contextmanager
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
@@ -77,21 +76,21 @@ def MakeScope(build_func):
         scope = build_func(old_scope, builder)
         assert scope is not None
 
-    vm_util.LogicalRun(BuildScope)
+    oneflow_api.deprecated.LogicalRun(BuildScope)
     return scope
 
 
-def MakeInitialScope(job_conf, device_tag, machine_device_ids, is_mirrored):
+def MakeInitialScope(job_conf, device_tag, machine_device_ids, hierarchy, is_mirrored):
     scope = None
 
     def BuildInitialScope(builder):
         nonlocal scope
         session_id = session_ctx.GetDefaultSession().id
         scope = builder.BuildInitialScope(
-            session_id, job_conf, device_tag, machine_device_ids, is_mirrored
+            session_id, job_conf, device_tag, machine_device_ids, hierarchy, is_mirrored
         )
 
-    vm_util.LogicalRun(BuildInitialScope)
+    oneflow_api.deprecated.LogicalRun(BuildInitialScope)
     return scope
 
 
@@ -99,7 +98,7 @@ def InitScopeStack():
     job_conf = job_conf_cfg.JobConfigProto()
     job_conf.mutable_predict_conf()
     job_conf.set_job_name("")
-    scope = MakeInitialScope(job_conf, "cpu", ["0:0"], is_mirrored=False)
+    scope = MakeInitialScope(job_conf, "cpu", ["0:0"], None, is_mirrored=False)
     oneflow_api.InitGlobalScopeStack(scope)
 
 

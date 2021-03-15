@@ -40,7 +40,7 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
                             const BlobDesc& logical_blob_desc, OpType op_type, int64_t root) {
   OperatorConf op_conf;
   op_conf.set_name(name);
-  op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(DeviceType::kGPU)));
+  op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(DeviceType::kGPU)));
   CollectiveBoxingGenericOpConf* conf = op_conf.mutable_collective_boxing_generic_conf();
   *conf->mutable_lbi() = lbi;
   RankDesc* rank_desc = conf->mutable_rank_desc();
@@ -91,9 +91,7 @@ int64_t FindRootParallelId(const ParallelDesc& multi_device, const ParallelDesc&
   return root_parallel_id;
 }
 
-bool IsSourceTimeShape(const Shape& shape) {
-  return shape.elem_cnt() == GlobalJobDesc().TotalBatchNum() * GlobalJobDesc().NumOfPiecesInBatch();
-}
+bool IsSourceTimeShape(const Shape& shape) { return shape.elem_cnt() == 1; }
 
 class NcclCollectiveBoxingAllReduceSubTskGphBuilder final : public SubTskGphBuilder {
  public:

@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/framework/op_arg_util.h"
+#include "oneflow/core/framework/python_interpreter_util.h"
 
 namespace oneflow {
 
@@ -40,7 +41,9 @@ class BlobObject : public Object {
  public:
   BlobObject(int64_t object_id, const std::shared_ptr<OpArgParallelAttribute>& op_arg_parallel_attr,
              const std::shared_ptr<OpArgBlobAttribute>& op_arg_blob_attr);
-  ~BlobObject() override { ForceReleaseAll(); }
+  ~BlobObject() override {
+    if (!(CHECK_JUST(IsShuttingDown()))) { ForceReleaseAll(); }
+  }
 
   std::shared_ptr<OpArgParallelAttribute> op_arg_parallel_attr() const;
 

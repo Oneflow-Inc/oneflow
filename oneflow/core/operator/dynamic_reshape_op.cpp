@@ -54,9 +54,10 @@ class DynamicReshapeOp final : public Operator {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override {
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
+    const auto* sbp_signature = JUST(this->sbp_signature());
     const DynamicReshapeOpConf& conf = op_conf().dynamic_reshape_conf();
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
     BlobDesc* out = GetBlobDesc4BnInOp("out");
@@ -129,9 +130,9 @@ class DynamicReshapeLikeOp final : public Operator {
     BlobDesc4BnInOp("y")->CopyFrom(*BlobDesc4BnInOp("like"));
     return Maybe<void>::Ok();
   }
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override {
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
     CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("x")->shape().elem_cnt(),
                        GetBlobDesc4BnInOp("like")->shape().elem_cnt());
     GetBlobDesc4BnInOp("y")->CopyFrom(*GetBlobDesc4BnInOp("like"));

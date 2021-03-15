@@ -38,9 +38,9 @@ void BoxingIdentityTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf op_conf;
   op_conf.set_name("System-Boxing-Identity-" + NewUniqueId());
-  op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
+  op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
   *op_conf.mutable_boxing_identity_conf()->mutable_lbi() = lbi_;
-  std::shared_ptr<Operator> sole_op = ConstructOp(op_conf, &GlobalJobDesc());
+  std::shared_ptr<Operator> sole_op = ConstructOp(op_conf);
   node->mut_op() = sole_op;
   node->BindBnWithRegst(sole_op->SoleIbn(), GetSoleConsumedRegst("in"));
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");

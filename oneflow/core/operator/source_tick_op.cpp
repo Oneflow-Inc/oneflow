@@ -29,15 +29,19 @@ LogicalNode* SourceTickOp::NewProperLogicalNode() const { return new SourceTickL
 Maybe<void> SourceTickOp::InferLogicalOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc& parallel_desc) const {
-  BlobDesc4BnInOp("out")->mut_shape() = Shape({1});
+  BlobDesc* blob_desc = BlobDesc4BnInOp("out");
+  blob_desc->mut_shape() = Shape({1});
+  blob_desc->set_data_type(DataType::kUInt8);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> SourceTickOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
-  GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
+  BlobDesc* blob_desc = GetBlobDesc4BnInOp("out");
+  blob_desc->mut_shape() = Shape({1});
+  blob_desc->set_data_type(DataType::kUInt8);
   return Maybe<void>::Ok();
 }
 

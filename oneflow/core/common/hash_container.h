@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,8 +12,21 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow_api
-from oneflow.python.oneflow_export import oneflow_export
+*/
+#ifndef ONEFLOW_CORE_COMMON_HASH_CONTAINER_
+#define ONEFLOW_CORE_COMMON_HASH_CONTAINER_
 
-oneflow_export("device")(oneflow_api.device)
+#include <unordered_set>
+#include <unordered_map>
+
+namespace oneflow {
+
+template<typename Key, typename T, typename Hash = std::hash<Key>>
+using HashMap = std::unordered_map<Key, T, Hash>;
+
+template<typename Key, typename Hash = std::hash<Key>>
+using HashSet = std::unordered_set<Key, Hash>;
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_HASH_CONTAINER_

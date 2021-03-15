@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -79,7 +80,6 @@ Maybe<ParallelDesc> ParallelDesc::New(int64_t symbol_id, const ParallelConf& par
 
 Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   parallel_conf_ = user_conf;
-  cfg_parallel_conf_.reset(new cfg::ParallelConf(user_conf));
   device_type_ = DeviceType::kInvalidDevice;
   const std::string& device_tag = parallel_conf_.device_tag();
   DeviceType device_type = JUST(DeviceType4DeviceTag(device_tag));
@@ -88,9 +88,9 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   machine_id2sorted_dev_phy_ids_ =
       std::make_shared<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>();
   for (const std::string& device_name : parallel_conf_.device_name()) {
-    int64_t mchn_id;
+    int64_t node_id = -1;
     std::string device_id_str;
-    JUST(ParseDeviceNameConf(device_name, &mchn_id, &device_id_str));
+    JUST(ParseDeviceNameConf(device_name, &node_id, &device_id_str));
     int64_t minus_pos = device_id_str.find("-");
     if (minus_pos == std::string::npos) {
       device_id_str = device_id_str + "-" + device_id_str;
@@ -99,10 +99,12 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
     int64_t min_id = oneflow_cast<int64_t>(device_id_str.substr(0, minus_pos));
     int64_t max_id = oneflow_cast<int64_t>(device_id_str.substr(minus_pos + 1));
     CHECK_LE_OR_RETURN(min_id, max_id);
-    if (!(*machine_id2sorted_dev_phy_ids_)[mchn_id]) {
-      (*machine_id2sorted_dev_phy_ids_)[mchn_id] = std::make_shared<std::vector<int64_t>>();
-    }
+    int64_t num_of_process_per_node = GlobalProcessCtx::NumOfProcessPerNode();
     for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
+      int64_t mchn_id = dev_phy_id % num_of_process_per_node + node_id * num_of_process_per_node;
+      if (!(*machine_id2sorted_dev_phy_ids_)[mchn_id]) {
+        (*machine_id2sorted_dev_phy_ids_)[mchn_id] = std::make_shared<std::vector<int64_t>>();
+      }
       (*machine_id2sorted_dev_phy_ids_)[mchn_id]->push_back(dev_phy_id);
     }
   }
@@ -129,11 +131,12 @@ Maybe<void> ParallelDesc::GetParallelContext(ParallelContext* parallel_ctx, int6
 
 bool ParallelDesc::Equals(const ParallelDesc& rhs) const {
   return device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
-         && EqualsMachineId2SortedDevPhyIds(rhs);
+         && EqualsMachineId2SortedDevPhyIds(rhs) && *hierarchy_ == *rhs.hierarchy_;
 }
 
 bool ParallelDesc::EqualsIgnoringDeviceType(const ParallelDesc& rhs) const {
-  return sorted_machine_ids_ == rhs.sorted_machine_ids_ && EqualsMachineId2SortedDevPhyIds(rhs);
+  return sorted_machine_ids_ == rhs.sorted_machine_ids_ && EqualsMachineId2SortedDevPhyIds(rhs)
+         && *hierarchy_ == *rhs.hierarchy_;
 }
 
 bool ParallelDesc::EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const {
@@ -159,6 +162,14 @@ void ParallelDesc::ClearUp() {
     SortAndRemoveDuplication((pair.second).get());
     parallel_num_ += pair.second->size();
   }
+  if (parallel_conf_.has_hierarchy() && parallel_conf_.hierarchy().dim_size() != 0) {
+    hierarchy_.reset(new Shape(parallel_conf_.hierarchy()));
+    CHECK_EQ(hierarchy_->elem_cnt(), parallel_num_);
+  } else {
+    hierarchy_.reset(new Shape({parallel_num_}));
+    hierarchy_->ToProto(parallel_conf_.mutable_hierarchy());
+  }
+  cfg_parallel_conf_.reset(new cfg::ParallelConf(parallel_conf_));
   SortAndRemoveDuplication(&sorted_machine_ids_);
   int64_t parallel_id = 0;
   for (int64_t machine_id : sorted_machine_ids_) {
@@ -174,7 +185,7 @@ void ParallelDesc::ClearUp() {
 void ParallelDesc::set_device_type(DeviceType device_type) {
   if (device_type == device_type_) { return; }
   device_type_ = device_type;
-  const char* tag = CHECK_JUST(DeviceTag4DeviceType(device_type));
+  const std::string tag = *CHECK_JUST(DeviceTag4DeviceType(device_type));
   parallel_conf_.set_device_tag(tag);
 }
 
@@ -205,7 +216,7 @@ ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) co
   ParallelConf parallel_conf;
   std::string machine_id = std::to_string(CHECK_JUST(MachineId4ParallelId(parallel_id)));
   std::string device_id = std::to_string(CHECK_JUST(DeviceId4ParallelId(parallel_id)));
-  parallel_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type())));
+  parallel_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type())));
   parallel_conf.add_device_name(machine_id + ":" + device_id);
   return parallel_conf;
 }
