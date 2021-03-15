@@ -34,7 +34,6 @@ limitations under the License.
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/serving/saved_model.cfg.h"
 #include "oneflow/core/serving/saved_model.pb.h"
-#include "oneflow/core/eager/foreign_boxing_util.h"
 
 namespace oneflow {
 
