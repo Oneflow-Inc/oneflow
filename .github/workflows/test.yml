@@ -329,7 +329,6 @@ jobs:
 
   mac_build:
     name: Build (macOS)
-    needs: [check_license_and_format]
     runs-on: "macos-latest"
     if: github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
