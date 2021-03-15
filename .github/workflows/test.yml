@@ -333,6 +333,9 @@ jobs:
     if: github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          brew install nasm
       - name: Build
         run: |
           mkdir build
