@@ -43,7 +43,8 @@ class Tensor:
     ):
         assert len(args) > 0
         dtype = dtype if dtype is not None else oneflow_api.float32
-        device = device if device is not None else oneflow_api.device("cpu")
+        if placement is not None:
+            device = device if device is not None else oneflow_api.device("cpu")
         if _input_args_is_other_data(*args):
             self._immediately_construct(
                 *args,
@@ -240,11 +241,11 @@ class Tensor:
             return False
 
     def set_placement(self, placement):
-        assert isinstance(placement, oneflow_api.Placement)
+        assert isinstance(placement, flow.placement)
         assert self._local_or_consistent_tensor is None
         assert self._undetermined_tensor is not None
-        assert self._undetermined_tensor.device is None
         self._undetermined_tensor.placement = placement
+        self._undetermined_tensor.device = None
 
     def set_sbp(self, sbp):
         assert isinstance(sbp, oneflow_api.Distribute)
@@ -447,13 +448,19 @@ def _default_initializer_for_determining(tensor):
     assert not tensor.is_determined
     undetermined_tensor = tensor._undetermined_tensor
     variable_name = id_util.UniqueStr("tensor_")
-    with tensor._placement_scope():
-        blob = flow.get_variable(
-            name=variable_name,
-            shape=tuple(undetermined_tensor.shape),
-            dtype=undetermined_tensor.dtype,
-            initializer=undetermined_tensor.data_initializer,
-        )
+
+    blob = None
+    @global_function_or_identity()
+    def job():
+        nonlocal blob
+        with tensor._placement_scope():
+            blob = flow.get_variable(
+                name=variable_name,
+                shape=tuple(undetermined_tensor.shape),
+                dtype=undetermined_tensor.dtype,
+                initializer=undetermined_tensor.data_initializer,
+            )
+    job()
     if undetermined_tensor.is_consistent:
         determined_tensor = oneflow_api.ConsistentTensor(
             undetermined_tensor.shape,
