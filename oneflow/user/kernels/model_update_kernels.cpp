@@ -746,7 +746,6 @@ class LarsUpdateKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
-    const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
@@ -774,9 +773,9 @@ class LarsUpdateKernel final : public user_op::OpKernel {
     }
     LarsUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, momentum_beta,
-        epsilon, lars_coefficient, weight_decay, learning_rate->dptr<float>(),
-        train_step->dptr<int64_t>(), scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
-        model->mut_dptr<T>(), momentum->mut_dptr<T>(), tlm.DataTmpPtr(), tlm.ModelDiffPtr());
+        epsilon, lars_coefficient, weight_decay, learning_rate->dptr<float>(), scale_by_ptr,
+        skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>(),
+        tlm.DataTmpPtr(), tlm.ModelDiffPtr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

@@ -10,7 +10,6 @@ enum TaskType {
   kNormalForward = 1;
   kCopyHd = 12;
   kCopyCommNet = 13;
-  kPrint = 15;
   kDeviceTick = 27;
   kDecodeRandom = 29;
   kPack = 30;
