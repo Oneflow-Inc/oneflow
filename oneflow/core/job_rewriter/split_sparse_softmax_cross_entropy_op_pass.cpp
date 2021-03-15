@@ -77,6 +77,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
 
     const int32_t split_axis =
         node->LogicalBlobDesc4Lbi(node->op().BnInOp2Lbi("prediction_0")).shape().NumAxes() - 1;
+
     SbpSignature reduce_max_device_stage_sbp_signature;
     (*reduce_max_device_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["in_0"]
         .mutable_split_parallel()
@@ -84,9 +85,8 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     (*reduce_max_device_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["out_0"]
         .mutable_split_parallel()
         ->set_axis(split_axis);
-    (*job_builder->mutable_job_parallel_view_conf()
-          ->mutable_op_name2sbp_signature_conf())[reduce_max_device_stage_op.op_name()] =
-        reduce_max_device_stage_sbp_signature;
+    job_builder->AddSbpSignature4OpName(reduce_max_device_stage_op.op_name(),
+                                        reduce_max_device_stage_sbp_signature);
 
     auto reduce_max_global_stage_op =
         user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_reduce_max_global_stage")
@@ -106,9 +106,8 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
         .mutable_broadcast_parallel();
     (*reduce_max_global_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["out_0"]
         .mutable_broadcast_parallel();
-    (*job_builder->mutable_job_parallel_view_conf()
-          ->mutable_op_name2sbp_signature_conf())[reduce_max_global_stage_op.op_name()] =
-        reduce_max_global_stage_sbp_signature;
+    job_builder->AddSbpSignature4OpName(reduce_max_global_stage_op.op_name(),
+                                        reduce_max_global_stage_sbp_signature);
 
     auto broadcast_sub_max_op =
         user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_sub_max")
