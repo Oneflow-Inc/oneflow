@@ -117,14 +117,22 @@ const SbpParallel& OpNode::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
   return it->second.sbp_parallel(0);
 }
 
+const ParallelDistribution& OpNode::ParallelDistribution4BnInOp(const std::string& bn_in_op) const {
+  return *CHECK_JUST(op().ParallelDistribution4BnInOp(bn_in_op));
+}
+
 const ParallelDistribution& OpNode::ParallelDistribution4Lbi(const LogicalBlobId& lbi) const {
   auto it = lbi2parallel_distribution_.find(lbi);
   CHECK(it != lbi2parallel_distribution_.end());
   return it->second;
 }
 
-const ParallelDistribution& OpNode::ParallelDistribution4BnInOp(const std::string& bn_in_op) const {
-  return *CHECK_JUST(op().ParallelDistribution4BnInOp(bn_in_op));
+OpNode::OpNode(const std::shared_ptr<const ParallelDesc>& parallel_desc,
+               const OperatorConf& op_conf)
+    : parallel_desc_(parallel_desc),
+      op_(ConstructOp(op_conf, parallel_desc->device_type())),
+      ibns_(op_->input_bns().begin(), op_->input_bns().end()) {
+  op_->FillOpParallelDesc(parallel_desc);
 }
 
 std::string OpNode::VisualStr() const {
@@ -264,11 +272,33 @@ void OpGraph::CheckIsDAG() const {
   CHECK(!FindFirstNontrivialSCC(ForEachIn, ForEachOut));
 }
 
+namespace {
+
+std::function<std::shared_ptr<const ParallelDesc>(const std::string&)>
+MakeGetterParallelDesc4OpName(const Placement& placement) {
+  auto op_name2parallel_desc =
+      std::make_shared<HashMap<std::string, std::shared_ptr<const ParallelDesc>>>();
+  for (const auto& placement_group : placement.placement_group()) {
+    for (const std::string& op_name : placement_group.op_set().op_name()) {
+      const ParallelConf* parallel_conf = &placement_group.parallel_conf();
+      CHECK(op_name2parallel_desc
+                ->emplace(op_name, std::make_shared<const ParallelDesc>(*parallel_conf))
+                .second)
+          << "op_name: " << op_name;
+    }
+  }
+  return [op_name2parallel_desc](const std::string& op_name) {
+    return op_name2parallel_desc->at(op_name);
+  };
+}
+
+}  // namespace
+
 void OpGraph::InitNodes(const Job& job) {
-  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job.placement());
+  auto ParallelDesc4OpName = MakeGetterParallelDesc4OpName(job.placement());
   for (const auto& op_conf : job.net().op()) {
     op_names_.push_back(op_conf.name());
-    OpNode* node = new OpNode(ParallelDesc(*ParallelConf4OpName(op_conf.name())), op_conf);
+    OpNode* node = new OpNode(ParallelDesc4OpName(op_conf.name()), op_conf);
     AddAllocatedNode(node);
   }
 }
@@ -415,7 +445,6 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
       const auto& producer_info = op_node->input_index2producer_and_output_index_.at(index);
       return producer_info.first->op().GetLogicalBlobDesc4OutputIndex(producer_info.second);
     };
-    JUST(op_node->mut_op()->FillOpParallelDesc(op_node->parallel_desc()));
     JUST(op_node->mut_op()->FillLogicalInBlobDesc(LogicalBlobDesc4InputIndex));
     // Infer ParallelSignature
     JUST(op_node->mut_op()->InferParallelSignatureIf());

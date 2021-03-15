@@ -39,11 +39,10 @@ DataType GetDataTypeFromBnInOpVec(
   return DataType::kInvalidDataType;
 }
 
-std::shared_ptr<Operator> CheckAndConstructOp(const OperatorConf& op_conf) {
-  Operator* rptr = NewObj<int32_t, Operator>(op_conf.op_type_case(), op_conf);
-  if (op_conf.device_tag() != "cpu") { LOG(ERROR) << "op_conf:\n" << op_conf.DebugString(); }
-  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf.device_tag()));
-  if (IsCpuOnly(op_conf)) { CHECK_EQ(device_type, DeviceType::kCPU); }
+std::shared_ptr<Operator> CheckAndConstructOp(std::shared_ptr<const OperatorConf> op_conf) {
+  Operator* rptr = NewObj<int32_t, Operator>(op_conf->op_type_case(), *op_conf);
+  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf->device_tag()));
+  if (IsCpuOnly(*op_conf)) { CHECK_EQ(device_type, DeviceType::kCPU); }
   rptr->Init(op_conf);
   return std::shared_ptr<Operator>(rptr);
 }
@@ -53,7 +52,11 @@ std::shared_ptr<Operator> CheckAndConstructOp(const OperatorConf& op_conf) {
 Operator::Operator() : device_type_(DeviceType::kInvalidDevice) {}
 
 void Operator::Init(const OperatorConf& op_conf) {
-  op_conf_.reset(new OperatorConf(op_conf));
+  Init(std::make_shared<const OperatorConf>(op_conf));
+}
+
+void Operator::Init(std::shared_ptr<const OperatorConf> op_conf) {
+  op_conf_ = std::move(op_conf);
   device_type_ = CHECK_JUST(DeviceType4DeviceTag(op_conf_->device_tag()));
   InitFromOpConf();
   input_output_bns_.Reserve(input_bns().size() + output_bns().size());
@@ -72,6 +75,8 @@ const OperatorConf& Operator::op_conf() const {
   return *op_conf_;
 }
 
+std::shared_ptr<const OperatorConf> Operator::shared_op_conf() const { return op_conf_; }
+
 DeviceType Operator::device_type() const { return device_type_; }
 
 const std::string& Operator::SoleIbn() const {
@@ -88,10 +93,10 @@ const std::string& Operator::SoleTbn() const {
 }
 
 Maybe<const std::string*> Operator::obn4lbi(const LogicalBlobId& lbi) const {
-  const auto& iter = lbi2obn_.find(lbi);
-  CHECK_OR_RETURN(iter != lbi2obn_.end())
+  const auto& it = lbi2output_index_.find(lbi);
+  CHECK_OR_RETURN(it != lbi2output_index_.end())
       << "no logical blob id found. lbn: " << lbi.op_name() << "/" << lbi.blob_name();
-  return &iter->second;
+  return &output_bns().Get(it->second);
 }
 
 const PbRpf<std::string>& Operator::input_bns() const { return input_bns_; }
@@ -132,9 +137,13 @@ Maybe<void> Operator::InferBlobParallelDesc() {
 }
 
 Maybe<void> Operator::FillOpParallelDesc(const ParallelDesc& parallel_desc) {
+  return FillOpParallelDesc(std::make_shared<const ParallelDesc>(parallel_desc));
+}
+
+Maybe<void> Operator::FillOpParallelDesc(std::shared_ptr<const ParallelDesc> parallel_desc) {
+  CHECK_EQ_OR_RETURN(parallel_desc->hierarchy()->NumAxes(), 1);
   CHECK_OR_RETURN(!op_parallel_desc_);
-  CHECK_EQ_OR_RETURN(parallel_desc.hierarchy()->NumAxes(), 1);
-  op_parallel_desc_.reset(new ParallelDesc(parallel_desc));
+  op_parallel_desc_ = std::move(parallel_desc);
   return Maybe<void>::Ok();
 }
 
@@ -891,13 +900,14 @@ void Operator::EnrollTmpBn(const std::string& tbn) {
 InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
   LogicalBlobId lbi = lbi4ibn(ibn);
   auto* map = arg_modifier_signature_.mutable_ibn2input_blob_modifier();
-  CHECK(map->insert({ibn, InputBlobModifier()}).second);
+  const auto& pair = map->insert({ibn, InputBlobModifier()});
+  CHECK(pair.second);
   const int32_t input_index = input_bns_.size();
   CHECK(
       bn2index_pair_.emplace(ibn, std::make_pair(BlobNameTag::kInputBlobName, input_index)).second);
   *input_bns_.Add() = ibn;
   CHECK(mut_bn_in_op2lbi()->insert({ibn, lbi}).second);
-  auto* ret = MutInputBlobModifier4Ibn(ibn);
+  auto* ret = &pair.first->second;
   ret->set_requires_grad(has_diff);
   return ret;
 }
@@ -937,22 +947,18 @@ void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix) {
   EnrollRepeatedInputBn(ibn_prefix, true);
 }
 
-void Operator::EmplaceLbi2Obn(const LogicalBlobId& lbi, const std::string& obn) {
-  CHECK(lbi2obn_.emplace(lbi, obn).second);
-}
-
 OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
   LogicalBlobId lbi = lbi4obn(obn);
-  EmplaceLbi2Obn(lbi, obn);
   auto* map = arg_modifier_signature_.mutable_obn2output_blob_modifier();
-  CHECK(map->insert({obn, OutputBlobModifier()}).second);
+  const auto& pair = map->insert({obn, OutputBlobModifier()});
+  CHECK(pair.second);
+  auto* ret = &pair.first->second;
   const int32_t output_index = output_bns_.size();
   CHECK(bn2index_pair_.emplace(obn, std::make_pair(BlobNameTag::kOutputBlobName, output_index))
             .second);
   CHECK(lbi2output_index_.emplace(lbi, output_index).second);
   *output_bns_.Add() = obn;
   CHECK(mut_bn_in_op2lbi()->insert({obn, lbi}).second);
-  auto* ret = MutOutputBlobModifier4Obn(obn);
   ret->set_requires_grad(has_diff);
   return ret;
 }
@@ -1024,14 +1030,15 @@ bool IsCpuOnly(const OperatorConf& op_conf) {
 }
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
-  OperatorConf dev_op_conf = op_conf;
-  dev_op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type)));
-  return CheckAndConstructOp(dev_op_conf);
+  std::shared_ptr<OperatorConf> dev_op_conf = std::make_shared<OperatorConf>(op_conf);
+  dev_op_conf->set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type)));
+  auto op = CheckAndConstructOp(dev_op_conf);
+  return op;
 }
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
   if (IsCpuOnly(op_conf)) { return ConstructOp(op_conf, DeviceType::kCPU); }
-  return CheckAndConstructOp(op_conf);
+  return CheckAndConstructOp(std::make_shared<OperatorConf>(op_conf));
 }
 
 Symbol<OperatorConf> Operator::GetOpConfWithoutOpNameAndLbn() const {
