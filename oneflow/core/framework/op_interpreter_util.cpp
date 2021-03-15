@@ -76,7 +76,7 @@ static std::shared_ptr<OpExprInterpreter> BuildInterpreter(const bool& eager_mod
 }
 
 /*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::AddBuiltinOpAndInferOpAttribute(
-    const BuiltinOpExpr* op_expr, const std::shared_ptr<Scope>& scope,
+    const BuiltinOpExpr& op_expr, const std::shared_ptr<Scope>& scope,
     const bool is_mirrored_strategy_enabled) {
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr));
   int64_t symbol_id = JUST(scope->symbol_id());
@@ -102,9 +102,9 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
       bn2blob_object);
 }
 
-/*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr* op_expr) {
+/*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr) {
   auto* op_conf = new OperatorConf;
-  op_expr->BuildOpConf(op_conf);
+  op_expr.BuildOpConf(op_conf);
   return std::shared_ptr<OperatorConf>(op_conf);
 }
 
@@ -296,14 +296,14 @@ OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
 }
 
 /*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::InferOpAttribute(
-    const BuiltinOpExpr* op_expr, const std::shared_ptr<Scope>& scope, const TensorTuple& inputs) {
+    const BuiltinOpExpr& op_expr, const std::shared_ptr<Scope>& scope, const TensorTuple& inputs) {
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr));
   int64_t symbol_id = JUST(scope->symbol_id());
   op_conf->set_scope_symbol_id(symbol_id);
   if (!op_conf->has_device_tag()) {
     op_conf->set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
   }
-  const auto& ibn2blob_object = JUST(MakeBn2BlobObjectMap(op_expr->indexed_ibns(), inputs));
+  const auto& ibn2blob_object = JUST(MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
   return OpInterpUtil::InferOpAttribute(*op_conf, scope, *ibn2blob_object);
 }
 
