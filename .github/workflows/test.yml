@@ -326,3 +326,20 @@ jobs:
         if: always()
         run: |
           docker rm -f ${container_name} || true
+
+  mac_build:
+    name: Build (macOS)
+    needs: [check_license_and_format]
+    runs-on: "macos-latest"
+    if: github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          cmake .. \
+            -DPython3_EXECUTABLE=$(which python3) \
+            -DRPC_BACKEND=LOCAL \
+            -DBUILD_CUDA=OFF
+          make -j $(nproc)
