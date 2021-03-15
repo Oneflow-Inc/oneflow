@@ -997,4 +997,4 @@ class BoxingUtil(oneflow_api.deprecated.ForeignBoxingUtil):
         return BoxingTo(builder, blob_object, op_arg_parallel_attr)
 
 _global_boxing_util = BoxingUtil()
-oneflow_api.RegisterBoxingUtilOnlyOnce(_global_boxing_util)
+oneflow_api.deprecated.RegisterBoxingUtilOnlyOnce(_global_boxing_util)
