@@ -25,15 +25,16 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.ops.user_op_builder as user_op_builder
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 
 
 @oneflow_export("math.two_stage_reduce_max")
 def api_two_stage_reduce_max(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     func = enable_if.unique([two_stage_reduce_max])
     return func(x, axis=axis, keepdims=keepdims, name=name)
 
@@ -46,11 +47,11 @@ def two_stage_reduce_max(x, axis=None, keepdims=False, name=None):
 
 @oneflow_export("math.two_stage_reduce_min")
 def api_two_stage_reduce_min(
-    x: remote_blob_util.BlobDef,
+    x: oneflow_api.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     func = enable_if.unique([two_stage_reduce_min])
     return func(x, axis=axis, keepdims=keepdims, name=name)
 
@@ -70,13 +71,13 @@ def two_stage_reduce(x, axis=None, keepdims=False, op_type_name=None, name=None)
     device_stage_count_list = []
     distribute_axis = x.distribute.axis
     x_list = flow.advanced.distribute_split(x, axis=distribute_axis)
-    current_placement_scope = flow.placement.current_scope()
-    device_tag = current_placement_scope.default_device_tag
+    parallel_desc_symbol = flow.current_scope().device_parallel_desc_symbol
+    device_tag = parallel_desc_symbol.device_tag
     parallel_id = 0
     for (
         machine_id,
         device_ids,
-    ) in current_placement_scope.machine_id2device_id_list.items():
+    ) in parallel_desc_symbol.machine_id2device_id_list.items():
         for device_id in device_ids:
             with flow.scope.placement(
                 device_tag, str(machine_id) + ":" + str(device_id)
@@ -162,6 +163,6 @@ def _check_axis(axis, shape):
 
 def check_x_dictribute(x, axis):
     for i in axis:
-        if x.distribute is distribute_util.split(i):
+        if x.distribute is oneflow_api.distribute.split(i):
             return True
     return False

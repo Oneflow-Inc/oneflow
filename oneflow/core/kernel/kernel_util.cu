@@ -66,21 +66,6 @@ __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
 }
 
 template<typename T>
-__global__ void MulByScalarGpu(const int64_t n, const T* x, const T* y, T* z) {
-  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[0]; }
-}
-
-template<typename T>
-__global__ void AddByScalarGpu(const int64_t n, const T* x, const T y, T* z) {
-  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] + y; }
-}
-
-template<typename T>
-__global__ void MulByScalarParaGpu(const int64_t n, const T* x, const T y, T* z) {
-  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y; }
-}
-
-template<typename T>
 __global__ void ReciprocalGpu(const int64_t n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = static_cast<T>(1.0) / x[i]; }
 }
@@ -109,16 +94,6 @@ __global__ void SigmoidForwardGpu(const int n, const T* x, T* y) {
 template<typename T>
 __global__ void SigmoidBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = dy[i] * y[i] * (1.0 - y[i]); }
-}
-
-template<typename T>
-__global__ void TanHForwardGpu(const int n, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::tanh(x[i]); }
-}
-
-template<typename T>
-__global__ void TanHBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = dy[i] * (1.0 - y[i] * y[i]); }
 }
 
 template<typename T>
@@ -427,14 +402,6 @@ KU_IF_METHOD Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x) {
   ReplicateGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, x);
 }
-KU_IF_METHOD AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
-  AddByScalarGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
-}
-KU_IF_METHOD MulByScalarPara(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
-  MulByScalarParaGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
-}
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \
@@ -533,10 +500,6 @@ KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, 
   MulGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
 }
-KU_FLOATING_METHOD MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  MulByScalarGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
-}
 KU_FLOATING_METHOD Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y) {
   ReciprocalGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
@@ -565,17 +528,6 @@ KU_FLOATING_METHOD Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
 KU_FLOATING_METHOD SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                                    const T* dy, T* dx) {
   SigmoidBackwardGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
-}
-
-KU_FLOATING_METHOD TanH(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
-  TanHForwardGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
-}
-
-KU_FLOATING_METHOD TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
-                                const T* dy, T* dx) {
-  TanHBackwardGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
 }
 
@@ -674,65 +626,6 @@ KU_INTEGRAL_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, 
   template struct KernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
 
-template<>
-__device__ int32_t gpu_atomic_add(int32_t* address, const int32_t val) {
-  return atomicAdd(address, val);
-}
-
-template<>
-__device__ float gpu_atomic_add(float* address, float val) {
-  return atomicAdd(address, val);
-}
-
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
-template<>
-__device__ half gpu_atomic_add(half* address, half val) {
-  return atomicAdd(address, val);
-}
-#endif
-
-template<>
-__device__ double gpu_atomic_add(double* address, const double val) {
-#if __CUDA_ARCH__ >= 600
-  return atomicAdd(address, val);
-#else
-  auto address_as_ull = reinterpret_cast<unsigned long long int*>(address);
-  unsigned long long int old = *address_as_ull;
-  unsigned long long int assumed = 0;
-  do {
-    assumed = old;
-    old = atomicCAS(address_as_ull, assumed,
-                    __double_as_longlong(val + __longlong_as_double(assumed)));
-  } while (assumed != old);
-  return __longlong_as_double(old);
-#endif
-}
-
-template<>
-__device__ float gpu_atomic_max(float* address, const float val) {
-  int* address_as_i = (int*)address;
-  int old = *address_as_i;
-  int assumed = 0;
-  do {
-    assumed = old;
-    old = atomicCAS(address_as_i, assumed, __float_as_int(fmaxf(val, __int_as_float(assumed))));
-  } while (assumed != old);
-  return __int_as_float(old);
-}
-
-template<>
-__device__ double gpu_atomic_max(double* address, const double val) {
-  unsigned long long int* address_as_i = (unsigned long long int*)address;
-  unsigned long long int old = *address_as_i;
-  unsigned long long int assumed = 0;
-  do {
-    assumed = old;
-    old = atomicCAS(address_as_i, assumed,
-                    __double_as_longlong(fmax(val, __longlong_as_double(assumed))));
-  } while (assumed != old);
-  return __longlong_as_double(old);
-}
-
 template<typename T, typename U>
 __global__ void CastOnGpu(const T* in, U* out, int64_t elem_num) {
   CUDA_1D_KERNEL_LOOP(i, elem_num) { out[i] = static_cast<U>(in[i]); }
@@ -740,12 +633,24 @@ __global__ void CastOnGpu(const T* in, U* out, int64_t elem_num) {
 
 template<>
 __global__ void CastOnGpu<float, half>(const float* in, half* out, int64_t elem_num) {
-  CUDA_1D_KERNEL_LOOP(i, elem_num) { out[i] = __float2half(in[i]); }
+  const int64_t elem_num_2 = elem_num / 2;
+  const auto* in_2 = reinterpret_cast<const float2*>(in);
+  auto* out_2 = reinterpret_cast<half2*>(out);
+  CUDA_1D_KERNEL_LOOP(i, elem_num_2) { out_2[i] = __float22half2_rn(in_2[i]); }
+  if (elem_num % 2 == 1 && blockIdx.x == 0 && threadIdx.x == 0) {
+    out[elem_num - 1] = __float2half(in[elem_num - 1]);
+  }
 }
 
 template<>
 __global__ void CastOnGpu<half, float>(const half* in, float* out, int64_t elem_num) {
-  CUDA_1D_KERNEL_LOOP(i, elem_num) { out[i] = __half2float(in[i]); }
+  const int64_t elem_num_2 = elem_num / 2;
+  const auto* in_2 = reinterpret_cast<const half2*>(in);
+  auto* out_2 = reinterpret_cast<float2*>(out);
+  CUDA_1D_KERNEL_LOOP(i, elem_num_2) { out_2[i] = __half22float2(in_2[i]); }
+  if (elem_num % 2 == 1 && blockIdx.x == 0 && threadIdx.x == 0) {
+    out[elem_num - 1] = __half2float(in[elem_num - 1]);
+  }
 }
 
 template<typename T, typename U>
@@ -763,16 +668,16 @@ template<>
 void CopyElemOnGpu<float, float16>(DeviceCtx* ctx, const float* in_dptr, float16* out_dptr,
                                    int64_t elem_num) {
   CastOnGpu<float, half>
-      <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          in_dptr, reinterpret_cast<half*>(out_dptr), elem_num);
+      <<<BlocksNum4ThreadsNum(RoundUp(elem_num, 2) / 2), kCudaThreadsNumPerBlock, 0,
+         ctx->cuda_stream()>>>(in_dptr, reinterpret_cast<half*>(out_dptr), elem_num);
 }
 
 template<>
 void CopyElemOnGpu<float16, float>(DeviceCtx* ctx, const float16* in_dptr, float* out_dptr,
                                    int64_t elem_num) {
   CastOnGpu<half, float>
-      <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          reinterpret_cast<const half*>(in_dptr), out_dptr, elem_num);
+      <<<BlocksNum4ThreadsNum(RoundUp(elem_num, 2) / 2), kCudaThreadsNumPerBlock, 0,
+         ctx->cuda_stream()>>>(reinterpret_cast<const half*>(in_dptr), out_dptr, elem_num);
 }
 
 #define INSTANTIATE_COPY_ELEM_ON_GPU(T, U) \

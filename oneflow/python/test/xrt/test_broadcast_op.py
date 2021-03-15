@@ -148,5 +148,35 @@ class TestBroadcastDivOp(TestBroadcastOp):
         return xla_broadcast_div_job
 
 
+class TestBroadcastMinOp(TestBroadcastOp):
+    run_test = True
+
+    def make_job(self, x_shape, y_shape, dtype=flow.float32):
+        config.use_xla_jit(False)
+        config.use_tensorrt(False)
+
+        @flow.global_function(config)
+        def broadcast_min_job(
+            x=flow.FixedTensorDef(x_shape, dtype=dtype),
+            y=flow.FixedTensorDef(y_shape, dtype=dtype),
+        ):
+            return flow.math.minimum(x, y)
+
+        return broadcast_min_job
+
+    def make_xla_job(self, x_shape, y_shape, dtype=flow.float32):
+        config.use_xla_jit(True)
+        config.use_tensorrt(False)
+
+        @flow.global_function(config)
+        def xla_broadcast_min_job(
+            x=flow.FixedTensorDef(x_shape, dtype=dtype),
+            y=flow.FixedTensorDef(y_shape, dtype=dtype),
+        ):
+            return flow.math.minimum(x, y)
+
+        return xla_broadcast_min_job
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -13,291 +13,311 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from collections import OrderedDict
 
-import numpy as np
-import oneflow as flow
-import tensorflow as tf
-from test_util import GenArgList
-import oneflow.typing as oft
-import unittest
 import os
-
-gpus = tf.config.experimental.list_physical_devices("GPU")
-for gpu in gpus:
-    tf.config.experimental.set_memory_growth(gpu, True)
-
-
-def _random_inputs(params_shape, indices_shape):
-    params = np.random.rand(*params_shape).astype(np.float32)
-    indices = []
-    indices_rows = np.prod(indices_shape[:-1])
-    indices_cols = indices_shape[-1]
-    for col in range(indices_cols):
-        indices_col = np.random.randint(
-            low=0, high=params_shape[col], size=(indices_rows,), dtype=np.int32
-        ).reshape(indices_shape[:-1])
-        indices.append(indices_col)
-    indices = np.stack(indices, axis=len(indices_shape) - 1)
-    return params, indices
+import numpy as np
+import unittest
+from collections import OrderedDict
+import oneflow as flow
+from test_util import GenArgDict, type_name_to_flow_type, type_name_to_np_type
 
 
-def _make_gather_nd_fn(params, indices, device_type, mirrored, compare_fn):
-    flow.clear_default_session()
+def _random_inputs(x_shape, x_dtype, index_shape, index_dtype):
+    assert isinstance(x_shape, (tuple, list))
+    assert isinstance(index_shape, (tuple, list))
+    assert index_dtype == np.int32 or index_dtype == np.int64
+
+    if x_dtype == np.float32 or x_dtype == np.double:
+        x = np.random.rand(*x_shape).astype(x_dtype)
+    elif x_dtype == np.int32 or x_dtype == np.int64 or x_dtype == np.int8:
+        x = np.random.randint(low=0, high=100, size=x_shape).astype(x_dtype)
+    else:
+        raise NotImplementedError("{}".format(x_dtype))
+
+    index = []
+    index_rows = np.prod(index_shape[:-1])
+    index_cols = index_shape[-1]
+    for col in range(index_cols):
+        index_col = np.random.randint(
+            low=0, high=x_shape[col], size=(index_rows,), dtype=index_dtype
+        ).reshape(index_shape[:-1])
+        index.append(index_col)
+    index = np.stack(index, axis=len(index_shape) - 1)
+    return x, index
+
+
+def _make_gather_nd_fn(
+    x_shape,
+    index_shape,
+    x_dtype,
+    index_type,
+    device_type,
+    device_num,
+    dynamic,
+    need_grad,
+    comp_diff_fn,
+):
+    assert device_num >= 1
+    fn_type = "train" if need_grad else "predict"
+
+    if device_type == "gpu":
+        flow.config.gpu_device_num(device_num)
+    elif device_type == "cpu":
+        flow.config.cpu_device_num(device_num)
+    else:
+        raise ValueError
+
     func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
-    if mirrored:
+    func_config.default_data_type(x_dtype)
+    func_config.default_placement_scope(
+        flow.scope.placement(device_type, "0:0-{}".format(device_num - 1))
+    )
+    if dynamic:
         func_config.default_logical_view(flow.scope.mirrored_view())
     else:
         func_config.default_logical_view(flow.scope.consistent_view())
 
-    def do_gather_nd(x_blob, i_blob):
-        with flow.scope.placement(device_type, "0:0"):
-            x = flow.get_variable(
-                "params",
-                shape=params.shape,
-                dtype=flow.float32,
-                initializer=flow.constant_initializer(0),
-            )
-            x = flow.cast_to_current_logical_view(x)
-            x = x + x_blob
-            y = flow.gather_nd(x, i_blob)
+    def do_gather_nd(x, index):
+        x_var = flow.get_variable(
+            "params", shape=(1,), dtype=x_dtype, initializer=flow.zeros_initializer(),
+        )
+        x = x + flow.cast_to_current_logical_view(x_var)
+        y = flow.gather_nd(x, index)
+        if need_grad:
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
             ).minimize(y)
-        flow.watch_diff(x, compare_fn)
+            if callable(comp_diff_fn):
+                flow.watch_diff(x, comp_diff_fn)
         return y
 
-    if mirrored:
+    if dynamic:
 
-        @flow.global_function(type="train", function_config=func_config)
+        @flow.global_function(type=fn_type, function_config=func_config)
         def gather_nd_fn(
-            params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
-            indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
-        ):
-            return do_gather_nd(params_def, indices_def)
+            x: flow.typing.ListNumpy.Placeholder(x_shape, dtype=x_dtype),
+            index: flow.typing.ListNumpy.Placeholder(index_shape, dtype=index_type),
+        ) -> flow.typing.ListNumpy:
+            return do_gather_nd(x, index)
 
     else:
 
-        @flow.global_function(type="train", function_config=func_config)
+        @flow.global_function(type=fn_type, function_config=func_config)
         def gather_nd_fn(
-            params_def: oft.Numpy.Placeholder(params.shape, dtype=flow.float),
-            indices_def: oft.Numpy.Placeholder(indices.shape, dtype=flow.int32),
-        ):
-            return do_gather_nd(params_def, indices_def)
+            x: flow.typing.Numpy.Placeholder(x_shape, dtype=x_dtype),
+            index: flow.typing.Numpy.Placeholder(index_shape, dtype=index_type),
+        ) -> flow.typing.Numpy:
+            return do_gather_nd(x, index)
 
     return gather_nd_fn
 
 
-def _of_dynamic_params_gather_nd(params, indices, static_params_shape, compare_fn):
-    flow.clear_default_session()
-    func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
-    func_config.default_logical_view(flow.scope.mirrored_view())
+def _gather_nd_np(x, index, require_grad=False, init_grad_value=1.0):
+    ndim = index.shape[-1]
+    assert ndim <= x.ndim
+    indices = []
+    for dim in range(ndim):
+        indices.append(index[..., dim])
 
-    @flow.global_function(type="train", function_config=func_config)
-    def gather_nd_fn(
-        params_def: oft.ListNumpy.Placeholder(static_params_shape, dtype=flow.float),
-        indices_def: oft.ListNumpy.Placeholder(indices.shape, dtype=flow.int32),
-    ):
-        with flow.scope.placement("gpu", "0:0"):
-            one_var = flow.get_variable(
-                "one",
-                shape=(1,),
-                dtype=flow.float32,
-                initializer=flow.constant_initializer(1),
-            )
-            one_var = flow.cast_to_current_logical_view(one_var)
-            params_var = params_def * one_var
-            y = flow.gather_nd(params_var, indices_def)
-            flow.optimizer.SGD(
-                flow.optimizer.PiecewiseConstantScheduler([], [1e-3]), momentum=0
-            ).minimize(y)
+    y = x[tuple(indices)]
+    dy = None
+    dx = None
+    if require_grad:
+        dy = np.zeros(shape=y.shape, dtype=np.float32)
+        dy.fill(init_grad_value)
+        dx = np.zeros(shape=x.shape, dtype=np.float32)
+        flat_index = index.reshape(-1, ndim)
+        flat_dy = dy.reshape(-1, *y.shape[(index.ndim - 1) :])
+        for i, nd_index in enumerate(flat_index):
+            if dx.ndim == ndim:
+                ravel_index = np.ravel_multi_index(nd_index, dx.shape)
+                dx_partial = np.zeros(shape=dx.shape, dtype=np.float32)
+                np.put(dx_partial, ravel_index, flat_dy[i])
+                dx += dx_partial
+            else:
+                dx[tuple(nd_index)] += flat_dy[i]
 
-        flow.watch_diff(params_var, compare_fn)
-        return y
-
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-    return gather_nd_fn([params], [indices]).get().numpy_list()[0]
+    return y, dx
 
 
-def _compare_gather_nd_with_tf(
-    test_case, device_type, params_shape, indices_shape, mirrored=False
+def _is_floating_dtype(dtype):
+    if dtype in ("float32", "double", "float16"):
+        return True
+
+    return False
+
+
+def _compare_with_np(
+    test_case,
+    shape,
+    index_shape,
+    dynamic_shape=None,
+    dynamic_index_shape=None,
+    dtype="float32",
+    index_dtype="int32",
+    device_type="gpu",
+    device_num=1,
+    dynamic=False,
 ):
-    params, indices = _random_inputs(params_shape, indices_shape)
+    x_is_floating = _is_floating_dtype(dtype)
+    need_grad = True if x_is_floating else False
+    x_of_dtype = type_name_to_flow_type[dtype]
+    index_of_dtype = type_name_to_flow_type[index_dtype]
+    x_dtype = type_name_to_np_type[dtype]
+    index_dtype = type_name_to_np_type[index_dtype]
 
-    i = tf.constant(indices)
-    with tf.GradientTape() as t:
-        x = tf.Variable(params)
-        y = tf.gather_nd(x, i)
+    if dynamic_shape is None:
+        dynamic_shape = shape
+    else:
+        dynamic = True
 
-    dy = t.gradient(y, x)
-    if isinstance(dy, tf.IndexedSlices):
-        test_case.assertTrue(
-            np.array_equal(indices.ravel(), dy.indices.numpy().ravel())
-        )
-        zero_params = tf.Variable(np.full(params.shape, 0.0, dtype=np.float32))
-        dy = tf.tensor_scatter_nd_add(zero_params, i, dy.values)
+    if dynamic_index_shape is None:
+        dynamic_index_shape = index_shape
+    else:
+        dynamic = True
 
-    if mirrored:
-
-        def compare_dy(params_grad):
-            test_case.assertTrue(
-                np.array_equal(dy.numpy(), params_grad.numpy_list()[0])
+    if dynamic:
+        x, index, y, dx = [], [], [], []
+        for _ in range(device_num):
+            x_, index_ = _random_inputs(
+                dynamic_shape, x_dtype, dynamic_index_shape, index_dtype
             )
+            y_, dx_ = _gather_nd_np(x_, index_, need_grad)
+            x.append(x_)
+            index.append(index_)
+            y.append(y_)
+            dx.append(dx_)
+
+        def comp_diff(dx_blob: flow.typing.ListNumpy):
+            for dx_blob_, dx_ in zip(dx_blob, dx):
+                test_case.assertTrue(np.array_equal(dx_blob_, dx_))
 
     else:
+        x, index = _random_inputs(
+            dynamic_shape, x_dtype, dynamic_index_shape, index_dtype
+        )
+        y, dx = _gather_nd_np(x, index, need_grad)
 
-        def compare_dy(params_grad):
-            test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.numpy()))
+        def comp_diff(dx_blob: flow.typing.Numpy):
+            test_case.assertTrue(np.array_equal(dx_blob, dx))
 
+    flow.clear_default_session()
     gather_nd_fn = _make_gather_nd_fn(
-        params, indices, device_type, mirrored, compare_dy
+        shape,
+        index_shape,
+        x_of_dtype,
+        index_of_dtype,
+        device_type,
+        device_num,
+        dynamic,
+        need_grad,
+        comp_diff if device_num == 1 else None,
     )
+    ret_y = gather_nd_fn(x, index)
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-
-    if mirrored:
-        of_y = gather_nd_fn([params], [indices]).get().numpy_list()[0]
+    if dynamic:
+        for ret_y_, y_ in zip(ret_y, y):
+            test_case.assertTrue(np.array_equal(ret_y_, y_))
     else:
-        of_y = gather_nd_fn(params, indices).get().numpy()
-
-    test_case.assertTrue(np.array_equal(y.numpy(), of_y))
+        test_case.assertTrue(np.array_equal(ret_y, y))
 
 
-def _compare_dynamic_gather_nd_with_tf(
-    test_case, params_shape, static_params_shape, indices_shape
-):
-    params, indices = _random_inputs(params_shape, indices_shape)
+@flow.unittest.skip_unless_1n1d()
+class TestGatherNd(flow.unittest.TestCase):
+    def test_gather_nd(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(10,)]
+        arg_dict["index_shape"] = [(5, 1)]
+        arg_dict["dtype"] = ["float32", "int32", "double"]
+        arg_dict["index_dtype"] = ["int32", "int64"]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["dynamic"] = [False, True]
+        for arg in GenArgDict(arg_dict):
+            _compare_with_np(test_case, **arg)
 
-    i = tf.constant(indices)
-    with tf.GradientTape() as t:
-        x = tf.Variable(params)
-        y = tf.gather_nd(x, i)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_gather_nd_case_1(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(20, 10, 10, 3, 3)]
+        arg_dict["index_shape"] = [(2, 3, 3)]
+        arg_dict["device_type"] = ["gpu"]
+        for arg in GenArgDict(arg_dict):
+            _compare_with_np(test_case, **arg)
 
-    dy = t.gradient(y, x)
-    if isinstance(dy, tf.IndexedSlices):
-        test_case.assertTrue(
-            np.array_equal(indices.ravel(), dy.indices.numpy().ravel())
-        )
-        zero_params = tf.constant(np.full(params.shape, 0.0, dtype=np.float32))
-        dy = tf.tensor_scatter_nd_add(zero_params, i, dy.values)
+    def test_gather_nd_case_2(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(10, 8, 4)]
+        arg_dict["index_shape"] = [(2, 2)]
+        arg_dict["dtype"] = ["float32", "int32"]
+        arg_dict["index_dtype"] = ["int32", "int64"]
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["dynamic"] = [True]
+        for arg in GenArgDict(arg_dict):
+            _compare_with_np(test_case, **arg)
 
-    def compare_dy(params_grad):
-        test_case.assertTrue(np.array_equal(dy.numpy(), params_grad.numpy_list()[0]))
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_gather_nd_case_3(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(32, 60, 80, 25)]
+        arg_dict["index_shape"] = [(128, 2)]
+        arg_dict["device_type"] = ["gpu"]
+        for arg in GenArgDict(arg_dict):
+            _compare_with_np(test_case, **arg)
 
-    of_y = _of_dynamic_params_gather_nd(
-        params, indices, static_params_shape, compare_dy
-    )
-    test_case.assertTrue(np.array_equal(y.numpy(), of_y))
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_gather_nd_case_4(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(128, 64, 2, 16, 7)]
+        arg_dict["index_shape"] = [(30, 10, 3)]
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["dynamic"] = [True]
+        for arg in GenArgDict(arg_dict):
+            _compare_with_np(test_case, **arg)
 
+    def test_with_dynamic_x(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(32, 16)]
+        arg_dict["dynamic_shape"] = [(30, 15)]
+        arg_dict["index_shape"] = [(12, 1)]
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        for arg in GenArgDict(arg_dict):
+            _compare_with_np(test_case, **arg)
 
-def _of_gather_nd_dynamic_indices(params, indices, indices_static_shape, device_type):
-    flow.clear_default_session()
-    func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
-    func_config.default_logical_view(flow.scope.mirrored_view())
+    def test_with_dynamic_index(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(25, 10)]
+        arg_dict["index_shape"] = [(15, 1)]
+        arg_dict["dynamic_index_shape"] = [(11, 1)]
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        for arg in GenArgDict(arg_dict):
+            _compare_with_np(test_case, **arg)
 
-    @flow.global_function(function_config=func_config)
-    def gather_nd_fn(
-        params_def: oft.ListNumpy.Placeholder(params.shape, dtype=flow.float),
-        indices_def: oft.ListNumpy.Placeholder(indices_static_shape, dtype=flow.int32),
-    ):
-        with flow.scope.placement(device_type, "0:0"):
-            return flow.gather_nd(params_def, indices_def)
-
-    return gather_nd_fn([params], [indices]).get().numpy_list()[0]
-
-
-def _compare_gather_nd_dynamic_indices_with_tf(
-    test_case, params_shape, indices_shape, indices_static_shape, device_type
-):
-    params, indices = _random_inputs(params_shape, indices_shape)
-
-    i = tf.constant(indices)
-    x = tf.Variable(params)
-    y = tf.gather_nd(x, i)
-
-    of_y = _of_gather_nd_dynamic_indices(
-        params, indices, indices_static_shape, device_type
-    )
-    test_case.assertTrue(np.array_equal(y.numpy(), of_y))
-
-
-def test_gather_nd(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["params_shape"] = [(10,)]
-    arg_dict["indices_shape"] = [(5, 1)]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_nd_with_tf(test_case, *arg)
-
-
-def test_gather_nd_case_1(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(20, 10, 10, 3, 3)]
-    arg_dict["indices_shape"] = [(2, 3, 3)]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_nd_with_tf(test_case, *arg)
-
-
-def test_gather_nd_case_2(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["params_shape"] = [(10, 8, 4)]
-    arg_dict["indices_shape"] = [(2, 2)]
-    arg_dict["mirrored"] = [True]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_nd_with_tf(test_case, *arg)
+    def test_with_empty_index(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(12, 13, 7)]
+        arg_dict["index_shape"] = [(5, 10, 2)]
+        arg_dict["dynamic_index_shape"] = [(5, 0, 2)]
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        for arg in GenArgDict(arg_dict):
+            _compare_with_np(test_case, **arg)
 
 
-def test_gather_nd_case_3(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(32, 60, 80, 25)]
-    arg_dict["indices_shape"] = [(128, 2)]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_nd_with_tf(test_case, *arg)
+# @flow.unittest.skip_unless_1n4d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+class TestGatherNdParallel(flow.unittest.TestCase):
+    def test_case_1(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(12, 5)]
+        arg_dict["index_shape"] = [(4, 8, 2)]
+        arg_dict["dtype"] = ["float32", "int32", "double"]
+        arg_dict["index_dtype"] = ["int32", "int64"]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["device_num"] = [4]
+        arg_dict["dynamic"] = [True, False]
+        for arg in GenArgDict(arg_dict):
+            _compare_with_np(test_case, **arg)
 
 
-def test_gather_nd_case_4(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["params_shape"] = [(128, 64, 2, 16, 7)]
-    arg_dict["indices_shape"] = [(30, 10, 3)]
-    arg_dict["mirrored"] = [True]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_nd_with_tf(test_case, *arg)
-
-
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_dynamic_gather_nd(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["params_shape"] = [(30, 15)]
-    arg_dict["static_params_shape"] = [(32, 16)]
-    arg_dict["indices_shape"] = [(12, 1)]
-    for arg in GenArgList(arg_dict):
-        _compare_dynamic_gather_nd_with_tf(test_case, *arg)
-
-
-def test_gather_nd_dynamic_indices(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["params_shape"] = [(25, 10)]
-    arg_dict["indices_shape"] = [(11, 1)]
-    arg_dict["indices_static_shape"] = [(15, 1)]
-    arg_dict["device_type"] = ["gpu"]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_nd_dynamic_indices_with_tf(test_case, *arg)
-
-
-def test_gather_nd_empty_indices(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["params_shape"] = [(12, 13, 7)]
-    arg_dict["indices_shape"] = [(5, 0, 2)]
-    arg_dict["indices_static_shape"] = [(5, 10, 2)]
-    arg_dict["device_type"] = ["gpu"]
-    for arg in GenArgList(arg_dict):
-        _compare_gather_nd_dynamic_indices_with_tf(test_case, *arg)
+if __name__ == "__main__":
+    unittest.main()

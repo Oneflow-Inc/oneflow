@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
 import numpy as np
@@ -79,8 +80,6 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
         ):
             return clip(values_def)
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         return clip_fn([values]).get().numpy_list()[0]
 
     else:
@@ -90,8 +89,6 @@ def _of_clip_by_value(values, min, max, device_type="gpu", dynamic=False, grad_c
         def clip_fn(values_def: oft.Numpy.Placeholder(values.shape, dtype=data_type)):
             return clip(values_def)
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         return clip_fn(values).get().numpy()
 
 
@@ -119,53 +116,57 @@ def _compare_with_tf(test_case, values, min, max, device_type, dynamic):
     test_case.assertTrue(np.array_equal(y.numpy(), of_y))
 
 
-def test_clip_by_value(test_case):
-    values = np.random.randint(low=-100, high=100, size=(8, 512, 4)).astype(np.float32)
-    np_out = np.clip(values, -50, 50)
+@flow.unittest.skip_unless_1n1d()
+class TestClipByValue(flow.unittest.TestCase):
+    def test_clip_by_value(test_case):
+        values = np.random.randint(low=-100, high=100, size=(8, 512, 4)).astype(
+            np.float32
+        )
+        np_out = np.clip(values, -50, 50)
 
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["dynamic"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        of_out = _of_clip_by_value(values, -50, 50, *arg)
-        test_case.assertTrue(np.array_equal(np_out, of_out))
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["dynamic"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            of_out = _of_clip_by_value(values, -50, 50, *arg)
+            test_case.assertTrue(np.array_equal(np_out, of_out))
+
+    def test_clip_by_min(test_case):
+        values = np.random.standard_normal((100, 30)).astype(np.float32)
+        np_out = np.clip(values, a_min=0, a_max=None)
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["dynamic"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            of_out = _of_clip_by_value(values, 0, None, *arg)
+            test_case.assertTrue(np.array_equal(np_out, of_out))
+
+    def test_clip_by_max(test_case):
+        values = np.random.standard_normal((2, 64, 800, 1088)).astype(np.float32)
+        np_out = np.clip(values, a_min=None, a_max=0.2)
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["dynamic"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            of_out = _of_clip_by_value(values, None, 0.2, *arg)
+            test_case.assertTrue(np.allclose(np_out, of_out))
+
+    def test_clip_by_value_grad(test_case):
+        values = np.random.standard_normal(1024).astype(np.float32)
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["dynamic"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            _compare_with_tf(test_case, values, 0, 0.5, *arg)
+
+    def test_clip_by_value_grad_case_1(test_case):
+        values = np.random.standard_normal((128, 10, 27)).astype(np.float32)
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["dynamic"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            _compare_with_tf(test_case, values, -0.2, 0.2, *arg)
 
 
-def test_clip_by_min(test_case):
-    values = np.random.standard_normal((100, 30)).astype(np.float32)
-    np_out = np.clip(values, a_min=0, a_max=None)
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["dynamic"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        of_out = _of_clip_by_value(values, 0, None, *arg)
-        test_case.assertTrue(np.array_equal(np_out, of_out))
-
-
-def test_clip_by_max(test_case):
-    values = np.random.standard_normal((2, 64, 800, 1088)).astype(np.float32)
-    np_out = np.clip(values, a_min=None, a_max=0.2)
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["dynamic"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        of_out = _of_clip_by_value(values, None, 0.2, *arg)
-        test_case.assertTrue(np.allclose(np_out, of_out))
-
-
-def test_clip_by_value_grad(test_case):
-    values = np.random.standard_normal(1024).astype(np.float32)
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["dynamic"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        _compare_with_tf(test_case, values, 0, 0.5, *arg)
-
-
-def test_clip_by_value_grad_case_1(test_case):
-    values = np.random.standard_normal((128, 10, 27)).astype(np.float32)
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["dynamic"] = [True, False]
-    for arg in GenArgList(arg_dict):
-        _compare_with_tf(test_case, values, -0.2, 0.2, *arg)
+if __name__ == "__main__":
+    unittest.main()

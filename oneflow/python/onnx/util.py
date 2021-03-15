@@ -34,27 +34,28 @@ import onnx
 from onnx import helper, onnx_pb, defs, numpy_helper
 import six
 
-import oneflow.python.framework.dtype as dtype_util
 from oneflow.python.framework import id_util
 from oneflow.python.onnx import constants
+import oneflow
+import oneflow_api
 
 
 #
 #  mapping dtypes from oneflow to onnx
 #
 FLOW_2_ONNX_DTYPE = {
-    dtype_util.float32: onnx_pb.TensorProto.FLOAT,
-    dtype_util.float64: onnx_pb.TensorProto.DOUBLE,
-    dtype_util.int64: onnx_pb.TensorProto.INT64,
-    dtype_util.int32: onnx_pb.TensorProto.INT32,
-    dtype_util.int8: onnx_pb.TensorProto.INT8,
-    dtype_util.uint8: onnx_pb.TensorProto.UINT8,
-    dtype_util.float16: onnx_pb.TensorProto.FLOAT16,
+    oneflow.float32: onnx_pb.TensorProto.FLOAT,
+    oneflow.float64: onnx_pb.TensorProto.DOUBLE,
+    oneflow.int64: onnx_pb.TensorProto.INT64,
+    oneflow.int32: onnx_pb.TensorProto.INT32,
+    oneflow.int8: onnx_pb.TensorProto.INT8,
+    oneflow.uint8: onnx_pb.TensorProto.UINT8,
+    oneflow.float16: onnx_pb.TensorProto.FLOAT16,
 }
 
 FLOW_PROTO_2_ONNX_DTYPE = {}
 for k, v in FLOW_2_ONNX_DTYPE.items():
-    FLOW_PROTO_2_ONNX_DTYPE[k.oneflow_proto_dtype] = v
+    FLOW_PROTO_2_ONNX_DTYPE[oneflow_api.deprecated.GetProtoDtype4OfDtype(k)] = v
 del k
 
 #

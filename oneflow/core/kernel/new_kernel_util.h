@@ -20,37 +20,13 @@ limitations under the License.
 
 namespace oneflow {
 
-#ifndef WITH_CUDA
-enum cudaMemcpyKind {
-  cudaMemcpyHostToHost = 0,
-  cudaMemcpyHostToDevice = 1,
-  cudaMemcpyDefault = 4,
-};
-#endif
-
 template<DeviceType deivce_type>
 struct NewKernelUtil : public DnnIf<deivce_type>,
                        public BlasIf<deivce_type>,
                        public ArithemeticIf<deivce_type> {};
 
 template<DeviceType device_type>
-struct GetCudaMemcpyKind;
-
-template<>
-struct GetCudaMemcpyKind<DeviceType::kCPU> {
-  static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyHostToHost;
-};
-
-#ifdef WITH_CUDA
-template<>
-struct GetCudaMemcpyKind<DeviceType::kGPU> {
-  static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
-};
-#endif  // WITH_CUDA
-
-template<DeviceType device_type>
-void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz,
-            cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val);
+void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz);
 
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);

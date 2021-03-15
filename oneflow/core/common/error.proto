@@ -105,12 +105,21 @@ message MemoryZoneOutOfMemoryError {
 
 message LossBlobNotFoundError { }
 
-message UnkownError { }
+message RwMutexedObjectNotFoundError { }
+
+message UnknownError { }
+
+message CompileOptionWrongError { }
 
 message ErrorStackFrame {
   required string location = 1;
   required string function = 2;
+  required string error_msg = 3;
 }
+
+message SymbolIdUninitializedError {}
+
+message ValueError {}
 
 message ErrorProto {
   optional string error_summary = 1 [default = ""];
@@ -131,6 +140,7 @@ message ErrorProto {
     LossBlobNotFoundError loss_blob_not_found_error = 24;
     JobSetEmptyError job_set_empty_error = 25;
     DeviceTagNotFoundError device_tag_not_found_error = 26;
+    ValueError value_error = 27;
     JobNameExistError job_name_exist_error = 100;
     JobNameEmptyError job_name_empty_error = 101;
     JobNameNotEqualError job_name_not_equal_error = 102;
@@ -147,6 +157,9 @@ message ErrorProto {
     PlacementError placement_error= 470;
     BlobSplitAxisInferError blob_split_axis_infer_error = 480;
     UnknownJobBuildAndInferError unknown_job_build_and_infer_error = 500;
-    UnkownError unknown_error = 900;
+    RwMutexedObjectNotFoundError rw_mutexed_object_not_found_error = 600;
+    SymbolIdUninitializedError symbol_id_uninitialized_error = 700;
+    UnknownError unknown_error = 900;
+    CompileOptionWrongError compile_option_wrong_error = 950;
   }
 }

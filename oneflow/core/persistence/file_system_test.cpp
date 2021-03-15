@@ -94,7 +94,7 @@ void TestFileSystem(FileSystem* file_system) {
 }  // namespace fs
 
 TEST(file_system, write_and_read) {
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
   fs::FileSystem* file_system = new fs::PosixFileSystem();
   fs::TestFileSystem(file_system);
 #endif

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -21,6 +22,10 @@ import oneflow as flow
 import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList
+
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
 
 
 def compare_with_tensorflow(device_type, params_case, dilations, data_format):
@@ -83,8 +88,6 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = DeconvJob().get()
     # Tensorflow
     if data_format == "NCHW":
@@ -155,33 +158,38 @@ def compare_with_tensorflow(device_type, params_case, dilations, data_format):
         )
 
 
-def test_deconv2d_NHWC_1n1c(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    # params_case: (input_shape, output_shape, padding, stirdes, kernel_size)
-    arg_dict["params_case"] = [
-        ((32, 3, 3, 4), (32, 3, 3, 8), "SAME", 1, 3),
-        ((32, 3, 3, 2), (32, 6, 6, 8), "SAME", 2, 4),
-        ((32, 2, 2, 1), (32, 5, 5, 2), "VALID", 2, 2),
-        ((32, 2, 2, 16), (32, 8, 8, 4), "VALID", 2, 5),
-    ]
-    arg_dict["dilations"] = [1]
-    arg_dict["data_format"] = ["NHWC"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestDeconv2d(flow.unittest.TestCase):
+    def test_deconv2d_NHWC_1n1c(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        # params_case: (input_shape, output_shape, padding, stirdes, kernel_size)
+        arg_dict["params_case"] = [
+            ((32, 3, 3, 4), (32, 3, 3, 8), "SAME", 1, 3),
+            ((32, 3, 3, 2), (32, 6, 6, 8), "SAME", 2, 4),
+            ((32, 2, 2, 1), (32, 5, 5, 2), "VALID", 2, 2),
+            ((32, 2, 2, 16), (32, 8, 8, 4), "VALID", 2, 5),
+        ]
+        arg_dict["dilations"] = [1]
+        arg_dict["data_format"] = ["NHWC"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_deconv2d_NCHW_1n1c(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        # params_case: (input_shape, output_shape, padding, stirdes, kernel_size)
+        arg_dict["params_case"] = [
+            ((32, 4, 3, 3), (32, 8, 3, 3), "SAME", 1, 3),
+            ((32, 4, 3, 3), (32, 8, 6, 6), "SAME", 2, 5),
+            ((32, 1, 2, 2), (32, 2, 5, 5), "VALID", 2, 2),
+            ((32, 16, 2, 2), (32, 4, 8, 8), "VALID", 2, 5),
+        ]
+        arg_dict["dilations"] = [1]
+        arg_dict["data_format"] = ["NCHW"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
 
-def test_deconv2d_NCHW_1n1c(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    # params_case: (input_shape, output_shape, padding, stirdes, kernel_size)
-    arg_dict["params_case"] = [
-        ((32, 4, 3, 3), (32, 8, 3, 3), "SAME", 1, 3),
-        ((32, 4, 3, 3), (32, 8, 6, 6), "SAME", 2, 5),
-        ((32, 1, 2, 2), (32, 2, 5, 5), "VALID", 2, 2),
-        ((32, 16, 2, 2), (32, 4, 8, 8), "VALID", 2, 5),
-    ]
-    arg_dict["dilations"] = [1]
-    arg_dict["data_format"] = ["NCHW"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+if __name__ == "__main__":
+    unittest.main()

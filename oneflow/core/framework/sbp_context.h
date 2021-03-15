@@ -50,40 +50,43 @@ class UserOpSbpSignatureBuilder final {
   SbpSignature sbp_sig_tmp_;
 };
 
-class SbpContext {
+class SbpContextBase {
  public:
-  virtual ~SbpContext() = default;
+  SbpContextBase() = default;
+  virtual ~SbpContextBase() = default;
 
   virtual const TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
       const std::string& input_arg_name, int32_t index) const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
-  UserOpSbpSignatureBuilder NewBuilder() { return UserOpSbpSignatureBuilder(sbp_sig_list_); }
-
-  DeviceType device_type() const { return device_type_; }
-  int64_t parallel_num() const { return parallel_num_; }
+  virtual DeviceType device_type() const = 0;
+  virtual int64_t parallel_num() const = 0;
 
   template<typename T>
   T Attr(const std::string& attr_name) const {
-    return user_op_conf_.attr<T>(attr_name);
+    return user_op_conf().attr<T>(attr_name);
   }
-  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+  virtual const UserOpConfWrapper& user_op_conf() const = 0;
+};
 
- protected:
-  SbpContext(UserOpConfWrapper&& conf, SbpSignatureList* sbp_sig_list, DeviceType device_type,
-             int64_t parallel_num)
-      : user_op_conf_(conf),
-        sbp_sig_list_(sbp_sig_list),
-        device_type_(device_type),
-        parallel_num_(parallel_num) {}
-  SbpContext(const SbpContext&) = delete;
+class SbpContext : public SbpContextBase {
+ public:
+  SbpContext() = default;
+  ~SbpContext() override = default;
 
- private:
-  UserOpConfWrapper user_op_conf_;
-  SbpSignatureList* sbp_sig_list_;
-  DeviceType device_type_;
-  int64_t parallel_num_;
+  virtual UserOpSbpSignatureBuilder NewBuilder() = 0;
+};
+
+class InferSbpSignatureFnContext : public SbpContextBase {
+ public:
+  InferSbpSignatureFnContext() = default;
+  ~InferSbpSignatureFnContext() override = default;
+
+  virtual SbpSignature* mutable_sbp_signature() = 0;
+  virtual const SbpSignature& sbp_signature_conf() const = 0;
+  virtual const SbpParallel& SbpParallelHint4InputArgNameAndIndex(const std::string& input_arg_name,
+                                                                  int32_t index) const = 0;
 };
 
 struct GetSbpFnUtil {

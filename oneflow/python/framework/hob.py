@@ -13,12 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.c_api_util as c_api_util
 import oneflow
 from oneflow.python.lib.core.high_order_bool import bool_functor
+import oneflow_api
 
 
 @bool_functor("Current mode is %s" % rt_mode.NORMAL_MODE)
@@ -39,7 +38,7 @@ def in_device_mode(ctx):
 @bool_functor("Environment initialized")
 def env_initialized(ctx):
     assert in_normal_mode(ctx)
-    return c_api_util.IsEnvInited()
+    return oneflow_api.IsEnvInited()
 
 
 @bool_functor("Any global function defined")
@@ -50,7 +49,7 @@ def any_global_function_defined(ctx):
 
 @bool_functor("Eager execution enabled")
 def eager_execution_enabled(ctx):
-    return c_api_util.EagerExecutionEnabled()
+    return oneflow_api.EagerExecutionEnabled()
 
 
 @bool_functor("Session initialized")
@@ -62,26 +61,16 @@ def session_initialized(ctx):
 @bool_functor("Current global function is trainable")
 def is_trainable(ctx):
     assert in_global_mode(ctx)
-    if c_api_util.EagerExecutionEnabled():
+    if oneflow_api.EagerExecutionEnabled():
         return session_ctx.GetDefaultSession().CurrentEagerGlobalFunctionDesc()
     else:
-        job_name = c_api_util.JobBuildAndInferCtx_GetCurrentJobName()
+        job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
         return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
-
-
-@bool_functor("In a placement scope")
-def in_placement_scope(ctx):
-    return len(session_ctx.GetDefaultSession().placement_scope_stack) > 0
-
-
-@bool_functor("Current placement is physical")
-def is_current_placement_physical(ctx):
-    return oneflow.placement.current_scope().is_physical_placement
 
 
 @bool_functor("Current machine is master")
 def is_current_machine_master(ctx):
-    return c_api_util.CurrentMachineId() == 0
+    return oneflow_api.CurrentMachineId() == 0
 
 
 @bool_functor("Consistent view enabled")

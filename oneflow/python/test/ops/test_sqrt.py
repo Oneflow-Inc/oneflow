@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -26,13 +27,19 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def test_sqrt(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["flow_op"] = [flow.math.sqrt]
-    arg_dict["tf_op"] = [tf.math.sqrt]
-    arg_dict["input_shape"] = [(10, 20, 30)]
-    arg_dict["input_minval"] = [0]
-    arg_dict["input_maxval"] = [100]
-    for arg in GenArgDict(arg_dict):
-        CompareOpWithTensorFlow(**arg)
+@flow.unittest.skip_unless_1n1d()
+class TestSqrt(flow.unittest.TestCase):
+    def test_sqrt(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["flow_op"] = [flow.math.sqrt]
+        arg_dict["tf_op"] = [tf.math.sqrt]
+        arg_dict["input_shape"] = [(10, 20, 30)]
+        arg_dict["input_minval"] = [0]
+        arg_dict["input_maxval"] = [100]
+        for arg in GenArgDict(arg_dict):
+            CompareOpWithTensorFlow(**arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

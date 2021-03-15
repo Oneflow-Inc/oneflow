@@ -31,10 +31,6 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
   const int32_t filters = ctx->Attr<int32_t>("filters");
   size_t idx_offset = IdxOffset(data_format);
 
-  // only support data parallel
-  CHECK_OR_RETURN(ctx->parallel_ctx().parallel_num() == 1
-                  || ctx->SbpParallel4ArgNameAndIndex("weight", 0).has_broadcast_parallel());
-
   {
     const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     const auto& output_padding = ctx->Attr<std::vector<int32_t>>("output_padding");
@@ -76,11 +72,6 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     CHECK_EQ(weight->shape(), Shape(weight_shape));
   }
 
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferBatchAxis4DeConv(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -198,51 +189,48 @@ REGISTER_USER_OP("deconv1d")
     .Input("in")
     .Input("weight")
     .Output("out")
-    .Attr("filters", UserOpAttrType::kAtInt32)
-    .Attr("padding_before", UserOpAttrType::kAtListInt32)
-    .Attr("data_format", UserOpAttrType::kAtString)
-    .Attr("kernel_size", UserOpAttrType::kAtListInt32)
-    .Attr("output_padding", UserOpAttrType::kAtListInt32)
-    .Attr("strides", UserOpAttrType::kAtListInt32)
-    .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
-    .Attr<int32_t>("groups", UserOpAttrType::kAtInt32, 1)
+    .Attr<int32_t>("filters")
+    .Attr<std::vector<int32_t>>("padding_before")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("output_padding")
+    .Attr<std::vector<int32_t>>("strides")
+    .Attr<std::vector<int32_t>>("dilation_rate")
+    .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<1>)
     .SetTensorDescInferFn(InferTensorDesc4DeConv<1>)
-    .SetBatchAxisInferFn(InferBatchAxis4DeConv)
     .SetGetSbpFn(GetSbpSignatures4DeConv);
 
 REGISTER_USER_OP("deconv2d")
     .Input("in")
     .Input("weight")
     .Output("out")
-    .Attr("filters", UserOpAttrType::kAtInt32)
-    .Attr("padding_before", UserOpAttrType::kAtListInt32)
-    .Attr("data_format", UserOpAttrType::kAtString)
-    .Attr("kernel_size", UserOpAttrType::kAtListInt32)
-    .Attr("output_padding", UserOpAttrType::kAtListInt32)
-    .Attr("strides", UserOpAttrType::kAtListInt32)
-    .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
-    .Attr<int32_t>("groups", UserOpAttrType::kAtInt32, 1)
+    .Attr<int32_t>("filters")
+    .Attr<std::vector<int32_t>>("padding_before")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("output_padding")
+    .Attr<std::vector<int32_t>>("strides")
+    .Attr<std::vector<int32_t>>("dilation_rate")
+    .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<2>)
     .SetTensorDescInferFn(InferTensorDesc4DeConv<2>)
-    .SetBatchAxisInferFn(InferBatchAxis4DeConv)
     .SetGetSbpFn(GetSbpSignatures4DeConv);
 
 REGISTER_USER_OP("deconv3d")
     .Input("in")
     .Input("weight")
     .Output("out")
-    .Attr("filters", UserOpAttrType::kAtInt32)
-    .Attr("padding_before", UserOpAttrType::kAtListInt32)
-    .Attr("data_format", UserOpAttrType::kAtString)
-    .Attr("kernel_size", UserOpAttrType::kAtListInt32)
-    .Attr("output_padding", UserOpAttrType::kAtListInt32)
-    .Attr("strides", UserOpAttrType::kAtListInt32)
-    .Attr("dilation_rate", UserOpAttrType::kAtListInt32)
-    .Attr<int32_t>("groups", UserOpAttrType::kAtInt32, 1)
+    .Attr<int32_t>("filters")
+    .Attr<std::vector<int32_t>>("padding_before")
+    .Attr<std::string>("data_format")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("output_padding")
+    .Attr<std::vector<int32_t>>("strides")
+    .Attr<std::vector<int32_t>>("dilation_rate")
+    .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<3>)
     .SetTensorDescInferFn(InferTensorDesc4DeConv<3>)
-    .SetBatchAxisInferFn(InferBatchAxis4DeConv)
     .SetGetSbpFn(GetSbpSignatures4DeConv);
 
 REGISTER_USER_OP_GRAD("deconv1d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);

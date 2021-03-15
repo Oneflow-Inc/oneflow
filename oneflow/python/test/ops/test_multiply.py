@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
 import numpy as np
@@ -31,22 +32,6 @@ import oneflow.typing as oft
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
-
-
-def test_scalar_mul(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["flow_op"] = [flow.math.multiply]
-    arg_dict["tf_op"] = [tf.math.multiply]
-    arg_dict["input_shape"] = [(10, 10, 10)]
-    arg_dict["op_args"] = [
-        Args([1]),
-        Args([-1]),
-        Args([84223.19348]),
-        Args([-3284.139]),
-    ]
-    for arg in GenArgDict(arg_dict):
-        CompareOpWithTensorFlow(**arg)
 
 
 def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
@@ -91,8 +76,6 @@ def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
             flow.watch_diff(out, test_global_storage.Setter("out_diff"))
             return out
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     x = np.random.randint(low=0, high=10, size=shape).astype(np.float32)
     y = np.random.randint(low=0, high=10, size=shape).astype(np.float32)
     test_element_wise_mul_job(x, y).get()
@@ -116,10 +99,31 @@ def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
     )
 
 
-def test_element_wise_mul_fw_bw(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device"] = ["gpu", "cpu"]
-    arg_dict["shape"] = [(96, 96)]
-    arg_dict["type_name"] = ["float32", "double", "int8", "int32", "int64"]
-    for arg in GenArgDict(arg_dict):
-        _test_element_wise_mul_fw_bw(test_case, **arg)
+@flow.unittest.skip_unless_1n1d()
+class TestMultiply(flow.unittest.TestCase):
+    def test_scalar_mul(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["flow_op"] = [flow.math.multiply]
+        arg_dict["tf_op"] = [tf.math.multiply]
+        arg_dict["input_shape"] = [(10, 10, 10)]
+        arg_dict["op_args"] = [
+            Args([1]),
+            Args([-1]),
+            Args([84223.19348]),
+            Args([-3284.139]),
+        ]
+        for arg in GenArgDict(arg_dict):
+            CompareOpWithTensorFlow(**arg)
+
+    def test_element_wise_mul_fw_bw(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["gpu", "cpu"]
+        arg_dict["shape"] = [(96, 96)]
+        arg_dict["type_name"] = ["float32", "double", "int8", "int32", "int64"]
+        for arg in GenArgDict(arg_dict):
+            _test_element_wise_mul_fw_bw(test_case, **arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -72,8 +72,6 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, dtype, axis):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = ConcatJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
@@ -87,17 +85,6 @@ def compare_with_tensorflow(device_type, x_shape, y_shape, dtype, axis):
     assert np.array_equal(of_out.numpy(), tf_out.numpy())
     assert np.array_equal(test_global_storage.Get("x_diff"), tf_x_diff.numpy())
     assert np.array_equal(test_global_storage.Get("y_diff"), tf_y_diff.numpy())
-
-
-def test_concat(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [(10, 20, 30)]
-    arg_dict["y_shape"] = [(10, 20, 30)]
-    arg_dict["dtype"] = ["float32", "double"]
-    arg_dict["axis"] = [0, 1, 2]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
 
 
 def _of_dynamic_concat(
@@ -167,8 +154,6 @@ def _of_dynamic_concat(
         flow.watch_diff(var_1, make_watch_diff_cb(1))
         return result
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     ret = dynamic_concat_job([inputs[0]], [inputs[1]]).get()
     return ret.numpy(0)
 
@@ -244,24 +229,6 @@ def _test_dynamic_concat(test_case, shape, axis, device_type, verbose=False):
     test_case.assertTrue(np.array_equal(of_output, output))
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_dynamic_concat_case_0(test_case):
-    _test_dynamic_concat(test_case, (64, 4), 0, "gpu")
-
-
-def test_dynamic_concat_case_1(test_case):
-    _test_dynamic_concat(test_case, (2, 10), 1, "cpu")
-
-
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_dynamic_concat_case_2(test_case):
-    _test_dynamic_concat(test_case, (4, 7, 128), 2, "gpu")
-
-
-def test_dynamic_concat_case_3(test_case):
-    _test_dynamic_concat(test_case, (16,), 0, "cpu")
-
-
 def _test_static_concat(test_case, shape, axis):
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -301,14 +268,6 @@ def _test_static_concat(test_case, shape, axis):
             concated.numpy(),
         )
     )
-
-
-def test_static_concat_case_0(test_case):
-    _test_static_concat(test_case, (10, 7), 0)
-
-
-def test_static_concat_case_1(test_case):
-    _test_static_concat(test_case, (3, 8, 4), 1)
 
 
 def _test_hybrid_concat(
@@ -388,13 +347,47 @@ def _test_hybrid_concat(
     )
 
 
-def test_hybrid_concat_case_0(test_case):
-    _test_hybrid_concat(test_case, (64, 4), 0)
+@flow.unittest.skip_unless_1n1d()
+class TestConcat(flow.unittest.TestCase):
+    def test_concat(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["x_shape"] = [(10, 20, 30)]
+        arg_dict["y_shape"] = [(10, 20, 30)]
+        arg_dict["dtype"] = ["float32", "double"]
+        arg_dict["axis"] = [0, 1, 2]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_dynamic_concat_case_0(test_case):
+        _test_dynamic_concat(test_case, (64, 4), 0, "gpu")
+
+    def test_dynamic_concat_case_1(test_case):
+        _test_dynamic_concat(test_case, (2, 10), 1, "cpu")
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_dynamic_concat_case_2(test_case):
+        _test_dynamic_concat(test_case, (4, 7, 128), 2, "gpu")
+
+    def test_dynamic_concat_case_3(test_case):
+        _test_dynamic_concat(test_case, (16,), 0, "cpu")
+
+    def test_static_concat_case_0(test_case):
+        _test_static_concat(test_case, (10, 7), 0)
+
+    def test_static_concat_case_1(test_case):
+        _test_static_concat(test_case, (3, 8, 4), 1)
+
+    def test_hybrid_concat_case_0(test_case):
+        _test_hybrid_concat(test_case, (64, 4), 0)
+
+    def test_hybrid_concat_case_1(test_case):
+        _test_hybrid_concat(test_case, (10,), 0, 30)
+
+    def test_hybrid_concat_case_2(test_case):
+        _test_hybrid_concat(test_case, (10, 7, 5), 1, 21)
 
 
-def test_hybrid_concat_case_1(test_case):
-    _test_hybrid_concat(test_case, (10,), 0, 30)
-
-
-def test_hybrid_concat_case_2(test_case):
-    _test_hybrid_concat(test_case, (10, 7, 5), 1, 21)
+if __name__ == "__main__":
+    unittest.main()

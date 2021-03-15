@@ -18,8 +18,8 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/oneflow.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/job_set.pb.h"
@@ -35,7 +35,7 @@ void AsyncRunLazyJobSet(ThreadPool* lazy_runtime_thread) {
     Global<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
     int32_t machine_num = config_proto.resource().machine_num();
     // do nothing if it's not my business
-    if (Global<MachineCtx>::Get()->this_machine_id() >= machine_num) { return; }
+    if (GlobalProcessCtx::Rank() >= machine_num) { return; }
     Global<SessionGlobalObjectsScope>::New();
     CHECK_JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
     JobSet job_set;
@@ -53,7 +53,7 @@ void AsyncRunLazyJobSet(ThreadPool* lazy_runtime_thread) {
 Maybe<void> Cluster::WorkerLoop() {
   // The reason why excluding master machine is that
   // eager instruction for compile-time symbol constructing must be done synchronously
-  CHECK_OR_RETURN(!Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(!GlobalProcessCtx::IsThisProcessMaster());
   {
     // Oneflow::~Oneflow blocking in current thread is not acceptable
     // Two reasons why `lazy_runtime_thread` is needed:
@@ -68,20 +68,23 @@ Maybe<void> Cluster::WorkerLoop() {
       ClusterInstruction::WorkerReceiveInstruction(mut_cluster_instruction.get());
       if (mut_cluster_instruction->has_cluster_ctrl_halt()) {
         break;
+      } else if (mut_cluster_instruction->has_cluster_ctrl_abort()) {
+        LOG(FATAL) << "received abort instruction";
       } else if (mut_cluster_instruction->has_cluster_ctrl_session_start()) {
         ClusterInstruction::NewSessionBarrier();
         AsyncRunLazyJobSet(&lazy_runtime_thread);
       } else if (mut_cluster_instruction->has_eager_instruction()) {
         Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(
             std::const_pointer_cast<const ClusterInstructionProto>(mut_cluster_instruction));
+      } else if (mut_cluster_instruction->has_cluster_ctrl_eager_sync()) {
+        ClusterInstruction::EagerSyncBarrier();
       } else {
         OF_UNIMPLEMENTED();
       }
     }
   }
   ClusterInstruction::HaltBarrier();
-  Global<EnvGlobalObjectsScope>::Delete();
-  exit(0);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

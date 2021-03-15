@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/comm_network/epoll/socket_message.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 namespace oneflow {
 
@@ -60,6 +60,6 @@ class IOEventPoller final {
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_IO_EVENT_POLLER_H_

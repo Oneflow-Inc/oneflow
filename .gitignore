@@ -21,5 +21,12 @@ wheelhouse*
 /oneflow/python/__export_symbols__.py
 /oneflow/python/compatibility.py
 /oneflow/python/framework/sysconfig_gen.py
+/oneflow/python/test/ops/localhost_script_*.sh
 .clangd
 compile_commands.json
+/oneflow/python/test/ops/localhost_script_*.sh
+.cache
+/oneflow-src.zip
+/oneflow_temp
+/distributed-tmp
+/serving-tmp

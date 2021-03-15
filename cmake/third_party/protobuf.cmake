@@ -7,9 +7,13 @@ set(PROTOBUF_BINARY_DIR ${THIRD_PARTY_DIR}/protobuf/bin)
 set(PROTOBUF_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
 if(WITH_XLA)
   set(PROTOBUF_URL "https://github.com/protocolbuffers/protobuf/archive/v3.9.2.zip")
+  set(PROTOBUF_MD5 cf02c32870a1f78c860039e0f63a6343)
 else()
-  set(PROTOBUF_URL ${THIRD_PARTY_SUBMODULE_DIR}/protobuf/src/protobuf)
+  set(PROTOBUF_URL https://github.com/Oneflow-Inc/protobuf/archive/1d2c7b6c7.tar.gz)
+  set(PROTOBUF_MD5 b859a1c299f1b374b25de2f0df9f9b50)
 endif()
+
+use_mirror(VARIABLE PROTOBUF_URL URL ${PROTOBUF_URL})
 
 if(WIN32)
     set(PROTOBUF_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/${CMAKE_BUILD_TYPE})
@@ -40,6 +44,7 @@ ExternalProject_Add(protobuf
     PREFIX protobuf
     DEPENDS zlib
     URL ${PROTOBUF_URL}
+    URL_MD5 ${PROTOBUF_MD5}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf

@@ -90,6 +90,12 @@ using remove_reference_t = typename remove_reference<T>::type;
 template<typename T>
 using decay_t = typename decay<T>::type;
 
+template<typename T>
+using make_unsigned_t = typename std::make_unsigned<T>::type;
+
+template<typename T>
+using remove_cv_t = typename remove_cv<T>::type;
+
 template<typename F, typename Tuple, size_t... Idx>
 auto apply_helper(F&& f, Tuple&& tp, std::index_sequence<Idx...>)
     -> decltype(std::forward<F>(f)(std::get<Idx>(std::forward<Tuple>(tp))...)) {

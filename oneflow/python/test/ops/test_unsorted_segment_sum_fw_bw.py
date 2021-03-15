@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
 import numpy as np
@@ -124,9 +125,6 @@ def _compare_unsorted_segment_sum_with_tf(
         data, segment_ids, axis, num_segments, device_type, mirrored, compare_dy
     )
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-
     if mirrored:
         of_y = unsorted_segment_sum_fn([data], [segment_ids]).get().numpy_list()[0]
     else:
@@ -134,24 +132,29 @@ def _compare_unsorted_segment_sum_with_tf(
     test_case.assertTrue(np.allclose(y.numpy(), of_y, rtol=1e-5, atol=1e-5))
 
 
-def test_unsorted_segment_sum(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["data_shape"] = [(300, 1, 4)]
-    arg_dict["segment_ids_shape"] = [(300)]
-    arg_dict["axis"] = [0]
-    arg_dict["num_segments"] = [2]
+@flow.unittest.skip_unless_1n1d()
+class TestUnsortedSegmentSumFwBw(flow.unittest.TestCase):
+    def test_unsorted_segment_sum(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["data_shape"] = [(300, 1, 4)]
+        arg_dict["segment_ids_shape"] = [(300)]
+        arg_dict["axis"] = [0]
+        arg_dict["num_segments"] = [2]
 
-    for arg in GenArgList(arg_dict):
-        _compare_unsorted_segment_sum_with_tf(test_case, *arg)
+        for arg in GenArgList(arg_dict):
+            _compare_unsorted_segment_sum_with_tf(test_case, *arg)
+
+    def test_unsorted_segment_sum_case_1(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["data_shape"] = [(200, 10, 20)]
+        arg_dict["segment_ids_shape"] = [(200)]
+        arg_dict["axis"] = [0]
+        arg_dict["num_segments"] = [5]
+        for arg in GenArgList(arg_dict):
+            _compare_unsorted_segment_sum_with_tf(test_case, *arg)
 
 
-def test_unsorted_segment_sum_case_1(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["data_shape"] = [(200, 10, 20)]
-    arg_dict["segment_ids_shape"] = [(200)]
-    arg_dict["axis"] = [0]
-    arg_dict["num_segments"] = [5]
-    for arg in GenArgList(arg_dict):
-        _compare_unsorted_segment_sum_with_tf(test_case, *arg)
+if __name__ == "__main__":
+    unittest.main()

@@ -60,7 +60,6 @@ namespace xrt {
 static std::unordered_map<int32_t, std::string> op_type2string_map = {
     {OP_TYPE_CASE(Identity), "Identity"},
     // {OP_TYPE_CASE(FullyConnected), "FullyConnected"},
-    {OP_TYPE_CASE(AdamModelUpdate), "AdamOptimizer"},
     // TODO(hjchen2)
 };
 
@@ -76,6 +75,7 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"broadcast_add", "BcastAdd"},
     {"broadcast_mul", "BcastMul"},
     {"broadcast_div", "BcastDiv"},
+    {"broadcast_min", "BcastMin"},
     {"cast", "Cast"},
     {"concat", "Concat"},
     {"conv2d", "Conv2D"},
@@ -100,9 +100,12 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"scalar_add", "ScalarAdd"},
     {"scalar_mul", "ScalarMul"},
     {"leaky_relu", "LeakyRelu"},
+    {"adam_update", "AdamOptimizer"},
+    {"rsqrt", "Rsqrt"},
+    {"square_sum", "SquareSum"},
 };
 
-std::string ExtractOpTypeAsString(const OperatorConf &conf) {
+std::string ExtractOpTypeAsString(const OperatorConf& conf) {
   if (conf.has_user_conf()) {
     const auto it = user_op_type_name2string_map.find(conf.user_conf().op_type_name());
     if (it != user_op_type_name2string_map.end()) {
@@ -122,12 +125,12 @@ std::string ExtractOpTypeAsString(const OperatorConf &conf) {
   }
 }
 
-XrtDevice DeviceTagToXrtDevice(const std::string &device_tag) {
+XrtDevice DeviceTagToXrtDevice(const std::string& device_tag) {
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(device_tag));
   return DeviceTypeToXrtDevice(device_type);
 }
 
-XrtDevice DeviceTypeToXrtDevice(const DeviceType &device_type) {
+XrtDevice DeviceTypeToXrtDevice(const DeviceType& device_type) {
   switch (device_type) {
     case DeviceType::kGPU: return XrtDevice::GPU_CUDA;
     case DeviceType::kCPU: return XrtDevice::CPU_X86;
@@ -138,7 +141,7 @@ XrtDevice DeviceTypeToXrtDevice(const DeviceType &device_type) {
   }
 }
 
-DeviceType XrtDeviceToDeviceType(const XrtDevice &device) {
+DeviceType XrtDeviceToDeviceType(const XrtDevice& device) {
   if (device == XrtDevice::GPU_CUDA) {
     return DeviceType::kGPU;
   } else if (device == XrtDevice::CPU_X86) {
@@ -149,7 +152,7 @@ DeviceType XrtDeviceToDeviceType(const XrtDevice &device) {
   }
 }
 
-XrtEngine StringToXrtEngine(const std::string &engine) {
+XrtEngine StringToXrtEngine(const std::string& engine) {
   if (engine == "XLA") {
     return xrt::XrtEngine::XLA;
   } else if (engine == "TENSORRT") {
@@ -159,14 +162,14 @@ XrtEngine StringToXrtEngine(const std::string &engine) {
   }
 }
 
-std::string BlobIdToName(const LogicalBlobId &lbi) {
+std::string BlobIdToName(const LogicalBlobId& lbi) {
   CHECK_EQ(lbi.has_op_name(), true);
   CHECK_EQ(lbi.has_blob_name(), true);
   if (lbi.op_name() == "") { return lbi.blob_name(); }
   return GenLogicalBlobName(lbi);
 }
 
-LogicalBlobId BlobNameToId(const std::string &blob_name) {
+LogicalBlobId BlobNameToId(const std::string& blob_name) {
   size_t pos = blob_name.find('/');
   if (pos == std::string::npos) {
     return GenLogicalBlobId("/" + blob_name);
@@ -175,21 +178,21 @@ LogicalBlobId BlobNameToId(const std::string &blob_name) {
   }
 }
 
-std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph *op_graph) {
+std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph* op_graph) {
   return graph_builder::BuildGraph(op_graph);
 }
 
-std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function &function,
-                                        const DeviceType &device_type, const JobDesc &job_desc) {
+std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function& function,
+                                        const DeviceType& device_type, const JobDesc& job_desc) {
   return graph_builder::BuildGraph(function, device_type, job_desc);
 }
 
-void InitXrtConfigurations(const XrtConfig &config) {
+void InitXrtConfigurations(const XrtConfig& config) {
   if (config.has_use_xla_jit()) { FLAGS_use_xla_jit = config.use_xla_jit(); }
   if (config.has_use_tensorrt()) { FLAGS_use_tensorrt = config.use_tensorrt(); }
   // Set xla configurations.
   if (config.has_tensorrt_config()) {
-    const XrtConfig::TensorRTConfig &trt_config = config.tensorrt_config();
+    const XrtConfig::TensorRTConfig& trt_config = config.tensorrt_config();
     if (trt_config.has_use_fp16()) { FLAGS_tensorrt_fp16 = trt_config.use_fp16(); }
     if (trt_config.has_use_int8()) {
       FLAGS_tensorrt_int8 = trt_config.use_int8();
@@ -219,7 +222,7 @@ XrtPassOptions CreateDefaultXrtPassOptions(bool train_phase) {
   return xrt_options;
 }
 
-void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job, bool train_phase) {
+void RunCompilationTimeXrtPasses(const OpGraph& op_graph, Job* job, bool train_phase) {
   auto graph = BuildXrtGraph(&op_graph);
   // Create options to run xrt passes.
   auto options = CreateDefaultXrtPassOptions(train_phase);
@@ -233,8 +236,8 @@ void RunCompilationTimeXrtPasses(const OpGraph &op_graph, Job *job, bool train_p
 #ifdef WITH_TENSORRT
 namespace tensorrt {
 void CacheInt8Calibration() {
-  const auto &calib_resources = TRTInt8CalibratorResource::All();
-  for (const auto &res : calib_resources) {
+  const auto& calib_resources = TRTInt8CalibratorResource::All();
+  for (const auto& res : calib_resources) {
     std::lock_guard<std::mutex> lock(res.second->mutex_);
     if (!res.second->calibrator_->isDone()) {
       res.second->calibrator_->waitAndSetDone();
@@ -244,14 +247,14 @@ void CacheInt8Calibration() {
   }
 }
 
-void WriteInt8Calibration(const std::string &path) {
-  const auto &calib_resources = TRTInt8CalibratorResource::All();
-  for (const auto &res : calib_resources) {
+void WriteInt8Calibration(const std::string& path) {
+  const auto& calib_resources = TRTInt8CalibratorResource::All();
+  for (const auto& res : calib_resources) {
     CHECK(res.second->calibrator_->isDone())  // NOLINT
         << "Calibration table maybe has not been generated "
         << "since the calibrator has not been done.";
 
-    const std::string &calibration_table_data =
+    const std::string& calibration_table_data =
         res.second->calibrator_->getCalibrationTableAsString();
     CHECK(calibration_table_data.size()) << "Calibration table data is empty.";
 

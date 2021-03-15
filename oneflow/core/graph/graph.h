@@ -32,6 +32,7 @@ class Graph {
 
   // For Each
   void ForEachNode(std::function<void(NodeType*)> NodeHandler) const;
+  Maybe<void> MaybeForEachNode(std::function<Maybe<void>(NodeType*)> NodeHandler) const;
   void TopoForEachNode(std::function<void(NodeType*)> NodeHandler) const;
   Maybe<void> TopoForEachNodeWithErrorCaptured(
       std::function<Maybe<void>(NodeType*)> NodeHandler) const;
@@ -168,6 +169,13 @@ class Graph {
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ForEachNode(std::function<void(NodeType*)> NodeHandler) const {
   for (auto& x : nodes_) { NodeHandler(x.get()); }
+}
+
+template<typename NodeType, typename EdgeType>
+Maybe<void> Graph<NodeType, EdgeType>::MaybeForEachNode(
+    std::function<Maybe<void>(NodeType*)> NodeHandler) const {
+  for (auto& x : nodes_) { JUST(NodeHandler(x.get())); }
+  return Maybe<void>::Ok();
 }
 
 template<typename NodeType, typename EdgeType>
@@ -331,8 +339,9 @@ void Graph<NodeType, EdgeType>::ToDotWithFilePath(
     const std::function<bool(NodeType*)>& IsNodeAllowed,
     const std::function<bool(EdgeType*)>& IsEdgeAllowed, const std::string& file_path) const {
   auto log_stream = TeePersistentLogStream::Create(file_path);
-  ToDotWithStream(IsNodeAllowed, IsEdgeAllowed, [](NodeType*) { return ""; },
-                  [](EdgeType*) { return ""; }, log_stream);
+  ToDotWithStream(
+      IsNodeAllowed, IsEdgeAllowed, [](NodeType*) { return ""; }, [](EdgeType*) { return ""; },
+      log_stream);
   log_stream->Flush();
 }
 

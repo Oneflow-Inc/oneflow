@@ -19,26 +19,22 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> OneToOneSubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
-    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
-    const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
-    const SbpParallel& dst_sbp_parallel) const {
-  if ((src_parallel_desc.parallel_num() == 1 && dst_parallel_desc.parallel_num() == 1)
-      || (src_parallel_desc.parallel_num() == dst_parallel_desc.parallel_num()
-          && src_sbp_parallel == dst_sbp_parallel)) {
-    for (int64_t i = 0; i < src_parallel_desc.parallel_num(); ++i) {
-      CompTaskNode* src_node = sorted_src_comp_tasks.at(i);
-      CompTaskNode* dst_node = sorted_dst_comp_tasks.at(i);
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
+    std::vector<TaskNode*>* sorted_out_tasks,
+    std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
+    const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
+    const BlobDesc& logical_blob_desc, const SbpParallel& in_sbp_parallel,
+    const SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
+  if ((in_parallel_desc.parallel_num() == 1 && out_parallel_desc.parallel_num() == 1)
+      || (in_parallel_desc.parallel_num() == out_parallel_desc.parallel_num()
+          && in_sbp_parallel == out_sbp_parallel)) {
+    for (int64_t i = 0; i < in_parallel_desc.parallel_num(); ++i) {
+      TaskNode* in_node = sorted_in_tasks.at(i);
       // TODO(liujuncheng): use lbi
-      TaskNode* proxy = ctx->GetProxyNode(src_node, src_node->MemZoneId121(),
-                                          dst_node->machine_id(), dst_node->MemZoneId121());
-      Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
+      TaskNode* proxy = ctx->GetProxyNode(in_node, in_node->MemZoneId121(), out_parallel_desc, i);
+      sorted_out_tasks->push_back(proxy);
     }
-    return TRY(BuildSubTskGphBuilderStatus(sorted_src_comp_tasks.front(),
-                                           sorted_dst_comp_tasks.front(), src_parallel_desc,
-                                           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                                           lbi, logical_blob_desc, "OneToOneSubTskGphBuilder", ""));
+    return TRY(BuildSubTskGphBuilderStatus("OneToOneSubTskGphBuilder", ""));
   } else {
     return Error::BoxingNotSupportedError();
   }

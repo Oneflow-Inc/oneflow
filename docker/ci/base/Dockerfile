@@ -12,7 +12,6 @@ RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproduct
     make \
     git \
     centos-release-scl \
-    swig \
     intel-mkl-2020.0-088 \
     zlib-devel \
     curl-devel \

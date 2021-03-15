@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import cv2
 import numpy as np
 import oneflow as flow
@@ -71,11 +72,19 @@ def _compare_image_flip_with_cv(test_case, image_files):
         test_case.assertTrue(np.allclose(exp_flip_image, flip_image))
 
 
-def test_image_flip(test_case):
-    _compare_image_flip_with_cv(
-        test_case,
-        [
-            "/dataset/mscoco_2017/val2017/000000000139.jpg",
-            "/dataset/mscoco_2017/val2017/000000000632.jpg",
-        ],
-    )
+# @flow.unittest.skip_unless_1n1d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+class TestImageFlip(flow.unittest.TestCase):
+    def test_image_flip(test_case):
+        _compare_image_flip_with_cv(
+            test_case,
+            [
+                "/dataset/mscoco_2017/val2017/000000000139.jpg",
+                "/dataset/mscoco_2017/val2017/000000000632.jpg",
+            ],
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

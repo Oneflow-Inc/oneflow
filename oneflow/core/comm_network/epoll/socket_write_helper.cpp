@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef __linux__
+
 #include "oneflow/core/comm_network/epoll/socket_write_helper.h"
 #include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
-
-#ifdef PLATFORM_POSIX
 
 #include <sys/eventfd.h>
 
@@ -140,6 +140,10 @@ void SocketWriteHelper::SetStatusWhenActorMsgHeadDone() {
   cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
 }
 
+void SocketWriteHelper::SetStatusWhenTransportMsgHeadDone() {
+  cur_write_handle_ = &SocketWriteHelper::InitMsgWriteHandle;
+}
+
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // __linux__

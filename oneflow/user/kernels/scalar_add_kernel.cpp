@@ -28,7 +28,7 @@ class ScalarAddUserKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    T scalar_operand = 0;
+    T scalar_operand = static_cast<T>(0);
     if (ctx->Attr<bool>("has_int_operand")) {
       scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
     } else if (ctx->Attr<bool>("has_float_operand")) {
@@ -39,7 +39,7 @@ class ScalarAddUserKernel final : public user_op::OpKernel {
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
-    KernelUtil<device_type, T>::AddByScalar(ctx->device_ctx(), out->shape().elem_cnt(), in_ptr,
+    NewKernelUtil<device_type>::AddByScalar(ctx->device_ctx(), out->shape().elem_cnt(), in_ptr,
                                             scalar_operand, out_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -67,6 +67,7 @@ REGISTER_KERNEL(GPU, int32_t)
 REGISTER_KERNEL(GPU, int64_t)
 REGISTER_KERNEL(GPU, float)
 REGISTER_KERNEL(GPU, double)
+REGISTER_KERNEL(GPU, float16)
 #endif
 
 }  // namespace oneflow

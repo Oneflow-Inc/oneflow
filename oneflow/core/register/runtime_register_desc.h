@@ -37,7 +37,11 @@ class RtRegstDesc {
   const MemoryCase& mem_case() const { return mem_case_; }
   const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
 
+  int64_t lbi_num() const { return sorted_lbi_vec_.size(); }
+  int64_t GetOrdinalForLbi(const LogicalBlobId& lbi) const;
   const RtBlobDesc* GetRtBlobDescFromLbi(const LogicalBlobId& lbi) const;
+  const RtBlobDesc* GetRtBlobDescByOrdinal(int64_t ordinal) const;
+  const LogicalBlobId& GetLbiByOrdinal(int64_t ordinal) const;
   const RtBlobDesc* packed_blob_desc() const { return packed_blob_desc_.get(); }
   size_t TotalByteSize4AllRegst() const;
   size_t TotalMainByteSize4AllRegst() const;
@@ -45,12 +49,10 @@ class RtRegstDesc {
   size_t SeparatedHeaderByteSize4OneRegst() const;
   size_t MainByteSize4OneRegst() const;
   const Shape& data_regst_time_shape() const;
-  bool is_body_disabled() const { return packed_blob_desc_->is_body_disabled(); }
 
   void ForEachBlobDescOffsetInOnRegst(
-      const std::vector<LbiBlobDescPair>& lbis,
-      const std::function<void(const LbiBlobDescPair&, int64_t body_offset, int64_t header_offset)>&
-          Handler) const;
+      const std::function<void(int64_t ordinal, const LogicalBlobId& lbi, const RtBlobDesc* desc,
+                               int64_t body_offset, int64_t header_offset)>& Handler) const;
 
  private:
   int64_t regst_desc_id_;
@@ -59,9 +61,11 @@ class RtRegstDesc {
   int64_t register_num_;
   RegstDescTypeProto regst_desc_type_;
   MemoryCase mem_case_;
-  HashMap<LogicalBlobId, std::unique_ptr<RtBlobDesc>> lbi2blob_desc_;
+  HashMap<LogicalBlobId, int64_t> lbi2blob_desc_ordinal_;
   std::unique_ptr<RtBlobDesc> packed_blob_desc_;
   std::unique_ptr<Shape> data_regst_time_shape_;
+  std::vector<std::unique_ptr<RtBlobDesc>> sorted_blob_desc_vec_;
+  std::vector<LogicalBlobId> sorted_lbi_vec_;
 };
 
 }  // namespace oneflow

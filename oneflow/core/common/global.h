@@ -16,8 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_GLOBAL_H_
 #define ONEFLOW_CORE_COMMON_GLOBAL_H_
 
+#include <mutex>
+#include <map>
+#include <memory>
 #include <glog/logging.h>
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/constant.h"
 
 namespace oneflow {
 
@@ -39,12 +43,37 @@ class Global final {
       *GetPPtr() = nullptr;
     }
   }
+  // for each session
+  static T* Get(int32_t session_id) {
+    if (session_id == kInvalidSessionId) { return Get(); }
+    return GetPPtr(session_id)->get();
+  }
+  static void SetAllocated(int32_t session_id, T* val) { GetPPtr(session_id)->reset(val); }
+  template<typename... Args>
+  static void SessionNew(int32_t session_id, Args&&... args) {
+    CHECK(Get(session_id) == nullptr);
+    LOG(INFO) << "session_id: " << session_id << ", NewGlobal " << typeid(T).name();
+    GetPPtr(session_id)->reset(new T(std::forward<Args>(args)...));
+  }
+  static void SessionDelete(int32_t session_id) {
+    if (Get(session_id) != nullptr) {
+      LOG(INFO) << "session_id: " << session_id << ", DeleteGlobal " << typeid(T).name();
+      GetPPtr(session_id)->reset();
+    }
+  }
 
  private:
   static T** GetPPtr() {
     CheckKind();
     static T* ptr = nullptr;
     return &ptr;
+  }
+  static std::unique_ptr<T>* GetPPtr(int32_t session_id) {
+    CheckKind();
+    static std::mutex mutex;
+    static std::map<int32_t, std::unique_ptr<T>> session_id2ptr;
+    std::unique_lock<std::mutex> lock(mutex);
+    return &session_id2ptr[session_id];
   }
   static void CheckKind() {
     if (!std::is_same<Kind, void>::value) {

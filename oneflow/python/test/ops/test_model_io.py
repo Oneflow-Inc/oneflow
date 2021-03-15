@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as tp
@@ -61,6 +62,7 @@ def _load_snapshot_manually(path, shape, dtype):
 
 def _test_model_io(test_case, shape, dtype, lr, num_iters):
     flow.clear_default_session()
+    flow.config.enable_legacy_model_io(True)
     gen_var = _make_gen_var_func(shape, dtype, lr)
 
     model_save_root_dir = "./log/snapshot/"
@@ -97,6 +99,15 @@ def _test_model_io(test_case, shape, dtype, lr, num_iters):
     test_case.assertTrue(np.allclose(final_var, var_from_file))
 
 
-def test_model_io_case_0(test_case):
-    # _test_model_io(test_case, (10, 5, 7), flow.float32, 1e-2, 10)
-    _test_model_io(test_case, (2, 2), flow.float32, 1e-2, 10)
+@flow.unittest.skip_unless_1n1d()
+class TestModelIo(flow.unittest.TestCase):
+    def test_model_io_case_0(test_case):
+        if flow.eager_execution_enabled():
+            print("\nSkip under erger mode!")
+            return
+        # _test_model_io(test_case, (10, 5, 7), flow.float32, 1e-2, 10)
+        _test_model_io(test_case, (2, 2), flow.float32, 1e-2, 10)
+
+
+if __name__ == "__main__":
+    unittest.main()

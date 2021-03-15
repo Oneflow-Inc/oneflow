@@ -36,56 +36,60 @@ def TestMultiInput(x1, x2):
     )
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_TestMultiInput_grad_mirrored_inplace(test_case):
-    func_config = flow.FunctionConfig()
-    func_config.default_data_type(flow.float)
-    func_config.default_logical_view(flow.scope.mirrored_view())
+@flow.unittest.skip_unless_1n1d()
+class Test_TestMultiInputGrad(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_TestMultiInput_grad_mirrored_inplace(test_case):
+        func_config = flow.FunctionConfig()
+        func_config.default_data_type(flow.float)
+        func_config.default_logical_view(flow.scope.mirrored_view())
 
-    shape = (
-        3,
-        3,
-    )
+        shape = (
+            3,
+            3,
+        )
 
-    @flow.global_function(type="train", function_config=func_config)
-    def TestMultiInputJob():
-        with flow.scope.placement("gpu", "0:0"):
-            x1 = flow.get_variable(
-                "x1",
-                shape=shape,
-                dtype=flow.float,
-                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
-                trainable=True,
-            )
-            x2 = flow.get_variable(
-                "x2",
-                shape=shape,
-                dtype=flow.float,
-                initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
-                trainable=True,
-            )
-            loss = TestMultiInput(x1, x2)
-            flow.optimizer.SGD(
-                flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
-            ).minimize(loss)
+        @flow.global_function(type="train", function_config=func_config)
+        def TestMultiInputJob():
+            with flow.scope.placement("gpu", "0:0"):
+                x1 = flow.get_variable(
+                    "x1",
+                    shape=shape,
+                    dtype=flow.float,
+                    initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
+                    trainable=True,
+                )
+                x2 = flow.get_variable(
+                    "x2",
+                    shape=shape,
+                    dtype=flow.float,
+                    initializer=flow.random_uniform_initializer(minval=-10, maxval=10),
+                    trainable=True,
+                )
+                loss = TestMultiInput(x1, x2)
+                flow.optimizer.SGD(
+                    flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+                ).minimize(loss)
 
-            flow.watch(x1, test_global_storage.Setter("x1"))
-            flow.watch_diff(x1, test_global_storage.Setter("x1_diff"))
-            flow.watch(x2, test_global_storage.Setter("x2"))
-            flow.watch_diff(x2, test_global_storage.Setter("x2_diff"))
-            return loss
+                flow.watch(x1, test_global_storage.Setter("x1"))
+                flow.watch_diff(x1, test_global_storage.Setter("x1_diff"))
+                flow.watch(x2, test_global_storage.Setter("x2"))
+                flow.watch_diff(x2, test_global_storage.Setter("x2_diff"))
+                return loss
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-    out = TestMultiInputJob().get()
-    x1_diff = test_global_storage.Get("x1_diff")
-    x2_diff = test_global_storage.Get("x2_diff")
+        out = TestMultiInputJob().get()
+        x1_diff = test_global_storage.Get("x1_diff")
+        x2_diff = test_global_storage.Get("x2_diff")
 
-    expect_out = test_global_storage.Get("x1")
-    expect_x1_diff = np.ones(shape, dtype=np.float32)
-    expect_x2_diff = np.ones(shape, dtype=np.float32) * 2.0
-    # print(x1_diff, x2_diff)
-    # print(expect_x1_diff, expect_x2_diff)
-    assert np.allclose(out.numpy(), expect_out)
-    assert np.allclose(x1_diff, expect_x1_diff)
-    assert np.allclose(x2_diff, expect_x2_diff)
+        expect_out = test_global_storage.Get("x1")
+        expect_x1_diff = np.ones(shape, dtype=np.float32)
+        expect_x2_diff = np.ones(shape, dtype=np.float32) * 2.0
+        # print(x1_diff, x2_diff)
+        # print(expect_x1_diff, expect_x2_diff)
+        assert np.allclose(out.numpy(), expect_out)
+        assert np.allclose(x1_diff, expect_x1_diff)
+        assert np.allclose(x2_diff, expect_x2_diff)
+
+
+if __name__ == "__main__":
+    unittest.main()

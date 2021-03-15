@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as tp
@@ -48,31 +49,32 @@ def _test_reverse(test_case, input, axis, dtype, verbose=False):
     test_case.assertTrue(np.array_equal(output, of_output))
 
 
-def test_reverse_case_1(test_case):
-    input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
-    _test_reverse(test_case, input, [3], flow.int32)
+@flow.unittest.skip_unless_1n1d()
+class TestReverse(flow.unittest.TestCase):
+    def test_reverse_case_1(test_case):
+        input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
+        _test_reverse(test_case, input, [3], flow.int32)
+
+    def test_reverse_case_2(test_case):
+        input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
+        _test_reverse(test_case, input, [-1], flow.int32)
+
+    def test_reverse_case_3(test_case):
+        input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
+        _test_reverse(test_case, input, [1], flow.int32)
+
+    def test_reverse_case_4(test_case):
+        input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
+        _test_reverse(test_case, input, [-3], flow.int32)
+
+    def test_reverse_case_5(test_case):
+        input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
+        _test_reverse(test_case, input, [2], flow.float32)
+
+    def test_reverse_case_6(test_case):
+        input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
+        _test_reverse(test_case, input, [-2], flow.float32)
 
 
-def test_reverse_case_2(test_case):
-    input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
-    _test_reverse(test_case, input, [-1], flow.int32)
-
-
-def test_reverse_case_3(test_case):
-    input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
-    _test_reverse(test_case, input, [1], flow.int32)
-
-
-def test_reverse_case_4(test_case):
-    input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
-    _test_reverse(test_case, input, [-3], flow.int32)
-
-
-def test_reverse_case_5(test_case):
-    input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
-    _test_reverse(test_case, input, [2], flow.float32)
-
-
-def test_reverse_case_6(test_case):
-    input = np.arange(1 * 2 * 3 * 4).reshape(1, 2, 3, 4)
-    _test_reverse(test_case, input, [-2], flow.float32)
+if __name__ == "__main__":
+    unittest.main()

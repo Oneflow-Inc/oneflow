@@ -11,6 +11,7 @@ message IOConf {
   optional bool save_downloaded_file_to_local_fs = 3 [default = false];
   optional uint64 persistence_buf_byte = 4;
   optional bool enable_model_io_v2 = 5 [default = false];
+  optional bool enable_legacy_model_io = 6 [default = false];
 }
 
 message ProfilerConf {
@@ -44,6 +45,7 @@ message ConfigProto {
   required IOConf io_conf = 2;
   optional ProfilerConf profiler_conf = 3;
   repeated string load_lib_path = 4;
+  required int64 session_id = 5;
 }
 
 message JobSet {

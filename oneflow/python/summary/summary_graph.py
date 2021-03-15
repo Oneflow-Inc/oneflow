@@ -15,8 +15,8 @@ limitations under the License.
 """
 import os
 import oneflow.core.summary.projector_pb2 as projector_pb2
-import oneflow.python.framework.c_api_util as c_api_util
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 import time
 import logging
 
@@ -55,7 +55,7 @@ class Graph(object):
             raise OSError("You must create only one structure graph log file!")
 
         self.structure_graph_filename_ = self.logdir_ + "/structure_graph.json"
-        struct_graph_str = c_api_util.GetStructureGraph()
+        struct_graph_str = oneflow_api.GetStructureGraph()
         with open(self.structure_graph_filename_, "w", encoding="utf-8") as f:
             f.write(str(struct_graph_str))
             f.flush()

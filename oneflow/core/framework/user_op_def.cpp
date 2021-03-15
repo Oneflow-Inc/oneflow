@@ -65,7 +65,7 @@ const UserOpDef::ArgDef* UserOpDefWrapper::GetArgPointer(const std::string& name
   return nullptr;
 }
 
-UserOpAttrType UserOpDefWrapper::GetAttrType(const std::string& name) const {
+AttrType UserOpDefWrapper::GetAttrType(const std::string& name) const {
   return attrs_.at(name)->type();
 }
 
@@ -77,9 +77,9 @@ bool UserOpDefWrapper::AttrHasDefaultVal(const std::string& name) const {
   template<>                                                                              \
   cpp_type UserOpDefWrapper::GetAttrDefaultVal<cpp_type>(const std::string& name) const { \
     CHECK(AttrHasDefaultVal(name));                                                       \
-    const UserOpAttrVal& default_val = attrs_.at(name)->default_val();                    \
+    const AttrValue& default_val = attrs_.at(name)->default_val();                        \
     CHECK_EQ(static_cast<int>(attr_type), default_val.value_case());                      \
-    return AttrValAccessor<cpp_type>::Attr(default_val);                                  \
+    return AttrValueAccessor<cpp_type>::Attr(default_val);                                \
   }
 
 OF_PP_FOR_EACH_TUPLE(ATTR_TYPE_SPECIALIZATION, ATTR_SEQ)

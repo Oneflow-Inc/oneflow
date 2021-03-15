@@ -15,10 +15,11 @@ limitations under the License.
 */
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 
-#if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
 namespace oneflow {
 
@@ -50,7 +51,7 @@ IBVerbsCommNet::~IBVerbsCommNet() {
 }
 
 void IBVerbsCommNet::RegisterMemoryDone() {
-  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
   IBVerbsTokensMsg this_tokens_msg;
   for (IBVerbsMemDesc* mem_desc : mem_descs()) {
     this_tokens_msg.mutable_token2mem_desc()->insert(
@@ -66,7 +67,8 @@ void IBVerbsCommNet::RegisterMemoryDone() {
                 .second);
     }
   }
-  OF_BARRIER();
+  // TODO(chengcheng): change to OF_ENV_BARRIER
+  OF_SESSION_BARRIER();
   Global<CtrlClient>::Get()->ClearKV(GenTokensMsgKey(this_machine_id));
 }
 
@@ -94,7 +96,7 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
   CHECK_EQ(ibv_query_port(context_, 1, &port_attr), 0);
   ibv_gid gid;
   CHECK_EQ(ibv_query_gid(context_, 1, 0, &gid), 0);
-  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
   qp_vec_.assign(Global<ResourceDesc, ForSession>::Get()->TotalMachineNum(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
     IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, cq_, cq_);
@@ -111,14 +113,17 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
     Global<CtrlClient>::Get()->PullKV(GenConnInfoKey(peer_id, this_machine_id), &conn_info);
     qp_vec_.at(peer_id)->Connect(conn_info);
   }
-  OF_BARRIER();
+  // TODO(chengcheng): change to OF_ENV_BARRIER
+  OF_SESSION_BARRIER();
   for (int64_t peer_id : peer_machine_id()) {
     qp_vec_.at(peer_id)->PostAllRecvRequest();
     Global<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_machine_id, peer_id));
   }
-  OF_BARRIER();
+  // TODO(chengcheng): change to OF_ENV_BARRIER
+  OF_SESSION_BARRIER();
   poll_thread_ = std::thread(&IBVerbsCommNet::PollCQ, this);
-  OF_BARRIER();
+  // TODO(chengcheng): change to OF_ENV_BARRIER
+  OF_SESSION_BARRIER();
 }
 
 void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token,
@@ -164,4 +169,4 @@ COMMAND(IBVForkInit());
 
 }  // namespace oneflow
 
-#endif  // WITH_RDMA && PLATFORM_POSIX
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX

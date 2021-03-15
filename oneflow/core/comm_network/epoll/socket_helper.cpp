@@ -13,17 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/comm_network/epoll/socket_helper.h"
+#ifdef __linux__
 
-#ifdef PLATFORM_POSIX
+#include "oneflow/core/comm_network/epoll/socket_helper.h"
 
 namespace oneflow {
 
 SocketHelper::SocketHelper(int sockfd, IOEventPoller* poller) {
   read_helper_ = new SocketReadHelper(sockfd);
   write_helper_ = new SocketWriteHelper(sockfd, poller);
-  poller->AddFd(sockfd, [this]() { read_helper_->NotifyMeSocketReadable(); },
-                [this]() { write_helper_->NotifyMeSocketWriteable(); });
+  poller->AddFd(
+      sockfd, [this]() { read_helper_->NotifyMeSocketReadable(); },
+      [this]() { write_helper_->NotifyMeSocketWriteable(); });
 }
 
 SocketHelper::~SocketHelper() {
@@ -35,4 +36,4 @@ void SocketHelper::AsyncWrite(const SocketMsg& msg) { write_helper_->AsyncWrite(
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // __linux__

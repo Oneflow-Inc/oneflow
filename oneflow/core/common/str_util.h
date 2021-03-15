@@ -53,6 +53,10 @@ void SplitAndParseAs(const std::string& text, const std::string& delims,
 // Return true if path is absolute.
 inline bool IsAbsolutePath(const std::string& path) { return !path.empty() && path[0] == '/'; }
 
+void GetPrefixAndIndex(const std::string& prefix_and_idx, std::string* prefix, int32_t* index);
+
+bool TryGetPrefixAndIndex(const std::string& prefix_and_idx, std::string* prefix, int32_t* index);
+
 namespace internal {
 
 std::string JoinPathImpl(std::initializer_list<std::string> paths);

@@ -20,8 +20,8 @@ namespace oneflow {
 REGISTER_CPU_ONLY_USER_OP("image_decode")
     .Input("in")
     .Output("out")
-    .Attr<std::string>("color_space", UserOpAttrType::kAtString, "BGR")
-    .Attr<DataType>("data_type", UserOpAttrType::kAtDataType, DataType::kUInt8)
+    .Attr<std::string>("color_space", "BGR")
+    .Attr<DataType>("data_type", DataType::kUInt8)
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       bool check_failed = false;
@@ -52,11 +52,6 @@ REGISTER_CPU_ONLY_USER_OP("image_decode")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
       return Maybe<void>::Ok();
     });
 

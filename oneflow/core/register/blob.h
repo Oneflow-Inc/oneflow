@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/common/shape_view.h"
-#include "oneflow/core/register/tensor_view.h"
 #include "oneflow/core/register/pod_ptr.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/symbol.h"
@@ -48,26 +47,6 @@ class BlobAccessCheckerIf final : public BlobAccessChecker {
   }
 };
 
-class Blob;
-
-class TensorBackInserter final {
- public:
-  explicit TensorBackInserter(Blob* blob);
-  TensorBackInserter(const TensorBackInserter&) = default;
-  ~TensorBackInserter() = default;
-
-  void ReserveOneEmptyTensorList();
-  void ClearTensorLists();
-  bool IsCurMutTensorAvailable() const;
-  FullyMutTensorView* add_tensor();
-  FullyMutTensorView* cur_mut_tensor();
-  void add_tensor_list_slice();
-
- private:
-  Blob* blob_;
-  FullyMutTensorView cur_mut_tensor_;
-};
-
 class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
@@ -75,27 +54,9 @@ class Blob final {
   Blob(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);
   virtual ~Blob() = default;
 
-  // tensor view for blob
-  const TensorView& sole_tensor() const;
-  const DataOnlyMutTensorView& sole_mut_tensor();
-
-  // [tensor] view for blob
-  size_t total_num_of_tensors() const;
-  const TensorView& BeginTensor() const { return *begin_tensor_; }
-  const DataOnlyMutTensorView& BeginMutTensor() { return *begin_mut_tensor_; }
-  void MoveToNextTensor(TensorView* last) const;
-  void MoveToNextMutTensor(DataOnlyMutTensorView* last);
-  bool IsEndTensor(const TensorView& tensor) const;
-  bool IsEndTensor(const DataOnlyMutTensorView& tensor) const;
-
-  friend class TensorBackInserter;
-
-  // tensor list slice
-  size_t num_of_tensor_list_slices() const;
-  int64_t tensor_index4slice_id(int32_t slice_id) const;
-
   DataType data_type() const { return blob_desc_->data_type(); }
   const char* header_ptr() const { return header_ptr_->ptr(); }
+  char* mut_header_ptr() { return header_ptr_->ptr(); }
   char* mut_contiguous_header_ptr();
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
@@ -126,17 +87,17 @@ class Blob final {
 
   MutShapeView* ForceMutShapeView() { return mut_shape_view_.get(); }
 
-  void reset_dptr(char* dptr);
+  void reset_dptr(char* dptr) { dptr_ = dptr; }
 
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  bool IsBodyEmpty() const;
+  bool IsBodyEmpty() const { return shape().elem_cnt() == 0; }
 
   size_t AlignedTotalByteSize() const { return blob_desc_->AlignedTotalByteSize(); }
-  const MemoryCase& mem_case() const;
+  const MemoryCase& mem_case() const { return mem_case_; }
 
-  size_t ByteSizeOfBlobBody() const;
+  size_t ByteSizeOfBlobBody() const { return blob_desc_->ByteSizeOfBlobBody(); }
   size_t AlignedByteSizeOfBlobBody() const { return blob_desc_->AlignedByteSizeOfBlobBody(); }
 
   int32_t record_num() const { return record_num_; }
@@ -163,15 +124,6 @@ class Blob final {
   size_t header_field_capacity() const {
     return header_field_capacities_[key];
   }
-  size_t GetEndTensorDataOffset() const;
-
-  FullyMutTensorView EndFullyMutTensor();
-  void ReserveOneEmptyTensorList();
-  void AddTensor(FullyMutTensorView* tensor);
-  bool IsEndFullyMutTensor(const FullyMutTensorView& tensor) const;
-  void clear_tensor_lists();
-  void add_tensor_list_slice();
-  void ResetTensorView();
 
   const BlobAccessChecker* blob_access_checker_;
   MemoryCase mem_case_;
@@ -182,9 +134,7 @@ class Blob final {
   std::unique_ptr<ShapeView> shape_view_;
   std::unique_ptr<MutShapeView> mut_shape_view_;
   std::unique_ptr<PodPtr> header_ptr_;
-  std::unique_ptr<TensorView> begin_tensor_;
-  std::unique_ptr<DataOnlyMutTensorView> begin_mut_tensor_;
-  // TODO(); remove this ugly code
+  // TODO(chengcheng); remove record num and record_blob
   int32_t record_num_;
 };
 

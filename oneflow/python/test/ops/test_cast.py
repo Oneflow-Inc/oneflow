@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -22,6 +23,10 @@ import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as oft
+
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
 
 
 def cast_forward_compare_with_tensorflow(test_cast, device_type, input_shape, dtype):
@@ -75,8 +80,6 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = CastJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
@@ -90,19 +93,24 @@ def compare_with_tensorflow(device_type, input_shape, dtype):
     )
 
 
-def test_cast(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["input_shape"] = [(5, 4, 3)]
-    arg_dict["dtype"] = ["float32", "double"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestCast(flow.unittest.TestCase):
+    def test_cast(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shape"] = [(5, 4, 3)]
+        arg_dict["dtype"] = ["float32", "double"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_cast_forward(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shape"] = [(5, 4, 3)]
+        arg_dict["dtype"] = ["float32", "int8", "uint8", "double", "int32", "int64"]
+        for arg in GenArgList(arg_dict):
+            cast_forward_compare_with_tensorflow(test_case, *arg)
 
 
-def test_cast_forward(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["input_shape"] = [(5, 4, 3)]
-    arg_dict["dtype"] = ["float32", "int8", "uint8", "double", "int32", "int64"]
-    for arg in GenArgList(arg_dict):
-        cast_forward_compare_with_tensorflow(test_case, *arg)
+if __name__ == "__main__":
+    unittest.main()

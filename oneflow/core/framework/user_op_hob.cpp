@@ -51,12 +51,27 @@ hob::HobContextGetter<KernelRegContext, DataType> HobDataType(const std::string&
       });
 }
 
+hob::HobContextGetter<KernelRegContext, int> HobNumAxes(const std::string& arg_name,
+                                                        int arg_index) {
+  std::ostringstream ss;
+  ss << "number of axes of tensor \'" << arg_name << "\'";
+  return hob::HobContextGetter<KernelRegContext, int>(
+      ss.str(), [arg_name, arg_index](const KernelRegContext& ctx) -> int {
+        return ctx.TensorDesc4ArgNameAndIndex(arg_name, arg_index)->shape().NumAxes();
+      });
+}
+
 HobStringContextGetter<KernelRegContext> HobDeviceTag() {
-  std::ostringstream string_stream;
-  string_stream << "device_tag";
   return HobStringContextGetter<KernelRegContext>(
-      string_stream.str(),
+      "device_tag",
       [](const KernelRegContext& ctx) -> const std::string& { return ctx.device_tag(); });
+}
+
+HobStringContextGetter<KernelRegContext> HobDeviceSubTag() {
+  return HobStringContextGetter<KernelRegContext>(
+      "device_sub_tag", [](const KernelRegContext& ctx) -> const std::string& {
+        return ctx.Attr<std::string>("device_sub_tag");
+      });
 }
 
 }  // namespace user_op

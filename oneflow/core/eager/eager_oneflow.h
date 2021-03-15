@@ -18,8 +18,27 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/cluster_instruction.pb.h"
+#include "oneflow/core/job/cluster_instruction.cfg.h"
+#include "oneflow/core/vm/instruction.cfg.h"
 
 namespace oneflow {
+
+namespace vm {
+namespace cfg {
+
+class InstructionListProto;
+
+}  // namespace cfg
+}  // namespace vm
+
+namespace eager {
+namespace cfg {
+
+class EagerSymbolList;
+
+}  // namespace cfg
+}  // namespace eager
+
 namespace eager {
 
 class EagerOneflow final {
@@ -27,13 +46,16 @@ class EagerOneflow final {
   Maybe<void> RunLogicalInstruction(
       const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
 
-  Maybe<void> RunLogicalInstruction(const std::string& instruction_list_proto_str,
-                                    const std::string& eager_symbol_list_str);
-
-  Maybe<void> RunPhysicalInstruction(const std::string& instruction_list_proto_str,
-                                     const std::string& eager_symbol_list_str);
   Maybe<void> RunPhysicalInstruction(
       const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
+
+  Maybe<void> RunLogicalInstruction(
+      const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list_proto,
+      const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list);
+
+  Maybe<void> RunPhysicalInstruction(
+      const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list_proto,
+      const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list);
 };
 
 }  // namespace eager

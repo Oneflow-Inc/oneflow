@@ -84,9 +84,8 @@ class NewObjectInstructionType final : public InstructionType {
   template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     FlatMsgView<NewObjectInstruction> view(instr_msg->operand());
-    std::shared_ptr<ParallelDesc> parallel_desc = vm->GetInstructionParallelDesc(*instr_msg);
+    const auto& parallel_desc = CHECK_JUST(vm->GetInstructionParallelDesc(*instr_msg));
     CHECK(static_cast<bool>(parallel_desc));
-    const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(parallel_desc->device_type()));
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
       auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
@@ -97,7 +96,7 @@ class NewObjectInstructionType final : public InstructionType {
       ForEachMachineIdAndDeviceIdInRange(
           *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
             int64_t global_device_id =
-                vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_tag, device_id);
+                vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_id);
             auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
                 vm->mut_allocator(), logical_object.Mutable(), global_device_id);
             CHECK(global_device_id2mirrored_object->Insert(mirrored_object.Mutable()).second);
@@ -133,6 +132,7 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+    const auto& parallel_desc = CHECK_JUST(vm->GetInstructionParallelDesc(*instr_msg));
     FlatMsgView<BroadcastObjectReferenceInstruction> args(instr_msg->operand());
     const RwMutexedObject* sole_rw_mutexed_object = nullptr;
     {
@@ -143,9 +143,7 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
       sole_rw_mutexed_object = &map->Begin()->rw_mutexed_object();
       CHECK_NOTNULL(sole_rw_mutexed_object);
     }
-    std::shared_ptr<ParallelDesc> parallel_desc = vm->GetInstructionParallelDesc(*instr_msg);
     CHECK(static_cast<bool>(parallel_desc));
-    const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(parallel_desc->device_type()));
     int64_t new_object = GetLogicalObjectId(args->new_object());
     auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
                                                                new_object, parallel_desc);
@@ -154,7 +152,7 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
     ForEachMachineIdAndDeviceIdInRange(
         *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
           int64_t global_device_id =
-              vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_tag, device_id);
+              vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_id);
           auto mirrored_object = ObjectMsgPtr<MirroredObject>::NewFrom(
               vm->mut_allocator(), logical_object.Mutable(), global_device_id);
           mirrored_object->reset_rw_mutexed_object(*sole_rw_mutexed_object);
@@ -204,14 +202,13 @@ class ReplaceMirroredInstructionType final : public InstructionType {
         }
       }
     };
-    std::shared_ptr<ParallelDesc> parallel_desc = vm->GetInstructionParallelDesc(*instr_msg);
+    const auto& parallel_desc = CHECK_JUST(vm->GetInstructionParallelDesc(*instr_msg));
     CHECK(static_cast<bool>(parallel_desc));
-    const char* device_tag = CHECK_JUST(DeviceTag4DeviceType(parallel_desc->device_type()));
     ForEachMachineIdAndDeviceIdInRange(
         *parallel_desc, vm->machine_id_range(), [&](int64_t machine_id, int64_t device_id) {
           FOR_RANGE(int, i, 0, args->lhs_object_id_size()) {
             int64_t global_device_id =
-                vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_tag, device_id);
+                vm->vm_resource_desc().GetGlobalDeviceId(machine_id, device_id);
             int64_t lhs_object_id = GetLogicalObjectId(args->lhs_object_id(i));
             auto* lhs = vm->MutMirroredObject(lhs_object_id, global_device_id);
             if (lhs != nullptr) { DoEachRhsObject(lhs, global_device_id); }
@@ -247,6 +244,8 @@ class DeleteObjectInstructionType final : public InstructionType {
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
   void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+    const auto* parallel_desc = CHECK_JUST(vm->GetInstructionParallelDesc(*instr_msg)).get();
+    if (parallel_desc && !parallel_desc->ContainingMachineId(vm->this_machine_id())) { return; }
     FlatMsgView<DeleteObjectInstruction> view(instr_msg->operand());
     FOR_RANGE(int, i, 0, view->object_size()) {
       CHECK(view->object(i).operand().has_all_mirrored_object());

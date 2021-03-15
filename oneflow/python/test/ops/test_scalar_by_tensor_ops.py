@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -72,8 +73,6 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = ScalarAddByTensorJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
@@ -100,41 +99,44 @@ def compare_with_tensorflow(device_type, data_type, x_shape, case):
     )
 
 
-def test_add(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["data_type"] = [flow.float]
-    arg_dict["x_shape"] = [(10, 20, 30)]
-    arg_dict["case"] = ["add"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestScalarByTensorOps(flow.unittest.TestCase):
+    def test_add(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["data_type"] = [flow.float]
+        arg_dict["x_shape"] = [(10, 20, 30)]
+        arg_dict["case"] = ["add"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_sub(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["data_type"] = [flow.float]
+        arg_dict["x_shape"] = [(10, 20, 30)]
+        arg_dict["case"] = ["sub"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_mul(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["data_type"] = [flow.float]
+        arg_dict["x_shape"] = [(10, 20, 30)]
+        arg_dict["case"] = ["mul"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+    def test_div(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["data_type"] = [flow.float]
+        arg_dict["x_shape"] = [(10, 20, 30)]
+        arg_dict["case"] = ["div"]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
 
-def test_sub(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["data_type"] = [flow.float]
-    arg_dict["x_shape"] = [(10, 20, 30)]
-    arg_dict["case"] = ["sub"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-
-def test_mul(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["data_type"] = [flow.float]
-    arg_dict["x_shape"] = [(10, 20, 30)]
-    arg_dict["case"] = ["mul"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
-
-
-def test_div(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["data_type"] = [flow.float]
-    arg_dict["x_shape"] = [(10, 20, 30)]
-    arg_dict["case"] = ["div"]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+if __name__ == "__main__":
+    unittest.main()

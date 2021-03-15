@@ -13,11 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef __linux__
+
 #include "oneflow/core/comm_network/epoll/socket_read_helper.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
-
-#ifdef PLATFORM_POSIX
+#include "oneflow/core/transport/transport.h"
 
 #include <netinet/tcp.h>
 
@@ -110,6 +111,11 @@ void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
   SwitchToMsgHeadReadHandle();
 }
 
+void SocketReadHelper::SetStatusWhenTransportMsgHeadDone() {
+  Global<Transport>::Get()->EnqueueTransportMsg(cur_msg_.transport_msg);
+  SwitchToMsgHeadReadHandle();
+}
+
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // __linux__

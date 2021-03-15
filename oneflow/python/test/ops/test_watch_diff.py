@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
@@ -50,15 +50,19 @@ def WatchDiff(test_case, device_type, input_shape, dtype):
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
             ).minimize(x)
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     TrainJob()
 
 
-def test_watch_diff(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["input_shape"] = [(10,)]
-    arg_dict["dtype"] = ["float32"]
-    for arg in GenArgList(arg_dict):
-        WatchDiff(test_case, *arg)
+@flow.unittest.skip_unless_1n1d()
+class TestWatchDiff(flow.unittest.TestCase):
+    def test_watch_diff(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shape"] = [(10,)]
+        arg_dict["dtype"] = ["float32"]
+        for arg in GenArgList(arg_dict):
+            WatchDiff(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

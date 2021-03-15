@@ -38,31 +38,46 @@ __global__ void MaskAndScaleAddGpu(const int64_t n, float scale, const T* x, con
 template<>
 __global__ void MaskAndScaleGpu<half>(const int64_t n, float scale, const half* x,
                                       const int8_t* mask, half* y) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  half h_scale = __float2half(scale);
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    half one_or_zero = mask[i];
-    y[i] = __hmul(__hmul(x[i], one_or_zero), h_scale);
+  const int64_t h2_n = n / 2;
+  half2 h2_scale = __float2half2_rn(scale);
+  const auto* x_h2 = reinterpret_cast<const half2*>(x);
+  const auto* mask_c2 = reinterpret_cast<const char2*>(mask);
+  auto* y_h2 = reinterpret_cast<half2*>(y);
+  CUDA_1D_KERNEL_LOOP(i, h2_n) {
+    char2 mask_val = mask_c2[i];
+    half2 one_or_zero_h2;
+    one_or_zero_h2.x = mask_val.x;
+    one_or_zero_h2.y = mask_val.y;
+    y_h2[i] = __hmul2(__hmul2(x_h2[i], one_or_zero_h2), h2_scale);
   }
-#else
-  printf("use half need nvcc arch >= 530");
-  assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
+  if (n % 2 != 0 && blockIdx.x == 0 && threadIdx.x == 0) {
+    const int64_t last_idx = n - 1;
+    half one_or_zero = mask[last_idx];
+    y[last_idx] = __hmul(__hmul(x[last_idx], one_or_zero), h2_scale.x);
+  }
 }
 
 template<>
 __global__ void MaskAndScaleAddGpu<half>(const int64_t n, float scale, const half* x,
                                          const int8_t* mask, const half* addend, half* y) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  half h_scale = __float2half(scale);
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    half one_or_zero = mask[i];
-    y[i] = __hadd(__hmul(__hmul(x[i], one_or_zero), h_scale), addend[i]);
+  const int64_t h2_n = n / 2;
+  half2 h2_scale = __float2half2_rn(scale);
+  const auto* x_h2 = reinterpret_cast<const half2*>(x);
+  const auto* addend_h2 = reinterpret_cast<const half2*>(addend);
+  const auto* mask_c2 = reinterpret_cast<const char2*>(mask);
+  auto* y_h2 = reinterpret_cast<half2*>(y);
+  CUDA_1D_KERNEL_LOOP(i, h2_n) {
+    char2 mask_val = mask_c2[i];
+    half2 one_or_zero_h2;
+    one_or_zero_h2.x = mask_val.x;
+    one_or_zero_h2.y = mask_val.y;
+    y_h2[i] = __hadd2(__hmul2(__hmul2(x_h2[i], one_or_zero_h2), h2_scale), addend_h2[i]);
   }
-#else
-  printf("use half need nvcc arch >= 530");
-  assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
+  if (n % 2 != 0 && blockIdx.x == 0 && threadIdx.x == 0) {
+    const int64_t last_idx = n - 1;
+    half one_or_zero = mask[last_idx];
+    y[last_idx] = __hadd(__hmul(__hmul(x[last_idx], one_or_zero), h2_scale.x), addend[last_idx]);
+  }
 }
 
 template<typename T>
@@ -70,6 +85,14 @@ void MaskAndScale(DeviceCtx* ctx, const int64_t n, float scale, const T* x, cons
                   T* y) {
   MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, scale, x, mask, y);
+}
+
+template<>
+void MaskAndScale<half>(DeviceCtx* ctx, const int64_t n, float scale, const half* x,
+                        const int8_t* mask, half* y) {
+  MaskAndScaleGpu<half>
+      <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          n, scale, x, mask, y);
 }
 
 template<typename T>
@@ -81,20 +104,11 @@ void MaskAndScaleAdd(DeviceCtx* ctx, const int64_t n, float scale, const T* x, c
 }
 
 template<>
-void MaskAndScale<float16>(DeviceCtx* ctx, const int64_t n, float scale, const float16* x,
-                           const int8_t* mask, float16* y) {
-  MaskAndScaleGpu<half>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          n, scale, reinterpret_cast<const half*>(x), mask, reinterpret_cast<half*>(y));
-}
-
-template<>
-void MaskAndScaleAdd<float16>(DeviceCtx* ctx, const int64_t n, float scale, const float16* x,
-                              const int8_t* mask, const float16* addend, float16* y) {
+void MaskAndScaleAdd<half>(DeviceCtx* ctx, const int64_t n, float scale, const half* x,
+                           const int8_t* mask, const half* addend, half* y) {
   MaskAndScaleAddGpu<half>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          n, scale, reinterpret_cast<const half*>(x), mask, reinterpret_cast<const half*>(addend),
-          reinterpret_cast<half*>(y));
+      <<<BlocksNum4ThreadsNum(RoundUp(n, 2) / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          n, scale, x, mask, addend, y);
 }
 
 template<typename T>
@@ -126,7 +140,7 @@ class DropoutKernelGPU final : public user_op::OpKernel {
       (user_op::HobDeviceTag() == "gpu")                                                  \
       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_DROPOUT_KERNEL_GPU(float16)
+REGISTER_DROPOUT_KERNEL_GPU(half)
 REGISTER_DROPOUT_KERNEL_GPU(float)
 REGISTER_DROPOUT_KERNEL_GPU(double)
 
@@ -159,7 +173,7 @@ class DropoutGradKernelGPU final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_DROPOUT_GRAD_KERNEL_GPU(float16)
+REGISTER_DROPOUT_GRAD_KERNEL_GPU(half)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(float)
 REGISTER_DROPOUT_GRAD_KERNEL_GPU(double)
 

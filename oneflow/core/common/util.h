@@ -34,10 +34,9 @@ limitations under the License.
 #include <queue>
 #include <random>
 #include <thread>
-#include <unordered_map>
-#include <unordered_set>
 #include <utility>
 
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/meta_util.hpp"
 #include "oneflow/core/common/global.h"
 
@@ -97,12 +96,6 @@ bool operator==(const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {
   return lhs.lock().get() == rhs.lock().get();
 }
 
-template<typename Key, typename T, typename Hash = std::hash<Key>>
-using HashMap = std::unordered_map<Key, T, Hash>;
-
-template<typename Key, typename Hash = std::hash<Key>>
-using HashSet = std::unordered_set<Key, Hash>;
-
 template<typename T>
 void SortAndRemoveDuplication(std::vector<T>* vec) {
   std::sort(vec->begin(), vec->end());
@@ -143,7 +136,8 @@ inline uint32_t NewRandomSeed() {
 
 #define DIM_SEQ           \
   OF_PP_MAKE_TUPLE_SEQ(1) \
-  OF_PP_MAKE_TUPLE_SEQ(2) OF_PP_MAKE_TUPLE_SEQ(3) OF_PP_MAKE_TUPLE_SEQ(4) OF_PP_MAKE_TUPLE_SEQ(5)
+  OF_PP_MAKE_TUPLE_SEQ(2) \
+  OF_PP_MAKE_TUPLE_SEQ(3) OF_PP_MAKE_TUPLE_SEQ(4) OF_PP_MAKE_TUPLE_SEQ(5) OF_PP_MAKE_TUPLE_SEQ(6)
 
 #define BOOL_SEQ (true)(false)
 

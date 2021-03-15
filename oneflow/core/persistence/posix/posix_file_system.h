@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/persistence/file_system.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 namespace oneflow {
 
@@ -60,6 +60,6 @@ class PosixFileSystem final : public FileSystem {
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_PERSISTENCE_POSIX_POSIX_FILE_SYSTEM_H_

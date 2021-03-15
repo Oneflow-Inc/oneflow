@@ -22,54 +22,23 @@ namespace oneflow {
 
 class SubTskGphBuilderStatus;
 
-Maybe<SubTskGphBuilderStatus> BuildSubTskGphBuilderStatus(
-    const CompTaskNode* src_node, const CompTaskNode* dst_node,
-    const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
-    const SbpParallel& src_sbp_parallel, const SbpParallel& dst_sbp_parallel,
-    const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc, const std::string& builder_name,
-    const std::string& comment);
+Maybe<SubTskGphBuilderStatus> BuildSubTskGphBuilderStatus(const std::string& builder_name,
+                                                          const std::string& comment);
+
+Maybe<SubTskGphBuilderStatus> MakeComposedSubTskGphBuilderStatus(
+    const std::vector<SubTskGphBuilderStatus>& status);
 
 class SubTskGphBuilderStatus final {
  public:
-  SubTskGphBuilderStatus(const std::string& src_op_name, const std::string& dst_op_name,
-                         const ParallelDesc& src_parallel_desc,
-                         const ParallelDesc& dst_parallel_desc,
-                         const SbpParallel& src_sbp_parallel_, const SbpParallel& dst_sbp_parallel,
-                         const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
-                         const std::string& builder_name, const std::string& comment)
-      : src_op_name_(src_op_name),
-        dst_op_name_(dst_op_name),
-        src_parallel_desc_(src_parallel_desc),
-        dst_parallel_desc_(dst_parallel_desc),
-        src_sbp_parallel_(src_sbp_parallel_),
-        dst_sbp_parallel_(dst_sbp_parallel),
-        lbi_(lbi),
-        logical_blob_desc_(logical_blob_desc),
-        builder_name_(builder_name),
-        comment_(comment){};
+  SubTskGphBuilderStatus(const std::string& builder_name, const std::string& comment)
+      : builder_name_(builder_name), comment_(comment){};
   ~SubTskGphBuilderStatus() = default;
 
   // Getters
-  const std::string& src_op_name() const { return src_op_name_; }
-  const std::string& dst_op_name() const { return dst_op_name_; }
-  const ParallelDesc& src_parallel_desc() const { return src_parallel_desc_; }
-  const ParallelDesc& dst_parallel_desc() const { return dst_parallel_desc_; }
-  const SbpParallel& src_sbp_parallel() const { return src_sbp_parallel_; }
-  const SbpParallel& dst_sbp_parallel() const { return dst_sbp_parallel_; }
-  const LogicalBlobId& lbi() const { return lbi_; }
-  const BlobDesc& logical_blob_desc() const { return logical_blob_desc_; }
   const std::string& builder_name() const { return builder_name_; }
   const std::string& comment() const { return comment_; }
 
  private:
-  std::string src_op_name_;
-  std::string dst_op_name_;
-  ParallelDesc src_parallel_desc_;
-  ParallelDesc dst_parallel_desc_;
-  SbpParallel src_sbp_parallel_;
-  SbpParallel dst_sbp_parallel_;
-  LogicalBlobId lbi_;
-  BlobDesc logical_blob_desc_;
   std::string builder_name_;
   std::string comment_;
 };

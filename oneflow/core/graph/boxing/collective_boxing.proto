@@ -12,6 +12,7 @@ enum OpType {
     kOpTypeAllGather = 3;
     kOpTypeReduce = 4;
     kOpTypeBroadcast = 5;
+    kOpTypeAll2All = 6;
 }
 
 enum ReduceMethod {

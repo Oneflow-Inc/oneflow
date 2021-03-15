@@ -4,4 +4,6 @@ protobuf
 wheel
 tqdm
 requests
-onnx
+onnx; sys_platform != 'darwin'
+jinja2
+opencv-python==4.2.0.34; sys_platform != 'darwin'

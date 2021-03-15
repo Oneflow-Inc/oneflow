@@ -16,16 +16,16 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_ATTR_VAL_ACCESSOR_H_
 #define ONEFLOW_CORE_FRAMEWORK_ATTR_VAL_ACCESSOR_H_
 
-#include "oneflow/core/framework/user_op_attr.h"
+#include "oneflow/core/framework/attr_value.h"
 
 namespace oneflow {
 
 namespace user_op {
 
 template<typename T>
-struct AttrValAccessor final {
-  static T Attr(const UserOpAttrVal&);
-  static void Attr(const T&, UserOpAttrVal*);
+struct AttrValueAccessor final {
+  static T Attr(const AttrValue&);
+  static void Attr(const T&, AttrValue*);
 };
 
 }  // namespace user_op

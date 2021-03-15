@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -56,8 +57,6 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis, epsilon):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = L2NormalizeJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
@@ -71,12 +70,18 @@ def compare_with_tensorflow(device_type, x_shape, data_type, axis, epsilon):
     )
 
 
-def test_l2_normalize(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["x_shape"] = [(10, 10, 20, 30)]
-    arg_dict["data_type"] = ["float32"]
-    arg_dict["axis"] = [-1, 0, 1, 2, 3]
-    arg_dict["epsilon"] = [1e-10, 1e-5]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestL2Normalize(flow.unittest.TestCase):
+    def test_l2_normalize(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["x_shape"] = [(10, 10, 20, 30)]
+        arg_dict["data_type"] = ["float32"]
+        arg_dict["axis"] = [-1, 0, 1, 2, 3]
+        arg_dict["epsilon"] = [1e-10, 1e-5]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

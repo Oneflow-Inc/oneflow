@@ -24,18 +24,20 @@ namespace oneflow {
 
 namespace user_op {
 
-UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf) : op_conf_(op_conf) {
-  CHECK(op_conf_.has_user_conf());
-  for (const auto& kv : op_conf_.user_conf().attr()) {
-    UserOpAttrVal::ValueCase value_case = kv.second.value_case();
+UserOpConfWrapper::UserOpConfWrapper(std::shared_ptr<const OperatorConf> op_conf)
+    : op_conf_(std::move(op_conf)) {
+  CHECK(op_conf_);
+  CHECK(op_conf_->has_user_conf());
+  for (const auto& kv : op_conf_->user_conf().attr()) {
+    AttrValue::ValueCase value_case = kv.second.value_case();
     switch (value_case) {
-#define CASE_ENTRY(field, cpp_type, attr_type)                                              \
-  /* UserOpAttrVal::ValueCase has the same order and naming convention as UserOpAttrType */ \
-  case (static_cast<UserOpAttrVal::ValueCase>(attr_type)):                                  \
-    CHECK(attrs_                                                                            \
-              .emplace(kv.first, std::make_shared<TypedAttrVal<cpp_type>>(                  \
-                                     AttrValAccessor<cpp_type>::Attr(kv.second)))           \
-              .second);                                                                     \
+#define CASE_ENTRY(field, cpp_type, attr_type)                                      \
+  /* AttrValue::ValueCase has the same order and naming convention as AttrType */   \
+  case (static_cast<AttrValue::ValueCase>(attr_type)):                              \
+    CHECK(attrs_                                                                    \
+              .emplace(kv.first, std::make_shared<TypedAttrVal<cpp_type>>(          \
+                                     AttrValueAccessor<cpp_type>::Attr(kv.second))) \
+              .second);                                                             \
     break;
       OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
 #undef CASE_ENTRY
@@ -44,27 +46,30 @@ UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf) : op_conf_(op_
   }
 }
 
-const OperatorConf& UserOpConfWrapper::op_conf() const { return op_conf_; }
+UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf)
+    : UserOpConfWrapper(std::make_shared<OperatorConf>(op_conf)) {}
 
-const UserOpConf& UserOpConfWrapper::user_op_conf() const { return op_conf_.user_conf(); }
+const OperatorConf& UserOpConfWrapper::op_conf() const { return *op_conf_; }
 
-const std::string& UserOpConfWrapper::op_name() const { return op_conf_.name(); }
+const UserOpConf& UserOpConfWrapper::user_op_conf() const { return op_conf_->user_conf(); }
+
+const std::string& UserOpConfWrapper::op_name() const { return op_conf_->name(); }
 
 const std::string& UserOpConfWrapper::op_type_name() const {
-  return op_conf_.user_conf().op_type_name();
+  return op_conf_->user_conf().op_type_name();
 }
 
 const std::string& UserOpConfWrapper::input(const std::string& arg_name, int32_t index) const {
-  auto it = op_conf_.user_conf().input().find(arg_name);
-  CHECK(it != op_conf_.user_conf().input().end())
+  auto it = op_conf_->user_conf().input().find(arg_name);
+  CHECK(it != op_conf_->user_conf().input().end())
       << "arg_name: " << arg_name << ", index: " << index;
   CHECK(index >= 0 && index < it->second.s_size());
   return it->second.s(index);
 }
 
 const std::string& UserOpConfWrapper::output(const std::string& arg_name, int32_t index) const {
-  auto it = op_conf_.user_conf().output().find(arg_name);
-  CHECK(it != op_conf_.user_conf().output().end())
+  auto it = op_conf_->user_conf().output().find(arg_name);
+  CHECK(it != op_conf_->user_conf().output().end())
       << "arg_name: " << arg_name << ", index: " << index;
   CHECK(index >= 0 && index < it->second.s_size());
   return it->second.s(index);
@@ -79,14 +84,14 @@ bool UserOpConfWrapper::has_output(const std::string& arg_name, int32_t index) c
 }
 
 int32_t UserOpConfWrapper::input_size(const std::string& arg_name) const {
-  auto it = op_conf_.user_conf().input().find(arg_name);
-  if (it == op_conf_.user_conf().input().end()) { return 0; }
+  auto it = op_conf_->user_conf().input().find(arg_name);
+  if (it == op_conf_->user_conf().input().end()) { return 0; }
   return it->second.s_size();
 }
 
 int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
-  auto it = op_conf_.user_conf().output().find(arg_name);
-  if (it == op_conf_.user_conf().output().end()) { return 0; }
+  auto it = op_conf_->user_conf().output().find(arg_name);
+  if (it == op_conf_->user_conf().output().end()) { return 0; }
   return it->second.s_size();
 }
 
@@ -98,15 +103,15 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
       return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(it->second)->val();                 \
     } else {                                                                                       \
       LOG(FATAL) << "Cannot find the attr: " << attr_name                                          \
-                 << " with UserOpAttrType: " << static_cast<int32_t>(attr_type);                   \
+                 << " with AttrType: " << static_cast<int32_t>(attr_type);                         \
     }                                                                                              \
   }                                                                                                \
                                                                                                    \
   template<>                                                                                       \
   UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Attr<cpp_type>(const std::string& attr_name, \
                                                                      const cpp_type& val) {        \
-    UserOpAttrVal attr_val;                                                                        \
-    AttrValAccessor<cpp_type>::Attr(val, &attr_val);                                               \
+    AttrValue attr_val;                                                                            \
+    AttrValueAccessor<cpp_type>::Attr(val, &attr_val);                                             \
     attr_.emplace(attr_name, attr_val);                                                            \
     return *this;                                                                                  \
   }
@@ -145,6 +150,16 @@ bool UserOpWrapper::NeedGenGradTensor4OpInput(const std::string& input_arg_name,
   CHECK(index >= 0 && index < it->second.s_size())
       << "arg_name: " << input_arg_name << ", index: " << index;
   return diff_fn_(GenRepeatedBn(input_arg_name, index)) != nullptr;
+}
+
+bool UserOpWrapper::HasGradTensor4OpOutput(const std::string& output_arg_name,
+                                           int32_t index) const {
+  auto it = op_conf().user_conf().output().find(output_arg_name);
+  CHECK(it != op_conf().user_conf().output().end())
+      << "arg_name: " << output_arg_name << ", index: " << index;
+  CHECK(index >= 0 && index < it->second.s_size())
+      << "arg_name: " << output_arg_name << ", index: " << index;
+  return diff_fn_(GenRepeatedBn(output_arg_name, index)) != nullptr;
 }
 
 std::string UserOpWrapper::output_grad(const std::string& output_arg_name, int32_t index) const {
@@ -323,7 +338,7 @@ Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, OperatorCo
         << " op_name: " << op_conf->name() << " op_type_name: " << user_conf->op_type_name()
         << " attr_name: " << attr.name()
         << " has different attr type in OpDef and OpConf, it should be with type: "
-        << UserOpAttrType_Name(attr.type());
+        << AttrType_Name(attr.type());
   }
   return Maybe<void>::Ok();
 }
@@ -344,8 +359,7 @@ Maybe<void> AddUserOpConfOutputDefaultArg(const UserOpDef& op_def, OperatorConf*
   return Maybe<void>::Ok();
 }
 
-Maybe<long long> GetUserOpAttrTypeImpl(const std::string& op_type_name,
-                                       const std::string& attr_name) {
+Maybe<long long> GetAttrTypeImpl(const std::string& op_type_name, const std::string& attr_name) {
   const user_op::OpRegistryResult* val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
   CHECK_OR_RETURN(val) << " Cannot find op " << op_type_name;

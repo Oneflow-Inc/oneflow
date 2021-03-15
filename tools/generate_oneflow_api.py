@@ -54,7 +54,7 @@ class VirtualModule(object):
             for k, v in self._func_or_class_dict.items():
                 lines += include_export(k, v)
             lines = list(mod_set) + lines
-            f.write("\n".join(lines))
+            f.write("\n" + "\n".join(lines) + "\n")
 
     def submodule_names(self):
         return self._submodule_dict.keys()
@@ -95,8 +95,11 @@ def collect_exports():
     exports = {}
     api_name2module = {}
     for api_name, symbol, module in exported_symbols():
+        has_another_symbol_exported = (
+            api_name in exports and exports[api_name] != symbol
+        )
         assert (
-            api_name not in exports
+            not has_another_symbol_exported
         ), "exported twice: {}, previous exported: {} in {}, current: {} in {}".format(
             api_name,
             exports[api_name],

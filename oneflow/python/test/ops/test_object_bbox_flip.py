@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import random
 
 import numpy as np
@@ -106,7 +107,15 @@ def _compare_bbox_flip(
         test_case.assertTrue(np.allclose(of_bbox.squeeze(), bbox))
 
 
-def test_object_bbox_flip(test_case):
-    _compare_bbox_flip(
-        test_case, "/dataset/mscoco_2017/annotations/instances_val2017.json", 4, 1
-    )
+# @flow.unittest.skip_unless_1n1d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
+class TestObjectBboxFlip(flow.unittest.TestCase):
+    def test_object_bbox_flip(test_case):
+        _compare_bbox_flip(
+            test_case, "/dataset/mscoco_2017/annotations/instances_val2017.json", 4, 1
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

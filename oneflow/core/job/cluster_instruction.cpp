@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.pb.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
@@ -69,13 +69,13 @@ void OccasionallyClearCtrlKV(const std::string& key) {
   Global<ObsoleteCtrlKeys>::Get()->Add(key);
   // 1 instead of 0 is better for avoid clearing no ctrl kv
   if ((seq++) % interval == 1) {
-    OF_BARRIER_ALL();
-    if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    OF_ENV_BARRIER();
+    if (GlobalProcessCtx::IsThisProcessMaster()) {
       Global<ObsoleteCtrlKeys>::Get()->ForEach(
           [](const std::string& k) { Global<CtrlClient>::Get()->ClearMasterKV(k); });
     }
     Global<ObsoleteCtrlKeys>::Get()->Clear();
-    OF_BARRIER_ALL();
+    OF_ENV_BARRIER();
   }
 }
 
@@ -94,10 +94,10 @@ void PullClusterInstruction(ClusterInstructionProto* cluster_instruction) {
 }  // namespace
 
 void ClusterInstruction::NewSessionBarrier() {
-  OF_BARRIER_ALL();
+  OF_ENV_BARRIER();
   Global<CtrlClient>::Get()->Clear();
   Global<ObsoleteCtrlKeys>::Get()->Clear();
-  OF_BARRIER_ALL();
+  OF_ENV_BARRIER();
 }
 
 void ClusterInstruction::MasterSendSessionStart() {
@@ -114,16 +114,35 @@ void ClusterInstruction::MasterSendHalt() {
   HaltBarrier();
 }
 
+void ClusterInstruction::MasterSendAbort() {
+  LOG(ERROR) << "sending abort instruction";
+  ClusterInstructionProto cluster_instruction;
+  cluster_instruction.mutable_cluster_ctrl_abort();
+  PushClusterInstruction(cluster_instruction);
+}
+
 void ClusterInstruction::MasterSendEagerInstruction(
     const ClusterInstructionProto& cluster_instruction) {
   CHECK(cluster_instruction.has_eager_instruction());
   PushClusterInstruction(cluster_instruction);
 }
 
+void ClusterInstruction::MasterSendEagerSync() {
+  ClusterInstructionProto cluster_instruction;
+  cluster_instruction.mutable_cluster_ctrl_eager_sync();
+  PushClusterInstruction(cluster_instruction);
+  EagerSyncBarrier();
+}
+
 void ClusterInstruction::WorkerReceiveInstruction(ClusterInstructionProto* cluster_instruction) {
   PullClusterInstruction(cluster_instruction);
 }
 
-void ClusterInstruction::HaltBarrier() { OF_BARRIER_ALL(); }
+void ClusterInstruction::HaltBarrier() { OF_ENV_BARRIER(); }
+
+void ClusterInstruction::EagerSyncBarrier() {
+  // TODO(jianhao): update here after eager instructions are run asynchronously
+  OF_ENV_BARRIER();
+}
 
 }  // namespace oneflow

@@ -18,14 +18,17 @@ from __future__ import absolute_import
 import socket
 from contextlib import closing
 
+import oneflow.core.control.ctrl_bootstrap_pb2 as ctrl_bootstrap_pb
 import oneflow.core.job.env_pb2 as env_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.scope_util as scope_util
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
+import oneflow_api
 import traceback
 
 
@@ -41,7 +44,7 @@ def api_enable_eager_execution(val: bool = True) -> None:
 
 @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
 def enable_eager_environment(val=True):
-    return c_api_util.EnableEagerEnvironment(val)
+    return oneflow_api.EnableEagerEnvironment(val)
 
 
 @oneflow_export("env.init")
@@ -60,7 +63,10 @@ def env_init():
     assert len(default_env_proto.machine) > 0
     CompleteEnvProto(default_env_proto)
     c_api_util.InitEnv(default_env_proto)
-    session_ctx.GetDefaultSession().InitNormalModeScope()
+    if oneflow_api.CurrentMachineId() == 0:
+        scope_util.InitScopeStack()
+    else:
+        exit(0)
     return True
 
 
@@ -92,14 +98,14 @@ def api_get_current_machine_id():
 
 @enable_if.condition(hob.in_normal_mode & hob.env_initialized)
 def get_current_machine_id() -> int:
-    return c_api_util.CurrentMachineId()
+    return oneflow_api.CurrentMachineId()
 
 
 @oneflow_export("env.machine")
 def api_machine(*val: list) -> None:
     r"""Set machines' hostnames.
 
-    For instance::
+    For instance:
 
         oneflow.env.machine([{"addr": "192.168.1.1"}, {"addr": "192.168.1.2"}])
 
@@ -254,6 +260,81 @@ def _MakeMachine(machines):
     return rp_machine
 
 
+# only used by CI
+@oneflow_export("env.init_bootstrap_confs")
+def api_init_bootstrap_confs(*val: list) -> None:
+    return enable_if.unique([MakeBootstrapConfs, do_nothing])(*val)
+
+
+def _MakeBootstrapConf(bootstrap_info: dict):
+    global config_master_addr
+    assert config_master_addr.HasField("host"), "must config master host first"
+    assert config_master_addr.HasField("port"), "must config master port first"
+    assert config_world_size != 0, "must config world size first"
+    bootstrap_conf = ctrl_bootstrap_pb.BootstrapConf()
+    bootstrap_conf.master_addr.CopyFrom(config_master_addr)
+    bootstrap_conf.world_size = config_world_size
+    assert "rank" in bootstrap_info
+    bootstrap_conf.rank = bootstrap_info["rank"]
+    if "host" in bootstrap_info:
+        bootstrap_conf.host = bootstrap_info["host"]
+    global config_bootstrap_ctrl_port
+    if config_bootstrap_ctrl_port != 0:
+        bootstrap_conf.ctrl_port = config_bootstrap_ctrl_port
+    global config_node_size
+    if config_node_size != 0:
+        bootstrap_conf.node_size = config_node_size
+    return bootstrap_conf
+
+
+# only used by CI
+@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
+def MakeBootstrapConfs(
+    node_list, master_port, world_size=0, ctrl_port=-1, node_size=-1
+):
+    r"""Set ctrl_bootstrap_conf' info.
+
+    For instance:
+
+        ONEFLOW_TEST_NODE_LIST=192.168.1.16,192.168.1.15 ONEFLOW_TEST_MASTER_PORT=43256
+        ONEFLOW_TEST_WORLD_SIZE=2 ONEFLOW_TEST_RANK_CTRL_PORT=34527
+
+    Args:
+        val:  `list`, First in the list is the master machine.
+    """
+    if isinstance(node_list, str):
+        node_list = [node_list]
+    global global_ctrl_bootstrap_confs
+    assert len(global_ctrl_bootstrap_confs) == 0, "ctrl_bootstrap_conf has been inited"
+    global config_master_addr
+    config_master_addr.host = node_list[0]
+    config_master_addr.port = master_port
+    global config_world_size
+    # set size of node list as world_size if which is not configed
+    if world_size == 0:
+        config_world_size = len(node_list)
+    else:
+        assert (world_size % len(node_list)) == 0
+        config_world_size = world_size
+    global config_bootstrap_ctrl_port
+    if ctrl_port != -1:
+        config_bootstrap_ctrl_port = ctrl_port
+    global config_node_size
+    if node_size != -1:
+        config_node_size = node_size
+    rank = 0
+    for rank_host in node_list:
+        assert isinstance(rank_host, str)
+        bootstrap_conf = _MakeBootstrapConf({"rank": rank, "host": rank_host})
+        # init ctrl_bootstrap_conf on master
+        if rank == 0:
+            global default_env_proto
+            default_env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
+        global_ctrl_bootstrap_confs.append(bootstrap_conf)
+        rank += 1
+    return global_ctrl_bootstrap_confs
+
+
 def _DefaultEnvProto():
     env_proto = env_pb.EnvProto()
     machine = env_proto.machine.add()
@@ -283,3 +364,13 @@ def GetEnvDefaultParallelConf(device_tag):
 device_tag2default_parallel_conf = {}
 
 default_env_proto = _DefaultEnvProto()
+
+config_master_addr = ctrl_bootstrap_pb.Address()
+
+config_world_size = 0
+
+config_bootstrap_ctrl_port = 0
+
+config_node_size = 0
+
+global_ctrl_bootstrap_confs = []

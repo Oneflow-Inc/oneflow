@@ -21,7 +21,7 @@ REGISTER_USER_OP("bias_add")
     .Input("a")
     .Input("b")
     .Output("out")
-    .Attr("axis", UserOpAttrType::kAtInt32)
+    .Attr<int32_t>("axis")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto* a_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);
       const auto* b_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);

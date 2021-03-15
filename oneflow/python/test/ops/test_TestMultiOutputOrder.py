@@ -20,7 +20,6 @@ import unittest
 import os
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def TestMultiOutputOrder(x, name):
     return (
         flow.user_op_builder(name)
@@ -44,12 +43,9 @@ def GenerateTest(test_case, shape):
         return TestMultiOutputOrder(x, "my_2_output_op")
 
     x = np.random.rand(*shape).astype(np.float32)
-    # print("x", x)
     out1, out2 = TestMultiOutputOrderJob(x).get()
     out1_ndarray = out1.numpy()
     out2_ndarray = out2.numpy()
-    # print("out1", out1_ndarray)
-    # print("out2", out2_ndarray)
     out2_shape = list(shape)
     out2_shape[-1] = out2_shape[-1] * 2
     out2_shape = tuple(out2_shape)
@@ -61,13 +57,20 @@ def GenerateTest(test_case, shape):
     )
 
 
-def test_TestMultiOutputOrder_example_1(test_case):
-    GenerateTest(test_case, (7,))
+@flow.unittest.skip_unless_1n1d()
+class Test_TestMultiOutputOrder(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_TestMultiOutputOrder_example_1(test_case):
+        GenerateTest(test_case, (7,))
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_TestMultiOutputOrder_example_2(test_case):
+        GenerateTest(test_case, (2, 5,))
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_TestMultiOutputOrder_example_3(test_case):
+        GenerateTest(test_case, (3, 3, 2,))
 
 
-def test_TestMultiOutputOrder_example_2(test_case):
-    GenerateTest(test_case, (2, 5,))
-
-
-def test_TestMultiOutputOrder_example_3(test_case):
-    GenerateTest(test_case, (3, 3, 2,))
+if __name__ == "__main__":
+    unittest.main()

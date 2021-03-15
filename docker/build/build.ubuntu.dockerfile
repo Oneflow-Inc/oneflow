@@ -11,7 +11,6 @@ RUN apt-get update && \
     nasm \
     make \
     git \
-    swig \
     gcc \
     g++ \
     libopenblas-dev \

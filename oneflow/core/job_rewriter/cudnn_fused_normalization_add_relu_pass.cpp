@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/op_graph_pass.h"
+#include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -30,13 +30,14 @@ bool IsFusedBnAddReluSupported() {
 
 }  // namespace
 
-class CudnnFusedNormalizationAddReluPass final : public OpGraphPass {
+class CudnnFusedNormalizationAddReluPass final : public JobPass {
  public:
   CudnnFusedNormalizationAddReluPass() = default;
   ~CudnnFusedNormalizationAddReluPass() override = default;
-  bool IsEnabled() const override {
-    if (GlobalJobDesc().job_conf().has_enable_cudnn_fused_normalization_add_relu()) {
-      bool enabled = GlobalJobDesc().job_conf().enable_cudnn_fused_normalization_add_relu();
+
+  bool IsEnabled(const JobPassCtx& ctx) const {
+    if (ctx.job_desc().job_conf().has_enable_cudnn_fused_normalization_add_relu()) {
+      bool enabled = ctx.job_desc().job_conf().enable_cudnn_fused_normalization_add_relu();
       CHECK(!enabled || IsFusedBnAddReluSupported())
           << "Option 'enable_cudnn_fused_normalization_add_relu' is only supported when cuDNN "
              "version >= 7.4.1";
@@ -45,7 +46,14 @@ class CudnnFusedNormalizationAddReluPass final : public OpGraphPass {
       return IsFusedBnAddReluSupported();
     }
   }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const override;
+  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
+
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    return Apply(op_graph, &job_builder);
+  }
 };
 
 Maybe<void> CudnnFusedNormalizationAddReluPass::Apply(const OpGraph& op_graph,
@@ -72,6 +80,6 @@ Maybe<void> CudnnFusedNormalizationAddReluPass::Apply(const OpGraph& op_graph,
   return Maybe<void>::Ok();
 }
 
-REGISTER_FUNCTION_PASS("CudnnFusedNormalizationAddReluPass", CudnnFusedNormalizationAddReluPass);
+REGISTER_JOB_PASS("CudnnFusedNormalizationAddReluPass", CudnnFusedNormalizationAddReluPass);
 
 }  // namespace oneflow

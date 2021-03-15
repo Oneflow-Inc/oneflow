@@ -39,7 +39,7 @@ class UserOpDefWrapper final {
   bool IsArgOptional(const std::string&) const;
   std::pair<int32_t, bool> ArgNumAndIsMin(const std::string&) const;
 
-  UserOpAttrType GetAttrType(const std::string&) const;
+  AttrType GetAttrType(const std::string&) const;
   bool AttrHasDefaultVal(const std::string&) const;
   template<typename T>
   T GetAttrDefaultVal(const std::string&) const;

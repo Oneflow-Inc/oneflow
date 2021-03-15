@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/persistence/posix/posix_file_system.h"
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 
 #include <dirent.h>
 #include <errno.h>
@@ -167,4 +167,4 @@ bool PosixFileSystem::IsDirectory(const std::string& fname) {
 
 }  // namespace oneflow
 
-#endif  // PLATFORM_POSIX
+#endif  // OF_PLATFORM_POSIX

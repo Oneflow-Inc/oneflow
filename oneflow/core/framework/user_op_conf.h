@@ -68,6 +68,7 @@ class TypedAttrVal final : public AttrVal {
 class UserOpConfWrapper final {
  public:
   UserOpConfWrapper(const OperatorConf&);
+  UserOpConfWrapper(std::shared_ptr<const OperatorConf> op_conf);
   const OperatorConf& op_conf() const;
   const UserOpConf& user_op_conf() const;
   const std::string& op_name() const;
@@ -86,7 +87,7 @@ class UserOpConfWrapper final {
   UserOpConfWrapper() = default;
   friend class UserOpConfWrapperBuilder;
 
-  OperatorConf op_conf_;
+  std::shared_ptr<const OperatorConf> op_conf_;
   HashMap<std::string, std::shared_ptr<AttrVal>> attrs_;
 };
 
@@ -127,6 +128,7 @@ class UserOpWrapper final {
   void BindGradTensorWithOpInput(const std::string& logical_grad_blob_name,
                                  const std::string& input_arg_name, int32_t index) const;
   bool NeedGenGradTensor4OpInput(const std::string& input_arg_name, int32_t index) const;
+  bool HasGradTensor4OpOutput(const std::string& output_arg_name, int32_t index) const;
 
  private:
   UserOpConfWrapper conf_;
@@ -165,7 +167,7 @@ class UserOpConfWrapperBuilder final {
   std::string op_type_name_;
   HashMap<std::string, std::vector<std::string>> input_;
   HashMap<std::string, std::vector<std::string>> output_;
-  HashMap<std::string, UserOpAttrVal> attr_;
+  HashMap<std::string, AttrValue> attr_;
   OptInt64 scope_symbol_id_;
 };
 
@@ -190,8 +192,7 @@ class BackwardOpConfContext final {
 
 }  // namespace user_op
 
-Maybe<long long> GetUserOpAttrTypeImpl(const std::string& op_type_name,
-                                       const std::string& attr_name);
+Maybe<long long> GetAttrTypeImpl(const std::string& op_type_name, const std::string& attr_name);
 Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf);
 
 }  // namespace oneflow

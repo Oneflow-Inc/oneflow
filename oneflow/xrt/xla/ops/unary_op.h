@@ -26,12 +26,13 @@ namespace op {
 
 #define OFXLA_DECLARE_UNARY_OP(op)                                    \
   struct op {                                                         \
-    xla::XlaOp operator()(const xla::XlaOp &x) { return xla::op(x); } \
+    xla::XlaOp operator()(const xla::XlaOp& x) { return xla::op(x); } \
   };
 
 OFXLA_DECLARE_UNARY_OP(Abs);
 OFXLA_DECLARE_UNARY_OP(Logistic);
 OFXLA_DECLARE_UNARY_OP(Tanh);
+OFXLA_DECLARE_UNARY_OP(Rsqrt);
 
 #undef OFXLA_DECLARE_UNARY_OP
 

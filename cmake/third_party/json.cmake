@@ -1,10 +1,11 @@
 include(ExternalProject)
 
 SET(JSON_URL https://github.com/nlohmann/json/releases/download/v3.7.3/include.zip)
-set(JSON_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR}/json/src/json)
+use_mirror(VARIABLE JSON_URL URL ${JSON_URL})
+SET(JSON_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR}/json/src/json)
 SET(JSON_INSTALL_DIR ${THIRD_PARTY_DIR}/json)
 SET(JSON_INCLUDE_DIR ${JSON_INSTALL_DIR}/include CACHE PATH "" FORCE)
-
+SET(JSON_URL_HASH fb96f95cdf609143e998db401ca4f324)
 SET(JSON_HEADERS
     "${JSON_BASE_DIR}/single_include/nlohmann/json.hpp"
 )
@@ -13,6 +14,7 @@ if(THIRD_PARTY)
     ExternalProject_Add(json
         PREFIX json
         URL ${JSON_URL}
+        URL_HASH MD5=${JSON_URL_HASH}
         UPDATE_COMMAND ""
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""

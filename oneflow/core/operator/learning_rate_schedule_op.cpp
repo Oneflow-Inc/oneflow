@@ -24,21 +24,18 @@ class LearningRateScheduleOp final : public Operator {
   ~LearningRateScheduleOp() override = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  virtual Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const;
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
 };
-
-const PbMessage& LearningRateScheduleOp::GetCustomizedConf() const {
-  return op_conf().learning_rate_schedule_conf();
-}
 
 void LearningRateScheduleOp::InitFromOpConf() {
   CHECK(op_conf().has_learning_rate_schedule_conf());
@@ -46,23 +43,30 @@ void LearningRateScheduleOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-Maybe<void> LearningRateScheduleOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  const BlobDesc* train_step = GetBlobDesc4BnInOp("train_step");
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  const BlobDesc* train_step = BlobDesc4BnInOp("train_step");
   CHECK_EQ(train_step->shape().elem_cnt(), 1);
   CHECK_EQ(train_step->data_type(), DataType::kInt64);
-  BlobDesc* out = GetBlobDesc4BnInOp("out");
+  BlobDesc* out = BlobDesc4BnInOp("out");
   out->mut_shape() = Shape({1});
   out->set_data_type(DataType::kFloat);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LearningRateScheduleOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  CHECK(!BatchAxis4BnInOp("train_step")->has_value());
-  BatchAxis4BnInOp("out")->clear_value();
-  return Maybe<void>::Ok();
+}  // namespace
+
+Maybe<void> LearningRateScheduleOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(BlobDesc4BnInOp);
+}
+
+Maybe<void> LearningRateScheduleOp::InferOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> LearningRateScheduleOp::GetSbpSignatures(

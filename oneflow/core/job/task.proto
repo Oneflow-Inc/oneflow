@@ -8,18 +8,16 @@ import "oneflow/core/job/placement.proto";
 enum TaskType {
   kInvalid = 0;
   kNormalForward = 1;
-  kDecode = 5;
   kCopyHd = 12;
   kCopyCommNet = 13;
-  kPrint = 15;
-  kRecordLoad = 16;
   kDeviceTick = 27;
   kDecodeRandom = 29;
-  kPackForward = 30;
-  kUnpackForward = 32;
-  kRepeatForward = 34;
+  kPack = 30;
+  kUnpack = 32;
+  kRepeat = 34;
   kAcc = 37;
-  kOptimizer = 38;
+  kSrcSubsetTick = 38;
+  kDstSubsetTick = 39;
   kSourceTick = 40;
   kTick = 41;
   kAccTick = 42;
@@ -35,24 +33,18 @@ enum TaskType {
   kSliceBoxing = 57;
   kCollectiveBoxingGeneric = 58;
   kBoxingIdentity = 59;
+  kDecodeH2D = 60;
+  kCollectiveBoxingPack = 61;
+  kCollectiveBoxingUnpack = 62;
+  kSspVariableProxy = 63;
+  kBoxingZeros = 64;
 };
-
-enum AreaType {
-  kInvalidArea = 0;
-  kDataPreprocessArea = 1;
-  kDataForwardArea = 2;
-  // TODO: rename to OptimizerArea
-  kMdUpdtArea = 4;
-  kPrintArea = 6;
-  kBoundaryArea = 7;
-}
 
 message RegstDescIdSet {
   repeated int64 regst_desc_id = 1;
 }
 
 message TaskSetInfo {
-  required int64 area_id = 1;
   required int64 chain_id = 4;
   required int64 order_in_graph = 5;
 }

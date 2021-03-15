@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
@@ -67,22 +68,19 @@ using PbMd = google::protobuf::util::MessageDifferencer;
 // Prototxt <-> File
 bool TryParseProtoFromTextFile(const std::string& file_path, PbMessage* proto);
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto);
+bool TryParseProtoFromPbFile(const std::string& file_path, PbMessage* proto);
+void ParseProtoFromPbFile(const std::string& file_path, PbMessage* proto);
 void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path);
 std::string PbMessage2TxtString(const PbMessage& proto);
 void PbMessage2TxtString(const PbMessage& proto, std::string* str);
 bool TxtString2PbMessage(const std::string& proto_str, PbMessage* proto);
 
 // Does PbMessage have the field_name
-bool HasFieldInPbMessage(const PbMessage&, const std::string& field_name);
+bool FieldDefinedInPbMessage(const PbMessage&, const std::string& field_name);
 
 // Get From PbMessage
-
-const PbFd* GetPbFdFromPbMessage(const PbMessage&, const std::string& field_name);
-
 template<typename T>
 T GetValFromPbMessage(const PbMessage&, const std::string& field_name);
-
-int32_t GetEnumFromPbMessage(const PbMessage&, const std::string& field_name);
 
 template<typename T>
 const PbRf<T>& GetPbRfFromPbMessage(const PbMessage& msg, const std::string& field_name) {
@@ -112,15 +110,14 @@ const PbMessage& GetMessageInPbMessage(const PbMessage& msg, const std::string& 
 
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
 PbMessage* MutableMessageInPbMessage(PbMessage*, int field_index);
-PbMessage* MutableRepeatedMessageInPbMessage(PbMessage* msg, const std::string& field_name,
-                                             int index);
 
 // Get/Replace str val maybe repeated;  field_name with index is like "name_0"
 std::pair<std::string, int32_t> GetFieldNameAndIndex4StrVal(const std::string& fd_name_with_idx);
 std::string GetStrValInPbFdOrPbRpf(const PbMessage& msg, const std::string& fd_name_may_have_idx);
 bool HasStrFieldInPbFdOrPbRpf(const PbMessage& msg, const std::string& fd_name_may_have_idx);
-void ReplaceStrValInPbFdOrPbRpf(PbMessage* msg, const std::string& fd_name_may_have_idx,
-                                const std::string& old_val, const std::string& new_val);
+// return old value
+std::string ReplaceStrValInPbFdOrPbRpf(PbMessage* msg, const std::string& fd_name_may_have_idx,
+                                       const std::string& new_val);
 
 // Add In PbMessage RepeatedField
 
@@ -161,30 +158,6 @@ template<typename K, typename V>
 google::protobuf::Map<K, V> HashMap2PbMap(const HashMap<K, V>& hash_map) {
   using RetType = google::protobuf::Map<K, V>;
   return RetType(hash_map.begin(), hash_map.end());
-}
-
-// Hack Oneof Getter
-
-template<typename T = PbMessage>
-const T* GetMsgPtrFromPbMessage(const PbMessage& msg, const std::string& field_name) {
-  PROTOBUF_REFLECTION(msg, field_name);
-  if (r->HasField(msg, fd)) {
-    return static_cast<const T*>(&(GetValFromPbMessage<const PbMessage&>(msg, field_name)));
-  } else {
-    return nullptr;
-  }
-}
-
-template<typename T = PbMessage>
-const T* TryGetMsgPtrFromPbMessage(const PbMessage& msg, const std::string& field_name) {
-  PROTOBUF_GET_FIELDDESC(msg, field_name);
-  if (fd == nullptr) { return nullptr; }
-  auto r = const_cast<google::protobuf::Reflection*>(msg.GetReflection());
-  if (r->HasField(msg, fd)) {
-    return static_cast<const T*>(&(GetValFromPbMessage<const PbMessage&>(msg, field_name)));
-  } else {
-    return nullptr;
-  }
 }
 
 // If value exists in RepeatedField
@@ -228,6 +201,13 @@ PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);
 namespace std {
 
 template<>
+struct hash<oneflow::DataType> {
+  size_t operator()(const oneflow::DataType data_type) const {
+    return std::hash<int64_t>()(data_type);
+  }
+};
+
+template<>
 struct hash<oneflow::LogicalBlobId> {
   size_t operator()(const oneflow::LogicalBlobId& lbi) const {
     const auto& str_hash = std::hash<std::string>();
@@ -259,6 +239,18 @@ struct hash<oneflow::SbpParallel> {
       UNIMPLEMENTED();
     }
     return ret;
+  }
+};
+
+template<>
+struct hash<oneflow::ParallelDistribution> {
+  size_t operator()(const oneflow::ParallelDistribution& parallel_distribution) const {
+    const auto& sbp_hash = std::hash<oneflow::SbpParallel>();
+    size_t hash = 0;
+    for (int i = 0; i < parallel_distribution.sbp_parallel_size(); ++i) {
+      oneflow::HashCombine(&hash, sbp_hash(parallel_distribution.sbp_parallel(i)));
+    }
+    return hash;
   }
 };
 

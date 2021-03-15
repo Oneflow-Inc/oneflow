@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -69,8 +70,6 @@ def compare_with_tensorflow(
     )
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = SparseSoftmaxCrossEntropyWithLogitsJob(labels).get()
 
     # TensorFlow
@@ -88,12 +87,18 @@ def compare_with_tensorflow(
     flow.clear_default_session()
 
 
-def test_sparse_cross_entropy_with_logits(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu", "cpu"]
-    arg_dict["data_type"] = ["float32", "double"]
-    arg_dict["label_type"] = ["int32", "int64"]
-    arg_dict["num_classes"] = [1000]
-    arg_dict["batch_size"] = [64]
-    for arg in GenArgList(arg_dict):
-        compare_with_tensorflow(*arg)
+@flow.unittest.skip_unless_1n1d()
+class TestSparseCrossEntropy(flow.unittest.TestCase):
+    def test_sparse_cross_entropy_with_logits(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["data_type"] = ["float32", "double"]
+        arg_dict["label_type"] = ["int32", "int64"]
+        arg_dict["num_classes"] = [1000]
+        arg_dict["batch_size"] = [64]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

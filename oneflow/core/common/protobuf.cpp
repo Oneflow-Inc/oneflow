@@ -23,32 +23,27 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-bool TryGetFieldNameAndIndex4StrVal(const std::string& fd_name_with_idx, std::string* field_name,
-                                    int32_t* index) {
-  const size_t underline_pos = fd_name_with_idx.rfind('_');
-  if (underline_pos == std::string::npos) { return false; }
-  if (underline_pos == 0) { return false; }
-  if (underline_pos == fd_name_with_idx.size() - 1) { return false; }
-  *field_name = fd_name_with_idx.substr(0, underline_pos);
-  std::string index_str = fd_name_with_idx.substr(underline_pos + 1);
-  if (IsStrInt(index_str) == false) { return false; }
-  *index = oneflow_cast<int32_t>(index_str);
-  return *index >= 0;
-}
-
-}  // namespace
-
-// txt file
+// parse protobuf message from .prototxt file
 bool TryParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {
   std::ifstream in_stream(file_path.c_str(), std::ifstream::in);
   google::protobuf::io::IstreamInputStream input(&in_stream);
   return google::protobuf::TextFormat::Parse(&input, proto);
 }
+
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {
   CHECK(TryParseProtoFromTextFile(file_path, proto));
 }
+
+// parse protobuf message from .pb file
+bool TryParseProtoFromPbFile(const std::string& file_path, PbMessage* proto) {
+  std::ifstream in_stream(file_path.c_str(), std::ifstream::in | std::ifstream::binary);
+  return proto->ParseFromIstream(&in_stream);
+}
+
+void ParseProtoFromPbFile(const std::string& file_path, PbMessage* proto) {
+  CHECK(TryParseProtoFromPbFile(file_path, proto));
+}
+
 void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path) {
   std::ofstream out_stream(file_path.c_str(), std::ofstream::out | std::ofstream::trunc);
   google::protobuf::io::OstreamOutputStream output(&out_stream);
@@ -69,15 +64,9 @@ bool TxtString2PbMessage(const std::string& proto_str, PbMessage* msg) {
   return google::protobuf::TextFormat::ParseFromString(proto_str, msg);
 }
 
-bool HasFieldInPbMessage(const PbMessage& msg, const std::string& field_name) {
+bool FieldDefinedInPbMessage(const PbMessage& msg, const std::string& field_name) {
   PROTOBUF_GET_FIELDDESC(msg, field_name);
   return fd != nullptr;
-}
-
-const PbFd* GetPbFdFromPbMessage(const PbMessage& msg, const std::string& field_name) {
-  PROTOBUF_GET_FIELDDESC(msg, field_name);
-  CHECK_NOTNULL(fd);
-  return fd;
 }
 
 #define DEFINE_GET_VAL_FROM_PBMESSAGE(cpp_type, pb_type_name)                                   \
@@ -89,11 +78,6 @@ const PbFd* GetPbFdFromPbMessage(const PbMessage& msg, const std::string& field_
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_GET_VAL_FROM_PBMESSAGE,
                      PROTOBUF_BASIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(const PbMessage&, Message))
-
-int32_t GetEnumFromPbMessage(const PbMessage& msg, const std::string& field_name) {
-  PROTOBUF_REFLECTION(msg, field_name);
-  return r->GetEnumValue(msg, fd);
-}
 
 #define DEFINE_SET_VAL_IN_PBMESSAGE(cpp_type, pb_type_name)                                    \
   template<>                                                                                   \
@@ -112,12 +96,6 @@ const PbMessage& GetMessageInPbMessage(const PbMessage& msg, const std::string& 
 PbMessage* MutableMessageInPbMessage(PbMessage* msg, const std::string& field_name) {
   PROTOBUF_REFLECTION((*msg), field_name);
   return r->MutableMessage(msg, fd);
-}
-
-PbMessage* MutableRepeatedMessageInPbMessage(PbMessage* msg, const std::string& field_name,
-                                             int index) {
-  PROTOBUF_REFLECTION((*msg), field_name);
-  return r->MutableRepeatedMessage(msg, fd, index);
 }
 
 const PbMessage& GetMessageInPbMessage(const PbMessage& msg, int field_index) {
@@ -174,7 +152,7 @@ DEFINE_ENUM_VAL_GETTER_AND_SETTER(DataType);
     int32_t field_size = r->FieldSize(msg, fd);                                             \
     vec_type retval(field_size);                                                            \
     for (int i = 0; i < field_size; ++i) { retval[i] = r->Get##vec_type_name(msg, fd, i); } \
-    return std::move(retval);                                                               \
+    return retval;                                                                          \
   }                                                                                         \
   DECLARE_SETTER_FUNC_HEADER(vec_type) {                                                    \
     PROTOBUF_REFLECTION((*msg), field_name);                                                \
@@ -207,13 +185,10 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_VECTOR_VAL_GETTER_AND_SETTER, PROTOBUF_BASIC_REPEATE
 OF_PP_FOR_EACH_TUPLE(DEFINE_ADD_VAL_IN_PBRF, PROTOBUF_BASIC_DATA_TYPE_SEQ)
 
 std::pair<std::string, int32_t> GetFieldNameAndIndex4StrVal(const std::string& fd_name_with_idx) {
-  const size_t underline_pos = fd_name_with_idx.rfind('_');
-  CHECK_NE(underline_pos, std::string::npos);
-  CHECK_GT(underline_pos, 0);
-  CHECK_LT(underline_pos, fd_name_with_idx.size() - 1);
-  const std::string field_name = fd_name_with_idx.substr(0, underline_pos);
-  const int32_t idx = oneflow_cast<int32_t>(fd_name_with_idx.substr(underline_pos + 1));
+  std::string field_name;
+  int32_t idx = 0;
   CHECK_GE(idx, 0);
+  GetPrefixAndIndex(fd_name_with_idx, &field_name, &idx);
   return std::make_pair(field_name, idx);
 }
 
@@ -233,23 +208,24 @@ bool HasStrFieldInPbFdOrPbRpf(const PbMessage& msg, const std::string& fd_name_m
   if (fd != nullptr) { return true; }
   std::string field_name;
   int32_t index = 0;
-  return TryGetFieldNameAndIndex4StrVal(fd_name_may_have_idx, &field_name, &index);
+  return TryGetPrefixAndIndex(fd_name_may_have_idx, &field_name, &index);
 }
 
-void ReplaceStrValInPbFdOrPbRpf(PbMessage* msg, const std::string& fd_name_may_have_idx,
-                                const std::string& old_val, const std::string& new_val) {
+std::string ReplaceStrValInPbFdOrPbRpf(PbMessage* msg, const std::string& fd_name_may_have_idx,
+                                       const std::string& new_val) {
   const PbFd* fd = msg->GetDescriptor()->FindFieldByName(fd_name_may_have_idx);
+  std::string old_val;
   if (fd) {
-    CHECK_EQ(GetValFromPbMessage<std::string>(*msg, fd_name_may_have_idx), old_val);
+    old_val = GetValFromPbMessage<std::string>(*msg, fd_name_may_have_idx);
     SetValInPbMessage<std::string>(msg, fd_name_may_have_idx, new_val);
   } else {
     const std::pair<std::string, int32_t> prefix_idx =
         GetFieldNameAndIndex4StrVal(fd_name_may_have_idx);
-    CHECK_EQ(GetPbRpfFromPbMessage<std::string>(*msg, prefix_idx.first).Get(prefix_idx.second),
-             old_val);
+    old_val = GetPbRpfFromPbMessage<std::string>(*msg, prefix_idx.first).Get(prefix_idx.second);
     PbRpf<std::string>* rpf = MutPbRpfFromPbMessage<std::string>(msg, prefix_idx.first);
     *rpf->Mutable(prefix_idx.second) = new_val;
   }
+  return old_val;
 }
 
 PersistentOutStream& operator<<(PersistentOutStream& out_stream, const PbMessage& msg) {

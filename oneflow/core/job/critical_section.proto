@@ -8,8 +8,8 @@ message InputOutputCriticalSection {
 
 message CriticalSection {
   required int64 job_id = 1;
-  required string source_tick_op_name = 2;
-  required string sink_tick_op_name = 3;
+  map<int64, string> machine_id2source_tick_op_name = 2;
+  map<int64, string> machine_id2sink_tick_op_name = 3;
   repeated int64 mem_block_id = 4;
   repeated int64 chunk_id = 5;
   oneof type {

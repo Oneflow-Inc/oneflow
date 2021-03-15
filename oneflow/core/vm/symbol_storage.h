@@ -22,13 +22,24 @@ limitations under the License.
 
 namespace oneflow {
 
+class StringSymbol;
+
+class OperatorConfSymbol;
+class OperatorConf;
+
 class ParallelDesc;
 class ParallelConf;
+
+class JobDesc;
+class JobConfigProto;
 
 class OpNodeSignatureDesc;
 class OpNodeSignature;
 
-namespace vm {
+class Scope;
+class ScopeProto;
+
+namespace symbol {
 
 template<typename T>
 struct ConstructArgType4Symbol final {
@@ -40,62 +51,129 @@ struct ConstructArgType4Symbol<OpNodeSignatureDesc> final {
   using type = OpNodeSignature;
 };
 
+template<>
+struct ConstructArgType4Symbol<StringSymbol> final {
+  using type = std::string;
+};
+
+template<>
+struct ConstructArgType4Symbol<OperatorConfSymbol> final {
+  using type = OperatorConf;
+};
+
+template<>
+struct ConstructArgType4Symbol<ParallelDesc> final {
+  using type = ParallelConf;
+};
+
+template<>
+struct ConstructArgType4Symbol<JobDesc> final {
+  using type = JobConfigProto;
+};
+
+template<>
+struct ConstructArgType4Symbol<Scope> final {
+  using type = ScopeProto;
+};
+
+namespace detail {
+
 template<typename T>
-class SymbolStorage final {
+Maybe<T> NewSymbol(int64_t symbol_id, const typename ConstructArgType4Symbol<T>::type& data) {
+  return std::make_shared<T>(data);
+}
+
+template<>
+Maybe<StringSymbol> NewSymbol<StringSymbol>(
+    int64_t symbol_id, const typename ConstructArgType4Symbol<StringSymbol>::type& data);
+
+template<>
+Maybe<OperatorConfSymbol> NewSymbol<OperatorConfSymbol>(
+    int64_t symbol_id, const typename ConstructArgType4Symbol<OperatorConfSymbol>::type& data);
+
+template<>
+Maybe<ParallelDesc> NewSymbol<ParallelDesc>(
+    int64_t symbol_id, const typename ConstructArgType4Symbol<ParallelDesc>::type& data);
+
+template<>
+Maybe<JobDesc> NewSymbol<JobDesc>(int64_t symbol_id,
+                                  const typename ConstructArgType4Symbol<JobDesc>::type& data);
+
+template<>
+Maybe<Scope> NewSymbol<Scope>(int64_t symbol_id,
+                              const typename ConstructArgType4Symbol<Scope>::type& data);
+
+template<>
+Maybe<OpNodeSignatureDesc> NewSymbol<OpNodeSignatureDesc>(
+    int64_t symbol_id, const typename ConstructArgType4Symbol<OpNodeSignatureDesc>::type& data);
+
+}  // namespace detail
+
+template<typename T>
+class Storage final {
  public:
-  SymbolStorage(const SymbolStorage&) = delete;
-  SymbolStorage(SymbolStorage&&) = delete;
+  Storage(const Storage&) = delete;
+  Storage(Storage&&) = delete;
 
-  SymbolStorage() = default;
-  ~SymbolStorage() = default;
+  Storage() = default;
+  ~Storage() = default;
 
-  bool Has(int64_t logical_object_id) const {
+  bool Has(int64_t symbol_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
-    return logical_object_id2data_.find(logical_object_id) != logical_object_id2data_.end();
+    return symbol_id2symbol_.find(symbol_id) != symbol_id2symbol_.end();
   }
 
-  Maybe<const T&> MaybeGet(int64_t logical_object_id) const {
-    return *JUST(MaybeGetPtr(logical_object_id));
-  }
+  Maybe<const T&> MaybeGet(int64_t symbol_id) const { return *JUST(MaybeGetPtr(symbol_id)); }
 
-  const T& Get(int64_t logical_object_id) const { return *GetPtr(logical_object_id); }
+  const T& Get(int64_t symbol_id) const { return *GetPtr(symbol_id); }
 
-  Maybe<T> MaybeGetPtr(int64_t logical_object_id) const {
+  Maybe<T> MaybeGetPtr(int64_t symbol_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
-    const auto& iter = logical_object_id2data_.find(logical_object_id);
-    CHECK_OR_RETURN(iter != logical_object_id2data_.end())
-        << "logical_object_id: " << logical_object_id;
+    const auto& iter = symbol_id2symbol_.find(symbol_id);
+    CHECK_OR_RETURN(iter != symbol_id2symbol_.end()) << "symbol_id: " << symbol_id;
     return iter->second;
   }
 
-  const std::shared_ptr<T>& GetPtr(int64_t logical_object_id) const {
+  const std::shared_ptr<T>& GetPtr(int64_t symbol_id) const {
     std::unique_lock<std::mutex> lock(mutex_);
-    const auto& iter = logical_object_id2data_.find(logical_object_id);
-    CHECK(iter != logical_object_id2data_.end());
+    const auto& iter = symbol_id2symbol_.find(symbol_id);
+    CHECK(iter != symbol_id2symbol_.end()) << "symbol_id: " << symbol_id;
     return iter->second;
   }
 
-  void Add(int64_t logical_object_id, const typename ConstructArgType4Symbol<T>::type& data) {
-    CHECK_GT(logical_object_id, 0);
-    const auto& ptr = std::make_shared<T>(data);
+  Maybe<void> Add(int64_t symbol_id, const typename ConstructArgType4Symbol<T>::type& data) {
+    CHECK_GT_OR_RETURN(symbol_id, 0);
+    const auto& ptr = JUST(detail::NewSymbol<T>(symbol_id, data));
     std::unique_lock<std::mutex> lock(mutex_);
-    CHECK(logical_object_id2data_.emplace(logical_object_id, ptr).second);
+    CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
+    return Maybe<void>::Ok();
   }
-  void Clear(int64_t logical_object_id) {
+
+  Maybe<void> TryAdd(int64_t symbol_id, const typename ConstructArgType4Symbol<T>::type& data) {
+    CHECK_GT_OR_RETURN(symbol_id, 0);
+    const auto& ptr = JUST(detail::NewSymbol<T>(symbol_id, data));
     std::unique_lock<std::mutex> lock(mutex_);
-    logical_object_id2data_.erase(logical_object_id);
+    const auto& iter = symbol_id2symbol_.find(symbol_id);
+    if (iter != symbol_id2symbol_.end()) { return Maybe<void>::Ok(); }
+    CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
+    return Maybe<void>::Ok();
+  }
+
+  void Clear(int64_t symbol_id) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    symbol_id2symbol_.erase(symbol_id);
   }
   void ClearAll() {
     std::unique_lock<std::mutex> lock(mutex_);
-    logical_object_id2data_.clear();
+    symbol_id2symbol_.clear();
   }
 
  private:
   mutable std::mutex mutex_;
-  HashMap<int64_t, std::shared_ptr<T>> logical_object_id2data_;
+  HashMap<int64_t, std::shared_ptr<T>> symbol_id2symbol_;
 };
 
-}  // namespace vm
+}  // namespace symbol
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_STORAGE_H_

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import math
 import os
 from collections import OrderedDict
@@ -36,17 +37,25 @@ def tf_gelu(x):
     return y.numpy(), x_diff.numpy()
 
 
-def test_gelu(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["gpu"]
-    arg_dict["flow_op"] = [flow.math.gelu]
-    arg_dict["flow_args"] = [[]]
-    arg_dict["x"] = [
-        np.random.uniform(low=-100, high=100, size=(10, 20, 30, 40)).astype(np.float32)
-    ]
-    for arg in GenArgDict(arg_dict):
-        of_y, of_x_diff = RunOneflowOp(**arg)
-        tf_y, tf_x_diff = tf_gelu(arg["x"])
+@flow.unittest.skip_unless_1n1d()
+class TestGelu(flow.unittest.TestCase):
+    def test_gelu(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["flow_op"] = [flow.math.gelu]
+        arg_dict["flow_args"] = [[]]
+        arg_dict["x"] = [
+            np.random.uniform(low=-100, high=100, size=(10, 20, 30, 40)).astype(
+                np.float32
+            )
+        ]
+        for arg in GenArgDict(arg_dict):
+            of_y, of_x_diff = RunOneflowOp(**arg)
+            tf_y, tf_x_diff = tf_gelu(arg["x"])
 
-        assert np.allclose(of_y, tf_y, rtol=1e-5, atol=1e-5)
-        assert np.allclose(of_x_diff, tf_x_diff, rtol=1e-5, atol=1e-5)
+            assert np.allclose(of_y, tf_y, rtol=1e-5, atol=1e-5)
+            assert np.allclose(of_x_diff, tf_x_diff, rtol=1e-5, atol=1e-5)
+
+
+if __name__ == "__main__":
+    unittest.main()

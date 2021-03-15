@@ -10,5 +10,5 @@ message UserOpConf {
   required string op_type_name = 1;
   map<string, ListString> input = 2;
   map<string, ListString> output = 3;
-  map<string, UserOpAttrVal> attr = 4;
+  map<string, AttrValue> attr = 4;
 }

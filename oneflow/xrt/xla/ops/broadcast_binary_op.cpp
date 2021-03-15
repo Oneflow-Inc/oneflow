@@ -27,7 +27,7 @@ namespace mola {
 template<typename BinaryOp>
 class BcastBinaryOp : public XlaOpKernel {
  public:
-  void Compile(XlaOpContext *ctx) override {
+  void Compile(XlaOpContext* ctx) override {
     Shape shape_a = ctx->InputShape("x_0");
     Shape shape_b = ctx->InputShape("y_0");
 
@@ -44,6 +44,7 @@ class BcastBinaryOp : public XlaOpKernel {
 REGISTER_XLA_OP_KERNEL(BcastAdd, BcastBinaryOp<op::Add>).Finalize();
 REGISTER_XLA_OP_KERNEL(BcastMul, BcastBinaryOp<op::Mul>).Finalize();
 REGISTER_XLA_OP_KERNEL(BcastDiv, BcastBinaryOp<op::Div>).Finalize();
+REGISTER_XLA_OP_KERNEL(BcastMin, BcastBinaryOp<op::Min>).Finalize();
 
 }  // namespace mola
 }  // namespace xrt

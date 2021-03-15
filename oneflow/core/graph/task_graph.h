@@ -39,12 +39,10 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
-  void AddOrderingCtrlEdgeInSameChain();
+  void MergeChainAndAddOrderingCtrlEdgeInSameChain();
 
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
-
-  void AcyclicTopoForEachNode(const std::function<void(TaskNode* node)>& Handler) const;
 
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 
@@ -53,11 +51,11 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySrcSubsetConnect);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByDstSubsetConnect);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D);
 
  private:
-  void AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
-                              const std::function<void(TaskNode* node)>& Handler) const;
-
   void BuildTaskPath(
       CompTaskNode* src, CompTaskNode* dst,
       std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
@@ -73,15 +71,16 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskNode* AddCopyD2HTaskFrom(TaskNode*);
   TaskNode* AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst);
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
+  Maybe<void> ConnectSrcSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
+                                        const std::vector<CompTaskNode*>& dst_task_nodes);
+  Maybe<void> ConnectDstSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
+                                        const std::vector<CompTaskNode*>& dst_task_nodes);
   void ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
                         const std::vector<CompTaskNode*>& dst_task_nodes, int64_t ctrl_regst_num);
 
-  void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
-  void MergeChainAndSetOrderInGraphForEachNode();
+  void SetOrderInGraphForEachNode();
+  void MergeChain();
   void BuildCtrlRegstDescInSameChain();
-
-  void GenerateIndependentThrdId(
-      const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);
 
   // inplace
   void GetInplaceOpBlobArgList(
@@ -102,8 +101,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::shared_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
   std::unique_ptr<BoxingLogger> boxing_logger_;
 };
-
-bool IsBackEdge(TaskNode* src, TaskNode* dst);
 
 }  // namespace oneflow
 

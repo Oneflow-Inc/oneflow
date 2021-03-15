@@ -5,7 +5,7 @@ import "oneflow/core/job/job_conf.proto";
 import "oneflow/core/job/placement.proto";
 import "oneflow/core/job/scope.proto";
 import "oneflow/core/operator/op_conf.proto";
-import "oneflow/core/operator/op_attribute.proto";
+import "oneflow/core/operator/op_node_signature.proto";
 
 message EagerSymbol {
   required int64 symbol_id = 1;

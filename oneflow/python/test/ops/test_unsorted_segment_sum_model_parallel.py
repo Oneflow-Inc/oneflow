@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import os
 from collections import OrderedDict
 
@@ -100,12 +101,19 @@ def _test_unsorted_segment_sum_model_parallel_fw(
     test_case.assertTrue(np.allclose(out1.numpy(), out_arr))
 
 
-def test_unsorted_segment_sum_model_parallel_fw(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["out_shape"] = [(96, 96, 96)]
-    arg_dict["segment_ids_shape"] = [(32, 48)]
-    arg_dict["axis"] = [0, 1, 2]
-    arg_dict["split_axis"] = [0, 1, 2]
-    for arg in GenArgList(arg_dict):
-        _test_unsorted_segment_sum_model_parallel_fw(test_case, *arg)
+@flow.unittest.skip_unless_1n4d()
+class TestUnsortedSegmentSumModelParallel(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_unsorted_segment_sum_model_parallel_fw(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["out_shape"] = [(96, 96, 96)]
+        arg_dict["segment_ids_shape"] = [(32, 48)]
+        arg_dict["axis"] = [0, 1, 2]
+        arg_dict["split_axis"] = [0, 1, 2]
+        for arg in GenArgList(arg_dict):
+            _test_unsorted_segment_sum_model_parallel_fw(test_case, *arg)
+
+
+if __name__ == "__main__":
+    unittest.main()

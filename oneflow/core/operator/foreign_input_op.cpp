@@ -22,6 +22,18 @@ namespace {
 
 void CheckOpConf(const OperatorConf& op_conf) { CHECK(op_conf.ctrl_in_op_name().empty()); }
 
+Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
+                           const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  CheckOpConf(op_conf);
+  const auto& conf = op_conf.foreign_input_conf().blob_conf();
+  BlobDesc* out_blob_desc = BlobDesc4BnInOp("out");
+  out_blob_desc->mut_shape() = Shape(conf.shape());
+  CHECK_OR_RETURN(conf.has_data_type());
+  out_blob_desc->set_data_type(conf.data_type());
+  out_blob_desc->set_is_dynamic(conf.is_dynamic());
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 void ForeignInputOp::InitFromOpConf() {
@@ -30,32 +42,18 @@ void ForeignInputOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-const PbMessage& ForeignInputOp::GetCustomizedConf() const {
-  return op_conf().foreign_input_conf();
+Maybe<void> ForeignInputOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), 1);
+  return InferBlobDescs(op_conf(), BlobDesc4BnInOp);
 }
 
-Maybe<void> ForeignInputOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+Maybe<void> ForeignInputOp::InferOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
-  CheckOpConf(op_conf());
-  const auto& conf = op_conf().foreign_input_conf().blob_conf();
-  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  out_blob_desc->mut_shape() = Shape(conf.shape());
-  if (conf.has_data_type()) {
-    out_blob_desc->set_data_type(conf.data_type());
-  } else {
-    out_blob_desc->set_data_type(job_desc().DefaultDataType());
-  }
-  out_blob_desc->set_is_dynamic(conf.is_dynamic());
-  out_blob_desc->set_is_tensor_list(conf.is_tensor_list());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> ForeignInputOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  *BatchAxis4BnInOp("out") = op_conf().foreign_input_conf().blob_conf().batch_axis();
-  return Maybe<void>::Ok();
+  return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
 }
 
 Maybe<void> ForeignInputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

@@ -30,8 +30,9 @@ Maybe<void> GenBroadcastToCompatibleWithGradOpConf(
     const Shape& x_shape = LogicalBlobDesc4BnInOp("x").shape();
     const Shape& y_shape = LogicalBlobDesc4BnInOp("y").shape();
     Shape x_extend_shape = CreateLeftExtendedShape(ShapeView(x_shape), y_shape.NumAxes());
-    std::vector<int32_t> reduced_axes;
-    FOR_RANGE(int64_t, i, 0, y_shape.NumAxes()) {
+    std::vector<int32_t> reduced_axes(x_extend_shape.NumAxes() - x_shape.NumAxes());
+    std::iota(reduced_axes.begin(), reduced_axes.end(), 0);
+    FOR_RANGE(int64_t, i, reduced_axes.size(), y_shape.NumAxes()) {
       if (x_extend_shape.At(i) == 1 && y_shape.At(i) != 1) {
         reduced_axes.push_back(i);
       } else {

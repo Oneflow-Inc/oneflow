@@ -18,8 +18,8 @@ from __future__ import absolute_import
 import sys
 import traceback
 
-import oneflow.oneflow_internal as oneflow_internal
 import oneflow.python.framework.ofblob as ofblob
+import oneflow_api
 
 
 def MakeUserJobInstance(job_name, finish_cb=None):
@@ -73,7 +73,7 @@ def MakeJobInstance(*arg, **kw):
     return job_instance
 
 
-class JobInstance(oneflow_internal.ForeignJobInstance):
+class JobInstance(oneflow_api.ForeignJobInstance):
     def __init__(
         self,
         job_name,
@@ -83,7 +83,7 @@ class JobInstance(oneflow_internal.ForeignJobInstance):
         pull_cb=None,
         finish_cb=None,
     ):
-        oneflow_internal.ForeignJobInstance.__init__(self)
+        oneflow_api.ForeignJobInstance.__init__(self)
         self.thisown = 0
         self.job_name_ = str(job_name)
         self.sole_input_op_name_in_user_job_ = str(sole_input_op_name_in_user_job)
@@ -109,7 +109,7 @@ class JobInstance(oneflow_internal.ForeignJobInstance):
 
     def sole_output_op_name_in_user_job(self):
         try:
-            return ret.sole_output_op_name_in_user_job_
+            return self.sole_output_op_name_in_user_job_
         except Exception as e:
             print(traceback.format_exc())
             raise e

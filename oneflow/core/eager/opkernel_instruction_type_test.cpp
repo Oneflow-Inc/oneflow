@@ -18,6 +18,7 @@ limitations under the License.
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
 #define private public
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
@@ -28,30 +29,41 @@ limitations under the License.
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/test_util.h"
 #include "oneflow/core/vm/object_wrapper.h"
-#include "oneflow/core/eager/eager_symbol_storage.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 
 namespace oneflow {
 namespace eager {
 namespace test {
+
+namespace {
+
+void InitNumProcessPerNode() {
+  Global<NumProcessPerNode>::New();
+  Global<NumProcessPerNode>::Get()->set_value(1);
+}
+
+void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+
+}  // namespace
 
 using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 
 int64_t NewJobDescSymbol(InstructionMsgList* list,
                          const std::shared_ptr<JobConfigProto>& job_conf) {
   int64_t job_desc_id = vm::TestUtil::NewSymbol(list);
-  Global<vm::SymbolStorage<JobDesc>>::Get()->Add(job_desc_id, *job_conf);
+  CHECK_JUST(Global<symbol::Storage<JobDesc>>::Get()->Add(job_desc_id, *job_conf));
   list->EmplaceBack(vm::NewInstruction("InitJobDescSymbol")->add_init_symbol_operand(job_desc_id));
   return job_desc_id;
 }
 
 int64_t NewOpConfSymbol(InstructionMsgList* list, const std::shared_ptr<OperatorConf>& op_conf) {
   int64_t op_conf_id = vm::TestUtil::NewSymbol(list);
-  Global<vm::SymbolStorage<OperatorConf>>::Get()->Add(op_conf_id, *op_conf);
+  CHECK_JUST(Global<symbol::Storage<OperatorConfSymbol>>::Get()->Add(op_conf_id, *op_conf));
   list->EmplaceBack(
       vm::NewInstruction("InitOperatorConfSymbol")->add_init_symbol_operand(op_conf_id));
   return op_conf_id;
@@ -81,8 +93,8 @@ int64_t NewOpNodeSignature(InstructionMsgList* list, const std::vector<std::stri
     SetFakeLogicalBlobDesc(obns[i]);
   }
   int64_t op_node_signature_id = vm::TestUtil::NewSymbol(list);
-  Global<vm::SymbolStorage<OpNodeSignatureDesc>>::Get()->Add(op_node_signature_id,
-                                                             op_node_signature);
+  CHECK_JUST(Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->Add(op_node_signature_id,
+                                                                      op_node_signature));
   list->EmplaceBack(vm::NewInstruction("InitOpNodeSignatureDescSymbol")
                         ->add_init_symbol_operand(op_node_signature_id));
   return op_node_signature_id;
@@ -105,6 +117,7 @@ int64_t InitOpKernelObject(InstructionMsgList* list,
 }
 
 TEST(OpkernelInstructionType, new_opkernel) {
+  InitNumProcessPerNode();
   vm::TestResourceDescScope scope(1, 1);
   InstructionMsgList list;
   {
@@ -122,9 +135,11 @@ TEST(OpkernelInstructionType, new_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
+  DestroyNumProcessPerNode();
 }
 
 TEST(OpkernelInstructionType, delete_opkernel) {
+  InitNumProcessPerNode();
   vm::TestResourceDescScope scope(1, 1);
   InstructionMsgList list;
   int64_t opkernel_id = 0;
@@ -144,9 +159,11 @@ TEST(OpkernelInstructionType, delete_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
+  DestroyNumProcessPerNode();
 }
 
 TEST(OpkernelInstructionType, call_opkernel) {
+  InitNumProcessPerNode();
   vm::TestResourceDescScope scope(1, 1);
   InstructionMsgList list;
   int64_t opkernel_id = 0;
@@ -182,9 +199,11 @@ TEST(OpkernelInstructionType, call_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
+  DestroyNumProcessPerNode();
 }
 
 TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
+  InitNumProcessPerNode();
   vm::TestResourceDescScope scope(1, 1);
   InstructionMsgList list;
   int64_t in_id = vm::TestUtil::NewStringSymbol(&list, "in_0");
@@ -259,9 +278,11 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
+  DestroyNumProcessPerNode();
 }
 
 TEST(OpkernelInstructionType, stateless_call_opkernel) {
+  InitNumProcessPerNode();
   vm::TestResourceDescScope scope(1, 1);
   InstructionMsgList list;
   int64_t job_desc_id = NewJobDescSymbol(&list, std::make_shared<JobConfigProto>());
@@ -301,9 +322,11 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
+  DestroyNumProcessPerNode();
 }
 
 TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
+  InitNumProcessPerNode();
   vm::TestResourceDescScope scope(1, 1);
   InstructionMsgList list;
   int64_t job_desc_id = NewJobDescSymbol(&list, std::make_shared<JobConfigProto>());
@@ -377,6 +400,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
+  DestroyNumProcessPerNode();
 }
 
 }  // namespace test

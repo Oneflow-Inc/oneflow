@@ -13,9 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import os
 
 from collections import OrderedDict
 
@@ -75,25 +77,32 @@ def _test_two_stage_reduce(
     _compare_with_numpy(test_case, np_func, x, y, axis=tuple(axis))
 
 
-def test_two_stage_reduce_max(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["flow_func"] = [flow.math.two_stage_reduce_max]
-    arg_dict["np_func"] = [np.maximum.reduce]
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["axis"] = [[1], [1, 2], [1, 2, 3]]
-    arg_dict["split_axis"] = [1]
+@flow.unittest.skip_unless_1n4d()
+class TestTwoStageReduce(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_two_stage_reduce_max(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["flow_func"] = [flow.math.two_stage_reduce_max]
+        arg_dict["np_func"] = [np.maximum.reduce]
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["axis"] = [[1], [1, 2], [1, 2, 3]]
+        arg_dict["split_axis"] = [1]
 
-    for arg in GenArgList(arg_dict):
-        _test_two_stage_reduce(test_case, *arg)
+        for arg in GenArgList(arg_dict):
+            _test_two_stage_reduce(test_case, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_two_stage_reduce_min(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["flow_func"] = [flow.math.two_stage_reduce_min]
+        arg_dict["np_func"] = [np.minimum.reduce]
+        arg_dict["device_type"] = ["cpu", "gpu"]
+        arg_dict["axis"] = [[1], [1, 2], [1, 2, 3]]
+        arg_dict["split_axis"] = [1]
+
+        for arg in GenArgList(arg_dict):
+            _test_two_stage_reduce(test_case, *arg)
 
 
-def test_two_stage_reduce_min(test_case):
-    arg_dict = OrderedDict()
-    arg_dict["flow_func"] = [flow.math.two_stage_reduce_min]
-    arg_dict["np_func"] = [np.minimum.reduce]
-    arg_dict["device_type"] = ["cpu", "gpu"]
-    arg_dict["axis"] = [[1], [1, 2], [1, 2, 3]]
-    arg_dict["split_axis"] = [1]
-
-    for arg in GenArgList(arg_dict):
-        _test_two_stage_reduce(test_case, *arg)
+if __name__ == "__main__":
+    unittest.main()

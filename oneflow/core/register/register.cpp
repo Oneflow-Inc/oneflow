@@ -26,8 +26,6 @@ Regst::Regst() {
   status_.regst_desc_id = -1;
   status_.piece_id = -1;
   status_.act_id = -1;
-  status_.col_id = 0;
-  status_.max_col_id = 0;
   regst_desc_ = nullptr;
   comm_net_token_ = nullptr;
 }
@@ -36,14 +34,18 @@ Regst::~Regst() {
   if (comm_net_token_ != nullptr) { Global<CommNet>::Get()->UnRegisterMemory(comm_net_token_); }
 }
 
+Blob* Regst::GetBlobByOrdinal(int64_t ordinal) { return sorted_blob_vec_.at(ordinal).get(); }
+
 Blob* Regst::GetBlobByLbi(const LogicalBlobId& lbi) {
-  auto it = lbi2blob_.find(lbi);
-  if (it != lbi2blob_.end()) {
-    return it->second.get();
-  } else if (lbi.is_packed_id()) {
-    return packed_blob_.get();
+  const int64_t ordinal = regst_desc_->GetOrdinalForLbi(lbi);
+  if (ordinal >= 0) {
+    return sorted_blob_vec_.at(ordinal).get();
   } else {
-    return nullptr;
+    if (lbi.is_packed_id()) {
+      return packed_blob_.get();
+    } else {
+      return nullptr;
+    }
   }
 }
 
@@ -51,16 +53,22 @@ void Regst::set_regst_desc(const RtRegstDesc* regst_desc) {
   CHECK(regst_desc_ == nullptr);
   regst_desc_ = regst_desc;
   status_.regst_desc_id = regst_desc_->regst_desc_id();
+  sorted_blob_vec_.resize(regst_desc->lbi_num());
+}
+
+void Regst::SetBlobByOrdinal(int64_t ordinal, std::unique_ptr<Blob>&& blob) {
+  CHECK(!sorted_blob_vec_.at(ordinal));
+  sorted_blob_vec_.at(ordinal).swap(blob);
 }
 
 Blob* Regst::GetMutSoleBlob() {
   CHECK_EQ(GetBlobSize(), 1);
-  return lbi2blob_.begin()->second.get();
+  return sorted_blob_vec_.front().get();
 }
 
 const Blob* Regst::GetSoleBlob() const {
   CHECK_EQ(GetBlobSize(), 1);
-  return lbi2blob_.begin()->second.get();
+  return sorted_blob_vec_.front().get();
 }
 
 }  // namespace oneflow

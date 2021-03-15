@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/platform.h"
 #include <csignal>
 
-#ifdef PLATFORM_POSIX
+#ifdef __linux__
 #include <sys/sysinfo.h>
 #endif
 
@@ -64,7 +64,7 @@ double oneflow_cast(const std::string& s) {
   return ret;
 }
 
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
 // COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
 #endif
 
@@ -73,7 +73,7 @@ void AbortSignalHandler(int signal) { exit(-1); }
 COMMAND(std::signal(SIGINT, AbortSignalHandler));
 
 size_t GetAvailableCpuMemSize() {
-#ifdef PLATFORM_POSIX
+#ifdef OF_PLATFORM_POSIX
   std::ifstream mem_info("/proc/meminfo");
   CHECK(mem_info.good()) << "can't open file: /proc/meminfo";
   std::string line;

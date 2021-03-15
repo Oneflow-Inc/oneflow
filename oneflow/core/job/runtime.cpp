@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_job_descs.h"
@@ -66,7 +66,7 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   std::vector<const TaskProto*> other_tasks;
   int64_t this_machine_task_num = 0;
   for (const TaskProto& task : plan.task()) {
-    if (task.machine_id() != Global<MachineCtx>::Get()->this_machine_id()) { continue; }
+    if (task.machine_id() != GlobalProcessCtx::Rank()) { continue; }
     if (!HasNonCtrlConsumedRegstDescId(task)) {
       source_tasks.push_back(&task);
     } else {
@@ -80,36 +80,45 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   HandoutTasks(other_tasks);
   runtime_ctx->WaitUntilCntEqualZero("constructing_actor_cnt");
   LOG(INFO) << "Actors on this machine constructed";
-  OF_BARRIER();
+  OF_SESSION_BARRIER();
   LOG(INFO) << "Actors on every machine constructed";
   if (Global<CommNet>::Get()) { Global<CommNet>::Get()->RegisterMemoryDone(); }
-  OF_BARRIER();
+  OF_SESSION_BARRIER();
   runtime_ctx->NewCounter("running_actor_cnt", this_machine_task_num);
   SendCmdMsg(source_tasks, ActorCmd::kStart);
 }
 
 Runtime::~Runtime() {
   Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero("running_actor_cnt");
-  OF_BARRIER();
+  OF_SESSION_BARRIER();
   DeleteAllGlobal();
 }
 
 void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
   Global<RuntimeCtx>::New(total_piece_num, is_experiment_phase);
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()
-      && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
+  if (GlobalProcessCtx::IsThisProcessMaster() && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
+  // TODO(chengcheng)
+  // this code should be called before Runtime::NewAllGlobal, maybe after Eager ENV init
+  // and should be called before Global<Transport>::New()
   if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {
-#ifdef PLATFORM_POSIX
+#ifdef __linux__
+    // NOTE(chengcheng): Global<EpollCommNet> will new in any case.
+    // if use RDMA,
+    //   The Global<CommNet> is set allocated by new Global<IBVerbsCommNet>
+    // else,
+    //   The Global<CommNet> is set allocated by Global<EpollCommNet>
+    Global<EpollCommNet>::New();
     if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
+      // DEPRECATED
       IBVerbsCommNet::Init(plan);
 #else
       LOG(FATAL) << "RDMA components not found";
 #endif
     } else {
-      EpollCommNet::Init(plan);
+      Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
     }
 #endif
   }
@@ -131,7 +140,31 @@ void Runtime::DeleteAllGlobal() {
   Global<RegstMgr>::Delete();
   Global<MemoryAllocator>::Delete();
   Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
-  Global<CommNet>::Delete();
+
+  // should be called after Global<Transport>::Delete()
+  if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {
+#ifdef __linux__
+    if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
+#ifdef WITH_RDMA
+      CHECK(Global<EpollCommNet>::Get() != static_cast<EpollCommNet*>(Global<CommNet>::Get()));
+      // NOTE(chengcheng): it means that
+      // Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get())
+      // so the Global<CommNet> and Global<EpollCommNet> are NOT same global object
+      // then need delete both.
+      Global<CommNet>::Delete();
+#else
+      LOG(FATAL) << "RDMA components not found";
+#endif
+    } else {
+      CHECK(Global<EpollCommNet>::Get() == static_cast<EpollCommNet*>(Global<CommNet>::Get()));
+      // NOTE(chengcheng): it means that Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get())
+      // so the Global<CommNet> and Global<EpollCommNet> are same global object
+      // then only need delete once.
+    }
+    Global<EpollCommNet>::Delete();
+#endif
+  }
+
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
   Global<summary::EventsWriter>::Delete();

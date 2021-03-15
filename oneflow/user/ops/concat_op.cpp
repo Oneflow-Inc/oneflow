@@ -99,10 +99,9 @@ void GenGrapOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
 REGISTER_USER_OP("concat")
     .InputWithMinimum("in", 2)
     .Output("out")
-    .Attr("axis", UserOpAttrType::kAtInt64)
-    .Attr("max_dim_size", UserOpAttrType::kAtInt64)
+    .Attr<int64_t>("axis")
+    .Attr<int64_t>("max_dim_size")
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn(GetSbpSignature);
 
 REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn(GenGrapOp);
