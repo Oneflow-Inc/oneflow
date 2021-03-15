@@ -30,10 +30,26 @@ class TestModule(flow.unittest.TestCase):
 
     def test_identity(test_case):
         m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
-        x = flow.Tensor(3, 2)
-        print("test_identity >> input:", x.numpy())
+        input_arr = np.array(
+            [
+                [
+                    [1.0154, -1.0616943, 0.50303376],
+                    [0.29679507, 0.65562993, 1.0424724],
+                    [0.6763601, -0.24286619, -2.0873115],
+                    [-0.13371214, -0.5589277, 1.9173933],
+                ],
+                [
+                    [0.6763601, -0.24286619, -2.0873115],
+                    [-0.42980736, -0.35347632, -0.15600166],
+                    [0.29679507, 0.65562993, 1.0424724],
+                    [1.0615997, -0.59715784, 1.9855849],
+                ],
+            ],
+            dtype=np.float32,
+        )
+        x = flow.Tensor(input_arr)
         y = m(x)
-        print("test_identity >> output", y.numpy())
+        print(np.allclose(y.numpy(), y.numpy()))
 
 
 if __name__ == "__main__":
