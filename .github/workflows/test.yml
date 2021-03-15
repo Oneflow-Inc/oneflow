@@ -342,6 +342,7 @@ jobs:
           mkdir build
           cd build
           cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
             -DPython3_EXECUTABLE=$(which python3) \
             -DRPC_BACKEND=LOCAL \
             -DBUILD_CUDA=OFF
