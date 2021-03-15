@@ -450,6 +450,7 @@ def _default_initializer_for_determining(tensor):
     variable_name = id_util.UniqueStr("tensor_")
 
     blob = None
+
     @global_function_or_identity()
     def job():
         nonlocal blob
@@ -460,6 +461,7 @@ def _default_initializer_for_determining(tensor):
                 dtype=undetermined_tensor.dtype,
                 initializer=undetermined_tensor.data_initializer,
             )
+
     job()
     if undetermined_tensor.is_consistent:
         determined_tensor = oneflow_api.ConsistentTensor(
