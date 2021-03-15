@@ -341,20 +341,10 @@ jobs:
           export CPATH=/Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
           mkdir build
           cd build
-          common_flags=""
-          common_flags+=" -DPython3_EXECUTABLE=$(which python3)"
-          common_flags+=" -DRPC_BACKEND=LOCAL"
-          common_flags+=" -DCMAKE_BUILD_TYPE=Release"
-          common_flags+=" -DBUILD_CUDA=OFF"
-          cmake .. \
-            -DTHIRD_PARTY=ON -DONEFLOW=OFF \
-            $common_flags
-          make -j $(nproc)
-          cd ..
-          rm -rf build
-          mkdir build
-          cd build
-          cmake .. \
-            -DTHIRD_PARTY=OFF -DONEFLOW=ON \
-            $common_flags
+          flags=""
+          flags+=" -DPython3_EXECUTABLE=$(which python3)"
+          flags+=" -DRPC_BACKEND=LOCAL"
+          flags+=" -DCMAKE_BUILD_TYPE=Release"
+          flags+=" -DBUILD_CUDA=OFF"
+          cmake .. $flags
           make -j $(nproc)
