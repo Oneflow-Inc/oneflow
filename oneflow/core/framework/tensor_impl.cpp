@@ -47,8 +47,7 @@ Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) 
   size_t pos = machine_device_id.find(':');
   CHECK_NE_OR_RETURN(pos, std::string::npos) << "device_name: " << machine_device_id;
   std::string device_id = machine_device_id.substr(pos + 1);
-  size_t minus_pos = device_id.rfind('-');
-  CHECK_EQ_OR_RETURN(minus_pos, std::string::npos);
+  CHECK_EQ_OR_RETURN(device_id.find('-'), std::string::npos);
   CHECK_OR_RETURN(IsStrInt(device_id));
   return std::make_shared<const Device>(type, std::stoi(device_id));
 }
