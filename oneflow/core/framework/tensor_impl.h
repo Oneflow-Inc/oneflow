@@ -67,13 +67,15 @@ class TensorImpl {
   virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
 
   // Setters to be deprecated
-  virtual Maybe<void> set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
+  virtual Maybe<void> set_blob_object(
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 
  protected:
   TensorImpl() = default;
   TensorImpl(bool requires_grad, bool is_leaf, bool retain_grad)
       : requires_grad_(requires_grad), is_leaf_(is_leaf), retain_grad_(retain_grad) {}
-  Maybe<void> SyncBlobObject2Attributes(const std::shared_ptr<compatible_py::BlobObject>& blob_object);
+  Maybe<void> SyncBlobObject2Attributes(
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object);
 
   // For autograd
   std::shared_ptr<Tensor> acc_grad_;
@@ -159,7 +161,8 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   }
 
   // Setters to be deprecated
-  Maybe<void> set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
+  Maybe<void> set_blob_object(
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
     UNIMPLEMENTED();
   }
 
@@ -195,7 +198,8 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   }
 
   // Setters to be deprecated
-  Maybe<void> set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override;
+  Maybe<void> set_blob_object(
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object) override;
 
  private:
   std::shared_ptr<const Shape> shape_;
@@ -238,7 +242,8 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
   }
 
   // Setters to be deprecated
-  Maybe<void> set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
+  Maybe<void> set_blob_object(
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
     UNIMPLEMENTED();
   }
 
@@ -283,7 +288,8 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   }
 
   // Setters to be deprecated
-  Maybe<void> set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override;
+  Maybe<void> set_blob_object(
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object) override;
 
  private:
   std::shared_ptr<const Shape> shape_;

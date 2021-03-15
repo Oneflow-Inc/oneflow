@@ -58,10 +58,11 @@ std::shared_ptr<MirroredTensor> MirroredTensor::detach() const {
   return t;
 }
 
-Maybe<void> MirroredTensor::set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) { 
-  JUST(impl_->set_parallel_desc(parallel_desc)); 
+Maybe<void> MirroredTensor::set_parallel_desc(
+    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  JUST(impl_->set_parallel_desc(parallel_desc));
   return Maybe<void>::Ok();
-} 
+}
 
 std::shared_ptr<ConsistentTensor> ConsistentTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,

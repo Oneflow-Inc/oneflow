@@ -37,9 +37,7 @@ std::shared_ptr<const ParallelDesc> MakeParallelDescByDevice(const Device& devic
 
 Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {
   std::string type = parallel_desc.device_tag();
-  if (parallel_desc.device_tag() == "gpu") {
-    type = "cuda";
-  }
+  if (parallel_desc.device_tag() == "gpu") { type = "cuda"; }
   std::vector<std::string> machine_device_ids;
   for (const auto& item : parallel_desc.parallel_conf().device_name()) {
     machine_device_ids.emplace_back(item);
@@ -50,39 +48,43 @@ Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) 
   CHECK_NE_OR_RETURN(pos, std::string::npos) << "device_name: " << machine_device_id;
   std::string device_id = machine_device_id.substr(pos + 1);
   size_t minus_pos = device_id.rfind('-');
-	CHECK_EQ_OR_RETURN(minus_pos, std::string::npos);
- 	CHECK_OR_RETURN(IsStrInt(device_id));
+  CHECK_EQ_OR_RETURN(minus_pos, std::string::npos);
+  CHECK_OR_RETURN(IsStrInt(device_id));
   return std::make_shared<const Device>(type, std::stoi(device_id));
 }
 
 }  // namespace
 
-Maybe<void> TensorImpl::SyncBlobObject2Attributes(const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+Maybe<void> TensorImpl::SyncBlobObject2Attributes(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   set_shape(blob_object->op_arg_blob_attr()->shape());
-  std::shared_ptr<DType> dtype = JUST(DType::GetDTypeByDataType(static_cast<DataType>(blob_object->op_arg_blob_attr()->get_dtype())));
+  DataType data_type = static_cast<DataType>(blob_object->op_arg_blob_attr()->get_dtype());
+  const std::shared_ptr<DType>& dtype = JUST(DType::GetDTypeByDataType(data_type));
   set_dtype(dtype);
   return Maybe<void>::Ok();
 }
-
 
 void MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
   device_ = device;
   parallel_desc_ = MakeParallelDescByDevice(*device);
 }
 
-Maybe<void> MirroredTensorImpl::set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+Maybe<void> MirroredTensorImpl::set_parallel_desc(
+    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   parallel_desc_ = parallel_desc;
   device_ = JUST(MakeDeviceByParallelDesc(*parallel_desc));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerMirroredTensorImpl::set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+Maybe<void> EagerMirroredTensorImpl::set_blob_object(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   blob_object_ = blob_object;
   JUST(SyncBlobObject2Attributes(blob_object));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerConsistentTensorImpl::set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+Maybe<void> EagerConsistentTensorImpl::set_blob_object(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   blob_object_ = blob_object;
   JUST(SyncBlobObject2Attributes(blob_object));
   return Maybe<void>::Ok();

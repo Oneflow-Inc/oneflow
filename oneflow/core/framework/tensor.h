@@ -127,7 +127,8 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
 
   // Setters to be deprecated
-  virtual Maybe<void> set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
+  virtual Maybe<void> set_blob_object(
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 
  protected:
   TensorIf() = default;
@@ -181,7 +182,8 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   }
 
   // Setters to be deprecated
-  Maybe<void> set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
+  Maybe<void> set_blob_object(
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
     JUST(impl_->set_blob_object(blob_object));
     return Maybe<void>::Ok();
   }
@@ -225,8 +227,12 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { impl_->set_dtype(dtype); }
-  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) { impl_->set_parallel_desc(parallel_desc); }
-  void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) { impl_->set_distribute(distribute); }
+  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+    impl_->set_parallel_desc(parallel_desc);
+  }
+  void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) {
+    impl_->set_distribute(distribute);
+  }
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
@@ -246,7 +252,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   }
 
   // Setters to be deprecated
-  Maybe<void> set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
+  Maybe<void> set_blob_object(
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
     JUST(impl_->set_blob_object(blob_object));
     return Maybe<void>::Ok();
   }
