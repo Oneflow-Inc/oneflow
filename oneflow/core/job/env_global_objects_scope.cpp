@@ -103,7 +103,9 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitGlobalCudaDeviceProp();
 #endif
   Global<EnvDesc>::New(env_proto);
+#ifdef RPC_BACKEND_GRPC
   Global<CtrlServer>::New(JUST(GetCtrlPort(*Global<EnvDesc>::Get())));
+#endif  // RPC_BACKEND_GRPC
   Global<ProcessCtx>::New();
 // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
 // ~CtrlBootstrap.
@@ -114,7 +116,6 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #ifdef RPC_BACKEND_LOCAL
   Address* addr = Global<ProcessCtx>::Get()->add_ctrl_addr();
   addr->set_host("localhost");
-  addr->set_port(Global<CtrlServer>::Get()->port());
   Global<ProcessCtx>::Get()->set_rank(0);
   Global<ProcessCtx>::Get()->set_node_size(1);
 #endif  // RPC_BACKEND_LOCAL
@@ -144,11 +145,15 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   }
   Global<ResourceDesc, ForEnv>::Delete();
   CHECK_NOTNULL(Global<CtrlClient>::Get());
+#ifdef RPC_BACKEND_GRPC
   CHECK_NOTNULL(Global<CtrlServer>::Get());
+#endif  // RPC_BACKEND_GRPC
   CHECK_NOTNULL(Global<EnvDesc>::Get());
   Global<CtrlClient>::Delete();
   Global<ProcessCtx>::Delete();
+#ifdef RPC_BACKEND_GRPC
   Global<CtrlServer>::Delete();
+#endif  // RPC_BACKEND_GRPC
   Global<EnvDesc>::Delete();
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();

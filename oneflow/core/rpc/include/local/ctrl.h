@@ -116,22 +116,6 @@ class CtrlCall final : public CtrlCallIf {
   std::function<void()> request_handler_;
 };
 
-class CtrlServer final : public RpcServer {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CtrlServer);
-  ~CtrlServer() override {}
-
-  CtrlServer();
-  // port may be configured in bootstrap_conf
-  CtrlServer(int ctrl_port);
-
-  int64_t port() const { return port_; }
-
- private:
-  void OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call);
-  int port_;
-};
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_RPC_INCLUDE_LOCAL_CTRL_

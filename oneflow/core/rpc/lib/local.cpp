@@ -29,15 +29,9 @@ CtrlClient::CtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx
   CHECK(process_ctx.node_size() == 1);
 }
 
-CtrlServer::CtrlServer(int /* ctrl_port */) : RpcServer() {}
-
-CtrlServer::CtrlServer() : CtrlServer(0) {}
-
 void RpcClient::Barrier(const std::string& barrier_name) {
   Barrier(barrier_name, Global<EnvDesc>::Get()->TotalMachineNum());
 }
-
-void CtrlServer::OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) { call->SendResponse(); }
 
 void RpcClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
   CHECK(barrier_num == 1);
