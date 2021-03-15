@@ -83,27 +83,6 @@ class RpcClient : RpcClientBase {
   std::condition_variable kv_cv_;
 };
 
-class RpcServer : RpcServerBase {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(RpcServer);
-  virtual ~RpcServer();
-
- protected:
-  RpcServer() {}
-  void HandleRpcs();
-  void Init();
-
-  void EnqueueRequests() {}
-
-  std::thread loop_thread_;
-  // TryLock, NotifyDone, WaitUntilDone
-  HashMap<std::string, void*> name2lock_status_;
-  // PushKV, ClearKV, PullKV
-  HashMap<std::string, std::string> kv_;
-  // IncreaseCount, EraseCount
-  HashMap<std::string, int32_t> count_;
-};
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_RPC_INCLUDE_LOCAL_RPC_

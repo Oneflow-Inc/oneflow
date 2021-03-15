@@ -142,12 +142,6 @@ int32_t RpcClient::IncreaseCount(const std::string& k, int32_t v) { UNIMPLEMENTE
 
 void RpcClient::EraseCount(const std::string& k) { UNIMPLEMENTED(); }
 
-RpcServer::~RpcServer() {}
-
-void RpcServer::HandleRpcs() { UNIMPLEMENTED(); }
-
-void RpcServer::Init() { UNIMPLEMENTED(); }
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_RPC_LIB_LOCAL_
