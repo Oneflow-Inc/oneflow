@@ -47,6 +47,7 @@ class Operator {
 
   //
   void Init(const OperatorConf& op_conf);
+  void Init(std::shared_ptr<const OperatorConf> op_conf);
   virtual void InitFromOpConf() = 0;
 
   virtual LogicalNode* NewProperLogicalNode() const;
@@ -58,6 +59,7 @@ class Operator {
   const std::string& op_name() const { return op_conf().name(); }
   DeviceType device_type() const;
   const OperatorConf& op_conf() const;
+  std::shared_ptr<const OperatorConf> shared_op_conf() const;
   const PbMessage& GetCustomizedConf() const {
     return GetMessageInPbMessage(op_conf(), op_conf().op_type_case());
   }
@@ -83,6 +85,7 @@ class Operator {
   const PbRpf<std::string>& input_output_bns() const;
 
   Maybe<void> FillOpParallelDesc(const ParallelDesc& parallel_desc);
+  Maybe<void> FillOpParallelDesc(std::shared_ptr<const ParallelDesc> parallel_desc);
   Maybe<const ParallelDesc> GetOpParallelDesc() const;
 
   Maybe<void> InferParallelSignatureIf();
@@ -288,10 +291,7 @@ class Operator {
     return arg_signature_.mutable_bn_in_op2lbi();
   }
 
-  virtual void EmplaceLbi2Obn(const LogicalBlobId& lbi, const std::string& obn);
-
-  std::unique_ptr<const OperatorConf> op_conf_;
-  HashMap<LogicalBlobId, std::string> lbi2obn_;
+  std::shared_ptr<const OperatorConf> op_conf_;
   std::shared_ptr<const ParallelDesc> op_parallel_desc_;
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const ParallelDesc>>> bn2parallel_desc_;
   std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>> input_index2logical_blob_desc_;
