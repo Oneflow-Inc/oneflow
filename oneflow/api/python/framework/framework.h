@@ -50,8 +50,6 @@ inline Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RegisterBoxingUtilOnlyOnce(const std::shared_ptr<ForeignBoxingUtil>& boxing_util);
-
 inline Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
