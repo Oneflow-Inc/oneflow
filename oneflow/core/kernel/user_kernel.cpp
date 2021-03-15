@@ -168,7 +168,12 @@ class UserKernelOpInferContext : public user_op::InferContext {
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         job_desc_(job_desc),
         parallel_ctx_(kernel_conf.parallel_ctx()),
-        sbp_signature_(kernel_conf.op_attribute().sbp_signature()) {
+        parallel_distribution_signature_(
+            kernel_conf.op_attribute().parallel_distribution_signature()),
+        parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
+    if (kernel_conf.op_attribute().has_sbp_signature()) {
+      sbp_signature_ = kernel_conf.op_attribute().sbp_signature();
+    }
     auto InitTensorDesc = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                               ArgVec* arg_vec) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
@@ -220,15 +225,25 @@ class UserKernelOpInferContext : public user_op::InferContext {
     return job_desc_;
   }
   const ParallelContext& parallel_ctx() const override { return parallel_ctx_; };
+  const ParallelDesc& parallel_desc() const override { return parallel_desc_; }
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                  int32_t index) const override {
+    CHECK_EQ(parallel_desc_.hierarchy()->NumAxes(), 1);
     const auto& bn2sbp = sbp_signature_.bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2sbp.find(bn);
     CHECK(it != bn2sbp.end());
     return it->second;
   }
-
+  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
+                                                                   int32_t index) const override {
+    const auto& bn2parallel_distribution =
+        parallel_distribution_signature_.bn_in_op2parallel_distribution();
+    std::string bn = GenRepeatedBn(arg_name, index);
+    auto it = bn2parallel_distribution.find(bn);
+    CHECK(it != bn2parallel_distribution.end());
+    return it->second;
+  }
   void UpdateArg2TensorDesc(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     for (auto& pair : arg2tensor_desc_) {
       const auto& arg_pair = pair.first;
@@ -255,6 +270,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
   ArgVec outputs_;
   ParallelContext parallel_ctx_;
   SbpSignature sbp_signature_;
+  ParallelDistributionSignature parallel_distribution_signature_;
+  ParallelDesc parallel_desc_;
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::TensorDesc>> arg2tensor_desc_;
   HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2logical_tensor_desc_;
 };

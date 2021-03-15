@@ -76,10 +76,15 @@ class Tensor {
   virtual bool requires_grad() const = 0;
   virtual bool is_leaf() const = 0;
   virtual bool retain_grad() const = 0;
+  virtual const std::shared_ptr<const FunctionNode>& grad_fn_node() const = 0;
+  virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
+  virtual const std::shared_ptr<TensorArg>& now_grad_arg() const = 0;
 
   // Setters for autograd
   virtual void set_requires_grad(bool requires_grad) = 0;
   virtual void set_retain_grad(bool retain_grad) = 0;
+  virtual void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) = 0;
+  virtual void set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
 
  protected:
   Tensor() = default;
@@ -102,9 +107,7 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   // Getters for autograd
   // acc_grad is tensor's accumulated grad in more than once backward operation,
   // and now_grad_arg is temporary grad to shared data with different FunctionNode
-  virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
-  virtual const std::shared_ptr<TensorArg>& now_grad_arg() const = 0;
-  const std::shared_ptr<const FunctionNode>& grad_fn_node() const { return grad_fn_node_; }
+  const std::shared_ptr<const FunctionNode>& grad_fn_node() const override { return grad_fn_node_; }
   // used by pybind11 only
   Maybe<DerivedT> api_acc_grad() const {
     if (acc_grad()) { return std::shared_ptr<DerivedT>(); }
@@ -114,8 +117,7 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   }
 
   // Setters for autograd
-  virtual void set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
-  void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) {
+  void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) override {
     grad_fn_node_ = grad_fn_node;
   }
 
@@ -150,6 +152,8 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
+  std::shared_ptr<MirroredTensor> data() const;
+  std::shared_ptr<MirroredTensor> detach() const;
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
@@ -206,6 +210,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
+  std::shared_ptr<ConsistentTensor> data() const;
+  std::shared_ptr<ConsistentTensor> detach() const;
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
