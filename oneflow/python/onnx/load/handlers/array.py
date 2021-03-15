@@ -163,14 +163,7 @@ class Expand(BackendHandler):
 @flow_func(array_ops.transpose)
 class Transpose(BackendHandler):
     @classmethod
-    def _common(cls, node, tensor_dict, **kwargs):
-        axes = node.attrs.pop("axes")
-        if len(axes) != 1:
-            x = tensor_dict[node.input_tensor_names[0]]
-            for axis in sorted(axes):
-                x = array_ops.expand_dims(x, axis=axis)
-            return x
-        node.attrs["axis"] = axes[0]
+    def version_1(cls, node, tensor_dict, **kwargs):
         return cls.run_onnx_node(node, tensor_dict, **kwargs)
 
 
