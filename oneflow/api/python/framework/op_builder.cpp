@@ -18,7 +18,6 @@ limitations under the License.
 #include <pybind11/functional.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/framework/user_op_attr.cfg.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 
@@ -54,10 +53,8 @@ std::shared_ptr<one::OpBuilder> OpBuilder_Output(const std::shared_ptr<one::OpBu
 
 std::shared_ptr<one::OpBuilder> OpBuilder_Attr(const std::shared_ptr<one::OpBuilder>& builder,
                                                const std::string& attr_name,
-                                               const std::shared_ptr<cfg::AttrValue>& attr_value) {
-  AttrValue pb_attr_value;
-  attr_value->ToProto(&pb_attr_value);
-  builder->MaybeAttr(attr_name, pb_attr_value).GetOrThrow();
+                                               const cfg::AttrValue& attr_value) {
+  builder->MaybeAttr(attr_name, attr_value).GetOrThrow();
   return builder;
 }
 

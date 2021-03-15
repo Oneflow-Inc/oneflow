@@ -19,6 +19,7 @@ limitations under the License.
 #include <string>
 
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/user_op_attr.cfg.h"
 
 namespace oneflow {
 namespace one {
@@ -50,8 +51,8 @@ class OpBuilder {
   OpBuilder& Output(const std::string& output_name);
   OpBuilder& Output(const std::string& output_name, const int count);
 
-  Maybe<OpBuilder&> MaybeAttr(const std::string& attr_name, const AttrValue& attr_value);
-  OpBuilder& Attr(const std::string& attr_name, const AttrValue& attr_value);
+  Maybe<OpBuilder&> MaybeAttr(const std::string& attr_name, const cfg::AttrValue& attr_value);
+  OpBuilder& Attr(const std::string& attr_name, const cfg::AttrValue& attr_value);
 
   // TODO(): Set attribute from primitive type.
   // template <typename T>
