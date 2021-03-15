@@ -267,7 +267,7 @@ class InferenceSession(object):
             self.config_proto_.resource
         )
         scope = scope_util.MakeInitialScope(
-            job_conf, *tag_and_dev_ids, self.is_mirrored_
+            job_conf, *tag_and_dev_ids, None, self.is_mirrored_
         )
 
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):

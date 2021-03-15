@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
@@ -30,8 +31,9 @@ class OpExpr {
  public:
   DEFINE_DEFAULT_CONSTRUCTOR(OpExpr);
 
-  virtual std::shared_ptr<OpExpr> GetBackwardOpExpr() const = 0;
   virtual std::string type() const = 0;
+  virtual int input_num() const = 0;
+  virtual int output_num() const = 0;
 };
 
 class BuiltinOpExpr : public OpExpr {
@@ -45,8 +47,8 @@ class BuiltinOpExpr : public OpExpr {
 
   const std::string& op_name() const { return op_name_; }
 
-  int input_num() const { return indexed_ibns_.size(); }
-  int output_num() const { return indexed_obns_.size(); }
+  int input_num() const override { return indexed_ibns_.size(); }
+  int output_num() const override { return indexed_obns_.size(); }
 
   const std::vector<std::string>& indexed_ibns() const { return indexed_ibns_; }
   const std::vector<std::string>& indexed_obns() const { return indexed_obns_; }
@@ -70,8 +72,6 @@ class BuiltinOpExpr : public OpExpr {
                             const std::vector<std::string>& indexed_ibns,       \
                             const std::vector<std::string>& indexed_obns)       \
         : BuiltinOpExpr(op_name, indexed_ibns, indexed_obns), proto_(proto) {}  \
-                                                                                \
-    std::shared_ptr<OpExpr> GetBackwardOpExpr() const override;                 \
                                                                                 \
     std::string type() const override { return std::string(#_op_name); }        \
                                                                                 \
@@ -103,9 +103,10 @@ class FunctionOpExpr : public OpExpr {
  public:
   DEFINE_DEFAULT_CONSTRUCTOR(FunctionOpExpr);
 
-  std::shared_ptr<OpExpr> GetBackwardOpExpr() const override;
-
   std::string type() const override { return "FunctionOp"; }
+
+  int input_num() const override { UNIMPLEMENTED(); }
+  int output_num() const override { UNIMPLEMENTED(); }
 };
 
 }  // namespace one

@@ -36,7 +36,7 @@ struct ShapeExportUtil final {
     } else if (py::isinstance<py::tuple>(py_obj)) {
       return MakeShape(py_obj.cast<py::tuple>()).GetPtrOrThrow();
     } else if (py::isinstance<py::list>(py_obj)) {
-      return MakeShape(py::tuple(py_obj.cast<py::tuple>())).GetPtrOrThrow();
+      return MakeShape(py::tuple(py_obj.cast<py::list>())).GetPtrOrThrow();
     } else {
       throw py::type_error("Input must be Tuple, List or oneflow.Size");
     }

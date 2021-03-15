@@ -27,7 +27,7 @@ import oneflow_api
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.ops import parallel_cast
 from oneflow.python.framework.tensor import Tensor
-from oneflow.python.nn.modules.utils import _wrapper, global_function_or_identity
+from oneflow.python.nn.modules.utils import global_function_or_identity
 from oneflow.python.ops.get_variable import api_get_variable as get_variable
 from oneflow.python.ops import initializer_util
 
@@ -120,8 +120,8 @@ class Module(object):
         raise NotImplementedError()
 
     def __call__(self, *args):
-        if hasattr(self, "_op") and isinstance(self._op, oneflow_api.one.UserOpExpr):
-            self._op = _wrapper(self._op)
+        # if hasattr(self, "_op") and isinstance(self._op, oneflow_api.one.UserOpExpr):
+        # self._op = _wrapper(self._op)
 
         for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args)

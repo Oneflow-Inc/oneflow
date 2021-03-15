@@ -89,8 +89,14 @@ class ScopeSymbol(Symbol):
         return self.BuildBySetter(instruction_builder, SetScopeProto)
 
     def BuildWithNewParallelConf(self, instruction_builder, parallel_conf):
-        tag_and_dev_ids = oneflow_api.GetDeviceTagAndMachineDeviceIds(parallel_conf)
-        return self.BuildWithNewParallelDesc(instruction_builder, *tag_and_dev_ids)
+        (
+            device_tag,
+            machine_device_ids,
+            hierarchy,
+        ) = oneflow_api.GetDeviceTagAndMachineDeviceIdsAndHierarchy(parallel_conf)
+        return self.BuildWithNewParallelDesc(
+            instruction_builder, device_tag, machine_device_ids
+        )
 
     def BuildWithNewIsMirrored(self, instruction_builder, is_mirrored):
         def SetScopeProto(scope_proto):

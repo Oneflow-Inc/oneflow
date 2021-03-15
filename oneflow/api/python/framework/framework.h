@@ -38,23 +38,22 @@ limitations under the License.
 
 namespace oneflow {
 
-inline Maybe<void> RegisterForeignCallbackOnlyOnce(ForeignCallback* callback) {
-  CHECK_ISNULL_OR_RETURN(Global<ForeignCallback>::Get()) << "foreign callback registered";
-  Global<ForeignCallback>::SetAllocated(callback);
+inline Maybe<void> RegisterForeignCallbackOnlyOnce(
+    const std::shared_ptr<ForeignCallback>& callback) {
+  CHECK_ISNULL_OR_RETURN(Global<std::shared_ptr<ForeignCallback>>::Get())
+      << "foreign callback registered";
+  Global<std::shared_ptr<ForeignCallback>>::New(callback);
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
-  CHECK_ISNULL_OR_RETURN(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
-  Global<ForeignWatcher>::SetAllocated(watcher);
+inline Maybe<void> RegisterWatcherOnlyOnce(const std::shared_ptr<ForeignWatcher>& watcher) {
+  CHECK_ISNULL_OR_RETURN(Global<std::shared_ptr<ForeignWatcher>>::Get())
+      << "foreign watcher registered";
+  Global<std::shared_ptr<ForeignWatcher>>::New(watcher);
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> RegisterBoxingUtilOnlyOnce(ForeignBoxingUtil* boxing_util) {
-  CHECK_ISNULL_OR_RETURN(Global<ForeignBoxingUtil>::Get()) << "Foreign Boxing util registered.";
-  Global<ForeignBoxingUtil>::SetAllocated(boxing_util);
-  return Maybe<void>::Ok();
-}
+Maybe<void> RegisterBoxingUtilOnlyOnce(const std::shared_ptr<ForeignBoxingUtil>& boxing_util);
 
 inline Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
