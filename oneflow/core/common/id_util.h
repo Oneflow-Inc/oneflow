@@ -142,8 +142,8 @@ class MemZoneId {
       (device_index_t{1} << kDeviceIndexBits) - device_index_t{1};
 
   MemZoneId() {
-    device_type_ = DeviceType::kCPU;
-    device_index_ = kCPUDeviceIndex;
+    device_type_ = DeviceType::kInvalidDevice;
+    device_index_ = -1;
   }
   MemZoneId(DeviceType device_type, device_index_t device_index)
       : device_type_(device_type), device_index_(device_index) {

@@ -561,7 +561,8 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
           CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii);
       const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
       if (calc >= available) {
-        const std::string device_tag = *JUST(DeviceTag4DeviceType(DeserializeMemZoneIdFromInt64(mem_zone_id).device_type()));
+        const std::string device_tag =
+            *JUST(DeviceTag4DeviceType(DeserializeMemZoneIdFromInt64(mem_zone_id).device_type()));
         return Error::MemoryZoneOutOfMemoryError(machine_id, mem_zone_id, calc, available,
                                                  device_tag)
                << "OOM detected at compile time. ";
