@@ -211,7 +211,8 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   // task node
   for (const TaskProto& task_proto : plan.task()) {
     std::string node_def = "task" + std::to_string(task_proto.task_id()) + "[label=\"{{";
-    // node_def += "<task_node_" + std::to_string(task_proto.task_id()) + ">";
+    node_def += std::to_string(task_proto.task_id()) + ":" + std::to_string(task_proto.machine_id())
+                + "\\n";
     std::string op_name = "";
     for (const ExecNodeProto& exec_node : task_proto.exec_sequence().exec_node()) {
       op_name += (exec_node.kernel_conf().op_attribute().op_conf().name());

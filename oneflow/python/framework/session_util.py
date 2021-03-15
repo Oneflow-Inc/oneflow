@@ -416,6 +416,7 @@ class Session(object):
         self.running_job_cnt_ -= 1
         self.cond_var_.notify()
         self.cond_var_.release()
+        print("_DecRunningJobCnt: ", self.running_job_cnt_)
 
 
 @oneflow_export("find_or_create_module")

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #ifdef __linux__
 
+#include <cstdlib>
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "glog/logging.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -90,6 +91,7 @@ EpollCommNet::~EpollCommNet() {
 }
 
 void EpollCommNet::RegisterMemoryDone() {
+  LOG(ERROR) << "EpollCommNet::RegisterMemoryDone()";
   // do nothing
 }
 
@@ -155,8 +157,9 @@ void EpollCommNet::InitSockets() {
                                                      : (this_listen_port)));
   } else {
     for (this_listen_port = 1024; this_listen_port < GetMaxVal<uint16_t>(); ++this_listen_port) {
-      if (SockListen(listen_sockfd, this_listen_port, total_machine_num) == 0) {
-        PushPort(this_machine_id, this_listen_port);
+      int32_t random_port = (rand() % (GetMaxVal<uint16_t>() - 1024 + 1) + 1024);
+      if (SockListen(listen_sockfd, random_port, total_machine_num) == 0) {
+        PushPort(this_machine_id, random_port);
         break;
       }
     }
@@ -172,6 +175,8 @@ void EpollCommNet::InitSockets() {
     }
     uint16_t peer_port = PullPort(peer_id);
     auto peer_machine = Global<ResourceDesc, ForSession>::Get()->machine(peer_id);
+    LOG(ERROR) << "Peer adddr: " << (peer_machine.addr())
+               << ", Peerport: " << std::to_string(peer_port);
     sockaddr_in peer_sockaddr = GetSockAddr(peer_machine.addr(), peer_port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     const int val = 1;
@@ -188,6 +193,12 @@ void EpollCommNet::InitSockets() {
     socklen_t len = sizeof(peer_sockaddr);
     int sockfd = accept(listen_sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), &len);
     PCHECK(sockfd != -1);
+    if (sockfd != -1) {
+      LOG(ERROR) << std::string("worker ") + std::to_string(this_machine_id)
+                        + " accept a connection success. ip: "
+                        + std::string(inet_ntoa(peer_sockaddr.sin_addr))
+                        + ", prot: " + std::to_string(peer_sockaddr.sin_port);
+    }
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
     int64_t peer_machine_id = GetMachineId(peer_sockaddr);
     machine_id2sockfd_[peer_machine_id] = sockfd;

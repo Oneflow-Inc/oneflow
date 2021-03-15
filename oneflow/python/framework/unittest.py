@@ -15,6 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
+import getpass
 import imp
 import inspect
 import os
@@ -155,10 +156,14 @@ _unittest_env_initilized = False
 _unittest_worker_initilized = False
 
 
+def _SystemCall(cmd):
+    print(cmd, flush=True)
+    subprocess.check_call(cmd, shell=True)
+
+
 @oneflow_export("unittest.TestCase")
 class TestCase(unittest.TestCase):
     def setUp(self):
-        print("\n*********************")
         global _unittest_env_initilized
         global _unittest_worker_initilized
         if has_node_list():
@@ -242,36 +247,104 @@ class TestCase(unittest.TestCase):
                     len(env_proto.machine) == 1
                     and env_proto.HasField("ctrl_bootstrap_conf") == 1
                 )
-                print(env_proto)
-                _log_dir = "./log"
-                if not os.path.exists(_log_dir):
-                    os.makedirs(_log_dir)
+                # _log_dir = "./log"
+                # if not os.path.exists(_log_dir):
+                #     os.makedirs(_log_dir)
+                run_dir = os.getenv("HOME") + "/oneflow_temp/"
+                run_dir = os.path.abspath(os.path.expanduser(run_dir))
+                ssh_port_arg = " -p {} ".format(22)
+                scp_port_arg = " -P {} ".format(22)
+                ssh_prefix = (
+                    "ssh {}".format(ssh_port_arg)
+                    + getpass.getuser()
+                    + "@"
+                    + "127.0.0.1"
+                    + " "
+                )
+                _SystemCall(ssh_prefix + '"mkdir -p ' + run_dir + '"')
                 for rank in range(1, config_world_size):
                     worker_env_proto = EnvProto()
                     worker_env_proto.CopyFrom(env_proto)
                     worker_env_proto.ctrl_bootstrap_conf.rank = rank
                     worker_env_proto.cpp_logging_conf.log_dir = (
-                        env_proto.cpp_logging_conf.log_dir + "/log_" + str(rank)
+                        env_proto.cpp_logging_conf.log_dir + "_" + str(rank)
                     )
                     env_file = NamedTemporaryFile(delete=False)
-                    print(worker_env_proto)
                     if sys.version_info >= (3, 0):
                         env_file.write(pbtxt.MessageToString(worker_env_proto).encode())
                     else:
                         env_file.write(pbtxt.MessageToString(worker_env_proto))
                     env_file.close()
-                    shutil.copy(
-                        env_file.name, _log_dir + "/env_proto_" + str(rank) + ".proto",
+                    # if not os.path.exists(worker_env_proto.cpp_logging_conf.log_dir):
+                    #     os.makedirs(worker_env_proto.cpp_logging_conf.log_dir)
+                    # shutil.copy(
+                    #     env_file.name,
+                    #     worker_env_proto.cpp_logging_conf.log_dir
+                    #     + "/env_proto_"
+                    #     + str(rank)
+                    #     + ".proto",
+                    # )
+
+                    remote_file_prefix = (
+                        " " + getpass.getuser() + "@" + "127.0.0.1" + ":"
                     )
-                    subprocess.Popen(
-                        oneflow_worker_path
+                    oneflow_cmd = (
+                        '"nohup '
+                        + oneflow_worker_path
                         + " -env_proto="
-                        + _log_dir
+                        + worker_env_proto.cpp_logging_conf.log_dir
                         + "/env_proto_"
                         + str(rank)
-                        + ".proto",
-                        shell=True,
+                        + ".proto"
+                        + ' 1>/dev/null 2>&1 </dev/null & "'
                     )
+                    _SystemCall(
+                        ssh_prefix + '"mkdir -p ' + run_dir + "/log_" + str(rank) + '"'
+                    )
+                    _SystemCall(
+                        "scp {}".format(scp_port_arg)
+                        + env_file.name
+                        + remote_file_prefix
+                        + run_dir
+                        + "/log_"
+                        + str(rank)
+                        + "/env_proto_"
+                        + str(rank)
+                        + ".proto"
+                    )
+                    _SystemCall(
+                        "scp {}".format(scp_port_arg)
+                        + oneflow_worker_path
+                        + remote_file_prefix
+                        + run_dir
+                        + "/log_"
+                        + str(rank)
+                        + "/oneflow_worker"
+                    )
+                    oneflow_cmd = (
+                        '"cd '
+                        + run_dir
+                        + "/log_"
+                        + str(rank)
+                        + "; "
+                        + "nohup ./oneflow_worker "
+                        + "-env_proto=./"
+                        + "env_proto_"
+                        + str(rank)
+                        + ".proto "
+                        + ' 1>/dev/null 2>&1 </dev/null & "'
+                    )
+                    _SystemCall(ssh_prefix + oneflow_cmd)
+                    # subprocess.Popen(
+                    #     oneflow_worker_path
+                    #     + " -env_proto="
+                    #     + worker_env_proto.cpp_logging_conf.log_dir
+                    #     + "/env_proto_"
+                    #     + str(rank)
+                    #     + ".proto",
+                    #     shell=True,
+                    # )
+                    # subprocess.check_call(ssh_prefix + oneflow_cmd, shell=True)
                     os.remove(env_file.name)
 
         log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
@@ -304,6 +377,11 @@ def skip_unless_1n1d():
 @oneflow_export("unittest.skip_unless_1n2d")
 def skip_unless_1n2d():
     return skip_unless(1, 2)
+
+
+@oneflow_export("unittest.skip_unless_1n3d")
+def skip_unless_1n3d():
+    return skip_unless(1, 3)
 
 
 @oneflow_export("unittest.skip_unless_1n4d")
