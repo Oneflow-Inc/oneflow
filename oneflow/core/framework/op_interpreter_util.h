@@ -32,16 +32,16 @@ class OpInterpUtil {
  public:
   static Maybe<OpExprInterpreter> GetOrCreateInterpreter();
 
-  static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr* op_expr);
+  static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr);
 
   static Maybe<cfg::OpAttribute> AddBuiltinOpAndInferOpAttribute(
       const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled);
 
   static Maybe<cfg::OpAttribute> AddBuiltinOpAndInferOpAttribute(
-      const BuiltinOpExpr* op_expr, const std::shared_ptr<Scope>& scope,
+      const BuiltinOpExpr& op_expr, const std::shared_ptr<Scope>& scope,
       const bool is_mirrored_strategy_enabled);
 
-  static Maybe<cfg::OpAttribute> InferOpAttribute(const BuiltinOpExpr* op_expr,
+  static Maybe<cfg::OpAttribute> InferOpAttribute(const BuiltinOpExpr& op_expr,
                                                   const std::shared_ptr<Scope>& scope,
                                                   const TensorTuple& inputs);
 
