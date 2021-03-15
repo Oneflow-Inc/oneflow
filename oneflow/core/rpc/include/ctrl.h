@@ -22,7 +22,7 @@ limitations under the License.
 #endif  // RPC_BACKEND_GRPC
 
 #ifdef RPC_BACKEND_LOCAL
-#include "oneflow/core/rpc/include/local/ctrl.h"
+#include "oneflow/core/rpc/include/local.h"
 #endif  // RPC_BACKEND_LOCAL
 
 #endif  // ONEFLOW_CORE_RPC_INCLUDE_CTRL_

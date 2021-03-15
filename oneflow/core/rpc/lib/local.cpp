@@ -18,7 +18,7 @@ limitations under the License.
 #define ONEFLOW_CORE_RPC_LIB_LOCAL_
 #include "glog/logging.h"
 #include "oneflow/core/job/env_desc.h"
-#include "oneflow/core/rpc/include/local/ctrl.h"
+#include "oneflow/core/rpc/include/local.h"
 
 namespace oneflow {
 

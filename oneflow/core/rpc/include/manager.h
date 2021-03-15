@@ -10,7 +10,9 @@ class RpcManager {
   virtual void CreateServer() {}
   virtual void CreateClient() {}
   virtual void Bootstrap() {}
+  virtual void TearDown() {}
 };
 
 }  // namespace oneflow
+
 #endif  // ONEFLOW_CORE_RPC_INCLUDE_MANAGER_H_

@@ -77,6 +77,10 @@ class CtrlCallIf {
  private:
 };
 
+class RpcClientBase {};
+
+class RpcServerBase {};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_RPC_INCLUDE_BASE_CTRL_
