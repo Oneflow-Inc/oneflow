@@ -35,43 +35,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-namespace {
-
-Maybe<Tensor> BuildTensorFromAttr(
-    const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
-    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
-    const bool is_lazy) {
-  const auto& dtype = JUST(DType::GetDTypeByDataType(DataType(blob_attr->get_dtype())));
-  if (parallel_attr->is_mirrored()) {
-    // TOOD(hjchen2): Use the right device.
-    return static_cast<std::shared_ptr<Tensor>>(
-        MirroredTensor::MakeTensor(blob_attr->shape(), dtype, std::make_shared<Device>("cpu", 0),
-                                   is_lazy, /*requires_grad=*/false, /*is_leaf=*/false,
-                                   /*retain_grad=*/false));
-  } else {
-    const auto& distribute =
-        compatible_py::MakeDistribute(*(parallel_attr->sbp_parallel())).GetPtrOrThrow();
-    return static_cast<std::shared_ptr<Tensor>>(ConsistentTensor::MakeTensor(
-        blob_attr->shape(), dtype, distribute, parallel_attr->parallel_desc_symbol(), is_lazy,
-        /*requires_grad=*/false, /*is_leaf=*/false, /*retain_grad=*/false));
-  }
-}
-
-Maybe<Tensor> BuildTensorFromBlobObject(
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  const auto& blob_attr = blob_object->op_arg_blob_attr();
-  const auto& parallel_attr = blob_object->op_arg_parallel_attr();
-  const auto& tensor = JUST(BuildTensorFromAttr(blob_attr, parallel_attr, /*is_lazy=*/false));
-  if (parallel_attr->is_mirrored()) {
-    dynamic_cast<MirroredTensor*>(tensor.get())->set_blob_object(blob_object);
-  } else {
-    dynamic_cast<ConsistentTensor*>(tensor.get())->set_blob_object(blob_object);
-  }
-  return tensor;
-}
-
-}  // namespace
-
 void OpExprInterpreter::ResetState() { state_.reset(new OpExprInterpState); }
 
 Maybe<void> LazyInterpreter::Apply(const OpExpr* op_expr, const TensorTuple& inputs,
@@ -89,6 +52,26 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr* op_expr, const TensorTuple& inp
 
   CHECK_OR_RETURN(false) << "The type " << op_expr->type()
                          << " has not been supported in LazyInterpreter::Apply.";
+}
+
+static Maybe<Tensor> BuildTensorFromAttribute(
+    const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
+    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
+    const bool is_lazy) {
+  const auto& dtype = JUST(DType::GetDTypeByDataType(DataType(blob_attr->get_dtype())));
+  if (parallel_attr->is_mirrored()) {
+    // TOOD(hjchen2): Use the right device.
+    return static_cast<std::shared_ptr<Tensor>>(
+        MirroredTensor::MakeTensor(blob_attr->shape(), dtype, std::make_shared<Device>("cpu", 0),
+                                   is_lazy, /*requires_grad=*/false, /*is_leaf=*/false,
+                                   /*retain_grad=*/false));
+  } else {
+    const auto& distribute =
+        compatible_py::MakeDistribute(*(parallel_attr->sbp_parallel())).GetPtrOrThrow();
+    return static_cast<std::shared_ptr<Tensor>>(ConsistentTensor::MakeTensor(
+        blob_attr->shape(), dtype, distribute, parallel_attr->parallel_desc_symbol(), is_lazy,
+        /*requires_grad=*/false, /*is_leaf=*/false, /*retain_grad=*/false));
+  }
 }
 
 Maybe<void> LazyInterpreter::Apply_(const BuiltinOpExpr* op_expr, const TensorTuple& inputs,
@@ -123,9 +106,9 @@ Maybe<void> LazyInterpreter::Apply_(const BuiltinOpExpr* op_expr, const TensorTu
         compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, proto_op_attribute, obn));
     const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(proto_op_attribute, obn));
     if (!(outputs[i].get())) {
-      outputs[i] = JUST(BuildTensorFromAttr(blob_attr, parallel_attr, /*is_lazy=*/true));
+      outputs[i] = JUST(BuildTensorFromAttribute(blob_attr, parallel_attr, /*is_lazy=*/true));
     } else {
-      // TODO(hjchen2) Set shape, dtype, ...
+      // TODO(hjchen2) Reset shape, dtype and so on.
     }
     TensorNameScope::Global()->Record(outputs[i], op_expr->op_name() + "/" + obn);
   }
@@ -161,6 +144,19 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr* op_expr, const TensorTuple& in
 
   CHECK_OR_RETURN(false) << "The type " << op_expr->type()
                          << " has not been supported in EagerInterpreter::Apply.";
+}
+
+static Maybe<Tensor> BuildTensorFromBlobObject(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+  const auto& blob_attr = blob_object->op_arg_blob_attr();
+  const auto& parallel_attr = blob_object->op_arg_parallel_attr();
+  const auto& tensor = JUST(BuildTensorFromAttribute(blob_attr, parallel_attr, /*is_lazy=*/false));
+  if (parallel_attr->is_mirrored()) {
+    dynamic_cast<MirroredTensor*>(tensor.get())->set_blob_object(blob_object);
+  } else {
+    dynamic_cast<ConsistentTensor*>(tensor.get())->set_blob_object(blob_object);
+  }
+  return tensor;
 }
 
 static Maybe<void> NaiveInterpret(const BuiltinOpExpr* op_expr, const TensorTuple& inputs,
@@ -216,7 +212,7 @@ Maybe<void> EagerInterpreter::Apply_(const VariableOpExpr* op_expr, const Tensor
       std::make_shared<ParallelDesc>(scope->device_parallel_desc_symbol()->parallel_conf());
   const auto& parallel_attr =
       JUST(compatible_py::GetOpArgParallelAttribute(parallel_desc, proto_op_attribute, "out"));
-  outputs[0] = JUST(BuildTensorFromAttr(blob_attr, parallel_attr, /*is_lazy=*/false));
+  outputs[0] = JUST(BuildTensorFromAttribute(blob_attr, parallel_attr, /*is_lazy=*/false));
   return OpInterpUtil::InitVariableOutputBlob(session, outputs[0], proto_op_attribute);
 }
 
