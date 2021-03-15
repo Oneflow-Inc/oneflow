@@ -387,8 +387,17 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
     if (iter == chain_id2node.end()) {
       CHECK(chain_id2node.emplace(chain_id, node).second);
     } else {
-      iter->second->BuildCtrlRegstDescIfNeed(node);
-      iter->second = node;
+      TaskNode* src_node = iter->second;
+      TaskNode* dst_node = node;
+      std::string ctrl_regst_name;
+      bool build_ctrl_edge = src_node->BuildCtrlRegstDescIfNeed(dst_node, &ctrl_regst_name);
+      if (build_ctrl_edge) {
+        CHECK(!ctrl_regst_name.empty());
+        TaskEdge* edge = NewEdge();
+        Connect<TaskNode>(src_node, edge, dst_node);
+        src_node->BindEdgeWithProducedRegst(edge, ctrl_regst_name);
+      }
+      iter->second = dst_node;
     }
   }
 }
