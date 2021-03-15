@@ -70,12 +70,6 @@ class JobBuilder final {
   const SbpSignature& SbpSignature4OpName(const std::string& op_name) const;
   void AddSbpSignature4OpName(const std::string& op_name, const SbpSignature& sbp_signature);
 
-  const OpTimeShape& TimeShape4OpName(const std::string& op_name) const;
-  void AddTimeShape4OpName(const std::string& op_name, const OpTimeShape& time_shape);
-
-  const OptInt64& BatchAxis4Lbn(const std::string& lbn) const;
-  void AddBatchAxis4Lbn(const std::string& lbn, const OptInt64& axis);
-
  private:
   PlacementGroup* FindPlacementGroup(const std::string& op_name) const;
 
@@ -87,8 +81,6 @@ class JobBuilder final {
   HashSet<std::string> modified_parallel_conf_op_names_;
 
   HashMap<std::string, SbpSignature*> op_name2sbp_signature_conf_;
-  HashMap<std::string, OpTimeShape*> op_name2time_shapes_;
-  HashMap<std::string, OptInt64*> lbn2batch_axis_;
 };
 
 }  // namespace oneflow

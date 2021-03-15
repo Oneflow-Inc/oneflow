@@ -13,14 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.eager_blob_util as eager_blob_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.blob_trait as blob_trait
+from oneflow.python.nn.modules.utils import op_expr_call
 import oneflow_api
 
 
 def RegisterMethod4Class():
+    oneflow_api.one.UserOpExpr.__call__ = op_expr_call
     eager_blob_util.RegisterMethod4EagerPhysicalBlob()
 
     blob_trait.RegisterBlobOperatorTraitMethod(oneflow_api.EagerPhysicalBlob)
@@ -31,5 +33,4 @@ def RegisterMethod4Class():
     remote_blob_util.RegisterMethod4LazyConsistentBlob()
     remote_blob_util.RegisterMethod4LazyMirroredBlob()
     remote_blob_util.RegisterMethod4EagerConsistentBlob()
-
-    vm_util.RegisterMethod4InstructionsBuilder()
+    blob_cache_util.RegisterMethodAndAttr4BlobCache()

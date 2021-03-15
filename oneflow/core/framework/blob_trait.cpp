@@ -21,9 +21,7 @@ namespace compatible_py {
 
 std::shared_ptr<Shape> BlobHeaderTrait::static_shape() const { UNIMPLEMENTED(); }
 std::shared_ptr<Shape> BlobHeaderTrait::shape() const { UNIMPLEMENTED(); }
-std::vector<std::shared_ptr<Shape>> BlobHeaderTrait::shape_list() const { UNIMPLEMENTED(); }
 DataType BlobHeaderTrait::dtype() const { UNIMPLEMENTED(); }
-bool BlobHeaderTrait::is_tensor_list() const { UNIMPLEMENTED(); }
 
 }  // namespace compatible_py
 

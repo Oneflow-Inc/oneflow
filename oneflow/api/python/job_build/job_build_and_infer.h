@@ -25,28 +25,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-inline Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  if (EagerExecutionEnabled()) {
-    return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
-  } else {
-    return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
-  }
-}
-
-inline Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {
-  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
-  return mgr->FindJobBuildAndInferCtx(job_name);
-}
-
-inline Maybe<JobBuildAndInferCtx*> GetCurInferCtx() {
-  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
-  return mgr->FindJobBuildAndInferCtx(*JUST(mgr->GetCurrentJobName()));
-}
-
-}  // namespace
-
 inline Maybe<void> JobBuildAndInferCtx_Open(const std::string& job_name) {
   auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
   return mgr->OpenJobBuildAndInferCtx(job_name);
@@ -137,18 +115,6 @@ inline Maybe<bool> JobBuildAndInferCtx_DisableBoxing(const std::string& job_name
                                                      const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
   return ctx->DisableBoxing(lbn);
-}
-
-inline Maybe<bool> JobBuildAndInferCtx_IsTensorList(const std::string& job_name,
-                                                    const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return ctx->IsTensorList(lbn);
-}
-
-inline Maybe<std::string> JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,
-                                                           const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(*JUST(ctx->GetBatchAxis(lbn)));
 }
 
 inline Maybe<std::string> JobBuildAndInferCtx_GetSplitAxisFromProducerView(

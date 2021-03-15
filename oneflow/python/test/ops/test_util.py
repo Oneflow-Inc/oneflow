@@ -154,3 +154,38 @@ type_name_to_np_type = {
     "char": np.byte,
     "uint8": np.uint8,
 }
+
+
+def FlattenArray(input_array):
+    output_array = list()
+    for x in np.nditer(input_array):
+        output_array.append(x.tolist())
+    return output_array
+
+
+def Array2Numpy(input_array, target_shape):
+    return np.array(input_array).reshape(target_shape, order="C")
+
+
+def Index2Coordinate(idx, tensor_shape):
+    coordinate = []
+    tmp = idx
+    for i in range(len(tensor_shape) - 1, -1, -1):
+        axis_size = tensor_shape[i]
+        coor = tmp % axis_size
+        coordinate.insert(0, int(coor))
+        tmp = (tmp - coor) / axis_size
+    return coordinate
+
+
+def Coordinate2Index(coordinate, tensor_shape):
+    if len(coordinate) != len(tensor_shape):
+        raise "wrong coordinate or shape"
+    idx = 0
+    for i, coor in enumerate(coordinate):
+        size_at_axis = coor
+        for j in range(i + 1, len(tensor_shape)):
+            size_at_axis *= tensor_shape[j]
+
+        idx += size_at_axis
+    return idx

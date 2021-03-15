@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
@@ -34,23 +34,29 @@ limitations under the License.
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/serving/saved_model.cfg.h"
 #include "oneflow/core/serving/saved_model.pb.h"
+#include "oneflow/core/eager/foreign_boxing_util.h"
 
 namespace oneflow {
 
-inline Maybe<void> RegisterForeignCallbackOnlyOnce(ForeignCallback* callback) {
-  CHECK_ISNULL_OR_RETURN(Global<ForeignCallback>::Get()) << "foreign callback registered";
-  Global<ForeignCallback>::SetAllocated(callback);
+inline Maybe<void> RegisterForeignCallbackOnlyOnce(
+    const std::shared_ptr<ForeignCallback>& callback) {
+  CHECK_ISNULL_OR_RETURN(Global<std::shared_ptr<ForeignCallback>>::Get())
+      << "foreign callback registered";
+  Global<std::shared_ptr<ForeignCallback>>::New(callback);
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
-  CHECK_ISNULL_OR_RETURN(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
-  Global<ForeignWatcher>::SetAllocated(watcher);
+inline Maybe<void> RegisterWatcherOnlyOnce(const std::shared_ptr<ForeignWatcher>& watcher) {
+  CHECK_ISNULL_OR_RETURN(Global<std::shared_ptr<ForeignWatcher>>::Get())
+      << "foreign watcher registered";
+  Global<std::shared_ptr<ForeignWatcher>>::New(watcher);
   return Maybe<void>::Ok();
 }
+
+Maybe<void> RegisterBoxingUtilOnlyOnce(const std::shared_ptr<ForeignBoxingUtil>& boxing_util);
 
 inline Maybe<void> LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
   const auto& job_name = cb->job_name();
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get();
@@ -73,7 +79,7 @@ inline Maybe<std::string> GetSerializedStructureGraph() {
 }
 
 inline Maybe<std::string> GetSerializedInterUserJobInfo() {
-  CHECK_OR_RETURN(Global<MachineCtx>::Get()->IsThisMachineMaster());
+  CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
   CHECK_NOTNULL_OR_RETURN(Global<InterUserJobInfo>::Get());
   std::string ret;

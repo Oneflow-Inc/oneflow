@@ -28,10 +28,6 @@ REGISTER_USER_OP("square_sum")
       *y->mut_data_type() = x->data_type();
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("y", 0)->clear_value();
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int64_t num_x_axes =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes();
@@ -56,10 +52,6 @@ REGISTER_USER_OP("multi_square_sum")
       user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
       *y->mut_shape() = Shape({1});
       *y->mut_data_type() = x_0->data_type();
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("y", 0)->clear_value();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

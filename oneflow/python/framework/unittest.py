@@ -114,6 +114,22 @@ def node_size():
         return 1
 
 
+@oneflow_export("unittest.env.has_world_size")
+def has_world_size():
+    if os.getenv("ONEFLOW_TEST_WORLD_SIZE"):
+        assert os.getenv(
+            "ONEFLOW_TEST_WORLD_SIZE"
+        ).isdigit(), "env var ONEFLOW_TEST_WORLD_SIZE must be num"
+        return True
+    else:
+        return False
+
+
+@oneflow_export("unittest.env.world_size")
+def world_size():
+    return int(os.getenv("ONEFLOW_TEST_WORLD_SIZE"))
+
+
 @oneflow_export("unittest.env.device_num")
 def device_num():
     device_num_str = os.getenv("ONEFLOW_TEST_DEVICE_NUM")
@@ -121,6 +137,10 @@ def device_num():
         return int(device_num_str)
     else:
         return 1
+
+
+def enable_init_by_host_list():
+    return os.getenv("ONEFLOW_TEST_ENABLE_INIT_BY_HOST_LIST") == "1"
 
 
 _unittest_env_initilized = False
@@ -132,28 +152,64 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         global _unittest_env_initilized
         global _unittest_worker_initilized
-
         if has_node_list():
             assert node_size() > 1
-
             if _unittest_worker_initilized == False:
-                oneflow.env.machine(node_list())
+                master_port = os.getenv("ONEFLOW_TEST_MASTER_PORT")
+                assert master_port, "env var ONEFLOW_TEST_MASTER_PORT not set"
+                oneflow.env.ctrl_port(int(master_port))
+                if enable_init_by_host_list():
+                    oneflow.env.machine(node_list())
+                    data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
+                    if data_port:
+                        oneflow.env.data_port(int(data_port))
+                    ssh_port = os.getenv("ONEFLOW_TEST_SSH_PORT")
+                    print("initializing worker...")
+                    oneflow.deprecated.init_worker(
+                        scp_binary=True, use_uuid=True, ssh_port=int(ssh_port)
+                    )
+                    atexit.register(oneflow.deprecated.delete_worker, ssh_port=ssh_port)
+                    _unittest_worker_initilized = True
+                else:
+                    ctrl_port = os.getenv("ONEFLOW_TEST_CTRL_PORT")
+                    config_rank_ctrl_port = -1
+                    if ctrl_port:
+                        config_rank_ctrl_port = int(ctrl_port)
 
-                ctrl_port = os.getenv("ONEFLOW_TEST_CTRL_PORT")
-                assert ctrl_port, "env var ONEFLOW_TEST_CTRL_PORT not set"
-                oneflow.env.ctrl_port(int(ctrl_port))
+                    if has_world_size():
+                        config_world_size = world_size()
+                    else:
+                        config_world_size = 0
 
-                data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
-                if data_port:
-                    oneflow.env.data_port(int(data_port))
+                    config_node_size = -1
+                    env_node_size = os.getenv("ONEFLOW_TEST_NODE_SIZE")
+                    if env_node_size:
+                        config_node_size = int(env_node_size)
 
-                ssh_port = os.getenv("ONEFLOW_TEST_SSH_PORT")
-                print("initializing worker...")
-                oneflow.deprecated.init_worker(
-                    scp_binary=True, use_uuid=True, ssh_port=int(ssh_port)
-                )
-                atexit.register(oneflow.deprecated.delete_worker, ssh_port=ssh_port)
-                _unittest_worker_initilized = True
+                    bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
+                        node_list(),
+                        int(master_port),
+                        config_world_size,
+                        config_rank_ctrl_port,
+                        config_node_size,
+                    )
+
+                    data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
+                    if data_port:
+                        oneflow.env.data_port(int(data_port))
+
+                    ssh_port = os.getenv("ONEFLOW_TEST_SSH_PORT")
+                    print("initializing worker...")
+                    oneflow.deprecated.init_worker(
+                        scp_binary=True,
+                        use_uuid=True,
+                        ssh_port=int(ssh_port),
+                        bootstrap_conf_list=bootstrap_conf_list,
+                    )
+                    atexit.register(
+                        oneflow.deprecated.delete_worker_by_bootstrap, ssh_port=ssh_port
+                    )
+                    _unittest_worker_initilized = True
 
         log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
         if log_dir:

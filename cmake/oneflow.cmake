@@ -1,6 +1,8 @@
 include(python)
+if (NOT APPLE)
 # main cpp
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow_worker.cpp)
+endif()
 
 function(oneflow_add_executable)
   if (BUILD_CUDA)
@@ -138,7 +140,9 @@ foreach(oneflow_single_file ${oneflow_all_src})
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/transport/transport_test_main\\.cpp$")
+    if(NOT APPLE)
       list(APPEND of_transport_test_cc ${oneflow_single_file})
+    endif()
     elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
@@ -163,7 +167,7 @@ endforeach()
 # clang format
 add_custom_target(of_format
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_license_format.py -i ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix
-  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix --quiet
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix --quiet
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR} --fix
   )
 

@@ -34,9 +34,9 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     EnrollTmpBn("tmp");
   }
 
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override {
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
     const ImageDecoderRandomCropResizeOpConf& conf =
         this->op_conf().image_decoder_random_crop_resize_conf();
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
@@ -53,8 +53,8 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
   }
 
   Maybe<void> InferInternalBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const override {
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const JobDesc* job_desc) const override {
     const ImageDecoderRandomCropResizeOpConf& conf =
         this->op_conf().image_decoder_random_crop_resize_conf();
     BlobDesc* tmp = GetBlobDesc4BnInOp("tmp");
@@ -71,12 +71,6 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
         .Split("out", 0)
         .MakeSplitSignatureListBuilder(JUST(LogicalBlobDesc4Ibn("in")).shape().NumAxes())
         .Build(sbp_sig_list);
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
     return Maybe<void>::Ok();
   }
 

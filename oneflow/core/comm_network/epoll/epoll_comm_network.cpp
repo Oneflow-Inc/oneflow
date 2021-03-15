@@ -13,16 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef __linux__
+
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "glog/logging.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/global_for.h"
-
-#ifdef OF_PLATFORM_POSIX
-
 #include <netinet/tcp.h>
 
 namespace oneflow {
@@ -134,7 +133,7 @@ EpollCommNet::EpollCommNet(const Plan& plan) : CommNetIf(plan) {
 }
 
 void EpollCommNet::InitSockets() {
-  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
   auto this_machine = Global<ResourceDesc, ForSession>::Get()->machine(this_machine_id);
   int64_t total_machine_num = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
   machine_id2sockfd_.assign(total_machine_num, -1);
@@ -211,7 +210,7 @@ void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kRequestWrite;
   msg.request_write_msg.src_token = src_token;
-  msg.request_write_msg.dst_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  msg.request_write_msg.dst_machine_id = GlobalProcessCtx::Rank();
   msg.request_write_msg.dst_token = dst_token;
   msg.request_write_msg.read_id = read_id;
   GetSocketHelper(src_machine_id)->AsyncWrite(msg);
@@ -219,4 +218,4 @@ void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token
 
 }  // namespace oneflow
 
-#endif  // OF_PLATFORM_POSIX
+#endif  // __linux__

@@ -32,7 +32,6 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.framework.typing as oft
 import oneflow.python.framework.typing_util as oft_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
 import typing
@@ -62,19 +61,27 @@ def InterpretScope(session, function_desc, config_proto):
     placement_scope = function_desc.function_attribute.default_placement_scope
     if placement_scope is None:
         tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(session.resource)
+        hierarchy = None
     else:
         assert isinstance(placement_scope, placement_ctx.EmptyPlacementScope)
         tag_and_dev_ids = (
             placement_scope.device_tag,
             placement_scope.machine_device_ids,
         )
+        hierarchy = placement_scope.hierarchy
+
     distribute_strategy = function_desc.function_attribute.default_distribute_strategy
     if distribute_strategy is None:
         distribute_strategy = distribute_util.DistributeConsistentStrategy()
     is_mirrored = isinstance(
         distribute_strategy, distribute_util.DistributeMirroredStrategy
     )
-    scope = scope_util.MakeInitialScope(job_conf, *tag_and_dev_ids, is_mirrored)
+    assert isinstance(hierarchy, (list, tuple)) or hierarchy is None
+    if hierarchy is not None:
+        hierarchy = oneflow_api.Size(tuple(hierarchy))
+    scope = scope_util.MakeInitialScope(
+        job_conf, *tag_and_dev_ids, hierarchy, is_mirrored
+    )
     with _JobBuildAndInferCtx(job_conf.job_name()), distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
@@ -188,7 +195,7 @@ def _RecusiveMakeInputBlobDef(cls):
             ("\nannotation %s" % cls)
             + "not supported"
             + "\nonly support oneflow.typing.Numpy.Placeholder, "
-            "oneflow.typing.ListNumpy.Placeholder and oneflow.typing.ListListNumpy.Placeholder"
+            "oneflow.typing.ListNumpy.Placeholder"
         )
 
 

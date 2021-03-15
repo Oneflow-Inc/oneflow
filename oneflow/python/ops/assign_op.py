@@ -21,7 +21,6 @@ import oneflow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.eager.boxing_util as boxing_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.id_util as id_util
@@ -63,10 +62,14 @@ def api_system_assign(ref, value, validate_shape=None, use_locking=None, name=No
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_system_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     op_conf = _SystemAssignOpConf(ref, value, name=name)
-    device_tag, machine_device_ids = oneflow_api.GetDeviceTagAndMachineDeviceIds(
-        ref.parallel_conf
-    )
-    with oneflow.scope.placement(device_tag, machine_device_ids):
+    (
+        device_tag,
+        machine_device_ids,
+        hierarchy,
+    ) = oneflow_api.GetDeviceTagAndMachineDeviceIdsAndHierarchy(ref.parallel_conf)
+    if hierarchy is not None:
+        hierarchy = tuple(hierarchy.dim())
+    with oneflow.scope.placement(device_tag, machine_device_ids, hierarchy):
         interpret_util.Forward(op_conf)
     return ref
 
@@ -75,7 +78,7 @@ def lazy_system_assign(ref, value, validate_shape=None, use_locking=None, name=N
 def eager_system_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     op_conf = _SystemAssignOpConf(ref, value, name=name)
     # no backward for assign
-    vm_util.LogicalRun(
+    oneflow_api.deprecated.LogicalRun(
         lambda builder: boxing_util.BuildAssignInstruction(
             builder, ref.blob_object, value.blob_object, op_conf
         )
@@ -86,7 +89,7 @@ def eager_system_assign(ref, value, validate_shape=None, use_locking=None, name=
 @oneflow_export("experimental.eager_assign_121")
 def api_one_to_one_assign(ref, value):
     assert hob.eager_execution_enabled(None)
-    vm_util.LogicalRun(
+    oneflow_api.deprecated.LogicalRun(
         lambda builder: builder.Build121AssignInstruction(
             ref.blob_object, value.blob_object
         )

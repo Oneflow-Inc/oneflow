@@ -26,7 +26,7 @@ namespace oneflow {
 namespace xrt {
 namespace tensorrt {
 
-inline nvinfer1::DataType DataTypeToTrtDataType(const DataType &data_type) {
+inline nvinfer1::DataType DataTypeToTrtDataType(const DataType& data_type) {
   switch (data_type) {
     case oneflow::kFloat: return nvinfer1::DataType::kFLOAT;
     case oneflow::kInt8: return nvinfer1::DataType::kINT8;
@@ -39,7 +39,7 @@ inline nvinfer1::DataType DataTypeToTrtDataType(const DataType &data_type) {
   }
 }
 
-inline nvinfer1::Dims ShapeToXrtDims(const Shape &shape) {
+inline nvinfer1::Dims ShapeToXrtDims(const Shape& shape) {
   CHECK_LE(shape.NumAxes(), 8) << "The maximum dimensions is 8 supported by TensorRT.";
   nvinfer1::Dims dims;
   dims.nbDims = shape.NumAxes();
@@ -51,7 +51,7 @@ class TrtShape {
  public:
   TrtShape() = default;
 
-  explicit TrtShape(const Shape &shape, const DataType &data_type)
+  explicit TrtShape(const Shape& shape, const DataType& data_type)
       : dims_(ShapeToXrtDims(shape)), data_type_(DataTypeToTrtDataType(data_type)) {}
 
   int64_t count() const {
@@ -62,9 +62,9 @@ class TrtShape {
     return count_;
   }
 
-  const nvinfer1::DataType &data_type() const { return data_type_; }
+  const nvinfer1::DataType& data_type() const { return data_type_; }
 
-  const nvinfer1::Dims &shape() const { return dims_; }
+  const nvinfer1::Dims& shape() const { return dims_; }
 
  private:
   mutable int64_t count_ = -1;

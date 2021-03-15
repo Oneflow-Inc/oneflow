@@ -29,14 +29,6 @@ REGISTER_USER_OP("tuple_identity")
       }
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      const int64_t in_size = ctx->user_op_conf().input_size("in");
-      CHECK_EQ_OR_RETURN(ctx->user_op_conf().output_size("out"), in_size);
-      for (int64_t i = 0; i < in_size; ++i) {
-        *ctx->BatchAxis4ArgNameAndIndex("out", i) = *ctx->BatchAxis4ArgNameAndIndex("in", i);
-      }
-      return Maybe<void>::Ok();
-    })
     .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
       SbpSignature* signature = ctx->mutable_sbp_signature();
       const SbpSignature& sbp_signature_conf = ctx->sbp_signature_conf();

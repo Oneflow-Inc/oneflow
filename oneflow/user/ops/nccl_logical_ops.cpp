@@ -25,7 +25,6 @@ REGISTER_USER_OP("_nccl_logical_all_reduce")
       *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
       // P2B
       auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
@@ -41,7 +40,11 @@ REGISTER_USER_OP("_nccl_logical_all_reduce")
 REGISTER_USER_OP("_nccl_logical_reduce_scatter")
     .Input("in")
     .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       *out_tensor = *in_tensor;
@@ -54,7 +57,6 @@ REGISTER_USER_OP("_nccl_logical_reduce_scatter")
       out_shape->Set(0, in_shape.At(0) / parallel_num);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
       // P2S
       auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
@@ -70,7 +72,11 @@ REGISTER_USER_OP("_nccl_logical_reduce_scatter")
 REGISTER_USER_OP("_nccl_logical_all_gather")
     .Input("in")
     .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       *out_tensor = *in_tensor;
@@ -82,7 +88,6 @@ REGISTER_USER_OP("_nccl_logical_all_gather")
       out_shape->Set(0, in_shape.At(0) * parallel_num);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
       // S2B
       auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
@@ -101,7 +106,11 @@ REGISTER_USER_OP("_nccl_logical_s2s")
     .Output("out")
     .Attr<int64_t>("in_split_axis", -1)
     .Attr<int64_t>("out_split_axis", -1)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       *out_tensor = *in_tensor;
@@ -121,7 +130,6 @@ REGISTER_USER_OP("_nccl_logical_s2s")
       CHECK_EQ(out_shape->elem_cnt(), in_shape.elem_cnt());
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
       // S2S
       auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();

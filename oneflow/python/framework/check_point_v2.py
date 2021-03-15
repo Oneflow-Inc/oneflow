@@ -20,7 +20,6 @@ from google.protobuf import text_format
 
 import oneflow
 import oneflow_api
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.dtype as dtype_util
@@ -30,7 +29,7 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
@@ -41,6 +40,7 @@ import oneflow.python.ops.get_variable as get_variable
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 from oneflow_api import EagerBlobTrait
+import oneflow_api
 from typing import Any, Callable, Dict, List, Union, Sequence, Optional, Iterable, Tuple
 
 
@@ -50,14 +50,14 @@ FAKE_JOB_NAME = "system_checkpoint"
 OP_PREFIX = "system_checkpoint"
 
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 class FileBackendVariableBlob:
     def __init__(
         self,
         var_dir: str,
-        dtype: Optional[dtype_util.dtype] = None,
+        dtype: Optional[oneflow.dtype] = None,
         shape: Optional[Sequence[int]] = None,
     ):
         data_path = os.path.join(var_dir, DATA_FILENAME)
@@ -107,7 +107,7 @@ class FileBackendVariableBlob:
         raise NotImplementedError()
 
     @property
-    def dtype(self) -> dtype_util.dtype:
+    def dtype(self) -> oneflow.dtype:
         return self.dtype_
 
     def numpy(self) -> np.ndarray:
@@ -254,7 +254,7 @@ def SaveVarDict(
     for name, var in var_dict.items():
         meta_info = variable_meta_info_pb.VariableMetaInfo()
         meta_info.shape.dim[:] = var.shape
-        meta_info.data_type = var.dtype.oneflow_proto_dtype
+        meta_info.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(var.dtype)
         var_dir = os.path.join(path, name)
         param_path = os.path.join(var_dir, DATA_FILENAME)
         os.makedirs(os.path.dirname(param_path))
@@ -294,19 +294,24 @@ def _LogicalSlice(
             op_conf.user_conf.attr["start"].at_list_int64.val[:] = start
             op_conf.user_conf.attr["stop"].at_list_int64.val[:] = stop
             op_conf.user_conf.attr["step"].at_list_int64.val[:] = [1] * len(start)
-            bn_in_op2blob_object = {"x_0": input_blob_object}
+            bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+            bn_in_op2blob_object["x_0"] = input_blob_object
             scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(input_blob)
             op_attribute = op_infer_util.Infer(
                 op_conf, bn_in_op2blob_object, scope_symbol_id
             )
+            cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+                str(op_attribute)
+            )
             builder.StatelessCall(
-                op_attribute,
-                parallel_conf=parallel_conf,
-                bn_in_op2blob_object=bn_in_op2blob_object,
+                cfg_op_attribute,
+                parallel_conf,
+                bn_in_op2blob_object,
+                boxing_util.BoxingTo,
             )
             Yield(bn_in_op2blob_object["y_0"])
 
-        vm_util.LogicalRun(build)
+        oneflow_api.deprecated.LogicalRun(build)
 
     lbi = lbi_util.LogicalBlobId()
     lbi.set_op_name(op_name)
@@ -324,7 +329,7 @@ def _LogicalSlice(
 
 
 def _GetCpu0VariableBlobFromNumpy(
-    np_array: np.ndarray, dtype: dtype_util.dtype
+    np_array: np.ndarray, dtype: oneflow.dtype
 ) -> oneflow_api.EagerConsistentBlob:
     """
     Add a variable on cpu 0, and feed the value of `np_array`
@@ -385,19 +390,22 @@ def _LogicalSliceAssign(
         op_conf.user_conf.attr["start"].at_list_int64.val[:] = start
         op_conf.user_conf.attr["stop"].at_list_int64.val[:] = stop
         op_conf.user_conf.attr["step"].at_list_int64.val[:] = [1] * len(start)
-        bn_in_op2blob_object = {"ref_0": ref_blob_object, "value_0": value_blob_object}
+        bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+        bn_in_op2blob_object["ref_0"] = ref_blob_object
+        bn_in_op2blob_object["value_0"] = value_blob_object
         scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(ref_blob)
         op_attribute = op_infer_util.Infer(
             op_conf, bn_in_op2blob_object, scope_symbol_id
         )
+        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+            str(op_attribute)
+        )
         builder.StatelessCall(
-            op_attribute,
-            parallel_conf=parallel_conf,
-            bn_in_op2blob_object=bn_in_op2blob_object,
+            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
         )
 
-    vm_util.LogicalRun(BuildAssignInstruction)
-    blob_cache_util.TryDisableBlobCache(ref_blob_object)
+    oneflow_api.deprecated.LogicalRun(BuildAssignInstruction)
+    oneflow_api.TryDisableBlobCache(ref_blob_object)
 
 
 def _FeedValueToVariable(
@@ -528,6 +536,9 @@ def Init() -> None:
         g = initializer_util.GetInitializer(
             var_conf.initializer, var_conf.random_seed, var_blob.shape
         )
+        # g is None if and only if the initializer is empty_initializer
+        if g is None:
+            continue
 
         def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx):
             np_dtype = np.dtype(

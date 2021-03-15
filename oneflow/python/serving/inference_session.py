@@ -111,15 +111,7 @@ def _inferface_blob_conf_proto_to_cfg(
         split_axis.set_value(inferface_blob_conf_proto.split_axis.value)
     mut_inferface_blob_conf_cfg.mutable_split_axis().CopyFrom(split_axis)
 
-    batch_axis = dtype_proto_cfg.OptInt64()
-    if inferface_blob_conf_proto.batch_axis.HasField("value"):
-        batch_axis.set_value(inferface_blob_conf_proto.batch_axis.value)
-    mut_inferface_blob_conf_cfg.mutable_batch_axis().CopyFrom(batch_axis)
-
     mut_inferface_blob_conf_cfg.set_is_dynamic(inferface_blob_conf_proto.is_dynamic)
-    mut_inferface_blob_conf_cfg.set_is_tensor_list(
-        inferface_blob_conf_proto.is_tensor_list
-    )
 
 
 @oneflow_export("serving.ModelVersionPolicy")
@@ -245,14 +237,8 @@ class InferenceSession(object):
         self._check_status(self.SessionStatus.OPEN)
         job_conf = self._get_job_conf(job_name)
         for _, mut_input_def in job_conf.mutable_signature().mutable_inputs().items():
-            if not mut_input_def.blob_conf().has_batch_axis():
-                continue
-            batch_axis = mut_input_def.blob_conf().batch_axis()
-            if not batch_axis.has_value():
-                continue
-            batch_axis = batch_axis.value()
             mut_shape = mut_input_def.mutable_blob_conf().mutable_shape()
-            mut_shape.mutable_dim()[batch_axis] = batch_size
+            mut_shape.mutable_dim()[0] = batch_size
 
     def _get_job_conf(self, job_name):
         if job_name in self.job_name2job_conf_:
@@ -281,7 +267,7 @@ class InferenceSession(object):
             self.config_proto_.resource
         )
         scope = scope_util.MakeInitialScope(
-            job_conf, *tag_and_dev_ids, self.is_mirrored_
+            job_conf, *tag_and_dev_ids, None, self.is_mirrored_
         )
 
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
@@ -513,17 +499,8 @@ class InferenceSession(object):
         )
 
         def pull_fn(ofblob):
-            ndarray_lists = ofblob.CopyToNdarrayLists()
-            assert len(ndarray_lists) == 1
-            ndarray_list = ndarray_lists[0]
-            if len(ndarray_list) == 1:
-                self.event_loop_.call_soon_threadsafe(
-                    future.set_result, ndarray_list[0]
-                )
-            else:
-                assert split_axis is not None
-                pull_result = np.concatenate(ndarray_list, axis=split_axis)
-                self.event_loop_.call_soon_threadsafe(future.set_result, pull_result)
+            ndarray = ofblob.CopyToNdarray()
+            self.event_loop_.call_soon_threadsafe(future.set_result, ndarray)
 
         return pull_fn
 

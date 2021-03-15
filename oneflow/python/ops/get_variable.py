@@ -17,7 +17,6 @@ from __future__ import absolute_import
 from typing import Optional, Sequence
 from oneflow.python.oneflow_export import oneflow_export
 
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -29,8 +28,8 @@ import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.hob as hob
-import oneflow.python.framework.dtype as dtype_util
-import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.blob_cache as blob_cache_util
+import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.lib.core.enable_if as enable_if
@@ -39,14 +38,14 @@ import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow_api
 import os
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 @oneflow_export("get_variable")
 def api_get_variable(
     name: str,
     shape: Optional[Sequence[int]] = None,
-    dtype: Optional[dtype_util.dtype] = dtype_util.float32,
+    dtype: Optional[oneflow.dtype] = oneflow.float32,
     initializer: Optional[initializer_conf_util.InitializerConf] = None,
     regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: Optional[bool] = None,
@@ -298,7 +297,9 @@ def GenerateVariableOpConf(
     op_conf.variable_conf.shape.dim.extend(shape)
 
     assert dtype is not None
-    op_conf.variable_conf.data_type = dtype.oneflow_proto_dtype
+    op_conf.variable_conf.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(
+        dtype
+    )
 
     if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
         root_path = None
@@ -321,7 +322,7 @@ def GenerateVariableOpConf(
         op_conf.variable_conf.regularizer.CopyFrom(regularizer)
 
     if trainable is not None:
-        op_conf.trainable = trainable
+        op_conf.variable_conf.trainable = trainable
 
     if model_name is not None:
         op_conf.variable_conf.model_name = model_name
@@ -347,17 +348,20 @@ def _CreateVariableBlob(op_conf):
 
 
 def CreateEagerVariableBlob(op_attribute, job_name=""):
-    bn_in_op2blob_object = {}
+    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
 
     def BuildInstruction(builder):
         parallel_conf = (
             oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
         )
+        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+            str(op_attribute)
+        )
         builder.StatelessCall(
-            op_attribute, parallel_conf, bn_in_op2blob_object=bn_in_op2blob_object
+            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
         )
 
-    vm_util.LogicalRun(BuildInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInstruction)
     lbi = lbi_util.LogicalBlobId()
     lbi.set_op_name(op_attribute.op_conf.name)
     lbi.set_blob_name(op_attribute.op_conf.variable_conf.out)

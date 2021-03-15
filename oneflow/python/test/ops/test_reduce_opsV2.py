@@ -68,7 +68,7 @@ def compare_reduce_sum_with_tensorflow(
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
-    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-3, atol=1e-3)
     assert np.allclose(
         test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )
@@ -112,7 +112,7 @@ class TestReduceOpsV2(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_reduce_sum_with_tensorflow(*arg)
 
-    def test_reduce_sum_batch_axis_reduced(test_case):
+    def test_reduce_sum_split_axis_reduced(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -121,7 +121,6 @@ class TestReduceOpsV2(flow.unittest.TestCase):
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_sum(x)
             test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
-            test_case.assertTrue(y.batch_axis == flow.INVALID_BATCH_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 

@@ -34,16 +34,17 @@ class DistributeCloneOp final : public Operator {
 
  private:
   Maybe<void> InferBlobParallelDesc() override;
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override;
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override;
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 };
 
 void DistributeCloneOp::InitFromOpConf() {
@@ -55,9 +56,20 @@ void DistributeCloneOp::InitFromOpConf() {
   });
 }
 
+Maybe<void> DistributeCloneOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  const auto& in_blob_desc = *BlobDesc4BnInOp("in");
+  FOR_RANGE(int, i, 0, output_bns().size()) {
+    BlobDesc* blob_desc = BlobDesc4BnInOp(output_bns().Get(i));
+    *blob_desc = in_blob_desc;
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> DistributeCloneOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const auto& in_blob_desc = *GetBlobDesc4BnInOp("in");
   if (parallel_ctx->parallel_num() > 1) {
     CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), output_bns().size());
@@ -85,14 +97,6 @@ Maybe<void> DistributeCloneOp::InferBlobParallelDesc() {
     CHECK_OR_RETURN(it != bn2parallel_desc.end());
     return it->second;
   });
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DistributeCloneOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  FOR_RANGE(int32_t, i, 0, output_bns().size()) {
-    *BatchAxis4BnInOp(output_bns().Get(i)) = *BatchAxis4BnInOp("in");
-  }
   return Maybe<void>::Ok();
 }
 

@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import functools
+import oneflow
+import oneflow_api
 
 
 class SessionStatus:
@@ -25,22 +27,25 @@ class SessionStatus:
 
 
 def GetDefaultSession():
-    assert _default_session is not None
-    return _default_session
+    global _sess_id2sess
+    default_sess_id = oneflow_api.deprecated.GetDefaultSessionId()
+    assert default_sess_id in _sess_id2sess
+    return _sess_id2sess[default_sess_id]
 
 
 def OpenDefaultSession(sess):
-    global _default_session
-    assert _default_session is None
-    _default_session = sess
+    global _sess_id2sess
+    assert sess.id not in _sess_id2sess
+    _sess_id2sess[sess.id] = sess
 
 
 def TryCloseDefaultSession():
-    global _default_session
-    assert _default_session is not None
-    if _default_session is not None:
-        _default_session.TryClose()
-    _default_session = None
+    global _sess_id2sess
+    default_sess_id = oneflow_api.deprecated.GetDefaultSessionId()
+    assert default_sess_id in _sess_id2sess
+    if default_sess_id in _sess_id2sess:
+        _sess_id2sess[default_sess_id].TryClose()
+    del _sess_id2sess[default_sess_id]
 
 
 def try_init_default_session(func):
@@ -52,4 +57,4 @@ def try_init_default_session(func):
     return Func
 
 
-_default_session = None
+_sess_id2sess = {}
