@@ -18,19 +18,29 @@ from __future__ import absolute_import, division, print_function
 import oneflow as flow
 
 
-def load_imagenet(data_dir, image_size, batch_size, data_part_num):
+def load_imagenet(
+    data_dir, image_size, batch_size, data_part_num, gpu_image_decoder=False
+):
     rgb_mean = [123.68, 116.78, 103.94]
     rgb_std = [255.0, 255.0, 255.0]
     ofrecord = flow.data.ofrecord_reader(
         data_dir, batch_size=batch_size, data_part_num=data_part_num, name="decode",
     )
-    image = flow.data.ofrecord_image_decoder(ofrecord, "encoded", color_space="RGB")
     label = flow.data.ofrecord_raw_decoder(
         ofrecord, "class/label", shape=(), dtype=flow.int32
     )
-    rsz = flow.image.resize(
-        image, resize_x=image_size, resize_y=image_size, color_space="RGB"
-    )
+
+    if gpu_image_decoder:
+        encoded = flow.data.OFRecordBytesDecoder(ofrecord, "encoded")
+        rsz = flow.data.ImageDecoderRandomCropResize(
+            encoded, target_width=image_size, target_height=image_size, num_workers=3
+        )
+    else:
+        image = flow.data.ofrecord_image_decoder(ofrecord, "encoded", color_space="RGB")
+        rsz = flow.image.resize(
+            image, resize_x=image_size, resize_y=image_size, color_space="RGB"
+        )
+
     normal = flow.image.crop_mirror_normalize(
         rsz,
         color_space="RGB",
