@@ -31,7 +31,7 @@ enum class OpInterpKind : int {
   kEagerConsistent = 2,
   kEagerMirrored = 3,
 
-  // Interpreter kind size.
+  // The kinds of interpreters.
   kOpInterpKindSize = 4
 };
 
@@ -48,7 +48,7 @@ static std::shared_ptr<OpExprInterpreter> BuildInterpreter(const bool& eager_mod
   return std::make_shared<AutogradInterpreter>(normal_interp);
 }
 
-/*static*/ Maybe<OpExprInterpreter> OpInterpUtil::GetInterpreter() {
+/*static*/ Maybe<OpExprInterpreter> OpInterpUtil::GetOrCreateInterpreter() {
   thread_local static std::vector<std::shared_ptr<OpExprInterpreter>> all_interpreters(
       static_cast<int>(OpInterpKind::kOpInterpKindSize));
   const auto& session = JUST(GetDefaultSession());
@@ -262,7 +262,7 @@ OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
                                                             const std::shared_ptr<Tensor>& output,
                                                             const OpAttribute& op_attribute) {
   const auto& op_conf = op_attribute.op_conf();
-  const auto& snapshot_path = session->snapshot_mgr()->GetSnapshotPath(op_conf.name());
+  const auto& snapshot_path = JUST(session->snapshot_mgr()->GetSnapshotPath(op_conf.name()));
 
   std::shared_ptr<compatible_py::BlobObject> temp_blob_object;
   if (snapshot_path.empty()) {

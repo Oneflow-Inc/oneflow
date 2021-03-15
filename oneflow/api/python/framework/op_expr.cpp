@@ -29,14 +29,23 @@ namespace oneflow {
 
 namespace {
 
-Maybe<std::vector<std::shared_ptr<one::Tensor>>> Interpret(const std::shared_ptr<one::OpExpr>& op,
-                                                           const one::TensorTuple& inputs) {
+Maybe<one::TensorTuple> Interpret(const std::shared_ptr<one::OpExpr>& op,
+                                  const one::TensorTuple& inputs) {
   CHECK_EQ_OR_RETURN(op->input_num(), inputs.size())
       << "The operation requires " << op->input_num() << " inputs, but " << inputs.size()
       << " is given.";
   auto outputs = std::make_shared<one::TensorTuple>(op->output_num());
-  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
+  auto interperter = JUST(one::OpInterpUtil::GetOrCreateInterpreter());
   JUST(interperter->Apply(op.get(), inputs, *outputs));
+  return outputs;
+}
+
+Maybe<std::vector<std::shared_ptr<one::Tensor>>> Interpret(
+    const std::shared_ptr<one::OpExpr>& op,
+    const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
+  one::TensorTuple input_list(inputs.size());
+  for (int i = 0; i < inputs.size(); ++i) { input_list[i] = inputs[i]; }
+  const auto& outputs = JUST(Interpret(op, input_list));
   return static_cast<std::shared_ptr<std::vector<std::shared_ptr<one::Tensor>>>>(outputs);
 }
 
@@ -47,13 +56,11 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def("apply",
            [](const std::shared_ptr<one::OpExpr>& op_expr,
               const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
-             one::TensorTuple input_list(inputs.size());
-             for (int i = 0; i < inputs.size(); ++i) { input_list[i] = inputs[i]; }
-             return Interpret(op_expr, input_list).GetOrThrow();
+             return Interpret(op_expr, inputs).GetOrThrow();
            })
       .def("apply", [](const std::shared_ptr<one::OpExpr>& op_expr,
                        const std::shared_ptr<one::TensorTuple>& inputs) {
-        return Interpret(op_expr, *inputs).GetOrThrow();
+        return Interpret(op_expr, *inputs).GetPtrOrThrow();
       });
 
   py::class_<one::BuiltinOpExpr, one::OpExpr, std::shared_ptr<one::BuiltinOpExpr>>(m,
