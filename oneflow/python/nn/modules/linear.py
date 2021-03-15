@@ -29,11 +29,11 @@ class Identity(Module):
 
     Examples::
 
-        >>> m = nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
-        >>> input = torch.randn(128, 20)
+        >>> m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
+        >>> input = flow.Tensor(np.random.rand(2, 3, 4, 5))
         >>> output = m(input)
-        >>> print(output.size())
-        torch.Size([128, 20])
+        >>> print(np.allclose(y.numpy(), y.numpy()))
+        True
 
     """
     def __init__(self, *args, **kwargs):
