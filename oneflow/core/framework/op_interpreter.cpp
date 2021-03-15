@@ -354,8 +354,20 @@ Maybe<void> EagerInterpreter::Apply_(const FunctionOpExpr* op_expr, const Tensor
 
 Maybe<void> AutogradInterpreter::Apply(const OpExpr* op_expr, const TensorTuple& inputs,
                                        TensorTuple& outputs) {
-  // TODO(hjchen2)
-  return normal_interp_->Apply(op_expr, inputs, outputs);
+  JUST(normal_interp_->Apply(op_expr, inputs, outputs));
+  if (AutoGradEnabled()) {
+    auto op_grad = op_expr->GetOrCreateOpGrad();
+    std::shared_ptr<OpExprInterpContext> ctx(new OpExprInterpContext);
+    op_grad->SaveForwardTensor(ctx.get(), inputs, outputs);
+
+    auto backward_fn =
+        std::make_shared<std::function<void(const TensorTuple&, TensorTuple*, const bool)>>(
+            [=](const TensorTuple& out_grads, TensorTuple* in_grads, const bool create_graph) {
+              op_grad->DoBackward(ctx.get(), out_grads);
+            });
+    GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(backward_fn, inputs, &outputs);
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace one
