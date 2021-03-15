@@ -20,31 +20,37 @@ import oneflow.python.framework.id_util as id_util
 
 @oneflow_export("nn.Dropout")
 class Dropout(Module):
-    def __init__(self, p=0.5, noise_shape=None, seed=None, name=None):
+    def __init__(self, p: float = 0.5, inplace: bool = False):
         super().__init__()
         self.rate = p
-        self.name = name
-        self.seed = seed
-        self.noise_shape = noise_shape
+        self.name = None
+        self.seed = None
+        self.noise_shape = None
         assert self.rate is not None and self.rate >= 0.0 and self.rate < 1.0
+        self.scale = float(1.0 / (1.0 - self.rate))
+        assert inplace==False, "Not support inplace=True yet!"
         if self.name is None:
             self.name = id_util.UniqueStr("Dropout_")
+        print("self.name .>>>>>>>>>>>>>>>>>>>>>>> ", self.name)
+        print("self.rate .>>>>>>>>>>>>>>>>>>>>>>> ", self.rate)
+        print("self.scale .>>>>>>>>>>>>>>>>>>>>>>> ", self.scale)
 
         self._op = (
             flow.builtin_op("dropout")
-            .Name("dropout")
+            .Name(self.name)
             .Input("in")
             .Input("mask")
-            .Attr("scale", float(1.0 / (1.0 - self.rate)))
             .Output("out")
+            .Attr("scale", self.scale)
             .Build()
         )
+        print("build >>>>>>>>>>>>>>>>>>>>>>> finish")
+
 
     def forward(self, x):
-        if not flow.current_global_function_desc().IsTrainable() or self.rate == 0.0:
+        if self.rate == 0.0:
             return x
-        mask = flow.nn.random_mask_like(
-            x, self.rate, self.seed, self.noise_shape, "%s-dropout_random_mask_like" % self.name
-        )
+        mask = flow.nn.random_mask_like(like=x, rate=self.rate, name = self.name + "-dropout_random_mask_like")
+        print("ddddddddddddddddddddddddddddddddddddddddddd")
         res = self._op(x, mask)[0]
         return res
