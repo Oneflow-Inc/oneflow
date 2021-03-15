@@ -18,6 +18,7 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.id_util as id_util
 
+
 @oneflow_export("nn.Dropout")
 class Dropout(Module):
     def __init__(self, p: float = 0.5, inplace: bool = False):
@@ -31,10 +32,6 @@ class Dropout(Module):
         assert inplace==False, "Not support inplace=True yet!"
         if self.name is None:
             self.name = id_util.UniqueStr("Dropout_")
-        print("self.name .>>>>>>>>>>>>>>>>>>>>>>> ", self.name)
-        print("self.rate .>>>>>>>>>>>>>>>>>>>>>>> ", self.rate)
-        print("self.scale .>>>>>>>>>>>>>>>>>>>>>>> ", self.scale)
-
         self._op = (
             flow.builtin_op("dropout")
             .Name(self.name)
@@ -44,13 +41,11 @@ class Dropout(Module):
             .Attr("scale", self.scale)
             .Build()
         )
-        print("build >>>>>>>>>>>>>>>>>>>>>>> finish")
 
 
     def forward(self, x):
         if self.rate == 0.0:
             return x
         mask = flow.nn.random_mask_like(like=x, rate=self.rate, name = self.name + "-dropout_random_mask_like")
-        print("ddddddddddddddddddddddddddddddddddddddddddd")
         res = self._op(x, mask)[0]
         return res
