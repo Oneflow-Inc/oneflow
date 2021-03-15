@@ -258,7 +258,7 @@ if __name__ == "__main__":
         "--wheel_house_dir", type=str, required=False, default=default_wheel_house_dir,
     )
     parser.add_argument(
-        "--python_version", type=str, required=False, default="3.5, 3.6, 3.7, 3.8",
+        "--python_version", type=str, required=False, default="3.6, 3.7, 3.8",
     )
     parser.add_argument(
         "--cuda_version", type=str, required=False, default="10.2",

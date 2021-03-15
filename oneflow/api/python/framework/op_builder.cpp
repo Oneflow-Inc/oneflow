@@ -25,44 +25,51 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-one::OpBuilder& OpBuilder_Name(const std::shared_ptr<one::OpBuilder>& builder,
-                               const std::string& op_name) {
-  return builder->MaybeName(op_name).GetOrThrow();
+std::shared_ptr<one::OpBuilder> OpBuilder_Name(const std::shared_ptr<one::OpBuilder>& builder,
+                                               const std::string& op_name) {
+  builder->MaybeName(op_name).GetOrThrow();
+  return builder;
 }
 
-one::OpBuilder& OpBuilder_Op(const std::shared_ptr<one::OpBuilder>& builder,
-                             const std::string& op_type_name) {
-  return builder->MaybeOp(op_type_name).GetOrThrow();
+std::shared_ptr<one::OpBuilder> OpBuilder_Op(const std::shared_ptr<one::OpBuilder>& builder,
+                                             const std::string& op_type_name) {
+  builder->MaybeOp(op_type_name).GetOrThrow();
+  return builder;
 }
 
-one::OpBuilder& OpBuilder_Input(const std::shared_ptr<one::OpBuilder>& builder,
-                                const std::string& input_name, const int input_num) {
-  return builder->MaybeInput(input_name, input_num).GetOrThrow();
+std::shared_ptr<one::OpBuilder> OpBuilder_Input(const std::shared_ptr<one::OpBuilder>& builder,
+                                                const std::string& input_name,
+                                                const int input_num) {
+  builder->MaybeInput(input_name, input_num).GetOrThrow();
+  return builder;
 }
 
-one::OpBuilder& OpBuilder_Output(const std::shared_ptr<one::OpBuilder>& builder,
-                                 const std::string& output_name, const int output_num) {
-  return builder->MaybeOutput(output_name, output_num).GetOrThrow();
+std::shared_ptr<one::OpBuilder> OpBuilder_Output(const std::shared_ptr<one::OpBuilder>& builder,
+                                                 const std::string& output_name,
+                                                 const int output_num) {
+  builder->MaybeOutput(output_name, output_num).GetOrThrow();
+  return builder;
 }
 
-one::OpBuilder& OpBuilder_Attr(const std::shared_ptr<one::OpBuilder>& builder,
-                               const std::string& attr_name,
-                               const std::string& serialized_attr_value) {
+std::shared_ptr<one::OpBuilder> OpBuilder_Attr(const std::shared_ptr<one::OpBuilder>& builder,
+                                               const std::string& attr_name,
+                                               const std::string& serialized_attr_value) {
   AttrValue attr_value;
   TxtString2PbMessage(serialized_attr_value, &attr_value);
-  return builder->MaybeAttr(attr_name, attr_value).GetOrThrow();
+  builder->MaybeAttr(attr_name, attr_value).GetOrThrow();
+  return builder;
 }
 
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::OpBuilder, std::shared_ptr<one::OpBuilder>>(m, "OpBuilder")
       .def(py::init<>())
       .def(py::init<const std::string&>())
-      .def("Name", &OpBuilder_Name)
-      .def("Op", &OpBuilder_Op)
-      .def("Input", &OpBuilder_Input)
-      .def("Output", &OpBuilder_Output)
-      .def("Attr", &OpBuilder_Attr)
-      .def("Build", [](const std::shared_ptr<one::OpBuilder>& builder) {
+      .def("name", &OpBuilder_Name)
+      .def("op", &OpBuilder_Op)
+      .def("input", &OpBuilder_Input)
+      .def("output", &OpBuilder_Output)
+      .def("attr", &OpBuilder_Attr)
+      .def("build", [](const std::shared_ptr<one::OpBuilder>& builder) {
         return builder->Build().GetPtrOrThrow();
       });
 }
