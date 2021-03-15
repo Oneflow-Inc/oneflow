@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-void SnapshotManager::Load(const std::string& root_dir, bool refresh) {
+Maybe<void> SnapshotManager::InitVariableSnapshotPath(const std::string& root_dir, bool refresh) {
   std::shared_ptr<fs::FileSystem> fs(LocalFS());
   CHECK(fs->IsDirectory(root_dir));
   if (refresh) { variable_name2path_.clear(); }
@@ -33,9 +33,10 @@ void SnapshotManager::Load(const std::string& root_dir, bool refresh) {
       }
     }
   }
+  return Maybe<void>::Ok();
 }
 
-const std::string& SnapshotManager::GetSnapshotPath(const std::string& variable_name) const {
+Maybe<const std::string&> SnapshotManager::GetSnapshotPath(const std::string& variable_name) const {
   const auto& it = variable_name2path_.find(variable_name);
   if (it != variable_name2path_.end()) {
     return it->second;

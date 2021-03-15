@@ -26,9 +26,9 @@ class SnapshotManager {
   SnapshotManager() = default;
   virtual ~SnapshotManager() = default;
 
-  void Load(const std::string& root_dir, bool refresh = true);
+  Maybe<void> InitVariableSnapshotPath(const std::string& root_dir, bool refresh = true);
 
-  const std::string& GetSnapshotPath(const std::string& variable_name) const;
+  Maybe<const std::string&> GetSnapshotPath(const std::string& variable_name) const;
 
  private:
   std::string default_path_ = "";
