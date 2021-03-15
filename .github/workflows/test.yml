@@ -338,7 +338,7 @@ jobs:
           brew install nasm
       - name: Build
         run: |
-          export CPATH=/Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk/usr/include
+          export CPATH=/Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
           mkdir build
           cd build
           cmake .. \
