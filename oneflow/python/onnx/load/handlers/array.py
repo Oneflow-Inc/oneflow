@@ -132,8 +132,10 @@ class Unsqueeze(BackendHandler):
     def version_11(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
 
+
 # TODO(BBuf) add expand op: https://github.com/Oneflow-Inc/oneflow/pull/4164
 # This is a temporary solution of senet
+
 
 @onnx_op("Expand")
 @flow_func(array_ops.broadcast_like)
@@ -141,22 +143,24 @@ class Expand(BackendHandler):
     @classmethod
     def _common(cls, node, tensor_dict, **kwargs):
         import oneflow as flow
+
         x = tensor_dict[node.input_tensor_names[0]]
         init_dict = kwargs["init_dict"]
         shape = init_dict[node.input_tensor_names[1]].tolist()
-        like_tensor = flow.constant(value=1.0,
-                                dtype=flow.float32,
-                                shape=(shape[0], shape[1], shape[2], shape[3]))
+        like_tensor = flow.constant(
+            value=1.0,
+            dtype=flow.float32,
+            shape=(shape[0], shape[1], shape[2], shape[3]),
+        )
         return array_ops.broadcast_like(x, like=like_tensor, broadcast_axes=(2, 3))
 
     @classmethod
     def version_8(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
-    
+
     @classmethod
     def version_13(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
-    
 
 
 @onnx_op("Transpose")

@@ -23,6 +23,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class Inception(nn.Module):
     def __init__(self, in_planes, n1x1, n3x3red, n3x3, n5x5red, n5x5, pool_planes):
         super(Inception, self).__init__()
@@ -69,7 +70,7 @@ class Inception(nn.Module):
         y2 = self.b2(x)
         y3 = self.b3(x)
         y4 = self.b4(x)
-        return torch.cat([y1,y2,y3,y4], 1)
+        return torch.cat([y1, y2, y3, y4], 1)
 
 
 class GoogLeNet(nn.Module):
@@ -81,15 +82,15 @@ class GoogLeNet(nn.Module):
             nn.ReLU(True),
         )
 
-        self.a3 = Inception(192,  64,  96, 128, 16, 32, 32)
+        self.a3 = Inception(192, 64, 96, 128, 16, 32, 32)
         self.b3 = Inception(256, 128, 128, 192, 32, 96, 64)
 
         self.maxpool = nn.MaxPool2d(3, stride=2, padding=1)
 
-        self.a4 = Inception(480, 192,  96, 208, 16,  48,  64)
-        self.b4 = Inception(512, 160, 112, 224, 24,  64,  64)
-        self.c4 = Inception(512, 128, 128, 256, 24,  64,  64)
-        self.d4 = Inception(512, 112, 144, 288, 32,  64,  64)
+        self.a4 = Inception(480, 192, 96, 208, 16, 48, 64)
+        self.b4 = Inception(512, 160, 112, 224, 24, 64, 64)
+        self.c4 = Inception(512, 128, 128, 256, 24, 64, 64)
+        self.d4 = Inception(512, 112, 144, 288, 32, 64, 64)
         self.e4 = Inception(528, 256, 160, 320, 32, 128, 128)
 
         self.a5 = Inception(832, 256, 160, 320, 32, 128, 128)
@@ -116,10 +117,8 @@ class GoogLeNet(nn.Module):
         out = self.linear(out)
         return out
 
+
 def test_googlenet(test_case):
     load_pytorch_module_and_check(
-        test_case,
-        GoogLeNet,
-        input_size=(1, 3, 32, 32),
-        train_flag=False,
+        test_case, GoogLeNet, input_size=(1, 3, 32, 32), train_flag=False,
     )

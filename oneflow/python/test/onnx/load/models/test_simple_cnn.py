@@ -18,6 +18,7 @@ from torch import nn
 
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
+
 def test_simple_cnn(test_case):
     class Net(nn.Module):
         def __init__(self):

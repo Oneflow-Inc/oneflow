@@ -17,6 +17,7 @@ import torchvision
 
 from oneflow.python.test.onnx.load.util import load_pytorch_module_and_check
 
+
 def test_resnet18(test_case):
     load_pytorch_module_and_check(
         test_case,

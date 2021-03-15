@@ -24,6 +24,7 @@ from torch.nn import init
 
 # https://github.com/xiaolai-sqlai/mobilenetv3/blob/master/mobilenetv3.py
 
+
 class hswish(nn.Module):
     def forward(self, x):
         out = x * F.relu6(x + 3, inplace=True) / 6
@@ -41,12 +42,26 @@ class SeModule(nn.Module):
         super(SeModule, self).__init__()
         self.se = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(in_size, in_size // reduction, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.Conv2d(
+                in_size,
+                in_size // reduction,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                bias=False,
+            ),
             nn.BatchNorm2d(in_size // reduction),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_size // reduction, in_size, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.Conv2d(
+                in_size // reduction,
+                in_size,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                bias=False,
+            ),
             nn.BatchNorm2d(in_size),
-            hsigmoid()
+            hsigmoid(),
         )
 
     def forward(self, x):
@@ -54,25 +69,42 @@ class SeModule(nn.Module):
 
 
 class Block(nn.Module):
-    '''expand + depthwise + pointwise'''
-    def __init__(self, kernel_size, in_size, expand_size, out_size, nolinear, semodule, stride):
+    """expand + depthwise + pointwise"""
+
+    def __init__(
+        self, kernel_size, in_size, expand_size, out_size, nolinear, semodule, stride
+    ):
         super(Block, self).__init__()
         self.stride = stride
         self.se = semodule
 
-        self.conv1 = nn.Conv2d(in_size, expand_size, kernel_size=1, stride=1, padding=0, bias=False)
+        self.conv1 = nn.Conv2d(
+            in_size, expand_size, kernel_size=1, stride=1, padding=0, bias=False
+        )
         self.bn1 = nn.BatchNorm2d(expand_size)
         self.nolinear1 = nolinear
-        self.conv2 = nn.Conv2d(expand_size, expand_size, kernel_size=kernel_size, stride=stride, padding=kernel_size//2, groups=expand_size, bias=False)
+        self.conv2 = nn.Conv2d(
+            expand_size,
+            expand_size,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=kernel_size // 2,
+            groups=expand_size,
+            bias=False,
+        )
         self.bn2 = nn.BatchNorm2d(expand_size)
         self.nolinear2 = nolinear
-        self.conv3 = nn.Conv2d(expand_size, out_size, kernel_size=1, stride=1, padding=0, bias=False)
+        self.conv3 = nn.Conv2d(
+            expand_size, out_size, kernel_size=1, stride=1, padding=0, bias=False
+        )
         self.bn3 = nn.BatchNorm2d(out_size)
 
         self.shortcut = nn.Sequential()
         if stride == 1 and in_size != out_size:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(in_size, out_size, kernel_size=1, stride=1, padding=0, bias=False),
+                nn.Conv2d(
+                    in_size, out_size, kernel_size=1, stride=1, padding=0, bias=False
+                ),
                 nn.BatchNorm2d(out_size),
             )
 
@@ -82,7 +114,7 @@ class Block(nn.Module):
         out = self.bn3(self.conv3(out))
         if self.se != None:
             out = self.se(out)
-        out = out + self.shortcut(x) if self.stride==1 else out
+        out = out + self.shortcut(x) if self.stride == 1 else out
         return out
 
 
@@ -111,7 +143,6 @@ class MobileNetV3_Large(nn.Module):
             Block(5, 160, 960, 160, hswish(), SeModule(160), 1),
         )
 
-
         self.conv2 = nn.Conv2d(160, 960, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn2 = nn.BatchNorm2d(960)
         self.hs2 = hswish()
@@ -124,7 +155,7 @@ class MobileNetV3_Large(nn.Module):
     def init_params(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                init.kaiming_normal_(m.weight, mode='fan_out')
+                init.kaiming_normal_(m.weight, mode="fan_out")
                 if m.bias is not None:
                     init.constant_(m.bias, 0)
             elif isinstance(m, nn.BatchNorm2d):
@@ -144,7 +175,6 @@ class MobileNetV3_Large(nn.Module):
         out = self.hs3(self.bn3(self.linear3(out)))
         out = self.linear4(out)
         return out
-
 
 
 class MobileNetV3_Small(nn.Module):
@@ -168,7 +198,6 @@ class MobileNetV3_Small(nn.Module):
             Block(5, 96, 576, 96, hswish(), SeModule(96), 1),
         )
 
-
         self.conv2 = nn.Conv2d(96, 576, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn2 = nn.BatchNorm2d(576)
         self.hs2 = hswish()
@@ -181,7 +210,7 @@ class MobileNetV3_Small(nn.Module):
     def init_params(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                init.kaiming_normal_(m.weight, mode='fan_out')
+                init.kaiming_normal_(m.weight, mode="fan_out")
                 if m.bias is not None:
                     init.constant_(m.bias, 0)
             elif isinstance(m, nn.BatchNorm2d):
@@ -202,18 +231,14 @@ class MobileNetV3_Small(nn.Module):
         out = self.linear4(out)
         return out
 
+
 def test_MobileNetV3_Large(test_case):
     load_pytorch_module_and_check(
-        test_case,
-        MobileNetV3_Large,
-        input_size=(1, 3, 224, 224),
-        train_flag=False,
+        test_case, MobileNetV3_Large, input_size=(1, 3, 224, 224), train_flag=False,
     )
+
 
 def test_MobileNetV3_Small(test_case):
     load_pytorch_module_and_check(
-        test_case,
-        MobileNetV3_Small,
-        input_size=(1, 3, 224, 224),
-        train_flag=False,
+        test_case, MobileNetV3_Small, input_size=(1, 3, 224, 224), train_flag=False,
     )
