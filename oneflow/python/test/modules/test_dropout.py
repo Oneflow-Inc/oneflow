@@ -39,9 +39,17 @@ class TestModule(flow.unittest.TestCase):
             [ 0.4299,  0.3626, -0.4892,  0.4141],
             [-1.4115,  1.2183, -0.5503,  0.6520]]
         ))
-        print("test_dropout >> input:\n", x.numpy())
         y = m(x)
-        print("test_dropout >> output:\n", y.numpy())
+        print(y.numpy())
+        
+        # test_dropout >> input:
+        # [[-0.7797  0.2264  0.2458  0.4163]
+        # [ 0.4299  0.3626 -0.4892  0.4141]
+        # [-1.4115  1.2183 -0.5503  0.652 ]]
+        # test_dropout >> output:
+        # [[-0.      0.      0.4916  0.8326]
+        # [ 0.8598  0.     -0.      0.8282]
+        # [-2.823   2.4366 -0.      1.304 ]]
 
 
 if __name__ == "__main__":
