@@ -14,39 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
+from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
+from typing import Optional, List, Tuple
 
 
 @oneflow_export("nn.Linear")
 class Linear(Module):
     def __init__(self, in_features: int, out_features: int, bias: bool = True) -> None:
-        super(Linear, self).__init__()
-        self.in_features = in_features
+        super().__init__()
+
         self.use_bias = bias
-        kernel_initializer = flow.variance_scaling_initializer(
-            2, "fan_in", "random_normal"
-        )
-        self.weight = flow.get_variable(
-            name="weight",
-            shape=(out_features, in_features),
-            initializer=kernel_initializer,
-            regularizer=flow.regularizers.l2(0.00005),
-            trainable=True,
-            model_name="weight",
-            reuse=False,
-        )
+        self.weight = flow.nn.Parameter(flow.Tensor(out_features, in_features))
 
         if bias:
-            self.bias = flow.get_variable(
-                name="bias",
-                shape=(out_features,),
-                initializer=flow.zeros_initializer(),
-                regularizer=flow.regularizers.l2(0.00005),
-                trainable=True,
-                model_name="bias",
-                reuse=False,
-            )
+
+            self.bias = flow.nn.Parameter(flow.Tensor(out_features))
 
             self._bias_add_op = (
                 flow.builtin_op("bias_add")
@@ -74,7 +59,7 @@ class Linear(Module):
 
     def forward(self, x):
         if self.use_bias:
-            res = self._bias_add_op(self._op(x)[0], self.bias, name="bias_add")[0]
+            res = self._bias_add_op(self._op(x, self.weight)[0], self.bias)[0]
         else:
-            res = self._op(x)[0]
+            res = self._op(x, self.weight)[0]
         return res
