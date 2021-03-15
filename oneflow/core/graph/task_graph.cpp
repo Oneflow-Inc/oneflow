@@ -516,8 +516,11 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
       CHECK_EQ(sorted_ctrl_tasks.size(), sorted_dst_comp_tasks.size());
       FOR_RANGE(size_t, i, 0, sorted_dst_comp_tasks.size()) {
         for (TaskNode* ctrl_node : sorted_ctrl_tasks.at(i)) {
-          Connect<TaskNode>(ctrl_node, NewEdge(), sorted_dst_comp_tasks.at(i));
-          ctrl_node->BuildCtrlRegstDesc(sorted_dst_comp_tasks.at(i));
+          std::string regst_desc_name;
+          ctrl_node->BuildCtrlRegstDesc(sorted_dst_comp_tasks.at(i), &regst_desc_name);
+          TaskEdge* edge = NewEdge();
+          Connect<TaskNode>(ctrl_node, edge, sorted_dst_comp_tasks.at(i));
+          ctrl_node->BindEdgeWithProducedRegst(edge, regst_desc_name);
         }
       }
     }
