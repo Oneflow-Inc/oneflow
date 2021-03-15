@@ -68,6 +68,7 @@ class TypedAttrVal final : public AttrVal {
 class UserOpConfWrapper final {
  public:
   UserOpConfWrapper(const OperatorConf&);
+  UserOpConfWrapper(std::shared_ptr<const OperatorConf> op_conf);
   const OperatorConf& op_conf() const;
   const UserOpConf& user_op_conf() const;
   const std::string& op_name() const;
@@ -86,7 +87,7 @@ class UserOpConfWrapper final {
   UserOpConfWrapper() = default;
   friend class UserOpConfWrapperBuilder;
 
-  OperatorConf op_conf_;
+  std::shared_ptr<const OperatorConf> op_conf_;
   HashMap<std::string, std::shared_ptr<AttrVal>> attrs_;
 };
 
