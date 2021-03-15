@@ -20,7 +20,7 @@ limitations under the License.
 namespace py = pybind11;
 namespace oneflow {
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
+ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   using namespace oneflow;
   py::class_<SnapshotManager, std::shared_ptr<SnapshotManager>>(m, "SnapshotManager")
       .def(py::init<>())

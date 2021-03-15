@@ -81,6 +81,11 @@ def _wrapper(func):
     return wrapped_func
 
 
+@_wrapper
+def op_expr_call(self, *args):
+    return self.apply(args)
+
+
 def global_function_or_identity(*args, **kwargs):
     if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
         return flow.global_function(*args, **kwargs)

@@ -121,15 +121,10 @@ std::string OpNode::VisualStr() const {
 }
 
 const BlobDesc& OpNode::LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const {
-  return *ProducerOpNode4Lbi(lbi).lbi2logical_blob_desc_.at(lbi);
-}
-
-BlobDesc* OpNode::MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi) {
-  CHECK_EQ(lbi.op_name(), op().op_name());
-  if (lbi2logical_blob_desc_.find(lbi) == lbi2logical_blob_desc_.end()) {
-    lbi2logical_blob_desc_[lbi].reset(new BlobDesc(GlobalJobDesc().DefaultDataType()));
-  }
-  return lbi2logical_blob_desc_.at(lbi).get();
+  const OpNode& producer = ProducerOpNode4Lbi(lbi);
+  const int32_t index = CHECK_JUST(producer.op().GetOutputIndex(lbi));
+  const BlobDesc* blob_desc = CHECK_JUST(producer.op().GetLogicalBlobDescPtr4OutputIndex(index));
+  return *blob_desc;
 }
 
 const OpNode& OpNode::SrcNode4Ibn(const std::string& bn_in_op) const {
@@ -259,10 +254,16 @@ void OpGraph::InitEdges() {
     HashMap<std::string, HashSet<LogicalBlobId>> producer_op_name2lbis;
     std::shared_ptr<HashMap<LogicalBlobId, std::vector<std::string>>> consumer_lbi2ibns(
         new HashMap<LogicalBlobId, std::vector<std::string>>);
+    op_node->input_index2producer_and_output_index_.reserve(op_node->op().input_bns().size());
     for (const auto& ibn : op_node->op().input_bns()) {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
       producer_op_name2lbis[lbi.op_name()].insert(lbi);
       (*consumer_lbi2ibns)[lbi].push_back(ibn);
+      auto producer_it = lbi2producer.find(lbi);
+      CHECK(producer_it != lbi2producer.end()) << "producer not found: " << GenLogicalBlobName(lbi);
+      const int32_t output_index = CHECK_JUST(producer_it->second->op().GetOutputIndex(lbi));
+      op_node->input_index2producer_and_output_index_.emplace_back(producer_it->second,
+                                                                   output_index);
     }
     for (const auto& pair : producer_op_name2lbis) {
       std::shared_ptr<std::vector<LogicalBlobId>> lbis(
@@ -363,11 +364,13 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     oba2sbp_identical_obas[pair.second()].push_back(pair.first());
   }
   JUST(TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
-    auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
-      return op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn));
+    auto LogicalBlobDesc4InputIndex = [&](int32_t index) -> Maybe<const BlobDesc> {
+      CHECK_LT_OR_RETURN(index, op_node->input_index2producer_and_output_index_.size());
+      const auto& producer_info = op_node->input_index2producer_and_output_index_.at(index);
+      return producer_info.first->op().GetLogicalBlobDesc4OutputIndex(producer_info.second);
     };
     JUST(op_node->mut_op()->FillOpParallelDesc(op_node->parallel_desc()));
-    JUST(op_node->mut_op()->FillLogicalInBlobDesc(LogicalBlobDesc4BnInOp));
+    JUST(op_node->mut_op()->FillLogicalInBlobDesc(LogicalBlobDesc4InputIndex));
     // Infer ParallelSignature
     JUST(op_node->mut_op()->InferParallelSignatureIf());
     // Infer mirrored_signature
@@ -389,10 +392,6 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     op_node->InferBlobParallelDesc();
     UpdateJobParallelViewConf(*op_node, oba2sbp_identical_obas, &job_parallel_view_conf);
     JUST(op_node->mut_op()->InferLogicalOutBlobDescsIf());
-    for (const auto& bn : op_node->op().output_bns()) {
-      *op_node->MutLogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(bn)) =
-          *JUST(op_node->op().GetLogicalBlobDesc4Obn(bn));
-    }
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
@@ -417,20 +416,6 @@ DataType OpGraph::GetBlobDataType(const LogicalBlobId& lbi) const {
 const BlobDesc& OpGraph::GetLogicalBlobDesc(const LogicalBlobId& lbi) const {
   return op_name2op_node_.at(lbi.op_name())
       ->LogicalBlobDesc4Lbi(GetLogicalBlobIdKey(lbi.op_name(), lbi));
-}
-
-void OpGraph::ForEachChainFamily(
-    const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
-  auto ForEachConnectedWithSameSbp7ParallelDesc7TimeShape =
-      [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
-        for (OpEdge* edge : node->in_edges()) {
-          if (edge->is_strict_121()) { Handler(edge->src_node()); }
-        }
-        for (OpEdge* edge : node->out_edges()) {
-          if (edge->is_strict_121()) { Handler(edge->dst_node()); }
-        }
-      };
-  ForEachConnectedComponent(ForEachConnectedWithSameSbp7ParallelDesc7TimeShape, Handler);
 }
 
 std::string OpGraph::GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const {

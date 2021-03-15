@@ -67,7 +67,7 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("device", &T::device)
       .def_property_readonly("is_cuda", &T::is_cuda)
       .def_property_readonly("dtype", &T::dtype)
-      .def_property_readonly("data", []() { TODO(); })
+      .def_property_readonly("data", &T::data)
       .def_property_readonly("grad", [](const T& t) { return t.api_acc_grad().GetPtrOrThrow(); })
       .def_property_readonly("grad_fn", &T::grad_fn_node)
       .def_property_readonly("requires_grad", &T::requires_grad)
@@ -77,6 +77,7 @@ void ExportTensor(py::module& m, const char* name) {
       .def("numpy", []() { TODO(); })
       .def("tolist", []() { TODO(); })
       .def("retain_grad", [](T& t) { t.set_retain_grad(true); })
+      .def("detach", &T::detach)
       .def("__str__", []() { TODO(); })
       .def("__repr__", []() { TODO(); })
       // OneFlow tensor properties other than pytorch tensor

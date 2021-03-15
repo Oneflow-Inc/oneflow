@@ -50,9 +50,9 @@ import oneflow_api
 import traceback
 
 
-class Session(oneflow_api.Session):
+class Session(oneflow_api.deprecated.Session):
     def __init__(self, sess_id):
-        oneflow_api.Session.__init__(self, sess_id)
+        oneflow_api.deprecated.Session.__init__(self, sess_id)
         self.job_name2function_desc_ = {}
         self.job_name2job_ = {}
         self.status_ = SessionStatus.OPEN
@@ -83,7 +83,7 @@ class Session(oneflow_api.Session):
         self.backward_blob_register_ = oneflow_api.BlobRegister()
         self.eager_config_proto_ctx_ = None
 
-        oneflow_api.RegsiterSession(sess_id, self)
+        oneflow_api.deprecated.RegsiterSession(sess_id, self)
 
     @property
     def id(self):
@@ -133,14 +133,6 @@ class Session(oneflow_api.Session):
     @property
     def job_name2name_scope_stack(self):
         return self.job_name2name_scope_stack_
-
-    @property
-    def instruction_list(self):
-        return self.instruction_list_()
-
-    @property
-    def eager_symbol_list(self):
-        return self.eager_symbol_list_()
 
     @property
     def backward_blob_register(self):
@@ -249,7 +241,7 @@ class Session(oneflow_api.Session):
         self.resource_ = None
         if self.eager_config_proto_ctx_:
             del self.eager_config_proto_ctx_
-        oneflow_api.ClearSessionById(self.id)
+        oneflow_api.deprecated.ClearSessionById(self.id)
 
     def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN
@@ -414,6 +406,15 @@ class Session(oneflow_api.Session):
         if len(self.job_name2name_scope_stack_[job_name]) == 0:
             return ""
         return "-".join(self.job_name2name_scope_stack_[job_name]) + "-"
+
+    def IsMirroredStrategyEnabled(self):
+        return (
+            len(self.is_mirrored_strategy_enabled_stack) > 0
+            and self.is_mirrored_strategy_enabled_stack[-1]
+        )
+
+    def IsConsistentStrategyEnabled(self):
+        return not self.IsMirroredStrategyEnabled()
 
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):

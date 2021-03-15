@@ -41,9 +41,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
                                int64_t ctrl_regst_num)>& Handler) const;
 
  private:
-  template<typename LogicalNodeType>
-  void ForEachLogicalNode(std::function<void(LogicalNodeType*)> Handler);
-
   void BuildFwStruct();
   void NaiveBuildFwStruct(HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
 

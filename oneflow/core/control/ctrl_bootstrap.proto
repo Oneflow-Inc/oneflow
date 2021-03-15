@@ -20,3 +20,7 @@ message BootstrapConf {
   optional int32 ctrl_port = 5 [default = -1];
   optional int64 node_size = 6 [default = -1];
 }
+
+message NumProcessPerNode {
+  required int64 value = 1;
+}

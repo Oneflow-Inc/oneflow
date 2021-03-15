@@ -39,7 +39,7 @@ class BuiltinOp(object):
         """
         # TODO: Check for op completeness.
         if self._op is None:
-            self._op = self._builder.Build()
+            self._op = self._builder.build()
         return self._op
 
     def Op(self, op_type_name):
@@ -52,7 +52,7 @@ class BuiltinOp(object):
             self
         """
         self._op_type_name = op_type_name
-        self._builder.Op(self._op_type_name)
+        self._builder.op(self._op_type_name)
         return self
 
     def Name(self, op_name):
@@ -64,7 +64,7 @@ class BuiltinOp(object):
         Returns:
             self
         """
-        self._builder.Name(op_name)
+        self._builder.name(op_name)
         return self
 
     def Input(self, input_name, num=1):
@@ -78,7 +78,7 @@ class BuiltinOp(object):
             self
         """
         assert isinstance(num, int) and num >= 1
-        self._builder.Input(input_name, num)
+        self._builder.input(input_name, num)
         return self
 
     def Output(self, output_name, num=1):
@@ -92,7 +92,7 @@ class BuiltinOp(object):
             self
         """
         assert isinstance(num, int) and num >= 1
-        self._builder.Output(output_name, num)
+        self._builder.output(output_name, num)
         return self
 
     def Attr(self, attr_name, attr_value, attr_type_name=None):
@@ -147,14 +147,10 @@ class BuiltinOp(object):
             attribute.at_shape.dim[:] = list(attr_value)
         elif attr_type == attr_value_pb.kAtDataType:
             assert (
-                isinstance(
-                    oneflow_api.deprecated.GetProtoDtype4OfDtype(attr_value), int
-                )
+                isinstance(attr_value.oneflow_proto_dtype, int)
                 and attr_value in oneflow.dtypes()
             )
-            attribute.at_data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(
-                attr_value
-            )
+            attribute.at_data_type = attr_value.oneflow_proto_dtype
         elif attr_type == attr_value_pb.kAtListInt32:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
@@ -170,12 +166,11 @@ class BuiltinOp(object):
         elif attr_type == attr_value_pb.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
             assert all(
-                isinstance(oneflow_api.deprecated.GetProtoDtype4OfDtype(x), int)
-                and x in oneflow.dtypes()
+                isinstance(x.oneflow_proto_dtype, int) and x in oneflow.dtypes()
                 for x in attr_value
             )
             attribute.at_list_data_type.val[:] = list(
-                [oneflow_api.deprecated.GetProtoDtype4OfDtype(x) for x in attr_value]
+                [x.oneflow_proto_dtype for x in attr_value]
             )
         elif attr_type == attr_value_pb.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
@@ -192,7 +187,7 @@ class BuiltinOp(object):
             raise ValueError("Invalid op attribute type {}".format(attr_type))
 
         serialized_attr_value = str(text_format.MessageToString(attribute))
-        self._builder.Attr(attr_name, serialized_attr_value)
+        self._builder.attr(attr_name, serialized_attr_value)
         return self
 
     def Build(self):
@@ -202,5 +197,5 @@ class BuiltinOp(object):
             the completed builtin op
         """
         if self._op is None:
-            self._op = self._builder.Build()
+            self._op = self._builder.build()
         return self._op

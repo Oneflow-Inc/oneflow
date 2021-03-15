@@ -49,9 +49,10 @@ class PyForeignBoxingUtil : public ForeignBoxingUtil {
   }
 };
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
+ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   using namespace oneflow;
-  py::class_<ForeignBoxingUtil, PyForeignBoxingUtil>(m, "ForeignBoxingUtil")
+  py::class_<ForeignBoxingUtil, PyForeignBoxingUtil, std::shared_ptr<ForeignBoxingUtil>>(
+      m, "ForeignBoxingUtil")
       .def(py::init<>())
       .def("BoxingTo", &ForeignBoxingUtil::BoxingTo)
       .def("TryReplaceDeviceTag", &ForeignBoxingUtil::TryReplaceDeviceTag)
