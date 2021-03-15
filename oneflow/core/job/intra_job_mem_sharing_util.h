@@ -17,6 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_IN_JOB_MEM_SHARING_UTIL_H_
 
 #include "oneflow/core/job/plan.pb.h"
+#include <functional>
+#include <string>
 
 namespace oneflow {
 
