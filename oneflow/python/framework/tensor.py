@@ -43,7 +43,7 @@ class Tensor:
     ):
         assert len(args) > 0
         dtype = dtype if dtype is not None else oneflow_api.float32
-        if placement is not None:
+        if placement is None:
             device = device if device is not None else oneflow_api.device("cpu")
         if _input_args_is_other_data(*args):
             self._immediately_construct(
