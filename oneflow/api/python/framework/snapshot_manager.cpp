@@ -20,12 +20,26 @@ limitations under the License.
 namespace py = pybind11;
 namespace oneflow {
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
+namespace {
+
+void InitVariableSnapshotPath(const std::shared_ptr<oneflow::SnapshotManager>& mgr,
+                              const std::string& root_dir, bool refresh) {
+  mgr->InitVariableSnapshotPath(root_dir, refresh).GetOrThrow();
+}
+
+}  // namespace
+
+ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   using namespace oneflow;
   py::class_<SnapshotManager, std::shared_ptr<SnapshotManager>>(m, "SnapshotManager")
       .def(py::init<>())
-      .def("Load", &SnapshotManager::Load)
-      .def("GetSnapshotPath", &SnapshotManager::GetSnapshotPath);
+      .def("load", &InitVariableSnapshotPath, py::arg("root_dir"), py::arg("refresh") = true)
+      .def("get_snapshot_path",
+           [](const std::shared_ptr<SnapshotManager>& mgr, const std::string& variable_name) {
+             const auto& snapshot_path = mgr->GetSnapshotPath(variable_name).GetOrThrow();
+             if (snapshot_path.empty()) { return py::cast(nullptr); }
+             return py::cast(snapshot_path);
+           });
 }
 
 }  // namespace oneflow
