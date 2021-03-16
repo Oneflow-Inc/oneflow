@@ -282,7 +282,11 @@ class Model(
                 try:
                     sub_step.step(step_idx)
                 except Exception as e:
-                    print("Model step_idx {} sub-step {} failed.".format(step_idx, step.name))
+                    print(
+                        "Model step_idx {} sub-step {} failed.".format(
+                            step_idx, step.name
+                        )
+                    )
                     raise e
 
     def method_overrided(self, method_name: str = None) -> bool:
@@ -295,7 +299,7 @@ class Model(
         checkpoint_config: Optional[CheckpointConfig] = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        model_step= []
+        model_step = []
 
         self._train_step = TrainStep(training_config, self, callbacks)
         if self._train_step.is_valid:
@@ -317,7 +321,7 @@ class Model(
 
         if len(model_step) == 0:
             print(" {}'s fit() will not do nothing.".format(self.__class__.__name__))
-            return model_step 
+            return model_step
 
         self._checkpoint_step = CheckpointStep(checkpoint_config, self, callbacks)
         if self._checkpoint_step.is_valid:
