@@ -58,7 +58,7 @@ class TestModule(flow.unittest.TestCase):
         print(y.numpy())
 
     def test_tanh(test_case):
-        input_arr = np.array([-1, 0, 1])
+        input_arr = np.array([-1, 0, 1]).astype(np.float32)
         x = flow.Tensor(input_arr)
 
         tanh = flow.nn.Tanh()
