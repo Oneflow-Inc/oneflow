@@ -60,8 +60,7 @@ std::shared_ptr<MirroredTensor> MirroredTensor::detach() const {
 
 Maybe<void> MirroredTensor::set_parallel_desc(
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  JUST(impl_->set_parallel_desc(parallel_desc));
-  return Maybe<void>::Ok();
+  return impl_->set_parallel_desc(parallel_desc);
 }
 
 std::shared_ptr<ConsistentTensor> ConsistentTensor::MakeTensor(
