@@ -2105,6 +2105,7 @@ def range(start, limit=None, delta=1, dtype=None, name="range") -> oneflow_api.B
         .RemoteBlobList()[0]
     )
 
+
 @oneflow_export("math.cumsum")
 def cumsum(
     input: oneflow_api.BlobDesc,

@@ -1,5 +1,20 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -21,29 +36,30 @@ import test_global_storage
 import oneflow.typing as tp
 import os
 
+
 def exclu_func(np_rev, shape, axis):
     np_exclu = np.zeros_like(np_rev)
     if len(shape) == 4:
         if 0 == axis:
-            np_exclu[1:,:,:,:] = np_rev[:-1,:,:,:]
+            np_exclu[1:, :, :, :] = np_rev[:-1, :, :, :]
         elif 1 == axis:
-            np_exclu[:,1:,:,:] = np_rev[:,:-1,:,:]
+            np_exclu[:, 1:, :, :] = np_rev[:, :-1, :, :]
         elif 2 == axis:
-            np_exclu[:,:,1:,:] = np_rev[:,:,:-1,:]
+            np_exclu[:, :, 1:, :] = np_rev[:, :, :-1, :]
         elif 3 == axis:
-            np_exclu[:,:,:,1:] = np_rev[:,:,:,:-1]   
+            np_exclu[:, :, :, 1:] = np_rev[:, :, :, :-1]
     elif len(shape) == 3:
         if 0 == axis:
-            np_exclu[1:,:,:] = np_rev[:-1,:,:]
+            np_exclu[1:, :, :] = np_rev[:-1, :, :]
         elif 1 == axis:
-            np_exclu[:,1:,:] = np_rev[:,:-1,:]
+            np_exclu[:, 1:, :] = np_rev[:, :-1, :]
         elif 2 == axis:
-            np_exclu[:,:,1:] = np_rev[:,:,:-1]
+            np_exclu[:, :, 1:] = np_rev[:, :, :-1]
     elif len(shape) == 2:
         if 0 == axis:
-            np_exclu[1:,:] = np_rev[:-1,:]
+            np_exclu[1:, :] = np_rev[:-1, :]
         elif 1 == axis:
-            np_exclu[:,1:] = np_rev[:,:-1]
+            np_exclu[:, 1:] = np_rev[:, :-1]
     elif len(shape) == 1:
         if 0 == axis:
             np_exclu[1:] = np_rev[:-1]
@@ -97,11 +113,11 @@ def _compare_cumsum_with_np(
     of_x = test_global_storage.Get("x")
     # of_x_diff = test_global_storage.Get("x_diff")
     if reverse == True:
-      np_rev = np.flip(of_x, axis)
-      np_rev = np.cumsum(np_rev, axis, float)
-      if exclusive == True:
-        np_rev = exclu_func(np_rev, shape, axis)
-      np_out = np.flip(np_rev, axis)
+        np_rev = np.flip(of_x, axis)
+        np_rev = np.cumsum(np_rev, axis, float)
+        if exclusive == True:
+            np_rev = exclu_func(np_rev, shape, axis)
+        np_out = np.flip(np_rev, axis)
     else:
         np_rev = np.cumsum(of_x, axis, float)
         if exclusive == True:
@@ -110,6 +126,7 @@ def _compare_cumsum_with_np(
             np_out = np_rev
 
     assert np.allclose(of_out, np_out, atol=1e-03)
+
 
 def _gen_arg_dict(device_type, shape, machine_ids, device_counts):
     # Generate a dict to pass parameter to test case
@@ -122,6 +139,7 @@ def _gen_arg_dict(device_type, shape, machine_ids, device_counts):
     arg_dict["machine_ids"] = [machine_ids]
     arg_dict["device_counts"] = [device_counts]
     return arg_dict
+
 
 @flow.unittest.skip_unless_1n1d()
 class Testzeros1n1d(flow.unittest.TestCase):
@@ -140,6 +158,7 @@ class Testzeros1n1d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _compare_cumsum_with_np(*arg)
 
+
 @flow.unittest.skip_unless_1n2d()
 class Testzeros1n2d(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -149,6 +168,7 @@ class Testzeros1n2d(flow.unittest.TestCase):
         )
         for arg in GenArgList(arg_dict):
             _compare_cumsum_with_np(*arg)
+
 
 if __name__ == "__main__":
     unittest.main()
