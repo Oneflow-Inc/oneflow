@@ -30,7 +30,7 @@ class TestModule(flow.unittest.TestCase):
         m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
         x = flow.Tensor(np.random.rand(2, 3, 4, 5))
         y = m(x)
-        print(np.allclose(y.numpy(), y.numpy()))
+        print(np.allclose(x.numpy(), y.numpy()))
 
 
 if __name__ == "__main__":
