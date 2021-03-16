@@ -22,22 +22,22 @@ limitations under the License.
 
 namespace oneflow {
 
-CtrlClient::~CtrlClient() {}
+LocalCtrlClient::~LocalCtrlClient() {}
 
-CtrlClient::CtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx) {
+LocalCtrlClient::LocalCtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx) {
   CHECK(process_ctx.ctrl_addr_size() == 1);
   CHECK(process_ctx.node_size() == 1);
 }
 
-void RpcClient::Barrier(const std::string& barrier_name) {
+void LocalRpcClient::Barrier(const std::string& barrier_name) {
   Barrier(barrier_name, Global<EnvDesc>::Get()->TotalMachineNum());
 }
 
-void RpcClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
+void LocalRpcClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
   CHECK(barrier_num == 1);
 }
 
-TryLockResult RpcClient::TryLock(const std::string& name) {
+TryLockResult LocalRpcClient::TryLock(const std::string& name) {
   std::unique_lock<std::mutex> lck(done_names_mtx_);
   if (done_names_.find(name) != done_names_.end()) {
     return TryLockResult::kDone;
@@ -46,49 +46,49 @@ TryLockResult RpcClient::TryLock(const std::string& name) {
   }
 }
 
-void RpcClient::NotifyDone(const std::string& name) {
+void LocalRpcClient::NotifyDone(const std::string& name) {
   std::unique_lock<std::mutex> lck(done_names_mtx_);
   done_names_.insert(name);
   done_names_cv_.notify_all();
 }
 
-void RpcClient::WaitUntilDone(const std::string& name) {
+void LocalRpcClient::WaitUntilDone(const std::string& name) {
   std::unique_lock<std::mutex> lck(done_names_mtx_);
   done_names_cv_.wait(lck);
   LOG(ERROR) << "waiting for name: " << name;
   CHECK(done_names_.find(name) != done_names_.end());
 }
 
-void RpcClient::PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {
+void LocalRpcClient::PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {
   std::unique_lock<std::mutex> lck(kv_mtx_);
   VSetter(&kv_[k]);
   kv_cv_.notify_all();
 }
 
-void RpcClient::PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter) {
+void LocalRpcClient::PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter) {
   PushKV(k, VSetter);
 }
 
-void RpcClient::PushKV(const std::string& k, const std::string& v) {
+void LocalRpcClient::PushKV(const std::string& k, const std::string& v) {
   PushKV(k, [&](std::string* o) { *o = v; });
 }
 
-void RpcClient::PushKV(const std::string& k, const PbMessage& msg) {
+void LocalRpcClient::PushKV(const std::string& k, const PbMessage& msg) {
   PushKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
 
-void RpcClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
+void LocalRpcClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
   PushMasterKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
 
-void RpcClient::ClearKV(const std::string& k) {
+void LocalRpcClient::ClearKV(const std::string& k) {
   std::unique_lock<std::mutex> lck(kv_mtx_);
   kv_.erase(k);
 }
 
-void RpcClient::ClearMasterKV(const std::string& k) { ClearKV(k); }
+void LocalRpcClient::ClearMasterKV(const std::string& k) { ClearKV(k); }
 
-void RpcClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
+void LocalRpcClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
   std::unique_lock<std::mutex> lck(kv_mtx_);
   while (true) {
     auto it = kv_.find(k);
@@ -102,24 +102,24 @@ void RpcClient::PullKV(const std::string& k, std::function<void(const std::strin
   }
 }
 
-void RpcClient::PullMasterKV(const std::string& k,
+void LocalRpcClient::PullMasterKV(const std::string& k,
                              std::function<void(const std::string&)> VGetter) {
   PullKV(k, VGetter);
 }
 
-void RpcClient::PullKV(const std::string& k, std::string* v) {
+void LocalRpcClient::PullKV(const std::string& k, std::string* v) {
   PullKV(k, [&](const std::string& i) { *v = i; });
 }
 
-void RpcClient::PullKV(const std::string& k, PbMessage* msg) {
+void LocalRpcClient::PullKV(const std::string& k, PbMessage* msg) {
   PullKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
-void RpcClient::PullMasterKV(const std::string& k, PbMessage* msg) {
+void LocalRpcClient::PullMasterKV(const std::string& k, PbMessage* msg) {
   PullMasterKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
-void RpcClient::Clear() {
+void LocalRpcClient::Clear() {
   {
     std::unique_lock<std::mutex> lck(done_names_mtx_);
     done_names_.clear();
@@ -132,9 +132,9 @@ void RpcClient::Clear() {
   }
 }
 
-int32_t RpcClient::IncreaseCount(const std::string& k, int32_t v) { UNIMPLEMENTED(); }
+int32_t LocalRpcClient::IncreaseCount(const std::string& k, int32_t v) { UNIMPLEMENTED(); }
 
-void RpcClient::EraseCount(const std::string& k) { UNIMPLEMENTED(); }
+void LocalRpcClient::EraseCount(const std::string& k) { UNIMPLEMENTED(); }
 
 void LocalRpcManager::Bootstrap() {
   Address* addr = Global<ProcessCtx>::Get()->add_ctrl_addr();
@@ -143,9 +143,9 @@ void LocalRpcManager::Bootstrap() {
   Global<ProcessCtx>::Get()->set_node_size(1);
 }
 
-void LocalRpcManager::CreateClient() { Global<CtrlClient>::New(*Global<ProcessCtx>::Get()); }
+void LocalRpcManager::CreateClient() { Global<LocalCtrlClient>::New(*Global<ProcessCtx>::Get()); }
 
-LocalRpcManager::~LocalRpcManager() { Global<CtrlClient>::Delete(); }
+LocalRpcManager::~LocalRpcManager() { Global<LocalCtrlClient>::Delete(); }
 
 }  // namespace oneflow
 

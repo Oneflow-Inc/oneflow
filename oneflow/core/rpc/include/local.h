@@ -24,10 +24,10 @@ limitations under the License.
 
 namespace oneflow {
 
-class RpcClient : RpcClientBase {
+class LocalRpcClient : RpcClientBase {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RpcClient);
-  virtual ~RpcClient() = default;
+  OF_DISALLOW_COPY_AND_MOVE(LocalRpcClient);
+  virtual ~LocalRpcClient() = default;
 
   void Barrier(const std::string& barrier_name);
   void Barrier(const std::string& barrier_name, int32_t barrier_num);
@@ -67,7 +67,7 @@ class RpcClient : RpcClientBase {
   void EraseCount(const std::string& k);
 
  protected:
-  RpcClient(){};
+  LocalRpcClient(){};
   void PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter);
   void PullMasterKV(const std::string& k, std::function<void(const std::string&)> VGetter);
 
@@ -79,15 +79,15 @@ class RpcClient : RpcClientBase {
   std::condition_variable kv_cv_;
 };
 
-class CtrlClient final : public RpcClient {
+class LocalCtrlClient final : public LocalRpcClient {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CtrlClient);
-  CtrlClient() = default;
-  ~CtrlClient();
+  OF_DISALLOW_COPY_AND_MOVE(LocalCtrlClient);
+  LocalCtrlClient() = default;
+  ~LocalCtrlClient();
 
  private:
-  friend class Global<CtrlClient>;
-  CtrlClient(const ProcessCtx& process_ctx);
+  friend class Global<LocalCtrlClient>;
+  LocalCtrlClient(const ProcessCtx& process_ctx);
 
   const ProcessCtx& process_ctx() const { return process_ctx_; }
 
@@ -104,19 +104,19 @@ class LocalRpcManager : public RpcManager {
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
 
-#define OF_ENV_BARRIER() Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR)
+#define OF_ENV_BARRIER() Global<LocalCtrlClient>::Get()->Barrier(FILE_LINE_STR)
 #define OF_SESSION_BARRIER()                        \
-  Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR, \
+  Global<LocalCtrlClient>::Get()->Barrier(FILE_LINE_STR, \
                                      Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())
 
 static void OfCallOnce(const std::string& name, std::function<void()> f) {
-  TryLockResult lock_ret = Global<CtrlClient>::Get()->TryLock(name);
+  TryLockResult lock_ret = Global<LocalCtrlClient>::Get()->TryLock(name);
   if (lock_ret == TryLockResult::kLocked) {
     f();
-    Global<CtrlClient>::Get()->NotifyDone(name);
+    Global<LocalCtrlClient>::Get()->NotifyDone(name);
   } else if (lock_ret == TryLockResult::kDone) {
   } else if (lock_ret == TryLockResult::kDoing) {
-    Global<CtrlClient>::Get()->WaitUntilDone(name);
+    Global<LocalCtrlClient>::Get()->WaitUntilDone(name);
   } else {
     UNIMPLEMENTED();
   }
