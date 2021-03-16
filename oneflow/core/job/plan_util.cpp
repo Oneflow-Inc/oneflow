@@ -23,40 +23,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-std::vector<std::vector<std::string>> GenNodeRank(const Plan& plan) {
-  std::vector<std::vector<std::string>> ret(7);
-  for (const TaskProto& task_proto : plan.task()) {
-    if (task_proto.machine_id() != 0) { continue; }
-    if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
-      continue;
-    }
-    if (task_proto.exec_sequence().exec_node_size() != 1) { continue; }
-    std::string op_name =
-        task_proto.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf().name();
-    std::string node_name = "task" + std::to_string(task_proto.task_id());
-    if (op_name.find("WaitAndSendIds") != std::string::npos) {
-      ret[0].push_back(node_name);
-    } else if (op_name.find("ReentrantLock") != std::string::npos) {
-      ret[1].push_back(node_name);
-    } else if (op_name.find("Case") != std::string::npos) {
-      ret[2].push_back(node_name);
-    } else if (op_name.find("CriticalSection") != std::string::npos) {
-      ret[3].push_back(node_name);
-    } else if (op_name.find("SinkTick") != std::string::npos) {
-      ret[4].push_back(node_name);
-    } else if (op_name.find("Esac") != std::string::npos) {
-      ret[5].push_back(node_name);
-    } else if (op_name.find("CallbackNotify") != std::string::npos) {
-      ret[6].push_back(node_name);
-    }
-  }
-  return ret;
-}
-
-}  // namespace
-
 RegstDescProto* PlanUtil::GetSoleProducedDataRegst(TaskProto* task_proto) {
   RegstDescProto* ret = nullptr;
   for (auto& pair : *task_proto->mutable_produced_regst_desc()) {
@@ -178,16 +144,27 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     machine_id2device_id2node_list[i].resize(gpu_device_num);
   }
   std::vector<std::vector<std::string>> machine_id2host_node_list(machine_num);
+  std::vector<std::string> main_node_list;
+  std::vector<std::string> copy_comm_net_node_list;
   HashSet<int64_t> ctrl_regst_desc_ids;
   HashMap<int64_t, HashMap<int64_t, std::string>> task_id2consumer_regst_id2name;
   HashMap<int64_t, std::string> task_id2op_name;
 
-  auto InsertNodeDefByTaskProto = [&](const TaskProto& task_proto, const std::string& node_def) {
-    if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
-      int64_t device_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_proto.thrd_id());
-      machine_id2device_id2node_list[task_proto.machine_id()][device_id].push_back(node_def);
+  auto InsertNodeDefByTaskProto = [&](const TaskProto& task_proto, const std::string& node_def,
+                                      const std::string& pass_tag) {
+    if (pass_tag.empty()) {
+      if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
+        int64_t device_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_proto.thrd_id());
+        machine_id2device_id2node_list[task_proto.machine_id()][device_id].push_back(node_def);
+      } else {
+        machine_id2host_node_list[task_proto.machine_id()].push_back(node_def);
+      }
+    } else if (pass_tag == "main") {
+      main_node_list.push_back(node_def);
+    } else if (pass_tag == "copy_comm_net") {
+      copy_comm_net_node_list.push_back(node_def);
     } else {
-      machine_id2host_node_list[task_proto.machine_id()].push_back(node_def);
+      UNIMPLEMENTED();
     }
   };
 
@@ -213,10 +190,17 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   // task node
   for (const TaskProto& task_proto : plan.task()) {
     std::string node_def = "task" + std::to_string(task_proto.task_id()) + "[label=\"{{";
-    // node_def += "<task_node_" + std::to_string(task_proto.task_id()) + ">";
+    node_def += std::to_string(task_proto.task_id()) + ":" + std::to_string(task_proto.machine_id())
+                + "\\n";
     std::string op_name = "";
+    std::string pass_tag = "";
     for (const ExecNodeProto& exec_node : task_proto.exec_sequence().exec_node()) {
-      op_name += (exec_node.kernel_conf().op_attribute().op_conf().name());
+      const auto& op_conf = exec_node.kernel_conf().op_attribute().op_conf();
+      op_name += op_conf.name();
+      pass_tag = (op_conf.has_pass_tag()) ? op_conf.pass_tag() : "";
+      if (op_conf.name().substr(0, 13) == std::string("copy_comm_net")) {
+        pass_tag = "copy_comm_net";
+      }
     }
     task_id2op_name[task_proto.task_id()] = op_name;
     node_def += op_name;
@@ -242,7 +226,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
          + ",colorscheme=set312, fillcolor=" + std::to_string((task_proto.job_id() % 12) + 1));
     if (IsEsacNode(op_name)) { node_def += ",width=5,height=1.5"; }
     node_def += "];\n";
-    InsertNodeDefByTaskProto(task_proto, node_def);
+    InsertNodeDefByTaskProto(task_proto, node_def, pass_tag);
     for (const auto& pair : task_proto.consumed_regst_desc_id()) {
       for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
         task_id2consumer_regst_id2name[task_proto.task_id()][regst_desc_id] = pair.first;
@@ -256,6 +240,11 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   log_stream << "#nodesep=1.3;\n";
   log_stream << "#ranksep=1.3;\n";
   log_stream << "node[color=\"gray\"];\n";
+  // main_node and copy_comm_net_node graph
+  for (const std::string& main_node : main_node_list) { log_stream << main_node; }
+  for (const std::string& copy_comm_net_node : copy_comm_net_node_list) {
+    log_stream << copy_comm_net_node;
+  }
   // sub graph
   for (size_t machine_id = 0; machine_id < machine_num; ++machine_id) {
     std::string machine_name = "machine_" + std::to_string(machine_id);
@@ -276,17 +265,6 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
       }
       log_stream << "#}\n";
     }
-    // rank for system task over job
-    /*
-    if (machine_id == 0) {
-      const auto& rank_list = GenNodeRank(plan);
-      for (const auto& current_list : rank_list) {
-        log_stream << "{ rank = same;";
-        for (const auto& node_name : current_list) { log_stream << node_name << "; "; }
-        log_stream << "}\n";
-      }
-    }
-    */
     log_stream << "}\n";
   }
 
@@ -319,13 +297,6 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
                    << "];\n";
       }
     }
-  }
-  // rank
-  const auto& rank_list = GenNodeRank(plan);
-  for (const auto& current_list : rank_list) {
-    log_stream << "{ rank = same;";
-    for (const auto& node_name : current_list) { log_stream << node_name << "; "; }
-    log_stream << "}\n";
   }
   log_stream << "}\n";
 }
