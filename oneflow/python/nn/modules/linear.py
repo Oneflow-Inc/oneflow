@@ -32,13 +32,11 @@ class Identity(Module):
         >>> m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
         >>> input = flow.Tensor(np.random.rand(2, 3, 4, 5))
         >>> output = m(input)
-        >>> print(np.allclose(y.numpy(), y.numpy()))
-        True
 
     """
+
     def __init__(self, *args, **kwargs):
         super(Identity, self).__init__()
 
     def forward(self, input: Tensor) -> Tensor:
         return input
-

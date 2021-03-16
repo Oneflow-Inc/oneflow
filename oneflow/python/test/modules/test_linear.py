@@ -26,8 +26,6 @@ import oneflow.typing as tp
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    
-
     def test_identity(test_case):
         m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
         x = flow.Tensor(np.random.rand(2, 3, 4, 5))
