@@ -57,6 +57,16 @@ class TestModule(flow.unittest.TestCase):
         y = relu(x)
         print(y.numpy())
 
+    def test_tanh(test_case):
+        input_arr = np.array([-1, 0, 1])
+        x = flow.Tensor(input_arr)
+
+        tanh = flow.nn.Tanh()
+        y = tanh(x)
+        z = np.tanh(input_arr)
+        
+        test_case.assertTrue(np.allclose(y.numpy(), z, atol=1e-4))
+
     def test_load_state_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
