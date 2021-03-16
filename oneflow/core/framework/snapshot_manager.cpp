@@ -29,9 +29,7 @@ Maybe<void> SnapshotManager::InitVariableSnapshotPath(const std::string& root_di
     for (const auto& file : fs->ListDir(absolute_dir)) {
       std::string absolute_file = JoinPath(absolute_dir, file);
       bool is_regular_file = JUST(fs->IsRegularFile(absolute_file));
-      if (file == "out" && is_regular_file) {
-        variable_name2path_[file] = absolute_file;
-      }
+      if (file == "out" && is_regular_file) { variable_name2path_[file] = absolute_file; }
     }
   }
   return Maybe<void>::Ok();
