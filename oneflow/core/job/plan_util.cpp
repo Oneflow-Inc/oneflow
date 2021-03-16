@@ -199,12 +199,13 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     node_def += std::to_string(task_proto.task_id()) + ":" + std::to_string(task_proto.machine_id())
                 + "\\n";
     std::string op_name = "";
-    std::string pass_tag = "";
+    std::string pass_tag = kNoPassTag;
     for (const ExecNodeProto& exec_node : task_proto.exec_sequence().exec_node()) {
       const auto& op_conf = exec_node.kernel_conf().op_attribute().op_conf();
       op_name += op_conf.name();
-      pass_tag = (op_conf.has_pass_tag()) ? op_conf.pass_tag() : "";
-      if (op_conf.name().substr(0, 13) == std::string("copy_comm_net")) {
+      if (op_conf.has_pass_tag()) {
+        pass_tag = op_conf.pass_tag();
+      } else if (op_conf.name().substr(0, 13) == std::string("copy_comm_net")) {
         pass_tag = "copy_comm_net";
       }
     }
