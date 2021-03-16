@@ -318,6 +318,7 @@ def compare_with_numpy_lars(
     epsilon,
     lars_coefficient,
     learning_rate,
+    weight_decay,
     train_iters,
 ):
     assert device_type in ["gpu", "cpu"]
@@ -338,12 +339,12 @@ def compare_with_numpy_lars(
                 trainable=True,
             )
             loss = flow.math.reduce_mean(x * random_mask)
-
             flow.optimizer.LARS(
                 flow.optimizer.PiecewiseConstantScheduler([], [learning_rate]),
                 momentum_beta=momentum_beta,
                 epsilon=epsilon,
                 lars_coefficient=lars_coefficient,
+                weight_decay=weight_decay,
             ).minimize(loss)
             return x
 
@@ -361,25 +362,32 @@ def compare_with_numpy_lars(
     def lars_update_numpy(
         param,
         gradient,
-        iter,
         momentum,
-        learning_rate=0.001,
-        momentum_beta=0.9,
-        epsilon=1e-9,
-        lars_coefficient=0.0001,
+        learning_rate,
+        momentum_beta,
+        weight_decay,
+        epsilon,
+        lars_coefficient,
     ):
         import math
 
-        model_norm = math.sqrt(np.mean(param * param))
-        model_diff_norm = math.sqrt(np.mean(gradient * gradient))
+        model_norm = math.sqrt(np.sum(param * param))
+        model_diff_norm = math.sqrt(np.sum(gradient * gradient))
 
-        local_learning_rate = (
-            learning_rate * lars_coefficient * model_norm / (epsilon + model_diff_norm)
-        )
+        if model_norm > 0 and model_diff_norm > 0:
+            lars = (
+                lars_coefficient
+                * model_norm
+                / (model_diff_norm + weight_decay * model_norm + epsilon)
+            )
+        else:
+            lars = 1.0
+
+        local_learning_rate = learning_rate * lars
 
         momentum_t = momentum_beta * momentum - local_learning_rate * gradient
 
-        param_t = param + momentum_t
+        param_t = param + momentum_t - local_learning_rate * weight_decay * param
 
         return param_t, momentum_t
 
@@ -391,10 +399,10 @@ def compare_with_numpy_lars(
         param, momentum = lars_update_numpy(
             param,
             gradient * random_masks_seq[i],
-            i,
             momentum,
             learning_rate,
             momentum_beta,
+            weight_decay,
             epsilon,
             lars_coefficient,
         )
@@ -1004,6 +1012,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["epsilon"] = [1e-9]
         arg_dict["lars_coefficient"] = [0.0001]
         arg_dict["learning_rate"] = [1]
+        arg_dict["weight_decay"] = [0.9]
         arg_dict["train_iters"] = [10]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_lars(*arg)

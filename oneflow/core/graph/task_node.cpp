@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/id_serialization.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
@@ -38,12 +41,7 @@ void ForEachDataEdge(const std::unordered_set<TaskEdge*>& edges,
 }  // namespace
 
 TaskNode::TaskNode()
-    : machine_id_(-1),
-      thrd_id_(-1),
-      task_id_(-1),
-      area_id_(0),
-      chain_id_(-1),
-      order_in_graph_(-1) {}
+    : machine_id_(-1), thrd_id_(-1), task_id_(-1), chain_id_(-1), order_in_graph_(-1) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   auto produced_regsts_it = produced_regsts_.find(name);
@@ -81,11 +79,6 @@ void TaskNode::set_thrd_id(int64_t val) {
   thrd_id_ = val;
   CHECK_GE(thrd_id_, 0);
   if (machine_id_ != -1) { UpdateTaskId(); }
-}
-
-void TaskNode::set_area_id(int64_t val) {
-  CHECK_EQ(area_id_, 0);
-  area_id_ = val;
 }
 
 void TaskNode::set_chain_id(int64_t val) {
@@ -165,7 +158,6 @@ void TaskNode::Build() {
   if (consumed_regsts_.size()) { CHECK(IsReadyForBuild()); }
   BuildExecGphAndRegst();
   LockRegsts();
-  FixRegisterNumRange();
 }
 
 void TaskNode::EraseZeroSizeProducedBlob() {
@@ -219,7 +211,6 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
   task_proto->set_job_id(GlobalJobDesc().job_id());
-  task_proto->mutable_task_set_info()->set_area_id(area_id_);
   task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
   task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
   exec_gph_.ToExecSequence(parallel_ctx(), task_proto->mutable_exec_sequence());
@@ -248,12 +239,13 @@ int64_t TaskNode::MemZoneId121() const {
   }
 }
 
-void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
-  if (IsMeaningLess() || dst_node->IsMeaningLess()) { return; }
+bool TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node, std::string* name) {
+  if (IsMeaningLess() || dst_node->IsMeaningLess()) { return false; }
   for (const TaskEdge* in_edge : dst_node->in_edges()) {
-    if (in_edge->src_node() == this) { return; }
+    if (in_edge->src_node() == this) { return false; }
   }
-  BuildCtrlRegstDesc(dst_node);
+  BuildCtrlRegstDesc(dst_node, name);
+  return true;
 }
 
 RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node) {
@@ -365,27 +357,12 @@ void TaskNode::LockRegsts() {
   for (auto& pair : produced_regsts_) { pair.second->Lock(); }
 }
 
-void TaskNode::FixRegisterNumRange() {
-  for (auto& pair : produced_regsts_) {
-    RegstDesc* produced_regst = pair.second.get();
-    bool in_same_stream = true;
-    for (const TaskNode* consumer : produced_regst->consumers()) {
-      if (consumer->GlobalWorkStreamId() != GlobalWorkStreamId()) {
-        in_same_stream = false;
-        break;
-      }
-    }
-    if (in_same_stream == false && area_id_ != static_cast<int64_t>(kMdUpdtArea)
-        && GetTaskType() == TaskType::kCopyHd) {  // TODO: delete this hack
-      if (produced_regst->max_register_num() >= 2) { produced_regst->UpdtMinRegstNumIfNeed(2); }
-    }
-  }
-}
-
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_);
+  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
+  TaskId task_id = Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id);
+  task_id_ = SerializeTaskIdToInt64(task_id);
 }
 
 int64_t TaskNode::GlobalWorkStreamId() const {

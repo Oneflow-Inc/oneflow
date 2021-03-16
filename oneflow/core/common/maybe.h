@@ -231,6 +231,11 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || std::is
     return *maybe_ptr_.GetDataAndSerializedErrorProto(error_str, static_cast<PtrT>(nullptr));
   }
 
+  T GetOrThrow() const {
+    if (!IsOk()) { ThrowError(error()); }
+    return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+  }
+
  private:
   Maybe<PtrT> maybe_ptr_;
 };
@@ -264,8 +269,7 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
       return maybe.error();                                                    \
     }                                                                          \
     maybe;                                                                     \
-  })                                                                           \
-      .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
+  }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 #define CHECK_JUST(...)                                                        \
   ({                                                                           \
     MAYBE_CONST_AUTO_REF maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
@@ -276,8 +280,7 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
       LOG(FATAL) << maybe.GetSerializedError();                                \
     }                                                                          \
     maybe;                                                                     \
-  })                                                                           \
-      .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
+  }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_OK(...) CHECK(MaybeIsOk(std::move(__VA_ARGS__)))
 

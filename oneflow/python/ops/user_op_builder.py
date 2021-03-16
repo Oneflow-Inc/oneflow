@@ -30,17 +30,15 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.hob as hob
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import random
 import oneflow.python.eager.gradient_util as gradient_util
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow as flow
 import oneflow_api
 import traceback
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 class UserOp(object):
@@ -376,8 +374,8 @@ class UserOpConfBuilder(object):
             attribute.at_list_int64.val[:] = list(attr_value)
         elif attr_type == attr_value_pb.kAtListFloat:
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, float) for x in attr_value)
-            attribute.at_list_float.val[:] = list(attr_value)
+            assert all(isinstance(x, (float, int)) for x in attr_value)
+            attribute.at_list_float.val[:] = list(map(lambda x: float(x), attr_value))
         elif attr_type == attr_value_pb.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
             assert all(
@@ -475,7 +473,7 @@ class EagerLogicalUserOpModule(UserOpModule, UserOp):
                 )
             self.set_opkernel_object(builder.NewOpKernelObject(cfg_op_conf))
 
-        vm_util.LogicalRun(BuildInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildInstruction)
 
     def InferAndTryRun(self):
         assert hob.in_global_mode(None)
@@ -541,7 +539,7 @@ class EagerConsistentUserOpModule(UserOpModule, UserOp):
                 )
             self.set_opkernel_object(builder.NewOpKernelObject(cfg_op_conf))
 
-        vm_util.LogicalRun(BuildInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildInstruction)
 
     def InferAndTryRun(self):
         assert hob.in_global_mode(None)

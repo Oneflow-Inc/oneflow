@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/graph/stream_index_getter_registry_manager.h"
 
 namespace oneflow {
 
@@ -53,6 +54,8 @@ class CompTaskNode : public TaskNode {
   const LogicalNode* GetOnePredLogicalNodeOnEdge(TaskEdge* edge);
   std::vector<CompTaskNode*> GetSuccCompTaskNodesOnEdge(TaskEdge* edge) const;
   std::vector<CompTaskNode*> GetPredCompTaskNodesOnEdge(TaskEdge* edge) const;
+
+  void InferProducedDataRegstTimeShape() override;
 
  private:
   ParallelContext parallel_ctx_;

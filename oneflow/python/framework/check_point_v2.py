@@ -20,17 +20,16 @@ from google.protobuf import text_format
 
 import oneflow
 import oneflow_api
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.ops.initializer_util as initializer_util
+import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.eager.blob_cache as blob_cache_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
@@ -52,7 +51,7 @@ FAKE_JOB_NAME = "system_checkpoint"
 OP_PREFIX = "system_checkpoint"
 
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 class FileBackendVariableBlob:
@@ -310,11 +309,10 @@ def _LogicalSlice(
                 parallel_conf,
                 bn_in_op2blob_object,
                 boxing_util.BoxingTo,
-                vm_util._FindOrCreateDelegateBlobObject,
             )
             Yield(bn_in_op2blob_object["y_0"])
 
-        vm_util.LogicalRun(build)
+        oneflow_api.deprecated.LogicalRun(build)
 
     lbi = lbi_util.LogicalBlobId()
     lbi.set_op_name(op_name)
@@ -404,15 +402,11 @@ def _LogicalSliceAssign(
             str(op_attribute)
         )
         builder.StatelessCall(
-            cfg_op_attribute,
-            parallel_conf,
-            bn_in_op2blob_object,
-            boxing_util.BoxingTo,
-            vm_util._FindOrCreateDelegateBlobObject,
+            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
         )
 
-    vm_util.LogicalRun(BuildAssignInstruction)
-    blob_cache_util.TryDisableBlobCache(ref_blob_object)
+    oneflow_api.deprecated.LogicalRun(BuildAssignInstruction)
+    oneflow_api.TryDisableBlobCache(ref_blob_object)
 
 
 def _FeedValueToVariable(
@@ -518,6 +512,43 @@ def _ForEachSlice(
             start_idx = stop_idx
 
 
+def init_by_initializer_conf(
+    var_blob: EagerBlobTrait,
+    initializer_conf: initializer_conf_util.InitializerConf,
+    sync_between_multi_machine: bool,
+    random_seed=0,
+):
+    initializer = initializer_util.GetInitializer(
+        initializer_conf, random_seed, var_blob.shape
+    )
+    # initializer is None if and only if the initializer_conf is empty_initializer
+    if initializer is None:
+        return
+
+    def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx):
+        np_dtype = np.dtype(
+            dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
+        )
+        length = _ElemCnt(np.array(stop_nd_idx) - np.array(start_nd_idx))
+        vals = (
+            np.array(initializer(length))
+            .astype(np_dtype)
+            .reshape(np.array(stop_nd_idx) - np.array(start_nd_idx))
+        )
+
+        slice_value_blob = _GetCpu0VariableBlobFromNumpy(vals, var_blob.dtype)
+        _LogicalSliceAssign(
+            var_blob, slice_value_blob, start_nd_idx, stop_nd_idx,
+        )
+
+    # we just want to run f on every slice without caring about the return value
+    for _ in _ForEachSlice(var_blob, GenerateValueAndAssign):
+        pass
+
+    if sync_between_multi_machine:
+        oneflow_api.eager.Sync()
+
+
 def Init() -> None:
     oneflow.sync_default_session()
 
@@ -540,27 +571,9 @@ def Init() -> None:
             )
             LoadVariables({op_name: GetCheckpoint(var_dir)})
             continue
-        g = initializer_util.GetInitializer(
-            var_conf.initializer, var_conf.random_seed, var_blob.shape
+
+        init_by_initializer_conf(
+            var_blob, var_conf.initializer, False, var_conf.random_seed
         )
 
-        def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx):
-            np_dtype = np.dtype(
-                dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
-            )
-            length = _ElemCnt(np.array(stop_nd_idx) - np.array(start_nd_idx))
-            vals = (
-                np.array(g(length))
-                .astype(np_dtype)
-                .reshape(np.array(stop_nd_idx) - np.array(start_nd_idx))
-            )
-
-            slice_value_blob = _GetCpu0VariableBlobFromNumpy(vals, var_blob.dtype)
-            _LogicalSliceAssign(
-                var_blob, slice_value_blob, start_nd_idx, stop_nd_idx,
-            )
-
-        # we just want to run f on every slice without caring about the return value
-        for _ in _ForEachSlice(var_blob, GenerateValueAndAssign):
-            pass
     oneflow_api.eager.Sync()

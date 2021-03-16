@@ -91,9 +91,6 @@ message BoxingOpConf {
   }
 }
 
-message AccumulateOpConf {
-}
-
 message DynamicReshapeOpConf {
   required string in = 1;
   required string out = 2;
@@ -153,6 +150,7 @@ message VariableOpConf {
   required OptInt64 split_axis = 8;
   optional int64 random_seed = 9;
   optional RegularizerConf regularizer = 10;
+  optional bool trainable = 11 [default = true];
 }
 
 message DecodeRandomOpConf {
@@ -350,7 +348,7 @@ message XrtLaunchOpConf {
   // Sbp signatures of each function node.
   map<string, SbpSignature> sbp_signatures = 8;
   optional bool model_update = 9 [default = false];
-  map<string, BlobDescProto> input_output_logical_blob_desc = 10;
+  map<string, BlobDescProto> lbn2logical_blob_desc = 10;
 }
 
 message ModelInitV2OpConf {
@@ -379,37 +377,6 @@ message ModelSaveV2OpConf {
   required string tick = 6;
 }
 
-message DynamicBinarySplitOpConf {
-  required string in = 1;
-  repeated string out = 2;
-  required int32 base_shift = 3;
-}
-
-message DynamicBinaryConcatOpConf {
-  repeated string in = 1;
-  required string out = 2;
-  required DataType out_data_type = 3;
-  required ShapeProto out_shape = 4;
-  required SbpParallel out_sbp = 6;
-}
-
-message UniqueWithCountsOpConf {
-  required string x = 1;
-  required string y = 2;
-  required string idx = 3;
-  required string count = 4;
-  required string num_unique = 5;
-  optional DataType out_idx = 6 [default = kInt32];
-}
-
-message IndexedSlicesReduceSumOpConf {
-  required string x_indices = 1;
-  required string x_values = 2;
-  required string y_indices = 3;
-  required string y_values = 4;
-  required string num_unique = 5;
-}
-
 message ConstantLikeOpConf {
   required string like = 1;
   required string out = 2;
@@ -432,23 +399,6 @@ message BroadcastToCompatibleWithOpConf {
   required string x = 1;
   repeated string compatible = 2;
   required string y = 3;
-}
-
-message TensorBufferToTensorListOpConf {
-  required string in = 1;
-  required string out = 2;
-  required ShapeProto shape = 3;
-  required DataType data_type = 4;
-}
-
-message TensorListToTensorBufferOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message TensorListSplitOpConf {
-  required string in = 1;
-  repeated string out = 2;
 }
 
 message CollectiveBoxingGenericOpConf {
@@ -500,7 +450,6 @@ message BoxingZerosOpConf {
 
 message OperatorConf {
   required string name = 1;
-  optional bool trainable = 3 [default = true];
   optional string device_tag = 4 [default = "invalid_device"];
   repeated string ctrl_in_op_name = 7;
   optional int64 scope_symbol_id = 8;
@@ -510,7 +459,6 @@ message OperatorConf {
     CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
     BoxingOpConf boxing_conf = 108;
-    AccumulateOpConf accumulate_conf = 117;
     VariableOpConf variable_conf = 122;
     TickOpConf tick_conf = 124;
     TotalLossInstanceNumOpConf total_loss_instance_num_conf = 126;
@@ -534,15 +482,10 @@ message OperatorConf {
     DistributeCloneOpConf distribute_clone_conf = 157;
     DistributeAddOpConf distribute_add_conf = 158;
     DeviceTickOpConf device_tick_conf = 159;
-    DynamicBinarySplitOpConf dynamic_binary_split_conf = 160;
-    DynamicBinaryConcatOpConf dynamic_binary_concat_conf = 161;
     SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
     SliceBoxingAddOpConf slice_boxing_add_conf = 167;
-    TensorBufferToTensorListOpConf tensor_buffer_to_tensor_list_conf = 168;
-    TensorListToTensorBufferOpConf tensor_list_to_tensor_buffer_conf = 169;
     CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
     BoxingIdentityOpConf boxing_identity_conf = 171;
-    TensorListSplitOpConf tensor_list_split_conf = 172;
     CollectiveBoxingPackOpConf collective_boxing_pack_conf = 174;
     CollectiveBoxingUnpackOpConf collective_boxing_unpack_conf = 175;
     BoxingZerosOpConf boxing_zeros_conf = 176;
@@ -559,8 +502,6 @@ message OperatorConf {
     ModelSaveOpConf model_save_conf = 297;
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
     ModelLoadOpConf model_load_conf = 301;
-    UniqueWithCountsOpConf unique_with_counts_conf = 337;
-    IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
     CopyOpConf copy_conf = 343;

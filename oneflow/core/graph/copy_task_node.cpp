@@ -15,8 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/copy_task_node.h"
-#include "oneflow/core/job/thrd_id_generator.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/id_serialization.h"
+#include "oneflow/core/device/cpu_stream_index.h"
 
 namespace oneflow {
 
@@ -48,7 +50,7 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   auto in_regst = GetSoleConsumedRegst("copy_in");
   out_regst->CopyBlobDescFrom(in_regst.get());
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = ConstructOp(NewCopyOpConf(), &GlobalJobDesc());
+  node->mut_op() = ConstructOp(NewCopyOpConf());
   node->BindBnWithRegst(node->op()->SoleIbn(), in_regst);
   node->BindBnWithRegst(node->op()->SoleObn(), out_regst);
 }
@@ -58,13 +60,19 @@ void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataReg
 void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int64_t dev_phy_id) {
   copy_type_ = copy_type;
   set_machine_id(machine_id);
+  DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
+                     static_cast<DeviceId::device_index_t>(dev_phy_id)};
+  auto* stream_index_generator =
+      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
+  StreamId::stream_index_t stream_index = 0;
   if (copy_type == CopyHdOpConf::H2D) {
-    set_thrd_id(Global<IDMgr>::Get()->GetGpuH2DThrdId(dev_phy_id));
+    stream_index = stream_index_generator->GenerateH2DStreamIndex();
   } else if (copy_type == CopyHdOpConf::D2H) {
-    set_thrd_id(Global<IDMgr>::Get()->GetGpuD2HThrdId(dev_phy_id));
+    stream_index = stream_index_generator->GenerateD2HStreamIndex();
   } else {
     UNIMPLEMENTED();
   }
+  set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
 }
 
 void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
@@ -80,7 +88,7 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
 OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_name("copy_hd_" + NewUniqueId());
-  conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type())));
+  conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type())));
   conf.mutable_copy_hd_conf()->set_type(copy_type_);
   auto in_regst = GetSoleConsumedRegst("copy_in");
   if (in_regst->NumOfLbi() == 1) {
@@ -92,7 +100,13 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 
 void CopyCommNetTaskNode::Init(int64_t machine_id) {
   set_machine_id(machine_id);
-  set_thrd_id(Global<IDMgr>::Get()->CommNetThrdId());
+  DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kCPU,
+                     DeviceId::kCPUDeviceIndex};
+  auto* generator = dynamic_cast<CPUStreamIndexGenerator*>(
+      Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
+  CHECK_NOTNULL(generator);
+  StreamId stream_id{device_id, generator->GenerateCommNetStreamIndex()};
+  set_thrd_id(SerializeStreamIdToInt64(stream_id));
 }
 
 void CopyCommNetTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
@@ -107,7 +121,7 @@ void CopyCommNetTaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
 OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_name("copy_comm_net_" + NewUniqueId());
-  conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
+  conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
   conf.mutable_copy_comm_net_conf();
   return conf;
 }

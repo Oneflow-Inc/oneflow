@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/object.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/framework/opkernel_object.h"
@@ -110,11 +111,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                  const std::shared_ptr<cfg::JobConfigProto>& job_conf,
                                  const std::string& device_tag,
                                  const std::vector<std::string>& machine_device_ids,
-                                 bool is_mirrored);
+                                 const std::shared_ptr<Shape>& hierarchy, bool is_mirrored);
 
   Maybe<Scope> BuildScopeWithNewParallelDesc(const std::shared_ptr<Scope>& scope,
                                              const std::string& device_tag,
-                                             const std::vector<std::string>& machine_device_ids);
+                                             const std::vector<std::string>& machine_device_ids,
+                                             const std::shared_ptr<Shape>& hierarchy);
 
   Maybe<Scope> BuildScopeWithNewParallelConf(
       const std::shared_ptr<Scope>& scope, const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
@@ -161,15 +163,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> FeedBlob(const std::shared_ptr<compatible_py::BlobObject>& blob_object,
                        int64_t callback_id);
 
-  using FindOrCreateDelegateBlobObjectFun =
-      std::function<std::shared_ptr<compatible_py::BlobObject>(
-          const std::shared_ptr<InstructionsBuilder>&,
-          const std::function<std::shared_ptr<compatible_py::BlobObject>(
-              const std::shared_ptr<compatible_py::BlobObject>&,
-              const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>&,
-          const std::shared_ptr<compatible_py::BlobObject>&,
-          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>;
-
   Maybe<void> StatefulCall(
       const std::shared_ptr<cfg::OpAttribute>& op_attribute,
       const std::shared_ptr<compatible_py::OpKernelObject>& opkernel_object,
@@ -178,8 +171,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::function<std::shared_ptr<compatible_py::BlobObject>(
           const std::shared_ptr<InstructionsBuilder>&,
           const std::shared_ptr<compatible_py::BlobObject>&,
-          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo,
-      const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject);
+          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo);
 
   Maybe<void> StatelessCall(
       const std::shared_ptr<cfg::OpAttribute>& op_attribute,
@@ -189,15 +181,13 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::function<std::shared_ptr<compatible_py::BlobObject>(
           const std::shared_ptr<InstructionsBuilder>&,
           const std::shared_ptr<compatible_py::BlobObject>&,
-          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo,
-      const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject);
+          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo);
 
   Maybe<void> NoBoxingStatelessCall(
       const std::shared_ptr<cfg::OpAttribute>& op_attribute,
       const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-          bn_in_op2blob_object,
-      const FindOrCreateDelegateBlobObjectFun& FindOrCreateDelegateBlobObject);
+          bn_in_op2blob_object);
 
   Maybe<void> NoBoxingCudaD2HStatelessCall(
       const std::shared_ptr<cfg::OpAttribute>& op_attribute,
@@ -419,6 +409,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
   std::function<void(compatible_py::Object*)> release_object_;
 };
+
+Maybe<void> LogicalRun(
+    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
+
+Maybe<void> PhysicalRun(
+    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
 
 }  // namespace oneflow
 

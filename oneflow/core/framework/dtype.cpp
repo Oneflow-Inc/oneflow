@@ -13,10 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "half.hpp"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/switch_func.h"
+#include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/device_register_cpu.h"
 
 namespace oneflow {
+
+namespace {
+
+template<typename T>
+std::size_t GetDataTypeBytes() {
+  return sizeof(T);
+}
+
+#define MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY(func_name, T) func_name<T>
+DEFINE_STATIC_SWITCH_FUNC(std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ));
+
+}  // namespace
 
 Maybe<DType> DType::GetDTypeByDataType(const DataType& data_type) {
   switch (data_type) {
@@ -26,10 +43,21 @@ Maybe<DType> DType::GetDTypeByDataType(const DataType& data_type) {
   }
     OF_PP_FOR_EACH_TUPLE(MAKE_DATA_TYPE_OBJ, DTYPE_SEQ)
 #undef MAKE_DATA_TYPE_OBJ
-    default: { OF_UNIMPLEMENTED(); }
+    default: {
+      OF_UNIMPLEMENTED();
+    }
   }
   OF_UNIMPLEMENTED();
   return std::shared_ptr<DType>();
+}
+
+Maybe<size_t> DType::bytes() const {
+  // DataType::OFRecord and DataType::TensorBuffer don't have fixed byte size
+  if (data_type() == DataType::kInvalidDataType || data_type() == DataType::kOFRecord
+      || data_type() == DataType::kTensorBuffer) {
+    OF_UNIMPLEMENTED();
+  }
+  return SwitchGetDataTypeBytes(SwitchCase(data_type()));
 }
 
 Maybe<DType> DType::InvalidDataType() {

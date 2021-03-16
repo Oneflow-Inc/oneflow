@@ -15,13 +15,9 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.python.eager.blob_cache as blob_cache_util
+import oneflow
 import oneflow_api
 from contextlib import contextmanager
-
-
-def GetDefaultBlobRegister():
-    return default_blob_register_
 
 
 @contextmanager
@@ -38,6 +34,3 @@ def BnInOp2BlobObjectScope(blob_register, op_attribute):
         blob_register.SetObject4BlobName(
             "%s/%s" % (lbi.op_name, lbi.blob_name), bn_in_op2blob_object[obn]
         )
-
-
-default_blob_register_ = oneflow_api.BlobRegister(blob_cache_util.TryDisableBlobCache)

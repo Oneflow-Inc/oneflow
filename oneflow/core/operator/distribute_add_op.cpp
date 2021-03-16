@@ -33,9 +33,9 @@ class DistributeAddOp final : public Operator {
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                const SbpSignature* sbp_signature) const override;
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
   LogicalNode* NewProperLogicalNode() const override { return new DistributeConcatLogicalNode; }
 
  private:
@@ -83,8 +83,8 @@ Maybe<void> DistributeAddOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> DistributeAddOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const SbpSignature* sbp_signature) const {
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc* first_blob_desc = nullptr;
   FOR_RANGE(int, i, 0, input_bns().size()) {
     first_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i));

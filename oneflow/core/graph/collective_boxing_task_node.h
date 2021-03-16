@@ -26,7 +26,7 @@ class CollectiveBoxingGenericTaskNode : public TaskNode {
   CollectiveBoxingGenericTaskNode() = default;
   ~CollectiveBoxingGenericTaskNode() override = default;
 
-  void Init(int64_t machine_id, int64_t thrd_id, int64_t area_id, const OperatorConf& op_conf);
+  void Init(int64_t machine_id, int64_t thrd_id, const OperatorConf& op_conf);
 
  private:
   void BuildExecGphAndRegst() override;

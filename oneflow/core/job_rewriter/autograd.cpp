@@ -148,11 +148,13 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
       OpBlobArg cast_in_op_blob_arg;
       cast_in_op_blob_arg.set_op_name(cast_op.op_name());
       cast_in_op_blob_arg.set_bn_in_op(GenRepeatedBn("in", 0));
-      job_builder->MutSbpParallel4Oba(cast_in_op_blob_arg)->mutable_broadcast_parallel();
+      SbpParallel sbp_parallel;
+      sbp_parallel.mutable_broadcast_parallel();
+      job_builder->SetSbpParallel4Oba(cast_in_op_blob_arg, sbp_parallel);
       OpBlobArg cast_out_op_blob_arg;
       cast_out_op_blob_arg.set_op_name(cast_op.op_name());
       cast_out_op_blob_arg.set_bn_in_op(GenRepeatedBn("out", 0));
-      job_builder->MutSbpParallel4Oba(cast_out_op_blob_arg)->mutable_broadcast_parallel();
+      job_builder->SetSbpParallel4Oba(cast_out_op_blob_arg, sbp_parallel);
       op_confs->push_back(cast_op.op_conf());
       loss_scale_val_lbn = cast_op.output("out", 0);
     }
@@ -232,8 +234,8 @@ Maybe<void> TryMirroredCastTotalLossInstanceNum(
           std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
       const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
           std::make_shared<cfg::ParallelConf>(parallel_conf);
-      scope_symbol_id =
-          Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, true);
+      scope_symbol_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())
+                            ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, true);
     }
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
@@ -288,8 +290,8 @@ void ScaleModelDiffByDynamicLossInstanceNum(
           std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
       const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
           std::make_shared<cfg::ParallelConf>(parallel_conf);
-      scope_symbol_id =
-          Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+      scope_symbol_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())
+                            ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
     }
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
@@ -473,7 +475,8 @@ int64_t MakeScopeSymbolId(const JobConfigProto& job_conf, const ParallelConf& pa
       std::make_shared<cfg::JobConfigProto>(job_conf);
   const std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf =
       std::make_shared<cfg::ParallelConf>(parallel_conf);
-  return Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+  return (*Global<std::shared_ptr<ForeignCallback>>::Get())
+      ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
 }
 
 std::string AddLbns(JobBuilder* job_builder, const std::vector<std::string>& lbns,
@@ -749,13 +752,11 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
     const auto& lbi = GenLogicalBlobId(loss_lbn);
     CHECK(loss_lbi2op_node.emplace(lbi, LossOpNode4OpName(lbi.op_name())).second);
   }
-  const Shape src_time_shape(
-      {GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
+  const Shape src_time_shape({1, 1});
   const int64_t source_time_shape_elem_cnt = src_time_shape.elem_cnt();
   bool all_loss_time_shape_eq_src = true;
   for (const auto& pair : loss_lbi2op_node) {
-    const Shape* time_shape = pair.second->out_blob_time_shape();
-    const int64_t time_shape_elem_cnt = time_shape->elem_cnt();
+    const int64_t time_shape_elem_cnt = JUST(pair.second->op().GetOpTimeShape())->elem_cnt();
     if (time_shape_elem_cnt != source_time_shape_elem_cnt) {
       CHECK_EQ(time_shape_elem_cnt % source_time_shape_elem_cnt, 0);
       all_loss_time_shape_eq_src = false;
@@ -781,7 +782,7 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
       // TODO: support dynamic
       CHECK(!cur_blob_desc->is_dynamic());
       const DataType loss_data_type = cur_blob_desc->data_type();
-      const int64_t time_shape_elem_cnt = pair.second->out_blob_time_shape()->elem_cnt();
+      const int64_t time_shape_elem_cnt = JUST(pair.second->op().GetOpTimeShape())->elem_cnt();
       // TODO: consider sbp
       const int64_t loss_elem_cnt =
           cur_blob_desc->shape().elem_cnt() * time_shape_elem_cnt / source_time_shape_elem_cnt;
