@@ -52,7 +52,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
                                            std::make_shared<eager::cfg::EagerSymbolList>());
       }))
       .def_property_readonly("id_", &Session::id)
-      .def("snapshot_mgr_", &Session::snapshot_mgr)
+      .def("snapshot_mgr_", [](Session* sess) { return sess->snapshot_mgr(); })
       .def("TryGetVariableBlobOfJobFromStash", &Session::TryGetVariableBlobOfJobFromStash)
       .def("GetJobNameScopePrefix", &Session::GetJobNameScopePrefix)
       .def("IsMirroredStrategyEnabled", &Session::IsMirroredStrategyEnabled)
