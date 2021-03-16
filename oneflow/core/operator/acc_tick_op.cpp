@@ -17,6 +17,16 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp) {
+  *GetBlobDesc4BnInOp("acc") = *GetBlobDesc4BnInOp("one");
+  GetBlobDesc4BnInOp("acc")->mut_shape() = Shape({1LL});
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 void AccTickOp::InitFromOpConf() {
   CHECK(op_conf().has_acc_tick_conf());
 
@@ -24,12 +34,16 @@ void AccTickOp::InitFromOpConf() {
   EnrollOutputBn("acc", false);
 }
 
+Maybe<void> AccTickOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(BlobDesc4BnInOp);
+}
+
 Maybe<void> AccTickOp::InferOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  *GetBlobDesc4BnInOp("acc") = *GetBlobDesc4BnInOp("one");
-  GetBlobDesc4BnInOp("acc")->mut_shape() = Shape({1LL});
-  return Maybe<void>::Ok();
+  return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> AccTickOp::InferOpTimeShape(
