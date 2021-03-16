@@ -126,10 +126,9 @@ class MaxPool2D:
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-
     def test_maxpool2d(test_case):
-        input_arr = np.random.rand(2,2,3,4)
-        kernel_size, stride, padding = (3, 3),  (2,2),  (1,2)
+        input_arr = np.random.rand(2, 2, 3, 4)
+        kernel_size, stride, padding = (3, 3), (2, 2), (1, 2)
 
         m_numpy = MaxPool2D(kernel_size, stride, padding)
         numpy_output = m_numpy(input_arr)

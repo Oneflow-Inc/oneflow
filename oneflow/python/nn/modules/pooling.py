@@ -1,5 +1,20 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -80,13 +95,14 @@ class MaxPool2d(Module):
 
     """
 
-    def __init__(self, 
-                kernel_size: _size_any_t, 
-                stride: Optional[_size_any_t] = None,
-                padding: _size_any_t = 0, 
-                dilation: _size_any_t = 1,
-                return_indices: bool = False, 
-                ceil_mode: bool = False
+    def __init__(
+        self,
+        kernel_size: _size_any_t,
+        stride: Optional[_size_any_t] = None,
+        padding: _size_any_t = 0,
+        dilation: _size_any_t = 1,
+        return_indices: bool = False,
+        ceil_mode: bool = False,
     ):
         super().__init__()
         _kernel_size = _pair(kernel_size)
@@ -98,6 +114,9 @@ class MaxPool2d(Module):
         _data_format = "NCHW"
         _channel_pos = "channels_last" if _data_format == "NHWC" else "channels_first"
 
+        assert return_indices == False, "Only support return_indices==False for now!"
+        assert dilation == 1, "Only support dilation==1 for now!"
+
         if isinstance(padding, int):
             padding = [padding, padding]
         if len(padding) == 2:
@@ -106,29 +125,29 @@ class MaxPool2d(Module):
             elif _data_format == "NHWC":
                 padding = (0, padding[0], padding[1], 0)
             else:
-                raise ValueError('error padding param!')
+                raise ValueError("error padding param!")
 
-        _padding_type, _pads_list = calc_pool_padding(padding, get_dhw_offset(_channel_pos), 2)
+        _padding_type, _pads_list = calc_pool_padding(
+            padding, get_dhw_offset(_channel_pos), 2
+        )
         _padding_before = [pad[0] for pad in _pads_list]
         _padding_after = [pad[1] for pad in _pads_list]
 
         self._op = (
-                flow.builtin_op("max_pool_2d")
-                .Name(id_util.UniqueStr("MaxPool2D_"))
-                .Attr("data_format", _channel_pos)
-                .Attr("pool_size", _kernel_size)
-                .Attr("strides", _strides)
-                .Attr("ceil_mode", _ceil_mode)
-                .Attr("padding", _padding_type)
-                .Attr("padding_before", _padding_before)
-                .Attr("padding_after", _padding_after)
-                .Input("x")
-                .Output("y")
-                .Build()
-            )
-
+            flow.builtin_op("max_pool_2d")
+            .Name(id_util.UniqueStr("MaxPool2D_"))
+            .Attr("data_format", _channel_pos)
+            .Attr("pool_size", _kernel_size)
+            .Attr("strides", _strides)
+            .Attr("ceil_mode", _ceil_mode)
+            .Attr("padding", _padding_type)
+            .Attr("padding_before", _padding_before)
+            .Attr("padding_after", _padding_after)
+            .Input("x")
+            .Output("y")
+            .Build()
+        )
 
     def forward(self, x):
         res = self._op(x)[0]
         return res
-
