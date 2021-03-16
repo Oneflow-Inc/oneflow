@@ -26,17 +26,18 @@ class Dropout(Module):
     def __init__(self, p: float = 0.5, inplace: bool = False):
         super().__init__()
         self._rate = p
-        self._seed = random.randint(-sys.maxsize, sys.maxsize)
-        assert self._rate is not None and self._rate >= 0.0 and self._rate < 1.0
-        self._scale = float(1.0 / (1.0 - self._rate))
+        _seed = random.randint(-sys.maxsize, sys.maxsize)
         assert inplace == False, "Not support inplace=True yet!"
+        assert self._rate is not None and self._rate >= 0.0 and self._rate < 1.0
+        _scale = float(1.0 / (1.0 - self._rate))
+
         self._op = (
             flow.builtin_op("dropout")
-            .Name(self.id_util.UniqueStr("Dropout_"))
+            .Name(id_util.UniqueStr("Dropout_"))
             .Input("in")
             .Input("mask")
             .Output("out")
-            .Attr("scale", self._scale)
+            .Attr("scale", _scale)
             .Build()
         )
         self._mask_op = (
@@ -45,12 +46,12 @@ class Dropout(Module):
             .Input("like")
             .Output("out")
             .Attr("rate", self._rate)
-            .Attr("seed", self._seed)
+            .Attr("seed", _seed)
             .Build()
         )
 
     def forward(self, x):
-        if self.rate == 0.0:
+        if self._rate == 0.0:
             return x
         mask = self._mask_op(x)[0]
         res = self._op(x, mask)[0]
