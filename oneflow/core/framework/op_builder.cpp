@@ -16,6 +16,7 @@ limitations under the License.
 #include <glog/logging.h>
 
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/op_builder.h"
 
 namespace oneflow {
@@ -60,9 +61,10 @@ Maybe<OpBuilder&> OpBuilder::MaybeOutput(const std::string& output_name, const i
   CHECK_GT_OR_RETURN(count, 0);
   CHECK_EQ_OR_RETURN(proto_.output().count(output_name), 0)
       << "The output " << output_name << " has been specified more than once.";
+  const auto& op_name = JUST(GetOrGenUniqueOpName());
   auto& output_list = (*(proto_.mutable_output()))[output_name];
   for (int i = 0; i < count; ++i) {
-    const std::string& tensor_name = op_name_ + "/" + output_name + "_" + std::to_string(i);
+    const std::string& tensor_name = *op_name + "/" + output_name + "_" + std::to_string(i);
     output_list.mutable_s()->Add()->assign(tensor_name);
     indexed_obns_.push_back(output_name + "_" + std::to_string(i));
   }
@@ -87,7 +89,13 @@ OpBuilder& OpBuilder::Attr(const std::string& attr_name, const AttrValue& attr_v
 }
 
 Maybe<UserOpExpr> OpBuilder::Build() {
-  return std::make_shared<UserOpExpr>(op_name_, std::move(proto_), indexed_ibns_, indexed_obns_);
+  const auto& op_name = JUST(GetOrGenUniqueOpName());
+  return std::make_shared<UserOpExpr>(*op_name, std::move(proto_), indexed_ibns_, indexed_obns_);
+}
+
+Maybe<std::string> OpBuilder::GetOrGenUniqueOpName() {
+  if (op_name_.empty()) { op_name_ = *JUST(UniqueStr(proto_.op_type_name())); }
+  return op_name_;
 }
 
 }  // namespace one

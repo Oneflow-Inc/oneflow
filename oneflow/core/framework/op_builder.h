@@ -60,6 +60,8 @@ class OpBuilder {
   Maybe<UserOpExpr> Build();
 
  private:
+  Maybe<std::string> GetOrGenUniqueOpName();
+
   std::string op_name_;
   UserOpConf proto_;
 
