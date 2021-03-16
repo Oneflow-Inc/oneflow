@@ -110,7 +110,21 @@ jobs:
             -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
             oneflow-manylinux2014-cuda10.2:0.1 \
             bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
+      - name: Upload wheel via SSH
+        uses: ./.github/actions/upload_ssh
+        with:
+          src_path: ${wheelhouse_dir}
+          dst_host: ${{ secrets.CI_STATIC_HOST }}
+          dst_path: ${{ secrets.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
+      - name: Upload bin via SSH
+        if: matrix.test_suite == 'cuda'
+        uses: ./.github/actions/upload_ssh
+        with:
+          src_path: ${bin_dir}
+          dst_host: ${{ secrets.CI_STATIC_HOST }}
+          dst_path: ${{ secrets.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/bin
       - name: Upload wheel to cloud
+        if: contains(github.event.pull_request.labels.*.name, 'upload-wheel-to-cloud')
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${wheelhouse_dir}
@@ -118,7 +132,7 @@ jobs:
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Upload bin to cloud
-        if: matrix.test_suite == 'cuda'
+        if: contains(github.event.pull_request.labels.*.name, 'upload-wheel-to-cloud')
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${bin_dir}
