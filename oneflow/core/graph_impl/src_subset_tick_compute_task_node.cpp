@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 void SrcSubsetTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", false, 1, 1);
+  ProduceRegst("out", false, 2, 2);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
