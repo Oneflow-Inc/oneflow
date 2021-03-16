@@ -52,8 +52,8 @@ void LocalCtrlClient::NotifyDone(const std::string& name) {
 
 void LocalCtrlClient::WaitUntilDone(const std::string& name) {
   std::unique_lock<std::mutex> lck(done_names_mtx_);
-  done_names_cv_.wait(lck);
   LOG(ERROR) << "waiting for name: " << name;
+  done_names_cv_.wait(lck);
   CHECK(done_names_.find(name) != done_names_.end());
 }
 
