@@ -61,7 +61,7 @@ def load_synthetic(image_size, batch_size):
     )
 
     image = flow.data.decode_random(
-        shape=(image_size, image_size, 3), dtype=flow.float, batch_size=batch_size
+        shape=(3, image_size, image_size), dtype=flow.float, batch_size=batch_size
     )
 
     return label, image
