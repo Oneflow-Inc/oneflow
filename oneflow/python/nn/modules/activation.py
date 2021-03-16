@@ -54,3 +54,4 @@ class Tanh(Module):
     def forward(self, x):
         res = self._op(x)[0]
         return res
+            
