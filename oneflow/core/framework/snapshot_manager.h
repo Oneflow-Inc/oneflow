@@ -23,7 +23,7 @@ namespace oneflow {
 
 class SnapshotManager {
  public:
-  SnapshotManager() = default;
+  SnapshotManager() : default_path_("") {}
   virtual ~SnapshotManager() = default;
 
   Maybe<void> InitVariableSnapshotPath(const std::string& root_dir, bool refresh = true);
@@ -31,7 +31,7 @@ class SnapshotManager {
   Maybe<const std::string&> GetSnapshotPath(const std::string& variable_name) const;
 
  private:
-  std::string default_path_ = "";
+  std::string default_path_;
   HashMap<std::string, std::string> variable_name2path_;
 };
 
