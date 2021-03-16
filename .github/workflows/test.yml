@@ -49,7 +49,7 @@ jobs:
     needs: [build]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - uses: Oneflow-Inc/github-workflow-schedule@2367bc4a738dce426132b292aba5c891df7daaab
+      - uses: Oneflow-Inc/github-workflow-schedule@508a8b799e78be6897b2a828c3b9d22836de1678
         name: Wait for GPU slot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
