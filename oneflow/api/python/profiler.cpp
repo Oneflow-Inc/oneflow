@@ -23,8 +23,7 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("OF_PROFILER_RANGE_PUSH",
-        [](const std::string& str) { OF_PROFILER_RANGE_PUSH(str); });
+  m.def("OF_PROFILER_RANGE_PUSH", [](const std::string& str) { OF_PROFILER_RANGE_PUSH(str); });
 
   m.def("OF_PROFILER_RANGE_POP", []() { OF_PROFILER_RANGE_POP(); });
 }
