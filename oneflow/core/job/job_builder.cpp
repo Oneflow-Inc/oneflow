@@ -242,18 +242,9 @@ void JobBuilder::RemoveOpByName(const std::unordered_set<std::string>& removing_
     // Update ParallelDistribution, Sbp
     if (op_name2parallel_distribution_signature_conf->count(op_name) > 0) {
       op_name2parallel_distribution_signature_conf->erase(op_name);
-      CHECK(op_name2sbp_signature_conf->count(op_name) > 0);
-      op_name2sbp_signature_conf->erase(op_name);
-    }
-  }
-  // Update identical sbp oba pairs
-  if (job_->helper().has_identical_sbp_oba_pairs()) {
-    auto identical_sbp_oba_pairs = job_->helper().identical_sbp_oba_pairs().pair();
-    job_->mutable_helper()->mutable_identical_sbp_oba_pairs()->clear_pair();
-    for (const auto& pair : identical_sbp_oba_pairs) {
-      if (removing_names.count(pair.first().op_name()) == 0
-          && removing_names.count(pair.second().op_name()) == 0) {
-        *(job_->mutable_helper()->mutable_identical_sbp_oba_pairs()->mutable_pair()->Add()) = pair;
+      if (GetParallelHierarchyNumAxes(op_name2parallel_conf_, op_name) == 1) {
+        CHECK(op_name2sbp_signature_conf->count(op_name) > 0);
+        op_name2sbp_signature_conf->erase(op_name);
       }
     }
   }
@@ -356,12 +347,6 @@ void JobBuilder::SetParallelDistribution4Oba(const OpBlobArg& oba,
   if (GetParallelHierarchyNumAxes(op_name2parallel_conf_, oba.op_name()) == 1) {
     SetSbpSignature4Oba(job_, oba, parallel_distribution.sbp_parallel(0));
   }
-}
-
-void JobBuilder::BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpBlobArg& second) {
-  auto* pair = job_->mutable_helper()->mutable_identical_sbp_oba_pairs()->mutable_pair()->Add();
-  *pair->mutable_first() = first;
-  *pair->mutable_second() = second;
 }
 
 const SbpSignature JobBuilder::SbpSignature4OpName(const std::string& op_name) const {

@@ -334,23 +334,32 @@ Maybe<void> MakeGetterLossOpNode4OpName(
 }
 
 void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_pairs,
-                      JobBuilder* job_builder) {
+                      OpBlobArgPairs* identical_sbp_oba_pairs) {
   HashSet<OpBlobArg> split_paralleled_obas;
   op_graph.ForEachNode([&](OpNode* op_node) {
     auto TryInserSplitParalleledObas = [&](const std::string& bn) {
       const auto& lbi = op_node->op().BnInOp2Lbi(bn);
-      const auto& fw_sbp_parallel = op_node->SbpParallel4Lbi(lbi);
-      if (fw_sbp_parallel.has_split_parallel()) {
+      const auto& fw_parallel_distribution = op_node->ParallelDistribution4Lbi(lbi);
+      bool all_sbp_split = true;
+      for (int64_t i = 0; i < fw_parallel_distribution.sbp_parallel_size(); ++i) {
+        if (!fw_parallel_distribution.sbp_parallel(i).has_split_parallel()) {
+          all_sbp_split = false;
+          break;
+        }
+      }
+      if (all_sbp_split) {
         split_paralleled_obas.insert(GenOpBlobArg(op_node->op().op_name(), bn));
       }
     };
     for (const auto& ibn : op_node->op().input_bns()) { TryInserSplitParalleledObas(ibn); }
-    for (const auto& obn : op_node->op().input_bns()) { TryInserSplitParalleledObas(obn); }
+    for (const auto& obn : op_node->op().output_bns()) { TryInserSplitParalleledObas(obn); }
   });
   for (const auto& pair : fw_bw_oba_pairs.pair()) {
     CHECK(split_paralleled_obas.find(pair.first()) == split_paralleled_obas.end());
     if (split_paralleled_obas.find(pair.second()) != split_paralleled_obas.end()) {
-      job_builder->BindIdenticalSbpOpBlobArgPair(pair.first(), pair.second());
+      auto* oba_pair = identical_sbp_oba_pairs->mutable_pair()->Add();
+      *oba_pair->mutable_first() = pair.first();
+      *oba_pair->mutable_second() = pair.second();
     }
   }
 }
@@ -673,7 +682,8 @@ Maybe<void> GenerateBackwardOpConfIf(
 }
 
 Maybe<void> AutoGrad(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
-                     HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi) {
+                     HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi,
+                     OpBlobArgPairs* identical_sbp_oba_pairs) {
   std::function<bool(OpNode*)> NeedBackwardOp;
   JUST(MakePredicatorNeedBackwardOp(op_graph, &NeedBackwardOp));
   std::list<OpNode*> loss_nodes;
@@ -737,7 +747,7 @@ Maybe<void> AutoGrad(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_b
   OpBlobArgPairs fw_bw_oba_pairs;
   CalcFwBwObaPairs(op_graph, in_oba2in_diff_lbi, out_oba2out_diff_lbi, out_oba2clone_bw_add_out_lbi,
                    *job_builder, &fw_bw_oba_pairs);
-  BindFwBwObaPairs(op_graph, fw_bw_oba_pairs, job_builder);
+  BindFwBwObaPairs(op_graph, fw_bw_oba_pairs, identical_sbp_oba_pairs);
   CalcOutLbi2OutDiffLbi(op_graph, out_oba2out_diff_lbi, out_lbi2out_diff_lbi);
   return Maybe<void>::Ok();
 }
