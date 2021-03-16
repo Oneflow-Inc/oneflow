@@ -163,7 +163,7 @@ bool PosixFileSystem::IsDirectory(const std::string& fname) {
   return false;
 }
 
-bool PosixFileSystem::IsRegularFile(const std::string& fname) {
+Maybe<bool> PosixFileSystem::IsRegularFile(const std::string& fname) {
   struct stat sbuf;
   if (stat(TranslateName(fname).c_str(), &sbuf) == 0 && S_ISREG(sbuf.st_mode)) { return true; }
   return false;
