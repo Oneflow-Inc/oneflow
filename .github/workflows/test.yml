@@ -45,11 +45,11 @@ jobs:
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
-    runs-on: [self-hosted, scheduler]
+    runs-on: ubuntu-18.04
     needs: [build]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - uses: Oneflow-Inc/github-workflow-schedule@64f8a54ab271a1153ff9bb878b145cc4321f61f0
+      - uses: Oneflow-Inc/github-workflow-schedule@5b8cd8f18bfb8e62c902010ffdadac78c76c92d8
         name: Wait for GPU slot
         env:
           GITHUB_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
