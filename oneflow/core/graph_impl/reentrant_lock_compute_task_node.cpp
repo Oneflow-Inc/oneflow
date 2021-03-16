@@ -59,4 +59,9 @@ void ReentrantLockCompTaskNode::InferProducedDataRegstTimeShape() {
 
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kReentrantLock);
 
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kReentrantLock)
+    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateTickTockStreamIndex();
+    });
+
 }  // namespace oneflow
