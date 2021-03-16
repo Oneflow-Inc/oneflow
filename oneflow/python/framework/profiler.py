@@ -21,9 +21,9 @@ import oneflow_api
 
 @oneflow_export("profiler.range_push")
 def RangePush(str):
-    oneflow_api.RangePush(str)
+    oneflow_api.profiler.RangePush(str)
 
 
 @oneflow_export("profiler.range_pop")
 def RangePop():
-    oneflow_api.RangePop()
+    oneflow_api.profiler.RangePop()
