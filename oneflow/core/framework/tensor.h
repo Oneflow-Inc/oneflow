@@ -254,8 +254,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   // Setters to be deprecated
   Maybe<void> set_blob_object(
       const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
-    JUST(impl_->set_blob_object(blob_object));
-    return Maybe<void>::Ok();
+    return impl_->set_blob_object(blob_object);
   }
 
   static std::shared_ptr<ConsistentTensor> MakeTensor(
