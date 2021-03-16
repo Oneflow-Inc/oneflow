@@ -24,7 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class LocalRpcClient : RpcClientBase {
+class LocalRpcClient : RpcClient {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LocalRpcClient);
   virtual ~LocalRpcClient() = default;
@@ -105,9 +105,9 @@ class LocalRpcManager : public RpcManager {
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
 
 #define OF_ENV_BARRIER() Global<LocalCtrlClient>::Get()->Barrier(FILE_LINE_STR)
-#define OF_SESSION_BARRIER()                        \
-  Global<LocalCtrlClient>::Get()->Barrier(FILE_LINE_STR, \
-                                     Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())
+#define OF_SESSION_BARRIER()               \
+  Global<LocalCtrlClient>::Get()->Barrier( \
+      FILE_LINE_STR, Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())
 
 static void OfCallOnce(const std::string& name, std::function<void()> f) {
   TryLockResult lock_ret = Global<LocalCtrlClient>::Get()->TryLock(name);

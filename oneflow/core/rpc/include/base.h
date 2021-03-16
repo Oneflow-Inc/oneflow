@@ -77,9 +77,9 @@ class CtrlCallIf {
  private:
 };
 
-class RpcClientBase {};
+class RpcClient {};
 
-class RpcServerBase {};
+class RpcServer {};
 
 class RpcManager {
  public:
