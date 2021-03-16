@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/constant.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/str_util.h"
@@ -22,12 +23,6 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
-
-namespace {
-
-static const std::string kNoPassTag = "";
-
-}  // namespace
 
 RegstDescProto* PlanUtil::GetSoleProducedDataRegst(TaskProto* task_proto) {
   RegstDescProto* ret = nullptr;
@@ -158,6 +153,10 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
 
   auto InsertNodeDefByTaskProto = [&](const TaskProto& task_proto, const std::string& node_def,
                                       const std::string& pass_tag) {
+    if (task_proto.task_type() == TaskType::kCopyCommNet) {
+      copy_comm_net_node_list.push_back(node_def);
+      return;
+    }
     if (pass_tag == kNoPassTag) {
       if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
         int64_t device_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_proto.thrd_id());
@@ -165,10 +164,8 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
       } else {
         machine_id2host_node_list[task_proto.machine_id()].push_back(node_def);
       }
-    } else if (pass_tag == "main") {
+    } else if (pass_tag == kMainOp) {
       main_node_list.push_back(node_def);
-    } else if (pass_tag == "copy_comm_net") {
-      copy_comm_net_node_list.push_back(node_def);
     } else {
       UNIMPLEMENTED();
     }
@@ -203,11 +200,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     for (const ExecNodeProto& exec_node : task_proto.exec_sequence().exec_node()) {
       const auto& op_conf = exec_node.kernel_conf().op_attribute().op_conf();
       op_name += op_conf.name();
-      if (op_conf.has_pass_tag()) {
-        pass_tag = op_conf.pass_tag();
-      } else if (op_conf.name().substr(0, 13) == std::string("copy_comm_net")) {
-        pass_tag = "copy_comm_net";
-      }
+      if (op_conf.has_pass_tag()) { pass_tag = op_conf.pass_tag(); }
     }
     task_id2op_name[task_proto.task_id()] = op_name;
     node_def += op_name;
