@@ -140,10 +140,10 @@ Maybe<SubTskGphBuilderStatus> Build1DParallelHierarchySubTskGph(
 
 }  // namespace
 
-class FlatHierarchicalSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
+class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(FlatHierarchicalSubTskGphBuilder);
-  FlatHierarchicalSubTskGphBuilder() {
+  OF_DISALLOW_COPY_AND_MOVE(FlatSubTskGphBuilder);
+  FlatSubTskGphBuilder() {
     std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
     builders.emplace_back(new OneToOneSubTskGphBuilder());
     builders.emplace_back(new B21SubTskGphBuilder());
@@ -155,7 +155,7 @@ class FlatHierarchicalSubTskGphBuilder final : public HierarchicalSubTskGphBuild
     builders.emplace_back(new NaiveB2PSubTskGphBuilder());
     sub_tsk_gph_builder_.reset(new ChainSubTskGphBuilder(builders));
   }
-  ~FlatHierarchicalSubTskGphBuilder() = default;
+  ~FlatSubTskGphBuilder() = default;
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
@@ -179,11 +179,11 @@ class FlatHierarchicalSubTskGphBuilder final : public HierarchicalSubTskGphBuild
 
 struct DispatchHierarchicalSubTskGphBuilder::Impl {
   Impl();
-  std::shared_ptr<FlatHierarchicalSubTskGphBuilder> flat_hierarchical_sub_tsk_gph_builder_;
+  std::unique_ptr<FlatSubTskGphBuilder> flat_sub_tsk_gph_builder_;
 };
 
 DispatchHierarchicalSubTskGphBuilder::Impl::Impl() {
-  flat_hierarchical_sub_tsk_gph_builder_.reset(new FlatHierarchicalSubTskGphBuilder());
+  flat_sub_tsk_gph_builder_.reset(new FlatSubTskGphBuilder());
 }
 
 DispatchHierarchicalSubTskGphBuilder::DispatchHierarchicalSubTskGphBuilder() {
@@ -212,7 +212,7 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
 
   if (reduced_in_parallel_hierarchy->NumAxes() == 1
       && reduced_out_parallel_hierarchy->NumAxes() == 1) {
-    return impl_->flat_hierarchical_sub_tsk_gph_builder_->Build(
+    return impl_->flat_sub_tsk_gph_builder_->Build(
         ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
         reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
         reduced_out_parallel_distribution, time_shape);
