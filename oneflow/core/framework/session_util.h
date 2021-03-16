@@ -35,7 +35,8 @@ class Session {
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list() const;
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list() const;
 
-  const std::shared_ptr<SnapshotManager>& snapshot_mgr() const { return snapshot_mgr_; }
+  std::shared_ptr<SnapshotManager> snapshot_mgr() { return snapshot_mgr_; }
+  std::shared_ptr<const SnapshotManager> snapshot_mgr() const { return snapshot_mgr_; }
 
  private:
   int64_t id_;

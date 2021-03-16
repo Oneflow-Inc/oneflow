@@ -21,7 +21,7 @@ namespace oneflow {
 
 Maybe<void> SnapshotManager::InitVariableSnapshotPath(const std::string& root_dir, bool refresh) {
   fs::FileSystem* fs = LocalFS();
-  CHECK(fs->IsDirectory(root_dir));
+  CHECK_OR_RETURN(fs->IsDirectory(root_dir));
   if (refresh) { variable_name2path_.clear(); }
   for (const auto& dir : fs->ListDir(root_dir)) {
     std::string absolute_dir = JoinPath(root_dir, dir);
