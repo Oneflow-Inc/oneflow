@@ -23,6 +23,12 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+static const std::string kNoPassTag = "";
+
+}  // namespace
+
 RegstDescProto* PlanUtil::GetSoleProducedDataRegst(TaskProto* task_proto) {
   RegstDescProto* ret = nullptr;
   for (auto& pair : *task_proto->mutable_produced_regst_desc()) {
@@ -152,7 +158,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
 
   auto InsertNodeDefByTaskProto = [&](const TaskProto& task_proto, const std::string& node_def,
                                       const std::string& pass_tag) {
-    if (pass_tag.empty()) {
+    if (pass_tag == kNoPassTag) {
       if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
         int64_t device_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_proto.thrd_id());
         machine_id2device_id2node_list[task_proto.machine_id()][device_id].push_back(node_def);
