@@ -81,6 +81,15 @@ class RpcClientBase {};
 
 class RpcServerBase {};
 
+class RpcManager {
+ public:
+  RpcManager() {}
+  virtual ~RpcManager() {}
+  virtual void Bootstrap() {}
+  virtual void CreateServer() {}
+  virtual void CreateClient() {}
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_RPC_INCLUDE_BASE_CTRL_

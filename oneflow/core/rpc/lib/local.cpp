@@ -136,6 +136,17 @@ int32_t RpcClient::IncreaseCount(const std::string& k, int32_t v) { UNIMPLEMENTE
 
 void RpcClient::EraseCount(const std::string& k) { UNIMPLEMENTED(); }
 
+void LocalRpcManager::Bootstrap() {
+  Address* addr = Global<ProcessCtx>::Get()->add_ctrl_addr();
+  addr->set_host("localhost");
+  Global<ProcessCtx>::Get()->set_rank(0);
+  Global<ProcessCtx>::Get()->set_node_size(1);
+}
+
+void LocalRpcManager::CreateClient() { Global<CtrlClient>::New(*Global<ProcessCtx>::Get()); }
+
+LocalRpcManager::~LocalRpcManager() { Global<CtrlClient>::Delete(); }
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_RPC_LIB_LOCAL_

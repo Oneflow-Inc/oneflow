@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
+#include "oneflow/core/rpc/include/manager.h"
 
 namespace oneflow {
 
@@ -113,13 +114,20 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   CHECK_JUST(JUST(MakeCtrlBootstrap(*Global<EnvDesc>::Get()))
                  ->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
 #endif  // RPC_BACKEND_GRPC
+  if (env_proto.rpc_backend() == "grpc") {
+    UNIMPLEMENTED();
+  } else if (env_proto.rpc_backend() == "local") {
 #ifdef RPC_BACKEND_LOCAL
-  Address* addr = Global<ProcessCtx>::Get()->add_ctrl_addr();
-  addr->set_host("localhost");
-  Global<ProcessCtx>::Get()->set_rank(0);
-  Global<ProcessCtx>::Get()->set_node_size(1);
+    auto* local_manager = new LocalRpcManager;
+    Global<RpcManager>::SetAllocated(local_manager);
+#else
+    UNIMPLEMENTED();
 #endif  // RPC_BACKEND_LOCAL
-  Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
+  } else {
+    UNIMPLEMENTED();
+  }
+  Global<RpcManager>::Get()->Bootstrap();  // TODO: add process ctx as arg
+  Global<RpcManager>::Get()->CreateClient();
   Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
@@ -149,7 +157,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   CHECK_NOTNULL(Global<CtrlServer>::Get());
 #endif  // RPC_BACKEND_GRPC
   CHECK_NOTNULL(Global<EnvDesc>::Get());
-  Global<CtrlClient>::Delete();
+  Global<RpcManager>::Delete();
   Global<ProcessCtx>::Delete();
 #ifdef RPC_BACKEND_GRPC
   Global<CtrlServer>::Delete();

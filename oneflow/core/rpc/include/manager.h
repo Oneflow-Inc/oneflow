@@ -1,18 +1,12 @@
 #ifndef ONEFLOW_CORE_RPC_INCLUDE_MANAGER_H_
 #define ONEFLOW_CORE_RPC_INCLUDE_MANAGER_H_
 
-namespace oneflow {
+#ifdef RPC_BACKEND_GRPC
+#include "oneflow/core/rpc/include/gprc/ctrl.h"
+#endif  // RPC_BACKEND_GRPC
 
-class RpcManager {
- public:
-  RpcManager() {}
-  virtual ~RpcManager() {}
-  virtual void CreateServer() {}
-  virtual void CreateClient() {}
-  virtual void Bootstrap() {}
-  virtual void TearDown() {}
-};
-
-}  // namespace oneflow
+#ifdef RPC_BACKEND_LOCAL
+#include "oneflow/core/rpc/include/local.h"
+#endif  // RPC_BACKEND_LOCAL
 
 #endif  // ONEFLOW_CORE_RPC_INCLUDE_MANAGER_H_

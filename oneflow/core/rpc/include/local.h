@@ -94,12 +94,12 @@ class CtrlClient final : public RpcClient {
   ProcessCtx process_ctx_;
 };
 
-class LocalRpcManager {
+class LocalRpcManager : public RpcManager {
  public:
   LocalRpcManager() {}
-  virtual ~LocalRpcManager() {}
-  virtual void CreateClient() {}
-  virtual void TearDown() {}
+  ~LocalRpcManager();
+  void Bootstrap();
+  void CreateClient();
 };
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
