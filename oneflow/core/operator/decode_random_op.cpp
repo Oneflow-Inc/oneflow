@@ -29,6 +29,20 @@ void DecodeRandomOp::VirtualGenKernelConf(
   kernel_conf->mutable_decode_random_conf()->set_random_seed(NewRandomSeed());
 }
 
+Maybe<void> DecodeRandomOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  BlobDesc* out_blob_desc = BlobDesc4BnInOp("out");
+  const DecodeRandomOpConf& conf = op_conf().decode_random_conf();
+  DimVector dim_vec(1 + conf.shape().dim_size());
+  int64_t batch_size = conf.batch_size();
+  dim_vec[0] = batch_size;
+  FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = conf.shape().dim(j - 1); }
+  out_blob_desc->mut_shape() = Shape(dim_vec);
+  out_blob_desc->set_data_type(conf.data_type());
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> DecodeRandomOp::InferOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {

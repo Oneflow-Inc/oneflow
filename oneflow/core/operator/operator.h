@@ -110,7 +110,7 @@ class Operator {
   Maybe<void> InferLogicalOutBlobDescsIf();
   virtual Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-      const ParallelDesc& parallel_desc) const;
+      const ParallelDesc& parallel_desc) const = 0;
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs

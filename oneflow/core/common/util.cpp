@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/platform.h"
 #include <csignal>
+#include <limits>
 
 #ifdef __linux__
 #include <sys/sysinfo.h>
@@ -73,7 +74,7 @@ void AbortSignalHandler(int signal) { exit(-1); }
 COMMAND(std::signal(SIGINT, AbortSignalHandler));
 
 size_t GetAvailableCpuMemSize() {
-#ifdef OF_PLATFORM_POSIX
+#if defined(__linux__)
   std::ifstream mem_info("/proc/meminfo");
   CHECK(mem_info.good()) << "can't open file: /proc/meminfo";
   std::string line;
@@ -91,10 +92,14 @@ size_t GetAvailableCpuMemSize() {
     return mem_available * 1024;
   }
   LOG(FATAL) << "can't find MemAvailable in /proc/meminfo";
-#else
-  TODO();
-#endif
   return 0;
+#elif defined(__APPLE__)
+  // macOS will eagerly make use of all memory so there is no point querying it
+  return std::numeric_limits<size_t>::max();
+#else
+  UNIMPLEMENTED();
+  return 0;
+#endif
 }
 
 bool IsKernelSafeInt32(int64_t n) { return n <= GetMaxVal<int32_t>() / 2; }
