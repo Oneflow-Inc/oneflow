@@ -58,11 +58,13 @@ class TestModule(flow.unittest.TestCase):
         print(y.numpy())
 
     def test_gelu(test_case):
-        relu = flow.nn.GeLU()
+        input_arr = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        x = flow.Tensor(input_arr)
 
-        x = flow.Tensor(2, 3)
+        gelu = flow.nn.GeLU()
         y = gelu(x)
-        print(y.numpy())
+        z = np.gelu(input_arr)
+        test_case.assertTrue(np.array_equal(y.numpy(), z))
 
     def test_load_state_dict(test_case):
         class CustomModule(flow.nn.Module):
