@@ -30,20 +30,40 @@ import oneflow.python.framework.id_util as id_util
 
 
 @oneflow_export("nn.CrossEntropyLoss")
-class CrossEntropyLoss:
+class CrossEntropyLoss(Module):
     r"""
     """
 
     def __init__(
-        self,
-        weight: Optional[Tensor] = None,
-        size_average=None,
-        ignore_index: int = -100,
-        reduce=None,
-        reduction: str = "mean",
+        self, weight=None, ignore_index: int = None, reduction: str = "mean"
     ) -> None:
         super().__init__()
-        pass
+        if weight != None:
+            raise ValueError("Argument weight is not supported yet")
+        if ignore_index != None:
+            raise ValueError("Argument ignore_index is not supported yet")
+        if reduction != None:
+            raise ValueError("reduction can only be None by now")
 
-    def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        pass
+        self.reduction = reduction
+
+        _opname = id_util.UniqueStr("Module_CrossEntropyLoss_")
+
+        self._op = (
+            flow.builtin_op("sparse_softmax_cross_entropy")
+            .Name(_opname)
+            .Input("prediction")
+            .Input("label")
+            .Output("prob")
+            .Output("out")
+        )
+
+    def forward(self, input, target):
+        self._op = self._op.Attr("depth", input.shape[len(input.shape) - 1]).Build()
+        prob, out = self._op(input, target)
+        if self.reduction == "mean":
+            raise ValueError("not supported yet")
+        elif self.reduction == "sum":
+            return ValueError("not supported yet")
+        else:
+            return out
