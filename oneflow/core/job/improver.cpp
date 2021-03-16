@@ -516,14 +516,17 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
 }  // namespace
 
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
-  int64_t mem_size = amd_.machine_amd(machine_id).zone_size(memory_zone_id);
+  uint64_t mem_size = amd_.machine_amd(machine_id).zone_size(memory_zone_id);
   const ResourceDesc* resource_desc = Global<ResourceDesc, ForSession>::Get();
-  if (memory_zone_id == resource_desc->GpuDeviceNum()) {
+  const bool is_host = memory_zone_id == resource_desc->GpuDeviceNum();
+  if (is_host) {
     mem_size -= resource_desc->reserved_host_mem_byte();
   } else {
     mem_size -= resource_desc->reserved_device_mem_byte();
   }
-  CHECK_GT(mem_size, 0);
+  CHECK_GT(mem_size, 0) << "memory_zone_id: " << memory_zone_id
+                        << ", is_host: " << (is_host ? "yes" : "no") << "\n"
+                        << "AvailableMemDesc:" << amd_.DebugString();
   return static_cast<uint64_t>(mem_size);
 }
 
@@ -561,7 +564,7 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
       const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
       if (calc >= available) {
         const auto* id_mgr = Global<IDMgr>::Get();
-        const char* device_tag = JUST(DeviceTag4DeviceType(
+        const std::string device_tag = *JUST(DeviceTag4DeviceType(
             id_mgr->IsGpuMemZone(mem_zone_id) ? DeviceType::kGPU : DeviceType::kCPU));
         return Error::MemoryZoneOutOfMemoryError(machine_id, mem_zone_id, calc, available,
                                                  device_tag)

@@ -167,6 +167,9 @@ class UserOpInferContext : public user_op::InferContext {
   const ArgVec& inputs() const override { return op_->inputs(); }
   const ArgVec& outputs() const override { return op_->outputs(); }
   const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; };
+  const ParallelDesc& parallel_desc() const override {
+    return *CHECK_JUST(op_->GetOpParallelDesc());
+  };
   const JobDesc* job_desc() const override {
     CHECK_NOTNULL(job_desc_);
     return job_desc_;
@@ -174,10 +177,21 @@ class UserOpInferContext : public user_op::InferContext {
 
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                  int32_t index) const override {
+    CHECK_EQ(CHECK_JUST(op_->GetOpParallelDesc())->hierarchy()->NumAxes(), 1);
     const auto& bn2sbp = CHECK_JUST(op_->sbp_signature())->bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2sbp.find(bn);
     CHECK(it != bn2sbp.end());
+    return it->second;
+  }
+
+  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
+                                                                   int32_t index) const override {
+    const auto& bn2parallel_distribution =
+        CHECK_JUST(op_->parallel_distribution_signature())->bn_in_op2parallel_distribution();
+    std::string bn = GenRepeatedBn(arg_name, index);
+    auto it = bn2parallel_distribution.find(bn);
+    CHECK(it != bn2parallel_distribution.end());
     return it->second;
   }
 
@@ -337,31 +351,34 @@ void UserOp::InitFromOpConf() {
     }
   }
   EnrollTmpBn(GenRepeatedBn("tmp_buffer", 0));
+  user_op_conf_.reset(new user_op::UserOpConfWrapper(shared_op_conf()));
   val_ =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf().user_conf().op_type_name());
   if (val_ != nullptr) {
-    user_op::UserOpConfWrapper user_conf_wrapper(op_conf());
-    user_op::GetInputArgModifier GetInputArgModifierFn =
-        [&](const std::string& in_arg_name, int32_t in_arg_index) -> user_op::InputArgModifier* {
-      std::string ibn = GenRepeatedBn(in_arg_name, in_arg_index);
-      if (std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end()) {
-        return MutInputBlobModifier4Ibn(ibn);
-      }
-      return nullptr;
-    };
-    val_->input_arg_modify_fn(GetInputArgModifierFn, user_conf_wrapper);
-
-    user_op::GetOutputArgModifier GetOutputArgModifierFn =
-        [&](const std::string& out_arg_name, int32_t out_arg_index) -> user_op::OutputArgModifier* {
-      std::string obn = GenRepeatedBn(out_arg_name, out_arg_index);
-      if (std::find(output_bns().begin(), output_bns().end(), obn) != output_bns().end()) {
-        return MutOutputBlobModifier4Obn(obn);
-      }
-      return nullptr;
-    };
-    val_->output_arg_modify_fn(GetOutputArgModifierFn, user_conf_wrapper);
+    if (val_->input_arg_modify_fn) {
+      user_op::GetInputArgModifier GetInputArgModifierFn =
+          [&](const std::string& in_arg_name, int32_t in_arg_index) -> user_op::InputArgModifier* {
+        std::string ibn = GenRepeatedBn(in_arg_name, in_arg_index);
+        if (std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end()) {
+          return MutInputBlobModifier4Ibn(ibn);
+        }
+        return nullptr;
+      };
+      val_->input_arg_modify_fn(GetInputArgModifierFn, *user_op_conf_);
+    }
+    if (val_->output_arg_modify_fn) {
+      user_op::GetOutputArgModifier GetOutputArgModifierFn =
+          [&](const std::string& out_arg_name,
+              int32_t out_arg_index) -> user_op::OutputArgModifier* {
+        std::string obn = GenRepeatedBn(out_arg_name, out_arg_index);
+        if (std::find(output_bns().begin(), output_bns().end(), obn) != output_bns().end()) {
+          return MutOutputBlobModifier4Obn(obn);
+        }
+        return nullptr;
+      };
+      val_->output_arg_modify_fn(GetOutputArgModifierFn, *user_op_conf_);
+    }
   }
-  user_op_conf_.reset(new user_op::UserOpConfWrapper(op_conf()));
 }
 
 Maybe<void> UserOp::InferInternalBlobDescs(
