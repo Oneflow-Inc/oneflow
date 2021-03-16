@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/model_update_kernel_util.h"
-#include "oneflow/core/kernel/indexed_slices_reduce_sum_kernel_util.h"
+#include "oneflow/user/kernels/indexed_slices_reduce_sum_kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
