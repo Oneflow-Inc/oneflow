@@ -314,13 +314,6 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Operator::InferLogicalOutBlobDescs(
-    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const ParallelDesc& parallel_desc) const {
-  UNIMPLEMENTED() << typeid(*this).name();
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> Operator::InferBlobDescsIf(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const JobDesc* job_desc) const {
