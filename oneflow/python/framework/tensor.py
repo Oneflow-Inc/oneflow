@@ -490,6 +490,7 @@ def _default_initializer_for_determining(tensor):
 
 def global_function_or_identity(*args, **kwargs):
     if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        assert flow.eager_execution_enabled()
         return flow.global_function(*args, **kwargs)
     else:
         assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
