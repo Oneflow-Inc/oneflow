@@ -83,23 +83,14 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   OF_SESSION_BARRIER();
   LOG(INFO) << "Actors on every machine constructed";
   if (Global<CommNet>::Get()) { Global<CommNet>::Get()->RegisterMemoryDone(); }
-  LOG(ERROR) << "RegisterMemoryDone";
   OF_SESSION_BARRIER();
-  LOG(ERROR) << "OF_SESSION_BARRIER Success";
   runtime_ctx->NewCounter("running_actor_cnt", this_machine_task_num);
   SendCmdMsg(source_tasks, ActorCmd::kStart);
-  LOG(ERROR) << "Runtime Init Done";
 }
 
 Runtime::~Runtime() {
-  // OF_SESSION_BARRIER();
-  LOG(ERROR) << "Destory Runtime";
-  LOG(ERROR) << "WaitUntilCntEqualZero";
   Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero("running_actor_cnt");
-  LOG(ERROR) << "WaitUntilCntEqualZero Success";
-  LOG(ERROR) << "Start OF_SESSION_BARRIER";
   OF_SESSION_BARRIER();
-  LOG(ERROR) << "OF_SESSION_BARRIER Done";
   DeleteAllGlobal();
 }
 

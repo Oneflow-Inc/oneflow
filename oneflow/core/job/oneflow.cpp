@@ -99,15 +99,6 @@ std::string block7chunk_key(const std::string& plan_name, int64_t machine_id) {
   return plan_name + "_" + std::to_string(machine_id) + "_block7chunk";
 }
 
-std::shared_ptr<OperatorConf> CreateSinkTickOpConf(const std::string& in_op_name) {
-  auto tick_op = std::make_shared<OperatorConf>();
-  tick_op->set_name("System-Main-CallbackNotifier_TmpSinkTick_" + NewUniqueId());
-  auto* tick_conf = tick_op->mutable_sink_tick_conf();
-  tick_conf->add_tick(in_op_name + "/out");
-  tick_conf->set_out("out");
-  return tick_op;
-}
-
 void PushPlan(const std::string& plan_name, const Plan& plan) {
   HashMap<int64_t, std::set<int64_t>> machine_id2thrd_id_set;
   HashMap<std::pair<int64_t, int64_t>, std::vector<TaskProto>> mchn_thrd_id2task_protos;
@@ -626,10 +617,11 @@ Maybe<ReentrantLockBackEdge> MakeMainJobComponent(
       src_tick_conf->set_out("out");
       JUST(job_builder->AddOp(parallel_conf, src_tick_op_conf));
     }
-    // identity tick
+
     auto* cur_cb_sink_tick_op_names = &cb_sink_tick_op_names->at(i);
     for (int64_t machine_id = machine_id_range.begin(); machine_id < machine_id_range.end();
          ++machine_id) {
+      // identity tick
       OperatorConf identity_tick_op_conf;
       {
         std::string name_prefix = "System-Main-Tick_CriticalSection_";
@@ -642,6 +634,7 @@ Maybe<ReentrantLockBackEdge> MakeMainJobComponent(
         CHECK_OR_RETURN(
             cur_id_tick_op_names->emplace(machine_id, identity_tick_op_conf.name()).second);
       }
+      // callback
       {
         OperatorConf cb_sink_tick_op_conf;
         std::string name_prefix = "System-Main-CallbackSinkTick_";
@@ -653,25 +646,24 @@ Maybe<ReentrantLockBackEdge> MakeMainJobComponent(
         CHECK_OR_RETURN(
             cur_cb_sink_tick_op_names->emplace(machine_id, cb_sink_tick_op_conf.name()).second);
       }
-    }
-    // sink tick
-    {
-      OperatorConf snk_tick_op_conf;
-      std::string name_prefix = "System-Main-SinkTick_CriticalSection_";
-      snk_tick_op_conf.set_name(name_prefix + std::to_string(i) + NewUniqueId());
-      auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
-      for (const auto& pair : *cur_cb_sink_tick_op_names) {
-        snk_tick_conf->add_tick(pair.second + "/out");
+      // sink tick
+      {
+        OperatorConf snk_tick_op_conf;
+        std::string name_prefix = "System-Main-SinkTick_CriticalSection_";
+        snk_tick_op_conf.set_name(name_prefix + std::to_string(i) + NewUniqueId());
+        auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
+        snk_tick_conf->add_tick(identity_tick_op_conf.name() + "/out");
+        snk_tick_conf->set_out("out");
+        JUST(job_builder->AddOp(parallel_conf, snk_tick_op_conf));
+        snk_tick_op_names.push_back(snk_tick_op_conf.name());
       }
-      snk_tick_conf->set_out("out");
-      JUST(job_builder->AddOp(parallel_conf, snk_tick_op_conf));
-      snk_tick_op_names.push_back(snk_tick_op_conf.name());
     }
   }
   // critical section esac op conf
   OperatorConf cs_esac_op_conf;
   {
     cs_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
+    // cs_esac_op_conf.set_pass_tag("main");
     auto* cs_esac_conf = cs_esac_op_conf.mutable_esac_conf();
     for (const auto& snk_tick_op_name : snk_tick_op_names) {
       cs_esac_conf->add_in(snk_tick_op_name + "/out");
@@ -698,6 +690,7 @@ Maybe<void> MakeCallbackNotifierSinkTick(
     {
       std::string name_prefix = "System-Main-CallbackNotifier_CriticalSection_";
       snk_tick_op_conf.set_name(name_prefix + std::to_string(total_job_cs_id));
+      snk_tick_op_conf.set_pass_tag("main");
       auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
       for (int64_t machine_id : process_ranks) {
         const auto& cb_sink_tick_op_name = cb_sink_tick_op_names.at(total_job_cs_id).at(machine_id);
@@ -722,6 +715,7 @@ Maybe<void> MakeMainJob(Job* main_job,
   OperatorConf wait_and_send_ids_op_conf;
   {
     wait_and_send_ids_op_conf.set_name(std::string("System-Main-WaitAndSendIds_") + NewUniqueId());
+    wait_and_send_ids_op_conf.set_pass_tag("main");
     auto* wait_and_send_ids_conf = wait_and_send_ids_op_conf.mutable_wait_and_send_ids_conf();
     wait_and_send_ids_conf->set_out("out");
     wait_and_send_ids_conf->set_wait_buffer_name(kBufferNameGlobalWaitJobId);
@@ -751,6 +745,7 @@ Maybe<void> MakeMainJob(Job* main_job,
   OperatorConf callback_notify_esac_op_conf;
   {
     callback_notify_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
+    callback_notify_esac_op_conf.set_pass_tag("main");
     auto* callback_notify_esac_conf = callback_notify_esac_op_conf.mutable_esac_conf();
     JUST(MakeCallbackNotifierSinkTick(
         process_ranks, cb_sink_tick_op_names, &job_builder,
@@ -762,6 +757,7 @@ Maybe<void> MakeMainJob(Job* main_job,
   OperatorConf callback_notify_op_conf;
   {
     callback_notify_op_conf.set_name(std::string("System-Main-CallbackNotify_") + NewUniqueId());
+    callback_notify_op_conf.set_pass_tag("main");
     auto* callback_notify_conf = callback_notify_op_conf.mutable_callback_notify_conf();
     callback_notify_conf->set_in(callback_notify_esac_op_conf.name() + "/out");
     auto* buffer_names = callback_notify_conf->mutable_callback_buffer_name();

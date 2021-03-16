@@ -400,7 +400,6 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
     act_id_ += 1;
-    LOG(ERROR) << "ACTOR ID: " << std::to_string(actor_id_);
     TryLogActEvent([&] { Act(); });
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();

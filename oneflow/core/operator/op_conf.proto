@@ -470,6 +470,7 @@ message OperatorConf {
   optional string device_tag = 4 [default = "invalid_device"];
   repeated string ctrl_in_op_name = 7;
   optional int64 scope_symbol_id = 8;
+  optional string pass_tag = 10;
   oneof op_type {
     // system op
     DecodeRandomOpConf decode_random_conf = 102;
