@@ -268,23 +268,23 @@ class Model(
         """
         self._max_steps = max_steps
         api_clear_default_session()
-        self._model_step = self._get_and_check_step(
+        self._sub_models= self._get_and_check_sub_models(
             training_config, validation_config, checkpoint_config, callbacks
         )
 
-        if len(self._model_step) == 0:
+        if len(self._sub_models) == 0:
             return
 
-        if self._checkpoint_step.is_valid:
-            self._checkpoint_step.load()
+        if self._checkpoint_model.is_valid:
+            self._checkpoint_model.load()
         for step_idx in range(0, self._max_steps):
-            for sub_step in self._model_step:
+            for sub_model in self._sub_models:
                 try:
-                    sub_step.step(step_idx)
+                    sub_model.step(step_idx)
                 except Exception as e:
                     print(
-                        "Model step_idx {} sub-step {} failed.".format(
-                            step_idx, step.name
+                        "Model step_idx {} sub-model {} failed.".format(
+                            step_idx, sub_model.name
                         )
                     )
                     raise e
@@ -292,50 +292,50 @@ class Model(
     def method_overrided(self, method_name: str = None) -> bool:
         return getattr(self.__class__, method_name) != getattr(Model, method_name)
 
-    def _get_and_check_step(
+    def _get_and_check_sub_models(
         self,
         training_config: Optional[TrainingConfig] = None,
         validation_config: Optional[ValidationConfig] = None,
         checkpoint_config: Optional[CheckpointConfig] = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        model_step = []
+        sub_models = []
 
-        self._train_step = TrainStep(training_config, self, callbacks)
-        if self._train_step.is_valid:
-            model_step.append(self._train_step)
+        self._train_model = TrainModel(training_config, self, callbacks)
+        if self._train_model.is_valid:
+            sub_models.append(self._train_model)
         else:
             print(
-                self._train_step.error_msg,
+                self._train_model.error_msg,
                 " {} will not do training.".format(self.__class__.__name__),
             )
 
-        self._val_step = ValidationStep(validation_config, self, callbacks)
-        if self._val_step.is_valid:
-            model_step.append(self._val_step)
+        self._val_model= ValidateModel(validation_config, self, callbacks)
+        if self._val_model.is_valid:
+            sub_models.append(self._val_model)
         else:
             print(
-                self._val_step.error_msg,
+                self._val_model.error_msg,
                 " {} will not do validation.".format(self.__class__.__name__),
             )
 
-        if len(model_step) == 0:
+        if len(sub_models) == 0:
             print(" {}'s fit() will not do nothing.".format(self.__class__.__name__))
-            return model_step
+            return sub_models 
 
-        self._checkpoint_step = CheckpointStep(checkpoint_config, self, callbacks)
-        if self._checkpoint_step.is_valid:
-            model_step.append(self._checkpoint_step)
+        self._checkpoint_model = CheckpointModel(checkpoint_config, self, callbacks)
+        if self._checkpoint_model.is_valid:
+            sub_models.append(self._checkpoint_model)
         else:
             print(
-                self._checkpoint_step.error_msg,
+                self._checkpoint_model.error_msg,
                 " {} will not do checkpoint.".format(self.__class__.__name__),
             )
 
-        return model_step
+        return sub_models 
 
 
-class SubStep(ABC):
+class SubModel(ABC):
     def __init__(self, name, cfg, model, callbacks):
         self._cfg = cfg
         assert isinstance(model, Model)
@@ -390,14 +390,14 @@ class SubStep(ABC):
             method(*args, **kwargs)
 
 
-class TrainStep(SubStep):
+class TrainModel(SubModel):
     def __init__(
         self,
         cfg: TrainingConfig = None,
         model: Model = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        super().__init__("train_sub_step", cfg, model, callbacks)
+        super().__init__("train_model", cfg, model, callbacks)
 
         if not self._get_and_check_step():
             self.is_valid = False
@@ -526,14 +526,14 @@ class TrainStep(SubStep):
         return deco(job)
 
 
-class ValidationStep(SubStep):
+class ValidateModel(SubModel):
     def __init__(
         self,
         cfg: ValidationConfig = None,
         model: Model = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        super().__init__("validate_sub_step", cfg, model, callbacks)
+        super().__init__("validate_model", cfg, model, callbacks)
 
         if not self._get_and_check_step():
             self.is_valid = False
@@ -602,14 +602,14 @@ class ValidationStep(SubStep):
         return deco(job)
 
 
-class CheckpointStep(SubStep):
+class CheckpointModel(SubModel):
     def __init__(
         self,
         cfg: CheckpointConfig = None,
         model: Model = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        super().__init__("checkpoint_sub_step", cfg, model, callbacks)
+        super().__init__("checkpoint_model", cfg, model, callbacks)
 
     def load(self):
         assert self.is_valid
