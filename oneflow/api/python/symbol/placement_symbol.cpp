@@ -26,6 +26,8 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+namespace {
+
 struct PlacementSymbolExportUtil {
   static std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(
       int64_t symbol_id, const std::shared_ptr<cfg::ParallelConf>& symbol_conf) {
@@ -65,6 +67,7 @@ struct PlacementSymbolExportUtil {
     return map_without_shared_ptr;
   }
 };
+}  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<ParallelDesc, std::shared_ptr<ParallelDesc>>(m, "PlacementSymbol")
