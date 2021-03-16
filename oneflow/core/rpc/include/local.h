@@ -24,10 +24,12 @@ limitations under the License.
 
 namespace oneflow {
 
-class LocalRpcClient : RpcClientBase {
+class LocalCtrlClient : public CtrlClient {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LocalRpcClient);
-  virtual ~LocalRpcClient() = default;
+  OF_DISALLOW_COPY_AND_MOVE(LocalCtrlClient);
+  LocalCtrlClient(const ProcessCtx& process_ctx);
+  LocalCtrlClient() = delete;
+  ~LocalCtrlClient() = default;
 
   void Barrier(const std::string& barrier_name);
   void Barrier(const std::string& barrier_name, int32_t barrier_num);
@@ -40,6 +42,7 @@ class LocalRpcClient : RpcClientBase {
   void PushKV(const std::string& k, const std::string& v);
   void PushKV(const std::string& k, const PbMessage& msg);
   void PushMasterKV(const std::string& k, const PbMessage& msg);
+  // TODO: delete this if base class has it
   template<typename T>
   typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(const std::string& k, T v) {
     PushKV(k, std::to_string(v));
@@ -67,7 +70,6 @@ class LocalRpcClient : RpcClientBase {
   void EraseCount(const std::string& k);
 
  protected:
-  LocalRpcClient(){};
   void PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter);
   void PullMasterKV(const std::string& k, std::function<void(const std::string&)> VGetter);
 
@@ -79,104 +81,12 @@ class LocalRpcClient : RpcClientBase {
   std::condition_variable kv_cv_;
 };
 
-class LocalCtrlClient final : public LocalRpcClient {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LocalCtrlClient);
-  LocalCtrlClient() = default;
-  ~LocalCtrlClient();
-
- private:
-  friend class Global<LocalCtrlClient>;
-  LocalCtrlClient(const ProcessCtx& process_ctx);
-
-  const ProcessCtx& process_ctx() const { return process_ctx_; }
-
-  ProcessCtx process_ctx_;
-};
-
 class LocalRpcManager : public RpcManager {
  public:
   LocalRpcManager() {}
   ~LocalRpcManager();
   void Bootstrap();
   void CreateClient();
-};
-
-#define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
-
-#define OF_ENV_BARRIER() Global<LocalCtrlClient>::Get()->Barrier(FILE_LINE_STR)
-#define OF_SESSION_BARRIER()                        \
-  Global<LocalCtrlClient>::Get()->Barrier(FILE_LINE_STR, \
-                                     Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())
-
-static void OfCallOnce(const std::string& name, std::function<void()> f) {
-  TryLockResult lock_ret = Global<LocalCtrlClient>::Get()->TryLock(name);
-  if (lock_ret == TryLockResult::kLocked) {
-    f();
-    Global<LocalCtrlClient>::Get()->NotifyDone(name);
-  } else if (lock_ret == TryLockResult::kDone) {
-  } else if (lock_ret == TryLockResult::kDoing) {
-    Global<LocalCtrlClient>::Get()->WaitUntilDone(name);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-template<typename Self, typename F, typename Arg, typename... Args>
-static void OfCallOnce(const std::string& name, Self self, F f, Arg&& arg, Args&&... args) {
-  std::function<void()> fn =
-      std::bind(f, self, std::forward<Arg>(arg), std::forward<Args>(args)...);
-  OfCallOnce(name, std::move(fn));
-}
-
-template<typename Self, typename F>
-static void OfCallOnce(const std::string& name, Self self, F f) {
-  std::function<void()> fn = std::bind(f, self, name);
-  OfCallOnce(name, std::move(fn));
-}
-
-template<typename F, typename Arg, typename... Args>
-static void OfCallOnce(const std::string& name, F f, Arg&& arg, Args&&... args) {
-  std::function<void()> fn = std::bind(f, std::forward<Arg>(arg), std::forward<Args>(args)...);
-  OfCallOnce(name, std::move(fn));
-}
-
-template<CtrlMethod ctrl_method>
-class CtrlCall final : public CtrlCallIf {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CtrlCall);
-  CtrlCall() : status_(Status::kBeforeHandleRequest) {}
-  ~CtrlCall() = default;
-
-  static constexpr const size_t value = (size_t)ctrl_method;
-
-  const CtrlRequest<ctrl_method>& request() const { return request_; }
-  CtrlRequest<ctrl_method>* mut_request() { return &request_; }
-  CtrlResponse<ctrl_method>* mut_response() { return &response_; }
-  void set_request_handler(std::function<void()> val) { request_handler_ = val; }
-
-  void Process() override {
-    switch (status_) {
-      case Status::kBeforeHandleRequest: {
-        request_handler_();
-        return;
-      }
-      case Status::kBeforeDelete: {
-        delete this;
-        return;
-      }
-    }
-  }
-
-  void SendResponse() override { status_ = Status::kBeforeDelete; }
-
- private:
-  enum class Status { kBeforeHandleRequest, kBeforeDelete };
-
-  Status status_;
-  CtrlRequest<ctrl_method> request_;
-  CtrlResponse<ctrl_method> response_;
-  std::function<void()> request_handler_;
 };
 
 }  // namespace oneflow

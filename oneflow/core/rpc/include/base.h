@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_RPC_INCLUDE_BASE_CTRL_
 
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/control/control.pb.h"
 
@@ -77,9 +78,138 @@ class CtrlCallIf {
  private:
 };
 
-class RpcClientBase {};
+class RpcClient {
+ public:
+  RpcClient() {}
+  virtual ~RpcClient() {}
 
-class RpcServerBase {};
+  virtual void Barrier(const std::string& barrier_name) {}
+  virtual void Barrier(const std::string& barrier_name, int32_t barrier_num) {}
+
+  virtual TryLockResult TryLock(const std::string& name) = 0;
+  virtual void NotifyDone(const std::string& name) {}
+  virtual void WaitUntilDone(const std::string& name) {}
+
+  virtual void PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {}
+  virtual void PushKV(const std::string& k, const std::string& v) {}
+  virtual void PushKV(const std::string& k, const PbMessage& msg) {}
+  virtual void PushMasterKV(const std::string& k, const PbMessage& msg) {}
+  template<typename T>
+  typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(const std::string& k, T v) {
+    PushKV(k, std::to_string(v));
+  }
+
+  virtual void ClearKV(const std::string& k) {}
+  virtual void ClearMasterKV(const std::string& k) {}
+
+  virtual void PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {}
+  virtual void PullKV(const std::string& k, std::string* v) {}
+  virtual void PullKV(const std::string& k, PbMessage* msg) {}
+  virtual void PullMasterKV(const std::string& k, PbMessage* msg) {}
+  template<typename T>
+  typename std::enable_if<std::is_arithmetic<T>::value>::type PullKVT(const std::string& k, T* v) {
+    std::string v_str;
+    PullKV(k, &v_str);
+    *v = oneflow_cast<T>(v_str);
+  }
+
+  virtual void PushActEvent(const ActEvent&) {}
+  virtual void Clear() {}
+};
+
+class RpcServer {
+ public:
+  RpcServer() {}
+  virtual ~RpcServer() {}
+};
+
+class CtrlClient : public RpcClient {
+ public:
+  CtrlClient() {}
+  virtual ~CtrlClient() {}
+};
+
+#define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
+#define OF_ENV_BARRIER() Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR)
+#define OF_SESSION_BARRIER()                        \
+  Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR, \
+                                     Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())
+
+static void OfCallOnce(const std::string& name, std::function<void()> f) {
+  TryLockResult lock_ret = Global<CtrlClient>::Get()->TryLock(name);
+  if (lock_ret == TryLockResult::kLocked) {
+    f();
+    Global<CtrlClient>::Get()->NotifyDone(name);
+  } else if (lock_ret == TryLockResult::kDone) {
+  } else if (lock_ret == TryLockResult::kDoing) {
+    Global<CtrlClient>::Get()->WaitUntilDone(name);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<typename Self, typename F, typename Arg, typename... Args>
+static void OfCallOnce(const std::string& name, Self self, F f, Arg&& arg, Args&&... args) {
+  std::function<void()> fn =
+      std::bind(f, self, std::forward<Arg>(arg), std::forward<Args>(args)...);
+  OfCallOnce(name, std::move(fn));
+}
+
+template<typename Self, typename F>
+static void OfCallOnce(const std::string& name, Self self, F f) {
+  std::function<void()> fn = std::bind(f, self, name);
+  OfCallOnce(name, std::move(fn));
+}
+
+template<typename F, typename Arg, typename... Args>
+static void OfCallOnce(const std::string& name, F f, Arg&& arg, Args&&... args) {
+  std::function<void()> fn = std::bind(f, std::forward<Arg>(arg), std::forward<Args>(args)...);
+  OfCallOnce(name, std::move(fn));
+}
+
+template<CtrlMethod ctrl_method>
+class CtrlCall final : public CtrlCallIf {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CtrlCall);
+  CtrlCall() : status_(Status::kBeforeHandleRequest) {}
+  ~CtrlCall() = default;
+
+  static constexpr const size_t value = (size_t)ctrl_method;
+
+  const CtrlRequest<ctrl_method>& request() const { return request_; }
+  CtrlRequest<ctrl_method>* mut_request() { return &request_; }
+  CtrlResponse<ctrl_method>* mut_response() { return &response_; }
+  void set_request_handler(std::function<void()> val) { request_handler_ = val; }
+
+  void Process() override {
+    switch (status_) {
+      case Status::kBeforeHandleRequest: {
+        request_handler_();
+        return;
+      }
+      case Status::kBeforeDelete: {
+        delete this;
+        return;
+      }
+    }
+  }
+
+  void SendResponse() override { status_ = Status::kBeforeDelete; }
+
+ private:
+  enum class Status { kBeforeHandleRequest, kBeforeDelete };
+
+  Status status_;
+  CtrlRequest<ctrl_method> request_;
+  CtrlResponse<ctrl_method> response_;
+  std::function<void()> request_handler_;
+};
+
+class CtrlServer {
+ public:
+  CtrlServer() {}
+  virtual ~CtrlServer() {}
+};
 
 class RpcManager {
  public:
