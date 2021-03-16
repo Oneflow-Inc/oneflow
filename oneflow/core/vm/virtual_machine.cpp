@@ -46,11 +46,12 @@ bool IsSourceInstruction(const InstructionMsg& instr_msg) {
 void VirtualMachine::ReleaseInstruction(Instruction* instruction,
                                         /*out*/ ReadyInstructionList* ready_instruction_list) {
   auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
-  OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(rw_mutexed_object_accesses, access) {
-    rw_mutexed_object_accesses->Erase(access);
+  OBJECT_MSG_SKIPLIST_FOR_EACH(rw_mutexed_object_accesses, access) {
+    CHECK_GT(access->ref_cnt(), 1);
+    rw_mutexed_object_accesses->Erase(access.Mutable());
     if (access->is_rw_mutexed_object_access_link_empty()) { continue; }
     auto* mirrored_object = access->mut_mirrored_object();
-    mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access);
+    mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access.Mutable());
   }
   TryMoveWaitingToReady(instruction, ready_instruction_list, [](Instruction*) { return true; });
 }
