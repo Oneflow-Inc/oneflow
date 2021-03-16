@@ -179,18 +179,11 @@ class FlatHierarchicalSubTskGphBuilder final : public HierarchicalSubTskGphBuild
 
 struct DispatchHierarchicalSubTskGphBuilder::Impl {
   Impl();
-  std::shared_ptr<FlatHierarchicalSubTskGphBuilder> FlatBuilder();
-
   std::shared_ptr<FlatHierarchicalSubTskGphBuilder> flat_hierarchical_sub_tsk_gph_builder_;
 };
 
 DispatchHierarchicalSubTskGphBuilder::Impl::Impl() {
   flat_hierarchical_sub_tsk_gph_builder_.reset(new FlatHierarchicalSubTskGphBuilder());
-}
-
-std::shared_ptr<FlatHierarchicalSubTskGphBuilder>
-DispatchHierarchicalSubTskGphBuilder::Impl::FlatBuilder() {
-  return flat_hierarchical_sub_tsk_gph_builder_;
 }
 
 DispatchHierarchicalSubTskGphBuilder::DispatchHierarchicalSubTskGphBuilder() {
@@ -219,10 +212,10 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
 
   if (reduced_in_parallel_hierarchy->NumAxes() == 1
       && reduced_out_parallel_hierarchy->NumAxes() == 1) {
-    return impl_->FlatBuilder()->Build(ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks,
-                                       reduced_in_parallel_desc, reduced_out_parallel_desc, lbi,
-                                       logical_blob_desc, reduced_in_parallel_distribution,
-                                       reduced_out_parallel_distribution, time_shape);
+    return impl_->flat_hierarchical_sub_tsk_gph_builder_->Build(
+        ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
+        reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
+        reduced_out_parallel_distribution, time_shape);
   } else {
     UNIMPLEMENTED();
   }
