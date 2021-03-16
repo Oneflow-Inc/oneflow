@@ -21,26 +21,22 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.id_util as id_util
 
 
-
 @oneflow_export("nn.Dropout")
 class Dropout(Module):
     def __init__(self, p: float = 0.5, inplace: bool = False):
         super().__init__()
-        self.rate = p
-        self.name = None
-        self.seed = random.randint(-sys.maxsize, sys.maxsize)
-        assert self.rate is not None and self.rate >= 0.0 and self.rate < 1.0
-        self.scale = float(1.0 / (1.0 - self.rate))
-        assert inplace==False, "Not support inplace=True yet!"
-        if self.name is None:
-            self.name = id_util.UniqueStr("Dropout_")
+        self._rate = p
+        self._seed = random.randint(-sys.maxsize, sys.maxsize)
+        assert self._rate is not None and self._rate >= 0.0 and self._rate < 1.0
+        self._scale = float(1.0 / (1.0 - self._rate))
+        assert inplace == False, "Not support inplace=True yet!"
         self._op = (
             flow.builtin_op("dropout")
-            .Name(self.name)
+            .Name(self.id_util.UniqueStr("Dropout_"))
             .Input("in")
             .Input("mask")
             .Output("out")
-            .Attr("scale", self.scale)
+            .Attr("scale", self._scale)
             .Build()
         )
         self._mask_op = (
@@ -48,11 +44,10 @@ class Dropout(Module):
             .Name(id_util.UniqueStr("RandomMaskLike_"))
             .Input("like")
             .Output("out")
-            .Attr("rate", self.rate)
-            .Attr("seed", self.seed)
+            .Attr("rate", self._rate)
+            .Attr("seed", self._seed)
             .Build()
         )
-
 
     def forward(self, x):
         if self.rate == 0.0:
