@@ -68,5 +68,4 @@ Maybe<const Device> Device::MakeDeviceByParallelDesc(const ParallelDesc& paralle
   return std::make_shared<const Device>(type, std::stoi(device_id));
 }
 
-
 }  // namespace oneflow
