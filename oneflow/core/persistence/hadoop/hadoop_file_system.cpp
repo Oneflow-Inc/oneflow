@@ -357,9 +357,9 @@ bool HadoopFileSystem::IsDirectory(const std::string& fname) {
   return true;
 }
 
-bool HadoopFileSystem::IsRegularFile(const std::string& fname) {
+Maybe<bool> HadoopFileSystem::IsRegularFile(const std::string& fname) {
   hdfsFS fs = nullptr;
-  CHECK(Connect(&fs));
+  CHECK_OR_RETURN(Connect(&fs));
 
   hdfsFileInfo* info = hdfs_->hdfsGetPathInfo(fs, TranslateName(fname).c_str());
   if (info == nullptr || info->mKind != kObjectKindFile) { return false; }
