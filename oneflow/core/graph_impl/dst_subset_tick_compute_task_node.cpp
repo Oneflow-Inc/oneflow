@@ -46,4 +46,9 @@ void DstSubsetTickCompTaskNode::BuildExecGphAndRegst() {
 
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kDstSubsetTick);
 
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kDstSubsetTick)
+    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateTickTockStreamIndex();
+    });
+
 }  // namespace oneflow

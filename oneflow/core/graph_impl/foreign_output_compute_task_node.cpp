@@ -18,4 +18,5 @@ limitations under the License.
 namespace oneflow {
 
 REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kForeignOutput, 1);
-}
+
+}  // namespace oneflow
