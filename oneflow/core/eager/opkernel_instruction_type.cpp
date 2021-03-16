@@ -583,7 +583,8 @@ void FeedOrFetchBlob(vm::Instruction* instruction) {
   auto* blob_object = CHECK_JUST(rw_mutext_blob->template Mut<BlobObject>());
   OfBlob of_blob(device_ctx, blob_object->mut_blob());
   int64_t of_blob_ptr = reinterpret_cast<int64_t>(&of_blob);
-  Global<ForeignCallback>::Get()->OfBlobCall(args->unique_callback_id(), of_blob_ptr);
+  (*Global<std::shared_ptr<ForeignCallback>>::Get())
+      ->OfBlobCall(args->unique_callback_id(), of_blob_ptr);
 }
 
 void FetchBlobHeaderInstructionType::Infer(vm::Instruction* instruction) const {
