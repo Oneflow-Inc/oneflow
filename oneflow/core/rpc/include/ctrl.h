@@ -18,7 +18,7 @@ limitations under the License.
 #define ONEFLOW_CORE_RPC_INCLUDE_CTRL_
 
 #ifdef RPC_BACKEND_GRPC
-#include "oneflow/core/rpc/include/gprc/ctrl.h"
+#include "oneflow/core/rpc/include/grpc.h"
 #endif  // RPC_BACKEND_GRPC
 
 #ifdef RPC_BACKEND_LOCAL
