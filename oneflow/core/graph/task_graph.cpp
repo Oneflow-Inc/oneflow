@@ -646,7 +646,6 @@ void TaskGraph::BuildTaskPath(
     }
     return new_val;
   };
-
   TaskNode* cur_node = src;
   while (cur_node->machine_id() != dst->machine_id()
          || cur_node->MemZoneId121() != dst->MemZoneId121()) {
