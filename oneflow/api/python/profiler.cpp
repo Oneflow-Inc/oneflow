@@ -22,10 +22,10 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("OF_PROFILER_RANGE_PUSH", [](const std::string& str) { OF_PROFILER_RANGE_PUSH(str); });
+ONEFLOW_API_PYBIND11_MODULE("profiler", m) {
+  m.def("RangePush", [](const std::string& str) { OF_PROFILER_RANGE_PUSH(str); });
 
-  m.def("OF_PROFILER_RANGE_POP", []() { OF_PROFILER_RANGE_POP(); });
+  m.def("RangePop", []() { OF_PROFILER_RANGE_POP(); });
 }
 
 }  // namespace oneflow
