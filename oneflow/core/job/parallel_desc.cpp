@@ -226,7 +226,7 @@ ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) co
   ParallelConf parallel_conf;
   std::string rank = std::to_string(CHECK_JUST(MachineId4ParallelId(parallel_id)));
   std::string device_id = std::to_string(CHECK_JUST(DeviceId4ParallelId(parallel_id)));
-  parallel_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type())));
+  parallel_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type())));
   parallel_conf.add_device_name(std::string("@") + rank + ":" + device_id);
   return parallel_conf;
 }
