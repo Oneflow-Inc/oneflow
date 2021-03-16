@@ -268,70 +268,70 @@ class Model(
         """
         self._max_steps = max_steps
         api_clear_default_session()
-        self._model_stages = self._get_and_check_stages(
+        self._model_step = self._get_and_check_step(
             training_config, validation_config, checkpoint_config, callbacks
         )
 
-        if len(self._model_stages) == 0:
+        if len(self._model_step) == 0:
             return
 
-        if self._checkpoint_stage.is_valid:
-            self._checkpoint_stage.load()
+        if self._checkpoint_step.is_valid:
+            self._checkpoint_step.load()
         for step_idx in range(0, self._max_steps):
-            for stage in self._model_stages:
+            for sub_step in self._model_step:
                 try:
-                    stage.step(step_idx)
+                    sub_step.step(step_idx)
                 except Exception as e:
-                    print("step_idx {} stage {} failed.".format(step_idx, stage.name))
+                    print("Model step_idx {} sub-step {} failed.".format(step_idx, step.name))
                     raise e
 
     def method_overrided(self, method_name: str = None) -> bool:
         return getattr(self.__class__, method_name) != getattr(Model, method_name)
 
-    def _get_and_check_stages(
+    def _get_and_check_step(
         self,
         training_config: Optional[TrainingConfig] = None,
         validation_config: Optional[ValidationConfig] = None,
         checkpoint_config: Optional[CheckpointConfig] = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        stages = []
+        model_step= []
 
-        self._train_stage = TrainStage(training_config, self, callbacks)
-        if self._train_stage.is_valid:
-            stages.append(self._train_stage)
+        self._train_step = TrainStep(training_config, self, callbacks)
+        if self._train_step.is_valid:
+            model_step.append(self._train_step)
         else:
             print(
-                self._train_stage.error_msg,
+                self._train_step.error_msg,
                 " {} will not do training.".format(self.__class__.__name__),
             )
 
-        self._val_stage = ValidationStage(validation_config, self, callbacks)
-        if self._val_stage.is_valid:
-            stages.append(self._val_stage)
+        self._val_step = ValidationStep(validation_config, self, callbacks)
+        if self._val_step.is_valid:
+            model_step.append(self._val_step)
         else:
             print(
-                self._val_stage.error_msg,
+                self._val_step.error_msg,
                 " {} will not do validation.".format(self.__class__.__name__),
             )
 
-        if len(stages) == 0:
+        if len(model_step) == 0:
             print(" {}'s fit() will not do nothing.".format(self.__class__.__name__))
-            return stages
+            return model_step 
 
-        self._checkpoint_stage = CheckpointStage(checkpoint_config, self, callbacks)
-        if self._checkpoint_stage.is_valid:
-            stages.append(self._checkpoint_stage)
+        self._checkpoint_step = CheckpointStep(checkpoint_config, self, callbacks)
+        if self._checkpoint_step.is_valid:
+            model_step.append(self._checkpoint_step)
         else:
             print(
-                self._checkpoint_stage.error_msg,
+                self._checkpoint_step.error_msg,
                 " {} will not do checkpoint.".format(self.__class__.__name__),
             )
 
-        return stages
+        return model_step
 
 
-class ModelStage(ABC):
+class SubStep(ABC):
     def __init__(self, name, cfg, model, callbacks):
         self._cfg = cfg
         assert isinstance(model, Model)
@@ -386,14 +386,14 @@ class ModelStage(ABC):
             method(*args, **kwargs)
 
 
-class TrainStage(ModelStage):
+class TrainStep(SubStep):
     def __init__(
         self,
         cfg: TrainingConfig = None,
         model: Model = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        super().__init__("train_stage", cfg, model, callbacks)
+        super().__init__("train_sub_step", cfg, model, callbacks)
 
         if not self._get_and_check_step():
             self.is_valid = False
@@ -455,7 +455,7 @@ class TrainStage(ModelStage):
         return True
 
     def _get_and_check_jobs(self):
-        # TOOD(strint): rm numpy in Stage
+        # TOOD(strint): rm numpy in sub-step
         self._is_numpy_input = (
             True if isinstance(self._cfg.data, NumpyDataModule) else False
         )
@@ -522,14 +522,14 @@ class TrainStage(ModelStage):
         return deco(job)
 
 
-class ValidationStage(ModelStage):
+class ValidationStep(SubStep):
     def __init__(
         self,
         cfg: ValidationConfig = None,
         model: Model = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        super().__init__("validate_stage", cfg, model, callbacks)
+        super().__init__("validate_sub_step", cfg, model, callbacks)
 
         if not self._get_and_check_step():
             self.is_valid = False
@@ -562,7 +562,7 @@ class ValidationStage(ModelStage):
             return True
 
     def _get_and_check_job(self):
-        # TOOD(strint): rm numpy in Stage
+        # TOOD(strint): rm numpy in sub step
         self._is_numpy_input = (
             True if isinstance(self._cfg.data, NumpyDataModule) else False
         )
@@ -598,14 +598,14 @@ class ValidationStage(ModelStage):
         return deco(job)
 
 
-class CheckpointStage(ModelStage):
+class CheckpointStep(SubStep):
     def __init__(
         self,
         cfg: CheckpointConfig = None,
         model: Model = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        super().__init__("checkpoint_stage", cfg, model, callbacks)
+        super().__init__("checkpoint_sub_step", cfg, model, callbacks)
 
     def load(self):
         assert self.is_valid
