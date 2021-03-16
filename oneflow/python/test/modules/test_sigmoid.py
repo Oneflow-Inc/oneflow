@@ -26,13 +26,19 @@ import oneflow.typing as tp
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    
-
     def test_sigmoid(test_case):
         m = flow.nn.Sigmoid()
-        x = flow.Tensor(np.array([0.8173, 0.4362, 0.1035]))
+        x = flow.Tensor(
+            np.array(
+                [[ 0.81733328,  0.43621480,  0.10351428],
+                [-1.15555191, -0.67776406,  0.27372134]]
+            )
+        )
         y = m(x)
-        torch_out = np.array([0.6937, 0.6074, 0.5259])
+        torch_out = np.array(
+            [[0.69366997, 0.60735673, 0.52585548],
+            [0.23947647, 0.33676055, 0.56800622]]
+        )
         print(np.allclose(y.numpy(), torch_out, rtol=1e-04))
 
 
