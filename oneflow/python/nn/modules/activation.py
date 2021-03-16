@@ -42,3 +42,15 @@ class ReLU(Module):
     def forward(self, x):
         res = self._op(x)[0]
         return res
+
+@oneflow_export("nn.Tanh")
+class Tanh(Module):
+    def __init__(self):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("tanh").Name("tanh").Input("in").Output("out").Build()
+        )
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
