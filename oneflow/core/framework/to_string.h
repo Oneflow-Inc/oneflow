@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_TO_STRING_H_
 #define ONEFLOW_CORE_FRAMEWORK_TO_STRING_H_
 
-#include <string>
 #include "oneflow/core/common/to_string.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/device_type.pb.h"

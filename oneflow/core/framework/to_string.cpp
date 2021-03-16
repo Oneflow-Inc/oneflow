@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <map>
-#include <string>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/device_registry_manager.h"
