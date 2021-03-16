@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 
 namespace oneflow {
+
 namespace {
 
 void ParallelDimReduce(const ParallelDesc& parallel_desc,
@@ -124,20 +125,6 @@ void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
   }
 }
 
-Maybe<SubTskGphBuilderStatus> Build1DParallelHierarchySubTskGph(
-    SubTskGphBuilderCtx* ctx, const std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder,
-    const std::vector<TaskNode*>& sorted_in_tasks, std::vector<TaskNode*>* sorted_out_tasks,
-    std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
-    const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const ParallelDistribution& in_parallel_distribution,
-    const ParallelDistribution& out_parallel_distribution, const Shape& time_shape) {
-  Maybe<SubTskGphBuilderStatus> boxing_builder_status = TRY(sub_tsk_gph_builder->Build(
-      ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
-      out_parallel_desc, lbi, logical_blob_desc, in_parallel_distribution.sbp_parallel(0),
-      out_parallel_distribution.sbp_parallel(0), time_shape));
-  return boxing_builder_status;
-}
-
 }  // namespace
 
 class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
@@ -167,14 +154,14 @@ class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
                                       const ParallelDistribution& in_parallel_distribution,
                                       const ParallelDistribution& out_parallel_distribution,
                                       const Shape& time_shape) const override {
-    return Build1DParallelHierarchySubTskGph(
-        ctx, sub_tsk_gph_builder_, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks,
-        in_parallel_desc, out_parallel_desc, lbi, logical_blob_desc, in_parallel_distribution,
-        out_parallel_distribution, time_shape);
+    return JUST(sub_tsk_gph_builder_->Build(
+        ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
+        out_parallel_desc, lbi, logical_blob_desc, in_parallel_distribution.sbp_parallel(0),
+        out_parallel_distribution.sbp_parallel(0), time_shape));
   }
 
  private:
-  std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
+  std::unique_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
 };
 
 struct DispatchHierarchicalSubTskGphBuilder::Impl {
@@ -217,9 +204,8 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
         reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
         reduced_out_parallel_distribution, time_shape);
   } else {
-    UNIMPLEMENTED();
+    return Error::BoxingNotSupportedError();
   }
-  return Error::BoxingNotSupportedError();
 }
 
 }  // namespace oneflow
