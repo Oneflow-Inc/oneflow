@@ -20,8 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {}  // namespace
-
 std::string OpEdge::VisualStr() const {
   std::string str;
   int32_t idx = 0;
