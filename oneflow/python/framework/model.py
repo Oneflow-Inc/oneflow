@@ -38,8 +38,9 @@ from oneflow.python.framework.check_point_v2 import (
 )
 from oneflow.python.framework.function_util import api_oneflow_function, FunctionConfig
 from oneflow.python.framework.local_blob import LocalBlob
-from oneflow.python.framework.module import Module
+from oneflow.python.framework.module import Module as DeprecatedModule
 from oneflow.python.framework.session_util import api_clear_default_session
+from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.ops.optimizer import Optimizer
 import oneflow.python.framework.typing as oneflow_typing
@@ -47,7 +48,7 @@ import oneflow.python.framework.dtype as dtype_util
 
 
 @oneflow_export("model.DataModule")
-class DataModule(Module):
+class DataModule(DeprecatedModule):
     def __init__(self, *args, **kwargs):
         super().__init__()
 
@@ -212,7 +213,7 @@ class Callback(ABC):
 
 @oneflow_export("Model", "model.Model")
 class Model(
-    ABC, Module,
+    ABC, DeprecatedModule,
 ):
     r"""A high level API for model training and validation.
     """
