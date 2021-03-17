@@ -538,6 +538,7 @@ def _input_args_is_shape(*args):
 
 
 def register_tensor_op_by_module(op_name, module=None, is_unary=True):
+    assert module is not None
     if is_unary is True:
         setattr(Tensor, op_name, lambda self: module().forward(self))
     else:
