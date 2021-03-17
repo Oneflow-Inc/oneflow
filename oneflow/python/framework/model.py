@@ -47,7 +47,7 @@ class DataModule(Module):
         # Do nothing, to be overrided by subclass.
         pass
 
-    def inspect_data4model_construct(
+    def infer_oneflow_data_placeholder(
         self, batch: Tuple[Any] = None, optimizer_idx: int = 0
     ):
         return None
@@ -62,11 +62,11 @@ class NumpyDataModule(DataModule):
         # Do nothing, to be overrided by subclass.
         pass
 
-    def inspect_data4model_construct(
+    def infer_oneflow_data_placeholder(
         self, batch: Tuple[np.ndarray, ...] = None, optimizer_idx: int = 0
     ):
         assert isinstance(batch, tuple), "model.NumpyDataModule must return a tuple."
-        para_list = []
+        data_placeholder_list = []
         for i, item in enumerate(batch):
             assert isinstance(
                 item, np.ndarray
@@ -75,21 +75,8 @@ class NumpyDataModule(DataModule):
             numpy_placeholder = oneflow_typing.Numpy.Placeholder(
                 shape=item.shape, dtype=of_dtype
             )
-            para_name = (
-                self.__class__.__name__
-                + "_opt_"
-                + str(optimizer_idx)
-                + "_para_"
-                + str(i)
-            )
-            para_list.append(
-                inspect.Parameter(
-                    name=para_name,
-                    kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                    annotation=numpy_placeholder,
-                )
-            )
-        return para_list
+            data_placeholder_list.append(numpy_placeholder)
+        return data_placeholder_list
 
 
 @oneflow_export("model.TrainingConfig")
@@ -268,7 +255,7 @@ class Model(
         """
         self._max_steps = max_steps
         api_clear_default_session()
-        self._sub_models= self._get_and_check_sub_models(
+        self._sub_models = self._get_and_check_sub_models(
             training_config, validation_config, checkpoint_config, callbacks
         )
 
@@ -310,7 +297,7 @@ class Model(
                 " {} will not do training.".format(self.__class__.__name__),
             )
 
-        self._val_model= ValidateModel(validation_config, self, callbacks)
+        self._val_model = ValidateModel(validation_config, self, callbacks)
         if self._val_model.is_valid:
             sub_models.append(self._val_model)
         else:
@@ -321,7 +308,7 @@ class Model(
 
         if len(sub_models) == 0:
             print(" {}'s fit() will not do nothing.".format(self.__class__.__name__))
-            return sub_models 
+            return sub_models
 
         self._checkpoint_model = CheckpointModel(checkpoint_config, self, callbacks)
         if self._checkpoint_model.is_valid:
@@ -332,7 +319,7 @@ class Model(
                 " {} will not do checkpoint.".format(self.__class__.__name__),
             )
 
-        return sub_models 
+        return sub_models
 
 
 class SubModel(ABC):
@@ -459,7 +446,7 @@ class TrainModel(SubModel):
         return True
 
     def _get_and_check_jobs(self):
-        # TOOD(strint): rm numpy in sub-step
+        # TOOD(strint): rm numpy in sub-model
         self._is_numpy_input = (
             True if isinstance(self._cfg.data, NumpyDataModule) else False
         )
@@ -512,11 +499,8 @@ class TrainModel(SubModel):
             self._opts[optimizer_idx].minimize(loss)
             return outputs
 
-        para_list = self._cfg.data.inspect_data4model_construct(batch, optimizer_idx)
+        _infer_job_signature(self._cfg.data, batch, optimizer_idx, job)
 
-        origin_sig = inspect.signature(job)
-        new_sig = origin_sig.replace(parameters=para_list)
-        job.__oneflow_function_signature__ = new_sig
         job.__name__ = (
             self._model.__class__.__name__
             + "_Model_train_numpy_job_"
@@ -566,7 +550,7 @@ class ValidateModel(SubModel):
             return True
 
     def _get_and_check_job(self):
-        # TOOD(strint): rm numpy in sub step
+        # TOOD(strint): rm numpy in sub-model
         self._is_numpy_input = (
             True if isinstance(self._cfg.data, NumpyDataModule) else False
         )
@@ -593,10 +577,8 @@ class ValidateModel(SubModel):
         def job(*input_batch):
             return self._model.validation_step(batch=input_batch)
 
-        para_list = self._cfg.data.inspect_data4model_construct(batch, 0)
-        origin_sig = inspect.signature(job)
-        new_sig = origin_sig.replace(parameters=para_list)
-        job.__oneflow_function_signature__ = new_sig
+        _infer_job_signature(self._cfg.data, batch, 0, job)
+
         job.__name__ = self._model.__class__.__name__ + "_Model_eval_numpy_job"
         deco = api_oneflow_function(type="predict", function_config=self._cfg.exe_cfg)
         return deco(job)
@@ -637,3 +619,27 @@ class CheckpointModel(SubModel):
         r"""Save model states as a checkpoint.
         """
         SaveVarDict(path=dirpath)
+
+
+def _infer_job_signature(data_module, batch, optimizer_idx, job):
+    para_list = []
+    placeholder_list = data_module.infer_oneflow_data_placeholder(batch, optimizer_idx)
+    for i, placeholder in enumerate(placeholder_list):
+        para_name = (
+            data_module.__class__.__name__
+            + "_opt_"
+            + str(optimizer_idx)
+            + "_para_"
+            + str(i)
+        )
+        para_list.append(
+            inspect.Parameter(
+                name=para_name,
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                annotation=placeholder,
+            )
+        )
+
+    origin_sig = inspect.signature(job)
+    new_sig = origin_sig.replace(parameters=para_list)
+    job.__oneflow_function_signature__ = new_sig
