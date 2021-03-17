@@ -137,7 +137,7 @@ class TestModule(flow.unittest.TestCase):
         x = flow.Tensor(input_arr)
         output = m(x)
 
-        print(np.allclose(numpy_output, output.numpy()))
+        assert np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4)
 
 
 if __name__ == "__main__":
