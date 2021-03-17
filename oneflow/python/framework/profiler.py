@@ -20,8 +20,8 @@ import oneflow_api
 
 
 @oneflow_export("profiler.range_push")
-def RangePush(str):
-    oneflow_api.profiler.RangePush(str)
+def RangePush(range_name):
+    oneflow_api.profiler.RangePush(range_name)
 
 
 @oneflow_export("profiler.range_pop")
