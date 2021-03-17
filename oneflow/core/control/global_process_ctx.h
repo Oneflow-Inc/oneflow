@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_
-#define ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_
+#ifndef ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
+#define ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
 
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
-#endif  // ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_
+#endif  // ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
