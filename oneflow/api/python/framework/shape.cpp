@@ -42,6 +42,19 @@ struct ShapeExportUtil final {
     }
   }
 
+  static std::shared_ptr<Shape> Slicing(const Shape& shape, const py::slice& slice) {
+    size_t start, stop, step, slicelength;
+    if (!slice.compute(shape.dim_vec().size(), &start, &stop, &step, &slicelength)) {
+      throw py::value_error();
+    }
+    DimVector shape_dims;
+    for (size_t i = 0; i < slicelength; ++i) {
+      shape_dims.emplace_back(shape.dim_vec().at(start));
+      start += step;
+    }
+    return std::make_shared<Shape>(shape_dims);
+  }
+
   static std::string ToString(const Shape& shape) {
     std::stringstream ss;
     int32_t idx = 0;
@@ -90,6 +103,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("__str__", &ShapeExportUtil::ToString)
       .def("__repr__", &ShapeExportUtil::ToString)
       .def("__getitem__", [](const Shape& shape, int idx) { return shape.At(idx); })
+      .def("__getitem__", &ShapeExportUtil::Slicing)
       .def(
           "__iter__",
           [](const Shape& shape) {
