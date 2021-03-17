@@ -46,13 +46,15 @@ int SockListen(int listen_sockfd, int32_t* listen_port, int32_t total_machine_nu
       setsockopt(listen_sockfd, SOL_SOCKET, SO_REUSEADDR, (const void*)&reuse, sizeof(int));
   CHECK_EQ(ret_setopt, 0);
   int bind_result = bind(listen_sockfd, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
-  sockaddr_in s;
-  socklen_t sLen = sizeof(s);
-  getsockname(listen_sockfd, reinterpret_cast<sockaddr*>(&s), &sLen);
-  if (*listen_port != kInvlidPort) {
-    CHECK_EQ(*listen_port, static_cast<int32_t>(htons(s.sin_port)));
-  } else {
-    *listen_port = static_cast<int32_t>(htons(s.sin_port));
+  {
+    sockaddr_in bound_sock;
+    socklen_t bound_sock_size = sizeof(bound_sock);
+    getsockname(listen_sockfd, reinterpret_cast<sockaddr*>(&bound_sock), &bound_sock_size);
+    if (*listen_port != kInvlidPort) {
+      CHECK_EQ(*listen_port, static_cast<int32_t>(htons(bound_sock.sin_port)));
+    } else {
+      *listen_port = static_cast<int32_t>(htons(bound_sock.sin_port));
+    }
   }
   if (bind_result == 0) {
     PCHECK(listen(listen_sockfd, total_machine_num) == 0);
