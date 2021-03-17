@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-__all__ = ["CheckpointConfig", "Callback", "NumpyDataModule", "Model"]
+__all__ = ["DataModule", "NumpyDataModule", "TrainingConfig", "ValidationConfig", "CheckpointConfig", "Callback", "Model"]
 
 from abc import ABC
 from typing import Optional, Any, Union, Tuple, List
@@ -294,7 +294,7 @@ class Model(
         else:
             print(
                 self._train_model.error_msg,
-                " {} will not do training.".format(self.__class__.__name__),
+                " {}'s fit() will not do training.".format(self.__class__.__name__),
             )
 
         self._val_model = ValidateModel(validation_config, self, callbacks)
@@ -303,11 +303,11 @@ class Model(
         else:
             print(
                 self._val_model.error_msg,
-                " {} will not do validation.".format(self.__class__.__name__),
+                " {}'s fit() will not do validation.".format(self.__class__.__name__),
             )
 
         if len(sub_models) == 0:
-            print(" {}'s fit() will not do nothing.".format(self.__class__.__name__))
+            print(" {}'s fit() will do nothing.".format(self.__class__.__name__))
             return sub_models
 
         self._checkpoint_model = CheckpointModel(checkpoint_config, self, callbacks)
@@ -316,7 +316,7 @@ class Model(
         else:
             print(
                 self._checkpoint_model.error_msg,
-                " {} will not do checkpoint.".format(self.__class__.__name__),
+                " {}'s fit() will not do checkpoint.".format(self.__class__.__name__),
             )
 
         return sub_models
@@ -344,7 +344,7 @@ class SubModel(ABC):
 
     def _get_and_check_cfg(self):
         if self._cfg is None:
-            self.error_msg += "cfg is None;"
+            self.error_msg += "config is None;"
             return False
 
         if not self._cfg.check_valid():
@@ -366,10 +366,10 @@ class SubModel(ABC):
             for cb in self._cbs:
                 assert isinstance(
                     cb, Callback
-                ), "model callbacks' type must be Callback or List[Callback]."
+                ), "model callbacks' type must be model.Callback or List[model.Callback]."
             return True
 
-        assert False, "model callbacks' type must be Callback or List[Callback]."
+        assert False, "model callbacks' type must be model.Callback or List[model.Callback]."
 
     def _method_callback(self, method_name: str = None, *args, **kwargs):
         for cb in self._cbs:
