@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/compiler.h"
-#include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/job_set.pb.h"
@@ -309,22 +308,19 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
   }
 }
 
-Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
+Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) {
   const JobDesc& job_desc = GlobalJobDesc();
-  Plan naive_plan;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
-    Compiler().Compile(job, &naive_plan, need_job_complete);
-    *improved_plan =
-        *JUST(Improver().GenAndInferMemBlockIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan));
+    Compiler().Compile(job, plan, need_job_complete);
+
     LOG(INFO) << "\njob_id: " << job_desc.job_id() << " , job_name: " << job_desc.job_name()
               << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      TeePersistentLogStream::Create(StrCat("subplan_job_", job_desc.job_id()))
-          ->Write(*improved_plan);
+      TeePersistentLogStream::Create(StrCat("subplan_job_", job_desc.job_id()))->Write(*plan);
     }
   }
-  GenCollectiveBoxingPlan(job, improved_plan);
+  GenCollectiveBoxingPlan(job, plan);
   return Maybe<void>::Ok();
 }
 
