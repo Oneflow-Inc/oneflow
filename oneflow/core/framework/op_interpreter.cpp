@@ -377,7 +377,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr* op_expr, const TensorTuple&
   {
     DISABLE_AUTOGRAD_MODE;
     JUST(normal_interp_->Apply(op_expr, inputs, outputs));
-    JUST(SetAutogradAttr4Outputs(intputs, &outputs);)
+    JUST(SetAutogradAttr4Outputs(inputs, &outputs);)
   }
   if (AutoGradEnabled()) {
     auto op_grad = op_expr->GetOrCreateOpGrad();
