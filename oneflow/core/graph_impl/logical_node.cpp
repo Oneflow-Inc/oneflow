@@ -57,8 +57,8 @@ const LogicalEdge* GetConnectedEdge(const LogicalNode* src_node, const LogicalNo
   return connect_edge;
 }
 
-static bool IsConnectedLbisAllSameSbpParallel(const LogicalNode* src_node,
-                                              const LogicalNode* dst_node) {
+static bool IsConnectedLbisAllSameParallelDistribution(const LogicalNode* src_node,
+                                                       const LogicalNode* dst_node) {
   if (src_node->parallel_desc()->parallel_num() != dst_node->parallel_desc()->parallel_num()) {
     return false;
   }
@@ -69,9 +69,11 @@ static bool IsConnectedLbisAllSameSbpParallel(const LogicalNode* src_node,
   const std::string& dst_op_name = dst_node->SoleOp()->op_name();
   HashSet<bool> predicators;
   for (const LogicalBlobId& lbi : connect_edge->lbis()) {
-    const auto& src_sbp = Global<OpGraph>::Get()->GetSbpParallel(src_op_name, lbi);
-    const auto& dst_sbp = Global<OpGraph>::Get()->GetSbpParallel(dst_op_name, lbi);
-    predicators.insert(src_sbp == dst_sbp);
+    const ParallelDistribution& src_parallel_distribution =
+        Global<OpGraph>::Get()->GetParallelDistribution(src_op_name, lbi);
+    const ParallelDistribution& dst_parallel_distribution =
+        Global<OpGraph>::Get()->GetParallelDistribution(dst_op_name, lbi);
+    predicators.insert(src_parallel_distribution == dst_parallel_distribution);
   }
   CHECK_EQ(predicators.size(), 1);
   return *predicators.begin();
@@ -141,69 +143,16 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
-      if (parallel_desc_->device_type() == DeviceType::kGPU) {
-#ifdef WITH_CUDA
-        DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
-                           static_cast<DeviceId::device_index_t>(dev_phy_id)};
-        StreamId::stream_index_t stream_index = 0;
-        auto* cuda_stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
-            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-        CHECK_NOTNULL(cuda_stream_index_generator);
-        switch (comp_task_node->GetCudaWorkType()) {
-          case CudaWorkType::kCompute: {
-            stream_index = cuda_stream_index_generator->GenerateComputeStreamIndex();
-            break;
-          }
-          case CudaWorkType::kCopyH2D: {
-            stream_index = cuda_stream_index_generator->GenerateH2DStreamIndex();
-            break;
-          }
-          case CudaWorkType::kCopyD2H: {
-            stream_index = cuda_stream_index_generator->GenerateD2HStreamIndex();
-            break;
-          }
-          case CudaWorkType::kNccl: {
-            stream_index = cuda_stream_index_generator->GenerateNcclStreamIndex();
-            break;
-          }
-          case CudaWorkType::kMix: {
-            stream_index = cuda_stream_index_generator->GenerateMixStreamIndex();
-            break;
-          }
-          case CudaWorkType::kDecodeH2D: {
-            stream_index = cuda_stream_index_generator->GenerateDecodeH2DStreamIndex();
-            break;
-          }
-          default: {
-            UNIMPLEMENTED();
-          }
-        }
-        comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
-#else
-        UNIMPLEMENTED();
-#endif
-      } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
-        DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kCPU,
-                           DeviceId::kCPUDeviceIndex};
-        auto* cpu_stream_index_generator = dynamic_cast<CPUStreamIndexGenerator*>(
-            Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
-        CHECK_NOTNULL(cpu_stream_index_generator);
-        StreamId::stream_index_t stream_index = 0;
-        if (comp_task_node->IsIndependent()) {
-          TaskType task_type = comp_task_node->GetTaskType();
-          if (IsClassRegistered<int32_t, TickTockTaskType>(task_type)) {
-            stream_index = cpu_stream_index_generator->GenerateTickTockStreamIndex();
-          } else {
-            stream_index =
-                cpu_stream_index_generator->GenerateIndependentTaskStreamIndex(task_type);
-          }
-        } else {
-          stream_index = cpu_stream_index_generator->GenerateComputeStreamIndex();
-        }
-        comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
-      } else {
-        UNIMPLEMENTED();
-      }
+      DeviceId::device_index_t device_index =
+          parallel_desc_->device_type() == DeviceType::kCPU
+              ? DeviceId::kCPUDeviceIndex
+              : static_cast<DeviceId::device_index_t>(dev_phy_id);
+      DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), parallel_desc_->device_type(),
+                         device_index};
+      StreamId::stream_index_t stream_index =
+          StreamIndexGetterRegistryManager::Get().StreamIndex4DeviceIdAndTaskType(
+              device_id, comp_task_node->GetTaskType());
+      comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
       comp_task_node->set_logical_node(this);
       Handler(comp_task_node);
     }
@@ -276,7 +225,8 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
   if (src_pd->parallel_num() == dst_pd->parallel_num()
-      && IsConnectedLbisAllSameSbpParallel(src_node, dst_node)) {
+      && *src_pd->hierarchy() == *dst_pd->hierarchy()
+      && IsConnectedLbisAllSameParallelDistribution(src_node, dst_node)) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
   return &TaskGraph::BldSubTskGphByBoxing;

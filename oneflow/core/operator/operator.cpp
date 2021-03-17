@@ -314,13 +314,6 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Operator::InferLogicalOutBlobDescs(
-    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const ParallelDesc& parallel_desc) const {
-  UNIMPLEMENTED() << typeid(*this).name();
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> Operator::InferBlobDescsIf(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const JobDesc* job_desc) const {
@@ -1144,8 +1137,10 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         if (*pair.second == *op_parallel_desc_) {
           (*symbol_map)[pair.first] = parallel_desc_symbol_id;
         } else {
-          (*symbol_map)[pair.first] = Global<ForeignCallback>::Get()->MakeParallelDescSymbol(
-              std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf()));
+          (*symbol_map)[pair.first] =
+              (*Global<std::shared_ptr<ForeignCallback>>::Get())
+                  ->MakeParallelDescSymbol(
+                      std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf()));
         }
       }
       for (const auto& tbn : tmp_bns()) { (*symbol_map)[tbn] = parallel_desc_symbol_id; }

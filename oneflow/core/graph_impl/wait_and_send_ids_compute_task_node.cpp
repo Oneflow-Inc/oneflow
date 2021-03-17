@@ -42,4 +42,9 @@ void WaitAndSendIdsCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kWaitAndSendIds)
+    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateIndependentTaskStreamIndex(TaskType::kWaitAndSendIds);
+    });
+
 }  // namespace oneflow
