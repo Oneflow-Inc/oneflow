@@ -41,10 +41,7 @@ namespace test {
 
 namespace {
 
-void InitNumProcessPerNode() {
-  Global<NumProcessPerNode>::New();
-  Global<NumProcessPerNode>::Get()->set_value(1);
-}
+void InitNumProcessPerNode() { Global<NumProcessPerNode>::New()->set_value(1); }
 
 void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
 

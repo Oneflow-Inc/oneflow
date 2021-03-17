@@ -15,11 +15,13 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
+import os
+import sys
 import getpass
 import imp
 import inspect
-import os
-import sys
+import socket
+from contextlib import closing
 import uuid
 import unittest
 import atexit
@@ -155,6 +157,13 @@ def enable_multi_process():
     return os.getenv("ONEFLOW_TEST_MULTI_PROCESS") == "1"
 
 
+def find_free_port():
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("localhost", 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
+
+
 _unittest_env_initilized = False
 _unittest_worker_initilized = False
 
@@ -235,12 +244,13 @@ class TestCase(unittest.TestCase):
             ), "binary oneflow_worker not found, please check your environment variable ONEFLOW_WORKER_BIN, path: {}".format(
                 oneflow_worker_path
             )
-            master_port = os.getenv("ONEFLOW_TEST_MASTER_PORT")
-            assert master_port, "env var ONEFLOW_TEST_MASTER_PORT not set"
-            oneflow.env.ctrl_port(int(master_port))
+            # master_port = os.getenv("ONEFLOW_TEST_MASTER_PORT")
+            # assert master_port, "env var ONEFLOW_TEST_MASTER_PORT not set"
+            master_port = find_free_port()
+            oneflow.env.ctrl_port(master_port)
             config_world_size = device_num()
             bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
-                ["127.0.0.1"], int(master_port), config_world_size
+                ["127.0.0.1"], master_port, config_world_size
             )
             env_proto = env_util.default_env_proto
             assert (
