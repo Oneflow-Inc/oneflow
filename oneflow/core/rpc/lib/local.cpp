@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#ifndef ONEFLOW_CORE_RPC_LIB_LOCAL_H_
+#define ONEFLOW_CORE_RPC_LIB_LOCAL_H_
+
 #ifndef ONEFLOW_CORE_RPC_LIB_LOCAL_
 #define ONEFLOW_CORE_RPC_LIB_LOCAL_
 
@@ -162,3 +165,5 @@ LocalRpcManager::~LocalRpcManager() { Global<CtrlClient>::Delete(); }
 #endif  // RPC_BACKEND_LOCAL
 
 #endif  // ONEFLOW_CORE_RPC_LIB_LOCAL_
+
+#endif  // ONEFLOW_CORE_RPC_LIB_LOCAL_H_
