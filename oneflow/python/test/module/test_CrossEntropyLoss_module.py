@@ -34,6 +34,7 @@ g_test_samples = [
         ),
         "target": np.array([3, 3, 4], dtype=np.int32),
         "out": np.array([1.1380, 1.7332, 1.4287], dtype=np.float32),
+        "out_sum": np.array([4.2999], dtype=np.float32),
     }
 ]
 
@@ -46,11 +47,15 @@ class TestModule(flow.unittest.TestCase):
     def test_CrossEntropyLoss(test_case):
         global g_test_samples
         for sample in g_test_samples:
-            loss = flow.nn.CrossEntropyLoss(class_num=None, reduction=None)
+            loss = flow.nn.CrossEntropyLoss(reduction=None)
             input = flow.Tensor(sample["input"], dtype=flow.float32)
             target = flow.Tensor(sample["target"], dtype=flow.int32)
             of_out = loss(input, target)
             assert np.allclose(of_out.numpy(), sample["out"], 1e-4, 1e-4)
+
+            loss_sum = flow.nn.CrossEntropyLoss(reduction="sum")
+            of_out_sum = loss_sum(input, target)
+            assert np.allclose(of_out_sum.numpy(), sample["out_sum"], 1e-4, 1e-4)
 
 
 if __name__ == "__main__":

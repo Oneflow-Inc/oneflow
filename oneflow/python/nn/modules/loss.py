@@ -42,8 +42,11 @@ class CrossEntropyLoss(Module):
             raise ValueError("Argument weight is not supported yet")
         if ignore_index != None:
             raise ValueError("Argument ignore_index is not supported yet")
-        if reduction != None:
-            raise ValueError("reduction can only be None by now")
+        assert reduction in [
+            "sum",
+            "none",
+            None,
+        ], "only 'sum' and None supported by now"
 
         self.reduction = reduction
 
@@ -58,12 +61,24 @@ class CrossEntropyLoss(Module):
             .Output("out")
         )
 
+        self._reduce_sum_op = (
+            flow.builtin_op("reduce_sum")
+            .Name(_opname + "ReduceSum_")
+            .Input("input_tensor")
+            .Output("output_tensor")
+        )
+
     def forward(self, input, target):
         self._op = self._op.Attr("depth", input.shape[len(input.shape) - 1]).Build()
         prob, out = self._op(input, target)
         if self.reduction == "mean":
             raise ValueError("not supported yet")
         elif self.reduction == "sum":
-            return ValueError("not supported yet")
+            self._reduce_sum_op = (
+                self._reduce_sum_op.Attr("axis", list(range(len(out.shape))))
+                .Attr("keepdims", False)
+                .Build()
+            )
+            return self._reduce_sum_op(out)[0]
         else:
             return out
