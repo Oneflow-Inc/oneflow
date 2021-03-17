@@ -62,11 +62,6 @@ void LocalCtrlClient::PushKV(const std::string& k, std::function<void(std::strin
   kv_cv_.notify_all();
 }
 
-void LocalCtrlClient::PushMasterKV(const std::string& k,
-                                   std::function<void(std::string*)> VSetter) {
-  PushKV(k, VSetter);
-}
-
 void LocalCtrlClient::PushKV(const std::string& k, const std::string& v) {
   PushKV(k, [&](std::string* o) { *o = v; });
 }
@@ -76,7 +71,7 @@ void LocalCtrlClient::PushKV(const std::string& k, const PbMessage& msg) {
 }
 
 void LocalCtrlClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
-  PushMasterKV(k, [&](std::string* o) { msg.SerializeToString(o); });
+  PushKV(k, [&](std::string* o) { msg.SerializeToString(o); });
 }
 
 void LocalCtrlClient::ClearKV(const std::string& k) {
@@ -101,11 +96,6 @@ void LocalCtrlClient::PullKV(const std::string& k,
   }
 }
 
-void LocalCtrlClient::PullMasterKV(const std::string& k,
-                                   std::function<void(const std::string&)> VGetter) {
-  PullKV(k, VGetter);
-}
-
 void LocalCtrlClient::PullKV(const std::string& k, std::string* v) {
   PullKV(k, [&](const std::string& i) { *v = i; });
 }
@@ -115,7 +105,7 @@ void LocalCtrlClient::PullKV(const std::string& k, PbMessage* msg) {
 }
 
 void LocalCtrlClient::PullMasterKV(const std::string& k, PbMessage* msg) {
-  PullMasterKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
+  PullKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
 void LocalCtrlClient::Clear() {
@@ -130,10 +120,6 @@ void LocalCtrlClient::Clear() {
     kv_cv_.notify_all();
   }
 }
-
-int32_t LocalCtrlClient::IncreaseCount(const std::string& k, int32_t v) { UNIMPLEMENTED(); }
-
-void LocalCtrlClient::EraseCount(const std::string& k) { UNIMPLEMENTED(); }
 
 Maybe<void> LocalRpcManager::Bootstrap() {
   Address* addr = Global<ProcessCtx>::Get()->add_ctrl_addr();

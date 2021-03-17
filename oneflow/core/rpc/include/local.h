@@ -30,35 +30,27 @@ class LocalCtrlClient : public CtrlClient {
   LocalCtrlClient(const ProcessCtx& process_ctx);
   ~LocalCtrlClient() = default;
 
-  void Barrier(const std::string& barrier_name);
-  void Barrier(const std::string& barrier_name, int32_t barrier_num);
+  void Barrier(const std::string& barrier_name) override;
+  void Barrier(const std::string& barrier_name, int32_t barrier_num) override;
 
-  TryLockResult TryLock(const std::string& name);
-  void NotifyDone(const std::string& name);
-  void WaitUntilDone(const std::string& name);
+  TryLockResult TryLock(const std::string& name) override;
+  void NotifyDone(const std::string& name) override;
+  void WaitUntilDone(const std::string& name) override;
 
-  void PushKV(const std::string& k, std::function<void(std::string*)> VSetter);
-  void PushKV(const std::string& k, const std::string& v);
-  void PushKV(const std::string& k, const PbMessage& msg);
-  void PushMasterKV(const std::string& k, const PbMessage& msg);
+  void PushKV(const std::string& k, std::function<void(std::string*)> VSetter) override;
+  void PushKV(const std::string& k, const std::string& v) override;
+  void PushKV(const std::string& k, const PbMessage& msg) override;
+  void PushMasterKV(const std::string& k, const PbMessage& msg) override;
 
-  void ClearKV(const std::string& k);
-  void ClearMasterKV(const std::string& k);
+  void ClearKV(const std::string& k) override;
+  void ClearMasterKV(const std::string& k) override;
 
-  void PullKV(const std::string& k, std::function<void(const std::string&)> VGetter);
-  void PullKV(const std::string& k, std::string* v);
-  void PullKV(const std::string& k, PbMessage* msg);
-  void PullMasterKV(const std::string& k, PbMessage* msg);
-  void PushActEvent(const ActEvent&){};
-  void Clear();
-
-  int32_t IncreaseCount(const std::string& k, int32_t v);
-  int32_t IncreaseCount(const std::string& k) { return IncreaseCount(k, 1); }
-  void EraseCount(const std::string& k);
-
- protected:
-  void PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter);
-  void PullMasterKV(const std::string& k, std::function<void(const std::string&)> VGetter);
+  void PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) override;
+  void PullKV(const std::string& k, std::string* v) override;
+  void PullKV(const std::string& k, PbMessage* msg) override;
+  void PullMasterKV(const std::string& k, PbMessage* msg) override;
+  void PushActEvent(const ActEvent&) override {}
+  void Clear() override;
 
   HashSet<std::string> done_names_;
   std::mutex done_names_mtx_;

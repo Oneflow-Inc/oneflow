@@ -73,14 +73,6 @@ void GrpcCtrlClient::NotifyDone(const std::string& name) { rpc_client_.NotifyDon
 
 void GrpcCtrlClient::WaitUntilDone(const std::string& name) { rpc_client_.WaitUntilDone(name); }
 
-void GrpcCtrlClient::PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {
-  rpc_client_.PushKV(k, VSetter);
-}
-
-void GrpcCtrlClient::PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter) {
-  rpc_client_.PushMasterKV(k, VSetter);
-}
-
 void GrpcCtrlClient::PushKV(const std::string& k, const std::string& v) {
   rpc_client_.PushKV(k, v);
 }
@@ -97,15 +89,6 @@ void GrpcCtrlClient::ClearKV(const std::string& k) { rpc_client_.ClearKV(k); }
 
 void GrpcCtrlClient::ClearMasterKV(const std::string& k) { rpc_client_.ClearMasterKV(k); }
 
-void GrpcCtrlClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
-  rpc_client_.PullKV(k, VGetter);
-}
-
-void GrpcCtrlClient::PullMasterKV(const std::string& k,
-                                  std::function<void(const std::string&)> VGetter) {
-  rpc_client_.PullMasterKV(k, VGetter);
-}
-
 void GrpcCtrlClient::PullKV(const std::string& k, std::string* v) { rpc_client_.PullKV(k, v); }
 
 void GrpcCtrlClient::PullKV(const std::string& k, PbMessage* msg) { rpc_client_.PullKV(k, msg); }
@@ -115,11 +98,5 @@ void GrpcCtrlClient::PullMasterKV(const std::string& k, PbMessage* msg) {
 }
 
 void GrpcCtrlClient::Clear() { rpc_client_.Clear(); }
-
-int32_t GrpcCtrlClient::IncreaseCount(const std::string& k, int32_t v) {
-  rpc_client_.IncreaseCount(k, v);
-}
-
-void GrpcCtrlClient::EraseCount(const std::string& k) { rpc_client_.EraseCount(k); }
 
 }  // namespace oneflow
