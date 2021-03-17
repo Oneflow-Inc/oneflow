@@ -147,9 +147,9 @@ class RpcManager {
  public:
   RpcManager() {}
   virtual ~RpcManager() {}
-  virtual void Bootstrap() {}
-  virtual void CreateServer() {}
-  virtual void CreateClient() {}
+  virtual Maybe<void> Bootstrap() = 0;
+  virtual Maybe<void> CreateServer() = 0;
+  virtual Maybe<void> CreateClient() = 0;
 };
 
 }  // namespace oneflow

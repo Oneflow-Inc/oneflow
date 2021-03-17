@@ -78,24 +78,6 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
   return resource;
 }
 
-#ifdef RPC_BACKEND_GRPC
-Maybe<CtrlBootstrap> MakeCtrlBootstrap(const EnvDesc& env_desc) {
-  std::shared_ptr<CtrlBootstrap> ctrl_bootstrap;
-  if (env_desc.has_ctrl_bootstrap_conf()) {
-    ctrl_bootstrap.reset(new RankInfoCtrlBootstrap(env_desc.bootstrap_conf()));
-  } else {
-    ctrl_bootstrap.reset(new HostListCtrlBootstrap(env_desc));
-  }
-  return ctrl_bootstrap;
-}
-#endif  // RPC_BACKEND_GRPC
-
-Maybe<int> GetCtrlPort(const EnvDesc& env_desc) {
-  int port = 0;
-  if (env_desc.has_bootstrap_conf_ctrl_port()) { port = env_desc.bootstrap_conf_ctrl_port(); }
-  return port;
-}
-
 }  // namespace
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
@@ -104,21 +86,19 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitGlobalCudaDeviceProp();
 #endif
   Global<EnvDesc>::New(env_proto);
-#ifdef RPC_BACKEND_GRPC
-  Global<CtrlServer>::New(JUST(GetCtrlPort(*Global<EnvDesc>::Get())));
-#endif  // RPC_BACKEND_GRPC
   Global<ProcessCtx>::New();
-// Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
-// ~CtrlBootstrap.
-#ifdef RPC_BACKEND_GRPC
-  CHECK_JUST(JUST(MakeCtrlBootstrap(*Global<EnvDesc>::Get()))
-                 ->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
-#endif  // RPC_BACKEND_GRPC
+  // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
+  // ~CtrlBootstrap.
   if (env_proto.rpc_backend() == "grpc") {
+#ifdef RPC_BACKEND_GRPC
+    auto* grpc_manager = new GrpcRpcManager();
+    Global<RpcManager>::SetAllocated(grpc_manager);
+#else
     UNIMPLEMENTED();
+#endif  // RPC_BACKEND_GRPC
   } else if (env_proto.rpc_backend() == "local") {
 #ifdef RPC_BACKEND_LOCAL
-    auto* local_manager = new LocalRpcManager;
+    auto* local_manager = new LocalRpcManager();
     Global<RpcManager>::SetAllocated(local_manager);
 #else
     UNIMPLEMENTED();
@@ -126,8 +106,9 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   } else {
     UNIMPLEMENTED();
   }
-  Global<RpcManager>::Get()->Bootstrap();  // TODO: add process ctx as arg
-  Global<RpcManager>::Get()->CreateClient();
+  CHECK_JUST(Global<RpcManager>::Get()->Bootstrap());
+  CHECK_JUST(Global<RpcManager>::Get()->CreateServer());
+  CHECK_JUST(Global<RpcManager>::Get()->CreateClient());
   Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());

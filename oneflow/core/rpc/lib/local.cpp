@@ -16,6 +16,9 @@ limitations under the License.
 
 #ifndef ONEFLOW_CORE_RPC_LIB_LOCAL_
 #define ONEFLOW_CORE_RPC_LIB_LOCAL_
+
+#ifdef RPC_BACKEND_LOCAL
+
 #include "glog/logging.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/rpc/include/local.h"
@@ -136,20 +139,26 @@ int32_t LocalCtrlClient::IncreaseCount(const std::string& k, int32_t v) { UNIMPL
 
 void LocalCtrlClient::EraseCount(const std::string& k) { UNIMPLEMENTED(); }
 
-void LocalRpcManager::Bootstrap() {
+Maybe<void> LocalRpcManager::Bootstrap() {
   Address* addr = Global<ProcessCtx>::Get()->add_ctrl_addr();
   addr->set_host("localhost");
   Global<ProcessCtx>::Get()->set_rank(0);
   Global<ProcessCtx>::Get()->set_node_size(1);
+  return Maybe<void>::Ok();
 }
 
-void LocalRpcManager::CreateClient() {
+Maybe<void> LocalRpcManager::CreateClient() {
   auto* client = new LocalCtrlClient(*Global<ProcessCtx>::Get());
   Global<CtrlClient>::SetAllocated(client);
+  return Maybe<void>::Ok();
 }
+
+Maybe<void> LocalRpcManager::CreateServer() { return Maybe<void>::Ok(); }
 
 LocalRpcManager::~LocalRpcManager() { Global<CtrlClient>::Delete(); }
 
 }  // namespace oneflow
+
+#endif  // RPC_BACKEND_LOCAL
 
 #endif  // ONEFLOW_CORE_RPC_LIB_LOCAL_
