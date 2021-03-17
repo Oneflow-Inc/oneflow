@@ -535,3 +535,7 @@ def _input_args_is_other_data(*args):
 
 def _input_args_is_shape(*args):
     return all(isinstance(x, int) for x in args)
+
+
+def register_tensor_op_by_module(op_name, op_impl):
+    setattr(Tensor, op_name, op_impl)
