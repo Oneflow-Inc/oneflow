@@ -25,7 +25,7 @@ class Parameter(Tensor):
         # data.requires_grad = True
         data.set_is_consistent(True)
         # TODO: set a proper placement
-        data.set_placement(flow.placement('gpu', ['0:0'], None))
+        data.set_placement(flow.placement("gpu", ["0:0"], None))
         self._data = data
 
     def __getattr__(self, name):
