@@ -229,8 +229,6 @@ class Model(
             if "is_deprecated_function_style" in kwargs
             else False
         )
-        if not self._is_deprecated_function_style:
-            raise NotImplementedError
 
     def forward(self, *args, **kwargs):
         r"""Same as `nn.Module.forward()`, here is to define the operations you want to use for prediction.
@@ -307,7 +305,11 @@ class Model(
                 " {}'s fit() will not do training.".format(self.__class__.__name__),
             )
 
-        self._val_model = ValidateModel(validation_config, self, callbacks)
+        self._val_model = (
+            ValidateModel(validation_config, self, callbacks)
+            if self._is_deprecated_function_style
+            else OOPStyleValidateModel(validation_config, self, callbacks)
+        )
         if self._val_model.is_valid:
             sub_models.append(self._val_model)
         else:
@@ -631,6 +633,36 @@ class CheckpointModel(SubModel):
         r"""Save model states as a checkpoint.
         """
         SaveVarDict(path=dirpath)
+
+
+class OOPStyleValidateModel(SubModel):
+    def __init__(
+        self,
+        cfg: ValidationConfig = None,
+        model: Model = None,
+        callbacks: Optional[Union[Callback, List[Callback]]] = None,
+    ):
+        super().__init__("validate_model", cfg, model, callbacks)
+
+        if not self._get_and_check_step():
+            self.is_valid = False
+
+    def step(self, step_idx: int = 0):
+        assert self.is_valid
+        if (step_idx + 1) % self._cfg.step_interval == 0:
+            outputs = None
+            inputs = self._cfg.data()
+            outputs = self._model.validation_step(inputs)
+            self._method_callback(
+                "on_validation_step_end", step_idx=step_idx, outputs=outputs,
+            )
+
+    def _get_and_check_step(self):
+        if not self._model.method_overrided("validation_step"):
+            self.error_msg += "model.validation_step() is empty;"
+            return False
+        else:
+            return True
 
 
 def _infer_job_signature(data_module, batch, optimizer_idx, job):
