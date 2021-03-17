@@ -72,8 +72,9 @@ class LocalRpcManager : public RpcManager {
  public:
   LocalRpcManager() {}
   ~LocalRpcManager();
-  void Bootstrap();
-  void CreateClient();
+  Maybe<void> Bootstrap();
+  Maybe<void> CreateServer();
+  Maybe<void> CreateClient();
 };
 
 }  // namespace oneflow
