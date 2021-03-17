@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_RPC_INCLUDE_GRPC_H_
 #define ONEFLOW_CORE_RPC_INCLUDE_GRPC_H_
 
+#include "oneflow/core/control/rpc_client.h"
 #include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 
