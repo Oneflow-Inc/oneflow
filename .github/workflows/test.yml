@@ -205,6 +205,7 @@ jobs:
           # set wheelpath
           wheelhouse_dir="${PWD}/wheel_tmp"
           extra_docker_args+=" --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir}"
+          extra_docker_args+=" --env ONEFLOW_WORKER_BIN=${bin_dir}/oneflow_worker"
           echo "wheelhouse_dir=${wheelhouse_dir}" >> $GITHUB_ENV
 
           # set matrix environment variables
