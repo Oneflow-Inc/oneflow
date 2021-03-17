@@ -375,11 +375,11 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr* op_expr, const TensorTuple&
                                        TensorTuple& outputs) {
   // forward
   {
-    DISABLE_AUTOGRAD_MODE;
+    autograd::AutogradMode mode(false);;
     JUST(normal_interp_->Apply(op_expr, inputs, outputs));
     JUST(SetAutogradAttr4Outputs(inputs, &outputs);)
   }
-  if (AutoGradEnabled()) {
+  if (autograd::AutoGradEnabled()) {
     auto op_grad = op_expr->GetOrCreateOpGrad();
     auto ctx = normal_interp_->state();
     op_grad->SaveForwardTensor(ctx.get(), inputs, outputs);
