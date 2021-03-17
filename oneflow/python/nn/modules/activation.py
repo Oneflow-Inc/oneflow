@@ -16,6 +16,7 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.framework.tensor import Tensor
 
 
 @oneflow_export("nn.Sigmoid")
@@ -42,3 +43,6 @@ class ReLU(Module):
     def forward(self, x):
         res = self._op(x)[0]
         return res
+
+
+setattr(Tensor, "relu", lambda self: ReLU().forward(self))
