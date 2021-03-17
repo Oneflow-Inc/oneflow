@@ -371,6 +371,7 @@ def conv2d(
     filters: oneflow_api.BlobDesc,
     strides: Union[int, IntPair],
     padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
+    bias: Optional[oneflow_api.BlobDesc] = None,
     data_format: str = "NCHW",
     dilations: Optional[Union[int, IntPair]] = None,
     groups: int = 1,
@@ -451,6 +452,8 @@ def conv2d(
     """
     assert len(input.shape) == 4
     assert len(filters.shape) == 4
+    if bias is not None:
+        assert len(bias.shape) == 1
 
     if isinstance(strides, (list, tuple)):
         assert len(strides) == 2, ValueError(
@@ -511,6 +514,8 @@ def conv2d(
     assert groups <= inputs.shape[in_channel_axis]
     assert inputs.shape[in_channel_axis] % groups == 0
     assert filters.shape[filter_in_axis] == inputs.shape[in_channel_axis] // groups
+    if bias is not None:
+        assert bias.shape[filter_out_axis] == filters.shape[filter_out_axis]
 
     if (
         groups > 1
@@ -520,6 +525,11 @@ def conv2d(
         filter_split_list = ConvUtil.split(
             filters, axis=filter_out_axis, split_num=groups
         )
+        bias_spilt_list = (
+            ConvUtil.split(bias, axis=filter_out_axis, split_num=groups)
+            if bias is not None
+            else [None for _ in range(groups)]
+        )
         out_list = []
         name = name if name is not None else id_util.UniqueStr("Conv2d_")
         for i in range(len(in_split_list)):
@@ -527,6 +537,7 @@ def conv2d(
                 conv2d_op(
                     in_split_list[i],
                     filter_split_list[i],
+                    bias_spilt_list[i],
                     padding_before,
                     channel_pos,
                     kernel_size_list,
@@ -541,6 +552,7 @@ def conv2d(
         return conv2d_op(
             inputs,
             filters,
+            bias,
             padding_before,
             channel_pos,
             kernel_size_list,
@@ -554,6 +566,7 @@ def conv2d(
 def conv2d_op(
     inputs,
     filters,
+    bias,
     padding_before,
     channel_pos,
     kernel_size_list,
@@ -562,7 +575,7 @@ def conv2d_op(
     groups,
     name,
 ):
-    return (
+    op_builder = (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
         .Op("conv2d")
         .Input("in", [inputs])
@@ -575,10 +588,10 @@ def conv2d_op(
         .Attr("strides", strides)
         .Attr("dilation_rate", dilations)
         .Attr("groups", groups)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
     )
+    if bias is not None:
+        op_builder = op_builder.Input("bias", [bias])
+    return op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("nn.conv3d")
