@@ -27,8 +27,8 @@ namespace oneflow {
 class LocalCtrlClient : public CtrlClient {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LocalCtrlClient);
-  LocalCtrlClient(const ProcessCtx& process_ctx);
-  ~LocalCtrlClient() = default;
+  explicit LocalCtrlClient(const ProcessCtx& process_ctx);
+  ~LocalCtrlClient() override = default;
 
   void Barrier(const std::string& barrier_name) override;
   void Barrier(const std::string& barrier_name, int32_t barrier_num) override;
@@ -62,11 +62,11 @@ class LocalCtrlClient : public CtrlClient {
 
 class LocalRpcManager : public RpcManager {
  public:
-  LocalRpcManager() {}
-  ~LocalRpcManager();
-  Maybe<void> Bootstrap();
-  Maybe<void> CreateServer();
-  Maybe<void> CreateClient();
+  LocalRpcManager() = default;
+  ~LocalRpcManager() override;
+  Maybe<void> Bootstrap() override;
+  Maybe<void> CreateServer() override;
+  Maybe<void> CreateClient() override;
 };
 
 }  // namespace oneflow
