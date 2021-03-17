@@ -74,11 +74,7 @@ class CrossEntropyLoss(Module):
         if self.reduction == "mean":
             raise ValueError("not supported yet")
         elif self.reduction == "sum":
-            self._reduce_sum_op = (
-                self._reduce_sum_op.Attr("axis", list(range(len(out.shape))))
-                .Attr("keepdims", False)
-                .Build()
-            )
-            return self._reduce_sum_op(out)[0]
+            self._sum = flow.sum()
+            return self._sum(out)
         else:
             return out
