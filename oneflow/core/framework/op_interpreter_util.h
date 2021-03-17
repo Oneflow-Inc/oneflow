@@ -34,54 +34,25 @@ class OpInterpUtil {
 
   static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr);
 
-  static Maybe<cfg::OpAttribute> AddBuiltinOpAndInferOpAttribute(
-      const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled);
-
-  static Maybe<cfg::OpAttribute> AddBuiltinOpAndInferOpAttribute(
-      const BuiltinOpExpr& op_expr, const std::shared_ptr<Scope>& scope,
-      const bool is_mirrored_strategy_enabled);
+  static Maybe<cfg::OpAttribute> AddOpAndInferOpAttribute(const OperatorConf& op_conf,
+                                                          const bool is_mirrored_strategy_enabled);
 
   static Maybe<cfg::OpAttribute> InferOpAttribute(const BuiltinOpExpr& op_expr,
-                                                  const std::shared_ptr<Scope>& scope,
                                                   const TensorTuple& inputs);
+
+  static Maybe<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>
+  MakeBn2BlobObjectMap(const std::vector<std::string>& indexed_ibns, const TensorTuple& inputs);
 
   static Maybe<compatible_py::BlobObject> GetTensorBlobObject(
       const std::shared_ptr<Tensor>& tensor);
 
-  static Maybe<void> InitVariableOutputBlob(const std::shared_ptr<Session>& session,
-                                            const std::shared_ptr<Tensor>& output,
-                                            const OpAttribute& op_attribute);
+  static Maybe<Tensor> BuildTensor(
+      const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
+      const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
+      const bool is_lazy);
 
-  using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
-
-  static Maybe<Bn2BlobObjectMap> MakeBn2BlobObjectMap(const std::vector<std::string>& indexed_ibns,
-                                                      const TensorTuple& inputs);
-
- private:
-  static Maybe<OperatorConf> GenModelInitOpConf(const OperatorConf& variable_conf);
-  static Maybe<OperatorConf> GenModelIOPathInputOpConf();
-  static Maybe<OperatorConf> GenModelLoadOpConf(const OperatorConf& variable_conf,
-                                                const OperatorConf& path_input_op_conf);
-
-  static Maybe<cfg::OpAttribute> InferOpAttribute(const OperatorConf& op_conf,
-                                                  const std::shared_ptr<Scope>& scope,
-                                                  const Bn2BlobObjectMap& ibn2blob_object);
-
-  static Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
-  BuildModelInitOrIOPathInputInstruction(const OperatorConf& op_conf,
-                                         const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object);
-
-  static Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
-  BuildFeedPathInstruction(const std::string& path,
-                           const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object);
-
-  static Maybe<compatible_py::BlobObject> EagerRunModelInit(const OperatorConf& op_conf);
-
-  static Maybe<compatible_py::BlobObject> EagerRunModelLoad(const OperatorConf& op_conf,
-                                                            const std::string& snapshot_path);
-
-  static Maybe<void> Assign(const std::shared_ptr<compatible_py::BlobObject>& target_blob_object,
-                            const std::shared_ptr<compatible_py::BlobObject>& blob_object);
+  static Maybe<Tensor> BuildTensorFromBlobObject(
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object);
 };
 
 }  // namespace one
