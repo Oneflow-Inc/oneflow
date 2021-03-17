@@ -352,7 +352,7 @@ void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_p
       }
     };
     for (const auto& ibn : op_node->op().input_bns()) { TryInserSplitParalleledObas(ibn); }
-    for (const auto& obn : op_node->op().output_bns()) { TryInserSplitParalleledObas(obn); }
+    // for (const auto& obn : op_node->op().output_bns()) { TryInserSplitParalleledObas(obn); }
   });
   for (const auto& pair : fw_bw_oba_pairs.pair()) {
     CHECK(split_paralleled_obas.find(pair.first()) == split_paralleled_obas.end());
