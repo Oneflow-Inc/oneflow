@@ -81,7 +81,7 @@ void GrpcCtrlClient::PushKV(const std::string& k, const PbMessage& msg) {
   rpc_client_.PushKV(k, msg);
 }
 
-void GrpcCtrlClient::PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter) {
+void GrpcCtrlClient::PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {
   rpc_client_.PushKV(k, VSetter);
 }
 
