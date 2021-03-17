@@ -32,6 +32,7 @@ def GetVariablesForCurrentJob() -> List[Text]:
     sess = session_ctx.GetDefaultSession()
     job_name = ""
     try:
+        # TODO(): Use new api when new Get api is ready.
         job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     except Exception as e:
         print(
