@@ -19,6 +19,7 @@ from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op_by_module
 
 
+@register_tensor_op_by_module("sigmoid")
 @oneflow_export("nn.Sigmoid")
 class Sigmoid(Module):
     def __init__(self):
@@ -32,6 +33,7 @@ class Sigmoid(Module):
         return res
 
 
+@register_tensor_op_by_module("relu")
 @oneflow_export("nn.ReLU")
 class ReLU(Module):
     def __init__(self):
@@ -43,6 +45,3 @@ class ReLU(Module):
     def forward(self, x):
         res = self._op(x)[0]
         return res
-
-
-register_tensor_op_by_module("relu", module=ReLU, is_unary=True)
