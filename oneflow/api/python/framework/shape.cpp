@@ -45,7 +45,7 @@ struct ShapeExportUtil final {
   static std::shared_ptr<Shape> Slicing(const Shape& shape, const py::slice& slice) {
     size_t start, stop, step, slicelength;
     if (!slice.compute(shape.dim_vec().size(), &start, &stop, &step, &slicelength)) {
-      throw py::value_error();
+      throw py::error_already_set();
     }
     DimVector shape_dims;
     for (size_t i = 0; i < slicelength; ++i) {
