@@ -36,7 +36,8 @@ from oneflow.python.framework.check_point_v2 import (
     SaveVarDict,
     GetCheckpoint,
 )
-from oneflow.python.framework.function_util import api_oneflow_function, FunctionConfig
+from oneflow.python.framework.function_util import api_oneflow_function
+from oneflow.python.framework.function_util import FunctionConfig as ExecutionConfig
 from oneflow.python.framework.local_blob import LocalBlob
 from oneflow.python.framework.module import Module as DeprecatedModule
 from oneflow.python.framework.session_util import api_clear_default_session
@@ -96,7 +97,7 @@ class TrainingConfig:
         self.data = None
         self.error_msg = ""
 
-    def config_exe(self, exe_cfg: FunctionConfig = None):
+    def config_exe(self, exe_cfg: ExecutionConfig = None):
         self.exe_cfg = exe_cfg
 
     def config_data(self, data: DataModule = None):
@@ -108,7 +109,7 @@ class TrainingConfig:
         if self.exe_cfg is None:
             self.error_msg += "model.TrainingConfig exe_cfg is None;"
             is_valid = False
-        if not isinstance(self.exe_cfg, FunctionConfig):
+        if not isinstance(self.exe_cfg, ExecutionConfig):
             self.error_msg += "model.TrainingConfig exe_cfg is not ExecutionConfig;"
             is_valid = False
         if self.data is None:
@@ -129,7 +130,7 @@ class ValidationConfig:
         self.step_interval = 10
         self.error_msg = ""
 
-    def config_exe(self, exe_cfg: FunctionConfig = None):
+    def config_exe(self, exe_cfg: ExecutionConfig = None):
         self.exe_cfg = exe_cfg
 
     def config_data(self, data: DataModule = None):
@@ -144,7 +145,7 @@ class ValidationConfig:
         if self.exe_cfg is None:
             self.error_msg += "model.ValidationConfig exe_cfg is None;"
             is_valid = False
-        if not isinstance(self.exe_cfg, FunctionConfig):
+        if not isinstance(self.exe_cfg, ExecutionConfig):
             self.error_msg += "model.ValidationConfig exe_cfg is not ExecutionConfig;"
             is_valid = False
         if self.data is None:
