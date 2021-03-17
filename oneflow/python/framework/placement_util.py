@@ -78,7 +78,7 @@ def api_placement(
 
     if oneflow_api.flags.with_cuda() == False and device_tag == "gpu":
         device_tag = "cpu"
-    assert isinstance(hierarchy, (list, tuple)) or hierarchy is None
+    assert isinstance(hierarchy, (list, tuple, oneflow_api.Size)) or hierarchy is None
     func = enable_if.unique(
         [
             GetEmptyPlacementScope,
