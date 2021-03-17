@@ -63,12 +63,10 @@ class OpNode final : public Node<OpNode, OpEdge> {
   Operator* mut_op() { return op_.get(); }
   OpNode* MutSrcNode4Ibn(const std::string& bn_in_op) const;
   OpNode* MutSrcNode4InputLbi(const LogicalBlobId& lbi) const;
-  void InferBlobParallelDesc();
   void InitLbi2SourceNode();
   void InitLbi2ParallelDistribution();
 
   std::shared_ptr<const ParallelDesc> parallel_desc_;
-  HashMap<std::string, ParallelDesc> obn2blob_parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
@@ -85,24 +83,16 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
       : lbis_(std::move(lbis)), lbi2obn_(std::move(lbi2obn)), lbi2ibns_(std::move(lbi2ibns)) {}
   ~OpEdge() override = default;
 
-  void InitDistributeHierarchyInfo();
-
   // Getters
   const std::vector<LogicalBlobId>& lbis() const { return *lbis_; }
   const HashMap<LogicalBlobId, std::string>& lbi2obn() const { return *lbi2obn_; }
   const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns() const { return *lbi2ibns_; }
   std::string VisualStr() const override;
-  bool is_strict_121() const { return is_strict_121_; }
 
  private:
-  void InitIsStrict121();
-  bool CalcIsStrict121Connected() const;
-
   std::shared_ptr<std::vector<LogicalBlobId>> lbis_;
   std::shared_ptr<HashMap<LogicalBlobId, std::string>> lbi2obn_;
   std::shared_ptr<HashMap<LogicalBlobId, std::vector<std::string>>> lbi2ibns_;
-
-  bool is_strict_121_;
 };
 
 class OpGraph final : public Graph<OpNode, OpEdge> {
