@@ -211,6 +211,7 @@ Maybe<OpGraph> OpGraph::New(const Job& job) {
 
 Maybe<void> OpGraph::Init(const Job& job) {
   InitNodes(job);
+  op_name2op_node_.reserve(job.net().op_size());
   ForEachNode([&](OpNode* node) {
     CHECK(op_name2op_node_.emplace(node->op().op_name(), node).second)
         << "op_name: " << node->op().op_name();
@@ -239,15 +240,17 @@ void OpGraph::CheckIsDAG() const {
 namespace {
 
 std::function<std::shared_ptr<const ParallelDesc>(const std::string&)>
-MakeGetterParallelDesc4OpName(const Placement& placement) {
+MakeGetterParallelDesc4OpName(const Job& job) {
+  const Placement& placement = job.placement();
   auto op_name2parallel_desc =
       std::make_shared<HashMap<std::string, std::shared_ptr<const ParallelDesc>>>();
+  op_name2parallel_desc->reserve(job.net().op_size());
   for (const auto& placement_group : placement.placement_group()) {
+    const ParallelConf& parallel_conf = placement_group.parallel_conf();
+    std::shared_ptr<const ParallelDesc> parallel_desc =
+        std::make_shared<const ParallelDesc>(parallel_conf);
     for (const std::string& op_name : placement_group.op_set().op_name()) {
-      const ParallelConf* parallel_conf = &placement_group.parallel_conf();
-      CHECK(op_name2parallel_desc
-                ->emplace(op_name, std::make_shared<const ParallelDesc>(*parallel_conf))
-                .second)
+      CHECK(op_name2parallel_desc->emplace(op_name, parallel_desc).second)
           << "op_name: " << op_name;
     }
   }
@@ -259,7 +262,7 @@ MakeGetterParallelDesc4OpName(const Placement& placement) {
 }  // namespace
 
 void OpGraph::InitNodes(const Job& job) {
-  auto ParallelDesc4OpName = MakeGetterParallelDesc4OpName(job.placement());
+  auto ParallelDesc4OpName = MakeGetterParallelDesc4OpName(job);
   for (const auto& op_conf : job.net().op()) {
     op_names_.push_back(op_conf.name());
     OpNode* node = new OpNode(ParallelDesc4OpName(op_conf.name()), op_conf);
