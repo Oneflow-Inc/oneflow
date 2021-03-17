@@ -85,7 +85,7 @@ jobs:
           echo "wheelhouse_dir=${ci_tmp_dir}/wheelhouse" >> $GITHUB_ENV
           sha_dir="${{ secrets.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}"
           echo "sha_dir=${sha_dir}" >> $GITHUB_ENV
-          if ssh ${{ secrets.CI_STATIC_HOST }} "test -d $sha_dir"; then
+          if ssh -o StrictHostKeyChecking=no ${{ secrets.CI_STATIC_HOST }} "test -d $sha_dir"; then
               echo "is_built=1" >> $GITHUB_ENV
           fi
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
