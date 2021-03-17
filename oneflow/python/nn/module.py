@@ -23,6 +23,7 @@ import numpy as np
 
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.framework.check_point_v2 import FeedValueToVariable
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.parameter import Parameter
 
@@ -379,7 +380,7 @@ class Module(object):
                     # TODO(jianhao): uncomment these lines when autograd is ready
                     # with torch.no_grad():
                     # param.copy_(input_param)
-                    flow.load_variables({param._variable_name: input_param})
+                    FeedValueToVariable(param, input_param)
                 except Exception as ex:
                     error_msgs.append(
                         'While copying the parameter named "{}", '
