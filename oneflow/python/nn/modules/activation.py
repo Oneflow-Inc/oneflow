@@ -45,4 +45,4 @@ class ReLU(Module):
         return res
 
 
-register_tensor_op_by_module("relu", lambda self: ReLU().forward(self))
+register_tensor_op_by_module("relu", module=ReLU, is_unary=True)
