@@ -15,7 +15,15 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-__all__ = ["DataModule", "NumpyDataModule", "TrainingConfig", "ValidationConfig", "CheckpointConfig", "Callback", "Model"]
+__all__ = [
+    "DataModule",
+    "NumpyDataModule",
+    "TrainingConfig",
+    "ValidationConfig",
+    "CheckpointConfig",
+    "Callback",
+    "Model",
+]
 
 from abc import ABC
 from typing import Optional, Any, Union, Tuple, List
@@ -369,7 +377,9 @@ class SubModel(ABC):
                 ), "model callbacks' type must be model.Callback or List[model.Callback]."
             return True
 
-        assert False, "model callbacks' type must be model.Callback or List[model.Callback]."
+        assert (
+            False
+        ), "model callbacks' type must be model.Callback or List[model.Callback]."
 
     def _method_callback(self, method_name: str = None, *args, **kwargs):
         for cb in self._cbs:
