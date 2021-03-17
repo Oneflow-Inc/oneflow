@@ -143,7 +143,6 @@ void Runtime::DeleteAllGlobal() {
 
   // should be called after Global<Transport>::Delete()
   if (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum() > 1) {
-#ifdef RPC_BACKEND_GRPC
 #ifdef __linux__
     if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
@@ -155,7 +154,7 @@ void Runtime::DeleteAllGlobal() {
       Global<CommNet>::Delete();
 #else
       LOG(FATAL) << "RDMA components not found";
-#endif
+#endif  // WITH_RDMA
     } else {
       CHECK(Global<EpollCommNet>::Get() == static_cast<EpollCommNet*>(Global<CommNet>::Get()));
       // NOTE(chengcheng): it means that Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get())
@@ -163,8 +162,7 @@ void Runtime::DeleteAllGlobal() {
       // then only need delete once.
     }
     Global<EpollCommNet>::Delete();
-#endif
-#endif
+#endif  // __linux__
   }
 
   Global<ActEventLogger>::Delete();
