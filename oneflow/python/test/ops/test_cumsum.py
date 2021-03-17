@@ -81,7 +81,6 @@ def _compare_cumsum_with_np(
     func_config = flow.FunctionConfig()
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
     func_config.default_data_type(flow.float32)
-    # pdb.set_trace()
 
     @flow.global_function(type="train", function_config=func_config)
     def CumsumJob() -> tp.Numpy:
@@ -111,7 +110,6 @@ def _compare_cumsum_with_np(
 
     # Numpy
     of_x = test_global_storage.Get("x")
-    # of_x_diff = test_global_storage.Get("x_diff")
     if reverse == True:
         np_rev = np.flip(of_x, axis)
         np_rev = np.cumsum(np_rev, axis, float)
