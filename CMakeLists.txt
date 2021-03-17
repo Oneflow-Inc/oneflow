@@ -17,7 +17,6 @@ option(WITH_TENSORRT "Option to build with TensorRT" OFF)
 option(FOR_CI "" OFF)
 option(BUILD_GIT_VERSION "" ON)
 option(BUILD_PROFILER "" OFF)
-
 set(RPC_BACKEND "GRPC" CACHE STRING "")
 set(THIRD_PARTY_MIRROR "" CACHE STRING "")
 
