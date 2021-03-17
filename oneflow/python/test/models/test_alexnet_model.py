@@ -182,14 +182,14 @@ def test_1n1c(test_case):
     train_exe_config.default_logical_view(flow.scope.consistent_view())
     train_exe_config.default_data_type(flow.float)
     train_config = flow.model.TrainingConfig()
-    train_config.config_exe(train_exe_config)
+    train_config.config_execution(train_exe_config)
     train_config.config_data(TrainData(global_specs))
 
     val_exe_config = flow.ExecutionConfig()
     val_exe_config.default_logical_view(flow.scope.consistent_view())
     val_exe_config.default_data_type(flow.float)
     val_config = flow.model.ValidationConfig()
-    val_config.config_exe(val_exe_config)
+    val_config.config_execution(val_exe_config)
     val_config.config_data(ValData(global_specs))
     val_config.config_step_interval(10)
 
