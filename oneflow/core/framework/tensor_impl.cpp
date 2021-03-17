@@ -27,7 +27,7 @@ Maybe<void> TensorImpl::SyncBlobObject2Attributes(
   DataType data_type = static_cast<DataType>(blob_object->op_arg_blob_attr()->get_dtype());
   const std::shared_ptr<DType>& dtype = JUST(DType::GetDTypeByDataType(data_type));
   set_dtype(dtype);
-  return Maybe<void>::Ok();
+  return set_parallel_desc(blob_object->op_arg_parallel_attr()->parallel_desc_symbol());
 }
 
 void MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
@@ -42,20 +42,22 @@ Maybe<void> MirroredTensorImpl::set_parallel_desc(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> ConsistentTensorImpl::set_parallel_desc(
+    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  parallel_desc_ = parallel_desc;
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> EagerMirroredTensorImpl::set_blob_object(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   blob_object_ = blob_object;
-  JUST(SyncBlobObject2Attributes(blob_object));
-  JUST(set_parallel_desc(blob_object->op_arg_parallel_attr()->parallel_desc_symbol()));
-  return Maybe<void>::Ok();
+  return SyncBlobObject2Attributes(blob_object);
 }
 
 Maybe<void> EagerConsistentTensorImpl::set_blob_object(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   blob_object_ = blob_object;
-  JUST(SyncBlobObject2Attributes(blob_object));
-  set_parallel_desc(blob_object->op_arg_parallel_attr()->parallel_desc_symbol());
-  return Maybe<void>::Ok();
+  return SyncBlobObject2Attributes(blob_object);
 }
 
 }  // namespace one

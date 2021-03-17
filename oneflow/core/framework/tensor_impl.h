@@ -45,6 +45,7 @@ class TensorImpl {
   // Getters
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual const std::shared_ptr<const DType>& dtype() const = 0;
+  virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
   virtual bool is_lazy() const = 0;
 
   // Getters for autograd
@@ -57,11 +58,14 @@ class TensorImpl {
   // Setters
   virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
   virtual void set_dtype(const std::shared_ptr<const DType>& dtype) = 0;
+  virtual Maybe<void> set_parallel_desc(
+      const std::shared_ptr<const ParallelDesc>& parallel_desc) = 0;
 
   // Setters for autograd
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) { acc_grad_ = grad; }
   void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
   void set_retain_grad(bool retain_grad) { retain_grad_ = retain_grad; }
+  void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
 
   // Getters to be deprecated
   virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
@@ -71,7 +75,6 @@ class TensorImpl {
       const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 
  protected:
-  TensorImpl() = default;
   TensorImpl(bool requires_grad, bool is_leaf, bool retain_grad)
       : requires_grad_(requires_grad), is_leaf_(is_leaf), retain_grad_(retain_grad) {}
   Maybe<void> SyncBlobObject2Attributes(
@@ -91,11 +94,13 @@ class MirroredTensorImpl : public TensorImpl {
 
   // Getters
   const std::shared_ptr<const Device>& device() const { return device_; }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
+  const std::shared_ptr<const ParallelDesc>& parallel_desc() const override {
+    return parallel_desc_;
+  }
 
   // Setters
+  Maybe<void> set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override;
   void set_device(const std::shared_ptr<const Device>& device);
-  Maybe<void> set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc);
 
  protected:
   MirroredTensorImpl(const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf,
@@ -114,13 +119,14 @@ class ConsistentTensorImpl : public TensorImpl {
 
   // Getters
   const std::shared_ptr<const Device>& device() const { return device_ /* always nullptr*/; }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; };
+  const std::shared_ptr<const ParallelDesc>& parallel_desc() const override {
+    return parallel_desc_;
+  };
   virtual const std::shared_ptr<const compatible_py::Distribute>& distribute() const = 0;
 
   // Setters
-  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-    parallel_desc_ = parallel_desc;
-  }
+  Maybe<void> set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override;
+
   virtual void set_distribute(
       const std::shared_ptr<const compatible_py::Distribute>& distribute) = 0;
 

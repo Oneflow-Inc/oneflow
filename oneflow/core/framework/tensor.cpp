@@ -58,11 +58,6 @@ std::shared_ptr<MirroredTensor> MirroredTensor::detach() const {
   return t;
 }
 
-Maybe<void> MirroredTensor::set_parallel_desc(
-    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  return impl_->set_parallel_desc(parallel_desc);
-}
-
 std::shared_ptr<ConsistentTensor> ConsistentTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
     const std::shared_ptr<const compatible_py::Distribute>& distribute,
