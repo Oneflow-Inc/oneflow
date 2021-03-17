@@ -41,11 +41,6 @@ class LocalCtrlClient : public CtrlClient {
   void PushKV(const std::string& k, const std::string& v);
   void PushKV(const std::string& k, const PbMessage& msg);
   void PushMasterKV(const std::string& k, const PbMessage& msg);
-  // TODO: delete this if base class has it
-  template<typename T>
-  typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(const std::string& k, T v) {
-    PushKV(k, std::to_string(v));
-  }
 
   void ClearKV(const std::string& k);
   void ClearMasterKV(const std::string& k);
@@ -54,13 +49,6 @@ class LocalCtrlClient : public CtrlClient {
   void PullKV(const std::string& k, std::string* v);
   void PullKV(const std::string& k, PbMessage* msg);
   void PullMasterKV(const std::string& k, PbMessage* msg);
-  template<typename T>
-  typename std::enable_if<std::is_arithmetic<T>::value>::type PullKVT(const std::string& k, T* v) {
-    std::string v_str;
-    PullKV(k, &v_str);
-    *v = oneflow_cast<T>(v_str);
-  }
-
   void PushActEvent(const ActEvent&){};
   void Clear();
 

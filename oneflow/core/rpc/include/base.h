@@ -65,49 +65,35 @@ inline const char* GetMethodName(CtrlMethod method) {
   return g_method_name[static_cast<int32_t>(method)];
 }
 
-class CtrlCallIf {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CtrlCallIf);
-  virtual ~CtrlCallIf() = default;
-
-  virtual void Process() = 0;
-  virtual void SendResponse() = 0;
-
- protected:
-  CtrlCallIf() = default;
-
- private:
-};
-
 class CtrlClient {
  public:
   CtrlClient(const ProcessCtx& process_ctx);
   CtrlClient() = default;
   virtual ~CtrlClient() {}
 
-  virtual void Barrier(const std::string& barrier_name) {}
-  virtual void Barrier(const std::string& barrier_name, int32_t barrier_num) {}
+  virtual void Barrier(const std::string& barrier_name) = 0;
+  virtual void Barrier(const std::string& barrier_name, int32_t barrier_num) = 0;
 
   virtual TryLockResult TryLock(const std::string& name) = 0;
-  virtual void NotifyDone(const std::string& name) {}
-  virtual void WaitUntilDone(const std::string& name) {}
+  virtual void NotifyDone(const std::string& name) = 0;
+  virtual void WaitUntilDone(const std::string& name) = 0;
 
-  virtual void PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {}
-  virtual void PushKV(const std::string& k, const std::string& v) {}
-  virtual void PushKV(const std::string& k, const PbMessage& msg) {}
-  virtual void PushMasterKV(const std::string& k, const PbMessage& msg) {}
+  virtual void PushKV(const std::string& k, std::function<void(std::string*)> VSetter) = 0;
+  virtual void PushKV(const std::string& k, const std::string& v) = 0;
+  virtual void PushKV(const std::string& k, const PbMessage& msg) = 0;
+  virtual void PushMasterKV(const std::string& k, const PbMessage& msg) = 0;
   template<typename T>
   typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(const std::string& k, T v) {
     PushKV(k, std::to_string(v));
   }
 
-  virtual void ClearKV(const std::string& k) {}
-  virtual void ClearMasterKV(const std::string& k) {}
+  virtual void ClearKV(const std::string& k) = 0;
+  virtual void ClearMasterKV(const std::string& k) = 0;
 
-  virtual void PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {}
-  virtual void PullKV(const std::string& k, std::string* v) {}
-  virtual void PullKV(const std::string& k, PbMessage* msg) {}
-  virtual void PullMasterKV(const std::string& k, PbMessage* msg) {}
+  virtual void PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) = 0;
+  virtual void PullKV(const std::string& k, std::string* v) = 0;
+  virtual void PullKV(const std::string& k, PbMessage* msg) = 0;
+  virtual void PullMasterKV(const std::string& k, PbMessage* msg) = 0;
   template<typename T>
   typename std::enable_if<std::is_arithmetic<T>::value>::type PullKVT(const std::string& k, T* v) {
     std::string v_str;
@@ -115,8 +101,8 @@ class CtrlClient {
     *v = oneflow_cast<T>(v_str);
   }
 
-  virtual void PushActEvent(const ActEvent&) {}
-  virtual void Clear() {}
+  virtual void PushActEvent(const ActEvent&) = 0;
+  virtual void Clear() = 0;
 };
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
@@ -156,50 +142,6 @@ static void OfCallOnce(const std::string& name, F f, Arg&& arg, Args&&... args) 
   std::function<void()> fn = std::bind(f, std::forward<Arg>(arg), std::forward<Args>(args)...);
   OfCallOnce(name, std::move(fn));
 }
-
-template<CtrlMethod ctrl_method>
-class CtrlCall final : public CtrlCallIf {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CtrlCall);
-  CtrlCall() : status_(Status::kBeforeHandleRequest) {}
-  ~CtrlCall() = default;
-
-  static constexpr const size_t value = (size_t)ctrl_method;
-
-  const CtrlRequest<ctrl_method>& request() const { return request_; }
-  CtrlRequest<ctrl_method>* mut_request() { return &request_; }
-  CtrlResponse<ctrl_method>* mut_response() { return &response_; }
-  void set_request_handler(std::function<void()> val) { request_handler_ = val; }
-
-  void Process() override {
-    switch (status_) {
-      case Status::kBeforeHandleRequest: {
-        request_handler_();
-        return;
-      }
-      case Status::kBeforeDelete: {
-        delete this;
-        return;
-      }
-    }
-  }
-
-  void SendResponse() override { status_ = Status::kBeforeDelete; }
-
- private:
-  enum class Status { kBeforeHandleRequest, kBeforeDelete };
-
-  Status status_;
-  CtrlRequest<ctrl_method> request_;
-  CtrlResponse<ctrl_method> response_;
-  std::function<void()> request_handler_;
-};
-
-class CtrlServer {
- public:
-  CtrlServer() {}
-  virtual ~CtrlServer() {}
-};
 
 class RpcManager {
  public:
