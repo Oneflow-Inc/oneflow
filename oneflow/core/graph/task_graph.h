@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 
-#include "oneflow/core/graph/logical_graph.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
@@ -35,7 +34,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskGraph() = delete;
   ~TaskGraph() override;
 
-  explicit TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph);
+  explicit TaskGraph();
 
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
@@ -96,7 +95,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void ForEachGpuDeviceNodes(
       const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const;
 
-  std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;
   std::unique_ptr<HierarchicalSubTskGphBuilder> hierarchical_sub_tsk_gph_builder_;
   std::unique_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;

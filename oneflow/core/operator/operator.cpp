@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/scope.h"
@@ -63,8 +62,6 @@ void Operator::Init(std::shared_ptr<const OperatorConf> op_conf) {
   for (const auto& bn : input_bns()) { *input_output_bns_.Add() = bn; }
   for (const auto& bn : output_bns()) { *input_output_bns_.Add() = bn; }
 }
-
-LogicalNode* Operator::NewProperLogicalNode() const { return new NormalForwardLogicalNode; }
 
 const LogicalBlobId& Operator::BnInOp2Lbi(const std::string& bn_in_op) const {
   return arg_signature_.bn_in_op2lbi().at(bn_in_op);

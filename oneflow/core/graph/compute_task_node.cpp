@@ -14,14 +14,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/graph/normal_forward_compute_task_node.h"
+/*
+#include "oneflow/core/graph/decode_random_compute_task_node.h"
+#include "oneflow/core/graph/distribute_concat_compute_task_node.h"
+#include "oneflow/core/graph/distribute_split_compute_task_node.h"
+#include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
+#include "oneflow/core/graph/foreign_input_compute_task_node.h"
+#include "oneflow/core/graph/foreign_output_compute_task_node.h"
+#include "oneflow/core/graph/callback_notify_compute_task_node.h"
+#include "oneflow/core/graph/reentrant_lock_compute_task_node.h"
+#include "oneflow/core/graph/src_subset_tick_compute_task_node.h"
+#include "oneflow/core/graph/dst_subset_tick_compute_task_node.h"
+#include "oneflow/core/graph/source_tick_compute_task_node.h"
+#include "oneflow/core/graph/tick_compute_task_node.h"
+#include "oneflow/core/graph/device_tick_compute_task_node.h"
+#include "oneflow/core/graph/acc_tick_compute_task_node.h"
+#include "oneflow/core/graph/case_compute_task_node.h"
+#include "oneflow/core/graph/esac_compute_task_node.h"
+#include "oneflow/core/graph/decode_h2d_compute_task_node.h"
+*/
 
 namespace oneflow {
 
 namespace {
 
-const LogicalNode* LogicalNodeOnEdge(
+const OpNode* OpNodeOnEdge(
     TaskEdge* edge, TaskNode* (TaskEdge::*GetNode)() const,
     void (TaskNode::*ForEachDataEdge)(const std::function<void(TaskEdge*)>&) const) {
   CompTaskNode* target_node = nullptr;
@@ -33,7 +52,7 @@ const LogicalNode* LogicalNodeOnEdge(
       if (edge == nullptr) { edge = e; }
     });
   } while (!target_node && edge);
-  if (target_node) { return target_node->logical_node(); }
+  if (target_node) { return target_node->op_node(); }
   return nullptr;
 }
 
@@ -66,9 +85,7 @@ std::vector<CompTaskNode*> GetCompTaskNodesOnEdge(
 }  // namespace
 
 std::string CompTaskNode::VisualStr() const {
-  std::stringstream ss;
-  for (const auto& op : logical_node()->op_vec()) { ss << op->op_name() << "\\n"; }
-  return ss.str();
+  return op_node_->op().op_name();
 }
 
 void CompTaskNode::ToProto(TaskProto* task_proto) {
@@ -76,12 +93,12 @@ void CompTaskNode::ToProto(TaskProto* task_proto) {
   *(task_proto->mutable_parallel_ctx()) = parallel_ctx_;
 }
 
-const LogicalNode* CompTaskNode::GetOneSuccLogicalNodeOnEdge(TaskEdge* edge) {
-  return LogicalNodeOnEdge(edge, &TaskEdge::dst_node, &TaskNode::ForEachOutDataEdge);
+const OpNode* CompTaskNode::GetOneSuccOpNodeOnEdge(TaskEdge* edge) {
+  return OpNodeOnEdge(edge, &TaskEdge::dst_node, &TaskNode::ForEachOutDataEdge);
 }
 
-const LogicalNode* CompTaskNode::GetOnePredLogicalNodeOnEdge(TaskEdge* edge) {
-  return LogicalNodeOnEdge(edge, &TaskEdge::src_node, &TaskNode::ForEachInDataEdge);
+const OpNode* CompTaskNode::GetOnePredOpNodeOnEdge(TaskEdge* edge) {
+  return OpNodeOnEdge(edge, &TaskEdge::src_node, &TaskNode::ForEachInDataEdge);
 }
 
 std::vector<CompTaskNode*> CompTaskNode::GetSuccCompTaskNodesOnEdge(TaskEdge* edge) const {
@@ -94,10 +111,33 @@ std::vector<CompTaskNode*> CompTaskNode::GetPredCompTaskNodesOnEdge(TaskEdge* ed
 
 void CompTaskNode::InferProducedDataRegstTimeShape() {
   std::shared_ptr<Shape> op_time_shape(
-      new Shape(*CHECK_JUST(exec_gph().SoleNode()->op()->GetOpTimeShape())));
+      new Shape(*CHECK_JUST(shared_op()->GetOpTimeShape())));
   ForEachProducedDataRegst([op_time_shape](const std::string& name, RegstDesc* regst) {
     *regst->mut_data_regst_time_shape() = op_time_shape;
   });
+}
+
+CompTaskNode* NewCompTaskNode4OpNode(const OpNode* op_node) {
+  const OperatorConf& op_conf = op_node->op().op_conf();
+  if (op_conf.has_user_conf()) {
+    const std::string& op_type_name = op_conf.user_conf().op_type_name();
+    if (IsClassRegistered<std::string, OpCompTaskNodeCreator>(op_type_name)) {
+      return std::unique_ptr<OpCompTaskNodeCreator>(
+                 NewObj<std::string, OpCompTaskNodeCreator>(op_type_name))
+          ->NewCompTaskNode(op_conf);
+    } else {
+      return new NormalForwardCompTaskNode;
+    }
+  } else {
+    OperatorConf::OpTypeCase op_type_case = op_conf.op_type_case();
+    if (IsClassRegistered<int32_t, OpCompTaskNodeCreator>(op_type_case)) {
+      return std::unique_ptr<OpCompTaskNodeCreator>(
+                 NewObj<int32_t, OpCompTaskNodeCreator>(op_type_case))
+          ->NewCompTaskNode(op_conf);
+    } else {
+      return new NormalForwardCompTaskNode;
+    }
+  }
 }
 
 }  // namespace oneflow
