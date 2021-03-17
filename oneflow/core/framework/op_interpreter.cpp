@@ -375,7 +375,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr* op_expr, const TensorTuple&
                                        TensorTuple& outputs) {
   // forward
   {
-    autograd::AutogradMode mode(false);;
+    autograd::AutogradMode mode(false);
     JUST(normal_interp_->Apply(op_expr, inputs, outputs));
     JUST(SetAutogradAttr4Outputs(inputs, &outputs);)
   }
@@ -385,8 +385,9 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr* op_expr, const TensorTuple&
     op_grad->SaveForwardTensor(ctx.get(), inputs, outputs);
 
     auto backward_fn =
-        std::make_shared<std::function<void(const TensorTuple&, TensorTuple*, const bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads, const bool create_graph) {
+        std::make_shared<std::function<void(const TensorTuple&, TensorTuple*, bool)>>(
+            [=](const TensorTuple& out_grads, TensorTuple* in_grads, bool create_graph) {
+              autograd::AutogradMode mode(create_graph);
               op_grad->DoBackward(ctx.get(), out_grads);
             });
     GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(backward_fn, inputs, &outputs);
