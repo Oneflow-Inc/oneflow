@@ -25,8 +25,11 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("builtin_op")
 class BuiltinOp(object):
-    def __init__(self, op_type_name):
-        self._builder = oneflow_api.one.OpBuilder(op_type_name)
+    def __init__(self, op_type_name, op_name=None):
+        if op_name is None:
+            self._builder = oneflow_api.one.OpBuilder(op_type_name)
+        else:
+            self._builder = oneflow_api.one.OpBuilder(op_type_name, op_name)
         self._op = None
         self._op_type_name = op_type_name
 
@@ -41,31 +44,6 @@ class BuiltinOp(object):
         if self._op is None:
             self._op = self._builder.build()
         return self._op
-
-    def Op(self, op_type_name):
-        r"""set typename of op
-
-        Args:
-            op_type_name (string): op type name
-
-        Returns:
-            self
-        """
-        self._op_type_name = op_type_name
-        self._builder.op(self._op_type_name)
-        return self
-
-    def Name(self, op_name):
-        r"""Set the op name.
-
-        Args:
-            op_name (str): the name of the op.
-
-        Returns:
-            self
-        """
-        self._builder.name(op_name)
-        return self
 
     def Input(self, input_name, num=1):
         r"""Set input blob of op
@@ -147,10 +125,14 @@ class BuiltinOp(object):
             attribute.at_shape.dim[:] = list(attr_value)
         elif attr_type == attr_value_pb.kAtDataType:
             assert (
-                isinstance(attr_value.oneflow_proto_dtype, int)
+                isinstance(
+                    oneflow_api.deprecated.GetProtoDtype4OfDtype(attr_value), int
+                )
                 and attr_value in oneflow.dtypes()
             )
-            attribute.at_data_type = attr_value.oneflow_proto_dtype
+            attribute.at_data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(
+                attr_value
+            )
         elif attr_type == attr_value_pb.kAtListInt32:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, int) for x in attr_value)
@@ -166,11 +148,12 @@ class BuiltinOp(object):
         elif attr_type == attr_value_pb.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
             assert all(
-                isinstance(x.oneflow_proto_dtype, int) and x in oneflow.dtypes()
+                isinstance(oneflow_api.deprecated.GetProtoDtype4OfDtype(x), int)
+                and x in oneflow.dtypes()
                 for x in attr_value
             )
             attribute.at_list_data_type.val[:] = list(
-                [x.oneflow_proto_dtype for x in attr_value]
+                [oneflow_api.deprecated.GetProtoDtype4OfDtype(x) for x in attr_value]
             )
         elif attr_type == attr_value_pb.kAtListShape:
             assert isinstance(attr_value, (tuple, list))

@@ -26,15 +26,12 @@ static constexpr char _PositionalPlaceholderPrefix[] = "_/#^Placeholder_";
 
 OpBuilder::OpBuilder(const std::string& op_type_name) {
   *(proto_.mutable_op_type_name()) = op_type_name;
+  op_name_ = *CHECK_JUST(UniqueStr(op_type_name));
 }
 
-Maybe<OpBuilder&> OpBuilder::MaybeOp(const std::string& op_type_name) {
+OpBuilder::OpBuilder(const std::string& op_type_name, const std::string& op_name)
+    : op_name_(op_name) {
   *(proto_.mutable_op_type_name()) = op_type_name;
-  return *this;
-}
-
-OpBuilder& OpBuilder::Op(const std::string& op_type_name) {
-  return CHECK_JUST(MaybeOp(op_type_name));
 }
 
 Maybe<OpBuilder&> OpBuilder::MaybeInput(const std::string& input_name, const int count) {
@@ -61,10 +58,9 @@ Maybe<OpBuilder&> OpBuilder::MaybeOutput(const std::string& output_name, const i
   CHECK_GT_OR_RETURN(count, 0);
   CHECK_EQ_OR_RETURN(proto_.output().count(output_name), 0)
       << "The output " << output_name << " has been specified more than once.";
-  const auto& op_name = JUST(GetOrGenUniqueOpName());
   auto& output_list = (*(proto_.mutable_output()))[output_name];
   for (int i = 0; i < count; ++i) {
-    const std::string& tensor_name = *op_name + "/" + output_name + "_" + std::to_string(i);
+    const std::string& tensor_name = op_name_ + "/" + output_name + "_" + std::to_string(i);
     output_list.mutable_s()->Add()->assign(tensor_name);
     indexed_obns_.push_back(output_name + "_" + std::to_string(i));
   }
@@ -89,13 +85,7 @@ OpBuilder& OpBuilder::Attr(const std::string& attr_name, const AttrValue& attr_v
 }
 
 Maybe<UserOpExpr> OpBuilder::Build() {
-  const auto& op_name = JUST(GetOrGenUniqueOpName());
-  return std::make_shared<UserOpExpr>(*op_name, std::move(proto_), indexed_ibns_, indexed_obns_);
-}
-
-Maybe<std::string> OpBuilder::GetOrGenUniqueOpName() {
-  if (op_name_.empty()) { op_name_ = *JUST(UniqueStr(proto_.op_type_name())); }
-  return op_name_;
+  return std::make_shared<UserOpExpr>(op_name_, std::move(proto_), indexed_ibns_, indexed_obns_);
 }
 
 }  // namespace one
