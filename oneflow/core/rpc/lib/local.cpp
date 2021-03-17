@@ -17,9 +17,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_RPC_LIB_LOCAL_H_
 #define ONEFLOW_CORE_RPC_LIB_LOCAL_H_
 
-#ifndef ONEFLOW_CORE_RPC_LIB_LOCAL_
-#define ONEFLOW_CORE_RPC_LIB_LOCAL_
-
 #ifdef RPC_BACKEND_LOCAL
 
 #include "glog/logging.h"
@@ -163,7 +160,5 @@ LocalRpcManager::~LocalRpcManager() { Global<CtrlClient>::Delete(); }
 }  // namespace oneflow
 
 #endif  // RPC_BACKEND_LOCAL
-
-#endif  // ONEFLOW_CORE_RPC_LIB_LOCAL_
 
 #endif  // ONEFLOW_CORE_RPC_LIB_LOCAL_H_
