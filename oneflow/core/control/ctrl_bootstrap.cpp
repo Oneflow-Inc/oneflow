@@ -40,8 +40,6 @@ Maybe<void> CtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_
       mut_bootstrap_client()->PullMasterKV(key, &cur_work_process_info);
       CHECK_EQ_OR_RETURN(world_rank, worker_process_info_list.size());
       CHECK_EQ_OR_RETURN(world_rank, cur_work_process_info.rank());
-      LOG(ERROR) << "pull rank: " << std::to_string(world_rank)
-                 << ", cur_work_process_info: " << cur_work_process_info.DebugString();
       worker_process_info_list.push_back(cur_work_process_info);
     }
   } else {
@@ -52,8 +50,6 @@ Maybe<void> CtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_
       cur_work_process_info.set_port(port);
       JUST(SetCurrentHostByWorker(&cur_work_process_info));
     }
-    LOG(ERROR) << "push rank: " << std::to_string(rank())
-               << ", cur_work_process_info: " << cur_work_process_info.DebugString();
     mut_bootstrap_client()->PushMasterKV(key, cur_work_process_info);
   }
 
@@ -122,11 +118,8 @@ BootstrapClient* HostListCtrlBootstrap::mut_bootstrap_client() { return bootstra
 RankInfoCtrlBootstrap::RankInfoCtrlBootstrap(const BootstrapConf& bootstrap_conf)
     : CtrlBootstrap(), bootstrap_conf_(bootstrap_conf) {
   bootstrap_server_.reset(new RankInfoBootstrapServer(bootstrap_conf));
-  LOG(ERROR) << "RankInfoBootstrapServer Init success";
   bootstrap_client_.reset(new RankInfoBootstrapClient(bootstrap_conf));
-  LOG(ERROR) << "RankInfoBootstrapClient Init success";
   bootstrap_client_->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
-  LOG(ERROR) << "RankInfoBootstrap Barrier success";
   master_host_ = bootstrap_conf.master_addr().host();
   rank_ = bootstrap_conf.rank();
   world_size_ = bootstrap_conf.world_size();

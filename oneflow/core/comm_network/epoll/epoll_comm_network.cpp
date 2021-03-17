@@ -15,7 +15,6 @@ limitations under the License.
 */
 #ifdef __linux__
 
-#include <cstdlib>
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "glog/logging.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -28,6 +27,8 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
+
+static const int32_t kInvlidPort = 0;
 
 sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
   sockaddr_in sa;
@@ -48,7 +49,7 @@ int SockListen(int listen_sockfd, int32_t* listen_port, int32_t total_machine_nu
   sockaddr_in s;
   socklen_t sLen = sizeof(s);
   getsockname(listen_sockfd, reinterpret_cast<sockaddr*>(&s), &sLen);
-  if (*listen_port != 0) {
+  if (*listen_port != kInvlidPort) {
     CHECK_EQ(*listen_port, static_cast<int32_t>(htons(s.sin_port)));
   } else {
     *listen_port = static_cast<int32_t>(htons(s.sin_port));
@@ -156,7 +157,7 @@ void EpollCommNet::InitSockets() {
 
   // listen
   int listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  int32_t this_listen_port = 0;
+  int32_t this_listen_port = kInvlidPort;
   {
     if (this_machine.data_port_agent() != -1) {
       this_listen_port = this_machine.data_port_agent();
