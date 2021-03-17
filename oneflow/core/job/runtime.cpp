@@ -116,11 +116,11 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
       IBVerbsCommNet::Init(plan);
 #else
       LOG(FATAL) << "RDMA components not found";
-#endif  // WITH_RDMA
+#endif
     } else {
       Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
     }
-#endif  // __linux__
+#endif
   }
   Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
   Global<MemoryAllocator>::New();
@@ -154,7 +154,7 @@ void Runtime::DeleteAllGlobal() {
       Global<CommNet>::Delete();
 #else
       LOG(FATAL) << "RDMA components not found";
-#endif  // WITH_RDMA
+#endif
     } else {
       CHECK(Global<EpollCommNet>::Get() == static_cast<EpollCommNet*>(Global<CommNet>::Get()));
       // NOTE(chengcheng): it means that Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get())
@@ -162,7 +162,7 @@ void Runtime::DeleteAllGlobal() {
       // then only need delete once.
     }
     Global<EpollCommNet>::Delete();
-#endif  // __linux__
+#endif
   }
 
   Global<ActEventLogger>::Delete();
