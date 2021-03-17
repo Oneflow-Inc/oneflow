@@ -28,7 +28,6 @@ class LocalCtrlClient : public CtrlClient {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LocalCtrlClient);
   LocalCtrlClient(const ProcessCtx& process_ctx);
-  LocalCtrlClient() = delete;
   ~LocalCtrlClient() = default;
 
   void Barrier(const std::string& barrier_name);

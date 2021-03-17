@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/control/control.pb.h"
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 
 namespace oneflow {
 
@@ -78,10 +79,11 @@ class CtrlCallIf {
  private:
 };
 
-class RpcClient {
+class CtrlClient {
  public:
-  RpcClient() {}
-  virtual ~RpcClient() {}
+  CtrlClient(const ProcessCtx& process_ctx);
+  CtrlClient() = default;
+  virtual ~CtrlClient() {}
 
   virtual void Barrier(const std::string& barrier_name) {}
   virtual void Barrier(const std::string& barrier_name, int32_t barrier_num) {}
@@ -115,18 +117,6 @@ class RpcClient {
 
   virtual void PushActEvent(const ActEvent&) {}
   virtual void Clear() {}
-};
-
-class RpcServer {
- public:
-  RpcServer() {}
-  virtual ~RpcServer() {}
-};
-
-class CtrlClient : public RpcClient {
- public:
-  CtrlClient() {}
-  virtual ~CtrlClient() {}
 };
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
