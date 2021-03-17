@@ -41,7 +41,7 @@ std::string Device::ToString() const {
   return ss.str();
 }
 
-std::shared_ptr<const ParallelDesc> Device::MakeParallelDescByDevice(const Device& device) {
+Maybe<const ParallelDesc> Device::MakeParallelDescByDevice(const Device& device) {
   int64_t machine_id = GlobalProcessCtx::Rank() / GlobalProcessCtx::NumOfProcessPerNode();
   int64_t device_id = device.device_id();
   std::string machine_device_id = std::to_string(machine_id) + ":" + std::to_string(device_id);

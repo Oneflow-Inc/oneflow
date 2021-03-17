@@ -100,7 +100,7 @@ class MirroredTensorImpl : public TensorImpl {
 
   // Setters
   Maybe<void> set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override;
-  void set_device(const std::shared_ptr<const Device>& device);
+  Maybe<void> set_device(const std::shared_ptr<const Device>& device);
 
  protected:
   MirroredTensorImpl(const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf,

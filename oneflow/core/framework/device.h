@@ -35,7 +35,7 @@ class Device final {
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
 
-  static std::shared_ptr<const ParallelDesc> MakeParallelDescByDevice(const Device& device);
+  static Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device);
   static Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;
 

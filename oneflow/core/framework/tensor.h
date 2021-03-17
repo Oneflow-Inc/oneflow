@@ -166,7 +166,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { impl_->set_dtype(dtype); }
-  void set_device(const std::shared_ptr<const Device>& device) { impl_->set_device(device); }
+  Maybe<void> set_device(const std::shared_ptr<const Device>& device) {
+    return impl_->set_device(device);
+  }
   Maybe<void> set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override {
     return impl_->set_parallel_desc(parallel_desc);
   }
