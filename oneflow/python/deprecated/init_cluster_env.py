@@ -127,7 +127,7 @@ def delete_worker(ssh_port=22) -> None:
         if os.getenv("ONEFLOW_WORKER_KEEP_LOG"):
             print("worker log kept at: {}".format(machine.addr), flush=True)
         else:
-            _SystemCall(ssh_prefix + '"rm -r ' + _temp_run_dir + '"')
+            SystemCall(ssh_prefix + '"rm -r ' + _temp_run_dir + '"')
             print("temp run dir removed at: {}".format(machine.addr), flush=True)
 
 
@@ -152,7 +152,7 @@ def delete_worker_by_bootstrap(ssh_port=22) -> None:
         if os.getenv("ONEFLOW_WORKER_KEEP_LOG"):
             print("worker log kept at: {}".format(bootstrap_conf.host), flush=True)
         else:
-            _SystemCall(ssh_prefix + '"rm -r ' + _temp_run_dir + '"')
+            SystemCall(ssh_prefix + '"rm -r ' + _temp_run_dir + '"')
             print("temp run dir removed at: {}".format(bootstrap_conf.host), flush=True)
 
 
@@ -164,7 +164,7 @@ def delete_worker_of_multi_process(run_dir, ssh_port=22) -> None:
     if os.getenv("ONEFLOW_WORKER_KEEP_LOG"):
         print("worker log kept at localhost", flush=True)
     else:
-        _SystemCall(ssh_prefix + '"rm -r ' + run_dir + '"')
+        SystemCall(ssh_prefix + '"rm -r ' + run_dir + '"')
         print("temp run dir removed at localhost", flush=True)
 
 
@@ -173,22 +173,22 @@ def _SendBinaryAndConfig2Worker(
 ):
     ssh_port_arg = " -p {} ".format(ssh_port)
     scp_port_arg = " -P {} ".format(ssh_port)
-    _SystemCall(
+    SystemCall(
         "ssh-copy-id {} -f ".format(ssh_port_arg) + getpass.getuser() + "@" + addr
     )
     ssh_prefix = "ssh {}".format(ssh_port_arg) + getpass.getuser() + "@" + addr + " "
     remote_file_prefix = " " + getpass.getuser() + "@" + addr + ":"
     assert run_dir != ""
-    _SystemCall(ssh_prefix + '"mkdir -p ' + run_dir + '"')
+    SystemCall(ssh_prefix + '"mkdir -p ' + run_dir + '"')
     if scp_binary:
-        _SystemCall(
+        SystemCall(
             "scp {}".format(scp_port_arg)
             + oneflow_worker_path
             + remote_file_prefix
             + run_dir
             + "/oneflow_worker"
         )
-    _SystemCall(
+    SystemCall(
         "scp {}".format(scp_port_arg)
         + env_proto_path
         + remote_file_prefix
@@ -203,7 +203,7 @@ def _SendBinaryAndConfig2Worker(
         + "-env_proto=./env.proto "
         + ' 1>/dev/null 2>&1 </dev/null & "'
     )
-    _SystemCall(ssh_prefix + oneflow_cmd)
+    SystemCall(ssh_prefix + oneflow_cmd)
     proc = subprocess.Popen(
         ssh_prefix + "ps aux",
         stdout=subprocess.PIPE,
@@ -218,7 +218,7 @@ def _SendBinaryAndConfig2Worker(
 
 
 @oneflow_export("deprecated.system_call")
-def _SystemCall(cmd):
+def SystemCall(cmd):
     print(cmd, flush=True)
     subprocess.check_call(cmd, shell=True)
 

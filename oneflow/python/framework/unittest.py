@@ -168,11 +168,6 @@ _unittest_env_initilized = False
 _unittest_worker_initilized = False
 
 
-def _SystemCall(cmd):
-    print(cmd, flush=True)
-    subprocess.check_call(cmd, shell=True)
-
-
 @oneflow_export("unittest.TestCase")
 class TestCase(unittest.TestCase):
     def setUp(self):
