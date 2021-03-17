@@ -238,7 +238,8 @@ class Tensor:
         if determining_initializer is None:
             determining_initializer = self._determining_initializer
         self._local_or_consistent_tensor, self._variable_name = determining_initializer(
-            self._undetermined_tensor)
+            self._undetermined_tensor
+        )
         self._undetermined_tensor = None
 
     @property

@@ -27,11 +27,24 @@ class Linear(Module):
         super().__init__()
 
         self.use_bias = bias
-        self.weight = flow.nn.Parameter(flow.Tensor(out_features, in_features))
+        self.weight = flow.nn.Parameter(
+            flow.Tensor(
+                out_features,
+                in_features,
+                data_initializer=flow.random_uniform_initializer(minval=-1, maxval=1),
+            )
+        )
 
         if bias:
 
-            self.bias = flow.nn.Parameter(flow.Tensor(out_features))
+            self.bias = flow.nn.Parameter(
+                flow.Tensor(
+                    out_features,
+                    data_initializer=flow.random_uniform_initializer(
+                        minval=-1, maxval=1
+                    ),
+                )
+            )
 
             self._bias_add_op = (
                 flow.builtin_op("bias_add")
