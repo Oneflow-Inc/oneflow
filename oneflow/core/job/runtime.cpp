@@ -116,11 +116,11 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
       IBVerbsCommNet::Init(plan);
 #else
       LOG(FATAL) << "RDMA components not found";
-#endif
+#endif  // WITH_RDMA
     } else {
       Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
     }
-#endif
+#endif  // __linux__
   }
   Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
   Global<MemoryAllocator>::New();
