@@ -35,6 +35,25 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+namespace {
+
+Maybe<void> SetAutogradAttr4Outputs(const TensorTuple& inputs, TensorTuple* outputs) {
+  if (inputs.empty()) {
+    for (auto& output : *outputs) { output->set_is_leaf(true); }
+    return Maybe<void>::Ok();
+  }
+  bool requires_grad =
+      std::any_of(inputs.begin(), inputs.end(),
+                  [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
+  for (auto& output : *outputs) {
+    output->set_requires_grad(requires_grad);
+    output->set_is_leaf(!requires_grad);
+  }
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 void OpExprInterpreter::ResetState() { state_.reset(new OpExprInterpState); }
 
 Maybe<void> LazyInterpreter::Apply(const OpExpr* op_expr, const TensorTuple& inputs,
@@ -354,10 +373,15 @@ Maybe<void> EagerInterpreter::Apply_(const FunctionOpExpr* op_expr, const Tensor
 
 Maybe<void> AutogradInterpreter::Apply(const OpExpr* op_expr, const TensorTuple& inputs,
                                        TensorTuple& outputs) {
-  JUST(normal_interp_->Apply(op_expr, inputs, outputs));
+  // forward
+  {
+    DISABLE_AUTOGRAD_MODE;
+    JUST(normal_interp_->Apply(op_expr, inputs, outputs));
+    JUST(SetAutogradAttr4Outputs(intputs, &outputs);)
+  }
   if (AutoGradEnabled()) {
     auto op_grad = op_expr->GetOrCreateOpGrad();
-    std::shared_ptr<OpExprInterpContext> ctx(new OpExprInterpContext);
+    auto ctx = normal_interp_->state();
     op_grad->SaveForwardTensor(ctx.get(), inputs, outputs);
 
     auto backward_fn =
