@@ -163,10 +163,10 @@ OpInterpUtil::BuildModelInitOrIOPathInputInstruction(
         CHECK_JUST(OpInterpUtil::InferOpAttribute(op_conf, scope, Bn2BlobObjectMap{}));
     auto parallel_conf =
         std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
-    const auto* boxing_util = Global<ForeignBoxingUtil>::Get();
-    CHECK_JUST(
-        builder->StatelessCall(op_attribute, parallel_conf, bn2blob_object,
-                               std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util, _1, _2, _3)));
+    const auto& boxing_util = (*Global<std::shared_ptr<ForeignBoxingUtil>>::Get());
+    CHECK_JUST(builder->StatelessCall(
+        op_attribute, parallel_conf, bn2blob_object,
+        std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util.get(), _1, _2, _3)));
   };
   return std::function<void(const std::shared_ptr<InstructionsBuilder>&)>(build_instruction);
 }
@@ -175,7 +175,7 @@ OpInterpUtil::BuildModelInitOrIOPathInputInstruction(
 OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
                                        const std::shared_ptr<Bn2BlobObjectMap>& bn2blob_object) {
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    int64_t callback_id = Global<ForeignCallback>::Get()->FeedPath(path);
+    int64_t callback_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())->FeedPath(path);
     const auto& blob_object = bn2blob_object->at("out");
     CHECK_JUST(builder->FeedBlob(blob_object, callback_id));
     CHECK_JUST(
@@ -218,10 +218,10 @@ OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
         OpInterpUtil::InferOpAttribute(*model_load_op_conf, scope, *model_load_blob_objects));
     auto parallel_conf =
         std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
-    const auto* boxing_util = Global<ForeignBoxingUtil>::Get();
-    CHECK_JUST(
-        builder->StatelessCall(op_attribute, parallel_conf, model_load_blob_objects,
-                               std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util, _1, _2, _3)));
+    const auto& boxing_util = *Global<std::shared_ptr<ForeignBoxingUtil>>::Get();
+    CHECK_JUST(builder->StatelessCall(
+        op_attribute, parallel_conf, model_load_blob_objects,
+        std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util.get(), _1, _2, _3)));
   };
 
   JUST(LogicalRun(*build_model_io_path_input_instruction));
@@ -234,7 +234,7 @@ OpInterpUtil::BuildFeedPathInstruction(const std::string& path,
     const std::shared_ptr<compatible_py::BlobObject>& target_blob_object,
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   auto build_assign_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    const auto* boxing_util = Global<ForeignBoxingUtil>::Get();
+    const auto& boxing_util = *Global<std::shared_ptr<ForeignBoxingUtil>>::Get();
     auto new_parallel_desc_symbol = boxing_util->TryReplaceDeviceTag(
         builder, target_blob_object->parallel_desc_symbol(), "cpu");
     auto consumer_op_arg_parallel_attr = std::make_shared<compatible_py::OpArgParallelAttribute>(

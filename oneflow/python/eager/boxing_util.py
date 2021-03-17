@@ -990,9 +990,9 @@ conditional_function_table = [
 ]
 
 
-class BoxingUtil(oneflow_api.ForeignBoxingUtil):
+class BoxingUtil(oneflow_api.deprecated.ForeignBoxingUtil):
     def __init__(self):
-        oneflow_api.ForeignBoxingUtil.__init__(self)
+        oneflow_api.deprecated.ForeignBoxingUtil.__init__(self)
 
     def BoxingTo(self, builder, blob_object, op_arg_parallel_attr):
         return BoxingTo(builder, blob_object, op_arg_parallel_attr)

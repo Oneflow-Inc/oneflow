@@ -31,8 +31,6 @@ class OpExpr {
  public:
   DEFINE_DEFAULT_CONSTRUCTOR(OpExpr);
 
-  virtual std::shared_ptr<OpExpr> GetBackwardOpExpr() const = 0;
-
   virtual std::string type() const = 0;
   virtual int input_num() const = 0;
   virtual int output_num() const = 0;
@@ -75,8 +73,6 @@ class BuiltinOpExpr : public OpExpr {
                             const std::vector<std::string>& indexed_obns)       \
         : BuiltinOpExpr(op_name, indexed_ibns, indexed_obns), proto_(proto) {}  \
                                                                                 \
-    std::shared_ptr<OpExpr> GetBackwardOpExpr() const override;                 \
-                                                                                \
     std::string type() const override { return std::string(#_op_name); }        \
                                                                                 \
     const _op_name##Conf& proto() const { return proto_; }                      \
@@ -106,8 +102,6 @@ DEFINE_BUILTIN_OPEXPR_CLASS(DistributeAddOp, distribute_add);
 class FunctionOpExpr : public OpExpr {
  public:
   DEFINE_DEFAULT_CONSTRUCTOR(FunctionOpExpr);
-
-  std::shared_ptr<OpExpr> GetBackwardOpExpr() const override;
 
   std::string type() const override { return "FunctionOp"; }
 

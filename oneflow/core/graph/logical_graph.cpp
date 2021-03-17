@@ -30,16 +30,6 @@ LogicalGraph::LogicalGraph(const Job& job) : job_(job) {
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
-template<typename LogicalNodeType>
-void LogicalGraph::ForEachLogicalNode(std::function<void(LogicalNodeType*)> func) {
-  std::vector<LogicalNodeType*> valid_nodes;
-  ForEachNode([&](LogicalNode* logical_node) {
-    auto valid_node = dynamic_cast<LogicalNodeType*>(logical_node);
-    if (valid_node != nullptr) { valid_nodes.push_back(valid_node); }
-  });
-  for (LogicalNodeType* valid_node : valid_nodes) { func(valid_node); }
-}
-
 void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
@@ -64,7 +54,7 @@ void LogicalGraph::NaiveBuildFwStruct(
     auto parallel_desc_ptr_it = name2parallel_desc.find(cur_op_conf.name());
     CHECK(parallel_desc_ptr_it != name2parallel_desc.end());
     const std::shared_ptr<ParallelDesc>& parallel_desc_ptr = parallel_desc_ptr_it->second;
-    cur_op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(parallel_desc_ptr->device_type())));
+    cur_op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(parallel_desc_ptr->device_type())));
     std::shared_ptr<const Operator> cur_op =
         Global<OpGraph>::Get()->OpNode4OpName(cur_op_conf.name())->shared_op();
     LogicalNode* cur_node = cur_op->NewProperLogicalNode();

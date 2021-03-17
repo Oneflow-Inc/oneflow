@@ -18,6 +18,22 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+void EraseEmptyBnInVec(const std::function<const BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+                       PbRpf<std::string>* bns) {
+  size_t idx_available = 0;
+  for (size_t i = 0; i < bns->size(); ++i) {
+    if (GetBlobDesc4BnInOp((*bns)[i])) {
+      if (i != idx_available) { (*bns)[idx_available] = (*bns)[i]; }
+      ++idx_available;
+    }
+  }
+  bns->erase(bns->begin() + idx_available, bns->end());
+}
+
+}  // namespace
+
 void BoxingOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {

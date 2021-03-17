@@ -148,11 +148,13 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
       OpBlobArg cast_in_op_blob_arg;
       cast_in_op_blob_arg.set_op_name(cast_op.op_name());
       cast_in_op_blob_arg.set_bn_in_op(GenRepeatedBn("in", 0));
-      job_builder->MutSbpParallel4Oba(cast_in_op_blob_arg)->mutable_broadcast_parallel();
+      SbpParallel sbp_parallel;
+      sbp_parallel.mutable_broadcast_parallel();
+      job_builder->SetSbpParallel4Oba(cast_in_op_blob_arg, sbp_parallel);
       OpBlobArg cast_out_op_blob_arg;
       cast_out_op_blob_arg.set_op_name(cast_op.op_name());
       cast_out_op_blob_arg.set_bn_in_op(GenRepeatedBn("out", 0));
-      job_builder->MutSbpParallel4Oba(cast_out_op_blob_arg)->mutable_broadcast_parallel();
+      job_builder->SetSbpParallel4Oba(cast_out_op_blob_arg, sbp_parallel);
       op_confs->push_back(cast_op.op_conf());
       loss_scale_val_lbn = cast_op.output("out", 0);
     }
@@ -232,8 +234,8 @@ Maybe<void> TryMirroredCastTotalLossInstanceNum(
           std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
       const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
           std::make_shared<cfg::ParallelConf>(parallel_conf);
-      scope_symbol_id =
-          Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, true);
+      scope_symbol_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())
+                            ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, true);
     }
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
@@ -288,8 +290,8 @@ void ScaleModelDiffByDynamicLossInstanceNum(
           std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
       const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
           std::make_shared<cfg::ParallelConf>(parallel_conf);
-      scope_symbol_id =
-          Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+      scope_symbol_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())
+                            ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
     }
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
@@ -473,7 +475,8 @@ int64_t MakeScopeSymbolId(const JobConfigProto& job_conf, const ParallelConf& pa
       std::make_shared<cfg::JobConfigProto>(job_conf);
   const std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf =
       std::make_shared<cfg::ParallelConf>(parallel_conf);
-  return Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+  return (*Global<std::shared_ptr<ForeignCallback>>::Get())
+      ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
 }
 
 std::string AddLbns(JobBuilder* job_builder, const std::vector<std::string>& lbns,

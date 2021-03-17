@@ -67,6 +67,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
       const std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)>&
           SetBufTask,
       bool use_buf_task_node);
+
   TaskNode* TryAddCopyH2DTaskTo(TaskNode*);
   TaskNode* AddCopyD2HTaskFrom(TaskNode*);
   TaskNode* AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst);
@@ -101,8 +102,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::shared_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
   std::unique_ptr<BoxingLogger> boxing_logger_;
 };
-
-bool IsBackEdge(TaskNode* src, TaskNode* dst);
 
 }  // namespace oneflow
 
