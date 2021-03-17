@@ -34,14 +34,6 @@ message XrtLaunchKernelConf {
   required ParallelContext parallel_ctx = 1;
 }
 
-message UniqueWithCountsKernelConf {
-  required DataType indices_data_type = 1;
-}
-
-message IndexedSlicesReduceSumKernelConf {
-  required DataType indices_data_type = 1;
-}
-
 message SyncDynamicResizeKernelConf {
   required DataType size_data_type = 1;
 }
@@ -67,8 +59,6 @@ message KernelConf {
     UserKernelConf user_conf = 100;
     DecodeRandomKernelConf decode_random_conf = 103;
     XrtLaunchKernelConf xrt_launch_conf = 353;
-    UniqueWithCountsKernelConf unique_with_counts_conf = 354;
-    IndexedSlicesReduceSumKernelConf indexed_slices_reduce_sum_conf = 355;
     SyncDynamicResizeKernelConf sync_dynamic_resize_conf = 360;
 
     VariableKernelConf variable_conf = 407;

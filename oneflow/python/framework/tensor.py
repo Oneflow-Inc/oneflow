@@ -20,6 +20,7 @@ import oneflow_api
 import numpy as np
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.check_point_v2 as check_point_v2
 import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow as flow
 
@@ -42,7 +43,8 @@ class Tensor:
     ):
         assert len(args) > 0
         dtype = dtype if dtype is not None else oneflow_api.float32
-        device = device if device is not None else oneflow_api.device("cpu")
+        if placement is None:
+            device = device if device is not None else oneflow_api.device("cpu")
         if _input_args_is_other_data(*args):
             self._immediately_construct(
                 *args,
@@ -55,6 +57,8 @@ class Tensor:
         elif _input_args_is_shape(*args):
             shape = args
             self._local_or_consistent_tensor = None
+            # TODO(jianhao): update checkpoint to remove this attr
+            self._variable_name = None
             self._undetermined_tensor = UndeterminedTensor(
                 shape,
                 dtype,
@@ -190,12 +194,8 @@ class Tensor:
 
     @_auto_determine
     def numpy(self):
-        parallel_conf = placement_cfg.ParallelConf()
-        parallel_conf.set_device_tag(self.device.type)
-        machine_id = 0
-        parallel_conf.add_device_name("{}:{}".format(machine_id, self.device.index))
         return remote_blob_util.BlobObjectNumpy(
-            self._local_or_consistent_tensor._blob_object, parallel_conf
+            self._local_or_consistent_tensor._blob_object
         )
 
     def tolist(self):
@@ -226,8 +226,8 @@ class Tensor:
         assert not self.is_determined
         if determining_initializer is None:
             determining_initializer = self._determining_initializer
-        self._local_or_consistent_tensor = determining_initializer(
-            self._undetermined_tensor
+        self._local_or_consistent_tensor, self._variable_name = determining_initializer(
+            self
         )
         self._undetermined_tensor = None
 
@@ -241,11 +241,11 @@ class Tensor:
             return False
 
     def set_placement(self, placement):
-        assert isinstance(placement, oneflow_api.Placement)
+        assert isinstance(placement, flow.placement)
         assert self._local_or_consistent_tensor is None
         assert self._undetermined_tensor is not None
-        assert self._undetermined_tensor.device is None
         self._undetermined_tensor.placement = placement
+        self._undetermined_tensor.device = None
 
     def set_sbp(self, sbp):
         assert isinstance(sbp, oneflow_api.Distribute)
@@ -299,6 +299,22 @@ class Tensor:
         else:
             return self._undetermined_tensor.sbp
 
+    def uniform_(self, a=0, b=1):
+        initializer_conf = flow.random_uniform_initializer(
+            minval=a, maxval=b, dtype=self.dtype
+        )
+        return self._init_by_initializer_conf(initializer_conf)
+
+    def normal_(self, mean=0, std=1):
+        initializer_conf = flow.random_normal_initializer(
+            mean=mean, stddev=std, dtype=self.dtype
+        )
+        return self._init_by_initializer_conf(initializer_conf)
+
+    def fill_(self, value):
+        initializer_conf = flow.constant_initializer(value=value, dtype=self.dtype)
+        return self._init_by_initializer_conf(initializer_conf)
+
     def _construct_determined_tensor_with_numpy(
         self,
         dtype=None,
@@ -320,6 +336,14 @@ class Tensor:
             numpy_data=numpy_data,
         )
         self._undetermined_tensor = None
+
+    def _init_by_initializer_conf(self, initializer_conf):
+        if self.is_determined:
+            variable = flow.get_all_variables()[self._variable_name]
+            check_point_v2.init_by_initializer_conf(variable, initializer_conf, True)
+        else:
+            self.set_data_initializer(initializer_conf)
+        return self
 
     def _immediately_construct(
         self,
@@ -358,6 +382,20 @@ class Tensor:
             self._local_or_consistent_tensor = args[0]
             self._undetermined_tensor = None
 
+    def _placement_scope(self):
+        if self.is_consistent:
+            return flow.scope.placement(
+                self.placement.device_tag,
+                list(self.placement.parallel_conf.device_name()),
+                self.placement.hierarchy,
+            )
+        else:
+            # TODO(jianhao): replace 0 with real machine id
+            machine_id = 0
+            return flow.scope.placement(
+                self.device.type, "{}:{}".format(machine_id, self.device.index), None
+            )
+
 
 class UndeterminedTensor:
     def __init__(
@@ -380,8 +418,7 @@ class UndeterminedTensor:
         data_initializer = (
             data_initializer
             if data_initializer is not None
-            # TODO: default initializer should be an "empty" initializer like pytorch
-            else flow.zeros_initializer(dtype=dtype)
+            else flow.empty_initializer(dtype=dtype)
         )
         device = device if device is not None else oneflow_api.device("cpu")
         self.shape = shape
@@ -407,29 +444,53 @@ class UndeterminedTensor:
         return device_type == "gpu" or device_type == "cuda"
 
 
-def _default_initializer_for_determining(undetermined_tensor):
-    assert not undetermined_tensor.is_consistent
-    blob = flow.get_variable(
-        name=id_util.UniqueStr("tensor_"),
-        shape=tuple(undetermined_tensor.shape),
-        dtype=undetermined_tensor.dtype,
-        initializer=undetermined_tensor.data_initializer,
-    )
-    determined_tensor = oneflow_api.LocalTensor(
-        undetermined_tensor.shape,
-        undetermined_tensor.dtype,
-        undetermined_tensor.device,
-        undetermined_tensor.is_lazy,
-        undetermined_tensor.requires_grad,
-        True,
-        undetermined_tensor.retain_grad,
-    )
+def _default_initializer_for_determining(tensor):
+    assert not tensor.is_determined
+    undetermined_tensor = tensor._undetermined_tensor
+    variable_name = id_util.UniqueStr("tensor_")
+
+    blob = None
+
+    @global_function_or_identity()
+    def job():
+        nonlocal blob
+        with tensor._placement_scope():
+            blob = flow.get_variable(
+                name=variable_name,
+                shape=tuple(undetermined_tensor.shape),
+                dtype=undetermined_tensor.dtype,
+                initializer=undetermined_tensor.data_initializer,
+            )
+
+    job()
+    if undetermined_tensor.is_consistent:
+        determined_tensor = oneflow_api.ConsistentTensor(
+            undetermined_tensor.shape,
+            undetermined_tensor.dtype,
+            undetermined_tensor.sbp,
+            undetermined_tensor.placement,
+            undetermined_tensor.is_lazy,
+            undetermined_tensor.requires_grad,
+            True,
+            undetermined_tensor.retain_grad,
+        )
+    else:
+        determined_tensor = oneflow_api.LocalTensor(
+            undetermined_tensor.shape,
+            undetermined_tensor.dtype,
+            undetermined_tensor.device,
+            undetermined_tensor.is_lazy,
+            undetermined_tensor.requires_grad,
+            True,
+            undetermined_tensor.retain_grad,
+        )
     determined_tensor._set_blob_object(blob.blob_object)
-    return determined_tensor
+    return determined_tensor, variable_name
 
 
 def global_function_or_identity(*args, **kwargs):
     if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        assert flow.eager_execution_enabled()
         return flow.global_function(*args, **kwargs)
     else:
         assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE

@@ -377,23 +377,6 @@ message ModelSaveV2OpConf {
   required string tick = 6;
 }
 
-message UniqueWithCountsOpConf {
-  required string x = 1;
-  required string y = 2;
-  required string idx = 3;
-  required string count = 4;
-  required string num_unique = 5;
-  optional DataType out_idx = 6 [default = kInt32];
-}
-
-message IndexedSlicesReduceSumOpConf {
-  required string x_indices = 1;
-  required string x_values = 2;
-  required string y_indices = 3;
-  required string y_values = 4;
-  required string num_unique = 5;
-}
-
 message ConstantLikeOpConf {
   required string like = 1;
   required string out = 2;
@@ -519,8 +502,6 @@ message OperatorConf {
     ModelSaveOpConf model_save_conf = 297;
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
     ModelLoadOpConf model_load_conf = 301;
-    UniqueWithCountsOpConf unique_with_counts_conf = 337;
-    IndexedSlicesReduceSumOpConf indexed_slices_reduce_sum_conf = 338;
     ConstantLikeOpConf constant_like_conf = 339;
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
     CopyOpConf copy_conf = 343;

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/nd_index_offset_helper.h"
-#include "oneflow/core/kernel/unsorted_segment_sum_kernel_util.h"
+#include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/kernel/kernel.h"
 #include <assert.h>
