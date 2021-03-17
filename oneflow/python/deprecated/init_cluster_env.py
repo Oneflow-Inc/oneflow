@@ -156,6 +156,18 @@ def delete_worker_by_bootstrap(ssh_port=22) -> None:
             print("temp run dir removed at: {}".format(bootstrap_conf.host), flush=True)
 
 
+@oneflow_export("deprecated.delete_worker_of_multi_process")
+def delete_worker_of_multi_process(run_dir, ssh_port=22) -> None:
+    ssh_port_arg = " -p {} ".format(ssh_port)
+    assert run_dir != ""
+    ssh_prefix = "ssh {} ".format(ssh_port_arg) + getpass.getuser() + "@127.0.0.1" + " "
+    if os.getenv("ONEFLOW_WORKER_KEEP_LOG"):
+        print("worker log kept at localhost", flush=True)
+    else:
+        _SystemCall(ssh_prefix + '"rm -r ' + run_dir + '"')
+        print("temp run dir removed at localhost", flush=True)
+
+
 def _SendBinaryAndConfig2Worker(
     addr, oneflow_worker_path, env_proto_path, run_dir, scp_binary, ssh_port
 ):
@@ -205,6 +217,7 @@ def _SendBinaryAndConfig2Worker(
     print("oneflow worker initialized:", addr, flush=True)
 
 
+@oneflow_export("deprecated.system_call")
 def _SystemCall(cmd):
     print(cmd, flush=True)
     subprocess.check_call(cmd, shell=True)

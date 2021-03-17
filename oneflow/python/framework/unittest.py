@@ -21,7 +21,6 @@ import inspect
 import os
 import sys
 import uuid
-import shutil
 import unittest
 import atexit
 from tempfile import NamedTemporaryFile
@@ -152,6 +151,10 @@ def enable_init_by_host_list():
     return os.getenv("ONEFLOW_TEST_ENABLE_INIT_BY_HOST_LIST") == "1"
 
 
+def enable_multi_process():
+    return os.getenv("ONEFLOW_TEST_MULTI_PROCESS") == "1"
+
+
 _unittest_env_initilized = False
 _unittest_worker_initilized = False
 
@@ -224,128 +227,93 @@ class TestCase(unittest.TestCase):
                         oneflow.deprecated.delete_worker_by_bootstrap, ssh_port=ssh_port
                     )
                     _unittest_worker_initilized = True
-        else:
-            if not enable_init_by_host_list():
-                oneflow_worker_path = os.getenv("ONEFLOW_WORKER_BIN")
-                assert (
-                    oneflow_worker_path is not None
-                ), "please set env ONEFLOW_WORKER_BIN"
-                assert os.path.isfile(
-                    oneflow_worker_path
-                ), "binary oneflow_worker not found, please check your environment variable ONEFLOW_WORKER_BIN, path: {}".format(
-                    oneflow_worker_path
-                )
-                master_port = os.getenv("ONEFLOW_TEST_MASTER_PORT")
-                assert master_port, "env var ONEFLOW_TEST_MASTER_PORT not set"
-                oneflow.env.ctrl_port(int(master_port))
-                config_world_size = device_num()
-                bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
-                    ["127.0.0.1"], int(master_port), config_world_size
-                )
-                env_proto = env_util.default_env_proto
-                assert (
-                    len(env_proto.machine) == 1
-                    and env_proto.HasField("ctrl_bootstrap_conf") == 1
-                )
-                # _log_dir = "./log"
-                # if not os.path.exists(_log_dir):
-                #     os.makedirs(_log_dir)
-                run_dir = os.getenv("HOME") + "/oneflow_temp/"
-                run_dir = os.path.abspath(os.path.expanduser(run_dir))
-                ssh_port_arg = " -p {} ".format(22)
-                scp_port_arg = " -P {} ".format(22)
-                ssh_prefix = (
-                    "ssh {}".format(ssh_port_arg)
-                    + getpass.getuser()
-                    + "@"
-                    + "127.0.0.1"
-                    + " "
-                )
-                _SystemCall(ssh_prefix + '"mkdir -p ' + run_dir + '"')
-                for rank in range(1, config_world_size):
-                    worker_env_proto = EnvProto()
-                    worker_env_proto.CopyFrom(env_proto)
-                    worker_env_proto.ctrl_bootstrap_conf.rank = rank
-                    worker_env_proto.cpp_logging_conf.log_dir = (
-                        env_proto.cpp_logging_conf.log_dir + "_" + str(rank)
-                    )
-                    env_file = NamedTemporaryFile(delete=False)
-                    if sys.version_info >= (3, 0):
-                        env_file.write(pbtxt.MessageToString(worker_env_proto).encode())
-                    else:
-                        env_file.write(pbtxt.MessageToString(worker_env_proto))
-                    env_file.close()
-                    # if not os.path.exists(worker_env_proto.cpp_logging_conf.log_dir):
-                    #     os.makedirs(worker_env_proto.cpp_logging_conf.log_dir)
-                    # shutil.copy(
-                    #     env_file.name,
-                    #     worker_env_proto.cpp_logging_conf.log_dir
-                    #     + "/env_proto_"
-                    #     + str(rank)
-                    #     + ".proto",
-                    # )
+        elif device_num() > 1 and enable_multi_process():
+            oneflow_worker_path = os.getenv("ONEFLOW_WORKER_BIN")
+            assert oneflow_worker_path is not None, "please set env ONEFLOW_WORKER_BIN"
+            assert os.path.isfile(
+                oneflow_worker_path
+            ), "binary oneflow_worker not found, please check your environment variable ONEFLOW_WORKER_BIN, path: {}".format(
+                oneflow_worker_path
+            )
+            master_port = os.getenv("ONEFLOW_TEST_MASTER_PORT")
+            assert master_port, "env var ONEFLOW_TEST_MASTER_PORT not set"
+            oneflow.env.ctrl_port(int(master_port))
+            config_world_size = device_num()
+            bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
+                ["127.0.0.1"], int(master_port), config_world_size
+            )
+            env_proto = env_util.default_env_proto
+            assert (
+                len(env_proto.machine) == 1
+                and env_proto.HasField("ctrl_bootstrap_conf") == 1
+            )
+            run_dir = os.getenv("HOME") + "/oneflow_temp/"
+            run_dir = os.path.abspath(os.path.expanduser(run_dir))
+            ssh_port_arg = " -p {} ".format(22)
+            scp_port_arg = " -P {} ".format(22)
+            ssh_prefix = (
+                "ssh {}".format(ssh_port_arg)
+                + getpass.getuser()
+                + "@"
+                + "127.0.0.1"
+                + " "
+            )
+            remote_file_prefix = " " + getpass.getuser() + "@" + "127.0.0.1" + ":"
+            oneflow.deprecated.system_call(ssh_prefix + '"mkdir -p ' + run_dir + '"')
+            for rank in range(1, config_world_size):
+                worker_env_proto = EnvProto()
+                worker_env_proto.CopyFrom(env_proto)
+                worker_env_proto.ctrl_bootstrap_conf.rank = rank
+                env_file = NamedTemporaryFile(delete=False)
+                if sys.version_info >= (3, 0):
+                    env_file.write(pbtxt.MessageToString(worker_env_proto).encode())
+                else:
+                    env_file.write(pbtxt.MessageToString(worker_env_proto))
+                env_file.close()
 
-                    remote_file_prefix = (
-                        " " + getpass.getuser() + "@" + "127.0.0.1" + ":"
-                    )
-                    oneflow_cmd = (
-                        '"nohup '
-                        + oneflow_worker_path
-                        + " -env_proto="
-                        + worker_env_proto.cpp_logging_conf.log_dir
-                        + "/env_proto_"
-                        + str(rank)
-                        + ".proto"
-                        + ' 1>/dev/null 2>&1 </dev/null & "'
-                    )
-                    _SystemCall(
-                        ssh_prefix + '"mkdir -p ' + run_dir + "/log_" + str(rank) + '"'
-                    )
-                    _SystemCall(
-                        "scp {}".format(scp_port_arg)
-                        + env_file.name
-                        + remote_file_prefix
-                        + run_dir
-                        + "/log_"
-                        + str(rank)
-                        + "/env_proto_"
-                        + str(rank)
-                        + ".proto"
-                    )
-                    _SystemCall(
-                        "scp {}".format(scp_port_arg)
-                        + oneflow_worker_path
-                        + remote_file_prefix
-                        + run_dir
-                        + "/log_"
-                        + str(rank)
-                        + "/oneflow_worker"
-                    )
-                    oneflow_cmd = (
-                        '"cd '
-                        + run_dir
-                        + "/log_"
-                        + str(rank)
-                        + "; "
-                        + "nohup ./oneflow_worker "
-                        + "-env_proto=./"
-                        + "env_proto_"
-                        + str(rank)
-                        + ".proto "
-                        + ' 1>/dev/null 2>&1 </dev/null & "'
-                    )
-                    _SystemCall(ssh_prefix + oneflow_cmd)
-                    # subprocess.Popen(
-                    #     oneflow_worker_path
-                    #     + " -env_proto="
-                    #     + worker_env_proto.cpp_logging_conf.log_dir
-                    #     + "/env_proto_"
-                    #     + str(rank)
-                    #     + ".proto",
-                    #     shell=True,
-                    # )
-                    # subprocess.check_call(ssh_prefix + oneflow_cmd, shell=True)
-                    os.remove(env_file.name)
+                oneflow_cmd = (
+                    '"nohup '
+                    + oneflow_worker_path
+                    + " -env_proto="
+                    + worker_env_proto.cpp_logging_conf.log_dir
+                    + "/env_proto_"
+                    + str(rank)
+                    + ".proto"
+                    + ' 1>/dev/null 2>&1 </dev/null & "'
+                )
+                oneflow.deprecated.system_call(
+                    ssh_prefix + '"mkdir -p ' + run_dir + "/log_" + str(rank) + '"'
+                )
+                oneflow.deprecated.system_call(
+                    "scp {}".format(scp_port_arg)
+                    + env_file.name
+                    + remote_file_prefix
+                    + run_dir
+                    + "/log_"
+                    + str(rank)
+                    + "/env_proto_"
+                    + str(rank)
+                    + ".proto"
+                )
+                oneflow_cmd = (
+                    '"cd '
+                    + run_dir
+                    + "/log_"
+                    + str(rank)
+                    + "; "
+                    + "nohup "
+                    + oneflow_worker_path
+                    + " -env_proto=./"
+                    + "env_proto_"
+                    + str(rank)
+                    + ".proto "
+                    + ' 1>/dev/null 2>&1 </dev/null & "'
+                )
+                oneflow.deprecated.system_call(ssh_prefix + oneflow_cmd)
+                os.remove(env_file.name)
+            atexit.register(
+                oneflow.deprecated.delete_worker_of_multi_process, run_dir=run_dir
+            )
 
         log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
         if log_dir:

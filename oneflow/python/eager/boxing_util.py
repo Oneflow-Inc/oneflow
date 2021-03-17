@@ -257,7 +257,7 @@ def InterNodeOneToMany(builder, produced_blob_object, consumer_op_arg_parallel_a
         for device_id in device_ids:
             parallel_conf = placement_cfg.ParallelConf()
             parallel_conf.set_device_tag("cpu")
-            parallel_conf.add_device_name("%s:%s" % (machine_id, device_id))
+            parallel_conf.add_device_name("@%s:%s" % (machine_id, device_id))
             parallel_desc_symbol = builder.GetParallelDescSymbol(parallel_conf)
             out_blob = builder.Build121To(produced_blob_object, parallel_desc_symbol)
             out_blobs.append(out_blob)
@@ -599,7 +599,7 @@ def GetConcatSplitBoxingParallelDescSymbol(
     parallel_conf = placement_cfg.ParallelConf()
     parallel_conf.set_device_tag("cpu")
     for machine_id, _ in blob_parallel_desc_symbol.machine_id2device_id_list.items():
-        parallel_conf.add_device_name("%s:%s" % (machine_id, random_rank_id))
+        parallel_conf.add_device_name("@%s:%s" % (machine_id, random_rank_id))
     hierarchy = shape_proto_cfg.ShapeProto()
     for dim in blob_parallel_desc_symbol.hierarchy:
         hierarchy.add_dim(dim)

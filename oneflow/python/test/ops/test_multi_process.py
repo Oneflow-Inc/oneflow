@@ -21,18 +21,18 @@ from typing import Tuple
 import time
 
 
-@flow.unittest.skip_unless_1n3d()
+@flow.unittest.skip_unless_1n4d()
 class TestMultiProcess(flow.unittest.TestCase):
     def test_multi_process(test_case):
         flow.config.enable_debug_mode(True)
         flow.config.comm_net_worker_num(1)
-        # flow.config.gpu_device_num(4)
+        flow.config.gpu_device_num(4)
         func_config = flow.FunctionConfig()
         func_config.concurrency_width(1)
 
         @flow.global_function()
         def Foo():
-            with flow.scope.placement("gpu", "0:0"):
+            with flow.scope.placement("gpu", "0:0-3"):
                 x = flow.get_variable(
                     "x",
                     shape=(2, 5),
@@ -40,15 +40,10 @@ class TestMultiProcess(flow.unittest.TestCase):
                     initializer=flow.random_uniform_initializer(minval=0, maxval=1),
                     trainable=False,
                 )
-            # return x
+            return x
 
-        for i in range(1):
-            Foo()
-            print("i: ", i, "$" * 50)
-            time.sleep(10)
-            print("************END**********")
-        # Foo()
-        # test_case.assertEqual(of_ret.numpy().shape, (2, 5))
+        of_ret = Foo().get()
+        test_case.assertEqual(of_ret.numpy().shape, (2, 5))
 
 
 if __name__ == "__main__":
