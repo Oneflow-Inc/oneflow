@@ -399,6 +399,8 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
 
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
+    LOG(INFO) << "ActorEvent " << std::to_string(actor_id_) << " "
+              << std::to_string(static_cast<long long>(GetCurTime()));
     act_id_ += 1;
     TryLogActEvent([&] { Act(); });
 

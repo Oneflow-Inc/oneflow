@@ -188,7 +188,8 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   auto log_stream = TeePersistentLogStream::Create(filepath);
   // task node
   for (const TaskProto& task_proto : plan.task()) {
-    std::string node_def = "task" + std::to_string(task_proto.task_id()) + "[label=\"{{";
+    std::string task_id_str = "task" + std::to_string(task_proto.task_id());
+    std::string node_def = task_id_str + "[class=\"" + task_id_str + "\",label=\"{{";
     node_def += std::to_string(task_proto.task_id()) + ":" + std::to_string(task_proto.machine_id())
                 + "\\n";
     std::string op_name = "";
