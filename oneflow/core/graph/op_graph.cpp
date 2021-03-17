@@ -81,30 +81,6 @@ std::string OpEdge::VisualStr() const {
   return str;
 }
 
-void OpEdge::InitDistributeHierarchyInfo() { InitIsStrict121(); }
-
-void OpEdge::InitIsStrict121() { is_strict_121_ = CalcIsStrict121Connected(); }
-
-bool OpEdge::CalcIsStrict121Connected() const {
-  OpNode* src = src_node();
-  OpNode* dst = dst_node();
-  if (!src->parallel_desc().Equals(dst->parallel_desc())) { return false; }
-  if (!src->IsTimeShapeIdentity()) { return false; }
-  if (!dst->IsTimeShapeIdentity()) { return false; }
-  if (*CHECK_JUST(src->op().GetOpTimeShape()) != *CHECK_JUST(dst->op().GetOpTimeShape())) {
-    return false;
-  }
-  for (const LogicalBlobId& lbi : lbis()) {
-    const ParallelDistribution& obn_distribution =
-        src->ParallelDistribution4BnInOp(lbi2obn().at(lbi));
-    for (const std::string& ibn : lbi2ibns().at(lbi)) {
-      const ParallelDistribution& ibn_distribution = dst->ParallelDistribution4BnInOp(ibn);
-      if (obn_distribution != ibn_distribution) { return false; }
-    }
-  }
-  return true;
-}
-
 const SbpParallel& OpNode::SbpParallel4BnInOp(const std::string& bn_in_op) const {
   return *CHECK_JUST(op().SbpParallel4BnInOp(bn_in_op));
 }
@@ -202,16 +178,6 @@ bool OpNode::IsTimeShapeIdentity() const {
   return *in_shape == *op_shape;
 }
 
-const ParallelDesc& OpNode::BlobParallelDesc4Obn(const std::string& obn) const {
-  return obn2blob_parallel_desc_.at(obn);
-}
-
-void OpNode::InferBlobParallelDesc() {
-  for (const auto& bn : op().output_bns()) {
-    obn2blob_parallel_desc_.emplace(bn, *CHECK_JUST(op().GetParallelDesc4BnInOp(bn)));
-  }
-}
-
 void OpNode::InitLbi2SourceNode() {
   for (OpEdge* edge : in_edges()) {
     for (const LogicalBlobId& lbi : edge->lbis()) {
@@ -257,7 +223,6 @@ Maybe<void> OpGraph::Init(const Job& job) {
   InferBlobLastUsed();
   InferTimeShape();
   JUST(InferLogicalBlobDesc(job));
-  ForEachEdge([](OpEdge* edge) { edge->InitDistributeHierarchyInfo(); });
   return Maybe<void>::Ok();
 }
 
@@ -477,7 +442,6 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
       }
     }
     InferOpNodeParallelDistributionSignature(op_node, parallel_distribution_sig_conf);
-    op_node->InferBlobParallelDesc();
     UpdateJobParallelViewConf(*op_node, oba2sbp_identical_obas, &job_parallel_view_conf);
     JUST(op_node->mut_op()->InferLogicalOutBlobDescsIf());
     return Maybe<void>::Ok();
