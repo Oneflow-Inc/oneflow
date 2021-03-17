@@ -96,7 +96,7 @@ class TrainingConfig:
         self.data = None
         self.error_msg = ""
 
-    def config_exe(self, exe_cfg: ExecutionConfig = None):
+    def config_execution(self, exe_cfg: ExecutionConfig = None):
         self.exe_cfg = exe_cfg
 
     def config_data(self, data: DataModule = None):
@@ -129,7 +129,7 @@ class ValidationConfig:
         self.step_interval = 10
         self.error_msg = ""
 
-    def config_exe(self, exe_cfg: ExecutionConfig = None):
+    def config_execution(self, exe_cfg: ExecutionConfig = None):
         self.exe_cfg = exe_cfg
 
     def config_data(self, data: DataModule = None):

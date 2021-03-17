@@ -229,7 +229,7 @@ class DCGANCompare:
         train_exe_config.default_data_type(flow.float)
         train_exe_config.default_logical_view(flow.scope.consistent_view())
         train_config = flow.model.TrainingConfig()
-        train_config.config_exe(train_exe_config)
+        train_config.config_execution(train_exe_config)
         train_config.config_data(NumpyTrainData(result_dir, batch_size))
 
         val_exe_config = flow.ExecutionConfig()
@@ -237,7 +237,7 @@ class DCGANCompare:
         val_exe_config.default_logical_view(flow.scope.consistent_view())
         val_config = flow.model.ValidationConfig()
         val_config.config_data(NumpyValData(result_dir, batch_size))
-        val_config.config_exe(val_exe_config)
+        val_config.config_execution(val_exe_config)
         val_config.config_step_interval(1)
 
         loss_monitor_cb = LossMoniter(result_dir)
