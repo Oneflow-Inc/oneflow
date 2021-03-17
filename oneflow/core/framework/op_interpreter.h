@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/job/scope.h"
 
 namespace oneflow {
 namespace one {
