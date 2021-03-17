@@ -134,15 +134,9 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   }
   Global<ResourceDesc, ForEnv>::Delete();
   CHECK_NOTNULL(Global<CtrlClient>::Get());
-#ifdef RPC_BACKEND_GRPC
-  CHECK_NOTNULL(Global<CtrlServer>::Get());
-#endif  // RPC_BACKEND_GRPC
   CHECK_NOTNULL(Global<EnvDesc>::Get());
   Global<RpcManager>::Delete();
   Global<ProcessCtx>::Delete();
-#ifdef RPC_BACKEND_GRPC
-  Global<CtrlServer>::Delete();
-#endif  // RPC_BACKEND_GRPC
   Global<EnvDesc>::Delete();
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();

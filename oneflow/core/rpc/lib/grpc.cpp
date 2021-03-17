@@ -43,6 +43,7 @@ Maybe<void> GrpcRpcManager::CreateClient() {
 
 GrpcRpcManager::~GrpcRpcManager() {
   Global<CtrlClient>::Delete();
+  CHECK_NOTNULL(Global<CtrlServer>::Get());
   Global<CtrlServer>::Delete();
 }
 
