@@ -13,10 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#ifndef ONEFLOW_CORE_RPC_LIB_LOCAL_H_
-#define ONEFLOW_CORE_RPC_LIB_LOCAL_H_
-
 #ifdef RPC_BACKEND_LOCAL
 
 #include "glog/logging.h"
@@ -160,5 +156,3 @@ LocalRpcManager::~LocalRpcManager() { Global<CtrlClient>::Delete(); }
 }  // namespace oneflow
 
 #endif  // RPC_BACKEND_LOCAL
-
-#endif  // ONEFLOW_CORE_RPC_LIB_LOCAL_H_
