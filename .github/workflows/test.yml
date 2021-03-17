@@ -331,21 +331,33 @@ jobs:
     name: Build (macOS)
     runs-on: "macos-latest"
     if: github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    env:
+      CPATH: /Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
         run: |
           brew install nasm
-      - name: Build
+      - name: Set environment variables
+        run: |
+          set -x
+          cmake_flags=""
+          cmake_flags+=" -DPython3_EXECUTABLE=$(which python3)"
+          cmake_flags+=" -DRPC_BACKEND=LOCAL"
+          cmake_flags+=" -DCMAKE_BUILD_TYPE=Release"
+          cmake_flags+=" -DBUILD_CUDA=OFF"
+          echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
+      - name: Build (third party)
         continue-on-error: true
         run: |
-          export CPATH=/Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
-          mkdir build
+          mkdir -p build
           cd build
-          flags=""
-          flags+=" -DPython3_EXECUTABLE=$(which python3)"
-          flags+=" -DRPC_BACKEND=LOCAL"
-          flags+=" -DCMAKE_BUILD_TYPE=Release"
-          flags+=" -DBUILD_CUDA=OFF"
-          cmake .. $flags
+          cmake .. $cmake_flags -DTHIRD_PARTY=ON -DONEFLOW=OFF
+          make -j $(nproc)
+      - name: Build (OneFlow)
+        continue-on-error: true
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
           make -j $(nproc)
