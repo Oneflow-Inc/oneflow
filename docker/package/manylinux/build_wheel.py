@@ -225,9 +225,9 @@ rm -rf build/*
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
 auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
 """
-        return create_tmp_bash_and_run(
-            docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry
-        )
+    return create_tmp_bash_and_run(
+        docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry
+    )
 
 
 def is_img_existing(tag):

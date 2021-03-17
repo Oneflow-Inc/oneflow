@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 void DstSubsetTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", false, 1, 1);
+  ProduceRegst("out", false, 2, 2);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
@@ -45,5 +45,10 @@ void DstSubsetTickCompTaskNode::BuildExecGphAndRegst() {
 }
 
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kDstSubsetTick);
+
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kDstSubsetTick)
+    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateTickTockStreamIndex();
+    });
 
 }  // namespace oneflow
