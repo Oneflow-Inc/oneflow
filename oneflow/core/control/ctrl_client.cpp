@@ -67,7 +67,7 @@ void GrpcCtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_nu
   rpc_client_.Barrier(barrier_name, barrier_num);
 }
 
-TryLockResult GrpcCtrlClient::TryLock(const std::string& name) { rpc_client_.TryLock(name); }
+TryLockResult GrpcCtrlClient::TryLock(const std::string& name) { return rpc_client_.TryLock(name); }
 
 void GrpcCtrlClient::NotifyDone(const std::string& name) { rpc_client_.NotifyDone(name); }
 
@@ -79,6 +79,10 @@ void GrpcCtrlClient::PushKV(const std::string& k, const std::string& v) {
 
 void GrpcCtrlClient::PushKV(const std::string& k, const PbMessage& msg) {
   rpc_client_.PushKV(k, msg);
+}
+
+void GrpcCtrlClient::PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter) {
+  rpc_client_.PushKV(k, VSetter);
 }
 
 void GrpcCtrlClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
@@ -93,10 +97,18 @@ void GrpcCtrlClient::PullKV(const std::string& k, std::string* v) { rpc_client_.
 
 void GrpcCtrlClient::PullKV(const std::string& k, PbMessage* msg) { rpc_client_.PullKV(k, msg); }
 
+void GrpcCtrlClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
+  rpc_client_.PullKV(k, VGetter);
+}
+
 void GrpcCtrlClient::PullMasterKV(const std::string& k, PbMessage* msg) {
   rpc_client_.PullMasterKV(k, msg);
 }
 
 void GrpcCtrlClient::Clear() { rpc_client_.Clear(); }
+
+void GrpcCtrlClient::PushActEvent(const ActEvent& act_event) {
+  rpc_client_.PushActEvent(act_event);
+}
 
 }  // namespace oneflow
