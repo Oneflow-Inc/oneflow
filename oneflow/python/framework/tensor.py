@@ -547,6 +547,7 @@ def register_tensor_op_by_module(op_name):
         if is_unary is True:
             setattr(Tensor, op_name, lambda self: module().forward(self))
         else:
+            assert len(inspect.signature(module.forward).parameters) == 3
             setattr(
                 Tensor, op_name, lambda self, x: module().forward(self, x),
             )
