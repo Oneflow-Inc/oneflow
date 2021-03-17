@@ -35,16 +35,38 @@ class TestTensor(flow.unittest.TestCase):
         "numpy doesn't work in lazy mode",
     )
     def test_numpy(test_case):
-        @flow.global_function()
-        def job():
-            shape = (2, 3)
-            test_case.assertTrue(
-                np.array_equal(
-                    fake_flow_ones(shape).numpy(), np.ones(shape, dtype=np.float32)
-                )
+        shape = (2, 3)
+        test_case.assertTrue(
+            np.array_equal(
+                fake_flow_ones(shape).numpy(), np.ones(shape, dtype=np.float32)
             )
+        )
 
-        job()
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_init(test_case):
+        shape = (2, 3)
+        x = flow.Tensor(*shape)
+
+        x.fill_(5)
+        test_case.assertTrue(np.array_equal(x.numpy(), 5 * np.ones(x.shape)))
+
+        flow.nn.init.ones_(x)
+        test_case.assertTrue(np.array_equal(x.numpy(), np.ones(x.shape)))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_creating_consistent_tensor(test_case):
+        shape = (2, 3)
+        x = flow.Tensor(*shape, placement=flow.placement("gpu", ["0:0"], None))
+        x.set_placement(flow.placement("cpu", ["0:0"], None))
+        x.set_is_consistent(True)
+        test_case.assertTrue(not x.is_cuda)
+        x.determine()
 
 
 if __name__ == "__main__":

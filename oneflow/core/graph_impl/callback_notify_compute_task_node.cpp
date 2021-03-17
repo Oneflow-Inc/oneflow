@@ -18,4 +18,10 @@ limitations under the License.
 namespace oneflow {
 
 REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kCallbackNotify, 1);
-}
+
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCallbackNotify)
+    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateIndependentTaskStreamIndex(TaskType::kCallbackNotify);
+    });
+
+}  // namespace oneflow
