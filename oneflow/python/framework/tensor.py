@@ -205,6 +205,86 @@ class Tensor:
             self._local_or_consistent_tensor._blob_object, parallel_conf
         )
 
+    def _get_slice_obj(self, key):
+        def get_or_default(x, default):
+            return x if x is not None else default
+
+        def get_canonical_index(index, length, *, start=0):
+            if index < 0:
+                index += length
+            return max(min(index, length), start)
+
+        def get_slice_if_int(x):
+            if isinstance(x, slice):
+                return x
+            return slice(x, x+1)
+
+        if isinstance(key, tuple):
+            assert all(isinstance(x, (slice, int)) for x in key)
+        else:
+            assert isinstance(key, (slice, int))
+            key = (key,)
+
+        key = list(map(get_slice_if_int, key))
+
+        assert len(key) <= len(self.shape)
+        for i in range(len(key), len(self.shape)):
+            key += (slice(None, None, None),)
+
+        starts = [get_canonical_index(get_or_default(x.start, 0), self.shape[i]) for i, x in enumerate(key)]
+        stops = [get_canonical_index(get_or_default(x.stop, self.shape[i]), self.shape[i], start=starts[i]) for i, x in enumerate(key)]
+        steps = [get_or_default(x.step, 1) for x in key]
+        assert(all(x > 0 for x in steps))
+        # np.abs is for compatibility of negative steps in the future
+        shape = (np.abs(np.array(stops) - np.array(starts)) - 1) // np.abs(np.array(steps)) + 1
+        shape = shape.tolist()
+        return starts, stops, steps, shape
+
+    @_auto_determine
+    def __setitem__(self, key, value):
+        starts, stops, steps, shape = self._get_slice_obj(key)
+        if isinstance(value, (int, float)):
+            scalar = value
+            value = flow.Tensor(*shape)
+            value.fill_(scalar)
+
+        @global_function_or_identity()
+        def job():
+            op = (
+                flow.builtin_op("logical_slice_assign")
+                .Name("logical_slice_assign")
+                .Input("ref")
+                .Input("value")
+                .Attr("start", starts)
+                .Attr("stop", stops)
+                .Attr("step", steps)
+                .Build()
+            )
+            op(self, value)
+        job()
+        return self
+
+    @_auto_determine
+    def __getitem__(self, key):
+        starts, stops, steps, _ = self._get_slice_obj(key)
+        result = None
+        @global_function_or_identity()
+        def job():
+            op = (
+                flow.builtin_op("logical_slice")
+                .Name("logical_slice")
+                .Input("x")
+                .Output("y")
+                .Attr("start", starts)
+                .Attr("stop", stops)
+                .Attr("step", steps)
+                .Build()
+            )
+            nonlocal result
+            result = op(self)[0]
+        job()
+        return result
+
     def tolist(self):
         TODO()
 
@@ -238,7 +318,8 @@ class Tensor:
         if determining_initializer is None:
             determining_initializer = self._determining_initializer
         self._local_or_consistent_tensor, self._variable_name = determining_initializer(
-            self._undetermined_tensor)
+            self._undetermined_tensor
+        )
         self._undetermined_tensor = None
 
     @property
