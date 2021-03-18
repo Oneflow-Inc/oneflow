@@ -478,7 +478,7 @@ void Operator::ForEachBnInOp(std::function<void(const std::string&)> Handler) co
 Maybe<void> Operator::FillSbpSignature(const SbpSignature& sbp_signature) {
   ParallelDistributionSignature parallel_distribution_signature;
   SbpSignatureToParallelDistributionSignature(sbp_signature, &parallel_distribution_signature);
-  FillParallelDistributionSignature(parallel_distribution_signature);
+  JUST(FillParallelDistributionSignature(parallel_distribution_signature));
   return Maybe<void>::Ok();
 }
 
@@ -698,7 +698,7 @@ Maybe<void> Operator::InferParallelDistributionSignature(
     SbpSignatureToParallelDistributionSignature(sbp_signature, signature);
     return Maybe<void>::Ok();
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN();
   }
 }
 
