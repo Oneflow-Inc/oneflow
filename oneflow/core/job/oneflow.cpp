@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/protobuf.h"
@@ -20,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/compiler.h"
-#include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/job_set.pb.h"
@@ -309,22 +309,19 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
   }
 }
 
-Maybe<void> CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
+Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) {
   const JobDesc& job_desc = GlobalJobDesc();
-  Plan naive_plan;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
-    Compiler().Compile(job, &naive_plan, need_job_complete);
-    *improved_plan =
-        *JUST(Improver().GenAndInferMemBlockIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan));
+    Compiler().Compile(job, plan, need_job_complete);
+
     LOG(INFO) << "\njob_id: " << job_desc.job_id() << " , job_name: " << job_desc.job_name()
               << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      TeePersistentLogStream::Create(StrCat("subplan_job_", job_desc.job_id()))
-          ->Write(*improved_plan);
+      TeePersistentLogStream::Create(StrCat("subplan_job_", job_desc.job_id()))->Write(*plan);
     }
   }
-  GenCollectiveBoxingPlan(job, improved_plan);
+  GenCollectiveBoxingPlan(job, plan);
   return Maybe<void>::Ok();
 }
 
@@ -690,7 +687,7 @@ Maybe<void> MakeCallbackNotifierSinkTick(
     {
       std::string name_prefix = "System-Main-CallbackNotifier_CriticalSection_";
       snk_tick_op_conf.set_name(name_prefix + std::to_string(total_job_cs_id));
-      snk_tick_op_conf.set_pass_tag("main");
+      snk_tick_op_conf.set_pass_tag(kMainOp);
       auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
       for (int64_t machine_id : process_ranks) {
         const auto& cb_sink_tick_op_name = cb_sink_tick_op_names.at(total_job_cs_id).at(machine_id);
@@ -715,7 +712,7 @@ Maybe<void> MakeMainJob(Job* main_job,
   OperatorConf wait_and_send_ids_op_conf;
   {
     wait_and_send_ids_op_conf.set_name(std::string("System-Main-WaitAndSendIds_") + NewUniqueId());
-    wait_and_send_ids_op_conf.set_pass_tag("main");
+    wait_and_send_ids_op_conf.set_pass_tag(kMainOp);
     auto* wait_and_send_ids_conf = wait_and_send_ids_op_conf.mutable_wait_and_send_ids_conf();
     wait_and_send_ids_conf->set_out("out");
     wait_and_send_ids_conf->set_wait_buffer_name(kBufferNameGlobalWaitJobId);
@@ -745,7 +742,7 @@ Maybe<void> MakeMainJob(Job* main_job,
   OperatorConf callback_notify_esac_op_conf;
   {
     callback_notify_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
-    callback_notify_esac_op_conf.set_pass_tag("main");
+    callback_notify_esac_op_conf.set_pass_tag(kMainOp);
     auto* callback_notify_esac_conf = callback_notify_esac_op_conf.mutable_esac_conf();
     JUST(MakeCallbackNotifierSinkTick(
         process_ranks, cb_sink_tick_op_names, &job_builder,
@@ -757,7 +754,7 @@ Maybe<void> MakeMainJob(Job* main_job,
   OperatorConf callback_notify_op_conf;
   {
     callback_notify_op_conf.set_name(std::string("System-Main-CallbackNotify_") + NewUniqueId());
-    callback_notify_op_conf.set_pass_tag("main");
+    callback_notify_op_conf.set_pass_tag(kMainOp);
     auto* callback_notify_conf = callback_notify_op_conf.mutable_callback_notify_conf();
     callback_notify_conf->set_in(callback_notify_esac_op_conf.name() + "/out");
     auto* buffer_names = callback_notify_conf->mutable_callback_buffer_name();

@@ -140,8 +140,9 @@ Maybe<void> ParallelDesc::GetParallelContext(ParallelContext* parallel_ctx, int6
 }
 
 bool ParallelDesc::Equals(const ParallelDesc& rhs) const {
-  return device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
-         && EqualsMachineId2SortedDevPhyIds(rhs) && *hierarchy_ == *rhs.hierarchy_;
+  return (this == &rhs)
+         || (device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
+             && EqualsMachineId2SortedDevPhyIds(rhs) && *hierarchy_ == *rhs.hierarchy_);
 }
 
 bool ParallelDesc::EqualsIgnoringDeviceType(const ParallelDesc& rhs) const {
