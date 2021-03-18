@@ -391,53 +391,51 @@ Maybe<void> Operator::InferInplaceObn2Ibn(
 }
 
 Maybe<void> Operator::FillInputBlobTimeShape(
-    const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4Ibn) {
-  CHECK_OR_RETURN(!ibn2time_shape_);
-  ibn2time_shape_.reset(new HashMap<std::string, std::shared_ptr<const Shape>>());
-  for (const auto& bn : input_bns()) {
-    std::shared_ptr<const Shape> time_shape = JUST(GetTimeShape4Ibn(bn));
+    const std::function<Maybe<const Shape>(int32_t)>& GetTimeShape4InputIndex) {
+  CHECK_OR_RETURN(!input_index2time_shape_);
+  input_index2time_shape_.reset(new std::vector<std::shared_ptr<const Shape>>());
+  input_index2time_shape_->reserve(input_bns().size());
+  for (int32_t i = 0; i < input_bns().size(); ++i) {
+    std::shared_ptr<const Shape> time_shape = JUST(GetTimeShape4InputIndex(i));
     if ((!input_blob_fastest_time_shape_)
         || input_blob_fastest_time_shape_->elem_cnt() < time_shape->elem_cnt()) {
       input_blob_fastest_time_shape_ = time_shape;
     }
-    CHECK_OR_RETURN(ibn2time_shape_->emplace(bn, time_shape).second);
-  }
-  if (input_blob_fastest_time_shape_) {
-    const int64_t fastest_elem_cnt = input_blob_fastest_time_shape_->elem_cnt();
-    for (const auto& pair : *ibn2time_shape_) {
-      CHECK_EQ_OR_RETURN(fastest_elem_cnt % pair.second->elem_cnt(), 0);
-    }
+    input_index2time_shape_->emplace_back(time_shape);
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferOpTimeShapeIf() {
   CHECK_OR_RETURN(!op_time_shape_);
-  CHECK_OR_RETURN(ibn2time_shape_);
-  auto GetTimeShape4BnInOp = [&](const std::string& ibn) { return ibn2time_shape_->at(ibn).get(); };
-  std::shared_ptr<Shape> time_shape(new Shape);
-  InferOpTimeShape(GetTimeShape4BnInOp, time_shape.get());
-  op_time_shape_ = time_shape;
+  CHECK_OR_RETURN(input_index2time_shape_);
+  auto GetTimeShape4BnInOp = [&](const std::string& ibn) -> Maybe<const Shape> {
+    const auto& it = bn2index_pair_.find(ibn);
+    CHECK_OR_RETURN(it != bn2index_pair_.end());
+    CHECK_EQ_OR_RETURN(it->second.first, kInputBlobName);
+    return input_index2time_shape_->at(it->second.second);
+  };
+  JUST(InferOpTimeShape(GetTimeShape4BnInOp, &op_time_shape_));
   if (input_blob_fastest_time_shape_
-      && input_blob_fastest_time_shape_->elem_cnt() > time_shape->elem_cnt()) {
+      && input_blob_fastest_time_shape_->elem_cnt() > op_time_shape_->elem_cnt()) {
     input_output_fastest_time_shape_ = input_blob_fastest_time_shape_;
   } else {
-    input_output_fastest_time_shape_ = time_shape;
+    input_output_fastest_time_shape_ = op_time_shape_;
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferOpTimeShape(
-    const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
-    Shape* time_shape) const {
+    const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
+    std::shared_ptr<const Shape>* time_shape) const {
   if (!input_bns().empty()) {
-    const Shape* first_time_shape = GetTimeShape4BnInOp(input_bns().Get(0));
+    std::shared_ptr<const Shape> first_time_shape = input_index2time_shape_->at(0);
     for (int64_t i = 1; i < input_bns().size(); ++i) {
-      CHECK_EQ_OR_RETURN(*GetTimeShape4BnInOp(input_bns().Get(i)), *first_time_shape);
+      CHECK_EQ_OR_RETURN(*input_index2time_shape_->at(i), *first_time_shape);
     }
-    *time_shape = *first_time_shape;
+    *time_shape = first_time_shape;
   } else {
-    *time_shape = Shape({1, 1});
+    *time_shape = std::make_shared<const Shape>(Shape({1, 1}));
   }
   return Maybe<void>::Ok();
 }

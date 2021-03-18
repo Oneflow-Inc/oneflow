@@ -286,8 +286,9 @@ void OpGraph::InferBlobLastUsed() const {
 
 void OpGraph::InferTimeShape() const {
   TopoForEachNode([&](OpNode* op_node) {
-    auto GetInputBlobTimeShape = [&](const std::string& bn_in_op) {
-      return op_node->MutSrcNode4Ibn(bn_in_op)->op().GetOpTimeShape();
+    auto GetInputBlobTimeShape = [&](int32_t index) -> Maybe<const Shape> {
+      CHECK_LT_OR_RETURN(index, op_node->input_index2producer_and_output_index_.size());
+      return op_node->input_index2producer_and_output_index_.at(index).first->op().GetOpTimeShape();
     };
     CHECK_JUST(op_node->mut_op()->FillInputBlobTimeShape(GetInputBlobTimeShape));
     CHECK_JUST(op_node->mut_op()->InferOpTimeShapeIf());

@@ -35,8 +35,8 @@ class AccTickOp final : public Operator {
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
   Maybe<void> InferOpTimeShape(
-      const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
-      Shape* time_shape) const override;
+      const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
+      std::shared_ptr<const Shape>* time_shape) const override;
 
  private:
 };
