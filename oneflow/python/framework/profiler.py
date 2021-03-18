@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +12,18 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_COMMON_CONSTANT_H_
-#define ONEFLOW_CORE_COMMON_CONSTANT_H_
+"""
+from __future__ import absolute_import
 
-#include <string>
+from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 
-namespace oneflow {
 
-static const int64_t kInvalidSessionId = -1;
-static const std::string kNoPassTag = "";
-static const std::string kMainOp = "main_op";
+@oneflow_export("profiler.range_push")
+def RangePush(range_name):
+    oneflow_api.profiler.RangePush(range_name)
 
-}  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_CONSTANT_H_
+@oneflow_export("profiler.range_pop")
+def RangePop():
+    oneflow_api.profiler.RangePop()
