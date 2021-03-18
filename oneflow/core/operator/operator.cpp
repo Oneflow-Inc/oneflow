@@ -400,7 +400,7 @@ Maybe<void> Operator::FillInputBlobTimeShape(
   input_index2time_shape_->reserve(input_bns().size());
   for (int32_t i = 0; i < input_bns().size(); ++i) {
     std::shared_ptr<const Shape> time_shape = JUST(GetTimeShape4InputIndex(i));
-    if (!input_blob_fastest_time_shape_
+    if ((!input_blob_fastest_time_shape_)
         || time_shape->elem_cnt() > input_blob_fastest_time_shape_->elem_cnt()) {
       input_blob_fastest_time_shape_ = time_shape;
     }
