@@ -49,8 +49,7 @@ class CompTaskNode : public TaskNode {
   std::string VisualStr() const override;
 
   // op
-  const Operator& op() const { return op_node_->op(); }
-  std::shared_ptr<const Operator> shared_op() const { return op_node_->shared_op(); }
+  std::shared_ptr<const Operator> op() const { return op_node_->shared_op(); }
 
  protected:
   const OpNode* GetOneSuccOpNodeOnEdge(TaskEdge* edge);

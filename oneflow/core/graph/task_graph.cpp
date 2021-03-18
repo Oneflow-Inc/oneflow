@@ -37,14 +37,14 @@ namespace {
 bool IsInterfaceTask(const TaskNode* node) {
   const auto* comp_task_node = dynamic_cast<const CompTaskNode*>(node);
   if (comp_task_node == nullptr) { return false; }
-  auto op_type_case = comp_task_node->shared_op()->op_conf().op_type_case();
+  auto op_type_case = comp_task_node->op()->op_conf().op_type_case();
   return IsClassRegistered<int32_t, IsInterfaceOpConf4OpTypeCase>(op_type_case);
 }
 
 bool IsConnectToTickOp(const TaskNode* node) {
   const auto* comp_task_node = dynamic_cast<const CompTaskNode*>(node);
   if (comp_task_node == nullptr) { return false; }
-  const Operator* op = comp_task_node->shared_op().get();
+  const Operator* op = comp_task_node->op().get();
   if (dynamic_cast<const VariableOp*>(op) != nullptr) { return true; }
   return false;
 }
@@ -103,7 +103,7 @@ bool CanBeMergedInChain(const TaskNode* node) {
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
   if (fw_comp_node->device_type() != DeviceType::kGPU) { return false; }
-  const Operator* op = fw_comp_node->shared_op().get();
+  const Operator* op = fw_comp_node->op().get();
   if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
   return true;
 }
@@ -176,8 +176,8 @@ MakePredicatorIsLbiAllConsumersReachable(
     if (comp_src_node == nullptr) { return false; }
     const CompTaskNode* comp_dst_node = dynamic_cast<const CompTaskNode*>(dst_node);
     if (comp_dst_node == nullptr) { return false; }
-    return IsOpNameDataOrCtrlReachable(comp_src_node->shared_op()->op_name(),
-                                       comp_dst_node->shared_op()->op_name());
+    return IsOpNameDataOrCtrlReachable(comp_src_node->op()->op_name(),
+                                       comp_dst_node->op()->op_name());
   };
   return [TaskNode4SoleOpName, IsDataOrCtrlReachable](const LogicalBlobId& lbi,
                                                       const std::string& op_name) -> bool {
@@ -633,8 +633,8 @@ void TaskGraph::EnableInplaceMemSharing(
   void TaskGraph::method_name BLD_SUB_TSK_GPH_MTHD_ARGS()
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
-  const OpNode* src_logical = op_edge->src_node();
-  const OpNode* dst_logical = op_edge->dst_node();
+  const OpNode* src_op_node = op_edge->src_node();
+  const OpNode* dst_op_node = op_edge->dst_node();
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
     std::vector<TaskNode*> in_nodes;
     if (op_edge->lbis().size() == 1) {
@@ -651,17 +651,17 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     out_nodes.reserve(sorted_dst_comp_tasks.size());
     std::vector<std::vector<TaskNode*>> sorted_ctrl_tasks;
     const ParallelDistribution& src_parallel_distribution =
-        src_logical->ParallelDistribution4Lbi(lbi);
+        src_op_node->ParallelDistribution4Lbi(lbi);
     const ParallelDistribution& dst_parallel_distribution =
-        dst_logical->ParallelDistribution4Lbi(lbi);
-    const ParallelDesc& src_parallel_desc = src_logical->parallel_desc();
-    const ParallelDesc& dst_parallel_desc = dst_logical->parallel_desc();
-    const BlobDesc& blob_desc = src_logical->LogicalBlobDesc4Lbi(lbi);
+        dst_op_node->ParallelDistribution4Lbi(lbi);
+    const ParallelDesc& src_parallel_desc = src_op_node->parallel_desc();
+    const ParallelDesc& dst_parallel_desc = dst_op_node->parallel_desc();
+    const BlobDesc& blob_desc = src_op_node->LogicalBlobDesc4Lbi(lbi);
     auto status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
         sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks, src_parallel_desc,
         dst_parallel_desc, lbi, blob_desc, src_parallel_distribution, dst_parallel_distribution,
-        *(CHECK_JUST(src_logical->op().GetOpTimeShape()).get())));
-    boxing_logger_->Log(*status, src_logical->op().op_name(), dst_logical->op().op_name(),
+        *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
+    boxing_logger_->Log(*status, src_op_node->op().op_name(), dst_op_node->op().op_name(),
                         src_parallel_desc, dst_parallel_desc, src_parallel_distribution,
                         dst_parallel_distribution, lbi, blob_desc);
     sub_tsk_gph_builder_ctx_->ConnectAll121(out_nodes, sorted_dst_comp_tasks);

@@ -25,7 +25,7 @@ void SinkCompTaskNode::ConsumeAllRegsts() {
 
 void SinkCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = shared_op();
+  node->mut_op() = this->op();
   for (const std::string& ibn : node->op()->input_bns()) {
     node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in"));
   }

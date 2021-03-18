@@ -47,7 +47,7 @@ void DistributeConcatCompTaskNode::BuildExecGphAndRegst() {
 
 void DistributeConcatCompTaskNode::BuildExecGphStructAndBindInRegst() {
   ExecNode* cur_node = mut_exec_gph().NewNode();
-  cur_node->mut_op() = shared_op();
+  cur_node->mut_op() = this->op();
   auto in_regst = GetSoleConsumedRegst("in");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     const auto& ibn = cur_node->op()->input_bns().Get(parallel_ctx()->parallel_id());

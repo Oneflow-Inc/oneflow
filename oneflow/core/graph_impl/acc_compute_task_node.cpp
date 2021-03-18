@@ -38,12 +38,11 @@ void AccCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->
 void AccCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  std::shared_ptr<const Operator> op = shared_op();
   ExecNode* exec_node = mut_exec_gph().NewNode();
-  exec_node->mut_op() = op;
-  exec_node->BindBnWithRegst(op->SoleIbn(), in_regst);
-  out_regst->AddLbi(op->BnInOp2Lbi(op->SoleObn()));
-  exec_node->BindBnWithRegst(op->SoleObn(), out_regst);
+  exec_node->mut_op() = op();
+  exec_node->BindBnWithRegst(op()->SoleIbn(), in_regst);
+  out_regst->AddLbi(op()->BnInOp2Lbi(op()->SoleObn()));
+  exec_node->BindBnWithRegst(op()->SoleObn(), out_regst);
   exec_node->InferBlobDescs(parallel_ctx());
   out_regst->ForEachLbi([out_regst](const LogicalBlobId& lbi) {
     const BlobDesc* blob_desc = out_regst->GetBlobDesc(lbi);

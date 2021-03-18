@@ -51,7 +51,7 @@ void RepeatCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void RepeatCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<const Operator> sole_op = shared_op();
+  std::shared_ptr<const Operator> sole_op = op();
   node->mut_op() = sole_op;
   node->BindBnWithRegst(sole_op->SoleIbn(), GetSoleConsumedRegst("in"));
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");

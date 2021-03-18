@@ -42,7 +42,7 @@ void DistributeSplitCompTaskNode::BuildExecGphAndRegst() {
 
 void DistributeSplitCompTaskNode::BuildExecGphStructAndBindInRegst() {
   ExecNode* cur_node = mut_exec_gph().NewNode();
-  cur_node->mut_op() = shared_op();
+  cur_node->mut_op() = this->op();
   for (const std::string& ibn : cur_node->op()->input_bns()) {
     cur_node->BindBnWithRegst(ibn, GetSoleConsumedRegst("in"));
   }

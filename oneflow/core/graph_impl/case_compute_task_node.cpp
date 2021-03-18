@@ -21,10 +21,9 @@ namespace oneflow {
 void CaseCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
 
 void CaseCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  const std::shared_ptr<const Operator> op = shared_op();
   HashMap<LogicalBlobId, int64_t> lbi2obn_id;
-  FOR_RANGE(int64_t, obn_id, 0, op->output_bns().size()) {
-    CHECK(lbi2obn_id.emplace(op->BnInOp2Lbi(GenRepeatedBn("out", obn_id)), obn_id).second);
+  FOR_RANGE(int64_t, obn_id, 0, op()->output_bns().size()) {
+    CHECK(lbi2obn_id.emplace(op()->BnInOp2Lbi(GenRepeatedBn("out", obn_id)), obn_id).second);
   }
   ForEachOutDataEdge([&](TaskEdge* edge) {
     const OpNode* succ = GetOneSuccOpNodeOnEdge(edge);
@@ -45,7 +44,7 @@ void CaseCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void CaseCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<const Operator> sole_op = shared_op();
+  std::shared_ptr<const Operator> sole_op = op();
   node->mut_op() = sole_op;
   node->BindBnWithRegst("in", GetSoleConsumedRegst("in"));
   FOR_RANGE(int64_t, obn_id, 0, sole_op->output_bns().size()) {

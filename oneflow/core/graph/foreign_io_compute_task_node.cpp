@@ -29,7 +29,7 @@ void ForeignIOCompTaskNode::ConsumeAllRegsts() {
 
 void ForeignIOCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = shared_op();
+  node->mut_op() = this->op();
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   for (const std::string& ibn : node->op()->input_bns()) {
     node->BindBnWithOneOfTheRegsts(ibn, in_regsts);

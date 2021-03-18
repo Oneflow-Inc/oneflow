@@ -28,8 +28,7 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
   ~SspVariableProxyCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override {
-    const Operator& op = this->op();
-    int64_t buffer_size = user_op::UserOpConfWrapper(op.op_conf()).attr<int64_t>("buffer_size");
+    int64_t buffer_size = user_op::UserOpConfWrapper(op()->op_conf()).attr<int64_t>("buffer_size");
     CHECK_GT(buffer_size, 0);
     ProduceRegst("value", false, buffer_size, buffer_size);
     ProduceRegst("ref", false, 1, 1);
@@ -49,12 +48,11 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
           CHECK(dst_node != nullptr)
               << "SspVariableProxyTaskNode must be consumed by CompTaskNode. got "
               << TaskType_Name(edge->dst_node()->GetTaskType());
-          const Operator& dst_op = dst_node->op();
-          for (const std::string& ibn : dst_op.input_bns()) {
-            const LogicalBlobId& dst_in_lbi = dst_op.BnInOp2Lbi(ibn);
-            if (dst_in_lbi == op.BnInOp2Lbi("ref_0")) {
+          for (const std::string& ibn : dst_node->op()->input_bns()) {
+            const LogicalBlobId& dst_in_lbi = dst_node->op()->BnInOp2Lbi(ibn);
+            if (dst_in_lbi == op()->BnInOp2Lbi("ref_0")) {
               CHECK_EQ(*out_regst_name2edges["ref"].insert(edge).first, edge);
-            } else if (dst_in_lbi == op.BnInOp2Lbi("value_0")) {
+            } else if (dst_in_lbi == op()->BnInOp2Lbi("value_0")) {
               CHECK_EQ(*out_regst_name2edges["value"].insert(edge).first, edge);
             } else {
               // do nothing
@@ -82,7 +80,7 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
 
   void BuildExecGphStructAndBindInRegst() {
     ExecNode* exec_node = mut_exec_gph().NewNode();
-    exec_node->mut_op() = shared_op();
+    exec_node->mut_op() = op();
     exec_node->BindBnWithOneOfTheRegsts("var_0", GetConsumedRegst("var"));
     BindInplacebetweenVarAndRef();
   }

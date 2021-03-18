@@ -27,7 +27,7 @@ void SourceTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void SourceTickCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = shared_op();
+  node->mut_op() = op();
   for (const std::string& obn : node->op()->output_bns()) {
     const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(obn);
     out_regst->AddLbi(lbi);

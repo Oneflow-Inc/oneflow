@@ -30,7 +30,7 @@ void ReentrantLockCompTaskNode::ConsumeAllRegsts() {
 
 void ReentrantLockCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = shared_op();
+  node->mut_op() = op();
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   // no regst_desc for ibn "end" provided because TaskGraph hates cycle
   node->BindBnWithOneOfTheRegsts("start", in_regsts);
