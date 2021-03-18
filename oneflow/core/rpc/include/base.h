@@ -67,9 +67,9 @@ inline const char* GetMethodName(CtrlMethod method) {
 
 class CtrlClient {
  public:
-  CtrlClient(const ProcessCtx& process_ctx);
+  explicit CtrlClient(const ProcessCtx& process_ctx);
   CtrlClient() = default;
-  virtual ~CtrlClient() {}
+  virtual ~CtrlClient() = default;
 
   virtual void Barrier(const std::string& barrier_name) = 0;
   virtual void Barrier(const std::string& barrier_name, int32_t barrier_num) = 0;
@@ -145,8 +145,8 @@ static void OfCallOnce(const std::string& name, F f, Arg&& arg, Args&&... args) 
 
 class RpcManager {
  public:
-  RpcManager() {}
-  virtual ~RpcManager() {}
+  RpcManager() = default;
+  virtual ~RpcManager() = default;
   virtual Maybe<void> Bootstrap() = 0;
   virtual Maybe<void> CreateServer() = 0;
   virtual Maybe<void> CreateClient() = 0;

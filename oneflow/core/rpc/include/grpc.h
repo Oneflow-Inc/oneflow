@@ -61,11 +61,11 @@ class GrpcCtrlClient final : public CtrlClient {
 
 class GrpcRpcManager : public RpcManager {
  public:
-  GrpcRpcManager() {}
-  ~GrpcRpcManager();
-  Maybe<void> Bootstrap();
-  Maybe<void> CreateServer();
-  Maybe<void> CreateClient();
+  GrpcRpcManager() = default;
+  ~GrpcRpcManager() override;
+  Maybe<void> Bootstrap() override;
+  Maybe<void> CreateServer() override;
+  Maybe<void> CreateClient() override;
 };
 
 }  // namespace oneflow

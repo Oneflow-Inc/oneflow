@@ -49,10 +49,10 @@ jobs:
     needs: [build]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - uses: Oneflow-Inc/github-workflow-schedule@508a8b799e78be6897b2a828c3b9d22836de1678
+      - uses: Oneflow-Inc/github-workflow-schedule@286010392b8658836e374657a39d87654512926d
         name: Wait for GPU slot
         env:
-          GITHUB_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
+          CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
 
   build:
     name: Build
@@ -83,7 +83,11 @@ jobs:
           mkdir -p $ci_tmp_dir
           echo "ci_tmp_dir=${ci_tmp_dir}" >> $GITHUB_ENV
           echo "wheelhouse_dir=${ci_tmp_dir}/wheelhouse" >> $GITHUB_ENV
-          echo "sha_dir=$HOME/ci-static/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}" >> $GITHUB_ENV
+          sha_dir="${{ secrets.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}"
+          echo "sha_dir=${sha_dir}" >> $GITHUB_ENV
+          if ssh -o StrictHostKeyChecking=no ${{ secrets.CI_STATIC_HOST }} "test -d $sha_dir"; then
+              echo "is_built=1" >> $GITHUB_ENV
+          fi
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
           extra_docker_args=""
           container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
@@ -96,21 +100,29 @@ jobs:
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
       - uses: actions/checkout@v2
       - name: Build OneFlow
+        if: env.is_built != '1'
         uses: ./.github/actions/whl
         with:
           tmp_dir: ${ci_tmp_dir}
           extra_flags: ${{ matrix.extra_flags }}
           cuda_version: ${{ matrix.cuda_version }}
           extra_docker_args: $extra_docker_args
-      - name: Custom Op test (run by oneflow build docker)
-        if: matrix.test_suite == 'cpu'
-        run: |
-          docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-            $extra_docker_args \
-            -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-            oneflow-manylinux2014-cuda10.2:0.1 \
-            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
+      - name: Upload wheel via SSH
+        if: env.is_built != '1'
+        uses: ./.github/actions/upload_ssh
+        with:
+          src_path: ${wheelhouse_dir}
+          dst_host: ${{ secrets.CI_STATIC_HOST }}
+          dst_path: ${{ secrets.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
+      - name: Upload bin via SSH
+        if: matrix.test_suite == 'cuda' && env.is_built != '1'
+        uses: ./.github/actions/upload_ssh
+        with:
+          src_path: ${bin_dir}
+          dst_host: ${{ secrets.CI_STATIC_HOST }}
+          dst_path: ${{ secrets.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/bin
       - name: Upload wheel to cloud
+        if: contains(github.event.pull_request.labels.*.name, 'upload-wheel')
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${wheelhouse_dir}
@@ -118,13 +130,21 @@ jobs:
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Upload bin to cloud
-        if: matrix.test_suite == 'cuda'
+        if: contains(github.event.pull_request.labels.*.name, 'upload-wheel')
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${bin_dir}
           oss_dst_path: oss://oneflow-staging/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/bin
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      - name: Custom Op test (run by oneflow build docker)
+        if: matrix.test_suite == 'cpu' && env.is_built != '1'
+        run: |
+          docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+            $extra_docker_args \
+            -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
+            oneflow-manylinux2014-cuda10.2:0.1 \
+            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
       - name: Remove container
         if: always()
         run: |
@@ -132,14 +152,11 @@ jobs:
       - name: Save shared env
         run: |
           set -x
-          echo "builder_host=$(hostname)" >> build.${{ matrix.test_suite }}.env
+          echo "builder_host=${{ secrets.CI_STATIC_HOST }}" >> build.${{ matrix.test_suite }}.env
           echo "sha_dir=${sha_dir}" >> build.${{ matrix.test_suite }}.env
-          mkdir -p $sha_dir
-          cp -r ${wheelhouse_dir} $sha_dir
-          echo "remote_whl_dir=$(hostname):$sha_dir/$(basename ${wheelhouse_dir})" >> build.${{ matrix.test_suite }}.env
+          echo "remote_whl_dir=${{ secrets.CI_STATIC_HOST }}:$sha_dir/whl" >> build.${{ matrix.test_suite }}.env
           if [ "$test_suite" == "cuda" ]; then
-            cp -r ${bin_dir} $sha_dir
-            echo "remote_bin_dir=$(hostname):$sha_dir/$(basename ${bin_dir})" >> build.${{ matrix.test_suite }}.env
+            echo "remote_bin_dir=${{ secrets.CI_STATIC_HOST }}:$sha_dir/bin" >> build.${{ matrix.test_suite }}.env
           fi
           # duplicate one for cuda_op
           if [ "$test_suite" == "cuda" ]; then
@@ -331,21 +348,33 @@ jobs:
     name: Build (macOS)
     runs-on: "macos-latest"
     if: github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    env:
+      CPATH: /Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
         run: |
           brew install nasm
-      - name: Build
+      - name: Set environment variables
+        run: |
+          set -x
+          cmake_flags=""
+          cmake_flags+=" -DPython3_EXECUTABLE=$(which python3)"
+          cmake_flags+=" -DRPC_BACKEND=LOCAL"
+          cmake_flags+=" -DCMAKE_BUILD_TYPE=Release"
+          cmake_flags+=" -DBUILD_CUDA=OFF"
+          echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
+      - name: Build (third party)
         continue-on-error: true
         run: |
-          export CPATH=/Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
-          mkdir build
+          mkdir -p build
           cd build
-          flags=""
-          flags+=" -DPython3_EXECUTABLE=$(which python3)"
-          flags+=" -DRPC_BACKEND=LOCAL"
-          flags+=" -DCMAKE_BUILD_TYPE=Release"
-          flags+=" -DBUILD_CUDA=OFF"
-          cmake .. $flags
+          cmake .. $cmake_flags -DTHIRD_PARTY=ON -DONEFLOW=OFF
+          make -j $(nproc)
+      - name: Build (OneFlow)
+        continue-on-error: true
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
           make -j $(nproc)
