@@ -140,11 +140,11 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
     const bool is_lazy) {
   const auto& dtype = JUST(DType::GetDTypeByDataType(DataType(blob_attr->get_dtype())));
   if (parallel_attr->is_mirrored()) {
-    // TOOD(hjchen2): Use the right device.
-    return static_cast<std::shared_ptr<Tensor>>(
-        MirroredTensor::MakeTensor(blob_attr->shape(), dtype, std::make_shared<Device>("cpu", 0),
-                                   is_lazy, /*requires_grad=*/false, /*is_leaf=*/false,
-                                   /*retain_grad=*/false));
+    const auto& device =
+        JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
+    return static_cast<std::shared_ptr<Tensor>>(MirroredTensor::MakeTensor(
+        blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/false,
+        /*retain_grad=*/false));
   } else {
     const auto& distribute =
         compatible_py::MakeDistribute(*(parallel_attr->sbp_parallel())).GetPtrOrThrow();
