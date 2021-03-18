@@ -316,6 +316,42 @@ class Tensor:
         )
         return self._init_by_initializer_conf(initializer_conf)
 
+    def kaiming_uniform_(
+        self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
+    ):
+        initializer_conf = flow.kaiming_initializer(
+            shape=self.shape,
+            distribution="random_uniform",
+            mode=mode,
+            nonlinearity=nonlinearity,
+            negative_slope=a,
+            data_format=data_format,
+        )
+        return self._init_by_initializer_conf(initializer_conf)
+
+    def kaiming_normal_(
+        self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
+    ):
+        initializer_conf = flow.kaiming_initializer(
+            shape=self.shape,
+            distribution="random_normal",
+            mode=mode,
+            nonlinearity=nonlinearity,
+            negative_slope=a,
+            data_format=data_format,
+        )
+        return self._init_by_initializer_conf(initializer_conf)
+
+    def xavier_normal_(self, gain=1.0, *, data_format="NCHW"):
+        assert gain == 1.0, "Only gain == 1.0 is supported now"
+        initializer_conf = flow.xavier_normal_initializer(data_format=data_format)
+        return self._init_by_initializer_conf(initializer_conf)
+
+    def xavier_uniform_(self, gain=1.0, *, data_format="NCHW"):
+        assert gain == 1.0, "Only gain == 1.0 is supported now"
+        initializer_conf = flow.xavier_uniform_initializer(data_format=data_format)
+        return self._init_by_initializer_conf(initializer_conf)
+
     def normal_(self, mean=0, std=1):
         initializer_conf = flow.random_normal_initializer(
             mean=mean, stddev=std, dtype=self.dtype
