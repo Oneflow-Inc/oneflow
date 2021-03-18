@@ -106,8 +106,8 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   } else {
     UNIMPLEMENTED();
   }
-  CHECK_JUST(Global<RpcManager>::Get()->Bootstrap());
   CHECK_JUST(Global<RpcManager>::Get()->CreateServer());
+  CHECK_JUST(Global<RpcManager>::Get()->Bootstrap());
   CHECK_JUST(Global<RpcManager>::Get()->CreateClient());
   Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));
