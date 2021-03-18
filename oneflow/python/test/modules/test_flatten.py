@@ -32,5 +32,6 @@ class TestModule(flow.unittest.TestCase):
         print(y.shape[1] == 25)
         print(np.allclose(y.numpy().flatten(), x.numpy().flatten()))
 
+
 if __name__ == "__main__":
     unittest.main()
