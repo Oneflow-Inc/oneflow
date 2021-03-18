@@ -333,6 +333,13 @@ Maybe<void> MakeGetterLossOpNode4OpName(
   return Maybe<void>::Ok();
 }
 
+bool AllSplitDistribution(const ParallelDistribution& parallel_distribution) {
+  for (int64_t i = 0; i < parallel_distribution.sbp_parallel_size(); ++i) {
+    if (!parallel_distribution.sbp_parallel(i).has_split_parallel()) { return false; }
+  }
+  return true;
+}
+
 void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_pairs,
                       OpBlobArgPairs* identical_sbp_oba_pairs) {
   HashSet<OpBlobArg> split_paralleled_obas;
@@ -340,14 +347,7 @@ void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_p
     auto TryInserSplitParalleledObas = [&](const std::string& bn) {
       const auto& lbi = op_node->op().BnInOp2Lbi(bn);
       const auto& fw_parallel_distribution = op_node->ParallelDistribution4Lbi(lbi);
-      bool all_sbp_split = true;
-      for (int64_t i = 0; i < fw_parallel_distribution.sbp_parallel_size(); ++i) {
-        if (!fw_parallel_distribution.sbp_parallel(i).has_split_parallel()) {
-          all_sbp_split = false;
-          break;
-        }
-      }
-      if (all_sbp_split) {
+      if (AllSplitDistribution(fw_parallel_distribution)) {
         split_paralleled_obas.insert(GenOpBlobArg(op_node->op().op_name(), bn));
       }
     };
