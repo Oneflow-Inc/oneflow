@@ -57,8 +57,6 @@ class Tensor:
         elif _input_args_is_shape(*args):
             shape = args
             self._local_or_consistent_tensor = None
-            # TODO(jianhao): update checkpoint to remove this attr
-            self._variable_name = None
             self._undetermined_tensor = UndeterminedTensor(
                 shape,
                 dtype,
@@ -226,9 +224,7 @@ class Tensor:
         assert not self.is_determined
         if determining_initializer is None:
             determining_initializer = self._determining_initializer
-        self._local_or_consistent_tensor, self._variable_name = determining_initializer(
-            self
-        )
+        self._local_or_consistent_tensor = determining_initializer(self)
         self._undetermined_tensor = None
 
     @property
@@ -339,8 +335,10 @@ class Tensor:
 
     def _init_by_initializer_conf(self, initializer_conf):
         if self.is_determined:
-            variable = flow.get_all_variables()[self._variable_name]
-            check_point_v2.init_by_initializer_conf(variable, initializer_conf, True)
+            with self._placement_scope():
+                check_point_v2.init_by_initializer_conf(
+                    self, initializer_conf, True, None
+                )
         else:
             self.set_data_initializer(initializer_conf)
         return self
@@ -395,6 +393,11 @@ class Tensor:
             return flow.scope.placement(
                 self.device.type, "{}:{}".format(machine_id, self.device.index), None
             )
+
+    @property
+    @_auto_determine
+    def _blob_object(self):
+        return self._local_or_consistent_tensor._blob_object
 
 
 class UndeterminedTensor:
@@ -485,7 +488,7 @@ def _default_initializer_for_determining(tensor):
             undetermined_tensor.retain_grad,
         )
     determined_tensor._set_blob_object(blob.blob_object)
-    return determined_tensor, variable_name
+    return determined_tensor
 
 
 def global_function_or_identity(*args, **kwargs):
