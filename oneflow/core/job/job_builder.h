@@ -60,7 +60,6 @@ class JobBuilder final {
   void DelOps(const std::vector<OperatorConf>& op_confs);
 
   SbpParallel* MutSbpParallel4Oba(const OpBlobArg& oba) const;
-  void BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpBlobArg& second);
   void SetSbpParallel4Oba(const OpBlobArg& oba, const SbpParallel& sbp_parallel);
   void SetParallelDistribution4Oba(const OpBlobArg& oba,
                                    const ParallelDistribution& parallel_distribution);
