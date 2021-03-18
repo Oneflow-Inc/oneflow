@@ -577,16 +577,50 @@ def _input_args_is_shape(*args):
 
 def register_tensor_op_by_module(op_name):
     def set_method(module):
-        is_unary = (
-            True if len(inspect.signature(module.forward).parameters) == 2 else False
-        )
-        if is_unary is True:
+        if is_unary_module(module):
             setattr(Tensor, op_name, lambda self: module().forward(self))
         else:
-            assert len(inspect.signature(module.forward).parameters) == 3
+            assert is_binary_module(module)
             setattr(
                 Tensor, op_name, lambda self, x: module().forward(self, x),
             )
         return module
 
     return set_method
+
+
+def register_op_by_module(op_name):
+    def set_method(module):
+        if is_unary_module(module):
+            oneflow_export(op_name)(_get_unary_module_impl(module))
+        else:
+            assert is_binary_module(module)
+            oneflow_export(op_name)(_get_binary_module_impl(module))
+
+        return module
+
+    def _get_unary_module_impl(module):
+        global unary_module_impl
+
+        def unary_module_impl(x):
+            return module().forward(x)
+
+        return unary_module_impl
+
+    def _get_binary_module_impl(module):
+        global binary_module_impl
+
+        def binary_module_impl(x, y):
+            return module().forward(x, y)
+
+        return binary_module_impl
+
+    return set_method
+
+
+def is_unary_module(module):
+    return True if len(inspect.signature(module.forward).parameters) == 2 else False
+
+
+def is_binary_module(module):
+    return True if len(inspect.signature(module.forward).parameters) == 3 else False
