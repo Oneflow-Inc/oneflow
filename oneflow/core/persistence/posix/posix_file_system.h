@@ -53,8 +53,6 @@ class PosixFileSystem final : public FileSystem {
 
   bool IsDirectory(const std::string& fname) override;
 
-  Maybe<bool> IsRegularFile(const std::string& fname) override;
-
  private:
 };
 
