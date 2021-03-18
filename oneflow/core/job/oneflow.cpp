@@ -692,7 +692,6 @@ Maybe<void> MakeCallbackNotifierSinkTick(
     {
       std::string name_prefix = "System-Main-CallbackNotifier_CriticalSection_";
       snk_tick_op_conf.set_name(name_prefix + NewUniqueId());
-      snk_tick_op_conf.set_pass_tag(kMainOp);
       auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
       for (int64_t job_cs_id : job_cs_ids) {
         const auto& cb_sink_tick_op_name = cb_sink_tick_op_names.at(job_cs_id).at(machine_id);
