@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
+#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
@@ -66,7 +67,6 @@ class JobBuilder final {
 
   const ParallelConf& ParallelConf4Lbi(const LogicalBlobId& lbi) const;
   const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;
-  void AddParallelConf4OpName(const std::string& op_name, const ParallelConf& parallel_conf);
 
   const SbpSignature SbpSignature4OpName(const std::string& op_name) const;
   void AddSbpSignature4OpName(const std::string& op_name, const SbpSignature& sbp_signature);
@@ -78,7 +78,8 @@ class JobBuilder final {
       const ParallelDistributionSignature& parallel_distribution_signature);
 
  private:
-  PlacementGroup* FindPlacementGroup(const std::string& op_name) const;
+  void AddOpNamesToPlacementGroup(const std::vector<std::string>& op_names,
+                                  const ParallelConf& parallel_conf);
 
   Job* job_;
   HashMap<std::string, OperatorConf*> op_name2op_conf_;
@@ -89,6 +90,7 @@ class JobBuilder final {
 
   HashMap<std::string, ParallelDistributionSignature*>
       op_name2parallel_distribution_signature_conf_;
+  HashMap<ParallelConf, PlacementGroup*> parallel_conf2placement_group_;
 };
 
 }  // namespace oneflow
