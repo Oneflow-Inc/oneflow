@@ -19,9 +19,9 @@ limitations under the License.
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/graph/stream_index_getter_registry_manager.h"
 
 namespace oneflow {
-
 
 class CompTaskNode : public TaskNode {
  public:
@@ -94,16 +94,17 @@ class FnOpCompTaskNodeCreator : public OpCompTaskNodeCreator {
   CreateFn fn_;
 };
 
-#define REGISTER_USER_OP_COMP_TASK_NODE_TYPE(op_type_name, comp_task_node_type)               \
-  REGISTER_CLASS_CREATOR(std::string, op_type_name, OpCompTaskNodeCreator, ([] {          \
-                           return new StaticOpCompTaskNodeCreator<comp_task_node_type>(); \
-                         }));
+#define REGISTER_USER_OP_COMP_TASK_NODE_TYPE(op_type_name, comp_task_node_type) \
+  REGISTER_CLASS_CREATOR(std::string, op_type_name, OpCompTaskNodeCreator,      \
+                         ([] { return new StaticOpCompTaskNodeCreator<comp_task_node_type>(); }));
 
-#define REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(op_type_case, comp_task_node_type)               \
-  REGISTER_CLASS_CREATOR(int32_t, op_type_case, OpCompTaskNodeCreator, ([] {          \
-                           return new StaticOpCompTaskNodeCreator<comp_task_node_type>(); \
-                         }));
+#define REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(op_type_case, comp_task_node_type) \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, OpCompTaskNodeCreator,            \
+                         ([] { return new StaticOpCompTaskNodeCreator<comp_task_node_type>(); }));
 
+#define REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE_WITH_FUNC(op_type_case, func) \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, OpCompTaskNodeCreator,       \
+                         ([] { return new FnOpCompTaskNodeCreator(func); }));
 
 CompTaskNode* NewCompTaskNode4OpNode(const OpNode* op_node);
 

@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -31,10 +30,12 @@ void DecodeRandomCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void DecodeRandomCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = logical_node()->SoleOp();
+  node->mut_op() = shared_op();
   node->BindBnWithRegst(node->op()->SoleIbn(), GetSoleConsumedRegst("in"));
   node->AddBnToRegstAndBindIt(&Operator::output_bns, out_regst);
   node->InferBlobDescs(parallel_ctx());
 }
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kDecodeRandomConf, DecodeRandomCompTaskNode);
 
 }  // namespace oneflow

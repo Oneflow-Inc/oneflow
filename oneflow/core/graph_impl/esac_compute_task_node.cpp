@@ -27,8 +27,8 @@ void EsacCompTaskNode::ConsumeAllRegsts() {
   ForEachInDataEdge([&](TaskEdge* edge) {
     const OpNode* pred = GetOnePredOpNodeOnEdge(edge);
     int64_t ibn_id = -1;
-    for (const std::string& obn : pred->SoleOp()->output_bns()) {
-      const LogicalBlobId& lbi = pred->SoleOp()->BnInOp2Lbi(obn);
+    for (const std::string& obn : pred->shared_op()->output_bns()) {
+      const LogicalBlobId& lbi = pred->shared_op()->BnInOp2Lbi(obn);
       if (lbi2ibn_id.find(lbi) != lbi2ibn_id.cend()) {
         CHECK_EQ(ibn_id, -1);
         ibn_id = lbi2ibn_id.at(lbi);
@@ -66,5 +66,7 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kEsac
     .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
       return generator->GenerateTickTockStreamIndex();
     });
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kEsacConf, EsacCompTaskNode);
 
 }  // namespace oneflow

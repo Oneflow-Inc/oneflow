@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -39,7 +38,7 @@ void AccCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->
 void AccCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  std::shared_ptr<const Operator> op = logical_node()->SoleOp();
+  std::shared_ptr<const Operator> op = shared_op();
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = op;
   exec_node->BindBnWithRegst(op->SoleIbn(), in_regst);

@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/source_tick_compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
@@ -28,7 +27,7 @@ void SourceTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void SourceTickCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = logical_node()->SoleOp();
+  node->mut_op() = shared_op();
   for (const std::string& obn : node->op()->output_bns()) {
     const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(obn);
     out_regst->AddLbi(lbi);
@@ -43,5 +42,7 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kSour
     .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
       return generator->GenerateTickTockStreamIndex();
     });
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kSourceTickConf, SourceTickCompTaskNode);
 
 }  // namespace oneflow

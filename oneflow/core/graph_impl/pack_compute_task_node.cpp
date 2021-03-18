@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -41,7 +40,7 @@ void PackCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void PackCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
 
 void PackCompTaskNode::BuildExecGphAndRegst() {
-  std::shared_ptr<const Operator> op = logical_node()->SoleOp();
+  std::shared_ptr<const Operator> op = shared_op();
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = op;
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");

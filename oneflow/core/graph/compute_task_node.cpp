@@ -16,33 +16,14 @@ limitations under the License.
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
-/*
-#include "oneflow/core/graph/decode_random_compute_task_node.h"
-#include "oneflow/core/graph/distribute_concat_compute_task_node.h"
-#include "oneflow/core/graph/distribute_split_compute_task_node.h"
-#include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
-#include "oneflow/core/graph/foreign_input_compute_task_node.h"
-#include "oneflow/core/graph/foreign_output_compute_task_node.h"
-#include "oneflow/core/graph/callback_notify_compute_task_node.h"
-#include "oneflow/core/graph/reentrant_lock_compute_task_node.h"
-#include "oneflow/core/graph/src_subset_tick_compute_task_node.h"
-#include "oneflow/core/graph/dst_subset_tick_compute_task_node.h"
-#include "oneflow/core/graph/source_tick_compute_task_node.h"
-#include "oneflow/core/graph/tick_compute_task_node.h"
-#include "oneflow/core/graph/device_tick_compute_task_node.h"
-#include "oneflow/core/graph/acc_tick_compute_task_node.h"
-#include "oneflow/core/graph/case_compute_task_node.h"
-#include "oneflow/core/graph/esac_compute_task_node.h"
-#include "oneflow/core/graph/decode_h2d_compute_task_node.h"
-*/
 
 namespace oneflow {
 
 namespace {
 
-const OpNode* OpNodeOnEdge(
-    TaskEdge* edge, TaskNode* (TaskEdge::*GetNode)() const,
-    void (TaskNode::*ForEachDataEdge)(const std::function<void(TaskEdge*)>&) const) {
+const OpNode* OpNodeOnEdge(TaskEdge* edge, TaskNode* (TaskEdge::*GetNode)() const,
+                           void (TaskNode::*ForEachDataEdge)(const std::function<void(TaskEdge*)>&)
+                               const) {
   CompTaskNode* target_node = nullptr;
   do {
     TaskNode* tmp_node = (edge->*GetNode)();
@@ -84,9 +65,7 @@ std::vector<CompTaskNode*> GetCompTaskNodesOnEdge(
 
 }  // namespace
 
-std::string CompTaskNode::VisualStr() const {
-  return op_node_->op().op_name();
-}
+std::string CompTaskNode::VisualStr() const { return op_node_->op().op_name(); }
 
 void CompTaskNode::ToProto(TaskProto* task_proto) {
   TaskNode::ToProto(task_proto);
@@ -110,8 +89,7 @@ std::vector<CompTaskNode*> CompTaskNode::GetPredCompTaskNodesOnEdge(TaskEdge* ed
 }
 
 void CompTaskNode::InferProducedDataRegstTimeShape() {
-  std::shared_ptr<Shape> op_time_shape(
-      new Shape(*CHECK_JUST(shared_op()->GetOpTimeShape())));
+  std::shared_ptr<Shape> op_time_shape(new Shape(*CHECK_JUST(shared_op()->GetOpTimeShape())));
   ForEachProducedDataRegst([op_time_shape](const std::string& name, RegstDesc* regst) {
     *regst->mut_data_regst_time_shape() = op_time_shape;
   });

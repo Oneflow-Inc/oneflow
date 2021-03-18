@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/register/op_blob_arg_info.h"
 #include "oneflow/core/graph/boxing/boxing_logger.h"
@@ -28,10 +30,18 @@ namespace oneflow {
 class SubTskGphBuilderCtx;
 class HierarchicalSubTskGphBuilder;
 
+#define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
+  (const OpEdge* op_edge, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,        \
+   const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,                               \
+   std::function<TaskNode**(CompTaskNode * src, int64_t machine_id, int32_t mem_zone_id)> \
+       MutBufTask)
+
+class TaskGraph;
+using BldSubTskGphMthd = void(TaskGraph::*) BLD_SUB_TSK_GPH_MTHD_ARGS();
+
 class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
-  TaskGraph() = delete;
   ~TaskGraph() override;
 
   explicit TaskGraph();

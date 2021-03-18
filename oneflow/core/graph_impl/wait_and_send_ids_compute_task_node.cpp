@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/wait_and_send_ids_compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -26,7 +25,7 @@ void WaitAndSendIdsCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void WaitAndSendIdsCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = logical_node()->SoleOp();
+  node->mut_op() = shared_op();
   for (const std::string& obn : node->op()->output_bns()) {
     const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(obn);
     out_regst->AddLbi(lbi);
@@ -46,5 +45,8 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kWait
     .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
       return generator->GenerateIndependentTaskStreamIndex(TaskType::kWaitAndSendIds);
     });
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kWaitAndSendIdsConf,
+                                       WaitAndSendIdsCompTaskNode);
 
 }  // namespace oneflow

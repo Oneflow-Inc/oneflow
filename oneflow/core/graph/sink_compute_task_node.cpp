@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/sink_compute_task_node.h"
 
 namespace oneflow {
@@ -26,7 +25,7 @@ void SinkCompTaskNode::ConsumeAllRegsts() {
 
 void SinkCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = logical_node()->SoleOp();
+  node->mut_op() = shared_op();
   for (const std::string& ibn : node->op()->input_bns()) {
     node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in"));
   }
