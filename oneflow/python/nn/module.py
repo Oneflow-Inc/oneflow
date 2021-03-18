@@ -380,7 +380,8 @@ class Module(object):
                     # TODO(jianhao): uncomment these lines when autograd is ready
                     # with torch.no_grad():
                     # param.copy_(input_param)
-                    FeedValueToVariable(param, input_param)
+                    with param._placement_scope():
+                        FeedValueToVariable(param, input_param, None)
                 except Exception as ex:
                     error_msgs.append(
                         'While copying the parameter named "{}", '
