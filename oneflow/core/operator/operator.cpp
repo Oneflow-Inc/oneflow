@@ -698,7 +698,7 @@ Maybe<void> Operator::InferParallelDistributionSignature(
     SbpSignatureToParallelDistributionSignature(sbp_signature, signature);
     return Maybe<void>::Ok();
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN();
   }
 }
 

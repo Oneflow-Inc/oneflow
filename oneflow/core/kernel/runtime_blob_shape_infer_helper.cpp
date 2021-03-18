@@ -28,8 +28,8 @@ RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_
   const OpAttribute& op_attribute = kernel_conf.op_attribute();
   if (op_attribute.has_parallel_conf_signature()
       && op_attribute.parallel_conf_signature().has_op_parallel_conf()) {
-    op_->FillOpParallelDesc(
-        ParallelDesc(op_attribute.parallel_conf_signature().op_parallel_conf()));
+    CHECK_JUST(op_->FillOpParallelDesc(
+        ParallelDesc(op_attribute.parallel_conf_signature().op_parallel_conf())));
   }
   if (op_attribute.has_sbp_signature()) {
     sbp_signature_.reset(new SbpSignature(op_attribute.sbp_signature()));
