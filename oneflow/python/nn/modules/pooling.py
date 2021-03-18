@@ -28,6 +28,7 @@ from typing import Optional, List, Tuple
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 import oneflow.python.framework.id_util as id_util
 
+
 @oneflow_export("nn.AvgPool2d")
 class AvgPool2d(Module):
     r"""Applies a 2D average pooling over an input.
@@ -123,6 +124,7 @@ class AvgPool2d(Module):
     def forward(self, x):
         res = self._op(x)[0]
         return res
+
 
 @oneflow_export("nn.MaxPool2d")
 class MaxPool2d(Module):
