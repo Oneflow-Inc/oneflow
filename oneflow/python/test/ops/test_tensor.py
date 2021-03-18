@@ -70,6 +70,39 @@ class TestTensor(flow.unittest.TestCase):
 
         job()
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_indexing(test_case):
+        class SliceExtracter:
+            def __getitem__(self, key):
+                return key
+
+        se = SliceExtracter()
+
+        x = flow.Tensor(5, 5)
+
+        def compare_getitem_with_numpy(tensor, slices):
+            np_arr = tensor.numpy()
+            test_case.assertTrue(np.array_equal(np_arr[slices], tensor[slices].numpy()))
+
+        def compare_setitem_with_numpy(tensor, slices, value):
+            np_arr = tensor.numpy()
+            if isinstance(value, flow.Tensor):
+                np_value = value.numpy()
+            else:
+                np_value = value
+            np_arr[slices] = np_value
+            tensor[slices] = value
+            test_case.assertTrue(np.array_equal(np_arr, tensor.numpy()))
+
+        compare_getitem_with_numpy(x, se[-4:-1:2])
+        compare_getitem_with_numpy(x, se[-1:])
+        v = flow.Tensor([[0, 1, 2, 3, 4]])
+        compare_setitem_with_numpy(x, se[-1:], v)
+        compare_setitem_with_numpy(x, se[2::2], 2)
+
 
 if __name__ == "__main__":
     unittest.main()
