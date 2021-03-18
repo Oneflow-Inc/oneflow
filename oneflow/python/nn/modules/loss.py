@@ -32,6 +32,32 @@ import oneflow.python.framework.id_util as id_util
 @oneflow_export("nn.CrossEntropyLoss")
 class CrossEntropyLoss(Module):
     r"""
+
+    Args:
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will
+            be applied, ``'mean'``: the weighted mean of the output is taken,
+            ``'sum'``: the output will be summed. Note: :attr:`size_average`
+            and :attr:`reduce` are in the process of being deprecated, and in
+            the meantime, specifying either of those two args will override
+            :attr:`reduction`. Default: ``'mean'``
+
+    Shape:
+        - Input: :math:`(N, C)` where `C = number of classes`, or
+          :math:`(N, C, d_1, d_2, ..., d_K)` with :math:`K \geq 1`
+          in the case of `K`-dimensional loss.
+        - Target: :math:`(N)` where each value is :math:`0 \leq \text{targets}[i] \leq C-1`, or
+          :math:`(N, d_1, d_2, ..., d_K)` with :math:`K \geq 1` in the case of
+          K-dimensional loss.
+        - Output: scalar.
+          If :attr:`reduction` is ``'none'``, then the same size as the target:
+          :math:`(N)`, or
+          :math:`(N, d_1, d_2, ..., d_K)` with :math:`K \geq 1` in the case
+          of K-dimensional loss.
+
+    Examples::
+
+        TODO(yaochi): add example
     """
 
     def __init__(
@@ -45,8 +71,9 @@ class CrossEntropyLoss(Module):
         assert reduction in [
             "sum",
             "none",
+            "mean",
             None,
-        ], "only 'sum' and None supported by now"
+        ], "only 'sum', 'mean' and None supported by now"
 
         self.reduction = reduction
 
@@ -65,7 +92,8 @@ class CrossEntropyLoss(Module):
         self._op = self._op.Attr("depth", input.shape[len(input.shape) - 1]).Build()
         prob, out = self._op(input, target)
         if self.reduction == "mean":
-            raise ValueError("not supported yet")
+            self._mean = flow.Mean()
+            return self._mean(out)
         elif self.reduction == "sum":
             self._sum = flow.Sum()
             return self._sum(out)

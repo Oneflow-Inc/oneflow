@@ -35,6 +35,7 @@ g_test_samples = [
         "target": np.array([3, 3, 4], dtype=np.int32),
         "out": np.array([1.1380, 1.7332, 1.4287], dtype=np.float32),
         "out_sum": np.array([4.2999], dtype=np.float32),
+        "out_mean": np.array([1.4333], dtype=np.float32),
     }
 ]
 
@@ -56,6 +57,10 @@ class TestModule(flow.unittest.TestCase):
             loss_sum = flow.nn.CrossEntropyLoss(reduction="sum")
             of_out_sum = loss_sum(input, target)
             assert np.allclose(of_out_sum.numpy(), sample["out_sum"], 1e-4, 1e-4)
+
+            loss_mean = flow.nn.CrossEntropyLoss(reduction="mean")
+            of_out_mean = loss_mean(input, target)
+            assert np.allclose(of_out_mean.numpy(), sample["out_mean"], 1e-4, 1e-4)
 
 
 if __name__ == "__main__":
