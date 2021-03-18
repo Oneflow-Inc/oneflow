@@ -587,5 +587,6 @@ def register_tensor_op_by_module(op_name):
             setattr(
                 Tensor, op_name, lambda self, x: module().forward(self, x),
             )
+        return module
 
     return set_method

@@ -33,8 +33,8 @@ class Sigmoid(Module):
         return res
 
 
-@register_tensor_op_by_module("relu")
 @oneflow_export("nn.ReLU")
+@register_tensor_op_by_module("relu")
 class ReLU(Module):
     def __init__(self):
         super().__init__()
