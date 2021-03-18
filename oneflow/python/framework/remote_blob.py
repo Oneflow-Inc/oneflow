@@ -161,7 +161,7 @@ def numpy_list(self, rank=None):
     return [self._Numpy()]
 
 
-def BlobObjectNumpy(blob_object, parallel_conf, tmp_name=None):
+def BlobObjectNumpy(blob_object, tmp_name=None):
     if tmp_name is None:
         tmp_name = id_util.UniqueStr("numpy-tmp-")
 
@@ -202,7 +202,7 @@ def BlobObjectNumpy(blob_object, parallel_conf, tmp_name=None):
 
 def _Numpy(self):
     tmp_name = "{}-consistent".format(self.logical_blob_name)
-    return BlobObjectNumpy(self.blob_object, self.parallel_conf, tmp_name)
+    return BlobObjectNumpy(self.blob_object, tmp_name)
 
 
 def RegisterMethod4EagerBlobTrait():

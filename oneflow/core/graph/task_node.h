@@ -100,7 +100,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual bool IsIndependent() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
   virtual MemZoneId MemZoneId121() const;
-  void BuildCtrlRegstDescIfNeed(TaskNode* dst_node);
+  bool BuildCtrlRegstDescIfNeed(TaskNode* dst_node, std::string* name);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name);
   std::shared_ptr<Shape> GetFastestInputOutputTimeShape() const;

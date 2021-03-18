@@ -27,14 +27,14 @@ limitations under the License.
 
 namespace oneflow {
 
-class SubTskGphBuilder;
 class SubTskGphBuilderCtx;
+class HierarchicalSubTskGphBuilder;
 
 class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
   TaskGraph() = delete;
-  ~TaskGraph() override = default;
+  ~TaskGraph() override;
 
   explicit TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph);
 
@@ -97,8 +97,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;
-  std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
-  std::shared_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
+  std::unique_ptr<HierarchicalSubTskGphBuilder> hierarchical_sub_tsk_gph_builder_;
+  std::unique_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
   std::unique_ptr<BoxingLogger> boxing_logger_;
 };
 

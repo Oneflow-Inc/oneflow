@@ -236,12 +236,13 @@ MemZoneId TaskNode::MemZoneId121() const {
   return MemZoneId(device_id.device_type(), device_id.device_index());
 }
 
-void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
-  if (IsMeaningLess() || dst_node->IsMeaningLess()) { return; }
+bool TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node, std::string* name) {
+  if (IsMeaningLess() || dst_node->IsMeaningLess()) { return false; }
   for (const TaskEdge* in_edge : dst_node->in_edges()) {
-    if (in_edge->src_node() == this) { return; }
+    if (in_edge->src_node() == this) { return false; }
   }
-  BuildCtrlRegstDesc(dst_node);
+  BuildCtrlRegstDesc(dst_node, name);
+  return true;
 }
 
 RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node) {
