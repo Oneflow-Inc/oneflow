@@ -606,19 +606,19 @@ def register_op_by_module(op_name):
         return module
 
     def _get_unary_module_impl(module):
-        global module_impl
+        global unary_module_impl
 
-        def module_impl(x):
+        def unary_module_impl(x):
             return module().forward(x)
 
-        return module_impl
+        return unary_module_impl
 
     def _get_binary_module_impl(module):
-        global module_impl
+        global binary_module_impl
 
-        def module_impl(x, y):
+        def binary_module_impl(x, y):
             return module().forward(x, y)
 
-        return module_impl
+        return binary_module_impl
 
     return set_method

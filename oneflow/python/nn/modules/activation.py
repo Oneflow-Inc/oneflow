@@ -19,6 +19,7 @@ from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op_by_module
 from oneflow.python.framework.tensor import register_op_by_module
 
+
 @register_op_by_module("sigmoid")
 @register_tensor_op_by_module("sigmoid")
 @oneflow_export("nn.Sigmoid")
