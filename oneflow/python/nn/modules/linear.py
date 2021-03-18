@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
