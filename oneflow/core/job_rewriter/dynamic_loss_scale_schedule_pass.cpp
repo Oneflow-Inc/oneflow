@@ -46,8 +46,8 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
         std::make_shared<cfg::JobConfigProto>(job->job_conf());
     const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
         std::make_shared<cfg::ParallelConf>(parallel_conf);
-    scope_symbol_id =
-        Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+    scope_symbol_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())
+                          ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
   }
   OperatorConf loss_scale_var_op_conf{};
   const std::string op_name_prefix = "System-Train-DynamicLossScale-";
