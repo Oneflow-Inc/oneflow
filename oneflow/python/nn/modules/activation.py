@@ -16,8 +16,10 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.framework.tensor import register_tensor_op_by_module
 
 
+@register_tensor_op_by_module("sigmoid")
 @oneflow_export("nn.Sigmoid")
 class Sigmoid(Module):
     def __init__(self):
@@ -32,6 +34,7 @@ class Sigmoid(Module):
 
 
 @oneflow_export("nn.ReLU")
+@register_tensor_op_by_module("relu")
 class ReLU(Module):
     def __init__(self):
         super().__init__()
