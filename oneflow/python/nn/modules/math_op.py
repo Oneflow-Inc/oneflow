@@ -29,6 +29,7 @@ from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 import oneflow.python.framework.id_util as id_util
+from oneflow.python.framework.tensor import register_tensor_op_by_module
 
 
 def _check_axis(axis, shape):
@@ -165,6 +166,7 @@ class BroadcastMul(Module):
         return self._op(x, y)[0]
 
 
+@register_tensor_op_by_module("mul")
 @oneflow_export("Mul")
 class Mul(Module):
     r"""Compute :math:`x \times y`.
@@ -201,14 +203,8 @@ class Mul(Module):
 
     """
 
-    def __init__(
-        self,
-        axis: Optional[Union[int, Sequence[int]]] = None,
-        keepdims: bool = False,
-        name: Optional[str] = None,
-    ) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        pass
 
     def forward(self, x, y):
         if isinstance(x, (int, float)):
@@ -261,3 +257,109 @@ class Mean(Module):
             for i in axes:
                 reduce_count *= input_tensor.shape[i]
         return flow.Mul()(reduce_sum, 1.0 / reduce_count)
+
+
+class ScalarSubByTensor(Module):
+    def __init__(self, name=None) -> None:
+        super().__init__()
+        if name is None:
+            name = id_util.UniqueStr("ScalarSubByTensor_")
+        self._op = (
+            flow.builtin_op("scalar_sub_by_tensor")
+            .Name(name)
+            .Input("x")
+            .Input("scalar")
+            .Output("y")
+            .Build()
+        )
+
+    def forward(self, x, y):
+        return self._op(x, y)[0]
+
+
+class BroadcastSub(Module):
+    def __init__(self, name=None) -> None:
+        super().__init__()
+        if name is None:
+            name = id_util.UniqueStr("BroadcastSub_")
+        self._op = (
+            flow.builtin_op("broadcast_sub")
+            .Name(name)
+            .Input("x")
+            .Input("y")
+            .Output("z")
+            .Build()
+        )
+
+    def forward(self, x, y):
+        return self._op(x, y)[0]
+
+
+class ScalarAdd(Module):
+    def __init__(self, operand, name=None) -> None:
+        super().__init__()
+        if name is None:
+            name = id_util.UniqueStr("ScalarAdd_")
+        self._op = flow.builtin_op("scalar_add").Name(name).Input("in").Output("out")
+
+        if isinstance(operand, int):
+            self._op = (
+                self._op.Attr("has_int_operand", True)
+                .Attr("has_float_operand", False)
+                .Attr("int_operand", operand)
+                .Attr("float_operand", 0.0)
+            )
+        elif isinstance(operand, float):
+            self._op = (
+                self._op.Attr("has_int_operand", False)
+                .Attr("has_float_operand", True)
+                .Attr("int_operand", 0)
+                .Attr("float_operand", operand)
+            )
+        else:
+            raise ValueError("operand type can only be int or float")
+
+        self._op = self._op.Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("Sub")
+class Sub(Module):
+    r"""
+
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        pass
+
+    def forward(self, x, y):
+        if isinstance(x, (int, float)):
+            return ScalarAdd(x)(ScalarMul(-1)(y))
+        elif isinstance(y, (int, float)):
+            return ScalarAdd(-1 * y)(x)
+        elif x.shape == y.shape:
+            # TODO: add element-wise op
+            return BroadcastSub()(x, y)
+        elif x.shape == (1,):
+            return ScalarSubByTensor()(y, x)
+        elif y.shape == (1,):
+            return ScalarSubByTensor()(x, y)
+        else:
+            return BroadcastSub()(x, y)
+
+
+import numpy as np
+
+if __name__ == "__main__":
+    flow.enable_eager_execution(True)
+    x = flow.Tensor(np.random.randn(2, 3))
+    y = 5
+    sub = flow.Sub()
+    print(x.numpy(), y)
+    print(sub(x, y).numpy())
+
+    print(x.numpy(), y)
+    print(sub(y, x).numpy())
