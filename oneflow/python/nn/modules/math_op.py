@@ -350,6 +350,7 @@ class Sub(Module):
         else:
             return BroadcastSub()(x, y)
 
+
 class BroadcastDiv(Module):
     def __init__(self, name=None) -> None:
         super().__init__()
@@ -363,6 +364,10 @@ class BroadcastDiv(Module):
             .Output("z")
             .Build()
         )
+
+    def forward(self, x, y):
+        return self._op(x, y)[0]
+
 
 class ScalarDivByTensor(Module):
     def __init__(self, name=None) -> None:
@@ -380,6 +385,7 @@ class ScalarDivByTensor(Module):
 
     def forward(self, x, scalar):
         return self._op(x, scalar)[0]
+
 
 @oneflow_export("Div")
 class Div(Module):
@@ -405,24 +411,31 @@ class Div(Module):
 
     def __init__(self, name: Optional[str] = None) -> None:
         super().__init__()
-    
-    # if isinstance(x, (int, float)):
-    #     return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
-    # elif isinstance(y, (int, float)):
-    #     if y == 0 or y == 0.0:
-    #         y = 0.0
-    #     else:
-    #         y = 1.0 / (float(y))
-    #     return scalar_mul(x, y, name)
-    # elif x.shape == y.shape:
-    #     # TODO: add element-wise op
-    #     return broadcast_div(x, y, name)
-    # elif x.shape == (1,):
-    #     return scalar_div_by_tensor(y, x, name)
-    # elif y.shape == (1,):
-    #     return scalar_div_by_tensor(x, y, name)
-    # else:
-    #     return broadcast_div(x, y, name)
+        self.name = name
+
+    def forward(self, x, y):
+        if isinstance(x, (int, float)):
+            return ScalarMul(x)(flow.Reciprocal()(y))
+            # return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
+        elif isinstance(y, (int, float)):
+            if y == 0 or y == 0.0:
+                y = 0.0
+            else:
+                y = 1.0 / (float(y))
+            return ScalarMul(y)(x)
+        elif x.shape == y.shape:
+            # TODO: add element-wise op
+            return BroadcastDiv()(x, y)
+            # return broadcast_div(x, y, name)
+        elif x.shape == (1,):
+            return ScalarDivByTensor(y, x)
+        elif y.shape == (1,):
+            return ScalarDivByTensor(x, y)
+            # return scalar_div_by_tensor(x, y, name)
+        else:
+            return BroadcastDiv()(x, y)
+            # broadcast_div(x, y, name)
+
 
 @oneflow_export("Reciprocal")
 class Reciprocal(Module):
@@ -449,19 +462,33 @@ class Reciprocal(Module):
             .Output("y")
             .Build()
         )
-    
+
     def forward(self, x):
         return self._op(x)[0]
+
 
 import numpy as np
 
 if __name__ == "__main__":
     flow.enable_eager_execution(True)
+    div = flow.Div()
+
+    x = 5
+    y = flow.Tensor(np.random.randn(2, 3))
+    out = div(x, y)
+    print(out.numpy())
+
     x = flow.Tensor(np.random.randn(2, 3))
     y = 5
-    sub = flow.Sub()
-    print(x.numpy(), y)
-    print(sub(x, y).numpy())
+    out = div(x, y)
+    print(out.numpy())
 
-    print(x.numpy(), y)
-    print(sub(y, x).numpy())
+    x = flow.Tensor(np.random.randn(1, 3))
+    y = flow.Tensor(np.random.randn(2, 3))
+    out = div(x, y)
+    print(out.numpy())
+
+    x = flow.Tensor(np.random.randn(2, 3))
+    y = flow.Tensor(np.random.randn(1, 3))
+    out = div(x, y)
+    print(out.numpy())
