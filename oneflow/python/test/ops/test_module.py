@@ -64,7 +64,7 @@ class TestModule(flow.unittest.TestCase):
         tanh = flow.nn.Tanh()
         y = tanh(x)
         z = np.tanh(input_arr)
-        
+
         test_case.assertTrue(np.allclose(y.numpy(), z, atol=1e-4))
 
     def test_load_state_dict(test_case):
