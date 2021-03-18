@@ -350,6 +350,108 @@ class Sub(Module):
         else:
             return BroadcastSub()(x, y)
 
+class BroadcastDiv(Module):
+    def __init__(self, name=None) -> None:
+        super().__init__()
+        if name is None:
+            name = id_util.UniqueStr("BroadcastDiv_")
+        self._op = (
+            flow.builtin_op("broadcast_div")
+            .Name(name)
+            .Input("x")
+            .Input("y")
+            .Output("z")
+            .Build()
+        )
+
+class ScalarDivByTensor(Module):
+    def __init__(self, name=None) -> None:
+        super().__init__()
+        if name is None:
+            name = id_util.UniqueStr("ScalarDivByTensor_")
+        self._op = (
+            flow.builtin_op("scalar_div_by_tensor")
+            .Name(name)
+            .Input("x")
+            .Input("scalar")
+            .Output("y")
+            .Build()
+        )
+
+    def forward(self, x, scalar):
+        return self._op(x, scalar)[0]
+
+@oneflow_export("Div")
+class Div(Module):
+    r"""Computes the division of x by y.
+
+    The formula is:
+
+    .. math::
+        out = \frac{X}{Y}
+
+    Args:
+        x (Union[int, float, flow.Tensor]): X.
+        y (Union[int, float, flow.Tensor]): Y.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    For example:
+
+    .. code-block:: python
+
+        # out [2.5, 4., 4.5]
+
+    """
+
+    def __init__(self, name: Optional[str] = None) -> None:
+        super().__init__()
+    
+    # if isinstance(x, (int, float)):
+    #     return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
+    # elif isinstance(y, (int, float)):
+    #     if y == 0 or y == 0.0:
+    #         y = 0.0
+    #     else:
+    #         y = 1.0 / (float(y))
+    #     return scalar_mul(x, y, name)
+    # elif x.shape == y.shape:
+    #     # TODO: add element-wise op
+    #     return broadcast_div(x, y, name)
+    # elif x.shape == (1,):
+    #     return scalar_div_by_tensor(y, x, name)
+    # elif y.shape == (1,):
+    #     return scalar_div_by_tensor(x, y, name)
+    # else:
+    #     return broadcast_div(x, y, name)
+
+@oneflow_export("Reciprocal")
+class Reciprocal(Module):
+    r"""Computes the safe reciprocal of x. If x is zero, the reciprocal will 
+    be also set to zero.
+
+    Args:
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    For example: 
+
+    .. code-block:: python 
+        # out [0.   0.5  0.25]
+    """
+
+    def __init__(self, name: Optional[str] = None) -> None:
+        super().__init__()
+        if name is None:
+            name = id_util.UniqueStr("Reciprocal_")
+        self._op = (
+            flow.builtin_op("reciprocal_no_nan")
+            .Name(name)
+            .Input("x")
+            .Output("y")
+            .Build()
+        )
+    
+    def forward(self, x):
+        return self._op(x)[0]
 
 import numpy as np
 
