@@ -46,4 +46,9 @@ void DeviceTickCompTaskNode::BuildExecGphAndRegst() {
 
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kDeviceTick);
 
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kDeviceTick)
+    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateTickTockStreamIndex();
+    });
+
 }  // namespace oneflow

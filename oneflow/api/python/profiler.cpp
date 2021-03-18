@@ -13,19 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OPERATOR_INDEXED_SLICES_REDUCE_SUM_OP_UTIL_H_
-#define ONEFLOW_CORE_OPERATOR_INDEXED_SLICES_REDUCE_SUM_OP_UTIL_H_
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
 
-#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/profiler/profiler.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 
-struct IndexedSlicesReduceSumOpUtil {
-  static void GetReduceSumWorkspaceSizeInBytes(DeviceType device_type, DataType value_type,
-                                               DataType index_type, int64_t n, int64_t m,
-                                               int64_t* workspace_size_in_bytes);
-};
+ONEFLOW_API_PYBIND11_MODULE("profiler", m) {
+  m.def("RangePush", [](const std::string& str) { OF_PROFILER_RANGE_PUSH(str); });
+
+  m.def("RangePop", []() { OF_PROFILER_RANGE_POP(); });
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_OPERATOR_INDEXED_SLICES_REDUCE_SUM_OP_UTIL_H_
