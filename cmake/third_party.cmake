@@ -165,6 +165,10 @@ set(oneflow_third_party_dependencies
   lz4_copy_headers_to_destination
 )
 
+if (RPC_BACKEND MATCHES "GRPC")
+  list(APPEND oneflow_third_party_dependencies grpc_copy_headers_to_destination)
+  list(APPEND oneflow_third_party_dependencies grpc_copy_libs_to_destination)
+endif()
 
 list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${ZLIB_INCLUDE_DIR}
@@ -192,10 +196,6 @@ if (NOT WITH_XLA)
   list(APPEND ONEFLOW_INCLUDE_SRC_DIRS ${RE2_INCLUDE_DIR})
 endif()
 
-if (RPC_BACKEND MATCHES "GRPC")
-  list(APPEND oneflow_third_party_dependencies grpc_copy_headers_to_destination)
-  list(APPEND oneflow_third_party_dependencies grpc_copy_libs_to_destination)
-endif()
 if (BUILD_CUDA)
   include(cub)
   include(nccl)
