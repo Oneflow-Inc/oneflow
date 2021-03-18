@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +12,30 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_COMMON_CONSTANT_H_
-#define ONEFLOW_CORE_COMMON_CONSTANT_H_
+"""
+import unittest
+from typing import Tuple
 
-#include <string>
+import oneflow as flow
+import oneflow.typing as tp
 
-namespace oneflow {
 
-static const int64_t kInvalidSessionId = -1;
-static const std::string kNoPassTag = "";
-static const std::string kMainOp = "main_op";
+class TestContainer(flow.unittest.TestCase):
+    def test_module_forward(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self, w):
+                super().__init__()
+                self.w = w
 
-}  // namespace oneflow
+            def forward(self, x):
+                return x + self.w
 
-#endif  // ONEFLOW_CORE_COMMON_CONSTANT_H_
+        m1 = CustomModule(5)
+        m2 = CustomModule(4)
+        s = flow.nn.Sequential(m1, m2)
+
+        test_case.assertEqual(s(1), 10)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/intra_job_mem_sharing_util.h"
+#include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
@@ -92,6 +94,13 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   {
     auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
     (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
+  }
+  {
+    // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
+    auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
+    IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
+    PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
+    PlanUtil::GenMemBlockAndChunk4Plan(plan);
   }
   Global<OpGraph>::Delete();
 }
