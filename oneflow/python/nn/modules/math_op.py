@@ -465,30 +465,3 @@ class Reciprocal(Module):
 
     def forward(self, x):
         return self._op(x)[0]
-
-
-import numpy as np
-
-if __name__ == "__main__":
-    flow.enable_eager_execution(True)
-    div = flow.Div()
-
-    x = 5
-    y = flow.Tensor(np.random.randn(2, 3))
-    out = div(x, y)
-    print(out.numpy())
-
-    x = flow.Tensor(np.random.randn(2, 3))
-    y = 5
-    out = div(x, y)
-    print(out.numpy())
-
-    x = flow.Tensor(np.random.randn(1, 3))
-    y = flow.Tensor(np.random.randn(2, 3))
-    out = div(x, y)
-    print(out.numpy())
-
-    x = flow.Tensor(np.random.randn(2, 3))
-    y = flow.Tensor(np.random.randn(1, 3))
-    out = div(x, y)
-    print(out.numpy())
