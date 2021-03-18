@@ -86,6 +86,7 @@ Maybe<void> LazyInterpreter::Apply_(const BuiltinOpExpr& op_expr, const TensorTu
       outputs[i] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
     } else {
       // TODO(hjchen2) Reset shape, dtype and so on.
+      UNIMPLEMENTED();
     }
     TensorNameScope::Global()->Record(outputs[i], op_expr.op_name() + "/" + obn);
   }
@@ -159,37 +160,37 @@ Maybe<void> EagerInterpreter::Apply_(const VariableOpExpr& op_expr, const Tensor
   return NaiveInterpret(op_expr, inputs, outputs, op_attribute, parallel_conf);
 }
 
-static Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
-BuildMirroredCastInstruction(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
-                             TensorTuple& outputs, const OpExprInterpContext* ctx) {
+static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_expr,
+                                                      const TensorTuple& inputs,
+                                                      TensorTuple& outputs,
+                                                      const OpExprInterpContext* ctx) {
   const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs));
-  auto build_instruction = [&, op_attribute](const std::shared_ptr<InstructionsBuilder>& builder) {
-    const auto& bn2blob_object =
-        CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
-    const auto& in_blob_object = (*bn2blob_object)["in"];
-    const auto& parallel_desc_symbol = in_blob_object->parallel_desc_symbol();
-    OpAttribute proto_op_attribute;
-    op_attribute->ToProto(&proto_op_attribute);
-    const auto& op_arg_parallel_attr = CHECK_JUST(
-        compatible_py::GetOpArgParallelAttribute(parallel_desc_symbol, proto_op_attribute, "out"));
+  const auto& bn2blob_object =
+      JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
+  const auto& in_blob_object = (*bn2blob_object)["in"];
+  const auto& parallel_desc_symbol = in_blob_object->parallel_desc_symbol();
+  OpAttribute proto_op_attribute;
+  op_attribute->ToProto(&proto_op_attribute);
+  const auto& op_arg_parallel_attr = JUST(
+      compatible_py::GetOpArgParallelAttribute(parallel_desc_symbol, proto_op_attribute, "out"));
+
+  auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
     const auto& out_blob_object = CHECK_JUST(builder->MakeReferenceBlobObject(
         in_blob_object,
         std::make_shared<compatible_py::OpArgParallelAttribute>(*op_arg_parallel_attr)));
     outputs[0] = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(out_blob_object));
   };
-  return std::function<void(const std::shared_ptr<InstructionsBuilder>&)>(build_instruction);
+  return LogicalRun(build_instruction);
 }
 
 Maybe<void> EagerInterpreter::Apply_(const CastToMirroredOpExpr& op_expr, const TensorTuple& inputs,
                                      TensorTuple& outputs) {
-  auto build_instruction = JUST(BuildMirroredCastInstruction(op_expr, inputs, outputs, context()));
-  return LogicalRun(*build_instruction);
+  return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs, context());
 }
 
 Maybe<void> EagerInterpreter::Apply_(const CastFromMirroredOpExpr& op_expr,
                                      const TensorTuple& inputs, TensorTuple& outputs) {
-  auto build_instruction = JUST(BuildMirroredCastInstruction(op_expr, inputs, outputs, context()));
-  return LogicalRun(*build_instruction);
+  return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs, context());
 }
 
 static Maybe<compatible_py::BlobObject> GetInBlobObject(
@@ -206,15 +207,17 @@ static Maybe<compatible_py::BlobObject> GetInBlobObject(
       ->BoxingTo(builder, origin_blob_object, in_op_arg_parallel_attr);
 };
 
-static Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
-BuildDistributeSplitOrCloneInstruction(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
-                                       TensorTuple& outputs, const OpExprInterpContext* ctx) {
+static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpExpr& op_expr,
+                                                                const TensorTuple& inputs,
+                                                                TensorTuple& outputs,
+                                                                const OpExprInterpContext* ctx) {
+  const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs));
+  OpAttribute proto_op_attribute;
+  op_attribute->ToProto(&proto_op_attribute);
+  const auto& bn2blob_object =
+      JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
+
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    const auto& op_attribute = CHECK_JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs));
-    OpAttribute proto_op_attribute;
-    op_attribute->ToProto(&proto_op_attribute);
-    const auto& bn2blob_object =
-        CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
     const auto& logical_in_blob_object =
         CHECK_JUST(GetInBlobObject(builder, proto_op_attribute, "in", *bn2blob_object));
     const auto& physical_out_blob_objects =
@@ -224,39 +227,37 @@ BuildDistributeSplitOrCloneInstruction(const BuiltinOpExpr& op_expr, const Tenso
           CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(physical_out_blob_objects->at(i)));
     }
   };
-  return std::function<void(const std::shared_ptr<InstructionsBuilder>&)>(build_instruction);
+  return LogicalRun(build_instruction);
 }
 
 Maybe<void> EagerInterpreter::Apply_(const DistributeSplitOpExpr& op_expr,
                                      const TensorTuple& inputs, TensorTuple& outputs) {
-  auto build_instruction =
-      JUST(BuildDistributeSplitOrCloneInstruction(op_expr, inputs, outputs, context()));
-  return LogicalRun(*build_instruction);
+  return BuildAndRunDistributeSplitOrCloneInstruction(op_expr, inputs, outputs, context());
 }
 
 Maybe<void> EagerInterpreter::Apply_(const DistributeCloneOpExpr& op_expr,
                                      const TensorTuple& inputs, TensorTuple& outputs) {
-  auto build_instruction =
-      JUST(BuildDistributeSplitOrCloneInstruction(op_expr, inputs, outputs, context()));
-  return LogicalRun(*build_instruction);
+  return BuildAndRunDistributeSplitOrCloneInstruction(op_expr, inputs, outputs, context());
 }
 
-static Maybe<std::function<void(const std::shared_ptr<InstructionsBuilder>&)>>
-BuildDistributeConcatAndAddInstruction(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
-                                       TensorTuple& outputs, const OpExprInterpContext* ctx) {
+static Maybe<void> BuildAndRunDistributeConcatAndAddInstruction(const BuiltinOpExpr& op_expr,
+                                                                const TensorTuple& inputs,
+                                                                TensorTuple& outputs,
+                                                                const OpExprInterpContext* ctx) {
+  const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs));
+  OpAttribute proto_op_attribute;
+  op_attribute->ToProto(&proto_op_attribute);
+  const auto& op_parallel_desc_sym = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(
+      proto_op_attribute.parallel_signature().op_parallel_desc_symbol_id()));
+  const auto& op_arg_parallel_attr = JUST(
+      compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, proto_op_attribute, "out"));
+  const auto& op_arg_blob_attr =
+      JUST(compatible_py::GetOpArgBlobAttribute(proto_op_attribute, "out"));
+  int input_size = op_expr.indexed_ibns().size();
+  const auto& bn2blob_object =
+      JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
+
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    const auto& op_attribute = CHECK_JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs));
-    OpAttribute proto_op_attribute;
-    op_attribute->ToProto(&proto_op_attribute);
-    const auto& op_parallel_desc_sym = CHECK_JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(
-        proto_op_attribute.parallel_signature().op_parallel_desc_symbol_id()));
-    const auto& op_arg_parallel_attr = CHECK_JUST(
-        compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, proto_op_attribute, "out"));
-    const auto& op_arg_blob_attr =
-        CHECK_JUST(compatible_py::GetOpArgBlobAttribute(proto_op_attribute, "out"));
-    int input_size = op_expr.indexed_ibns().size();
-    const auto& bn2blob_object =
-        CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
     std::vector<std::shared_ptr<compatible_py::BlobObject>> in_blob_objects(input_size);
     for (int i = 0; i < input_size; ++i) {
       in_blob_objects[i] = CHECK_JUST(
@@ -266,21 +267,17 @@ BuildDistributeConcatAndAddInstruction(const BuiltinOpExpr& op_expr, const Tenso
         in_blob_objects, op_arg_parallel_attr, op_arg_blob_attr));
     outputs[0] = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(physical_out_blob_object));
   };
-  return std::function<void(const std::shared_ptr<InstructionsBuilder>&)>(build_instruction);
+  return LogicalRun(build_instruction);
 }
 
 Maybe<void> EagerInterpreter::Apply_(const DistributeConcatOpExpr& op_expr,
                                      const TensorTuple& inputs, TensorTuple& outputs) {
-  auto build_instruction =
-      JUST(BuildDistributeConcatAndAddInstruction(op_expr, inputs, outputs, context()));
-  return LogicalRun(*build_instruction);
+  return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs, context());
 }
 
 Maybe<void> EagerInterpreter::Apply_(const DistributeAddOpExpr& op_expr, const TensorTuple& inputs,
                                      TensorTuple& outputs) {
-  auto build_instruction =
-      JUST(BuildDistributeConcatAndAddInstruction(op_expr, inputs, outputs, context()));
-  return LogicalRun(*build_instruction);
+  return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs, context());
 }
 
 Maybe<void> EagerInterpreter::Apply_(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
