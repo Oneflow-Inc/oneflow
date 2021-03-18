@@ -54,7 +54,8 @@ Maybe<void> RegisterBoxingUtilOnlyOnce(const std::shared_ptr<ForeignBoxingUtil>&
       << "Foreign Boxing util has been registered.";
   // Global<T>::SetAllocated is preferred since Global<T>::New will output logs but
   // glog is not constructed yet.
-  Global<std::shared_ptr<ForeignBoxingUtil>>::(new std::shared_ptr<ForeignBoxingUtil>(boxing_util));
+  Global<std::shared_ptr<ForeignBoxingUtil>>::SetAllocated(
+      new std::shared_ptr<ForeignBoxingUtil>(boxing_util));
   return Maybe<void>::Ok();
 }
 
