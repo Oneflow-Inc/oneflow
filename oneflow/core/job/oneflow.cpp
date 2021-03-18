@@ -681,18 +681,30 @@ Maybe<void> MakeCallbackNotifierSinkTick(
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0");
-  for (int64_t total_job_cs_id :
-       Global<CriticalSectionDesc>::Get()->job_id2total_job_critical_section_id()) {
+  const auto& MakeSinkTick = [&](int64_t job_cs_id) -> Maybe<std::string> {
     OperatorConf snk_tick_op_conf;
     {
       std::string name_prefix = "System-Main-CallbackNotifier_CriticalSection_";
-      snk_tick_op_conf.set_name(name_prefix + std::to_string(total_job_cs_id));
+      snk_tick_op_conf.set_name(name_prefix + NewUniqueId());
       snk_tick_op_conf.set_pass_tag(kMainOp);
       auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
       for (int64_t machine_id : process_ranks) {
-        const auto& cb_sink_tick_op_name = cb_sink_tick_op_names.at(total_job_cs_id).at(machine_id);
+        const auto& cb_sink_tick_op_name = cb_sink_tick_op_names.at(job_cs_id).at(machine_id);
         snk_tick_conf->add_tick(cb_sink_tick_op_name + "/out");
       }
+      snk_tick_conf->set_out("out");
+      JUST(job_builder->AddOp(parallel_conf, snk_tick_op_conf));
+    }
+    return snk_tick_op_conf.name() + "/out";
+  };
+  for (const auto& cs_ids : Global<CriticalSectionDesc>::Get()->job_id2critical_section_ids()) {
+    OperatorConf snk_tick_op_conf;
+    {
+      std::string name_prefix = "System-Main-CallbackNotifier_CriticalSection_";
+      snk_tick_op_conf.set_name(name_prefix + NewUniqueId());
+      snk_tick_op_conf.set_pass_tag(kMainOp);
+      auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
+      for (int64_t cs_id : cs_ids) { snk_tick_conf->add_tick(*JUST(MakeSinkTick(cs_id))); }
       snk_tick_conf->set_out("out");
       JUST(job_builder->AddOp(parallel_conf, snk_tick_op_conf));
     }
