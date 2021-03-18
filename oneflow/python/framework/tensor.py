@@ -20,11 +20,13 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow_api
 import numpy as np
+import inspect
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.check_point_v2 as check_point_v2
 import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow as flow
+from oneflow.python.nn.modules import *
 
 
 @oneflow_export("Tensor")
@@ -571,3 +573,19 @@ def _input_args_is_other_data(*args):
 
 def _input_args_is_shape(*args):
     return all(isinstance(x, int) for x in args)
+
+
+def register_tensor_op_by_module(op_name):
+    def set_method(module):
+        is_unary = (
+            True if len(inspect.signature(module.forward).parameters) == 2 else False
+        )
+        if is_unary is True:
+            setattr(Tensor, op_name, lambda self: module().forward(self))
+        else:
+            assert len(inspect.signature(module.forward).parameters) == 3
+            setattr(
+                Tensor, op_name, lambda self, x: module().forward(self, x),
+            )
+
+    return set_method
