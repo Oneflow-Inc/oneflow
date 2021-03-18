@@ -20,56 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-void UpdateJobParallelViewConf(
-    const OpNode& op_node, const HashMap<OpBlobArg, std::vector<OpBlobArg>>& oba2sbp_identical_obas,
-    JobParallelViewConf* job_parallel_view_conf) {
-  auto* op_name2parallel_distribution_signature =
-      job_parallel_view_conf->mutable_op_name2parallel_distribution_signature_conf();
-  auto* op_name2sbp_signature = job_parallel_view_conf->mutable_op_name2sbp_signature_conf();
-  auto Update = [&](const std::string& bn) {
-    const auto& bn_in_op2parallel_distribution =
-        op_node.parallel_distribution_signature().bn_in_op2parallel_distribution();
-    const auto bn_in_op2parallel_distribution_it = bn_in_op2parallel_distribution.find(bn);
-    CHECK(bn_in_op2parallel_distribution_it != bn_in_op2parallel_distribution.end());
-    const auto& parallel_distribution = bn_in_op2parallel_distribution_it->second;
-    const OpBlobArg& oba = GenOpBlobArg(op_node.op().op_name(), bn);
-    auto iter = oba2sbp_identical_obas.find(oba);
-    if (iter == oba2sbp_identical_obas.end()) { return; }
-    for (const auto& identical_obas : iter->second) {
-      auto* parallel_distribution_signature =
-          &(*op_name2parallel_distribution_signature)[identical_obas.op_name()];
-      auto iter = parallel_distribution_signature->mutable_bn_in_op2parallel_distribution()->find(
-          identical_obas.bn_in_op());
-      if (iter
-          == parallel_distribution_signature->mutable_bn_in_op2parallel_distribution()->end()) {
-        CHECK(iter->second == parallel_distribution);
-      } else {
-        iter->second = parallel_distribution;
-      }
-      if (op_node.parallel_desc().hierarchy()->NumAxes() == 1) {
-        CHECK_EQ(parallel_distribution.sbp_parallel_size(), 1);
-        const auto& sbp_parallel = parallel_distribution.sbp_parallel(0);
-        auto* sbp_signature = &(*op_name2sbp_signature)[identical_obas.op_name()];
-        auto sbp_iter =
-            sbp_signature->mutable_bn_in_op2sbp_parallel()->find(identical_obas.bn_in_op());
-        if (sbp_iter == sbp_signature->mutable_bn_in_op2sbp_parallel()->end()) {
-          CHECK(sbp_iter->second == sbp_parallel);
-        } else {
-          sbp_iter->second = sbp_parallel;
-        }
-      } else {
-        UNIMPLEMENTED();
-      }
-    }
-  };
-  for (const auto& ibn : op_node.op().input_bns()) { Update(ibn); }
-  for (const auto& obn : op_node.op().output_bns()) { Update(obn); }
-}
-
-}  // namespace
-
 std::string OpEdge::VisualStr() const {
   std::string str;
   int32_t idx = 0;
@@ -401,11 +351,6 @@ const OpNode* OpGraph::OpNode4OpName(const std::string& op_name) const {
 
 Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
   JobParallelViewConf job_parallel_view_conf(job.job_parallel_view_conf());
-  HashMap<OpBlobArg, std::vector<OpBlobArg>> oba2sbp_identical_obas;
-  for (const auto& pair : job.helper().identical_sbp_oba_pairs().pair()) {
-    oba2sbp_identical_obas[pair.first()].push_back(pair.second());
-    oba2sbp_identical_obas[pair.second()].push_back(pair.first());
-  }
   JUST(TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
     auto LogicalBlobDesc4InputIndex = [&](int32_t index) -> Maybe<const BlobDesc> {
       CHECK_LT_OR_RETURN(index, op_node->input_index2producer_and_output_index_.size());
@@ -442,7 +387,6 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
       }
     }
     InferOpNodeParallelDistributionSignature(op_node, parallel_distribution_sig_conf);
-    UpdateJobParallelViewConf(*op_node, oba2sbp_identical_obas, &job_parallel_view_conf);
     JUST(op_node->mut_op()->InferLogicalOutBlobDescsIf());
     return Maybe<void>::Ok();
   }));
