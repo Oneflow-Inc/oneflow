@@ -225,23 +225,39 @@ class Mul(Module):
             return BroadcastMul()(x, y)
 
 
-import numpy as np
+@oneflow_export("Mean")
+class Mean(Module):
+    def __init__(
+        self,
+        axis: Optional[Union[collections.Sized, int]] = None,
+        keepdims: bool = False,
+        name: Optional[str] = None,
+    ) -> None:
+        super().__init__()
+        self.axis = axis
+        self.keepdims = keepdims
+        self.name = name
 
-if __name__ == "__main__":
-    flow.enable_eager_execution(True)
-    mul = flow.Mul()
+    def forward(self, input_tensor):
+        reduce_sum = flow.Sum(axis=self.axis, keepdims=self.keepdims, name=self.name)(
+            input_tensor
+        )
 
-    x = flow.Tensor(np.random.randn(2, 3))
-    y = flow.Tensor(np.random.randn(2, 3))
-    out = mul(x, y).numpy()
-    print(out.shape)
+        # TODO: add if input.is_dynamic branch like flow.math.reduce_mean
 
-    x = 5
-    y = flow.Tensor(np.random.randn(2, 3))
-    out = mul(x, y).numpy()
-    print(out.shape)
-
-    x = flow.Tensor(np.random.randn(1, 1))
-    y = flow.Tensor(np.random.randn(2, 3))
-    out = mul(x, y).numpy()
-    print(out.shape)
+        if self.axis is None:
+            axes = []
+        else:
+            axes = (
+                list(self.axis)
+                if isinstance(self.axis, collections.Sized)
+                else [self.axis]
+            )
+        reduce_count = 1
+        if len(axes) == 0:
+            for dim in input_tensor.shape:
+                reduce_count *= dim
+        else:
+            for i in axes:
+                reduce_count *= input_tensor.shape[i]
+        return flow.Mul()(reduce_sum, 1.0 / reduce_count)
