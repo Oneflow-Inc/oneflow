@@ -61,20 +61,13 @@ class CrossEntropyLoss(Module):
             .Output("out")
         )
 
-        self._reduce_sum_op = (
-            flow.builtin_op("reduce_sum")
-            .Name(_opname + "ReduceSum_")
-            .Input("input_tensor")
-            .Output("output_tensor")
-        )
-
     def forward(self, input, target):
         self._op = self._op.Attr("depth", input.shape[len(input.shape) - 1]).Build()
         prob, out = self._op(input, target)
         if self.reduction == "mean":
             raise ValueError("not supported yet")
         elif self.reduction == "sum":
-            self._sum = flow.sum()
+            self._sum = flow.Sum()
             return self._sum(out)
         else:
             return out

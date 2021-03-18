@@ -16,6 +16,7 @@ limitations under the License.
 import oneflow as flow
 
 from typing import Optional, Sequence, Sized, Union
+import collections
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import (
@@ -48,7 +49,7 @@ def _check_axis(axis, shape):
     return axis
 
 
-@oneflow_export("sum")
+@oneflow_export("Sum")
 class Sum(Module):
     r"""
     """
