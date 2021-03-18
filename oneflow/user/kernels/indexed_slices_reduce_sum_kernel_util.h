@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_INDEXED_SLICES_REDUCE_SUM_KERNEL_UTIL_H_
-#define ONEFLOW_CORE_KERNEL_INDEXED_SLICES_REDUCE_SUM_KERNEL_UTIL_H_
+#ifndef ONEFLOW_USER_KERNELS_INDEXED_SLICES_REDUCE_SUM_KERNEL_UTIL_H_
+#define ONEFLOW_USER_KERNELS_INDEXED_SLICES_REDUCE_SUM_KERNEL_UTIL_H_
 
 #include "oneflow/core/kernel/kernel_util.h"
 
@@ -31,4 +31,4 @@ struct IndexedSlicesReduceSumKernelUtil {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_INDEXED_SLICES_REDUCE_SUM_KERNEL_UTIL_H_
+#endif  // ONEFLOW_USER_KERNELS_INDEXED_SLICES_REDUCE_SUM_KERNEL_UTIL_H_

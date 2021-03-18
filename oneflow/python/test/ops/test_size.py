@@ -110,6 +110,14 @@ class TestSize(flow.unittest.TestCase):
         with test_case.assertRaises(ValueError):
             size.index(2, start=3)
 
+    def test_slicing(test_case):
+        size = flow.Size([2, 3, 4, 5])
+        test_case.assertTrue(size[1:3] == flow.Size((3, 4)))
+        test_case.assertTrue(size[1:] == flow.Size((3, 4, 5)))
+        test_case.assertTrue(size[:2] == (2, 3))
+        test_case.assertTrue(size[-3:] == flow.Size((3, 4, 5)))
+        test_case.assertTrue(size[-3:-1] == flow.Size((3, 4)))
+
 
 if __name__ == "__main__":
     unittest.main()
