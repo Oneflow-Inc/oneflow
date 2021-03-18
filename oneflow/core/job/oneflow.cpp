@@ -678,25 +678,36 @@ Maybe<void> MakeCallbackNotifierSinkTick(
     const std::set<int64_t>& process_ranks,
     const std::vector<std::map<int64_t, std::string>>& cb_sink_tick_op_names,
     JobBuilder* job_builder, const std::function<void(const std::string& lbn)>& DoEachSinkTickLbn) {
-  ParallelConf parallel_conf;
-  parallel_conf.set_device_tag("cpu");
-  parallel_conf.add_device_name("0:0");
-  const auto& MakeSinkTick = [&](int64_t job_cs_id) -> Maybe<std::string> {
+  const auto& MakeSinkTick = [&](const std::vector<int64_t>& job_cs_ids,
+                                 int64_t machine_id) -> Maybe<std::string> {
+    if (job_cs_ids.size() == 1) {
+      return cb_sink_tick_op_names.at(job_cs_ids.at(0)).at(machine_id) + "/out";
+    }
+    ParallelConf machine_parallel_conf;
+    {
+      machine_parallel_conf.set_device_tag("cpu");
+      machine_parallel_conf.add_device_name("@" + std::to_string(machine_id) + ":0");
+    }
     OperatorConf snk_tick_op_conf;
     {
       std::string name_prefix = "System-Main-CallbackNotifier_CriticalSection_";
       snk_tick_op_conf.set_name(name_prefix + NewUniqueId());
       snk_tick_op_conf.set_pass_tag(kMainOp);
       auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
-      for (int64_t machine_id : process_ranks) {
+      for (int64_t job_cs_id : job_cs_ids) {
         const auto& cb_sink_tick_op_name = cb_sink_tick_op_names.at(job_cs_id).at(machine_id);
         snk_tick_conf->add_tick(cb_sink_tick_op_name + "/out");
       }
       snk_tick_conf->set_out("out");
-      JUST(job_builder->AddOp(parallel_conf, snk_tick_op_conf));
+      JUST(job_builder->AddOp(machine_parallel_conf, snk_tick_op_conf));
     }
     return snk_tick_op_conf.name() + "/out";
   };
+  ParallelConf parallel_conf;
+  {
+    parallel_conf.set_device_tag("cpu");
+    parallel_conf.add_device_name("0:0");
+  }
   for (const auto& cs_ids : Global<CriticalSectionDesc>::Get()->job_id2critical_section_ids()) {
     OperatorConf snk_tick_op_conf;
     {
@@ -704,7 +715,9 @@ Maybe<void> MakeCallbackNotifierSinkTick(
       snk_tick_op_conf.set_name(name_prefix + NewUniqueId());
       snk_tick_op_conf.set_pass_tag(kMainOp);
       auto* snk_tick_conf = snk_tick_op_conf.mutable_sink_tick_conf();
-      for (int64_t cs_id : cs_ids) { snk_tick_conf->add_tick(*JUST(MakeSinkTick(cs_id))); }
+      for (int64_t machine_id : process_ranks) {
+        snk_tick_conf->add_tick(*JUST(MakeSinkTick(cs_ids, machine_id)));
+      }
       snk_tick_conf->set_out("out");
       JUST(job_builder->AddOp(parallel_conf, snk_tick_op_conf));
     }
