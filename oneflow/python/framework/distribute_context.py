@@ -25,7 +25,7 @@ class DistributeStrategy(object):
         self.scope_context_ = None
         sess = session_ctx.GetDefaultSession()
         # bypass the first DistributeStrategy for avoiding None old_scope
-        if sess.is_running and len(sess.is_mirrored_strategy_enabled_stack) > 0:
+        if sess.is_running and sess.is_mirrored_strategy_enabled_stack_size > 0:
 
             def BuildScope(old_scope, builder):
                 return builder.BuildScopeWithNewIsMirrored(old_scope, is_mirrored)
@@ -46,7 +46,7 @@ class DistributeStrategy(object):
 
 
 def PushMirroredStrategyEnabled(val):
-    session_ctx.GetDefaultSession().is_mirrored_strategy_enabled_stack.append(val)
+    session_ctx.GetDefaultSession().PushMirroredStrategyEnabled(val)
 
 
 def IsMirroredStrategyEnabled():
@@ -58,4 +58,4 @@ def IsConsistentStrategyEnabled():
 
 
 def PopMirroredStrategyEnabled():
-    session_ctx.GetDefaultSession().is_mirrored_strategy_enabled_stack.pop()
+    session_ctx.GetDefaultSession().PopMirroredStrategyEnabled()

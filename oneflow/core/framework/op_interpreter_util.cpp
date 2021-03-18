@@ -55,7 +55,7 @@ static std::shared_ptr<OpExprInterpreter> BuildInterpreter(const bool& eager_mod
   thread_local static std::vector<std::shared_ptr<OpExprInterpreter>> all_interpreters(
       static_cast<int>(OpInterpKind::kOpInterpKindSize));
   const auto& session = JUST(GetDefaultSession());
-  int mirrored_mode = session->IsMirroredStrategyEnabled();
+  int mirrored_mode = JUST(session->IsMirroredStrategyEnabled());
   int eager_mode = EagerExecutionEnabled();
   int kind = (eager_mode >> 1) + mirrored_mode;
   CHECK_LT_OR_RETURN(kind, static_cast<int>(OpInterpKind::kOpInterpKindSize));
