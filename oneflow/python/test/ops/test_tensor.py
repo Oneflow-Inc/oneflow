@@ -68,7 +68,6 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(not x.is_cuda)
         x.determine()
 
-
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",

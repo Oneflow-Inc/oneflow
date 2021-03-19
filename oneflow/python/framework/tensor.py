@@ -515,12 +515,16 @@ def _initialized_job(
 
     @global_function_or_identity()
     def set_data():
-        flow.get_variable(
-            name=variable_name,
-            shape=tuple(shape),
-            dtype=dtype,
-            initializer=flow.zeros_initializer(dtype=dtype),
-        )
+        machine_id = 0
+        with flow.scope.placement(
+            device.type, "{}:{}".format(machine_id, device.index), None
+        ):
+            flow.get_variable(
+                name=variable_name,
+                shape=tuple(shape),
+                dtype=dtype,
+                initializer=flow.zeros_initializer(dtype=dtype),
+            )
 
     if not is_lazy:
         set_data()
