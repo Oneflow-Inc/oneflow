@@ -310,14 +310,15 @@ class UserOpInferSbpSignatureFnContext : public user_op::InferSbpSignatureFnCont
 class UserOpInferOutputBlobTimeShapeFnContext : public user_op::InferOutputBlobTimeShapeFnContext {
  public:
   UserOpInferOutputBlobTimeShapeFnContext(
-      const UserOp* op, const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
+      const UserOp* op,
+      const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
       Shape* output_blob_time_shape)
       : op_(op), output_blob_time_shape_(output_blob_time_shape) {
     for (const auto& it : op->op_conf().user_conf().input()) {
       const std::string& arg_name = it.first;
       for (int32_t i = 0; i < it.second.s_size(); ++i) {
         std::string ibn = GenRepeatedBn(arg_name, i);
-        arg2time_shape_.emplace(std::make_pair(arg_name, i), *GetTimeShape4BnInOp(ibn));
+        arg2time_shape_.emplace(std::make_pair(arg_name, i), *CHECK_JUST(GetTimeShape4BnInOp(ibn)));
       }
     }
   }
@@ -626,11 +627,13 @@ Maybe<void> UserOp::GetSbpSignatures(
 }
 
 Maybe<void> UserOp::InferOpTimeShape(
-    const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
-    Shape* time_shape) const {
+    const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
+    std::shared_ptr<const Shape>* time_shape) const {
   if (val_->infer_output_blob_time_shape_fn) {
+    std::shared_ptr<Shape> op_time_shape(new Shape());
     UserOpInferOutputBlobTimeShapeFnContext infer_output_blob_time_shape_fn_ctx(
-        this, GetTimeShape4BnInOp, time_shape);
+        this, GetTimeShape4BnInOp, op_time_shape.get());
+    *time_shape = op_time_shape;
     return val_->infer_output_blob_time_shape_fn(&infer_output_blob_time_shape_fn_ctx);
   } else {
     return Operator::InferOpTimeShape(GetTimeShape4BnInOp, time_shape);
