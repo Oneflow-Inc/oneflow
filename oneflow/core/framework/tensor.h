@@ -117,7 +117,7 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   const std::shared_ptr<const FunctionNode>& grad_fn_node() const override { return grad_fn_node_; }
   // used by pybind11 only
   Maybe<DerivedT> api_acc_grad() const {
-    if (acc_grad()) { return std::shared_ptr<DerivedT>(); }
+    if (!acc_grad()) { return std::shared_ptr<DerivedT>(); }
     const auto& ptr = std::dynamic_pointer_cast<DerivedT>(acc_grad());
     CHECK_OR_RETURN(ptr) << Error::ValueError("Tensor Cast Error");
     return ptr;
