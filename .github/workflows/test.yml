@@ -99,6 +99,7 @@ jobs:
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
       - uses: actions/checkout@v2
+        if: env.is_built != '1'
       - name: Build OneFlow
         if: env.is_built != '1'
         uses: ./.github/actions/whl
