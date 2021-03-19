@@ -162,7 +162,6 @@ class TestModule(flow.unittest.TestCase):
         def get_module_num(m):
             global module_num
             module_num += 1
-            print(module_num)
 
         net = CustomModule()
         net.apply(get_module_num)

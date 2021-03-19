@@ -53,7 +53,6 @@ class Conv2d(Module):
         )
         self._op = (
             flow.builtin_op("conv2d")
-            .Name("conv2d")
             .Input("in")
             .Input("weight")
             .Attr("filters", out_channels)

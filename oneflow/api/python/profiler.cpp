@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,30 +12,20 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import unittest
-from typing import Tuple
+*/
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
 
-import oneflow as flow
-import oneflow.typing as tp
+#include "oneflow/core/profiler/profiler.h"
 
+namespace py = pybind11;
 
-class TestContainer(flow.unittest.TestCase):
-    def test_module_forward(test_case):
-        class CustomModule(flow.nn.Module):
-            def __init__(self, w):
-                super().__init__()
-                self.w = w
+namespace oneflow {
 
-            def forward(self, x):
-                return x + self.w
+ONEFLOW_API_PYBIND11_MODULE("profiler", m) {
+  m.def("RangePush", [](const std::string& str) { OF_PROFILER_RANGE_PUSH(str); });
 
-        m1 = CustomModule(5)
-        m2 = CustomModule(4)
-        s = flow.nn.Sequential(m1, m2)
+  m.def("RangePop", []() { OF_PROFILER_RANGE_POP(); });
+}
 
-        test_case.assertEqual(s(1), 10)
-
-
-if __name__ == "__main__":
-    unittest.main()
+}  // namespace oneflow
