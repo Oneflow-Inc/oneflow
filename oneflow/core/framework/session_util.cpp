@@ -62,7 +62,7 @@ std::shared_ptr<eager::cfg::EagerSymbolList> Session::eager_symbol_list() const 
 }
 
 Maybe<void> Session::PushMirroredStrategyEnabled(bool is_mirrored) {
-  is_mirrored_strategy_enabled_stack_->emplace_back(is_mirrored);
+  is_mirrored_strategy_enabled_stack_->push_back(is_mirrored);
   return Maybe<void>::Ok();
 }
 Maybe<void> Session::PopMirroredStrategyEnabled() {
