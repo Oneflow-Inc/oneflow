@@ -63,7 +63,7 @@ Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
                             const std::shared_ptr<cfg::OpAttribute>& op_attribute,
                             const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const) {
   const auto& op_graph = JUST(OpGraph::New(job));
-  const auto& foreign_callback = *JUST(GlobalMaybe<std::shared_ptr<ForeignCallback>>());
+  const auto* foreign_callback = JUST(GlobalMaybe<std::shared_ptr<ForeignCallback>>());
   JUST(op_graph->ForEachOpNode([&](const OpNode& op_node) -> Maybe<void> {
     if (!op_names->insert(op_node.op().op_name()).second) { return Maybe<void>::Ok(); }
     const auto& op_attribute = op_node.op().GetOpAttributeWithoutOpNameAndLbn();
@@ -73,7 +73,7 @@ Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
           std::make_shared<cfg::OpAttribute>(*op_attribute);
       const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
           std::make_shared<cfg::ParallelConf>(parallel_conf);
-      (foreign_callback.get()->*interpret)(cfg_op_attribute, cfg_parallel_conf);
+      (foreign_callback->get()->*interpret)(cfg_op_attribute, cfg_parallel_conf);
     }
     return Maybe<void>::Ok();
   }));

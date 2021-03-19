@@ -21,25 +21,9 @@ limitations under the License.
 
 namespace py = pybind11;
 
-namespace oneflow {
-
-Maybe<void> RegisterBoxingUtilOnlyOnce(const std::shared_ptr<ForeignBoxingUtil>& boxing_util) {
-  CHECK_ISNULL_OR_RETURN(Global<std::shared_ptr<ForeignBoxingUtil>>::Get())
-      << "Foreign Boxing util registered.";
-  Global<std::shared_ptr<ForeignBoxingUtil>>::New(boxing_util);
-  return Maybe<void>::Ok();
-}
-
-}  // namespace oneflow
-
-void RegisterBoxingUtilOnlyOnce(const std::shared_ptr<oneflow::ForeignBoxingUtil>& boxing_util) {
-  return oneflow::RegisterBoxingUtilOnlyOnce(boxing_util).GetOrThrow();
-}
-
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("RegisterForeignCallbackOnlyOnce", &RegisterForeignCallbackOnlyOnce);
   m.def("RegisterWatcherOnlyOnce", &RegisterWatcherOnlyOnce);
-  m.def("RegisterBoxingUtilOnlyOnce", &RegisterBoxingUtilOnlyOnce);
   m.def("LaunchJob", &LaunchJob, py::call_guard<py::gil_scoped_release>());
 
   m.def("GetSerializedInterUserJobInfo", &GetSerializedInterUserJobInfo);

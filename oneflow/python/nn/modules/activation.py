@@ -26,9 +26,7 @@ from oneflow.python.framework.tensor import register_op_by_module
 class Sigmoid(Module):
     def __init__(self):
         super().__init__()
-        self._op = (
-            flow.builtin_op("sigmoid").Name("sigmoid").Input("in").Output("out").Build()
-        )
+        self._op = flow.builtin_op("sigmoid").Input("in").Output("out").Build()
 
     def forward(self, x):
         res = self._op(x)[0]
@@ -41,9 +39,7 @@ class Sigmoid(Module):
 class ReLU(Module):
     def __init__(self):
         super().__init__()
-        self._op = (
-            flow.builtin_op("relu").Name("relu").Input("in").Output("out").Build()
-        )
+        self._op = flow.builtin_op("relu").Input("in").Output("out").Build()
 
     def forward(self, x):
         res = self._op(x)[0]

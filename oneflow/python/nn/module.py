@@ -17,19 +17,18 @@ limitations under the License.
 from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
-from inspect import signature
 import itertools
 
 import numpy as np
 
 import oneflow as flow
-import oneflow_api
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.ops import parallel_cast
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.modules.utils import global_function_or_identity
 from oneflow.python.ops.get_variable import api_get_variable as get_variable
-from oneflow.python.ops import initializer_util
+from oneflow.python.framework.check_point_v2 import FeedValueToVariable
+from oneflow.python.nn.parameter import Parameter
 
 
 class _IncompatibleKeys(
@@ -47,29 +46,6 @@ class _IncompatibleKeys(
 # of `T` to annotate `self`. Many methods of `Module` return `self` and we want those return values to be
 # the type of the subclass, not the looser type of `Module`.
 T = TypeVar("T", bound="Module")
-
-
-_counter = 0
-
-
-def get_var_helper(shape, name=None):
-    global _counter
-    if name is None:
-        name = "x_" + str(_counter)
-    var = flow.get_variable(
-        name, shape=shape, initializer=flow.kaiming_initializer(shape)
-    )
-    _counter += 1
-    return var
-
-
-@oneflow_export("nn.Parameter")
-class Parameter(Tensor):
-    def __init__(self, data):
-        self._data = data
-
-    def __getattr__(self, name):
-        return getattr(self._data, name)
 
 
 class InputConfigs:
@@ -104,7 +80,6 @@ class Module(object):
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
-        self.input_configs = InputConfigs()
 
     @property
     def consistent(self):
@@ -120,9 +95,6 @@ class Module(object):
         raise NotImplementedError()
 
     def __call__(self, *args):
-        # if hasattr(self, "_op") and isinstance(self._op, oneflow_api.one.UserOpExpr):
-        # self._op = _wrapper(self._op)
-
         for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args)
             if result is not None:
@@ -204,7 +176,7 @@ class Module(object):
             else:
                 self._non_persistent_buffers_set.add(name)
 
-    def register_parameter(self, name: str, param: Optional["Parameter"]) -> None:
+    def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
         if "_parameters" not in self.__dict__:
             raise AttributeError(
                 "cannot assign parameter before Module.__init__() call"
@@ -227,6 +199,7 @@ class Module(object):
                 "cannot assign '{}' object to parameter '{}' "
                 "(nn.Parameter or None required)".format(type(param), name)
             )
+        # TODO: uncomment these lines when autograd is ready
         # elif param.grad_fn:
         #     raise ValueError(
         #         "Cannot assign non-leaf Tensor to parameter '{0}'. Model "
@@ -327,7 +300,7 @@ class Module(object):
                 name = module_prefix + ("." if module_prefix else "") + k
                 yield name, v
 
-    def parameters(self, recurse: bool = True) -> Iterator["Parameter"]:
+    def parameters(self, recurse: bool = True) -> Iterator[Parameter]:
         for name, param in self.named_parameters(recurse=recurse):
             yield param
 
@@ -393,25 +366,13 @@ class Module(object):
     def _save_to_state_dict(self, destination, prefix, keep_vars):
         for name, param in self._parameters.items():
             if param is not None:
-                # TODO: uncomment these line when tensor is ready
+                # TODO: uncomment these lines when autograd is ready
                 # destination[prefix + name] = param if keep_vars else param.detach()
                 destination[prefix + name] = param
         for name, buf in self._buffers.items():
             if buf is not None and name not in self._non_persistent_buffers_set:
                 # destination[prefix + name] = buf if keep_vars else buf.detach()
                 destination[prefix + name] = buf
-
-    # def load_state_dict(self, state_dict: Dict[str, np.ndarray], strict: bool = True):
-    #     param_buffer_var_names = [x._get_var_name() for x in self.parameters()]
-    #     state_dict_overlapped = {
-    #         key: item
-    #         for key, item in state_dict.items()
-    #         if key in param_buffer_var_names
-    #     }
-    #     if strict and len(state_dict) != len(state_dict_overlapped):
-    #         # TODO:
-    #         raise RuntimeError()
-    #     flow.load_variables(state_dict_overlapped)
 
     def _load_from_state_dict(
         self,
@@ -459,12 +420,11 @@ class Module(object):
                     )
                     continue
                 try:
+                    # TODO(jianhao): uncomment these lines when autograd is ready
                     # with torch.no_grad():
                     # param.copy_(input_param)
-                    param._determine_if_needed()
-                    flow.load_variables(
-                        {param._variable_name: input_param}, ignore_mismatch=False
-                    )
+                    with param._placement_scope():
+                        FeedValueToVariable(param, input_param, None)
                 except Exception as ex:
                     error_msgs.append(
                         'While copying the parameter named "{}", '
@@ -495,23 +455,6 @@ class Module(object):
         state_dict: Union[Dict[str, Tensor], Dict[str, Tensor]],
         strict: bool = True,
     ):
-        r"""Copies parameters and buffers from :attr:`state_dict` into
-        this module and its descendants. If :attr:`strict` is ``True``, then
-        the keys of :attr:`state_dict` must exactly match the keys returned
-        by this module's :meth:`~torch.nn.Module.state_dict` function.
-
-        Arguments:
-            state_dict (dict): a dict containing parameters and
-                persistent buffers.
-            strict (bool, optional): whether to strictly enforce that the keys
-                in :attr:`state_dict` match the keys returned by this module's
-                :meth:`~torch.nn.Module.state_dict` function. Default: ``True``
-
-        Returns:
-            ``NamedTuple`` with ``missing_keys`` and ``unexpected_keys`` fields:
-                * **missing_keys** is a list of str containing the missing keys
-                * **unexpected_keys** is a list of str containing the unexpected keys
-        """
         missing_keys = []
         unexpected_keys = []
         error_msgs = []
@@ -610,17 +553,6 @@ class Module(object):
         return self
 
     def apply(self: T, fn: Callable[["Module"], None]) -> T:
-        r"""Applies ``fn`` recursively to every submodule (as returned by ``.children()``)
-        as well as self. Typical use includes initializing the parameters of a model
-        (see also :ref:`nn-init-doc`).
-
-        Args:
-            fn (:class:`Module` -> None): function to be applied to each submodule
-
-        Returns:
-            Module: self
-
-        """
         for module in self.children():
             module.apply(fn)
         fn(self)

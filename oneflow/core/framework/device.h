@@ -18,8 +18,11 @@ limitations under the License.
 
 #include <string>
 #include <unordered_set>
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
+
+class ParallelDesc;
 
 class Device final {
  public:
@@ -32,6 +35,8 @@ class Device final {
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
 
+  static Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device);
+  static Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;
 
  private:
