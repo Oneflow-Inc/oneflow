@@ -70,22 +70,12 @@ class _NormBase(Module):
             self.register_buffer(
                 "running_var", flow.Tensor(num_features),
             )
-            self.register_buffer(
-                "num_batches_tracked", flow.Tensor(1, dtype=flow.int64),
-            )
         else:
             self.register_parameter("running_mean", None)
             self.register_parameter("running_var", None)
-            self.register_parameter("num_batches_tracked", None)
 
     def _check_input_dim(self, input):
         raise NotImplementedError
-
-    def extra_repr(self):
-        return (
-            "{num_features}, eps={eps}, momentum={momentum}, affine={affine}, "
-            "track_running_stats={track_running_stats}".format(**self.__dict__)
-        )
 
     def _load_from_state_dict(
         self,
