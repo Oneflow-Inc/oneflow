@@ -51,22 +51,8 @@ class To(Module):
             .Build()
         )
 
-    # return (
-    #     flow.user_op_builder(name)
-    #     .Op("cast")
-    #     .Input("in", [x])
-    #     .Output("out")
-    #     .Attr("dtype", dtype)
-    #     .Build()
-    #     .InferAndTryRun()
-    #     .RemoteBlobList()[0]
-    # )
-
     def forward(self, x):
-        if x.dtype == self.dtype:
-            return x
-        else:
-            return self._op(x)[0]
+        return self._op(x)[0]
 
 
 import numpy as np
@@ -76,6 +62,6 @@ if __name__ == "__main__":
     x = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
     print(x.dtype)
 
-    to = flow.To(flow.float32)
-    # y = to(x)
-    # print(y.dtype)
+    to = flow.To(flow.float64)
+    y = to(x)
+    #print(y.dtype)
