@@ -21,7 +21,7 @@ import oneflow as flow
 
 flow.unittest.register_test_cases(
     scope=globals(),
-    directory=os.path.join(os.path.dirname(os.path.realpath(__file__)), "nodes"),
+    directory=os.path.join(os.path.dirname(os.path.realpath(__file__)), "nodes/pytorch"),
     filter_by_num_nodes=lambda x: True,
     base_class=absltest.TestCase,
 )
