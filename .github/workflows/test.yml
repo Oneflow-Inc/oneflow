@@ -365,28 +365,24 @@ jobs:
           cmake_flags+=" -DBUILD_CUDA=OFF"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
       - name: Build (third party)
-        continue-on-error: true
         run: |
           mkdir -p build
           cd build
           cmake .. $cmake_flags -DTHIRD_PARTY=ON -DONEFLOW=OFF
           make -j $(nproc)
       - name: Build (of_ccobj)
-        continue-on-error: true
         run: |
           mkdir -p build
           cd build
           cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
           make -j 2 of_ccobj
       - name: Build (oneflow_internal)
-        continue-on-error: true
         run: |
           mkdir -p build
           cd build
           cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
           make -j 2 oneflow_internal
       - name: Build (generate_api)
-        continue-on-error: true
         run: |
           mkdir -p build
           cd build
