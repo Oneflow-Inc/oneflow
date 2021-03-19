@@ -43,9 +43,6 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
         *out_distribution->add_sbp_parallel() = sbp_parallel;
       }
       return Maybe<void>::Ok();
-    })
-    .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
-      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("hierarchical_parallel_cast_like")
@@ -67,9 +64,6 @@ REGISTER_USER_OP("hierarchical_parallel_cast_like")
       *in_distribution = hint_distribution;
       *out_distribution = hint_distribution;
       *like_distribution = hint_distribution;
-      return Maybe<void>::Ok();
-    })
-    .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
     });
 

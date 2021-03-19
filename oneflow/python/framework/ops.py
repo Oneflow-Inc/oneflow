@@ -171,6 +171,7 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
     )
     return op.InferAndTryRun().SoleOutputBlob()
 
+
 @oneflow_export("hierarchical_parallel_cast")
 def api_hierarchical_parallel_cast(
     input: oneflow_api.BlobDesc,
