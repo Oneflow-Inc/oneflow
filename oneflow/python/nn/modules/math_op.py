@@ -44,8 +44,7 @@ class To(Module):
             name = id_util.UniqueStr("To_")
         self.dtype = dtype
         self._op = (
-            flow.builtin_op("cast")
-            .Name(name)
+            flow.builtin_op("cast", name)
             .Input("in")
             .Output("out")
             .Attr("dtype", dtype)
