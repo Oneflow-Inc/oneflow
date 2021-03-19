@@ -45,7 +45,7 @@ class Flatten(Module):
     start_dim: int
     end_dim: int
 
-    def __init__(self, start_dim: int = 1, end_dim: int = -1, name: str = None) -> None:
+    def __init__(self, start_dim: int = 1, end_dim: int = -1) -> None:
         super().__init__()
         self.start_dim = start_dim
         self.end_dim = end_dim

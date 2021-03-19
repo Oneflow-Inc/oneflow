@@ -116,7 +116,6 @@ class _BatchNorm(_NormBase):
         momentum=0.1,
         affine=True,
         track_running_stats=True,
-        name=None,
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
         self.training = False
