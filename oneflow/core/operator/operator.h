@@ -34,7 +34,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class LogicalNode;
 class MirroredSigInferHint;
 class OpNodeSignature;
 class Scope;
@@ -49,8 +48,6 @@ class Operator {
   void Init(const OperatorConf& op_conf);
   void Init(std::shared_ptr<const OperatorConf> op_conf);
   virtual void InitFromOpConf() = 0;
-
-  virtual LogicalNode* NewProperLogicalNode() const;
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
