@@ -120,8 +120,8 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
   APPLY_IF(FunctionOp);
 #undef APPLY_IF
 
-  CHECK_OR_RETURN(false) << "The type " << op_expr.type()
-                         << " has not been supported in EagerInterpreter::Apply.";
+  OF_UNIMPLEMENTED() << "The type " << op_expr.type()
+                     << " has not been supported in EagerInterpreter::Apply.";
 }
 
 static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
