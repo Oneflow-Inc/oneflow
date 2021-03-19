@@ -234,8 +234,8 @@ Maybe<void> TryMirroredCastTotalLossInstanceNum(
           std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
       const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
           std::make_shared<cfg::ParallelConf>(parallel_conf);
-      scope_symbol_id =
-          Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, true);
+      scope_symbol_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())
+                            ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, true);
     }
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
@@ -290,8 +290,8 @@ void ScaleModelDiffByDynamicLossInstanceNum(
           std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
       const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
           std::make_shared<cfg::ParallelConf>(parallel_conf);
-      scope_symbol_id =
-          Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+      scope_symbol_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())
+                            ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
     }
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
@@ -333,24 +333,33 @@ Maybe<void> MakeGetterLossOpNode4OpName(
   return Maybe<void>::Ok();
 }
 
+bool AllSplitDistribution(const ParallelDistribution& parallel_distribution) {
+  for (int64_t i = 0; i < parallel_distribution.sbp_parallel_size(); ++i) {
+    if (!parallel_distribution.sbp_parallel(i).has_split_parallel()) { return false; }
+  }
+  return true;
+}
+
 void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_pairs,
-                      JobBuilder* job_builder) {
+                      OpBlobArgPairs* identical_sbp_oba_pairs) {
   HashSet<OpBlobArg> split_paralleled_obas;
   op_graph.ForEachNode([&](OpNode* op_node) {
     auto TryInserSplitParalleledObas = [&](const std::string& bn) {
       const auto& lbi = op_node->op().BnInOp2Lbi(bn);
-      const auto& fw_sbp_parallel = op_node->SbpParallel4Lbi(lbi);
-      if (fw_sbp_parallel.has_split_parallel()) {
+      const auto& fw_parallel_distribution = op_node->ParallelDistribution4Lbi(lbi);
+      if (AllSplitDistribution(fw_parallel_distribution)) {
         split_paralleled_obas.insert(GenOpBlobArg(op_node->op().op_name(), bn));
       }
     };
     for (const auto& ibn : op_node->op().input_bns()) { TryInserSplitParalleledObas(ibn); }
-    for (const auto& obn : op_node->op().input_bns()) { TryInserSplitParalleledObas(obn); }
+    for (const auto& obn : op_node->op().output_bns()) { TryInserSplitParalleledObas(obn); }
   });
   for (const auto& pair : fw_bw_oba_pairs.pair()) {
     CHECK(split_paralleled_obas.find(pair.first()) == split_paralleled_obas.end());
     if (split_paralleled_obas.find(pair.second()) != split_paralleled_obas.end()) {
-      job_builder->BindIdenticalSbpOpBlobArgPair(pair.first(), pair.second());
+      auto* oba_pair = identical_sbp_oba_pairs->mutable_pair()->Add();
+      *oba_pair->mutable_first() = pair.first();
+      *oba_pair->mutable_second() = pair.second();
     }
   }
 }
@@ -475,7 +484,8 @@ int64_t MakeScopeSymbolId(const JobConfigProto& job_conf, const ParallelConf& pa
       std::make_shared<cfg::JobConfigProto>(job_conf);
   const std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf =
       std::make_shared<cfg::ParallelConf>(parallel_conf);
-  return Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+  return (*Global<std::shared_ptr<ForeignCallback>>::Get())
+      ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
 }
 
 std::string AddLbns(JobBuilder* job_builder, const std::vector<std::string>& lbns,
@@ -672,7 +682,8 @@ Maybe<void> GenerateBackwardOpConfIf(
 }
 
 Maybe<void> AutoGrad(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
-                     HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi) {
+                     HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi,
+                     OpBlobArgPairs* identical_sbp_oba_pairs) {
   std::function<bool(OpNode*)> NeedBackwardOp;
   JUST(MakePredicatorNeedBackwardOp(op_graph, &NeedBackwardOp));
   std::list<OpNode*> loss_nodes;
@@ -736,7 +747,7 @@ Maybe<void> AutoGrad(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_b
   OpBlobArgPairs fw_bw_oba_pairs;
   CalcFwBwObaPairs(op_graph, in_oba2in_diff_lbi, out_oba2out_diff_lbi, out_oba2clone_bw_add_out_lbi,
                    *job_builder, &fw_bw_oba_pairs);
-  BindFwBwObaPairs(op_graph, fw_bw_oba_pairs, job_builder);
+  BindFwBwObaPairs(op_graph, fw_bw_oba_pairs, identical_sbp_oba_pairs);
   CalcOutLbi2OutDiffLbi(op_graph, out_oba2out_diff_lbi, out_lbi2out_diff_lbi);
   return Maybe<void>::Ok();
 }

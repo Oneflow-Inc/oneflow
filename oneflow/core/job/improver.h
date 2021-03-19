@@ -30,21 +30,13 @@ class Improver final {
   Improver() : start_mem_block_id_(-1) {}
   ~Improver() = default;
 
-  Maybe<Plan> Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
-                      const std::string& act_event_filepath);
-  Maybe<Plan> GenAndInferMemBlockIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan);
-
  private:
-  Plan GenAndInferMemBlockId(const Plan& naive_plan) const;
   void Init(const AvailableMemDesc& amd, const Plan& naive_plan);
   Maybe<void> ForEachImprovedRegstNum(
       const Plan& plan, bool is_memory_limited, double ii,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
       const std::function<void(int64_t, uint64_t)>& Handler) const;
-  void ForEachInferredMemBlockCriticalSection(
-      const Plan& plan, const std::function<int64_t(int64_t)>& OrderInGraph4TaskId,
-      const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) const;
   //  first dimension index of MemZoneRegstDescs is machine_id
   //  second dimension index of MemZoneRegstDescs is mem_zone_id
   using MemZoneRegstDescs = std::vector<std::vector<std::list<const RegstDescProto*>>>;

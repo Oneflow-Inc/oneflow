@@ -17,11 +17,11 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_COMPUTE_TASK_NODE_H_
 
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/graph/stream_index_getter_registry_manager.h"
 
 namespace oneflow {
-
-class LogicalNode;
 
 class CompTaskNode : public TaskNode {
  public:
@@ -43,14 +43,17 @@ class CompTaskNode : public TaskNode {
   const ParallelContext* parallel_ctx() const override { return &parallel_ctx_; }
   ParallelContext* mut_parallel_ctx() { return &parallel_ctx_; }
 
-  // logical_node_
-  const LogicalNode* logical_node() const { return logical_node_; }
-  void set_logical_node(const LogicalNode* val) { logical_node_ = val; }
+  // op_node_
+  const OpNode* op_node() const { return op_node_; }
+  void set_op_node(const OpNode* val) { op_node_ = val; }
   std::string VisualStr() const override;
 
+  // op
+  std::shared_ptr<const Operator> op() const { return op_node_->shared_op(); }
+
  protected:
-  const LogicalNode* GetOneSuccLogicalNodeOnEdge(TaskEdge* edge);
-  const LogicalNode* GetOnePredLogicalNodeOnEdge(TaskEdge* edge);
+  const OpNode* GetOneSuccOpNodeOnEdge(TaskEdge* edge);
+  const OpNode* GetOnePredOpNodeOnEdge(TaskEdge* edge);
   std::vector<CompTaskNode*> GetSuccCompTaskNodesOnEdge(TaskEdge* edge) const;
   std::vector<CompTaskNode*> GetPredCompTaskNodesOnEdge(TaskEdge* edge) const;
 
@@ -58,8 +61,51 @@ class CompTaskNode : public TaskNode {
 
  private:
   ParallelContext parallel_ctx_;
-  const LogicalNode* logical_node_;
+  const OpNode* op_node_;
 };
+
+class OpCompTaskNodeCreator {
+ public:
+  virtual ~OpCompTaskNodeCreator() = default;
+  virtual CompTaskNode* NewCompTaskNode(const OperatorConf& op_conf) = 0;
+};
+
+template<typename CompTaskNodeType>
+class StaticOpCompTaskNodeCreator : public OpCompTaskNodeCreator {
+ public:
+  StaticOpCompTaskNodeCreator() = default;
+  ~StaticOpCompTaskNodeCreator() override = default;
+
+ private:
+  CompTaskNode* NewCompTaskNode(const OperatorConf& op_conf) override {
+    return new CompTaskNodeType();
+  }
+};
+
+class FnOpCompTaskNodeCreator : public OpCompTaskNodeCreator {
+ public:
+  using CreateFn = std::function<CompTaskNode*(const OperatorConf& op_conf)>;
+  explicit FnOpCompTaskNodeCreator(CreateFn fn) : fn_(std::move(fn)) {}
+  ~FnOpCompTaskNodeCreator() override = default;
+
+ private:
+  CompTaskNode* NewCompTaskNode(const OperatorConf& op_conf) override { return fn_(op_conf); }
+  CreateFn fn_;
+};
+
+#define REGISTER_USER_OP_COMP_TASK_NODE_TYPE(op_type_name, comp_task_node_type) \
+  REGISTER_CLASS_CREATOR(std::string, op_type_name, OpCompTaskNodeCreator,      \
+                         ([] { return new StaticOpCompTaskNodeCreator<comp_task_node_type>(); }));
+
+#define REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(op_type_case, comp_task_node_type) \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, OpCompTaskNodeCreator,            \
+                         ([] { return new StaticOpCompTaskNodeCreator<comp_task_node_type>(); }));
+
+#define REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE_WITH_FUNC(op_type_case, func) \
+  REGISTER_CLASS_CREATOR(int32_t, op_type_case, OpCompTaskNodeCreator,       \
+                         ([] { return new FnOpCompTaskNodeCreator(func); }));
+
+CompTaskNode* NewCompTaskNode4OpNode(const OpNode* op_node);
 
 }  // namespace oneflow
 
