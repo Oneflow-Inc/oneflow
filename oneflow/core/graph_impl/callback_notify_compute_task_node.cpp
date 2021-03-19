@@ -24,4 +24,7 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCall
       return generator->GenerateIndependentTaskStreamIndex(TaskType::kCallbackNotify);
     });
 
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kCallbackNotifyConf,
+                                       CallbackNotifyCompTaskNode);
+
 }  // namespace oneflow

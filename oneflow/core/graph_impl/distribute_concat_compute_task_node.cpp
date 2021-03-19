@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/graph/distribute_concat_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/operator/variable_op.h"
 
 namespace oneflow {
@@ -47,10 +46,8 @@ void DistributeConcatCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void DistributeConcatCompTaskNode::BuildExecGphStructAndBindInRegst() {
-  for (std::shared_ptr<const Operator> op : logical_node()->op_vec()) {
-    ExecNode* cur_node = mut_exec_gph().NewNode();
-    cur_node->mut_op() = op;
-  }
+  ExecNode* cur_node = mut_exec_gph().NewNode();
+  cur_node->mut_op() = this->op();
   auto in_regst = GetSoleConsumedRegst("in");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     const auto& ibn = cur_node->op()->input_bns().Get(parallel_ctx()->parallel_id());
@@ -75,5 +72,11 @@ void DistributeConcatCompTaskNode::BuildOutRegst() {
     out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
   }
 }
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kDistributeConcatConf,
+                                       DistributeConcatCompTaskNode);
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kDistributeAddConf,
+                                       DistributeConcatCompTaskNode);
 
 }  // namespace oneflow

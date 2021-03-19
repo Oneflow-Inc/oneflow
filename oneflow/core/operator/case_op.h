@@ -38,7 +38,6 @@ class CaseOp final : public Operator {
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
-  LogicalNode* NewProperLogicalNode() const override;
 };
 
 }  // namespace oneflow
