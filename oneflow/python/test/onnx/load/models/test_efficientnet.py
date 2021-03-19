@@ -183,4 +183,3 @@ def test_efficientNetB0(test_case):
     load_pytorch_module_and_check(
         test_case, EfficientNetB0, input_size=(1, 3, 32, 32), train_flag=False,
     )
-
