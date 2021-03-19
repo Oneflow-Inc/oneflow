@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/operator/reentrant_lock_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -57,10 +56,6 @@ Maybe<void> ReentrantLockOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
-}
-
-LogicalNode* ReentrantLockOp::NewProperLogicalNode() const {
-  return new ReentrantLockLogicalNode();
 }
 
 REGISTER_CPU_OP(OperatorConf::kReentrantLockConf, ReentrantLockOp);

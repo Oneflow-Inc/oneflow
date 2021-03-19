@@ -29,7 +29,7 @@ void AccTickCompTaskNode::ConsumeAllRegsts() {
 void AccTickCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  std::shared_ptr<const Operator> op = logical_node()->SoleOp();
+  std::shared_ptr<const Operator> op = this->op();
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = op;
   exec_node->BindBnWithRegst(op->SoleIbn(), in_regst);
@@ -37,5 +37,7 @@ void AccTickCompTaskNode::BuildExecGphAndRegst() {
   exec_node->BindBnWithRegst(op->SoleObn(), out_regst);
   exec_node->InferBlobDescs(parallel_ctx());
 }
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kAccTickConf, AccTickCompTaskNode);
 
 }  // namespace oneflow
