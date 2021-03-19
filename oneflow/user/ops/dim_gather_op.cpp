@@ -139,6 +139,20 @@ REGISTER_USER_OP("dim_scatter_add_like")
               .Split(user_op::OpArg("output", 0), i)
               .Split(user_op::OpArg("like", 0), i)
               .Build();
+        } else {
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("index", 0), i)
+              .Split(user_op::OpArg("input", 0), i)
+              .PartialSum(user_op::OpArg("output", 0))
+              .Broadcast(user_op::OpArg("like", 0))
+              .Build();
+
+          ctx->NewBuilder()
+              .Split(user_op::OpArg("index", 0), i)
+              .Split(user_op::OpArg("input", 0), i)
+              .PartialSum(user_op::OpArg("output", 0))
+              .PartialSum(user_op::OpArg("like", 0))
+              .Build();
         }
       }
 
