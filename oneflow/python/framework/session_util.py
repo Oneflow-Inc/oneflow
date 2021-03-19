@@ -114,10 +114,6 @@ class Session(object):
         return self.uuid2watch_handler_
 
     @property
-    def is_mirrored_strategy_enabled_stack_size(self):
-        return self.sess_.IsMirroredStrategyEnabledStackSize()
-
-    @property
     def function_flag_name2default_val(self):
         return self.function_flag_name2default_val_
 
@@ -389,22 +385,21 @@ class Session(object):
             return None
         return self.eager_global_function_desc_stack_[0]
 
-    @property
-    def is_mirrored_strategy_enabled_stack_size(self):
-        return self.sess_.IsMirroredStrategyEnabledStackSize()
+    def has_empty_is_mirrored_strategy_enabled_stack(self):
+        return self.sess_.is_mirrored_strategy_enabled_stack_size() == 0
 
-    def PushMirroredStrategyEnabled(self, val):
+    def push_mirrored_strategy_enabled(self, val):
         assert isinstance(val, bool)
-        self.sess_.PushMirroredStrategyEnabled(val)
+        self.sess_.push_mirrored_strategy_enabled(val)
 
-    def PopMirroredStrategyEnabled(self):
-        self.sess_.PopMirroredStrategyEnabled()
+    def pop_mirrored_strategy_enabled(self):
+        self.sess_.pop_mirrored_strategy_enabled()
 
-    def IsMirroredStrategyEnabled(self):
-        return self.sess_.IsMirroredStrategyEnabled()
+    def is_mirrored_strategy_enabled(self):
+        return self.sess_.is_mirrored_strategy_enabled()
 
-    def IsConsistentStrategyEnabled(self):
-        return self.sess_.IsConsistentStrategyEnabled()
+    def is_consistent_strategy_enabled(self):
+        return self.sess_.is_consistent_strategy_enabled()
 
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):

@@ -71,7 +71,9 @@ class BuiltinOpExpr : public OpExpr {
     explicit _op_name##Expr(const std::string& op_name, _op_name##Conf&& proto, \
                             const std::vector<std::string>& indexed_ibns,       \
                             const std::vector<std::string>& indexed_obns)       \
-        : BuiltinOpExpr(op_name, indexed_ibns, indexed_obns), proto_(proto) {}  \
+        : BuiltinOpExpr(op_name, indexed_ibns, indexed_obns) {                  \
+      proto_.Swap(&proto);                                                      \
+    }                                                                           \
                                                                                 \
     std::string type() const override { return std::string(#_op_name); }        \
                                                                                 \
