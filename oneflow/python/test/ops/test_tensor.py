@@ -81,8 +81,8 @@ class TestTensor(flow.unittest.TestCase):
         z = flow.Tensor(numpy_data)
 
         test_case.assertTrue(np.array_equal(x.numpy(), 5 * np.ones(x.shape)))
-        test_case.assertTrue(np.array_equal(y.numpy(), 5 * np.ones(x.shape)))
-        test_case.assertTrue(np.array_equal(z.numpy(), 5 * np.ones(x.shape)))
+        test_case.assertTrue(np.array_equal(y.numpy(), 5 * np.ones(y.shape)))
+        test_case.assertTrue(np.array_equal(z.numpy(), 5 * np.ones(z.shape)))
 
 
 if __name__ == "__main__":

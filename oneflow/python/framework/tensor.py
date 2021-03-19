@@ -84,10 +84,11 @@ class Tensor:
             raise TypeError("new() received an invalid combination of arguments")
 
     def _construct_with_tensor(*args):
-        if _input_args_is_consistent_or_mirrored(*args):
+        if _input_args_is_consistent_or_local(*args):
             self._local_or_consistent_tensor = args[0]
             self._undetermined_tensor = None
         else:
+            # TODO(liyurui): add py tensor constructor
             TODO()
 
     def _construct_with_other_data_source(
@@ -502,13 +503,12 @@ def _numpy_initializer_for_determining(tensor):
 
     @global_function_or_identity()
     def set_numpy_data():
-        machine_id = 0
         with tensor._placement_scope():
             flow.get_variable(
                 name=variable_name,
                 shape=tuple(undetermined_tensor.shape),
                 dtype=undetermined_tensor.dtype,
-                initializer=flow.zeros_initializer(dtype=undetermined_tensor.dtype),
+                initializer=undetermined_tensor.data_initializer,
             )
 
     set_numpy_data()
@@ -547,7 +547,7 @@ def _input_args_is_numpy(*args):
     return len(args) == 1 and isinstance(args[0], np.ndarray)
 
 
-def _input_args_is_consistent_or_mirrored(*args):
+def _input_args_is_consistent_or_local(*args):
     return len(args) == 1 and isinstance(
         args[0], (oneflow_api.ConsistentTensor, oneflow_api.LocalTensor)
     )
@@ -559,9 +559,10 @@ def _input_args_is_py_tensor(*args):
 
 def _input_args_is_other_data(*args):
     return (
-        _input_args_is_consistent_or_mirrored(*args)
+        _input_args_is_consistent_or_local(*args)
         or _input_args_is_numpy(*args)
         or _input_args_is_tuple_or_list(*args)
+        or _input_args_is_py_tensor(*args)
     )
 
 
@@ -570,6 +571,4 @@ def _input_args_is_shape(*args):
 
 
 def _input_args_is_tensor(*args):
-    return _input_args_is_consistent_or_mirrored(*args) or _input_args_is_py_tensor(
-        *args
-    )
+    return _input_args_is_consistent_or_local(*args) or _input_args_is_py_tensor(*args)
