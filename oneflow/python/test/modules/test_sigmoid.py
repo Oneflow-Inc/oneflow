@@ -46,5 +46,6 @@ class TestModule(flow.unittest.TestCase):
         print(np.allclose(z.numpy(), torch_out, rtol=1e-04))
         print(np.allclose(k.numpy(), torch_out, rtol=1e-04))
 
+
 if __name__ == "__main__":
     unittest.main()
