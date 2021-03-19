@@ -36,7 +36,7 @@ Maybe<one::TensorTuple> Interpret(const std::shared_ptr<one::OpExpr>& op,
       << " is given.";
   auto outputs = std::make_shared<one::TensorTuple>(op->output_num());
   auto interperter = JUST(one::OpInterpUtil::GetOrCreateInterpreter());
-  JUST(interperter->Apply(*op.get(), inputs, *outputs));
+  JUST(interperter->Apply(*op.get(), inputs, outputs.get()));
   return outputs;
 }
 
