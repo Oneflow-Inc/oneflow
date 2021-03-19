@@ -55,11 +55,6 @@ class ForeignCallback {
     UNIMPLEMENTED();
     return 0;
   }
-
-  virtual int64_t FeedPath(const std::string& path) const {
-    UNIMPLEMENTED();
-    return 0;
-  }
 };
 
 }  // namespace oneflow
