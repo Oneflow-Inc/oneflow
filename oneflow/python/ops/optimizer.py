@@ -22,6 +22,7 @@ from typing import Optional, Union, Sequence, List, Text, Callable
 import oneflow as flow
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.runtime_mode as rt_mode
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.job.learning_rate_schedule_conf_pb2 as learning_rate_schedule_conf_pb
@@ -30,15 +31,11 @@ import oneflow_api
 
 def GetVariablesForCurrentJob() -> List[Text]:
     sess = session_ctx.GetDefaultSession()
-    job_name = ""
-    try:
-        # TODO(): Use new api when new GetCurrentJobName api is ready.
-        job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
-    except Exception as e:
-        print(
-            "Optimizer's Variables() or minimize() method should be called inside a Job Function to implicitly get variables from a job."
-        )
-        raise e
+    assert (
+        rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
+    ), "Optimizer's Variables() or minimize() method should be called inside a Job Function to implicitly get variables from a job."
+    # TODO(): Use new api when new GetCurrentJobName api is ready.
+    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
     return list(sess.job_name2var_name2var_blob_[job_name].keys())
 
 
