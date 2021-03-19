@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/job/scope.h"
 
 namespace oneflow {
 namespace one {
@@ -45,7 +44,7 @@ class OpExprInterpreter {
   OpExprInterpreter() : state_(new OpExprInterpState) {}
   virtual ~OpExprInterpreter() = default;
 
-  virtual Maybe<void> Apply(const OpExpr* op, const TensorTuple& inputs, TensorTuple& outputs) = 0;
+  virtual Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple& outputs) = 0;
 
   void ResetState();
   std::shared_ptr<OpExprInterpState> state() const { return state_; }
@@ -79,7 +78,7 @@ class NormalInterpreter : public OpExprInterpreter {
 };
 
 #define DECLARE_NORMAL_APPLY_FUNC(op_type)                                            \
-  virtual Maybe<void> Apply_(const op_type##Expr* op_expr, const TensorTuple& inputs, \
+  virtual Maybe<void> Apply_(const op_type##Expr& op_expr, const TensorTuple& inputs, \
                              TensorTuple& outputs);
 
 class LazyInterpreter : public NormalInterpreter {
@@ -87,7 +86,7 @@ class LazyInterpreter : public NormalInterpreter {
   LazyInterpreter(const std::shared_ptr<OpExprInterpContext>& context)
       : NormalInterpreter(context) {}
 
-  Maybe<void> Apply(const OpExpr* op_expr, const TensorTuple& inputs,
+  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                     TensorTuple& outputs) override;
 
  private:
@@ -100,7 +99,7 @@ class EagerInterpreter : public NormalInterpreter {
   EagerInterpreter(const std::shared_ptr<OpExprInterpContext>& context)
       : NormalInterpreter(context) {}
 
-  Maybe<void> Apply(const OpExpr* op_expr, const TensorTuple& inputs,
+  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                     TensorTuple& outputs) override;
 
  private:
@@ -116,7 +115,7 @@ class AutogradInterpreter : public OpExprInterpreter {
   AutogradInterpreter(const std::shared_ptr<NormalInterpreter>& normal_interp)
       : OpExprInterpreter(), normal_interp_(normal_interp) {}
 
-  Maybe<void> Apply(const OpExpr* op_expr, const TensorTuple& inputs,
+  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                     TensorTuple& outputs) override;
 
  private:

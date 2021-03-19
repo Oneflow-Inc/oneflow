@@ -28,8 +28,6 @@ inline void RegisterWatcherOnlyOnce(const std::shared_ptr<oneflow::ForeignWatche
   return oneflow::RegisterWatcherOnlyOnce(watcher).GetOrThrow();
 }
 
-void RegisterBoxingUtilOnlyOnce(const std::shared_ptr<oneflow::ForeignBoxingUtil>& boxing_util);
-
 inline void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
   return oneflow::LaunchJob(cb).GetOrThrow();
 }
