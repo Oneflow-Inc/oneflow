@@ -38,7 +38,6 @@ from oneflow.python.nn.modules.utils import (
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from typing import Optional, List, Tuple
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
-import oneflow.python.framework.id_util as id_util
 
 
 class _NormBase(Module):
@@ -59,29 +58,20 @@ class _NormBase(Module):
         self.affine = affine
         self.track_running_stats = track_running_stats
         if self.affine:
-            self.weight = flow.nn.Parameter(
-                flow.Tensor(num_features, data_initializer=flow.ones_initializer())
-            )
-            self.bias = flow.nn.Parameter(
-                flow.Tensor(num_features, data_initializer=flow.zeros_initializer())
-            )
+            self.weight = flow.nn.Parameter(flow.Tensor(num_features))
+            self.bias = flow.nn.Parameter(flow.Tensor(num_features))
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
         if self.track_running_stats:
             self.register_buffer(
-                "running_mean",
-                flow.Tensor(num_features, data_initializer=flow.zeros_initializer()),
+                "running_mean", flow.Tensor(num_features),
             )
             self.register_buffer(
-                "running_var",
-                flow.Tensor(num_features, data_initializer=flow.ones_initializer()),
+                "running_var", flow.Tensor(num_features),
             )
             self.register_buffer(
-                "num_batches_tracked",
-                flow.Tensor(
-                    1, data_initializer=flow.zeros_initializer(), dtype=flow.int64
-                ),
+                "num_batches_tracked", flow.Tensor(1, dtype=flow.int64),
             )
         else:
             self.register_parameter("running_mean", None)
@@ -129,15 +119,9 @@ class _BatchNorm(_NormBase):
         name=None,
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
-
         self.training = False
-        # TODO(liangdepeng)
-        # if not flow.current_global_function_desc().IsTrainable():
-        #     self.training = False
-
         self._op = (
             flow.builtin_op("normalization")
-            .Name(name if name != None else id_util.UniqueStr("BatchNorm_"))
             .Input("x")
             .Input("moving_mean")
             .Input("moving_variance")

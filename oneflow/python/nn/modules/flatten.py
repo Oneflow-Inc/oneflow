@@ -51,7 +51,6 @@ class Flatten(Module):
         self.end_dim = end_dim
         self.op_ = (
             flow.builtin_op("flatten")
-            .Name("relu")
             .Input("in")
             .Output("out")
             .Attr("start_dim", start_dim)

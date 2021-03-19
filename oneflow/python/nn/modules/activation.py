@@ -20,9 +20,9 @@ from oneflow.python.framework.tensor import register_tensor_op_by_module
 from oneflow.python.framework.tensor import register_op_by_module
 
 
-@register_op_by_module("sigmoid")
-@register_tensor_op_by_module("sigmoid")
 @oneflow_export("nn.Sigmoid")
+@register_tensor_op_by_module("sigmoid")
+@register_op_by_module("sigmoid")
 class Sigmoid(Module):
     def __init__(self):
         super().__init__()
