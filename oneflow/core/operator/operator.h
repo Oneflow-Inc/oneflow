@@ -34,7 +34,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class LogicalNode;
 class MirroredSigInferHint;
 class OpNodeSignature;
 class Scope;
@@ -49,8 +48,6 @@ class Operator {
   void Init(const OperatorConf& op_conf);
   void Init(std::shared_ptr<const OperatorConf> op_conf);
   virtual void InitFromOpConf() = 0;
-
-  virtual LogicalNode* NewProperLogicalNode() const;
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
@@ -132,11 +129,11 @@ class Operator {
       const ParallelContext* parallel_ctx) const;
 
   Maybe<void> FillInputBlobTimeShape(
-      const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4Ibn);
+      const std::function<Maybe<const Shape>(int32_t)>& GetTimeShape4InputIndex);
   Maybe<void> InferOpTimeShapeIf();
   virtual Maybe<void> InferOpTimeShape(
-      const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
-      Shape* time_shape) const;
+      const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
+      std::shared_ptr<const Shape>* time_shape) const;
   Maybe<const Shape> GetOpTimeShape() const;
   Maybe<const Shape> GetInputBlobFastestTimeShape() const;
   Maybe<const Shape> GetInputOutputFastestTimeShape() const;
@@ -296,7 +293,7 @@ class Operator {
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const ParallelDesc>>> bn2parallel_desc_;
   std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>> input_index2logical_blob_desc_;
   std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>> output_index2logical_blob_desc_;
-  std::unique_ptr<HashMap<std::string, std::shared_ptr<const Shape>>> ibn2time_shape_;
+  std::unique_ptr<std::vector<std::shared_ptr<const Shape>>> input_index2time_shape_;
   std::shared_ptr<const Shape> input_blob_fastest_time_shape_;
   std::shared_ptr<const Shape> input_output_fastest_time_shape_;
   std::shared_ptr<const Shape> op_time_shape_;

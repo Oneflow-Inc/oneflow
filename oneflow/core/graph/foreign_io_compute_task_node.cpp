@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/foreign_io_compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -30,7 +29,7 @@ void ForeignIOCompTaskNode::ConsumeAllRegsts() {
 
 void ForeignIOCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = logical_node()->SoleOp();
+  node->mut_op() = this->op();
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   for (const std::string& ibn : node->op()->input_bns()) {
     node->BindBnWithOneOfTheRegsts(ibn, in_regsts);

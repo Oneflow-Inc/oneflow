@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <string>
 
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
@@ -34,8 +33,6 @@ class XrtLaunchOp : public Operator {
   Maybe<void> InferOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
-
-  LogicalNode* NewProperLogicalNode() const override { return new NormalForwardLogicalNode; }
 
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
