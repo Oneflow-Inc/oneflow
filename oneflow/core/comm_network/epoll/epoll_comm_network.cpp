@@ -54,16 +54,6 @@ int SockListen(int listen_sockfd, uint16_t listen_port, int32_t total_machine_nu
   return bind_result;
 }
 
-int64_t GetMachineId(const sockaddr_in& sa) {
-  char addr[INET_ADDRSTRLEN];
-  memset(addr, '\0', sizeof(addr));
-  PCHECK(inet_ntop(AF_INET, &(sa.sin_addr), addr, INET_ADDRSTRLEN));
-  for (int64_t i = 0; i < Global<ResourceDesc, ForSession>::Get()->TotalMachineNum(); ++i) {
-    if (Global<ResourceDesc, ForSession>::Get()->machine(i).addr() == addr) { return i; }
-  }
-  UNIMPLEMENTED();
-}
-
 std::string GenPortKey(int64_t machine_id) { return "EpollPort/" + std::to_string(machine_id); }
 void PushPort(int64_t machine_id, uint16_t port) {
   Global<CtrlClient>::Get()->PushKV(GenPortKey(machine_id), std::to_string(port));
@@ -178,6 +168,8 @@ void EpollCommNet::InitSockets() {
     PCHECK(setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char*)&val, sizeof(int)) == 0);
     PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), sizeof(peer_sockaddr))
            == 0);
+    ssize_t n = write(sockfd, &this_machine_id, sizeof(int64_t));
+    PCHECK(n == 8);
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
     machine_id2sockfd_[peer_id] = sockfd;
   }
@@ -188,9 +180,11 @@ void EpollCommNet::InitSockets() {
     socklen_t len = sizeof(peer_sockaddr);
     int sockfd = accept(listen_sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), &len);
     PCHECK(sockfd != -1);
+    int64_t peer_rank;
+    ssize_t n = read(sockfd, &peer_rank, sizeof(int64_t));
+    PCHECK(n == 8);
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
-    int64_t peer_machine_id = GetMachineId(peer_sockaddr);
-    machine_id2sockfd_[peer_machine_id] = sockfd;
+    machine_id2sockfd_[peer_rank] = sockfd;
   }
   PCHECK(close(listen_sockfd) == 0);
   ClearPort(this_machine_id);
