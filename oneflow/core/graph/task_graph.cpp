@@ -328,19 +328,23 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const OpEdge* op_edge) {
     }
   }
 
+  std::shared_ptr<CompTaskNode> src_comp_task(NewCompTaskNode4OpNode(src_node));
+  std::shared_ptr<CompTaskNode> dst_comp_task(NewCompTaskNode4OpNode(dst_node));
+  // NOTE(chengcheng): MUST use TaskType instead of OpTypeCase because may
+  //   Multi-op correspoding to SAME TaskType such as:
+  //     DistributeConcatOpConf and DistributeAddOpConf -> TaskType::kDistributeConcat
+  //     DistributeSplitOpConf  and DistributeCloneOpConf -> TaskType::kDistributeSplit
   // * -> DistributeConcat
-  if (dst_op_conf.has_distribute_concat_conf()) {
+  if (dst_comp_task->GetTaskType() == TaskType::kDistributeConcat) {
     return &TaskGraph::BldSubTskGphByPartialInLbiConnect;
   }
 
   // DistributeSplit -> *
-  if (src_op_conf.has_distribute_split_conf()) {
+  if (src_comp_task->GetTaskType() == TaskType::kDistributeSplit) {
     return &TaskGraph::BldSubTskGphByPartialOutLbiConnect;
   }
 
   // NormalForward -> DecodeH2D
-  std::shared_ptr<CompTaskNode> src_comp_task(NewCompTaskNode4OpNode(src_node));
-  std::shared_ptr<CompTaskNode> dst_comp_task(NewCompTaskNode4OpNode(dst_node));
   if (src_comp_task->GetTaskType() == TaskType::kNormalForward
       && dst_comp_task->GetTaskType() == TaskType::kDecodeH2D) {
     return &TaskGraph::BldSubTskGphNormalForwardToDecodeH2D;
