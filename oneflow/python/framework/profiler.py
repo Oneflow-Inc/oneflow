@@ -13,29 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import unittest
-from typing import Tuple
+from __future__ import absolute_import
 
-import oneflow as flow
-import oneflow.typing as tp
-
-
-class TestContainer(flow.unittest.TestCase):
-    def test_module_forward(test_case):
-        class CustomModule(flow.nn.Module):
-            def __init__(self, w):
-                super().__init__()
-                self.w = w
-
-            def forward(self, x):
-                return x + self.w
-
-        m1 = CustomModule(5)
-        m2 = CustomModule(4)
-        s = flow.nn.Sequential(m1, m2)
-
-        test_case.assertEqual(s(1), 10)
+from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 
 
-if __name__ == "__main__":
-    unittest.main()
+@oneflow_export("profiler.range_push")
+def RangePush(range_name):
+    oneflow_api.profiler.RangePush(range_name)
+
+
+@oneflow_export("profiler.range_pop")
+def RangePop():
+    oneflow_api.profiler.RangePop()
