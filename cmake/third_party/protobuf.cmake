@@ -5,13 +5,8 @@ set(PROTOBUF_LIBRARY_DIR ${THIRD_PARTY_DIR}/protobuf/lib)
 set(PROTOBUF_BINARY_DIR ${THIRD_PARTY_DIR}/protobuf/bin)
 
 set(PROTOBUF_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
-if(WITH_XLA)
-  set(PROTOBUF_URL "https://github.com/protocolbuffers/protobuf/archive/v3.9.2.zip")
-  set(PROTOBUF_MD5 cf02c32870a1f78c860039e0f63a6343)
-else()
-  set(PROTOBUF_URL https://github.com/Oneflow-Inc/protobuf/archive/1d2c7b6c7.tar.gz)
-  set(PROTOBUF_MD5 b859a1c299f1b374b25de2f0df9f9b50)
-endif()
+set(PROTOBUF_URL "https://github.com/protocolbuffers/protobuf/archive/v3.9.2.zip")
+set(PROTOBUF_MD5 cf02c32870a1f78c860039e0f63a6343)
 
 use_mirror(VARIABLE PROTOBUF_URL URL ${PROTOBUF_URL})
 
@@ -64,11 +59,7 @@ ExternalProject_Add(protobuf
 )
 
 # put protobuf includes in the 'THIRD_PARTY_DIR'
-if(WITH_XLA)
-  add_copy_headers_target(NAME protobuf SRC ${PROTOBUF_SRC_DIR} DST ${PROTOBUF_INCLUDE_DIR} DEPS protobuf INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/protobuf_xla_headers.txt")
-else()
-  add_copy_headers_target(NAME protobuf SRC ${PROTOBUF_SRC_DIR} DST ${PROTOBUF_INCLUDE_DIR} DEPS protobuf INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/protobuf_headers.txt")
-endif()
+add_copy_headers_target(NAME protobuf SRC ${PROTOBUF_SRC_DIR} DST ${PROTOBUF_INCLUDE_DIR} DEPS protobuf INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/protobuf_headers.txt")
 
 
 # put protobuf librarys in the 'THIRD_PARTY_DIR'
