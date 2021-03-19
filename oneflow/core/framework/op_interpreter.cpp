@@ -125,39 +125,38 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
 }
 
 static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
-                                  TensorTuple& outputs,
-                                  const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-                                  const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
-  auto BuildInstruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+                                  TensorTuple& outputs, const OpExprInterpContext* ctx) {
+  using namespace std::placeholders;
+  const auto& scope = JUST(GetCurrentScope());
+  const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs));
+  auto parallel_conf =
+      std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
+
+  auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
     const auto& bn2blob_object =
         CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
-    CHECK_JUST(builder->NoBoxingStatelessCall(op_attribute, parallel_conf, bn2blob_object));
+    const auto& boxing_util = *Global<std::shared_ptr<ForeignBoxingUtil>>::Get();
+    CHECK_JUST(builder->StatelessCall(
+        op_attribute, parallel_conf, bn2blob_object,
+        std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util.get(), _1, _2, _3)));
     for (int i = 0; i < outputs.size(); ++i) {
       const std::string& obn = op_expr.indexed_obns().at(i);
       outputs[i] = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(bn2blob_object->at(obn)));
     }
   };
-  return LogicalRun(BuildInstruction);
+  return LogicalRun(build_instruction);
 }
 
 Maybe<void> EagerInterpreter::Apply_(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                      TensorTuple& outputs) {
-  const auto& scope = JUST(GetCurrentScope());
-  const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs));
-  auto parallel_conf =
-      std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
-  return NaiveInterpret(op_expr, inputs, outputs, op_attribute, parallel_conf);
+  return NaiveInterpret(op_expr, inputs, outputs, context());
 }
 
 Maybe<void> EagerInterpreter::Apply_(const VariableOpExpr& op_expr, const TensorTuple& inputs,
                                      TensorTuple& outputs) {
   CHECK_EQ_OR_RETURN(inputs.size(), 0);
   CHECK_EQ_OR_RETURN(outputs.size(), 1);
-  const auto& scope = JUST(GetCurrentScope());
-  const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs));
-  auto parallel_conf =
-      std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
-  return NaiveInterpret(op_expr, inputs, outputs, op_attribute, parallel_conf);
+  return NaiveInterpret(op_expr, inputs, outputs, context());
 }
 
 static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_expr,
@@ -165,16 +164,16 @@ static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_ex
                                                       TensorTuple& outputs,
                                                       const OpExprInterpContext* ctx) {
   const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs));
-  const auto& bn2blob_object =
-      JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
-  const auto& in_blob_object = (*bn2blob_object)["in"];
-  const auto& parallel_desc_symbol = in_blob_object->parallel_desc_symbol();
   OpAttribute proto_op_attribute;
   op_attribute->ToProto(&proto_op_attribute);
-  const auto& op_arg_parallel_attr = JUST(
-      compatible_py::GetOpArgParallelAttribute(parallel_desc_symbol, proto_op_attribute, "out"));
 
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+    const auto& bn2blob_object =
+        CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
+    const auto& in_blob_object = (*bn2blob_object)["in"];
+    const auto& parallel_desc_symbol = in_blob_object->parallel_desc_symbol();
+    const auto& op_arg_parallel_attr = CHECK_JUST(
+        compatible_py::GetOpArgParallelAttribute(parallel_desc_symbol, proto_op_attribute, "out"));
     const auto& out_blob_object = CHECK_JUST(builder->MakeReferenceBlobObject(
         in_blob_object,
         std::make_shared<compatible_py::OpArgParallelAttribute>(*op_arg_parallel_attr)));
@@ -214,10 +213,10 @@ static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpE
   const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs));
   OpAttribute proto_op_attribute;
   op_attribute->ToProto(&proto_op_attribute);
-  const auto& bn2blob_object =
-      JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
 
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+    const auto& bn2blob_object =
+        CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
     const auto& logical_in_blob_object =
         CHECK_JUST(GetInBlobObject(builder, proto_op_attribute, "in", *bn2blob_object));
     const auto& physical_out_blob_objects =
@@ -253,11 +252,11 @@ static Maybe<void> BuildAndRunDistributeConcatAndAddInstruction(const BuiltinOpE
       compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, proto_op_attribute, "out"));
   const auto& op_arg_blob_attr =
       JUST(compatible_py::GetOpArgBlobAttribute(proto_op_attribute, "out"));
-  int input_size = op_expr.indexed_ibns().size();
-  const auto& bn2blob_object =
-      JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
 
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
+    const auto& bn2blob_object =
+        CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
+    int input_size = op_expr.indexed_ibns().size();
     std::vector<std::shared_ptr<compatible_py::BlobObject>> in_blob_objects(input_size);
     for (int i = 0; i < input_size; ++i) {
       in_blob_objects[i] = CHECK_JUST(
