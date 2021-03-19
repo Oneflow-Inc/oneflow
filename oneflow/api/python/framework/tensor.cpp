@@ -74,7 +74,7 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("is_leaf", &T::is_leaf)
       // Methods of pytorch
       .def("retain_grad", [](T& t) { t.set_retain_grad(true); })
-      .def("detach", &T::detach)
+      .def("detach", [](const T& t) { return t.api_detach().GetPtrOrThrow(); })
       // OneFlow tensor properties other than pytorch tensor
       .def_property_readonly("placement", &T::parallel_desc)
       .def_property_readonly("is_lazy", &T::is_lazy)

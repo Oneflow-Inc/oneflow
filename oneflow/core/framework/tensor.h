@@ -85,6 +85,7 @@ class Tensor {
   virtual const std::shared_ptr<const FunctionNode>& grad_fn_node() const = 0;
   virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
   virtual const std::shared_ptr<TensorArg>& now_grad_arg() const = 0;
+  virtual std::shared_ptr<Tensor> detach() const = 0;
 
   // Setters for autograd
   virtual void set_requires_grad(bool requires_grad) = 0;
@@ -117,10 +118,13 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   const std::shared_ptr<const FunctionNode>& grad_fn_node() const override { return grad_fn_node_; }
   // used by pybind11 only
   Maybe<DerivedT> api_acc_grad() const {
-    if (!acc_grad()) { return std::shared_ptr<DerivedT>(); }
-    const auto& ptr = std::dynamic_pointer_cast<DerivedT>(acc_grad());
-    CHECK_OR_RETURN(ptr) << Error::ValueError("Tensor Cast Error");
-    return ptr;
+    const std::shared_ptr<Tensor>& tensor = acc_grad();
+    return cast_for_api(tensor);
+  }
+  // userd by pybind11 only
+  Maybe<DerivedT> api_detach() const {
+    const std::shared_ptr<Tensor>& tensor = detach();
+    return cast_for_api(tensor);
   }
 
   // Setters for autograd
@@ -138,6 +142,14 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
  protected:
   TensorIf() = default;
   std::shared_ptr<const FunctionNode> grad_fn_node_;
+
+ private:
+  Maybe<DerivedT> cast_for_api(const std::shared_ptr<Tensor>& tensor) const {
+    if (!tensor) { return std::shared_ptr<DerivedT>(); }
+    const auto& ptr = std::dynamic_pointer_cast<DerivedT>(tensor);
+    CHECK_OR_RETURN(ptr) << Error::ValueError("Tensor Cast Error");
+    return ptr;
+  }
 };
 
 class MirroredTensor final : public TensorIf<MirroredTensor> {
@@ -161,7 +173,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
   std::shared_ptr<MirroredTensor> data() const;
-  std::shared_ptr<MirroredTensor> detach() const;
+  std::shared_ptr<Tensor> detach() const override;
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
@@ -231,7 +243,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
   std::shared_ptr<ConsistentTensor> data() const;
-  std::shared_ptr<ConsistentTensor> detach() const;
+  std::shared_ptr<Tensor> detach() const override;
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }

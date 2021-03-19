@@ -83,50 +83,6 @@ class Tensor:
             # Maybe some other arguments to be supported, reported as error for now
             raise TypeError("new() received an invalid combination of arguments")
 
-    def _construct_with_tensor(*args):
-        if _input_args_is_consistent_or_local(*args):
-            self._local_or_consistent_tensor = args[0]
-            self._undetermined_tensor = None
-        else:
-            # TODO(liyurui): add py tensor constructor
-            TODO()
-
-    def _construct_with_other_data_source(
-        self,
-        *args,
-        dtype=None,
-        device=None,
-        requires_grad=False,
-        retain_grad=False,
-        placement=None,
-        sbp=None,
-        is_consistent=False,
-        is_lazy=False,
-    ):
-        numpy_data = None
-        if _input_args_is_tuple_or_list(*args):
-            numpy_data = np.array(args[0]).astype(
-                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-            )
-        elif _input_args_is_numpy(*args):
-            numpy_data = args[0].astype(
-                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-            )
-        shape = oneflow_api.Size(tuple(numpy_data.shape))
-        self._determining_initializer = _numpy_initializer_for_determining
-        self._undetermined_tensor = UndeterminedTensor(
-            shape,
-            dtype,
-            device=device,
-            requires_grad=requires_grad,
-            retain_grad=retain_grad,
-            placement=placement,
-            sbp=sbp,
-            is_consistent=is_consistent,
-            is_lazy=is_lazy,
-            numpy_data=numpy_data,
-        )
-
     @property
     def shape(self):
         if self._local_or_consistent_tensor is not None:
@@ -159,7 +115,18 @@ class Tensor:
         else:
             return self._undetermined_tensor.dtype
 
+    # internal decorator
+    def _auto_determine(func):
+        def wrapped_func(*args, **kwargs):
+            tensor = args[0]
+            if not tensor.is_determined:
+                tensor.determine()
+            return func(*args, **kwargs)
+
+        return wrapped_func
+
     @property
+    @_auto_determine
     def data(self):
         if self._local_or_consistent_tensor is not None:
             return flow.Tensor(self._local_or_consistent_tensor.data)
@@ -203,6 +170,7 @@ class Tensor:
     def ndimension(self):
         return self.ndim
 
+    @_auto_determine
     def detach(self):
         if self._local_or_consistent_tensor is not None:
             return flow.Tensor(self._local_or_consistent_tensor.detach())
@@ -220,16 +188,6 @@ class Tensor:
         for dim in self.shape:
             prod *= dim
         return prod
-
-    # internal decorator
-    def _auto_determine(func):
-        def wrapped_func(*args, **kwargs):
-            tensor = args[0]
-            if not tensor.is_determined:
-                tensor.determine()
-            return func(*args, **kwargs)
-
-        return wrapped_func
 
     def retain_grad(self):
         assert self.is_determined
@@ -390,6 +348,50 @@ class Tensor:
     @_auto_determine
     def _blob_object(self):
         return self._local_or_consistent_tensor._blob_object
+
+    def _construct_with_tensor(self, *args):
+        if _input_args_is_consistent_or_local(*args):
+            self._local_or_consistent_tensor = args[0]
+            self._undetermined_tensor = None
+        else:
+            # TODO(liyurui): add py tensor constructor
+            TODO()
+
+    def _construct_with_other_data_source(
+        self,
+        *args,
+        dtype=None,
+        device=None,
+        requires_grad=False,
+        retain_grad=False,
+        placement=None,
+        sbp=None,
+        is_consistent=False,
+        is_lazy=False,
+    ):
+        numpy_data = None
+        if _input_args_is_tuple_or_list(*args):
+            numpy_data = np.array(args[0]).astype(
+                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+            )
+        elif _input_args_is_numpy(*args):
+            numpy_data = args[0].astype(
+                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+            )
+        shape = oneflow_api.Size(tuple(numpy_data.shape))
+        self._determining_initializer = _numpy_initializer_for_determining
+        self._undetermined_tensor = UndeterminedTensor(
+            shape,
+            dtype,
+            device=device,
+            requires_grad=requires_grad,
+            retain_grad=retain_grad,
+            placement=placement,
+            sbp=sbp,
+            is_consistent=is_consistent,
+            is_lazy=is_lazy,
+            numpy_data=numpy_data,
+        )
 
 
 class UndeterminedTensor:
