@@ -242,18 +242,16 @@ endif()
 if (USE_CLANG_FORMAT)
   add_dependencies(of_ccobj of_format)
 endif()
+
 if (BUILD_SHARED_LIBS)
-  target_link_libraries(of_ccobj of_protoobj of_cfgobj ${GLOG_BUILD_STATIC_LIBRARIES})
+  target_link_libraries(of_ccobj of_protoobj of_cfgobj ${GLOG_STATIC_LIBRARIES})
 endif()
 
 # py ext lib
-add_library(of_pyext_obj ${of_pyext_obj_cc})
+add_library(of_pyext_obj STATIC ${of_pyext_obj_cc})
 target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 target_link_libraries(of_pyext_obj of_ccobj)
 add_dependencies(of_pyext_obj of_ccobj)
-if (BUILD_SHARED_LIBS)
-  target_link_libraries(of_pyext_obj ${Python3_LIBRARIES})
-endif()
 
 if(APPLE)
   set(of_libs -Wl,-force_load of_ccobj of_protoobj of_cfgobj)
