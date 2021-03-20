@@ -13,23 +13,45 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/esac_compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
+class EsacCompTaskNode final : public CompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EsacCompTaskNode);
+  EsacCompTaskNode() = default;
+  ~EsacCompTaskNode() override = default;
+
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+
+  TaskType GetTaskType() const override { return TaskType::kEsac; }
+  CudaWorkType GetCudaWorkType() const override {
+#ifdef WITH_CUDA
+    return CudaWorkType::kCompute;
+#else
+    UNIMPLEMENTED();
+#endif
+  }
+
+ private:
+  void BuildExecGphAndRegst() override;
+  void InferProducedDataRegstTimeShape() override;
+  bool IsIndependent() const override { return true; }
+};
+
 void EsacCompTaskNode::ConsumeAllRegsts() {
-  const std::shared_ptr<const Operator> op = logical_node()->SoleOp();
   HashMap<LogicalBlobId, int64_t> lbi2ibn_id;
-  FOR_RANGE(int64_t, ibn_id, 0, op->input_bns().size()) {
-    CHECK(lbi2ibn_id.emplace(op->BnInOp2Lbi(GenRepeatedBn("in", ibn_id)), ibn_id).second);
+  FOR_RANGE(int64_t, ibn_id, 0, op()->input_bns().size()) {
+    CHECK(lbi2ibn_id.emplace(op()->BnInOp2Lbi(GenRepeatedBn("in", ibn_id)), ibn_id).second);
   }
   ForEachInDataEdge([&](TaskEdge* edge) {
-    const LogicalNode* pred = GetOnePredLogicalNodeOnEdge(edge);
+    const OpNode* pred = GetOnePredOpNodeOnEdge(edge);
     int64_t ibn_id = -1;
-    for (const std::string& obn : pred->SoleOp()->output_bns()) {
-      const LogicalBlobId& lbi = pred->SoleOp()->BnInOp2Lbi(obn);
+    for (const std::string& obn : pred->shared_op()->output_bns()) {
+      const LogicalBlobId& lbi = pred->shared_op()->BnInOp2Lbi(obn);
       if (lbi2ibn_id.find(lbi) != lbi2ibn_id.cend()) {
         CHECK_EQ(ibn_id, -1);
         ibn_id = lbi2ibn_id.at(lbi);
@@ -47,7 +69,7 @@ void EsacCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void EsacCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<const Operator> sole_op = this->logical_node()->SoleOp();
+  std::shared_ptr<const Operator> sole_op = this->op();
   node->mut_op() = sole_op;
   FOR_RANGE(int64_t, ibn_id, 0, sole_op->input_bns().size()) {
     node->BindBnWithRegst(GenRepeatedBn("in", ibn_id),
@@ -67,5 +89,7 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kEsac
     .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
       return generator->GenerateTickTockStreamIndex();
     });
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kEsacConf, EsacCompTaskNode);
 
 }  // namespace oneflow

@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/graph/plan_task_graph.h"
-#include "oneflow/core/graph/regst_lifetime_graph.h"
 #include "oneflow/core/graph/sharable_mem_block_graph.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/thread/thread_pool.h"

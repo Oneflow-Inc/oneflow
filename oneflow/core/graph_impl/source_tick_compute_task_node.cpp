@@ -13,12 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/source_tick_compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
+
+class SourceTickCompTaskNode final : public CompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SourceTickCompTaskNode);
+  SourceTickCompTaskNode() = default;
+  ~SourceTickCompTaskNode() = default;
+
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override {}
+  void BuildExecGphAndRegst() override;
+  bool IsMeaningLess() override { return false; }
+
+  TaskType GetTaskType() const override { return TaskType::kSourceTick; }
+
+ private:
+  bool IsIndependent() const override { return true; }
+};
 
 void SourceTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 2, 2);
@@ -28,7 +44,7 @@ void SourceTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void SourceTickCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = logical_node()->SoleOp();
+  node->mut_op() = op();
   for (const std::string& obn : node->op()->output_bns()) {
     const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(obn);
     out_regst->AddLbi(lbi);
@@ -43,5 +59,7 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kSour
     .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
       return generator->GenerateTickTockStreamIndex();
     });
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kSourceTickConf, SourceTickCompTaskNode);
 
 }  // namespace oneflow
