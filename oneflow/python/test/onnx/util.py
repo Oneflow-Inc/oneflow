@@ -30,6 +30,7 @@ def convert_to_onnx_and_check(
     external_data=False,
     ort_optimize=True,
     opset=None,
+    dtype=None,
 ):
     check_point = flow.train.CheckPoint()
     if explicit_init:
@@ -85,4 +86,7 @@ def convert_to_onnx_and_check(
         for i in range(len(a)):
             if np.abs(a[i] - b[i]) > atol + rtol * np.abs(b[i]):
                 print("a[{}]={}, b[{}]={}".format(i, a[i], i, b[i]))
+    if dtype is not None:
+        onnx_res = onnx_res.astype(dtype)
+        oneflow_res = oneflow_res.astype(dtype)
     assert np.allclose(onnx_res, oneflow_res, rtol=rtol, atol=atol)
