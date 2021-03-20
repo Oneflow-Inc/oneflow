@@ -9,12 +9,24 @@ use_mirror(VARIABLE glog_URL URL ${glog_URL})
 if(WIN32)
     set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE})
     set(GLOG_LIBRARY_NAMES glog.lib)
-elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
-    set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE})
-    set(GLOG_LIBRARY_NAMES libglog.a)
+elseif(APPLE)
+    if ("${CMAKE_GENERATOR}" STREQUAL "Xcode")
+      set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE})
+    else()
+      set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog)
+    endif()
+    if(BUILD_SHARED_LIBS)
+      set(GLOG_LIBRARY_NAMES libglog${CMAKE_SHARED_LIBRARY_SUFFIX})
+    else()
+      set(GLOG_LIBRARY_NAMES libglog.a)
+    endif()
 else()
     set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog)
-    set(GLOG_LIBRARY_NAMES libglog.a)
+    if(BUILD_SHARED_LIBS)
+      set(GLOG_LIBRARY_NAMES libglog${CMAKE_SHARED_LIBRARY_SUFFIX})
+    else()
+      set(GLOG_LIBRARY_NAMES libglog.a)
+    endif()
 endif()
 
 foreach(LIBRARY_NAME ${GLOG_LIBRARY_NAMES})
@@ -52,6 +64,7 @@ ExternalProject_Add(glog
         -Dgflags_DIR:STRING=${oneflow_cmake_dir}/third_party
         -DMY_GFLAGS_INCLUDE_DIR:STRING=${GFLAGS_INCLUDE_DIR}
         -DMY_GFLAGS_LIBS:STRING=${GFLAGS_STATIC_LIBRARIES}
+        -DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
 )
 
 add_custom_target(glog_create_header_dir
