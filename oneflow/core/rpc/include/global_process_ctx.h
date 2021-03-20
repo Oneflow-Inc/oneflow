@@ -13,9 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
-#define ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
+#ifndef ONEFLOW_CORE_RPC_INCLUDE_GLOBAL_PROCESS_CTX_
+#define ONEFLOW_CORE_RPC_INCLUDE_GLOBAL_PROCESS_CTX_
 
-#include "oneflow/core/rpc/include/global_process_ctx.h"
+#include <string>
 
-#endif  // ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
+namespace oneflow {
+
+struct GlobalProcessCtx {
+  static int64_t Rank();
+  static int64_t NodeSize();
+  static int64_t ThisNodeId();
+  static int64_t NumOfProcessPerNode();
+  static bool IsThisProcessMaster();
+  static size_t WorldSize();
+  static std::string LogDirEntry();
+};
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_RPC_INCLUDE_GLOBAL_PROCESS_CTX_
