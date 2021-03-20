@@ -35,22 +35,13 @@ class OpExprInterpState {
   TensorTuple saved_tensors_;
 };
 
-typedef struct OpExprInterpContext {
-  bool is_mirrored_strategy_enabled;
-} OpExprInterpContext, *OpExprInterpContextPtr;
-
 class OpExprInterpreter {
  public:
-  OpExprInterpreter() : state_(new OpExprInterpState) {}
+  OpExprInterpreter() = default;
   virtual ~OpExprInterpreter() = default;
 
-  virtual Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs) = 0;
-
-  void ResetState();
-  std::shared_ptr<OpExprInterpState> state() const { return state_; }
-
- private:
-  std::shared_ptr<OpExprInterpState> state_;
+  virtual Maybe<OpExprInterpState> Apply(const OpExpr& op, const OpExprInterpState* state,
+                                         const TensorTuple& inputs, TensorTuple* outputs) = 0;
 };
 
 #define FOR_EACH_OPS(_macro)  \
@@ -66,28 +57,21 @@ class OpExprInterpreter {
 
 class NormalInterpreter : public OpExprInterpreter {
  public:
-  NormalInterpreter() = delete;
-  NormalInterpreter(const std::shared_ptr<OpExprInterpContext>& context)
-      : OpExprInterpreter(), context_(context) {}
+  NormalInterpreter() : OpExprInterpreter() {}
   virtual ~NormalInterpreter() = default;
-
-  const OpExprInterpContext* context() const { return context_.get(); }
-
- private:
-  std::shared_ptr<OpExprInterpContext> context_;
 };
 
-#define DECLARE_NORMAL_APPLY_FUNC(op_type)                                               \
-  virtual Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs, \
-                                TensorTuple* outputs);
+#define DECLARE_NORMAL_APPLY_FUNC(op_type)                                   \
+  virtual Maybe<OpExprInterpState> ApplyImpl(const op_type##Expr& op_expr,   \
+                                             const OpExprInterpState* state, \
+                                             const TensorTuple& inputs, TensorTuple* outputs);
 
 class LazyInterpreter : public NormalInterpreter {
  public:
-  LazyInterpreter(const std::shared_ptr<OpExprInterpContext>& context)
-      : NormalInterpreter(context) {}
+  LazyInterpreter() : NormalInterpreter() {}
 
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
-                    TensorTuple* outputs) override;
+  Maybe<OpExprInterpState> Apply(const OpExpr& op_expr, const OpExprInterpState* state,
+                                 const TensorTuple& inputs, TensorTuple* outputs) override;
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(BuiltinOp);
@@ -96,11 +80,10 @@ class LazyInterpreter : public NormalInterpreter {
 
 class EagerInterpreter : public NormalInterpreter {
  public:
-  EagerInterpreter(const std::shared_ptr<OpExprInterpContext>& context)
-      : NormalInterpreter(context) {}
+  EagerInterpreter() : NormalInterpreter() {}
 
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
-                    TensorTuple* outputs) override;
+  Maybe<OpExprInterpState> Apply(const OpExpr& op_expr, const OpExprInterpState* state,
+                                 const TensorTuple& inputs, TensorTuple* outputs) override;
 
  private:
   FOR_EACH_OPS(DECLARE_NORMAL_APPLY_FUNC);
@@ -115,8 +98,8 @@ class AutogradInterpreter : public OpExprInterpreter {
   AutogradInterpreter(const std::shared_ptr<NormalInterpreter>& normal_interp)
       : OpExprInterpreter(), normal_interp_(normal_interp) {}
 
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
-                    TensorTuple* outputs) override;
+  Maybe<OpExprInterpState> Apply(const OpExpr& op_expr, const OpExprInterpState* state,
+                                 const TensorTuple& inputs, TensorTuple* outputs) override;
 
  private:
   std::shared_ptr<NormalInterpreter> normal_interp_;

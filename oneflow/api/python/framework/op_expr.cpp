@@ -35,9 +35,10 @@ Maybe<one::TensorTuple> Interpret(const std::shared_ptr<one::OpExpr>& op,
   CHECK_EQ_OR_RETURN(op->input_num(), inputs.size())
       << "The operation requires " << op->input_num() << " inputs, but " << inputs.size()
       << " is given.";
+  one::OpExprInterpState state;
   auto outputs = std::make_shared<one::TensorTuple>(op->output_num());
-  auto interperter = JUST(one::OpInterpUtil::GetOrCreateInterpreter());
-  JUST(interperter->Apply(*op.get(), inputs, outputs.get()));
+  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
+  JUST(interperter->Apply(*op.get(), &state, inputs, outputs.get()));
   return outputs;
 }
 

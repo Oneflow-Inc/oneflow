@@ -19,50 +19,31 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/py_distribute.h"
-#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/persistence/file_system.h"
 
 namespace oneflow {
 namespace one {
 
-// Our system will has only 4 kind interpreters.
-enum class OpInterpKind : int {
-  kLazyConsistent = 0,
-  kLazyMirrored = 1,
-  kEagerConsistent = 2,
-  kEagerMirrored = 3,
+namespace {
 
-  // The kinds of interpreters.
-  kOpInterpKindSize = 4
-};
-
-static std::shared_ptr<OpExprInterpreter> BuildInterpreter(const bool& eager_mode,
-                                                           const bool& mirrored_mode) {
-  std::shared_ptr<OpExprInterpContext> context(
-      new OpExprInterpContext{.is_mirrored_strategy_enabled = mirrored_mode});
+std::shared_ptr<OpExprInterpreter> BuildInterpreter(const bool& eager_mode) {
   std::shared_ptr<NormalInterpreter> normal_interp;
   if (eager_mode) {
-    normal_interp = std::make_shared<EagerInterpreter>(context);
+    normal_interp = std::make_shared<EagerInterpreter>();
   } else {
-    normal_interp = std::make_shared<LazyInterpreter>(context);
+    normal_interp = std::make_shared<LazyInterpreter>();
   }
   return std::make_shared<AutogradInterpreter>(normal_interp);
 }
 
-/*static*/ Maybe<OpExprInterpreter> OpInterpUtil::GetOrCreateInterpreter() {
-  thread_local static std::vector<std::shared_ptr<OpExprInterpreter>> all_interpreters(
-      static_cast<int>(OpInterpKind::kOpInterpKindSize));
-  const auto& session = JUST(GetDefaultSession());
-  int mirrored_mode = JUST(session->IsMirroredStrategyEnabled());
-  int eager_mode = EagerExecutionEnabled();
-  int kind = (eager_mode >> 1) + mirrored_mode;
-  CHECK_LT_OR_RETURN(kind, static_cast<int>(OpInterpKind::kOpInterpKindSize));
-  if (!all_interpreters[kind].get()) {
-    all_interpreters[kind] = BuildInterpreter(eager_mode, mirrored_mode);
-  }
-  return all_interpreters[kind];
+}  // namespace
+
+/*static*/ Maybe<OpExprInterpreter> OpInterpUtil::GetInterpreter() {
+  static auto g_lazy_interpreter = BuildInterpreter(false);
+  static auto g_eager_interpreter = BuildInterpreter(true);
+  if (EagerExecutionEnabled()) { return g_eager_interpreter; }
+  return g_lazy_interpreter;
 }
 
 /*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
