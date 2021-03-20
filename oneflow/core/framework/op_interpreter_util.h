@@ -30,7 +30,7 @@ namespace one {
 
 class OpInterpUtil {
  public:
-  static Maybe<OpExprInterpreter> GetOrCreateInterpreter();
+  static Maybe<OpExprInterpreter> GetInterpreter();
 
   static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr);
 
