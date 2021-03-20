@@ -13,9 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
-#define ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
 
-#include "oneflow/core/rpc/include/global_process_ctx.h"
+#ifndef ONEFLOW_CORE_RPC_INCLUDE_CTRL_
+#define ONEFLOW_CORE_RPC_INCLUDE_CTRL_
 
-#endif  // ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
+#ifdef RPC_BACKEND_GRPC
+#include "oneflow/core/rpc/include/grpc.h"
+#endif  // RPC_BACKEND_GRPC
+
+#ifdef RPC_BACKEND_LOCAL
+#include "oneflow/core/rpc/include/local.h"
+#endif  // RPC_BACKEND_LOCAL
+
+#endif  // ONEFLOW_CORE_RPC_INCLUDE_CTRL_
