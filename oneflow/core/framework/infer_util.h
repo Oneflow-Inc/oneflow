@@ -26,7 +26,6 @@ limitations under the License.
 namespace oneflow {
 
 class Shape;
-enum DataType;
 class JobDesc;
 
 namespace user_op {
