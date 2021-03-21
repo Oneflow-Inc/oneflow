@@ -61,7 +61,7 @@ class CrossEntropyLoss(Module):
     """
 
     def __init__(
-        self, weight=None, ignore_index: int = None, reduction: str = "mean"
+        self, weight=None, ignore_index: int = None, reduction: str = "mean", name:Optional[str] = None
     ) -> None:
         super().__init__()
         if weight != None:
@@ -77,11 +77,8 @@ class CrossEntropyLoss(Module):
 
         self.reduction = reduction
 
-        _opname = id_util.UniqueStr("Module_CrossEntropyLoss_")
-
         self._op = (
-            flow.builtin_op("sparse_softmax_cross_entropy")
-            .Name(_opname)
+            flow.builtin_op("sparse_softmax_cross_entropy", name)
             .Input("prediction")
             .Input("label")
             .Output("prob")

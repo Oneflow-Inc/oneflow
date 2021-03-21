@@ -64,8 +64,7 @@ class Sum(Module):
         super().__init__()
         self.axis = axis
         self._op = (
-            flow.builtin_op("reduce_sum")
-            .Name(name if name is not None else id_util.UniqueStr("ReduceSum_"))
+            flow.builtin_op("reduce_sum", name)
             .Input("input_tensor")
             .Output("output_tensor")
             .Attr("keepdims", keepdims)
@@ -85,9 +84,7 @@ class Sum(Module):
 class ScalarMul(Module):
     def __init__(self, operand, name=None) -> None:
         super().__init__()
-        if name is None:
-            name = id_util.UniqueStr("ScalarMul_")
-        self._op = flow.builtin_op("scalar_mul").Name(name).Input("in").Output("out")
+        self._op = flow.builtin_op("scalar_mul", name).Input("in").Output("out")
 
         if isinstance(operand, int):
             self._op = (
@@ -115,11 +112,8 @@ class ScalarMul(Module):
 class ScalarMulByTensor(Module):
     def __init__(self, name=None) -> None:
         super().__init__()
-        if name is None:
-            name = id_util.UniqueStr("ScalarMulByTensor_")
         self._op = (
-            flow.builtin_op("scalar_mul_by_tensor")
-            .Name(name)
+            flow.builtin_op("scalar_mul_by_tensor", name)
             .Input("x")
             .Input("scalar")
             .Output("y")
@@ -133,11 +127,8 @@ class ScalarMulByTensor(Module):
 class ElementwiseMul(Module):
     def __init__(self, name=None) -> None:
         super().__init__()
-        if name is None:
-            name = id_util.UniqueStr("ElementwiseMul_")
         self._op = (
-            flow.builtin_op("multiply")
-            .Name(name)
+            flow.builtin_op("multiply", name)
             .Input("x")
             .Input("y")
             .Output("out")
@@ -151,11 +142,8 @@ class ElementwiseMul(Module):
 class BroadcastMul(Module):
     def __init__(self, name=None) -> None:
         super().__init__()
-        if name is None:
-            name = id_util.UniqueStr("BroadcastMul_")
         self._op = (
-            flow.builtin_op("broadcast_mul")
-            .Name(name)
+            flow.builtin_op("broadcast_mul", name)
             .Input("x")
             .Input("y")
             .Output("z")
@@ -262,11 +250,8 @@ class Mean(Module):
 class ScalarSubByTensor(Module):
     def __init__(self, name=None) -> None:
         super().__init__()
-        if name is None:
-            name = id_util.UniqueStr("ScalarSubByTensor_")
         self._op = (
-            flow.builtin_op("scalar_sub_by_tensor")
-            .Name(name)
+            flow.builtin_op("scalar_sub_by_tensor", name)
             .Input("x")
             .Input("scalar")
             .Output("y")
@@ -280,11 +265,8 @@ class ScalarSubByTensor(Module):
 class BroadcastSub(Module):
     def __init__(self, name=None) -> None:
         super().__init__()
-        if name is None:
-            name = id_util.UniqueStr("BroadcastSub_")
         self._op = (
-            flow.builtin_op("broadcast_sub")
-            .Name(name)
+            flow.builtin_op("broadcast_sub", name)
             .Input("x")
             .Input("y")
             .Output("z")
@@ -298,9 +280,7 @@ class BroadcastSub(Module):
 class ScalarAdd(Module):
     def __init__(self, operand, name=None) -> None:
         super().__init__()
-        if name is None:
-            name = id_util.UniqueStr("ScalarAdd_")
-        self._op = flow.builtin_op("scalar_add").Name(name).Input("in").Output("out")
+        self._op = flow.builtin_op("scalar_add", name).Input("in").Output("out")
 
         if isinstance(operand, int):
             self._op = (
@@ -354,11 +334,8 @@ class Sub(Module):
 class BroadcastDiv(Module):
     def __init__(self, name=None) -> None:
         super().__init__()
-        if name is None:
-            name = id_util.UniqueStr("BroadcastDiv_")
         self._op = (
-            flow.builtin_op("broadcast_div")
-            .Name(name)
+            flow.builtin_op("broadcast_div", name)
             .Input("x")
             .Input("y")
             .Output("z")
@@ -372,11 +349,8 @@ class BroadcastDiv(Module):
 class ScalarDivByTensor(Module):
     def __init__(self, name=None) -> None:
         super().__init__()
-        if name is None:
-            name = id_util.UniqueStr("ScalarDivByTensor_")
         self._op = (
-            flow.builtin_op("scalar_div_by_tensor")
-            .Name(name)
+            flow.builtin_op("scalar_div_by_tensor", name)
             .Input("x")
             .Input("scalar")
             .Output("y")
@@ -453,11 +427,8 @@ class Reciprocal(Module):
 
     def __init__(self, name: Optional[str] = None) -> None:
         super().__init__()
-        if name is None:
-            name = id_util.UniqueStr("Reciprocal_")
         self._op = (
-            flow.builtin_op("reciprocal_no_nan")
-            .Name(name)
+            flow.builtin_op("reciprocal_no_nan", name)
             .Input("x")
             .Output("y")
             .Build()
