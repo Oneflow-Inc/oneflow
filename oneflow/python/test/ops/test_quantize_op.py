@@ -276,7 +276,7 @@ def _run_test_moving_average_min_max_observer(
                 initializer=flow.zeros_initializer(activation.dtype),
                 trainable=True,
             )
-            scale, zero_point = flow.quantization.moving_average_min_maxObserver(
+            scale, zero_point = flow.quantization.moving_average_min_max_observer(
                 activation,
                 quantization_bit,
                 quantization_scheme,

@@ -49,7 +49,7 @@ def test_moving_average_min_max_observer_symmetric(test_case):
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(-10, 10),
             )
-            return flow.quantization.moving_average_min_maxObserver(x)[0]
+            return flow.quantization.moving_average_min_max_observer(x)[0]
 
     set_moving_max_min_value()
 
@@ -70,7 +70,7 @@ def test_moving_average_min_max_observer_symmetric_zero_point(test_case):
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(-10, 10),
             )
-            return flow.quantization.moving_average_min_maxObserver(x)[1]
+            return flow.quantization.moving_average_min_max_observer(x)[1]
 
     set_moving_max_min_value()
 
@@ -91,7 +91,7 @@ def test_moving_average_min_max_observer_affine(test_case):
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(-10, 10),
             )
-            return flow.quantization.moving_average_min_maxObserver(
+            return flow.quantization.moving_average_min_max_observer(
                 x, quantization_scheme="affine"
             )[0]
 
@@ -114,7 +114,7 @@ def test_moving_average_min_max_observer_affine_zero_point(test_case):
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(-10, 10),
             )
-            return flow.quantization.moving_average_min_maxObserver(
+            return flow.quantization.moving_average_min_max_observer(
                 x, quantization_scheme="affine"
             )[1]
 
@@ -137,7 +137,7 @@ def test_moving_average_min_max_observer_cambricon(test_case):
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(-10, 10),
             )
-            return flow.quantization.moving_average_min_maxObserver(
+            return flow.quantization.moving_average_min_max_observer(
                 x, quantization_formula="cambricon"
             )[0]
 
@@ -160,7 +160,7 @@ def test_moving_average_min_max_observer_cambricon_zero_point(test_case):
                 dtype=flow.float,
                 initializer=flow.random_uniform_initializer(-10, 10),
             )
-            return flow.quantization.moving_average_min_maxObserver(
+            return flow.quantization.moving_average_min_max_observer(
                 x, quantization_formula="cambricon"
             )[1]
 
