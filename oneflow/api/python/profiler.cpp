@@ -13,28 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_SNAPSHOT_MANAGER_H_
-#define ONEFLOW_CORE_FRAMEWORK_SNAPSHOT_MANAGER_H_
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
 
-#include <string>
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/profiler/profiler.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 
-class SnapshotManager {
- public:
-  SnapshotManager() = default;
-  virtual ~SnapshotManager() = default;
+ONEFLOW_API_PYBIND11_MODULE("profiler", m) {
+  m.def("RangePush", [](const std::string& str) { OF_PROFILER_RANGE_PUSH(str); });
 
-  void Load(const std::string& root_dir, bool refresh = true);
-
-  const std::string& GetSnapshotPath(const std::string& variable_name) const;
-
- private:
-  std::string default_path_ = "";
-  HashMap<std::string, std::string> variable_name2path_;
-};
+  m.def("RangePop", []() { OF_PROFILER_RANGE_POP(); });
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_SNAPSHOT_MANAGER_H_

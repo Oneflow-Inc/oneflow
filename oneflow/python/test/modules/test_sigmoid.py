@@ -37,10 +37,14 @@ class TestModule(flow.unittest.TestCase):
             )
         )
         y = m(x)
+        z = x.sigmoid(x)
+        k = flow.sigmoid(x)
         torch_out = np.array(
             [[0.69366997, 0.60735673, 0.52585548], [0.23947647, 0.33676055, 0.56800622]]
         )
         print(np.allclose(y.numpy(), torch_out, rtol=1e-04))
+        print(np.allclose(z.numpy(), torch_out, rtol=1e-04))
+        print(np.allclose(k.numpy(), torch_out, rtol=1e-04))
 
 
 if __name__ == "__main__":
