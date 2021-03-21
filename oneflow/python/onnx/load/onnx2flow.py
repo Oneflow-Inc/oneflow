@@ -44,6 +44,7 @@ import shutil
 import numpy as np
 import onnx
 import torch
+import paddle
 import logging
 
 try:
@@ -146,6 +147,32 @@ def from_pytorch(
     )
     model_str = f.getvalue()
     onnx_model = onnx.load_model_from_string(model_str)
+    return from_onnx(
+        onnx_model,
+        dict(zip(input_names, inputs)),
+        model_weight_dir=model_weight_dir,
+        do_onnxsim=do_onnxsim,
+    )
+
+@oneflow_export("from_paddle")
+def from_paddle(
+    paddle_model, inputs, model_weight_dir="/tmp", do_onnxsim=True, train_flag=True
+):
+    if type(inputs) is not list:
+        inputs = [inputs]
+    input_names = ["x_{}".format(i) for i in range(len(inputs))]
+
+    paddle_model.eval()
+
+    f = io.BytesIO()
+
+    input_spec = paddle.static.InputSpec(shape=x.shape, dtype='float32', name=input_names)
+
+    mode_str = "/tmp.onnx"
+    paddle.onnx.export(model, mode_str, input_spec=[input_spec], opset_version=12, enable_onnx_checker=True)
+
+    onnx_model = onnx.load_model_from_string(model_str)
+
     return from_onnx(
         onnx_model,
         dict(zip(input_names, inputs)),
