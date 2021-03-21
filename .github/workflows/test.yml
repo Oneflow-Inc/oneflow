@@ -126,6 +126,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ github.repository }}-build-
             ${{ runner.os }}-${{ github.repository }}-
+            ${{ runner.os }}-
       - name: Build OneFlow (macOS)
         if: matrix.test_suite == 'macOS'
         uses: ./.github/actions/mac-build
