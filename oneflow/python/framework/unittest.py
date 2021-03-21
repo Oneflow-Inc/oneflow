@@ -151,9 +151,9 @@ _unittest_worker_initilized = False
 @oneflow_export("unittest.TestCase")
 class TestCase(unittest.TestCase):
     def setUp(self):
-        if (
-            platform.system() == "Darwin"
-            or os.environ.get("ONEFLOW_TEST_RPC_BACKEND").lower() == "local"
+        if platform.system() == "Darwin" or (
+            os.environ.get("ONEFLOW_TEST_RPC_BACKEND")
+            and os.environ.get("ONEFLOW_TEST_RPC_BACKEND").lower() == "local"
         ):
             oneflow.env.rpc_backend("local")
         global _unittest_env_initilized
