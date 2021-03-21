@@ -32,7 +32,6 @@ import oneflow.python.framework.id_util as id_util
 @oneflow_export("nn.CrossEntropyLoss")
 class CrossEntropyLoss(Module):
     r"""
-
     Args:
         reduction (string, optional): Specifies the reduction to apply to the output:
             ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will
@@ -55,9 +54,26 @@ class CrossEntropyLoss(Module):
           :math:`(N, d_1, d_2, ..., d_K)` with :math:`K \geq 1` in the case
           of K-dimensional loss.
 
-    Examples::
+    For example:
 
-        TODO(yaochi): add example
+    .. code-block:: python 
+
+        input = flow.Tensor(
+            [[-0.1664078, -1.7256707, -0.14690138],
+                [-0.21474946, 0.53737473, 0.99684894],
+                [-1.135804, -0.50371903, 0.7645404]], dtype=flow.float32)
+
+        target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
+
+        out = flow.nn.CrossEntropyLoss(reduction="none")(input, target)
+        # out: [0.80199665 1.1166505  0.35826027]
+
+        out_sum = flow.nn.CrossEntropyLoss(reduction="sum")(input, target)
+        # out_sum: [2.2769074]
+
+        out_mean = flow.nn.CrossEntropyLoss(reduction="mean")(input, target)
+        # out_mean: [0.7589692]
+
     """
 
     def __init__(
