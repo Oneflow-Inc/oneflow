@@ -504,6 +504,7 @@ class Reciprocal(Module):
     For example: 
 
     .. code-block:: python 
+    
         reciprocal = flow.Reciprocal()
         x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
         out = reciprocal(x)
