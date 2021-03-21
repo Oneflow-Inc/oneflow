@@ -109,11 +109,6 @@ jobs:
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
       - uses: actions/checkout@v2
         if: env.is_built != '1'
-      - name: Build OneFlow (macOS)
-        if: matrix.test_suite == 'macOS'
-        uses: ./.github/actions/mac-build
-        env:
-          CPATH: /Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
       - name: Build OneFlow
         if: env.is_built != '1' && matrix.test_suite != 'macOS'
         uses: ./.github/actions/whl
@@ -122,6 +117,20 @@ jobs:
           extra_flags: ${{ matrix.extra_flags }}
           cuda_version: ${{ matrix.cuda_version }}
           extra_docker_args: $extra_docker_args
+      - name: Cache build dir (macOS)
+        if: matrix.test_suite == 'macOS'
+        uses: actions/cache@v2
+        with:
+          path: build
+          key: ${{ runner.os }}-build-${{ hashFiles('**/*.cmake') }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Build OneFlow (macOS)
+        if: matrix.test_suite == 'macOS'
+        uses: ./.github/actions/mac-build
+        env:
+          CPATH: /Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
       - name: Upload wheel via SSH
         if: env.is_built != '1' && matrix.test_suite != 'macOS'
         uses: ./.github/actions/upload_ssh
