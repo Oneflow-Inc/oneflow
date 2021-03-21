@@ -117,7 +117,7 @@ jobs:
           extra_flags: ${{ matrix.extra_flags }}
           cuda_version: ${{ matrix.cuda_version }}
           extra_docker_args: $extra_docker_args
-      - name: Cache build dir (macOS)
+      - name: Cache build dir (macOS), enable by adding label 'mac-ci'
         if: matrix.test_suite == 'macOS'
         uses: actions/cache@v2
         with:
@@ -146,7 +146,7 @@ jobs:
           src_path: ${bin_dir}
           dst_host: ${{ secrets.CI_STATIC_HOST }}
           dst_path: ${{ secrets.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/bin
-      - name: Upload wheel to cloud
+      - name: Upload wheel to cloud, enable by adding label 'upload-wheel'
         if: contains(github.event.pull_request.labels.*.name, 'upload-wheel') && matrix.test_suite != 'macOS'
         uses: ./.github/actions/upload_oss
         with:
@@ -154,7 +154,7 @@ jobs:
           oss_dst_path: oss://oneflow-staging/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-      - name: Upload bin to cloud
+      - name: Upload bin to cloud, enable by adding label 'upload-wheel'
         if: contains(github.event.pull_request.labels.*.name, 'upload-wheel') && matrix.test_suite != 'macOS'
         uses: ./.github/actions/upload_oss
         with:
