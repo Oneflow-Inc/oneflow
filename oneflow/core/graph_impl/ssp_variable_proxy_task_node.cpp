@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/user_op_conf.h"
 
@@ -29,8 +28,7 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
   ~SspVariableProxyCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override {
-    const auto& op = *logical_node()->SoleOp();
-    int64_t buffer_size = user_op::UserOpConfWrapper(op.op_conf()).attr<int64_t>("buffer_size");
+    int64_t buffer_size = user_op::UserOpConfWrapper(op()->op_conf()).attr<int64_t>("buffer_size");
     CHECK_GT(buffer_size, 0);
     ProduceRegst("value", false, buffer_size, buffer_size);
     ProduceRegst("ref", false, 1, 1);
@@ -50,12 +48,11 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
           CHECK(dst_node != nullptr)
               << "SspVariableProxyTaskNode must be consumed by CompTaskNode. got "
               << TaskType_Name(edge->dst_node()->GetTaskType());
-          const Operator& dst_op = *dst_node->logical_node()->SoleOp();
-          for (const std::string& ibn : dst_op.input_bns()) {
-            const LogicalBlobId& dst_in_lbi = dst_op.BnInOp2Lbi(ibn);
-            if (dst_in_lbi == op.BnInOp2Lbi("ref_0")) {
+          for (const std::string& ibn : dst_node->op()->input_bns()) {
+            const LogicalBlobId& dst_in_lbi = dst_node->op()->BnInOp2Lbi(ibn);
+            if (dst_in_lbi == op()->BnInOp2Lbi("ref_0")) {
               CHECK_EQ(*out_regst_name2edges["ref"].insert(edge).first, edge);
-            } else if (dst_in_lbi == op.BnInOp2Lbi("value_0")) {
+            } else if (dst_in_lbi == op()->BnInOp2Lbi("value_0")) {
               CHECK_EQ(*out_regst_name2edges["value"].insert(edge).first, edge);
             } else {
               // do nothing
@@ -83,7 +80,7 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
 
   void BuildExecGphStructAndBindInRegst() {
     ExecNode* exec_node = mut_exec_gph().NewNode();
-    exec_node->mut_op() = logical_node()->SoleOp();
+    exec_node->mut_op() = op();
     exec_node->BindBnWithOneOfTheRegsts("var_0", GetConsumedRegst("var"));
     BindInplacebetweenVarAndRef();
   }
@@ -115,6 +112,5 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
 };
 
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("ssp_variable_proxy", SspVariableProxyCompTaskNode);
-REGISTER_USER_OP_INDEPENDENT_AREA_ID("ssp_variable_proxy");
 
 }  // namespace oneflow

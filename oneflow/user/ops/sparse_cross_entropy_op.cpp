@@ -53,16 +53,6 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferBatchAxisFn(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("label", 0);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferGradBatchAxisFn(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("prediction_diff", 0) = *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> AddMsSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& prediction =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
@@ -143,7 +133,6 @@ void GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
         CHECK(label_modifier != nullptr);                                              \
         label_modifier->set_requires_grad(false);                                      \
       })                                                                               \
-      .SetBatchAxisInferFn(InferBatchAxisFn)                                           \
       .SetGetSbpFn(GetSbpFn<sbp_sig>);
 
 #define REGISTER_SPAESE_CROSS_ENTROPY_GRAD_USER_OP(op_name, sbp_sig) \
@@ -154,7 +143,6 @@ void GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
       .Output("prediction_diff")                                     \
       .Attr<int64_t>("depth")                                        \
       .SetTensorDescInferFn(InferGradTensorDescFn)                   \
-      .SetBatchAxisInferFn(InferGradBatchAxisFn)                     \
       .SetGetSbpFn(GetSbpFn<sbp_sig>);
 
 REGISTER_SPAESE_CROSS_ENTROPY_USER_OP("sparse_cross_entropy", AddSignature);

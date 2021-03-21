@@ -36,6 +36,7 @@ import oneflow.python.lib.core.pb_util as pb_util
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow_api.oneflow.core.common.data_type as data_type_cfg
+import oneflow_api
 import traceback
 import sys
 
@@ -230,7 +231,7 @@ def set_default_data_type(func_desc, value):
         value ([type]): data type. e.g. flow.float
     """
     func_desc.job_config_proto.set_default_data_type(
-        data_type_cfg.DataType(value.oneflow_proto_dtype)
+        data_type_cfg.DataType(oneflow_api.deprecated.GetProtoDtype4OfDtype(value))
     )
 
 
@@ -731,6 +732,11 @@ def set_qat_moving_min_max_momentum(func_desc, value: float):
     )
 
 
+@oneflow_function_config("qat.target_backend")
+def set_qat_symmetric(func_desc, value: str):
+    func_desc.job_config_proto.mutable_qat_config().set_target_backend(value)
+
+
 @oneflow_function_config("enable_auto_mixed_precision")
 def set_enable_auto_mixed_precision(func_desc, value=True):
     r"""If true, then job will use mixed precision mode, it means use both float16 and float32 during model training.
@@ -744,13 +750,13 @@ def set_enable_auto_mixed_precision(func_desc, value=True):
 
 @oneflow_function_config("enable_keep_header_only")
 def set_enable_keep_header_only(func_desc, value=True):
-    r"""Whether keep header only or not
+    r"""deprecated api.
 
     Args:
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_enable_keep_header_only(value)
+    print("Sorry! enable_keep_header_only is deprecated and it doesn't work.\n")
 
 
 @oneflow_function_config("concurrency_width")

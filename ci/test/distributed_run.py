@@ -155,12 +155,13 @@ def run_bash_script(
     ctrl_port = find_free_port()
     data_port = find_free_port()
     exports = f"""
-export ONEFLOW_TEST_CTRL_PORT={ctrl_port}
+export ONEFLOW_TEST_MASTER_PORT={ctrl_port}
 export ONEFLOW_TEST_DATA_PORT={data_port}
 export ONEFLOW_TEST_SSH_PORT={ssh_port}
 export ONEFLOW_TEST_LOG_DIR={log_dir}
 export ONEFLOW_TEST_NODE_LIST="{this_host},{remote_host}"
 export ONEFLOW_WORKER_KEEP_LOG=1
+export ONEFLOW_TEST_TMP_DIR="./distributed-tmp"
 export NCCL_DEBUG=INFO
 """
     if oneflow_worker_bin:

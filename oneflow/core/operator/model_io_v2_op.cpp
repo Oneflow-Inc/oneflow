@@ -52,8 +52,18 @@ class ModelInitV2Op : public Operator {
     EnrollInputBn("tick", false);
   }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override {
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    BlobDesc* out = BlobDesc4BnInOp("out");
+    out->set_data_type(DataType::kFloat);
+    out->mut_shape() = Shape({parallel_desc.parallel_num()});
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     out->set_data_type(DataType::kFloat);
     out->mut_shape() = Shape({1});
@@ -61,12 +71,6 @@ class ModelInitV2Op : public Operator {
   }
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    BatchAxis4BnInOp("out")->set_value(0);
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -99,8 +103,18 @@ class ModelLoadV2Op : public Operator {
     EnrollInputBn("tick", false);
   }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override {
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    BlobDesc* out = BlobDesc4BnInOp("out");
+    out->set_data_type(DataType::kFloat);
+    out->mut_shape() = Shape({parallel_desc.parallel_num()});
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     out->set_data_type(DataType::kFloat);
     out->mut_shape() = Shape({1});
@@ -108,12 +122,6 @@ class ModelLoadV2Op : public Operator {
   }
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    BatchAxis4BnInOp("out")->set_value(0);
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -151,8 +159,18 @@ class ModelSaveV2Op final : public Operator {
     EnrollInputBn("tick", false);
   }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override {
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    BlobDesc* out = BlobDesc4BnInOp("out");
+    out->set_data_type(DataType::kFloat);
+    out->mut_shape() = Shape({parallel_desc.parallel_num()});
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     out->set_data_type(DataType::kFloat);
     out->mut_shape() = Shape({1});
@@ -160,12 +178,6 @@ class ModelSaveV2Op final : public Operator {
   }
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    BatchAxis4BnInOp("out")->set_value(0);
-    return Maybe<void>::Ok();
-  }
-
   Maybe<void> InferSbpSignature(
       SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,

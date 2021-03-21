@@ -22,10 +22,103 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+namespace {
+struct ShapeExportUtil final {
+  static Maybe<Shape> MakeShape(const py::tuple& py_shape) {
+    DimVector shape_dims;
+    for (const auto& dim : py_shape) { shape_dims.emplace_back(dim.cast<int64_t>()); }
+    return std::make_shared<Shape>(shape_dims);
+  }
+
+  static std::shared_ptr<Shape> ApiMakeShape(const py::object& py_obj) {
+    if (py::isinstance<Shape>(py_obj)) {
+      return std::make_shared<Shape>(py_obj.cast<Shape>().dim_vec());
+    } else if (py::isinstance<py::tuple>(py_obj)) {
+      return MakeShape(py_obj.cast<py::tuple>()).GetPtrOrThrow();
+    } else if (py::isinstance<py::list>(py_obj)) {
+      return MakeShape(py::tuple(py_obj.cast<py::list>())).GetPtrOrThrow();
+    } else {
+      throw py::type_error("Input must be Tuple, List or oneflow.Size");
+    }
+  }
+
+  static std::shared_ptr<Shape> Slicing(const Shape& shape, const py::slice& slice) {
+    size_t start, stop, step, slicelength;
+    if (!slice.compute(shape.dim_vec().size(), &start, &stop, &step, &slicelength)) {
+      throw py::error_already_set();
+    }
+    DimVector shape_dims;
+    for (size_t i = 0; i < slicelength; ++i) {
+      shape_dims.emplace_back(shape.dim_vec().at(start));
+      start += step;
+    }
+    return std::make_shared<Shape>(shape_dims);
+  }
+
+  static std::string ToString(const Shape& shape) {
+    std::stringstream ss;
+    int32_t idx = 0;
+    ss << "flow.Size([";
+    for (int64_t dim : shape.dim_vec()) {
+      ss << dim;
+      if (++idx != shape.dim_vec().size()) { ss << ", "; }
+    }
+    ss << "])";
+    return ss.str();
+  }
+
+  static int GetIndexOrError(const Shape& shape, int64_t value, int start = 0,
+                             int end = SHAPE_MAX_AXIS_SIZE) {
+    if (end > shape.dim_vec().size()) { end = shape.dim_vec().size(); }
+    const auto& it =
+        std::find(shape.dim_vec().begin() + start, shape.dim_vec().begin() + end, value);
+    if (it == shape.dim_vec().begin() + end) {
+      throw std::invalid_argument("tuple.index(x): x not in tuple");
+    }
+    return std::distance(shape.dim_vec().begin(), it);
+  }
+
+  static bool IsEqual(const Shape& shape, const py::object& py_obj) {
+    std::shared_ptr<Shape> other;
+    if (py::isinstance<Shape>(py_obj)) {
+      other = std::make_shared<Shape>(py_obj.cast<Shape>());
+    } else if (py::isinstance<py::tuple>(py_obj)) {
+      other = ApiMakeShape(py_obj.cast<py::tuple>());
+    } else {
+      return false;
+    }
+    if (shape.NumAxes() != other->NumAxes()) { return false; }
+    for (int i = 0; i < shape.NumAxes(); i++) {
+      if (shape.At(i) != other->At(i)) { return false; }
+    }
+    return true;
+  }
+};
+
+}  // namespace
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Shape, std::shared_ptr<Shape>>(m, "Size")
-      .def("__str__", &Shape::ToString)
-      .def("__repr__", &Shape::ToString);
+      .def(py::init(&ShapeExportUtil::ApiMakeShape))
+      .def("__str__", &ShapeExportUtil::ToString)
+      .def("__repr__", &ShapeExportUtil::ToString)
+      .def("__getitem__", [](const Shape& shape, int idx) { return shape.At(idx); })
+      .def("__getitem__", &ShapeExportUtil::Slicing)
+      .def(
+          "__iter__",
+          [](const Shape& shape) {
+            return py::make_iterator(shape.dim_vec().begin(), shape.dim_vec().end());
+          },
+          py::keep_alive<0, 1>())
+      .def("__len__", [](const Shape& shape) { return shape.NumAxes(); })
+      .def("__eq__", &ShapeExportUtil::IsEqual)
+      .def("numel", [](const Shape& shape) { return shape.elem_cnt(); })
+      .def("count",
+           [](const Shape& shape, int64_t value) {
+             return std::count(shape.dim_vec().begin(), shape.dim_vec().end(), value);
+           })
+      .def("index", &ShapeExportUtil::GetIndexOrError, py::arg(), py::arg("start") = 0,
+           py::arg("end") = SHAPE_MAX_AXIS_SIZE);
 }
 
 }  // namespace oneflow

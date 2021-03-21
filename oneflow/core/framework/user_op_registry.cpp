@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/user_op_registry.h"
-
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/sbp_context.h"
-#include "oneflow/core/framework/batch_axis_context.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -142,12 +142,18 @@ OpRegistry& OpRegistry::DefaultedAttr(const std::string& name, AttrType type,
 }
 
 OpRegistry& OpRegistry::SetTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
-  result_.tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
+  SetLogicalTensorDescInferFn(tensor_desc_infer_fn);
+  SetPhysicalTensorDescInferFn(tensor_desc_infer_fn);
   return *this;
 }
 
-OpRegistry& OpRegistry::SetBatchAxisInferFn(BatchAxisInferFn batch_axis_infer_fn) {
-  result_.batch_axis_infer_fn = std::move(batch_axis_infer_fn);
+OpRegistry& OpRegistry::SetLogicalTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
+  result_.logical_tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetPhysicalTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
+  result_.physical_tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
   return *this;
 }
 
@@ -183,20 +189,40 @@ OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
 }
 
 OpRegistry& OpRegistry::Finish() {
-  CHECK(result_.tensor_desc_infer_fn != nullptr)
+  CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
-  if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
-  if (result_.batch_axis_infer_fn == nullptr) {
-    result_.batch_axis_infer_fn = BatchAxisInferFnUtil::DefaultAsFirstHasValueInput;
+  if (!result_.physical_tensor_desc_infer_fn) {
+    auto logical_fn = result_.logical_tensor_desc_infer_fn;
+    result_.physical_tensor_desc_infer_fn =
+        [logical_fn](user_op::InferContext* ctx) -> Maybe<void> {
+      if (ctx->parallel_num() == 1) {
+        logical_fn(ctx);
+      } else {
+        for (const auto& pair : ctx->inputs()) {
+          const auto& parallel_distribution =
+              ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
+          const TensorDesc* in_logical =
+              ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          const TensorDesc* in_physical = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          CHECK_OR_RETURN(*JUST(GetPhysicalShape(in_logical->shape(), parallel_distribution,
+                                                 ctx->parallel_desc(), ctx->parallel_ctx()))
+                          == in_physical->shape());
+        }
+        for (const auto& pair : ctx->outputs()) {
+          TensorDesc* desc = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          *desc = *ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          const auto& parallel_distribution =
+              ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
+          *desc->mut_shape() = *JUST(GetPhysicalShape(desc->shape(), parallel_distribution,
+                                                      ctx->parallel_desc(), ctx->parallel_ctx()));
+        }
+      }
+      return Maybe<void>::Ok();
+    };
   }
+  if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
   if (result_.get_sbp_fn == nullptr) {
     result_.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
-  }
-  if (result_.input_arg_modify_fn == nullptr) {
-    result_.input_arg_modify_fn = [](GetInputArgModifier, const UserOpConfWrapper&) {};
-  }
-  if (result_.output_arg_modify_fn == nullptr) {
-    result_.output_arg_modify_fn = [](GetOutputArgModifier, const UserOpConfWrapper&) {};
   }
   return *this;
 }

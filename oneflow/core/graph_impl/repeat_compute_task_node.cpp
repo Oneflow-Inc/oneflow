@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -39,7 +38,6 @@ class RepeatCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecGphAndRegst() override;
-  void InferProducedDataRegstTimeShape() override;
 };
 
 void RepeatCompTaskNode::ConsumeAllRegsts() {
@@ -53,7 +51,7 @@ void RepeatCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void RepeatCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<Operator> sole_op = this->logical_node()->SoleOp();
+  std::shared_ptr<const Operator> sole_op = op();
   node->mut_op() = sole_op;
   node->BindBnWithRegst(sole_op->SoleIbn(), GetSoleConsumedRegst("in"));
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
@@ -62,19 +60,6 @@ void RepeatCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-void RepeatCompTaskNode::InferProducedDataRegstTimeShape() {
-  auto TimeShape4Ibn = [&](const std::string& ibn) -> const Shape* {
-    return GetSoleConsumedRegst("in")->data_regst_time_shape().get();
-  };
-  std::shared_ptr<Shape> time_shape(new Shape());
-  logical_node()->SoleOp()->InferOutputBlobTimeShape(TimeShape4Ibn, parallel_ctx(),
-                                                     time_shape.get());
-  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
-    *regst->mut_data_regst_time_shape() = time_shape;
-  });
-}
-
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("repeat", RepeatCompTaskNode);
-REGISTER_USER_OP_INDEPENDENT_AREA_ID("repeat");
 
 }  // namespace oneflow

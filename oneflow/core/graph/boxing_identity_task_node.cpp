@@ -18,12 +18,10 @@ limitations under the License.
 
 namespace oneflow {
 
-void BoxingIdentityTaskNode::Init(int64_t machine_id, int64_t thrd_id, int64_t area_id,
-                                  const LogicalBlobId& lbi) {
+void BoxingIdentityTaskNode::Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi) {
   lbi_ = lbi;
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
-  set_area_id(area_id);
 }
 
 void BoxingIdentityTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -40,9 +38,9 @@ void BoxingIdentityTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf op_conf;
   op_conf.set_name("System-Boxing-Identity-" + NewUniqueId());
-  op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
+  op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
   *op_conf.mutable_boxing_identity_conf()->mutable_lbi() = lbi_;
-  std::shared_ptr<Operator> sole_op = ConstructOp(op_conf, &GlobalJobDesc());
+  std::shared_ptr<Operator> sole_op = ConstructOp(op_conf);
   node->mut_op() = sole_op;
   node->BindBnWithRegst(sole_op->SoleIbn(), GetSoleConsumedRegst("in"));
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");

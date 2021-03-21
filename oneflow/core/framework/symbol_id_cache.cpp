@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/operator/op_node_signature.cfg.h"
+#include "oneflow/core/operator/op_conf.cfg.h"
 
 namespace oneflow {
 
@@ -26,6 +27,7 @@ COMMAND(Global<IdCache<cfg::ParallelConf>>::SetAllocated(new IdCache<cfg::Parall
 COMMAND(Global<IdCache<cfg::ScopeProto>>::SetAllocated(new IdCache<cfg::ScopeProto>()));
 COMMAND(Global<IdCache<cfg::OpNodeSignature>>::SetAllocated(new IdCache<cfg::OpNodeSignature>()));
 COMMAND(Global<IdCache<std::string>>::SetAllocated(new IdCache<std::string>()));
+COMMAND(Global<IdCache<cfg::OperatorConf>>::SetAllocated(new IdCache<cfg::OperatorConf>()));
 
 }  // namespace symbol
 

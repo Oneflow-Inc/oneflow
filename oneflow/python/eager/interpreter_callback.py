@@ -22,17 +22,20 @@ import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.job.scope_pb2 as scope_pb
 import oneflow.core.job.placement_pb2 as placement_pb
 from google.protobuf import text_format
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.scope_util as scope_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.symbol_storage as symbol_storage
+import oneflow_api
 
 
 def MakeScopeSymbol(job_conf, parallel_conf, is_mirrored):
+    parallel_hierarchy = None
+    if parallel_conf.has_hierarchy():
+        parallel_hierarchy = oneflow_api.Size(tuple(parallel_conf.hierarchy().dim()))
     return scope_util.MakeInitialScope(
         job_conf,
         parallel_conf.device_tag(),
         list(parallel_conf.device_name()),
+        parallel_hierarchy,
         is_mirrored,
     ).symbol_id
 
@@ -44,13 +47,13 @@ def MakeParallelDescSymbol(parallel_conf):
         nonlocal symbol_id
         symbol_id = builder.GetParallelDescSymbol(parallel_conf).symbol_id
 
-    vm_util.LogicalRun(BuildInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInstruction)
     return symbol_id
 
 
 def MirroredCast(op_attribute_str, parallel_conf):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
-    blob_register = blob_register_util.GetDefaultBlobRegister()
+    blob_register = oneflow_api.GetDefaultBlobRegister()
     is_cast_to_mirrored = op_attribute.op_conf.HasField("cast_to_mirrored_conf")
     is_cast_from_mirrored = op_attribute.op_conf.HasField("cast_from_mirrored_conf")
     assert is_cast_to_mirrored or is_cast_from_mirrored
