@@ -69,7 +69,7 @@ jobs:
             extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --xla
           - test_suite: cpu
             cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\ BUILD_SHARED_LIBS=ON\ -DRPC_BACKEND=GPRC,LOCAL\" --cpu
+            extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\ -DBUILD_SHARED_LIBS=ON\ -DRPC_BACKEND=GPRC,LOCAL\" --cpu
     needs: [check_license_and_format, mirror_third_party]
     runs-on: [self-hosted, linux, release]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
