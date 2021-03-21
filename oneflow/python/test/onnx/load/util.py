@@ -96,14 +96,14 @@ def load_pytorch_module_and_check(
         flow_res = job_train(ipt1)
     else:
         flow_res = job_eval(ipt1)
-    pytorch_res = pt_module(torch.tensor(ipt1).to("cuda")).cpu().detach().numpy()
+    paddle_res = pt_module(torch.tensor(ipt1).to("cuda")).cpu().detach().numpy()
     print(flow_res)
     print("-------------")
-    print(pytorch_res)
+    print(paddle_res)
     np.save("/home/zhangxiaoyu/tmp/flow_res.npy", flow_res)
-    np.save("/home/zhangxiaoyu/tmp/pytorch_res.npy", pytorch_res)
+    np.save("/home/zhangxiaoyu/tmp/paddle_res.npy", paddle_res)
 
-    a, b = flow_res.flatten(), pytorch_res.flatten()
+    a, b = flow_res.flatten(), paddle_res.flatten()
 
     max_idx = np.argmax(np.abs(a - b) / (a + 1e-7))
     print(
@@ -113,7 +113,7 @@ def load_pytorch_module_and_check(
     )
     print("a[{}]={}, b[{}]={}".format(max_idx, a[max_idx], max_idx, b[max_idx]))
     msg = "success"
-    test_case.assertTrue(np.allclose(flow_res, pytorch_res, rtol=1e-3, atol=1e-5), msg)
+    test_case.assertTrue(np.allclose(flow_res, paddle_res, rtol=1e-3, atol=1e-5), msg)
 
 
 def load_paddle_module_and_check(
@@ -174,9 +174,8 @@ def load_paddle_module_and_check(
 
     flow.load_variables(flow.checkpoint.get(model_weight_save_dir))
 
-    pt_module = pt_module.to("cuda")
     if train_flag == False:
-        pt_module.eval()
+        pd_module.eval()
 
     ipt1 = np.random.uniform(
         low=input_min_val, high=input_max_val, size=input_size
@@ -185,14 +184,12 @@ def load_paddle_module_and_check(
         flow_res = job_train(ipt1)
     else:
         flow_res = job_eval(ipt1)
-    pytorch_res = pd_module(paddle.tensor(ipt1).to("cuda")).cpu().detach().numpy()
+    paddle_res = pd_module(paddle.to_tensor(ipt1)).numpy()
     print(flow_res)
     print("-------------")
-    print(pytorch_res)
-    np.save("/home/zhangxiaoyu/tmp/flow_res.npy", flow_res)
-    np.save("/home/zhangxiaoyu/tmp/pytorch_res.npy", pytorch_res)
+    print(paddle_res)
 
-    a, b = flow_res.flatten(), pytorch_res.flatten()
+    a, b = flow_res.flatten(), paddle_res.flatten()
 
     max_idx = np.argmax(np.abs(a - b) / (a + 1e-7))
     print(
@@ -202,4 +199,4 @@ def load_paddle_module_and_check(
     )
     print("a[{}]={}, b[{}]={}".format(max_idx, a[max_idx], max_idx, b[max_idx]))
     msg = "success"
-    test_case.assertTrue(np.allclose(flow_res, pytorch_res, rtol=1e-3, atol=1e-5), msg)
+    test_case.assertTrue(np.allclose(flow_res, paddle_res, rtol=1e-3, atol=1e-5), msg)

@@ -168,7 +168,7 @@ def from_paddle(
 
     input_spec = paddle.static.InputSpec(shape=x.shape, dtype='float32', name=input_names)
 
-    mode_str = "/tmp.onnx"
+    mode_str = " /tmp/model"
     paddle.onnx.export(model, mode_str, input_spec=[input_spec], opset_version=12, enable_onnx_checker=True)
 
     onnx_model = onnx.load_model_from_string(model_str)
