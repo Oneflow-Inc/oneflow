@@ -39,9 +39,7 @@ class To(Module):
     """
 
     def __init__(self, dtype: flow.dtype, name: Optional[str] = None):
-
-        if name is None:
-            name = id_util.UniqueStr("To_")
+        super().__init__()
         self.dtype = dtype
         self._op = (
             flow.builtin_op("cast", name)
@@ -64,4 +62,4 @@ if __name__ == "__main__":
 
     to = flow.To(flow.float64)
     y = to(x)
-    #print(y.dtype)
+    print(y.dtype)
