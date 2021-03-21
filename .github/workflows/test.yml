@@ -122,10 +122,10 @@ jobs:
         uses: actions/cache@v2
         with:
           path: build
-          key: ${{ runner.os }}-build-${{ hashFiles('**/*.cmake') }}
+          key: ${{ runner.os }}-${{ github.repository }}-build-${{ hashFiles('**/*.cmake', '**/CMakeLists.txt') }}
           restore-keys: |
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+            ${{ runner.os }}-${{ github.repository }}-build-
+            ${{ runner.os }}-${{ github.repository }}-
       - name: Build OneFlow (macOS)
         if: matrix.test_suite == 'macOS'
         uses: ./.github/actions/mac-build
