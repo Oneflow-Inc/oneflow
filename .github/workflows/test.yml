@@ -117,7 +117,7 @@ jobs:
           extra_flags: ${{ matrix.extra_flags }}
           cuda_version: ${{ matrix.cuda_version }}
           extra_docker_args: $extra_docker_args
-      - name: Cache build dir (macOS), enable by adding label 'mac-ci'
+      - name: Cache build dir (macOS)
         if: matrix.test_suite == 'macOS' && contains(github.event.pull_request.labels.*.name, 'mac-ci')
         uses: actions/cache@v2
         with:
