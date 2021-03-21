@@ -9,19 +9,12 @@ use_mirror(VARIABLE glog_URL URL ${glog_URL})
 if(WIN32)
     set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE})
     set(GLOG_LIBRARY_NAMES glog.lib)
-elseif(APPLE)
+else()
     if ("${CMAKE_GENERATOR}" STREQUAL "Xcode")
       set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE})
     else()
       set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog)
     endif()
-    if(BUILD_SHARED_LIBS)
-      set(GLOG_LIBRARY_NAMES libglog${CMAKE_SHARED_LIBRARY_SUFFIX})
-    else()
-      set(GLOG_LIBRARY_NAMES libglog.a)
-    endif()
-else()
-    set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog)
     if(BUILD_SHARED_LIBS)
       set(GLOG_LIBRARY_NAMES libglog${CMAKE_SHARED_LIBRARY_SUFFIX})
     else()
@@ -55,7 +48,7 @@ ExternalProject_Add(glog
     INSTALL_COMMAND ""
     CMAKE_CACHE_ARGS
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
-        -DBUILD_SHARED_LIBS:BOOL=OFF
+        -DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
         -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
@@ -64,7 +57,6 @@ ExternalProject_Add(glog
         -Dgflags_DIR:STRING=${oneflow_cmake_dir}/third_party
         -DMY_GFLAGS_INCLUDE_DIR:STRING=${GFLAGS_INCLUDE_DIR}
         -DMY_GFLAGS_LIBS:STRING=${GFLAGS_STATIC_LIBRARIES}
-        -DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
 )
 
 add_custom_target(glog_create_header_dir
