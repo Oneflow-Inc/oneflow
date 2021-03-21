@@ -79,9 +79,7 @@ jobs:
             os: "macos-latest"
     needs: [check_license_and_format, mirror_third_party]
     runs-on: ${{ matrix.os }}
-    if:
-      (github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')) || \
-      (matrix.test_suite == 'macOS' && contains(github.event.pull_request.labels.*.name, 'mac-ci'))
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - name: Set environment variables
         if: matrix.test_suite != 'macOS'
@@ -120,7 +118,7 @@ jobs:
           cuda_version: ${{ matrix.cuda_version }}
           extra_docker_args: $extra_docker_args
       - name: Cache build dir (macOS)
-        if: matrix.test_suite == 'macOS'
+        if: matrix.test_suite == 'macOS' && contains(github.event.pull_request.labels.*.name, 'mac-ci')
         uses: actions/cache@v2
         with:
           path: build
@@ -130,7 +128,7 @@ jobs:
             ${{ runner.os }}-${{ github.repository }}-
             ${{ runner.os }}-
       - name: Build OneFlow (macOS), enable by adding label 'mac-ci'
-        if: matrix.test_suite == 'macOS'
+        if: matrix.test_suite == 'macOS' && contains(github.event.pull_request.labels.*.name, 'mac-ci')
         uses: ./.github/actions/mac-build
         env:
           CPATH: /Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
