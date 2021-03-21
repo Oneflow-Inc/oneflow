@@ -169,3 +169,137 @@ def test_moving_average_min_max_observer_cambricon_zero_point(test_case):
     convert_to_onnx_and_check(
         moving_average_min_max_observer, opset=11, explicit_init=False, dtype=np.int8
     )
+
+
+def test_moving_average_min_max_observer_symmetric_gpu(test_case):
+    flow.clear_default_session()
+
+    @flow.global_function()
+    def moving_average_min_max_observer():
+        with flow.scope.placement("gpu", "0:0"):
+            x = flow.get_variable(
+                name="x1",
+                shape=(2, 3, 4),
+                dtype=flow.float,
+                initializer=flow.random_uniform_initializer(-10, 10),
+            )
+            return flow.quantization.moving_average_min_max_observer(x)[0]
+
+    set_moving_max_min_value()
+
+    convert_to_onnx_and_check(
+        moving_average_min_max_observer, opset=11, explicit_init=False
+    )
+
+
+def test_moving_average_min_max_observer_symmetric_zero_point_gpu(test_case):
+    flow.clear_default_session()
+
+    @flow.global_function()
+    def moving_average_min_max_observer():
+        with flow.scope.placement("gpu", "0:0"):
+            x = flow.get_variable(
+                name="x1",
+                shape=(2, 3, 4),
+                dtype=flow.float,
+                initializer=flow.random_uniform_initializer(-10, 10),
+            )
+            return flow.quantization.moving_average_min_max_observer(x)[1]
+
+    set_moving_max_min_value()
+
+    convert_to_onnx_and_check(
+        moving_average_min_max_observer, opset=11, explicit_init=False, dtype=np.int8
+    )
+
+
+def test_moving_average_min_max_observer_affine_gpu(test_case):
+    flow.clear_default_session()
+
+    @flow.global_function()
+    def moving_average_min_max_observer():
+        with flow.scope.placement("gpu", "0:0"):
+            x = flow.get_variable(
+                name="x1",
+                shape=(2, 3, 4),
+                dtype=flow.float,
+                initializer=flow.random_uniform_initializer(-10, 10),
+            )
+            return flow.quantization.moving_average_min_max_observer(
+                x, quantization_scheme="affine"
+            )[0]
+
+    set_moving_max_min_value()
+
+    convert_to_onnx_and_check(
+        moving_average_min_max_observer, opset=11, explicit_init=False
+    )
+
+
+def test_moving_average_min_max_observer_affine_zero_point_gpu(test_case):
+    flow.clear_default_session()
+
+    @flow.global_function()
+    def moving_average_min_max_observer():
+        with flow.scope.placement("gpu", "0:0"):
+            x = flow.get_variable(
+                name="x1",
+                shape=(2, 3, 4),
+                dtype=flow.float,
+                initializer=flow.random_uniform_initializer(-10, 10),
+            )
+            return flow.quantization.moving_average_min_max_observer(
+                x, quantization_scheme="affine"
+            )[1]
+
+    set_moving_max_min_value()
+
+    convert_to_onnx_and_check(
+        moving_average_min_max_observer, opset=11, explicit_init=False, dtype=np.uint8
+    )
+
+
+def test_moving_average_min_max_observer_cambricon_gpu(test_case):
+    flow.clear_default_session()
+
+    @flow.global_function()
+    def moving_average_min_max_observer():
+        with flow.scope.placement("gpu", "0:0"):
+            x = flow.get_variable(
+                name="x1",
+                shape=(2, 3, 4),
+                dtype=flow.float,
+                initializer=flow.random_uniform_initializer(-10, 10),
+            )
+            return flow.quantization.moving_average_min_max_observer(
+                x, quantization_formula="cambricon"
+            )[0]
+
+    set_moving_max_min_value()
+
+    convert_to_onnx_and_check(
+        moving_average_min_max_observer, opset=11, explicit_init=False
+    )
+
+
+def test_moving_average_min_max_observer_cambricon_zero_point_gpu(test_case):
+    flow.clear_default_session()
+
+    @flow.global_function()
+    def moving_average_min_max_observer():
+        with flow.scope.placement("gpu", "0:0"):
+            x = flow.get_variable(
+                name="x1",
+                shape=(2, 3, 4),
+                dtype=flow.float,
+                initializer=flow.random_uniform_initializer(-10, 10),
+            )
+            return flow.quantization.moving_average_min_max_observer(
+                x, quantization_formula="cambricon"
+            )[1]
+
+    set_moving_max_min_value()
+
+    convert_to_onnx_and_check(
+        moving_average_min_max_observer, opset=11, explicit_init=False, dtype=np.int8
+    )

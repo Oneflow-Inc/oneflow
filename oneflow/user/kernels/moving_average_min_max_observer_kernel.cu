@@ -247,10 +247,10 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
                          kCudaThreadsNumPerBlock * 2 * sizeof(T), in->dptr<T>(), elements, max_ptr,
                          min_ptr);
     }
-
+    bool moving = (*host_current_train_step_ptr <= stop_update_after_iters) && is_training;
     if (quantization_formula == "google") {
       if (quantization_scheme == "symmetric") {
-        if (*host_current_train_step_ptr <= stop_update_after_iters) {
+        if (moving) {
           LAUNCH_CUDA_KERNEL((CalScaleZeroPointSymmetric<T>), ctx->device_ctx(), 1, 0, 1,
                              static_cast<double>(quantization_bit), momentum, max_ptr, min_ptr,
                              moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(),
@@ -261,7 +261,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
                              scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
         }
       } else {  // quantization_scheme == "affine"
-        if (*host_current_train_step_ptr <= stop_update_after_iters) {
+        if (moving) {
           LAUNCH_CUDA_KERNEL((CalScaleZeroPointAffine<T>), ctx->device_ctx(), 1, 0, 1,
                              static_cast<double>(quantization_bit), momentum, max_ptr, min_ptr,
                              moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(),
@@ -274,7 +274,7 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
         }
       }
     } else if (quantization_formula == "cambricon") {
-      if (*host_current_train_step_ptr <= stop_update_after_iters) {
+      if (moving) {
         LAUNCH_CUDA_KERNEL((CalScaleZeroPointCambricon<T>), ctx->device_ctx(), 1, 0, 1,
                            static_cast<double>(quantization_bit), momentum, max_ptr, min_ptr,
                            moving_max->mut_dptr<T>(), moving_min->mut_dptr<T>(),
