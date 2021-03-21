@@ -52,7 +52,24 @@ def _check_axis(axis, shape):
 
 @oneflow_export("Sum")
 class Sum(Module):
-    r"""
+    r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
+
+    For example:
+
+    .. code-block:: python
+
+        sum = flow.Sum() # axis default to None
+        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        out = sum(input) # out: [21.]
+
+        sum = flow.Sum(axis=0)
+        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        out = sum(input) # out: [5. 7. 9.]
+
+        sum = flow.Sum(axis=1)
+        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        out = sum(input) # out: [ 6. 15.]
+
     """
 
     def __init__(
@@ -157,9 +174,9 @@ class BroadcastMul(Module):
 @register_tensor_op_by_module("mul")
 @oneflow_export("Mul")
 class Mul(Module):
-    r"""Compute :math:`x \times y`.
+    r"""Computes the multiplication of x by y for each element, scalar and broadcast promotation are supported.
 
-    The equation is:
+    The formula is:
 
     .. math::
         out = x \times y
@@ -211,6 +228,29 @@ class Mul(Module):
 
 @oneflow_export("Mean")
 class Mean(Module):
+    r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
+
+    For example:
+
+    .. code-block:: python
+
+        mean = flow.Mean() # axis default to None
+        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        out = mean(input) # out: [3.5]
+        print(out.numpy())
+        
+        mean = flow.Mean(axis=0)
+        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        out = mean(input) # out: [2.5 3.5 4.5]
+        print(out.numpy())
+
+        mean = flow.Mean(axis=1)
+        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        out = mean(input) # out: [ 2. 5.]
+        print(out.numpy())
+
+    """
+
     def __init__(
         self,
         axis: Optional[Union[collections.Sized, int]] = None,
@@ -307,8 +347,37 @@ class ScalarAdd(Module):
 
 @oneflow_export("Sub")
 class Sub(Module):
-    r"""
+    r"""Computes the subtraction of x by y for each element, scalar and broadcast promotation are supported.
 
+    The formula is:
+
+    .. math::
+        out = x - y
+
+
+    For example:
+
+    .. code-block:: python
+
+        sub = flow.Sub()
+
+        # element-wise subtract
+        x = flow.Tensor(np.random.randn(2,3))
+        y = flow.Tensor(np.random.randn(2,3))
+        out = sub(x,y).numpy()
+        print(out.shape) # (2,3)
+
+        # scalar subtract
+        x = 5
+        y = flow.Tensor(np.random.randn(2,3))
+        out = sub(x,y).numpy()
+        print(out.shape) # (2,3)
+
+        # broadcast subtract
+        x = flow.Tensor(np.random.randn(1,1))
+        y = flow.Tensor(np.random.randn(2,3))
+        out = sub(x,y).numpy()
+        print(out.shape) # (2,3)
     """
 
     def __init__(self) -> None:
@@ -363,7 +432,7 @@ class ScalarDivByTensor(Module):
 
 @oneflow_export("Div")
 class Div(Module):
-    r"""Computes the division of x by y.
+    r"""Computes the division of x by y for each element, scalar and broadcast promotation are supported.
 
     The formula is:
 
@@ -379,7 +448,25 @@ class Div(Module):
 
     .. code-block:: python
 
-        # out [2.5, 4., 4.5]
+        div = flow.Div()
+
+        # element-wise divide
+        x = flow.Tensor(np.random.randn(2,3))
+        y = flow.Tensor(np.random.randn(2,3))
+        out = div(x,y).numpy()
+        print(out.shape) # (2,3)
+
+        # scalar divide
+        x = 5
+        y = flow.Tensor(np.random.randn(2,3))
+        out = div(x,y).numpy()
+        print(out.shape) # (2,3)
+
+        # broadcast divide
+        x = flow.Tensor(np.random.randn(1,1))
+        y = flow.Tensor(np.random.randn(2,3))
+        out = div(x,y).numpy()
+        print(out.shape) # (2,3)
 
     """
 
@@ -390,7 +477,6 @@ class Div(Module):
     def forward(self, x, y):
         if isinstance(x, (int, float)):
             return ScalarMul(x)(flow.Reciprocal()(y))
-            # return scalar_mul(math_unary_elementwise_ops.reciprocal_no_nan(y), x, name)
         elif isinstance(y, (int, float)):
             if y == 0 or y == 0.0:
                 y = 0.0
@@ -398,17 +484,13 @@ class Div(Module):
                 y = 1.0 / (float(y))
             return ScalarMul(y)(x)
         elif x.shape == y.shape:
-            # TODO: add element-wise op
             return BroadcastDiv()(x, y)
-            # return broadcast_div(x, y, name)
         elif x.shape == (1,):
             return ScalarDivByTensor(y, x)
         elif y.shape == (1,):
             return ScalarDivByTensor(x, y)
-            # return scalar_div_by_tensor(x, y, name)
         else:
             return BroadcastDiv()(x, y)
-            # broadcast_div(x, y, name)
 
 
 @oneflow_export("Reciprocal")
@@ -422,16 +504,18 @@ class Reciprocal(Module):
     For example: 
 
     .. code-block:: python 
-        # out [0.   0.5  0.25]
+        reciprocal = flow.Reciprocal()
+        x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
+        out = reciprocal(x)
+        # out [[1.         0.5        0.33333334]
+               [0.25       0.2        0.16666667]]
+
     """
 
     def __init__(self, name: Optional[str] = None) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("reciprocal_no_nan", name)
-            .Input("x")
-            .Output("y")
-            .Build()
+            flow.builtin_op("reciprocal_no_nan", name).Input("x").Output("y").Build()
         )
 
     def forward(self, x):
