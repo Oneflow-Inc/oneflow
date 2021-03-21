@@ -244,7 +244,9 @@ if (USE_CLANG_FORMAT)
 endif()
 
 if (BUILD_SHARED_LIBS)
-  target_link_libraries(of_ccobj of_protoobj of_cfgobj ${GLOG_STATIC_LIBRARIES})
+  get_filename_component(GLOG_RPATH "${GLOG_STATIC_LIBRARIES}" DIRECTORY)
+  target_link_libraries(of_ccobj of_protoobj of_cfgobj "${GLOG_STATIC_LIBRARIES}")
+  set_target_properties(of_ccobj PROPERTIES INSTALL_RPATH ${GLOG_RPATH})
 endif()
 
 # py ext lib
