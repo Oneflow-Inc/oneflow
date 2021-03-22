@@ -343,23 +343,24 @@ class UserOpInferParallelDistributionFnContext
  public:
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
   UserOpInferParallelDistributionFnContext(
-      const UserOp* op, ParallelDistributionSignature* signature,
+      const UserOp* op, ParallelDistributionSignature* parallel_distribution_signature,
       const ParallelDistributionSignature& parallel_distribution_sig_constraints,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn)
       : op_(op),
-        signature_(signature),
+        parallel_distribution_signature_(parallel_distribution_signature),
         parallel_distribution_sig_constraints_(parallel_distribution_sig_constraints),
         parallel_distribution_infer_hint4ibn_fn_(std::move(ParallelDistributionInferHint4Ibn)) {}
   ~UserOpInferParallelDistributionFnContext() override = default;
 
-  const ParallelDistributionSignature& parallel_distribution_sig_constraints() const override {
+  const ParallelDistributionSignature& parallel_distribution_constraints() const override {
     return parallel_distribution_sig_constraints_;
   }
 
   ParallelDistribution* ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
                                                              int32_t index) override {
-    return &(*signature_->mutable_bn_in_op2parallel_distribution())[GenRepeatedBn(arg_name, index)];
+    return &(*parallel_distribution_signature_
+                  ->mutable_bn_in_op2parallel_distribution())[GenRepeatedBn(arg_name, index)];
   }
 
   const ParallelDistribution& ParallelDistributionHint4InputArgNameAndIndex(
@@ -381,7 +382,7 @@ class UserOpInferParallelDistributionFnContext
 
  private:
   const UserOp* op_;
-  ParallelDistributionSignature* signature_;
+  ParallelDistributionSignature* parallel_distribution_signature_;
   ParallelDistributionSignature parallel_distribution_sig_constraints_;
   std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
       parallel_distribution_infer_hint4ibn_fn_;

@@ -32,7 +32,7 @@ class InferParallelDistributionFnContext {
                                                                      int32_t index) = 0;
   virtual const ParallelDistribution& ParallelDistributionHint4InputArgNameAndIndex(
       const std::string& arg_name, int32_t index) = 0;
-  virtual const ParallelDistributionSignature& parallel_distribution_sig_constraints() const = 0;
+  virtual const ParallelDistributionSignature& parallel_distribution_constraints() const = 0;
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
   virtual int64_t parallel_num() const = 0;
   virtual const Shape& parallel_hierarchy() = 0;
