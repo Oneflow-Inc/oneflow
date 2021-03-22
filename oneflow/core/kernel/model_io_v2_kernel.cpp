@@ -215,7 +215,7 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
     int64_t seed_offset = 0;
     const ParallelDistribution& parallel_distribution =
         GetParallelDistribution(this->kernel_conf(), "ref");
-    for (int64_t i = 0; i < hierarchy->NumAxes(); ++i) {
+    FOR_RANGE(int64_t, i, 0, hierarchy->NumAxes()) {
       SbpParallel sbp_parallel = parallel_distribution.sbp_parallel(i);
       CHECK(sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel());
       if (sbp_parallel.has_split_parallel()) {
@@ -330,43 +330,29 @@ class ModelSaveV2Kernel final : public KernelIf<device_type> {
             .hierarchy();
     const ParallelDistribution& parallel_distribution =
         GetParallelDistribution(this->kernel_conf(), "in");
-
+    const auto NeedDoSave = [&](const std::vector<int64_t>& parallel_rank) -> bool {
+      FOR_RANGE(int64_t, j, 0, hierarchy->NumAxes()) {
+        const SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(j);
+        if (sbp_parallel.has_broadcast_parallel() && parallel_rank.at(j) != 0) { return false; }
+      }
+      return true;
+    };
     const Shape logical_blob_shape(
         this->op_conf().model_save_v2_conf().original_variable_conf().shape());
-    std::vector<Range> ranges(logical_blob_shape.NumAxes());
-    bool need_do_save;
     NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
         hierarchy->dim_vec().data(), hierarchy->NumAxes());
     std::vector<int64_t> parallel_rank(SHAPE_MAX_AXIS_SIZE);
     FOR_RANGE(int64_t, i, 0, hierarchy->elem_cnt()) {
-      need_do_save = true;
-      FOR_RANGE(int64_t, j, 0, logical_blob_shape.NumAxes()) {
-        ranges[j].mut_begin() = 0;
-        ranges[j].mut_end() = logical_blob_shape.At(j);
-      }
       hierarchy_index_helper.OffsetToNdIndex(i, parallel_rank.data());
-      FOR_RANGE(int64_t, j, 0, hierarchy->NumAxes()) {
-        const SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(j);
-        CHECK(sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel());
-        if (sbp_parallel.has_broadcast_parallel() && parallel_rank.at(j) != 0) {
-          need_do_save = false;
-          break;
-        } else if (sbp_parallel.has_split_parallel()) {
-          const int64_t split_axis = sbp_parallel.split_parallel().axis();
-          CHECK_EQ(ranges[split_axis].size() % hierarchy->At(j), 0);
-          const int64_t range_size = ranges[split_axis].size() / hierarchy->At(j);
-          const int64_t dim_start = ranges[split_axis].begin() + parallel_rank.at(j) * range_size;
-          ranges[split_axis].mut_begin() = dim_start;
-          ranges[split_axis].mut_end() = dim_start + range_size;
-        } else {
-          // do nothing
-        }
-      }
+      bool cur_i_need_do_save = NeedDoSave(parallel_rank);
       if (i == this->kernel_conf().parallel_ctx().parallel_id()) {
-        need_do_save_ = need_do_save;
+        need_do_save_ = cur_i_need_do_save;
         part_id_ = part_id2slice_views_.size();
       }
-      if (need_do_save) { part_id2slice_views_.emplace_back(ranges); }
+      if (cur_i_need_do_save) {
+        part_id2slice_views_.emplace_back(SubTskGphBuilderUtil::GetTensorSliceView4ParallelRank(
+            *hierarchy, parallel_distribution, logical_blob_shape, parallel_rank));
+      }
     }
   }
 

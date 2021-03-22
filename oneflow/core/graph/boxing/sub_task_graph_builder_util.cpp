@@ -51,13 +51,9 @@ std::vector<TensorSliceView> SubTskGphBuilderUtil::GetTensorSliceView(
   return views;
 }
 
-TensorSliceView SubTskGphBuilderUtil::GetTensorSliceView4ParallelId(
+TensorSliceView SubTskGphBuilderUtil::GetTensorSliceView4ParallelRank(
     const Shape& parallel_hierarchy, const ParallelDistribution& parallel_distribution,
-    const Shape& logical_shape, int64_t parallel_id) {
-  NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
-      parallel_hierarchy.dim_vec().data(), parallel_hierarchy.NumAxes());
-  std::vector<int64_t> parallel_rank(SHAPE_MAX_AXIS_SIZE);
-  hierarchy_index_helper.OffsetToNdIndex(parallel_id, parallel_rank.data());
+    const Shape& logical_shape, const std::vector<int64_t>& parallel_rank) {
   std::vector<Range> ranges(logical_shape.NumAxes());
   FOR_RANGE(int64_t, i, 0, logical_shape.NumAxes()) {
     ranges[i].mut_begin() = 0;
@@ -75,6 +71,17 @@ TensorSliceView SubTskGphBuilderUtil::GetTensorSliceView4ParallelId(
     }
   }
   return TensorSliceView(ranges);
+}
+
+TensorSliceView SubTskGphBuilderUtil::GetTensorSliceView4ParallelId(
+    const Shape& parallel_hierarchy, const ParallelDistribution& parallel_distribution,
+    const Shape& logical_shape, int64_t parallel_id) {
+  NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
+      parallel_hierarchy.dim_vec().data(), parallel_hierarchy.NumAxes());
+  std::vector<int64_t> parallel_rank(SHAPE_MAX_AXIS_SIZE);
+  hierarchy_index_helper.OffsetToNdIndex(parallel_id, parallel_rank.data());
+  return GetTensorSliceView4ParallelRank(parallel_hierarchy, parallel_distribution, logical_shape,
+                                         parallel_rank);
 }
 
 std::vector<TensorSliceView> SubTskGphBuilderUtil::GetTensorSliceView(
