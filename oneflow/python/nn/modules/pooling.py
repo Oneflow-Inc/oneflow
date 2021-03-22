@@ -26,7 +26,6 @@ from oneflow.python.nn.modules.utils import (
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from typing import Optional, List, Tuple
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
-import oneflow.python.framework.id_util as id_util
 
 
 @oneflow_export("nn.AvgPool2d")
@@ -97,7 +96,6 @@ class AvgPool2d(Module):
         count_include_pad = count_include_pad
         divisor_override = divisor_override
 
-        _opname = id_util.UniqueStr("Module_AvgPool2D_")
         _channel_pos = "channels_first"
 
         _padding_type, _pads_list = calc_pool_padding(
@@ -108,7 +106,6 @@ class AvgPool2d(Module):
 
         self._op = (
             flow.builtin_op("avg_pool_2d")
-            .Name(_opname)
             .Attr("data_format", _channel_pos)
             .Attr("pool_size", kernel_size)
             .Attr("strides", stride)
@@ -220,7 +217,6 @@ class MaxPool2d(Module):
 
         self._op = (
             flow.builtin_op("max_pool_2d")
-            .Name(id_util.UniqueStr("MaxPool2D_"))
             .Attr("data_format", _channel_pos)
             .Attr("pool_size", _kernel_size)
             .Attr("strides", _strides)
