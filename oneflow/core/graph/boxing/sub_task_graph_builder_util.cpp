@@ -50,6 +50,41 @@ std::vector<TensorSliceView> SubTskGphBuilderUtil::GetTensorSliceView(
   return views;
 }
 
+TensorSliceView SubTskGphBuilderUtil::GetTensorSliceView4ParallelId(
+    const Shape& parallel_hierarchy, const ParallelDistribution& parallel_distribution,
+    const Shape& logical_shape, int64_t parallel_id) {
+  std::vector<Range> ranges(logical_shape.NumAxes());
+  FOR_RANGE(int64_t, j, 0, logical_shape.NumAxes()) {
+    ranges[j].mut_begin() = 0;
+    ranges[j].mut_end() = logical_shape.At(j);
+  }
+  FOR_RANGE(int64_t, j, 0, parallel_hierarchy.NumAxes()) {
+    const int64_t rank_id =
+        (parallel_id % parallel_hierarchy.Count(j)) / parallel_hierarchy.Count(j + 1);
+    const SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(j);
+    if (sbp_parallel.has_split_parallel()) {
+      const int64_t split_axis = sbp_parallel.split_parallel().axis();
+      CHECK_EQ(ranges[split_axis].size() % parallel_hierarchy.At(j), 0);
+      const int64_t range_size = ranges[split_axis].size() / parallel_hierarchy.At(j);
+      const int64_t dim_start = ranges[split_axis].begin() + rank_id * range_size;
+      ranges[split_axis].mut_begin() = dim_start;
+      ranges[split_axis].mut_end() = dim_start + range_size;
+    }
+  }
+  return TensorSliceView(ranges);
+}
+
+std::vector<TensorSliceView> SubTskGphBuilderUtil::GetTensorSliceView(
+    const Shape& parallel_hierarchy, const ParallelDistribution& parallel_distribution,
+    const Shape& logical_shape) {
+  std::vector<TensorSliceView> views;
+  FOR_RANGE(int64_t, i, 0, parallel_hierarchy.elem_cnt()) {
+    views.emplace_back(
+        GetTensorSliceView4ParallelId(parallel_hierarchy, parallel_distribution, logical_shape, i));
+  }
+  return views;
+}
+
 TensorSliceView SubTskGphBuilderUtil::GetBroadcastTensorSliceView(const BlobDesc& blob_desc) {
   return TensorSliceView(blob_desc.shape());
 }
