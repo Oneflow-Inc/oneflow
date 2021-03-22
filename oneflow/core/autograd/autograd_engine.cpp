@@ -40,13 +40,11 @@ bool IsReadyToRun(const std::vector<std::shared_ptr<TensorArg>>& out_grads) {
 
 Maybe<void> InitEmptyTensorArgs2ZerosTensor(const TensorTuple& outputs,
                                             std::vector<std::shared_ptr<TensorArg>>& out_grads) {
-  TensorTuple input(1);
-  const auto& zero_like = GetZeroLikeOpExpr();
+  const auto& zero_like = JUST(GetZeroLikeOpExpr());
   for (int i = 0; i < out_grads.size(); ++i) {
     if (out_grads.at(i)->Empty()) {
       TensorTuple output(1);
-      input.at(0) = outputs.at(i);
-      GetInterpreter()->Apply(zero_like, input, output);
+      GetInterpreter()->Apply(zero_like, {outputs.at(i)}, output);
       out_grads.at(i)->PushPartialTensor(output.at(0));
     }
   }
@@ -56,11 +54,9 @@ Maybe<void> InitEmptyTensorArgs2ZerosTensor(const TensorTuple& outputs,
 Maybe<void> CopyOrAccGrad(Tensor& tensor) {
   const auto& tensor_arg = tensor.now_grad_arg();
   if (tensor.acc_grad()) {
-    TensorTuple input(2);
+    TensorTuple input = {tensor.acc_grad(), tensor_arg->GetAccTensor().GetPtrOrThrow()};
     TensorTuple output(1);
-    input.at(0) = tensor.acc_grad();
-    input.at(1) = tensor_arg->GetAccTensor().GetPtrOrThrow();
-    const auto& add = GetAddOpExpr();
+    const auto& add = JUST(GetAddOpExpr());
     GetInterpreter()->Apply(add, input, output);
     tensor.set_acc_grad(output.at(0));
   } else {

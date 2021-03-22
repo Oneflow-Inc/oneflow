@@ -45,9 +45,9 @@ Maybe<Tensor> TensorArg::GetAccTensor() {
   if (!acc_tensor_) {
     size_t input_num = partial_sum_tensors_.size();
     TensorTuple input(input_num);
-    TensorTuple output(1);
     for (size_t i = 0; i < input_num; ++i) { input.at(i) = partial_sum_tensors_.at(i); }
-    const auto& add_n = CHECK_JUST(GetAddNOpExpr(input_num));
+    TensorTuple output(1);
+    const auto& add_n = JUST(GetAddNOpExpr(input_num));
     GetInterpreter()->Apply(add_n, input, &output);
     acc_tensor_ = output.at(0);
     partial_sum_tensors_.clear();
