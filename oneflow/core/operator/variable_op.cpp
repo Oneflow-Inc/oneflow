@@ -66,25 +66,30 @@ Symbol<OperatorConf> VariableOp::GetOpConfWithoutOpNameAndLbn() const {
 }
 
 Maybe<void> VariableOp::InferParallelDistributionSignature(
-    ParallelDistributionSignature* signature,
-    const ParallelDistributionSignature& parallel_distribution_sig_conf,
+    ParallelDistributionSignature* parallel_distribution_signature,
+    const ParallelDistributionSignature& parallel_distribution_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
         ParallelDistributionInferHint4Ibn) {
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   const VariableOpConf& conf = this->op_conf().variable_conf();
-  CHECK_EQ_OR_RETURN(conf.parallel_distribution_size(), parallel_hierarchy->NumAxes());
+  CHECK_OR_RETURN(conf.parallel_distribution_size() == 0
+                  || conf.parallel_distribution_size() == parallel_hierarchy->NumAxes());
   ParallelDistribution& out_parallel_distribution =
-      (*signature->mutable_bn_in_op2parallel_distribution())["out"];
+      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["out"];
   for (int64_t i = 0; i < parallel_hierarchy->NumAxes(); ++i) {
-    SbpParallel sbp_parallel;
-    CHECK_OR_RETURN(ParseSbpParallelFromString(conf.parallel_distribution(i), &sbp_parallel));
-    CHECK_OR_RETURN(sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel());
-    *out_parallel_distribution.mutable_sbp_parallel()->Add() = sbp_parallel;
+    if (conf.parallel_distribution_size() != 0) {
+      SbpParallel sbp_parallel;
+      CHECK_OR_RETURN(ParseSbpParallelFromString(conf.parallel_distribution(i), &sbp_parallel));
+      CHECK_OR_RETURN(sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel());
+      *out_parallel_distribution.mutable_sbp_parallel()->Add() = sbp_parallel;
+    } else {
+      out_parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+    }
   }
   if (conf.has_tick()) {
     ParallelDistribution& tick_parallel_distribution =
-        (*signature->mutable_bn_in_op2parallel_distribution())["tick"];
+        (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["tick"];
     for (int64_t i = 0; i < parallel_hierarchy->NumAxes(); ++i) {
       tick_parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
     }

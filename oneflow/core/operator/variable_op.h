@@ -37,11 +37,11 @@ class VariableOp final : public Operator {
       const ParallelDesc& parallel_desc) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
   Maybe<void> InferParallelDistributionSignature(
-      ParallelDistributionSignature* signature,
-      const ParallelDistributionSignature& parallel_distribution_sig_conf,
+      ParallelDistributionSignature* parallel_distribution_signature,
+      const ParallelDistributionSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-          ParallelDistributionInferHint4Ibn);
+          ParallelDistributionInferHint4Ibn) override;
 };
 
 }  // namespace oneflow

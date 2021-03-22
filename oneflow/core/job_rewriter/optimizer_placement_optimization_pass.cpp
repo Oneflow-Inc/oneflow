@@ -246,6 +246,8 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
     for (int64_t i = 0; i < sorted_sequences.size(); ++i) {
       const OpNode* var_node = sorted_sequences.at(i)->GetVariableNode();
       OperatorConf new_var_op_conf = var_node->op().op_conf();
+      CHECK_EQ(pd.hierarchy()->NumAxes(), 1);
+      new_var_op_conf.mutable_variable_conf()->clear_parallel_distribution();
       *new_var_op_conf.mutable_variable_conf()->add_parallel_distribution() = "S(0)";
       if (i != 0) {
         const std::string& prev_op_name =
