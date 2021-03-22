@@ -40,6 +40,8 @@ sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
 }
 
 int SockListen(int listen_sockfd, int32_t* listen_port, int32_t total_machine_num) {
+  // System designated available port if listen_port == kInvlidPort, otherwise, the configured port
+  // is used.
   sockaddr_in sa = GetSockAddr("0.0.0.0", *listen_port);
   int reuse = 1;
   int ret_setopt =
