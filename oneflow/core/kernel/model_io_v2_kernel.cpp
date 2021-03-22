@@ -206,34 +206,31 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
         ParallelDesc(
             this->kernel_conf().op_attribute().parallel_conf_signature().op_parallel_conf())
             .hierarchy();
-
-    NdIndexOffsetHelper<int64_t, 5> hierarchy_index_helper(hierarchy->dim_vec().data(),
-                                                           hierarchy->NumAxes());
-    std::vector<int64_t> parallel_rank(5);
+    NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
+        hierarchy->dim_vec().data(), hierarchy->NumAxes());
+    std::vector<int64_t> parallel_rank(SHAPE_MAX_AXIS_SIZE);
     hierarchy_index_helper.OffsetToNdIndex(parallel_ctx.parallel_id(), parallel_rank.data());
-    DimVector seed_vec;
-    std::vector<int64_t> seed_rank;
+
+    int64_t seed_num = 1;
+    int64_t seed_offset = 0;
     const ParallelDistribution& parallel_distribution =
         GetParallelDistribution(this->kernel_conf(), "ref");
     for (int64_t i = 0; i < hierarchy->NumAxes(); ++i) {
       SbpParallel sbp_parallel = parallel_distribution.sbp_parallel(i);
       CHECK(sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel());
       if (sbp_parallel.has_split_parallel()) {
-        seed_vec.push_back(hierarchy->At(i));
-        seed_rank.push_back(parallel_rank.at(i));
+        seed_num *= hierarchy->At(i);
+        seed_offset = seed_offset * hierarchy->At(i) + parallel_rank.at(i);
       }
     }
-    if (seed_vec.size() == 0) {
-      seed_id_ = 0;
-      seed_num_ = 1;
-    } else {
-      NdIndexOffsetHelper<int64_t, 5> seed_index_helper(seed_vec.data(), seed_vec.size());
-      seed_id_ = seed_index_helper.NdIndexToOffset(seed_rank.data(), seed_rank.size());
-      seed_num_ = Shape(seed_vec).elem_cnt();
-    }
+    const VariableOpConf& original_variable_conf =
+        this->op_conf().model_init_v2_conf().original_variable_conf();
+    std::seed_seq seq{original_variable_conf.random_seed()};
+    std::vector<int64_t> seeds(seed_num);
+    seq.generate(seeds.begin(), seeds.end());
+    seed_ = seeds.at(seed_offset);
 
-    const Shape logical_blob_shape(
-        this->op_conf().model_init_v2_conf().original_variable_conf().shape());
+    const Shape logical_blob_shape(original_variable_conf.shape());
     tensor_slice_view_ = SubTskGphBuilderUtil::GetTensorSliceView4ParallelId(
         *hierarchy, parallel_distribution, logical_blob_shape, parallel_ctx.parallel_id());
   }
@@ -249,12 +246,7 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
     const VariableOpConf& original_variable_conf = conf.original_variable_conf();
     AutoSyncBlobAccessor<device_type> ref_accessor(ctx.device_ctx, ref, false, true);
     if (original_variable_conf.has_initializer()) {
-      std::seed_seq seq{original_variable_conf.random_seed()};
-      std::vector<int64_t> seeds(seed_num_);
-      seq.generate(seeds.begin(), seeds.end());
-      int64_t seed = seeds.at(seed_id_);
-
-      std::mt19937 random_seed_gen(seed);
+      std::mt19937 random_seed_gen(seed_);
       InitializeWithConfUtil::SwitchInitializeWithConf(SwitchCase(data_type),
                                                        original_variable_conf.initializer(),
                                                        random_seed_gen(), ref_accessor.host_blob());
@@ -271,8 +263,7 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
     }
   }
 
-  int64_t seed_id_;
-  int64_t seed_num_;
+  int64_t seed_;
   TensorSliceView tensor_slice_view_;
 };
 
@@ -344,24 +335,27 @@ class ModelSaveV2Kernel final : public KernelIf<device_type> {
         this->op_conf().model_save_v2_conf().original_variable_conf().shape());
     std::vector<Range> ranges(logical_blob_shape.NumAxes());
     bool need_do_save;
+    NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
+        hierarchy->dim_vec().data(), hierarchy->NumAxes());
+    std::vector<int64_t> parallel_rank(SHAPE_MAX_AXIS_SIZE);
     FOR_RANGE(int64_t, i, 0, hierarchy->elem_cnt()) {
       need_do_save = true;
       FOR_RANGE(int64_t, j, 0, logical_blob_shape.NumAxes()) {
         ranges[j].mut_begin() = 0;
         ranges[j].mut_end() = logical_blob_shape.At(j);
       }
+      hierarchy_index_helper.OffsetToNdIndex(i, parallel_rank.data());
       FOR_RANGE(int64_t, j, 0, hierarchy->NumAxes()) {
-        const int64_t rank_id = (i % hierarchy->Count(j)) / hierarchy->Count(j + 1);
         const SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(j);
         CHECK(sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel());
-        if (sbp_parallel.has_broadcast_parallel() && rank_id != 0) {
+        if (sbp_parallel.has_broadcast_parallel() && parallel_rank.at(j) != 0) {
           need_do_save = false;
           break;
         } else if (sbp_parallel.has_split_parallel()) {
           const int64_t split_axis = sbp_parallel.split_parallel().axis();
           CHECK_EQ(ranges[split_axis].size() % hierarchy->At(j), 0);
           const int64_t range_size = ranges[split_axis].size() / hierarchy->At(j);
-          const int64_t dim_start = ranges[split_axis].begin() + rank_id * range_size;
+          const int64_t dim_start = ranges[split_axis].begin() + parallel_rank.at(j) * range_size;
           ranges[split_axis].mut_begin() = dim_start;
           ranges[split_axis].mut_end() = dim_start + range_size;
         } else {
