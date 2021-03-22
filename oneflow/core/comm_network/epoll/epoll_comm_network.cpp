@@ -177,7 +177,7 @@ void EpollCommNet::InitSockets() {
     PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), sizeof(peer_sockaddr))
            == 0);
     ssize_t n = write(sockfd, &this_machine_id, sizeof(int64_t));
-    PCHECK(n == 8);
+    PCHECK(n == sizeof(int64_t));
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
     machine_id2sockfd_[peer_id] = sockfd;
   }
@@ -190,7 +190,7 @@ void EpollCommNet::InitSockets() {
     PCHECK(sockfd != -1);
     int64_t peer_rank;
     ssize_t n = read(sockfd, &peer_rank, sizeof(int64_t));
-    PCHECK(n == 8);
+    PCHECK(n == sizeof(int64_t));
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
     machine_id2sockfd_[peer_rank] = sockfd;
   }

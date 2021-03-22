@@ -33,6 +33,7 @@ from oneflow.core.job.env_pb2 import EnvProto
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Any, Dict, Callable
 import subprocess
+import platform
 
 
 class _ClearDefaultSession(object):
@@ -171,6 +172,8 @@ _unittest_worker_initilized = False
 @oneflow_export("unittest.TestCase")
 class TestCase(unittest.TestCase):
     def setUp(self):
+        if platform.system() == "Darwin":
+            oneflow.env.rpc_backend("local")
         global _unittest_env_initilized
         global _unittest_worker_initilized
         if has_node_list():

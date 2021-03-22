@@ -13,12 +13,30 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/distribute_split_compute_task_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/operator/variable_op.h"
 
 namespace oneflow {
+
+class DistributeSplitCompTaskNode final : public CompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DistributeSplitCompTaskNode);
+  DistributeSplitCompTaskNode() = default;
+  ~DistributeSplitCompTaskNode() = default;
+
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  bool IsReadyForBuild() override;
+
+  TaskType GetTaskType() const override { return TaskType::kDistributeSplit; }
+  bool HasBackwardCompTaskNode();
+
+ private:
+  void BuildExecGphAndRegst() override;
+  void BuildExecGphStructAndBindInRegst();
+  void BuildOutRegst();
+};
 
 bool DistributeSplitCompTaskNode::HasBackwardCompTaskNode() { return false; }
 
@@ -42,15 +60,11 @@ void DistributeSplitCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void DistributeSplitCompTaskNode::BuildExecGphStructAndBindInRegst() {
-  for (std::shared_ptr<const Operator> op : logical_node()->op_vec()) {
-    ExecNode* cur_node = mut_exec_gph().NewNode();
-    cur_node->mut_op() = op;
+  ExecNode* cur_node = mut_exec_gph().NewNode();
+  cur_node->mut_op() = this->op();
+  for (const std::string& ibn : cur_node->op()->input_bns()) {
+    cur_node->BindBnWithRegst(ibn, GetSoleConsumedRegst("in"));
   }
-  mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
-    for (const std::string& ibn : cur_node->op()->input_bns()) {
-      cur_node->BindBnWithRegst(ibn, GetSoleConsumedRegst("in"));
-    }
-  });
 }
 
 void DistributeSplitCompTaskNode::BuildOutRegst() {
@@ -65,6 +79,12 @@ void DistributeSplitCompTaskNode::BuildOutRegst() {
   if (in_regst->NumOfLbi() == 1) {
     out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
   }
-}  // namespace oneflow
+}
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kDistributeSplitConf,
+                                       DistributeSplitCompTaskNode);
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kDistributeCloneConf,
+                                       DistributeSplitCompTaskNode);
 
 }  // namespace oneflow
