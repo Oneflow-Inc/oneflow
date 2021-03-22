@@ -63,7 +63,8 @@ TEST(CtrlServer, new_delete) {
   Global<ProcessCtx>::New();
   CHECK_JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
                  .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
-  Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
+  auto* client = new GrpcCtrlClient(*Global<ProcessCtx>::Get());
+  Global<CtrlClient>::SetAllocated(client);
   Global<ResourceDesc, ForEnv>::New(GetResource());
   Global<ResourceDesc, ForSession>::New(GetResource());
 
