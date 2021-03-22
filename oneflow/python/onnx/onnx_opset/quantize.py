@@ -23,7 +23,7 @@ from __future__ import absolute_import
 
 import logging
 import numpy as np
-from onnx.onnx_pb import TensorProto
+from typing import Optional, Callable
 from oneflow.python.onnx.graph import Graph, Node
 from oneflow.python.onnx.handler import flow_op
 
@@ -46,44 +46,47 @@ class MinMaxObserver:
         input_node: Node = node.input_nodes[0]
         input_np: np.ndarray = input_node.get_tensor_value(as_list=False)
 
-        _input_np = (
+        input_np = (
             input_np.flatten()
-            if per_layer
+            if formula == "cambricon" or per_layer
             else input_np.reshape((input_np.shape[0], -1))
         )
-        _input_np_abs_max = np.max(np.abs(_input_np), axis=-1 if per_layer else 1)
+
+        def get_min_or_max_value(get_min: bool, pre_func: Optional[Callable] = None):
+            data = input_np.copy()
+            func = np.min if get_min else np.max
+            if pre_func is not None:
+                data = pre_func(data)
+            result = func(data, axis=-1 if formula == "cambricon" or per_layer else 1)
+            return result.flatten()
+
+        input_np_abs_max = get_min_or_max_value(False, np.abs)
 
         if formula == "google":
             if scheme == "symmetric":
                 denominator = 2.0 ** (bit - 1) - 1
-                scale = _input_np_abs_max / denominator
-                zero_point = (
-                    np.array([0], dtype=np.int8)
-                    if per_layer
-                    else np.array([0 for _ in range(scale.shape[0])], dtype=np.int8)
-                )
+                scale = input_np_abs_max / denominator
+                zero_point = np.array([0] * scale.shape[0], dtype=np.int8)
 
-            if scheme == "affine":
-                _input_np_min = _input_np.min(axis=-1 if per_layer else 1)
+            elif scheme == "affine":
+                input_np_min = get_min_or_max_value(True)
                 denominator = 2.0 ** bit - 1
-                scale = (
-                    _input_np.max(axis=-1 if per_layer else 1) - _input_np_min
-                ) / denominator
-                zero_point = -_input_np_min / scale
-                zero_point = (
-                    np.array([zero_point], dtype=np.uint8)
-                    if per_layer
-                    else zero_point.astype(np.uint8)
-                )
+                scale = (get_min_or_max_value(False) - input_np_min) / denominator
+                zero_point = (-input_np_min / scale).astype(np.uint8)
 
-        if formula == "cambricon":
-            scale = np.floor(np.log2(_input_np_abs_max)) - (bit - 2)
+            else:
+                raise ValueError("invalid quantization scheme: " + scheme)
+
+        elif formula == "cambricon":
+            scale = np.floor(np.log2(input_np_abs_max)) - (bit - 2)
             zero_point = np.array([0], dtype=np.int8)
 
+        else:
+            raise ValueError("invalid quantization formula: " + formula)
+
         ctx.RemoveNode(node.name)
-        ctx.MakeConst(node.output_tensor_names[0], scale.flatten())
-        ctx.MakeConst(node.output_tensor_names[1], zero_point.flatten())
-        ctx.set_dtype(node.output_tensor_names[1], TensorProto.UINT8)
+        ctx.MakeConst(node.output_tensor_names[0], scale)
+        ctx.MakeConst(node.output_tensor_names[1], zero_point)
 
 
 @flow_op(
@@ -102,25 +105,30 @@ class MovingAverageMinMaxObserver:
         moving_max_np: np.ndarray = moving_max_node.get_tensor_value(as_list=False)
         moving_min_node: Node = node.input_nodes[3]
         moving_min_np: np.ndarray = moving_min_node.get_tensor_value(as_list=False)
+
+        _zero = np.array([0], dtype=np.int8)
+
         if formula == "google":
             if scheme == "symmetric":
                 denominator = 2.0 ** (bit - 1) - 1
                 scale = moving_max_np / denominator
-                zero_point = 0
-            if scheme == "affine":
+                zero_point = _zero
+
+            elif scheme == "affine":
                 denominator = 2.0 ** bit - 1
                 scale = (moving_max_np - moving_min_np) / denominator
-                zero_point = -moving_min_np / scale
+                zero_point = (-moving_min_np / scale).astype(np.uint8).flatten()
 
-        if formula == "cambricon":
+            else:
+                raise ValueError("invalid quantization scheme: " + scheme)
+
+        elif formula == "cambricon":
             scale = np.floor(np.log2(moving_max_np)) - (bit - 2)
-            zero_point = 0
+            zero_point = _zero
 
-        scale = np.array([scale])
-        zero_point = np.array([zero_point], dtype=np.int8)
-        if formula == "google" and scheme == "affine":
-            zero_point = zero_point.astype(np.uint8)
+        else:
+            raise ValueError("invalid quantization formula: " + formula)
 
         ctx.RemoveNode(node.name)
         ctx.MakeConst(node.output_tensor_names[0], scale.flatten())
-        ctx.MakeConst(node.output_tensor_names[1], zero_point.flatten())
+        ctx.MakeConst(node.output_tensor_names[1], zero_point)
