@@ -59,14 +59,14 @@ jobs:
     strategy:
       max-parallel: 5
       matrix:
-        test_suite: ["cuda", "xla", "cpu"]
+        test_suite: ["cuda", "cpu"]
         include:
           - test_suite: cuda
             cuda_version: 10.2
             extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\"
-          - test_suite: xla
-            cuda_version: 10.1
-            extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --xla
+          # - test_suite: xla
+          #   cuda_version: 10.1
+          #   extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --xla
           - test_suite: cpu
             cuda_version: 10.2
             extra_flags: --extra_oneflow_cmake_args \"-DFOR_CI=ON\" --cpu
@@ -180,14 +180,14 @@ jobs:
     strategy:
       max-parallel: 5
       matrix:
-        test_suite: ["cuda", "cuda_op", "xla", "cpu"]
+        test_suite: ["cuda", "cuda_op", "cpu"]
         include:
           - test_suite: "cuda"
             os: [self-hosted, linux, gpu]
           - test_suite: "cuda_op"
             os: [self-hosted, linux, gpu]
-          - test_suite: "xla"
-            os: [self-hosted, linux, gpu]
+          # - test_suite: "xla"
+          #   os: [self-hosted, linux, gpu]
           - test_suite: "cpu"
             os: [self-hosted, linux, cpu]
     needs: [build, wait_for_gpu_slot]
