@@ -83,7 +83,7 @@ Maybe<void> StackFunctionNode::GetNowGrad(TensorTuple* input_now_grads, const Ha
     for(const auto& out_tensor: *outputs_) {
         const auto& iter = tensor_arg2idx.find(out_tensor->now_grad_arg().get());
         if (iter != tensor_arg2idx.end()) {
-            input_now_grads[&iter->second] = out_tensor->now_grad_arg()->GetAccTensor()->detach();
+            input_now_grads->at(iter->second) = out_tensor->now_grad_arg()->GetAccTensor()->detach();
         }
     }
     return Maybe<void>::Ok();
