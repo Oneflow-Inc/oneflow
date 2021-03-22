@@ -13,10 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/foreign_input_compute_task_node.h"
+#ifndef ONEFLOW_CORE_RPC_INCLUDE_MANAGER_H_
+#define ONEFLOW_CORE_RPC_INCLUDE_MANAGER_H_
 
-namespace oneflow {
+#ifdef RPC_BACKEND_GRPC
+#include "oneflow/core/rpc/include/grpc.h"
+#endif  // RPC_BACKEND_GRPC
 
-REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kForeignInput, 1);
+#ifdef RPC_BACKEND_LOCAL
+#include "oneflow/core/rpc/include/local.h"
+#endif  // RPC_BACKEND_LOCAL
 
-}  // namespace oneflow
+#endif  // ONEFLOW_CORE_RPC_INCLUDE_MANAGER_H_

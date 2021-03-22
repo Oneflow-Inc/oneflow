@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/operator/callback_notify_op.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
@@ -22,10 +21,6 @@ namespace oneflow {
 void CallbackNotifyOp::InitFromOpConf() {
   CHECK(op_conf().has_callback_notify_conf());
   EnrollInputBn("in", false);
-}
-
-LogicalNode* CallbackNotifyOp::NewProperLogicalNode() const {
-  return new CallbackNotifyLogicalNode();
 }
 
 namespace {

@@ -40,8 +40,8 @@ std::shared_ptr<OpExprInterpreter> BuildInterpreter(const bool& eager_mode) {
 }  // namespace
 
 /*static*/ Maybe<OpExprInterpreter> OpInterpUtil::GetInterpreter() {
-  static auto g_lazy_interpreter = BuildInterpreter(false);
-  static auto g_eager_interpreter = BuildInterpreter(true);
+  static const auto& g_lazy_interpreter = BuildInterpreter(false);
+  static const auto& g_eager_interpreter = BuildInterpreter(true);
   if (EagerExecutionEnabled()) { return g_eager_interpreter; }
   return g_lazy_interpreter;
 }

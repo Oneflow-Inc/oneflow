@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
+#include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -27,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
+#include "oneflow/core/graph/stream_index_getter_registry_manager.h"
 
 namespace oneflow {
 
@@ -35,16 +37,14 @@ namespace {
 bool IsInterfaceTask(const TaskNode* node) {
   const auto* comp_task_node = dynamic_cast<const CompTaskNode*>(node);
   if (comp_task_node == nullptr) { return false; }
-  if (comp_task_node->logical_node()->op_vec().size() != 1) { return false; }
-  auto op_type_case = comp_task_node->logical_node()->SoleOp()->op_conf().op_type_case();
+  auto op_type_case = comp_task_node->op()->op_conf().op_type_case();
   return IsClassRegistered<int32_t, IsInterfaceOpConf4OpTypeCase>(op_type_case);
 }
 
 bool IsConnectToTickOp(const TaskNode* node) {
   const auto* comp_task_node = dynamic_cast<const CompTaskNode*>(node);
   if (comp_task_node == nullptr) { return false; }
-  if (comp_task_node->logical_node()->op_vec().size() != 1) { return false; }
-  const Operator* op = comp_task_node->logical_node()->SoleOp().get();
+  const Operator* op = comp_task_node->op().get();
   if (dynamic_cast<const VariableOp*>(op) != nullptr) { return true; }
   return false;
 }
@@ -64,6 +64,14 @@ bool IsOptimizerPassOp(const Operator* op) {
       << " which cannot find in Global<symbol::Storage<Scope>>::Get()\n";
   const Scope& scope = Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
   return scope.scope_proto().calculation_pass_name() == kOptimizerPass;
+}
+
+bool IsSubsetTickOpConf(const OperatorConf& op_conf) {
+  return op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf();
+}
+
+bool IsTickOpConf(const OperatorConf& conf) {
+  return IsClassRegistered<int32_t, IsTickTockOpTypeCase>(conf.op_type_case());
 }
 
 bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
@@ -94,9 +102,8 @@ bool CanBeMergedInChain(const TaskNode* node) {
   if (IsTaskNodeProducedResgtHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
-  if (fw_comp_node->logical_node()->op_vec().size() != 1) { return false; }
   if (fw_comp_node->device_type() != DeviceType::kGPU) { return false; }
-  const Operator* op = fw_comp_node->logical_node()->SoleOp().get();
+  const Operator* op = fw_comp_node->op().get();
   if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
   return true;
 }
@@ -167,12 +174,10 @@ MakePredicatorIsLbiAllConsumersReachable(
     }
     const CompTaskNode* comp_src_node = dynamic_cast<const CompTaskNode*>(src_node);
     if (comp_src_node == nullptr) { return false; }
-    if (comp_src_node->logical_node()->op_vec().size() != 1) { return false; }
     const CompTaskNode* comp_dst_node = dynamic_cast<const CompTaskNode*>(dst_node);
     if (comp_dst_node == nullptr) { return false; }
-    if (comp_dst_node->logical_node()->op_vec().size() != 1) { return false; }
-    return IsOpNameDataOrCtrlReachable(comp_src_node->logical_node()->SoleOp()->op_name(),
-                                       comp_dst_node->logical_node()->SoleOp()->op_name());
+    return IsOpNameDataOrCtrlReachable(comp_src_node->op()->op_name(),
+                                       comp_dst_node->op()->op_name());
   };
   return [TaskNode4SoleOpName, IsDataOrCtrlReachable](const LogicalBlobId& lbi,
                                                       const std::string& op_name) -> bool {
@@ -241,14 +246,156 @@ Maybe<void> MakeGetterTaskNode4MachineId7ThrdId(
   return Maybe<void>::Ok();
 }
 
+void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* sorted_comp_tasks) {
+  int64_t parallel_idx = 0;
+  const ParallelDesc& parallel_desc = op_node->parallel_desc();
+  int64_t parallel_num = parallel_desc.parallel_num();
+  for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
+    for (int64_t dev_phy_id : parallel_desc.sorted_dev_phy_ids(machine_id)) {
+      CompTaskNode* comp_task_node = NewCompTaskNode4OpNode(op_node);
+      comp_task_node->set_machine_id(machine_id);
+      comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
+      comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
+
+      DeviceId::device_index_t device_index =
+          parallel_desc.device_type() == DeviceType::kCPU
+              ? DeviceId::kCPUDeviceIndex
+              : static_cast<DeviceId::device_index_t>(dev_phy_id);
+      DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), parallel_desc.device_type(),
+                         device_index};
+      StreamId::stream_index_t stream_index =
+          StreamIndexGetterRegistryManager::Get().StreamIndex4DeviceIdAndTaskType(
+              device_id, comp_task_node->GetTaskType());
+      comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
+      comp_task_node->set_op_node(op_node);
+      sorted_comp_tasks->push_back(comp_task_node);
+    }
+  }
+}
+
+bool IsConnectedLbisAllSameParallelDistribution(const OpEdge* op_edge) {
+  const OpNode* src_node = op_edge->src_node();
+  const OpNode* dst_node = op_edge->dst_node();
+  CHECK_GT(op_edge->lbis().size(), 0);
+  HashSet<bool> predicators;
+  for (const LogicalBlobId& lbi : op_edge->lbis()) {
+    const ParallelDistribution& src_parallel_distribution = src_node->ParallelDistribution4Lbi(lbi);
+    const ParallelDistribution& dst_parallel_distribution = dst_node->ParallelDistribution4Lbi(lbi);
+    predicators.insert(src_parallel_distribution == dst_parallel_distribution);
+  }
+  CHECK_EQ(predicators.size(), 1);
+  return *predicators.begin();
+}
+
+BldSubTskGphMthd GetMthdForBldSubTskGph(const OpEdge* op_edge) {
+  const OpNode* src_node = op_edge->src_node();
+  const OpNode* dst_node = op_edge->dst_node();
+  const ParallelDesc& src_pd = src_node->parallel_desc();
+  const ParallelDesc& dst_pd = dst_node->parallel_desc();
+  const OperatorConf& src_op_conf = src_node->op().op_conf();
+  const OperatorConf& dst_op_conf = dst_node->op().op_conf();
+
+  // WaitAndSendIds -> Reentrantlock
+  if (src_op_conf.has_wait_and_send_ids_conf() && dst_op_conf.has_reentrant_lock_conf()) {
+    CHECK_EQ(src_pd.parallel_num(), 1);
+    CHECK_EQ(dst_pd.parallel_num(), 1);
+    return &TaskGraph::BldSubTskGphByBoxing;
+  }
+
+  // *Tick -> *Tick
+  if (IsTickOpConf(src_op_conf) || IsTickOpConf(dst_op_conf)) {
+    if (src_op_conf.has_source_tick_conf()) {
+      CHECK(dst_op_conf.has_tick_conf());
+      CHECK_EQ(src_pd.parallel_num(), 1);
+      CHECK_EQ(dst_pd.parallel_num(), 1);
+      return &TaskGraph::BldSubTskGphByBoxing;
+    } else if (dst_op_conf.has_sink_tick_conf()) {
+      CHECK(src_op_conf.has_tick_conf() || src_op_conf.has_sink_tick_conf());
+      CHECK_EQ(src_pd.parallel_num(), 1);
+      CHECK_EQ(dst_pd.parallel_num(), 1);
+      return &TaskGraph::BldSubTskGphByBoxing;
+    } else if (IsSubsetTickOpConf(src_op_conf)) {
+      return &TaskGraph::BldSubTskGphBySrcSubsetConnect;
+    } else if (IsSubsetTickOpConf(dst_op_conf)) {
+      return &TaskGraph::BldSubTskGphByDstSubsetConnect;
+    } else if (IsTickOpConf(src_op_conf) && IsTickOpConf(dst_op_conf)) {
+      if (src_pd.parallel_num() == dst_pd.parallel_num()) {
+        return &TaskGraph::BldSubTskGphByOneToOne;
+      } else {
+        CHECK_EQ(src_pd.parallel_num(), 1);
+        return &TaskGraph::BldSubTskGphByBroadcastToBroadcast;
+      }
+    }
+  }
+
+  std::shared_ptr<CompTaskNode> src_comp_task(NewCompTaskNode4OpNode(src_node));
+  std::shared_ptr<CompTaskNode> dst_comp_task(NewCompTaskNode4OpNode(dst_node));
+  // NOTE(chengcheng): MUST use TaskType instead of OpTypeCase because may
+  //   Multi-op correspoding to SAME TaskType such as:
+  //     DistributeConcatOpConf and DistributeAddOpConf -> TaskType::kDistributeConcat
+  //     DistributeSplitOpConf  and DistributeCloneOpConf -> TaskType::kDistributeSplit
+  // * -> DistributeConcat
+  if (dst_comp_task->GetTaskType() == TaskType::kDistributeConcat) {
+    return &TaskGraph::BldSubTskGphByPartialInLbiConnect;
+  }
+
+  // DistributeSplit -> *
+  if (src_comp_task->GetTaskType() == TaskType::kDistributeSplit) {
+    return &TaskGraph::BldSubTskGphByPartialOutLbiConnect;
+  }
+
+  // NormalForward -> DecodeH2D
+  if (src_comp_task->GetTaskType() == TaskType::kNormalForward
+      && dst_comp_task->GetTaskType() == TaskType::kDecodeH2D) {
+    return &TaskGraph::BldSubTskGphNormalForwardToDecodeH2D;
+  }
+
+  if (src_pd.parallel_num() == 1 && dst_pd.parallel_num() == 1) {
+    return &TaskGraph::BldSubTskGphByOneToOne;
+  }
+
+  // one to one
+  if (src_pd.parallel_num() == dst_pd.parallel_num() && *src_pd.hierarchy() == *dst_pd.hierarchy()
+      && IsConnectedLbisAllSameParallelDistribution(op_edge)) {
+    return &TaskGraph::BldSubTskGphByOneToOne;
+  }
+
+  return &TaskGraph::BldSubTskGphByBoxing;
+}
+
+void ForEachOpGraphNecessaryCtrlEdge(
+    const OpGraph* op_graph,
+    const std::function<void(const OpNode*, const OpNode*, int64_t)>& Handler) {
+  auto IsOpGraphDataReachable = op_graph->MakePredicatorIsReachable();
+  op_graph->ForEachNode([&](OpNode* dst) {
+    for (const auto& ctrl_in_op_name : dst->op().op_conf().ctrl_in_op_name()) {
+      const OpNode* src = op_graph->OpNode4OpName(ctrl_in_op_name);
+      CHECK(!IsOpGraphDataReachable(dst, src));
+      if (!IsOpGraphDataReachable(src, dst)) {
+        CHECK(src->parallel_desc().EqualsIgnoringDeviceType(dst->parallel_desc()));
+        const Shape* src_time_shape = CHECK_JUST(src->op().GetOpTimeShape()).get();
+        const Shape* dst_time_shape = CHECK_JUST(dst->op().GetInputBlobFastestTimeShape()).get();
+        if (dst_time_shape == nullptr) {
+          dst_time_shape = CHECK_JUST(dst->op().GetOpTimeShape()).get();
+        }
+        CHECK(src_time_shape->elem_cnt() == dst_time_shape->elem_cnt()
+              || src_time_shape->Containing(*dst_time_shape));
+        CHECK_EQ(src_time_shape->elem_cnt() % dst_time_shape->elem_cnt(), 0);
+        int64_t regst_desc_num = src_time_shape->elem_cnt() / dst_time_shape->elem_cnt();
+        Handler(src, dst, regst_desc_num);
+      }
+    }
+  });
+}
+
 }  // namespace
 
-TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
-  logical_gph_ = std::move(logical_gph);
+TaskGraph::TaskGraph() {
+  OpGraph* op_graph = Global<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
   hierarchical_sub_tsk_gph_builder_.reset(new DispatchHierarchicalSubTskGphBuilder());
-  HashMap<const LogicalNode*, std::vector<CompTaskNode*>> logical2sorted_comp_tasks;
+  HashMap<const OpNode*, std::vector<CompTaskNode*>> logical2sorted_comp_tasks;
   HashMap<CompTaskNode*, HashMap<int64_t, std::vector<TaskNode*>>> buf_task;
   auto MutBufTask = [&](CompTaskNode* task_node, int64_t machine_id, int32_t mem_zone_id) {
     auto& buf_vec = buf_task[task_node][machine_id];
@@ -258,27 +405,25 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
     return &(buf_vec.at(mem_zone_id));
   };
 
-  logical_gph_->ForEachNode([&](const LogicalNode* logical_node) {
-    logical_node->GenSortedCompTaskNodes([&](CompTaskNode* comp_task_node) {
-      AddAllocatedNode(comp_task_node);
-      logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
-    });
+  op_graph->ForEachNode([&](const OpNode* op_node) {
+    std::vector<CompTaskNode*>* sorted_comp_tasks = &(logical2sorted_comp_tasks[op_node]);
+    GenSortedCompTaskNodes(op_node, sorted_comp_tasks);
+    for (CompTaskNode* comp_task : *sorted_comp_tasks) { AddAllocatedNode(comp_task); }
   });
 
-  logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
-    BldSubTskGphMthd method =
-        GetMthdForBldSubTskGph(logical_edge->src_node(), logical_edge->dst_node());
-    (this->*method)(logical_edge->src_node(), logical_edge->dst_node(),
-                    logical2sorted_comp_tasks.at(logical_edge->src_node()),
-                    logical2sorted_comp_tasks.at(logical_edge->dst_node()), MutBufTask);
+  op_graph->ForEachEdge([&](const OpEdge* op_edge) {
+    // TODO(chengcheng): ForEachLbi for one regst one blob.
+    BldSubTskGphMthd method = GetMthdForBldSubTskGph(op_edge);
+    (this->*method)(op_edge, logical2sorted_comp_tasks.at(op_edge->src_node()),
+                    logical2sorted_comp_tasks.at(op_edge->dst_node()), MutBufTask);
   });
-  logical_gph_->ForEachNecessaryCtrlEdge(
-      [&](const LogicalNode* src, const LogicalNode* dst, int64_t ctrl_regst_num) {
+  ForEachOpGraphNecessaryCtrlEdge(
+      op_graph, [&](const OpNode* src, const OpNode* dst, int64_t ctrl_regst_num) {
         const auto& src_task_nodes = logical2sorted_comp_tasks.at(src);
         const auto& dst_task_nodes = logical2sorted_comp_tasks.at(dst);
-        if (src->SoleOp()->op_conf().has_src_subset_tick_conf()) {
+        if (src->op().op_conf().has_src_subset_tick_conf()) {
           UNIMPLEMENTED();
-        } else if (dst->SoleOp()->op_conf().has_dst_subset_tick_conf()) {
+        } else if (dst->op().op_conf().has_dst_subset_tick_conf()) {
           UNIMPLEMENTED();
         } else {
           ConnectCtrlEdges(src_task_nodes, dst_task_nodes, ctrl_regst_num);
@@ -492,10 +637,11 @@ void TaskGraph::EnableInplaceMemSharing(
   void TaskGraph::method_name BLD_SUB_TSK_GPH_MTHD_ARGS()
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
-  const std::vector<LogicalBlobId> lbis = src_logical->GetLbisTo(dst_logical);
-  for (const LogicalBlobId& lbi : lbis) {
+  const OpNode* src_op_node = op_edge->src_node();
+  const OpNode* dst_op_node = op_edge->dst_node();
+  for (const LogicalBlobId& lbi : op_edge->lbis()) {
     std::vector<TaskNode*> in_nodes;
-    if (lbis.size() == 1) {
+    if (op_edge->lbis().size() == 1) {
       in_nodes.assign(sorted_src_comp_tasks.begin(), sorted_src_comp_tasks.end());
     } else {
       for (CompTaskNode* src_node : sorted_src_comp_tasks) {
@@ -509,18 +655,18 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     out_nodes.reserve(sorted_dst_comp_tasks.size());
     std::vector<std::vector<TaskNode*>> sorted_ctrl_tasks;
     const ParallelDistribution& src_parallel_distribution =
-        Global<OpGraph>::Get()->GetParallelDistribution(src_logical->SoleOp()->op_name(), lbi);
+        src_op_node->ParallelDistribution4Lbi(lbi);
     const ParallelDistribution& dst_parallel_distribution =
-        Global<OpGraph>::Get()->GetParallelDistribution(dst_logical->SoleOp()->op_name(), lbi);
-    const std::shared_ptr<const ParallelDesc>& src_parallel_desc = src_logical->parallel_desc();
-    const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
-    const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
+        dst_op_node->ParallelDistribution4Lbi(lbi);
+    const ParallelDesc& src_parallel_desc = src_op_node->parallel_desc();
+    const ParallelDesc& dst_parallel_desc = dst_op_node->parallel_desc();
+    const BlobDesc& blob_desc = src_op_node->LogicalBlobDesc4Lbi(lbi);
     auto status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
-        sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks,
-        *src_parallel_desc, *dst_parallel_desc, lbi, blob_desc, src_parallel_distribution,
-        dst_parallel_distribution, *src_logical->out_blob_time_shape()));
-    boxing_logger_->Log(*status, src_logical->SoleOp()->op_name(), dst_logical->SoleOp()->op_name(),
-                        *src_parallel_desc, *dst_parallel_desc, src_parallel_distribution,
+        sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks, src_parallel_desc,
+        dst_parallel_desc, lbi, blob_desc, src_parallel_distribution, dst_parallel_distribution,
+        *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
+    boxing_logger_->Log(*status, src_op_node->op().op_name(), dst_op_node->op().op_name(),
+                        src_parallel_desc, dst_parallel_desc, src_parallel_distribution,
                         dst_parallel_distribution, lbi, blob_desc);
     sub_tsk_gph_builder_ctx_->ConnectAll121(out_nodes, sorted_dst_comp_tasks);
     if (!sorted_ctrl_tasks.empty()) {
@@ -557,14 +703,14 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast) {
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect) {
+  const Operator& src_op = op_edge->src_node()->op();
+  const Operator& dst_op = op_edge->dst_node()->op();
   HashSet<LogicalBlobId> lbis;
-  for (const auto& obn : src_logical->SoleOp()->output_bns()) {
-    lbis.insert(src_logical->SoleOp()->BnInOp2Lbi(obn));
-  }
+  for (const auto& obn : src_op.output_bns()) { lbis.insert(src_op.BnInOp2Lbi(obn)); }
   CHECK_EQ(sorted_src_comp_tasks.size(), 1);
-  CHECK_EQ(dst_logical->SoleOp()->input_bns().size(), sorted_dst_comp_tasks.size());
+  CHECK_EQ(dst_op.input_bns().size(), sorted_dst_comp_tasks.size());
   FOR_RANGE(int, i, 0, sorted_dst_comp_tasks.size()) {
-    const auto& lbi = dst_logical->SoleOp()->BnInOp2Lbi(dst_logical->SoleOp()->input_bns().Get(i));
+    const auto& lbi = dst_op.BnInOp2Lbi(dst_op.input_bns().Get(i));
     if (lbis.find(lbi) != lbis.end()) {
       BuildTaskPath(sorted_src_comp_tasks.at(0), sorted_dst_comp_tasks.at(i), MutBufTask, true);
     }
@@ -572,14 +718,14 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect) {
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect) {
+  const Operator& src_op = op_edge->src_node()->op();
+  const Operator& dst_op = op_edge->dst_node()->op();
   HashSet<LogicalBlobId> lbis;
-  for (const auto& ibn : dst_logical->SoleOp()->input_bns()) {
-    lbis.insert(dst_logical->SoleOp()->BnInOp2Lbi(ibn));
-  }
+  for (const auto& ibn : dst_op.input_bns()) { lbis.insert(dst_op.BnInOp2Lbi(ibn)); }
   CHECK_EQ(sorted_dst_comp_tasks.size(), 1);
-  CHECK_EQ(src_logical->SoleOp()->output_bns().size(), sorted_src_comp_tasks.size());
+  CHECK_EQ(src_op.output_bns().size(), sorted_src_comp_tasks.size());
   FOR_RANGE(int, i, 0, sorted_src_comp_tasks.size()) {
-    const auto& lbi = src_logical->SoleOp()->BnInOp2Lbi(src_logical->SoleOp()->output_bns().Get(i));
+    const auto& lbi = src_op.BnInOp2Lbi(src_op.output_bns().Get(i));
     if (lbis.find(lbi) != lbis.end()) {
       BuildTaskPath(sorted_src_comp_tasks.at(i), sorted_dst_comp_tasks.at(0), MutBufTask, true);
     }
