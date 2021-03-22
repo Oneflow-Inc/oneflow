@@ -74,6 +74,18 @@ jobs:
     runs-on: [self-hosted, linux, release]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
+      - name: Set environments from secrets
+        if: contains(${{ github.repository }}, "Oneflow-Inc")
+        run: |
+          echo "CI_STATIC_HOST=${{ secrets.CI_STATIC_HOST }}" >> $GITHUB_ENV
+          echo "CI_STATIC_PATH=${{ secrets.CI_STATIC_PATH }}" >> $GITHUB_ENV
+      - name: Set environments for forks
+        if: contains(${{ github.repository }}, "Oneflow-Inc")
+        run: |
+          CI_STATIC_HOST=${CI_STATIC_HOST:-"192.168.1.13"}
+          CI_STATIC_PATH=${CI_STATIC_PATH:-"/tank/ci-static"}
+          echo "CI_STATIC_HOST=${CI_STATIC_HOST}" >> $GITHUB_ENV
+          echo "CI_STATIC_PATH=${CI_STATIC_PATH}" >> $GITHUB_ENV
       - name: Set environment variables
         env:
           test_suite: ${{ matrix.test_suite }}
@@ -83,9 +95,9 @@ jobs:
           mkdir -p $ci_tmp_dir
           echo "ci_tmp_dir=${ci_tmp_dir}" >> $GITHUB_ENV
           echo "wheelhouse_dir=${ci_tmp_dir}/wheelhouse" >> $GITHUB_ENV
-          sha_dir="${{ secrets.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}"
+          sha_dir="${CI_STATIC_PATH}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}"
           echo "sha_dir=${sha_dir}" >> $GITHUB_ENV
-          if ssh -o StrictHostKeyChecking=no ${{ secrets.CI_STATIC_HOST }} "test -d $sha_dir"; then
+          if ssh -o StrictHostKeyChecking=no ${CI_STATIC_HOST} "test -d $sha_dir"; then
               echo "is_built=1" >> $GITHUB_ENV
           fi
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
@@ -113,15 +125,15 @@ jobs:
         uses: ./.github/actions/upload_ssh
         with:
           src_path: ${wheelhouse_dir}
-          dst_host: ${{ secrets.CI_STATIC_HOST }}
-          dst_path: ${{ secrets.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
+          dst_host: ${{ env.CI_STATIC_HOST }}
+          dst_path: ${{ env.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
       - name: Upload bin via SSH
         if: matrix.test_suite == 'cuda' && env.is_built != '1'
         uses: ./.github/actions/upload_ssh
         with:
           src_path: ${bin_dir}
-          dst_host: ${{ secrets.CI_STATIC_HOST }}
-          dst_path: ${{ secrets.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/bin
+          dst_host: ${{ env.CI_STATIC_HOST }}
+          dst_path: ${{ env.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/bin
       - name: Upload wheel to cloud
         if: contains(github.event.pull_request.labels.*.name, 'upload-wheel')
         uses: ./.github/actions/upload_oss
@@ -153,11 +165,11 @@ jobs:
       - name: Save shared env
         run: |
           set -x
-          echo "builder_host=${{ secrets.CI_STATIC_HOST }}" >> build.${{ matrix.test_suite }}.env
+          echo "builder_host=${CI_STATIC_HOST}" >> build.${{ matrix.test_suite }}.env
           echo "sha_dir=${sha_dir}" >> build.${{ matrix.test_suite }}.env
-          echo "remote_whl_dir=${{ secrets.CI_STATIC_HOST }}:$sha_dir/whl" >> build.${{ matrix.test_suite }}.env
+          echo "remote_whl_dir=${CI_STATIC_HOST}:$sha_dir/whl" >> build.${{ matrix.test_suite }}.env
           if [ "$test_suite" == "cuda" ]; then
-            echo "remote_bin_dir=${{ secrets.CI_STATIC_HOST }}:$sha_dir/bin" >> build.${{ matrix.test_suite }}.env
+            echo "remote_bin_dir=${CI_STATIC_HOST}:$sha_dir/bin" >> build.${{ matrix.test_suite }}.env
           fi
           # duplicate one for cuda_op
           if [ "$test_suite" == "cuda" ]; then
