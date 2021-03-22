@@ -26,11 +26,11 @@ void GenModelIoV2KernelConf(const VariableOpConf& variable_conf,
                             const ParallelContext& parallel_ctx, KernelConf* kernel_conf) {
   const Shape& logical_blob_shape = Shape(variable_conf.shape());
   SbpParallel sbp_parallel;
-  if (variable_conf.split_axis().has_value()) {
-    sbp_parallel.mutable_split_parallel()->set_axis(variable_conf.split_axis().value());
-  } else {
-    sbp_parallel.mutable_broadcast_parallel();
-  }
+  // if (variable_conf.split_axis().has_value()) {
+  //  sbp_parallel.mutable_split_parallel()->set_axis(variable_conf.split_axis().value());
+  //} else {
+  //  sbp_parallel.mutable_broadcast_parallel();
+  //}
   BlobDesc blob_desc(variable_conf.data_type());
   blob_desc.mut_shape() = Shape(logical_blob_shape);
   const std::vector<TensorSliceView> slices = SubTskGphBuilderUtil::GetTensorSliceView(

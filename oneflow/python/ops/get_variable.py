@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from __future__ import absolute_import
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow.python.framework.session_context as session_ctx
@@ -38,6 +38,7 @@ import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow_api
 import os
 
+
 blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
@@ -51,7 +52,10 @@ def api_get_variable(
     trainable: Optional[bool] = None,
     model_name: Optional[str] = None,
     random_seed: Optional[int] = None,
-    distribute: oneflow_api.distribute.Distribute = oneflow_api.distribute.broadcast(),
+    parallel_distribution: Optional[
+        Union[Sequence[oneflow_api.distribute.Distribute], Sequence[str], str]
+    ] = None,
+    distribute: Optional[oneflow_api.distribute.Distribute] = None,
     reuse: bool = True,
 ) -> oneflow_api.BlobDesc:
     r"""Create a variable or retrieve an existing one.
@@ -149,6 +153,29 @@ def api_get_variable(
         # out.shape (1, 128, 16, 16)
 
     """
+    if distribute is not None:
+        assert parallel_distribution is None
+        parallel_distribution = [distribute]
+    if parallel_distribution is None:
+        parallel_distribution = []
+    if isinstance(parallel_distribution, str):
+        parallel_distribution = parallel_distribution.split(",")
+    assert isinstance(parallel_distribution, (list, tuple))
+
+    def distribute_to_str(dist):
+        if dist is None:
+            return ""
+        elif type(dist) is str:
+            return dist
+        elif type(dist) is oneflow_api.distribute.SplitDistribute:
+            return "S({})".format(dist.axis)
+        elif type(dist) is oneflow_api.distribute.BroadcastDistribute:
+            return "B"
+        else:
+            raise ValueError("unsupported distribute")
+
+    parallel_distribution = list(map(distribute_to_str, parallel_distribution))
+
     api = enable_if.unique([get_lazy_variable, get_eager_variable])
     return api(
         name,
@@ -159,7 +186,7 @@ def api_get_variable(
         trainable=trainable,
         model_name=model_name,
         random_seed=random_seed,
-        distribute=distribute,
+        parallel_distribution=parallel_distribution,
         reuse=reuse,
     )
 
@@ -174,7 +201,7 @@ def get_eager_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=oneflow_api.distribute.broadcast(),
+    parallel_distribution=None,
     reuse=True,
 ):
     assert isinstance(name, str)
@@ -204,7 +231,7 @@ def get_eager_variable(
             trainable=trainable,
             model_name=model_name,
             random_seed=random_seed,
-            distribute=distribute,
+            parallel_distribution=parallel_distribution,
         )
         op_attribute = compile_context.CurJobAddConsistentOp(op_conf)
         if var_blob is None:
@@ -235,7 +262,7 @@ def get_lazy_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=oneflow_api.distribute.broadcast(),
+    parallel_distribution=None,
     reuse=True,
 ):
     assert isinstance(name, str)
@@ -265,7 +292,7 @@ def get_lazy_variable(
             trainable=trainable,
             model_name=model_name,
             random_seed=random_seed,
-            distribute=distribute,
+            parallel_distribution=parallel_distribution,
         )
         job_var_blob = _CreateVariableBlob(op_conf)
         assert isinstance(job_var_blob, oneflow_api.LazyConsistentBlob)
@@ -290,7 +317,7 @@ def GenerateVariableOpConf(
     trainable=None,
     model_name=None,
     random_seed=None,
-    distribute=oneflow_api.distribute.broadcast(),
+    parallel_distribution=None,
 ):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
@@ -327,10 +354,10 @@ def GenerateVariableOpConf(
     if model_name is not None:
         op_conf.variable_conf.model_name = model_name
 
-    if type(distribute) is oneflow_api.distribute.SplitDistribute:
-        op_conf.variable_conf.split_axis.value = distribute.axis
-    else:
-        op_conf.variable_conf.split_axis.ClearField("value")
+    if parallel_distribution is None or len(parallel_distribution) == 0:
+        parallel_distribution = ["B"]
+
+    op_conf.variable_conf.parallel_distribution.extend(parallel_distribution)
 
     if random_seed is not None:
         op_conf.variable_conf.random_seed = random_seed

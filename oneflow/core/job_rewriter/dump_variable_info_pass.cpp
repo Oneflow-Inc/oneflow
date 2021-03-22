@@ -60,10 +60,8 @@ Maybe<void> DumpVariableInfoPass::Apply(const OpGraph& op_graph, JobBuilder* job
     (*log_stream) << sep;
     (*log_stream) << std::to_string(node->parallel_desc().parallel_num());
     (*log_stream) << sep;
-    if (conf.split_axis().has_value()) {
-      (*log_stream) << "S(" << std::to_string(conf.split_axis().value()) << ")";
-    } else {
-      (*log_stream) << "B";
+    for (int64_t i = 0; i < conf.parallel_distribution_size(); ++i) {
+      (*log_stream) << conf.parallel_distribution(i);
     }
     (*log_stream) << sep;
     (*log_stream) << DataType_Name(conf.data_type());

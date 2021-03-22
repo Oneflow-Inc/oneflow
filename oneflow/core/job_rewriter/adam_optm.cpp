@@ -73,7 +73,7 @@ OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::s
 void SetScalarShapeAndSbpConf(OperatorConf* op_conf) {
   op_conf->mutable_variable_conf()->mutable_shape()->clear_dim();
   op_conf->mutable_variable_conf()->mutable_shape()->add_dim(1);
-  op_conf->mutable_variable_conf()->mutable_split_axis()->clear_value();
+  *op_conf->mutable_variable_conf()->add_parallel_distribution() = "B";
   CHECK_NE(op_conf->name(), std::string(""));
 }
 
