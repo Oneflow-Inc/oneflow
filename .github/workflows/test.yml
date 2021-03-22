@@ -56,9 +56,9 @@ jobs:
           set -x
           if [ -z "$CI_PERSONAL_ACCESS_TOKEN" ]
           then
-            echo "is_secrets_accessible=1" >> $GITHUB_ENV
             exit 0
           fi
+          echo "is_secrets_accessible=1" >> $GITHUB_ENV
       - uses: Oneflow-Inc/github-workflow-schedule@286010392b8658836e374657a39d87654512926d
         name: Wait for GPU slot
         if: env.is_secrets_accessible == '1'
