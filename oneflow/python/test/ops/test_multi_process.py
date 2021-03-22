@@ -24,8 +24,6 @@ import time
 @flow.unittest.skip_unless_1n4d()
 class TestMultiProcess(flow.unittest.TestCase):
     def test_multi_process(test_case):
-        flow.config.enable_debug_mode(True)
-        flow.config.comm_net_worker_num(1)
         flow.config.gpu_device_num(4)
         func_config = flow.FunctionConfig()
         func_config.concurrency_width(1)
@@ -46,8 +44,6 @@ class TestMultiProcess(flow.unittest.TestCase):
         test_case.assertEqual(of_ret.numpy().shape, (2, 5))
 
     def test_worker_to_master_communication(test_case):
-        flow.config.enable_debug_mode(True)
-        flow.config.comm_net_worker_num(1)
         flow.config.gpu_device_num(4)
         func_config = flow.FunctionConfig()
         func_config.concurrency_width(1)
@@ -77,8 +73,6 @@ class TestMultiProcess(flow.unittest.TestCase):
         test_case.assertEqual(of_ret.numpy().shape, (2, 5))
 
     def test_worker_to_worker_communication(test_case):
-        flow.config.enable_debug_mode(True)
-        flow.config.comm_net_worker_num(1)
         flow.config.gpu_device_num(4)
         func_config = flow.FunctionConfig()
         func_config.concurrency_width(1)

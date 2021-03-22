@@ -239,8 +239,6 @@ class TestCase(unittest.TestCase):
             ), "binary oneflow_worker not found, please check your environment variable ONEFLOW_WORKER_BIN, path: {}".format(
                 oneflow_worker_path
             )
-            # master_port = os.getenv("ONEFLOW_TEST_MASTER_PORT")
-            # assert master_port, "env var ONEFLOW_TEST_MASTER_PORT not set"
             master_port = find_free_port()
             oneflow.env.ctrl_port(master_port)
             config_world_size = device_num()
@@ -252,47 +250,29 @@ class TestCase(unittest.TestCase):
                 len(env_proto.machine) == 1
                 and env_proto.HasField("ctrl_bootstrap_conf") == 1
             )
-            run_dir = os.getenv("HOME") + "/oneflow_temp/"
+            run_dir = os.getenv("HOME") + "/oneflow_temp/" + str(uuid.uuid1())
             run_dir = os.path.abspath(os.path.expanduser(run_dir))
-            ssh_port_arg = " -p {} ".format(22)
-            scp_port_arg = " -P {} ".format(22)
-            ssh_prefix = (
-                "ssh {}".format(ssh_port_arg)
-                + getpass.getuser()
-                + "@"
-                + "127.0.0.1"
-                + " "
-            )
-            remote_file_prefix = " " + getpass.getuser() + "@" + "127.0.0.1" + ":"
-            oneflow.deprecated.system_call(ssh_prefix + '"mkdir -p ' + run_dir + '"')
+            if not os.path.exists(run_dir):
+                os.makedirs(run_dir)
             for rank in range(1, config_world_size):
                 worker_env_proto = EnvProto()
                 worker_env_proto.CopyFrom(env_proto)
                 worker_env_proto.ctrl_bootstrap_conf.rank = rank
+                worker_env_proto.cpp_logging_conf.log_dir = (
+                    run_dir + "/log_" + str(rank)
+                )
                 env_file = NamedTemporaryFile(delete=False)
                 if sys.version_info >= (3, 0):
                     env_file.write(pbtxt.MessageToString(worker_env_proto).encode())
                 else:
                     env_file.write(pbtxt.MessageToString(worker_env_proto))
                 env_file.close()
-
-                oneflow_cmd = (
-                    '"nohup '
-                    + oneflow_worker_path
-                    + " -env_proto="
-                    + worker_env_proto.cpp_logging_conf.log_dir
-                    + "/env_proto_"
-                    + str(rank)
-                    + ".proto"
-                    + ' 1>/dev/null 2>&1 </dev/null & "'
-                )
-                oneflow.deprecated.system_call(
-                    ssh_prefix + '"mkdir -p ' + run_dir + "/log_" + str(rank) + '"'
-                )
-                oneflow.deprecated.system_call(
-                    "scp {}".format(scp_port_arg)
+                if not os.path.exists(run_dir + "/log_" + str(rank)):
+                    os.mkdir(run_dir + "/log_" + str(rank))
+                os.system(
+                    "cp "
                     + env_file.name
-                    + remote_file_prefix
+                    + " "
                     + run_dir
                     + "/log_"
                     + str(rank)
@@ -301,20 +281,22 @@ class TestCase(unittest.TestCase):
                     + ".proto"
                 )
                 oneflow_cmd = (
-                    '"cd '
+                    oneflow_worker_path
+                    + " -env_proto="
                     + run_dir
                     + "/log_"
                     + str(rank)
-                    + "; "
-                    + "nohup "
-                    + oneflow_worker_path
-                    + " -env_proto=./"
+                    + "/"
                     + "env_proto_"
                     + str(rank)
                     + ".proto "
-                    + ' 1>/dev/null 2>&1 </dev/null & "'
                 )
-                oneflow.deprecated.system_call(ssh_prefix + oneflow_cmd)
+                subprocess.Popen(
+                    oneflow_cmd,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    shell=True,
+                )
                 os.remove(env_file.name)
             atexit.register(
                 oneflow.deprecated.delete_worker_of_multi_process, run_dir=run_dir
