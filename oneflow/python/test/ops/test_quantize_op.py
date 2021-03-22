@@ -90,10 +90,10 @@ def _check_min_max_observer(
         scale_np[0], zero_point_np[0] = gen_quant_scale_for_min_max_cambricon(
             weight_flatten, quantization_bit
         )
-    test_case.assertTrue(np.allclose(scale_of, scale_np, atol=1e-3))
+    test_case.assertTrue(np.allclose(scale_of, scale_np, rtol=1e-3))
     test_case.assertTrue(
         np.allclose(
-            zero_point_of.astype(np.int), zero_point_np.astype(np.int), atol=1e-3
+            zero_point_of.astype(np.int), zero_point_np.astype(np.int), rtol=1e-3
         )
     )
 
@@ -240,8 +240,8 @@ def _check_moving_average_min_max_observer(
             moving_max_np,
             moving_min_np,
         )
-    test_case.assertTrue(np.allclose(scale_of[0], scale_np, atol=1e-3))
-    test_case.assertTrue(np.allclose(zero_point_of[0], zero_point_np, atol=1e-3))
+    test_case.assertTrue(np.allclose(scale_of[0], scale_np, rtol=1e-3))
+    test_case.assertTrue(np.allclose(zero_point_of[0], zero_point_np, rtol=1e-3))
 
 
 def _run_test_moving_average_min_max_observer(
