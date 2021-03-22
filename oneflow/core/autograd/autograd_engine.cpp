@@ -66,6 +66,7 @@ Maybe<void> CopyOrAccGrad(Tensor& tensor) {
   } else {
     tensor.set_acc_grad(tensor_arg->GetAccTensor().GetPtrOrThrow());
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -91,7 +92,7 @@ StackFunctionNode::StackFunctionNode(
 Maybe<void> StackFunctionNode::AccGrad4RetainGradTensor() {
   for (int i = 0; i < outputs_->size(); ++i) {
     if (outputs_->at(i)->retain_grad() && outputs_->at(i)->requires_grad()) {
-      CopyOrAccGrad(outputs_.at(i));
+      JUST(CopyOrAccGrad(outputs_.at(i)));
     }
   }
   return Maybe<void>::Ok();
@@ -100,7 +101,7 @@ Maybe<void> StackFunctionNode::AccGrad4RetainGradTensor() {
 Maybe<void> StackFunctionNode::AccGrad4LeafTensor() {
   for (int i = 0; i < outputs_->size(); ++i) {
     if (outputs_->at(i)->is_leaf() && outputs_->at(i)->requires_grad()) {
-      CopyOrAccGrad(outputs_.at(i));
+      JUST(CopyOrAccGrad(outputs_.at(i)));
     }
   }
   return Maybe<void>::Ok();
