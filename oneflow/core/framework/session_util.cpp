@@ -49,7 +49,7 @@ Session::Session(int64_t id, const std::shared_ptr<vm::cfg::InstructionListProto
     : id_(id),
       instruction_list_(instruction_list),
       eager_symbol_list_(symbol_list),
-      snapshot_mgr_(new SnapshotManager) {}
+      is_mirrored_strategy_enabled_stack_(new std::vector<bool>()) {}
 
 int64_t Session::id() const { return id_; }
 
@@ -61,15 +61,37 @@ std::shared_ptr<eager::cfg::EagerSymbolList> Session::eager_symbol_list() const 
   return eager_symbol_list_;
 }
 
+Maybe<void> Session::PushMirroredStrategyEnabled(bool is_mirrored) {
+  is_mirrored_strategy_enabled_stack_->push_back(is_mirrored);
+  return Maybe<void>::Ok();
+}
+Maybe<void> Session::PopMirroredStrategyEnabled() {
+  is_mirrored_strategy_enabled_stack_->pop_back();
+  return Maybe<void>::Ok();
+}
+
+Maybe<bool> Session::IsMirroredStrategyEnabled() const {
+  // Mirrored strategy is enabled by default.
+  return is_mirrored_strategy_enabled_stack_->size() == 0
+         || is_mirrored_strategy_enabled_stack_->back();
+}
+Maybe<bool> Session::IsConsistentStrategyEnabled() const {
+  bool is_mirrored_enabled = JUST(IsMirroredStrategyEnabled());
+  return !is_mirrored_enabled;
+}
+
 Maybe<int64_t> GetDefaultSessionId() { return *(DefaultSessionId()); }
 
-Maybe<void> RegsiterSession(int64_t id, const std::shared_ptr<Session>& sess) {
+Maybe<Session> RegsiterSession(int64_t id) {
+  std::shared_ptr<Session> sess =
+      std::make_shared<Session>(id, std::make_shared<vm::cfg::InstructionListProto>(),
+                                std::make_shared<eager::cfg::EagerSymbolList>());
   std::unique_lock<std::mutex> lock(*GlobalSessionUtilMutex());
   auto* id2session_map = GlobalId2SessionMap();
   CHECK_OR_RETURN(id2session_map->find(id) == id2session_map->end());
   (*id2session_map)[id] = sess;
   JUST(SetDefaultSessionId(id));
-  return Maybe<void>::Ok();
+  return id2session_map->at(id);
 }
 
 Maybe<Session> GetDefaultSession() {
