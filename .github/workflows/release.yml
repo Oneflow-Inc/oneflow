@@ -49,49 +49,48 @@ jobs:
       - uses: actions/checkout@v2
       - name: Set environment variables
         env:
-          matrix_release_version: ${{matrix.release_version }}
           python_version: ${{ github.event.inputs.python_version }}
           package_names: ${{ github.event.inputs.package_names }}
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
         run: |
           set -x
-          if [ "$matrix_release_version" == "cpu" ]; then
+          if [ "${{ matrix.release_version }}" == "cpu" ]; then
               cuda_version="10.2"
               extra_flags="--cpu"
               cache_dir_name="cpu"
-          elif [ "$matrix_release_version" == "cu100" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu100" ]; then
               cuda_version="10.0"
               cache_dir_name="10.0"
-          elif [ "$matrix_release_version" == "cu101" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu101" ]; then
               cuda_version="10.1"
               cache_dir_name="10.1"
-          elif [ "$matrix_release_version" == "cu102" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu102" ]; then
               cuda_version="10.2"
               cache_dir_name="10.2"
-          elif [ "$matrix_release_version" == "cu110" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu110" ]; then
               cuda_version="11.0"
               cache_dir_name="11.0"
-          elif [ "$matrix_release_version" == "cu111" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu111" ]; then
               cuda_version="11.1"
               cache_dir_name="11.1"
-          elif [ "$matrix_release_version" == "cu100_xla" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu100_xla" ]; then
               cuda_version="10.0"
               extra_flags="--xla"
               cache_dir_name="10.0-xla"
-          elif [ "$matrix_release_version" == "cu101_xla" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu101_xla" ]; then
               cuda_version="10.1"
               extra_flags="--xla"
               cache_dir_name="10.1-xla"
-          elif [ "$matrix_release_version" == "cu102_xla" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu102_xla" ]; then
               cuda_version="10.2"
               extra_flags="--xla"
               cache_dir_name="10.2-xla"
-          elif [ "$matrix_release_version" == "cu110_xla" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu110_xla" ]; then
               cuda_version="11.0"
               extra_flags="--xla"
               cache_dir_name="11.0-xla"
-          elif [ "$matrix_release_version" == "cu111_xla" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu111_xla" ]; then
               cuda_version="11.1"
               extra_flags="--xla"
               cache_dir_name="11.1-xla"
