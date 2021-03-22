@@ -400,13 +400,8 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
 
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
-    LOG(INFO) << "ActorEvent " << std::to_string(actor_id_) << " "
-              << std::to_string(static_cast<long long>(GetCurTime())) << " "
-              << std::to_string(GlobalProcessCtx::Rank());
     act_id_ += 1;
     TryLogActEvent([&] { Act(); });
-    LOG(INFO) << "ActorEnd " << std::to_string(actor_id_) << " "
-              << std::to_string(static_cast<long long>(GetCurTime()));
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
     AsyncSendNaiveProducedRegstMsgToConsumer();

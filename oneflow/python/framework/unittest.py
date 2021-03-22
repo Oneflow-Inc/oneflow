@@ -337,11 +337,6 @@ def skip_unless_1n2d():
     return skip_unless(1, 2)
 
 
-@oneflow_export("unittest.skip_unless_1n3d")
-def skip_unless_1n3d():
-    return skip_unless(1, 3)
-
-
 @oneflow_export("unittest.skip_unless_1n4d")
 def skip_unless_1n4d():
     return skip_unless(1, 4)

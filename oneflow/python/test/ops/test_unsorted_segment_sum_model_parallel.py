@@ -60,7 +60,6 @@ def _test_unsorted_segment_sum_model_parallel_fw(
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.consistent_view())
-    flow.config.enable_debug_mode(True)
 
     data_arr, segment_ids_arr, out_arr = _gen_test_data(
         out_shape, segment_ids_shape, axis
@@ -114,7 +113,6 @@ class TestUnsortedSegmentSumModelParallel(flow.unittest.TestCase):
         arg_dict["split_axis"] = [0, 1, 2]
         for arg in GenArgList(arg_dict):
             _test_unsorted_segment_sum_model_parallel_fw(test_case, *arg)
-            return
 
 
 if __name__ == "__main__":

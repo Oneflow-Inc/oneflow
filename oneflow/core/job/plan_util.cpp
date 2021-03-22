@@ -254,13 +254,13 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   const auto& process_ranks = Global<ResourceDesc, ForSession>::Get()->process_ranks();
   size_t gpu_device_num = Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
   std::map<int64_t, std::map<int64_t, std::vector<std::vector<std::string>>>>
-      machine_id2device_id2node_list;
+      machine_id2job_id_device_id2node_list;
   for (size_t i : process_ranks) {
     for (const auto& pair : plan.job_confs().job_id2job_conf()) {
-      machine_id2device_id2node_list[i][pair.first].resize(gpu_device_num);
+      machine_id2job_id_device_id2node_list[i][pair.first].resize(gpu_device_num);
     }
   }
-  std::map<int64_t, std::map<int64_t, std::vector<std::string>>> machine_id2host_node_list;
+  std::map<int64_t, std::map<int64_t, std::vector<std::string>>> machine_id2job_id2host_node_list;
   std::vector<std::string> main_node_list;
   std::vector<std::string> copy_comm_net_node_list;
   HashSet<int64_t> ctrl_regst_desc_ids;
@@ -279,11 +279,13 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     if (pass_tag == kNoPassTag) {
       if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
         int64_t device_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_proto.thrd_id());
-        machine_id2device_id2node_list[task_proto.machine_id()][task_proto.job_id()][device_id]
-            .push_back(node_def);
+        machine_id2job_id_device_id2node_list[task_proto.machine_id()][task_proto.job_id()]
+                                             [device_id]
+                                                 .push_back(node_def);
         machine_id2device_id2node_list_job_ids[task_proto.machine_id()].insert(task_proto.job_id());
       } else {
-        machine_id2host_node_list[task_proto.machine_id()][task_proto.job_id()].push_back(node_def);
+        machine_id2job_id2host_node_list[task_proto.machine_id()][task_proto.job_id()].push_back(
+            node_def);
         machine_id2host_node_list_job_ids[task_proto.machine_id()].insert(task_proto.job_id());
       }
     } else if (pass_tag == kMainOp) {
@@ -403,7 +405,8 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
                      << job_name << "\";\n";
           log_stream << "style=\"rounded\";\n";
         }
-        for (const std::string& host_node_def : machine_id2host_node_list[machine_id][job_id]) {
+        for (const std::string& host_node_def :
+             machine_id2job_id2host_node_list[machine_id][job_id]) {
           log_stream << host_node_def;
         }
         if (machine_id2device_id2node_list_job_ids[machine_id].find(job_id)
@@ -416,7 +419,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
             log_stream << "#fillcolor=\"azure\";\n";
             log_stream << "#style=\"rounded,filled\";\n";
             for (const auto& device_node_def :
-                 machine_id2device_id2node_list[machine_id][job_id][device_id]) {
+                 machine_id2job_id_device_id2node_list[machine_id][job_id][device_id]) {
               log_stream << device_node_def;
             }
             log_stream << "#}\n";
@@ -442,29 +445,13 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
           log_stream << "#fillcolor=\"azure\";\n";
           log_stream << "#style=\"rounded,filled\";\n";
           for (const auto& device_node_def :
-               machine_id2device_id2node_list[machine_id][job_id][device_id]) {
+               machine_id2job_id_device_id2node_list[machine_id][job_id][device_id]) {
             log_stream << device_node_def;
           }
           log_stream << "#}\n";
         }
         if (job_id != plan.job_confs().job_id2job_conf().size() - 1) { log_stream << "}\n"; }
       }
-      // for (const std::string& host_node_def : machine_id2host_node_list[machine_id]) {
-      //   log_stream << host_node_def;
-      // }
-      // for (size_t device_id = 0; device_id < gpu_device_num; ++device_id) {
-      //   std::string device_name = machine_name + "_device_" + std::to_string(device_id);
-      //   log_stream << "#subgraph cluster_" << device_name << " { label = \"" << device_name
-      //             << "\";\n";
-      //   log_stream << "#color=\"skyblue\";\n";
-      //   log_stream << "#fillcolor=\"azure\";\n";
-      //   log_stream << "#style=\"rounded,filled\";\n";
-      //   for (const auto& device_node_def : machine_id2device_id2node_list[machine_id][device_id])
-      //   {
-      //     log_stream << device_node_def;
-      //   }
-      //   log_stream << "#}\n";
-      // }
     }
     log_stream << "}\n";
   }
