@@ -30,5 +30,12 @@ void TensorArg::PushPartialTensor(const std::shared_ptr<Tensor>& partial_tensor)
   partial_sum_tensors_.push_back(partial_tensor);
 }
 
+const std::shared_ptr<Tensor>& TensorArg::GetAccTensor() {
+    if (!acc_tensor_) {
+        TODO();  // wangyinggang: Adds `partial_sum_tensor` to `acc_tensor_`
+    }
+    return acc_tensor_;
+}
+
 }  // namespace one
 }  // namespace oneflow
