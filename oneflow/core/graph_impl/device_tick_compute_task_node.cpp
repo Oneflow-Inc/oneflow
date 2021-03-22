@@ -13,9 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/device_tick_compute_task_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 
 namespace oneflow {
+
+class DeviceTickCompTaskNode final : public CompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DeviceTickCompTaskNode);
+  DeviceTickCompTaskNode() = default;
+  ~DeviceTickCompTaskNode() = default;
+
+  bool IsMeaningLess() override { return false; }
+  TaskType GetTaskType() const override { return TaskType::kDeviceTick; }
+
+ private:
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void BuildExecGphAndRegst() override;
+  bool IsIndependent() const override { return true; }
+};
 
 void DeviceTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", false, 1, 1);
