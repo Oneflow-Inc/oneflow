@@ -112,4 +112,10 @@ void GrpcCtrlClient::PushActEvent(const ActEvent& act_event) {
   rpc_client_.PushActEvent(act_event);
 }
 
+int32_t GrpcCtrlClient::IncreaseCount(const std::string& k, int32_t v) {
+  return rpc_client_.IncreaseCount(k, v);
+}
+
+void GrpcCtrlClient::EraseCount(const std::string& k) { rpc_client_.EraseCount(k); }
+
 }  // namespace oneflow
