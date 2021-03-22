@@ -110,7 +110,8 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   } else if (auto* consistent_tensor = dynamic_cast<ConsistentTensor*>(tensor.get())) {
     return consistent_tensor->blob_object();
   } else {
-    CHECK_OR_RETURN(false) << "The tensor should be either Mirrored Tensor or Consistent Tensor.";
+    UNIMPLEMENTED_THEN_RETURN()
+        << "The tensor should be either Mirrored Tensor or Consistent Tensor.";
   }
 }
 

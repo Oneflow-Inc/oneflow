@@ -64,7 +64,6 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def_property_readonly("name", &one::BuiltinOpExpr::op_name);
 
   py::class_<one::UserOpExpr, one::BuiltinOpExpr, std::shared_ptr<one::UserOpExpr>>(m, "UserOpExpr")
-      .def(py::init<>())
       .def_property_readonly("type", &one::UserOpExpr::type)
       .def_property_readonly(
           "proto", [](const one::UserOpExpr& op) { return PbMessage2TxtString(op.proto()); })

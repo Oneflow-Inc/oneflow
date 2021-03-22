@@ -23,27 +23,28 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-#define DEFINE_DEFAULT_CONSTRUCTOR(class_type) \
-  class_type() = default;                      \
-  virtual ~class_type() = default;
-
 class OpExpr {
  public:
-  DEFINE_DEFAULT_CONSTRUCTOR(OpExpr);
+  explicit OpExpr(const std::string& type) : type_(type) {}
+  virtual ~OpExpr() = default;
 
-  virtual std::string type() const = 0;
+  const std::string& type() const { return type_; }
+
   virtual int input_num() const = 0;
   virtual int output_num() const = 0;
+
+ private:
+  std::string type_;
 };
 
 class BuiltinOpExpr : public OpExpr {
  public:
-  DEFINE_DEFAULT_CONSTRUCTOR(BuiltinOpExpr);
+  explicit BuiltinOpExpr(const std::string& type, const std::string& op_name,
+                         const std::vector<std::string>& indexed_ibns,
+                         const std::vector<std::string>& indexed_obns)
+      : OpExpr(type), op_name_(op_name), indexed_ibns_(indexed_ibns), indexed_obns_(indexed_obns) {}
 
-  explicit BuiltinOpExpr(const std::string& op_name) : op_name_(op_name) {}
-  BuiltinOpExpr(const std::string& op_name, const std::vector<std::string>& indexed_ibns,
-                const std::vector<std::string>& indexed_obns)
-      : op_name_(op_name), indexed_ibns_(indexed_ibns), indexed_obns_(indexed_obns) {}
+  virtual ~BuiltinOpExpr() = default;
 
   const std::string& op_name() const { return op_name_; }
 
@@ -63,28 +64,27 @@ class BuiltinOpExpr : public OpExpr {
   std::vector<std::string> indexed_obns_;
 };
 
-#define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name, _op_conf)                                   \
-  class _op_name##Expr : public BuiltinOpExpr {                                           \
-   public:                                                                                \
-    _op_name##Expr() = default;                                                           \
-    virtual ~_op_name##Expr() = default;                                                  \
-    explicit _op_name##Expr(const std::string& op_name, _op_name##Conf&& proto,           \
-                            const std::vector<std::string>& indexed_ibns,                 \
-                            const std::vector<std::string>& indexed_obns)                 \
-        : BuiltinOpExpr(op_name, indexed_ibns, indexed_obns), proto_(std::move(proto)) {} \
-                                                                                          \
-    std::string type() const override { return OF_PP_STRINGIZE(_op_name); }               \
-                                                                                          \
-    const _op_name##Conf& proto() const { return proto_; }                                \
-    _op_name##Conf* mutable_proto() { return &proto_; }                                   \
-                                                                                          \
-    void BuildOpConf(OperatorConf* op_conf) const {                                       \
-      *(op_conf->mutable_name()) = this->op_name_;                                        \
-      *(op_conf->mutable_##_op_conf##_conf()) = proto_;                                   \
-    }                                                                                     \
-                                                                                          \
-   private:                                                                               \
-    _op_name##Conf proto_;                                                                \
+#define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name, _op_conf)                                  \
+  class _op_name##Expr : public BuiltinOpExpr {                                          \
+   public:                                                                               \
+    _op_name##Expr() = default;                                                          \
+    virtual ~_op_name##Expr() = default;                                                 \
+    explicit _op_name##Expr(const std::string& op_name, _op_name##Conf&& proto,          \
+                            const std::vector<std::string>& indexed_ibns,                \
+                            const std::vector<std::string>& indexed_obns)                \
+        : BuiltinOpExpr(OF_PP_STRINGIZE(_op_name), op_name, indexed_ibns, indexed_obns), \
+          proto_(std::move(proto)) {}                                                    \
+                                                                                         \
+    const _op_name##Conf& proto() const { return proto_; }                               \
+    _op_name##Conf* mutable_proto() { return &proto_; }                                  \
+                                                                                         \
+    void BuildOpConf(OperatorConf* op_conf) const {                                      \
+      *(op_conf->mutable_name()) = this->op_name_;                                       \
+      *(op_conf->mutable_##_op_conf##_conf()) = proto_;                                  \
+    }                                                                                    \
+                                                                                         \
+   private:                                                                              \
+    _op_name##Conf proto_;                                                               \
   };
 
 DEFINE_BUILTIN_OPEXPR_CLASS(UserOp, user);
@@ -101,9 +101,8 @@ DEFINE_BUILTIN_OPEXPR_CLASS(DistributeAddOp, distribute_add);
 // TODO(): Finish the class definition of `FunctionOpExpr`.
 class FunctionOpExpr : public OpExpr {
  public:
-  DEFINE_DEFAULT_CONSTRUCTOR(FunctionOpExpr);
-
-  std::string type() const override { return "FunctionOp"; }
+  FunctionOpExpr() : OpExpr("FunctionOp") {}
+  virtual ~FunctionOpExpr() = default;
 
   int input_num() const override { UNIMPLEMENTED(); }
   int output_num() const override { UNIMPLEMENTED(); }
