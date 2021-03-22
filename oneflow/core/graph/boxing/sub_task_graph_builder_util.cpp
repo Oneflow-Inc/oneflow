@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
 
@@ -46,6 +47,50 @@ std::vector<TensorSliceView> SubTskGphBuilderUtil::GetTensorSliceView(
     }
   } else {
     UNIMPLEMENTED();
+  }
+  return views;
+}
+
+TensorSliceView SubTskGphBuilderUtil::GetTensorSliceView4ParallelRank(
+    const Shape& parallel_hierarchy, const ParallelDistribution& parallel_distribution,
+    const Shape& logical_shape, const std::vector<int64_t>& parallel_rank) {
+  std::vector<Range> ranges(logical_shape.NumAxes());
+  FOR_RANGE(int64_t, i, 0, logical_shape.NumAxes()) {
+    ranges[i].mut_begin() = 0;
+    ranges[i].mut_end() = logical_shape.At(i);
+  }
+  FOR_RANGE(int64_t, i, 0, parallel_hierarchy.NumAxes()) {
+    const SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(i);
+    if (sbp_parallel.has_split_parallel()) {
+      const int64_t split_axis = sbp_parallel.split_parallel().axis();
+      CHECK_EQ(ranges[split_axis].size() % parallel_hierarchy.At(i), 0);
+      const int64_t range_size = ranges[split_axis].size() / parallel_hierarchy.At(i);
+      const int64_t dim_start = ranges[split_axis].begin() + parallel_rank.at(i) * range_size;
+      ranges[split_axis].mut_begin() = dim_start;
+      ranges[split_axis].mut_end() = dim_start + range_size;
+    }
+  }
+  return TensorSliceView(ranges);
+}
+
+TensorSliceView SubTskGphBuilderUtil::GetTensorSliceView4ParallelId(
+    const Shape& parallel_hierarchy, const ParallelDistribution& parallel_distribution,
+    const Shape& logical_shape, int64_t parallel_id) {
+  NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
+      parallel_hierarchy.dim_vec().data(), parallel_hierarchy.NumAxes());
+  std::vector<int64_t> parallel_rank(SHAPE_MAX_AXIS_SIZE);
+  hierarchy_index_helper.OffsetToNdIndex(parallel_id, parallel_rank.data());
+  return GetTensorSliceView4ParallelRank(parallel_hierarchy, parallel_distribution, logical_shape,
+                                         parallel_rank);
+}
+
+std::vector<TensorSliceView> SubTskGphBuilderUtil::GetTensorSliceView(
+    const Shape& parallel_hierarchy, const ParallelDistribution& parallel_distribution,
+    const Shape& logical_shape) {
+  std::vector<TensorSliceView> views;
+  FOR_RANGE(int64_t, i, 0, parallel_hierarchy.elem_cnt()) {
+    views.emplace_back(
+        GetTensorSliceView4ParallelId(parallel_hierarchy, parallel_distribution, logical_shape, i));
   }
   return views;
 }
