@@ -600,11 +600,6 @@ def GetConcatSplitBoxingParallelDescSymbol(
     parallel_conf.set_device_tag("cpu")
     for machine_id, _ in blob_parallel_desc_symbol.machine_id2device_id_list.items():
         parallel_conf.add_device_name("@%s:%s" % (machine_id, random_rank_id))
-    hierarchy = shape_proto_cfg.ShapeProto()
-    for dim in blob_parallel_desc_symbol.hierarchy:
-        hierarchy.add_dim(dim)
-    assert hierarchy.dim_size() > 0
-    parallel_conf.mutable_hierarchy().CopyFrom(hierarchy)
     return builder.GetParallelDescSymbol(parallel_conf)
 
 
