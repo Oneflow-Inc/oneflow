@@ -121,15 +121,17 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
     const std::shared_ptr<Tensor>& tensor = acc_grad();
     return cast_for_api(tensor);
   }
-  // userd by pybind11 only
-  Maybe<DerivedT> api_detach() const {
-    const std::shared_ptr<Tensor>& tensor = detach();
-    return cast_for_api(tensor);
-  }
 
   // Setters for autograd
   void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) override {
     grad_fn_node_ = grad_fn_node;
+  }
+
+  // Operators for tensor
+  // used by pybind11 only
+  Maybe<DerivedT> api_detach() const {
+    const std::shared_ptr<Tensor>& tensor = detach();
+    return cast_for_api(tensor);
   }
 
   // Getters to be deprecated
@@ -173,7 +175,6 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
   std::shared_ptr<MirroredTensor> data() const;
-  std::shared_ptr<Tensor> detach() const override;
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
@@ -197,6 +198,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
   void set_retain_grad(bool retain_grad) override { impl_->set_requires_grad(retain_grad); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
+
+  // Operators for tensor
+  std::shared_ptr<Tensor> detach() const override;
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
@@ -243,7 +247,6 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
   std::shared_ptr<ConsistentTensor> data() const;
-  std::shared_ptr<Tensor> detach() const override;
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
@@ -267,6 +270,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
   void set_retain_grad(bool retain_grad) override { impl_->set_requires_grad(retain_grad); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
+
+  // Operators for tensor
+  std::shared_ptr<Tensor> detach() const override;
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
