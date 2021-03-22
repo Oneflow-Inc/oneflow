@@ -38,6 +38,10 @@ jobs:
       - name: Fix permissions
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+      - name: Install dependencies
+        run: |
+          python3 -m pip install -U pip setuptools wheel
+          python3 -m pip install oss2
       - uses: actions/checkout@v2
       - name: Set environment variables
         env:
