@@ -185,6 +185,7 @@ void EpollCommNet::InitSockets() {
   }
 
   // accept
+  HashSet<int64_t> processed_ranks;
   FOR_RANGE(int32_t, idx, 0, src_machine_count) {
     sockaddr_in peer_sockaddr;
     socklen_t len = sizeof(peer_sockaddr);
@@ -194,6 +195,7 @@ void EpollCommNet::InitSockets() {
     ssize_t n = read(sockfd, &peer_rank, sizeof(int64_t));
     PCHECK(n == sizeof(int64_t));
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
+    CHECK(processed_ranks.emplace(peer_rank).second);
     machine_id2sockfd_[peer_rank] = sockfd;
   }
   PCHECK(close(listen_sockfd) == 0);
