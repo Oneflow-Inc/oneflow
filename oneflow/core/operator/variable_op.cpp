@@ -46,16 +46,23 @@ Maybe<void> VariableOp::InferOutBlobDescs(
   CHECK_OR_RETURN(variable_conf.has_data_type());
   out_blob_desc->set_data_type(variable_conf.data_type());
   if (parallel_ctx->parallel_num() == 1) { return Maybe<void>::Ok(); }
-  const Shape& hierarchy = *JUST(GetOpParallelDesc())->hierarchy();
-  CHECK_EQ_OR_RETURN(variable_conf.parallel_distribution_size(), hierarchy.NumAxes());
-  for (int64_t i = 0; i < hierarchy.NumAxes(); ++i) {
+  if (variable_conf.parallel_distribution_size() == 0) { return Maybe<void>::Ok(); }
+  const auto& hierarchy = JUST(GetOpParallelDesc())->hierarchy();
+  CHECK_EQ_OR_RETURN(variable_conf.parallel_distribution_size(), hierarchy->NumAxes());
+  for (int64_t i = 0; i < hierarchy->NumAxes(); ++i) {
     SbpParallel sbp_parallel;
     CHECK_OR_RETURN(
         ParseSbpParallelFromString(variable_conf.parallel_distribution(i), &sbp_parallel));
     if (sbp_parallel.has_split_parallel()) {
       const int64_t split_axis = sbp_parallel.split_parallel().axis();
-      out_blob_desc->mut_shape().Set(split_axis,
-                                     out_blob_desc->shape().At(split_axis) / hierarchy.At(i));
+      if (hierarchy->NumAxes() == 1) {
+        BalancedSplitter bs(out_blob_desc->shape().At(split_axis), parallel_ctx->parallel_num());
+        out_blob_desc->mut_shape().Set(split_axis, bs.At(parallel_ctx->parallel_id()).size());
+      } else {
+        CHECK_EQ_OR_RETURN(out_blob_desc->shape().At(split_axis) % hierarchy->At(i), 0);
+        out_blob_desc->mut_shape().Set(split_axis,
+                                       out_blob_desc->shape().At(split_axis) / hierarchy->At(i));
+      }
     }
   }
   return Maybe<void>::Ok();
