@@ -689,11 +689,11 @@ def _input_args_is_shape(*args):
 def register_tensor_op_by_module(op_name):
     def set_method(module):
         if is_unary_module(module):
-            setattr(Tensor, op_name, lambda self: module().forward(self))
+            setattr(Tensor, op_name, lambda self, *args: module(*args).forward(self))
         else:
             assert is_binary_module(module)
             setattr(
-                Tensor, op_name, lambda self, x: module().forward(self, x),
+                Tensor, op_name, lambda self, x, *args: module(*args).forward(self, x),
             )
         return module
 
@@ -713,16 +713,16 @@ def register_op_by_module(op_name):
     def _get_unary_module_impl(module):
         global unary_module_impl
 
-        def unary_module_impl(x):
-            return module().forward(x)
+        def unary_module_impl(x, *args):
+            return module(*args).forward(x)
 
         return unary_module_impl
 
     def _get_binary_module_impl(module):
         global binary_module_impl
 
-        def binary_module_impl(x, y):
-            return module().forward(x, y)
+        def binary_module_impl(x, y, *args):
+            return module(*args).forward(x, y)
 
         return binary_module_impl
 

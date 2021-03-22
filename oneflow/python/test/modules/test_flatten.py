@@ -27,11 +27,14 @@ import oneflow.typing as tp
 class TestModule(flow.unittest.TestCase):
     def test_sigmoid(test_case):
         m = flow.nn.Flatten()
-        x = flow.Tensor(32, 1, 5, 5, data_initializer=flow.random_normal_initializer())
+        x = flow.Tensor(32, 2, 5, 5, data_initializer=flow.random_normal_initializer())
         y = m(x)
-        print(y.shape[1] == 25)
+        print(y.shape[1] == 50)
         print(np.allclose(y.numpy().flatten(), x.numpy().flatten()))
 
+        y2 = x.flatten(2)
+        print(y2.shape[2] == 25)
+        print(np.allclose(y2.numpy().flatten(), x.numpy().flatten()))
 
 if __name__ == "__main__":
     unittest.main()
