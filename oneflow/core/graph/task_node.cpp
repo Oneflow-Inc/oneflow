@@ -360,7 +360,7 @@ void TaskNode::LockRegsts() {
 
     // NOTE(chengcheng): CHECK 1 regst 1 blob.
     if (regst->regst_desc_type().has_data_regst_desc()) {
-      CHECK_EQ(regst->regst_desc_type().data_regst_desc().lbi2blob_desc_size(), 1);
+      CHECK_LE(regst->regst_desc_type().data_regst_desc().lbi2blob_desc_size(), 1);
     }
   }
 }

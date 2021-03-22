@@ -40,19 +40,6 @@ std::string GetOutRegstNameByObn(const std::string& obn) {
 
 bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() { return false; }
 
-bool NormalForwardCompTaskNode::CanProduceSeperatedRegstsForEachOutBlob() const {
-  return op()->output_bns().size() > 1 && IsAllOutNodeNormalForward();
-}
-
-bool NormalForwardCompTaskNode::IsAllOutNodeNormalForward() const {
-  bool ret = true;
-  ForEachNodeOnOutDataEdge([&](TaskNode* node) {
-    auto* fw_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
-    if (fw_node == nullptr) { ret = false; }
-  });
-  return ret;
-}
-
 void NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum(const std::string& name,
                                                                  size_t mem_block_num) {
   if (mem_block_num != -1) {
