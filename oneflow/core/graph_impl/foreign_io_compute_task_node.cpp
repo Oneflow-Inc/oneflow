@@ -13,9 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/foreign_io_compute_task_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 
 namespace oneflow {
+
+class ForeignIOCompTaskNode : public CompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ForeignIOCompTaskNode);
+  ForeignIOCompTaskNode() = default;
+  virtual ~ForeignIOCompTaskNode() override = default;
+
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void BuildExecGphAndRegst() override;
+  bool IsMeaningLess() override { return false; }
+
+  bool IsIndependent() const override { return true; }
+
+ private:
+  void InferProducedDataRegstTimeShape() override;
+};
 
 void ForeignIOCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
@@ -52,5 +69,31 @@ void ForeignIOCompTaskNode::InferProducedDataRegstTimeShape() {
     *regst->mut_data_regst_time_shape() = time_shape;
   });
 }
+
+class ForeignInputCompTaskNode final : public ForeignIOCompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ForeignInputCompTaskNode);
+  ForeignInputCompTaskNode() = default;
+  ~ForeignInputCompTaskNode() override = default;
+
+  TaskType GetTaskType() const override { return TaskType::kForeignInput; }
+};
+
+class ForeignOutputCompTaskNode final : public ForeignIOCompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ForeignOutputCompTaskNode);
+  ForeignOutputCompTaskNode() = default;
+  ~ForeignOutputCompTaskNode() override = default;
+
+  TaskType GetTaskType() const override { return TaskType::kForeignOutput; }
+};
+
+REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kForeignInput, 1);
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kForeignInputConf, ForeignInputCompTaskNode);
+
+REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kForeignOutput, 1);
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kForeignOutputConf, ForeignOutputCompTaskNode);
 
 }  // namespace oneflow

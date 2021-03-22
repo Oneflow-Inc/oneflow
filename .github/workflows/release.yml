@@ -11,6 +11,10 @@ on:
         description: "python_version"
         default: "3.6,3.7,3.8"
         required: false
+      package_names:
+        description: "package names to build"
+        default: "cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"
+        required: false
 jobs:
   staging_release:
     name: Staging Release
@@ -38,56 +42,61 @@ jobs:
       - name: Fix permissions
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+      - name: Install dependencies
+        run: |
+          python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+          python3 -m pip install -U pip setuptools wheel --user
+          python3 -m pip install oss2  --user
       - uses: actions/checkout@v2
       - name: Set environment variables
         env:
-          matrix_release_version: ${{matrix.release_version }}
           python_version: ${{ github.event.inputs.python_version }}
+          package_names: ${{ github.event.inputs.package_names }}
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
         run: |
           set -x
-          if [ "$matrix_release_version" == "cpu" ]; then
+          if [ "${{ matrix.release_version }}" == "cpu" ]; then
               cuda_version="10.2"
               extra_flags="--cpu"
               cache_dir_name="cpu"
-          elif [ "$matrix_release_version" == "cu100" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu100" ]; then
               cuda_version="10.0"
               cache_dir_name="10.0"
-          elif [ "$matrix_release_version" == "cu101" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu101" ]; then
               cuda_version="10.1"
               cache_dir_name="10.1"
-          elif [ "$matrix_release_version" == "cu102" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu102" ]; then
               cuda_version="10.2"
               cache_dir_name="10.2"
-          elif [ "$matrix_release_version" == "cu110" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu110" ]; then
               cuda_version="11.0"
               cache_dir_name="11.0"
-          elif [ "$matrix_release_version" == "cu111" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu111" ]; then
               cuda_version="11.1"
               cache_dir_name="11.1"
-          elif [ "$matrix_release_version" == "cu100_xla" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu100_xla" ]; then
               cuda_version="10.0"
               extra_flags="--xla"
               cache_dir_name="10.0-xla"
-          elif [ "$matrix_release_version" == "cu101_xla" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu101_xla" ]; then
               cuda_version="10.1"
               extra_flags="--xla"
               cache_dir_name="10.1-xla"
-          elif [ "$matrix_release_version" == "cu102_xla" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu102_xla" ]; then
               cuda_version="10.2"
               extra_flags="--xla"
               cache_dir_name="10.2-xla"
-          elif [ "$matrix_release_version" == "cu110_xla" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu110_xla" ]; then
               cuda_version="11.0"
               extra_flags="--xla"
               cache_dir_name="11.0-xla"
-          elif [ "$matrix_release_version" == "cu111_xla" ]; then
+          elif [ "${{ matrix.release_version }}" == "cu111_xla" ]; then
               cuda_version="11.1"
               extra_flags="--xla"
               cache_dir_name="11.1-xla"
           else
-              echo "Release version: $matrix_release_version not supported"
+              echo "Release version: ${{ matrix.release_version }} not supported"
               exit 1
           fi
 
@@ -100,8 +109,10 @@ jobs:
 
           python3 ci/build/ensure_img.py
           python_version=${python_version:-"3.5,3.6,3.7,3.8"}
+          package_names=${package_names:-"cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"}
           echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
           echo "python_version=${python_version}" >> $GITHUB_ENV
+          echo "package_names=${package_names}" >> $GITHUB_ENV
           echo "extra_flags=${extra_flags}" >> $GITHUB_ENV
 
           tmp_dir=$HOME/ci-tmp-rel
@@ -121,7 +132,7 @@ jobs:
           $(python3 tools/oss_file_exist.py --bucket oneflow-staging --path ${oss_dir}/oneflow_${matrix_release_version})
           echo "is_built=${OSS_FILE_EXISTED}" >> $GITHUB_ENV
       - name: Build OneFlow
-        if: env.is_built != '1'
+        if: env.is_built != '1' && contains(env.package_names, matrix.release_version)
         uses: ./.github/actions/whl
         with:
           tmp_dir: ${ci_tmp_dir}
@@ -129,7 +140,7 @@ jobs:
           python_version: ${python_version}
           extra_flags: ${extra_flags}
       - name: Upload wheel
-        if: env.is_built != '1'
+        if: env.is_built != '1' && contains(env.package_names, matrix.release_version)
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${wheelhouse_dir}
@@ -137,7 +148,7 @@ jobs:
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update pip index
-        if: env.is_built != '1'
+        if: env.is_built != '1' && contains(env.package_names, matrix.release_version)
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
@@ -146,7 +157,7 @@ jobs:
           python3 -m pip install oss2 beautifulsoup4 --user
           python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${oss_branch_dir}/index.html --index_key=${oss_dir}/index.html
       - name: Upload bin
-        if: env.is_built != '1'
+        if: env.is_built != '1' && contains(env.package_names, matrix.release_version)
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${bin_dir}
@@ -154,7 +165,7 @@ jobs:
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update API docs
-        if: github.ref == 'refs/heads/master' && matrix.release_version == 'cu102'
+        if: github.ref == 'refs/heads/master' && matrix.release_version == 'cu102' && contains(env.package_names, matrix.release_version)
         env:
           READTHEDOCS_TOKEN: ${{ secrets.READTHEDOCS_TOKEN }}
         run: |
