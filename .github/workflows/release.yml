@@ -95,7 +95,7 @@ jobs:
               extra_flags="--xla"
               cache_dir_name="11.1-xla"
           else
-              echo "Release version: $matrix_release_version not supported"
+              echo "Release version: ${{ matrix.release_version }} not supported"
               exit 1
           fi
 
