@@ -63,30 +63,28 @@ class BuiltinOpExpr : public OpExpr {
   std::vector<std::string> indexed_obns_;
 };
 
-#define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name, _op_conf)                         \
-  class _op_name##Expr : public BuiltinOpExpr {                                 \
-   public:                                                                      \
-    _op_name##Expr() = default;                                                 \
-    virtual ~_op_name##Expr() = default;                                        \
-    explicit _op_name##Expr(const std::string& op_name, _op_name##Conf&& proto, \
-                            const std::vector<std::string>& indexed_ibns,       \
-                            const std::vector<std::string>& indexed_obns)       \
-        : BuiltinOpExpr(op_name, indexed_ibns, indexed_obns) {                  \
-      proto_.Swap(&proto);                                                      \
-    }                                                                           \
-                                                                                \
-    std::string type() const override { return OF_PP_STRINGIZE(_op_name); }     \
-                                                                                \
-    const _op_name##Conf& proto() const { return proto_; }                      \
-    _op_name##Conf* mutable_proto() { return &proto_; }                         \
-                                                                                \
-    void BuildOpConf(OperatorConf* op_conf) const {                             \
-      *(op_conf->mutable_name()) = this->op_name_;                              \
-      *(op_conf->mutable_##_op_conf##_conf()) = proto_;                         \
-    }                                                                           \
-                                                                                \
-   private:                                                                     \
-    _op_name##Conf proto_;                                                      \
+#define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name, _op_conf)                                   \
+  class _op_name##Expr : public BuiltinOpExpr {                                           \
+   public:                                                                                \
+    _op_name##Expr() = default;                                                           \
+    virtual ~_op_name##Expr() = default;                                                  \
+    explicit _op_name##Expr(const std::string& op_name, _op_name##Conf&& proto,           \
+                            const std::vector<std::string>& indexed_ibns,                 \
+                            const std::vector<std::string>& indexed_obns)                 \
+        : BuiltinOpExpr(op_name, indexed_ibns, indexed_obns), proto_(std::move(proto)) {} \
+                                                                                          \
+    std::string type() const override { return OF_PP_STRINGIZE(_op_name); }               \
+                                                                                          \
+    const _op_name##Conf& proto() const { return proto_; }                                \
+    _op_name##Conf* mutable_proto() { return &proto_; }                                   \
+                                                                                          \
+    void BuildOpConf(OperatorConf* op_conf) const {                                       \
+      *(op_conf->mutable_name()) = this->op_name_;                                        \
+      *(op_conf->mutable_##_op_conf##_conf()) = proto_;                                   \
+    }                                                                                     \
+                                                                                          \
+   private:                                                                               \
+    _op_name##Conf proto_;                                                                \
   };
 
 DEFINE_BUILTIN_OPEXPR_CLASS(UserOp, user);
