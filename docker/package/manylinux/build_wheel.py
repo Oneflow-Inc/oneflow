@@ -64,7 +64,7 @@ def build_img(
 
 def common_cmake_args(cache_dir):
     third_party_install_dir = os.path.join(cache_dir, "build-third-party-install")
-    return f"-DCMAKE_BUILD_TYPE=Release -DBUILD_RDMA=ON -DTHIRD_PARTY_DIR={third_party_install_dir}"
+    return f"-DCMAKE_BUILD_TYPE=Debug -DBUILD_RDMA=ON -DTHIRD_PARTY_DIR={third_party_install_dir}"
 
 
 def get_build_dir_arg(cache_dir, oneflow_src_dir):
@@ -268,7 +268,7 @@ if __name__ == "__main__":
         "--cuda_version", type=str, required=False, default="10.2",
     )
     parser.add_argument(
-        "--extra_oneflow_cmake_args", type=str, required=False, default="",
+        "--extra_oneflow_cmake_args", action="append", nargs="+", default=[]
     )
     parser.add_argument(
         "--extra_docker_args", type=str, required=False, default="",
@@ -299,7 +299,10 @@ if __name__ == "__main__":
     parser.add_argument("--cpu", default=False, action="store_true", required=False)
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
-    extra_oneflow_cmake_args = args.extra_oneflow_cmake_args
+    print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
+    extra_oneflow_cmake_args = " ".join(
+        [" ".join(l) for l in args.extra_oneflow_cmake_args]
+    )
 
     cuda_versions = []
     if args.use_aliyun_mirror:
