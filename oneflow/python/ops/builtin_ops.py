@@ -126,11 +126,10 @@ class BuiltinOp(object):
                 assert isinstance(x, int)
                 attribute.mutable_at_shape().add_dim(x)
         elif attr_type == user_op_attr_cfg.kAtDataType:
-            assert (
-                isinstance(attr_value.oneflow_proto_dtype, int)
-                and attr_value in oneflow.dtypes()
-            )
-            attribute.set_at_data_type(attr_value.oneflow_proto_dtype)
+            assert attr_value in oneflow.dtypes()
+            attr_value = oneflow_api.deprecated.GetProtoDtype4OfDtype(attr_value)
+            assert isinstance(attr_value, int)
+            attribute.set_at_data_type(user_op_attr_cfg.AttrType(attr_value))
         elif attr_type == user_op_attr_cfg.kAtListInt32:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
@@ -149,8 +148,11 @@ class BuiltinOp(object):
         elif attr_type == user_op_attr_cfg.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
-                assert isinstance(x.oneflow_proto_dtype, int)
-                attribute.mutable_at_list_data_type.add_val(x.oneflow_proto_dtype)
+                x = oneflow_api.deprecated.GetProtoDtype4OfDtype(x)
+                assert isinstance(x, int)
+                attribute.mutable_at_list_data_type.add_val(
+                    user_op_attr_cfg.AttrType(x)
+                )
         elif attr_type == user_op_attr_cfg.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
             assert all(isinstance(x, tuple) or isinstance(x, list) for x in attr_value)
@@ -159,7 +161,7 @@ class BuiltinOp(object):
                 shape = shape_cfg.ShapeProto()
                 for dim in x:
                     shape.add_dim(dim)
-                attribute.mutable_at_list_shape.add_val(shape)
+                attribute.mutable_at_list_shape.Add().CopyFrom(shape)
         elif attr_type == user_op_attr_cfg.kAtListString:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
