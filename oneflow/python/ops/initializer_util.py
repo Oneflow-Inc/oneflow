@@ -975,7 +975,7 @@ def kaiming_initializer(
         # out.shape (1, 128, 32, 32)
 
     """
-    assert isinstance(shape, tuple)
+    assert isinstance(shape, (tuple, flow.Size))
     # Kaiming Initialization only deals with FC, Conv and Deconv's weight
     assert len(shape) >= 2
     elem_cnt = functools.reduce(lambda a, b: a * b, shape, 1)
@@ -986,7 +986,7 @@ def kaiming_initializer(
     assert data_format in ["NCHW", "NHWC"]
 
     fan = _CalcFan(shape, mode, _get_data_format(data_format))
-    gain = _CalcGain(nonlinearity, negative_slope)
+    gain = CalcGain(nonlinearity, negative_slope)
     std = gain / math.sqrt(fan)
     if distribution == "random_normal":
         return flow.random_normal_initializer(0.0, std)
@@ -1063,19 +1063,41 @@ def _CalcFan(shape, mode, data_format):
         raise NotImplementedError("Only support 'fan_in', 'fan_out' and 'fan_avg' mode")
 
 
-def _CalcGain(nonlinearity, negative_slope):
-    if nonlinearity is None or nonlinearity == "sigmoid":
-        return 1.0
+def CalcGain(nonlinearity, param):
+    linear_fns = [
+        "linear",
+        "conv1d",
+        "conv2d",
+        "conv3d",
+        "conv_transpose1d",
+        "conv_transpose2d",
+        "conv_transpose3d",
+    ]
+    if nonlinearity in linear_fns or nonlinearity == "sigmoid":
+        return 1
     elif nonlinearity == "tanh":
         return 5.0 / 3
     elif nonlinearity == "relu":
         return math.sqrt(2.0)
     elif nonlinearity == "leaky_relu":
+        if param is None:
+            negative_slope = 0.01
+        elif (
+            not isinstance(param, bool)
+            and isinstance(param, int)
+            or isinstance(param, float)
+        ):
+            # True/False are instances of int, hence check above
+            negative_slope = param
+        else:
+            raise ValueError("negative_slope {} not a valid number".format(param))
         return math.sqrt(2.0 / (1 + negative_slope ** 2))
+    elif nonlinearity == "selu":
+        return (
+            3.0 / 4
+        )  # Value found empirically (https://github.com/pytorch/pytorch/pull/50664)
     else:
-        raise NotImplementedError(
-            "Only support None, 'tanh', 'sigmoid', 'relu' and 'leaky_relu' nonlinearity"
-        )
+        raise ValueError("Unsupported nonlinearity {}".format(nonlinearity))
 
 
 _init_map = {}
@@ -1179,6 +1201,8 @@ def TruncatedNormalInitializerImpl(
 def GenInitialFan(initializer_conf, var_blob_shape: Sequence[int]):
     variance_norm = initializer_conf.variance_norm
     data_format = initializer_conf.data_format
+    # TODO(jianhao): remove tuple() when https://github.com/Oneflow-Inc/oneflow/pull/4437 is merged
+    var_blob_shape = tuple(var_blob_shape)
     fan_in = np.prod(var_blob_shape[1:]).astype(np.int).item()
     fan_out = var_blob_shape[0]
     if data_format == "channel_first":
