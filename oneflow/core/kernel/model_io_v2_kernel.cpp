@@ -37,10 +37,10 @@ struct InitializeWithConfUtil final {
 };
 
 const ParallelDistribution& GetParallelDistribution(const KernelConf& kernel_conf,
-                                                    const std::string name) {
+                                                    const std::string& bn_in_op) {
   const auto& parallel_distribution_map =
       kernel_conf.op_attribute().parallel_distribution_signature().bn_in_op2parallel_distribution();
-  const auto it = parallel_distribution_map.find(name);
+  const auto it = parallel_distribution_map.find(bn_in_op);
   CHECK(it != parallel_distribution_map.end());
   return it->second;
 }
