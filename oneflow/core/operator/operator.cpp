@@ -860,6 +860,10 @@ void Operator::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {}
 
+void Operator::AddLbi2OutputIndex(const LogicalBlobId& lbi, int32_t output_index) {
+  CHECK(lbi2output_index_.emplace(lbi, output_index).second);
+}
+
 std::string Operator::Bn2ConfName(const std::string& bn) const {
   return GetStrValInPbFdOrPbRpf(GetCustomizedConf(), bn);
 }
@@ -944,7 +948,7 @@ OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_di
   const int32_t output_index = output_bns_.size();
   CHECK(bn2index_pair_.emplace(obn, std::make_pair(BlobNameTag::kOutputBlobName, output_index))
             .second);
-  CHECK(lbi2output_index_.emplace(lbi, output_index).second);
+  AddLbi2OutputIndex(lbi, output_index);
   *output_bns_.Add() = obn;
   CHECK(mut_bn_in_op2lbi()->insert({obn, lbi}).second);
   ret->set_requires_grad(has_diff);
