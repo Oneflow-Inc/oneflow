@@ -76,7 +76,7 @@ def get_build_dir_arg(cache_dir, oneflow_src_dir):
 def force_rm_dir(dir_to_clean):
     print("cleaning:", dir_to_clean)
     assert dir_to_clean
-    clean_cmd = f"docker run --rm -v {dir_to_clean}:{dir_to_clean} -w {dir_to_clean} busybox rm -rf {dir_to_clean}/*"
+    clean_cmd = f"docker run --network=host --rm -v {dir_to_clean}:{dir_to_clean} -w {dir_to_clean} busybox rm -rf {dir_to_clean}/*"
     subprocess.check_call(clean_cmd, shell=True)
 
 
@@ -158,7 +158,9 @@ make -j`nproc` prepare_oneflow_third_party
         current_dir=third_party_build_dir,
         use_system_proxy=use_system_proxy,
     )
-    docker_cmd = f"docker run {extra_docker_args} --rm {common_docker_args}"
+    docker_cmd = (
+        f"docker run --network=host {extra_docker_args} --rm {common_docker_args}"
+    )
     create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry)
 
 
@@ -208,7 +210,9 @@ def build_oneflow(
         house_dir=house_dir,
         use_system_proxy=use_system_proxy,
     )
-    docker_cmd = f"docker run --rm {common_docker_args} {extra_docker_args}"
+    docker_cmd = (
+        f"docker run --network=host --rm {common_docker_args} {extra_docker_args}"
+    )
     bash_cmd = f"""set -ex
 export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
