@@ -16,7 +16,6 @@ limitations under the License.
 from __future__ import absolute_import
 
 import traceback
-import numpy as np
 
 import oneflow.python.framework.ofblob as ofblob
 import oneflow_api.oneflow.core.operator.op_attribute as op_attribute_cfg
@@ -90,12 +89,6 @@ class PythonCallback(oneflow_api.ForeignCallback):
         except Exception as e:
             print(traceback.format_exc())
             raise e
-
-    def FeedPath(self, path):
-        def callback(ofblob):
-            ofblob.CopyFromNdarray(np.frombuffer(path.encode("ascii"), dtype=np.int8))
-
-        return GetIdForRegisteredCallback(callback)
 
 
 def _WatcherHandler(unique_id, of_blob_ptr):
