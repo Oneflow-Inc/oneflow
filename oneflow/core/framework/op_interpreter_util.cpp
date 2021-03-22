@@ -88,20 +88,19 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
 /*static*/ Maybe<Bn2BlobObjectMap> OpInterpUtil::MakeBn2BlobObjectMap(
     const std::vector<std::string>& indexed_ibns, const TensorTuple& inputs) {
   CHECK_EQ_OR_RETURN(indexed_ibns.size(), inputs.size());
-  auto* bn2blob_object(new HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>{});
+  auto bn2blob_object = std::make_shared<Bn2BlobObjectMap>();
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& ibn = indexed_ibns.at(i);
     const auto& blob_object = JUST(GetTensorBlobObject(inputs[i]));
     bn2blob_object->emplace(ibn, blob_object);
   }
-  return std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>(
-      bn2blob_object);
+  return bn2blob_object;
 }
 
 /*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr) {
-  auto* op_conf = new OperatorConf;
-  op_expr.BuildOpConf(op_conf);
-  return std::shared_ptr<OperatorConf>(op_conf);
+  auto op_conf = std::make_shared<OperatorConf>();
+  op_expr.BuildOpConf(op_conf.get());
+  return op_conf;
 }
 
 /*static*/ Maybe<compatible_py::BlobObject> OpInterpUtil::GetTensorBlobObject(

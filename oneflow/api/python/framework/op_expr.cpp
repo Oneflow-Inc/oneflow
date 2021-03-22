@@ -29,21 +29,18 @@ namespace oneflow {
 
 namespace {
 
-Maybe<one::TensorTuple> Interpret(const std::shared_ptr<one::OpExpr>& op,
-                                  const one::TensorTuple& inputs) {
-  CHECK_EQ_OR_RETURN(op->input_num(), inputs.size())
-      << "The operation requires " << op->input_num() << " inputs, but " << inputs.size()
+Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const one::TensorTuple& inputs) {
+  CHECK_EQ_OR_RETURN(op.input_num(), inputs.size())
+      << "The operation requires " << op.input_num() << " inputs, but " << inputs.size()
       << " is given.";
-  one::OpExprInterpState state;
-  auto outputs = std::make_shared<one::TensorTuple>(op->output_num());
+  auto outputs = std::make_shared<one::TensorTuple>(op.output_num());
   auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
-  JUST(interperter->Apply(*op.get(), &state, inputs, outputs.get()));
+  JUST(interperter->Apply(op, inputs, outputs.get()));
   return outputs;
 }
 
 Maybe<std::vector<std::shared_ptr<one::Tensor>>> Interpret(
-    const std::shared_ptr<one::OpExpr>& op,
-    const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
+    const one::OpExpr& op, const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
   one::TensorTuple input_list(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) { input_list[i] = inputs[i]; }
   const auto& outputs = JUST(Interpret(op, input_list));
@@ -55,13 +52,11 @@ Maybe<std::vector<std::shared_ptr<one::Tensor>>> Interpret(
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::OpExpr, std::shared_ptr<one::OpExpr>>(m, "OpExpr")
       .def("apply",
-           [](const std::shared_ptr<one::OpExpr>& op_expr,
-              const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
+           [](const one::OpExpr& op_expr, const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
              return Interpret(op_expr, inputs).GetOrThrow();
            })
-      .def("apply", [](const std::shared_ptr<one::OpExpr>& op_expr,
-                       const std::shared_ptr<one::TensorTuple>& inputs) {
-        return Interpret(op_expr, *inputs).GetPtrOrThrow();
+      .def("apply", [](const one::OpExpr& op_expr, const one::TensorTuple& inputs) {
+        return Interpret(op_expr, inputs).GetPtrOrThrow();
       });
 
   py::class_<one::BuiltinOpExpr, one::OpExpr, std::shared_ptr<one::BuiltinOpExpr>>(m,

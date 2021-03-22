@@ -75,7 +75,7 @@ class BuiltinOpExpr : public OpExpr {
       proto_.Swap(&proto);                                                      \
     }                                                                           \
                                                                                 \
-    std::string type() const override { return std::string(#_op_name); }        \
+    std::string type() const override { return OF_PP_STRINGIZE(_op_name); }     \
                                                                                 \
     const _op_name##Conf& proto() const { return proto_; }                      \
     _op_name##Conf* mutable_proto() { return &proto_; }                         \
