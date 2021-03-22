@@ -30,8 +30,7 @@ Maybe<SubTskGphBuilderStatus> OneToOneSubTskGphBuilder::Build(
           && in_sbp_parallel == out_sbp_parallel)) {
     for (int64_t i = 0; i < in_parallel_desc.parallel_num(); ++i) {
       TaskNode* in_node = sorted_in_tasks.at(i);
-      TaskNode* proxy = ctx->task_graph()->GetProxyNode(
-          in_node, lbi, out_parallel_desc, i);
+      TaskNode* proxy = ctx->task_graph()->GetProxyNode(in_node, lbi, out_parallel_desc, i);
       sorted_out_tasks->push_back(proxy);
     }
     return TRY(BuildSubTskGphBuilderStatus("OneToOneSubTskGphBuilder", ""));

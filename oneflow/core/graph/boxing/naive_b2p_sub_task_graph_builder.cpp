@@ -50,8 +50,8 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
       const int64_t nearest_in_id = out_id2nearest_in_id.at(out_id);
       TaskNode* nearest_in_node = sorted_in_tasks.at(nearest_in_id);
       if (out_id == nearest_out_node_idx) {
-        TaskNode* proxy = ctx->task_graph()->GetProxyNode(nearest_in_node, lbi,
-                                            out_parallel_desc, out_id);
+        TaskNode* proxy =
+            ctx->task_graph()->GetProxyNode(nearest_in_node, lbi, out_parallel_desc, out_id);
 
         sorted_out_tasks->push_back(proxy);
       } else {

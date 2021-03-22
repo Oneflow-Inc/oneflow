@@ -33,7 +33,7 @@ size_t RegstNum4OpSameOutputBlob(OperatorConf::OpTypeCase op_type_case) {
 }
 
 std::string GetOutRegstNameByObn(const std::string& obn) {
-  return "NormalForwardCompTaskNodeOutRegstName_" + obn;
+  return "NormalForwardOutRegstName_" + obn;
 }
 
 }  // namespace
@@ -76,19 +76,21 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   }
   // when output blob num > 1 and task node on out edge is all NormalForwardCompTaskNode ,
   // create multi out regst by output blob name in op
-  if (CanProduceSeperatedRegstsForEachOutBlob()) {
-    HashMap<LogicalBlobId, std::string> lbi2out_regst_name;
-    for (const std::string& obn : sole_op->output_bns()) {
-      const LogicalBlobId& lbi = sole_op->BnInOp2Lbi(obn);
-      std::string out_regst_name = GetOutRegstNameByObn(obn);
-      lbi2out_regst_name.insert({lbi, out_regst_name});
-      ProduceOutRegstByNameAndBlockNum(out_regst_name, mem_block_num);
-    }
-    ForEachOutDataEdge([&](TaskEdge* edge) {
-      TaskNode* node = edge->dst_node();
-      auto* dst_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
-      CHECK(dst_node != nullptr) << "1regst1blob ONLY support normal fw comp task node 121";
-      std::shared_ptr<const Operator> dst_op = dst_node->op();
+
+  HashMap<LogicalBlobId, std::string> lbi2out_regst_name;
+  for (const std::string& obn : sole_op->output_bns()) {
+    const LogicalBlobId& lbi = sole_op->BnInOp2Lbi(obn);
+    std::string out_regst_name = GetOutRegstNameByObn(obn);
+    lbi2out_regst_name.insert({lbi, out_regst_name});
+    ProduceOutRegstByNameAndBlockNum(out_regst_name, mem_block_num);
+  }
+  ForEachOutDataEdge([&](TaskEdge* edge) {
+    TaskNode* node = edge->dst_node();
+
+    // compute task node
+    CompTaskNode* comp_dst_node = dynamic_cast<CompTaskNode*>(node);
+    if (comp_dst_node) {
+      std::shared_ptr<const Operator> dst_op = comp_dst_node->op();
       bool is_found = false;
       for (const std::string& ibn : dst_op->input_bns()) {
         const LogicalBlobId& dst_in_lbi = dst_op->BnInOp2Lbi(ibn);
@@ -98,11 +100,21 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
         }
       }
       CHECK(is_found) << "Cannot find comsumed blob in dst op: " << dst_op->op_name();
-    });
-  } else {
-    ProduceOutRegstByNameAndBlockNum("out", mem_block_num);
-    ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
-  }
+      return;
+    }
+
+    // tranport task node
+    TransportTaskNode* trans_dst_node = dynamic_cast<TransportTaskNode*>(node);
+    if (trans_dst_node) {
+      const LogicalBlobId& lbi = trans_dst_node->lbi();
+      CHECK(lbi2out_regst_name.find(lbi) != lbi2out_regst_name.end());
+      BindEdgeWithProducedRegst(edge, lbi2out_regst_name.at(lbi));
+      return;
+    }
+
+    UNIMPLEMENTED() << "Cannot find bind regst between: [" << sole_op->op_name() << "] -> "
+                    << node->VisualStr();
+  });
   ProduceRegst("tmp", true);
 }
 
@@ -151,21 +163,12 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
 }
 
 void NormalForwardCompTaskNode::BuildOutRegst() {
-  if (CanProduceSeperatedRegstsForEachOutBlob()) {
-    ExecNode* exec_node = mut_exec_gph().SoleNode();
-    for (const std::string& obn : exec_node->op()->output_bns()) {
-      std::string out_regst_name = GetOutRegstNameByObn(obn);
-      std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_regst_name);
-      out_regst->AddLbi(exec_node->op()->BnInOp2Lbi(obn));
-      exec_node->BindBnWithRegst(obn, out_regst);
-    }
-  } else {
-    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-    ExecNode* exec_node = mut_exec_gph().SoleNode();
-    for (const std::string& obn : exec_node->op()->output_bns()) {
-      out_regst->AddLbi(exec_node->op()->BnInOp2Lbi(obn));
-      exec_node->BindBnWithRegst(obn, out_regst);
-    }
+  ExecNode* exec_node = mut_exec_gph().SoleNode();
+  for (const std::string& obn : exec_node->op()->output_bns()) {
+    std::string out_regst_name = GetOutRegstNameByObn(obn);
+    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_regst_name);
+    out_regst->AddLbi(exec_node->op()->BnInOp2Lbi(obn));
+    exec_node->BindBnWithRegst(obn, out_regst);
   }
 }
 

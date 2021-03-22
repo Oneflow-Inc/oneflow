@@ -354,7 +354,15 @@ void TaskNode::TryLockConsumedRegst(const std::string& name) {
 }
 
 void TaskNode::LockRegsts() {
-  for (auto& pair : produced_regsts_) { pair.second->Lock(); }
+  for (auto& pair : produced_regsts_) {
+    std::shared_ptr<RegstDesc> regst = pair.second;
+    regst->Lock();
+
+    // NOTE(chengcheng): CHECK 1 regst 1 blob.
+    if (regst->regst_desc_type().has_data_regst_desc()) {
+      CHECK_EQ(regst->regst_desc_type().data_regst_desc().lbi2blob_desc_size(), 1);
+    }
+  }
 }
 
 void TaskNode::UpdateTaskId() {

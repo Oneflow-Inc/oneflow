@@ -30,8 +30,8 @@ namespace oneflow {
 class SubTskGphBuilderCtx;
 class HierarchicalSubTskGphBuilder;
 
-#define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
-  (const OpEdge* op_edge, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,        \
+#define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                \
+  (const OpEdge* op_edge, const std::vector<CompTaskNode*>& sorted_src_comp_tasks, \
    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks)
 
 class TaskGraph;
@@ -51,15 +51,11 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
 
-  TaskNode* GetProxyNode(TaskNode* src_node, 
-      const LogicalBlobId& lbi,
-      int64_t dst_machine_id,
-      int64_t dst_mem_zone_id);
-
+  TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi, int64_t dst_machine_id,
+                         int64_t dst_mem_zone_id);
 
   TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
-                                            const ParallelDesc& dst_parallel_desc,
-                                            int64_t dst_parallel_id);
+                         const ParallelDesc& dst_parallel_desc, int64_t dst_parallel_id);
 
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 
@@ -105,8 +101,28 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::unique_ptr<HierarchicalSubTskGphBuilder> hierarchical_sub_tsk_gph_builder_;
   std::unique_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
   std::unique_ptr<BoxingLogger> boxing_logger_;
-  
-  HashMap<TaskNode*, HashMap<std::tuple<LogicalBlobId, int64_t, int64_t>, TaskNode*>> node2proxies_;
+
+  struct ProxyKey {
+    LogicalBlobId lbi;
+    int64_t dst_machine_id;
+    int64_t dst_mem_zone_id;
+
+    ProxyKey(const LogicalBlobId& arg_lbi, int64_t arg_machine, int64_t arg_zone)
+        : lbi(arg_lbi), dst_machine_id(arg_machine), dst_mem_zone_id(arg_zone) {}
+
+    bool operator==(const ProxyKey& other) const {
+      return lbi == other.lbi && dst_machine_id == other.dst_machine_id && dst_mem_zone_id
+             && other.dst_mem_zone_id;
+    }
+
+    struct my_hash {
+      inline size_t operator()(const ProxyKey& key) const {
+        return std::hash<LogicalBlobId>{}(key.lbi) ^ key.dst_machine_id ^ key.dst_mem_zone_id;
+      }
+    };
+  };
+
+  HashMap<TaskNode*, HashMap<ProxyKey, TaskNode*, ProxyKey::my_hash>> node2proxies_;
 };
 
 }  // namespace oneflow

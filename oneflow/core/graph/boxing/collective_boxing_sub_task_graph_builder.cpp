@@ -73,7 +73,7 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   CHECK_NOTNULL(stream_index_generator);
   auto stream_index = stream_index_generator->GenerateNcclStreamIndex();
   const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
-  node->Init(machine_id, thrd_id, op_conf);
+  node->Init(machine_id, thrd_id, lbi, op_conf);
 }
 
 int64_t FindRootParallelId(const ParallelDesc& multi_device, const ParallelDesc& sole_device) {
@@ -330,9 +330,8 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
         auto* cpu_in_node = sorted_in_tasks.front();
         root_parallel_id =
             SubTskGphBuilderUtil::FindNearestSrcParallelId(out_parallel_desc, in_parallel_desc, 0);
-        gpu_in_node = ctx->task_graph()->GetProxyNode(
-            cpu_in_node, lbi, out_parallel_desc,
-                                        root_parallel_id);
+        gpu_in_node =
+            ctx->task_graph()->GetProxyNode(cpu_in_node, lbi, out_parallel_desc, root_parallel_id);
 
       } else if (in_parallel_desc.device_type() == DeviceType::kGPU) {
         root_parallel_id = FindRootParallelId(out_parallel_desc, in_parallel_desc);

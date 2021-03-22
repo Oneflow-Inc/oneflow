@@ -26,7 +26,8 @@ class CollectiveBoxingGenericTaskNode : public TransportTaskNode {
   CollectiveBoxingGenericTaskNode() = default;
   ~CollectiveBoxingGenericTaskNode() override = default;
 
-  void Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi, const OperatorConf& op_conf);
+  void Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi,
+            const OperatorConf& op_conf);
 
  private:
   void BuildExecGphAndRegst() override;
