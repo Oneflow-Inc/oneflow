@@ -22,6 +22,7 @@ import numpy as np
 import onnxruntime as ort
 import onnx
 import torch
+import paddle
 
 import oneflow as flow
 import oneflow.typing as tp
@@ -96,14 +97,12 @@ def load_pytorch_module_and_check(
         flow_res = job_train(ipt1)
     else:
         flow_res = job_eval(ipt1)
-    paddle_res = pt_module(torch.tensor(ipt1).to("cuda")).cpu().detach().numpy()
+    pytorch_res = pt_module(torch.tensor(ipt1).to("cuda")).cpu().detach().numpy()
     print(flow_res)
     print("-------------")
-    print(paddle_res)
-    np.save("/home/zhangxiaoyu/tmp/flow_res.npy", flow_res)
-    np.save("/home/zhangxiaoyu/tmp/paddle_res.npy", paddle_res)
+    print(pytorch_res)
 
-    a, b = flow_res.flatten(), paddle_res.flatten()
+    a, b = flow_res.flatten(), pytorch_res.flatten()
 
     max_idx = np.argmax(np.abs(a - b) / (a + 1e-7))
     print(
@@ -113,7 +112,7 @@ def load_pytorch_module_and_check(
     )
     print("a[{}]={}, b[{}]={}".format(max_idx, a[max_idx], max_idx, b[max_idx]))
     msg = "success"
-    test_case.assertTrue(np.allclose(flow_res, paddle_res, rtol=1e-3, atol=1e-5), msg)
+    test_case.assertTrue(np.allclose(flow_res, pytorch_res, rtol=1e-3, atol=1e-5), msg)
 
 
 def load_paddle_module_and_check(
@@ -128,6 +127,7 @@ def load_paddle_module_and_check(
         input_size = (2, 4, 3, 5)
     pd_module = pd_module_class()
 
+    paddle.set_device('gpu')
     model_weight_save_dir = "/home/zhangxiaoyu/tmp"
 
     if train_flag == True:
