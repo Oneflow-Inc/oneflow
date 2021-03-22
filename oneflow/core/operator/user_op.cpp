@@ -344,17 +344,17 @@ class UserOpInferParallelDistributionFnContext
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
   UserOpInferParallelDistributionFnContext(
       const UserOp* op, ParallelDistributionSignature* parallel_distribution_signature,
-      const ParallelDistributionSignature& parallel_distribution_sig_constraints,
+      const ParallelDistributionSignature& parallel_distribution_constraints,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn)
       : op_(op),
         parallel_distribution_signature_(parallel_distribution_signature),
-        parallel_distribution_sig_constraints_(parallel_distribution_sig_constraints),
+        parallel_distribution_constraints_(parallel_distribution_constraints),
         parallel_distribution_infer_hint4ibn_fn_(std::move(ParallelDistributionInferHint4Ibn)) {}
   ~UserOpInferParallelDistributionFnContext() override = default;
 
   const ParallelDistributionSignature& parallel_distribution_constraints() const override {
-    return parallel_distribution_sig_constraints_;
+    return parallel_distribution_constraints_;
   }
 
   ParallelDistribution* ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
@@ -383,7 +383,7 @@ class UserOpInferParallelDistributionFnContext
  private:
   const UserOp* op_;
   ParallelDistributionSignature* parallel_distribution_signature_;
-  ParallelDistributionSignature parallel_distribution_sig_constraints_;
+  ParallelDistributionSignature parallel_distribution_constraints_;
   std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
       parallel_distribution_infer_hint4ibn_fn_;
 };
@@ -642,18 +642,19 @@ Maybe<void> UserOp::InferOpTimeShape(
 }
 
 Maybe<void> UserOp::InferParallelDistributionSignature(
-    ParallelDistributionSignature* signature,
-    const ParallelDistributionSignature& parallel_distribution_sig_constraints,
+    ParallelDistributionSignature* parallel_distribution_signature,
+    const ParallelDistributionSignature& parallel_distribution_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
         ParallelDistributionInferHint4Ibn) {
   if (val_->infer_parallel_distribution_fn) {
-    UserOpInferParallelDistributionFnContext ctx(
-        this, signature, parallel_distribution_sig_constraints, ParallelDistributionInferHint4Ibn);
+    UserOpInferParallelDistributionFnContext ctx(this, parallel_distribution_signature,
+                                                 parallel_distribution_constraints,
+                                                 ParallelDistributionInferHint4Ibn);
     return val_->infer_parallel_distribution_fn(&ctx);
   } else {
     return Operator::InferParallelDistributionSignature(
-        signature, parallel_distribution_sig_constraints, parallel_desc,
+        parallel_distribution_signature, parallel_distribution_constraints, parallel_desc,
         ParallelDistributionInferHint4Ibn);
   }
 }
