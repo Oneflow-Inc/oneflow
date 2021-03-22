@@ -80,7 +80,6 @@ jobs:
           echo "CI_STATIC_HOST=${{ secrets.CI_STATIC_HOST }}" >> $GITHUB_ENV
           echo "CI_STATIC_PATH=${{ secrets.CI_STATIC_PATH }}" >> $GITHUB_ENV
       - name: Set environments for forks
-        if: contains(${{ github.repository }}, "Oneflow-Inc")
         run: |
           CI_STATIC_HOST=${CI_STATIC_HOST:-"192.168.1.13"}
           CI_STATIC_PATH=${CI_STATIC_PATH:-"/tank/ci-static"}
