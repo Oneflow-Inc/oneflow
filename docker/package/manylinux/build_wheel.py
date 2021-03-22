@@ -64,7 +64,7 @@ def build_img(
 
 def common_cmake_args(cache_dir):
     third_party_install_dir = os.path.join(cache_dir, "build-third-party-install")
-    return f"-DCMAKE_BUILD_TYPE=Debug -DBUILD_RDMA=ON -DTHIRD_PARTY_DIR={third_party_install_dir}"
+    return f"-DCMAKE_BUILD_TYPE=Release -DBUILD_RDMA=ON -DTHIRD_PARTY_DIR={third_party_install_dir}"
 
 
 def get_build_dir_arg(cache_dir, oneflow_src_dir):
