@@ -45,22 +45,24 @@ class Tensor:
         dtype = dtype if dtype is not None else oneflow_api.float32
         if placement is None:
             device = device if device is not None else oneflow_api.device("cpu")
-        if _input_args_is_other_data(*args):
-            if _input_args_is_tensor(*args):
-                self._construct_with_tensor(*args)
-            else:
-                self._local_or_consistent_tensor = None
-                self._construct_with_other_data_source(
-                    *args,
-                    dtype=dtype,
-                    device=device,
-                    requires_grad=requires_grad,
-                    retain_grad=retain_grad,
-                    placement=placement,
-                    sbp=sbp,
-                    is_consistent=is_consistent,
-                    is_lazy=is_lazy,
-                )
+        if _input_args_is_tensor:
+            TODO() # liyurui, construct using another tensor
+        elif _input_args_is_consistent_or_local:
+            self._local_or_consistent_tensor = args[0]
+            self._undetermined_tensor = None
+        elif _input_args_is_other_data:
+            self._local_or_consistent_tensor = None
+            self._construct_with_other_data_source(
+                *args,
+                dtype=dtype,
+                device=device,
+                requires_grad=requires_grad,
+                retain_grad=retain_grad,
+                placement=placement,
+                sbp=sbp,
+                is_consistent=is_consistent,
+                is_lazy=is_lazy,
+            )
         elif _input_args_is_shape(*args):
             shape = args
             self._local_or_consistent_tensor = None
@@ -349,14 +351,6 @@ class Tensor:
     def _blob_object(self):
         return self._local_or_consistent_tensor._blob_object
 
-    def _construct_with_tensor(self, *args):
-        if _input_args_is_consistent_or_local(*args):
-            self._local_or_consistent_tensor = args[0]
-            self._undetermined_tensor = None
-        else:
-            # TODO(liyurui): add py tensor constructor
-            TODO()
-
     def _construct_with_other_data_source(
         self,
         *args,
@@ -555,22 +549,17 @@ def _input_args_is_consistent_or_local(*args):
     )
 
 
-def _input_args_is_py_tensor(*args):
+def _input_args_is_tensor(*args):
     return len(args) == 1 and isinstance(args[0], flow.Tensor)
 
 
 def _input_args_is_other_data(*args):
     return (
-        _input_args_is_consistent_or_local(*args)
-        or _input_args_is_numpy(*args)
+        _input_args_is_numpy(*args)
         or _input_args_is_tuple_or_list(*args)
-        or _input_args_is_py_tensor(*args)
     )
 
 
 def _input_args_is_shape(*args):
     return all(isinstance(x, int) for x in args)
 
-
-def _input_args_is_tensor(*args):
-    return _input_args_is_consistent_or_local(*args) or _input_args_is_py_tensor(*args)
