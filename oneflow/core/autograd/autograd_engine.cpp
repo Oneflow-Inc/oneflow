@@ -54,7 +54,7 @@ StackFunctionNode::StackFunctionNode(
 
   outputs_ = std::make_shared<TensorTuple>(outputs.size());
   for (int i = 0; i < outputs.size(); ++i) {
-    TODO();  // shares data with output tensors but not grad_fn
+    outputs_->at(i) = outputs.at(i)->detach();
     out_grads_.emplace_back(outputs.at(i)->now_grad_arg());
   }
 
@@ -77,6 +77,16 @@ Maybe<void> StackFunctionNode::AccGrad4LeafTensor() {
     }
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<void> StackFunctionNode::GetNowGrad(TensorTuple* input_now_grads, const HashMap<TensorArg*, size_t>& tensor_arg2idx) const {
+    for(const auto& out_tensor: *outputs_) {
+        const auto& iter = tensor_arg2idx.find(out_tensor->now_grad_arg().get());
+        if (iter != tensor_arg2idx.end()) {
+            input_now_grads[&iter->second] = out_tensor->now_grad_arg()->GetAccTensor()->detach();
+        }
+    }
+    return Maybe<void>::Ok();
 }
 
 void StackFunctionNode::ReleaseOutTensorArgs() {
@@ -132,6 +142,10 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
     bool retain_graph, bool create_graph) {
   std::shared_ptr<TensorTuple> input_now_grads = std::make_shared<TensorTuple>(inputs.size());
+  HashMap<TensorArg*, size_t> tensor_arg2idx;
+  for(int i=0; i<inputs.size(); ++i) {
+      tensor_arg2idx.emplace(inputs.at(i)->now_grad_arg(), i);
+  }
   for (int i = 0; i < outputs.size(); ++i) {
     outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i));
   }
@@ -140,7 +154,7 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     const auto& func_node = weak_func_node.lock();
     if (!func_node) { continue; }
     JUST(func_node->Apply(create_graph));
-    TODO();  // wangyinggang: Get grads in out_grads to input_now_grads
+    JUST(func_node->GetNowGrad(input_now_grads.get(), tensor_arg2idx));
     JUST(func_node->AccGrad4RetainGradTensor());
     func_node->ReleaseOutTensorArgs();
   }
