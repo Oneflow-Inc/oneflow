@@ -190,7 +190,7 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
       FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
         TaskNode* in_node = sorted_in_tasks.at(i);
         TaskNode* in_node_proxy =
-            ctx->GetProxyNode(in_node, in_node->MemZoneId121(), out_parallel_desc, i);
+            ctx->task_graph()->GetProxyNode(in_node, lbi, out_parallel_desc, i);
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, out_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllGather, -1);
@@ -288,7 +288,7 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
         slice_node->ConnectToSrcNodeWithSlice(in_node, ctx->task_graph()->NewEdge(), in_slice);
         // copy to dst gpu
         TaskNode* slice_node_proxy =
-            ctx->GetProxyNode(slice_node, slice_node->MemZoneId121(), out_parallel_desc, out_id);
+            ctx->task_graph()->GetProxyNode(slice_node, lbi, out_parallel_desc, out_id);
         // allgather
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, out_parallel_desc, out_id, op_name, lbi,
@@ -330,7 +330,8 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
         auto* cpu_in_node = sorted_in_tasks.front();
         root_parallel_id =
             SubTskGphBuilderUtil::FindNearestSrcParallelId(out_parallel_desc, in_parallel_desc, 0);
-        gpu_in_node = ctx->GetProxyNode(cpu_in_node, cpu_in_node->MemZoneId121(), out_parallel_desc,
+        gpu_in_node = ctx->task_graph()->GetProxyNode(
+            cpu_in_node, lbi, out_parallel_desc,
                                         root_parallel_id);
 
       } else if (in_parallel_desc.device_type() == DeviceType::kGPU) {

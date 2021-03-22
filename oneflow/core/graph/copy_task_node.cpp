@@ -57,7 +57,8 @@ void CopyTaskNode::BuildExecGphAndRegst() {
 
 void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
-void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int64_t dev_phy_id) {
+void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int64_t dev_phy_id,
+    const LogicalBlobId& lbi) {
   copy_type_ = copy_type;
   set_machine_id(machine_id);
   DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
@@ -73,6 +74,7 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int6
     UNIMPLEMENTED();
   }
   set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
+  set_lbi(lbi);
 }
 
 void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
@@ -98,7 +100,7 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   return conf;
 }
 
-void CopyCommNetTaskNode::Init(int64_t machine_id) {
+void CopyCommNetTaskNode::Init(int64_t machine_id, const LogicalBlobId& lbi) {
   set_machine_id(machine_id);
   DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kCPU,
                      DeviceId::kCPUDeviceIndex};
@@ -107,6 +109,7 @@ void CopyCommNetTaskNode::Init(int64_t machine_id) {
   CHECK_NOTNULL(generator);
   StreamId stream_id{device_id, generator->GenerateCommNetStreamIndex()};
   set_thrd_id(SerializeStreamIdToInt64(stream_id));
+  set_lbi(lbi);
 }
 
 void CopyCommNetTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {

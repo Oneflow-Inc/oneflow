@@ -16,17 +16,17 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_COLLECTIVE_BOXING_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_COLLECTIVE_BOXING_TASK_NODE_H_
 
-#include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/graph/transport_task_node.h"
 
 namespace oneflow {
 
-class CollectiveBoxingGenericTaskNode : public TaskNode {
+class CollectiveBoxingGenericTaskNode : public TransportTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveBoxingGenericTaskNode);
   CollectiveBoxingGenericTaskNode() = default;
   ~CollectiveBoxingGenericTaskNode() override = default;
 
-  void Init(int64_t machine_id, int64_t thrd_id, const OperatorConf& op_conf);
+  void Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi, const OperatorConf& op_conf);
 
  private:
   void BuildExecGphAndRegst() override;

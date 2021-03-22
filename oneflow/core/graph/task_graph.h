@@ -32,9 +32,7 @@ class HierarchicalSubTskGphBuilder;
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
   (const OpEdge* op_edge, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,        \
-   const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,                               \
-   std::function<TaskNode**(CompTaskNode * src, int64_t machine_id, int32_t mem_zone_id)> \
-       MutBufTask)
+   const std::vector<CompTaskNode*>& sorted_dst_comp_tasks)
 
 class TaskGraph;
 using BldSubTskGphMthd = void(TaskGraph::*) BLD_SUB_TSK_GPH_MTHD_ARGS();
@@ -53,6 +51,16 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
 
+  TaskNode* GetProxyNode(TaskNode* src_node, 
+      const LogicalBlobId& lbi,
+      int64_t dst_machine_id,
+      int64_t dst_mem_zone_id);
+
+
+  TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
+                                            const ParallelDesc& dst_parallel_desc,
+                                            int64_t dst_parallel_id);
+
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
@@ -65,22 +73,10 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D);
 
  private:
-  void BuildTaskPath(
-      CompTaskNode* src, CompTaskNode* dst,
-      std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
-          MutBufTask,
-      bool use_buf_task_node);
-  TaskNode* BuildTaskStep(
-      TaskNode* cur_node, TaskNode* dst,
-      const std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)>& GetBufTask,
-      const std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)>&
-          SetBufTask,
-      bool use_buf_task_node);
+  void TryConnectTaskEdgeNonRepeated(TaskNode* src_node, TaskNode* dst_node);
 
-  TaskNode* TryAddCopyH2DTaskTo(TaskNode*);
-  TaskNode* AddCopyD2HTaskFrom(TaskNode*);
-  TaskNode* AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst);
-  void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
+  void BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi);
+
   Maybe<void> ConnectSrcSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
                                         const std::vector<CompTaskNode*>& dst_task_nodes);
   Maybe<void> ConnectDstSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
@@ -109,6 +105,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::unique_ptr<HierarchicalSubTskGphBuilder> hierarchical_sub_tsk_gph_builder_;
   std::unique_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
   std::unique_ptr<BoxingLogger> boxing_logger_;
+  
+  HashMap<TaskNode*, HashMap<std::tuple<LogicalBlobId, int64_t, int64_t>, TaskNode*>> node2proxies_;
 };
 
 }  // namespace oneflow

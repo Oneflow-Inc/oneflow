@@ -31,7 +31,7 @@ Maybe<SubTskGphBuilderStatus> B21SubTskGphBuilder::Build(
     const int64_t nearest_in_parallel_id = SubTskGphBuilderUtil::FindNearestSrcParallelId(
         in_parallel_desc, out_parallel_desc, out_parallel_id);
     TaskNode* nearest_in_node = sorted_in_tasks.at(nearest_in_parallel_id);
-    TaskNode* proxy = ctx->GetProxyNode(nearest_in_node, nearest_in_node->MemZoneId121(),
+    TaskNode* proxy = ctx->task_graph()->GetProxyNode(nearest_in_node, lbi,
                                         out_parallel_desc, out_parallel_id);
     sorted_out_tasks->push_back(proxy);
     return TRY(BuildSubTskGphBuilderStatus("B21SubTskGphBuilder", ""));
