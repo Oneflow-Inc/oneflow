@@ -235,6 +235,8 @@ class Operator {
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       KernelConf*) const;
 
+  virtual void AddLbi2OutputIndex(const LogicalBlobId& lbi, int32_t output_index);
+
   virtual LogicalBlobId lbi4ibn(const std::string& input_bn) const;
   virtual LogicalBlobId lbi4obn(const std::string& output_bn) const;
 
