@@ -154,6 +154,8 @@ class fixed_vector final {
 
   void clear() noexcept { size_ = 0; }
 
+  template<typename Iterator = iterator>
+  iterator insert(Iterator pos) { return insert(pos, T()); }
   iterator insert(iterator pos, const T& value) {
     MoveNToEnd(pos, 1);
     *pos = value;

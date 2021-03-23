@@ -51,14 +51,17 @@ namespace oneflow {
                    OF_PP_CAT(field_name, _));
 
 #define FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(flat_msg_field_type, field_name)                  \
+  FLAT_MSG_VIEW_DEFINE_VECTOR_PATTERN(flat_msg_field_type, field_name, FlatMsgViewPatternStdVec)
+
+#define FLAT_MSG_VIEW_DEFINE_VECTOR_PATTERN(flat_msg_field_type, field_name, container_type)                  \
   static_assert(__is_flat_message_view_type__, "this struct is not a flat message view");       \
-  _FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(FLAT_MSG_TYPE_CHECK(flat_msg_field_type), field_name); \
+  _FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(FLAT_MSG_TYPE_CHECK(flat_msg_field_type), field_name, container_type); \
   OF_PUBLIC INCREASE_STATIC_COUNTER(field_counter);                                             \
   _SPECIALIZE_IS_REPEATED_PATTERN(STATIC_COUNTER(field_counter));                               \
   FLAT_MSG_VIEW_SPECIALIZE_FIELD_TYPE(STATIC_COUNTER(field_counter), flat_msg_field_type);      \
   FLAT_MSG_VIEW_CHECK_LAST_FIELD_TYPE(STATIC_COUNTER(field_counter), flat_msg_field_type);      \
   DSS_DEFINE_FIELD(STATIC_COUNTER(field_counter), "flat message view",                          \
-                   FlatMsgViewPatternVec<flat_msg_field_type>, OF_PP_CAT(field_name, _));
+                   container_type<flat_msg_field_type>, OF_PP_CAT(field_name, _));
 
 // details
 
@@ -69,13 +72,13 @@ namespace oneflow {
  private:                                                                    \
   const field_type* OF_PP_CAT(field_name, _);
 
-#define _FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(field_type, field_name)                         \
+#define _FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(field_type, field_name, container_type)                         \
  public:                                                                                       \
   const field_type& field_name(int i) const { return *OF_PP_CAT(field_name, _).at(i); }        \
   std::size_t OF_PP_CAT(field_name, _size)() const { return OF_PP_CAT(field_name, _).size(); } \
                                                                                                \
  private:                                                                                      \
-  FlatMsgViewPatternVec<field_type> OF_PP_CAT(field_name, _);
+  container_type<field_type> OF_PP_CAT(field_name, _);
 
 #define FLAT_MSG_VIEW_DEFINE_BASIC_METHODS(T)        \
  public:                                             \
@@ -113,6 +116,9 @@ namespace oneflow {
   }
 
 template<typename T>
+using StdVector = std::vector<T>;
+
+template<typename T, template<typename> class container_type>
 struct FlatMsgViewPatternVec {
   using value_type = T;
 
@@ -125,8 +131,7 @@ struct FlatMsgViewPatternVec {
   void push_back(const T* ptr) { mut_vec()->push_back(ptr); }
 
  private:
-  using Vec = std::vector<const T*>;
-
+  using Vec = container_type<const T*>;
   Vec* mut_vec() {
     Vec* __attribute__((__may_alias__)) ptr = reinterpret_cast<Vec*>(&vec_buffer_);
     return ptr;
@@ -142,6 +147,9 @@ struct FlatMsgViewPatternVec {
     int64_t align64_;
   };
 };
+
+template<typename T>
+using FlatMsgViewPatternStdVec = FlatMsgViewPatternVec<T, StdVector>;
 
 template<typename FlatMsgViewT, typename FlatMsgOneofField, typename OneofValueType>
 class FlatMsgViewFieldCtx {
@@ -243,12 +251,12 @@ struct FlatMsgViewContainerUtil {
 };
 
 template<typename FlatMsgViewT, typename ValueType, typename Enabled>
-struct FlatMsgViewContainerUtil<FlatMsgViewT, ValueType, std::vector<FlatMsg<ValueType>>, Enabled> {
+struct FlatMsgViewContainerUtil<FlatMsgViewT, ValueType, StdVector<FlatMsg<ValueType>>, Enabled> {
   using FlatMsgOneofField =
       StructField<ValueType, typename ValueType::__OneofType, ValueType::__kDssFieldOffset>;
   static_assert(sizeof(ValueType) == sizeof(FlatMsg<ValueType>), "");
   static_assert(alignof(ValueType) == alignof(FlatMsg<ValueType>), "");
-  static bool Match(FlatMsgViewT* self, const std::vector<FlatMsg<ValueType>>& container) {
+  static bool Match(FlatMsgViewT* self, const StdVector<FlatMsg<ValueType>>& container) {
     return FlatMsgViewUtil<FlatMsgViewT, FlatMsgOneofField, ValueType>::Match(
         self, &container.data()->Get(), container.size());
   }

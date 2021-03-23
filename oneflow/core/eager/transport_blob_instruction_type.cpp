@@ -28,21 +28,21 @@ namespace {
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(SendBlobInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, dst_parallel_desc);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::ConstOperand, src_blob);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, header_token_sep);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(uint64_t, header_token);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, body_token_sep);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(uint64_t, body_token);
+  FLAT_MSG_VIEW_DEFINE_OPERAND(vm::SymbolOperand, dst_parallel_desc);
+  FLAT_MSG_VIEW_DEFINE_OPERAND(vm::ConstOperand, src_blob);
+  FLAT_MSG_VIEW_DEFINE_OPERAND(vm::OperandSeparator, header_token_sep);
+  FLAT_MSG_VIEW_DEFINE_OPERAND_LIST(uint64_t, header_token);
+  FLAT_MSG_VIEW_DEFINE_OPERAND(vm::OperandSeparator, body_token_sep);
+  FLAT_MSG_VIEW_DEFINE_OPERAND_LIST(uint64_t, body_token);
 FLAT_MSG_VIEW_END(SendBlobInstruction);
 
 FLAT_MSG_VIEW_BEGIN(ReceiveBlobInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, src_parallel_desc);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::Mut2Operand, dst_blob);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, header_token_sep);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(uint64_t, header_token);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::OperandSeparator, body_token_sep);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(uint64_t, body_token);
+  FLAT_MSG_VIEW_DEFINE_OPERAND(vm::SymbolOperand, src_parallel_desc);
+  FLAT_MSG_VIEW_DEFINE_OPERAND(vm::Mut2Operand, dst_blob);
+  FLAT_MSG_VIEW_DEFINE_OPERAND(vm::OperandSeparator, header_token_sep);
+  FLAT_MSG_VIEW_DEFINE_OPERAND_LIST(uint64_t, header_token);
+  FLAT_MSG_VIEW_DEFINE_OPERAND(vm::OperandSeparator, body_token_sep);
+  FLAT_MSG_VIEW_DEFINE_OPERAND_LIST(uint64_t, body_token);
 FLAT_MSG_VIEW_END(ReceiveBlobInstruction);
 // clang-format on
 

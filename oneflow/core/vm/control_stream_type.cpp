@@ -79,7 +79,7 @@ class NewSymbolInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(NewSymbolInstruction);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, symbol_id);
+    FLAT_MSG_VIEW_DEFINE_OPERAND_LIST(int64_t, symbol_id);
   FLAT_MSG_VIEW_END(NewSymbolInstruction);
   // clang-format on
 

@@ -36,7 +36,7 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(ParallelDescObjectInstrOperand);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, logical_object_id);
+    FLAT_MSG_VIEW_DEFINE_OPERAND_LIST(int64_t, logical_object_id);
   FLAT_MSG_VIEW_END(ParallelDescObjectInstrOperand);
   // clang-format on
 

@@ -37,7 +37,7 @@ class TryClearObjectInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(TryClearObjectInstrOperand);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(MutOperand, object);
+    FLAT_MSG_VIEW_DEFINE_OPERAND_LIST(MutOperand, object);
   FLAT_MSG_VIEW_END(TryClearObjectInstrOperand);
   // clang-format on
 

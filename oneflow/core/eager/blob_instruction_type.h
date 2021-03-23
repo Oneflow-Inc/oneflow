@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/operand_def.h"
 
 namespace oneflow {
 namespace eager {
@@ -27,8 +28,8 @@ class LazyReferenceInstructionType : public vm::InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(LazyReferenceInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, eager_blob);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(vm::SymbolOperand, lbn_sym_id);
+    FLAT_MSG_VIEW_DEFINE_OPERAND(vm::MutOperand, eager_blob);
+    FLAT_MSG_VIEW_DEFINE_OPERAND(vm::SymbolOperand, lbn_sym_id);
   FLAT_MSG_VIEW_END(LazyReferenceInstruction);
   // clang-format on
 
