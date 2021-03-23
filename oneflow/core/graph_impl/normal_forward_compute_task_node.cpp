@@ -32,9 +32,7 @@ size_t RegstNum4OpSameOutputBlob(OperatorConf::OpTypeCase op_type_case) {
   }
 }
 
-std::string GetOutRegstNameByObn(const std::string& obn) {
-  return "NormalForwardOutRegstName_" + obn;
-}
+std::string GetOutRegstNameByObn(const std::string& obn) { return "__" + obn; }
 
 }  // namespace
 
