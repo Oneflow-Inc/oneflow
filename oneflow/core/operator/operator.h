@@ -139,7 +139,7 @@ class Operator {
   Maybe<const Shape> GetInputOutputFastestTimeShape() const;
 
   Maybe<void> InferSbpSignature(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-                                const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint);
+                                const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint) const;
   Maybe<void> FillSbpSignature(const SbpSignature& sbp_signature);
   Maybe<void> FillParallelDistributionSignature(const ParallelDistributionSignature& signature);
   Maybe<void> InferSbpSignatureIf(
@@ -215,7 +215,7 @@ class Operator {
       const ParallelDistributionSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-          ParallelDistributionInferHint4Ibn);
+          ParallelDistributionInferHint4Ibn) const;
   virtual Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
     UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
     return Maybe<void>::Ok();
@@ -411,10 +411,6 @@ inline std::string GenLogicalBlobName(const LogicalBlobId& lbi) {
 
 Maybe<bool> GetSbpParallelInLbnOrNothing(const std::string& lbn, SbpParallel* sbp);
 Maybe<bool> ParseDisableBoxingFlag(const std::string& lbn_with_hint, bool* disable_boxing);
-
-Maybe<void> InferOpSbpSignature(Operator* op, const SbpSignature& sbp_sig_conf,
-                                const ParallelDesc& parallel_desc,
-                                const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint);
 
 std::string GetInputLbnInOpCustomizedConf(const OperatorConf& op_conf,
                                           const std::string& fd_name_may_have_idx);
