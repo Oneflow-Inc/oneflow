@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
