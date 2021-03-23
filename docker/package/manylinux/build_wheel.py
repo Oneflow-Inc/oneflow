@@ -70,7 +70,7 @@ def common_cmake_args(cache_dir=None, extra_oneflow_cmake_args=None):
     if not extra_oneflow_cmake_args or "-DBUILD_RDMA" not in extra_oneflow_cmake_args:
         ret += " -DBUILD_RDMA=ON"
     third_party_install_dir = os.path.join(cache_dir, "build-third-party-install")
-    ret += " -DTHIRD_PARTY_DIR={third_party_install_dir}"
+    ret += f" -DTHIRD_PARTY_DIR={third_party_install_dir}"
     return ret
 
 
