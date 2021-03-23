@@ -20,17 +20,12 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/op_expr_helper.h"
 
 namespace oneflow {
 namespace one {
 
 namespace {
-
-Maybe<UserOpExpr> GetAddOpExpr() { return OpBuilder("add").Input("in", 2).Output("out").Build(); }
-
-Maybe<UserOpExpr> GetZeroLikeOpExpr() {
-  return OpBuilder("zero_like").Input("in").Output("out").Build();
-}
 
 bool IsReadyToRun(const std::vector<std::shared_ptr<TensorArg>>& out_grads) {
   return std::any_of(
@@ -40,7 +35,7 @@ bool IsReadyToRun(const std::vector<std::shared_ptr<TensorArg>>& out_grads) {
 
 Maybe<void> InitEmptyTensorArgs2ZerosTensor(const TensorTuple& outputs,
                                             std::vector<std::shared_ptr<TensorArg>>& out_grads) {
-  const auto& zero_like = JUST(GetZeroLikeOpExpr());
+  const auto& zero_like = JUST(helper::ZeroLikeOp());
   for (int i = 0; i < out_grads.size(); ++i) {
     if (out_grads.at(i)->Empty()) {
       TensorTuple output(1);
@@ -56,7 +51,7 @@ Maybe<void> CopyOrAccGrad(Tensor& tensor) {
   if (tensor.acc_grad()) {
     TensorTuple input = {tensor.acc_grad(), tensor_arg->GetAccTensor().GetPtrOrThrow()};
     TensorTuple output(1);
-    const auto& add = JUST(GetAddOpExpr());
+    const auto& add = JUST(helper::AddOp());
     GetInterpreter()->Apply(add, input, output);
     tensor.set_acc_grad(output.at(0));
   } else {

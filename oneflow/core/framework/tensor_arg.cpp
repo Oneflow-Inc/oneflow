@@ -18,17 +18,10 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/op_expr_helper.h"
 
 namespace oneflow {
 namespace one {
-
-namespace {
-
-Maybe<UserOpExpr> GetAddNOpExpr(int32_t n) {
-  return OpBuilder("add_n").Input("in", n).Output("out").Build();
-}
-
-}  // namespace
 
 bool TensorArg::Empty() const { return partial_sum_tensors_.empty() && acc_tensor_; }
 
@@ -47,7 +40,7 @@ Maybe<Tensor> TensorArg::GetAccTensor() {
     TensorTuple input(input_num);
     for (size_t i = 0; i < input_num; ++i) { input.at(i) = partial_sum_tensors_.at(i); }
     TensorTuple output(1);
-    const auto& add_n = JUST(GetAddNOpExpr(input_num));
+    const auto& add_n = JUST(helper::AddNOp(input_num));
     GetInterpreter()->Apply(add_n, input, &output);
     acc_tensor_ = output.at(0);
     partial_sum_tensors_.clear();
