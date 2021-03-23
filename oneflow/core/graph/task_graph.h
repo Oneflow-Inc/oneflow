@@ -112,7 +112,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
     bool operator==(const ProxyKey& other) const {
       return src_node == other.src_node && lbi == other.lbi
-             && dst_machine_id == other.dst_machine_id && dst_mem_zone_id && other.dst_mem_zone_id;
+             && dst_machine_id == other.dst_machine_id && dst_mem_zone_id == other.dst_mem_zone_id;
     }
 
     struct Hasher {
