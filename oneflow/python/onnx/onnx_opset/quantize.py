@@ -26,7 +26,6 @@ import numpy as np
 from typing import Optional, Callable
 from oneflow.python.onnx.graph import Graph, Node
 from oneflow.python.onnx.handler import flow_op
-from onnx.onnx_ml_pb2 import Version
 
 
 logger = logging.getLogger(__name__)
