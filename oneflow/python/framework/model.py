@@ -76,7 +76,7 @@ class NumpyDataModule(DataModule):
     ):
         assert isinstance(batch, tuple), "model.NumpyDataModule must return a tuple."
         data_placeholder_list = []
-        for i, item in enumerate(batch):
+        for item in batch:
             assert isinstance(
                 item, np.ndarray
             ), "model.NumpyDataModule must return a tuple of numpy."
@@ -447,12 +447,14 @@ class TrainModel(SubModel):
             for opt in opt_conf:
                 assert isinstance(
                     opt, Optimizer
-                ), "model.configure_optimizers() must return Optimizer "
-                "or List[Optimizer, ...] or Tuple[Optimizer, ...]"
+                ), "model.configure_optimizers() must return Optimizer \
+                    or List[Optimizer, ...] or Tuple[Optimizer, ...]"
             self._opts = opt_conf
         else:
-            assert False, "model.configure_optimizers() must return Optimizer "
-            "or List[Optimizer, ...] or Tuple[Optimizer, ...]"
+            assert (
+                False
+            ), "model.configure_optimizers() must return Optimizer \
+                or List[Optimizer, ...] or Tuple[Optimizer, ...]"
 
         return True
 
