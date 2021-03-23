@@ -235,13 +235,6 @@ class TestCase(unittest.TestCase):
                     )
                     _unittest_worker_initilized = True
         elif device_num() > 1 and enable_multi_process():
-            oneflow_worker_path = os.getenv("ONEFLOW_WORKER_BIN")
-            assert oneflow_worker_path is not None, "please set env ONEFLOW_WORKER_BIN"
-            assert os.path.isfile(
-                oneflow_worker_path
-            ), "binary oneflow_worker not found, please check your environment variable ONEFLOW_WORKER_BIN, path: {}".format(
-                oneflow_worker_path
-            )
             master_port = find_free_port()
             oneflow.env.ctrl_port(master_port)
             config_world_size = device_num()
@@ -284,15 +277,15 @@ class TestCase(unittest.TestCase):
                     + ".proto"
                 )
                 oneflow_cmd = (
-                    oneflow_worker_path
-                    + " -env_proto="
+                    "python3 -m oneflow --start_worker=1"
+                    + " --env_proto="
                     + run_dir
                     + "/log_"
                     + str(rank)
                     + "/"
                     + "env_proto_"
                     + str(rank)
-                    + ".proto "
+                    + ".proto"
                 )
                 subprocess.Popen(
                     oneflow_cmd,

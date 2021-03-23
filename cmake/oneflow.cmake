@@ -269,6 +269,8 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/clean_generated_api.py --root_path=${of_pyscript_dir}
     COMMAND "${CMAKE_COMMAND}" -E copy
         "${PROJECT_SOURCE_DIR}/oneflow/init.py" "${of_pyscript_dir}/oneflow/__init__.py"
+    COMMAND "${CMAKE_COMMAND}" -E copy
+        "${PROJECT_SOURCE_DIR}/oneflow/__main__.py" "${of_pyscript_dir}/oneflow/__main__.py"
     COMMAND rm -rf ${of_pyscript_dir}/oneflow/python
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/oneflow/python" "${of_pyscript_dir}/oneflow/python"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
