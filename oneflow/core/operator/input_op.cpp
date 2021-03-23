@@ -42,7 +42,7 @@ Maybe<void> InputOp::InferOutBlobDescs(
     const ParallelContext* parallel_ctx) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   JUST(InterfaceOpUtil::InferOutBlobDesc(op_conf().input_conf().blob_conf(), out_blob_desc,
-                                         parallel_ctx));
+                                         parallel_ctx, *JUST(GetOpParallelDesc())));
   return Maybe<void>::Ok();
 }
 
@@ -60,6 +60,27 @@ Maybe<void> InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
                                               output_bns(),
                                               sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InputOp::InferParallelDistributionSignature(
+    ParallelDistributionSignature* parallel_distribution_signature,
+    const ParallelDistributionSignature& parallel_distribution_constraints,
+    const ParallelDesc& parallel_desc,
+    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+        ParallelDistributionInferHint4Ibn) const {
+  const auto& parallel_hierarchy = parallel_desc.hierarchy();
+  const InterfaceBlobConf& blob_conf = op_conf().input_conf().blob_conf();
+  ParallelDistribution& tick_parallel_distribution =
+      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["tick"];
+  tick_parallel_distribution.clear_sbp_parallel();
+  FOR_RANGE(int64_t, i, 0, parallel_hierarchy->NumAxes()) {
+    tick_parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+  }
+  ParallelDistribution& out_parallel_distribution =
+      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["out"];
+  InterfaceOpUtil::ParseParallelDistributionFromBlobConf(blob_conf, parallel_desc,
+                                                         &out_parallel_distribution);
   return Maybe<void>::Ok();
 }
 

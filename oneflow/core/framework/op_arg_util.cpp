@@ -113,11 +113,8 @@ void OpArgParallelAttribute::Assign(const std::shared_ptr<OpArgParallelAttribute
 
 void OpArgParallelAttribute::DumpToInterfaceBlobConf(
     std::shared_ptr<cfg::InterfaceBlobConf> interface_blob_conf) const {
-  if (sbp_parallel_->has_split_parallel()) {
-    interface_blob_conf->mutable_split_axis()->set_value(sbp_parallel_->split_parallel().axis());
-  } else {
-    interface_blob_conf->clear_split_axis();
-  }
+  interface_blob_conf->mutable_parallel_distribution()->clear_sbp_parallel();
+  *interface_blob_conf->mutable_parallel_distribution()->add_sbp_parallel() = *sbp_parallel_;
 }
 
 void OpArgParallelAttribute::DumpToOpNodeSignature(
