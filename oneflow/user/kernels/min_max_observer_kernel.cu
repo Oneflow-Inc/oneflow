@@ -140,7 +140,7 @@ __global__ void CalScaleZeroPointAffine(const T* max_ptr, const T* min_ptr, cons
     T min = -min_ptr[gid];
     T s = (max_ptr[gid] - min) / denominator;
     scale[gid] = s;
-    zero_point[gid] = -min / s;
+    zero_point[gid] = -round(min / s);
     gid += gridDim.x * blockDim.x;
   }
 }
