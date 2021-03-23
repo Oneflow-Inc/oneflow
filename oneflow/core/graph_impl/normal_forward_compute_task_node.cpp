@@ -71,8 +71,9 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   }
   ForEachOutDataEdge([&](TaskEdge* edge) {
     for (const LogicalBlobId& lbi : edge->GetLbis()) {
-      CHECK(lbi2out_regst_name.find(lbi) != lbi2out_regst_name.end());
-      BindEdgeWithProducedRegst(edge, lbi2out_regst_name.at(lbi));
+      auto it = lbi2out_regst_name.find(lbi);
+      CHECK(it != lbi2out_regst_name.end());
+      BindEdgeWithProducedRegst(edge, it->second);
     }
   });
   ProduceRegst("tmp", true);

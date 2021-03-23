@@ -102,26 +102,28 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::unique_ptr<BoxingLogger> boxing_logger_;
 
   struct ProxyKey {
+    TaskNode* src_node;
     LogicalBlobId lbi;
     int64_t dst_machine_id;
     int64_t dst_mem_zone_id;
 
-    ProxyKey(const LogicalBlobId& arg_lbi, int64_t arg_machine, int64_t arg_zone)
-        : lbi(arg_lbi), dst_machine_id(arg_machine), dst_mem_zone_id(arg_zone) {}
+    ProxyKey(TaskNode* src, const LogicalBlobId& arg_lbi, int64_t arg_machine, int64_t arg_zone)
+        : src_node(src), lbi(arg_lbi), dst_machine_id(arg_machine), dst_mem_zone_id(arg_zone) {}
 
     bool operator==(const ProxyKey& other) const {
-      return lbi == other.lbi && dst_machine_id == other.dst_machine_id && dst_mem_zone_id
-             && other.dst_mem_zone_id;
+      return src_node == other.src_node && lbi == other.lbi
+             && dst_machine_id == other.dst_machine_id && dst_mem_zone_id && other.dst_mem_zone_id;
     }
 
-    struct my_hash {
+    struct Hasher {
       inline size_t operator()(const ProxyKey& key) const {
-        return std::hash<LogicalBlobId>{}(key.lbi) ^ key.dst_machine_id ^ key.dst_mem_zone_id;
+        return std::hash<TaskNode*>{}(key.src_node) ^ std::hash<LogicalBlobId>{}(key.lbi)
+               ^ key.dst_machine_id ^ key.dst_mem_zone_id;
       }
     };
   };
 
-  HashMap<TaskNode*, HashMap<ProxyKey, TaskNode*, ProxyKey::my_hash>> node2proxies_;
+  HashMap<ProxyKey, TaskNode*, ProxyKey::Hasher> proxy2node;
 };
 
 }  // namespace oneflow

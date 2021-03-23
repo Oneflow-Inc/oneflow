@@ -443,13 +443,12 @@ TaskEdge* TaskGraph::NewTaskEdgeWithLbis(const std::vector<LogicalBlobId>& lbis)
 TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
                                   int64_t dst_machine_id, int64_t dst_mem_zone_id) {
   int64_t src_mem_zone_id = src_node->MemZoneId121();
-  const ProxyKey key(lbi, dst_machine_id, dst_mem_zone_id);
-  if (node2proxies_.find(src_node) != node2proxies_.cend()
-      && node2proxies_.at(src_node).find(key) != node2proxies_.at(src_node).cend()) {
-    return node2proxies_.at(src_node).at(key);
+  const ProxyKey key(src_node, lbi, dst_machine_id, dst_mem_zone_id);
+  if (proxy2node.find(key) != proxy2node.cend()) {
+    return proxy2node.at(key);
   } else {
     if (dst_machine_id == src_node->machine_id() && dst_mem_zone_id == src_mem_zone_id) {
-      node2proxies_[src_node][key] = src_node;
+      proxy2node[key] = src_node;
       return src_node;
     } else if (Global<IDMgr>::Get()->IsGpuMemZone(dst_mem_zone_id)) {
       TaskNode* proxy_on_dst_host =
@@ -458,7 +457,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
       copy_task->Init(CopyHdOpConf::H2D, proxy_on_dst_host->machine_id(),
                       Global<IDMgr>::Get()->GetGpuPhyIdFromMemZoneId(dst_mem_zone_id), lbi);
       Connect<TaskNode>(proxy_on_dst_host, NewTaskEdgeWithLbi(lbi), copy_task);
-      node2proxies_[src_node][key] = copy_task;
+      proxy2node[key] = copy_task;
       return copy_task;
     } else if (Global<IDMgr>::Get()->IsCpuMemZone(dst_mem_zone_id)) {
       if (src_node->machine_id() == dst_machine_id) {
@@ -467,7 +466,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
           copy_task->Init(CopyHdOpConf::D2H, src_node->machine_id(),
                           Global<IDMgr>::Get()->GetGpuPhyIdFromMemZoneId(src_mem_zone_id), lbi);
           Connect<TaskNode>(src_node, NewTaskEdgeWithLbi(lbi), copy_task);
-          node2proxies_[src_node][key] = copy_task;
+          proxy2node[key] = copy_task;
           return copy_task;
         } else {
           UNIMPLEMENTED();
@@ -478,7 +477,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
         CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
         copy_comm_net_task->Init(dst_machine_id, lbi);
         Connect<TaskNode>(proxy_on_src_host, NewTaskEdgeWithLbi(lbi), copy_comm_net_task);
-        node2proxies_[src_node][key] = copy_comm_net_task;
+        proxy2node[key] = copy_comm_net_task;
         return copy_comm_net_task;
       }
     } else {
