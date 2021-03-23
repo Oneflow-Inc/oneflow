@@ -60,3 +60,11 @@ def get_link_flags() -> List[str]:
         file.close()
     flags.append("-l:{}".format(os.path.basename(oneflow_internal_lib_path)))
     return flags
+
+@oneflow_export("sysconfig.has_rpc_backend_grpc")
+def has_rpc_backend_grpc() -> bool:
+    return oneflow_api.flags.has_rpc_backend_grpc():
+
+@oneflow_export("sysconfig.has_rpc_backend_local")
+def has_rpc_backend_local() -> bool:
+    return oneflow_api.flags.has_rpc_backend_local():
