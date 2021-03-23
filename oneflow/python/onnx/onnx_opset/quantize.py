@@ -72,7 +72,7 @@ class MinMaxObserver:
                 input_np_min = get_min_or_max_value(True)
                 denominator = 2.0 ** bit - 1
                 scale = (get_min_or_max_value(False) - input_np_min) / denominator
-                zero_point = (-input_np_min / scale).astype(np.uint8)
+                zero_point = (-np.round(input_np_min / scale)).astype(np.uint8)
 
             else:
                 raise ValueError("invalid quantization scheme: " + scheme)
@@ -117,8 +117,10 @@ class MovingAverageMinMaxObserver:
             elif scheme == "affine":
                 denominator = 2.0 ** bit - 1
                 scale = (moving_max_np - moving_min_np) / denominator
-                zero_point = (-moving_min_np / scale).astype(np.uint8).flatten()
-
+                zero_point = (
+                    (-np.round(moving_min_np / scale)).astype(np.uint8).flatten()
+                )
+                print(moving_min_np / scale)
             else:
                 raise ValueError("invalid quantization scheme: " + scheme)
 

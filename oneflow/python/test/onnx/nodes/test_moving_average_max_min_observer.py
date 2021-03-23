@@ -15,7 +15,6 @@ limitations under the License.
 """
 import numpy as np
 import oneflow as flow
-from typing import Optional
 from util import convert_to_onnx_and_check
 
 
@@ -32,17 +31,13 @@ def set_moving_max_min_value():
     flow.load_variables(
         {
             max_key: np.array([0.5]).astype(np.float32),
-            min_key: np.array([0.1]).astype(np.float32),
+            min_key: np.array([-0.2]).astype(np.float32),
         }
     )
 
 
 def generate_moving_average_min_max_observer_test(
-    out_pos: int,
-    formula: str,
-    scheme: str = "symmetric",
-    device_type: str = "cpu",
-    dtype: Optional[type] = None,
+    out_pos: int, formula: str, scheme: str = "symmetric", device_type: str = "cpu",
 ):
     flow.clear_default_session()
 
@@ -62,7 +57,7 @@ def generate_moving_average_min_max_observer_test(
     set_moving_max_min_value()
 
     convert_to_onnx_and_check(
-        moving_average_min_max_observer, opset=11, explicit_init=False, dtype=dtype
+        moving_average_min_max_observer, opset=11, explicit_init=False
     )
 
 
@@ -71,9 +66,7 @@ def test_moving_average_min_max_observer_symmetric(test_case):
 
 
 def test_moving_average_min_max_observer_symmetric_zero_point(test_case):
-    generate_moving_average_min_max_observer_test(
-        1, "google", "symmetric", dtype=np.int8
-    )
+    generate_moving_average_min_max_observer_test(1, "google", "symmetric")
 
 
 def test_moving_average_min_max_observer_affine(test_case):
@@ -81,7 +74,7 @@ def test_moving_average_min_max_observer_affine(test_case):
 
 
 def test_moving_average_min_max_observer_affine_zero_point(test_case):
-    generate_moving_average_min_max_observer_test(0, "google", "affine", dtype=np.uint8)
+    generate_moving_average_min_max_observer_test(1, "google", "affine")
 
 
 def test_moving_average_min_max_observer_cambricon(test_case):
@@ -89,7 +82,7 @@ def test_moving_average_min_max_observer_cambricon(test_case):
 
 
 def test_moving_average_min_max_observer_cambricon_zero_point(test_case):
-    generate_moving_average_min_max_observer_test(1, "cambricon", dtype=np.int8)
+    generate_moving_average_min_max_observer_test(1, "cambricon")
 
 
 def test_moving_average_min_max_observer_symmetric_gpu(test_case):
@@ -100,7 +93,7 @@ def test_moving_average_min_max_observer_symmetric_gpu(test_case):
 
 def test_moving_average_min_max_observer_symmetric_zero_point_gpu(test_case):
     generate_moving_average_min_max_observer_test(
-        1, "google", "symmetric", device_type="gpu", dtype=np.int8
+        1, "google", "symmetric", device_type="gpu"
     )
 
 
@@ -112,7 +105,7 @@ def test_moving_average_min_max_observer_affine_gpu(test_case):
 
 def test_moving_average_min_max_observer_affine_zero_point_gpu(test_case):
     generate_moving_average_min_max_observer_test(
-        0, "google", "affine", device_type="gpu", dtype=np.uint8
+        1, "google", "affine", device_type="gpu"
     )
 
 
@@ -121,6 +114,4 @@ def test_moving_average_min_max_observer_cambricon_gpu(test_case):
 
 
 def test_moving_average_min_max_observer_cambricon_zero_point_gpu(test_case):
-    generate_moving_average_min_max_observer_test(
-        1, "cambricon", device_type="gpu", dtype=np.int8
-    )
+    generate_moving_average_min_max_observer_test(1, "cambricon", device_type="gpu")
