@@ -123,8 +123,8 @@ Maybe<OpExprInterpState> EagerInterpreter::Apply(const OpExpr& op_expr,
                      << " has not been supported in EagerInterpreter::Apply.";
 }
 
-static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr,
-                                  const TensorTuple& inputs, TensorTuple* outputs) {
+static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
+                                  TensorTuple* outputs) {
   using namespace std::placeholders;
   const auto& scope = JUST(GetCurrentScope());
   const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs));

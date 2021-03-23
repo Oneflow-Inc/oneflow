@@ -120,7 +120,9 @@ class FileBackendVariableBlob:
         ).reshape(self.shape)
 
 
-ValueContainer = Union[EagerBlobTrait, FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"]
+ValueContainer = Union[
+    EagerBlobTrait, FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"
+]
 
 
 def _ElemCnt(shape):
@@ -262,7 +264,9 @@ def SaveVarDict(
 
     assert not IsFileOrNonEmptyDir(
         path
-    ), "{} is a file or non-empty directory! Note that flow.save is different from torch.save. It saves each weight as a separated file so that a directory instead of a file should be given.".format(path)
+    ), "{} is a file or non-empty directory! Note that flow.save is different from torch.save. It saves each weight as a separated file so that a directory instead of a file should be given.".format(
+        path
+    )
     os.makedirs(path, exist_ok=True)
     for name, var in var_dict.items():
         meta_info = variable_meta_info_pb.VariableMetaInfo()
