@@ -62,9 +62,16 @@ def build_img(
     subprocess.check_call(cmd, cwd=oneflow_src_dir, shell=True)
 
 
-def common_cmake_args(cache_dir):
+def common_cmake_args(cache_dir=None, extra_oneflow_cmake_args=None):
+    assert cache_dir
+    ret = ""
+    if not extra_oneflow_cmake_args or "-DCMAKE_BUILD_TYPE" not in extra_oneflow_cmake_args:
+        ret += " -DCMAKE_BUILD_TYPE=Release"
+    if not extra_oneflow_cmake_args or "-DBUILD_RDMA" not in extra_oneflow_cmake_args:
+        ret += " -DBUILD_RDMA=ON"
     third_party_install_dir = os.path.join(cache_dir, "build-third-party-install")
-    return f"-DCMAKE_BUILD_TYPE=Release -DBUILD_RDMA=ON -DTHIRD_PARTY_DIR={third_party_install_dir}"
+    ret += " -DTHIRD_PARTY_DIR={third_party_install_dir}"
+    return ret
 
 
 def get_build_dir_arg(cache_dir, oneflow_src_dir):
@@ -140,7 +147,7 @@ def build_third_party(
     cmake_cmd = " ".join(
         [
             "cmake",
-            common_cmake_args(cache_dir),
+            common_cmake_args(cache_dir=cache_dir, extra_oneflow_cmake_args=extra_oneflow_cmake_args),
             "-DTHIRD_PARTY=ON -DONEFLOW=OFF",
             extra_oneflow_cmake_args,
             oneflow_src_dir,
@@ -195,7 +202,7 @@ def build_oneflow(
     cmake_cmd = " ".join(
         [
             "cmake",
-            common_cmake_args(cache_dir),
+            common_cmake_args(cache_dir=cache_dir, extra_oneflow_cmake_args=extra_oneflow_cmake_args),
             "-DTHIRD_PARTY=OFF -DONEFLOW=ON",
             extra_oneflow_cmake_args,
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
