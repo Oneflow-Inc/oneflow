@@ -148,7 +148,7 @@ class Operator {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc);
   Maybe<void> InferParallelDistributionSignatureIf(
-      const ParallelDistributionSignature& parallel_distribution_sig_conf,
+      const ParallelDistributionSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn);
@@ -211,8 +211,8 @@ class Operator {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
   virtual Maybe<void> InferParallelDistributionSignature(
-      ParallelDistributionSignature* signature,
-      const ParallelDistributionSignature& parallel_distribution_sig_conf,
+      ParallelDistributionSignature* parallel_distribution_signature,
+      const ParallelDistributionSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn);
@@ -234,6 +234,8 @@ class Operator {
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       KernelConf*) const;
+
+  virtual void AddLbi2OutputIndex(const LogicalBlobId& lbi, int32_t output_index);
 
   virtual LogicalBlobId lbi4ibn(const std::string& input_bn) const;
   virtual LogicalBlobId lbi4obn(const std::string& output_bn) const;
