@@ -13,25 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_SINK_COMPUTE_TASK_NODE_H_
-#define ONEFLOW_CORE_GRAPH_SINK_COMPUTE_TASK_NODE_H_
+#ifndef ONEFLOW_CORE_RPC_INCLUDE_MANAGER_H_
+#define ONEFLOW_CORE_RPC_INCLUDE_MANAGER_H_
 
-#include "oneflow/core/graph/compute_task_node.h"
+#ifdef RPC_BACKEND_GRPC
+#include "oneflow/core/rpc/include/grpc.h"
+#endif  // RPC_BACKEND_GRPC
 
-namespace oneflow {
+#ifdef RPC_BACKEND_LOCAL
+#include "oneflow/core/rpc/include/local.h"
+#endif  // RPC_BACKEND_LOCAL
 
-class SinkCompTaskNode : public CompTaskNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(SinkCompTaskNode);
-  SinkCompTaskNode() = default;
-  virtual ~SinkCompTaskNode() = default;
-
- private:
-  void ProduceAllRegstsAndBindEdges() override;
-  void ConsumeAllRegsts() override;
-  void BuildExecGphAndRegst() override;
-};
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_GRAPH_SINK_COMPUTE_TASK_NODE_H_
+#endif  // ONEFLOW_CORE_RPC_INCLUDE_MANAGER_H_
