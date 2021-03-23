@@ -39,7 +39,7 @@ Maybe<void> InitEmptyTensorArgs2ZerosTensor(const TensorTuple& outputs,
   for (int i = 0; i < out_grads.size(); ++i) {
     if (out_grads.at(i)->Empty()) {
       TensorTuple output(1);
-      GetInterpreter()->Apply(zero_like, {outputs.at(i)}, output);
+      JUST(GetInterpreter()->Apply(zero_like, {outputs.at(i)}, output));
       out_grads.at(i)->PushPartialTensor(output.at(0));
     }
   }
@@ -53,7 +53,7 @@ Maybe<void> CopyOrAccGrad(Tensor& tensor, bool autograd_mode) {
     TensorTuple input = {tensor.acc_grad(), tensor_arg->GetAccTensor().GetPtrOrThrow()};
     TensorTuple output(1);
     const auto& add = JUST(helper::AddOp());
-    GetInterpreter()->Apply(add, input, output);
+    JUST(GetInterpreter()->Apply(add, input, output));
     tensor.set_acc_grad(output.at(0));
   } else {
     tensor.set_acc_grad(tensor_arg->GetAccTensor().GetPtrOrThrow());
