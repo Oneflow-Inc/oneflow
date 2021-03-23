@@ -44,7 +44,8 @@ std::string Device::ToString() const {
 Maybe<const ParallelDesc> Device::MakeParallelDescByDevice(const Device& device) {
   int64_t machine_id = GlobalProcessCtx::Rank() / GlobalProcessCtx::NumOfProcessPerNode();
   int64_t device_id = device.device_id();
-  std::string machine_device_id = std::to_string(machine_id) + ":" + std::to_string(device_id);
+  std::string machine_device_id =
+      std::string("@") + std::to_string(machine_id) + ":" + std::to_string(device_id);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag(device.of_type());
   parallel_conf.add_device_name(machine_device_id);

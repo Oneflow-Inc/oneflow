@@ -51,7 +51,7 @@ void LocalCtrlClient::NotifyDone(const std::string& name) {
 
 void LocalCtrlClient::WaitUntilDone(const std::string& name) {
   std::unique_lock<std::mutex> lck(done_names_mtx_);
-  LOG(ERROR) << "waiting for name: " << name;
+  LOG(INFO) << "waiting for name: " << name;
   done_names_cv_.wait(lck);
   CHECK(done_names_.find(name) != done_names_.end());
 }
@@ -87,7 +87,7 @@ void LocalCtrlClient::PullKV(const std::string& k,
   while (true) {
     auto it = kv_.find(k);
     if (it == kv_.end()) {
-      LOG(ERROR) << "waiting for key: " << k;
+      LOG(INFO) << "waiting for key: " << k;
       kv_cv_.wait(lck);
     } else {
       VGetter(kv_.at(k));
@@ -119,6 +119,24 @@ void LocalCtrlClient::Clear() {
     kv_.clear();
     kv_cv_.notify_all();
   }
+}
+
+int32_t LocalCtrlClient::IncreaseCount(const std::string& k, int32_t v) {
+  std::unique_lock<std::mutex> lck(counter_mtx_);
+  auto it = counter_.find(k);
+  if (it == counter_.end()) {
+    counter_[k] = 1;
+    return 1;
+  } else {
+    const int32_t new_val = it->second + 1;
+    counter_[k] = new_val;
+    return new_val;
+  }
+}
+
+void LocalCtrlClient::EraseCount(const std::string& k) {
+  std::unique_lock<std::mutex> lck(counter_mtx_);
+  counter_.erase(k);
 }
 
 Maybe<void> LocalRpcManager::Bootstrap() {
