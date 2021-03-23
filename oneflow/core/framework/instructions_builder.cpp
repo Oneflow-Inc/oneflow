@@ -474,7 +474,8 @@ InstructionsBuilder::GetPhysicalParallelDescSymbols(
                                                int64_t device_id) -> Maybe<void> {
     std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
     parallel_conf->set_device_tag(device_tag);
-    parallel_conf->add_device_name(std::to_string(machine_id) + ":" + std::to_string(device_id));
+    parallel_conf->add_device_name(std::string("@") + std::to_string(machine_id) + ":"
+                                   + std::to_string(device_id));
     phy_parallel_desc_symbols.emplace_back(JUST(GetParallelDescSymbol(parallel_conf)));
     return Maybe<void>::Ok();
   };
