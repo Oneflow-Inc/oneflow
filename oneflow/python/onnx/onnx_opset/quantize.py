@@ -26,6 +26,7 @@ import numpy as np
 from typing import Optional, Callable
 from oneflow.python.onnx.graph import Graph, Node
 from oneflow.python.onnx.handler import flow_op
+from onnx.onnx_ml_pb2 import Version
 
 
 logger = logging.getLogger(__name__)
@@ -37,11 +38,14 @@ logger = logging.getLogger(__name__)
 @flow_op("min_max_observer", flow_obns=["scale", "zero_point"])
 class MinMaxObserver:
     @classmethod
-    def Version_11(cls, ctx: Graph, node: Node, **kwargs):
+    def _Convert(cls, ctx: Graph, node: Node, opset: int, **kwargs):
         bit = node.attrs["quantization_bit"]
         scheme = node.attrs["quantization_scheme"]
         per_layer = node.attrs["per_layer_quantization"]
         formula = node.attrs["quantization_formula"]
+
+        if (not per_layer and formula == "google") and opset == 10:
+            raise NotImplementedError("per-channel mode is not supported in version 10")
 
         input_node: Node = node.input_nodes[0]
         input_np: np.ndarray = input_node.get_tensor_value(as_list=False)
@@ -88,6 +92,14 @@ class MinMaxObserver:
         ctx.MakeConst(node.output_tensor_names[0], scale)
         ctx.MakeConst(node.output_tensor_names[1], zero_point)
 
+    @classmethod
+    def Version_10(cls, ctx: Graph, node: Node, **kwargs):
+        cls._Convert(ctx, node, opset=10, **kwargs)
+
+    @classmethod
+    def Version_13(cls, ctx: Graph, node: Node, **kwargs):
+        cls._Convert(ctx, node, opset=13, **kwargs)
+
 
 @flow_op(
     "moving_average_min_max_observer",
@@ -96,7 +108,7 @@ class MinMaxObserver:
 )
 class MovingAverageMinMaxObserver:
     @classmethod
-    def Version_11(cls, ctx: Graph, node: Node, **kwargs):
+    def Version_10(cls, ctx: Graph, node: Node, **kwargs):
         bit = node.attrs["quantization_bit"]
         scheme = node.attrs["quantization_scheme"]
         formula = node.attrs["quantization_formula"]
@@ -120,7 +132,6 @@ class MovingAverageMinMaxObserver:
                 zero_point = (
                     (-np.round(moving_min_np / scale)).astype(np.uint8).flatten()
                 )
-                print(moving_min_np / scale)
             else:
                 raise ValueError("invalid quantization scheme: " + scheme)
 

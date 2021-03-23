@@ -57,7 +57,7 @@ def generate_moving_average_min_max_observer_test(
     set_moving_max_min_value()
 
     convert_to_onnx_and_check(
-        moving_average_min_max_observer, opset=11, explicit_init=False
+        moving_average_min_max_observer, opset=10, explicit_init=False
     )
 
 
