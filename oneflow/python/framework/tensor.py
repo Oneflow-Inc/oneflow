@@ -50,9 +50,9 @@ class Tensor:
         elif _input_args_is_consistent_or_local:
             self._local_or_consistent_tensor = args[0]
             self._undetermined_tensor = None
-        elif _input_args_is_other_data:
+        elif _input_args_is_data:
             self._local_or_consistent_tensor = None
-            self._construct_with_other_data_source(
+            self._construct_with_data(
                 *args,
                 dtype=dtype,
                 device=device,
@@ -351,7 +351,7 @@ class Tensor:
     def _blob_object(self):
         return self._local_or_consistent_tensor._blob_object
 
-    def _construct_with_other_data_source(
+    def _construct_with_data(
         self,
         *args,
         dtype=None,
@@ -553,7 +553,7 @@ def _input_args_is_tensor(*args):
     return len(args) == 1 and isinstance(args[0], flow.Tensor)
 
 
-def _input_args_is_other_data(*args):
+def _input_args_is_data(*args):
     return (
         _input_args_is_numpy(*args)
         or _input_args_is_tuple_or_list(*args)
