@@ -47,24 +47,49 @@ Maybe<void> VariableOp::InferOutBlobDescs(
   out_blob_desc->set_data_type(variable_conf.data_type());
   if (parallel_ctx->parallel_num() == 1) { return Maybe<void>::Ok(); }
   if (variable_conf.parallel_distribution_size() == 0) { return Maybe<void>::Ok(); }
-  const auto& hierarchy = JUST(GetOpParallelDesc())->hierarchy();
-  CHECK_EQ_OR_RETURN(variable_conf.parallel_distribution_size(), hierarchy->NumAxes());
-  for (int64_t i = 0; i < hierarchy->NumAxes(); ++i) {
+  const auto& parallel_desc = JUST(GetOpParallelDesc());
+  CHECK_EQ_OR_RETURN(variable_conf.parallel_distribution_size(),
+                     parallel_desc->hierarchy()->NumAxes());
+  ParallelDistribution parallel_distribution;
+  for (const std::string& sbp_str : variable_conf.parallel_distribution()) {
     SbpParallel sbp_parallel;
-    CHECK_OR_RETURN(
-        ParseSbpParallelFromString(variable_conf.parallel_distribution(i), &sbp_parallel));
-    if (sbp_parallel.has_split_parallel()) {
-      const int64_t split_axis = sbp_parallel.split_parallel().axis();
-      if (hierarchy->NumAxes() == 1) {
-        BalancedSplitter bs(out_blob_desc->shape().At(split_axis), parallel_ctx->parallel_num());
-        out_blob_desc->mut_shape().Set(split_axis, bs.At(parallel_ctx->parallel_id()).size());
-      } else {
-        CHECK_EQ_OR_RETURN(out_blob_desc->shape().At(split_axis) % hierarchy->At(i), 0);
-        out_blob_desc->mut_shape().Set(split_axis,
-                                       out_blob_desc->shape().At(split_axis) / hierarchy->At(i));
-      }
-    }
+    CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
+    *parallel_distribution.add_sbp_parallel() = sbp_parallel;
   }
+  out_blob_desc->mut_shape() = *JUST(GetPhysicalShape(
+      Shape(variable_conf.shape()), parallel_distribution, *parallel_desc, *parallel_ctx));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  CHECK_EQ_OR_RETURN(JUST(GetOpParallelDesc())->hierarchy()->NumAxes(), 1);
+  SbpSignatureBuilder sbp_sig_builder;
+  if (op_conf().variable_conf().parallel_distribution_size() != 0) {
+    CHECK_EQ_OR_RETURN(op_conf().variable_conf().parallel_distribution_size(), 1);
+    SbpParallel sbp_parallel;
+    CHECK_OR_RETURN(ParseSbpParallelFromString(op_conf().variable_conf().parallel_distribution(0),
+                                               &sbp_parallel));
+    if (sbp_parallel.has_split_parallel()) {
+      sbp_sig_builder.Split(output_bns(), sbp_parallel.split_parallel().axis());
+    } else {
+      sbp_sig_builder.Broadcast(output_bns());
+    }
+  } else {
+    sbp_sig_builder.Broadcast(output_bns());
+  }
+  sbp_sig_builder.Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> VariableOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  CHECK_EQ_OR_RETURN(parallel_desc.hierarchy()->NumAxes(), 1);
+  SbpSignatureList sbp_sig_list;
+  JUST(GetSbpSignatures(&sbp_sig_list));
+  *sbp_signature = sbp_sig_list.sbp_signature().Get(0);
   return Maybe<void>::Ok();
 }
 
