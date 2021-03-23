@@ -46,7 +46,7 @@ class Tensor:
         if placement is None:
             device = device if device is not None else oneflow_api.device("cpu")
         if _input_args_is_tensor:
-            TODO() # liyurui, construct using another tensor
+            TODO()  # liyurui, construct using another tensor
         elif _input_args_is_consistent_or_local:
             self._local_or_consistent_tensor = args[0]
             self._undetermined_tensor = None
@@ -554,12 +554,8 @@ def _input_args_is_tensor(*args):
 
 
 def _input_args_is_data(*args):
-    return (
-        _input_args_is_numpy(*args)
-        or _input_args_is_tuple_or_list(*args)
-    )
+    return _input_args_is_numpy(*args) or _input_args_is_tuple_or_list(*args)
 
 
 def _input_args_is_shape(*args):
     return all(isinstance(x, int) for x in args)
-
