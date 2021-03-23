@@ -51,15 +51,15 @@ Maybe<void> InputOp::InferSbpSignature(
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
-                                              output_bns(), sbp_signature);
+  JUST(InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
+                                                   output_bns(), sbp_signature));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
-                                              output_bns(),
-                                              sbp_sig_list->mutable_sbp_signature()->Add());
+  JUST(InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
+                                                   output_bns(),
+                                                   sbp_sig_list->mutable_sbp_signature()->Add()));
   return Maybe<void>::Ok();
 }
 
@@ -79,8 +79,8 @@ Maybe<void> InputOp::InferParallelDistributionSignature(
   }
   ParallelDistribution& out_parallel_distribution =
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["out"];
-  InterfaceOpUtil::ParseParallelDistributionFromBlobConf(blob_conf, parallel_desc,
-                                                         &out_parallel_distribution);
+  JUST(InterfaceOpUtil::ParseParallelDistributionFromBlobConf(blob_conf, parallel_desc,
+                                                              &out_parallel_distribution));
   return Maybe<void>::Ok();
 }
 
