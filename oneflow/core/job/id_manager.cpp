@@ -65,7 +65,7 @@ int64_t IDMgr::PickCpuThrdIdEvenly(int64_t machine_id) {
 }
 
 IDMgr::IDMgr() {
-  CHECK_LT((Global<ResourceDesc, ForSession>::Get()->TotalMachineNum()),
+  CHECK_LT((Global<ResourceDesc, ForSession>::Get()->process_ranks().size()),
            static_cast<int64_t>(1) << machine_id_bit_num_);
   gpu_device_num_ = Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
   cpu_device_num_ = Global<ResourceDesc, ForSession>::Get()->CpuDeviceNum();

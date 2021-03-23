@@ -15,14 +15,24 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
+import os
+import sys
+import getpass
 import imp
 import inspect
-import os
+import socket
+from contextlib import closing
+import uuid
 import unittest
 import atexit
+from tempfile import NamedTemporaryFile
+import google.protobuf.text_format as pbtxt
 import oneflow
+import oneflow.python.framework.env_util as env_util
+from oneflow.core.job.env_pb2 import EnvProto
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Any, Dict, Callable
+import subprocess
 import platform
 
 
@@ -144,6 +154,17 @@ def enable_init_by_host_list():
     return os.getenv("ONEFLOW_TEST_ENABLE_INIT_BY_HOST_LIST") == "1"
 
 
+def enable_multi_process():
+    return os.getenv("ONEFLOW_TEST_MULTI_PROCESS") == "1"
+
+
+def find_free_port():
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("localhost", 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
+
+
 _unittest_env_initilized = False
 _unittest_worker_initilized = False
 
@@ -213,6 +234,69 @@ class TestCase(unittest.TestCase):
                         oneflow.deprecated.delete_worker_by_bootstrap, ssh_port=ssh_port
                     )
                     _unittest_worker_initilized = True
+        elif device_num() > 1 and enable_multi_process():
+            master_port = find_free_port()
+            oneflow.env.ctrl_port(master_port)
+            config_world_size = device_num()
+            bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
+                ["127.0.0.1"], master_port, config_world_size
+            )
+            env_proto = env_util.default_env_proto
+            assert (
+                len(env_proto.machine) == 1
+                and env_proto.HasField("ctrl_bootstrap_conf") == 1
+            )
+            run_dir = os.getenv("HOME") + "/oneflow_temp/" + str(uuid.uuid1())
+            run_dir = os.path.abspath(os.path.expanduser(run_dir))
+            if not os.path.exists(run_dir):
+                os.makedirs(run_dir)
+            for rank in range(1, config_world_size):
+                worker_env_proto = EnvProto()
+                worker_env_proto.CopyFrom(env_proto)
+                worker_env_proto.ctrl_bootstrap_conf.rank = rank
+                worker_env_proto.cpp_logging_conf.log_dir = (
+                    run_dir + "/log_" + str(rank)
+                )
+                env_file = NamedTemporaryFile(delete=False)
+                if sys.version_info >= (3, 0):
+                    env_file.write(pbtxt.MessageToString(worker_env_proto).encode())
+                else:
+                    env_file.write(pbtxt.MessageToString(worker_env_proto))
+                env_file.close()
+                if not os.path.exists(run_dir + "/log_" + str(rank)):
+                    os.mkdir(run_dir + "/log_" + str(rank))
+                os.system(
+                    "cp "
+                    + env_file.name
+                    + " "
+                    + run_dir
+                    + "/log_"
+                    + str(rank)
+                    + "/env_proto_"
+                    + str(rank)
+                    + ".proto"
+                )
+                oneflow_cmd = (
+                    "python3 -m oneflow --start_worker"
+                    + " --env_proto="
+                    + run_dir
+                    + "/log_"
+                    + str(rank)
+                    + "/"
+                    + "env_proto_"
+                    + str(rank)
+                    + ".proto"
+                )
+                subprocess.Popen(
+                    oneflow_cmd,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    shell=True,
+                )
+                os.remove(env_file.name)
+            atexit.register(
+                oneflow.deprecated.delete_worker_of_multi_process, run_dir=run_dir
+            )
 
         log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
         if log_dir:
