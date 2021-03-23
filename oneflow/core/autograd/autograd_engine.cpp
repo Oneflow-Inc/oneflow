@@ -46,7 +46,8 @@ Maybe<void> InitEmptyTensorArgs2ZerosTensor(const TensorTuple& outputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CopyOrAccGrad(Tensor& tensor) {
+Maybe<void> CopyOrAccGrad(Tensor& tensor, bool autograd_mode) {
+  autograd::AutogradMode mode(autograd_mode);
   const auto& tensor_arg = tensor.now_grad_arg();
   if (tensor.acc_grad()) {
     TensorTuple input = {tensor.acc_grad(), tensor_arg->GetAccTensor().GetPtrOrThrow()};
@@ -83,16 +84,16 @@ StackFunctionNode::StackFunctionNode(
 Maybe<void> StackFunctionNode::AccGrad4RetainGradTensor() {
   for (int i = 0; i < outputs_->size(); ++i) {
     if (outputs_->at(i)->retain_grad() && outputs_->at(i)->requires_grad()) {
-      JUST(CopyOrAccGrad(outputs_.at(i)));
+      JUST(CopyOrAccGrad(outputs_->at(i), /*autograd_mode=*/false));
     }
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> StackFunctionNode::AccGrad4LeafTensor() {
+Maybe<void> StackFunctionNode::AccGrad4LeafTensor(bool create_graph) {
   for (int i = 0; i < outputs_->size(); ++i) {
     if (outputs_->at(i)->is_leaf() && outputs_->at(i)->requires_grad()) {
-      JUST(CopyOrAccGrad(outputs_.at(i)));
+      JUST(CopyOrAccGrad(outputs_->at(i), /*autograd_mode=*/create_graph));
     }
   }
   return Maybe<void>::Ok();
