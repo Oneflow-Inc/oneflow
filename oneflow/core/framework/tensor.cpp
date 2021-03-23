@@ -53,7 +53,7 @@ std::shared_ptr<MirroredTensor> MirroredTensor::data() const {
   return t;
 }
 
-std::shared_ptr<MirroredTensor> MirroredTensor::detach() const {
+std::shared_ptr<Tensor> MirroredTensor::detach() const {
   std::shared_ptr<MirroredTensor> t = std::make_shared<MirroredTensor>(impl_);
   return t;
 }
@@ -91,7 +91,7 @@ std::shared_ptr<ConsistentTensor> ConsistentTensor::data() const {
   return t;
 }
 
-std::shared_ptr<ConsistentTensor> ConsistentTensor::detach() const {
+std::shared_ptr<Tensor> ConsistentTensor::detach() const {
   std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);
   return t;
 }
