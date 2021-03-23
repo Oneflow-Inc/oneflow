@@ -68,6 +68,22 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(not x.is_cuda)
         x.determine()
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_user_defined_data(test_case):
+        list_data = [5, 5]
+        tuple_data = (5, 5)
+        numpy_data = np.array((5, 5))
+        x = flow.Tensor(list_data)
+        y = flow.Tensor(tuple_data)
+        z = flow.Tensor(numpy_data)
+
+        test_case.assertTrue(np.array_equal(x.numpy(), 5 * np.ones(x.shape)))
+        test_case.assertTrue(np.array_equal(y.numpy(), 5 * np.ones(y.shape)))
+        test_case.assertTrue(np.array_equal(z.numpy(), 5 * np.ones(z.shape)))
+
 
 if __name__ == "__main__":
     unittest.main()
