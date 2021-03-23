@@ -71,7 +71,7 @@ jobs:
           #   os: [self-hosted, linux, release]
           - test_suite: cpu
             cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=ON --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --cpu
+            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=ON --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu
             os: [self-hosted, linux, release]
           - test_suite: macOS
             cuda_version: ""
