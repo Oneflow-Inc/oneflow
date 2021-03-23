@@ -73,7 +73,7 @@ class TestModule(flow.unittest.TestCase):
         m.load_state_dict({"w": ones})
         y = m()
         test_case.assertTrue(np.array_equal(y.numpy(), ones))
-        
+
         twos_tensor = flow.Tensor(ones * 2)
         m.load_state_dict({"w": twos_tensor})
         y = m()
