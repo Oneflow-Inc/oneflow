@@ -105,7 +105,6 @@ jobs:
             echo "cuda_version empty"
             exit 1
           fi
-          echo "matrix_release_version=${matrix_release_version}" >> $GITHUB_ENV
 
           python3 ci/build/ensure_img.py
           python_version=${python_version:-"3.5,3.6,3.7,3.8"}
@@ -129,7 +128,7 @@ jobs:
           echo "oss_dir=${oss_dir}" >> $GITHUB_ENV
           echo "git_branch=${git_branch}" >> $GITHUB_ENV
 
-          $(python3 tools/oss_file_exist.py --bucket oneflow-staging --path ${oss_dir}/oneflow_${matrix_release_version})
+          $(python3 tools/oss_file_exist.py --bucket oneflow-staging --path ${oss_dir}/oneflow_${{ matrix.release_version }})
           echo "is_built=${OSS_FILE_EXISTED}" >> $GITHUB_ENV
       - name: Build OneFlow
         if: env.is_built != '1' && contains(env.package_names, matrix.release_version)
@@ -161,7 +160,7 @@ jobs:
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${bin_dir}
-          oss_dst_path: oss://oneflow-staging/${oss_dir}/bin/${matrix_release_version}
+          oss_dst_path: oss://oneflow-staging/${oss_dir}/bin/${{ matrix.release_version }}
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update API docs
