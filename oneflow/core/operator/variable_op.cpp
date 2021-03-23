@@ -27,12 +27,11 @@ Maybe<void> ParseParallelDistributionFromConf(const VariableOpConf& conf,
   const bool has_parallel_distribution_conf = (conf.parallel_distribution_size() != 0);
   const int64_t num_axes = parallel_desc.hierarchy()->NumAxes();
   if (has_parallel_distribution_conf) { CHECK_EQ(conf.parallel_distribution_size(), num_axes); }
+  parallel_distribution->clear_sbp_parallel();
   FOR_RANGE(int64_t, i, 0, num_axes) {
     if (has_parallel_distribution_conf) {
-      SbpParallel sbp_parallel;
-      CHECK_OR_RETURN(ParseSbpParallelFromString(conf.parallel_distribution(i), &sbp_parallel));
-      CHECK_OR_RETURN(sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel());
-      *parallel_distribution->add_sbp_parallel() = sbp_parallel;
+      CHECK_OR_RETURN(ParseSbpParallelFromString(conf.parallel_distribution(i),
+                                                 parallel_distribution->add_sbp_parallel()));
     } else {
       parallel_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
     }
