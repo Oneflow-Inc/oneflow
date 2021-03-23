@@ -42,7 +42,7 @@ void GenQuantScaleAffine(const T* in_ptr, const int32_t quantization_bit,
   T denominator = static_cast<T>(pow(2.0, quantization_bit)) - 1;
 
   *scale = (in_max - in_min) / denominator;
-  *zero_point = -in_min / (*scale);
+  *zero_point = -std::round(in_min / (*scale));
 }
 
 template<typename T>

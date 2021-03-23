@@ -47,11 +47,13 @@ Maybe<void> AccTickOp::InferOutBlobDescs(
 }
 
 Maybe<void> AccTickOp::InferOpTimeShape(
-    const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
-    Shape* time_shape) const {
+    const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
+    std::shared_ptr<const Shape>* time_shape) const {
   const int32_t max_acc_num = op_conf().acc_tick_conf().max_acc_num();
-  CHECK_EQ_OR_RETURN(GetTimeShape4BnInOp("one")->elem_cnt() % max_acc_num, 0);
-  *time_shape = Shape({GetTimeShape4BnInOp("one")->elem_cnt() / max_acc_num});
+  CHECK_EQ_OR_RETURN(JUST(GetTimeShape4BnInOp("one"))->elem_cnt() % max_acc_num, 0);
+  std::shared_ptr<Shape> op_time_shape(
+      new Shape({JUST(GetTimeShape4BnInOp("one"))->elem_cnt() / max_acc_num}));
+  *time_shape = op_time_shape;
   return Maybe<void>::Ok();
 }
 
