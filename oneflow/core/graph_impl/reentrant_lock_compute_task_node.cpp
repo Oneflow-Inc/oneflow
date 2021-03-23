@@ -13,11 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/reentrant_lock_compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
+
+class ReentrantLockCompTaskNode final : public CompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ReentrantLockCompTaskNode);
+  ReentrantLockCompTaskNode() = default;
+  ~ReentrantLockCompTaskNode() = default;
+
+  bool IsMeaningLess() override { return false; }
+  TaskType GetTaskType() const override { return TaskType::kReentrantLock; }
+
+ private:
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void BuildExecGphAndRegst() override;
+  void InferProducedDataRegstTimeShape() override;
+  bool IsIndependent() const override { return true; }
+};
 
 void ReentrantLockCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", false, 1, 1);
@@ -31,7 +47,7 @@ void ReentrantLockCompTaskNode::ConsumeAllRegsts() {
 
 void ReentrantLockCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = logical_node()->SoleOp();
+  node->mut_op() = op();
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   // no regst_desc for ibn "end" provided because TaskGraph hates cycle
   node->BindBnWithOneOfTheRegsts("start", in_regsts);
@@ -63,5 +79,7 @@ REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kReen
     .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
       return generator->GenerateTickTockStreamIndex();
     });
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kReentrantLockConf, ReentrantLockCompTaskNode);
 
 }  // namespace oneflow
