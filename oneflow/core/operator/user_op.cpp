@@ -646,7 +646,7 @@ Maybe<void> UserOp::InferParallelDistributionSignature(
     const ParallelDistributionSignature& parallel_distribution_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-        ParallelDistributionInferHint4Ibn) {
+        ParallelDistributionInferHint4Ibn) const {
   if (val_->infer_parallel_distribution_fn) {
     UserOpInferParallelDistributionFnContext ctx(this, parallel_distribution_signature,
                                                  parallel_distribution_constraints,
