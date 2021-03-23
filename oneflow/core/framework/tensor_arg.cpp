@@ -41,7 +41,7 @@ Maybe<Tensor> TensorArg::GetAccTensor() {
     for (size_t i = 0; i < input_num; ++i) { input.at(i) = partial_sum_tensors_.at(i); }
     TensorTuple output(1);
     const auto& add_n = JUST(helper::AddNOp(input_num));
-    GetInterpreter()->Apply(add_n, input, &output);
+    JUST(GetInterpreter()->Apply(add_n, input, &output));
     acc_tensor_ = output.at(0);
     partial_sum_tensors_.clear();
   }
