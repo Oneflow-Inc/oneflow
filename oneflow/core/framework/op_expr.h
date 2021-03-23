@@ -18,10 +18,15 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 namespace one {
+
+class OpExprInterpState;
+class OpExprGrad;
+class OpExprGradInterface;
 
 class OpExpr {
  public:
@@ -32,6 +37,7 @@ class OpExpr {
 
   virtual int input_num() const = 0;
   virtual int output_num() const = 0;
+  virtual Maybe<OpExprGradInterface> GetOrCreateOpGrad() const = 0;
 
  private:
   std::string type_;
@@ -62,6 +68,8 @@ class BuiltinOpExpr : public OpExpr {
   std::vector<std::string> indexed_ibns_;
   // The indexed output blob names.
   std::vector<std::string> indexed_obns_;
+
+  mutable std::shared_ptr<OpExprGrad> op_grad_;
 };
 
 #define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name, _op_conf)                                  \
@@ -83,6 +91,8 @@ class BuiltinOpExpr : public OpExpr {
       *(op_conf->mutable_##_op_conf##_conf()) = proto_;                                  \
     }                                                                                    \
                                                                                          \
+    Maybe<OpExprGradInterface> GetOrCreateOpGrad() const override;                       \
+                                                                                         \
    private:                                                                              \
     _op_name##Conf proto_;                                                               \
   };
@@ -101,11 +111,27 @@ DEFINE_BUILTIN_OPEXPR_CLASS(DistributeAddOp, distribute_add);
 // TODO(): Finish the class definition of `FunctionOpExpr`.
 class FunctionOpExpr : public OpExpr {
  public:
-  FunctionOpExpr() : OpExpr("FunctionOp") {}
+  using FType = std::function<Maybe<void>(const std::shared_ptr<OpExprInterpState>& /*ctx*/,
+                                          const TensorTuple& /*inputs or out_grads*/,
+                                          TensorTuple* /*outputs or in_grads*/)>;
+
+  FunctionOpExpr(const FType& forward, const FType& backward)
+      : OpExpr("FunctionOp"), forward_(forward), backward_(backward) {}
   virtual ~FunctionOpExpr() = default;
 
   int input_num() const override { UNIMPLEMENTED(); }
   int output_num() const override { UNIMPLEMENTED(); }
+
+  FType forward() const { return forward_; }
+  FType backward() const { return backward_; }
+  std::shared_ptr<OpExprInterpState> state() const { return state_; }
+
+  Maybe<OpExprGradInterface> GetOrCreateOpGrad() const override { UNIMPLEMENTED(); }
+
+ private:
+  FType forward_;
+  FType backward_;
+  std::shared_ptr<OpExprInterpState> state_;
 };
 
 }  // namespace one
