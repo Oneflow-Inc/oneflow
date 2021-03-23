@@ -163,7 +163,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     dst_node->ConnectToSrcNodeWithSlice(src_node, NewEdge(), src_slice);
     return dst_node;
   };
-  const auto BuildSubTaskGphS2B = [&ctx, &CreateBoxingNode121, &NewEdge](
+  const auto BuildSubTaskGphS2B = [&ctx, &CreateBoxingNode121, &NewEdge, &lbi](
                                       const ParallelDesc& in_pd, const ParallelDesc& out_pd,
                                       const SbpParallel& in_sbp, const SbpParallel& out_sbp,
                                       const BlobDesc& blob_desc,
@@ -183,9 +183,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         if (SubTskGphBuilderUtil::IsOnSameGPU(in_node, out_node)) {
           out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
         } else {
-          TaskNode* proxy_node =
-              ctx->GetProxyNode(in_node, in_node->MemZoneId121(), out_node->machine_id(),
-                                Global<IDMgr>::Get()->CpuMemZoneId());
+          TaskNode* proxy_node = ctx->task_graph()->GetProxyNode(
+              in_node, lbi, out_node->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
           out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), in_slice);
         }
       }
@@ -291,9 +290,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                                                            in_slices.at(in_id));
             }
           }
-          TaskNode* local_add_proxy_node =
-              ctx->GetProxyNode(local_concat_node, Global<IDMgr>::Get()->CpuMemZoneId(),
-                                out_node->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
+          TaskNode* local_add_proxy_node = ctx->task_graph()->GetProxyNode(
+              local_concat_node, lbi, out_node->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
           out_node->ConnectToSrcNodeWithSlice(local_add_proxy_node, NewEdge(), concat_slice);
         }
       }
@@ -353,9 +351,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
           for (const int64_t in_id : in_parallel_ids) {
             local_add_node->ConnectToSrcNodeWithSlice(in_nodes.at(in_id), NewEdge(), in_slice);
           }
-          TaskNode* local_add_proxy_node =
-              ctx->GetProxyNode(local_add_node, Global<IDMgr>::Get()->CpuMemZoneId(),
-                                out_node->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
+          TaskNode* local_add_proxy_node = ctx->task_graph()->GetProxyNode(
+              local_add_node, lbi, out_node->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
           out_node->ConnectToSrcNodeWithSlice(local_add_proxy_node, NewEdge(), out_slice);
         }
       }
@@ -409,18 +406,17 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       const int64_t out_machine_id = machine_id7out_parallel_ids.first;
       TaskNode* in_box_node = nullptr;
       if (out_box_nodes.size() == 1) {
-        in_box_node = ctx->GetProxyNode(
-            out_box_nodes.front(), out_box_nodes.front()->MemZoneId121(),
-            machine_id7out_parallel_ids.first, Global<IDMgr>::Get()->CpuMemZoneId());
+        in_box_node = ctx->task_graph()->GetProxyNode(out_box_nodes.front(), lbi,
+                                                      machine_id7out_parallel_ids.first,
+                                                      Global<IDMgr>::Get()->CpuMemZoneId());
       } else {
         auto* add_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
         add_node->Init(lbi, slice, kSliceBoxingTaskModeAdd, machine_id7out_parallel_ids.first,
                        Global<IDMgr>::Get()->PickCpuThrdIdEvenly(machine_id7out_parallel_ids.first),
                        Global<IDMgr>::Get()->CpuMemZoneId());
         for (TaskNode* out_box_node : out_box_nodes) {
-          TaskNode* out_boxing_node_proxy =
-              ctx->GetProxyNode(out_box_node, out_box_node->MemZoneId121(), out_machine_id,
-                                Global<IDMgr>::Get()->CpuMemZoneId());
+          TaskNode* out_boxing_node_proxy = ctx->task_graph()->GetProxyNode(
+              out_box_node, lbi, out_machine_id, Global<IDMgr>::Get()->CpuMemZoneId());
           add_node->ConnectToSrcNodeWithSlice(out_boxing_node_proxy, NewEdge(), slice);
         }
         in_box_node = add_node;
@@ -435,8 +431,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         } else {
           UNIMPLEMENTED();
         }
-        (*out_nodes)[out_id] = ctx->GetProxyNode(in_box_node, Global<IDMgr>::Get()->CpuMemZoneId(),
-                                                 out_machine_id, mem_zone_id);
+        (*out_nodes)[out_id] =
+            ctx->task_graph()->GetProxyNode(in_box_node, lbi, out_machine_id, mem_zone_id);
       }
     }
   };
@@ -460,8 +456,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
           SliceBoxingTaskNode* slice_node =
               CreateBoxingNode121(in_pd, nearest_idx, out_slice, kSliceBoxingTaskModeCopy);
           slice_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
-          TaskNode* out_node =
-              ctx->GetProxyNode(slice_node, slice_node->MemZoneId121(), out_pd, out_id);
+          TaskNode* out_node = ctx->task_graph()->GetProxyNode(slice_node, lbi, out_pd, out_id);
 
           out_nodes->push_back(out_node);
         }
