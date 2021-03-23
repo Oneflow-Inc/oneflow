@@ -137,7 +137,7 @@ __global__ void CalScaleZeroPointAffine(const int64_t elements, const double qua
     T s = (moving_max_ptr[gid] - min) / denominator;
 
     scale[gid] = s;
-    zero_point[gid] = -min / s;
+    zero_point[gid] = -round(min / s);
     gid += gridDim.x * blockDim.x;
   }
 }
@@ -156,7 +156,7 @@ __global__ void CalFreezeScaleZeroPointAffine(const int64_t elements, const doub
     T s = (moving_max_ptr[gid] - min) / denominator;
 
     scale[gid] = s;
-    zero_point[gid] = -min / s;
+    zero_point[gid] = -round(min / s);
     gid += gridDim.x * blockDim.x;
   }
 }

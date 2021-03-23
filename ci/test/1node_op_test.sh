@@ -30,3 +30,5 @@ python3 -m unittest discover test/ops --failfast --verbose
 
 export ONEFLOW_TEST_DEVICE_NUM=4
 python3 -m unittest discover test/ops --failfast --verbose
+
+ONEFLOW_TEST_MULTI_PROCESS=1 python3 test/ops/test_multi_process.py --failfast --verbose
