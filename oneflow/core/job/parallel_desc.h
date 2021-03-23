@@ -98,6 +98,8 @@ class ParallelDesc final {
   ParallelDesc() : symbol_id_(Error::SymbolIdUninitialized()) {}
   ParallelDesc(int64_t symbol_id) : symbol_id_(symbol_id) {}
   void ClearUp();
+  Maybe<void> SetMachineIdAndDeviceIdsByParsingDeviceName(const std::string& device_name,
+                                                          size_t cols);
   Maybe<void> SanityCheck();
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
   bool EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const;

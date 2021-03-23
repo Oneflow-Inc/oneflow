@@ -80,7 +80,7 @@ def two_stage_reduce(x, axis=None, keepdims=False, op_type_name=None, name=None)
     ) in parallel_desc_symbol.machine_id2device_id_list.items():
         for device_id in device_ids:
             with flow.scope.placement(
-                device_tag, str(machine_id) + ":" + str(device_id)
+                device_tag, "@" + str(machine_id) + ":" + str(device_id)
             ):
                 device_stage_out, device_stage_count = reduce_device_stage(
                     x_list[parallel_id],

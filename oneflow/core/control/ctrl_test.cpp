@@ -65,8 +65,8 @@ TEST(CtrlServer, new_delete) {
                  .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
   auto* client = new GrpcCtrlClient(*Global<ProcessCtx>::Get());
   Global<CtrlClient>::SetAllocated(client);
-  Global<ResourceDesc, ForEnv>::New(GetResource());
-  Global<ResourceDesc, ForSession>::New(GetResource());
+  Global<ResourceDesc, ForEnv>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
+  Global<ResourceDesc, ForSession>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
 
   // do test
   // OF_ENV_BARRIER();
