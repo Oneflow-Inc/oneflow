@@ -350,7 +350,8 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
           ctx->task_graph()->ConnectWithLbi(gpu_in_node, collective_node, lbi);
         } else {
           gpu_in_node->BuildCtrlRegstDesc(collective_node);
-          Connect<TaskNode>(gpu_in_node, ctx->task_graph()->NewEdge(), collective_node);
+          Connect<TaskNode>(gpu_in_node, ctx->task_graph()->NewTaskEdgeWithLbi(lbi),
+                            collective_node);
         }
         sorted_out_tasks->push_back(collective_node);
       }
