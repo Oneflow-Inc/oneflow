@@ -55,19 +55,13 @@ class OpExprInterpreter {
   _macro(DistributeAddOp);    \
   _macro(FunctionOp);
 
-class NormalInterpreter : public OpExprInterpreter {
- public:
-  NormalInterpreter() : OpExprInterpreter() {}
-  virtual ~NormalInterpreter() = default;
-};
-
 #define DECLARE_NORMAL_APPLY_FUNC(op_type)                                               \
   virtual Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs, \
                                 TensorTuple* outputs) const;
 
-class LazyInterpreter : public NormalInterpreter {
+class LazyInterpreter : public OpExprInterpreter {
  public:
-  LazyInterpreter() : NormalInterpreter() {}
+  LazyInterpreter() : OpExprInterpreter() {}
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                     TensorTuple* outputs) const override;
@@ -77,9 +71,9 @@ class LazyInterpreter : public NormalInterpreter {
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
 };
 
-class EagerInterpreter : public NormalInterpreter {
+class EagerInterpreter : public OpExprInterpreter {
  public:
-  EagerInterpreter() : NormalInterpreter() {}
+  EagerInterpreter() : OpExprInterpreter() {}
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                     TensorTuple* outputs) const override;
@@ -91,17 +85,17 @@ class EagerInterpreter : public NormalInterpreter {
 #undef DECLARE_NORMAL_APPLY_FUNC
 #undef FOR_EACH_OPS
 
-class AutogradInterpreter : public OpExprInterpreter {
+class AutogradInterpreter {
  public:
   AutogradInterpreter() = delete;
-  AutogradInterpreter(const std::shared_ptr<NormalInterpreter>& normal_interp)
-      : OpExprInterpreter(), normal_interp_(normal_interp) {}
+  AutogradInterpreter(const std::shared_ptr<OpExprInterpreter>& internal) : internal_(internal) {}
 
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
-                    TensorTuple* outputs) const override;
+  virtual ~AutogradInterpreter() = default;
+
+  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs) const;
 
  private:
-  std::shared_ptr<NormalInterpreter> normal_interp_;
+  std::shared_ptr<OpExprInterpreter> internal_;
 };
 
 }  // namespace one
