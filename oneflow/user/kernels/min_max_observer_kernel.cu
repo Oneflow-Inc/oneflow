@@ -216,6 +216,9 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
                            scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
       }
     } else if (quantization_formula == "cambricon") {
+      if (!per_layer_quantization) {
+        UNIMPLEMENTED() << " per-channel mode is not supported in cambricon scheme";
+      }
       LAUNCH_CUDA_KERNEL((CalScaleZeroPointCambricon<T>), ctx->device_ctx(), channel, 0, max_ptr,
                          min_ptr, channel, static_cast<double>(quantization_bit),
                          scale->mut_dptr<T>(), zero_point->mut_dptr<T>());

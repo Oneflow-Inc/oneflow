@@ -60,28 +60,28 @@ def test_min_max_observer_affine_zero_point(test_case):
     generate_min_max_observer_test(1, True, "google", "affine")
 
 
-def test_min_max_observer_symmetric_not_per_layer(test_case):
+def test_min_max_observer_symmetric_per_channel(test_case):
     generate_min_max_observer_test(0, False, "google", "symmetric", opset=13)
 
 
-def test_min_max_observer_symmetric_not_per_layer_zero_point(test_case):
+def test_min_max_observer_symmetric_per_channel_zero_point(test_case):
     generate_min_max_observer_test(1, False, "google", "symmetric", opset=13)
 
 
-def test_min_max_observer_affine_not_per_layer(test_case):
+def test_min_max_observer_affine_per_channel(test_case):
     generate_min_max_observer_test(0, False, "google", "affine", opset=13)
 
 
-def test_min_max_observer_affine_not_per_layer_zero_point(test_case):
+def test_min_max_observer_affine_per_channel_zero_point(test_case):
     generate_min_max_observer_test(1, False, "google", "affine", opset=13)
 
 
 def test_min_max_observer_cambricon(test_case):
-    generate_min_max_observer_test(0, False, "cambricon", "symmetric")
+    generate_min_max_observer_test(0, True, "cambricon", "symmetric")
 
 
 def test_min_max_observer_cambricon_zero_point(test_case):
-    generate_min_max_observer_test(1, False, "cambricon", "symmetric")
+    generate_min_max_observer_test(1, True, "cambricon", "symmetric")
 
 
 def test_min_max_observer_symmetric_gpu(test_case):
@@ -100,25 +100,25 @@ def test_min_max_observer_affine_zero_point_gpu(test_case):
     generate_min_max_observer_test(1, True, "google", "affine", device_type="gpu")
 
 
-def test_min_max_observer_symmetric_not_per_layer_gpu(test_case):
+def test_min_max_observer_symmetric_per_channel_gpu(test_case):
     generate_min_max_observer_test(
         0, False, "google", "symmetric", device_type="gpu", opset=13
     )
 
 
-def test_min_max_observer_symmetric_not_per_layer_zero_point_gpu(test_case):
+def test_min_max_observer_symmetric_per_channel_zero_point_gpu(test_case):
     generate_min_max_observer_test(
         1, False, "google", "symmetric", device_type="gpu", opset=13
     )
 
 
-def test_min_max_observer_affine_not_per_layer_gpu(test_case):
+def test_min_max_observer_affine_per_channel_gpu(test_case):
     generate_min_max_observer_test(
         0, False, "google", "affine", device_type="gpu", opset=13
     )
 
 
-def test_min_max_observer_affine_not_per_layer_zero_point_gpu(test_case):
+def test_min_max_observer_affine_per_channel_zero_point_gpu(test_case):
     generate_min_max_observer_test(
         1, False, "google", "affine", device_type="gpu", opset=13
     )
@@ -126,12 +126,12 @@ def test_min_max_observer_affine_not_per_layer_zero_point_gpu(test_case):
 
 def test_min_max_observer_cambricon_gpu(test_case):
     generate_min_max_observer_test(
-        0, False, "cambricon", "symmetric", device_type="gpu"
+        0, True, "cambricon", "symmetric", device_type="gpu"
     )
 
 
 def test_min_max_observer_cambricon_zero_point_gpu(test_case):
     generate_min_max_observer_test(
-        1, False, "cambricon", "symmetric", device_type="gpu"
+        1, True, "cambricon", "symmetric", device_type="gpu"
     )
 

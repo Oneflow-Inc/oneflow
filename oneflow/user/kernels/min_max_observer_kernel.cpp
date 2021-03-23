@@ -103,6 +103,9 @@ class CpuMinMaxObserverKernel final : public user_op::OpKernel {
         }
       }
     } else if (quantization_formula == "cambricon") {
+      if (!per_layer_quantization) {
+        UNIMPLEMENTED() << " per-channel mode is not supported in cambricon scheme";
+      }
       GenQuantScaleCambricon(in_ptr, quantization_bit, in->shape().elem_cnt(), scale_ptr,
                              zero_point_ptr);
     } else {

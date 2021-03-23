@@ -102,6 +102,9 @@ def min_max_observer(
         scale, zero_point = QuantizeJob(input)
 
     """
+    if quantization_formula == "cambricon" and not per_layer_quantization:
+        raise NotImplementedError("per-channel mode is not supported in cambricon scheme")
+
     scale, zero_point = (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("MinMaxObserver_")

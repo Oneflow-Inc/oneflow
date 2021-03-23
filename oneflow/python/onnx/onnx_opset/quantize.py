@@ -43,7 +43,7 @@ class MinMaxObserver:
         per_layer = node.attrs["per_layer_quantization"]
         formula = node.attrs["quantization_formula"]
 
-        if (not per_layer and formula == "google") and opset == 10:
+        if not per_layer and opset == 10:
             raise NotImplementedError("per-channel mode is not supported in version 10")
 
         input_node: Node = node.input_nodes[0]
