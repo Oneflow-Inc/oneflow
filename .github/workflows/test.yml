@@ -71,7 +71,7 @@ jobs:
           #   os: [self-hosted, linux, release]
           - test_suite: cpu
             cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --cpu
+            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=ON --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --cpu
             os: [self-hosted, linux, release]
           - test_suite: macOS
             cuda_version: ""
@@ -102,6 +102,11 @@ jobs:
           echo "container_name=${container_name}" >> $GITHUB_ENV
           extra_docker_args+=" --name ${container_name}"
           echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
+          if [ "$test_suite" == "cpu" ]; then
+            extra_docker_args+=" --env ONEFLOW_TEST_CPU_ONLY=1"
+            extra_docker_args+=" --env ONEFLOW_TEST_RPC_BACKEND=local"
+            extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=''"
+          fi
           echo "" >> $GITHUB_ENV
       - name: Fix permissions
         if: matrix.test_suite != 'macOS'
