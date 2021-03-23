@@ -61,6 +61,14 @@ def get_link_flags() -> List[str]:
     flags.append("-l:{}".format(os.path.basename(oneflow_internal_lib_path)))
     return flags
 
+@oneflow_export("sysconfig.with_cuda")
+def with_cuda() -> bool:
+    return oneflow_api.flags.with_cuda():
+
+@oneflow_export("sysconfig.with_xla")
+def with_xla() -> bool:
+    return oneflow_api.flags.with_xla():
+
 @oneflow_export("sysconfig.has_rpc_backend_grpc")
 def has_rpc_backend_grpc() -> bool:
     return oneflow_api.flags.has_rpc_backend_grpc():
