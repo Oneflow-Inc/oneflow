@@ -125,13 +125,8 @@ def test_min_max_observer_affine_per_channel_zero_point_gpu(test_case):
 
 
 def test_min_max_observer_cambricon_gpu(test_case):
-    generate_min_max_observer_test(
-        0, True, "cambricon", "symmetric", device_type="gpu"
-    )
+    generate_min_max_observer_test(0, True, "cambricon", "symmetric", device_type="gpu")
 
 
 def test_min_max_observer_cambricon_zero_point_gpu(test_case):
-    generate_min_max_observer_test(
-        1, True, "cambricon", "symmetric", device_type="gpu"
-    )
-
+    generate_min_max_observer_test(1, True, "cambricon", "symmetric", device_type="gpu")
