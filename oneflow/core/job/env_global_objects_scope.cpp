@@ -91,6 +91,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   // ~CtrlBootstrap.
   if (env_proto.rpc_backend() == "grpc") {
 #ifdef RPC_BACKEND_GRPC
+    LOG(ERROR) << "using rpc backend: gRPC";
     auto* grpc_manager = new GrpcRpcManager();
     Global<RpcManager>::SetAllocated(grpc_manager);
 #else
@@ -98,6 +99,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #endif  // RPC_BACKEND_GRPC
   } else if (env_proto.rpc_backend() == "local") {
 #ifdef RPC_BACKEND_LOCAL
+    LOG(ERROR) << "using rpc backend: local";
     auto* local_manager = new LocalRpcManager();
     Global<RpcManager>::SetAllocated(local_manager);
 #else
