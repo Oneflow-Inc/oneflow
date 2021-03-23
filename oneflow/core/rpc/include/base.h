@@ -103,13 +103,16 @@ class CtrlClient {
 
   virtual void PushActEvent(const ActEvent&) = 0;
   virtual void Clear() = 0;
+  virtual int32_t IncreaseCount(const std::string& k, int32_t v) = 0;
+  int32_t IncreaseCount(const std::string& k) { return IncreaseCount(k, 1); }
+  virtual void EraseCount(const std::string& k) = 0;
 };
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
 #define OF_ENV_BARRIER() Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR)
-#define OF_SESSION_BARRIER()                        \
-  Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR, \
-                                     Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())
+#define OF_SESSION_BARRIER()          \
+  Global<CtrlClient>::Get()->Barrier( \
+      FILE_LINE_STR, Global<ResourceDesc, ForSession>::Get()->process_ranks().size())
 
 static void OfCallOnce(const std::string& name, std::function<void()> f) {
   TryLockResult lock_ret = Global<CtrlClient>::Get()->TryLock(name);

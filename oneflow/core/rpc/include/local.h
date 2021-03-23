@@ -51,6 +51,8 @@ class LocalCtrlClient : public CtrlClient {
   void PullMasterKV(const std::string& k, PbMessage* msg) override;
   void PushActEvent(const ActEvent&) override {}
   void Clear() override;
+  int32_t IncreaseCount(const std::string& k, int32_t v) override;
+  void EraseCount(const std::string& k) override;
 
   HashSet<std::string> done_names_;
   std::mutex done_names_mtx_;
@@ -58,6 +60,8 @@ class LocalCtrlClient : public CtrlClient {
   HashMap<std::string, std::string> kv_;
   std::mutex kv_mtx_;
   std::condition_variable kv_cv_;
+  HashMap<std::string, int32_t> counter_;
+  std::mutex counter_mtx_;
 };
 
 class LocalRpcManager : public RpcManager {
