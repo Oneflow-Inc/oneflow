@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_FIXED_VECTOR_H_
 #define ONEFLOW_CORE_COMMON_FIXED_VECTOR_H_
 
+#include <type_traits>
 #include <array>
 #include <initializer_list>
 #include <vector>
@@ -155,7 +156,10 @@ class fixed_vector final {
   void clear() noexcept { size_ = 0; }
 
   template<typename Iterator = iterator>
-  iterator insert(Iterator pos) { return insert(pos, T()); }
+  iterator insert(Iterator pos) {
+    static_assert(std::is_same<Iterator, iterator>::value, "");
+    return insert(pos, T());
+  }
   iterator insert(iterator pos, const T& value) {
     MoveNToEnd(pos, 1);
     *pos = value;
