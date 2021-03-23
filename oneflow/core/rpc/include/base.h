@@ -110,9 +110,9 @@ class CtrlClient {
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
 #define OF_ENV_BARRIER() Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR)
-#define OF_SESSION_BARRIER()                        \
-  Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR, \
-                                     Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())
+#define OF_SESSION_BARRIER()          \
+  Global<CtrlClient>::Get()->Barrier( \
+      FILE_LINE_STR, Global<ResourceDesc, ForSession>::Get()->process_ranks().size())
 
 static void OfCallOnce(const std::string& name, std::function<void()> f) {
   TryLockResult lock_ret = Global<CtrlClient>::Get()->TryLock(name);

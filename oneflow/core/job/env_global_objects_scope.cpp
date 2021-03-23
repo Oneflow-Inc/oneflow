@@ -111,8 +111,10 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   CHECK_JUST(Global<RpcManager>::Get()->CreateServer());
   CHECK_JUST(Global<RpcManager>::Get()->Bootstrap());
   CHECK_JUST(Global<RpcManager>::Get()->CreateClient());
-  Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
-  Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));
+  Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto),
+                                    GlobalProcessCtx::NumOfProcessPerNode());
+  Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto),
+                                        GlobalProcessCtx::NumOfProcessPerNode());
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
   Global<EagerJobBuildAndInferCtxMgr>::New();
