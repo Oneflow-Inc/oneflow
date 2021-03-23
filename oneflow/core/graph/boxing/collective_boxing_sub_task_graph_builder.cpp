@@ -117,7 +117,7 @@ class NcclCollectiveBoxingAllReduceSubTskGphBuilder final : public SubTskGphBuil
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, in_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllReduce, -1);
-        Connect<TaskNode>(in_node, ctx->task_graph()->NewEdge(), collective_node);
+        ctx->task_graph()->ConnectWithLbi(in_node, collective_node, lbi);
         sorted_out_tasks->push_back(collective_node);
       }
       return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingAllReduceSubTskGphBuilder", ""));
@@ -154,7 +154,7 @@ class NcclCollectiveBoxingReduceScatterSubTskGphBuilder final : public SubTskGph
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, in_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeReduceScatter, -1);
-        Connect<TaskNode>(in_node, ctx->task_graph()->NewEdge(), collective_node);
+        ctx->task_graph()->ConnectWithLbi(in_node, collective_node, lbi);
         sorted_out_tasks->push_back(collective_node);
       }
       return TRY(
@@ -194,7 +194,7 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, out_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllGather, -1);
-        Connect<TaskNode>(in_node_proxy, ctx->task_graph()->NewEdge(), collective_node);
+        ctx->task_graph()->ConnectWithLbi(in_node_proxy, collective_node, lbi);
         sorted_out_tasks->push_back(collective_node);
       }
       return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingAllGatherSubTskGphBuilder", ""));
@@ -232,7 +232,7 @@ class NcclCollectiveBoxingReduceSubTskGphBuilder final : public SubTskGphBuilder
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, in_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeReduce, root_parallel_id);
-        Connect<TaskNode>(in_node, ctx->task_graph()->NewEdge(), collective_node);
+        ctx->task_graph()->ConnectWithLbi(in_node, collective_node, lbi);
         if (i == root_parallel_id) {
           sorted_out_tasks->push_back(collective_node);
         } else {
@@ -293,7 +293,7 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, out_parallel_desc, out_id, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAllGather, -1);
-        Connect<TaskNode>(slice_node_proxy, ctx->task_graph()->NewEdge(), collective_node);
+        ctx->task_graph()->ConnectWithLbi(slice_node_proxy, collective_node, lbi);
         sorted_out_tasks->push_back(collective_node);
       }
       return TRY(BuildSubTskGphBuilderStatus(
@@ -347,7 +347,7 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
         NcclInitCollectiveNode(collective_node, out_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeBroadcast, root_parallel_id);
         if (i == root_parallel_id) {
-          Connect<TaskNode>(gpu_in_node, ctx->task_graph()->NewEdge(), collective_node);
+          ctx->task_graph()->ConnectWithLbi(gpu_in_node, collective_node, lbi);
         } else {
           gpu_in_node->BuildCtrlRegstDesc(collective_node);
           Connect<TaskNode>(gpu_in_node, ctx->task_graph()->NewEdge(), collective_node);
@@ -402,18 +402,18 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
             ctx->task_graph()->NewNode<CollectiveBoxingPackTaskNode>();
         pack_node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(), in_sbp_parallel,
                         out_sbp_parallel, in_parallel_desc.parallel_num());
-        Connect<TaskNode>(in_node, ctx->task_graph()->NewEdge(), pack_node);
+        ctx->task_graph()->ConnectWithLbi(in_node, pack_node, lbi);
 
         auto* collective_node = ctx->task_graph()->NewNode<CollectiveBoxingGenericTaskNode>();
         NcclInitCollectiveNode(collective_node, out_parallel_desc, i, op_name, lbi,
                                logical_blob_desc, OpType::kOpTypeAll2All, -1);
-        Connect<TaskNode>(pack_node, ctx->task_graph()->NewEdge(), collective_node);
+        ctx->task_graph()->ConnectWithLbi(pack_node, collective_node, lbi);
 
         CollectiveBoxingUnpackTaskNode* unpack_node =
             ctx->task_graph()->NewNode<CollectiveBoxingUnpackTaskNode>();
         unpack_node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(), in_sbp_parallel,
                           out_sbp_parallel, in_parallel_desc.parallel_num());
-        Connect<TaskNode>(collective_node, ctx->task_graph()->NewEdge(), unpack_node);
+        ctx->task_graph()->ConnectWithLbi(collective_node, unpack_node, lbi);
         sorted_out_tasks->push_back(unpack_node);
       }
       return TRY(BuildSubTskGphBuilderStatus("NcclCollectiveBoxingAll2AllSubTskGphBuilder", ""));

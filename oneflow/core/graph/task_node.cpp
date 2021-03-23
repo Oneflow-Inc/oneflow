@@ -359,9 +359,7 @@ void TaskNode::LockRegsts() {
     regst->Lock();
 
     // NOTE(chengcheng): CHECK 1 regst 1 blob.
-    if (regst->regst_desc_type().has_data_regst_desc()) {
-      CHECK_LE(regst->regst_desc_type().data_regst_desc().lbi2blob_desc_size(), 1);
-    }
+    if (regst->regst_desc_type().has_data_regst_desc()) { CHECK_LE(regst->NumOfLbi(), 1); }
   }
 }
 
@@ -403,6 +401,30 @@ std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
 void TaskEdge::AddRegst(const std::string& name_in_producer,
                         const std::shared_ptr<RegstDesc>& regst) {
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
+}
+
+void TaskEdge::CheckRegstLbiValid() const {
+  HashMap<LogicalBlobId, std::shared_ptr<RegstDesc>> lbi2data_regst;
+  for (auto& pair : name_in_producer2regst_) {
+    std::shared_ptr<RegstDesc> regst = pair.second;
+    if (regst->regst_desc_type().has_data_regst_desc()) {
+      // NOTE(chengcheng): regst_desc_type is Set, BUT regst_desc_type.data_regst_desc is UNSET!
+      //  So you can ONLY use NumOfLbi and ForEachLbi interface.
+      CHECK_EQ(regst->NumOfLbi(), 1);
+      regst->ForEachLbi(
+          [&](const LogicalBlobId& lbi) { CHECK(lbi2data_regst.emplace(lbi, regst).second); });
+    }
+  }
+
+  CHECK_EQ(lbi2data_regst.size(), lbis_.size())
+      << " \n\n TaskEdge lbi and regst NOT match."
+      << " TaskEdge: edge_id = " << edge_id() << " From: [" << src_node()->VisualStr() << "] To: ["
+      << dst_node()->VisualStr() << "]\n";
+  for (auto& lbi : lbis_) {
+    CHECK(lbi2data_regst.find(lbi) != lbi2data_regst.end())
+        << " \n\n Cannot find lbi: " << lbi.DebugString() << " in TaskEdge From: ["
+        << src_node()->VisualStr() << "] To: [" << dst_node()->VisualStr() << "]\n\n";
+  }
 }
 
 RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,

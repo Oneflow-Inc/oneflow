@@ -428,6 +428,18 @@ TaskGraph::TaskGraph() {
 
 TaskGraph::~TaskGraph() = default;
 
+TaskEdge* TaskGraph::NewTaskEdgeWithLbi(const LogicalBlobId& lbi) {
+  TaskEdge* edge = NewEdge();
+  edge->AddLbi(lbi);
+  return edge;
+}
+
+TaskEdge* TaskGraph::NewTaskEdgeWithLbis(const std::vector<LogicalBlobId>& lbis) {
+  TaskEdge* edge = NewEdge();
+  edge->AddLbis(lbis);
+  return edge;
+}
+
 TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
                                   int64_t dst_machine_id, int64_t dst_mem_zone_id) {
   int64_t src_mem_zone_id = src_node->MemZoneId121();
@@ -445,7 +457,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
       CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
       copy_task->Init(CopyHdOpConf::H2D, proxy_on_dst_host->machine_id(),
                       Global<IDMgr>::Get()->GetGpuPhyIdFromMemZoneId(dst_mem_zone_id), lbi);
-      Connect<TaskNode>(proxy_on_dst_host, NewEdge(), copy_task);
+      Connect<TaskNode>(proxy_on_dst_host, NewTaskEdgeWithLbi(lbi), copy_task);
       node2proxies_[src_node][key] = copy_task;
       return copy_task;
     } else if (Global<IDMgr>::Get()->IsCpuMemZone(dst_mem_zone_id)) {
@@ -454,7 +466,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
           CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
           copy_task->Init(CopyHdOpConf::D2H, src_node->machine_id(),
                           Global<IDMgr>::Get()->GetGpuPhyIdFromMemZoneId(src_mem_zone_id), lbi);
-          Connect<TaskNode>(src_node, NewEdge(), copy_task);
+          Connect<TaskNode>(src_node, NewTaskEdgeWithLbi(lbi), copy_task);
           node2proxies_[src_node][key] = copy_task;
           return copy_task;
         } else {
@@ -465,7 +477,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
                                                    Global<IDMgr>::Get()->CpuMemZoneId());
         CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
         copy_comm_net_task->Init(dst_machine_id, lbi);
-        Connect<TaskNode>(proxy_on_src_host, NewEdge(), copy_comm_net_task);
+        Connect<TaskNode>(proxy_on_src_host, NewTaskEdgeWithLbi(lbi), copy_comm_net_task);
         node2proxies_[src_node][key] = copy_comm_net_task;
         return copy_comm_net_task;
       }
@@ -493,19 +505,6 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
     UNIMPLEMENTED();
   }
   return GetProxyNode(src_node, lbi, dst_machine_id, dst_mem_zone_id);
-}
-
-Maybe<void> TaskGraph::ConnectDstSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
-                                                 const std::vector<CompTaskNode*>& dst_task_nodes) {
-  std::function<Maybe<CompTaskNode*>(int64_t mchn_id, int64_t thrd_id)> TaskNode4MachineId7ThrdId;
-  JUST(MakeGetterTaskNode4MachineId7ThrdId(dst_task_nodes, &TaskNode4MachineId7ThrdId));
-  for (CompTaskNode* src_task_node : src_task_nodes) {
-    CompTaskNode* dst_task_node =
-        JUST(TaskNode4MachineId7ThrdId(src_task_node->machine_id(), src_task_node->thrd_id()));
-    TaskEdge* edge = NewEdge();
-    Connect<TaskNode>(src_task_node, edge, dst_task_node);
-  }
-  return Maybe<void>::Ok();
 }
 
 void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
@@ -719,7 +718,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
                         dst_parallel_distribution, lbi, blob_desc);
     CHECK_EQ(out_nodes.size(), sorted_dst_comp_tasks.size());
     FOR_RANGE(size_t, i, 0, out_nodes.size()) {
-      TryConnectTaskEdgeNonRepeated(out_nodes.at(i), sorted_dst_comp_tasks.at(i));
+      ConnectWithLbi(out_nodes.at(i), sorted_dst_comp_tasks.at(i), lbi);
     }
     if (!sorted_ctrl_tasks.empty()) {
       CHECK_EQ(sorted_ctrl_tasks.size(), sorted_dst_comp_tasks.size());
@@ -786,25 +785,26 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect) {
   }
 }
 
-Maybe<void> TaskGraph::ConnectSrcSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
-                                                 const std::vector<CompTaskNode*>& dst_task_nodes) {
-  std::function<Maybe<CompTaskNode*>(int64_t mchn_id, int64_t thrd_id)> TaskNode4MachineId7ThrdId;
-  JUST(MakeGetterTaskNode4MachineId7ThrdId(src_task_nodes, &TaskNode4MachineId7ThrdId));
-  for (CompTaskNode* dst_task_node : dst_task_nodes) {
-    CompTaskNode* src_task_node =
-        JUST(TaskNode4MachineId7ThrdId(dst_task_node->machine_id(), dst_task_node->thrd_id()));
-    TaskEdge* edge = NewEdge();
-    Connect<TaskNode>(src_task_node, edge, dst_task_node);
-  }
-  return Maybe<void>::Ok();
-}
-
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySrcSubsetConnect) {
-  CHECK_JUST(ConnectSrcSubsetTickEdges(sorted_src_comp_tasks, sorted_dst_comp_tasks));
+  std::function<Maybe<CompTaskNode*>(int64_t mchn_id, int64_t thrd_id)> TaskNode4MachineId7ThrdId;
+  CHECK_JUST(
+      MakeGetterTaskNode4MachineId7ThrdId(sorted_src_comp_tasks, &TaskNode4MachineId7ThrdId));
+  for (CompTaskNode* dst_task_node : sorted_dst_comp_tasks) {
+    CompTaskNode* src_task_node = CHECK_JUST(
+        TaskNode4MachineId7ThrdId(dst_task_node->machine_id(), dst_task_node->thrd_id()));
+    Connect<TaskNode>(src_task_node, NewTaskEdgeWithLbis(op_edge->lbis()), dst_task_node);
+  }
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByDstSubsetConnect) {
-  CHECK_JUST(ConnectDstSubsetTickEdges(sorted_src_comp_tasks, sorted_dst_comp_tasks));
+  std::function<Maybe<CompTaskNode*>(int64_t mchn_id, int64_t thrd_id)> TaskNode4MachineId7ThrdId;
+  CHECK_JUST(
+      MakeGetterTaskNode4MachineId7ThrdId(sorted_dst_comp_tasks, &TaskNode4MachineId7ThrdId));
+  for (CompTaskNode* src_task_node : sorted_src_comp_tasks) {
+    CompTaskNode* dst_task_node = CHECK_JUST(
+        TaskNode4MachineId7ThrdId(src_task_node->machine_id(), src_task_node->thrd_id()));
+    Connect<TaskNode>(src_task_node, NewTaskEdgeWithLbis(op_edge->lbis()), dst_task_node);
+  }
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D) {
@@ -812,24 +812,30 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D) {
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     CompTaskNode* src = sorted_src_comp_tasks.at(i);
     CompTaskNode* dst = sorted_dst_comp_tasks.at(i);
-    Connect<TaskNode>(src, NewEdge(), dst);
+    for (const LogicalBlobId& lbi : op_edge->lbis()) { BuildTaskPath(src, dst, lbi); }
   }
 }
 
-void TaskGraph::TryConnectTaskEdgeNonRepeated(TaskNode* src_node, TaskNode* dst_node) {
+void TaskGraph::ConnectWithLbi(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi) {
   if (src_node == dst_node) { return; }
   for (TaskEdge* out_edge : src_node->out_edges()) {
     TaskNode* out_node = out_edge->dst_node();
-    if (out_node == dst_node) { return; }
+    if (out_node == dst_node) {
+      out_edge->AddLbi(lbi);
+      return;
+    }
   }
-  Connect<TaskNode>(src_node, NewEdge(), dst_node);
+
+  TaskEdge* connected_edge = NewEdge();
+  connected_edge->AddLbi(lbi);
+  Connect<TaskNode>(src_node, connected_edge, dst_node);
 }
 
 void TaskGraph::BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi) {
   int64_t dst_machine_id = dst_node->machine_id();
   int64_t dst_mem_zone_id = dst_node->MemZoneId121();
   TaskNode* proxy_node = GetProxyNode(src_node, lbi, dst_machine_id, dst_mem_zone_id);
-  TryConnectTaskEdgeNonRepeated(proxy_node, dst_node);
+  ConnectWithLbi(proxy_node, dst_node, lbi);
 }
 
 }  // namespace oneflow

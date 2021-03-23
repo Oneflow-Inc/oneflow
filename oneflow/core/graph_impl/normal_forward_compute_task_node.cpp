@@ -72,35 +72,10 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     ProduceOutRegstByNameAndBlockNum(out_regst_name, mem_block_num);
   }
   ForEachOutDataEdge([&](TaskEdge* edge) {
-    TaskNode* node = edge->dst_node();
-
-    // compute task node
-    CompTaskNode* comp_dst_node = dynamic_cast<CompTaskNode*>(node);
-    if (comp_dst_node) {
-      std::shared_ptr<const Operator> dst_op = comp_dst_node->op();
-      bool is_found = false;
-      for (const std::string& ibn : dst_op->input_bns()) {
-        const LogicalBlobId& dst_in_lbi = dst_op->BnInOp2Lbi(ibn);
-        if (lbi2out_regst_name.find(dst_in_lbi) != lbi2out_regst_name.end()) {
-          is_found = true;
-          BindEdgeWithProducedRegst(edge, lbi2out_regst_name.at(dst_in_lbi));
-        }
-      }
-      CHECK(is_found) << "Cannot find comsumed blob in dst op: " << dst_op->op_name();
-      return;
-    }
-
-    // tranport task node
-    TransportTaskNode* trans_dst_node = dynamic_cast<TransportTaskNode*>(node);
-    if (trans_dst_node) {
-      const LogicalBlobId& lbi = trans_dst_node->lbi();
+    for (const LogicalBlobId& lbi : edge->GetLbis()) {
       CHECK(lbi2out_regst_name.find(lbi) != lbi2out_regst_name.end());
       BindEdgeWithProducedRegst(edge, lbi2out_regst_name.at(lbi));
-      return;
     }
-
-    UNIMPLEMENTED() << "Cannot find bind regst between: [" << sole_op->op_name() << "] -> "
-                    << node->VisualStr();
   });
   ProduceRegst("tmp", true);
 }
@@ -126,26 +101,11 @@ void NormalForwardCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
-  HashMap<LogicalBlobId, std::pair<ExecNode*, std::string>> lbi2producer;
   ExecNode* cur_node = mut_exec_gph().NewNode();
   cur_node->mut_op() = op();
-  for (const std::string& obn : op()->output_bns()) {
-    const LogicalBlobId& lbi = op()->BnInOp2Lbi(obn);
-    CHECK(lbi2producer.insert({lbi, {cur_node, obn}}).second);
-  }
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   for (const std::string& ibn : cur_node->op()->input_bns()) {
-    const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(ibn);
-    auto producer_it = lbi2producer.find(lbi);
-    if (producer_it != lbi2producer.end()) {
-      ExecEdge* edge = mut_exec_gph().NewEdge();
-      edge->set_lbi(lbi);
-      edge->mut_src_bn() = producer_it->second.second;
-      edge->mut_dst_bn() = ibn;
-      Connect(producer_it->second.first, edge, cur_node);
-    } else {
-      cur_node->BindBnWithOneOfTheRegsts(ibn, in_regsts);
-    }
+    cur_node->BindBnWithOneOfTheRegsts(ibn, in_regsts);
   }
 }
 

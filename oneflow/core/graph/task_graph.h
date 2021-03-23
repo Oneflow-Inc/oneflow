@@ -57,6 +57,11 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
                          const ParallelDesc& dst_parallel_desc, int64_t dst_parallel_id);
 
+  TaskEdge* NewTaskEdgeWithLbi(const LogicalBlobId& lbi);
+  TaskEdge* NewTaskEdgeWithLbis(const std::vector<LogicalBlobId>& lbis);
+
+  void ConnectWithLbi(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi);
+
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
@@ -69,14 +74,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D);
 
  private:
-  void TryConnectTaskEdgeNonRepeated(TaskNode* src_node, TaskNode* dst_node);
-
   void BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi);
 
-  Maybe<void> ConnectSrcSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
-                                        const std::vector<CompTaskNode*>& dst_task_nodes);
-  Maybe<void> ConnectDstSubsetTickEdges(const std::vector<CompTaskNode*>& src_task_nodes,
-                                        const std::vector<CompTaskNode*>& dst_task_nodes);
   void ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
                         const std::vector<CompTaskNode*>& dst_task_nodes, int64_t ctrl_regst_num);
 

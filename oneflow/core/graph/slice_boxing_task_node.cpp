@@ -94,6 +94,7 @@ void SliceBoxingTaskNode::SetInDataEdgeSlice(const TaskEdge* edge, const TensorS
 
 void SliceBoxingTaskNode::ConnectToSrcNodeWithSlice(TaskNode* src, TaskEdge* edge,
                                                     const TensorSliceView& slice) {
+  edge->AddLbi(lbi());
   Connect<TaskNode>(src, edge, this);
   SetInDataEdgeSlice(edge, slice);
 }
