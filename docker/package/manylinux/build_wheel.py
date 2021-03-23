@@ -65,7 +65,10 @@ def build_img(
 def common_cmake_args(cache_dir=None, extra_oneflow_cmake_args=None):
     assert cache_dir
     ret = ""
-    if not extra_oneflow_cmake_args or "-DCMAKE_BUILD_TYPE" not in extra_oneflow_cmake_args:
+    if (
+        not extra_oneflow_cmake_args
+        or "-DCMAKE_BUILD_TYPE" not in extra_oneflow_cmake_args
+    ):
         ret += " -DCMAKE_BUILD_TYPE=Release"
     if not extra_oneflow_cmake_args or "-DBUILD_RDMA" not in extra_oneflow_cmake_args:
         ret += " -DBUILD_RDMA=ON"
@@ -147,7 +150,9 @@ def build_third_party(
     cmake_cmd = " ".join(
         [
             "cmake",
-            common_cmake_args(cache_dir=cache_dir, extra_oneflow_cmake_args=extra_oneflow_cmake_args),
+            common_cmake_args(
+                cache_dir=cache_dir, extra_oneflow_cmake_args=extra_oneflow_cmake_args
+            ),
             "-DTHIRD_PARTY=ON -DONEFLOW=OFF",
             extra_oneflow_cmake_args,
             oneflow_src_dir,
@@ -202,7 +207,9 @@ def build_oneflow(
     cmake_cmd = " ".join(
         [
             "cmake",
-            common_cmake_args(cache_dir=cache_dir, extra_oneflow_cmake_args=extra_oneflow_cmake_args),
+            common_cmake_args(
+                cache_dir=cache_dir, extra_oneflow_cmake_args=extra_oneflow_cmake_args
+            ),
             "-DTHIRD_PARTY=OFF -DONEFLOW=ON",
             extra_oneflow_cmake_args,
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
