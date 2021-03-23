@@ -154,10 +154,10 @@ class FixedTensorDef(ArgBlobDef):
             and parallel_symbol.parallel_num == 1
         ):
             device_tag = "gpu"
-            device_ids = "0:%s" % (parallel_symbol.machine_id2device_id_list[0][0])
+            device_ids = "@0:%s" % (parallel_symbol.machine_id2device_id_list[0][0])
         else:
             device_tag = "cpu"
-            device_ids = "0:0"
+            device_ids = "@0:0"
         with oneflow.scope.placement(device_tag, device_ids):
             return compile_context.CurJobAddConsistentOp(op_conf)
 
