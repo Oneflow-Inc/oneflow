@@ -21,6 +21,7 @@ from typing import Tuple
 import time
 
 
+@unittest.skipIf(flow.sysconfig.has_rpc_backend_grpc() == False, "lacks grpc")
 @flow.unittest.skip_unless_1n4d()
 class TestMultiProcess(flow.unittest.TestCase):
     def test_multi_process(test_case):
