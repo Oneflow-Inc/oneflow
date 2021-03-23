@@ -42,6 +42,7 @@ FLAT_MSG_BEGIN(Operand);
   // init all_mirrored_object
   OF_PUBLIC void __Init__(const ObjectId& logical_object_id, const AllMirroredObject&);
   OF_PUBLIC void __Init__(const OperandProto& proto);
+  OF_PUBLIC void ToProto(OperandProto* proto) const;
   OF_PUBLIC int64_t GetGlobalDeviceId(int64_t default_global_device_id) const;
 
   // fields

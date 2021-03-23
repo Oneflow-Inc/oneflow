@@ -123,7 +123,7 @@ std::shared_ptr<vm::cfg::InstructionOperandProto> Mut2Operand(int64_t val) {
 }
 
 Maybe<int64_t> NewSymbolId(vm::IdGenerator* id_generator,
-                           vm::cfg::InstructionListProto* instruction_list) {
+                           vm::InstructionMsgList* instruction_list) {
   int64_t symbol_id = JUST(id_generator->NewSymbolId());
   auto* instruction = instruction_list->mutable_instruction()->Add();
   instruction->set_instr_type_name("NewSymbol");
@@ -227,12 +227,12 @@ Maybe<compatible_py::BlobObject> MakeNewBlobObjectLike(
 Maybe<void> _Run(
     const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build,
     const std::shared_ptr<vm::IdGenerator>& id_generator,
-    const std::function<Maybe<void>(const std::shared_ptr<vm::cfg::InstructionListProto>&,
+    const std::function<Maybe<void>(const std::shared_ptr<vm::InstructionMsgList>&,
                                     const std::shared_ptr<eager::cfg::EagerSymbolList>&)>&
         RunInstruction,
     const std::function<Maybe<void>(compatible_py::Object*)>& ReleaseObject) {
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
-  std::shared_ptr<vm::cfg::InstructionListProto> instruction_list = sess->instruction_list();
+  std::shared_ptr<vm::InstructionMsgList> instruction_list = sess->instruction_list();
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list = sess->eager_symbol_list();
   Build(std::make_shared<InstructionsBuilder>(id_generator, instruction_list, eager_symbol_list,
                                               ReleaseObject));
@@ -260,7 +260,7 @@ namespace detail {
 
 template<typename T>
 Maybe<int64_t> CreateSymbolIdHelper<T>::Call(vm::IdGenerator* id_generator,
-                                             vm::cfg::InstructionListProto* instruction_list,
+                                             vm::InstructionMsgList* instruction_list,
                                              eager::cfg::EagerSymbolList* eager_symbol_list,
                                              const T& conf) {
   int64_t symbol_id = JUST(NewSymbolId(id_generator, instruction_list));
@@ -282,7 +282,7 @@ template struct CreateSymbolIdHelper<cfg::ScopeProto>;
 
 template<>
 Maybe<int64_t> CreateSymbolIdHelper<cfg::ParallelConf>::Call(
-    vm::IdGenerator* id_generator, vm::cfg::InstructionListProto* instruction_list,
+    vm::IdGenerator* id_generator, vm::InstructionMsgList* instruction_list,
     eager::cfg::EagerSymbolList* eager_symbol_list, const cfg::ParallelConf& conf) {
   int64_t symbol_id = JUST(id_generator->NewSymbolId());
   {
@@ -305,7 +305,7 @@ Maybe<int64_t> InstructionsBuilder::NewSymbolId() {
   vm::cfg::InstructionProto instruction;
   instruction.set_instr_type_name("NewSymbol");
   instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(symbol_id));
-  instruction_list_->mutable_instruction()->Add()->CopyFrom(instruction);
+  instruction_list_->PushBack(ObjectMsgPtr<InstructionMsg>::New(instruction).Mutable());
   return symbol_id;
 }
 
@@ -1571,7 +1571,7 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
 Maybe<void> LogicalRun(
     const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
   const auto& RunInstruction =
-      [](const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
+      [](const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
          const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) -> Maybe<void> {
     JUST(Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(instruction_list,
                                                                    eager_symbol_list));
@@ -1585,7 +1585,7 @@ Maybe<void> LogicalRun(
 Maybe<void> PhysicalRun(
     const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
   const auto& RunInstruction =
-      [](const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
+      [](const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
          const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) -> Maybe<void> {
     JUST(Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(instruction_list,
                                                                     eager_symbol_list));

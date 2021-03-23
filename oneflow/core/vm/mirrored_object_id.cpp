@@ -47,6 +47,19 @@ void Operand::__Init__(const OperandProto& proto) {
   }
 }
 
+void Operand::ToProto(OperandProto* proto) const {
+  proto->set_logical_object_id(logical_object_id());
+  if (has_sole_mirrored_object()) {
+    proto->mutable_sole_mirrored_object();
+  } else if (has_current_global_device_id()) {
+    proto->mutable_current_global_device_id();
+  } else if (has_all_mirrored_object()) {
+    proto->mutable_all_mirrored_object();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 int64_t Operand::GetGlobalDeviceId(int64_t current_global_device_id) const {
   if (has_sole_mirrored_object()) { return 0; }
   CHECK(has_current_global_device_id());

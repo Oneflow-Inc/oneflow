@@ -62,6 +62,7 @@ class InstructionOperandProto;
 FLAT_MSG_BEGIN(InstructionOperand);
   // methods
   OF_PUBLIC void __Init__(const InstructionOperandProto& proto);
+  OF_PUBLIC void ToProto(InstructionOperandProto* proto) const;
   // fields
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
     FLAT_MSG_ONEOF_FIELD(ConstOperand, const_operand)

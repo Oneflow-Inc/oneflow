@@ -46,9 +46,15 @@ InstructionOperand* InstructionMsg::add_instr_operand() {
   return operand_vec->back().Mutable();
 }
 
+void InstructionMsg::__Init__() {
+  *mutable_instr_type_name() = "";
+  mutable_operand_list();
+}
+
 void InstructionMsg::__Init__(const std::string& instr_type_name) {
   __Init__();
   mutable_instr_type_id()->CopyFrom(LookupInstrTypeId(instr_type_name));
+  *mutable_instr_type_name() = instr_type_name;
 }
 
 void InstructionMsg::__Init__(const InstructionProto& proto) {
@@ -65,10 +71,22 @@ void InstructionMsg::__Init__(const InstructionProto& proto) {
 void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
   __Init__();
   mutable_instr_type_id()->CopyFrom(instr_msg.instr_type_id());
+  *mutable_instr_type_name() = instr_msg.instr_type_name();
   if (instr_msg.has_parallel_desc_symbol_id()) {
     set_parallel_desc_symbol_id(instr_msg.parallel_desc_symbol_id());
   }
   reset_operand_list(instr_msg.operand_list());
+}
+
+void InstructionMsg::ToProto(InstructionProto* proto) const {
+  proto->set_instr_type_name(instr_type_name());
+  if (has_parallel_desc_symbol_id()) {
+    proto->set_parallel_desc_symbol_id(parallel_desc_symbol_id());
+  }
+  proto->mutable_operand()->Clear();
+  for (const auto& operand : operand_list().operand()) {
+    operand->ToProto(proto->mutable_operand()->Add());
+  }
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_parallel_desc(int64_t symbol_id) {

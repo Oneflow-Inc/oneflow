@@ -316,7 +316,6 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
                                                      release_object);
       }))
       .def("id_generator", &InstructionsBuilder::id_generator)
-      .def("instruction_list", &InstructionsBuilder::instruction_list)
       .def("eager_symbol_list", &InstructionsBuilder::eager_symbol_list)
       .def("object_releaser", &InstructionsBuilder::object_releaser)
       .def("PackPhysicalBlobsToLogicalBlob", &PackPhysicalBlobsToLogicalBlob)

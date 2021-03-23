@@ -46,5 +46,31 @@ void InstructionOperand::__Init__(const InstructionOperandProto& proto) {
   }
 }
 
+void InstructionOperand::ToProto(InstructionOperandProto* proto) const {
+  if (has_const_operand()) {
+    const_operand().operand().ToProto(proto->mutable_const_operand());
+  } else if (has_mut_operand()) {
+    mut_operand().operand().ToProto(proto->mutable_mut_operand());
+  } else if (has_mut2_operand()) {
+    mut2_operand().operand().ToProto(proto->mutable_mut2_operand());
+  } else if (has_symbol_operand()) {
+    symbol_operand().operand().ToProto(proto->mutable_symbol_operand());
+  } else if (has_init_symbol_operand()) {
+    init_symbol_operand().operand().ToProto(proto->mutable_init_symbol_operand());
+  } else if (has_separator()) {
+    proto->mutable_separator();
+  } else if (has_double_operand()) {
+    proto->set_double_operand(double_operand());
+  } else if (has_int64_operand()) {
+    proto->set_int64_operand(int64_operand());
+  } else if (has_uint64_operand()) {
+    proto->set_uint64_operand(uint64_operand());
+  } else if (has_bool_operand()) {
+    proto->set_bool_operand(bool_operand());
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 }  // namespace vm
 }  // namespace oneflow
