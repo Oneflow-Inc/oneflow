@@ -27,19 +27,19 @@ namespace one {
 
 namespace {
 
-std::shared_ptr<OpExprInterpreter> BuildInterpreter(const bool& eager_mode) {
-  std::shared_ptr<NormalInterpreter> normal_interp;
+std::shared_ptr<AutogradInterpreter> BuildInterpreter(const bool& eager_mode) {
+  std::shared_ptr<OpExprInterpreter> internal;
   if (eager_mode) {
-    normal_interp = std::make_shared<EagerInterpreter>();
+    internal = std::make_shared<EagerInterpreter>();
   } else {
-    normal_interp = std::make_shared<LazyInterpreter>();
+    internal = std::make_shared<LazyInterpreter>();
   }
-  return std::make_shared<AutogradInterpreter>(normal_interp);
+  return std::make_shared<AutogradInterpreter>(internal);
 }
 
 }  // namespace
 
-/*static*/ Maybe<OpExprInterpreter> OpInterpUtil::GetInterpreter() {
+/*static*/ Maybe<AutogradInterpreter> OpInterpUtil::GetInterpreter() {
   static const auto& g_lazy_interpreter = BuildInterpreter(false);
   static const auto& g_eager_interpreter = BuildInterpreter(true);
   if (EagerExecutionEnabled()) { return g_eager_interpreter; }
