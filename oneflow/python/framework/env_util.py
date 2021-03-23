@@ -172,9 +172,9 @@ def rpc_backend(val: str):
     assert type(val) is str
     val = val.lower()
     if val == "grpc":
-        assert(oneflow_api.flags.has_rpc_backend_grpc())
+        assert oneflow_api.flags.has_rpc_backend_grpc()
     if val == "local":
-        assert(oneflow_api.flags.has_rpc_backend_local())
+        assert oneflow_api.flags.has_rpc_backend_local()
     default_env_proto.rpc_backend = val.lower()
 
 
@@ -365,8 +365,10 @@ def _DefaultEnvProto():
         env_proto.rpc_backend = "grpc"
     elif oneflow_api.flags.has_rpc_backend_local():
         env_proto.rpc_backend = "local"
-    else
-        raise ValueError("at least one of rpc backend: 'grpc, local' should be available")
+    else:
+        raise ValueError(
+            "at least one of rpc backend: 'grpc, local' should be available"
+        )
     return env_proto
 
 
