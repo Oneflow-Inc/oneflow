@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_SLICE_BOXING_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_SLICE_BOXING_TASK_NODE_H_
 
-#include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/graph/transport_task_node.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 
 namespace oneflow {
@@ -27,7 +27,7 @@ enum SliceBoxingTaskMode {
   kSliceBoxingTaskModeAdd,
 };
 
-class SliceBoxingTaskNode final : public TaskNode {
+class SliceBoxingTaskNode final : public TransportTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SliceBoxingTaskNode);
   SliceBoxingTaskNode() = default;
@@ -49,10 +49,10 @@ class SliceBoxingTaskNode final : public TaskNode {
   void InferProducedDataRegstTimeShape() override;
   OperatorConf GetBoxingOpConf();
   void InitProducedRegstMemCase(MemoryCase*) override;
+  int64_t MemZoneId121() const override { return mem_zone_id_; }
 
   HashMap<const TaskEdge*, TensorSliceView> in_data_edge2slice_;
   std::vector<const TaskEdge*> ordered_in_data_edges_;
-  LogicalBlobId lbi_;
   TensorSliceView out_slice_;
   Shape out_shape_;
   SliceBoxingTaskMode mode_ = kSliceBoxingTaskModeInvalid;
