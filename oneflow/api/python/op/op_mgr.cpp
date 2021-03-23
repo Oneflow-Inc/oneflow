@@ -24,7 +24,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("IsOpTypeCaseCpuSupportOnly", &IsOpTypeCaseCpuSupportOnly);
   m.def("IsOpTypeNameCpuSupportOnly", &IsOpTypeNameCpuSupportOnly);
   m.def("GetUserOpAttrType", [](const std::string& op_type_name, const std::string& attr_name) {
-    return static_cast<cfg::AttrType>(GetUserOpAttrType(op_type_name, attr_name));
+    return static_cast<oneflow::cfg::AttrType>(GetUserOpAttrType(op_type_name, attr_name));
   });
 
   m.def("InferOpConf", &InferOpConf);
