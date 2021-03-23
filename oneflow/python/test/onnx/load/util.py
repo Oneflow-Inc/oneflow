@@ -127,7 +127,7 @@ def load_paddle_module_and_check(
         input_size = (2, 4, 3, 5)
     pd_module = pd_module_class()
 
-    paddle.set_device('gpu')
+    paddle.set_device("gpu")
     model_weight_save_dir = "/home/zhangxiaoyu/tmp"
 
     if train_flag == True:

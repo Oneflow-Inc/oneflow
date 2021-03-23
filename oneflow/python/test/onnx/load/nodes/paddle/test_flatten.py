@@ -13,26 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import os
-import numpy
-from absl import app
-from absl.testing import absltest
-import oneflow as flow
+import paddle
+import paddle.nn as nn
+import paddle.nn.functional as F
 
-flow.unittest.register_test_cases(
-    scope=globals(),
-    directory=os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), "models/pytorch"
-    ),
-    filter_by_num_nodes=lambda x: True,
-    base_class=absltest.TestCase,
-)
+from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
 
-def main(argv):
-    flow.env.init()
-    absltest.main()
+def test_flatten(test_case):
+    class Net(nn.Layer):
+        def forward(self, x):
+            flatten = nn.Flatten()
+            x = nn.flatten(x)
+            return x
 
-
-if __name__ == "__main__":
-    app.run(main)
+    load_paddle_module_and_check(test_case, Net)

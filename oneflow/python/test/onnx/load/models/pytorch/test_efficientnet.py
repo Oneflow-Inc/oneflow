@@ -23,8 +23,10 @@ import torch.nn.functional as F
 
 # https://github.com/kuangliu/pytorch-cifar/blob/master/models/efficientnet.py
 
+
 def swish(x):
     return x * x.sigmoid()
+
 
 def drop_connect(x, drop_ratio):
     keep_ratio = 1.0 - drop_ratio
