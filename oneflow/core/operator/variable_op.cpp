@@ -19,6 +19,29 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> ParseParallelDistributionFromConf(const VariableOpConf& conf,
+                                              const ParallelDesc& parallel_desc,
+                                              ParallelDistribution* parallel_distribution) {
+  const bool has_parallel_distribution_conf = (conf.parallel_distribution_size() != 0);
+  const int64_t num_axes = parallel_desc.hierarchy()->NumAxes();
+  if (has_parallel_distribution_conf) { CHECK_EQ(conf.parallel_distribution_size(), num_axes); }
+  FOR_RANGE(int64_t, i, 0, num_axes) {
+    if (has_parallel_distribution_conf) {
+      SbpParallel sbp_parallel;
+      CHECK_OR_RETURN(ParseSbpParallelFromString(conf.parallel_distribution(i), &sbp_parallel));
+      CHECK_OR_RETURN(sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel());
+      *parallel_distribution->add_sbp_parallel() = sbp_parallel;
+    } else {
+      parallel_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
   if (op_conf().variable_conf().has_tick()) { EnrollInputBn("tick", false); }
@@ -41,23 +64,14 @@ Maybe<void> VariableOp::InferOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();
+  const ParallelDesc& parallel_desc = *JUST(GetOpParallelDesc());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  out_blob_desc->mut_shape() = Shape(variable_conf.shape());
   CHECK_OR_RETURN(variable_conf.has_data_type());
   out_blob_desc->set_data_type(variable_conf.data_type());
-  if (parallel_ctx->parallel_num() == 1) { return Maybe<void>::Ok(); }
-  if (variable_conf.parallel_distribution_size() == 0) { return Maybe<void>::Ok(); }
-  const auto& parallel_desc = JUST(GetOpParallelDesc());
-  CHECK_EQ_OR_RETURN(variable_conf.parallel_distribution_size(),
-                     parallel_desc->hierarchy()->NumAxes());
   ParallelDistribution parallel_distribution;
-  for (const std::string& sbp_str : variable_conf.parallel_distribution()) {
-    SbpParallel sbp_parallel;
-    CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
-    *parallel_distribution.add_sbp_parallel() = sbp_parallel;
-  }
+  JUST(ParseParallelDistributionFromConf(variable_conf, parallel_desc, &parallel_distribution));
   out_blob_desc->mut_shape() = *JUST(GetPhysicalShape(
-      Shape(variable_conf.shape()), parallel_distribution, *parallel_desc, *parallel_ctx));
+      Shape(variable_conf.shape()), parallel_distribution, parallel_desc, *parallel_ctx));
   return Maybe<void>::Ok();
 }
 
@@ -102,23 +116,12 @@ Maybe<void> VariableOp::InferParallelDistributionSignature(
     const ParallelDistributionSignature& parallel_distribution_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-        ParallelDistributionInferHint4Ibn) {
+        ParallelDistributionInferHint4Ibn) const {
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   const VariableOpConf& conf = this->op_conf().variable_conf();
-  CHECK_OR_RETURN(conf.parallel_distribution_size() == 0
-                  || conf.parallel_distribution_size() == parallel_hierarchy->NumAxes());
   ParallelDistribution& out_parallel_distribution =
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["out"];
-  for (int64_t i = 0; i < parallel_hierarchy->NumAxes(); ++i) {
-    if (conf.parallel_distribution_size() != 0) {
-      SbpParallel sbp_parallel;
-      CHECK_OR_RETURN(ParseSbpParallelFromString(conf.parallel_distribution(i), &sbp_parallel));
-      CHECK_OR_RETURN(sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel());
-      *out_parallel_distribution.mutable_sbp_parallel()->Add() = sbp_parallel;
-    } else {
-      out_parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
-    }
-  }
+  JUST(ParseParallelDistributionFromConf(conf, parallel_desc, &out_parallel_distribution));
   if (conf.has_tick()) {
     ParallelDistribution& tick_parallel_distribution =
         (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["tick"];
