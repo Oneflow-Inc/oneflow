@@ -19,7 +19,9 @@ import os
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--start_worker", type=str, required=True)
+parser.add_argument(
+    "--start_worker", default=False, action="store_true", required=False
+)
 parser.add_argument("--env_proto", type=str, required=True)
 
 args = parser.parse_args()
@@ -38,7 +40,6 @@ def import_secondary_module(name, path):
 
 def import_oneflow_internal2():
     import oneflow
-    import os
     from os.path import dirname
     import imp
 
@@ -49,16 +50,14 @@ def import_oneflow_internal2():
     return import_secondary_module("oneflow_api", pathname)
 
 
-oneflow_api = import_oneflow_internal2()
-
-
 def StartWorker(env_proto):
+    oneflow_api = import_oneflow_internal2()
     oneflow_api.InitEnv(env_proto)
 
 
 def main():
     start_worker = args.start_worker
-    if start_worker == "1" or start_worker == "y" or start_worker == "yes":
+    if start_worker:
         env_proto = args.env_proto
         assert os.path.isfile(
             env_proto

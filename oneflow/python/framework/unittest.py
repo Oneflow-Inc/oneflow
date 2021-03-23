@@ -277,7 +277,7 @@ class TestCase(unittest.TestCase):
                     + ".proto"
                 )
                 oneflow_cmd = (
-                    "python3 -m oneflow --start_worker=1"
+                    "python3 -m oneflow --start_worker"
                     + " --env_proto="
                     + run_dir
                     + "/log_"
