@@ -68,6 +68,8 @@ using PbMd = google::protobuf::util::MessageDifferencer;
 // Prototxt <-> File
 bool TryParseProtoFromTextFile(const std::string& file_path, PbMessage* proto);
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto);
+bool TryParseProtoFromPbFile(const std::string& file_path, PbMessage* proto);
+void ParseProtoFromPbFile(const std::string& file_path, PbMessage* proto);
 void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path);
 std::string PbMessage2TxtString(const PbMessage& proto);
 void PbMessage2TxtString(const PbMessage& proto, std::string* str);
@@ -237,6 +239,18 @@ struct hash<oneflow::SbpParallel> {
       UNIMPLEMENTED();
     }
     return ret;
+  }
+};
+
+template<>
+struct hash<oneflow::ParallelDistribution> {
+  size_t operator()(const oneflow::ParallelDistribution& parallel_distribution) const {
+    const auto& sbp_hash = std::hash<oneflow::SbpParallel>();
+    size_t hash = 0;
+    for (int i = 0; i < parallel_distribution.sbp_parallel_size(); ++i) {
+      oneflow::HashCombine(&hash, sbp_hash(parallel_distribution.sbp_parallel(i)));
+    }
+    return hash;
   }
 };
 

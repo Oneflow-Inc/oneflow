@@ -28,7 +28,7 @@ from google.protobuf import text_format
 
 
 def BindUuidAndHandler(uuid, blob_watched, handler):
-    assert isinstance(blob_watched, remote_blob_util.ConsistentBlob)
+    assert isinstance(blob_watched, oneflow_api.ConsistentBlob)
     session_ctx.GetDefaultSession().uuid2watch_handler[uuid] = (blob_watched, handler)
 
 
@@ -49,8 +49,8 @@ def _WatcherHandler(handler_uuid, of_blob_ptr):
     assert handler_uuid in uuid2handler
     blob_watched, handler = uuid2handler[handler_uuid]
     assert callable(handler)
-    ndarray_lists = ofblob.OfBlob(of_blob_ptr).CopyToNdarrayLists()
-    local_blob = local_blob_util.MakeLocalBlob(ndarray_lists, blob_watched)
+    ndarray = ofblob.OfBlob(of_blob_ptr).CopyToNdarray()
+    local_blob = local_blob_util.LocalBlob(ndarray, blob_watched.is_dynamic)
     handler(oft_util.TransformWatchedBlob(local_blob, handler))
 
 

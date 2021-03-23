@@ -16,18 +16,18 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_BOXING_ZEROS_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_BOXING_ZEROS_TASK_NODE_H_
 
-#include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/graph/transport_task_node.h"
 
 namespace oneflow {
 
-class BoxingZerosTaskNode : public TaskNode {
+class BoxingZerosTaskNode : public TransportTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingZerosTaskNode);
   BoxingZerosTaskNode() = default;
   ~BoxingZerosTaskNode() override = default;
 
-  void Init(int64_t machine_id, int64_t thrd_id, int64_t area_id, const LogicalBlobId& lbi,
-            const Shape& shape, DataType data_type, const Shape& time_shape);
+  void Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi, const Shape& shape,
+            DataType data_type, const Shape& time_shape);
   TaskType GetTaskType() const override { return TaskType::kBoxingZeros; }
 
  private:
@@ -36,7 +36,6 @@ class BoxingZerosTaskNode : public TaskNode {
   void ConsumeAllRegsts() final;
   void InferProducedDataRegstTimeShape() final;
 
-  LogicalBlobId lbi_;
   Shape shape_;
   DataType data_type_;
   Shape time_shape_;

@@ -68,7 +68,8 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     do {
       if (dst_node->op().output_bns().empty()) { break; }
       const OperatorConf& dst_op_conf = dst_node->op().op_conf();
-      if (dst_op_conf.has_parallel_cast_conf()) {
+      if (dst_op_conf.has_user_conf()
+          && dst_op_conf.user_conf().op_type_name() == "parallel_cast") {
         if (dst_node->out_edges().size() != 1) { return; }
         op_nodes_to_remove.push_back(dst_node);
         dst_node = dst_node->SoleOutEdge()->dst_node();
@@ -91,9 +92,7 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
       return;
     }
     if (user_op_conf.attr<double>("scale") != 1.0 || user_op_conf.attr<float>("l1") != 0.0f
-        || user_op_conf.attr<float>("l2") != 0.0f
-        || user_op_conf.attr<float>("weight_decay") != 0.0f
-        || user_op_conf.has_input("scale_by_tensor", 0)) {
+        || user_op_conf.attr<float>("l2") != 0.0f || user_op_conf.has_input("scale_by_tensor", 0)) {
       return;
     }
     const LogicalBlobId& model_lbi = GenLogicalBlobId(user_op_conf.input("model", 0));
@@ -107,7 +106,8 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
                                                                 + model_op_name);
     indexed_slices_op_builder.OpTypeName("indexed_slices_" + user_op_conf.op_type_name())
         .Input("model", user_op_conf.input("model", 0))
-        .Input("learning_rate", user_op_conf.input("learning_rate", 0));
+        .Input("learning_rate", user_op_conf.input("learning_rate", 0))
+        .Attr<float>("weight_decay", user_op_conf.attr<float>("weight_decay"));
 
     if (user_op_conf.op_type_name() == "sgd_update") {
       // do nothing

@@ -36,7 +36,8 @@ ExternalProject_Add(openssl
   UPDATE_COMMAND ""
   CONFIGURE_COMMAND ${OPENSSL_SOURCE_DIR}/src/openssl/config --prefix=${OPENSSL_INSTALL}
   BUILD_COMMAND make -j${PROC_NUM}
-  INSTALL_COMMAND make install
+  INSTALL_COMMAND make install_sw
 )
 
 endif(THIRD_PARTY)
+

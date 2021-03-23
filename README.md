@@ -87,6 +87,8 @@
 
     - To install dependencies, run:
 
+      On CentOS:
+
       ```
       yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
       rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
@@ -112,10 +114,10 @@
 
 2. #### Clone Source Code
 
-    - #### Option 1: Clone source code from github
+    - #### Option 1: Clone source code from GitHub
 
       ```bash
-      git clone https://github.com/Oneflow-Inc/oneflow
+      git clone https://github.com/Oneflow-Inc/oneflow --depth=1
       ```
 
     - #### Option 2: Download from Aliyun
@@ -219,7 +221,7 @@ For those who would like to understand the OneFlow internals, please read the do
 * [BERT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/BERT)
 
 ## Communication
-* Github issues : any install, bug, feature issues.
+* GitHub issues : any install, bug, feature issues.
 * [www.oneflow.org](http://www.oneflow.org) : brand related information.
 
 ## Contributing

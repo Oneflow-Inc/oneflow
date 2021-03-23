@@ -19,10 +19,15 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+import oneflow_api
 import tensorflow as tf
 from test_util import GenArgList
 import oneflow.typing as oft
 import test_global_storage
+
+gpus = tf.config.experimental.list_physical_devices("GPU")
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
 
 
 def compare_reduce_any_with_tensorflow(
@@ -154,7 +159,7 @@ def compare_reduce_sum_with_tensorflow(
 
 
 def compare_reduce_euclidean_norm_with_tensorflow(
-    device_type, input_shape, axis, keepdims, rtol=1e-5, atol=1e-5
+    device_type, input_shape, axis, keepdims, rtol=1e-3, atol=1e-3
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -328,7 +333,7 @@ class TestReduceOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_reduce_any_with_tensorflow(*arg)
 
-    def test_reduce_any_batch_axis_reduced(test_case):
+    def test_reduce_any_split_axis_reduced(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -336,8 +341,7 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,), dtype=flow.int8)):
             y = flow.math.reduce_any(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.int8))
 
@@ -386,7 +390,7 @@ class TestReduceOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_reduce_prod_with_tensorflow(*arg)
 
-    def test_reduce_prod_batch_axis_reduced(test_case):
+    def test_reduce_prod_split_axis_reduced(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -394,8 +398,7 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_prod(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
@@ -444,7 +447,7 @@ class TestReduceOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_reduce_min_with_tensorflow(*arg)
 
-    def test_reduce_min_batch_axis_reduced(test_case):
+    def test_reduce_min_split_axis_reduced(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -452,8 +455,7 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_min(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
@@ -502,7 +504,7 @@ class TestReduceOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_reduce_all_with_tensorflow(*arg)
 
-    def test_reduce_all_batch_axis_reduced(test_case):
+    def test_reduce_all_split_axis_reduced(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -510,8 +512,7 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,), dtype=flow.int8)):
             y = flow.math.reduce_all(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.int8))
 
@@ -560,7 +561,7 @@ class TestReduceOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_reduce_sum_with_tensorflow(test_case, *arg)
 
-    def test_reduce_sum_batch_axis_reduced(test_case):
+    def test_reduce_sum_split_axis_reduced(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -568,8 +569,7 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_sum(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
@@ -618,7 +618,7 @@ class TestReduceOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_reduce_euclidean_norm_with_tensorflow(*arg)
 
-    def test_reduce_euclidean_norm_batch_axis_reduced(test_case):
+    def test_reduce_euclidean_norm_split_axis_reduced(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -626,8 +626,7 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_euclidean_norm(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
@@ -676,7 +675,7 @@ class TestReduceOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_reduce_logsumexp_with_tensorflow(*arg)
 
-    def test_reduce_logsumexp_batch_axis_reduced(test_case):
+    def test_reduce_logsumexp_split_axis_reduced(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -684,8 +683,7 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_logsumexp(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
@@ -734,7 +732,7 @@ class TestReduceOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_reduce_std_with_tensorflow(*arg)
 
-    def test_reduce_std_batch_axis_reduced(test_case):
+    def test_reduce_std_split_axis_reduced(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -742,8 +740,7 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_std(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
@@ -792,7 +789,7 @@ class TestReduceOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_reduce_variance_with_tensorflow(*arg)
 
-    def test_reduce_variance_batch_axis_reduced(test_case):
+    def test_reduce_variance_split_axis_reduced(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -800,8 +797,7 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_variance(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 
@@ -850,7 +846,7 @@ class TestReduceOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_reduce_max_with_tensorflow(*arg)
 
-    def test_reduce_max_batch_axis_reduced(test_case):
+    def test_reduce_max_split_axis_reduced(test_case):
         flow.config.gpu_device_num(2)
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.consistent_view())
@@ -858,8 +854,7 @@ class TestReduceOps(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def Foo(x: oft.Numpy.Placeholder((10,))):
             y = flow.math.reduce_max(x)
-            test_case.assertTrue(y.split_axis is None)
-            test_case.assertTrue(y.batch_axis is None)
+            test_case.assertTrue(y.split_axis == flow.INVALID_SPLIT_AXIS)
 
         Foo(np.ndarray((10,), dtype=np.float32))
 

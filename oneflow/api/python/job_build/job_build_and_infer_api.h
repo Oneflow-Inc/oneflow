@@ -53,6 +53,10 @@ inline void CurJobBuildAndInferCtx_Complete() {
   return oneflow::CurJobBuildAndInferCtx_Complete().GetOrThrow();
 }
 
+inline void CurJobBuildAndInferCtx_Rebuild() {
+  return oneflow::CurJobBuildAndInferCtx_Rebuild().GetOrThrow();
+}
+
 inline bool CurJobBuildAndInferCtx_HasJobConf() {
   return oneflow::CurJobBuildAndInferCtx_HasJobConf().GetOrThrow();
 }
@@ -65,13 +69,6 @@ inline std::string CurJobBuildAndInferCtx_AddAndInferMirroredOp(
 inline std::string CurJobBuildAndInferCtx_AddAndInferConsistentOp(
     const std::string& serialized_op_conf) {
   return oneflow::CurJobBuildAndInferCtx_AddAndInferConsistentOp(serialized_op_conf).GetOrThrow();
-}
-
-inline std::string JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView(
-    const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView(
-             job_name, lbn)
-      .GetOrThrow();
 }
 
 inline void CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(const std::string& lbi_uuid_pair) {
@@ -94,15 +91,6 @@ inline bool JobBuildAndInferCtx_IsDynamic(const std::string& job_name, const std
 
 inline bool JobBuildAndInferCtx_DisableBoxing(const std::string& job_name, const std::string& lbn) {
   return oneflow::JobBuildAndInferCtx_DisableBoxing(job_name, lbn).GetOrThrow();
-}
-
-inline bool JobBuildAndInferCtx_IsTensorList(const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_IsTensorList(job_name, lbn).GetOrThrow();
-}
-
-inline std::string JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,
-                                                    const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_GetBatchAxis(job_name, lbn).GetOrThrow();
 }
 
 inline std::string JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& job_name,
@@ -136,36 +124,15 @@ inline std::string JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi(const std
   return oneflow::JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, lbn, index).GetOrThrow();
 }
 
-inline std::string JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape(
-    const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape(job_name, lbn)
-      .GetOrThrow();
-}
-
-inline long long JobBuildAndInferCtx_MirroredBlobGetDataType(const std::string& job_name,
-                                                             const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_MirroredBlobGetDataType(job_name, lbn).GetOrThrow();
-}
-
-inline bool JobBuildAndInferCtx_MirroredBlobIsDynamic(const std::string& job_name,
+inline void JobBuildAndInferCtx_CheckLbnValidAndExist(const std::string& job_name,
                                                       const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_MirroredBlobIsDynamic(job_name, lbn).GetOrThrow();
+  return oneflow::JobBuildAndInferCtx_CheckLbnValidAndExist(job_name, lbn).GetOrThrow();
 }
 
-inline bool JobBuildAndInferCtx_MirroredBlobIsTensorList(const std::string& job_name,
-                                                         const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_MirroredBlobIsTensorList(job_name, lbn).GetOrThrow();
-}
-
-inline std::string JobBuildAndInferCtx_MirroredBlobGetBatchAxis(const std::string& job_name,
-                                                                const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_MirroredBlobGetBatchAxis(job_name, lbn).GetOrThrow();
-}
-
-inline std::string JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(
-    const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(job_name, lbn)
-      .GetOrThrow();
+inline std::string JobBuildAndInferCtx_GetOpBlobLbn(const std::string& job_name,
+                                                    const std::string& op_name,
+                                                    const std::string bn_in_op) {
+  return oneflow::JobBuildAndInferCtx_GetOpBlobLbn(job_name, op_name, bn_in_op).GetOrThrow();
 }
 
 #endif  // ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_API_H_

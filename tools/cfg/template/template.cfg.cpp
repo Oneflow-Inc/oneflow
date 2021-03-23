@@ -320,6 +320,12 @@ void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::add_{{ util.
   }
   return {{ util.field_name(field) }}_->Add(value);
 }
+void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::set_{{ util.field_name(field) }}(::std::size_t index, const {{ util.field_type_name_with_cfg_namespace(field) }}& value) {
+  if (!{{ util.field_name(field) }}_) {
+    {{ util.field_name(field) }}_ = ::std::make_shared<{{ util.field_repeated_container_name(field) }}>();
+  }
+  return {{ util.field_name(field) }}_->Set(index, value);
+}
 {% endif %}{# field message type #}
 {% elif util.field_has_oneof_label(field) %}
 // oneof field {{ util.oneof_name_of_oneof_type_field(field) }}: {{ util.field_name(field) }}
@@ -565,8 +571,26 @@ bool Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::operator==(c
 {% for oneof in util.message_type_oneofs(cls) %}
     && {{ util.oneof_name(oneof) }}_case() == other.{{ util.oneof_name(oneof) }}_case()
 {% for field in util.oneof_type_fields(oneof) %}
-    && {{ util.oneof_name(oneof) }}_case() == {{ util.oneof_type_field_enum_value_name(field) }} ? 
-      {{ util.field_name(field) }}() == other.{{ util.field_name(field) }}() : true
+    && ({{ util.oneof_name(oneof) }}_case() == {{ util.oneof_type_field_enum_value_name(field) }} ? 
+      {{ util.field_name(field) }}() == other.{{ util.field_name(field) }}() : true)
+{% endfor %}{# oneof_field #}
+{% endfor %}{# oneofs #}
+  ;
+}
+
+std::size_t Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::__CalcHash__() const {
+  return 0
+{% for field in util.message_type_fields(cls) %}
+{% if util.field_has_required_or_optional_label(field) %}
+    ^ (has_{{ util.field_name(field) }}() ? std::hash<{{ util.field_type_name_with_cfg_namespace(field) }}>()({{ util.field_name(field) }}()) : 0)
+{% elif util.field_has_repeated_label(field) or util.field_has_map_label(field) %}
+    ^ {{ util.field_name(field) }}().__CalcHash__()
+{% endif %}{# field_label #}
+{% endfor %}{# fields #}
+{% for oneof in util.message_type_oneofs(cls) %}
+    ^ static_cast<std::size_t>({{ util.oneof_name(oneof) }}_case())
+{% for field in util.oneof_type_fields(oneof) %}
+    ^ (has_{{ util.field_name(field) }}() ? std::hash<{{ util.field_type_name_with_cfg_namespace(field) }}>()({{ util.field_name(field) }}()) : 0)
 {% endfor %}{# oneof_field #}
 {% endfor %}{# oneofs #}
   ;
@@ -774,6 +798,10 @@ bool Const{{ util.class_name(cls) }}::operator==(const Const{{ util.class_name(c
   return *__SharedPtrOrDefault__() == *other.__SharedPtrOrDefault__();
 }
 
+std::size_t Const{{ util.class_name(cls) }}::__CalcHash__() const {
+  return __SharedPtrOrDefault__()->__CalcHash__();
+}
+
 bool Const{{ util.class_name(cls) }}::operator<(const Const{{ util.class_name(cls) }}& other) const {
   return *__SharedPtrOrDefault__() < *other.__SharedPtrOrDefault__();
 }
@@ -819,6 +847,10 @@ void* {{ util.class_name(cls) }}::MutableFieldPtr4FieldNumber(int field_number) 
 
 bool {{ util.class_name(cls) }}::operator==(const {{ util.class_name(cls) }}& other) const {
   return *__SharedPtrOrDefault__() == *other.__SharedPtrOrDefault__();
+}
+
+std::size_t {{ util.class_name(cls) }}::__CalcHash__() const {
+  return __SharedPtrOrDefault__()->__CalcHash__();
 }
 
 bool {{ util.class_name(cls) }}::operator<(const {{ util.class_name(cls) }}& other) const {
@@ -887,6 +919,9 @@ void {{ util.class_name(cls) }}::clear_{{ util.field_name(field) }}() {
 void {{ util.class_name(cls) }}::add_{{ util.field_name(field) }}(const {{ util.field_type_name_with_cfg_namespace(field) }}& value) {
   return __SharedPtr__()->add_{{ util.field_name(field) }}(value);
 }
+void {{ util.class_name(cls) }}::set_{{ util.field_name(field) }}(::std::size_t index, const {{ util.field_type_name_with_cfg_namespace(field) }}& value) {
+  return __SharedPtr__()->set_{{ util.field_name(field) }}(index, value);
+}
 // used by pybind11 only
 ::std::shared_ptr<{{ util.field_repeated_container_name(field) }}> {{ util.class_name(cls) }}::shared_mutable_{{ util.field_name(field) }}() {
   return mutable_{{ util.field_name(field) }}()->__SharedMutable__();
@@ -919,8 +954,8 @@ void {{ util.class_name(cls) }}::clear_{{ util.field_name(field) }}() {
   return __SharedPtr__()->clear_{{ util.field_name(field) }}();
 }
 
-const {{ util.field_map_container_name(field) }} & {{ util.class_name(cls) }}::{{ util.field_name(field) }}() {
-  return __SharedPtr__()->{{ util.field_name(field) }}();
+const {{ util.field_map_container_name(field) }} & {{ util.class_name(cls) }}::{{ util.field_name(field) }}() const {
+  return __SharedConst__()->{{ util.field_name(field) }}();
 }
 
 {{ util.field_map_container_name(field) }}* {{ util.class_name(cls) }}::mutable_{{ util.field_name(field) }}() {
@@ -954,6 +989,14 @@ Const{{ util.field_repeated_container_name(field) }}::~Const{{ util.field_repeat
 bool Const{{ util.field_repeated_container_name(field) }}::operator==(const Const{{ util.field_repeated_container_name(field) }}& other) const {
   return *__SharedPtr__() == *other.__SharedPtr__();
 }
+
+std::size_t Const{{ util.field_repeated_container_name(field) }}::__CalcHash__() const {
+  std::size_t hash_value = 0;
+  const auto& hash = std::hash<{{ util.field_type_name_with_cfg_namespace(field) }}>();
+  for (const auto& elem : *__SharedPtr__()) { hash_value ^= hash(elem); }
+  return hash_value;
+}
+
 bool Const{{ util.field_repeated_container_name(field) }}::operator<(const Const{{ util.field_repeated_container_name(field) }}& other) const {
   return *__SharedPtr__() < *other.__SharedPtr__();
 }
@@ -979,6 +1022,14 @@ void {{ util.field_repeated_container_name(field) }}::CopyFrom(const {{ util.fie
 bool {{ util.field_repeated_container_name(field) }}::operator==(const {{ util.field_repeated_container_name(field) }}& other) const {
   return *__SharedPtr__() == *other.__SharedPtr__();
 }
+
+std::size_t {{ util.field_repeated_container_name(field) }}::__CalcHash__() const {
+  std::size_t hash_value = 0;
+  const auto& hash = std::hash<{{ util.field_type_name_with_cfg_namespace(field) }}>();
+  for (const auto& elem : *__SharedPtr__()) { hash_value ^= hash(elem); }
+  return hash_value;
+}
+
 bool {{ util.field_repeated_container_name(field) }}::operator<(const {{ util.field_repeated_container_name(field) }}& other) const {
   return *__SharedPtr__() < *other.__SharedPtr__();
 }
@@ -1004,6 +1055,17 @@ Const{{ util.field_map_container_name(field) }}::~Const{{ util.field_map_contain
 bool Const{{ util.field_map_container_name(field) }}::operator==(const Const{{ util.field_map_container_name(field) }}& other) const {
   return *__SharedPtr__() == *other.__SharedPtr__();
 }
+
+std::size_t Const{{ util.field_map_container_name(field) }}::__CalcHash__() const {
+  std::size_t hash_value = 0;
+  const auto& key_hash = std::hash<{{ util.field_map_key_type_name(field) }}>();
+  const auto& value_hash = std::hash<{{ util.field_map_value_type_name_with_cfg_namespace(field) }}>();
+  for (const auto& pair : *__SharedPtr__()) {
+    hash_value ^= key_hash(pair.first) ^ value_hash(pair.second); 
+  }
+  return hash_value;
+}
+
 bool Const{{ util.field_map_container_name(field) }}::operator<(const Const{{ util.field_map_container_name(field) }}& other) const {
   return *__SharedPtr__() < *other.__SharedPtr__();
 }
@@ -1039,9 +1101,21 @@ void {{ util.field_map_container_name(field) }}::CopyFrom(const Const{{ util.fie
 void {{ util.field_map_container_name(field) }}::CopyFrom(const {{ util.field_map_container_name(field) }}& other) {
   ::oneflow::cfg::_MapField_<{{ util.field_map_pair_type_name_with_cfg_namespace(field) }}>::CopyFrom(other);
 }
+
 bool {{ util.field_map_container_name(field) }}::operator==(const {{ util.field_map_container_name(field) }}& other) const {
   return *__SharedPtr__() == *other.__SharedPtr__();
 }
+
+std::size_t {{ util.field_map_container_name(field) }}::__CalcHash__() const {
+  std::size_t hash_value = 0;
+  const auto& key_hash = std::hash<{{ util.field_map_key_type_name(field) }}>();
+  const auto& value_hash = std::hash<{{ util.field_map_value_type_name_with_cfg_namespace(field) }}>();
+  for (const auto& pair : *__SharedPtr__()) {
+    hash_value ^= key_hash(pair.first) ^ value_hash(pair.second); 
+  }
+  return hash_value;
+}
+
 bool {{ util.field_map_container_name(field) }}::operator<(const {{ util.field_map_container_name(field) }}& other) const {
   return *__SharedPtr__() < *other.__SharedPtr__();
 }

@@ -17,7 +17,6 @@ from __future__ import absolute_import
 
 from oneflow.python.eager.symbol import Symbol
 import oneflow.python.eager.symbol_storage as symbol_storage
-import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow_api.oneflow.core.job.scope as scope_cfg
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api
@@ -63,7 +62,7 @@ class ScopeSymbol(Symbol):
     def BuildBySetter(self, instruction_builder, setter):
         scope_proto = self._CloneScopeProto()
         setter(scope_proto)
-        return instruction_builder.GetScopeSymbol(scope_proto, self)
+        return instruction_builder.GetScopeSymbol(scope_proto)
 
     def BuildWithNewParallelDesc(
         self, instruction_builder, device_tag, machine_device_ids
@@ -90,10 +89,14 @@ class ScopeSymbol(Symbol):
         return self.BuildBySetter(instruction_builder, SetScopeProto)
 
     def BuildWithNewParallelConf(self, instruction_builder, parallel_conf):
-        tag_and_dev_ids = parallel_conf_util.GetDeviceTagAndMachineDeviceIds(
-            parallel_conf
+        (
+            device_tag,
+            machine_device_ids,
+            hierarchy,
+        ) = oneflow_api.GetDeviceTagAndMachineDeviceIdsAndHierarchy(parallel_conf)
+        return self.BuildWithNewParallelDesc(
+            instruction_builder, device_tag, machine_device_ids
         )
-        return self.BuildWithNewParallelDesc(instruction_builder, *tag_and_dev_ids)
 
     def BuildWithNewIsMirrored(self, instruction_builder, is_mirrored):
         def SetScopeProto(scope_proto):
@@ -138,7 +141,7 @@ def BuildInitialScope(
         scope_proto.mutable_opt_mirrored_parallel_conf().mutable_mirrored_parallel()
     else:
         scope_proto.mutable_opt_mirrored_parallel_conf().clear_mirrored_parallel()
-    return instruction_builder.GetScopeSymbol(scope_proto, None)
+    return instruction_builder.GetScopeSymbol(scope_proto)
 
 
 def MakeParallelConf(device_tag, machine_device_ids):

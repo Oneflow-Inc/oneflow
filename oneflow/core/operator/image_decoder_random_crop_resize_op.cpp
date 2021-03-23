@@ -15,11 +15,30 @@ limitations under the License.
 */
 
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/scope.h"
 
 namespace oneflow {
+
+namespace {
+
+Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
+                           const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  const ImageDecoderRandomCropResizeOpConf& conf = op_conf.image_decoder_random_crop_resize_conf();
+  const BlobDesc* in = BlobDesc4BnInOp("in");
+  BlobDesc* out = BlobDesc4BnInOp("out");
+  CHECK_EQ_OR_RETURN(in->data_type(), DataType::kTensorBuffer);
+  *out = *in;
+  out->set_data_type(DataType::kUInt8);
+  DimVector out_dim_vec = in->shape().dim_vec();
+  out_dim_vec.push_back(conf.target_height());
+  out_dim_vec.push_back(conf.target_width());
+  out_dim_vec.push_back(3);
+  out->mut_shape() = Shape(out_dim_vec);
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
 
 class ImageDecoderRandomCropResizeOp final : public Operator {
  public:
@@ -34,20 +53,23 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     EnrollTmpBn("tmp");
   }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override {
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    return InferBlobDescs(this->op_conf(), BlobDesc4BnInOp);
+  }
+
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
+    return InferBlobDescs(this->op_conf(), GetBlobDesc4BnInOp);
+  }
+
+  Maybe<void> InferInternalBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, const JobDesc* job_desc) const override {
     const ImageDecoderRandomCropResizeOpConf& conf =
         this->op_conf().image_decoder_random_crop_resize_conf();
-    const BlobDesc* in = GetBlobDesc4BnInOp("in");
-    BlobDesc* out = GetBlobDesc4BnInOp("out");
-    CHECK_EQ_OR_RETURN(in->data_type(), DataType::kTensorBuffer);
-    *out = *in;
-    out->set_data_type(DataType::kUInt8);
-    DimVector out_dim_vec = in->shape().dim_vec();
-    out_dim_vec.push_back(conf.target_height());
-    out_dim_vec.push_back(conf.target_width());
-    out_dim_vec.push_back(3);
-    out->mut_shape() = Shape(out_dim_vec);
     BlobDesc* tmp = GetBlobDesc4BnInOp("tmp");
     tmp->set_data_type(DataType::kUInt8);
     tmp->mut_shape() = Shape({conf.max_num_pixels() * 3 * conf.num_workers()});
@@ -62,12 +84,6 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
         .Split("out", 0)
         .MakeSplitSignatureListBuilder(JUST(LogicalBlobDesc4Ibn("in")).shape().NumAxes())
         .Build(sbp_sig_list);
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override {
-    *BatchAxis4BnInOp("out") = *BatchAxis4BnInOp("in");
     return Maybe<void>::Ok();
   }
 
@@ -92,34 +108,26 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
         GetBlobDesc4BnInOp("in")->shape().elem_cnt());
   }
 
-  LogicalNode* NewProperLogicalNode() const override {
-    if (device_type() == DeviceType::kGPU) {
-      return new DecodeH2DLogicalNode();
-    } else {
-      return new NormalForwardLogicalNode();
-    }
-  }
-
-  Maybe<void> InferParallelSignature() override {
+  Maybe<void> InferBlobParallelDesc() override {
+    HashMap<std::string, std::shared_ptr<const ParallelDesc>> bn2parallel_desc;
+    const std::shared_ptr<const ParallelDesc> op_parallel_desc = JUST(GetOpParallelDesc());
+    bn2parallel_desc["out"] = op_parallel_desc;
     if (device_type() == DeviceType::kCPU) {
-      return Operator::InferParallelSignature();
+      bn2parallel_desc["in"] = op_parallel_desc;
     } else if (device_type() == DeviceType::kGPU) {
-      const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
-      const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
-      const int64_t device_parallel_desc_symbol_id =
-          scope.scope_proto().device_parallel_desc_symbol_id();
-      const int64_t host_parallel_desc_symbol_id =
-          scope.scope_proto().host_parallel_desc_symbol_id();
-      mut_parallel_signature()->set_op_parallel_desc_symbol_id(device_parallel_desc_symbol_id);
-      auto* map = mut_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id();
-      for (const auto& ibn : input_bns()) { (*map)[ibn] = host_parallel_desc_symbol_id; }
-      for (const auto& obn : output_bns()) { (*map)[obn] = device_parallel_desc_symbol_id; }
-      for (const auto& tbn : tmp_bns()) { (*map)[tbn] = device_parallel_desc_symbol_id; }
-      return Maybe<void>::Ok();
+      std::shared_ptr<ParallelDesc> in_parallel_desc =
+          std::make_shared<ParallelDesc>(*op_parallel_desc);
+      in_parallel_desc->set_device_type(DeviceType::kCPU);
+      bn2parallel_desc["in"] = in_parallel_desc;
     } else {
-      UNIMPLEMENTED();
-      return Maybe<void>::Ok();
+      UNIMPLEMENTED_THEN_RETURN();
     }
+    FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
+      auto it = bn2parallel_desc.find(bn);
+      CHECK_OR_RETURN(it != bn2parallel_desc.end());
+      return it->second;
+    });
+    return Maybe<void>::Ok();
   }
 };
 

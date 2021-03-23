@@ -13,20 +13,42 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <algorithm>
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/common/util.h"
+#ifdef WITH_CUDA
+#include <nccl.h>
+#endif
 
 namespace oneflow {
 
-size_t ResourceDesc::TotalMachineNum() const {
+ResourceDesc::ResourceDesc(const Resource& resource, int64_t num_process_per_node)
+    : resource_(resource) {
   CHECK_GT(resource_.machine_num(), 0);
   CHECK_LE(resource_.machine_num(), Global<EnvDesc>::Get()->TotalMachineNum());
-  return resource_.machine_num();
+  int64_t max_device_num = std::max(resource.gpu_device_num(), resource.cpu_device_num());
+  CHECK_GT(max_device_num, 0);
+  max_device_num = std::min(max_device_num, num_process_per_node);
+  for (int i = 0; i < resource_.machine_num(); ++i) {
+    for (int j = 0; j < max_device_num; ++j) {
+      CHECK(process_ranks_.emplace(i * num_process_per_node + j).second);
+    }
+  }
 }
 
-const Machine& ResourceDesc::machine(int32_t idx) const {
-  CHECK_LT(idx, TotalMachineNum());
-  return Global<EnvDesc>::Get()->machine(idx);
+Machine ResourceDesc::machine(int32_t idx) const {
+  CHECK_GE(idx, 0);
+  CHECK(process_ranks().find(idx) != process_ranks().end());
+  if (Global<EnvDesc>::Get()->has_ctrl_bootstrap_conf()) {
+    CHECK_NOTNULL(Global<ProcessCtx>::Get());
+    CHECK_GE(Global<ProcessCtx>::Get()->ctrl_addr().size(), process_ranks().size());
+    Machine machine;
+    const Address& addr = Global<ProcessCtx>::Get()->ctrl_addr(idx);
+    machine.set_addr(addr.host());
+    return machine;
+  } else {
+    return Global<EnvDesc>::Get()->machine(idx);
+  }
 }
 
 int32_t ResourceDesc::ComputeThreadPoolSize() const {
@@ -48,6 +70,14 @@ CollectiveBoxingConf ResourceDesc::collective_boxing_conf() const {
   } else {
     return CollectiveBoxingConf();
   }
+}
+
+bool ResourceDesc::nccl_use_compute_stream() const {
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+  return resource_.nccl_use_compute_stream();
+#else
+  return false;
+#endif
 }
 
 }  // namespace oneflow

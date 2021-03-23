@@ -34,14 +34,11 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
   bool HasBackwardCompTaskNode();
 
  private:
-  bool IsAllOutNodeNormalForward() const;
-  bool CanProduceSeperatedRegstsForEachOutBlob() const;
   void ProduceOutRegstByNameAndBlockNum(const std::string& name, size_t mem_block_num);
   void BuildExecGphAndRegst() override;
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
   void BuildTmp7BufRegsts();
-  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

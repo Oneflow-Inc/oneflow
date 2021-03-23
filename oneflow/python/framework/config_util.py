@@ -81,16 +81,14 @@ def api_gpu_device_num(val: int) -> None:
         val (int): number of GPUs. It is identical on every machine. In other words,
         you can't specify different number of GPUs you would like to use on each machine.
     """
-    from oneflow.python_gen.compatibility import with_cuda
-
-    if with_cuda == False:
+    if oneflow_api.flags.with_cuda():
+        return enable_if.unique([gpu_device_num, do_nothing])(val)
+    else:
         print(
             "INFO: for CPU-only OneFlow, oneflow.config.gpu_device_num is equivalent to oneflow.config.cpu_device_num"
         )
         print(traceback.format_stack()[-2])
         return enable_if.unique([cpu_device_num, do_nothing])(val)
-    else:
-        return enable_if.unique([gpu_device_num, do_nothing])(val)
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
@@ -430,6 +428,57 @@ def num_callback_threads(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is int
     sess.config_proto.resource.collective_boxing_conf.num_callback_threads = val
+
+
+@oneflow_export("config.enable_tensor_float_32_compute")
+def api_enable_tensor_float_32_compute(val: bool = True) -> None:
+    r"""Whether or not to enable Tensor-float-32 on supported GPUs
+
+    Args:
+        val (bool, optional): True or False. Defaults to True.
+    """
+    return enable_if.unique([enable_tensor_float_32_compute, do_nothing])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def enable_tensor_float_32_compute(val=True):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.enable_tensor_float_32_compute = val
+
+
+@oneflow_export("config.nccl_use_compute_stream")
+def api_nccl_use_compute_stream(val: bool = False) -> None:
+    r"""Whether or not nccl use compute stream to reuse nccl memory and speedup
+
+    Args:
+        val (bool, optional): True or False. Defaults to False.
+    """
+    return enable_if.unique([nccl_use_compute_stream, do_nothing])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def nccl_use_compute_stream(val=False):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.nccl_use_compute_stream = val
+
+
+@oneflow_export("config.disable_group_boxing_by_dst_parallel")
+def api_disable_group_boxing_by_dst_parallel(val: bool = False) -> None:
+    r"""Whether or not disable group boxing by dst parallel pass to reduce boxing memory life cycle.
+
+    Args:
+        val (bool, optional): True or False. Defaults to False.
+    """
+    return enable_if.unique([disable_group_boxing_by_dst_parallel, do_nothing])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def disable_group_boxing_by_dst_parallel(val=False):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.disable_group_boxing_by_dst_parallel = val
 
 
 @oneflow_export("config.collective_boxing.nccl_num_streams")

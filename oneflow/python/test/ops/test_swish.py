@@ -75,7 +75,7 @@ def _compare_swish_with_np(input_shape, beta, device_type, machine_ids, device_c
 
         flow.watch_diff(x_var, assert_prediction_grad)
 
-        of_swish_out = flow.math.swish(x_var, beta)
+        of_swish_out = flow.nn.swish(x_var, beta)
 
         with flow.scope.placement(device_type, "0:0"):
             flow.optimizer.SGD(

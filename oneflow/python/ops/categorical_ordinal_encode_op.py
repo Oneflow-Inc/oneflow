@@ -20,27 +20,28 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
+import oneflow_api
 
 
 @oneflow_export("categorical_ordinal_encode")
 def categorical_ordinal_encode(
-    table: remote_blob_util.BlobDef,
-    size: remote_blob_util.BlobDef,
-    input_tensor: remote_blob_util.BlobDef,
+    table: oneflow_api.BlobDesc,
+    size: oneflow_api.BlobDesc,
+    input_tensor: oneflow_api.BlobDesc,
     hash_precomputed: bool = True,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator maintains a hash table to encode the categorical ordinal Blob. It converts a discrete input value into a continuous integer ID. 
 
     Args:
-        table (remote_blob_util.BlobDef): The hash table, you can assign it as a variable. 
-        size (remote_blob_util.BlobDef): The size of hash table. 
-        input_tensor (remote_blob_util.BlobDef): The input Blob. 
+        table (oneflow_api.BlobDesc): The hash table, you can assign it as a variable. 
+        size (oneflow_api.BlobDesc): The size of hash table. 
+        input_tensor (oneflow_api.BlobDesc): The input Blob. 
         hash_precomputed (bool, optional): We currently only support the 'True' mode. The internal hash value will no longer be computed. Defaults to True.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
 
     For example: 
 
@@ -103,21 +104,21 @@ def categorical_ordinal_encode(
 
 @oneflow_export("layers.categorical_ordinal_encoder")
 def categorical_ordinal_encoder(
-    input_tensor: remote_blob_util.BlobDef,
+    input_tensor: oneflow_api.BlobDesc,
     capacity: int,
     hash_precomputed: bool = True,
     name: str = "CategoricalOrdinalEncoder",
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     """This operator uses `oneflow.categorical_ordinal_encode` to encapsulate a categorical_ordinal_encoder. More details please refer to `oneflow.categorical_ordinal_encode`
 
     Args:
-        input_tensor (remote_blob_util.BlobDef): The input Blob. 
+        input_tensor (oneflow_api.BlobDesc): The input Blob. 
         capacity (int): The capacity of hash table. 
         hash_precomputed (bool, optional): We currently only support the 'True' mode. The internal hash value will no longer be computed. Defaults to True.
         name (str, optional): The name for the operation. Defaults to "CategoricalOrdinalEncoder".
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow_api.BlobDesc: The result Blob. 
 
     For example: 
 

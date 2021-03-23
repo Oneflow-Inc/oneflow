@@ -132,10 +132,11 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% for cls in util.module_nested_message_types(module) %}
 {% if not util.class_is_map_entry(cls) %}
   {
-    pybind11::class_<Const{{ util.class_name(cls) }}, std::shared_ptr<Const{{ util.class_name(cls) }}>> registry(m, "Const{{ util.class_name(cls) }}");
+    pybind11::class_<Const{{ util.class_name(cls) }}, ::oneflow::cfg::Message, std::shared_ptr<Const{{ util.class_name(cls) }}>> registry(m, "Const{{ util.class_name(cls) }}");
     registry.def("__id__", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::__Id__);
     registry.def(pybind11::self == pybind11:: self);
     registry.def(pybind11::self < pybind11:: self);
+    registry.def(pybind11::hash(pybind11::self));
     registry.def("__str__", &Const{{ util.class_name(cls) }}::DebugString);
     registry.def("__repr__", &Const{{ util.class_name(cls) }}::DebugString);
 {% for field in util.message_type_fields(cls) %}
@@ -190,7 +191,7 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {% endfor %}{# oneofs #}
   }
   {
-    pybind11::class_<{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}, std::shared_ptr<{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}>> registry(m, "{{ util.class_name(cls) }}");
+    pybind11::class_<{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}, ::oneflow::cfg::Message, std::shared_ptr<{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}>> registry(m, "{{ util.class_name(cls) }}");
     registry.def(pybind11::init<>());
     registry.def("Clear", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::Clear);
     registry.def("CopyFrom", (void ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)(const Const{{ util.class_name(cls) }}&))&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::CopyFrom);
@@ -198,6 +199,7 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
     registry.def("__id__", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::__Id__);
     registry.def(pybind11::self == pybind11:: self);
     registry.def(pybind11::self < pybind11:: self);
+    registry.def(pybind11::hash(pybind11::self));
     registry.def("__str__", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::DebugString);
     registry.def("__repr__", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::DebugString);
 
@@ -233,19 +235,21 @@ ONEFLOW_CFG_PYBIND11_MODULE("{{ util.module_get_python_module_path(module) }}", 
 {%elif util.field_is_enum_type(field) %}
     registry.def("{{ util.field_name(field) }}", (const {{ util.module_package_cfg_namespace(module) }}::{{ util.field_type_name(field) }}& ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)(::std::size_t) const)&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::{{ util.field_name(field) }});
     registry.def("add_{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::add_{{ util.field_name(field) }});
+    registry.def("set_{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::set_{{ util.field_name(field) }});
 {% else %}
     registry.def("{{ util.field_name(field) }}", (const {{ util.field_type_name(field) }}& ({{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::*)(::std::size_t) const)&{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::{{ util.field_name(field) }});
     registry.def("add_{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::add_{{ util.field_name(field) }});
+    registry.def("set_{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::set_{{ util.field_name(field) }});
 {% endif %}{# field message type #}
 {% elif util.field_has_oneof_label(field) %}
     registry.def("has_{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::has_{{ util.field_name(field) }});
     registry.def("clear_{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::clear_{{ util.field_name(field) }});
     registry.def_property_readonly_static("{{ util.oneof_type_field_enum_value_name(field) }}",
         [](const pybind11::object&){ return {{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::{{ util.oneof_type_field_enum_value_name(field) }}; });
+    registry.def("{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::{{ util.field_name(field) }});
 {% if util.field_is_message_type(field) %}
     registry.def("mutable_{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::shared_mutable_{{ util.field_name(field) }});
 {% else %}
-    registry.def("{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::{{ util.field_name(field) }});
     registry.def("set_{{ util.field_name(field) }}", &{{ util.module_package_cfg_namespace(module) }}::{{ util.class_name(cls) }}::set_{{ util.field_name(field) }});
 {% endif %}{# field_message_type #}
 {# map begin #}

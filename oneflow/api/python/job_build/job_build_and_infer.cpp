@@ -31,14 +31,14 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   m.def("CurJobBuildAndInferCtx_Complete", &CurJobBuildAndInferCtx_Complete,
         py::call_guard<py::gil_scoped_release>());
+  m.def("CurJobBuildAndInferCtx_Rebuild", &CurJobBuildAndInferCtx_Rebuild,
+        py::call_guard<py::gil_scoped_release>());
   m.def("CurJobBuildAndInferCtx_HasJobConf", &CurJobBuildAndInferCtx_HasJobConf);
   m.def("CurJobBuildAndInferCtx_AddAndInferMirroredOp",
         &CurJobBuildAndInferCtx_AddAndInferMirroredOp, py::call_guard<py::gil_scoped_release>());
 
   m.def("CurJobBuildAndInferCtx_AddAndInferConsistentOp",
         &CurJobBuildAndInferCtx_AddAndInferConsistentOp);
-  m.def("JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView",
-        &JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView);
   m.def("CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair",
         &CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair);
 
@@ -48,13 +48,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("JobBuildAndInferCtx_IsDynamic", &JobBuildAndInferCtx_IsDynamic);
 
   m.def("JobBuildAndInferCtx_DisableBoxing", &JobBuildAndInferCtx_DisableBoxing);
-  m.def("JobBuildAndInferCtx_IsTensorList", &JobBuildAndInferCtx_IsTensorList);
-  m.def("JobBuildAndInferCtx_GetBatchAxis", &JobBuildAndInferCtx_GetBatchAxis);
 
   m.def("JobBuildAndInferCtx_GetSplitAxisFromProducerView",
         &JobBuildAndInferCtx_GetSplitAxisFromProducerView);
   m.def("JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView",
         &JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView);
+
   m.def("CurJobBuildAndInferCtx_AddLossLogicalBlobName",
         &CurJobBuildAndInferCtx_AddLossLogicalBlobName);
 
@@ -63,17 +62,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         &JobBuildAndInferCtx_MirroredBlobGetNumSubLbi);
   m.def("JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi",
         &JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi);
-
-  m.def("JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape",
-        &JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape);
-  m.def("JobBuildAndInferCtx_MirroredBlobGetDataType",
-        &JobBuildAndInferCtx_MirroredBlobGetDataType);
-  m.def("JobBuildAndInferCtx_MirroredBlobIsDynamic", &JobBuildAndInferCtx_MirroredBlobIsDynamic);
-
-  m.def("JobBuildAndInferCtx_MirroredBlobIsTensorList",
-        &JobBuildAndInferCtx_MirroredBlobIsTensorList);
-  m.def("JobBuildAndInferCtx_MirroredBlobGetBatchAxis",
-        &JobBuildAndInferCtx_MirroredBlobGetBatchAxis);
-  m.def("JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView",
-        &JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView);
+  m.def("JobBuildAndInferCtx_CheckLbnValidAndExist", &JobBuildAndInferCtx_CheckLbnValidAndExist);
+  m.def("JobBuildAndInferCtx_GetOpBlobLbn", &JobBuildAndInferCtx_GetOpBlobLbn);
 }

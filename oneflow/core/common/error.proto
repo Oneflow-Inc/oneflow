@@ -119,6 +119,8 @@ message ErrorStackFrame {
 
 message SymbolIdUninitializedError {}
 
+message ValueError {}
+
 message ErrorProto {
   optional string error_summary = 1 [default = ""];
   optional string msg = 2 [default = ""];
@@ -138,6 +140,7 @@ message ErrorProto {
     LossBlobNotFoundError loss_blob_not_found_error = 24;
     JobSetEmptyError job_set_empty_error = 25;
     DeviceTagNotFoundError device_tag_not_found_error = 26;
+    ValueError value_error = 27;
     JobNameExistError job_name_exist_error = 100;
     JobNameEmptyError job_name_empty_error = 101;
     JobNameNotEqualError job_name_not_equal_error = 102;

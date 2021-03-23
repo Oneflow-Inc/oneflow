@@ -16,8 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_OPERATOR_ACC_TICK_OP_H_
 #define ONEFLOW_CORE_OPERATOR_ACC_TICK_OP_H_
 
-#include "oneflow/core/operator/accumulate_op.h"
-#include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -28,17 +27,18 @@ class AccTickOp final : public Operator {
   ~AccTickOp() = default;
 
   void InitFromOpConf() override;
-  LogicalNode* NewProperLogicalNode() const override { return new AccTickLogicalNode; }
 
-  Maybe<void> InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
-  Maybe<void> InferOutputBlobTimeShape(
-      std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
-      const ParallelContext* parallel_ctx, Shape* time_shape) const override;
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override;
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOpTimeShape(
+      const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
+      std::shared_ptr<const Shape>* time_shape) const override;
 
  private:
-  Maybe<void> InferBatchAxis(
-      std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const override;
 };
 
 }  // namespace oneflow

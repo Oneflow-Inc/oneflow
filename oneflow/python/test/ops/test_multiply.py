@@ -76,8 +76,6 @@ def _test_element_wise_mul_fw_bw(test_case, device, shape, type_name):
             flow.watch_diff(out, test_global_storage.Setter("out_diff"))
             return out
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     x = np.random.randint(low=0, high=10, size=shape).astype(np.float32)
     y = np.random.randint(low=0, high=10, size=shape).astype(np.float32)
     test_element_wise_mul_job(x, y).get()

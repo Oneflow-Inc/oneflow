@@ -36,12 +36,14 @@ def compare_with_tensorflow(
     transpose_b,
     data_type,
     fuse_add_to_output,
+    enable_tf32,
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.enable_fuse_add_to_output(fuse_add_to_output)
+    flow.config.enable_tensor_float_32_compute(enable_tf32)
     if data_type == "float16":
         dtype = flow.float
     else:
@@ -108,8 +110,6 @@ def compare_with_tensorflow(
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = MatmulJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:
@@ -184,6 +184,7 @@ def gen_arg_list():
     arg_dict["transpose_b"] = [True, False]
     arg_dict["data_type"] = ["float16", "float32", "double"]
     arg_dict["fuse_add_to_output"] = [True, False]
+    arg_dict["enable_tf32"] = [True, False]
     matmul_args = filter_args(GenArgList(arg_dict))
 
     arg_dict.clear()
@@ -194,8 +195,8 @@ def gen_arg_list():
     arg_dict["transpose_b"] = [True, False]
     arg_dict["data_type"] = ["float16", "float32", "double"]
     arg_dict["fuse_add_to_output"] = [True, False]
+    arg_dict["enable_tf32"] = [True, False]
     batch_matmul_args = filter_args(GenArgList(arg_dict))
-
     return matmul_args + batch_matmul_args
 
 
@@ -203,7 +204,9 @@ def gen_arg_list():
 class TestMatmul(flow.unittest.TestCase):
     def test_matmul(test_case):
         for arg in gen_arg_list():
-            if arg[0] == "cpu" and arg[5] == "float16":
+            if arg[0] == "cpu" and (arg[5] == "float16" or arg[7] == True):
+                continue
+            if arg[5] != "float32" and arg[7] == True:
                 continue
             compare_with_tensorflow(*arg)
 

@@ -24,28 +24,29 @@ import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow_api
 from typing import Optional
 
 
 @oneflow_export("matmul", "linalg.matmul")
 def matmul(
-    a: remote_blob_util.BlobDef,
-    b: remote_blob_util.BlobDef,
+    a: oneflow_api.BlobDesc,
+    b: oneflow_api.BlobDesc,
     transpose_a: bool = False,
     transpose_b: bool = False,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow_api.BlobDesc:
     r"""This operator applies matrix multiplication to two Blobs. 
 
     Args:
-        a (remote_blob_util.BlobDef): A Blob
-        b (remote_blob_util.BlobDef): A Blob
+        a (oneflow_api.BlobDesc): A Blob
+        b (oneflow_api.BlobDesc): A Blob
         transpose_a (bool, optional): Whether to transpose A Blob. Defaults to False.
         transpose_b (bool, optional): Whether to transpose B Blob. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob
+        oneflow_api.BlobDesc: The result Blob
 
     For example: 
 

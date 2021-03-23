@@ -49,21 +49,35 @@ MemoryCase MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(
   return ret;
 }
 
-int64_t MemoryCaseUtil::GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
-  int64_t mem_zone_id = 1024;
+int64_t MemoryCaseUtil::GenMemZoneId(const MemoryCase& mem_case) {
+  // [0, 127] = GPU device mem
+  // [128] = CPU host mem
+  // [129, 256] = CPU host mem used by CUDA with device id
+  // [257, ...] Other Device
+  if (mem_case.has_device_cuda_mem()) {
+    return mem_case.device_cuda_mem().device_id();  // GPU device mem
+  }
   if (mem_case.has_host_mem()) {
     if (mem_case.host_mem().has_cuda_pinned_mem()) {
-      mem_zone_id = 1025 + mem_case.host_mem().cuda_pinned_mem().device_id();
+      return 129 + mem_case.host_mem().cuda_pinned_mem().device_id();  // Host mem used by GPU
     }
-  } else {
-    mem_zone_id = mem_case.device_cuda_mem().device_id();
+    return 128;  // CPU host mem
   }
-  return (machine_id << 32) | mem_zone_id;
+  UNIMPLEMENTED();
+  return -1;
+}
+
+int64_t MemoryCaseUtil::GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
+  return (machine_id << 32) | (MemoryCaseUtil::GenMemZoneId(mem_case));
 }
 
 bool MemoryCaseUtil::IsHostUnPinnedMemoryCase(const MemoryCase& mem_case) {
   return mem_case.has_host_mem() && !mem_case.host_mem().has_cuda_pinned_mem()
          && !mem_case.host_mem().used_by_network();
+}
+
+int64_t MemoryCaseUtil::MergeThrdMemZoneId(int64_t thrd_id, const MemoryCase& mem_case) {
+  return (thrd_id << 21) | (MemoryCaseUtil::GenMemZoneId(mem_case));
 }
 
 }  // namespace oneflow

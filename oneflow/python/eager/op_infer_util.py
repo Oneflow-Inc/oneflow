@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from __future__ import absolute_import
-import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
+import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
 import oneflow.python.framework.c_api_util as c_api_util
+import oneflow_api.oneflow.core.operator.op_node_signature as op_node_signature_cfg
 import oneflow
+from google.protobuf import text_format
 
 
 def Infer(op_conf, ibn2blob_object, scope_symbol_id=None):
@@ -28,8 +30,13 @@ def Infer(op_conf, ibn2blob_object, scope_symbol_id=None):
 
 
 def MakeUpstreamSignature(ibn2blob_object):
-    upstream_signature = op_attribute_pb.OpNodeSignature()
+    upstream_signature_cfg = op_node_signature_cfg.OpNodeSignature()
+
     for ibn, blob_object in ibn2blob_object.items():
-        blob_object.op_arg_blob_attr.DumpToOpNodeSignature(ibn, upstream_signature)
-        blob_object.op_arg_parallel_attr.DumpToOpNodeSignature(ibn, upstream_signature)
-    return upstream_signature
+        blob_object.op_arg_blob_attr.DumpToOpNodeSignature(ibn, upstream_signature_cfg)
+        blob_object.op_arg_parallel_attr.DumpToOpNodeSignature(
+            ibn, upstream_signature_cfg
+        )
+    return text_format.Parse(
+        str(upstream_signature_cfg), op_node_signature_pb.OpNodeSignature()
+    )

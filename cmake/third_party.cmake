@@ -14,10 +14,12 @@ include(cocoapi)
 include(half)
 include(re2)
 include(json)
-include(absl)
-include(cares)
-include(openssl)
-include(grpc)
+if (RPC_BACKEND MATCHES "GRPC")
+  include(absl)
+  include(cares)
+  include(openssl)
+  include(grpc)
+endif()
 include(flatbuffers)
 include(lz4)
 
@@ -100,9 +102,13 @@ else()
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
-set(oneflow_third_party_libs
+# libraries only a top level .so or exe should be linked to
+set(oneflow_exe_third_party_libs
     ${GLOG_STATIC_LIBRARIES}
     ${GFLAGS_STATIC_LIBRARIES}
+)
+
+set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
     ${PROTOBUF_STATIC_LIBRARIES}
@@ -145,8 +151,6 @@ set(oneflow_third_party_dependencies
   googletest_copy_libs_to_destination
   googlemock_copy_headers_to_destination
   googlemock_copy_libs_to_destination
-  grpc_copy_headers_to_destination
-  grpc_copy_libs_to_destination
   opencv_copy_headers_to_destination
   libpng_copy_headers_to_destination
   opencv_copy_libs_to_destination
@@ -161,6 +165,10 @@ set(oneflow_third_party_dependencies
   lz4_copy_headers_to_destination
 )
 
+if (RPC_BACKEND MATCHES "GRPC")
+  list(APPEND oneflow_third_party_dependencies grpc_copy_headers_to_destination)
+  list(APPEND oneflow_third_party_dependencies grpc_copy_libs_to_destination)
+endif()
 
 list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${ZLIB_INCLUDE_DIR}

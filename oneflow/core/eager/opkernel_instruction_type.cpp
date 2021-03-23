@@ -36,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
+#include "oneflow/core/operator/op_conf_symbol.h"
 
 namespace oneflow {
 namespace eager {
@@ -59,14 +60,14 @@ class InitOpKernelObjectInstructionType final : public vm::InstructionType {
       const auto* operand_op_conf = instruction->operand_type(view->op_conf(i));
       CHECK_NOTNULL(operand_op_conf);
       const auto& op_conf_object =
-          CHECK_JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConf>>());
-      CHECK(op_conf_object->has_user_conf());
+          CHECK_JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConfSymbol>>());
+      CHECK(op_conf_object.Get().op_conf().has_user_conf());
       vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(view->op(i));
       const auto& parallel_desc = instruction->parallel_desc();
       CHECK(static_cast<bool>(parallel_desc));
       DeviceType device_type = parallel_desc->device_type();
-      rw_mutexed_object->Init<OpKernelObject>(op_conf_object.Get(), job_desc_object.GetPtr(),
-                                              device_type);
+      rw_mutexed_object->Init<OpKernelObject>(op_conf_object.Get().op_conf(),
+                                              job_desc_object.GetPtr(), device_type);
     }
   }
   void Compute(vm::Instruction* instruction) const override {
@@ -433,7 +434,8 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
   CHECK_NOTNULL_OR_RETURN(operand_job_desc);
   const auto& job_desc_ptr = JUST(operand_job_desc->Get<vm::ObjectWrapper<JobDesc>>()).GetPtr();
   const auto* operand_op_conf = instruction->mut_operand_type(args.op_conf());
-  const auto& op_conf = JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConf>>()).Get();
+  const auto& op_conf =
+      JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConfSymbol>>()).Get().op_conf();
   vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(args.shared_opkernel());
   CHECK_OR_RETURN(!rw_mutexed_object->has_object() || rw_mutexed_object->Has<OpKernelObject>()
                   || rw_mutexed_object->Has<SystemOpKernelObject>());
@@ -485,7 +487,7 @@ Maybe<const OperatorConf&> GetOpConf(vm::Instruction* instruction,
                                      const StatelessCallOpKernelInstrOperand& args) {
   const auto* operand_op_conf = instruction->operand_type(args.op_conf());
   CHECK_NOTNULL_OR_RETURN(operand_op_conf);
-  return JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConf>>()).Get();
+  return JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConfSymbol>>()).Get().op_conf();
 }
 
 Maybe<void> UserStatelessCallOpKernelInstructionType::Infer(
@@ -581,7 +583,8 @@ void FeedOrFetchBlob(vm::Instruction* instruction) {
   auto* blob_object = CHECK_JUST(rw_mutext_blob->template Mut<BlobObject>());
   OfBlob of_blob(device_ctx, blob_object->mut_blob());
   int64_t of_blob_ptr = reinterpret_cast<int64_t>(&of_blob);
-  Global<ForeignCallback>::Get()->OfBlobCall(args->unique_callback_id(), of_blob_ptr);
+  (*Global<std::shared_ptr<ForeignCallback>>::Get())
+      ->OfBlobCall(args->unique_callback_id(), of_blob_ptr);
 }
 
 void FetchBlobHeaderInstructionType::Infer(vm::Instruction* instruction) const {

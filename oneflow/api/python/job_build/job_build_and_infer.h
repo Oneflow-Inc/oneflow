@@ -25,28 +25,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-inline Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  if (EagerExecutionEnabled()) {
-    return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
-  } else {
-    return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
-  }
-}
-
-inline Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {
-  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
-  return mgr->FindJobBuildAndInferCtx(job_name);
-}
-
-inline Maybe<JobBuildAndInferCtx*> GetCurInferCtx() {
-  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
-  return mgr->FindJobBuildAndInferCtx(*JUST(mgr->GetCurrentJobName()));
-}
-
-}  // namespace
-
 inline Maybe<void> JobBuildAndInferCtx_Open(const std::string& job_name) {
   auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
   return mgr->OpenJobBuildAndInferCtx(job_name);
@@ -79,6 +57,7 @@ inline Maybe<void> CurJobBuildAndInferCtx_SetTrainConf(const std::string& train_
 }
 
 inline Maybe<void> CurJobBuildAndInferCtx_Complete() { return JUST(GetCurInferCtx())->Complete(); }
+inline Maybe<void> CurJobBuildAndInferCtx_Rebuild() { return JUST(GetCurInferCtx())->Rebuild(); }
 
 inline Maybe<bool> CurJobBuildAndInferCtx_HasJobConf() {
   return JUST(GetCurInferCtx())->HasJobConf();
@@ -100,13 +79,6 @@ inline Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferConsistentOp(
   auto* ctx = JUST(GetCurInferCtx());
   const auto& op_attribute = JUST(ctx->AddAndInferConsistentOp(op_conf));
   return PbMessage2TxtString(*op_attribute);
-}
-
-inline Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSerializedParallelConfFromProducerView(
-    const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(
-      JUST(ctx->MirroredBlobGetParallelDescFromProducerView(lbn))->parallel_conf());
 }
 
 inline Maybe<void> CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(
@@ -145,18 +117,6 @@ inline Maybe<bool> JobBuildAndInferCtx_DisableBoxing(const std::string& job_name
   return ctx->DisableBoxing(lbn);
 }
 
-inline Maybe<bool> JobBuildAndInferCtx_IsTensorList(const std::string& job_name,
-                                                    const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return ctx->IsTensorList(lbn);
-}
-
-inline Maybe<std::string> JobBuildAndInferCtx_GetBatchAxis(const std::string& job_name,
-                                                           const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(*JUST(ctx->GetBatchAxis(lbn)));
-}
-
 inline Maybe<std::string> JobBuildAndInferCtx_GetSplitAxisFromProducerView(
     const std::string& job_name, const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
@@ -192,43 +152,18 @@ inline Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSubLbi(const std::s
   return PbMessage2TxtString(*JUST(ctx->MirroredBlobGetSubLbi(lbn, index)));
 }
 
-inline Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSerializedIdListAsStaticShape(
-    const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  const auto& shape = JUST(ctx->MirroredBlobGetStaticShape(lbn));
-  Int64List id_list;
-  *id_list.mutable_value() = {shape->dim_vec().begin(), shape->dim_vec().end()};
-  return PbMessage2TxtString(id_list);
-}
-
-inline Maybe<long long> JobBuildAndInferCtx_MirroredBlobGetDataType(const std::string& job_name,
-                                                                    const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return JUST(ctx->MirroredBlobGetDataType(lbn));
-}
-
-inline Maybe<bool> JobBuildAndInferCtx_MirroredBlobIsDynamic(const std::string& job_name,
+inline Maybe<void> JobBuildAndInferCtx_CheckLbnValidAndExist(const std::string& job_name,
                                                              const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return ctx->MirroredBlobIsDynamic(lbn);
+  JUST(ctx->CheckLbnValidAndExist(lbn));
+  return Maybe<void>::Ok();
 }
 
-inline Maybe<bool> JobBuildAndInferCtx_MirroredBlobIsTensorList(const std::string& job_name,
-                                                                const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return ctx->MirroredBlobIsTensorList(lbn);
-}
-
-inline Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetBatchAxis(const std::string& job_name,
-                                                                       const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(*JUST(ctx->MirroredBlobGetBatchAxis(lbn)));
-}
-
-inline Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSplitAxisFromProducerView(
-    const std::string& job_name, const std::string& lbn) {
-  auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(*JUST(ctx->MirroredBlobGetSplitAxisFromProducerView(lbn)));
+inline Maybe<std::string> JobBuildAndInferCtx_GetOpBlobLbn(const std::string& job_name,
+                                                           const std::string& op_name,
+                                                           const std::string bn_in_op) {
+  const auto* job_ctx = JUST(GetJobBuildAndInferCtx(job_name));
+  return job_ctx->GetOpBlobLbn(op_name, bn_in_op);
 }
 
 }  // namespace oneflow

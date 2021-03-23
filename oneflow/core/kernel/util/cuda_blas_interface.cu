@@ -76,23 +76,16 @@ void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE tra
   cublasOperation_t cublas_trans_a, cublas_trans_b;
   std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallCublasGemm(trans_a, trans_b, m, n, k);
-  OF_CUBLAS_CHECK(cublasGemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a,
-                               n, m, k, &alpha_f, b, CUDA_R_16F, ldb, a, CUDA_R_16F, lda, &beta_f,
-                               c, CUDA_R_16F, ldc, CUDA_R_32F, CUBLAS_GEMM_DFALT_TENSOR_OP));
-}
-
-void HGemmWithFloat(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE trans_a,
-                    enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
-                    const float* alpha, const half* a, const half* b, const float* beta, half* c) {
-  int lda, ldb, ldc;
-  cublasOperation_t cublas_trans_a, cublas_trans_b;
-  std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
-      PrepareToCallCublasGemm(trans_a, trans_b, m, n, k);
-
-  cudaDataType_t data_type = GetCudaDataType(DataType::kFloat16);
-  OF_CUBLAS_CHECK(cublasSgemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a,
-                                n, m, k, alpha, b, data_type, ldb, a, data_type, lda, beta, c,
-                                data_type, ldc));
+  if (GetCudaSmVersion() >= 500) {
+    OF_CUBLAS_CHECK(cublasGemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
+                                 cublas_trans_a, n, m, k, &alpha_f, b, CUDA_R_16F, ldb, a,
+                                 CUDA_R_16F, lda, &beta_f, c, CUDA_R_16F, ldc, CUDA_R_32F,
+                                 CUBLAS_GEMM_DFALT_TENSOR_OP));
+  } else {
+    OF_CUBLAS_CHECK(cublasSgemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
+                                  cublas_trans_a, n, m, k, &alpha_f, b, CUDA_R_16F, ldb, a,
+                                  CUDA_R_16F, lda, &beta_f, c, CUDA_R_16F, ldc));
+  }
 }
 
 std::tuple<int, int, int> CalcMNKForGemm(enum CBLAS_TRANSPOSE trans_a, const Blob* a,
@@ -114,24 +107,9 @@ void BlobGemmImpl(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANS
                                    b->dptr<T>(), beta, c->mut_dptr<T>());
 }
 
-template<typename T>
-__global__ void AssignStridedAddrGpu(T** dev_ptrs, T* start_ptr, int32_t stride_len,
-                                     int32_t stride_num) {
-  CUDA_1D_KERNEL_LOOP(i, stride_num) { dev_ptrs[i] = start_ptr + i * stride_len; }
-}
-
-template<typename T>
-void AssignStridedAddr(DeviceCtx* ctx, T** dev_ptrs, T* start_ptr, int stride_len, int stride_num) {
-  AssignStridedAddrGpu<T>
-      <<<BlocksNum4ThreadsNum(stride_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          dev_ptrs, start_ptr, stride_len, stride_num);
-}
-
-template<typename T>
-std::tuple<int, int, int, int, int, int, cublasOperation_t, cublasOperation_t, T**, T**, T**>
-PrepareToCallBatchedGemm(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans_a,
-                         const enum CBLAS_TRANSPOSE trans_b, int batch_size, int m, int n, int k,
-                         const T* a, const T* b, T* c, T** buf) {
+std::tuple<int, int, int, int, int, int, cublasOperation_t, cublasOperation_t>
+PrepareToCallBatchedGemm(const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                         int batch_size, int m, int n, int k) {
   const int a_stride = m * k;
   const int b_stride = k * n;
   const int c_stride = m * n;
@@ -140,14 +118,8 @@ PrepareToCallBatchedGemm(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans_a,
   const int ldc = n;
   cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
   cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
-  T** dev_a_ptrs = buf;
-  T** dev_b_ptrs = buf + batch_size;
-  T** dev_c_ptrs = buf + 2 * batch_size;
-  AssignStridedAddr<T>(ctx, dev_a_ptrs, const_cast<T*>(a), a_stride, batch_size);
-  AssignStridedAddr<T>(ctx, dev_b_ptrs, const_cast<T*>(b), b_stride, batch_size);
-  AssignStridedAddr<T>(ctx, dev_c_ptrs, c, c_stride, batch_size);
   return std::make_tuple(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a,
-                         cublas_trans_b, dev_a_ptrs, dev_b_ptrs, dev_c_ptrs);
+                         cublas_trans_b);
 }
 
 template<typename T>
@@ -168,27 +140,24 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   int a_stride, b_stride, c_stride;
   int lda, ldb, ldc;
   cublasOperation_t cublas_trans_a, cublas_trans_b;
-  T** dev_a_ptrs;
-  T** dev_b_ptrs;
-  T** dev_c_ptrs;
-  std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b, dev_a_ptrs,
-           dev_b_ptrs, dev_c_ptrs) =
-      PrepareToCallBatchedGemm<T>(ctx, trans_a, trans_b, batch_size, m, n, k, a, b, c, buf);
+  std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
+      PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
 
+  if (CUDA_VERSION >= 9010 && GetCudaSmVersion() >= 500) {
 #if CUDA_VERSION >= 9010
-  cudaDataType_t data_type = GetCudaDataType4BatchedGemm<T>();
-  cublasGemmBatchedEx(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-                      reinterpret_cast<const void*>(alpha),
-                      reinterpret_cast<const void**>(const_cast<const T**>(dev_b_ptrs)), data_type,
-                      ldb, reinterpret_cast<const void**>(const_cast<const T**>(dev_a_ptrs)),
-                      data_type, lda, reinterpret_cast<const void*>(beta),
-                      reinterpret_cast<void**>(dev_c_ptrs), data_type, ldc, batch_size, data_type,
-                      CUBLAS_GEMM_DEFAULT);
-#else
-  cublas_gemmBatched<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k, alpha,
-                        const_cast<const T**>(dev_b_ptrs), ldb, const_cast<const T**>(dev_a_ptrs),
-                        lda, beta, dev_c_ptrs, ldc, batch_size);
+    cudaDataType_t data_type = GetCudaDataType4BatchedGemm<T>();
+    OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
+        ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+        reinterpret_cast<const void*>(alpha), reinterpret_cast<const void*>(b), data_type, ldb,
+        b_stride, reinterpret_cast<const void*>(a), data_type, lda, a_stride,
+        reinterpret_cast<const void*>(beta), reinterpret_cast<void*>(c), data_type, ldc, c_stride,
+        batch_size, data_type, CUBLAS_GEMM_DEFAULT));
 #endif
+  } else {
+    cublas_gemmStridedBatched<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+                                 alpha, b, ldb, b_stride, a, lda, a_stride, beta, c, ldc, c_stride,
+                                 batch_size);
+  }
 }
 
 #if CUDA_VERSION >= 9010
@@ -203,49 +172,28 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   int a_stride, b_stride, c_stride;
   int lda, ldb, ldc;
   cublasOperation_t cublas_trans_a, cublas_trans_b;
-  half** dev_a_ptrs;
-  half** dev_b_ptrs;
-  half** dev_c_ptrs;
-  std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b, dev_a_ptrs,
-           dev_b_ptrs, dev_c_ptrs) =
-      PrepareToCallBatchedGemm<half>(ctx, trans_a, trans_b, batch_size, m, n, k, a, b, c, buf);
-  OF_CUBLAS_CHECK(cublasGemmBatchedEx(
-      ctx->cublas_tensor_op_math_handle(), CblasTrans2CublasTrans(trans_b),
-      CblasTrans2CublasTrans(trans_a), n, m, k, &alpha_f,
-      reinterpret_cast<const void**>(const_cast<const half**>(dev_b_ptrs)), CUDA_R_16F, ldb,
-      reinterpret_cast<const void**>(const_cast<const half**>(dev_a_ptrs)), CUDA_R_16F, lda,
-      &beta_f, reinterpret_cast<void**>(dev_c_ptrs), CUDA_R_16F, ldc, batch_size, CUDA_R_32F,
-      CUBLAS_GEMM_DFALT_TENSOR_OP));
-}
-#endif
+  std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
+      PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
 
-void BatchedHGemmWithFloatImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
-                               const enum CBLAS_TRANSPOSE trans_a,
-                               const enum CBLAS_TRANSPOSE trans_b, int batch_size, int m, int n,
-                               int k, const float* alpha, const half* a, const half* b,
-                               const float* beta, half* c, half** buf) {
-  int a_stride, b_stride, c_stride;
-  int lda, ldb, ldc;
-  cublasOperation_t cublas_trans_a, cublas_trans_b;
-  half** dev_a_ptrs;
-  half** dev_b_ptrs;
-  half** dev_c_ptrs;
-  std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b, dev_a_ptrs,
-           dev_b_ptrs, dev_c_ptrs) =
-      PrepareToCallBatchedGemm<half>(ctx, trans_a, trans_b, batch_size, m, n, k, a, b, c, buf);
-
-#if CUDA_VERSION >= 9010
-  cublasGemmBatchedEx(
-      ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-      reinterpret_cast<const void*>(alpha),
-      reinterpret_cast<const void**>(const_cast<const half**>(dev_b_ptrs)), CUDA_R_16F, ldb,
-      reinterpret_cast<const void**>(const_cast<const half**>(dev_a_ptrs)), CUDA_R_16F, lda,
-      reinterpret_cast<const void*>(beta), reinterpret_cast<void**>(dev_c_ptrs), CUDA_R_16F, ldc,
-      batch_size, CUDA_R_32F, CUBLAS_GEMM_DEFAULT);
+  if (GetCudaSmVersion() >= 500) {
+#if CUDA_VERSION >= 11000
+    cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
 #else
-  LOG(FATAL) << "BatchedHGemmWithFloatImpl() does not support CUDA_VERSION below 9010";
+    cublasGemmAlgo_t algo = CUBLAS_GEMM_DFALT_TENSOR_OP;
 #endif
+    OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
+        ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha_f,
+        reinterpret_cast<const void*>(b), CUDA_R_16F, ldb, b_stride,
+        reinterpret_cast<const void*>(a), CUDA_R_16F, lda, a_stride, &beta_f,
+        reinterpret_cast<void*>(c), CUDA_R_16F, ldc, c_stride, batch_size, CUDA_R_32F, algo));
+  } else {
+    cublas_gemmStridedBatched<half>(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
+                                    cublas_trans_a, n, m, k, alpha, b, ldb, b_stride, a, lda,
+                                    a_stride, beta, c, ldc, c_stride, batch_size);
+  }
 }
+#endif
+
 __global__ void AxpyHalfGpu(const int n, const half alpha, const half* x, const int incx, half* y,
                             const int incy) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
@@ -272,16 +220,6 @@ void BlasIf<DeviceType::kGPU>::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE tra
                                         const Blob* a, const Blob* b, Blob* c) {
   BlobGemmImpl<float16>(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
-void BlasIf<DeviceType::kGPU>::BlobHGemmWithFloat(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                                  enum CBLAS_TRANSPOSE trans_b, float alpha,
-                                                  float beta, const Blob* a, const Blob* b,
-                                                  Blob* c) {
-  int m, n, k;
-  std::tie(m, n, k) = CalcMNKForGemm(trans_a, a, c);
-  BlasIf<DeviceType::kGPU>::OFHGemmWithFloat(ctx, trans_a, trans_b, m, n, k, alpha,
-                                             a->dptr<float16>(), b->dptr<float16>(), beta,
-                                             c->mut_dptr<float16>());
-}
 void BlasIf<DeviceType::kGPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
                                       const int k, const float alpha, const float* a,
@@ -301,15 +239,6 @@ void BlasIf<DeviceType::kGPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans
   Gemm<half>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, reinterpret_cast<const half*>(&alpha),
              reinterpret_cast<const half*>(a), reinterpret_cast<const half*>(b),
              reinterpret_cast<const half*>(&beta), reinterpret_cast<half*>(c));
-}
-void BlasIf<DeviceType::kGPU>::OFHGemmWithFloat(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                                enum CBLAS_TRANSPOSE trans_b, const int m,
-                                                const int n, const int k, const float alpha,
-                                                const float16* a, const float16* b,
-                                                const float beta, float16* c) {
-  HGemmWithFloat(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, &alpha,
-                 reinterpret_cast<const half*>(a), reinterpret_cast<const half*>(b), &beta,
-                 reinterpret_cast<half*>(c));
 }
 
 void BlasIf<DeviceType::kGPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
@@ -338,15 +267,6 @@ void BlasIf<DeviceType::kGPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOS
                         reinterpret_cast<const half*>(&alpha), reinterpret_cast<const half*>(a),
                         reinterpret_cast<const half*>(b), reinterpret_cast<const half*>(&beta),
                         reinterpret_cast<half*>(c), reinterpret_cast<half**>(buf));
-}
-
-void BlasIf<DeviceType::kGPU>::OFBatchedHGemmWithFloat(
-    DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-    const int batch_size, const int m, const int n, const int k, const float alpha,
-    const float16* a, const float16* b, const float beta, float16* c, float16** buf) {
-  BatchedHGemmWithFloatImpl(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, &alpha,
-                            reinterpret_cast<const half*>(a), reinterpret_cast<const half*>(b),
-                            &beta, reinterpret_cast<half*>(c), reinterpret_cast<half**>(buf));
 }
 
 void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x,
