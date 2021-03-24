@@ -26,12 +26,11 @@ from typing import Optional, List, Tuple
 @oneflow_export("nn.Gather")
 class Gather(Module):
     def __init__(
-        self, axis: int = 0, sparse_grad: bool = False, name: Optional[str] = None,
+        self, axis: int = 0, sparse_grad: bool = False,
     ):
         super().__init__()
         self._op = (
             flow.builtin_op("gather")
-            .Name(name if name is not None else id_util.UniqueStr("Gather_"))
             .Input("in")
             .Input("indices")
             .Output("out")
@@ -56,7 +55,6 @@ class Embedding(Module):
         scale_grad_by_freq: bool = False,
         sparse: bool = False,
         _weight: Optional[Tensor] = None,
-        name: Optional[str] = None,
     ):
         super().__init__()
 
@@ -79,20 +77,28 @@ class Embedding(Module):
         if _weight is None:
             self.weight = flow.nn.Parameter(Tensor(num_embeddings, embedding_dim))
             # TODO(Liangdepeng)
-            # self.reset_parameters()
+            self.reset_parameters()
         else:
             assert list(_weight.shape) == [
                 num_embeddings,
                 embedding_dim,
             ], "Shape of weight does not match num_embeddings and embedding_dim"
+            # TODO(Liangdepeng): unit test error
             self.weight = flow.nn.Parameter(_weight)
             # TODO(Liangdepeng)
             # self._fill_padding_idx_with_zero()
         self.sparse = sparse
 
-        self.gather_op = Gather(
-            name=name if name is not None else id_util.UniqueStr("Embedding_")
-        )
+        self.gather_op = Gather()
+
+    def reset_parameters(self) -> None:
+        flow.nn.init.normal_(self.weight)
+        # self._fill_padding_idx_with_zero()
+
+    # def _fill_padding_idx_with_zero(self) -> None:
+    #     if self.padding_idx is not None:
+    #         with torch.no_grad():
+    #             self.weight[self.padding_idx].fill_(0)
 
     def forward(self, indices):
         res = self.gather_op(self.weight, indices)
