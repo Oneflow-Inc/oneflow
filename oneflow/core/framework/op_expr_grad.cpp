@@ -71,5 +71,31 @@ class MatMulOpGrad : public OpExprGrad {
 
 REGISTER_OP_EXPR_GRAD("matmul", MatMulOpGrad);
 
+class UserOpExprGrad : public OpExprGrad {
+ public:
+  explicit UserOpExprGrad(const OpExpr& op) : OpExprGrad(op) {
+    // TODO()
+    UNIMPLEMENTED();
+  }
+
+  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs) const override {
+    // TODO()
+    UNIMPLEMENTED();
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> DoBackward(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+                         TensorTuple* in_grads) const override {
+    // TODO()
+    UNIMPLEMENTED();
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> backward_ops_;
+};
+
+REGISTER_OP_EXPR_GRAD("user_op", UserOpExprGrad);
 }  // namespace one
 }  // namespace oneflow
