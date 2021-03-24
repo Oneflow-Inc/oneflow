@@ -11,7 +11,9 @@ if args.xla:
     assert args.cuda
 
 if args.cuda:
-    compute_platform = "cu102"
+    compute_platform = "".join(args.cuda.split("."))
+    assert len(compute_platform) == 3
+    compute_platform = "cu" + compute_platform
     if args.xla:
         compute_platform += ".xla"
 else:
@@ -39,3 +41,5 @@ else:
     version = f"0.3b6+{compute_platform}.git.{git_hash}"
 
 print(f"generating pip version: {version}")
+with open("oneflow/python/version.py", "w+") as f:
+    f.write(f'__version__ = "{version}"')
