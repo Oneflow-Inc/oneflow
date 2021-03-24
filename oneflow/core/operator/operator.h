@@ -383,12 +383,6 @@ struct IsTickTockOpTypeCase final {};
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type);
 
-inline LogicalBlobId GenPackedLbi() {
-  LogicalBlobId lbi;
-  lbi.set_is_packed_id(true);
-  return lbi;
-}
-
 inline OpBlobArg GenOpBlobArg(const std::string& op_name, const std::string& bn_in_op) {
   OpBlobArg oba;
   oba.set_op_name(op_name);
@@ -405,7 +399,6 @@ inline std::string GenLogicalBlobName(const std::string& op_name, const std::str
 inline std::string GenLogicalBlobName(const LogicalBlobId& lbi) {
   CHECK_EQ(lbi.has_op_name(), true);
   CHECK_EQ(lbi.has_blob_name(), true);
-  CHECK_EQ(lbi.is_packed_id(), false);
   return GenLogicalBlobName(lbi.op_name(), lbi.blob_name());
 }
 

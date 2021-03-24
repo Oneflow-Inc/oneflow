@@ -93,10 +93,11 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type())));
   conf.mutable_copy_hd_conf()->set_type(copy_type_);
   auto in_regst = GetSoleConsumedRegst("copy_in");
-  if (in_regst->NumOfLbi() == 1) {
-    in_regst->ForEachLbi(
-        [&](const LogicalBlobId& lbi) { *conf.mutable_copy_hd_conf()->mutable_lbi() = lbi; });
-  }
+  CHECK_EQ(in_regst->NumOfLbi(), 1);
+  in_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+    *conf.mutable_copy_hd_conf()->mutable_lbi() = lbi;
+    CHECK(lbi == this->lbi());
+  });
   return conf;
 }
 
@@ -125,7 +126,7 @@ OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_name("copy_comm_net_" + NewUniqueId());
   conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
-  conf.mutable_copy_comm_net_conf();
+  *(conf.mutable_copy_comm_net_conf()->mutable_lbi()) = lbi();
   return conf;
 }
 

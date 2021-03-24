@@ -422,7 +422,6 @@ const BlobDesc& OpGraph::GetLogicalBlobDesc(const LogicalBlobId& lbi) const {
 }
 
 std::string OpGraph::GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const {
-  CHECK(!lbi.has_is_packed_id());
   if (op_name2op_node_.find(op_name) != op_name2op_node_.end()) {
     return op_name;
   } else {
@@ -432,7 +431,6 @@ std::string OpGraph::GetOpNameKey(const std::string& op_name, const LogicalBlobI
 
 LogicalBlobId OpGraph::GetLogicalBlobIdKey(const std::string& op_name,
                                            const LogicalBlobId& lbi) const {
-  CHECK(!lbi.has_is_packed_id());
   if (op_name2op_node_.find(op_name) != op_name2op_node_.end()) {
     return lbi;
   } else {
