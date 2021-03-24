@@ -27,23 +27,24 @@ from paddle.nn import AdaptiveAvgPool2D, MaxPool2D, AvgPool2D
 from paddle.nn.initializer import KaimingNormal
 import math
 
-__all__ = [
-    "MobileNetV1_x0_25", "MobileNetV1_x0_5", "MobileNetV1_x0_75", "MobileNetV1"
-]
+__all__ = ["MobileNetV1_x0_25", "MobileNetV1_x0_5", "MobileNetV1_x0_75", "MobileNetV1"]
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
+
 class ConvBNLayer(nn.Layer):
-    def __init__(self,
-                 num_channels,
-                 filter_size,
-                 num_filters,
-                 stride,
-                 padding,
-                 channels=None,
-                 num_groups=1,
-                 act='relu',
-                 name=None):
+    def __init__(
+        self,
+        num_channels,
+        filter_size,
+        num_filters,
+        stride,
+        padding,
+        channels=None,
+        num_groups=1,
+        act="relu",
+        name=None,
+    ):
         super(ConvBNLayer, self).__init__()
 
         self._conv = Conv2D(
@@ -53,9 +54,9 @@ class ConvBNLayer(nn.Layer):
             stride=stride,
             padding=padding,
             groups=num_groups,
-            weight_attr=ParamAttr(
-                initializer=KaimingNormal(), name=name + "_weights"),
-            bias_attr=False)
+            weight_attr=ParamAttr(initializer=KaimingNormal(), name=name + "_weights"),
+            bias_attr=False,
+        )
 
         self._batch_norm = BatchNorm(
             num_filters,
@@ -63,7 +64,8 @@ class ConvBNLayer(nn.Layer):
             param_attr=ParamAttr(name + "_bn_scale"),
             bias_attr=ParamAttr(name + "_bn_offset"),
             moving_mean_name=name + "_bn_mean",
-            moving_variance_name=name + "_bn_variance")
+            moving_variance_name=name + "_bn_variance",
+        )
 
     def forward(self, inputs):
         y = self._conv(inputs)
@@ -72,14 +74,16 @@ class ConvBNLayer(nn.Layer):
 
 
 class DepthwiseSeparable(nn.Layer):
-    def __init__(self,
-                 num_channels,
-                 num_filters1,
-                 num_filters2,
-                 num_groups,
-                 stride,
-                 scale,
-                 name=None):
+    def __init__(
+        self,
+        num_channels,
+        num_filters1,
+        num_filters2,
+        num_groups,
+        stride,
+        scale,
+        name=None,
+    ):
         super(DepthwiseSeparable, self).__init__()
 
         self._depthwise_conv = ConvBNLayer(
@@ -89,7 +93,8 @@ class DepthwiseSeparable(nn.Layer):
             stride=stride,
             padding=1,
             num_groups=int(num_groups * scale),
-            name=name + "_dw")
+            name=name + "_dw",
+        )
 
         self._pointwise_conv = ConvBNLayer(
             num_channels=int(num_filters1 * scale),
@@ -97,7 +102,8 @@ class DepthwiseSeparable(nn.Layer):
             num_filters=int(num_filters2 * scale),
             stride=1,
             padding=0,
-            name=name + "_sep")
+            name=name + "_sep",
+        )
 
     def forward(self, inputs):
         y = self._depthwise_conv(inputs)
@@ -118,7 +124,8 @@ class MobileNet(nn.Layer):
             num_filters=int(32 * scale),
             stride=2,
             padding=1,
-            name="conv1")
+            name="conv1",
+        )
 
         conv2_1 = self.add_sublayer(
             "conv2_1",
@@ -129,7 +136,9 @@ class MobileNet(nn.Layer):
                 num_groups=32,
                 stride=1,
                 scale=scale,
-                name="conv2_1"))
+                name="conv2_1",
+            ),
+        )
         self.block_list.append(conv2_1)
 
         conv2_2 = self.add_sublayer(
@@ -141,7 +150,9 @@ class MobileNet(nn.Layer):
                 num_groups=64,
                 stride=2,
                 scale=scale,
-                name="conv2_2"))
+                name="conv2_2",
+            ),
+        )
         self.block_list.append(conv2_2)
 
         conv3_1 = self.add_sublayer(
@@ -153,7 +164,9 @@ class MobileNet(nn.Layer):
                 num_groups=128,
                 stride=1,
                 scale=scale,
-                name="conv3_1"))
+                name="conv3_1",
+            ),
+        )
         self.block_list.append(conv3_1)
 
         conv3_2 = self.add_sublayer(
@@ -165,7 +178,9 @@ class MobileNet(nn.Layer):
                 num_groups=128,
                 stride=2,
                 scale=scale,
-                name="conv3_2"))
+                name="conv3_2",
+            ),
+        )
         self.block_list.append(conv3_2)
 
         conv4_1 = self.add_sublayer(
@@ -177,7 +192,9 @@ class MobileNet(nn.Layer):
                 num_groups=256,
                 stride=1,
                 scale=scale,
-                name="conv4_1"))
+                name="conv4_1",
+            ),
+        )
         self.block_list.append(conv4_1)
 
         conv4_2 = self.add_sublayer(
@@ -189,7 +206,9 @@ class MobileNet(nn.Layer):
                 num_groups=256,
                 stride=2,
                 scale=scale,
-                name="conv4_2"))
+                name="conv4_2",
+            ),
+        )
         self.block_list.append(conv4_2)
 
         for i in range(5):
@@ -202,7 +221,9 @@ class MobileNet(nn.Layer):
                     num_groups=512,
                     stride=1,
                     scale=scale,
-                    name="conv5_" + str(i + 1)))
+                    name="conv5_" + str(i + 1),
+                ),
+            )
             self.block_list.append(conv5)
 
         conv5_6 = self.add_sublayer(
@@ -214,7 +235,9 @@ class MobileNet(nn.Layer):
                 num_groups=512,
                 stride=2,
                 scale=scale,
-                name="conv5_6"))
+                name="conv5_6",
+            ),
+        )
         self.block_list.append(conv5_6)
 
         conv6 = self.add_sublayer(
@@ -226,7 +249,9 @@ class MobileNet(nn.Layer):
                 num_groups=1024,
                 stride=1,
                 scale=scale,
-                name="conv6"))
+                name="conv6",
+            ),
+        )
         self.block_list.append(conv6)
 
         self.pool2d_avg = AdaptiveAvgPool2D(1)
@@ -234,9 +259,9 @@ class MobileNet(nn.Layer):
         self.out = Linear(
             int(1024 * scale),
             class_dim,
-            weight_attr=ParamAttr(
-                initializer=KaimingNormal(), name="fc7_weights"),
-            bias_attr=ParamAttr(name="fc7_offset"))
+            weight_attr=ParamAttr(initializer=KaimingNormal(), name="fc7_weights"),
+            bias_attr=ParamAttr(name="fc7_offset"),
+        )
 
     def forward(self, inputs):
         y = self.conv1(inputs)

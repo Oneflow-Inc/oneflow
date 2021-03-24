@@ -30,14 +30,20 @@ from paddle.regularizer import L2Decay
 import math
 
 __all__ = [
-    "MobileNetV3_small_x0_35", "MobileNetV3_small_x0_5",
-    "MobileNetV3_small_x0_75", "MobileNetV3_small_x1_0",
-    "MobileNetV3_small_x1_25", "MobileNetV3_large_x0_35",
-    "MobileNetV3_large_x0_5", "MobileNetV3_large_x0_75",
-    "MobileNetV3_large_x1_0", "MobileNetV3_large_x1_25"
+    "MobileNetV3_small_x0_35",
+    "MobileNetV3_small_x0_5",
+    "MobileNetV3_small_x0_75",
+    "MobileNetV3_small_x1_0",
+    "MobileNetV3_small_x1_25",
+    "MobileNetV3_large_x0_35",
+    "MobileNetV3_large_x0_5",
+    "MobileNetV3_large_x0_75",
+    "MobileNetV3_large_x1_0",
+    "MobileNetV3_large_x1_25",
 ]
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
+
 
 def make_divisible(v, divisor=8, min_value=None):
     if min_value is None:
@@ -49,11 +55,7 @@ def make_divisible(v, divisor=8, min_value=None):
 
 
 class MobileNetV3(nn.Layer):
-    def __init__(self,
-                 scale=1.0,
-                 model_name="small",
-                 dropout_prob=0.2,
-                 class_dim=1000):
+    def __init__(self, scale=1.0, model_name="small", dropout_prob=0.2, class_dim=1000):
         super(MobileNetV3, self).__init__()
 
         inplanes = 16
@@ -97,7 +99,8 @@ class MobileNetV3(nn.Layer):
             self.cls_ch_expand = 1280
         else:
             raise NotImplementedError(
-                "mode[{}_model] is not implemented!".format(model_name))
+                "mode[{}_model] is not implemented!".format(model_name)
+            )
 
         self.conv1 = ConvBNLayer(
             in_c=3,
@@ -108,7 +111,8 @@ class MobileNetV3(nn.Layer):
             num_groups=1,
             if_act=True,
             act="hardswish",
-            name="conv1")
+            name="conv1",
+        )
 
         self.block_list = []
         i = 0
@@ -124,7 +128,9 @@ class MobileNetV3(nn.Layer):
                     stride=s,
                     use_se=se,
                     act=nl,
-                    name="conv" + str(i + 2)))
+                    name="conv" + str(i + 2),
+                ),
+            )
             self.block_list.append(block)
             inplanes = make_divisible(scale * c)
             i += 1
@@ -138,7 +144,8 @@ class MobileNetV3(nn.Layer):
             num_groups=1,
             if_act=True,
             act="hardswish",
-            name="conv_last")
+            name="conv_last",
+        )
 
         self.pool = AdaptiveAvgPool2D(1)
 
@@ -149,7 +156,8 @@ class MobileNetV3(nn.Layer):
             stride=1,
             padding=0,
             weight_attr=ParamAttr(name="last_1x1_conv_weights"),
-            bias_attr=False)
+            bias_attr=False,
+        )
 
         self.dropout = Dropout(p=dropout_prob, mode="downscale_in_infer")
 
@@ -157,7 +165,8 @@ class MobileNetV3(nn.Layer):
             self.cls_ch_expand,
             class_dim,
             weight_attr=ParamAttr("fc_weights"),
-            bias_attr=ParamAttr(name="fc_offset"))
+            bias_attr=ParamAttr(name="fc_offset"),
+        )
 
     def forward(self, inputs, label=None):
         x = self.conv1(inputs)
@@ -178,17 +187,19 @@ class MobileNetV3(nn.Layer):
 
 
 class ConvBNLayer(nn.Layer):
-    def __init__(self,
-                 in_c,
-                 out_c,
-                 filter_size,
-                 stride,
-                 padding,
-                 num_groups=1,
-                 if_act=True,
-                 act=None,
-                 use_cudnn=True,
-                 name=""):
+    def __init__(
+        self,
+        in_c,
+        out_c,
+        filter_size,
+        stride,
+        padding,
+        num_groups=1,
+        if_act=True,
+        act=None,
+        use_cudnn=True,
+        name="",
+    ):
         super(ConvBNLayer, self).__init__()
         self.if_act = if_act
         self.act = act
@@ -200,16 +211,16 @@ class ConvBNLayer(nn.Layer):
             padding=padding,
             groups=num_groups,
             weight_attr=ParamAttr(name=name + "_weights"),
-            bias_attr=False)
+            bias_attr=False,
+        )
         self.bn = BatchNorm(
             num_channels=out_c,
             act=None,
-            param_attr=ParamAttr(
-                name=name + "_bn_scale", regularizer=L2Decay(0.0)),
-            bias_attr=ParamAttr(
-                name=name + "_bn_offset", regularizer=L2Decay(0.0)),
+            param_attr=ParamAttr(name=name + "_bn_scale", regularizer=L2Decay(0.0)),
+            bias_attr=ParamAttr(name=name + "_bn_offset", regularizer=L2Decay(0.0)),
             moving_mean_name=name + "_bn_mean",
-            moving_variance_name=name + "_bn_variance")
+            moving_variance_name=name + "_bn_variance",
+        )
 
     def forward(self, x):
         x = self.conv(x)
@@ -226,15 +237,9 @@ class ConvBNLayer(nn.Layer):
 
 
 class ResidualUnit(nn.Layer):
-    def __init__(self,
-                 in_c,
-                 mid_c,
-                 out_c,
-                 filter_size,
-                 stride,
-                 use_se,
-                 act=None,
-                 name=''):
+    def __init__(
+        self, in_c, mid_c, out_c, filter_size, stride, use_se, act=None, name=""
+    ):
         super(ResidualUnit, self).__init__()
         self.if_shortcut = stride == 1 and in_c == out_c
         self.if_se = use_se
@@ -247,7 +252,8 @@ class ResidualUnit(nn.Layer):
             padding=0,
             if_act=True,
             act=act,
-            name=name + "_expand")
+            name=name + "_expand",
+        )
         self.bottleneck_conv = ConvBNLayer(
             in_c=mid_c,
             out_c=mid_c,
@@ -257,7 +263,8 @@ class ResidualUnit(nn.Layer):
             num_groups=mid_c,
             if_act=True,
             act=act,
-            name=name + "_depthwise")
+            name=name + "_depthwise",
+        )
         if self.if_se:
             self.mid_se = SEModule(mid_c, name=name + "_se")
         self.linear_conv = ConvBNLayer(
@@ -268,7 +275,8 @@ class ResidualUnit(nn.Layer):
             padding=0,
             if_act=False,
             act=None,
-            name=name + "_linear")
+            name=name + "_linear",
+        )
 
     def forward(self, inputs):
         x = self.expand_conv(inputs)
@@ -292,7 +300,8 @@ class SEModule(nn.Layer):
             stride=1,
             padding=0,
             weight_attr=ParamAttr(name=name + "_1_weights"),
-            bias_attr=ParamAttr(name=name + "_1_offset"))
+            bias_attr=ParamAttr(name=name + "_1_offset"),
+        )
         self.conv2 = Conv2D(
             in_channels=channel // reduction,
             out_channels=channel,
@@ -300,7 +309,8 @@ class SEModule(nn.Layer):
             stride=1,
             padding=0,
             weight_attr=ParamAttr(name + "_2_weights"),
-            bias_attr=ParamAttr(name=name + "_2_offset"))
+            bias_attr=ParamAttr(name=name + "_2_offset"),
+        )
 
     def forward(self, inputs):
         outputs = self.avg_pool(inputs)

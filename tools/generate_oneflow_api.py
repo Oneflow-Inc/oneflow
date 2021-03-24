@@ -83,7 +83,12 @@ def include_export(api_name_base, symbol):
 
 def exported_symbols():
     for mod in sys.modules.values():
-        if mod.__name__.startswith("oneflow.python"):
+        # fix import paddle compile bug, some module in paddle has not __name__ attr
+        try:
+            mod_name = mod.__name__
+        except:
+            mod_name = ""
+        if mod_name.startswith("oneflow.python"):
             for attr in dir(mod):
                 symbol = getattr(mod, attr)
                 if hasattr(symbol, "__dict__") and "_ONEFLOW_API" in vars(symbol):

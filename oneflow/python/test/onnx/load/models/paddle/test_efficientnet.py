@@ -25,9 +25,16 @@ import re
 import copy
 
 __all__ = [
-    'EfficientNet', 'EfficientNetB0_small', 'EfficientNetB0', 'EfficientNetB1',
-    'EfficientNetB2', 'EfficientNetB3', 'EfficientNetB4', 'EfficientNetB5',
-    'EfficientNetB6', 'EfficientNetB7'
+    "EfficientNet",
+    "EfficientNetB0_small",
+    "EfficientNetB0",
+    "EfficientNetB1",
+    "EfficientNetB2",
+    "EfficientNetB3",
+    "EfficientNetB4",
+    "EfficientNetB5",
+    "EfficientNetB6",
+    "EfficientNetB7",
 ]
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check

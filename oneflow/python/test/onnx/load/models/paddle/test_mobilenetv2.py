@@ -28,23 +28,30 @@ from paddle.nn import AdaptiveAvgPool2D, MaxPool2D, AvgPool2D
 import math
 
 __all__ = [
-    "MobileNetV2_x0_25", "MobileNetV2_x0_5", "MobileNetV2_x0_75",
-    "MobileNetV2", "MobileNetV2_x1_5", "MobileNetV2_x2_0"
+    "MobileNetV2_x0_25",
+    "MobileNetV2_x0_5",
+    "MobileNetV2_x0_75",
+    "MobileNetV2",
+    "MobileNetV2_x1_5",
+    "MobileNetV2_x2_0",
 ]
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
+
 class ConvBNLayer(nn.Layer):
-    def __init__(self,
-                 num_channels,
-                 filter_size,
-                 num_filters,
-                 stride,
-                 padding,
-                 channels=None,
-                 num_groups=1,
-                 name=None,
-                 use_cudnn=True):
+    def __init__(
+        self,
+        num_channels,
+        filter_size,
+        num_filters,
+        stride,
+        padding,
+        channels=None,
+        num_groups=1,
+        name=None,
+        use_cudnn=True,
+    ):
         super(ConvBNLayer, self).__init__()
 
         self._conv = Conv2D(
@@ -55,14 +62,16 @@ class ConvBNLayer(nn.Layer):
             padding=padding,
             groups=num_groups,
             weight_attr=ParamAttr(name=name + "_weights"),
-            bias_attr=False)
+            bias_attr=False,
+        )
 
         self._batch_norm = BatchNorm(
             num_filters,
             param_attr=ParamAttr(name=name + "_bn_scale"),
             bias_attr=ParamAttr(name=name + "_bn_offset"),
             moving_mean_name=name + "_bn_mean",
-            moving_variance_name=name + "_bn_variance")
+            moving_variance_name=name + "_bn_variance",
+        )
 
     def forward(self, inputs, if_act=True):
         y = self._conv(inputs)
@@ -73,8 +82,17 @@ class ConvBNLayer(nn.Layer):
 
 
 class InvertedResidualUnit(nn.Layer):
-    def __init__(self, num_channels, num_in_filter, num_filters, stride,
-                 filter_size, padding, expansion_factor, name):
+    def __init__(
+        self,
+        num_channels,
+        num_in_filter,
+        num_filters,
+        stride,
+        filter_size,
+        padding,
+        expansion_factor,
+        name,
+    ):
         super(InvertedResidualUnit, self).__init__()
         num_expfilter = int(round(num_in_filter * expansion_factor))
         self._expand_conv = ConvBNLayer(
@@ -84,7 +102,8 @@ class InvertedResidualUnit(nn.Layer):
             stride=1,
             padding=0,
             num_groups=1,
-            name=name + "_expand")
+            name=name + "_expand",
+        )
 
         self._bottleneck_conv = ConvBNLayer(
             num_channels=num_expfilter,
@@ -94,7 +113,8 @@ class InvertedResidualUnit(nn.Layer):
             padding=padding,
             num_groups=num_expfilter,
             use_cudnn=False,
-            name=name + "_dwise")
+            name=name + "_dwise",
+        )
 
         self._linear_conv = ConvBNLayer(
             num_channels=num_expfilter,
@@ -103,7 +123,8 @@ class InvertedResidualUnit(nn.Layer):
             stride=1,
             padding=0,
             num_groups=1,
-            name=name + "_linear")
+            name=name + "_linear",
+        )
 
     def forward(self, inputs, ifshortcut):
         y = self._expand_conv(inputs, if_act=True)
@@ -126,7 +147,8 @@ class InvresiBlocks(nn.Layer):
             filter_size=3,
             padding=1,
             expansion_factor=t,
-            name=name + "_1")
+            name=name + "_1",
+        )
 
         self._block_list = []
         for i in range(1, n):
@@ -140,7 +162,9 @@ class InvresiBlocks(nn.Layer):
                     filter_size=3,
                     padding=1,
                     expansion_factor=t,
-                    name=name + "_" + str(i + 1)))
+                    name=name + "_" + str(i + 1),
+                ),
+            )
             self._block_list.append(block)
 
     def forward(self, inputs):
@@ -172,7 +196,8 @@ class MobileNet(nn.Layer):
             filter_size=3,
             stride=2,
             padding=1,
-            name=prefix_name + "conv1_1")
+            name=prefix_name + "conv1_1",
+        )
 
         self.block_list = []
         i = 1
@@ -188,7 +213,9 @@ class MobileNet(nn.Layer):
                     c=int(c * scale),
                     n=n,
                     s=s,
-                    name=prefix_name + "conv" + str(i)))
+                    name=prefix_name + "conv" + str(i),
+                ),
+            )
             self.block_list.append(block)
             in_c = int(c * scale)
 
@@ -199,7 +226,8 @@ class MobileNet(nn.Layer):
             filter_size=1,
             stride=1,
             padding=0,
-            name=prefix_name + "conv9")
+            name=prefix_name + "conv9",
+        )
 
         self.pool2d_avg = AdaptiveAvgPool2D(1)
 
@@ -207,7 +235,8 @@ class MobileNet(nn.Layer):
             self.out_c,
             class_dim,
             weight_attr=ParamAttr(name=prefix_name + "fc10_weights"),
-            bias_attr=ParamAttr(name=prefix_name + "fc10_offset"))
+            bias_attr=ParamAttr(name=prefix_name + "fc10_offset"),
+        )
 
     def forward(self, inputs):
         y = self.conv1(inputs, if_act=True)

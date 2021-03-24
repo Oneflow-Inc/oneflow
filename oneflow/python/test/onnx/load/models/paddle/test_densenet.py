@@ -23,9 +23,7 @@ from paddle.nn import AdaptiveAvgPool2D, MaxPool2D, AvgPool2D
 from paddle.nn.initializer import Uniform
 import math
 
-__all__ = [
-    "DenseNet121", "DenseNet161", "DenseNet169", "DenseNet201", "DenseNet264"
-]
+__all__ = ["DenseNet121", "DenseNet161", "DenseNet169", "DenseNet201", "DenseNet264"]
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
