@@ -67,11 +67,14 @@ jobs:
 
   build:
     name: Build
+    needs: [check_license_and_format, mirror_third_party]
+    continue-on-error: ${{ matrix.allow_fail }}
+    runs-on: ${{ matrix.os }}
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     strategy:
       max-parallel: 5
       matrix:
         test_suite: ["cuda", "cpu", "xla", "mac"]
-        continue-on-error: ${{ matrix.allow_fail }}
         include:
           - test_suite: cuda
             cuda_version: 10.2
@@ -93,9 +96,6 @@ jobs:
             extra_flags: ""
             os: "macos-latest"
             allow_fail: true
-    needs: [check_license_and_format, mirror_third_party]
-    runs-on: ${{ matrix.os }}
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - name: Set environments from secrets
         if: contains(${{ github.repository }}, "Oneflow-Inc")
@@ -235,9 +235,12 @@ jobs:
 
   test:
     name: Test suite
+    needs: [build, wait_for_gpu_slot]
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.allow_fail }}
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     strategy:
       max-parallel: 5
-      continue-on-error: ${{ matrix.allow_fail }}
       matrix:
         test_suite: ["cuda", "cuda_op", "cpu"]
         include:
@@ -253,9 +256,6 @@ jobs:
           - test_suite: "xla"
             os: [self-hosted, linux, gpu]
             allow_fail: true
-    needs: [build, wait_for_gpu_slot]
-    runs-on: ${{ matrix.os }}
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - name: Fix permissions
         run: |
