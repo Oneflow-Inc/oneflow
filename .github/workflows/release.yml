@@ -19,6 +19,14 @@ on:
         description: "package name to build"
         default: "oneflow"
         required: false
+      version:
+        description: ""
+        default: "0.3.5"
+        required: false
+      release:
+        description: "if this is a release build"
+        default: "0"
+        required: false
 
 jobs:
   staging_release:

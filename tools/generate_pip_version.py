@@ -13,7 +13,7 @@ if args.xla:
     assert args.cuda
 
 local_label = ""
-version = f"0.3b6"
+version = f"0.3.5"
 
 # set version if release of nightly
 if os.getenv("ONEFLOW_RELEASE_VERSION"):
