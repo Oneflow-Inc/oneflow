@@ -309,7 +309,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
 
   py::class_<InstructionsBuilder, std::shared_ptr<InstructionsBuilder>>(m, "InstructionsBuilder")
       .def(py::init([](const std::shared_ptr<vm::IdGenerator>& id_generator,
-                       const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
+                       const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
                        const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list,
                        const std::function<void(compatible_py::Object*)>& release_object) {
         return std::make_shared<InstructionsBuilder>(id_generator, instruction_list, symbol_list,
