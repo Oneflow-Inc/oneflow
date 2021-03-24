@@ -466,7 +466,6 @@ Maybe<void> InstructionsBuilder::DeleteObject(compatible_py::Object* blob_object
 Maybe<std::vector<std::shared_ptr<ParallelDesc>>>
 InstructionsBuilder::GetPhysicalParallelDescSymbols(
     const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
-  const auto& machine_id2device_ids = parallel_desc_symbol->machine_id2sorted_dev_phy_ids();
   std::string device_tag = parallel_desc_symbol->parallel_conf().device_tag();
   std::vector<std::shared_ptr<ParallelDesc>> phy_parallel_desc_symbols;
   const auto AppendPhyParallelDescSymbol = [this, &phy_parallel_desc_symbols, &device_tag](
@@ -480,11 +479,12 @@ InstructionsBuilder::GetPhysicalParallelDescSymbols(
     return Maybe<void>::Ok();
   };
 
-  for (const auto& pair : *machine_id2device_ids) {
-    for (int64_t device_id : *pair.second) {
-      JUST(AppendPhyParallelDescSymbol(pair.first, device_id));
+  for (const int64_t machine_id : parallel_desc_symbol->sorted_machine_ids()) {
+    for (const int64_t device_id : parallel_desc_symbol->sorted_dev_phy_ids(machine_id)) {
+      JUST(AppendPhyParallelDescSymbol(machine_id, device_id));
     }
   }
+
   return phy_parallel_desc_symbols;
 }
 
