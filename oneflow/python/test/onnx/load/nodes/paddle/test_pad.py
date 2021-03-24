@@ -36,7 +36,7 @@ def test_pad(test_case):
 def test_pad_with_value(test_case):
     class Net(nn.Layer):
         def forward(self, x):
-            my_pad = nn.Pad2D(padding=(2, 2, 3, 3), mode="constant", value='3.5')
+            my_pad = nn.Pad2D(padding=(2, 2, 3, 3), mode="constant", value="3.5")
             x = my_pad(x)
             return x
 

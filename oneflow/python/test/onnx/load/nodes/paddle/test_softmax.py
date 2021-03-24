@@ -19,6 +19,7 @@ import paddle.nn.functional as F
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
+
 def test_softmax(test_case):
     class Net(nn.Layer):
         def forward(self, x):

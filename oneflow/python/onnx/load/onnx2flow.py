@@ -165,15 +165,14 @@ def from_paddle(
 
     paddle_model.eval()
 
-    f = io.BytesIO()
-
     input_spec = paddle.static.InputSpec(
         shape=x.shape, dtype="float32", name=input_names
     )
 
-    mode_str = " /tmp/model"
+    mode_str = " /tmp/model.onnx"
+
     paddle.onnx.export(
-        model,
+        paddle_model,
         mode_str,
         input_spec=[input_spec],
         opset_version=12,

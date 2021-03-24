@@ -24,17 +24,20 @@ import math
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
+
 class ConvPoolLayer(nn.Layer):
-    def __init__(self,
-                 input_channels,
-                 output_channels,
-                 filter_size,
-                 stride,
-                 padding,
-                 stdv,
-                 groups=1,
-                 act=None,
-                 name=None):
+    def __init__(
+        self,
+        input_channels,
+        output_channels,
+        filter_size,
+        stride,
+        padding,
+        stdv,
+        groups=1,
+        act=None,
+        name=None,
+    ):
         super(ConvPoolLayer, self).__init__()
 
         self.relu = ReLU() if act == "relu" else None
@@ -47,9 +50,12 @@ class ConvPoolLayer(nn.Layer):
             padding=padding,
             groups=groups,
             weight_attr=ParamAttr(
-                name=name + "_weights", initializer=Uniform(-stdv, stdv)),
+                name=name + "_weights", initializer=Uniform(-stdv, stdv)
+            ),
             bias_attr=ParamAttr(
-                name=name + "_offset", initializer=Uniform(-stdv, stdv)))
+                name=name + "_offset", initializer=Uniform(-stdv, stdv)
+            ),
+        )
         self._pool = MaxPool2D(kernel_size=3, stride=2, padding=0)
 
     def forward(self, inputs):
@@ -65,11 +71,9 @@ class AlexNetDY(nn.Layer):
         super(AlexNetDY, self).__init__()
 
         stdv = 1.0 / math.sqrt(3 * 11 * 11)
-        self._conv1 = ConvPoolLayer(
-            3, 64, 11, 4, 2, stdv, act="relu", name="conv1")
+        self._conv1 = ConvPoolLayer(3, 64, 11, 4, 2, stdv, act="relu", name="conv1")
         stdv = 1.0 / math.sqrt(64 * 5 * 5)
-        self._conv2 = ConvPoolLayer(
-            64, 192, 5, 1, 2, stdv, act="relu", name="conv2")
+        self._conv2 = ConvPoolLayer(64, 192, 5, 1, 2, stdv, act="relu", name="conv2")
         stdv = 1.0 / math.sqrt(192 * 3 * 3)
         self._conv3 = Conv2D(
             192,
@@ -78,9 +82,10 @@ class AlexNetDY(nn.Layer):
             stride=1,
             padding=1,
             weight_attr=ParamAttr(
-                name="conv3_weights", initializer=Uniform(-stdv, stdv)),
-            bias_attr=ParamAttr(
-                name="conv3_offset", initializer=Uniform(-stdv, stdv)))
+                name="conv3_weights", initializer=Uniform(-stdv, stdv)
+            ),
+            bias_attr=ParamAttr(name="conv3_offset", initializer=Uniform(-stdv, stdv)),
+        )
         stdv = 1.0 / math.sqrt(384 * 3 * 3)
         self._conv4 = Conv2D(
             384,
@@ -89,38 +94,35 @@ class AlexNetDY(nn.Layer):
             stride=1,
             padding=1,
             weight_attr=ParamAttr(
-                name="conv4_weights", initializer=Uniform(-stdv, stdv)),
-            bias_attr=ParamAttr(
-                name="conv4_offset", initializer=Uniform(-stdv, stdv)))
+                name="conv4_weights", initializer=Uniform(-stdv, stdv)
+            ),
+            bias_attr=ParamAttr(name="conv4_offset", initializer=Uniform(-stdv, stdv)),
+        )
         stdv = 1.0 / math.sqrt(256 * 3 * 3)
-        self._conv5 = ConvPoolLayer(
-            256, 256, 3, 1, 1, stdv, act="relu", name="conv5")
+        self._conv5 = ConvPoolLayer(256, 256, 3, 1, 1, stdv, act="relu", name="conv5")
         stdv = 1.0 / math.sqrt(256 * 6 * 6)
 
         self._drop1 = Dropout(p=0.5, mode="downscale_in_infer")
         self._fc6 = Linear(
             in_features=256 * 6 * 6,
             out_features=4096,
-            weight_attr=ParamAttr(
-                name="fc6_weights", initializer=Uniform(-stdv, stdv)),
-            bias_attr=ParamAttr(
-                name="fc6_offset", initializer=Uniform(-stdv, stdv)))
+            weight_attr=ParamAttr(name="fc6_weights", initializer=Uniform(-stdv, stdv)),
+            bias_attr=ParamAttr(name="fc6_offset", initializer=Uniform(-stdv, stdv)),
+        )
 
         self._drop2 = Dropout(p=0.5, mode="downscale_in_infer")
         self._fc7 = Linear(
             in_features=4096,
             out_features=4096,
-            weight_attr=ParamAttr(
-                name="fc7_weights", initializer=Uniform(-stdv, stdv)),
-            bias_attr=ParamAttr(
-                name="fc7_offset", initializer=Uniform(-stdv, stdv)))
+            weight_attr=ParamAttr(name="fc7_weights", initializer=Uniform(-stdv, stdv)),
+            bias_attr=ParamAttr(name="fc7_offset", initializer=Uniform(-stdv, stdv)),
+        )
         self._fc8 = Linear(
             in_features=4096,
             out_features=class_dim,
-            weight_attr=ParamAttr(
-                name="fc8_weights", initializer=Uniform(-stdv, stdv)),
-            bias_attr=ParamAttr(
-                name="fc8_offset", initializer=Uniform(-stdv, stdv)))
+            weight_attr=ParamAttr(name="fc8_weights", initializer=Uniform(-stdv, stdv)),
+            bias_attr=ParamAttr(name="fc8_offset", initializer=Uniform(-stdv, stdv)),
+        )
 
     def forward(self, inputs):
         x = self._conv1(inputs)
@@ -140,13 +142,12 @@ class AlexNetDY(nn.Layer):
         x = self._fc8(x)
         return x
 
+
 def AlexNet():
     return AlexNetDY(class_dim=1000)
 
+
 def test_alexnet(test_case):
     load_paddle_module_and_check(
-        test_case,
-        AlexNet,
-        input_size=(1, 3, 224, 224),
-        train_flag=False,
+        test_case, AlexNet, input_size=(1, 3, 224, 224), train_flag=False,
     )
