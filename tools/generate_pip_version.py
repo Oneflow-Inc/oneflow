@@ -26,9 +26,6 @@ version = ""
 if os.getenv("ONEFLOW_RELEASE_VERSION"):
     release_version = os.getenv("ONEFLOW_RELEASE_VERSION")
     version = f"{release_version}+{compute_platform}"
-elif os.getenv("ONEFLOW_NIGHTLY_VERSION"):
-    nightly_version = os.getenv("ONEFLOW_NIGHTLY_VERSION")
-    version = f"{nightly_version}+{compute_platform}"
 else:
     try:
         git_hash = (
