@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/scope.h"
@@ -63,8 +62,6 @@ void Operator::Init(std::shared_ptr<const OperatorConf> op_conf) {
   for (const auto& bn : input_bns()) { *input_output_bns_.Add() = bn; }
   for (const auto& bn : output_bns()) { *input_output_bns_.Add() = bn; }
 }
-
-LogicalNode* Operator::NewProperLogicalNode() const { return new NormalForwardLogicalNode; }
 
 const LogicalBlobId& Operator::BnInOp2Lbi(const std::string& bn_in_op) const {
   return arg_signature_.bn_in_op2lbi().at(bn_in_op);
@@ -394,53 +391,51 @@ Maybe<void> Operator::InferInplaceObn2Ibn(
 }
 
 Maybe<void> Operator::FillInputBlobTimeShape(
-    const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4Ibn) {
-  CHECK_OR_RETURN(!ibn2time_shape_);
-  ibn2time_shape_.reset(new HashMap<std::string, std::shared_ptr<const Shape>>());
-  for (const auto& bn : input_bns()) {
-    std::shared_ptr<const Shape> time_shape = JUST(GetTimeShape4Ibn(bn));
+    const std::function<Maybe<const Shape>(int32_t)>& GetTimeShape4InputIndex) {
+  CHECK_OR_RETURN(!input_index2time_shape_);
+  input_index2time_shape_.reset(new std::vector<std::shared_ptr<const Shape>>());
+  input_index2time_shape_->reserve(input_bns().size());
+  for (int32_t i = 0; i < input_bns().size(); ++i) {
+    std::shared_ptr<const Shape> time_shape = JUST(GetTimeShape4InputIndex(i));
     if ((!input_blob_fastest_time_shape_)
         || input_blob_fastest_time_shape_->elem_cnt() < time_shape->elem_cnt()) {
       input_blob_fastest_time_shape_ = time_shape;
     }
-    CHECK_OR_RETURN(ibn2time_shape_->emplace(bn, time_shape).second);
-  }
-  if (input_blob_fastest_time_shape_) {
-    const int64_t fastest_elem_cnt = input_blob_fastest_time_shape_->elem_cnt();
-    for (const auto& pair : *ibn2time_shape_) {
-      CHECK_EQ_OR_RETURN(fastest_elem_cnt % pair.second->elem_cnt(), 0);
-    }
+    input_index2time_shape_->emplace_back(time_shape);
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferOpTimeShapeIf() {
   CHECK_OR_RETURN(!op_time_shape_);
-  CHECK_OR_RETURN(ibn2time_shape_);
-  auto GetTimeShape4BnInOp = [&](const std::string& ibn) { return ibn2time_shape_->at(ibn).get(); };
-  std::shared_ptr<Shape> time_shape(new Shape);
-  InferOpTimeShape(GetTimeShape4BnInOp, time_shape.get());
-  op_time_shape_ = time_shape;
+  CHECK_OR_RETURN(input_index2time_shape_);
+  auto GetTimeShape4BnInOp = [&](const std::string& ibn) -> Maybe<const Shape> {
+    const auto& it = bn2index_pair_.find(ibn);
+    CHECK_OR_RETURN(it != bn2index_pair_.end());
+    CHECK_EQ_OR_RETURN(it->second.first, kInputBlobName);
+    return input_index2time_shape_->at(it->second.second);
+  };
+  JUST(InferOpTimeShape(GetTimeShape4BnInOp, &op_time_shape_));
   if (input_blob_fastest_time_shape_
-      && input_blob_fastest_time_shape_->elem_cnt() > time_shape->elem_cnt()) {
+      && input_blob_fastest_time_shape_->elem_cnt() > op_time_shape_->elem_cnt()) {
     input_output_fastest_time_shape_ = input_blob_fastest_time_shape_;
   } else {
-    input_output_fastest_time_shape_ = time_shape;
+    input_output_fastest_time_shape_ = op_time_shape_;
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferOpTimeShape(
-    const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
-    Shape* time_shape) const {
+    const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
+    std::shared_ptr<const Shape>* time_shape) const {
   if (!input_bns().empty()) {
-    const Shape* first_time_shape = GetTimeShape4BnInOp(input_bns().Get(0));
+    std::shared_ptr<const Shape> first_time_shape = input_index2time_shape_->at(0);
     for (int64_t i = 1; i < input_bns().size(); ++i) {
-      CHECK_EQ_OR_RETURN(*GetTimeShape4BnInOp(input_bns().Get(i)), *first_time_shape);
+      CHECK_EQ_OR_RETURN(*input_index2time_shape_->at(i), *first_time_shape);
     }
-    *time_shape = *first_time_shape;
+    *time_shape = first_time_shape;
   } else {
-    *time_shape = Shape({1, 1});
+    *time_shape = std::make_shared<const Shape>(Shape({1, 1}));
   }
   return Maybe<void>::Ok();
 }
@@ -478,7 +473,7 @@ void Operator::ForEachBnInOp(std::function<void(const std::string&)> Handler) co
 Maybe<void> Operator::FillSbpSignature(const SbpSignature& sbp_signature) {
   ParallelDistributionSignature parallel_distribution_signature;
   SbpSignatureToParallelDistributionSignature(sbp_signature, &parallel_distribution_signature);
-  FillParallelDistributionSignature(parallel_distribution_signature);
+  JUST(FillParallelDistributionSignature(parallel_distribution_signature));
   return Maybe<void>::Ok();
 }
 
@@ -518,7 +513,7 @@ Maybe<void> Operator::InferSbpSignatureIf(
 
 Maybe<void> Operator::InferSbpSignature(
     SbpSignature* infered_sbp_signature, const SbpSignature& sbp_sig_conf,
-    const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint) {
+    const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint) const {
   auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
     auto it = ibn2sbp_infer_hint.find(ibn);
     if (it == ibn2sbp_infer_hint.end()) {
@@ -662,23 +657,24 @@ Maybe<void> Operator::InferSbpSignature(
 }
 
 Maybe<void> Operator::InferParallelDistributionSignatureIf(
-    const ParallelDistributionSignature& parallel_distribution_sig_constraints,
+    const ParallelDistributionSignature& parallel_distribution_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
         ParallelDistributionInferHint4Ibn) {
-  ParallelDistributionSignature signature;
-  JUST(InferParallelDistributionSignature(&signature, parallel_distribution_sig_constraints,
-                                          parallel_desc, ParallelDistributionInferHint4Ibn));
-  JUST(FillParallelDistributionSignature(signature));
+  ParallelDistributionSignature parallel_distribution_signature;
+  JUST(InferParallelDistributionSignature(&parallel_distribution_signature,
+                                          parallel_distribution_constraints, parallel_desc,
+                                          ParallelDistributionInferHint4Ibn));
+  JUST(FillParallelDistributionSignature(parallel_distribution_signature));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferParallelDistributionSignature(
-    ParallelDistributionSignature* signature,
-    const ParallelDistributionSignature& parallel_distribution_sig_constraints,
+    ParallelDistributionSignature* parallel_distribution_signature,
+    const ParallelDistributionSignature& parallel_distribution_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-        ParallelDistributionInferHint4Ibn) {
+        ParallelDistributionInferHint4Ibn) const {
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   CHECK_GT(parallel_hierarchy->NumAxes(), 0);
   if (parallel_hierarchy->NumAxes() == 1) {
@@ -690,15 +686,15 @@ Maybe<void> Operator::InferParallelDistributionSignature(
                                  SbpInferHint(&hint->parallel_desc(), &hint->logical_blob_desc(),
                                               &hint->parallel_distribution().sbp_parallel(0)));
     }
-    SbpSignature sbp_sig_constraints;
-    ParallelDistributionSignatureToSbpSignature(parallel_distribution_sig_constraints,
-                                                &sbp_sig_constraints);
+    SbpSignature sbp_constraints;
+    ParallelDistributionSignatureToSbpSignature(parallel_distribution_constraints,
+                                                &sbp_constraints);
     SbpSignature sbp_signature;
-    CHECK_JUST(InferSbpSignature(&sbp_signature, sbp_sig_constraints, ibn2sbp_infer_hint));
-    SbpSignatureToParallelDistributionSignature(sbp_signature, signature);
+    CHECK_JUST(InferSbpSignature(&sbp_signature, sbp_constraints, ibn2sbp_infer_hint));
+    SbpSignatureToParallelDistributionSignature(sbp_signature, parallel_distribution_signature);
     return Maybe<void>::Ok();
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN();
   }
 }
 
@@ -865,6 +861,10 @@ void Operator::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {}
 
+void Operator::AddLbi2OutputIndex(const LogicalBlobId& lbi, int32_t output_index) {
+  CHECK(lbi2output_index_.emplace(lbi, output_index).second);
+}
+
 std::string Operator::Bn2ConfName(const std::string& bn) const {
   return GetStrValInPbFdOrPbRpf(GetCustomizedConf(), bn);
 }
@@ -949,7 +949,7 @@ OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_di
   const int32_t output_index = output_bns_.size();
   CHECK(bn2index_pair_.emplace(obn, std::make_pair(BlobNameTag::kOutputBlobName, output_index))
             .second);
-  CHECK(lbi2output_index_.emplace(lbi, output_index).second);
+  AddLbi2OutputIndex(lbi, output_index);
   *output_bns_.Add() = obn;
   CHECK(mut_bn_in_op2lbi()->insert({obn, lbi}).second);
   ret->set_requires_grad(has_diff);

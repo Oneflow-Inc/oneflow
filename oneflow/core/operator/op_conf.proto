@@ -147,10 +147,10 @@ message VariableOpConf {
     InitializeWithSnapshotConf initialize_with_snapshot = 6;
   }
   optional string model_name = 7 [default = "weight"];
-  required OptInt64 split_axis = 8;
   optional int64 random_seed = 9;
   optional RegularizerConf regularizer = 10;
   optional bool trainable = 11 [default = true];
+  repeated string parallel_distribution = 12;
 }
 
 message DecodeRandomOpConf {
@@ -355,8 +355,6 @@ message ModelInitV2OpConf {
   required string ref = 1;
   required string variable_op_name = 2;
   required VariableOpConf original_variable_conf = 3;
-  required string out = 4;
-  required string tick = 5;
 }
 
 message ModelLoadV2OpConf {
@@ -364,8 +362,6 @@ message ModelLoadV2OpConf {
   required string ref = 2;
   required string variable_op_name = 3;
   required VariableOpConf original_variable_conf = 4;
-  required string out = 5;
-  required string tick = 6;
 }
 
 message ModelSaveV2OpConf {
@@ -373,8 +369,6 @@ message ModelSaveV2OpConf {
   required string in = 2;
   required string variable_op_name = 3;
   required VariableOpConf original_variable_conf = 4;
-  required string out = 5;
-  required string tick = 6;
 }
 
 message ConstantLikeOpConf {

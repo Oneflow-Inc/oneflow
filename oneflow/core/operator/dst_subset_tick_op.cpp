@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
@@ -44,7 +43,6 @@ class DstSubsetTickOp final : public Operator {
   Maybe<void> InferOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
-  LogicalNode* NewProperLogicalNode() const override;
 
  private:
   Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
@@ -54,10 +52,6 @@ void DstSubsetTickOp::InitFromOpConf() {
   CHECK(op_conf().has_dst_subset_tick_conf());
   EnrollRepeatedInputBn("in", false);
   EnrollOutputBn("out", false);
-}
-
-LogicalNode* DstSubsetTickOp::NewProperLogicalNode() const {
-  return new DstSubsetTickLogicalNode();
 }
 
 Maybe<void> DstSubsetTickOp::InferLogicalOutBlobDescs(

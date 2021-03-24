@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_OPERATOR_DECODE_RANDOM_OP_H_
 
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -28,7 +27,6 @@ class DecodeRandomOp final : public Operator {
   ~DecodeRandomOp() = default;
 
   void InitFromOpConf() override;
-  LogicalNode* NewProperLogicalNode() const override { return new DecodeRandomLogicalNode; }
 
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
