@@ -160,17 +160,13 @@ def from_pytorch(
 def from_paddle(
     paddle_model, inputs, model_weight_dir="/tmp", do_onnxsim=True, train_flag=True
 ):
-    if type(inputs) is not list:
-        inputs = [inputs]
-    input_names = ["x_{}".format(i) for i in range(len(inputs))]
-
+    input_names = "x_0"
     paddle_model.eval()
-
     input_spec = paddle.static.InputSpec(
-        shape=x.shape, dtype="float32", name=input_names
+        shape=inputs.shape, dtype="float32", name=input_names
     )
 
-    mode_str = " /tmp/model.onnx"
+    mode_str = "/tmp/model"
 
     paddle.onnx.export(
         paddle_model,
@@ -180,11 +176,11 @@ def from_paddle(
         enable_onnx_checker=True,
     )
 
-    onnx_model = onnx.load_model_from_string(model_str)
+    onnx_model = onnx.load(str(mode_str+".onnx"))
 
     return from_onnx(
         onnx_model,
-        dict(zip(input_names, inputs)),
+        dict(zip([input_names], [inputs])),
         model_weight_dir=model_weight_dir,
         do_onnxsim=do_onnxsim,
     )
