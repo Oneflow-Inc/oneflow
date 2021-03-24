@@ -16,6 +16,7 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.framework.id_util as id_util
 
 
 @oneflow_export("nn.Sigmoid")
@@ -48,7 +49,13 @@ class ReLU(Module):
 class Tanh(Module):
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("tanh").Name("tanh").Input("x").Output("y").Build()
+        self._op = (
+            flow.builtin_op("tanh")
+            .Name(id_util.UniqueStr("tanh"))
+            .Input("x")
+            .Output("y")
+            .Build()
+        )
 
     def forward(self, x):
         res = self._op(x)[0]
