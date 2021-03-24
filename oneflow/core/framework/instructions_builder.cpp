@@ -675,12 +675,11 @@ Maybe<int64_t> InstructionsBuilder::BroadcastObjectReference(
     const std::shared_ptr<compatible_py::BlobObject>& sole_mirrored_object,
     const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
   int64_t object_id = JUST(id_generator_->NewObjectId());
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name("BroadcastObjectReference");
-  instruction.set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(object_id));
-  instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(sole_mirrored_object->object_id()));
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("BroadcastObjectReference");
+  instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
+  instruction->add_int64_operand(object_id);
+  instruction->add_int64_operand(sole_mirrored_object->object_id());
+  instruction_list_->PushBack(instruction.Mutable());
   return object_id;
 }
 
