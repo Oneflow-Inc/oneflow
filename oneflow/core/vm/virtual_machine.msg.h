@@ -36,8 +36,6 @@ class VmDesc;
 // clang-format off
 OBJECT_MSG_BEGIN(VirtualMachine);
   // methods
-  using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
-
   OF_PUBLIC void __Init__(const VmDesc& vm_desc) { __Init__(vm_desc, mut_allocator()); }
   OF_PUBLIC void __Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator);
   OF_PUBLIC void Receive(InstructionMsgList* instr_list);
