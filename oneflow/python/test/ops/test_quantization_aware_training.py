@@ -72,6 +72,8 @@ class TestQAT(flow.unittest.TestCase):
         arg_dict["target_backend"] = ["", "cambricon"]
         arg_dict["build_backbone_fn"] = [build_conv_with_bias, build_conv_without_bias]
         for arg in GenArgList(arg_dict):
+            if arg[2] == "cambricon" and arg[0] == True:
+                continue
             _test(test_case, *arg)
 
 
