@@ -20,9 +20,9 @@ if os.getenv("ONEFLOW_RELEASE_VERSION"):
     release_version = os.getenv("ONEFLOW_RELEASE_VERSION")
     version = f"{release_version}"
 elif os.getenv("ONEFLOW_RELEASE_NIGHTLY"):
-        today = date.today()
-        date_str = today.strftime("%Y%m%d")
-        version += f".dev{date_str}"
+    today = date.today()
+    date_str = today.strftime("%Y%m%d")
+    version += f".dev{date_str}"
 
 # append compute_platform
 compute_platform = ""
@@ -38,17 +38,20 @@ assert compute_platform
 version += f"+{compute_platform}"
 
 # append git if not release
-if not os.getenv("ONEFLOW_RELEASE_VERSION") and not os.getenv("ONEFLOW_RELEASE_NIGHTLY"):
+if not os.getenv("ONEFLOW_RELEASE_VERSION") and not os.getenv(
+    "ONEFLOW_RELEASE_NIGHTLY"
+):
     try:
         git_hash = (
-            subprocess.check_output("git rev-parse --short HEAD", shell=True, cwd=args.src)
+            subprocess.check_output(
+                "git rev-parse --short HEAD", shell=True, cwd=args.src
+            )
             .decode()
             .strip()
         )
     except:
         git_hash = "unknown"
     version += f".git.{git_hash}"
-
 
 
 dst = os.path.join(args.src, "oneflow/python/version.py")
