@@ -51,7 +51,7 @@ void LocalCtrlClient::NotifyDone(const std::string& name) {
 
 void LocalCtrlClient::WaitUntilDone(const std::string& name) {
   std::unique_lock<std::mutex> lck(done_names_mtx_);
-  LOG(ERROR) << "waiting for name: " << name;
+  LOG(INFO) << "waiting for name: " << name;
   done_names_cv_.wait(lck);
   CHECK(done_names_.find(name) != done_names_.end());
 }
@@ -87,7 +87,7 @@ void LocalCtrlClient::PullKV(const std::string& k,
   while (true) {
     auto it = kv_.find(k);
     if (it == kv_.end()) {
-      LOG(ERROR) << "waiting for key: " << k;
+      LOG(INFO) << "waiting for key: " << k;
       kv_cv_.wait(lck);
     } else {
       VGetter(kv_.at(k));

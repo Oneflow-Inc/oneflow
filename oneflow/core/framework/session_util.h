@@ -34,10 +34,19 @@ class Session {
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list() const;
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list() const;
 
+  std::shared_ptr<const std::vector<bool>> is_mirrored_strategy_enabled_stack() const {
+    return is_mirrored_strategy_enabled_stack_;
+  }
+  Maybe<void> PushMirroredStrategyEnabled(bool is_mirrored);
+  Maybe<void> PopMirroredStrategyEnabled();
+  Maybe<bool> IsMirroredStrategyEnabled() const;
+  Maybe<bool> IsConsistentStrategyEnabled() const;
+
  private:
   int64_t id_;
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list_;
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
+  std::shared_ptr<std::vector<bool>> is_mirrored_strategy_enabled_stack_;
 };
 
 Maybe<int64_t> GetDefaultSessionId();
