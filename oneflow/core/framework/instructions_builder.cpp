@@ -834,7 +834,7 @@ Maybe<void> InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string
 Maybe<void> InstructionsBuilder::InitJobConfSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::JobConfigProto>& job_conf) {
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("InitJobDescSymbol");
-  instruction->add_symbol_operand(symbol_id);
+  instruction->add_init_symbol_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
