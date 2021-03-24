@@ -16,6 +16,7 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.framework.id_util as id_util
 
 
 @oneflow_export("nn.Sigmoid")
@@ -49,7 +50,11 @@ class GeLU(Module):
     def __init__(self):
         super().__init__()
         self._op = (
-            flow.builtin_op("gelu").Name("gelu").Input("in").Output("out").Build()
+            flow.builtin_op("gelu")
+            .Name(id_util.UniqueStr("gelu"))
+            .Input("in")
+            .Output("out")
+            .Build()
         )
 
     def forward(self, x):
