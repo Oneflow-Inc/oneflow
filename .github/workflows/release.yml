@@ -107,7 +107,7 @@ jobs:
           fi
 
           python3 ci/build/ensure_img.py
-          python_version=${python_version:-"3.5,3.6,3.7,3.8"}
+          python_version=${python_version:-"3.6,3.7,3.8"}
           package_names=${package_names:-"cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"}
           echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
           echo "python_version=${python_version}" >> $GITHUB_ENV
