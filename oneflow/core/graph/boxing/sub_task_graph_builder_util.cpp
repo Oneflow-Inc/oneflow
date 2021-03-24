@@ -59,15 +59,27 @@ TensorSliceView SubTskGphBuilderUtil::GetTensorSliceView4ParallelRank(
     ranges[i].mut_begin() = 0;
     ranges[i].mut_end() = logical_shape.At(i);
   }
-  FOR_RANGE(int64_t, i, 0, parallel_hierarchy.NumAxes()) {
-    const SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(i);
+  if (parallel_hierarchy.elem_cnt() == 1) { return TensorSliceView(ranges); }
+  if (parallel_hierarchy.NumAxes() == 1) {
+    CHECK_EQ(parallel_rank.size(), 1);
+    const SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(0);
     if (sbp_parallel.has_split_parallel()) {
-      const int64_t split_axis = sbp_parallel.split_parallel().axis();
-      CHECK_EQ(ranges[split_axis].size() % parallel_hierarchy.At(i), 0);
-      const int64_t range_size = ranges[split_axis].size() / parallel_hierarchy.At(i);
-      const int64_t dim_start = ranges[split_axis].begin() + parallel_rank.at(i) * range_size;
-      ranges[split_axis].mut_begin() = dim_start;
-      ranges[split_axis].mut_end() = dim_start + range_size;
+      const int64_t axis = sbp_parallel.split_parallel().axis();
+      const BalancedSplitter bs(logical_shape.At(axis), parallel_hierarchy.elem_cnt());
+      CHECK_GT(bs.At(parallel_rank.front()).size(), 0);
+      ranges[axis] = bs.At(parallel_rank.front());
+    }
+  } else {
+    FOR_RANGE(int64_t, i, 0, parallel_hierarchy.NumAxes()) {
+      const SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(i);
+      if (sbp_parallel.has_split_parallel()) {
+        const int64_t split_axis = sbp_parallel.split_parallel().axis();
+        CHECK_EQ(ranges[split_axis].size() % parallel_hierarchy.At(i), 0);
+        const int64_t range_size = ranges[split_axis].size() / parallel_hierarchy.At(i);
+        const int64_t dim_start = ranges[split_axis].begin() + parallel_rank.at(i) * range_size;
+        ranges[split_axis].mut_begin() = dim_start;
+        ranges[split_axis].mut_end() = dim_start + range_size;
+      }
     }
   }
   return TensorSliceView(ranges);
