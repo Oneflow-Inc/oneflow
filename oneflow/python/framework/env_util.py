@@ -157,27 +157,6 @@ def data_port(val):
     default_env_proto.data_port = val
 
 
-@oneflow_export("env.rpc_backend")
-def api_rpc_backend(val: int) -> None:
-    r"""Set which rpc backend to use. For single process: local. For multiple nodes: grpc
-
-    Args:
-        val: rpc backend's name
-    """
-    return enable_if.unique([rpc_backend, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def rpc_backend(val: str):
-    assert type(val) is str
-    val = val.lower()
-    if val == "grpc":
-        assert oneflow_api.flags.has_rpc_backend_grpc()
-    if val == "local":
-        assert oneflow_api.flags.has_rpc_backend_local()
-    default_env_proto.rpc_backend = val.lower()
-
-
 @oneflow_export("env.grpc_use_no_signal")
 @oneflow_deprecate()
 def api_grpc_use_no_signal(val: bool = True) -> None:
@@ -361,14 +340,6 @@ def _DefaultEnvProto():
     machine = env_proto.machine.add()
     machine.id = 0
     machine.addr = "127.0.0.1"
-    if oneflow_api.flags.has_rpc_backend_grpc():
-        env_proto.rpc_backend = "grpc"
-    elif oneflow_api.flags.has_rpc_backend_local():
-        env_proto.rpc_backend = "local"
-    else:
-        raise ValueError(
-            "at least one of rpc backend: 'grpc, local' should be available"
-        )
     return env_proto
 
 
