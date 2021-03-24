@@ -724,22 +724,20 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
     const std::shared_ptr<ParallelDesc>& src_parallel_desc_symbol,
     const std::shared_ptr<compatible_py::BlobObject>& dst_blob_object,
     const std::tuple<std::vector<uint64_t>, std::vector<uint64_t>>& token_ids) {
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name("ReceiveBlob");
-  instruction.set_parallel_desc_symbol_id(
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("ReceiveBlob");
+  instruction->set_parallel_desc_symbol_id(
       JUST(dst_blob_object->parallel_desc_symbol()->symbol_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(
-      *SymbolOperand(JUST(src_parallel_desc_symbol->symbol_id())));
-  instruction.mutable_operand()->Add()->CopyFrom(*Mut2Operand(dst_blob_object->object_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  instruction->add_symbol_operand(JUST(src_parallel_desc_symbol->symbol_id()));
+  instruction->add_mut2_operand(dst_blob_object->object_id());
+  instruction->add_separator();
   for (uint64_t token_id : std::get<0>(token_ids)) {
-    instruction.mutable_operand()->Add()->CopyFrom(*Uint64Operand(token_id));
+    instruction->add_uint64_operand(token_id);
   }
-  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  instruction->add_separator();
   for (uint64_t token_id : std::get<1>(token_ids)) {
-    instruction.mutable_operand()->Add()->CopyFrom(*Uint64Operand(token_id));
+    instruction->add_uint64_operand(token_id);
   }
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
