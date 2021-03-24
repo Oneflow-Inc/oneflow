@@ -13,22 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_GRAPH_FOREIGN_OUTPUT_COMPUTE_TASK_NODE_H_
-#define ONEFLOW_CORE_GRAPH_FOREIGN_OUTPUT_COMPUTE_TASK_NODE_H_
+#ifndef ONEFLOW_CORE_RPC_INCLUDE_GLOBAL_PROCESS_CTX_
+#define ONEFLOW_CORE_RPC_INCLUDE_GLOBAL_PROCESS_CTX_
 
-#include "oneflow/core/graph/foreign_io_compute_task_node.h"
+#include <string>
 
 namespace oneflow {
 
-class ForeignOutputCompTaskNode final : public ForeignIOCompTaskNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ForeignOutputCompTaskNode);
-  ForeignOutputCompTaskNode() = default;
-  ~ForeignOutputCompTaskNode() override = default;
-
-  TaskType GetTaskType() const override { return TaskType::kForeignOutput; }
+struct GlobalProcessCtx {
+  static int64_t Rank();
+  static int64_t NodeSize();
+  static int64_t ThisNodeId();
+  static int64_t NumOfProcessPerNode();
+  static bool IsThisProcessMaster();
+  static size_t WorldSize();
+  static std::string LogDirEntry();
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_FOREIGN_OUTPUT_COMPUTE_TASK_NODE_H_
+#endif  // ONEFLOW_CORE_RPC_INCLUDE_GLOBAL_PROCESS_CTX_

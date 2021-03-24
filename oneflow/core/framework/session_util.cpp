@@ -71,13 +71,12 @@ Maybe<void> Session::PopMirroredStrategyEnabled() {
 }
 
 Maybe<bool> Session::IsMirroredStrategyEnabled() const {
-  // Mirrored strategy is enabled by default.
-  return is_mirrored_strategy_enabled_stack_->size() == 0
-         || is_mirrored_strategy_enabled_stack_->back();
+  return is_mirrored_strategy_enabled_stack_->size() > 0
+         && is_mirrored_strategy_enabled_stack_->back();
 }
 Maybe<bool> Session::IsConsistentStrategyEnabled() const {
-  bool is_mirrored_enabled = JUST(IsMirroredStrategyEnabled());
-  return !is_mirrored_enabled;
+  return is_mirrored_strategy_enabled_stack_->size() > 0
+         && !is_mirrored_strategy_enabled_stack_->back();
 }
 
 Maybe<int64_t> GetDefaultSessionId() { return *(DefaultSessionId()); }
