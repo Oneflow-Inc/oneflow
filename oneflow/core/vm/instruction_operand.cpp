@@ -48,11 +48,14 @@ void InitFromProto(InstructionOperand* that, const T& proto) {
     UNIMPLEMENTED();
   }
 }
+}  // namespace
+
+void InstructionOperand::__Init__(const InstructionOperandProto& proto) {
+  InitFromProto(this, proto);
 }
-
-
-void InstructionOperand::__Init__(const InstructionOperandProto& proto) { InitFromProto(this, proto); }
-void InstructionOperand::__Init__(const cfg::InstructionOperandProto& proto) { InitFromProto(this, proto); }
+void InstructionOperand::__Init__(const cfg::InstructionOperandProto& proto) {
+  InitFromProto(this, proto);
+}
 
 void InstructionOperand::ToProto(InstructionOperandProto* proto) const {
   if (has_const_operand()) {

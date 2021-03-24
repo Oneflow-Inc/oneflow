@@ -44,7 +44,8 @@ Maybe<void> SetDefaultSessionId(int64_t val) {
 
 }  // namespace
 
-Session::Session(int64_t id) : id_(id), is_mirrored_strategy_enabled_stack_(new std::vector<bool>()) {
+Session::Session(int64_t id)
+    : id_(id), is_mirrored_strategy_enabled_stack_(new std::vector<bool>()) {
   instruction_list_.reset(new vm::InstructionMsgList());
   eager_symbol_list_.reset(new eager::cfg::EagerSymbolList());
 }

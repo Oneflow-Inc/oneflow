@@ -34,7 +34,7 @@ void InitFromProto(Operand* that, const T& proto) {
     UNIMPLEMENTED();
   }
 }
-}
+}  // namespace
 
 void Operand::__Init__(const ObjectId& logical_object_id) {
   set_logical_object_id(logical_object_id);

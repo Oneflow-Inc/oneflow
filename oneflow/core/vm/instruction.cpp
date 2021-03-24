@@ -70,7 +70,7 @@ void InstructionMsg::__Init__(const std::string& instr_type_name) {
 }
 
 void InstructionMsg::__Init__(const InstructionProto& proto) { InitFromProto(this, proto); }
-void InstructionMsg::__Init__(const cfg::InstructionProto& proto) {  InitFromProto(this, proto); } 
+void InstructionMsg::__Init__(const cfg::InstructionProto& proto) { InitFromProto(this, proto); }
 
 void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
   __Init__();
