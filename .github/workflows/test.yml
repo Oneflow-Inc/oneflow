@@ -70,24 +70,29 @@ jobs:
     strategy:
       max-parallel: 5
       matrix:
-        test_suite: ["cuda", "cpu"]
+        test_suite: ["cuda", "cpu", "xla", "mac"]
+        continue-on-error: ${{ matrix.allow_fail }}
         include:
           - test_suite: cuda
             cuda_version: 10.2
             extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON
             os: [self-hosted, linux, release]
-          - test_suite: xla
-            cuda_version: 10.1
-            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --xla
-            os: [self-hosted, linux, release]
+            allow_fail: false
           - test_suite: cpu
             cuda_version: 10.2
             extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=ON --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu
             os: [self-hosted, linux, release]
-          - test_suite: macOS
+            allow_fail: false
+          - test_suite: xla
+            cuda_version: 10.1
+            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --xla
+            os: [self-hosted, linux, release]
+            allow_fail: true
+          - test_suite: mac
             cuda_version: ""
             extra_flags: ""
             os: "macos-latest"
+            allow_fail: true
     needs: [check_license_and_format, mirror_third_party]
     runs-on: ${{ matrix.os }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
@@ -232,17 +237,22 @@ jobs:
     name: Test suite
     strategy:
       max-parallel: 5
+      continue-on-error: ${{ matrix.allow_fail }}
       matrix:
         test_suite: ["cuda", "cuda_op", "cpu"]
         include:
           - test_suite: "cuda"
             os: [self-hosted, linux, gpu]
+            allow_fail: false
           - test_suite: "cuda_op"
             os: [self-hosted, linux, gpu]
-          - test_suite: "xla"
-            os: [self-hosted, linux, gpu]
+            allow_fail: false
           - test_suite: "cpu"
             os: [self-hosted, linux, cpu]
+            allow_fail: false
+          - test_suite: "xla"
+            os: [self-hosted, linux, gpu]
+            allow_fail: true
     needs: [build, wait_for_gpu_slot]
     runs-on: ${{ matrix.os }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
