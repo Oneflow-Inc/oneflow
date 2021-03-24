@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/vm/instruction.msg.h"
 
 namespace oneflow {
 namespace eager {

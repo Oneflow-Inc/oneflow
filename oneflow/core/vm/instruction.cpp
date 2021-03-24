@@ -68,6 +68,17 @@ void InstructionMsg::__Init__(const InstructionProto& proto) {
   }
 }
 
+void InstructionMsg::__Init__(const cfg::InstructionProto& proto) {
+  __Init__(proto.instr_type_name());
+  mutable_operand()->resize(proto.operand_size());
+  if (proto.has_parallel_desc_symbol_id()) {
+    set_parallel_desc_symbol_id(proto.parallel_desc_symbol_id());
+  }
+  for (int i = 0; i < proto.operand_size(); ++i) {
+    mutable_operand()->at(i)->__Init__(proto.operand(i));
+  }
+}
+
 void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
   __Init__();
   mutable_instr_type_id()->CopyFrom(instr_msg.instr_type_id());

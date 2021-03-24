@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/instruction.pb.h"
+#include "oneflow/core/vm/instruction.cfg.h"
 
 namespace oneflow {
 namespace vm {
@@ -43,6 +44,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC void __Init__();
   OF_PUBLIC void __Init__(const std::string& instr_type_name);
   OF_PUBLIC void __Init__(const InstructionProto& proto);
+  OF_PUBLIC void __Init__(const cfg::InstructionProto& proto);
   OF_PUBLIC void __Init__(const InstructionMsg& instr_msg);
 
   OF_PUBLIC void ToProto(InstructionProto* proto) const;

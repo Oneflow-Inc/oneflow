@@ -59,9 +59,14 @@ FLAT_MSG_END(OperandSeparator);
 
 class InstructionOperandProto;
 
+namespace cfg {
+  class InstructionOperandProto;
+}
+
 FLAT_MSG_BEGIN(InstructionOperand);
   // methods
   OF_PUBLIC void __Init__(const InstructionOperandProto& proto);
+  OF_PUBLIC void __Init__(const cfg::InstructionOperandProto& proto);
   OF_PUBLIC void ToProto(InstructionOperandProto* proto) const;
   // fields
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
