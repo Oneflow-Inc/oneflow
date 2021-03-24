@@ -38,6 +38,18 @@ int64_t GetObjectId<kInfer>(int64_t val) {
   return IdUtil::GetTypeId(val);
 }
 
+template<typename T>
+void InitFromProto(InstructionMsg* that, const T& proto) {
+  that->__Init__(proto.instr_type_name());
+  that->mutable_operand()->resize(proto.operand_size());
+  if (proto.has_parallel_desc_symbol_id()) {
+    that->set_parallel_desc_symbol_id(proto.parallel_desc_symbol_id());
+  }
+  for (int i = 0; i < proto.operand_size(); ++i) {
+    that->mutable_operand()->at(i)->__Init__(proto.operand(i));
+  }
+}
+
 }  // namespace
 
 InstructionOperand* InstructionMsg::add_instr_operand() {
@@ -46,29 +58,39 @@ InstructionOperand* InstructionMsg::add_instr_operand() {
   return operand_vec->back().Mutable();
 }
 
+void InstructionMsg::__Init__() {
+  *mutable_instr_type_name() = "";
+  mutable_operand_list();
+}
+
 void InstructionMsg::__Init__(const std::string& instr_type_name) {
   __Init__();
   mutable_instr_type_id()->CopyFrom(LookupInstrTypeId(instr_type_name));
+  *mutable_instr_type_name() = instr_type_name;
 }
 
-void InstructionMsg::__Init__(const InstructionProto& proto) {
-  __Init__(proto.instr_type_name());
-  mutable_operand()->resize(proto.operand_size());
-  if (proto.has_parallel_desc_symbol_id()) {
-    set_parallel_desc_symbol_id(proto.parallel_desc_symbol_id());
-  }
-  for (int i = 0; i < proto.operand_size(); ++i) {
-    mutable_operand()->at(i)->__Init__(proto.operand(i));
-  }
-}
+void InstructionMsg::__Init__(const InstructionProto& proto) { InitFromProto(this, proto); }
+void InstructionMsg::__Init__(const cfg::InstructionProto& proto) { InitFromProto(this, proto); }
 
 void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
   __Init__();
   mutable_instr_type_id()->CopyFrom(instr_msg.instr_type_id());
+  *mutable_instr_type_name() = instr_msg.instr_type_name();
   if (instr_msg.has_parallel_desc_symbol_id()) {
     set_parallel_desc_symbol_id(instr_msg.parallel_desc_symbol_id());
   }
   reset_operand_list(instr_msg.operand_list());
+}
+
+void InstructionMsg::ToProto(InstructionProto* proto) const {
+  proto->set_instr_type_name(instr_type_name());
+  if (has_parallel_desc_symbol_id()) {
+    proto->set_parallel_desc_symbol_id(parallel_desc_symbol_id());
+  }
+  proto->mutable_operand()->Clear();
+  for (const auto& operand : operand_list().operand()) {
+    operand->ToProto(proto->mutable_operand()->Add());
+  }
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_parallel_desc(int64_t symbol_id) {
