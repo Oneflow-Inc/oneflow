@@ -171,13 +171,11 @@ bool IsInRepeatedField(const PbRf<T>& repeated_field, const T& value) {
 inline bool operator<(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
   if (lhs.op_name() != rhs.op_name()) { return lhs.op_name() < rhs.op_name(); }
   if (lhs.blob_name() != rhs.blob_name()) { return lhs.blob_name() < rhs.blob_name(); }
-  if (lhs.is_packed_id() != rhs.is_packed_id()) { return lhs.is_packed_id() < rhs.is_packed_id(); }
   return false;
 }
 
 inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
-  return lhs.op_name() == rhs.op_name() && lhs.blob_name() == rhs.blob_name()
-         && lhs.is_packed_id() == rhs.is_packed_id();
+  return lhs.op_name() == rhs.op_name() && lhs.blob_name() == rhs.blob_name();
 }
 
 inline bool operator!=(const LogicalBlobId& lhs, const LogicalBlobId& rhs) { return !(lhs == rhs); }
