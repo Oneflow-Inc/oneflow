@@ -62,7 +62,6 @@ class Session(object):
         self.uuid2watch_handler_ = {}
         self.config_proto_ = None
         self.resource_ = None
-        self.is_mirrored_strategy_enabled_stack_ = []
         self.job_name2var_name2var_blob_ = {}
         self.job_name2module_name2module_ = {}
         self.existed_module_names_ = set()
@@ -113,10 +112,6 @@ class Session(object):
     @property
     def uuid2watch_handler(self):
         return self.uuid2watch_handler_
-
-    @property
-    def is_mirrored_strategy_enabled_stack(self):
-        return self.is_mirrored_strategy_enabled_stack_
 
     @property
     def function_flag_name2default_val(self):
@@ -389,6 +384,22 @@ class Session(object):
         if len(self.eager_global_function_desc_stack_) == 0:
             return None
         return self.eager_global_function_desc_stack_[0]
+
+    def has_empty_is_mirrored_strategy_enabled_stack(self):
+        return self.sess_.is_mirrored_strategy_enabled_stack_size() == 0
+
+    def push_mirrored_strategy_enabled(self, val):
+        assert isinstance(val, bool)
+        self.sess_.push_mirrored_strategy_enabled(val)
+
+    def pop_mirrored_strategy_enabled(self):
+        self.sess_.pop_mirrored_strategy_enabled()
+
+    def is_mirrored_strategy_enabled(self):
+        return self.sess_.is_mirrored_strategy_enabled()
+
+    def is_consistent_strategy_enabled(self):
+        return self.sess_.is_consistent_strategy_enabled()
 
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):
