@@ -73,7 +73,7 @@ void AccCompActor::Act() {
   Regst* out_regst = GetNaiveCurWriteable("out");
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   if (acc_cnt_ == 0) {
-    Blob* out_blob = out_regst->packed_blob();
+    Blob* out_blob = out_regst->GetMutSoleBlob();
     if (GetDeviceType() == DeviceType::kCPU) {
       Memset<DeviceType::kCPU>(kernel_ctx.device_ctx, out_blob->mut_dptr(), 0,
                                out_blob->ByteSizeOfBlobBody());
