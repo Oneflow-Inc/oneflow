@@ -492,6 +492,8 @@ class TestMinMaxObserver(flow.unittest.TestCase):
         arg_dict["per_layer_quantization"] = [True, False]
 
         for arg in GenArgList(arg_dict):
+            if arg[-2] == "cambricon" and arg[-1] == False:
+                continue
             _run_test_min_max_observer(*arg)
 
 
@@ -528,6 +530,8 @@ class TestFakeQuantize(flow.unittest.TestCase):
         arg_dict["per_layer_quantization"] = [True, False]
 
         for arg in GenArgList(arg_dict):
+            if arg[-2] == "cambricon" and arg[-1] == False:
+                continue
             _run_test_fake_quantize(*arg)
 
 
