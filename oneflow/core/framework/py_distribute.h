@@ -70,6 +70,8 @@ std::shared_ptr<AutoDistribute> GlobalAutoDistribute();
 std::shared_ptr<BroadcastDistribute> GlobalBroadcastDistribute();
 Maybe<SplitDistribute> GlobalSplitDistribute(int axis);
 
+Maybe<Distribute> MakeDistribute(const cfg::SbpParallel& sbp_parallel);
+
 }  // namespace compatible_py
 
 }  // namespace oneflow
