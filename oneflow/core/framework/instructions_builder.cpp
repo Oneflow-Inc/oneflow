@@ -846,7 +846,7 @@ Maybe<void> InstructionsBuilder::InitJobConfSymbol(
 Maybe<void> InstructionsBuilder::NewParallelConfSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("NewParallelDescSymbol");
-  instruction->add_init_symbol_operand(symbol_id);
+  instruction->add_int64_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
