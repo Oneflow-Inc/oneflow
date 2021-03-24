@@ -27,3 +27,9 @@ def test_relu(test_case):
             return x
 
     load_paddle_module_and_check(test_case, Net)
+
+# from absl import app
+# from absl.testing import absltest
+
+# test_case = absltest.TestCase
+# test_relu(test_case)

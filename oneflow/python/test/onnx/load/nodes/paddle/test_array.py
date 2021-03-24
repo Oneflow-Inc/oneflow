@@ -33,7 +33,7 @@ def test_concat_with_axis(test_case):
     class Net(nn.Layer):
         def forward(self, x):
             y = x * 3
-            return paddle.concat((x, y), aixs=1)
+            return paddle.concat((x, y), axis=1)
 
     load_paddle_module_and_check(test_case, Net)
 
@@ -69,3 +69,14 @@ def test_tensor_index(test_case):
             return x[0, 1:3, :1, 2:]
 
     load_paddle_module_and_check(test_case, Net)
+
+from absl import app
+from absl.testing import absltest
+
+test_case = absltest.TestCase
+# test_concat(test_case)
+# test_concat_with_axis(test_case)
+# test_unsqueeze(test_case)
+# test_transpose(test_case)
+test_gather(test_case)
+# test_tensor_index(test_case)

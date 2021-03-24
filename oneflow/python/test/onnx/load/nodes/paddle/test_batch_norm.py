@@ -33,8 +33,8 @@ def test_bn(test_case):
     load_paddle_module_and_check(test_case, Net)
 
 
-from absl import app
-from absl.testing import absltest
+# from absl import app
+# from absl.testing import absltest
 
-test_case = absltest.TestCase
-test_bn(test_case)
+# test_case = absltest.TestCase
+# test_bn(test_case)
