@@ -19,6 +19,23 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+namespace {
+
+template<typename T>
+void InitFromProto(Operand* that, const T& proto) {
+  that->set_logical_object_id(proto.logical_object_id());
+  if (proto.has_sole_mirrored_object()) {
+    that->mutable_sole_mirrored_object();
+  } else if (proto.has_current_global_device_id()) {
+    that->mutable_current_global_device_id();
+  } else if (proto.has_all_mirrored_object()) {
+    that->mutable_all_mirrored_object();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+}
+
 void Operand::__Init__(const ObjectId& logical_object_id) {
   set_logical_object_id(logical_object_id);
   mutable_current_global_device_id();
@@ -34,19 +51,8 @@ void Operand::__Init__(const ObjectId& logical_object_id, const AllMirroredObjec
   mutable_all_mirrored_object();
 }
 
-template<typename T>
-void Operand::InitFromProto(const T& proto) {
-  set_logical_object_id(proto.logical_object_id());
-  if (proto.has_sole_mirrored_object()) {
-    mutable_sole_mirrored_object();
-  } else if (proto.has_current_global_device_id()) {
-    mutable_current_global_device_id();
-  } else if (proto.has_all_mirrored_object()) {
-    mutable_all_mirrored_object();
-  } else {
-    UNIMPLEMENTED();
-  }
-}
+void Operand::__Init__(const OperandProto& proto) { InitFromProto(this, proto); }
+void Operand::__Init__(const cfg::OperandProto& proto) { InitFromProto(this, proto); }
 
 void Operand::ToProto(OperandProto* proto) const {
   proto->set_logical_object_id(logical_object_id());

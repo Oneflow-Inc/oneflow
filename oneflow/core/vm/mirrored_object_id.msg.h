@@ -42,11 +42,10 @@ FLAT_MSG_BEGIN(Operand);
   OF_PUBLIC void __Init__(const ObjectId& logical_object_id, const SoleMirroredObject&);
   // init all_mirrored_object
   OF_PUBLIC void __Init__(const ObjectId& logical_object_id, const AllMirroredObject&);
-  OF_PUBLIC void __Init__(const OperandProto& proto) { InitFromProto(proto); }
-  OF_PUBLIC void __Init__(const cfg::OperandProto& proto) { InitFromProto(proto); }
+  OF_PUBLIC void __Init__(const OperandProto& proto);
+  OF_PUBLIC void __Init__(const cfg::OperandProto& proto);
   OF_PUBLIC void ToProto(OperandProto* proto) const;
   OF_PUBLIC int64_t GetGlobalDeviceId(int64_t default_global_device_id) const;
-  OF_PRIVATE template<typename T> void InitFromProto(const T& proto);
 
   // fields
   FLAT_MSG_DEFINE_OPTIONAL(ObjectId, logical_object_id);
