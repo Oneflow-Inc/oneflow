@@ -45,6 +45,7 @@ class RegstSlot final {
 
   // 0: success, -1: cannot find regst_desc_id
   int TryPushBackRegst(Regst* regst);
+  int TryPushBackRegst(Regst* regst, int64_t regst_desc_id);
   int TryPopFrontRegst(int64_t regst_desc_id);
 
   void PopFrontRegsts(const std::vector<int64_t>& regst_desc_ids);

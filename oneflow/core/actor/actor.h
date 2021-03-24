@@ -250,6 +250,9 @@ class Actor {
   std::deque<ActorMsg> async_msg_queue_;
   bool is_kernel_launch_synchronized_;
   std::vector<int64_t> tmp_regst_desc_id_vec_;
+  // storage information of ctrl regst from other rank
+  HashMap<Regst*, std::pair<int64_t, int64_t>>
+      ctrl_regst_from_other_rank2_regst_decs_id_and_producer_actor_id_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
