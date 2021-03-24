@@ -10,10 +10,10 @@ jobs:
     name: Labels
     steps:
       - name: Check type labels 'bug, enhancement, purge, feature, documentation'
-        if: (contains(github.event.issue.labels.*.name, 'bug') || contains(github.event.issue.labels.*.name, 'enhancement') || contains(github.event.issue.labels.*.name, 'purge') || contains(github.event.issue.labels.*.name, 'feature') || contains(github.event.issue.labels.*.name, 'documentation')) == false
+        if: (contains(github.event.issue.pull_request.*.name, 'bug') || contains(github.event.issue.pull_request.*.name, 'enhancement') || contains(github.event.issue.pull_request.*.name, 'purge') || contains(github.event.issue.pull_request.*.name, 'feature') || contains(github.event.issue.pull_request.*.name, 'documentation')) == false
         run: |
           exit 1
       - name: Check component labels 'op, system, eager, build, xla, python, ci, test, tooling, onnx'
-        if: (contains(github.event.issue.labels.*.name, 'op') || contains(github.event.issue.labels.*.name, 'system') || contains(github.event.issue.labels.*.name, 'eager') || contains(github.event.issue.labels.*.name, 'build') || contains(github.event.issue.labels.*.name, 'xla') || contains(github.event.issue.labels.*.name, 'python') || contains(github.event.issue.labels.*.name, 'ci') || contains(github.event.issue.labels.*.name, 'test') || contains(github.event.issue.labels.*.name, 'tooling') || contains(github.event.issue.labels.*.name, 'onnx')) == false
+        if: (contains(github.event.issue.pull_request.*.name, 'op') || contains(github.event.issue.pull_request.*.name, 'system') || contains(github.event.issue.pull_request.*.name, 'eager') || contains(github.event.issue.pull_request.*.name, 'build') || contains(github.event.issue.pull_request.*.name, 'xla') || contains(github.event.issue.pull_request.*.name, 'python') || contains(github.event.issue.pull_request.*.name, 'ci') || contains(github.event.issue.pull_request.*.name, 'test') || contains(github.event.issue.pull_request.*.name, 'tooling') || contains(github.event.issue.pull_request.*.name, 'onnx')) == false
         run: |
           exit 2
