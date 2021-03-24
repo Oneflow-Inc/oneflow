@@ -59,19 +59,25 @@ TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
   }
   if (parallel_hierarchy.elem_cnt() == 1) { return TensorSliceView(ranges); }
   if (parallel_hierarchy.NumAxes() == 1) {
-    CHECK_EQ(parallel_rank.size(), 1);
     const SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(0);
     if (sbp_parallel.has_split_parallel()) {
-      const int64_t axis = sbp_parallel.split_parallel().axis();
-      const BalancedSplitter bs(logical_shape.At(axis), parallel_hierarchy.elem_cnt());
-      CHECK_GT(bs.At(parallel_rank.front()).size(), 0);
-      ranges[axis] = bs.At(parallel_rank.front());
+      const int64_t split_axis = sbp_parallel.split_parallel().axis();
+      CHECK_GE(split_axis, 0);
+      CHECK_LT(split_axis, ranges.size());
+      const int64_t id = parallel_rank.front();
+      CHECK_GE(id, 0);
+      CHECK_LT(id, parallel_hierarchy.elem_cnt());
+      const BalancedSplitter bs(logical_shape.At(split_axis), parallel_hierarchy.elem_cnt());
+      CHECK_GT(bs.At(id).size(), 0);
+      ranges[split_axis] = bs.At(id);
     }
   } else {
     FOR_RANGE(int64_t, i, 0, parallel_hierarchy.NumAxes()) {
       const SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(i);
       if (sbp_parallel.has_split_parallel()) {
         const int64_t split_axis = sbp_parallel.split_parallel().axis();
+        CHECK_GE(split_axis, 0);
+        CHECK_LT(split_axis, ranges.size());
         CHECK_EQ(ranges[split_axis].size() % parallel_hierarchy.At(i), 0);
         const int64_t range_size = ranges[split_axis].size() / parallel_hierarchy.At(i);
         const int64_t dim_start = ranges[split_axis].begin() + parallel_rank.at(i) * range_size;
