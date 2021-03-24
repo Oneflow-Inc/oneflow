@@ -380,8 +380,8 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
           reduced_out_parallel_distribution, time_shape);
     } else if (reduced_in_parallel_distribution.sbp_parallel(1)
                == reduced_out_parallel_distribution.sbp_parallel(1)) {
-      if (!(ParallelDistributionAllSameSplitParallel(in_parallel_distribution)
-            || ParallelDistributionAllSameSplitParallel(out_parallel_distribution))) {
+      if (!(ParallelDistributionAllSameSplitParallel(reduced_in_parallel_distribution)
+            || ParallelDistributionAllSameSplitParallel(reduced_out_parallel_distribution))) {
         return impl_->inter_group_sub_tsk_gph_builder_->Build(
             ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
             reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
