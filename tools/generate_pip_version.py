@@ -13,30 +13,18 @@ if args.xla:
     assert args.cuda
 
 local_label = ""
-version = ""
+version = f"0.3b6"
 
+# set version if release of nightly
 if os.getenv("ONEFLOW_RELEASE_VERSION"):
     release_version = os.getenv("ONEFLOW_RELEASE_VERSION")
     version = f"{release_version}"
-else:
-    version = f"0.3b6"
-    if os.getenv("ONEFLOW_RELEASE_NIGHTLY"):
+elif os.getenv("ONEFLOW_RELEASE_NIGHTLY"):
         today = date.today()
         date_str = today.strftime("%Y%m%d")
         version += f".dev{date_str}"
-    else:
-        try:
-            git_hash = (
-                subprocess.check_output("git rev-parse --short HEAD", shell=True, cwd=args.src)
-                .decode()
-                .strip()
-            )
-        except:
-            git_hash = "unknown"
-        version += f".git.{git_hash}"
 
 # append compute_platform
-
 compute_platform = ""
 if args.cuda:
     compute_platform = "".join(args.cuda.split("."))
@@ -48,6 +36,20 @@ else:
     compute_platform = "cpu"
 assert compute_platform
 version += f"+{compute_platform}"
+
+# append git if not release
+if not os.getenv("ONEFLOW_RELEASE_VERSION") and not os.getenv("ONEFLOW_RELEASE_NIGHTLY"):
+    try:
+        git_hash = (
+            subprocess.check_output("git rev-parse --short HEAD", shell=True, cwd=args.src)
+            .decode()
+            .strip()
+        )
+    except:
+        git_hash = "unknown"
+    version += f".git.{git_hash}"
+
+
 
 dst = os.path.join(args.src, "oneflow/python/version.py")
 print(f"-- Generating pip version: {version} to: {dst}")
