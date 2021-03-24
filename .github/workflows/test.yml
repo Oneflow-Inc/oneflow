@@ -78,7 +78,7 @@ jobs:
         include:
           - test_suite: cuda
             cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON
+            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL
             os: [self-hosted, linux, release]
             allow_fail: false
           - test_suite: cpu
@@ -88,7 +88,7 @@ jobs:
             allow_fail: false
           - test_suite: xla
             cuda_version: 10.1
-            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --xla
+            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla
             os: [self-hosted, linux, release]
             allow_fail: true
           - test_suite: mac
