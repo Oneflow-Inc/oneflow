@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
-#include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
+#include "oneflow/core/job/parallel_distribution_util.h"
 
 namespace oneflow {
 
@@ -61,11 +61,11 @@ std::shared_ptr<user_op::OpKernelState> CreateUnsortedSegmentSumOpKernelState(
   const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
   CheckParallelDistribution(
       hierarchy, axis, ctx->ParallelDistribution4ArgNameAndIndex("segment_ids", 0),
-      ctx->ParallelDistribution4ArgNameAndIndex("indices", 0), out_parallel_distribution);
+      ctx->ParallelDistribution4ArgNameAndIndex("data", 0), out_parallel_distribution);
   const TensorDesc* out_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0);
-  TensorSliceView view = SubTskGphBuilderUtil::GetTensorSliceView4ParallelId(
-      hierarchy, out_parallel_distribution, out_logical_desc->shape(),
-      ctx->parallel_ctx().parallel_id());
+  TensorSliceView view =
+      GetTensorSliceView4ParallelId(hierarchy, out_parallel_distribution, out_logical_desc->shape(),
+                                    ctx->parallel_ctx().parallel_id());
   return std::make_shared<UnsortedSegmentSumOpKernelState>(view.At(axis).begin(),
                                                            view.At(axis).end());
 }

@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/gather_kernel_util.h"
-#include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
+#include "oneflow/core/job/parallel_distribution_util.h"
 
 namespace oneflow {
 
@@ -75,9 +75,9 @@ class GatherKernel final : public user_op::OpKernel {
                               ctx->ParallelDistribution4ArgNameAndIndex("indices", 0),
                               ctx->ParallelDistribution4ArgNameAndIndex("out", 0));
     const TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("in", 0);
-    TensorSliceView view = SubTskGphBuilderUtil::GetTensorSliceView4ParallelId(
-        hierarchy, in_parallel_distribution, in_logical_desc->shape(),
-        ctx->parallel_ctx().parallel_id());
+    TensorSliceView view =
+        GetTensorSliceView4ParallelId(hierarchy, in_parallel_distribution, in_logical_desc->shape(),
+                                      ctx->parallel_ctx().parallel_id());
     return std::make_shared<GatherOpKernelState>(view.At(axis).begin(), view.At(axis).end());
   }
 
