@@ -24,14 +24,13 @@ struct GradMode {
 };
 
 struct AutoGradMode {
-    AutoGradMode(bool enabled) : prev_mode_(GradMode::is_enabled()) {
+    AutoGradMode(bool enabled) : prev_mode(GradMode::is_enabled()) {
         GradMode::set_enabled(enabled);
     }
     ~AutoGradMode() {
-        GradMode::set_enabled(prev_mode_);
+        GradMode::set_enabled(prev_mode);
     }
-private:
-    bool prev_mode_;
+    bool prev_mode;
 };
 
 }  // namespace autograd
