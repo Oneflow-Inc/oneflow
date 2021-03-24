@@ -282,6 +282,9 @@ if __name__ == "__main__":
         "--cuda_version", type=str, required=False, default="10.2",
     )
     parser.add_argument(
+        "--package_name", type=str, required=False, default="oneflow",
+    )
+    parser.add_argument(
         "--extra_oneflow_cmake_args", action="append", nargs="+", default=[]
     )
     parser.add_argument(
@@ -404,13 +407,6 @@ gcc --version
             assert len(cuda_version_literal) == 3
             python_versions = args.python_version.split(",")
             python_versions = [pv.strip() for pv in python_versions]
-            package_name = None
-            if args.cpu:
-                package_name = "oneflow_cpu"
-            else:
-                package_name = f"oneflow_cu{cuda_version_literal}"
-                if args.xla:
-                    package_name += "_xla"
             for python_version in python_versions:
                 build_oneflow(
                     img_tag,
@@ -420,7 +416,7 @@ gcc --version
                     args.extra_docker_args,
                     python_version,
                     args.skip_wheel,
-                    package_name,
+                    args.package_name,
                     args.wheel_house_dir,
                     bash_args,
                     bash_wrap,
