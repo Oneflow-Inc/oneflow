@@ -15,9 +15,9 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/job/cluster_instruction.h"
+#include "oneflow/core/vm/vm_util.h"
 
 ONEFLOW_API_PYBIND11_MODULE("eager", m) {
   using namespace oneflow;
-  m.def("Sync", &ClusterInstruction::MasterSendEagerSync);
+  m.def("Sync", []() { vm::Sync().GetOrThrow(); });
 }

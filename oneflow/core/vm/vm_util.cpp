@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/oneflow_vm.h"
 #include "oneflow/core/vm/instruction.msg.h"
@@ -47,10 +48,20 @@ Maybe<void> Run(const InstructionListProto& instruction_list_proto) {
   auto* oneflow_vm = JUST(GlobalMaybe<OneflowVM>());
   auto* vm = oneflow_vm->mut_vm();
   vm->Receive(&instr_msg_list);
-  while (!vm->Empty()) {
-    vm->Schedule();
-    oneflow_vm->TryReceiveAndRun();
+  if (!Global<ResourceDesc, ForSession>::Get()->async_eager_execution()) {
+    while (!vm->Empty()) {
+      vm->Schedule();
+      oneflow_vm->TryReceiveAndRun();
+    }
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> Sync() {
+  auto* oneflow_vm = JUST(GlobalMaybe<OneflowVM>());
+  oneflow_vm->Sync();
+  // TODO(jianhao): update it when multi client is ready
+  ClusterInstruction::MasterSendEagerSync();
   return Maybe<void>::Ok();
 }
 

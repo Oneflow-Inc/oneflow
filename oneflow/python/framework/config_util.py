@@ -56,6 +56,18 @@ def load_library_now(val):
     oneflow_api.LoadLibraryNow(val)
 
 
+@oneflow_export("config.async_eager_execution")
+def api_async_eager_execution(val: bool) -> None:
+    return enable_if.unique([async_eager_execution, do_nothing])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def async_eager_execution(val: bool) -> None:
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.async_eager_execution = val
+
+
 @oneflow_export("config.machine_num")
 def api_machine_num(val: int) -> None:
     r"""Set available number of machine/node for  running job .

@@ -53,6 +53,7 @@ class ResourceDesc final {
   size_t thread_local_cache_max_size() const { return resource_.thread_local_cache_max_size(); }
   int32_t ComputeThreadPoolSize() const;
   bool enable_debug_mode() const;
+  bool async_eager_execution() const;
   CollectiveBoxingConf collective_boxing_conf() const;
   bool nccl_use_compute_stream() const;
 

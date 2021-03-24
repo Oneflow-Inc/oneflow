@@ -33,14 +33,20 @@ class OneflowVM final {
   OneflowVM(const OneflowVM&) = delete;
   OneflowVM(OneflowVM&&) = delete;
   OneflowVM(const Resource& resource, int64_t this_machine_id);
-  ~OneflowVM() = default;
+  ~OneflowVM();
 
   vm::VirtualMachine* mut_vm() { return vm_.Mutable(); }
   void TryReceiveAndRun();
+  void Sync();
 
  private:
   ObjectMsgPtr<vm::VirtualMachine> vm_;
   HashMap<vm::ThreadCtx*, std::unique_ptr<ThreadPool>> thread_ctx2thread_pool_;
+  std::thread loop_thread_;
+  bool exiting_;
+  mutable std::mutex mutex_;
+
+  void Loop();
 };
 
 }  // namespace oneflow
