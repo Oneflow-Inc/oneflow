@@ -131,9 +131,11 @@ def get_ofrecord_handle(
 
 
 if __name__ == "__main__":
-    flow.eager_execution_enabled()
+    flow.enable_eager_execution(True)
+    print(flow.eager_execution_enabled())
+    flow.env.init()
     record = flow.tmp.OfrecordReader("/dataset/lenet_mnist/data/ofrecord/train")
     print(type(record))
 
-    image = tmp.RawDecoder(record, "images", (784,), dtype=flow.int32)
-    print(type(image))
+    # image = tmp.RawDecoder(record, "images", (784,), dtype=flow.int32)
+    # print(type(image))
