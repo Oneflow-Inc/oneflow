@@ -27,10 +27,10 @@ namespace one {
 // The backward op exprs should be contained in the derived class.
 class OpExprGrad {
  public:
-  explicit OpExprGrad(const OpExpr& op) : op_type_(op.type()) {}
+  OpExprGrad() = default;
   virtual ~OpExprGrad() = default;
 
-  const std::string& type() const { return op_type_; }
+  virtual Maybe<void> Init(const OpExpr& op) = 0;
 
   // Capture forward inputs and outputs for backward.
   virtual Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
@@ -38,9 +38,6 @@ class OpExprGrad {
 
   virtual Maybe<void> DoBackward(const OpExprInterpState* ctx, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const = 0;
-
- private:
-  std::string op_type_;
 };
 
 // Stateful interface of the `OpExprGrad`.
@@ -68,9 +65,8 @@ class OpExprGradInterface {
   std::shared_ptr<OpExprInterpState> state_;
 };
 
-#define REGISTER_OP_EXPR_GRAD(op_type, op_grad)            \
-  REGISTER_CLASS_CREATOR(std::string, op_type, OpExprGrad, \
-                         ([](const OpExpr& op) { return new op_grad(op); }), const OpExpr&)
+#define REGISTER_OP_EXPR_GRAD(op_type, op_grad) \
+  REGISTER_CLASS_CREATOR(std::string, op_type, OpExprGrad, ([]() { return new op_grad; }))
 
 }  // namespace one
 }  // namespace oneflow
