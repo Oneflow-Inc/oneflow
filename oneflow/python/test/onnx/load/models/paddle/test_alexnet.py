@@ -143,9 +143,9 @@ class AlexNetDY(nn.Layer):
         return x
 
 
-def AlexNet():
-    return AlexNetDY(class_dim=1000)
-
+def AlexNet(**args):
+    model = AlexNetDY(**args)
+    return model
 
 def test_alexnet(test_case):
     load_paddle_module_and_check(
