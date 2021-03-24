@@ -1004,7 +1004,7 @@ Maybe<void> InstructionsBuilder::_StatelessCallOpKernel(
     instruction->add_mut2_operand(pair.second->object_id());
   }
 
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
