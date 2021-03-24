@@ -136,7 +136,6 @@ if __name__ == "__main__":
     # @flow.global_function(type="predict")
     # def ofrecord_reader_job() -> Tuple[tp.Numpy, tp.Numpy]:
     #     with flow.scope.placement("cpu", "0:0"):
-    #         # our ofrecord file path is "./dataset/part-0"
     #         ofrecord = flow.data.ofrecord_reader(
     #             "/dataset/lenet_mnist/data/ofrecord/train"
     #         )
@@ -156,7 +155,6 @@ if __name__ == "__main__":
     # print("In per batch, labels shape is", labels.shape)
 
     flow.enable_eager_execution(True)
-    print(flow.eager_execution_enabled())
     flow.env.init()
     record = OfrecordReader("/dataset/lenet_mnist/data/ofrecord/train")()
     print(type(record))
