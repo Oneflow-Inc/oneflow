@@ -437,7 +437,7 @@ class Tensor:
 
     def normal_(self, mean=0, std=1):
         initializer_conf = flow.random_normal_initializer(
-            mean=mean, stddev=std, dtype=self.dtype
+            mean=mean, stddev=std
         )
         return self._init_by_initializer_conf(initializer_conf)
 
