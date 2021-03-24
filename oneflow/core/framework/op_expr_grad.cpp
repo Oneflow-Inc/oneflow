@@ -109,7 +109,7 @@ void GetUserOpGradConf(const UserOpExpr& fw_op_expr, std::vector<OperatorConf>* 
       << PbMessage2TxtString(op_conf);
   std::unique_ptr<GenerateBackwardOpConfWrapperStruct> obj;
   obj.reset(NewObj<int32_t, GenerateBackwardOpConfWrapperStruct>(op_type_case));
-  obj->Call(op_adapter, bw_op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
+  CHECK_JUST(obj->Call(op_adapter, bw_op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
 }
 }  // namespace
 
