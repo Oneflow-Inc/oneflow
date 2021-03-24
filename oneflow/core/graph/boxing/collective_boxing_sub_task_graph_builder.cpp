@@ -349,9 +349,11 @@ class NcclCollectiveBoxingBroadcastSubTskGphBuilder final : public SubTskGphBuil
         if (i == root_parallel_id) {
           ctx->task_graph()->ConnectWithLbi(gpu_in_node, collective_node, lbi);
         } else {
-          gpu_in_node->BuildCtrlRegstDesc(collective_node);
-          Connect<TaskNode>(gpu_in_node, ctx->task_graph()->NewTaskEdgeWithLbi(lbi),
-                            collective_node);
+          std::string regst_desc_name;
+          gpu_in_node->BuildCtrlRegstDesc(collective_node, &regst_desc_name);
+          TaskEdge* edge = ctx->task_graph()->NewEdge();
+          Connect<TaskNode>(gpu_in_node, edge, collective_node);
+          gpu_in_node->BindEdgeWithProducedRegst(edge, regst_desc_name);
         }
         sorted_out_tasks->push_back(collective_node);
       }
