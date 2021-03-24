@@ -11,7 +11,7 @@ on:
         description: "python_version"
         default: "3.6,3.7,3.8"
         required: false
-      package_names:
+      compute_platforms:
         description: "package names to build"
         default: "cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"
         required: false
@@ -51,7 +51,7 @@ jobs:
       - name: Set environment variables
         env:
           python_version: ${{ github.event.inputs.python_version }}
-          package_names: ${{ github.event.inputs.package_names }}
+          compute_platforms: ${{ github.event.inputs.compute_platforms }}
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
         run: |
@@ -108,10 +108,10 @@ jobs:
 
           python3 ci/build/ensure_img.py
           python_version=${python_version:-"3.5,3.6,3.7,3.8"}
-          package_names=${package_names:-"cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"}
+          compute_platforms=${compute_platforms:-"cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"}
           echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
           echo "python_version=${python_version}" >> $GITHUB_ENV
-          echo "package_names=${package_names}" >> $GITHUB_ENV
+          echo "compute_platforms=${compute_platforms}" >> $GITHUB_ENV
           echo "extra_flags=${extra_flags}" >> $GITHUB_ENV
 
           tmp_dir=$HOME/ci-tmp-rel
@@ -131,7 +131,7 @@ jobs:
           $(python3 tools/oss_file_exist.py --bucket oneflow-staging --path ${oss_dir}/oneflow_${{ matrix.release_version }})
           echo "is_built=${OSS_FILE_EXISTED}" >> $GITHUB_ENV
       - name: Build OneFlow
-        if: env.is_built != '1' && contains(env.package_names, matrix.release_version)
+        if: env.is_built != '1' && contains(env.compute_platforms, matrix.release_version)
         uses: ./.github/actions/whl
         with:
           tmp_dir: ${ci_tmp_dir}
@@ -139,7 +139,7 @@ jobs:
           python_version: ${python_version}
           extra_flags: ${extra_flags}
       - name: Upload wheel
-        if: env.is_built != '1' && contains(env.package_names, matrix.release_version)
+        if: env.is_built != '1' && contains(env.compute_platforms, matrix.release_version)
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${wheelhouse_dir}
@@ -147,7 +147,7 @@ jobs:
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update pip index
-        if: env.is_built != '1' && contains(env.package_names, matrix.release_version)
+        if: env.is_built != '1' && contains(env.compute_platforms, matrix.release_version)
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
@@ -156,7 +156,7 @@ jobs:
           python3 -m pip install oss2 beautifulsoup4 --user
           python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${oss_branch_dir}/index.html --index_key=${oss_dir}/index.html
       - name: Upload bin
-        if: env.is_built != '1' && contains(env.package_names, matrix.release_version)
+        if: env.is_built != '1' && contains(env.compute_platforms, matrix.release_version)
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${bin_dir}
@@ -164,7 +164,7 @@ jobs:
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update API docs
-        if: github.ref == 'refs/heads/master' && matrix.release_version == 'cu102' && contains(env.package_names, matrix.release_version)
+        if: github.ref == 'refs/heads/master' && matrix.release_version == 'cu102' && contains(env.compute_platforms, matrix.release_version)
         env:
           READTHEDOCS_TOKEN: ${{ secrets.READTHEDOCS_TOKEN }}
         run: |
