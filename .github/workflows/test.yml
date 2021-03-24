@@ -242,7 +242,7 @@ jobs:
     strategy:
       max-parallel: 5
       matrix:
-        test_suite: ["cuda", "cuda_op", "cpu"]
+        test_suite: ["cuda", "cuda_op", "cpu", "xla"]
         include:
           - test_suite: "cuda"
             os: [self-hosted, linux, gpu]
