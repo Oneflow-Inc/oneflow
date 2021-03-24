@@ -10,10 +10,10 @@ jobs:
     name: Labels
     steps:
       - name: Check type labels 'bug, enhancement, purge, feature, documentation'
-        if: (contains(github.event.issue.pull_request.*.name, 'bug') || contains(github.event.issue.pull_request.*.name, 'enhancement') || contains(github.event.issue.pull_request.*.name, 'purge') || contains(github.event.issue.pull_request.*.name, 'feature') || contains(github.event.issue.pull_request.*.name, 'documentation')) == false
+        if: (contains(github.event.pull_request.labels.*.name, 'bug') || contains(github.event.pull_request.labels.*.name, 'enhancement') || contains(github.event.pull_request.labels.*.name, 'purge') || contains(github.event.pull_request.labels.*.name, 'feature') || contains(github.event.pull_request.labels.*.name, 'documentation')) == false
         run: |
           exit 1
       - name: Check component labels 'op, system, eager, build, xla, python, ci, test, tooling, onnx'
-        if: (contains(github.event.issue.pull_request.*.name, 'op') || contains(github.event.issue.pull_request.*.name, 'system') || contains(github.event.issue.pull_request.*.name, 'eager') || contains(github.event.issue.pull_request.*.name, 'build') || contains(github.event.issue.pull_request.*.name, 'xla') || contains(github.event.issue.pull_request.*.name, 'python') || contains(github.event.issue.pull_request.*.name, 'ci') || contains(github.event.issue.pull_request.*.name, 'test') || contains(github.event.issue.pull_request.*.name, 'tooling') || contains(github.event.issue.pull_request.*.name, 'onnx')) == false
+        if: (contains(github.event.pull_request.labels.*.name, 'op') || contains(github.event.pull_request.labels.*.name, 'system') || contains(github.event.pull_request.labels.*.name, 'eager') || contains(github.event.pull_request.labels.*.name, 'build') || contains(github.event.pull_request.labels.*.name, 'xla') || contains(github.event.pull_request.labels.*.name, 'python') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'test') || contains(github.event.pull_request.labels.*.name, 'tooling') || contains(github.event.pull_request.labels.*.name, 'onnx')) == false
         run: |
           exit 2
