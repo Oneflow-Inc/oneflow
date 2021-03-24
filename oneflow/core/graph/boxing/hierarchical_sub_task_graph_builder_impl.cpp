@@ -125,23 +125,35 @@ void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
   }
 }
 
+std::shared_ptr<ChainSubTskGphBuilder> Build1DSubTskGphBuilder() {
+  std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
+  builders.emplace_back(new OneToOneSubTskGphBuilder());
+  builders.emplace_back(new B21SubTskGphBuilder());
+  if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+    builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
+  }
+  builders.emplace_back(new SliceBoxingSubTskGphBuilder());
+  builders.emplace_back(new NaiveB2BSubTskGphBuilder());
+  builders.emplace_back(new NaiveB2PSubTskGphBuilder());
+  return std::make_shared<ChainSubTskGphBuilder>(builders);
+}
+
+bool ParallelDistributionAllSameSplitParallel(const ParallelDistribution& parallel_distribution) {
+  CHECK_GT(parallel_distribution.sbp_parallel_size(), 1);
+  const SbpParallel& first_sbp = parallel_distribution.sbp_parallel(0);
+  if (!first_sbp.has_split_parallel()) { return false; }
+  FOR_RANGE(int64_t, i, 1, parallel_distribution.sbp_parallel_size()) {
+    if (parallel_distribution.sbp_parallel(i) != first_sbp) { return false; }
+  }
+  return true;
+}
+
 }  // namespace
 
 class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FlatSubTskGphBuilder);
-  FlatSubTskGphBuilder() {
-    std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
-    builders.emplace_back(new OneToOneSubTskGphBuilder());
-    builders.emplace_back(new B21SubTskGphBuilder());
-    if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
-      builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
-    }
-    builders.emplace_back(new SliceBoxingSubTskGphBuilder());
-    builders.emplace_back(new NaiveB2BSubTskGphBuilder());
-    builders.emplace_back(new NaiveB2PSubTskGphBuilder());
-    sub_tsk_gph_builder_.reset(new ChainSubTskGphBuilder(builders));
-  }
+  FlatSubTskGphBuilder() { sub_tsk_gph_builder_ = Build1DSubTskGphBuilder(); }
   ~FlatSubTskGphBuilder() = default;
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
@@ -161,24 +173,13 @@ class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
   }
 
  private:
-  std::unique_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
+  std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
 };
 
 class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IntraGroupSubTskGphBuilder);
-  IntraGroupSubTskGphBuilder() {
-    std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
-    builders.emplace_back(new OneToOneSubTskGphBuilder());
-    builders.emplace_back(new B21SubTskGphBuilder());
-    if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
-      builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
-    }
-    builders.emplace_back(new SliceBoxingSubTskGphBuilder());
-    builders.emplace_back(new NaiveB2BSubTskGphBuilder());
-    builders.emplace_back(new NaiveB2PSubTskGphBuilder());
-    sub_tsk_gph_builder_.reset(new ChainSubTskGphBuilder(builders));
-  }
+  IntraGroupSubTskGphBuilder() { sub_tsk_gph_builder_ = Build1DSubTskGphBuilder(); }
   ~IntraGroupSubTskGphBuilder() = default;
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
@@ -247,24 +248,13 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
   }
 
  private:
-  std::unique_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
+  std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
 };
 
 class InterGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InterGroupSubTskGphBuilder);
-  InterGroupSubTskGphBuilder() {
-    std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
-    builders.emplace_back(new OneToOneSubTskGphBuilder());
-    builders.emplace_back(new B21SubTskGphBuilder());
-    if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
-      builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
-    }
-    builders.emplace_back(new SliceBoxingSubTskGphBuilder());
-    builders.emplace_back(new NaiveB2BSubTskGphBuilder());
-    builders.emplace_back(new NaiveB2PSubTskGphBuilder());
-    sub_tsk_gph_builder_.reset(new ChainSubTskGphBuilder(builders));
-  }
+  InterGroupSubTskGphBuilder() { sub_tsk_gph_builder_ = Build1DSubTskGphBuilder(); }
   ~InterGroupSubTskGphBuilder() = default;
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
@@ -334,7 +324,7 @@ class InterGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
   }
 
  private:
-  std::unique_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
+  std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
 };
 
 struct DispatchHierarchicalSubTskGphBuilder::Impl {
@@ -390,12 +380,8 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
           reduced_out_parallel_distribution, time_shape);
     } else if (reduced_in_parallel_distribution.sbp_parallel(1)
                == reduced_out_parallel_distribution.sbp_parallel(1)) {
-      const bool use_2d_slice_boxing =
-          (in_parallel_distribution.sbp_parallel(0) == in_parallel_distribution.sbp_parallel(1)
-           && in_parallel_distribution.sbp_parallel(0).has_split_parallel())
-          || (out_parallel_distribution.sbp_parallel(0) == out_parallel_distribution.sbp_parallel(1)
-              && out_parallel_distribution.sbp_parallel(0).has_split_parallel());
-      if (!use_2d_slice_boxing) {
+      if (!(ParallelDistributionAllSameSplitParallel(in_parallel_distribution)
+            || ParallelDistributionAllSameSplitParallel(out_parallel_distribution))) {
         return impl_->inter_group_sub_tsk_gph_builder_->Build(
             ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
             reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
