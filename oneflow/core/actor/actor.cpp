@@ -487,6 +487,7 @@ void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
         CHECK(reg_deq.empty() == false);
         Regst* regst = reg_deq.front();
         auto regst_desc_addr = consumed_regst_desc_id2addr_.at(regst_desc_id);
+        // TODO(hanbinbin): Optimize the processing procedure of return_regst_num afterwards
         int32_t returned_regst_num = 1;
         if (regst_desc_addr.rank() == GlobalProcessCtx::Rank()) {
           CHECK(regst->regst_desc()->regst_desc_type().has_ctrl_regst_desc());
