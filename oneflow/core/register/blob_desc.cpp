@@ -19,29 +19,6 @@ limitations under the License.
 
 namespace oneflow {
 
-std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
-    const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc) {
-  // TODO(chengcheng) : remove PackedBlob
-  int64_t body_byte_size = 0;
-  StructPodDesc opaque_header_pod_desc;
-  std::unique_ptr<BlobDesc> ret;
-  for (const auto& pair : lbi2blob_desc) {
-    if (lbi2blob_desc.size() == 1) {
-      ret.reset(new BlobDesc(*(pair.second)));
-      break;
-    }
-    RtBlobDesc rt_blob_desc(*(pair.second));
-    // CHECK(!rt_blob_desc.is_dynamic());
-    body_byte_size += rt_blob_desc.AlignedByteSizeOfBlobBody();
-    *opaque_header_pod_desc.MutStructField(NewFieldId(pair.first)) = rt_blob_desc.header_pod_desc();
-  }
-  if (lbi2blob_desc.size() > 1) {
-    ret.reset(new BlobDesc(Shape(DimVector{body_byte_size}), DataType::kChar));
-    ret->SetOpaqueHeader(opaque_header_pod_desc);
-  }
-  return ret;
-}
-
 bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs) {
   return lhs.lbi() < rhs.lbi();
 }
