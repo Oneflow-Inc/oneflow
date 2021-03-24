@@ -35,6 +35,11 @@ DeviceType IDMgr::GetDeviceTypeFromActorId(int64_t actor_id) const {
   return DeserializeTaskIdFromInt64(actor_id).stream_id().device_id().device_type();
 }
 
+int64_t IDMgr::MachineId4TaskId(int64_t task_id) const {
+  // TODO: change this inferface semantics, rank does not indicate machine_id in multi-client
+  return DeserializeTaskIdFromInt64(task_id).stream_id().device_id().rank();
+}
+
 int64_t IDMgr::MachineId4ActorId(int64_t actor_id) const {
   // TODO: change this inferface semantics, rank does not indicate machine_id in multi-client
   return DeserializeTaskIdFromInt64(actor_id).stream_id().device_id().rank();

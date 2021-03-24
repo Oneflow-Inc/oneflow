@@ -151,10 +151,17 @@ void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* src_task_proto, TaskProt
   if (!IsInRepeatedField(ctrl_regst_desc->consumer_task_id(), dst_task_id)) {
     ctrl_regst_desc->add_consumer_task_id(dst_task_id);
     int64_t ctrl_regst_desc_id = ctrl_regst_desc->regst_desc_id();
-    RegstDescIdSet* consumed_ctrl_regst_desc_ids =
-        FindOrCreateConsumedCtrlRegstDescIdSet(dst_task_proto, "in_ctrl");
+    const auto& pair = FindOrCreateConsumedCtrlRegstDescIdSet(dst_task_proto, "in_ctrl");
+    RegstDescIdSet* consumed_ctrl_regst_desc_ids = pair.first;
+    auto* consumed_regst_desc_id2addr = pair.second;
     CHECK(!IsInRepeatedField(consumed_ctrl_regst_desc_ids->regst_desc_id(), ctrl_regst_desc_id));
     consumed_ctrl_regst_desc_ids->add_regst_desc_id(ctrl_regst_desc_id);
+    RegstDescAddr regst_desc_addr;
+    regst_desc_addr.set_rank(
+        Global<IDMgr>::Get()->MachineId4TaskId(ctrl_regst_desc->producer_task_id()));
+    regst_desc_addr.set_task_id(ctrl_regst_desc->producer_task_id());
+    CHECK(consumed_regst_desc_id2addr->insert({ctrl_regst_desc->regst_desc_id(), regst_desc_addr})
+              .second);
   }
 }
 

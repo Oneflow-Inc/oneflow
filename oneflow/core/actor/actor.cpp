@@ -94,6 +94,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   TakeOverInplaceConsumedAndProduced(task_proto.produced_regst_desc());
   is_naive_consumed_eord_ = false;
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
+  TakeOverConsumedRegstDescAddr(task_proto.consumed_regst_desc_id2addr());
   TakeOverNaiveProduced(task_proto.produced_regst_desc());
   InitBnInOp2BlobInfo(task_proto);
   VirtualActorInit(task_proto);
@@ -141,6 +142,13 @@ void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& cons
     }
   }
   naive_consumed_rs_.InitedDone();
+}
+
+void Actor::TakeOverConsumedRegstDescAddr(
+    const PbMap<int64_t, RegstDescAddr>& consumed_regst_desc_id2addr) {
+  for (const auto& pair : consumed_regst_desc_id2addr) {
+    CHECK(consumed_regst_desc_id2addr_.emplace(pair.first, pair.second).second);
+  }
 }
 
 void Actor::TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& produced_ids) {
@@ -319,10 +327,6 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         // process ctrl msg from other rank
         if (IsConsumedCtrlRegstDescId(msg.regst_desc_id())) {
           Regst* regst = msg.regst();
-          CHECK(ctrl_regst_from_other_rank2_regst_decs_id_and_producer_actor_id_
-                    .emplace(regst, std::make_pair<int64_t, int64_t>(msg.regst_desc_id(),
-                                                                     msg.src_actor_id()))
-                    .second);
           if (naive_consumed_rs_.HasRegstDescId(msg.regst_desc_id())) {
             CHECK_EQ(0, naive_consumed_rs_.TryPushBackRegst(regst, msg.regst_desc_id()));
             const auto& rdeq = naive_consumed_rs_.RegstDeq4RegstDescId(msg.regst_desc_id());
@@ -481,36 +485,33 @@ void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
   };
 
   tmp_regst_desc_id_vec_.clear();
-  naive_consumed_rs_.ForChosenRegstDeq(IsChosenRegstDescId, [&](const std::deque<Regst*>& reg_deq) {
-    CHECK(reg_deq.empty() == false);
-    Regst* regst = reg_deq.front();
-    int32_t returned_regst_num = 1;
-    if ((ctrl_regst_from_other_rank2_regst_decs_id_and_producer_actor_id_.find(regst)
-         == ctrl_regst_from_other_rank2_regst_decs_id_and_producer_actor_id_.end())) {
-      CHECK(regst->regst_desc()->regst_desc_type().has_ctrl_regst_desc());
-      returned_regst_num =
-          regst->regst_desc()->regst_desc_type().ctrl_regst_desc().returned_regst_num();
-    }
-    CHECK_GE(returned_regst_num, 1);
-    CHECK_GE(reg_deq.size(), returned_regst_num);
-    for (size_t i = 0; i < returned_regst_num; ++i) {
-      Regst* regst = reg_deq.at(i);
-      if ((ctrl_regst_from_other_rank2_regst_decs_id_and_producer_actor_id_.find(regst)
-           == ctrl_regst_from_other_rank2_regst_decs_id_and_producer_actor_id_.end())) {
-        // must access regst before sending it to producer
-        tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id());
-        EnqueueAsyncMsg(
-            ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
-      } else {
-        const auto& regst_decs_id_and_producer =
-            ctrl_regst_from_other_rank2_regst_decs_id_and_producer_actor_id_.at(regst);
-        tmp_regst_desc_id_vec_.push_back(regst_decs_id_and_producer.first);
-        EnqueueAsyncMsg(
-            ActorMsg::BuildRegstMsgToProducer(actor_id_, regst_decs_id_and_producer.second, regst));
-        ctrl_regst_from_other_rank2_regst_decs_id_and_producer_actor_id_.erase(regst);
-      }
-    }
-  });
+  naive_consumed_rs_.ForChosenRegstDeq(
+      IsChosenRegstDescId, [&](int64_t regst_desc_id, const std::deque<Regst*>& reg_deq) {
+        CHECK(reg_deq.empty() == false);
+        Regst* regst = reg_deq.front();
+        auto regst_desc_addr = consumed_regst_desc_id2addr_.at(regst_desc_id);
+        int32_t returned_regst_num = 1;
+        if (regst_desc_addr.rank() == GlobalProcessCtx::Rank()) {
+          CHECK(regst->regst_desc()->regst_desc_type().has_ctrl_regst_desc());
+          returned_regst_num =
+              regst->regst_desc()->regst_desc_type().ctrl_regst_desc().returned_regst_num();
+        }
+        CHECK_GE(returned_regst_num, 1);
+        CHECK_GE(reg_deq.size(), returned_regst_num);
+        for (size_t i = 0; i < returned_regst_num; ++i) {
+          Regst* regst = reg_deq.at(i);
+          if (regst_desc_addr.rank() == GlobalProcessCtx::Rank()) {
+            // must access regst before sending it to producer
+            tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id());
+            EnqueueAsyncMsg(
+                ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
+          } else {
+            tmp_regst_desc_id_vec_.push_back(regst_desc_id);
+            EnqueueAsyncMsg(
+                ActorMsg::BuildRegstMsgToProducer(actor_id_, regst_desc_addr.task_id(), regst));
+          }
+        }
+      });
   naive_consumed_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
 }
 
@@ -645,9 +646,9 @@ void Actor::AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(int64_t
 
 void Actor::HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst) {
   tmp_regst_desc_id_vec_.clear();
-  naive_consumed_rs_.ForEachFrontRegst([&](Regst* regst) {
-    if (ctrl_regst_from_other_rank2_regst_decs_id_and_producer_actor_id_.find(regst)
-        == ctrl_regst_from_other_rank2_regst_decs_id_and_producer_actor_id_.end()) {
+  naive_consumed_rs_.ForEachFrontRegst([&](int64_t regst_desc_id, Regst* regst) {
+    auto regst_desc_addr = consumed_regst_desc_id2addr_.at(regst_desc_id);
+    if (regst_desc_addr.rank() == GlobalProcessCtx::Rank()) {
       if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
         if (IsAllowedRegst(regst) == false) { return; }
         // must access regst before sending it to producer
