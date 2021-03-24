@@ -552,17 +552,16 @@ Maybe<void> InstructionsBuilder::ReplaceMirrored(
     const std::shared_ptr<ParallelDesc>& parallel_desc_sym,
     const std::vector<std::shared_ptr<compatible_py::BlobObject>>& lhs_objects,
     const std::vector<std::shared_ptr<compatible_py::BlobObject>>& rhs_objects) {
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name("ReplaceMirrored");
-  instruction.set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("ReplaceMirrored");
+  instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
   for (const auto& lhs_object : lhs_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(lhs_object->object_id()));
+    instruction->add_int64_operand(lhs_object->object_id());
   }
-  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  instruction->add_separator();
   for (const auto& rhs_object : rhs_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(rhs_object->object_id()));
+    instruction->add_int64_operand(rhs_object->object_id());
   }
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
