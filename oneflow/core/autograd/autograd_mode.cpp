@@ -20,14 +20,14 @@ namespace oneflow {
 
 namespace autograd {
 
-thread_local bool GradModeEnabled = true;
+thread_local bool g_grad_mode_enabled = true;
 
 bool GradMode::is_enabled() {
-    return GradModeEnabled;
+    return g_grad_mode_enabled;
 }
 
 void GradMode::set_enabled(bool enabled) {
-    GradModeEnabled = enabled;
+    g_grad_mode_enabled = enabled;
 }
 
 }  // namespace autograd
