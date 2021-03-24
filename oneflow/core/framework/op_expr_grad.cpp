@@ -16,60 +16,63 @@ limitations under the License.
 
 #include "oneflow/core/framework/op_expr_grad.h"
 #include "oneflow/core/framework/op_interpreter_util.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
 namespace one {
 
-class MatMulOpGrad : public OpExprGrad {
+class UserOpGrad : public OpExprGrad {
  public:
-  explicit MatMulOpGrad(const OpExpr& op) : OpExprGrad(op) {
-    // TODO()
-    UNIMPLEMENTED();
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* user_op = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(user_op);
+    const UserOpConf& user_conf = user_op->proto();
+    const user_op::OpGradRegistryResult* val =
+      user_op::UserOpRegistryMgr::Get().GetOpGradRegistryResult(user_conf.op_type_name());
+    if (val == nullptr) {
+      return Error::GradientFunctionNotFound() << user_conf.op_type_name();
+    }
+
+    std::vector<OperatorConf> bw_op_confs;
+    BlobDesc fake_blob_desc(DataType::kFloat);
+    auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
+      return fake_blob_desc;
+    };
+    HashMap<std::string, LogicalBlobId> in_diff_lbis;
+    auto DiffLbi4BnInOp = [&](const std::string& bn) {
+      return &in_diff_lbis[bn];
+    };
+    OperatorConf op_conf;
+    user_op->BuildOpConf(&op_conf);
+    user_op::UserOpWrapper fw_user_op(op_conf, LogicalBlobDesc4BnInOp, DiffLbi4BnInOp);
+    if (nullptr != val->bw_gen_fn) {
+      // new refined interface
+      user_op::BackwardOpConfContext ctx(fw_user_op, &bw_op_confs);
+      val->bw_gen_fn(&ctx);
+    } else if (nullptr != val->gen_bw_fn) {
+      // old interface, will be removed when all backward gradient configs are using new interface
+      auto AddOp = [&](const user_op::UserOpConfWrapper& wrapper) {
+        bw_op_confs.push_back(wrapper.op_conf());
+      };
+      val->gen_bw_fn(fw_user_op, AddOp);
+    }
+
+    for (const auto& op_conf : bw_op_confs) {
+      // TODO()
+    }
   }
 
   Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
-    if (a_grad_op_.get()) { ctx->SaveTensorForBackward(inputs[1]); }
-    if (b_grad_op_.get()) { ctx->SaveTensorForBackward(inputs[0]); }
-    return Maybe<void>::Ok();
-  }
+                      const TensorTuple& outputs) const override {}
 
   Maybe<void> DoBackward(const OpExprInterpState* ctx, const TensorTuple& out_grads,
-                         TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    const auto& saved_tensors = ctx->SavedTensors();
-    in_grads->resize(2);
-    const auto& interpreter = JUST(OpInterpUtil::GetInterpreter());
-    int i = 0;
-    if (a_grad_op_.get()) {
-      TensorTuple inputs(2);
-      inputs.push_back(out_grads[0]);
-      inputs.push_back(saved_tensors[i]);
-      TensorTuple outputs(1);
-
-      JUST(interpreter->Apply(*a_grad_op_, inputs, &outputs));
-      (*in_grads)[0] = outputs[0];
-      ++i;
-    }
-    if (b_grad_op_.get()) {
-      TensorTuple inputs(2);
-      inputs.push_back(out_grads[0]);
-      inputs.push_back(saved_tensors[i]);
-      TensorTuple outputs(1);
-
-      JUST(interpreter->Apply(*b_grad_op_, inputs, &outputs));
-      (*in_grads)[1] = outputs[0];
-    }
-    return Maybe<void>::Ok();
-  }
+                         TensorTuple* in_grads) const override {}
 
  private:
-  std::shared_ptr<OpExpr> a_grad_op_;
-  std::shared_ptr<OpExpr> b_grad_op_;
+  std::vector<std::shared_ptr<OpExpr>> backward_ops_;
 };
 
-REGISTER_OP_EXPR_GRAD("matmul", MatMulOpGrad);
+REGISTER_OP_EXPR_GRAD("UserOp", UserOpGrad);
 
 }  // namespace one
 }  // namespace oneflow
