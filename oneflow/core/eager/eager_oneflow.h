@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.pb.h"
 #include "oneflow/core/job/cluster_instruction.cfg.h"
 #include "oneflow/core/vm/instruction.cfg.h"
+#include "oneflow/core/vm/instruction.msg.h"
 
 namespace oneflow {
 
@@ -50,11 +51,11 @@ class EagerOneflow final {
       const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
 
   Maybe<void> RunLogicalInstruction(
-      const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list_proto,
+      const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
       const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list);
 
   Maybe<void> RunPhysicalInstruction(
-      const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list_proto,
+      const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
       const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list);
 };
 
