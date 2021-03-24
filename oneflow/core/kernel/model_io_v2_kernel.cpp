@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/register/tensor_slice_copier.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
-#include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
+#include "oneflow/core/job/parallel_distribution_util.h"
 
 namespace oneflow {
 
@@ -231,7 +231,7 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
     seed_ = seeds.at(seed_offset);
 
     const Shape logical_blob_shape(original_variable_conf.shape());
-    tensor_slice_view_ = SubTskGphBuilderUtil::GetTensorSliceView4ParallelId(
+    tensor_slice_view_ = GetTensorSliceView4ParallelId(
         *hierarchy, parallel_distribution, logical_blob_shape, parallel_ctx.parallel_id());
   }
   void Forward(const KernelCtx& ctx,
@@ -286,9 +286,9 @@ class ModelLoadV2Kernel final : public KernelIf<device_type> {
         GetParallelDistribution(this->kernel_conf(), "ref");
     const Shape logical_blob_shape(
         this->op_conf().model_load_v2_conf().original_variable_conf().shape());
-    tensor_slice_view_ = SubTskGphBuilderUtil::GetTensorSliceView4ParallelId(
-        *hierarchy, parallel_distribution, logical_blob_shape,
-        this->kernel_conf().parallel_ctx().parallel_id());
+    tensor_slice_view_ =
+        GetTensorSliceView4ParallelId(*hierarchy, parallel_distribution, logical_blob_shape,
+                                      this->kernel_conf().parallel_ctx().parallel_id());
   }
   void Forward(const KernelCtx& ctx,
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
@@ -350,7 +350,7 @@ class ModelSaveV2Kernel final : public KernelIf<device_type> {
         part_id_ = part_id2slice_views_.size();
       }
       if (cur_i_need_do_save) {
-        part_id2slice_views_.emplace_back(SubTskGphBuilderUtil::GetTensorSliceView4ParallelRank(
+        part_id2slice_views_.emplace_back(GetTensorSliceView4ParallelRank(
             *hierarchy, parallel_distribution, logical_blob_shape, parallel_rank));
       }
     }
