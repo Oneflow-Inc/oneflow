@@ -821,10 +821,9 @@ Maybe<compatible_py::Object> InstructionsBuilder::GetSharedOpKernelObject4Parall
 }
 
 Maybe<void> InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string str) {
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name("InitStringSymbol");
-  instruction.mutable_operand()->Add()->CopyFrom(*InitSymbolOperand(symbol_id));
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("InitStringSymbol");
+  instruction->add_symbol_operand(symbol_id);
+  instruction_list_->PushBack(instruction.Mutable());
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.set_string_symbol(str);
@@ -834,10 +833,9 @@ Maybe<void> InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string
 
 Maybe<void> InstructionsBuilder::InitJobConfSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::JobConfigProto>& job_conf) {
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name("InitJobDescSymbol");
-  instruction.mutable_operand()->Add()->CopyFrom(*InitSymbolOperand(symbol_id));
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("InitJobDescSymbol");
+  instruction->add_symbol_operand(symbol_id);
+  instruction_list_->PushBack(instruction.Mutable());
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_job_conf_symbol()->CopyFrom(*job_conf);
@@ -847,10 +845,9 @@ Maybe<void> InstructionsBuilder::InitJobConfSymbol(
 
 Maybe<void> InstructionsBuilder::NewParallelConfSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name("NewParallelDescSymbol");
-  instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(symbol_id));
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("NewParallelDescSymbol");
+  instruction->add_init_symbol_operand(symbol_id);
+  instruction_list_->PushBack(instruction.Mutable());
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_parallel_conf_symbol()->CopyFrom(*parallel_conf);
@@ -860,10 +857,9 @@ Maybe<void> InstructionsBuilder::NewParallelConfSymbol(
 
 Maybe<void> InstructionsBuilder::NewScopeSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name("InitScopeSymbol");
-  instruction.mutable_operand()->Add()->CopyFrom(*InitSymbolOperand(symbol_id));
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("InitScopeSymbol");
+  instruction->add_init_symbol_operand(symbol_id);
+  instruction_list_->PushBack(instruction.Mutable());
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_scope_symbol()->CopyFrom(*scope_proto);
@@ -876,22 +872,20 @@ Maybe<int64_t> InstructionsBuilder::_NewOpKernelObject(
     const std::shared_ptr<JobDesc>& job_desc_sym,
     const std::shared_ptr<OperatorConfSymbol>& op_conf_sym) {
   int64_t object_id = JUST(NewObjectId(parallel_desc_symbol));
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name("InitOpKernelObject");
-  instruction.set_parallel_desc_symbol_id(JUST(parallel_desc_symbol->symbol_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(job_desc_sym->symbol_id())));
-  instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(op_conf_sym->symbol_id())));
-  instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(object_id));
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("InitOpKernelObject");
+  instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_symbol->symbol_id()));
+  instruction->add_symbol_operand(JUST(job_desc_sym->symbol_id()));
+  instruction->add_symbol_operand(JUST(op_conf_sym->symbol_id()));
+  instruction->add_mut_operand(object_id);
+  instruction_list_->PushBack(instruction.Mutable());
   return object_id;
 }
 
 Maybe<void> InstructionsBuilder::InitOpNodeSignatureDescSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature_sym) {
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name("InitOpNodeSignatureDescSymbol");
-  instruction.mutable_operand()->Add()->CopyFrom(*InitSymbolOperand(symbol_id));
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("InitOpNodeSignatureDescSymbol");
+  instruction->add_symbol_operand(symbol_id);
+  instruction_list_->PushBack(instruction.Mutable());
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_op_node_signature_symbol()->CopyFrom(*op_node_signature_sym);
@@ -901,10 +895,9 @@ Maybe<void> InstructionsBuilder::InitOpNodeSignatureDescSymbol(
 
 Maybe<void> InstructionsBuilder::InitOpConfSymbol(
     int64_t symbol_id, const std::shared_ptr<cfg::OperatorConf>& op_conf) {
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name("InitOperatorConfSymbol");
-  instruction.mutable_operand()->Add()->CopyFrom(*InitSymbolOperand(symbol_id));
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("InitOperatorConfSymbol");
+  instruction->add_init_symbol_operand(symbol_id);
+  instruction_list_->PushBack(instruction.Mutable());
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_op_conf_symbol()->CopyFrom(*op_conf);
@@ -925,25 +918,23 @@ Maybe<void> InstructionsBuilder::InsertRemoveForeignCallbackInstruction(int64_t 
 Maybe<void> InstructionsBuilder::_FetchBlob(
     const std::string& instruction_name,
     const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
-  vm::cfg::InstructionProto instruction;
   const std::string& device_tag = blob_object->parallel_desc_symbol()->device_tag();
-  instruction.set_instr_type_name(device_tag + "." + instruction_name);
-  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(*ConstOperand(blob_object->object_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(callback_id));
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(device_tag + "." + instruction_name);
+  instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction->add_const_operand(blob_object->object_id());
+  instruction->add_int64_operand(callback_id);
+  instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InstructionsBuilder::FeedBlob(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
-  vm::cfg::InstructionProto instruction;
   const std::string& device_tag = blob_object->parallel_desc_symbol()->device_tag();
-  instruction.set_instr_type_name(device_tag + "." + "FeedBlob");
-  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(*Mut2Operand(blob_object->object_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(*Int64Operand(callback_id));
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(device_tag + "." + "FeedBlob");
+  instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction->add_mut2_operand(blob_object->object_id());
+  instruction->add_int64_operand(callback_id);
+  instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
@@ -960,11 +951,10 @@ Maybe<void> InstructionsBuilder::FetchBlobBody(
 }
 
 Maybe<void> InstructionsBuilder::_TryClearObject(compatible_py::Object* blob_object) {
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name("TryClearObject");
-  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(blob_object->object_id()));
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("TryClearObject");
+  instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction->add_mut_operand(blob_object->object_id());
+  instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
@@ -993,46 +983,44 @@ Maybe<void> InstructionsBuilder::_StatefulCallOpKernel(
     const std::vector<
         std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
         mut2_operand_blob_objects) {
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name(parallel_desc_sym->device_tag() + "." + instr_name);
-  instruction.set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(opkernel_object->object_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(
-      *SymbolOperand(JUST(op_node_signature_sym->symbol_id())));
-  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc_sym->device_tag() + "." + instr_name);
+  instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
+  instruction->add_mut_operand(opkernel_object->object_id());
+  instruction->add_symbol_operand(JUST(op_node_signature_sym->symbol_id()));
+  instruction->add_separator();
 
   for (const auto& pair : const_input_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(pair.first->symbol_id())));
+    instruction->add_symbol_operand(JUST(pair.first->symbol_id()));
   }
   for (const auto& pair : const_input_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*ConstOperand(pair.second->object_id()));
+    instruction->add_const_operand(pair.second->object_id());
   }
-  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  instruction->add_separator();
 
   for (const auto& pair : mutable_input_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(pair.first->symbol_id())));
+    instruction->add_symbol_operand(JUST(pair.first->symbol_id()));
   }
   for (const auto& pair : mutable_input_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(pair.second->object_id()));
+    instruction->add_mut_operand(pair.second->object_id());
   }
-  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  instruction->add_separator();
 
   for (const auto& pair : mut1_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(pair.first->symbol_id())));
+    instruction->add_symbol_operand(JUST(pair.first->symbol_id()));
   }
   for (const auto& pair : mut1_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(pair.second->object_id()));
+    instruction->add_mut_operand(pair.second->object_id());
   }
-  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  instruction->add_separator();
 
   for (const auto& pair : mut2_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(pair.first->symbol_id())));
+    instruction->add_symbol_operand(JUST(pair.first->symbol_id()));
   }
   for (const auto& pair : mut2_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*Mut2Operand(pair.second->object_id()));
+    instruction->add_mut2_operand(pair.second->object_id());
   }
 
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
@@ -1054,45 +1042,43 @@ Maybe<void> InstructionsBuilder::_StatelessCallOpKernel(
     const std::vector<
         std::pair<std::shared_ptr<StringSymbol>, std::shared_ptr<compatible_py::BlobObject>>>&
         mut2_operand_blob_objects) {
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name(parallel_desc_sym->device_tag() + "." + instr_name);
-  instruction.set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(job_desc_sym->symbol_id())));
-  instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(op_conf_sym->symbol_id())));
-  instruction.mutable_operand()->Add()->CopyFrom(
-      *SymbolOperand(JUST(op_node_signature_sym->symbol_id())));
-  instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(shared_opkernel_obj->object_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc_sym->device_tag() + "." + instr_name);
+  instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
+  instruction->add_symbol_operand(JUST(job_desc_sym->symbol_id()));
+  instruction->add_symbol_operand(JUST(op_conf_sym->symbol_id()));
+  instruction->add_symbol_operand(JUST(op_node_signature_sym->symbol_id()));
+  instruction->add_mut_operand(shared_opkernel_obj->object_id());
+  instruction->add_separator();
 
   for (const auto& pair : const_input_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(pair.first->symbol_id())));
+    instruction->add_symbol_operand(JUST(pair.first->symbol_id()));
   }
   for (const auto& pair : const_input_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*ConstOperand(pair.second->object_id()));
+    instruction->add_const_operand(pair.second->object_id());
   }
-  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  instruction->add_separator();
 
   for (const auto& pair : mutable_input_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(pair.first->symbol_id())));
+    instruction->add_symbol_operand(JUST(pair.first->symbol_id()));
   }
   for (const auto& pair : mutable_input_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(pair.second->object_id()));
+    instruction->add_mut_operand(pair.second->object_id());
   }
-  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  instruction->add_separator();
 
   for (const auto& pair : mut1_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(pair.first->symbol_id())));
+    instruction->add_symbol_operand(JUST(pair.first->symbol_id()));
   }
   for (const auto& pair : mut1_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(pair.second->object_id()));
+    instruction->add_mut_operand(pair.second->object_id());
   }
-  instruction.mutable_operand()->Add()->CopyFrom(*OperandSeparator());
+  instruction->add_separator();
 
   for (const auto& pair : mut2_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*SymbolOperand(JUST(pair.first->symbol_id())));
+    instruction->add_symbol_operand(JUST(pair.first->symbol_id()));
   }
   for (const auto& pair : mut2_operand_blob_objects) {
-    instruction.mutable_operand()->Add()->CopyFrom(*Mut2Operand(pair.second->object_id()));
+    instruction->add_mut2_operand(pair.second->object_id());
   }
 
   instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
