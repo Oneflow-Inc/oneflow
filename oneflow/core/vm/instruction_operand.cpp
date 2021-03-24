@@ -20,7 +20,8 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void InstructionOperand::__Init__(const InstructionOperandProto& proto) {
+template<typename T>
+void InstructionOperand::InitFromProto(const T& proto) {
   if (proto.has_const_operand()) {
     mutable_const_operand()->mutable_operand()->__Init__(proto.const_operand());
   } else if (proto.has_mut_operand()) {

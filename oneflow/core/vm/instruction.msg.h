@@ -43,9 +43,10 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   // methods
   OF_PUBLIC void __Init__();
   OF_PUBLIC void __Init__(const std::string& instr_type_name);
-  OF_PUBLIC void __Init__(const InstructionProto& proto);
-  OF_PUBLIC void __Init__(const cfg::InstructionProto& proto);
+  OF_PUBLIC void __Init__(const InstructionProto& proto) { InitFromProto(proto); }
+  OF_PUBLIC void __Init__(const cfg::InstructionProto& proto) {  InitFromProto(proto); } 
   OF_PUBLIC void __Init__(const InstructionMsg& instr_msg);
+  OF_PRIVATE template<typename T> void InitFromProto(const T& proto);
 
   OF_PUBLIC void ToProto(InstructionProto* proto) const;
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_parallel_desc(int64_t symbol_id);

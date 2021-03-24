@@ -125,9 +125,9 @@ std::shared_ptr<vm::cfg::InstructionOperandProto> Mut2Operand(int64_t val) {
 Maybe<int64_t> NewSymbolId(vm::IdGenerator* id_generator,
                            vm::InstructionMsgList* instruction_list) {
   int64_t symbol_id = JUST(id_generator->NewSymbolId());
-  auto* instruction = ObjectMsgPtr<vm::InstructionMsg>::New("NewSymbol").Mutable();
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("NewSymbol");
   instruction->add_int64_operand(symbol_id);
-  instruction_list->PushBack(instruction);
+  instruction_list->PushBack(instruction.Mutable());
   return symbol_id;
 }
 
@@ -265,9 +265,10 @@ Maybe<int64_t> CreateSymbolIdHelper<T>::Call(vm::IdGenerator* id_generator,
                                              const T& conf) {
   int64_t symbol_id = JUST(NewSymbolId(id_generator, instruction_list));
   {
-    auto* instruction = ObjectMsgPtr<vm::InstructionMsg>::New(GetInstrTypeName<T>()).Mutable();
+    ObjectMsgPtr<vm::InstructionMsg> instruction =
+        ObjectMsgPtr<vm::InstructionMsg>::New(GetInstrTypeName<T>());
     instruction->add_int64_operand(symbol_id);
-    instruction_list->PushBack(instruction);
+    instruction_list->PushBack(instruction.Mutable());
   }
   {
     auto* eager_symbol = eager_symbol_list->mutable_eager_symbol()->Add();
@@ -286,10 +287,10 @@ Maybe<int64_t> CreateSymbolIdHelper<cfg::ParallelConf>::Call(
     eager::cfg::EagerSymbolList* eager_symbol_list, const cfg::ParallelConf& conf) {
   int64_t symbol_id = JUST(id_generator->NewSymbolId());
   {
-    auto* instruction =
-        ObjectMsgPtr<vm::InstructionMsg>::New(GetInstrTypeName<cfg::ParallelConf>()).Mutable();
+    ObjectMsgPtr<vm::InstructionMsg> instruction =
+        ObjectMsgPtr<vm::InstructionMsg>::New(GetInstrTypeName<cfg::ParallelConf>());
     instruction->add_int64_operand(symbol_id);
-    instruction_list->PushBack(instruction);
+    instruction_list->PushBack(instruction.Mutable());
   }
   {
     auto* eager_symbol = eager_symbol_list->mutable_eager_symbol()->Add();
@@ -313,11 +314,10 @@ Maybe<int64_t> InstructionsBuilder::NewSymbolId() {
 Maybe<int64_t> InstructionsBuilder::NewObjectId(
     const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
   int64_t object_id = JUST(id_generator_->NewObjectId());
-  auto* instruction =
-      ObjectMsgPtr<vm::InstructionMsg>::New("NewObject", JUST(parallel_desc_sym->symbol_id()))
-          .Mutable();
+  ObjectMsgPtr<vm::InstructionMsg> instruction =
+      ObjectMsgPtr<vm::InstructionMsg>::New("NewObject", JUST(parallel_desc_sym->symbol_id()));
   instruction->add_int64_operand(object_id);
-  instruction_list_->PushBack(instruction);
+  instruction_list_->PushBack(instruction.Mutable());
   return object_id;
 }
 
