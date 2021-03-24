@@ -743,21 +743,19 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
 
 Maybe<void> InstructionsBuilder::CudaHostRegisterBlob(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name("CudaHostRegisterBlob");
-  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(blob_object->object_id()));
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("CudaHostRegisterBlob");
+  instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction->add_mut_operand(blob_object->object_id());
+  instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InstructionsBuilder::CudaHostUnregisterBlob(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  vm::cfg::InstructionProto instruction;
-  instruction.set_instr_type_name("CudaHostUnregisterBlob");
-  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(blob_object->object_id()));
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("CudaHostUnregisterBlob");
+  instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction->add_mut_operand(blob_object->object_id());
+  instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
