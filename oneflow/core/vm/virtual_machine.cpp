@@ -60,10 +60,22 @@ void VirtualMachine::TryReleaseFinishedInstructions(
     Stream* stream,
     /*out*/ ReadyInstructionList* ready_instruction_list) {
   auto* running_instruction_list = stream->mut_running_instruction_list();
+  auto* sequantial_infer_list = mutable_sequantial_infer_instr_list();
+  auto* sequantial_compute_list = mutable_sequantial_compute_instr_list();
   while (true) {
     auto* instruction_ptr = running_instruction_list->Begin();
     if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
     ReleaseInstruction(instruction_ptr, /*out*/ ready_instruction_list);
+    const auto interpret_type = instruction_ptr->stream().stream_type_id().interpret_type();
+    if (interpret_type == kInfer) {
+      CHECK(!instruction_ptr->is_sequantial_infer_instr_link_empty());
+      sequantial_infer_list->Erase(instruction_ptr);
+    } else if (interpret_type == kCompute) {
+      CHECK(!instruction_ptr->is_sequantial_compute_instr_link_empty());
+      sequantial_compute_list->Erase(instruction_ptr);
+    } else {
+      UNIMPLEMENTED();
+    }
     stream->DeleteInstruction(running_instruction_list->Erase(instruction_ptr));
   }
 }
@@ -96,17 +108,30 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
     }
     return parallel_desc->Containing(stream.machine_id(), stream.device_id());
   };
+  auto* sequantial_infer_list = mutable_sequantial_infer_instr_list();
+  auto* sequantial_compute_list = mutable_sequantial_compute_instr_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
     auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
+    const auto& instruction_type = instr_msg->instr_type_id().instruction_type();
     if (stream_rt_desc == nullptr) {
-      LOG(FATAL) << typeid(instr_msg->instr_type_id().instruction_type()).name() << " "
+      LOG(FATAL) << typeid(instruction_type).name() << " "
                  << typeid(stream_type_id.stream_type()).name();
     }
+    bool is_sequantial = instruction_type.IsSequantialInstructionType();
+    if (is_sequantial) { CHECK_EQ(stream_rt_desc->stream_id2stream().size(), 1); }
     const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
       if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
-      new_instruction_list->EmplaceBack(stream->NewInstruction(instr_msg, parallel_desc));
+      ObjectMsgPtr<Instruction> instr = stream->NewInstruction(instr_msg, parallel_desc);
+      if (stream_type_id.interpret_type() == kInfer) {
+        sequantial_infer_list->PushBack(instr.Mutable());
+      } else if (stream_type_id.interpret_type() == kCompute) {
+        sequantial_compute_list->PushBack(instr.Mutable());
+      } else {
+        UNIMPLEMENTED();
+      }
+      if (!is_sequantial) { new_instruction_list->PushBack(instr.Mutable()); }
     }
     instr_msg_list->Erase(instr_msg);
   }
@@ -407,6 +432,27 @@ void VirtualMachine::Receive(ObjectMsgPtr<InstructionMsg>&& compute_instr_msg) {
   Receive(&instr_msg_list);
 }
 
+namespace {
+
+template<typename ContainerT>
+void TryRunSequantialInstructionsOnList(VirtualMachine* vm, ContainerT* sequantial_list) {
+  OBJECT_MSG_LIST_FOR_EACH(sequantial_list, instruction) {
+    const auto& instruction_type = instruction->instr_msg().instr_type_id().instruction_type();
+    if (!instruction_type.IsSequantialInstructionType()) { break; }
+    sequantial_list->Erase(instruction.Mutable());
+    const auto& stream_type = instruction->stream().stream_type();
+    CHECK(stream_type.SharingVirtualMachineThread());
+    stream_type.Run(vm, instruction.Mutable());
+  }
+}
+
+}  // namespace
+
+void VirtualMachine::TryRunSequantialInstructions() {
+  TryRunSequantialInstructionsOnList(this, mutable_sequantial_infer_instr_list());
+  TryRunSequantialInstructionsOnList(this, mutable_sequantial_compute_instr_list());
+}
+
 void VirtualMachine::Schedule() {
   ReadyInstructionList* ready_instruction_list = mut_ready_instruction_list();
   auto* active_stream_list = mut_active_stream_list();
@@ -414,6 +460,7 @@ void VirtualMachine::Schedule() {
     TryReleaseFinishedInstructions(stream, /*out*/ ready_instruction_list);
     if (stream->running_instruction_list().empty()) { active_stream_list->Erase(stream); }
   }
+  TryRunSequantialInstructions();
   auto* waiting_instruction_list = mut_waiting_instruction_list();
   if (pending_msg_list().size() > 0) {
     TmpPendingInstrMsgList tmp_pending_msg_list;

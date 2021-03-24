@@ -61,6 +61,8 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(InstructionMsg, instr_msg_link, pending_msg_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, waiting_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, ready_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, sequantial_infer_instr_link, sequantial_infer_instr_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, sequantial_compute_instr_link, sequantial_compute_instr_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Stream, active_stream_link, active_stream_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(ThreadCtx, thread_ctx_link, thread_ctx_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamRtDesc, stream_type_id, stream_type_id2stream_rt_desc);
@@ -76,6 +78,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   using Id2LogicalObject = VirtualMachine::id2logical_object_ObjectMsgSkipListType;
   using ActiveStreamList = VirtualMachine::active_stream_list_ObjectMsgListType;
 
+  void TryRunSequantialInstructions();
   void ReleaseInstruction(Instruction* instruction,
                             /*out*/ ReadyInstructionList* ready_instruction_list);
   void TryReleaseFinishedInstructions(
