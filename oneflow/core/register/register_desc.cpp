@@ -60,7 +60,6 @@ void RegstDesc::UpdtMaxRegstNumIfNeed(int32_t val) {
 void RegstDesc::Lock() {
   CHECK_EQ(is_locked_, false);
   is_locked_ = true;
-  packed_blob_desc_ = ComputePackedBlobDesc(lbi2blob_desc_);
 }
 
 void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
@@ -104,7 +103,6 @@ bool RegstDesc::HasLbi(const LogicalBlobId& lbi) const {
 }
 
 BlobDesc* RegstDesc::MutBlobDesc(const LogicalBlobId& lbi) {
-  if (lbi.is_packed_id()) { return packed_blob_desc_.get(); }
   auto it = lbi2blob_desc_.find(lbi);
   if (it != lbi2blob_desc_.end()) {
     return it->second.get();
@@ -139,7 +137,6 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   if (regst_desc_type_.has_data_regst_desc()) {
     DataRegstDesc* data_regst_desc_proto =
         ret->mutable_regst_desc_type()->mutable_data_regst_desc();
-    packed_blob_desc_->ToProto(data_regst_desc_proto->mutable_packed_blob_desc());
     for (const auto& pair : lbi2blob_desc_) {
       LbiBlobDescPair* pb_pair = data_regst_desc_proto->mutable_lbi2blob_desc()->Add();
       *(pb_pair->mutable_lbi()) = pair.first;
@@ -171,8 +168,8 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
 }
 
 bool RegstDesc::HasSameMemSize(const RegstDesc* rhs) {
-  return RtBlobDesc(*(packed_blob_desc_.get())).AlignedTotalByteSize()
-         == RtBlobDesc(*(rhs->packed_blob_desc_.get())).AlignedTotalByteSize();
+  return RtBlobDesc(*SoleBlobDesc()).AlignedTotalByteSize()
+         == RtBlobDesc(*(rhs->SoleBlobDesc())).AlignedTotalByteSize();
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
