@@ -13,7 +13,6 @@ message LbiBlobDescPair {
 
 message DataRegstDesc {
   repeated LbiBlobDescPair lbi2blob_desc = 1;
-  required BlobDescProto packed_blob_desc = 2;
   required ShapeProto time_shape = 3;
 }
 
