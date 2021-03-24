@@ -314,8 +314,7 @@ Maybe<int64_t> InstructionsBuilder::NewSymbolId() {
 Maybe<int64_t> InstructionsBuilder::NewObjectId(
     const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
   int64_t object_id = JUST(id_generator_->NewObjectId());
-  ObjectMsgPtr<vm::InstructionMsg> instruction =
-      ObjectMsgPtr<vm::InstructionMsg>::New("NewObject");
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New("NewObject");
   instruction->add_parallel_desc(JUST(parallel_desc_sym->symbol_id()));
   instruction->add_int64_operand(object_id);
   instruction_list_->PushBack(instruction.Mutable());

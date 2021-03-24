@@ -34,7 +34,8 @@ void Operand::__Init__(const ObjectId& logical_object_id, const AllMirroredObjec
   mutable_all_mirrored_object();
 }
 
-void Operand::__Init__(const OperandProto& proto) {
+template<typename T>
+void Operand::InitFromProto(const T& proto) {
   set_logical_object_id(proto.logical_object_id());
   if (proto.has_sole_mirrored_object()) {
     mutable_sole_mirrored_object();

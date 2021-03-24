@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/vm/instruction.cfg.h"
 
 namespace oneflow {
 namespace vm {
