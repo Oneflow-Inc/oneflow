@@ -779,16 +779,14 @@ Maybe<compatible_py::OpKernelObject> InstructionsBuilder::NewOpKernelObject(
 Maybe<void> InstructionsBuilder::LazyReference(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object,
     const std::string& interface_op_name) {
-  vm::cfg::InstructionProto instruction;
   std::string device_tag = blob_object->parallel_desc_symbol()->device_tag();
-  instruction.set_instr_type_name(device_tag + ".LazyReference");
-  instruction.set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
-  instruction.mutable_operand()->Add()->CopyFrom(*MutOperand(blob_object->object_id()));
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(device_tag + ".LazyReference");
+  instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
+  instruction->add_mut_operand(blob_object->object_id());
   std::shared_ptr<StringSymbol> interface_op_name_sym =
       JUST(GetSymbol4String(blob_object->op_arg_blob_attr()->logical_blob_name()));
-  instruction.mutable_operand()->Add()->CopyFrom(
-      *SymbolOperand(JUST(interface_op_name_sym->symbol_id())));
-  instruction_list_->PushBack(ObjectMsgPtr<vm::InstructionMsg>::New(instruction).Mutable());
+  instruction->add_symbol_operand(JUST(interface_op_name_sym->symbol_id()));
+  instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
