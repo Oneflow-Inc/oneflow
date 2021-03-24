@@ -20,17 +20,15 @@ namespace oneflow {
 
 namespace autograd {
 
-static thread_local bool g_grad_mode_enabled = true;
-
-bool GradMode::is_enabled() {
-    return g_grad_mode_enabled;
+static bool* GetThreadLocalGradMode() {
+  static thread_local bool g_grad_mode = true;
+  return &g_grad_mode;
 }
 
-void GradMode::set_enabled(bool enabled) {
-    g_grad_mode_enabled = enabled;
-}
+bool GradMode::is_enabled() { return *GetThreadLocalGradMode(); }
+
+void GradMode::set_enabled(bool enabled) { *GetThreadLocalGradMode() = enabled; }
 
 }  // namespace autograd
 
 }  // namespace oneflow
-

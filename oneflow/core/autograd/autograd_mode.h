@@ -19,21 +19,16 @@ namespace oneflow {
 namespace autograd {
 
 struct GradMode {
-    static bool is_enabled();
-    static void set_enabled(bool enabled);
+  static bool is_enabled();
+  static void set_enabled(bool enabled);
 };
 
 struct AutoGradMode {
-    AutoGradMode(bool enabled) : prev_mode(GradMode::is_enabled()) {
-        GradMode::set_enabled(enabled);
-    }
-    ~AutoGradMode() {
-        GradMode::set_enabled(prev_mode);
-    }
-    bool prev_mode;
+  AutoGradMode(bool enabled) : prev_mode(GradMode::is_enabled()) { GradMode::set_enabled(enabled); }
+  ~AutoGradMode() { GradMode::set_enabled(prev_mode); }
+  bool prev_mode;
 };
 
 }  // namespace autograd
 
 }  // namespace oneflow
-
