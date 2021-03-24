@@ -272,6 +272,13 @@ set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PR
 target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj ${oneflow_exe_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
+set(gen_pip_args "")
+if (BUILD_CUDA)
+set(gen_pip_args "${gen_pip_args} --cuda "${CUDA_VERSION})
+endif()
+if (WITH_XLA)
+set(gen_pip_args "${gen_pip_args} --xla")
+endif()
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 add_custom_target(of_pyscript_copy ALL
     COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/clean_generated_api.py --root_path=${of_pyscript_dir}
@@ -285,7 +292,7 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python_gen"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/python_gen/__init__.py"
-    COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py" --xla ${WITH_XLA} --CUDA ${CUDA_VERSION}
+    COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py" ${gen_pip_args} --dst "${PROJECT_SOURCE_DIR}/oneflow/python/version.py"
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python_gen/__export_symbols__.py")
 

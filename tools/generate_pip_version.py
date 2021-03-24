@@ -5,6 +5,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--xla", default=False, action="store_true", required=False)
 parser.add_argument("--cuda", type=str, required=False)
+parser.add_argument("--dst", type=str, required=False)
 args = parser.parse_args()
 
 if args.xla:
@@ -40,6 +41,7 @@ else:
 
     version = f"0.3b6+{compute_platform}.git.{git_hash}"
 
-print(f"generating pip version: {version}")
-with open("oneflow/python/version.py", "w+") as f:
+print(f"-- Generating pip version: {version}")
+assert args.dst
+with open(args.dst, "w+") as f:
     f.write(f'__version__ = "{version}"')
