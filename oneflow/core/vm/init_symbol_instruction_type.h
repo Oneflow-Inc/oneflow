@@ -23,13 +23,14 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/object_wrapper.h"
+#include "oneflow/core/vm/operand_def.h"
 
 namespace oneflow {
 namespace vm {
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(SymbolInstrOperand);
-  FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(InitSymbolOperand, serialized_logical_object_id);
+  FLAT_MSG_VIEW_DEFINE_OPERAND_LIST(InitSymbolOperand, serialized_logical_object_id);
 FLAT_MSG_VIEW_END(SymbolInstrOperand);
 // clang-format on
 

@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/eager/lazy_ref_blob_object.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/vm/operand_def.h"
 
 namespace oneflow {
 namespace eager {
@@ -34,7 +35,7 @@ namespace {
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(PinBlobInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, blob);
+  FLAT_MSG_VIEW_DEFINE_OPERAND(vm::MutOperand, blob);
 FLAT_MSG_VIEW_END(PinBlobInstruction);
 // clang-format on
 

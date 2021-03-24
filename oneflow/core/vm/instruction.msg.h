@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <cstring>
 #include <mutex>
+#include "oneflow/core/common/fixed_vector.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/object_msg/object_msg.h"
@@ -29,13 +30,14 @@ limitations under the License.
 #include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/instruction.pb.h"
+#include "oneflow/core/vm/operand_def.h"
 
 namespace oneflow {
 namespace vm {
 
 // clang-format off
 OBJECT_MSG_BEGIN(InstructionOperandList);
-  OBJECT_MSG_DEFINE_STRUCT(std::vector<FlatMsg<InstructionOperand>>, operand);
+  OBJECT_MSG_DEFINE_STRUCT(OperandListT, operand);
 OBJECT_MSG_END(InstructionOperandList);
 
 OBJECT_MSG_BEGIN(InstructionMsg);
@@ -61,13 +63,13 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&);
-  OF_PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
+  OF_PUBLIC const OperandListT& operand() const {
     return operand_list().operand();
   }
-  OF_PUBLIC std::vector<FlatMsg<InstructionOperand>>* mut_operand() {
+  OF_PUBLIC OperandListT* mut_operand() {
     return mut_operand_list()->mut_operand();
   }
-  OF_PUBLIC std::vector<FlatMsg<InstructionOperand>>* mutable_operand() {
+  OF_PUBLIC OperandListT* mutable_operand() {
     return mutable_operand_list()->mut_operand();
   }
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> MakeInferInstrMsg() const;

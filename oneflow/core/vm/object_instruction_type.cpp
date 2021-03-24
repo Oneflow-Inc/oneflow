@@ -67,7 +67,7 @@ class NewObjectInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(NewObjectInstruction);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, logical_object_id);
+    FLAT_MSG_VIEW_DEFINE_OPERAND_LIST(int64_t, logical_object_id);
   FLAT_MSG_VIEW_END(NewObjectInstruction);
   // clang-format on
 
@@ -115,8 +115,8 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(BroadcastObjectReferenceInstruction);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, new_object);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, sole_mirrored_object);
+    FLAT_MSG_VIEW_DEFINE_OPERAND(int64_t, new_object);
+    FLAT_MSG_VIEW_DEFINE_OPERAND(int64_t, sole_mirrored_object);
   FLAT_MSG_VIEW_END(BroadcastObjectReferenceInstruction);
   // clang-format on
 
@@ -172,9 +172,9 @@ class ReplaceMirroredInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(ReplaceMirroredInstruction);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, lhs_object_id);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(OperandSeparator, separator);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(int64_t, rhs_object_id);
+    FLAT_MSG_VIEW_DEFINE_OPERAND_LIST(int64_t, lhs_object_id);
+    FLAT_MSG_VIEW_DEFINE_OPERAND(OperandSeparator, separator);
+    FLAT_MSG_VIEW_DEFINE_OPERAND_LIST(int64_t, rhs_object_id);
   FLAT_MSG_VIEW_END(ReplaceMirroredInstruction);
   // clang-format on
 
@@ -227,7 +227,7 @@ class DeleteObjectInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(DeleteObjectInstruction);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(MutOperand, object);
+    FLAT_MSG_VIEW_DEFINE_OPERAND_LIST(MutOperand, object);
   FLAT_MSG_VIEW_END(DeleteObjectInstruction);
   // clang-format on
 
