@@ -61,7 +61,8 @@ class TestModule(flow.unittest.TestCase):
         )
 
         indices = flow.Tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int32)
-        m2 = flow.nn.Embedding(10, 3, _weight=flow.Tensor(torch_weight))
+        # m2 = flow.nn.Embedding(10, 3, _weight=flow.Tensor(torch_weight))
+        m2 = flow.nn.Embedding(10, 3)
         y = m2(indices)
         print(np.allclose(y.numpy(), torch_out))
 
