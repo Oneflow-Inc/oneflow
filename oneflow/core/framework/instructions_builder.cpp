@@ -267,7 +267,7 @@ Maybe<int64_t> CreateSymbolIdHelper<T>::Call(vm::IdGenerator* id_generator,
   {
     ObjectMsgPtr<vm::InstructionMsg> instruction =
         ObjectMsgPtr<vm::InstructionMsg>::New(GetInstrTypeName<T>());
-    instruction->add_int64_operand(symbol_id);
+    instruction->add_init_symbol_operand(symbol_id);
     instruction_list->PushBack(instruction.Mutable());
   }
   {
