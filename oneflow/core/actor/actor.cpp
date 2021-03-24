@@ -327,13 +327,10 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         // process ctrl msg from other rank
         if (IsConsumedCtrlRegstDescId(msg.regst_desc_id())) {
           Regst* regst = msg.regst();
-          if (naive_consumed_rs_.HasRegstDescId(msg.regst_desc_id())) {
-            CHECK_EQ(0, naive_consumed_rs_.TryPushBackRegst(regst, msg.regst_desc_id()));
-            const auto& rdeq = naive_consumed_rs_.RegstDeq4RegstDescId(msg.regst_desc_id());
-            CHECK(rdeq.empty() == false);
-          } else {
-            UNIMPLEMENTED();
-          }
+          CHECK(naive_consumed_rs_.HasRegstDescId(msg.regst_desc_id()));
+          CHECK_EQ(0, naive_consumed_rs_.TryPushBackRegst(regst, msg.regst_desc_id()));
+          const auto& rdeq = naive_consumed_rs_.RegstDeq4RegstDescId(msg.regst_desc_id());
+          CHECK(rdeq.empty() == false);
         } else {
           CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
         }
