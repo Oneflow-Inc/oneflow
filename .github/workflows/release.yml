@@ -12,9 +12,14 @@ on:
         default: "3.6,3.7,3.8"
         required: false
       compute_platforms:
-        description: "package names to build"
+        description: ""
         default: "cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"
         required: false
+      package_name:
+        description: "package name to build"
+        default: "oneflow"
+        required: false
+
 jobs:
   staging_release:
     name: Staging Release
