@@ -169,10 +169,16 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   std::shared_ptr<RegstDesc> GetRegst(const std::string& name_in_producer) const;
   std::shared_ptr<RegstDesc> GetSoleRegst() const;
   std::vector<std::shared_ptr<RegstDesc>> GetRegsts() const;
+  const HashSet<LogicalBlobId>& GetLbis() const { return lbis_; }
 
   void AddRegst(const std::string& name_in_producer, const std::shared_ptr<RegstDesc>& regst);
+  void AddLbi(const LogicalBlobId& lbi) { lbis_.insert(lbi); }
+  void AddLbis(const std::vector<LogicalBlobId>& lbis) { lbis_.insert(lbis.begin(), lbis.end()); }
+
+  void CheckRegstLbiValid() const;
 
  private:
+  HashSet<LogicalBlobId> lbis_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> name_in_producer2regst_;
 };
 
