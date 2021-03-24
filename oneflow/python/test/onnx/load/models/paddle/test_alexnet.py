@@ -22,8 +22,9 @@ from paddle.nn import AdaptiveAvgPool2D, MaxPool2D, AvgPool2D
 from paddle.nn.initializer import Uniform
 import math
 
-from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
+_all__ = ["AlexNet"]
 
+from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
 class ConvPoolLayer(nn.Layer):
     def __init__(
@@ -146,6 +147,7 @@ class AlexNetDY(nn.Layer):
 def AlexNet(**args):
     model = AlexNetDY(**args)
     return model
+
 
 def test_alexnet(test_case):
     load_paddle_module_and_check(

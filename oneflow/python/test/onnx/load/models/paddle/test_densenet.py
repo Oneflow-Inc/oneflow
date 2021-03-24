@@ -23,27 +23,35 @@ from paddle.nn import AdaptiveAvgPool2D, MaxPool2D, AvgPool2D
 from paddle.nn.initializer import Uniform
 import math
 
+__all__ = [
+    "DenseNet121", "DenseNet161", "DenseNet169", "DenseNet201", "DenseNet264"
+]
+
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
+
 class BNACConvLayer(nn.Layer):
-    def __init__(self,
-                 num_channels,
-                 num_filters,
-                 filter_size,
-                 stride=1,
-                 pad=0,
-                 groups=1,
-                 act="relu",
-                 name=None):
+    def __init__(
+        self,
+        num_channels,
+        num_filters,
+        filter_size,
+        stride=1,
+        pad=0,
+        groups=1,
+        act="relu",
+        name=None,
+    ):
         super(BNACConvLayer, self).__init__()
 
         self._batch_norm = BatchNorm(
             num_channels,
             act=act,
-            param_attr=ParamAttr(name=name + '_bn_scale'),
-            bias_attr=ParamAttr(name + '_bn_offset'),
-            moving_mean_name=name + '_bn_mean',
-            moving_variance_name=name + '_bn_variance')
+            param_attr=ParamAttr(name=name + "_bn_scale"),
+            bias_attr=ParamAttr(name + "_bn_offset"),
+            moving_mean_name=name + "_bn_mean",
+            moving_variance_name=name + "_bn_variance",
+        )
 
         self._conv = Conv2D(
             in_channels=num_channels,
@@ -53,7 +61,8 @@ class BNACConvLayer(nn.Layer):
             padding=pad,
             groups=groups,
             weight_attr=ParamAttr(name=name + "_weights"),
-            bias_attr=False)
+            bias_attr=False,
+        )
 
     def forward(self, input):
         y = self._batch_norm(input)
@@ -72,7 +81,8 @@ class DenseLayer(nn.Layer):
             filter_size=1,
             pad=0,
             stride=1,
-            name=name + "_x1")
+            name=name + "_x1",
+        )
 
         self.bn_ac_func2 = BNACConvLayer(
             num_channels=bn_size * growth_rate,
@@ -80,7 +90,8 @@ class DenseLayer(nn.Layer):
             filter_size=3,
             pad=1,
             stride=1,
-            name=name + "_x2")
+            name=name + "_x2",
+        )
 
         if dropout:
             self.dropout_func = Dropout(p=dropout, mode="downscale_in_infer")
@@ -95,13 +106,9 @@ class DenseLayer(nn.Layer):
 
 
 class DenseBlock(nn.Layer):
-    def __init__(self,
-                 num_channels,
-                 num_layers,
-                 bn_size,
-                 growth_rate,
-                 dropout,
-                 name=None):
+    def __init__(
+        self, num_channels, num_layers, bn_size, growth_rate, dropout, name=None
+    ):
         super(DenseBlock, self).__init__()
         self.dropout = dropout
 
@@ -117,7 +124,10 @@ class DenseBlock(nn.Layer):
                         growth_rate=growth_rate,
                         bn_size=bn_size,
                         dropout=dropout,
-                        name=name + '_' + str(layer + 1))))
+                        name=name + "_" + str(layer + 1),
+                    ),
+                )
+            )
             pre_channel = pre_channel + growth_rate
 
     def forward(self, input):
@@ -137,7 +147,8 @@ class TransitionLayer(nn.Layer):
             filter_size=1,
             pad=0,
             stride=1,
-            name=name)
+            name=name,
+        )
 
         self.pool2d_avg = AvgPool2D(kernel_size=2, stride=2, padding=0)
 
@@ -148,15 +159,17 @@ class TransitionLayer(nn.Layer):
 
 
 class ConvBNLayer(nn.Layer):
-    def __init__(self,
-                 num_channels,
-                 num_filters,
-                 filter_size,
-                 stride=1,
-                 pad=0,
-                 groups=1,
-                 act="relu",
-                 name=None):
+    def __init__(
+        self,
+        num_channels,
+        num_filters,
+        filter_size,
+        stride=1,
+        pad=0,
+        groups=1,
+        act="relu",
+        name=None,
+    ):
         super(ConvBNLayer, self).__init__()
 
         self._conv = Conv2D(
@@ -167,14 +180,16 @@ class ConvBNLayer(nn.Layer):
             padding=pad,
             groups=groups,
             weight_attr=ParamAttr(name=name + "_weights"),
-            bias_attr=False)
+            bias_attr=False,
+        )
         self._batch_norm = BatchNorm(
             num_filters,
             act=act,
-            param_attr=ParamAttr(name=name + '_bn_scale'),
-            bias_attr=ParamAttr(name + '_bn_offset'),
-            moving_mean_name=name + '_bn_mean',
-            moving_variance_name=name + '_bn_variance')
+            param_attr=ParamAttr(name=name + "_bn_scale"),
+            bias_attr=ParamAttr(name + "_bn_offset"),
+            moving_mean_name=name + "_bn_mean",
+            moving_variance_name=name + "_bn_variance",
+        )
 
     def forward(self, input):
         y = self._conv(input)
@@ -187,15 +202,17 @@ class DenseNet(nn.Layer):
         super(DenseNet, self).__init__()
 
         supported_layers = [121, 161, 169, 201, 264]
-        assert layers in supported_layers, \
-            "supported layers are {} but input layer is {}".format(
-                supported_layers, layers)
+        assert (
+            layers in supported_layers
+        ), "supported layers are {} but input layer is {}".format(
+            supported_layers, layers
+        )
         densenet_spec = {
             121: (64, 32, [6, 12, 24, 16]),
             161: (96, 48, [6, 12, 36, 24]),
             169: (64, 32, [6, 12, 32, 32]),
             201: (64, 32, [6, 12, 48, 32]),
-            264: (64, 32, [6, 12, 64, 48])
+            264: (64, 32, [6, 12, 64, 48]),
         }
         num_init_features, growth_rate, block_config = densenet_spec[layers]
 
@@ -205,8 +222,9 @@ class DenseNet(nn.Layer):
             filter_size=7,
             stride=2,
             pad=3,
-            act='relu',
-            name="conv1")
+            act="relu",
+            name="conv1",
+        )
 
         self.pool2d_max = MaxPool2D(kernel_size=3, stride=2, padding=1)
 
@@ -226,7 +244,10 @@ class DenseNet(nn.Layer):
                         bn_size=bn_size,
                         growth_rate=growth_rate,
                         dropout=dropout,
-                        name='conv' + str(i + 2))))
+                        name="conv" + str(i + 2),
+                    ),
+                )
+            )
 
             num_features = num_features + num_layers * growth_rate
             pre_num_channels = num_features
@@ -238,17 +259,21 @@ class DenseNet(nn.Layer):
                         TransitionLayer(
                             num_channels=pre_num_channels,
                             num_output_features=num_features // 2,
-                            name='conv' + str(i + 2) + "_blk")))
+                            name="conv" + str(i + 2) + "_blk",
+                        ),
+                    )
+                )
                 pre_num_channels = num_features // 2
                 num_features = num_features // 2
 
         self.batch_norm = BatchNorm(
             num_features,
             act="relu",
-            param_attr=ParamAttr(name='conv5_blk_bn_scale'),
-            bias_attr=ParamAttr(name='conv5_blk_bn_offset'),
-            moving_mean_name='conv5_blk_bn_mean',
-            moving_variance_name='conv5_blk_bn_variance')
+            param_attr=ParamAttr(name="conv5_blk_bn_scale"),
+            bias_attr=ParamAttr(name="conv5_blk_bn_offset"),
+            moving_mean_name="conv5_blk_bn_mean",
+            moving_variance_name="conv5_blk_bn_variance",
+        )
 
         self.pool2d_avg = AdaptiveAvgPool2D(1)
 
@@ -257,9 +282,9 @@ class DenseNet(nn.Layer):
         self.out = Linear(
             num_features,
             class_dim,
-            weight_attr=ParamAttr(
-                initializer=Uniform(-stdv, stdv), name="fc_weights"),
-            bias_attr=ParamAttr(name="fc_offset"))
+            weight_attr=ParamAttr(initializer=Uniform(-stdv, stdv), name="fc_weights"),
+            bias_attr=ParamAttr(name="fc_offset"),
+        )
 
     def forward(self, input):
         conv = self.conv1_func(input)
@@ -301,28 +326,32 @@ def DenseNet264(**args):
     model = DenseNet(layers=264, **args)
     return model
 
+
 def test_densenet121(test_case):
     load_paddle_module_and_check(
         test_case, DenseNet121, input_size=(1, 3, 224, 224), train_flag=False,
     )
+
 
 def test_densenet161(test_case):
     load_paddle_module_and_check(
         test_case, DenseNet161, input_size=(1, 3, 224, 224), train_flag=False,
     )
 
+
 def test_densenet169(test_case):
     load_paddle_module_and_check(
         test_case, DenseNet169, input_size=(1, 3, 224, 224), train_flag=False,
     )
+
 
 def test_densenet201(test_case):
     load_paddle_module_and_check(
         test_case, DenseNet201, input_size=(1, 3, 224, 224), train_flag=False,
     )
 
+
 def test_densenet264(test_case):
     load_paddle_module_and_check(
         test_case, DenseNet264, input_size=(1, 3, 224, 224), train_flag=False,
     )
-

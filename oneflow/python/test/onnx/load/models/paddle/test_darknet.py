@@ -22,16 +22,15 @@ from paddle.nn import AdaptiveAvgPool2D, MaxPool2D, AvgPool2D
 from paddle.nn.initializer import Uniform
 import math
 
+__all__ = ["DarkNet53"]
+
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
+
 class ConvBNLayer(nn.Layer):
-    def __init__(self,
-                 input_channels,
-                 output_channels,
-                 filter_size,
-                 stride,
-                 padding,
-                 name=None):
+    def __init__(
+        self, input_channels, output_channels, filter_size, stride, padding, name=None
+    ):
         super(ConvBNLayer, self).__init__()
 
         self._conv = Conv2D(
@@ -41,7 +40,8 @@ class ConvBNLayer(nn.Layer):
             stride=stride,
             padding=padding,
             weight_attr=ParamAttr(name=name + ".conv.weights"),
-            bias_attr=False)
+            bias_attr=False,
+        )
 
         bn_name = name + ".bn"
         self._bn = BatchNorm(
@@ -50,7 +50,8 @@ class ConvBNLayer(nn.Layer):
             param_attr=ParamAttr(name=bn_name + ".scale"),
             bias_attr=ParamAttr(name=bn_name + ".offset"),
             moving_mean_name=bn_name + ".mean",
-            moving_variance_name=bn_name + ".var")
+            moving_variance_name=bn_name + ".var",
+        )
 
     def forward(self, inputs):
         x = self._conv(inputs)
@@ -63,9 +64,11 @@ class BasicBlock(nn.Layer):
         super(BasicBlock, self).__init__()
 
         self._conv1 = ConvBNLayer(
-            input_channels, output_channels, 1, 1, 0, name=name + ".0")
+            input_channels, output_channels, 1, 1, 0, name=name + ".0"
+        )
         self._conv2 = ConvBNLayer(
-            output_channels, output_channels * 2, 3, 1, 1, name=name + ".1")
+            output_channels, output_channels * 2, 3, 1, 1, name=name + ".1"
+        )
 
     def forward(self, inputs):
         x = self._conv1(inputs)
@@ -79,17 +82,14 @@ class DarkNet(nn.Layer):
 
         self.stages = [1, 2, 8, 8, 4]
         self._conv1 = ConvBNLayer(3, 32, 3, 1, 1, name="yolo_input")
-        self._conv2 = ConvBNLayer(
-            32, 64, 3, 2, 1, name="yolo_input.downsample")
+        self._conv2 = ConvBNLayer(32, 64, 3, 2, 1, name="yolo_input.downsample")
 
         self._basic_block_01 = BasicBlock(64, 32, name="stage.0.0")
-        self._downsample_0 = ConvBNLayer(
-            64, 128, 3, 2, 1, name="stage.0.downsample")
+        self._downsample_0 = ConvBNLayer(64, 128, 3, 2, 1, name="stage.0.downsample")
 
         self._basic_block_11 = BasicBlock(128, 64, name="stage.1.0")
         self._basic_block_12 = BasicBlock(128, 64, name="stage.1.1")
-        self._downsample_1 = ConvBNLayer(
-            128, 256, 3, 2, 1, name="stage.1.downsample")
+        self._downsample_1 = ConvBNLayer(128, 256, 3, 2, 1, name="stage.1.downsample")
 
         self._basic_block_21 = BasicBlock(256, 128, name="stage.2.0")
         self._basic_block_22 = BasicBlock(256, 128, name="stage.2.1")
@@ -99,8 +99,7 @@ class DarkNet(nn.Layer):
         self._basic_block_26 = BasicBlock(256, 128, name="stage.2.5")
         self._basic_block_27 = BasicBlock(256, 128, name="stage.2.6")
         self._basic_block_28 = BasicBlock(256, 128, name="stage.2.7")
-        self._downsample_2 = ConvBNLayer(
-            256, 512, 3, 2, 1, name="stage.2.downsample")
+        self._downsample_2 = ConvBNLayer(256, 512, 3, 2, 1, name="stage.2.downsample")
 
         self._basic_block_31 = BasicBlock(512, 256, name="stage.3.0")
         self._basic_block_32 = BasicBlock(512, 256, name="stage.3.1")
@@ -110,8 +109,7 @@ class DarkNet(nn.Layer):
         self._basic_block_36 = BasicBlock(512, 256, name="stage.3.5")
         self._basic_block_37 = BasicBlock(512, 256, name="stage.3.6")
         self._basic_block_38 = BasicBlock(512, 256, name="stage.3.7")
-        self._downsample_3 = ConvBNLayer(
-            512, 1024, 3, 2, 1, name="stage.3.downsample")
+        self._downsample_3 = ConvBNLayer(512, 1024, 3, 2, 1, name="stage.3.downsample")
 
         self._basic_block_41 = BasicBlock(1024, 512, name="stage.4.0")
         self._basic_block_42 = BasicBlock(1024, 512, name="stage.4.1")
@@ -124,9 +122,9 @@ class DarkNet(nn.Layer):
         self._out = Linear(
             1024,
             class_dim,
-            weight_attr=ParamAttr(
-                name="fc_weights", initializer=Uniform(-stdv, stdv)),
-            bias_attr=ParamAttr(name="fc_offset"))
+            weight_attr=ParamAttr(name="fc_weights", initializer=Uniform(-stdv, stdv)),
+            bias_attr=ParamAttr(name="fc_offset"),
+        )
 
     def forward(self, inputs):
         x = self._conv1(inputs)
@@ -169,9 +167,11 @@ class DarkNet(nn.Layer):
         x = self._out(x)
         return x
 
+
 def DarkNet53(**args):
     model = DarkNet(**args)
     return model
+
 
 def test_darknet(test_case):
     load_paddle_module_and_check(
