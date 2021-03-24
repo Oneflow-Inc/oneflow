@@ -18,12 +18,11 @@ from oneflow.python.nn import init
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import Tensor, register_op_by_module, register_tensor_op_by_module
-from typing import Tuple
-from oneflow.python.nn.common_types import _size_any_t
+from typing import Tuple, Union
 
 
 
-
+_shape_t = Union[int, Tuple[int], flow.Size]
 
 @oneflow_export("nn.LayerNorm")
 @register_tensor_op_by_module("layer_norm")
@@ -77,23 +76,20 @@ class LayerNorm(Module):
     eps: float
     elementwise_affine: bool
 
-    def __init__(self, normalized_shape: _size_any_t, eps: float = 1e-5, elementwise_affine: bool = True) -> None:
+    def __init__(self, normalized_shape: _shape_t, eps: float = 1e-5, elementwise_affine: bool = True) -> None:
         super(LayerNorm, self).__init__()
         if isinstance(normalized_shape, int):
             # mypy error: incompatible types in assignment
             normalized_shape = (normalized_shape,)  # type: ignore[assignment]
         self.normalized_shape = tuple(normalized_shape)  # type: ignore[arg-type]
 
-        print("self.normalized_shape >>>>>>>>>>>>>>>>>>>>> ", self.normalized_shape)
-        print("type self.normalized_shape >>>>>>>>>>>>>>>>>>>>> ", type(self.normalized_shape))
-
         self.epsilon = eps
         self.elementwise_affine = elementwise_affine
         if self.elementwise_affine:
-            # self.weight = flow.nn.Parameter(flow.Tensor(self.normalized_shape))
-            # self.bias = flow.nn.Parameter(flow.Tensor(self.normalized_shape))
-            self.weight = flow.nn.Parameter(flow.Tensor(2,2,2))
-            self.bias = flow.nn.Parameter(flow.Tensor(2,2,2))
+            self.weight = flow.nn.Parameter(flow.Tensor(*self.normalized_shape))
+            self.bias = flow.nn.Parameter(flow.Tensor(*self.normalized_shape))
+            # self.weight = flow.nn.Parameter(flow.Tensor(2,2,2))
+            # self.bias = flow.nn.Parameter(flow.Tensor(2,2,2))
         else:
             self.register_parameter('weight', None)
             self.register_parameter('bias', None)
@@ -102,18 +98,16 @@ class LayerNorm(Module):
         self.begin_norm_axis = 1    # An integer specifies which axis to normalize at first, defaults to 1.
         self.begin_params_axis = -1 # An integer specifies which axis params at, defaults to -1 in 'NCHW' format,-2 in 'NHWC' format
 
-        self.op_ = (
+        self._op = (
             flow.builtin_op("layer_norm")
             .Input("x")
             .Output("y")
             .Output("mean")
             .Output("inv_variance")
-            .Attr("center", True)
-            .Attr("scale", True)
-            .Attr("begin_norm_axis", self.begin_norm_axis)
+            .Attr("center", False)
+            .Attr("scale", False)
             .Attr("begin_params_axis", self.begin_params_axis)
             .Attr("epsilon", self.epsilon)
-            .Build()
         )
 
     def reset_parameters(self) -> None:
@@ -122,9 +116,10 @@ class LayerNorm(Module):
             init.zeros_(self.bias)
             
     def forward(self, x):
-        print("self.op_(x) >>>>>>>>>>>>>>>>>>>>>> ", self.op_(x))
-        y = self.op_(x)[0]
-        return y
+        assert len(x.shape) > len(self.normalized_shape), "Input tensor dim must greater than normalized dim!"
+        self.begin_norm_axis = len(x.shape) - len(self.normalized_shape)
+        self._op = self._op.Attr("begin_norm_axis", self.begin_norm_axis).Build()
+        return self._op(x)[0]
 
     def extra_repr(self) -> str:
         return '{normalized_shape}, eps={eps}, ' \
