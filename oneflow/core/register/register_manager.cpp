@@ -114,6 +114,9 @@ RegstMgr::RegstMgr(const Plan& plan) {
       CHECK(regst_desc_id2parallel_ctx_.emplace(regst_desc_id, task.parallel_ctx()).second);
     }
   }
+  for (const auto& pair : plan.ctrl_regst_desc_info().ctrl_regst_desc_id2producer_task_id()) {
+    CHECK(ctrl_regst_desc_id2producer_task_id_.emplace(pair.first, pair.second).second);
+  }
 }
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
@@ -220,6 +223,17 @@ const RtRegstDesc& RegstMgr::RegstDesc4RegstDescId(int64_t regst_desc_id) const 
 
 bool RegstMgr::HasRegstDescId(int64_t regst_desc_id) const {
   return regst_desc_id2rt_regst_desc_.find(regst_desc_id) != regst_desc_id2rt_regst_desc_.end();
+}
+
+int64_t RegstMgr::ProducerTaskId4RegstDescId(int64_t regst_desc_id) const {
+  const auto& it = ctrl_regst_desc_id2producer_task_id_.find(regst_desc_id);
+  CHECK(it != ctrl_regst_desc_id2producer_task_id_.end());
+  return it->second;
+}
+
+bool RegstMgr::HasProducerTaskId4RegstDescId(int64_t regst_desc_id) const {
+  return ctrl_regst_desc_id2producer_task_id_.find(regst_desc_id)
+         != ctrl_regst_desc_id2producer_task_id_.end();
 }
 
 Blob* RegstMgr::Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id) {

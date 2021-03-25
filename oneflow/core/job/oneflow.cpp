@@ -86,6 +86,10 @@ std::string cluster_thrd_ids_key(const std::string& plan_name) {
 
 std::string net_topo_key(const std::string& plan_name) { return plan_name + "_net_topo"; }
 
+std::string ctrl_regst_desc_info_key(const std::string& plan_name) {
+  return plan_name + "_ctrl_regst_desc_info_key";
+}
+
 std::string job_id2job_conf(const std::string& plan_name) { return plan_name + "_job_id2job_conf"; }
 
 std::string GetCollectiveBoxingPlanKey(const std::string& plan_name) {
@@ -139,6 +143,8 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
   }
 
   Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
+  Global<CtrlClient>::Get()->PushKV(ctrl_regst_desc_info_key(plan_name),
+                                    plan.ctrl_regst_desc_info());
   Global<CtrlClient>::Get()->PushKV(job_id2job_conf(plan_name), plan.job_confs());
   Global<CtrlClient>::Get()->PushKV(GetCollectiveBoxingPlanKey(plan_name),
                                     plan.collective_boxing_plan());
@@ -162,6 +168,9 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   NetTopo net_topo;
   Global<CtrlClient>::Get()->PullKV(net_topo_key(plan_name), &net_topo);
   *(plan->mutable_net_topo()) = net_topo;
+  CtrlRegstDescInfo ctrl_regst_desc_info;
+  Global<CtrlClient>::Get()->PullKV(ctrl_regst_desc_info_key(plan_name), &ctrl_regst_desc_info);
+  *(plan->mutable_ctrl_regst_desc_info()) = ctrl_regst_desc_info;
   JobConfs job_confs;
   Global<CtrlClient>::Get()->PullKV(job_id2job_conf(plan_name), &job_confs);
   *(plan->mutable_job_confs()) = job_confs;
@@ -348,6 +357,19 @@ void MergeSubPlanWithoutGenNetTopo(Plan* plan, const std::vector<Plan>& sub_plan
 void MergePlan(Plan* plan, const Plan& other) {
   MergePlanWithoutGenNetTopo(plan, other);
   Compiler().GenNetTopo(plan);
+}
+
+void DumpCtrlRegstInfoToPlan(Plan* plan) {
+  auto* ctrl_regst_desc_id2producer_task_id =
+      plan->mutable_ctrl_regst_desc_info()->mutable_ctrl_regst_desc_id2producer_task_id();
+  for (const TaskProto& task : plan->task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      if (pair.second.regst_desc_type().has_ctrl_regst_desc()) {
+        ctrl_regst_desc_id2producer_task_id->insert(
+            {pair.second.regst_desc_id(), pair.second.producer_task_id()});
+      }
+    }
+  }
 }
 
 RegstDescProto* GetSoleDataRegstDescProto(TaskProto* task) {
@@ -1094,6 +1116,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
     PlanUtil::CleanUselessMemBlockAndCheckValid(plan);
+    DumpCtrlRegstInfoToPlan(plan);
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
       PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
