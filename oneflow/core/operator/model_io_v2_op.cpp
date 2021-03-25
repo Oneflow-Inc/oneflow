@@ -44,7 +44,7 @@ class ModelInitV2Op : public Operator {
       const ParallelDistributionSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-          ParallelDistributionInferHint4Ibn) override {
+          ParallelDistributionInferHint4Ibn) const override {
     (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["ref"] =
         JUST(ParallelDistributionInferHint4Ibn("ref"))->parallel_distribution();
     return Maybe<void>::Ok();
@@ -79,7 +79,7 @@ class ModelLoadV2Op : public Operator {
       const ParallelDistributionSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-          ParallelDistributionInferHint4Ibn) override {
+          ParallelDistributionInferHint4Ibn) const override {
     (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["ref"] =
         JUST(ParallelDistributionInferHint4Ibn("ref"))->parallel_distribution();
     const auto& hierarchy = parallel_desc.hierarchy();
@@ -124,7 +124,7 @@ class ModelSaveV2Op final : public Operator {
       const ParallelDistributionSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-          ParallelDistributionInferHint4Ibn) override {
+          ParallelDistributionInferHint4Ibn) const override {
     (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["in"] =
         JUST(ParallelDistributionInferHint4Ibn("in"))->parallel_distribution();
     const auto& hierarchy = parallel_desc.hierarchy();

@@ -89,24 +89,25 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<ProcessCtx>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
-  if (env_proto.rpc_backend() == "grpc") {
-#ifdef RPC_BACKEND_GRPC
-    LOG(ERROR) << "using rpc backend: gRPC";
-    auto* grpc_manager = new GrpcRpcManager();
-    Global<RpcManager>::SetAllocated(grpc_manager);
-#else
-    UNIMPLEMENTED();
-#endif  // RPC_BACKEND_GRPC
-  } else if (env_proto.rpc_backend() == "local") {
+  if ((env_proto.machine_size() == 1 && env_proto.has_ctrl_bootstrap_conf() == false)
+      || (env_proto.has_ctrl_bootstrap_conf()
+          && env_proto.ctrl_bootstrap_conf().world_size() == 1)) /*single process*/ {
 #ifdef RPC_BACKEND_LOCAL
     LOG(ERROR) << "using rpc backend: local";
     auto* local_manager = new LocalRpcManager();
     Global<RpcManager>::SetAllocated(local_manager);
 #else
-    UNIMPLEMENTED();
+    static_assert(false, "requires rpc backend local to run oneflow in single processs");
 #endif  // RPC_BACKEND_LOCAL
-  } else {
-    UNIMPLEMENTED();
+  } else /*multi process, multi machine*/ {
+#ifdef RPC_BACKEND_GRPC
+    LOG(ERROR) << "using rpc backend: gRPC";
+    auto* grpc_manager = new GrpcRpcManager();
+    Global<RpcManager>::SetAllocated(grpc_manager);
+#else
+    UNIMPLEMENTED() << "to run distributed oneflow, you must enable at least one multi-node rpc "
+                       "backend by adding cmake argument, for instance: -DRPC_BACKEND=GRPC";
+#endif  // RPC_BACKEND_GRPC
   }
   CHECK_JUST(Global<RpcManager>::Get()->CreateServer());
   CHECK_JUST(Global<RpcManager>::Get()->Bootstrap());

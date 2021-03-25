@@ -49,7 +49,6 @@ class Regst final {
   const Blob* GetSoleBlob() const;
   Blob* GetMutSoleBlob();
   int64_t GetBlobSize() const { return sorted_blob_vec_.size(); }
-  Blob* packed_blob() { return packed_blob_.get(); }
   void* comm_net_token() const { return comm_net_token_; }
 
   // Setters
@@ -66,7 +65,6 @@ class Regst final {
   void* comm_net_token_;
   RegstStatus status_;
   const RtRegstDesc* regst_desc_;
-  std::unique_ptr<Blob> packed_blob_;
   std::vector<std::unique_ptr<Blob>> sorted_blob_vec_;
 };
 

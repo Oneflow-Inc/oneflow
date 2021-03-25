@@ -285,8 +285,7 @@ Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const Ten
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs) const {
   // TODO(hjchen2)
-  JUST(internal_->Apply(op_expr, inputs, outputs));
-  return Maybe<void>::Ok();
+  return internal_->Apply(op_expr, inputs, outputs);
 }
 
 }  // namespace one

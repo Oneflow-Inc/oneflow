@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,25 +12,27 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow as flow
-import numpy as np
+*/
 
-flow.config.machine_num(1)
-flow.config.gpu_device_num(1)
+#include "oneflow/core/autograd/autograd_mode.h"
 
+namespace oneflow {
 
-@flow.function()
-def Foo(x=flow.FixedTensorDef((2, 5))):
-    return x
+namespace autograd {
 
+namespace {
 
-Foo(np.ones((2, 5), dtype=np.float32))
+bool* GetThreadLocalGradMode() {
+  static thread_local bool g_grad_mode = true;
+  return &g_grad_mode;
+}
 
-vm_instr_list = flow.vm.new_instruction_list()
-with flow.vm.instruction_build_scope(vm_instr_list):
-    flow.vm.new_host_symbol(9527)
-    flow.vm.delete_host_symbol(9527)
+}  // namespace
 
-print(vm_instr_list)
-flow.vm.run_instruction_list(vm_instr_list)
+bool GradMode::is_enabled() { return *GetThreadLocalGradMode(); }
+
+void GradMode::set_enabled(bool enabled) { *GetThreadLocalGradMode() = enabled; }
+
+}  // namespace autograd
+
+}  // namespace oneflow
