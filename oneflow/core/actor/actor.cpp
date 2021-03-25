@@ -485,12 +485,12 @@ void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
   naive_consumed_rs_.ForChosenRegstDeq(
       IsChosenRegstDescId, [&](int64_t regst_desc_id, const std::deque<Regst*>& reg_deq) {
         CHECK(reg_deq.empty() == false);
-        auto regst_desc_addr = Global<RegstMgr>::Get()->ProducerTaskId4RegstDescId(regst_desc_id);
+        auto producer_task_id = Global<RegstMgr>::Get()->ProducerTaskId4RegstDescId(regst_desc_id);
         Regst* regst = reg_deq.front();
         CHECK_GE(reg_deq.size(), 1);
         // must access regst before sending it to producer
         tmp_regst_desc_id_vec_.push_back(regst_desc_id);
-        EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst_desc_addr, regst));
+        EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer_task_id, regst));
       });
   naive_consumed_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
 }
