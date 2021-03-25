@@ -206,23 +206,6 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
   };
 }
 
-void FixReliantCtrlRegstNum(const Plan& plan, const std::function<uint64_t(int64_t)>& GetRegstNum,
-                            const std::function<void(int64_t, uint64_t)>& SetRegstNum) {
-  for (const auto& task_proto : plan.task()) {
-    for (const auto& pair : task_proto.produced_regst_desc()) {
-      const RegstDescProto& regst = pair.second;
-      const RegstDescTypeProto& regst_type = regst.regst_desc_type();
-      if (regst_type.has_ctrl_regst_desc()
-          && regst_type.ctrl_regst_desc().has_reliant_regst_desc_id()) {
-        // set ctrl regst num between copyHd and MdUpdt
-        CHECK(task_proto.task_type() == kCopyHd);
-        uint64_t regst_num = GetRegstNum(regst_type.ctrl_regst_desc().reliant_regst_desc_id());
-        SetRegstNum(regst.regst_desc_id(), regst_num);
-      }
-    }
-  }
-}
-
 void SetInplaceConsumedRegstDescId(Plan* plan,
                                    const std::function<RegstDescProto*(int64_t)>& RegstDesc4Id) {
   for (int i = 0; i < plan->task_size(); i++) {

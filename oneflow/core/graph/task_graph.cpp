@@ -364,8 +364,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const OpEdge* op_edge) {
 }
 
 void ForEachOpGraphNecessaryCtrlEdge(
-    const OpGraph* op_graph,
-    const std::function<void(const OpNode*, const OpNode*, int64_t)>& Handler) {
+    const OpGraph* op_graph, const std::function<void(const OpNode*, const OpNode*)>& Handler) {
   auto IsOpGraphDataReachable = op_graph->MakePredicatorIsReachable();
   op_graph->ForEachNode([&](OpNode* dst) {
     for (const auto& ctrl_in_op_name : dst->op().op_conf().ctrl_in_op_name()) {
@@ -378,11 +377,8 @@ void ForEachOpGraphNecessaryCtrlEdge(
         if (dst_time_shape == nullptr) {
           dst_time_shape = CHECK_JUST(dst->op().GetOpTimeShape()).get();
         }
-        CHECK(src_time_shape->elem_cnt() == dst_time_shape->elem_cnt()
-              || src_time_shape->Containing(*dst_time_shape));
-        CHECK_EQ(src_time_shape->elem_cnt() % dst_time_shape->elem_cnt(), 0);
-        int64_t regst_desc_num = src_time_shape->elem_cnt() / dst_time_shape->elem_cnt();
-        Handler(src, dst, regst_desc_num);
+        CHECK_EQ(src_time_shape->elem_cnt(), dst_time_shape->elem_cnt());
+        Handler(src, dst);
       }
     }
   });
@@ -409,18 +405,17 @@ TaskGraph::TaskGraph() {
                     op_node2sorted_comp_tasks.at(op_edge->dst_node()));
   });
 
-  ForEachOpGraphNecessaryCtrlEdge(
-      op_graph, [&](const OpNode* src, const OpNode* dst, int64_t ctrl_regst_num) {
-        const auto& src_task_nodes = op_node2sorted_comp_tasks.at(src);
-        const auto& dst_task_nodes = op_node2sorted_comp_tasks.at(dst);
-        if (src->op().op_conf().has_src_subset_tick_conf()) {
-          UNIMPLEMENTED();
-        } else if (dst->op().op_conf().has_dst_subset_tick_conf()) {
-          UNIMPLEMENTED();
-        } else {
-          ConnectCtrlEdges(src_task_nodes, dst_task_nodes, ctrl_regst_num);
-        }
-      });
+  ForEachOpGraphNecessaryCtrlEdge(op_graph, [&](const OpNode* src, const OpNode* dst) {
+    const auto& src_task_nodes = op_node2sorted_comp_tasks.at(src);
+    const auto& dst_task_nodes = op_node2sorted_comp_tasks.at(dst);
+    if (src->op().op_conf().has_src_subset_tick_conf()) {
+      UNIMPLEMENTED();
+    } else if (dst->op().op_conf().has_dst_subset_tick_conf()) {
+      UNIMPLEMENTED();
+    } else {
+      ConnectCtrlEdges(src_task_nodes, dst_task_nodes);
+    }
+  });
 
   SetOrderInGraphForEachNode();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
@@ -507,18 +502,12 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
 }
 
 void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
-                                 const std::vector<CompTaskNode*>& dst_task_nodes,
-                                 int64_t ctrl_regst_num) {
+                                 const std::vector<CompTaskNode*>& dst_task_nodes) {
   CHECK_EQ(src_task_nodes.size(), dst_task_nodes.size());
   FOR_RANGE(int32_t, i, 0, src_task_nodes.size()) {
     std::string regst_desc_name;
     RegstDesc* ctrl_regst_desc =
         src_task_nodes.at(i)->BuildCtrlRegstDesc(dst_task_nodes.at(i), &regst_desc_name);
-    ctrl_regst_desc->UpdtMinRegstNumIfNeed(ctrl_regst_num);
-    ctrl_regst_desc->UpdtMaxRegstNumIfNeed(ctrl_regst_num);
-    ctrl_regst_desc->mut_regst_desc_type()->mutable_ctrl_regst_desc()->set_returned_regst_num(
-        ctrl_regst_num);
-
     TaskEdge* edge = NewEdge();
     Connect<TaskNode>(src_task_nodes.at(i), edge, dst_task_nodes.at(i));
     src_task_nodes.at(i)->BindEdgeWithProducedRegst(edge, regst_desc_name);
