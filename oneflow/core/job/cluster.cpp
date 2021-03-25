@@ -80,7 +80,6 @@ Maybe<void> Cluster::WorkerLoop() {
             std::const_pointer_cast<const ClusterInstructionProto>(mut_cluster_instruction));
       } else if (mut_cluster_instruction->has_cluster_ctrl_eager_sync()) {
         vm::Sync();
-        ClusterInstruction::EagerSyncBarrier();
       } else {
         OF_UNIMPLEMENTED();
       }

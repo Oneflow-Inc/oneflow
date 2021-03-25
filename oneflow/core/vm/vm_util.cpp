@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace vm {
@@ -47,11 +48,8 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
 }
 
 Maybe<void> Sync() {
-  // TODO(jianhao): get the right in_main_thread flag
-  bool in_main_thread = true;
-  if (!Global<ResourceDesc, ForSession>::Get()->async_eager_execution() && in_main_thread) {
-    return Maybe<void>::Ok();
-  }
+  // TODO(jianhao): update it for multi client
+  if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendEagerSync(); }
 
   BlockingCounter bc(1);
   PhysicalRun([&bc](const std::shared_ptr<InstructionsBuilder>& builder) {
@@ -61,8 +59,7 @@ Maybe<void> Sync() {
 
   bc.WaitUntilCntEqualZero();
 
-  // TODO(jianhao): update it when multi client is ready
-  ClusterInstruction::MasterSendEagerSync();
+  ClusterInstruction::EagerSyncBarrier();
   return Maybe<void>::Ok();
 }
 
