@@ -325,6 +325,18 @@ class Tensor:
 
     def __radd__(self, other):
         return self.add(other)
+        
+    def __sub__(self, other):
+        return self.sub(other)
+
+    def __rsub__(self, other):
+        return flow.Sub().forward(other, self)
+
+    def __truediv__(self, other):
+        return self.div(other)
+
+    def __rtruediv__(self, other):
+        return flow.Div().forward(other, self)
 
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:

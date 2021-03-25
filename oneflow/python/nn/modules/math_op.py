@@ -345,6 +345,7 @@ class ScalarAdd(Module):
         return self._op(x)[0]
 
 
+@register_tensor_op_by_module("sub")
 @oneflow_export("Sub")
 class Sub(Module):
     r"""Computes the subtraction of x by y for each element, scalar and broadcast promotation are supported.
@@ -430,6 +431,7 @@ class ScalarDivByTensor(Module):
         return self._op(x, scalar)[0]
 
 
+@register_tensor_op_by_module("div")
 @oneflow_export("Div")
 class Div(Module):
     r"""Computes the division of x by y for each element, scalar and broadcast promotation are supported.
