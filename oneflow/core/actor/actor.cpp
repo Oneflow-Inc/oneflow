@@ -469,17 +469,11 @@ void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
     CHECK(reg_deq.empty() == false);
     Regst* regst = reg_deq.front();
     CHECK(regst->regst_desc()->regst_desc_type().has_ctrl_regst_desc());
-    int32_t returned_regst_num =
-        regst->regst_desc()->regst_desc_type().ctrl_regst_desc().returned_regst_num();
-    CHECK_GE(returned_regst_num, 1);
-    CHECK_GE(reg_deq.size(), returned_regst_num);
-    for (size_t i = 0; i < returned_regst_num; ++i) {
-      Regst* regst = reg_deq.at(i);
-      // must access regst before sending it to producer
-      tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id());
-      EnqueueAsyncMsg(
-          ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
-    }
+    CHECK_GE(reg_deq.size(), 1);
+    // must access regst before sending it to producer
+    tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id());
+    EnqueueAsyncMsg(
+        ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
   });
   naive_consumed_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
 }
