@@ -29,25 +29,42 @@ class TestModule(flow.unittest.TestCase):
         y = flow.Tensor(np.random.randn(2, 3))
         of_out = sub(x, y)
         np_out = np.subtract(x.numpy(), y.numpy())
-        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+        assert np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
 
         x = 5
         y = flow.Tensor(np.random.randn(2, 3))
         of_out = sub(x, y)
         np_out = np.subtract(x, y.numpy())
-        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+        assert np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
 
         x = flow.Tensor(np.random.randn(2, 3))
         y = 5
         of_out = sub(x, y)
         np_out = np.subtract(x.numpy(), y)
-        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+        assert np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
 
         x = flow.Tensor(np.random.randn(2, 3))
         y = flow.Tensor(np.random.randn(1, 1))
         of_out = sub(x, y)
         np_out = np.subtract(x.numpy(), y.numpy())
-        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+        assert np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+
+        # test __sub__
+        x = flow.Tensor(np.random.randn(1, 1))
+        y = flow.Tensor(np.random.randn(2, 3))
+        of_out = x - y
+        np_out = np.subtract(x.numpy(), y.numpy())
+        assert np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+
+        x = flow.Tensor(np.random.randn(2, 3))
+        of_out = x - 3
+        np_out = np.subtract(x.numpy(), 3)
+        assert np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+
+        x = flow.Tensor(np.random.randn(2, 3))
+        of_out = 3 - x
+        np_out = np.subtract(3, x.numpy())
+        assert np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
 
 
 if __name__ == "__main__":

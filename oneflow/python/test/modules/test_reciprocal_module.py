@@ -28,7 +28,7 @@ class TestModule(flow.unittest.TestCase):
         x = flow.Tensor(np.random.randn(2, 3))
         of_out = reciprocal(x)
         np_out = np.reciprocal(x.numpy())
-        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+        assert np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
 
 
 if __name__ == "__main__":

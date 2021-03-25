@@ -28,13 +28,13 @@ class TestModule(flow.unittest.TestCase):
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
         of_out = mean(input)
         np_out = np.mean(input.numpy(), axis=1)
-        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+        assert np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
 
         mean = flow.Mean(axis=0)
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
         of_out = mean(input)
         np_out = np.mean(input.numpy(), axis=0)
-        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+        assert np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
 
 
 if __name__ == "__main__":
