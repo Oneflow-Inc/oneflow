@@ -27,8 +27,6 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
-
 ObjectMsgPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name) {
   return ObjectMsgPtr<InstructionMsg>::New(instr_type_name);
 }
