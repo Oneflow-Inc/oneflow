@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/operator/op_attribute.cfg.h"
 
 namespace oneflow {
 
@@ -26,12 +27,18 @@ Maybe<one::UserOpExpr> AddNOp(int32_t n) {
   return one::OpBuilder("add_n").Input("in", n).Output("out").Build();
 }
 
-Maybe<one::UserOpExpr> GetAddOp() {
+Maybe<one::UserOpExpr> AddOp() {
   return one::OpBuilder("add").Input("in", 2).Output("out").Build();
 }
 
-Maybe<one::UserOpExpr> GetZeroLikeOp() {
+Maybe<one::UserOpExpr> ZeroLikeOp() {
   return one::OpBuilder("zero_like").Input("in").Output("out").Build();
+}
+
+Maybe<one::UserOpExpr> OnesLikeOp() {
+  AttrValue conf;
+  conf.set_at_float(1.0);
+  return one::OpBuilder("constant_like").Input("like").Output("out").Attr("value", conf).Build();
 }
 
 }  // namespace op_expr_helper
