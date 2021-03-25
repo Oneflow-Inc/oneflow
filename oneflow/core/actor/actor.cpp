@@ -489,12 +489,14 @@ void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
         CHECK(reg_deq.empty() == false);
         Regst* regst = reg_deq.front();
         auto regst_desc_addr = consumed_regst_desc_id2addr_.at(regst_desc_id);
-        // TODO(hanbinbin): Optimize the processing procedure of returned_regst_num afterwards
-        int32_t returned_regst_num = 1;
+        int32_t returned_regst_num = -1;
         if (regst_desc_addr.rank() == GlobalProcessCtx::Rank()) {
           CHECK(regst->regst_desc()->regst_desc_type().has_ctrl_regst_desc());
           returned_regst_num =
               regst->regst_desc()->regst_desc_type().ctrl_regst_desc().returned_regst_num();
+        } else {
+          CHECK(regst_desc_addr.has_returned_regst_num());
+          returned_regst_num = regst_desc_addr.returned_regst_num();
         }
         CHECK_GE(returned_regst_num, 1);
         CHECK_GE(reg_deq.size(), returned_regst_num);

@@ -229,6 +229,10 @@ void TaskNode::ToProto(TaskProto* task_proto) {
       RegstDescAddr regst_desc_addr;
       regst_desc_addr.set_rank(regst->producer()->machine_id());
       regst_desc_addr.set_task_id(regst->producer()->task_id());
+      if (regst->regst_desc_type().has_ctrl_regst_desc()) {
+        regst_desc_addr.set_returned_regst_num(
+            regst->regst_desc_type().ctrl_regst_desc().returned_regst_num());
+      }
       CHECK(consumed_regst_desc_id2addr->insert({regst->regst_desc_id(), regst_desc_addr}).second);
     }
     CHECK(consumed_regst_proto->insert({pair.first, regst_desc_ids}).second);
@@ -458,6 +462,10 @@ void DumpToConsumedRegstDescId2Addr(const RegstDescProto& regst_desc_proto, Task
   regst_desc_addr.set_rank(
       Global<IDMgr>::Get()->MachineId4TaskId(regst_desc_proto.producer_task_id()));
   regst_desc_addr.set_task_id(regst_desc_proto.producer_task_id());
+  if (regst_desc_proto.regst_desc_type().has_ctrl_regst_desc()) {
+    regst_desc_addr.set_returned_regst_num(
+        regst_desc_proto.regst_desc_type().ctrl_regst_desc().returned_regst_num());
+  }
   CHECK(consumed_regst_desc_id2addr->insert({regst_desc_proto.regst_desc_id(), regst_desc_addr})
             .second);
 }

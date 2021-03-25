@@ -43,6 +43,7 @@ enum TaskType {
 message RegstDescAddr {
     required int64 rank = 1;
     required int64 task_id = 2;
+    optional int64 returned_regst_num = 3 [default = 1];
 }
 
 message RegstDescIdSet {
