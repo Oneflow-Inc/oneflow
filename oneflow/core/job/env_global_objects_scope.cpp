@@ -97,7 +97,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     auto* local_manager = new LocalRpcManager();
     Global<RpcManager>::SetAllocated(local_manager);
 #else
-    UNIMPLEMENTED();
+    static_assert(false, "requires rpc backend local to run oneflow in single processs");
 #endif  // RPC_BACKEND_LOCAL
   } else /*multi process, multi machine*/ {
 #ifdef RPC_BACKEND_GRPC
