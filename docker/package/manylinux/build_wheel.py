@@ -409,6 +409,7 @@ gcc --version
             python_versions = args.python_version.split(",")
             python_versions = [pv.strip() for pv in python_versions]
             for python_version in python_versions:
+                print("building for python version:", python_version)
                 build_oneflow(
                     img_tag,
                     args.oneflow_src_dir,
