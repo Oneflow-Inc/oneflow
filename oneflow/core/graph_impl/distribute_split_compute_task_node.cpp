@@ -27,18 +27,14 @@ class DistributeSplitCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
-  bool IsReadyForBuild() override;
 
   TaskType GetTaskType() const override { return TaskType::kDistributeSplit; }
-  bool HasBackwardCompTaskNode();
 
  private:
   void BuildExecGphAndRegst() override;
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
 };
-
-bool DistributeSplitCompTaskNode::HasBackwardCompTaskNode() { return false; }
 
 void DistributeSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", true);
@@ -47,10 +43,6 @@ void DistributeSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void DistributeSplitCompTaskNode::ConsumeAllRegsts() {
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
-}
-
-bool DistributeSplitCompTaskNode::IsReadyForBuild() {
-  return GetSoleConsumedRegst("in")->IsLocked();
 }
 
 void DistributeSplitCompTaskNode::BuildExecGphAndRegst() {
