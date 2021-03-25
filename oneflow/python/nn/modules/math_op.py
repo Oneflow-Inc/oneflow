@@ -645,3 +645,32 @@ class Add(Module):
             return ScalarAddByTensor()(x, y)
         else:
             return BroadcastAdd()(x, y)
+
+
+@register_tensor_op_by_module("sin")
+@oneflow_export("Sin")
+class Sin(Module):
+    """This operator computes the sin value of Tensor."""
+    def __init__(self) -> None:
+        super().__init__()
+        name = id_util.UniqueStr("sin" + "_")
+        self._op = (
+            flow.builtin_op("sin", name).Input("x").Output("y").Build()
+        )
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+@register_tensor_op_by_module("cos")
+@oneflow_export("Cos")
+class Cos(Module):
+    """This operator computes the cosine value of Tensor."""
+    def __init__(self) -> None:
+        super().__init__()
+        name = id_util.UniqueStr("cos" + "_")
+        self._op = (
+            flow.builtin_op("cos", name).Input("x").Output("y").Build()
+        )
+
+    def forward(self, x):
+        return self._op(x)[0]
