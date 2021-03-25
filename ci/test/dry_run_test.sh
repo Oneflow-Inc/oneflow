@@ -4,7 +4,7 @@ set -xe
 export PYTHONUNBUFFERED=1
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
-test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"/test_tmp_dir"}
+test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-".test_tmp_dir"}
 
 
 rm -rf $test_tmp_dir
@@ -13,8 +13,9 @@ cp -r $src_dir/oneflow/python/benchmarks $test_tmp_dir
 cd $test_tmp_dir/benchmarks
 
 export ONEFLOW_DRY_RUN=1
-
-python3 bert_benchmark/run_pretraining.py \
+export ONEFLOW_DEBUG_MODE=1
+generated_node_list=$(python -c 'print(",".join(["mocknode_" + str(x) for x in range(32)]))')
+time python3 bert_benchmark/run_pretraining.py \
     --gpu_num_per_node=1 \
     --node_num=1 \
     --learning_rate=1e-4 \
@@ -33,4 +34,6 @@ python3 bert_benchmark/run_pretraining.py \
     --vocab_size=30522 \
     --attention_probs_dropout_prob=0.1 \
     --hidden_dropout_prob=0.1 \
-    --hidden_size_per_head=64
+    --hidden_size_per_head=64 \
+    --node_list=${generated_node_list} \
+    --gpu_num_per_node=8
