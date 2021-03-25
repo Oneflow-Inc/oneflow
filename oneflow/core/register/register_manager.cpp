@@ -105,9 +105,9 @@ RegstMgr::RegstMgr(const Plan& plan) {
 
   for (const TaskProto& task : plan.task()) {
     for (const auto& pair : task.consumed_ctrl_regst_desc_id2addr()) {
-      if (ctrl_regst_desc_id2regst_desc_addr_.find(pair.first)
-          == ctrl_regst_desc_id2regst_desc_addr_.end()) {
-        CHECK(ctrl_regst_desc_id2regst_desc_addr_.emplace(pair.first, pair.second).second);
+      if (ctrl_regst_desc_id2ctrl_regst_desc_addr_.find(pair.first)
+          == ctrl_regst_desc_id2ctrl_regst_desc_addr_.end()) {
+        CHECK(ctrl_regst_desc_id2ctrl_regst_desc_addr_.emplace(pair.first, pair.second).second);
       }
     }
     if (task.machine_id() != this_machine_id) { continue; }
@@ -228,15 +228,15 @@ bool RegstMgr::HasRegstDescId(int64_t regst_desc_id) const {
   return regst_desc_id2rt_regst_desc_.find(regst_desc_id) != regst_desc_id2rt_regst_desc_.end();
 }
 
-const RegstDescAddr& RegstMgr::RegstDescAddr4RegstDescId(int64_t regst_desc_id) const {
-  const auto& it = ctrl_regst_desc_id2regst_desc_addr_.find(regst_desc_id);
-  CHECK(it != ctrl_regst_desc_id2regst_desc_addr_.end());
+const RegstDescAddr& RegstMgr::CtrlRegstDescAddr4RegstDescId(int64_t regst_desc_id) const {
+  const auto& it = ctrl_regst_desc_id2ctrl_regst_desc_addr_.find(regst_desc_id);
+  CHECK(it != ctrl_regst_desc_id2ctrl_regst_desc_addr_.end());
   return it->second;
 }
 
-bool RegstMgr::HasRegstDescAddr4RegstDescId(int64_t regst_desc_id) const {
-  return ctrl_regst_desc_id2regst_desc_addr_.find(regst_desc_id)
-         != ctrl_regst_desc_id2regst_desc_addr_.end();
+bool RegstMgr::HasCtrlRegstDescAddr4RegstDescId(int64_t regst_desc_id) const {
+  return ctrl_regst_desc_id2ctrl_regst_desc_addr_.find(regst_desc_id)
+         != ctrl_regst_desc_id2ctrl_regst_desc_addr_.end();
 }
 
 Blob* RegstMgr::Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id) {
