@@ -67,38 +67,26 @@ Maybe<void> StorageAdd(const EagerSymbol& symbol) {
 
 Maybe<void> EagerOneflow::RunPhysicalInstruction(
     const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction) {
-  const vm::InstructionListProto& instruction_list_proto =
-      cluster_instruction->eager_instruction().instruction_list();
-  const EagerSymbolList& eager_symbol_list =
-      cluster_instruction->eager_instruction().eager_symbol_list();
-  for (const auto& eager_symbol : eager_symbol_list.eager_symbol()) {
+  const auto& instruction_list = std::make_shared<vm::InstructionMsgList>();
+  const auto& eage_instructions = cluster_instruction->eager_instruction();
+  for (const auto& instr_proto : eage_instructions.instruction_list().instruction()) {
+    instruction_list->EmplaceBack(ObjectMsgPtr<vm::InstructionMsg>::New(instr_proto));
+  }
+  for (const auto& eager_symbol : eage_instructions.eager_symbol_list().eager_symbol()) {
     JUST(StorageAdd(eager_symbol));
   }
-  return vm::Run(instruction_list_proto);
+  return vm::Run(instruction_list);
 }
 
 Maybe<void> EagerOneflow::RunPhysicalInstruction(
     const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
     const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) {
-  auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
-  auto* repeated_instruction_proto = cluster_instruction->mutable_eager_instruction()
-                                         ->mutable_instruction_list()
-                                         ->mutable_instruction();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(instruction_list.get(), instruction_msg) {
-    instruction_msg->ToProto(repeated_instruction_proto->Add());
+  for (const auto& cfg_symbol : eager_symbol_list->eager_symbol()) {
+    EagerSymbol eager_symbol;
+    cfg_symbol.ToProto(&eager_symbol);
+    JUST(StorageAdd(eager_symbol));
   }
-  eager_symbol_list->ToProto(
-      cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list());
-  return RunPhysicalInstruction(
-      std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
-}
-
-Maybe<void> EagerOneflow::RunLogicalInstruction(
-    const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction) {
-  CHECK(cluster_instruction->has_eager_instruction());
-  CHECK(GlobalProcessCtx::IsThisProcessMaster());
-  ClusterInstruction::MasterSendEagerInstruction(*cluster_instruction);
-  return RunPhysicalInstruction(cluster_instruction);
+  return vm::Run(instruction_list);
 }
 
 Maybe<void> EagerOneflow::RunLogicalInstruction(
@@ -113,8 +101,9 @@ Maybe<void> EagerOneflow::RunLogicalInstruction(
   }
   eager_symbol_list->ToProto(
       cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list());
-  return RunLogicalInstruction(
-      std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
+  CHECK(GlobalProcessCtx::IsThisProcessMaster());
+  ClusterInstruction::MasterSendEagerInstruction(*cluster_instruction);
+  return RunPhysicalInstruction(instruction_list, eager_symbol_list);
 }
 
 COMMAND(Global<EagerOneflow>::SetAllocated(new EagerOneflow()));
