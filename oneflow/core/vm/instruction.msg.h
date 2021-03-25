@@ -65,6 +65,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_del_object_operand(ObjectId logical_object_id);
   OF_PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
     return operand_list().operand();
   }
@@ -82,7 +83,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OBJECT_MSG_DEFINE_STRUCT(std::string, instr_type_name);
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, parallel_desc_symbol_id);
   OBJECT_MSG_DEFINE_OPTIONAL(InstructionOperandList, operand_list);
-  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<std::function<void()>>, sequantial_callback);
+  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<std::function<void()>>, no_arg_callback);
 
 
   // links
@@ -221,8 +222,8 @@ OBJECT_MSG_BEGIN(Instruction);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instruction_link);
   OBJECT_MSG_DEFINE_LIST_LINK(pending_instruction_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(sequantial_infer_instr_link);
-  OBJECT_MSG_DEFINE_LIST_LINK(sequantial_compute_instr_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(front_seq_infer_instr_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(front_seq_compute_instr_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(CallbackMsg, callback_link, callback_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstructionEdge, src_instruction, in_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstructionEdge, dst_instruction, out_edges);

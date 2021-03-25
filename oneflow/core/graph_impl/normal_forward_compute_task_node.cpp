@@ -36,8 +36,6 @@ std::string GetOutRegstNameByObn(const std::string& obn) { return "__" + obn; }
 
 }  // namespace
 
-bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() { return false; }
-
 void NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum(const std::string& name,
                                                                  size_t mem_block_num) {
   if (mem_block_num != -1) {
@@ -83,13 +81,6 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   ForEachInDataEdge([&](TaskEdge* edge) {
     for (const auto& regst : edge->GetRegsts()) { ConsumeRegst("in", regst); }
   });
-}
-
-bool NormalForwardCompTaskNode::IsReadyForBuild() {
-  for (std::shared_ptr<RegstDesc> regst_desc : GetConsumedRegst("in")) {
-    if (regst_desc->IsLocked() == false) { return false; }
-  }
-  return true;
 }
 
 void NormalForwardCompTaskNode::BuildExecGphAndRegst() {

@@ -31,7 +31,8 @@ class InstructionType {
  public:
   virtual ~InstructionType() = default;
 
-  virtual bool IsSequantialInstructionType() const { return false; }
+  bool IsSequential() const { return IsFrontSequential(); }
+  virtual bool IsFrontSequential() const { return false; }
   virtual void Compute(Instruction* instruction) const = 0;
   virtual void Infer(Instruction* instruction) const = 0;
 
