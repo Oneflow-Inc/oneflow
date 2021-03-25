@@ -65,6 +65,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_del_object_operand(ObjectId logical_object_id);
   OF_PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
     return operand_list().operand();
   }
