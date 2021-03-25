@@ -146,10 +146,11 @@ jobs:
           container_name=release-run-id-${{ github.run_id }}-${{ matrix.compute_platform }}
           echo "container_name=${container_name}" >> $GITHUB_ENV
           extra_docker_args+=" --name ${container_name}"
+          # if release_version not given, it is a nightly build
           if [ -z "${{ github.event.inputs.release_version }}" ]; then
-            extra_docker_args+=" --env ONEFLOW_RELEASE_VERSION=${{ github.event.inputs.release_version }}"
-          else
             extra_docker_args+=" --env ONEFLOW_RELEASE_NIGHTLY=1"
+          else
+            extra_docker_args+=" --env ONEFLOW_RELEASE_VERSION=${{ github.event.inputs.release_version }}"
           fi
           echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
 
