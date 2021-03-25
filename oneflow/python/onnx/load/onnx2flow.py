@@ -176,7 +176,7 @@ def from_paddle(
         enable_onnx_checker=True,
     )
 
-    onnx_model = onnx.load(str(mode_str+".onnx"))
+    onnx_model = onnx.load(str(mode_str + ".onnx"))
 
     return from_onnx(
         onnx_model,

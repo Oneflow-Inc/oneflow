@@ -149,10 +149,11 @@ class Squeeze(BackendHandler):
     @classmethod
     def version_11(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
-    
+
     @classmethod
     def version_13(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
+
 
 # TODO(BBuf) add expand op: https://github.com/Oneflow-Inc/oneflow/pull/4164
 # This is a temporary solution of senet

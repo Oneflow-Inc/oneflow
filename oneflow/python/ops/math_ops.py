@@ -1646,20 +1646,38 @@ def clip_by_value(
     if name is None:
         name = id_util.UniqueStr("ClipByValue_")
 
-    if type(min_value) == float:
-        floating_min_value = float(min_value)
-        integral_min_value = 0
+    floating_min_value = None
+    integral_min_value = None
+    floating_max_value = None
+    integral_max_value = None
+
+    if values.dtype in [
+        flow.float32,
+        flow.float16,
+        flow.float64,
+    ]:
+        if min_value is not None:
+            floating_min_value = float(min_value)
+            integral_min_value = 0
+        else:
+            pass
+        if max_value is not None:
+            floating_max_value = float(max_value)
+            integral_max_value = 0
+        else:
+            pass
     else:
-        floating_min_value = 0
-        integral_min_value = int(min_value)
-    
-    if type(max_value) == float:
-        floating_max_value = float(max_value)
-        integral_max_value = 0
-    else:
-        floating_max_value = 0
-        integral_max_value = int(max_value)
-    
+        if min_value is not None:
+            floating_min_value = 0
+            integral_min_value = int(min_value)
+        else:
+            pass
+        if max_value is not None:
+            floating_max_value = 0
+            integral_max_value = int(max_value)
+        else:
+            pass
+
     if min_value is not None and max_value is not None:
         op_builder = (
             flow.user_op_builder(name)

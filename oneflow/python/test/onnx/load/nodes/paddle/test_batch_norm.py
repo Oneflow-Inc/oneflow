@@ -31,4 +31,3 @@ def test_bn(test_case):
             return x
 
     load_paddle_module_and_check(test_case, Net)
-
