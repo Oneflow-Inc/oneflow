@@ -54,8 +54,8 @@ Maybe<void> GetUserOpGradConf(const UserOpExpr* fw_op_expr, std::vector<Operator
       auto find_iter = out_rbn2diff_lbi.find(rbn);
       if (find_iter == out_rbn2diff_lbi.end()) {
         LogicalBlobId lbi;
-        lbi.set_op_name("next_grad_op");
-        lbi.set_blob_name(rbn + "_diff");
+        lbi.set_op_name("_");
+        lbi.set_blob_name(rbn);
         out_rbn2diff_lbi.emplace(rbn, lbi);
       }
       return &out_rbn2diff_lbi[rbn];
