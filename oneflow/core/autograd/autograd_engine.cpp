@@ -35,7 +35,7 @@ bool IsReadyToRun(const std::vector<std::shared_ptr<TensorArg>>& out_grads) {
 
 Maybe<void> InitEmptyTensorArgs2ZerosTensor(const TensorTuple& outputs,
                                             std::vector<std::shared_ptr<TensorArg>>& out_grads) {
-  const auto& zero_like = JUST(helper::ZeroLikeOp());
+  const auto& zero_like = JUST(op_expr_helper::ZeroLikeOp());
   for (int i = 0; i < out_grads.size(); ++i) {
     if (out_grads.at(i)->Empty()) {
       TensorTuple output(1);
@@ -52,7 +52,7 @@ Maybe<void> CopyOrAccGrad(Tensor& tensor, bool autograd_mode) {
   if (tensor.acc_grad()) {
     TensorTuple input = {tensor.acc_grad(), tensor_arg->GetAccTensor().GetPtrOrThrow()};
     TensorTuple output(1);
-    const auto& add = JUST(helper::AddOp());
+    const auto& add = JUST(op_expr_helper::AddOp());
     JUST(GetInterpreter()->Apply(add, input, output));
     tensor.set_acc_grad(output.at(0));
   } else {
