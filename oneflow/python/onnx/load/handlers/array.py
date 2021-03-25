@@ -133,6 +133,27 @@ class Unsqueeze(BackendHandler):
         return cls._common(node, tensor_dict, **kwargs)
 
 
+@onnx_op("Squeeze")
+@flow_func(array_ops.squeeze)
+class Squeeze(BackendHandler):
+    @classmethod
+    def _common(cls, node, tensor_dict, **kwargs):
+        axes = node.attrs.pop("axes")
+        node.attrs["axis"] = axes
+        return cls.run_onnx_node(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_11(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+    
+    @classmethod
+    def version_13(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
 # TODO(BBuf) add expand op: https://github.com/Oneflow-Inc/oneflow/pull/4164
 # This is a temporary solution of senet
 
