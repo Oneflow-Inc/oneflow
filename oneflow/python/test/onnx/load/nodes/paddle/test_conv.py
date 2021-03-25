@@ -20,11 +20,11 @@ import paddle.nn.functional as F
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
 
-def test_conv2d_k3s1p1(test_case):
+def test_Conv2D_k3s1p1(test_case):
     class Net(nn.Layer):
         def __init__(self):
             super(Net, self).__init__()
-            self.conv = nn.Conv2d(4, 5, 3, padding=1)
+            self.conv = nn.Conv2D(4, 5, 3, padding=1)
 
         def forward(self, x):
             x = self.conv(x)
@@ -33,11 +33,11 @@ def test_conv2d_k3s1p1(test_case):
     load_paddle_module_and_check(test_case, Net, input_size=(2, 4, 3, 5))
 
 
-def test_conv2d_k3s1p0(test_case):
+def test_Conv2D_k3s1p0(test_case):
     class Net(nn.Layer):
         def __init__(self):
             super(Net, self).__init__()
-            self.conv = nn.Conv2d(4, 5, 3, padding=0)
+            self.conv = nn.Conv2D(4, 5, 3, padding=0)
 
         def forward(self, x):
             x = self.conv(x)
@@ -46,11 +46,11 @@ def test_conv2d_k3s1p0(test_case):
     load_paddle_module_and_check(test_case, Net, input_size=(2, 4, 3, 5))
 
 
-def test_conv2d_k3s2p0(test_case):
+def test_Conv2D_k3s2p0(test_case):
     class Net(nn.Layer):
         def __init__(self):
             super(Net, self).__init__()
-            self.conv = nn.Conv2d(4, 5, 3, stride=2, padding=0)
+            self.conv = nn.Conv2D(4, 5, 3, stride=2, padding=0)
 
         def forward(self, x):
             x = self.conv(x)
@@ -59,11 +59,11 @@ def test_conv2d_k3s2p0(test_case):
     load_paddle_module_and_check(test_case, Net, input_size=(2, 4, 9, 7))
 
 
-def test_conv2d_k3s2p0g2(test_case):
+def test_Conv2D_k3s2p0g2(test_case):
     class Net(nn.Layer):
         def __init__(self):
             super(Net, self).__init__()
-            self.conv = nn.Conv2d(4, 6, 3, stride=1, padding=1, groups=2)
+            self.conv = nn.Conv2D(4, 6, 3, stride=1, padding=1, groups=2)
 
         def forward(self, x):
             x = self.conv(x)
@@ -72,11 +72,11 @@ def test_conv2d_k3s2p0g2(test_case):
     load_paddle_module_and_check(test_case, Net, input_size=(2, 4, 9, 7))
 
 
-def test_conv2d_k3s2p0g2d2(test_case):
+def test_Conv2D_k3s2p0g2d2(test_case):
     class Net(nn.Layer):
         def __init__(self):
             super(Net, self).__init__()
-            self.conv = nn.Conv2d(4, 6, 3, stride=1, padding=1, groups=2, dilation=2)
+            self.conv = nn.Conv2D(4, 6, 3, stride=1, padding=1, groups=2, dilation=2)
 
         def forward(self, x):
             x = self.conv(x)
