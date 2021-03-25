@@ -105,7 +105,8 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     auto* grpc_manager = new GrpcRpcManager();
     Global<RpcManager>::SetAllocated(grpc_manager);
 #else
-    UNIMPLEMENTED();
+    UNIMPLEMENTED() << "to run distributed oneflow, you must enable at least one multi-node rpc "
+                       "backend by adding cmake argument, for instance: -DRPC_BACKEND=GRPC";
 #endif  // RPC_BACKEND_GRPC
   }
   CHECK_JUST(Global<RpcManager>::Get()->CreateServer());
