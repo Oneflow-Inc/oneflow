@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 #include "oneflow/core/graph/collective_boxing_pack_task_node.h"
 #include "oneflow/core/graph/collective_boxing_unpack_task_node.h"
+#include "oneflow/core/job/parallel_distribution_util.h"
 #include "oneflow/core/common/id_util.h"
 #include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/cuda_stream_index.h"
@@ -267,11 +268,10 @@ class CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder final : public Su
         && out_sbp_parallel.has_broadcast_parallel()
         // a potential optimization: flat the blob and then relax this requirement
         && logical_blob_desc.shape().At(0) % out_parallel_desc.parallel_num() == 0) {
-      const TensorSliceView in_slice =
-          SubTskGphBuilderUtil::GetBroadcastTensorSliceView(logical_blob_desc);
+      const TensorSliceView in_slice = GetBroadcastTensorSliceView(logical_blob_desc);
       SbpParallel split_sbp_parallel;
       split_sbp_parallel.mutable_split_parallel()->set_axis(0);
-      std::vector<TensorSliceView> out_slices = SubTskGphBuilderUtil::GetTensorSliceView(
+      std::vector<TensorSliceView> out_slices = GetTensorSliceView(
           out_parallel_desc.parallel_num(), split_sbp_parallel, logical_blob_desc);
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllGather-" + NewUniqueId();
       FOR_RANGE(int64_t, out_id, 0, out_parallel_desc.parallel_num()) {
