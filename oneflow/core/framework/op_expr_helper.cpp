@@ -26,7 +26,9 @@ Maybe<one::UserOpExpr> AddNOp(int32_t n) {
   return one::OpBuilder("add_n").Input("in", n).Output("out").Build();
 }
 
-Maybe<one::UserOpExpr> GetAddOp() { return one::OpBuilder("add").Input("in", 2).Output("out").Build(); }
+Maybe<one::UserOpExpr> GetAddOp() {
+  return one::OpBuilder("add").Input("in", 2).Output("out").Build();
+}
 
 Maybe<one::UserOpExpr> GetZeroLikeOp() {
   return one::OpBuilder("zero_like").Input("in").Output("out").Build();
@@ -35,4 +37,3 @@ Maybe<one::UserOpExpr> GetZeroLikeOp() {
 }  // namespace op_expr_helper
 
 }  // namespace oneflow
-

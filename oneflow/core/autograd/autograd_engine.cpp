@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/autograd/autograd_mode.h"
 
 namespace oneflow {
 namespace one {
@@ -47,7 +48,7 @@ Maybe<void> InitEmptyTensorArgs2ZerosTensor(const TensorTuple& outputs,
 }
 
 Maybe<void> CopyOrAccGrad(Tensor& tensor, bool autograd_mode) {
-  autograd::AutogradMode mode(autograd_mode);
+  autograd::AutoGradMode mode(autograd_mode);
   const auto& tensor_arg = tensor.now_grad_arg();
   if (tensor.acc_grad()) {
     TensorTuple input = {tensor.acc_grad(), tensor_arg->GetAccTensor().GetPtrOrThrow()};
