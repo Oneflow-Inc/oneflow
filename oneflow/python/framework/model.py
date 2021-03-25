@@ -221,8 +221,6 @@ class Model(
     def __init__(self, *args, **kwargs):
         super().__init__()
 
-        self._is_deprecated_function_style = False
-
         self._is_deprecated_function_style = (
             kwargs["is_deprecated_function_style"]
             if "is_deprecated_function_style" in kwargs
