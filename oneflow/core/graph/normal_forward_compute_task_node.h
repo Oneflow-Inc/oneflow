@@ -28,10 +28,8 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
-  bool IsReadyForBuild() override;
 
   TaskType GetTaskType() const override { return TaskType::kNormalForward; }
-  bool HasBackwardCompTaskNode();
 
  private:
   void ProduceOutRegstByNameAndBlockNum(const std::string& name, size_t mem_block_num);
