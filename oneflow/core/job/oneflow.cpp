@@ -1122,7 +1122,7 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   }
   OF_PROFILER_RANGE_PUSH("new Runtime");
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
-    LOG(ERROR) << "This is dry run, exiting";
+    LOG(ERROR) << "this is dry run, exiting";
     exit(0);
   }
   runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false));
