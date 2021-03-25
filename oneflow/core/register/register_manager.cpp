@@ -167,7 +167,6 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
                                   const RtRegstDesc* rt_regst_desc, char* main_mem_ptr,
                                   char* separated_header_mem_ptr) {
   size_t separated_header_mem_size = rt_regst_desc->SeparatedHeaderByteSize4OneRegst();
-  const RtBlobDesc* packed_blob_desc = rt_regst_desc->packed_blob_desc();
   char* cur_body_pointer = nullptr;
   char* cur_header_pointer = nullptr;
   if (separated_header_mem_size > 0) {
@@ -177,19 +176,15 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
       separated_header_mem_ptr =
           Global<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);
     }
-    regst->packed_blob_.reset(new Blob(regst->regst_desc()->mem_case(), packed_blob_desc,
-                                       separated_header_mem_ptr, main_mem_ptr));
     cur_header_pointer = separated_header_mem_ptr;
     cur_body_pointer = main_mem_ptr;
   } else {
     CHECK(separated_header_mem_ptr == nullptr);
-    regst->packed_blob_.reset(
-        new Blob(regst->regst_desc()->mem_case(), packed_blob_desc, main_mem_ptr));
     cur_header_pointer = main_mem_ptr;
     if (main_mem_ptr == nullptr) {
       cur_body_pointer = nullptr;
     } else {
-      cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
+      cur_body_pointer = main_mem_ptr + rt_regst_desc->GetSoleRtBlobDesc()->ByteSizeOfBlobHeader();
     }
   }
   rt_regst_desc->ForEachBlobDescOffsetInOnRegst([&](int64_t ordinal, const LogicalBlobId& lbi,
