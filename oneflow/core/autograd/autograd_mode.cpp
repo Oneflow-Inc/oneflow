@@ -13,23 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/operator/copy_comm_net_op.h"
+
+#include "oneflow/core/autograd/autograd_mode.h"
 
 namespace oneflow {
 
-void CopyCommNetOp::InitFromOpConf() {
-  EnrollInputBn("in", false);
-  EnrollOutputBn("out", false);
+namespace autograd {
+
+namespace {
+
+bool* GetThreadLocalGradMode() {
+  static thread_local bool g_grad_mode = true;
+  return &g_grad_mode;
 }
 
-LogicalBlobId CopyCommNetOp::lbi4obn(const std::string& output_bn) const {
-  return this->op_conf().copy_comm_net_conf().lbi();
-}
+}  // namespace
 
-LogicalBlobId CopyCommNetOp::lbi4ibn(const std::string& input_bn) const {
-  return this->op_conf().copy_comm_net_conf().lbi();
-}
+bool GradMode::is_enabled() { return *GetThreadLocalGradMode(); }
 
-REGISTER_OP(OperatorConf::kCopyCommNetConf, CopyCommNetOp);
+void GradMode::set_enabled(bool enabled) { *GetThreadLocalGradMode() = enabled; }
+
+}  // namespace autograd
 
 }  // namespace oneflow
