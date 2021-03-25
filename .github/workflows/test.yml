@@ -379,13 +379,13 @@ jobs:
           docker run $extra_docker_args \
             oneflow-test:$USER bash ci/test/print_stack_from_core.sh python3 serving-tmp
       - name: Benchmark (mainly for backward compatibility)
-        if: matrix.test_suite == 'cuda'
+        if: matrix.test_suite == 'cuda_op'
         run: |
           docker run $extra_docker_args \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
       - name: Benchmark FP16 (mainly for backward compatibility)
-        if: matrix.test_suite == 'cuda'
+        if: matrix.test_suite == 'cuda_op'
         run: |
           docker run $extra_docker_args \
             oneflow-test:$USER \
