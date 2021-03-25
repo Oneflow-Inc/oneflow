@@ -225,8 +225,6 @@ void TaskNode::ToProto(TaskProto* task_proto) {
       if (regst->regst_desc_type().has_ctrl_regst_desc()) {
         RegstDescAddr regst_desc_addr;
         regst_desc_addr.set_task_id(regst->producer()->task_id());
-        regst_desc_addr.set_returned_regst_num(
-            regst->regst_desc_type().ctrl_regst_desc().returned_regst_num());
         CHECK(consumed_ctrl_regst_desc_id2addr->insert({regst->regst_desc_id(), regst_desc_addr})
                   .second);
       }
@@ -427,8 +425,6 @@ void DumpToConsumedRegstDescId2Addr(const RegstDescProto& regst_desc_proto, Task
   auto* consumed_ctrl_regst_desc_id2addr = task_proto->mutable_consumed_ctrl_regst_desc_id2addr();
   RegstDescAddr regst_desc_addr;
   regst_desc_addr.set_task_id(regst_desc_proto.producer_task_id());
-  regst_desc_addr.set_returned_regst_num(
-      regst_desc_proto.regst_desc_type().ctrl_regst_desc().returned_regst_num());
   CHECK(
       consumed_ctrl_regst_desc_id2addr->insert({regst_desc_proto.regst_desc_id(), regst_desc_addr})
           .second);
