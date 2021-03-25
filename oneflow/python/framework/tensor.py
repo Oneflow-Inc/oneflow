@@ -314,6 +314,12 @@ class Tensor:
     def __deepcopy__(self, memo):
         TODO()
 
+    def __mul__(self, other):
+        return self.mul(other)
+
+    def __rmul__(self, other):
+        return self.mul(other)
+
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:
             self.determine(determining_initializer)
@@ -436,9 +442,7 @@ class Tensor:
         return self._init_by_initializer_conf(initializer_conf)
 
     def normal_(self, mean=0, std=1):
-        initializer_conf = flow.random_normal_initializer(
-            mean=mean, stddev=std
-        )
+        initializer_conf = flow.random_normal_initializer(mean=mean, stddev=std)
         return self._init_by_initializer_conf(initializer_conf)
 
     def fill_(self, value):
