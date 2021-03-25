@@ -379,6 +379,7 @@ class UserOpConfBuilder(object):
         elif attr_type == user_op_attr_cfg.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
+                assert x in oneflow.dtypes()
                 x = oneflow_api.deprecated.GetProtoDtype4OfDtype(x)
                 assert isinstance(x, int)
                 attribute.mutable_at_list_data_type.add_val(
@@ -386,11 +387,11 @@ class UserOpConfBuilder(object):
                 )
         elif attr_type == user_op_attr_cfg.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, tuple) or isinstance(x, list) for x in attr_value)
             for x in attr_value:
                 assert isinstance(x, tuple) or isinstance(x, list)
                 shape = shape_cfg.ShapeProto()
                 for dim in x:
+                    assert isinstance(dim, int)
                     shape.add_dim(dim)
                 attribute.mutable_at_list_shape.Add().CopyFrom(shape)
         elif attr_type == user_op_attr_cfg.kAtListString:
