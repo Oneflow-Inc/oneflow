@@ -25,28 +25,28 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class RankSequantialCallbackInstructionType : public InstructionType {
+class RankFrontSeqCallbackInstructionType : public InstructionType {
  public:
-  RankSequantialCallbackInstructionType() = default;
-  virtual ~RankSequantialCallbackInstructionType() override = default;
+  RankFrontSeqCallbackInstructionType() = default;
+  virtual ~RankFrontSeqCallbackInstructionType() override = default;
 
   using stream_type = ControlStreamType;
 
-  virtual bool IsSequantialInstructionType() const { return true; }
+  virtual bool IsFrontSequential() const { return true; }
 
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
   void Compute(Instruction*) const override { UNIMPLEMENTED(); }
 
  protected:
   // clang-format off
-  FLAT_MSG_VIEW_BEGIN(RankSequantialCallbackInstrOperand);
+  FLAT_MSG_VIEW_BEGIN(RankFrontSeqCallbackInstrOperand);
     FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, process_rank);
-  FLAT_MSG_VIEW_END(RankSequantialCallbackInstrOperand);
+  FLAT_MSG_VIEW_END(RankFrontSeqCallbackInstrOperand);
   // clang-format on
 
   void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
-    FlatMsgView<RankSequantialCallbackInstrOperand> args(instr_msg->operand());
-    const auto& callback = instr_msg->sequantial_callback();
+    FlatMsgView<RankFrontSeqCallbackInstrOperand> args(instr_msg->operand());
+    const auto& callback = instr_msg->no_arg_callback();
     if (args->process_rank() == GlobalProcessCtx::Rank()) {
       CHECK(static_cast<bool>(callback));
       (*callback)();
@@ -56,31 +56,30 @@ class RankSequantialCallbackInstructionType : public InstructionType {
   }
 };
 
-class RankSequantialInferCallbackInstructionType final
-    : public RankSequantialCallbackInstructionType {
+class RankFrontSeqInferCallbackInstructionType final : public RankFrontSeqCallbackInstructionType {
  public:
-  RankSequantialInferCallbackInstructionType() = default;
-  ~RankSequantialInferCallbackInstructionType() override = default;
+  RankFrontSeqInferCallbackInstructionType() = default;
+  ~RankFrontSeqInferCallbackInstructionType() override = default;
 
   void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override { Run(vm, instr_msg); }
   void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override { /* do nothing */
   }
 };
-COMMAND(RegisterInstructionType<RankSequantialInferCallbackInstructionType>(
-    "RankSequantialInferCallback"));
+COMMAND(
+    RegisterInstructionType<RankFrontSeqInferCallbackInstructionType>("RankFrontSeqInferCallback"));
 
-class RankSequantialComputeCallbackInstructionType final
-    : public RankSequantialCallbackInstructionType {
+class RankFrontSeqComputeCallbackInstructionType final
+    : public RankFrontSeqCallbackInstructionType {
  public:
-  RankSequantialComputeCallbackInstructionType() = default;
-  ~RankSequantialComputeCallbackInstructionType() override = default;
+  RankFrontSeqComputeCallbackInstructionType() = default;
+  ~RankFrontSeqComputeCallbackInstructionType() override = default;
 
   void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override { /* do nothing */
   }
   void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override { Run(vm, instr_msg); }
 };
-COMMAND(RegisterInstructionType<RankSequantialComputeCallbackInstructionType>(
-    "RankSequantialComputeCallback"));
+COMMAND(RegisterInstructionType<RankFrontSeqComputeCallbackInstructionType>(
+    "RankFrontSeqComputeCallback"));
 
 }  // namespace vm
 }  // namespace oneflow
