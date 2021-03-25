@@ -67,18 +67,22 @@ class GatherKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto axis = ctx->Attr<int64_t>("axis");
-    const ParallelDistribution& in_parallel_distribution =
-        ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-    const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-    CheckParallelDistribution(hierarchy, axis, in_parallel_distribution,
-                              ctx->ParallelDistribution4ArgNameAndIndex("indices", 0),
-                              ctx->ParallelDistribution4ArgNameAndIndex("out", 0));
-    const TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("in", 0);
-    TensorSliceView view =
-        GetTensorSliceView4ParallelId(hierarchy, in_parallel_distribution, in_logical_desc->shape(),
-                                      ctx->parallel_ctx().parallel_id());
-    return std::make_shared<GatherOpKernelState>(view.At(axis).begin(), view.At(axis).end());
+    if (ctx->parallel_ctx().parallel_num() > 1) {
+      const auto axis = ctx->Attr<int64_t>("axis");
+      const ParallelDistribution& in_parallel_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+      CheckParallelDistribution(hierarchy, axis, in_parallel_distribution,
+                                ctx->ParallelDistribution4ArgNameAndIndex("indices", 0),
+                                ctx->ParallelDistribution4ArgNameAndIndex("out", 0));
+      const TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("in", 0);
+      TensorSliceView view = GetTensorSliceView4ParallelId(hierarchy, in_parallel_distribution,
+                                                           in_logical_desc->shape(),
+                                                           ctx->parallel_ctx().parallel_id());
+      return std::make_shared<GatherOpKernelState>(view.At(axis).begin(), view.At(axis).end());
+    } else {
+      return std::shared_ptr<OpKernelState>(nullptr);
+    }
   }
 
  private:
