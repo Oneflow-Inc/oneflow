@@ -118,7 +118,7 @@ jobs:
           python3 ci/build/ensure_img.py
           python_version=${python_version:-"3.6,3.7,3.8"}
           compute_platforms=${compute_platforms:-"cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"}
-          if [ "${{ matrix.package_name }}" != "oneflow" ]; then
+          if [ ! -z "${{ matrix.package_name }}"] && [ "${{ matrix.package_name }}" != "oneflow" ]; then
               extra_flags+=" --package_name=${{ matrix.package_name }}"
           fi
           echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
