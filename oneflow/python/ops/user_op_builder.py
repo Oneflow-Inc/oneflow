@@ -373,9 +373,9 @@ class UserOpConfBuilder(object):
                 attribute.mutable_at_list_int64.add_val(x)
         elif attr_type == user_op_attr_cfg.kAtListFloat:
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, (float, int)) for x in attr_value)
-            for x in list(map(lambda x: float(x), attr_value)):
-                attribute.mutable_at_list_float.add_val(x)
+            for x in attr_value:
+                assert isinstance(x, (float, int))
+                attribute.mutable_at_list_float.add_val(float(x))
         elif attr_type == user_op_attr_cfg.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
@@ -388,7 +388,7 @@ class UserOpConfBuilder(object):
         elif attr_type == user_op_attr_cfg.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
-                assert isinstance(x, tuple) or isinstance(x, list)
+                assert isinstance(x, (tuple, list))
                 shape = shape_cfg.ShapeProto()
                 for dim in x:
                     assert isinstance(dim, int)

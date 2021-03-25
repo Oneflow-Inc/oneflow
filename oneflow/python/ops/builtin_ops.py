@@ -157,7 +157,7 @@ class BuiltinOp(object):
         elif attr_type == user_op_attr_cfg.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
-                assert isinstance(x, tuple) or isinstance(x, list)
+                assert isinstance(x, (tuple, list))
                 shape = shape_cfg.ShapeProto()
                 for dim in x:
                     assert isinstance(dim, int)
