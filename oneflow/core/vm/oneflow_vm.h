@@ -43,7 +43,6 @@ class OneflowVM final {
   HashMap<vm::ThreadCtx*, std::unique_ptr<ThreadPool>> thread_ctx2thread_pool_;
   std::thread loop_thread_;
   bool exiting_;
-  mutable std::mutex mutex_;
 
   void Loop();
 };

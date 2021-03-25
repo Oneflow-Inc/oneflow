@@ -47,6 +47,7 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
 }
 
 Maybe<void> Sync() {
+  // TODO(jianhao): get the right in_main_thread flag
   bool in_main_thread = true;
   if (!Global<ResourceDesc, ForSession>::Get()->async_eager_execution() && in_main_thread) {
     return Maybe<void>::Ok();
