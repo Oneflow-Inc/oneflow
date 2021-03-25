@@ -328,6 +328,8 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         if (IsConsumedCtrlRegstDescId(msg.regst_desc_id())) {
           Regst* regst = msg.regst();
           CHECK(naive_consumed_rs_.HasRegstDescId(msg.regst_desc_id()));
+          CHECK(consumed_regst_desc_id2addr_.find(msg.regst_desc_id())
+                != consumed_regst_desc_id2addr_.end());
           CHECK_EQ(0, naive_consumed_rs_.TryPushBackRegst(regst, msg.regst_desc_id()));
           const auto& rdeq = naive_consumed_rs_.RegstDeq4RegstDescId(msg.regst_desc_id());
           CHECK(rdeq.empty() == false);
