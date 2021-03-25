@@ -28,6 +28,8 @@ namespace oneflow {
 
 namespace {
 
+static const int32_t kInvlidPort = 0;
+
 sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
   sockaddr_in sa;
   sa.sin_family = AF_INET;
@@ -37,17 +39,29 @@ sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
   return sa;
 }
 
-int SockListen(int listen_sockfd, uint16_t listen_port, int32_t total_machine_num) {
-  sockaddr_in sa = GetSockAddr("0.0.0.0", listen_port);
+int SockListen(int listen_sockfd, int32_t* listen_port, int32_t total_machine_num) {
+  // System designated available port if listen_port == kInvlidPort, otherwise, the configured port
+  // is used.
+  sockaddr_in sa = GetSockAddr("0.0.0.0", *listen_port);
   int reuse = 1;
   int ret_setopt =
       setsockopt(listen_sockfd, SOL_SOCKET, SO_REUSEADDR, (const void*)&reuse, sizeof(int));
   CHECK_EQ(ret_setopt, 0);
   int bind_result = bind(listen_sockfd, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
+  {
+    sockaddr_in bound_sock;
+    socklen_t bound_sock_size = sizeof(bound_sock);
+    getsockname(listen_sockfd, reinterpret_cast<sockaddr*>(&bound_sock), &bound_sock_size);
+    if (*listen_port != kInvlidPort) {
+      CHECK_EQ(*listen_port, static_cast<int32_t>(ntohs(bound_sock.sin_port)));
+    } else {
+      *listen_port = static_cast<int32_t>(ntohs(bound_sock.sin_port));
+    }
+  }
   if (bind_result == 0) {
     PCHECK(listen(listen_sockfd, total_machine_num) == 0);
     LOG(INFO) << "CommNet:Epoll listening on "
-              << "0.0.0.0:" + std::to_string(listen_port);
+              << "0.0.0.0:" + std::to_string(*listen_port);
   } else {
     PCHECK(errno == EACCES || errno == EADDRINUSE) << "SockListen errno: " << errno;
   }
@@ -125,7 +139,7 @@ EpollCommNet::EpollCommNet(const Plan& plan) : CommNetIf(plan) {
 void EpollCommNet::InitSockets() {
   int64_t this_machine_id = GlobalProcessCtx::Rank();
   auto this_machine = Global<ResourceDesc, ForSession>::Get()->machine(this_machine_id);
-  int64_t total_machine_num = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
+  int64_t total_machine_num = Global<ResourceDesc, ForSession>::Get()->process_ranks().size();
   machine_id2sockfd_.assign(total_machine_num, -1);
   sockfd2helper_.clear();
   size_t poller_idx = 0;
@@ -137,21 +151,17 @@ void EpollCommNet::InitSockets() {
 
   // listen
   int listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  int32_t this_listen_port = Global<EnvDesc>::Get()->data_port();
-  if (this_listen_port != -1) {
-    CHECK_EQ(SockListen(listen_sockfd, this_listen_port, total_machine_num), 0);
-    PushPort(this_machine_id,
-             ((this_machine.data_port_agent() != -1) ? (this_machine.data_port_agent())
-                                                     : (this_listen_port)));
-  } else {
-    for (this_listen_port = 1024; this_listen_port < GetMaxVal<uint16_t>(); ++this_listen_port) {
-      if (SockListen(listen_sockfd, this_listen_port, total_machine_num) == 0) {
-        PushPort(this_machine_id, this_listen_port);
-        break;
-      }
+  int32_t this_listen_port = kInvlidPort;
+  {
+    if (this_machine.data_port_agent() != -1) {
+      this_listen_port = this_machine.data_port_agent();
+    } else if (Global<EnvDesc>::Get()->data_port() != -1) {
+      this_listen_port = Global<EnvDesc>::Get()->data_port();
     }
-    CHECK_LT(this_listen_port, GetMaxVal<uint16_t>());
   }
+  CHECK_EQ(SockListen(listen_sockfd, &this_listen_port, total_machine_num), 0);
+  CHECK_NE(this_listen_port, 0);
+  PushPort(this_machine_id, this_listen_port);
   int32_t src_machine_count = 0;
 
   // connect
@@ -175,6 +185,7 @@ void EpollCommNet::InitSockets() {
   }
 
   // accept
+  HashSet<int64_t> processed_ranks;
   FOR_RANGE(int32_t, idx, 0, src_machine_count) {
     sockaddr_in peer_sockaddr;
     socklen_t len = sizeof(peer_sockaddr);
@@ -184,6 +195,7 @@ void EpollCommNet::InitSockets() {
     ssize_t n = read(sockfd, &peer_rank, sizeof(int64_t));
     PCHECK(n == sizeof(int64_t));
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
+    CHECK(processed_ranks.emplace(peer_rank).second);
     machine_id2sockfd_[peer_rank] = sockfd;
   }
   PCHECK(close(listen_sockfd) == 0);

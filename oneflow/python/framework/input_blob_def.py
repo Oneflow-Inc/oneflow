@@ -24,6 +24,7 @@ import numpy as np
 import oneflow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.operator.interface_blob_conf_pb2 as inter_face_blob_conf_util
+import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.distribute as distribute_util
@@ -114,7 +115,9 @@ class ArgBlobDef(object):
         interface_blob_conf.is_dynamic = self.is_dynamic
         # NOTE(chengcheng): rm batch_axis, so set split_axis always = 0 for safe. will support
         #     set sbp in future, or will delete in multi-client
-        interface_blob_conf.split_axis.value = 0
+        sbp_parallel = sbp_parallel_pb.SbpParallel()
+        sbp_parallel.split_parallel.axis = 0
+        interface_blob_conf.parallel_distribution.sbp_parallel.extend([sbp_parallel])
         return interface_blob_conf
 
     def _Distribute2Str(self):
@@ -154,10 +157,10 @@ class FixedTensorDef(ArgBlobDef):
             and parallel_symbol.parallel_num == 1
         ):
             device_tag = "gpu"
-            device_ids = "0:%s" % (parallel_symbol.machine_id2device_id_list[0][0])
+            device_ids = "@0:%s" % (parallel_symbol.machine_id2device_id_list[0][0])
         else:
             device_tag = "cpu"
-            device_ids = "0:0"
+            device_ids = "@0:0"
         with oneflow.scope.placement(device_tag, device_ids):
             return compile_context.CurJobAddConsistentOp(op_conf)
 
