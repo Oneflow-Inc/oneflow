@@ -78,11 +78,15 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(
 }
 
 Maybe<void> EagerOneflow::RunPhysicalInstruction(
-    const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list_proto,
+    const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
     const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) {
   auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
-  instruction_list_proto->ToProto(
-      cluster_instruction->mutable_eager_instruction()->mutable_instruction_list());
+  auto* repeated_instruction_proto = cluster_instruction->mutable_eager_instruction()
+                                         ->mutable_instruction_list()
+                                         ->mutable_instruction();
+  OBJECT_MSG_LIST_FOR_EACH_PTR(instruction_list.get(), instruction_msg) {
+    instruction_msg->ToProto(repeated_instruction_proto->Add());
+  }
   eager_symbol_list->ToProto(
       cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list());
   return RunPhysicalInstruction(
@@ -98,11 +102,15 @@ Maybe<void> EagerOneflow::RunLogicalInstruction(
 }
 
 Maybe<void> EagerOneflow::RunLogicalInstruction(
-    const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list_proto,
+    const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
     const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) {
   auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
-  instruction_list_proto->ToProto(
-      cluster_instruction->mutable_eager_instruction()->mutable_instruction_list());
+  auto* repeated_instruction_proto = cluster_instruction->mutable_eager_instruction()
+                                         ->mutable_instruction_list()
+                                         ->mutable_instruction();
+  OBJECT_MSG_LIST_FOR_EACH_PTR(instruction_list.get(), instruction_msg) {
+    instruction_msg->ToProto(repeated_instruction_proto->Add());
+  }
   eager_symbol_list->ToProto(
       cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list());
   return RunLogicalInstruction(
