@@ -37,7 +37,6 @@ class OneflowVM final {
 
   vm::VirtualMachine* mut_vm() { return vm_.Mutable(); }
   void TryReceiveAndRun();
-  void Sync();
 
  private:
   ObjectMsgPtr<vm::VirtualMachine> vm_;

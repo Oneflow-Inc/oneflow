@@ -37,21 +37,11 @@ OneflowVM::~OneflowVM() {
 void OneflowVM::Loop() {
   auto* vm = mut_vm();
   while (!exiting_) {
-    if (Global<ResourceDesc, ForSession>::Get()
-        && Global<ResourceDesc, ForSession>::Get()->async_eager_execution()) {
-      std::lock_guard<std::mutex> lock(mutex_);
+    auto* resource = Global<ResourceDesc, ForSession>::Get();
+    if (resource && resource->async_eager_execution()) {
       vm->Schedule();
       TryReceiveAndRun();
     }
-  }
-}
-
-void OneflowVM::Sync() {
-  auto* vm = mut_vm();
-  while (true) {
-    // object msg is not thread safe so add a mutex here
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (vm->Empty()) { break; }
   }
 }
 

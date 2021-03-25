@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/cluster_instruction.h"
@@ -22,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 
@@ -58,8 +60,25 @@ Maybe<void> Run(const InstructionListProto& instruction_list_proto) {
 }
 
 Maybe<void> Sync() {
+  bool in_main_thread = true;
+  if (!Global<ResourceDesc, ForSession>::Get()->async_eager_execution() && in_main_thread) {
+    return Maybe<void>::Ok();
+  }
+
+  InstructionMsgList instr_msg_list;
+  auto instr_msg = ObjectMsgPtr<vm::InstructionMsg>::New("RankFrontSeqComputeCallback");
+  instr_msg->add_int64_operand(0);
+  BlockingCounter bc(1);
+  *instr_msg->mutable_no_arg_callback() =
+      std::make_shared<std::function<void()>>([&bc]() { bc.Decrease(); });
+  instr_msg_list.EmplaceBack(std::move(instr_msg));
+
   auto* oneflow_vm = JUST(GlobalMaybe<OneflowVM>());
-  oneflow_vm->Sync();
+  auto* vm = oneflow_vm->mut_vm();
+  vm->Receive(&instr_msg_list);
+
+  bc.WaitUntilCntEqualZero();
+
   // TODO(jianhao): update it when multi client is ready
   ClusterInstruction::MasterSendEagerSync();
   return Maybe<void>::Ok();

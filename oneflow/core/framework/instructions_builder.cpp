@@ -858,6 +858,26 @@ Maybe<void> InstructionsBuilder::FeedBlob(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InstructionsBuilder::RankFrontSeqInferCallback(
+    int64_t rank, std::shared_ptr<std::function<void()>> callback) {
+  ObjectMsgPtr<vm::InstructionMsg> instruction =
+      ObjectMsgPtr<vm::InstructionMsg>::New("RankFrontSeqInterCallback");
+  instruction->add_int64_operand(rank);
+  *instruction->mutable_no_arg_callback() = callback;
+  instruction_list_->PushBack(instruction.Mutable());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::RankFrontSeqComputeCallback(
+    int64_t rank, std::shared_ptr<std::function<void()>> callback) {
+  ObjectMsgPtr<vm::InstructionMsg> instruction =
+      ObjectMsgPtr<vm::InstructionMsg>::New("RankFrontSeqComputeCallback");
+  instruction->add_int64_operand(rank);
+  *instruction->mutable_no_arg_callback() = callback;
+  instruction_list_->PushBack(instruction.Mutable());
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InstructionsBuilder::FetchBlobHeader(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
   JUST(_FetchBlob("FetchBlobHeader", blob_object, callback_id));

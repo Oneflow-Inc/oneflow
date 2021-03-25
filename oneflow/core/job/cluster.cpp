@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/thread/thread_pool.h"
-#include "oneflow/core/vm/oneflow_vm.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 
@@ -79,8 +79,7 @@ Maybe<void> Cluster::WorkerLoop() {
         Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(
             std::const_pointer_cast<const ClusterInstructionProto>(mut_cluster_instruction));
       } else if (mut_cluster_instruction->has_cluster_ctrl_eager_sync()) {
-        auto* oneflow_vm = JUST(GlobalMaybe<OneflowVM>());
-        oneflow_vm->Sync();
+        vm::Sync();
         ClusterInstruction::EagerSyncBarrier();
       } else {
         OF_UNIMPLEMENTED();
