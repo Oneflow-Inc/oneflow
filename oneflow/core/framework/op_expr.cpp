@@ -22,7 +22,14 @@ namespace oneflow {
 namespace one {
 
 Maybe<OpExprGradInterface> UserOpExpr::GetOrCreateOpGrad() const {
-  if (!op_grad_.get()) { op_grad_.reset(NewObj<std::string, OpExprGrad>(proto().op_type_name())); }
+  if (!op_grad_.get()) {
+    if (IsClassRegistered<std::string, OpExprGrad>(proto().op_type_name())) {
+      op_grad_.reset(NewObj<std::string, OpExprGrad>(proto().op_type_name()));
+    } else {
+      op_grad_.reset(NewObj<std::string, OpExprGrad>("default"));
+    }
+  }
+  CHECK_NOTNULL_OR_RETURN(op_grad_.get());
   op_grad_->Init(*this);
   return std::make_shared<OpExprGradInterface>(op_grad_);
 }
