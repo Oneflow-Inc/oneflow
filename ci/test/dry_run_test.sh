@@ -14,6 +14,7 @@ cd $test_tmp_dir/benchmarks
 
 export ONEFLOW_DRY_RUN=1
 export ONEFLOW_DEBUG_MODE=1
+
 generated_node_list=$(python -c 'print(",".join(["mocknode_" + str(x) for x in range(32)]))')
 time python3 bert_benchmark/run_pretraining.py \
     --gpu_num_per_node=1 \
@@ -36,4 +37,5 @@ time python3 bert_benchmark/run_pretraining.py \
     --hidden_dropout_prob=0.1 \
     --hidden_size_per_head=64 \
     --node_list=${generated_node_list} \
+    --node_num=32 \
     --gpu_num_per_node=8
