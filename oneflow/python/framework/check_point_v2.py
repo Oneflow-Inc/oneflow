@@ -120,7 +120,9 @@ class FileBackendVariableBlob:
         ).reshape(self.shape)
 
 
-ValueContainer = Union[EagerBlobTrait, FileBackendVariableBlob, np.ndarray]
+ValueContainer = Union[
+    EagerBlobTrait, FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"
+]
 
 
 def _ElemCnt(shape):
@@ -152,7 +154,7 @@ def _LoadSingleVariable(path: str) -> Optional[FileBackendVariableBlob]:
     return None
 
 
-@oneflow_export("checkpoint.get")
+@oneflow_export("checkpoint.get", "load")
 @session_ctx.try_init_default_session
 def GetCheckpoint(
     path: str,
@@ -192,7 +194,16 @@ def _ReadSlice(
     Return a generator which iterates over the input blob or array and yields
     (start_nd_idx, stop_nd_idx, slice_np_array)
     """
-    if isinstance(container, EagerBlobTrait):
+    if isinstance(container, oneflow.Tensor):
+
+        def ReadFromTensor(tensor, start_nd_idx, stop_nd_idx):
+            with tensor._placement_scope():
+                return _LogicalSlice(
+                    tensor._blob_object, start_nd_idx, stop_nd_idx, None
+                )
+
+        yield from _ForEachSlice(container, ReadFromTensor)
+    elif isinstance(container, EagerBlobTrait):
 
         def ReadFromEagerBlob(eager_blob, start_nd_idx, stop_nd_idx):
             scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(eager_blob)
@@ -253,7 +264,9 @@ def SaveVarDict(
 
     assert not IsFileOrNonEmptyDir(
         path
-    ), "Non-empty directory {} already exists!".format(path)
+    ), "{} is a file or non-empty directory! Note that flow.save is different from torch.save. It saves each weight as a separated file so that a directory instead of a file should be given.".format(
+        path
+    )
     os.makedirs(path, exist_ok=True)
     for name, var in var_dict.items():
         meta_info = variable_meta_info_pb.VariableMetaInfo()
@@ -271,6 +284,11 @@ def SaveVarDict(
     # the save process finishes normally
     with open(os.path.join(path, "snapshot_done"), "w"):
         pass
+
+
+@oneflow_export("save")
+def save(obj, save_dir):
+    return SaveVarDict(save_dir, obj)
 
 
 def _LogicalSlice(
@@ -420,7 +438,7 @@ def FeedValueToVariable(
     Feed the value of `value` to the variable `var_blob`
     """
     assert isinstance(
-        value, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray)
+        value, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray, oneflow.Tensor)
     ), "Unknown value type: {}".format(type(value).__name__)
 
     if isinstance(value, FileBackendVariableBlob):

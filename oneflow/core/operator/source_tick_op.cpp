@@ -24,8 +24,6 @@ void SourceTickOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-LogicalNode* SourceTickOp::NewProperLogicalNode() const { return new SourceTickLogicalNode(); }
-
 Maybe<void> SourceTickOp::InferLogicalOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc& parallel_desc) const {

@@ -50,28 +50,14 @@ class Linear(Module):
         super().__init__()
 
         self.use_bias = bias
-        self.weight = flow.nn.Parameter(
-            flow.Tensor(
-                out_features,
-                in_features,
-                data_initializer=flow.random_uniform_initializer(minval=-1, maxval=1),
-            )
-        )
+        self.weight = flow.nn.Parameter(flow.Tensor(out_features, in_features))
 
         if bias:
 
-            self.bias = flow.nn.Parameter(
-                flow.Tensor(
-                    out_features,
-                    data_initializer=flow.random_uniform_initializer(
-                        minval=-1, maxval=1
-                    ),
-                )
-            )
+            self.bias = flow.nn.Parameter(flow.Tensor(out_features))
 
             self._bias_add_op = (
                 flow.builtin_op("bias_add")
-                .Name("bias_add")
                 .Input("a")
                 .Input("b")
                 .Output("out")
@@ -81,7 +67,6 @@ class Linear(Module):
 
         self._op = (
             flow.builtin_op("matmul")
-            .Name("matmul")
             .Input("a")
             .Input("b")
             .Output("out")

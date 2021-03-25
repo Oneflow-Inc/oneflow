@@ -24,17 +24,17 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Session, std::shared_ptr<Session>>(m, "Session")
       .def_property_readonly("id", &Session::id)
-      .def("PushMirroredStrategyEnabled",
+      .def("push_mirrored_strategy_enabled",
            [](Session* sess, const bool& val) {
              sess->PushMirroredStrategyEnabled(val).GetOrThrow();
            })
-      .def("PopMirroredStrategyEnabled",
+      .def("pop_mirrored_strategy_enabled",
            [](Session* sess) { sess->PopMirroredStrategyEnabled().GetOrThrow(); })
-      .def("IsMirroredStrategyEnabled",
+      .def("is_mirrored_strategy_enabled",
            [](const Session* sess) { return sess->IsMirroredStrategyEnabled().GetOrThrow(); })
-      .def("IsConsistentStrategyEnabled",
+      .def("is_consistent_strategy_enabled",
            [](const Session* sess) { return sess->IsConsistentStrategyEnabled().GetOrThrow(); })
-      .def("IsMirroredStrategyEnabledStackSize",
+      .def("is_mirrored_strategy_enabled_stack_size",
            [](const Session* sess) { return sess->is_mirrored_strategy_enabled_stack()->size(); });
 
   m.def("GetDefaultSessionId", []() { return GetDefaultSessionId().GetOrThrow(); });
