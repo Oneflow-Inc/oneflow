@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter_util.h"
+#include "oneflow/core/framework/op_expr_grad.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/scope_util.h"
@@ -78,7 +79,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const BuiltinOpExpr& op_expr, const Tenso
         compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, proto_op_attribute, obn));
     const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(proto_op_attribute, obn));
     if (!(outputs->at(i).get())) {
-      (*outputs)[i] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
+      auto t = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
+      outputs->at(i).swap(t);
     } else {
       // TODO(hjchen2) Reset shape, dtype and so on.
       UNIMPLEMENTED();
@@ -134,7 +136,8 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
         std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util.get(), _1, _2, _3)));
     for (int i = 0; i < outputs->size(); ++i) {
       const std::string& obn = op_expr.indexed_obns().at(i);
-      (*outputs)[i] = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(bn2blob_object->at(obn)));
+      auto t = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(bn2blob_object->at(obn)));
+      outputs->at(i).swap(t);
     }
   };
   return LogicalRun(build_instruction);
@@ -169,7 +172,8 @@ static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_ex
     const auto& out_blob_object = CHECK_JUST(builder->MakeReferenceBlobObject(
         in_blob_object,
         std::make_shared<compatible_py::OpArgParallelAttribute>(*op_arg_parallel_attr)));
-    (*outputs)[0] = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(out_blob_object));
+    auto t = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(out_blob_object));
+    outputs->at(0).swap(t);
   };
   return LogicalRun(build_instruction);
 }
@@ -213,8 +217,9 @@ static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpE
     const auto& physical_out_blob_objects =
         CHECK_JUST(builder->UnpackLogicalBlobToPhysicalBlobs(logical_in_blob_object));
     for (int i = 0; i < physical_out_blob_objects->size(); ++i) {
-      (*outputs)[i] =
+      auto t =
           CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(physical_out_blob_objects->at(i)));
+      outputs->at(i).swap(t);
     }
   };
   return LogicalRun(build_instruction);
@@ -254,7 +259,8 @@ static Maybe<void> BuildAndRunDistributeConcatAndAddInstruction(const BuiltinOpE
     }
     const auto& physical_out_blob_object = CHECK_JUST(builder->PackPhysicalBlobsToLogicalBlob(
         in_blob_objects, op_arg_parallel_attr, op_arg_blob_attr));
-    (*outputs)[0] = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(physical_out_blob_object));
+    auto t = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(physical_out_blob_object));
+    outputs->at(0).swap(t);
   };
   return LogicalRun(build_instruction);
 }
@@ -280,7 +286,6 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
                                        TensorTuple* outputs) const {
   // TODO(hjchen2)
   JUST(internal_->Apply(op_expr, inputs, outputs));
-  if (op_expr.input_num()) { const auto& grad = JUST(op_expr.GetOrCreateOpGrad()); }
   return Maybe<void>::Ok();
 }
 
