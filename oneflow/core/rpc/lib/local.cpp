@@ -18,6 +18,8 @@ limitations under the License.
 #include "glog/logging.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/rpc/include/local.h"
+#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -31,6 +33,10 @@ void LocalCtrlClient::Barrier(const std::string& barrier_name) {
 }
 
 void LocalCtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
+  if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+    LOG(ERROR) << "skipping barrier: " << barrier_name;
+    return;
+  }
   CHECK(barrier_num == 1);
 }
 
@@ -87,7 +93,11 @@ void LocalCtrlClient::PullKV(const std::string& k,
   while (true) {
     auto it = kv_.find(k);
     if (it == kv_.end()) {
-      LOG(INFO) << "waiting for key: " << k;
+      if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+        LOG(ERROR) << "waiting for key: " << k;
+      } else {
+        LOG(INFO) << "waiting for key: " << k;
+      }
       kv_cv_.wait(lck);
     } else {
       VGetter(kv_.at(k));

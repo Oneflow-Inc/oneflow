@@ -287,7 +287,7 @@ def main():
             nodes.append(addr_dict)
 
         flow.env.machine(nodes)
-    if os.getenv("ONEFLOW_DEBUG_MODE"):
+    if os.getenv("ONEFLOW_DRY_RUN"):
         flow.env.ctrl_port(9788)
     check_point = flow.train.CheckPoint()
     if args.model_load_dir:

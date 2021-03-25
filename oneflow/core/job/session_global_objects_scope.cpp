@@ -46,12 +46,21 @@ std::string GetAmdCtrlKey(int64_t machine_id) {
 
 void PushAvailableMemDescOfThisMachine() {
   AvailableMemDescOfMachine this_machine_mem_desc;
+  if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef WITH_CUDA
-  FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
-    this_machine_mem_desc.add_zone_size(GetAvailableGpuMemSize(i));
-  }
+    FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
+      this_machine_mem_desc.add_zone_size(std::numeric_limits<size_t>::max());
+    }
 #endif
-  this_machine_mem_desc.add_zone_size(GetAvailableCpuMemSize());
+    this_machine_mem_desc.add_zone_size(std::numeric_limits<size_t>::max());
+  } else {
+#ifdef WITH_CUDA
+    FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
+      this_machine_mem_desc.add_zone_size(GetAvailableGpuMemSize(i));
+    }
+#endif
+    this_machine_mem_desc.add_zone_size(GetAvailableCpuMemSize());
+  }
   Global<CtrlClient>::Get()->PushKV(GetAmdCtrlKey(GlobalProcessCtx::Rank()), this_machine_mem_desc);
 }
 
@@ -59,7 +68,11 @@ AvailableMemDesc PullAvailableMemDesc() {
   AvailableMemDesc ret;
   AvailableMemDescOfMachine machine_amd_i;
   for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
-    Global<CtrlClient>::Get()->PullKV(GetAmdCtrlKey(i), ret.add_machine_amd());
+    if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+      Global<CtrlClient>::Get()->PullKV(GetAmdCtrlKey(0), ret.add_machine_amd());
+    } else {
+      Global<CtrlClient>::Get()->PullKV(GetAmdCtrlKey(i), ret.add_machine_amd());
+    }
   }
   return ret;
 }
