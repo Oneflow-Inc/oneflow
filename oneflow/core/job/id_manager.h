@@ -44,8 +44,6 @@ class IDMgr final {
     return mem_zone_id;
   }
 
-  int64_t MachineId4TaskId(int64_t task_id) const;
-
   // GetFromThrdId
   DeviceType GetDeviceTypeFromThrdId(int64_t thrd_id) const;
   int64_t GetGpuPhyIdFromThrdId(int64_t thrd_id) const;

@@ -38,6 +38,8 @@ class RegstMgr final {
   void NewRegsts(const RegstDescProto& regst_desc_proto, std::function<void(Regst*)> OneRegstDone);
   const RtRegstDesc& RegstDesc4RegstDescId(int64_t regst_desc_id) const;
   bool HasRegstDescId(int64_t regst_desc_id) const;
+  const RegstDescAddr& RegstDescAddr4RegstDescId(int64_t regst_desc_id) const;
+  bool HasRegstDescAddr4RegstDescId(int64_t regst_desc_id) const;
   Blob* Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id);
 
  private:
@@ -50,6 +52,7 @@ class RegstMgr final {
   HashMap<LogicalBlobId, HashMap<int64_t, Blob*>> lbi2parallel_id2blob_;
   HashMap<int64_t, char*> mem_block_id2ptr_;
   HashMap<int64_t, ParallelContext> regst_desc_id2parallel_ctx_;
+  HashMap<int64_t, RegstDescAddr> regst_desc_id2regst_desc_addr_;
   std::mutex mutex_;
 };
 

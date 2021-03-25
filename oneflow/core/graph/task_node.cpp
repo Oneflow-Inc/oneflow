@@ -221,19 +221,19 @@ void TaskNode::ToProto(TaskProto* task_proto) {
     CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
   }
   auto* consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
-  auto* consumed_regst_desc_id2addr = task_proto->mutable_consumed_regst_desc_id2addr();
+  auto* consumed_ctrl_regst_desc_id2addr = task_proto->mutable_consumed_ctrl_regst_desc_id2addr();
   for (const auto& pair : consumed_regsts_) {
     RegstDescIdSet regst_desc_ids;
     for (const std::shared_ptr<RegstDesc>& regst : pair.second) {
       regst_desc_ids.add_regst_desc_id(regst->regst_desc_id());
-      RegstDescAddr regst_desc_addr;
-      regst_desc_addr.set_rank(regst->producer()->machine_id());
-      regst_desc_addr.set_task_id(regst->producer()->task_id());
       if (regst->regst_desc_type().has_ctrl_regst_desc()) {
+        RegstDescAddr regst_desc_addr;
+        regst_desc_addr.set_task_id(regst->producer()->task_id());
         regst_desc_addr.set_returned_regst_num(
             regst->regst_desc_type().ctrl_regst_desc().returned_regst_num());
+        CHECK(consumed_ctrl_regst_desc_id2addr->insert({regst->regst_desc_id(), regst_desc_addr})
+                  .second);
       }
-      CHECK(consumed_regst_desc_id2addr->insert({regst->regst_desc_id(), regst_desc_addr}).second);
     }
     CHECK(consumed_regst_proto->insert({pair.first, regst_desc_ids}).second);
   }
@@ -457,17 +457,15 @@ RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
 }
 
 void DumpToConsumedRegstDescId2Addr(const RegstDescProto& regst_desc_proto, TaskProto* task_proto) {
-  auto* consumed_regst_desc_id2addr = task_proto->mutable_consumed_regst_desc_id2addr();
+  CHECK(regst_desc_proto.regst_desc_type().has_ctrl_regst_desc());
+  auto* consumed_ctrl_regst_desc_id2addr = task_proto->mutable_consumed_ctrl_regst_desc_id2addr();
   RegstDescAddr regst_desc_addr;
-  regst_desc_addr.set_rank(
-      Global<IDMgr>::Get()->MachineId4TaskId(regst_desc_proto.producer_task_id()));
   regst_desc_addr.set_task_id(regst_desc_proto.producer_task_id());
-  if (regst_desc_proto.regst_desc_type().has_ctrl_regst_desc()) {
-    regst_desc_addr.set_returned_regst_num(
-        regst_desc_proto.regst_desc_type().ctrl_regst_desc().returned_regst_num());
-  }
-  CHECK(consumed_regst_desc_id2addr->insert({regst_desc_proto.regst_desc_id(), regst_desc_addr})
-            .second);
+  regst_desc_addr.set_returned_regst_num(
+      regst_desc_proto.regst_desc_type().ctrl_regst_desc().returned_regst_num());
+  CHECK(
+      consumed_ctrl_regst_desc_id2addr->insert({regst_desc_proto.regst_desc_id(), regst_desc_addr})
+          .second);
 }
 
 void TaskNode::ForEachInDataEdge(const std::function<void(TaskEdge*)>& Handler) const {

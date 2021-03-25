@@ -41,9 +41,8 @@ enum TaskType {
 };
 
 message RegstDescAddr {
-    required int64 rank = 1;
-    required int64 task_id = 2;
-    optional int64 returned_regst_num = 3 [default = 1];
+    required int64 task_id = 1;
+    optional int64 returned_regst_num = 2 [default = 1];
 }
 
 message RegstDescIdSet {
@@ -66,7 +65,7 @@ message TaskProto {
   required ExecSequence exec_sequence = 7;
   map<string, RegstDescProto> produced_regst_desc = 8;
   map<string, RegstDescIdSet> consumed_regst_desc_id = 9;
-  map<int64, RegstDescAddr> consumed_regst_desc_id2addr = 10;
+  map<int64, RegstDescAddr> consumed_ctrl_regst_desc_id2addr = 10;
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
 };

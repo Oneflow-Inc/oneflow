@@ -824,7 +824,6 @@ Maybe<void> ConnectCriticalSectionEndToReentrantLockEnd(
   cs_end_regst->add_consumer_task_id(reentrant_lock_task->task_id());
   reentrant_lock_task->mutable_consumed_regst_desc_id()->at("in").add_regst_desc_id(
       cs_end_regst->regst_desc_id());
-  DumpToConsumedRegstDescId2Addr(*cs_end_regst, reentrant_lock_task);
 
   auto* reentrant_exec_node = reentrant_lock_task->mutable_exec_sequence()->mutable_exec_node(0);
   (*reentrant_exec_node->mutable_bn_in_op2regst_desc_id())["end"] = cs_end_regst->regst_desc_id();
