@@ -17,8 +17,6 @@ message DataRegstDesc {
 }
 
 message CtrlRegstDesc {
-  optional int64 reliant_regst_desc_id = 1;
-  optional int32 returned_regst_num = 2 [default = 1];
 }
 
 message RegstDescTypeProto {
