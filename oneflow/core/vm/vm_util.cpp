@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/oneflow_vm.h"
-#include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -34,22 +33,10 @@ ObjectMsgPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name) 
   return ObjectMsgPtr<InstructionMsg>::New(instr_type_name);
 }
 
-Maybe<void> Run(const std::string& instruction_list_str) {
-  InstructionListProto instruction_list_proto;
-  CHECK_OR_RETURN(TxtString2PbMessage(instruction_list_str, &instruction_list_proto))
-      << "InstructionListProto parse failed";
-  return Run(instruction_list_proto);
-}
-
-Maybe<void> Run(const InstructionListProto& instruction_list_proto) {
-  InstructionMsgList instr_msg_list;
-  for (const auto& instr_proto : instruction_list_proto.instruction()) {
-    auto instr_msg = ObjectMsgPtr<InstructionMsg>::New(instr_proto);
-    instr_msg_list.EmplaceBack(std::move(instr_msg));
-  }
+Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
   auto* oneflow_vm = JUST(GlobalMaybe<OneflowVM>());
   auto* vm = oneflow_vm->mut_vm();
-  vm->Receive(&instr_msg_list);
+  vm->Receive(instr_msg_list);
   if (!Global<ResourceDesc, ForSession>::Get()->async_eager_execution()) {
     while (!vm->Empty()) {
       vm->Schedule();
