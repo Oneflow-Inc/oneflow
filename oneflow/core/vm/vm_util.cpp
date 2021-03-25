@@ -52,17 +52,11 @@ Maybe<void> Sync() {
     return Maybe<void>::Ok();
   }
 
-  InstructionMsgList instr_msg_list;
-  auto instr_msg = ObjectMsgPtr<vm::InstructionMsg>::New("RankFrontSeqComputeCallback");
-  instr_msg->add_int64_operand(0);
   BlockingCounter bc(1);
-  *instr_msg->mutable_no_arg_callback() =
-      std::make_shared<std::function<void()>>([&bc]() { bc.Decrease(); });
-  instr_msg_list.EmplaceBack(std::move(instr_msg));
-
-  auto* oneflow_vm = JUST(GlobalMaybe<OneflowVM>());
-  auto* vm = oneflow_vm->mut_vm();
-  vm->Receive(&instr_msg_list);
+  PhysicalRun([&bc](const std::shared_ptr<InstructionsBuilder>& builder) {
+    builder->RankFrontSeqComputeCallback(
+        std::make_shared<std::function<void()>>([&bc]() { bc.Decrease(); }));
+  });
 
   bc.WaitUntilCntEqualZero();
 

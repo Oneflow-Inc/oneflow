@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/framework/blob_cache.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -859,20 +860,20 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 }
 
 Maybe<void> InstructionsBuilder::RankFrontSeqInferCallback(
-    int64_t rank, std::shared_ptr<std::function<void()>> callback) {
+    std::shared_ptr<std::function<void()>> callback) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New("RankFrontSeqInterCallback");
-  instruction->add_int64_operand(rank);
+  instruction->add_int64_operand(GlobalProcessCtx::Rank());
   *instruction->mutable_no_arg_callback() = callback;
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InstructionsBuilder::RankFrontSeqComputeCallback(
-    int64_t rank, std::shared_ptr<std::function<void()>> callback) {
+    std::shared_ptr<std::function<void()>> callback) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New("RankFrontSeqComputeCallback");
-  instruction->add_int64_operand(rank);
+  instruction->add_int64_operand(GlobalProcessCtx::Rank());
   *instruction->mutable_no_arg_callback() = callback;
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
