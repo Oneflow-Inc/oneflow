@@ -202,4 +202,3 @@ class FakeQuantization:
     @classmethod
     def Version_13(cls, ctx: Graph, node: Node, **kwargs):
         cls.Version_10(ctx, node, **kwargs)
-
