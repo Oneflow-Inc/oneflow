@@ -27,18 +27,14 @@ class DistributeConcatCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
-  bool IsReadyForBuild() override;
 
   TaskType GetTaskType() const override { return TaskType::kDistributeConcat; }
-  bool HasBackwardCompTaskNode();
 
  private:
   void BuildExecGphAndRegst() override;
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
 };
-
-bool DistributeConcatCompTaskNode::HasBackwardCompTaskNode() { return false; }
 
 void DistributeConcatCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", true);
@@ -52,10 +48,6 @@ void DistributeConcatCompTaskNode::ConsumeAllRegsts() {
     ConsumeRegst("in", edge->GetSoleRegst());
   });
   CHECK_EQ(cnt, 1);
-}
-
-bool DistributeConcatCompTaskNode::IsReadyForBuild() {
-  return GetSoleConsumedRegst("in")->IsLocked();
 }
 
 void DistributeConcatCompTaskNode::BuildExecGphAndRegst() {

@@ -24,6 +24,7 @@ import numpy as np
 import oneflow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.operator.interface_blob_conf_pb2 as inter_face_blob_conf_util
+import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.distribute as distribute_util
@@ -114,7 +115,9 @@ class ArgBlobDef(object):
         interface_blob_conf.is_dynamic = self.is_dynamic
         # NOTE(chengcheng): rm batch_axis, so set split_axis always = 0 for safe. will support
         #     set sbp in future, or will delete in multi-client
-        interface_blob_conf.split_axis.value = 0
+        sbp_parallel = sbp_parallel_pb.SbpParallel()
+        sbp_parallel.split_parallel.axis = 0
+        interface_blob_conf.parallel_distribution.sbp_parallel.extend([sbp_parallel])
         return interface_blob_conf
 
     def _Distribute2Str(self):

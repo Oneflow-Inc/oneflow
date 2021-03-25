@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/instruction.pb.h"
+#include "oneflow/core/vm/instruction.cfg.h"
 
 namespace oneflow {
 namespace vm {
@@ -40,10 +41,13 @@ OBJECT_MSG_END(InstructionOperandList);
 
 OBJECT_MSG_BEGIN(InstructionMsg);
   // methods
-  OF_PUBLIC void __Init__() { mutable_operand_list(); }
+  OF_PUBLIC void __Init__();
   OF_PUBLIC void __Init__(const std::string& instr_type_name);
   OF_PUBLIC void __Init__(const InstructionProto& proto);
+  OF_PUBLIC void __Init__(const cfg::InstructionProto& proto); 
   OF_PUBLIC void __Init__(const InstructionMsg& instr_msg);
+
+  OF_PUBLIC void ToProto(InstructionProto* proto) const;
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_parallel_desc(int64_t symbol_id);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_double_operand(double double_operand);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_int64_operand(int64_t int64_operand);
@@ -61,6 +65,7 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const SoleMirroredObject&);
   OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_mut2_operand(ObjectId logical_object_id, const AllMirroredObject&);
+  OF_PUBLIC ObjectMsgPtr<InstructionMsg> add_del_object_operand(ObjectId logical_object_id);
   OF_PUBLIC const std::vector<FlatMsg<InstructionOperand>>& operand() const {
     return operand_list().operand();
   }
@@ -74,8 +79,12 @@ OBJECT_MSG_BEGIN(InstructionMsg);
 
   // fields
   OBJECT_MSG_DEFINE_STRUCT(InstrTypeId, instr_type_id);
+  // instr_type_name is a necessary reduandant field for method ToProto
+  OBJECT_MSG_DEFINE_STRUCT(std::string, instr_type_name);
   OBJECT_MSG_DEFINE_OPTIONAL(int64_t, parallel_desc_symbol_id);
   OBJECT_MSG_DEFINE_OPTIONAL(InstructionOperandList, operand_list);
+  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<std::function<void()>>, no_arg_callback);
+
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instr_msg_link);
@@ -84,6 +93,8 @@ OBJECT_MSG_BEGIN(InstructionMsg);
   OF_PRIVATE InstructionOperand* add_instr_operand();
 OBJECT_MSG_END(InstructionMsg);
 // clang-format on
+
+using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
 
 template<OperandMemZoneModifier mem_zone_modifier>
 void CheckOperand(const Operand& operand);
@@ -211,6 +222,8 @@ OBJECT_MSG_BEGIN(Instruction);
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instruction_link);
   OBJECT_MSG_DEFINE_LIST_LINK(pending_instruction_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(front_seq_infer_instr_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(front_seq_compute_instr_link);
   OBJECT_MSG_DEFINE_LIST_HEAD(CallbackMsg, callback_link, callback_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstructionEdge, src_instruction, in_edges);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(InstructionEdge, dst_instruction, out_edges);

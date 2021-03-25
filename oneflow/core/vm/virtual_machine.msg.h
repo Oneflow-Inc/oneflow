@@ -36,8 +36,6 @@ class VmDesc;
 // clang-format off
 OBJECT_MSG_BEGIN(VirtualMachine);
   // methods
-  using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
-
   OF_PUBLIC void __Init__(const VmDesc& vm_desc) { __Init__(vm_desc, mut_allocator()); }
   OF_PUBLIC void __Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator);
   OF_PUBLIC void Receive(InstructionMsgList* instr_list);
@@ -63,6 +61,8 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(InstructionMsg, instr_msg_link, pending_msg_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, waiting_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, ready_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, front_seq_infer_instr_link, front_seq_infer_instr_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, front_seq_compute_instr_link, front_seq_compute_instr_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Stream, active_stream_link, active_stream_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(ThreadCtx, thread_ctx_link, thread_ctx_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamRtDesc, stream_type_id, stream_type_id2stream_rt_desc);
@@ -78,13 +78,13 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   using Id2LogicalObject = VirtualMachine::id2logical_object_ObjectMsgSkipListType;
   using ActiveStreamList = VirtualMachine::active_stream_list_ObjectMsgListType;
 
+  void TryRunFrontSeqInstructions();
   void ReleaseInstruction(Instruction* instruction,
                             /*out*/ ReadyInstructionList* ready_instruction_list);
   void TryReleaseFinishedInstructions(
           Stream* stream, /*out*/ ReadyInstructionList* ready_instruction_list);
   void FilterAndRunSourceInstructions(TmpPendingInstrMsgList* instr_msg_list);
-  void MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
-                         /*out*/ NewInstructionList* ret_instruction_list);
+  void MakeInstructions(TmpPendingInstrMsgList*, /*out*/ NewInstructionList* ret_instruction_list);
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object,
                              const Operand& operand,

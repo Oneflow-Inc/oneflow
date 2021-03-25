@@ -66,9 +66,6 @@ class BlobDesc final {
   std::unique_ptr<StructPodDesc> opaque_header_;
 };
 
-std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
-    const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc);
-
 bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs);
 
 }  // namespace oneflow

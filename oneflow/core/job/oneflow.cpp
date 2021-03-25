@@ -60,7 +60,8 @@ namespace oneflow {
 
 bool operator==(const ParallelBlobConf& lhs, const ParallelBlobConf& rhs) {
   return BlobDesc(lhs.logical_blob_desc_conf()) == BlobDesc(rhs.logical_blob_desc_conf())
-         && lhs.parallel_conf() == rhs.parallel_conf() && lhs.sbp_conf() == rhs.sbp_conf();
+         && lhs.parallel_conf() == rhs.parallel_conf()
+         && lhs.parallel_distribution() == rhs.parallel_distribution();
 }
 
 namespace {
@@ -84,6 +85,10 @@ std::string cluster_thrd_ids_key(const std::string& plan_name) {
 }
 
 std::string net_topo_key(const std::string& plan_name) { return plan_name + "_net_topo"; }
+
+std::string ctrl_regst_desc_info_key(const std::string& plan_name) {
+  return plan_name + "_ctrl_regst_desc_info_key";
+}
 
 std::string job_id2job_conf(const std::string& plan_name) { return plan_name + "_job_id2job_conf"; }
 
@@ -138,6 +143,8 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
   }
 
   Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
+  Global<CtrlClient>::Get()->PushKV(ctrl_regst_desc_info_key(plan_name),
+                                    plan.ctrl_regst_desc_info());
   Global<CtrlClient>::Get()->PushKV(job_id2job_conf(plan_name), plan.job_confs());
   Global<CtrlClient>::Get()->PushKV(GetCollectiveBoxingPlanKey(plan_name),
                                     plan.collective_boxing_plan());
@@ -161,6 +168,9 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   NetTopo net_topo;
   Global<CtrlClient>::Get()->PullKV(net_topo_key(plan_name), &net_topo);
   *(plan->mutable_net_topo()) = net_topo;
+  CtrlRegstDescInfo ctrl_regst_desc_info;
+  Global<CtrlClient>::Get()->PullKV(ctrl_regst_desc_info_key(plan_name), &ctrl_regst_desc_info);
+  *(plan->mutable_ctrl_regst_desc_info()) = ctrl_regst_desc_info;
   JobConfs job_confs;
   Global<CtrlClient>::Get()->PullKV(job_id2job_conf(plan_name), &job_confs);
   *(plan->mutable_job_confs()) = job_confs;
@@ -349,6 +359,19 @@ void MergePlan(Plan* plan, const Plan& other) {
   Compiler().GenNetTopo(plan);
 }
 
+void DumpCtrlRegstInfoToPlan(Plan* plan) {
+  auto* ctrl_regst_desc_id2producer_task_id =
+      plan->mutable_ctrl_regst_desc_info()->mutable_ctrl_regst_desc_id2producer_task_id();
+  for (const TaskProto& task : plan->task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      if (pair.second.regst_desc_type().has_ctrl_regst_desc()) {
+        ctrl_regst_desc_id2producer_task_id->insert(
+            {pair.second.regst_desc_id(), pair.second.producer_task_id()});
+      }
+    }
+  }
+}
+
 RegstDescProto* GetSoleDataRegstDescProto(TaskProto* task) {
   RegstDescProto* ret = nullptr;
   for (auto& pair : *task->mutable_produced_regst_desc()) {
@@ -504,11 +527,11 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
   ParallelBlobConf ret;
   *blob_conf->mutable_parallel_conf() = job_builder.ParallelConf4OpName(op_name);
   *blob_conf->mutable_logical_blob_desc_conf() = job.helper().lbn2logical_blob_desc().at(lbn);
-  *blob_conf->mutable_sbp_conf() = job.job_parallel_view_conf()
-                                       .op_name2sbp_signature_conf()
-                                       .at(op_name)
-                                       .bn_in_op2sbp_parallel()
-                                       .at(obn);
+  *blob_conf->mutable_parallel_distribution() = job.job_parallel_view_conf()
+                                                    .op_name2parallel_distribution_signature_conf()
+                                                    .at(op_name)
+                                                    .bn_in_op2parallel_distribution()
+                                                    .at(obn);
 }
 
 void FilterOpName2ParallelBlobConf(
@@ -1093,6 +1116,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
     PlanUtil::CleanUselessMemBlockAndCheckValid(plan);
+    DumpCtrlRegstInfoToPlan(plan);
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
       PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
