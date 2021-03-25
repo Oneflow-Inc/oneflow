@@ -1646,28 +1646,42 @@ def clip_by_value(
     if name is None:
         name = id_util.UniqueStr("ClipByValue_")
 
+    if type(min_value) == float:
+        floating_min_value = float(min_value)
+        integral_min_value = 0
+    else:
+        floating_min_value = 0
+        integral_min_value = int(min_value)
+    
+    if type(max_value) == float:
+        floating_max_value = float(max_value)
+        integral_max_value = 0
+    else:
+        floating_max_value = 0
+        integral_max_value = int(max_value)
+    
     if min_value is not None and max_value is not None:
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar")
-            .Attr("floating_min", float(min_value))
-            .Attr("integral_min", int(min_value))
-            .Attr("floating_max", float(max_value))
-            .Attr("integral_max", int(max_value))
+            .Attr("floating_min", floating_min_value)
+            .Attr("integral_min", integral_min_value)
+            .Attr("floating_max", floating_max_value)
+            .Attr("integral_max", integral_max_value)
         )
     elif min_value is not None:
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar_min")
-            .Attr("floating_min", float(min_value))
-            .Attr("integral_min", int(min_value))
+            .Attr("floating_min", floating_min_value)
+            .Attr("integral_min", integral_min_value)
         )
     elif max_value is not None:
         op_builder = (
             flow.user_op_builder(name)
             .Op("clip_by_scalar_max")
-            .Attr("floating_max", float(max_value))
-            .Attr("integral_max", int(max_value))
+            .Attr("floating_max", floating_max_value)
+            .Attr("integral_max", integral_max_value)
         )
     else:
         raise ValueError("min_value and max_value cannot be None at the same time")

@@ -45,3 +45,4 @@ def test_clip_max(test_case):
             return x
 
     load_paddle_module_and_check(test_case, Net)
+

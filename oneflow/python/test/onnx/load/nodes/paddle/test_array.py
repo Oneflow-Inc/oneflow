@@ -69,6 +69,3 @@ def test_tensor_index(test_case):
             return x[0, 1:3, :1, 2:4]
 
     load_paddle_module_and_check(test_case, Net)
-
-from absl import app
-from absl.testing import absltest
