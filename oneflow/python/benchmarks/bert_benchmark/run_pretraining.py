@@ -287,7 +287,8 @@ def main():
             nodes.append(addr_dict)
 
         flow.env.machine(nodes)
-
+    if os.getenv("ONEFLOW_DEBUG_MODE"):
+        flow.env.ctrl_port(9788)
     check_point = flow.train.CheckPoint()
     if args.model_load_dir:
         assert os.path.isdir(args.model_load_dir)
