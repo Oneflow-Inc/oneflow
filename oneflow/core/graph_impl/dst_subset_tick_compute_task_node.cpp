@@ -14,12 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/dst_subset_tick_compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
 void DstSubsetTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", false, 1, 1);
+  ProduceRegst("out", false, 2, 2);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
@@ -30,7 +29,7 @@ void DstSubsetTickCompTaskNode::ConsumeAllRegsts() {
 
 void DstSubsetTickCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = logical_node()->SoleOp();
+  node->mut_op() = op();
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   for (const std::string& ibn : node->op()->input_bns()) {
     node->TryBindBnWithOneOfTheRegsts(ibn, in_regsts);
@@ -45,5 +44,12 @@ void DstSubsetTickCompTaskNode::BuildExecGphAndRegst() {
 }
 
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kDstSubsetTick);
+
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kDstSubsetTick)
+    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateTickTockStreamIndex();
+    });
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kDstSubsetTickConf, DstSubsetTickCompTaskNode);
 
 }  // namespace oneflow

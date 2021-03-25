@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/case_compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
@@ -22,16 +21,15 @@ namespace oneflow {
 void CaseCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
 
 void CaseCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  const std::shared_ptr<const Operator> op = logical_node()->SoleOp();
   HashMap<LogicalBlobId, int64_t> lbi2obn_id;
-  FOR_RANGE(int64_t, obn_id, 0, op->output_bns().size()) {
-    CHECK(lbi2obn_id.emplace(op->BnInOp2Lbi(GenRepeatedBn("out", obn_id)), obn_id).second);
+  FOR_RANGE(int64_t, obn_id, 0, op()->output_bns().size()) {
+    CHECK(lbi2obn_id.emplace(op()->BnInOp2Lbi(GenRepeatedBn("out", obn_id)), obn_id).second);
   }
   ForEachOutDataEdge([&](TaskEdge* edge) {
-    const LogicalNode* succ = GetOneSuccLogicalNodeOnEdge(edge);
+    const OpNode* succ = GetOneSuccOpNodeOnEdge(edge);
     int64_t obn_id = -1;
-    for (const std::string& ibn : succ->SoleOp()->input_bns()) {
-      const LogicalBlobId& lbi = succ->SoleOp()->BnInOp2Lbi(ibn);
+    for (const std::string& ibn : succ->shared_op()->input_bns()) {
+      const LogicalBlobId& lbi = succ->shared_op()->BnInOp2Lbi(ibn);
       if (lbi2obn_id.find(lbi) != lbi2obn_id.cend()) {
         CHECK_EQ(obn_id, -1);
         obn_id = lbi2obn_id.at(lbi);
@@ -46,7 +44,7 @@ void CaseCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void CaseCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<const Operator> sole_op = this->logical_node()->SoleOp();
+  std::shared_ptr<const Operator> sole_op = op();
   node->mut_op() = sole_op;
   node->BindBnWithRegst("in", GetSoleConsumedRegst("in"));
   FOR_RANGE(int64_t, obn_id, 0, sole_op->output_bns().size()) {
@@ -61,5 +59,12 @@ void CaseCompTaskNode::BuildExecGphAndRegst() {
 void CaseCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kCase);
+
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCase)
+    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateTickTockStreamIndex();
+    });
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kCaseConf, CaseCompTaskNode);
 
 }  // namespace oneflow

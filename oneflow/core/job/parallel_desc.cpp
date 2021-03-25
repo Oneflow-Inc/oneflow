@@ -130,8 +130,9 @@ Maybe<void> ParallelDesc::GetParallelContext(ParallelContext* parallel_ctx, int6
 }
 
 bool ParallelDesc::Equals(const ParallelDesc& rhs) const {
-  return device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
-         && EqualsMachineId2SortedDevPhyIds(rhs) && *hierarchy_ == *rhs.hierarchy_;
+  return (this == &rhs)
+         || (device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
+             && EqualsMachineId2SortedDevPhyIds(rhs) && *hierarchy_ == *rhs.hierarchy_);
 }
 
 bool ParallelDesc::EqualsIgnoringDeviceType(const ParallelDesc& rhs) const {
@@ -185,7 +186,7 @@ void ParallelDesc::ClearUp() {
 void ParallelDesc::set_device_type(DeviceType device_type) {
   if (device_type == device_type_) { return; }
   device_type_ = device_type;
-  const char* tag = CHECK_JUST(DeviceTag4DeviceType(device_type));
+  const std::string tag = *CHECK_JUST(DeviceTag4DeviceType(device_type));
   parallel_conf_.set_device_tag(tag);
 }
 
@@ -216,7 +217,7 @@ ParallelConf ParallelDesc::GetParallelIdOnlyParallelConf(int64_t parallel_id) co
   ParallelConf parallel_conf;
   std::string machine_id = std::to_string(CHECK_JUST(MachineId4ParallelId(parallel_id)));
   std::string device_id = std::to_string(CHECK_JUST(DeviceId4ParallelId(parallel_id)));
-  parallel_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type())));
+  parallel_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type())));
   parallel_conf.add_device_name(machine_id + ":" + device_id);
   return parallel_conf;
 }

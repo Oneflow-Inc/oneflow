@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/vm/symbol_storage.h"
@@ -36,7 +35,6 @@ class DistributeAddOp final : public Operator {
   Maybe<void> InferOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
-  LogicalNode* NewProperLogicalNode() const override { return new DistributeConcatLogicalNode; }
 
  private:
   Maybe<void> InferBlobParallelDesc() override;

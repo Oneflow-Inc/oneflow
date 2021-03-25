@@ -16,15 +16,17 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.framework.tensor import register_tensor_op_by_module
+from oneflow.python.framework.tensor import register_op_by_module
 
 
 @oneflow_export("nn.Sigmoid")
+@register_tensor_op_by_module("sigmoid")
+@register_op_by_module("sigmoid")
 class Sigmoid(Module):
     def __init__(self):
         super().__init__()
-        self._op = (
-            flow.builtin_op("sigmoid").Name("sigmoid").Input("in").Output("out").Build()
-        )
+        self._op = flow.builtin_op("sigmoid").Input("in").Output("out").Build()
 
     def forward(self, x):
         res = self._op(x)[0]
@@ -32,12 +34,12 @@ class Sigmoid(Module):
 
 
 @oneflow_export("nn.ReLU")
+@register_tensor_op_by_module("relu")
+@register_op_by_module("relu")
 class ReLU(Module):
     def __init__(self):
         super().__init__()
-        self._op = (
-            flow.builtin_op("relu").Name("relu").Input("in").Output("out").Build()
-        )
+        self._op = flow.builtin_op("relu").Input("in").Output("out").Build()
 
     def forward(self, x):
         res = self._op(x)[0]

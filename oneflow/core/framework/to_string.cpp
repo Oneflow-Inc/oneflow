@@ -20,12 +20,14 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<const char*> DeviceTag4DeviceType(DeviceType device_type) {
+Maybe<std::string> DeviceTag4DeviceType(DeviceType device_type) {
   auto device_type_to_tag = DeviceRegistryMgr::Get().DeviceType4Tag();
-  if (device_type_to_tag.find(device_type) == device_type_to_tag.end()) {
+  auto it = device_type_to_tag.find(device_type);
+  if (it == device_type_to_tag.end()) {
     return Error::DeviceTagNotFoundError() << "invalid_device";
+  } else {
+    return it->second;
   }
-  return device_type_to_tag[device_type].c_str();
 }
 
 Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {

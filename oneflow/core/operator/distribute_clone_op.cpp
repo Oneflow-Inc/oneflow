@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/vm/symbol_storage.h"
@@ -29,8 +28,6 @@ class DistributeCloneOp final : public Operator {
   ~DistributeCloneOp() = default;
 
   void InitFromOpConf() override;
-
-  LogicalNode* NewProperLogicalNode() const override { return new DistributeSplitLogicalNode; }
 
  private:
   Maybe<void> InferBlobParallelDesc() override;

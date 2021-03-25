@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/operator/esac_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -55,8 +54,6 @@ Maybe<void> EsacOp::GetSbpSignatures(
     SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
-
-LogicalNode* EsacOp::NewProperLogicalNode() const { return new EsacLogicalNode(); }
 
 REGISTER_CPU_OP(OperatorConf::kEsacConf, EsacOp);
 
