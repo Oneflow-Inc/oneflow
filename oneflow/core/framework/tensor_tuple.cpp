@@ -22,9 +22,7 @@ namespace one {
 TensorTuple::TensorTuple(std::vector<std::shared_ptr<Tensor>>::size_type size) { resize(size); }
 
 TensorTuple::TensorTuple(std::initializer_list<std::shared_ptr<Tensor>> init_list) {
-    for(const auto& tensor: init_list) {
-        emplace_back(tensor);
-    }
+  for (const auto& tensor : init_list) { emplace_back(tensor); }
 }
 
 }  // namespace one
