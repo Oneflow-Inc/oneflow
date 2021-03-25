@@ -52,7 +52,7 @@ class RegstMgr final {
   HashMap<LogicalBlobId, HashMap<int64_t, Blob*>> lbi2parallel_id2blob_;
   HashMap<int64_t, char*> mem_block_id2ptr_;
   HashMap<int64_t, ParallelContext> regst_desc_id2parallel_ctx_;
-  HashMap<int64_t, RegstDescAddr> regst_desc_id2regst_desc_addr_;
+  HashMap<int64_t, RegstDescAddr> ctrl_regst_desc_id2regst_desc_addr_;
   std::mutex mutex_;
 };
 
