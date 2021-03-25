@@ -317,6 +317,7 @@ if __name__ == "__main__":
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
     print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
+    assert args.package_name
     extra_oneflow_cmake_args = " ".join(
         [" ".join(l) for l in args.extra_oneflow_cmake_args]
     )
