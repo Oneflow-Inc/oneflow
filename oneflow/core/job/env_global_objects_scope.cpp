@@ -90,8 +90,8 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
   if ((env_proto.machine_size() == 1 && env_proto.has_ctrl_bootstrap_conf() == false)
-      || (env_proto.has_ctrl_bootstrap_conf()
-          && env_proto.ctrl_bootstrap_conf().world_size() == 1)) /*single process*/ {
+      || (env_proto.has_ctrl_bootstrap_conf() && env_proto.ctrl_bootstrap_conf().world_size() == 1)
+      || Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) /*single process*/ {
 #ifdef RPC_BACKEND_LOCAL
     LOG(ERROR) << "using rpc backend: local";
     auto* local_manager = new LocalRpcManager();
