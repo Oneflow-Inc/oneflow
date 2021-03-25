@@ -34,7 +34,7 @@ jobs:
       fail-fast: false
       max-parallel: 5
       matrix:
-        release_version:
+        compute_platform:
           [
             "cpu",
             "cu100",
