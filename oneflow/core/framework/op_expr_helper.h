@@ -32,6 +32,8 @@ Maybe<one::UserOpExpr> AddOp();
 
 Maybe<one::UserOpExpr> ZeroLikeOp();
 
+Maybe<one::UserOpExpr> OnesLikeOp();
+
 }  // namespace op_expr_helper
 
 }  // namespace oneflow
