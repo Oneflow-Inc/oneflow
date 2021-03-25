@@ -37,6 +37,7 @@ class TestModule(flow.unittest.TestCase):
         x = flow.Tensor(input_arr)
         y = m(x)
         print(y.numpy())
+        test_case.assertTrue(True)
  
         # test_dropout >> output:
         # [[-0.      0.      0.4916  0.8326]

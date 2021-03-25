@@ -27,16 +27,12 @@ class Dropout(Module):
     def __init__(self, p: float = 0.5, inplace: bool = False):
         super().__init__()
         self.rate = p
-        self.name = None
         self.seed = random.randint(-sys.maxsize, sys.maxsize)
         assert self.rate is not None and self.rate >= 0.0 and self.rate < 1.0
         self.scale = float(1.0 / (1.0 - self.rate))
         assert inplace==False, "Not support inplace=True yet!"
-        if self.name is None:
-            self.name = id_util.UniqueStr("Dropout_")
         self._op = (
             flow.builtin_op("dropout")
-            .Name(self.name)
             .Input("in")
             .Input("mask")
             .Output("out")
@@ -45,7 +41,6 @@ class Dropout(Module):
         )
         self._mask_op = (
             flow.builtin_op("random_mask_like")
-            .Name(id_util.UniqueStr("RandomMaskLike_"))
             .Input("like")
             .Output("out")
             .Attr("rate", self.rate)
