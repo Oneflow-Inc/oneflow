@@ -16,7 +16,7 @@ on:
         default: "cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"
         required: false
       package_name:
-        description: "package name to build"
+        description: ""
         default: "oneflow"
         required: false
       release_version:
