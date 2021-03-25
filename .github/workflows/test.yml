@@ -125,7 +125,7 @@ jobs:
           fi
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
           extra_docker_args=""
-          container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
+          container_name=pr-run-id-${{ github.run_id }}-${{ github.event.pull_request.number }}-${test_suite}-build
           echo "container_name=${container_name}" >> $GITHUB_ENV
           extra_docker_args+=" --name ${container_name}"
           if [ "$test_suite" == "cpu" ]; then
@@ -304,7 +304,7 @@ jobs:
           fi
 
           # set container_name
-          container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
+          container_name=pr-run-id-${{ github.run_id }}-${{ github.event.pull_request.number }}-${test_suite}-build
           extra_docker_args+=" --name ${container_name}"
           echo "container_name=${container_name}" >> $GITHUB_ENV
 
