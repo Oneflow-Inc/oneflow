@@ -521,3 +521,125 @@ class Reciprocal(Module):
 
     def forward(self, x):
         return self._op(x)[0]
+
+
+class ScalarAdd(Module):
+    def __init__(self, operand, name=None) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("scalar_add", name).Input("in").Output("out")
+
+        if isinstance(operand, int):
+            self._op = (
+                self._op.Attr("has_int_operand", True)
+                .Attr("has_float_operand", False)
+                .Attr("int_operand", operand)
+                .Attr("float_operand", 0.0)
+            )
+        elif isinstance(operand, float):
+            self._op = (
+                self._op.Attr("has_int_operand", False)
+                .Attr("has_float_operand", True)
+                .Attr("int_operand", 0)
+                .Attr("float_operand", operand)
+            )
+        else:
+            raise ValueError("operand type can only be int or float")
+
+        self._op = self._op.Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+class ScalarAddByTensor(Module):
+    def __init__(self, name=None) -> None:
+        super().__init__()
+        self._op = (
+            flow.builtin_op("scalar_add_by_tensor", name)
+            .Input("x")
+            .Input("scalar")
+            .Output("y")
+            .Build()
+        )
+
+    def forward(self, x, y):
+        return self._op(x, y)[0]
+
+
+class ElementwiseAdd(Module):
+    def __init__(self, name=None) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("add_n", name).Input("in", 2).Output("out").Build()
+
+    def forward(self, x, y):
+        return self._op(x, y)[0]
+
+
+class BroadcastAdd(Module):
+    def __init__(self, name=None) -> None:
+        super().__init__()
+        self._op = (
+            flow.builtin_op("broadcast_add", name)
+            .Input("x")
+            .Input("y")
+            .Output("z")
+            .Build()
+        )
+
+    def forward(self, x, y):
+        return self._op(x, y)[0]
+
+
+@register_tensor_op_by_module("add")
+@oneflow_export("Add")
+class Add(Module):
+    r"""Computes the addition of x by y for each element, scalar and broadcast promotation are supported.
+
+    The formula is:
+
+    .. math::
+        out = x + y
+
+    For example:
+
+    .. code-block:: python
+
+        # Example
+        add = flow.Add()
+
+        # element-wise add
+        x = flow.Tensor(np.random.randn(2,3))
+        y = flow.Tensor(np.random.randn(2,3))
+        out = add(x,y).numpy()
+        print(out.shape) # (2,3)
+
+        # scalar add
+        x = 5
+        y = flow.Tensor(np.random.randn(2,3))
+        out = add(x,y).numpy()
+        print(out.shape) # (2,3)
+
+        # broadcast add
+        x = flow.Tensor(np.random.randn(1,1))
+        y = flow.Tensor(np.random.randn(2,3))
+        out = add(x,y).numpy()
+        print(out.shape) # (2,3)
+
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x, y):
+        if isinstance(x, (int, float)):
+            return ScalarAdd(x)(y)
+        elif isinstance(y, (int, float)):
+            return ScalarAdd(y)(x)
+        elif x.shape == y.shape:
+            return ElementwiseAdd()(x, y)
+        elif x.shape == (1,):
+            return ScalarAddByTensor()(y, x)
+        elif y.shape == (1,):
+            return ScalarAddByTensor()(x, y)
+        else:
+            return BroadcastAdd()(x, y)

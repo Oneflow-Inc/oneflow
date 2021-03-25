@@ -320,6 +320,12 @@ class Tensor:
     def __rmul__(self, other):
         return self.mul(other)
 
+    def __add__(self, other):
+        return self.add(other)
+
+    def __radd__(self, other):
+        return self.add(other)
+
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:
             self.determine(determining_initializer)
