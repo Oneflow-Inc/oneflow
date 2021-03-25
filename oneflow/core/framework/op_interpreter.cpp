@@ -280,9 +280,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
                                        TensorTuple* outputs) const {
   // TODO(hjchen2)
   JUST(internal_->Apply(op_expr, inputs, outputs));
-  if (op_expr.input_num()) {
-    const auto& grad = JUST(op_expr.GetOrCreateOpGrad());
-  }
+  if (op_expr.input_num()) { const auto& grad = JUST(op_expr.GetOrCreateOpGrad()); }
   return Maybe<void>::Ok();
 }
 
