@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
+#include "oneflow/core/job/parallel_distribution_util.h"
 #include "oneflow/core/common/id_util.h"
 #include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/cpu_stream_index.h"
@@ -163,34 +164,33 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     dst_node->ConnectToSrcNodeWithSlice(src_node, NewEdge(), src_slice);
     return dst_node;
   };
-  const auto BuildSubTaskGphS2B = [&ctx, &CreateBoxingNode121, &NewEdge, &lbi](
-                                      const ParallelDesc& in_pd, const ParallelDesc& out_pd,
-                                      const SbpParallel& in_sbp, const SbpParallel& out_sbp,
-                                      const BlobDesc& blob_desc,
-                                      const std::vector<TaskNode*>& in_nodes,
-                                      std::vector<TaskNode*>* out_nodes) {
-    CHECK(SubTskGphBuilderUtil::IsBoxingS2B(in_sbp, out_sbp));
-    const std::vector<TensorSliceView> in_slices =
-        SubTskGphBuilderUtil::GetTensorSliceView(in_pd.parallel_num(), in_sbp, blob_desc);
-    CHECK(!ContainsEmptySlice(in_slices));
-    const TensorSliceView out_slice = SubTskGphBuilderUtil::GetBroadcastTensorSliceView(blob_desc);
-    FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
-      SliceBoxingTaskNode* out_node =
-          CreateBoxingNode121(out_pd, out_id, out_slice, kSliceBoxingTaskModeCopy);
-      FOR_RANGE(int64_t, in_id, 0, in_pd.parallel_num()) {
-        const TensorSliceView& in_slice = in_slices.at(in_id);
-        TaskNode* in_node = in_nodes.at(in_id);
-        if (SubTskGphBuilderUtil::IsOnSameGPU(in_node, out_node)) {
-          out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
-        } else {
-          TaskNode* proxy_node = ctx->task_graph()->GetProxyNode(
-              in_node, lbi, out_node->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
-          out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), in_slice);
+  const auto BuildSubTaskGphS2B =
+      [&ctx, &CreateBoxingNode121, &NewEdge, &lbi](
+          const ParallelDesc& in_pd, const ParallelDesc& out_pd, const SbpParallel& in_sbp,
+          const SbpParallel& out_sbp, const BlobDesc& blob_desc,
+          const std::vector<TaskNode*>& in_nodes, std::vector<TaskNode*>* out_nodes) {
+        CHECK(SubTskGphBuilderUtil::IsBoxingS2B(in_sbp, out_sbp));
+        const std::vector<TensorSliceView> in_slices =
+            GetTensorSliceView(in_pd.parallel_num(), in_sbp, blob_desc);
+        CHECK(!ContainsEmptySlice(in_slices));
+        const TensorSliceView out_slice = GetBroadcastTensorSliceView(blob_desc);
+        FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
+          SliceBoxingTaskNode* out_node =
+              CreateBoxingNode121(out_pd, out_id, out_slice, kSliceBoxingTaskModeCopy);
+          FOR_RANGE(int64_t, in_id, 0, in_pd.parallel_num()) {
+            const TensorSliceView& in_slice = in_slices.at(in_id);
+            TaskNode* in_node = in_nodes.at(in_id);
+            if (SubTskGphBuilderUtil::IsOnSameGPU(in_node, out_node)) {
+              out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
+            } else {
+              TaskNode* proxy_node = ctx->task_graph()->GetProxyNode(
+                  in_node, lbi, out_node->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
+              out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), in_slice);
+            }
+          }
+          out_nodes->push_back(out_node);
         }
-      }
-      out_nodes->push_back(out_node);
-    }
-  };
+      };
   const auto BuildSubTaskGphS2S = [&ctx, &lbi, &CreateBoxingNode121, &CreateBoxingNodeToHost,
                                    &GetBoxingGpuThrdId,
                                    &NewEdge](const ParallelDesc& in_pd, const ParallelDesc& out_pd,
@@ -200,10 +200,10 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                                              std::vector<TaskNode*>* out_nodes) {
     CHECK(SubTskGphBuilderUtil::IsBoxingS2S(in_sbp, out_sbp));
     const std::vector<TensorSliceView> in_slices =
-        SubTskGphBuilderUtil::GetTensorSliceView(in_pd.parallel_num(), in_sbp, blob_desc);
+        GetTensorSliceView(in_pd.parallel_num(), in_sbp, blob_desc);
     CHECK(!ContainsEmptySlice(in_slices));
     const std::vector<TensorSliceView> out_slices =
-        SubTskGphBuilderUtil::GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
+        GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
     CHECK(!ContainsEmptySlice(out_slices));
     HashMap<int64_t, std::vector<int64_t>> machine_id2in_parallel_ids;
     GroupParallelIdByMachine(in_pd, &machine_id2in_parallel_ids);
@@ -306,9 +306,9 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                                              const std::vector<TaskNode*>& in_nodes,
                                              std::vector<TaskNode*>* out_nodes) {
     CHECK(SubTskGphBuilderUtil::IsBoxingP2S(in_sbp, out_sbp));
-    const TensorSliceView in_slice = SubTskGphBuilderUtil::GetBroadcastTensorSliceView(blob_desc);
+    const TensorSliceView in_slice = GetBroadcastTensorSliceView(blob_desc);
     const std::vector<TensorSliceView> out_slices =
-        SubTskGphBuilderUtil::GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
+        GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
     CHECK(!ContainsEmptySlice(out_slices));
     HashMap<int64_t, std::vector<int64_t>> machine_id2in_parallel_ids;
     GroupParallelIdByMachine(in_pd, &machine_id2in_parallel_ids);
@@ -367,7 +367,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                                       const std::vector<TaskNode*>& in_nodes,
                                       std::vector<TaskNode*>* out_nodes) {
     CHECK(SubTskGphBuilderUtil::IsBoxingP2B(in_sbp, out_sbp));
-    const TensorSliceView slice = SubTskGphBuilderUtil::GetBroadcastTensorSliceView(blob_desc);
+    const TensorSliceView slice = GetBroadcastTensorSliceView(blob_desc);
     HashMap<int64_t, std::vector<int64_t>> machine_id2in_parallel_ids;
     HashMap<int64_t, std::vector<int64_t>> machine_id2out_parallel_ids;
     GroupParallelIdByMachine(in_pd, &machine_id2in_parallel_ids);
@@ -443,10 +443,9 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
           const SbpParallel& out_sbp, const BlobDesc& blob_desc,
           const std::vector<TaskNode*>& in_nodes, std::vector<TaskNode*>* out_nodes) {
         CHECK(SubTskGphBuilderUtil::IsBoxingB2S(in_sbp, out_sbp));
-        const TensorSliceView in_slice =
-            SubTskGphBuilderUtil::GetBroadcastTensorSliceView(blob_desc);
+        const TensorSliceView in_slice = GetBroadcastTensorSliceView(blob_desc);
         const std::vector<TensorSliceView> out_slices =
-            SubTskGphBuilderUtil::GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
+            GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
         CHECK(!ContainsEmptySlice(out_slices));
         FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
           const TensorSliceView& out_slice = out_slices.at(out_id);

@@ -276,7 +276,7 @@ def _run_test_moving_average_min_max_observer(
                 initializer=flow.zeros_initializer(activation.dtype),
                 trainable=True,
             )
-            scale, zero_point = flow.quantization.moving_average_min_maxObserver(
+            scale, zero_point = flow.quantization.moving_average_min_max_observer(
                 activation,
                 quantization_bit,
                 quantization_scheme,
@@ -492,6 +492,8 @@ class TestMinMaxObserver(flow.unittest.TestCase):
         arg_dict["per_layer_quantization"] = [True, False]
 
         for arg in GenArgList(arg_dict):
+            if arg[-2] == "cambricon" and arg[-1] == False:
+                continue
             _run_test_min_max_observer(*arg)
 
 
@@ -528,6 +530,8 @@ class TestFakeQuantize(flow.unittest.TestCase):
         arg_dict["per_layer_quantization"] = [True, False]
 
         for arg in GenArgList(arg_dict):
+            if arg[-2] == "cambricon" and arg[-1] == False:
+                continue
             _run_test_fake_quantize(*arg)
 
 
