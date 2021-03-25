@@ -325,7 +325,7 @@ class Tensor:
 
     def __radd__(self, other):
         return self.add(other)
-        
+
     def __sub__(self, other):
         return self.sub(other)
 
