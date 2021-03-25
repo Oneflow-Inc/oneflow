@@ -155,7 +155,6 @@ void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* src_task_proto, TaskProt
         FindOrCreateConsumedCtrlRegstDescIdSet(dst_task_proto, "in_ctrl");
     CHECK(!IsInRepeatedField(consumed_ctrl_regst_desc_ids->regst_desc_id(), ctrl_regst_desc_id));
     consumed_ctrl_regst_desc_ids->add_regst_desc_id(ctrl_regst_desc_id);
-    DumpToConsumedRegstDescId2Addr(*ctrl_regst_desc, dst_task_proto);
   }
 }
 

@@ -217,17 +217,10 @@ void TaskNode::ToProto(TaskProto* task_proto) {
     CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
   }
   auto* consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
-  auto* consumed_ctrl_regst_desc_id2addr = task_proto->mutable_consumed_ctrl_regst_desc_id2addr();
   for (const auto& pair : consumed_regsts_) {
     RegstDescIdSet regst_desc_ids;
     for (const std::shared_ptr<RegstDesc>& regst : pair.second) {
       regst_desc_ids.add_regst_desc_id(regst->regst_desc_id());
-      if (regst->regst_desc_type().has_ctrl_regst_desc()) {
-        RegstDescAddr regst_desc_addr;
-        regst_desc_addr.set_task_id(regst->producer()->task_id());
-        CHECK(consumed_ctrl_regst_desc_id2addr->insert({regst->regst_desc_id(), regst_desc_addr})
-                  .second);
-      }
     }
     CHECK(consumed_regst_proto->insert({pair.first, regst_desc_ids}).second);
   }
@@ -418,16 +411,6 @@ RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
     CHECK(consumed_regst_desc_id_sets->insert({regst_desc_name, RegstDescIdSet()}).second);
   }
   return &consumed_regst_desc_id_sets->at(regst_desc_name);
-}
-
-void DumpToConsumedRegstDescId2Addr(const RegstDescProto& regst_desc_proto, TaskProto* task_proto) {
-  CHECK(regst_desc_proto.regst_desc_type().has_ctrl_regst_desc());
-  auto* consumed_ctrl_regst_desc_id2addr = task_proto->mutable_consumed_ctrl_regst_desc_id2addr();
-  RegstDescAddr regst_desc_addr;
-  regst_desc_addr.set_task_id(regst_desc_proto.producer_task_id());
-  CHECK(
-      consumed_ctrl_regst_desc_id2addr->insert({regst_desc_proto.regst_desc_id(), regst_desc_addr})
-          .second);
 }
 
 void TaskNode::ForEachInDataEdge(const std::function<void(TaskEdge*)>& Handler) const {

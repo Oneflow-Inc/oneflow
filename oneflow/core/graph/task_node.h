@@ -40,8 +40,6 @@ RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
 RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
                                                        const std::string& regst_desc_name);
 
-void DumpToConsumedRegstDescId2Addr(const RegstDescProto& regst_desc_proto, TaskProto* task_proto);
-
 class TaskEdge;
 
 class TaskNode : public Node<TaskNode, TaskEdge> {
