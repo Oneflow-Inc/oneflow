@@ -16,7 +16,6 @@ limitations under the License.
 from __future__ import absolute_import
 
 import os
-import sys
 from typing import Union, Optional, Sequence, List, Tuple
 
 import oneflow as flow
