@@ -55,7 +55,7 @@ if not os.getenv("ONEFLOW_RELEASE_VERSION") and not os.getenv(
 
 
 dst = os.path.join(args.src, "oneflow/python/version.py")
-print(f"-- Generating pip version: {version} to: {dst}")
+print(f"-- Generating pip version: {version}, writing to: {dst}")
 assert args.src
 with open(dst, "w+") as f:
     f.write(f'__version__ = "{version}"')
