@@ -125,7 +125,7 @@ void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
   }
 }
 
-std::shared_ptr<ChainSubTskGphBuilder> Build1DSubTskGphBuilder() {
+std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new OneToOneSubTskGphBuilder());
   builders.emplace_back(new B21SubTskGphBuilder());
@@ -139,7 +139,7 @@ std::shared_ptr<ChainSubTskGphBuilder> Build1DSubTskGphBuilder() {
 }
 
 bool ParallelDistributionAllSameSplitParallel(const ParallelDistribution& parallel_distribution) {
-  CHECK_GT(parallel_distribution.sbp_parallel_size(), 1);
+  CHECK_GT(parallel_distribution.sbp_parallel_size(), 0);
   const SbpParallel& first_sbp = parallel_distribution.sbp_parallel(0);
   if (!first_sbp.has_split_parallel()) { return false; }
   FOR_RANGE(int64_t, i, 1, parallel_distribution.sbp_parallel_size()) {
@@ -153,8 +153,8 @@ bool ParallelDistributionAllSameSplitParallel(const ParallelDistribution& parall
 class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FlatSubTskGphBuilder);
-  FlatSubTskGphBuilder() { sub_tsk_gph_builder_ = Build1DSubTskGphBuilder(); }
-  ~FlatSubTskGphBuilder() = default;
+  FlatSubTskGphBuilder() { sub_tsk_gph_builder_ = Make1DSubTskGphBuilder(); }
+  ~FlatSubTskGphBuilder() override = default;
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
@@ -179,8 +179,8 @@ class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
 class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IntraGroupSubTskGphBuilder);
-  IntraGroupSubTskGphBuilder() { sub_tsk_gph_builder_ = Build1DSubTskGphBuilder(); }
-  ~IntraGroupSubTskGphBuilder() = default;
+  IntraGroupSubTskGphBuilder() { sub_tsk_gph_builder_ = Make1DSubTskGphBuilder(); }
+  ~IntraGroupSubTskGphBuilder() override = default;
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
@@ -192,9 +192,9 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
                                       const ParallelDistribution& in_parallel_distribution,
                                       const ParallelDistribution& out_parallel_distribution,
                                       const Shape& time_shape) const override {
-    CHECK_EQ(*in_parallel_desc.hierarchy(), *out_parallel_desc.hierarchy());
+    CHECK_EQ_OR_RETURN(*in_parallel_desc.hierarchy(), *out_parallel_desc.hierarchy());
     const auto& hierarchy = in_parallel_desc.hierarchy();
-    CHECK_EQ(hierarchy->NumAxes(), 2);
+    CHECK_EQ_OR_RETURN(hierarchy->NumAxes(), 2);
     std::vector<SubTskGphBuilderStatus> status;
     const int64_t num_groups = hierarchy->At(0);
     const int64_t group_size = hierarchy->At(1);
@@ -214,11 +214,11 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
         const int64_t parallel_id = i * group_size + j;
         in_tasks.push_back(sorted_in_tasks.at(parallel_id));
         in_parallel_conf.add_device_name(
-            std::to_string(CHECK_JUST(in_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
-            + std::to_string(CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(parallel_id))));
+            std::to_string(JUST(in_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
+            + std::to_string(JUST(in_parallel_desc.DeviceId4ParallelId(parallel_id))));
         out_parallel_conf.add_device_name(
-            std::to_string(CHECK_JUST(out_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
-            + std::to_string(CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(parallel_id))));
+            std::to_string(JUST(out_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
+            + std::to_string(JUST(out_parallel_desc.DeviceId4ParallelId(parallel_id))));
       }
       DimVector dim_vec = logical_blob_desc.shape().dim_vec();
       if (in_parallel_distribution.sbp_parallel(0).has_split_parallel()) {
@@ -226,12 +226,13 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
         dim_vec.at(axis) /= hierarchy->At(0);
       }
       BlobDesc new_blob_desc(Shape(dim_vec), logical_blob_desc.data_type());
-      Maybe<SubTskGphBuilderStatus> boxing_builder_status = JUST(sub_tsk_gph_builder_->Build(
-          ctx, in_tasks, &out_tasks, &ctrl_tasks, ParallelDesc(in_parallel_conf),
-          ParallelDesc(out_parallel_conf), lbi, new_blob_desc,
-          in_parallel_distribution.sbp_parallel(1), out_parallel_distribution.sbp_parallel(1),
-          time_shape));
-      status.push_back(*CHECK_JUST(boxing_builder_status));
+      std::shared_ptr<SubTskGphBuilderStatus> boxing_builder_status =
+          JUST(sub_tsk_gph_builder_->Build(ctx, in_tasks, &out_tasks, &ctrl_tasks,
+                                           ParallelDesc(in_parallel_conf),
+                                           ParallelDesc(out_parallel_conf), lbi, new_blob_desc,
+                                           in_parallel_distribution.sbp_parallel(1),
+                                           out_parallel_distribution.sbp_parallel(1), time_shape));
+      status.push_back(*boxing_builder_status);
       CHECK_EQ_OR_RETURN(out_tasks.size(), group_size);
       FOR_RANGE(int64_t, j, 0, group_size) {
         const int64_t parallel_id = i * group_size + j;
@@ -243,8 +244,7 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
         }
       }
     }
-    Maybe<SubTskGphBuilderStatus> composed_status = MakeComposedSubTskGphBuilderStatus(status);
-    return composed_status;
+    return MakeComposedSubTskGphBuilderStatus(status);
   }
 
  private:
@@ -254,8 +254,8 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
 class InterGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InterGroupSubTskGphBuilder);
-  InterGroupSubTskGphBuilder() { sub_tsk_gph_builder_ = Build1DSubTskGphBuilder(); }
-  ~InterGroupSubTskGphBuilder() = default;
+  InterGroupSubTskGphBuilder() { sub_tsk_gph_builder_ = Make1DSubTskGphBuilder(); }
+  ~InterGroupSubTskGphBuilder() override = default;
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
@@ -267,9 +267,9 @@ class InterGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
                                       const ParallelDistribution& in_parallel_distribution,
                                       const ParallelDistribution& out_parallel_distribution,
                                       const Shape& time_shape) const override {
-    CHECK_EQ(*in_parallel_desc.hierarchy(), *out_parallel_desc.hierarchy());
+    CHECK_EQ_OR_RETURN(*in_parallel_desc.hierarchy(), *out_parallel_desc.hierarchy());
     const auto& hierarchy = in_parallel_desc.hierarchy();
-    CHECK_EQ(hierarchy->NumAxes(), 2);
+    CHECK_EQ_OR_RETURN(hierarchy->NumAxes(), 2);
     std::vector<SubTskGphBuilderStatus> status;
     const int64_t num_groups = hierarchy->At(0);
     const int64_t group_size = hierarchy->At(1);
@@ -289,11 +289,11 @@ class InterGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
         const int64_t parallel_id = j * group_size + i;
         in_tasks.push_back(sorted_in_tasks.at(parallel_id));
         in_parallel_conf.add_device_name(
-            std::to_string(CHECK_JUST(in_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
-            + std::to_string(CHECK_JUST(in_parallel_desc.DeviceId4ParallelId(parallel_id))));
+            std::to_string(JUST(in_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
+            + std::to_string(JUST(in_parallel_desc.DeviceId4ParallelId(parallel_id))));
         out_parallel_conf.add_device_name(
-            std::to_string(CHECK_JUST(out_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
-            + std::to_string(CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(parallel_id))));
+            std::to_string(JUST(out_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
+            + std::to_string(JUST(out_parallel_desc.DeviceId4ParallelId(parallel_id))));
       }
       DimVector dim_vec = logical_blob_desc.shape().dim_vec();
       if (in_parallel_distribution.sbp_parallel(1).has_split_parallel()) {
@@ -301,13 +301,13 @@ class InterGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
         dim_vec.at(axis) /= hierarchy->At(1);
       }
       BlobDesc new_blob_desc(Shape(dim_vec), logical_blob_desc.data_type());
-      Maybe<SubTskGphBuilderStatus> boxing_builder_status = JUST(sub_tsk_gph_builder_->Build(
-          ctx, in_tasks, &out_tasks, &ctrl_tasks, ParallelDesc(in_parallel_conf),
-          ParallelDesc(out_parallel_conf), lbi, new_blob_desc,
-          in_parallel_distribution.sbp_parallel(0), out_parallel_distribution.sbp_parallel(0),
-          time_shape));
-      status.push_back(*CHECK_JUST(boxing_builder_status));
-
+      std::shared_ptr<SubTskGphBuilderStatus> boxing_builder_status =
+          JUST(sub_tsk_gph_builder_->Build(ctx, in_tasks, &out_tasks, &ctrl_tasks,
+                                           ParallelDesc(in_parallel_conf),
+                                           ParallelDesc(out_parallel_conf), lbi, new_blob_desc,
+                                           in_parallel_distribution.sbp_parallel(0),
+                                           out_parallel_distribution.sbp_parallel(0), time_shape));
+      status.push_back(*boxing_builder_status);
       CHECK_EQ_OR_RETURN(out_tasks.size(), num_groups);
       FOR_RANGE(int64_t, j, 0, num_groups) {
         const int64_t parallel_id = j * group_size + i;
@@ -319,8 +319,7 @@ class InterGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
         }
       }
     }
-    Maybe<SubTskGphBuilderStatus> composed_status = MakeComposedSubTskGphBuilderStatus(status);
-    return composed_status;
+    return MakeComposedSubTskGphBuilderStatus(status);
   }
 
  private:
@@ -363,8 +362,8 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
                          &reduced_out_parallel_distribution);
   const auto& reduced_in_parallel_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& reduced_out_parallel_hierarchy = reduced_out_parallel_desc.hierarchy();
-  CHECK_LE(reduced_in_parallel_hierarchy->NumAxes(), 2);
-  CHECK_LE(reduced_out_parallel_hierarchy->NumAxes(), 2);
+  CHECK_LE_OR_RETURN(reduced_in_parallel_hierarchy->NumAxes(), 2);
+  CHECK_LE_OR_RETURN(reduced_out_parallel_hierarchy->NumAxes(), 2);
   if (reduced_in_parallel_hierarchy->NumAxes() == 1
       && reduced_out_parallel_hierarchy->NumAxes() == 1) {
     return impl_->flat_sub_tsk_gph_builder_->Build(
