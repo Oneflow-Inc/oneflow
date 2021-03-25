@@ -237,9 +237,13 @@ int64_t Actor::GetPieceId4NaiveCurReadableDataRegst() const {
   int64_t init_val = -2;
   int64_t pid = init_val;
   auto FirstFoundOnly = [&pid, init_val](int64_t) { return pid == init_val; };
-  naive_consumed_rs_.ForChosenFrontRegst(FirstFoundOnly, [&pid](Regst* regst) {
-    if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) { pid = regst->piece_id(); }
-  });
+  naive_consumed_rs_.ForChosenFrontRegst(
+      FirstFoundOnly, [&pid](int64_t regst_desc_id, Regst* regst) {
+        if (Global<RegstMgr>::Get()->HasRegstDescAddr4RegstDescId(regst_desc_id)) { return; }
+        if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+          pid = regst->piece_id();
+        }
+      });
   CHECK_GE(pid, 0);
   return pid;
 }
@@ -248,7 +252,8 @@ int64_t Actor::GetPieceId4NaiveOrInplaceCurReadableDataRegst() const {
   int64_t init_val = -2;
   int64_t pid = init_val;
   auto FirstFoundOnly = [&pid, init_val](int64_t) { return pid == init_val; };
-  auto Select = [&pid](Regst* regst) {
+  auto Select = [&pid](int64_t regst_desc_id, Regst* regst) {
+    if (Global<RegstMgr>::Get()->HasRegstDescAddr4RegstDescId(regst_desc_id)) { return; }
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) { pid = regst->piece_id(); }
   };
   naive_consumed_rs_.ForChosenFrontRegst(FirstFoundOnly, Select);
@@ -274,7 +279,8 @@ void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) co
 }
 
 void Actor::ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)> func) const {
-  naive_consumed_rs_.ForEachFrontRegst([func](Regst* regst) {
+  naive_consumed_rs_.ForEachFrontRegst([func](int64_t regst_desc_id, Regst* regst) {
+    if (Global<RegstMgr>::Get()->HasRegstDescAddr4RegstDescId(regst_desc_id)) { return; }
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) { func(regst); }
   });
 }
@@ -384,7 +390,8 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
     act_event->set_work_stream_id(GetGlobalWorkStreamId());
     act_event->set_act_id(act_id_);
     act_event->set_ready_time(GetCurTime());
-    naive_consumed_rs_.ForEachFrontRegst([&](const Regst* readable_regst) {
+    naive_consumed_rs_.ForEachFrontRegst([&](int64_t regst_desc_id, const Regst* readable_regst) {
+      if (Global<RegstMgr>::Get()->HasRegstDescAddr4RegstDescId(regst_desc_id)) { return; }
       ReadableRegstInfo* info = act_event->add_readable_regst_infos();
       Actor::SetReadableRegstInfo(readable_regst, info);
     });
@@ -478,7 +485,6 @@ void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
   naive_consumed_rs_.ForChosenRegstDeq(
       IsChosenRegstDescId, [&](int64_t regst_desc_id, const std::deque<Regst*>& reg_deq) {
         CHECK(reg_deq.empty() == false);
-        Regst* regst = reg_deq.front();
         auto regst_desc_addr = Global<RegstMgr>::Get()->RegstDescAddr4RegstDescId(regst_desc_id);
         CHECK(regst_desc_addr.has_returned_regst_num());
         int32_t returned_regst_num = regst_desc_addr.returned_regst_num();
