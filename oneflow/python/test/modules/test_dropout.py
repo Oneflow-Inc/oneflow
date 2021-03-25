@@ -20,19 +20,20 @@ import numpy as np
 import oneflow as flow
 import oneflow.typing as tp
 
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    
-
     def test_dropout(test_case):
         m = flow.nn.Dropout(p=0.5)
         input_arr = np.array(
-            [[-0.7797,  0.2264,  0.2458,  0.4163],
-            [ 0.4299,  0.3626, -0.4892,  0.4141],
-            [-1.4115,  1.2183, -0.5503,  0.6520]]
+            [
+                [-0.7797, 0.2264, 0.2458, 0.4163],
+                [0.4299, 0.3626, -0.4892, 0.4141],
+                [-1.4115, 1.2183, -0.5503, 0.6520],
+            ]
         )
         x = flow.Tensor(input_arr)
         y = m(x)

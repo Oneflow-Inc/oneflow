@@ -21,7 +21,6 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.id_util as id_util
 
 
-
 @oneflow_export("nn.Dropout")
 class Dropout(Module):
     def __init__(self, p: float = 0.5, inplace: bool = False):
@@ -36,21 +35,20 @@ class Dropout(Module):
             .Input("in")
             .Input("mask")
             .Output("out")
-            .Attr("scale", self.scale)
+            .Attr("scale", _scale)
             .Build()
         )
         self._mask_op = (
             flow.builtin_op("random_mask_like")
             .Input("like")
             .Output("out")
-            .Attr("rate", self.rate)
-            .Attr("seed", self.seed)
+            .Attr("rate", self._rate)
+            .Attr("seed", _seed)
             .Build()
         )
 
-
     def forward(self, x):
-        if self.rate == 0.0:
+        if self._rate == 0.0:
             return x
         mask = self._mask_op(x)[0]
         res = self._op(x, mask)[0]
