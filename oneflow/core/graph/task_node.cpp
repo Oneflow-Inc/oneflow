@@ -154,11 +154,7 @@ void TaskNode::ForEachProducedDataRegst(
   }
 }
 
-void TaskNode::Build() {
-  if (consumed_regsts_.size()) { CHECK(IsReadyForBuild()); }
-  BuildExecGphAndRegst();
-  LockRegsts();
-}
+void TaskNode::Build() { BuildExecGphAndRegst(); }
 
 void TaskNode::EraseZeroSizeProducedBlob() {
   for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
@@ -333,30 +329,6 @@ void TaskNode::ConsumeRegst(const std::string& name, const std::shared_ptr<Regst
   consumed_regsts_[name].push_back(regst);
 }
 
-bool TaskNode::IsAllConsumedDataRegstLocked() {
-  for (const auto& pair : consumed_regsts_) {
-    for (const std::shared_ptr<RegstDesc>& regst_desc : pair.second) {
-      if (regst_desc->regst_desc_type().has_data_regst_desc() && regst_desc->IsLocked() == false) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-void TaskNode::TryLockConsumedRegst(const std::string& name) {
-  auto consumed_regsts_it = consumed_regsts_.find(name);
-  if (consumed_regsts_it == consumed_regsts_.end()) { return; }
-  for (const std::shared_ptr<RegstDesc>& wrd : consumed_regsts_it->second) {
-    const std::shared_ptr<RegstDesc>& srd = wrd;
-    if (srd->IsLocked() == false) { srd->Lock(); }
-  }
-}
-
-void TaskNode::LockRegsts() {
-  for (auto& pair : produced_regsts_) { pair.second->Lock(); }
-}
-
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
@@ -395,6 +367,30 @@ std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
 void TaskEdge::AddRegst(const std::string& name_in_producer,
                         const std::shared_ptr<RegstDesc>& regst) {
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
+}
+
+void TaskEdge::CheckRegstLbiValid() const {
+  HashMap<LogicalBlobId, std::shared_ptr<RegstDesc>> lbi2data_regst;
+  for (auto& pair : name_in_producer2regst_) {
+    std::shared_ptr<RegstDesc> regst = pair.second;
+    if (regst->regst_desc_type().has_data_regst_desc()) {
+      // NOTE(chengcheng): regst_desc_type is Set, BUT regst_desc_type.data_regst_desc is UNSET!
+      //  So you can ONLY use NumOfLbi and ForEachLbi interface.
+      CHECK_EQ(regst->NumOfLbi(), 1);
+      regst->ForEachLbi(
+          [&](const LogicalBlobId& lbi) { CHECK(lbi2data_regst.emplace(lbi, regst).second); });
+    }
+  }
+
+  CHECK_EQ(lbi2data_regst.size(), lbis_.size())
+      << " \n\n TaskEdge lbi and regst NOT match."
+      << " TaskEdge: edge_id = " << edge_id() << " From: [" << src_node()->VisualStr() << "] To: ["
+      << dst_node()->VisualStr() << "]\n";
+  for (auto& lbi : lbis_) {
+    CHECK(lbi2data_regst.find(lbi) != lbi2data_regst.end())
+        << " \n\n Cannot find lbi: " << lbi.DebugString() << " in TaskEdge From: ["
+        << src_node()->VisualStr() << "] To: [" << dst_node()->VisualStr() << "]\n\n";
+  }
 }
 
 RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,

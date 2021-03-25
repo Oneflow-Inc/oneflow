@@ -513,7 +513,7 @@ Maybe<void> Operator::InferSbpSignatureIf(
 
 Maybe<void> Operator::InferSbpSignature(
     SbpSignature* infered_sbp_signature, const SbpSignature& sbp_sig_conf,
-    const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint) {
+    const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint) const {
   auto SbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const SbpInferHint*> {
     auto it = ibn2sbp_infer_hint.find(ibn);
     if (it == ibn2sbp_infer_hint.end()) {
@@ -674,7 +674,7 @@ Maybe<void> Operator::InferParallelDistributionSignature(
     const ParallelDistributionSignature& parallel_distribution_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-        ParallelDistributionInferHint4Ibn) {
+        ParallelDistributionInferHint4Ibn) const {
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   CHECK_GT(parallel_hierarchy->NumAxes(), 0);
   if (parallel_hierarchy->NumAxes() == 1) {

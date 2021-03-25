@@ -78,7 +78,7 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
 
 IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
     : CommNetIf(plan),
-      token2mem_desc_(Global<ResourceDesc, ForSession>::Get()->TotalMachineNum()),
+      token2mem_desc_(Global<ResourceDesc, ForEnv>::Get()->process_ranks().size()),
       poll_exit_flag_(ATOMIC_FLAG_INIT) {
   ibv_device** device_list = ibv_get_device_list(nullptr);
   PCHECK(device_list);
@@ -97,7 +97,7 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
   ibv_gid gid;
   CHECK_EQ(ibv_query_gid(context_, 1, 0, &gid), 0);
   int64_t this_machine_id = GlobalProcessCtx::Rank();
-  qp_vec_.assign(Global<ResourceDesc, ForSession>::Get()->TotalMachineNum(), nullptr);
+  qp_vec_.assign(Global<ResourceDesc, ForEnv>::Get()->process_ranks().size(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
     IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, cq_, cq_);
     qp_vec_.at(peer_id) = cur_qp;

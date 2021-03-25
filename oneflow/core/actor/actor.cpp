@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -306,8 +307,8 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       } else if (inplace_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
         CHECK_EQ(0, inplace_consumed_rs_.TryPushBackRegst(regst));
         int64_t out_regst_desc_id = inplace_regst_desc_id_in2out_.at(regst->regst_desc_id());
-        CHECK(regst->packed_blob()->dptr()
-              == inplace_produced_rs_.Front(out_regst_desc_id)->packed_blob()->dptr());
+        CHECK(regst->GetSoleBlob()->dptr()
+              == inplace_produced_rs_.Front(out_regst_desc_id)->GetSoleBlob()->dptr());
       } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
         // do nothing
       } else {
@@ -468,17 +469,11 @@ void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
     CHECK(reg_deq.empty() == false);
     Regst* regst = reg_deq.front();
     CHECK(regst->regst_desc()->regst_desc_type().has_ctrl_regst_desc());
-    int32_t returned_regst_num =
-        regst->regst_desc()->regst_desc_type().ctrl_regst_desc().returned_regst_num();
-    CHECK_GE(returned_regst_num, 1);
-    CHECK_GE(reg_deq.size(), returned_regst_num);
-    for (size_t i = 0; i < returned_regst_num; ++i) {
-      Regst* regst = reg_deq.at(i);
-      // must access regst before sending it to producer
-      tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id());
-      EnqueueAsyncMsg(
-          ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
-    }
+    CHECK_GE(reg_deq.size(), 1);
+    // must access regst before sending it to producer
+    tmp_regst_desc_id_vec_.push_back(regst->regst_desc_id());
+    EnqueueAsyncMsg(
+        ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
   });
   naive_consumed_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
 }
