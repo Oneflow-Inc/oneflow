@@ -859,24 +859,24 @@ Maybe<void> InstructionsBuilder::FeedBlob(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::RankFrontSeqInferCallback(
-    std::shared_ptr<std::function<void()>> callback) {
+Maybe<void> InstructionsBuilder::_RankFrontSeqCallback(
+    const std::string& instruction_name, std::shared_ptr<std::function<void()>>& callback) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
-      ObjectMsgPtr<vm::InstructionMsg>::New("RankFrontSeqInterCallback");
+      ObjectMsgPtr<vm::InstructionMsg>::New(instruction_name);
   instruction->add_int64_operand(GlobalProcessCtx::Rank());
   *instruction->mutable_no_arg_callback() = callback;
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InstructionsBuilder::RankFrontSeqInferCallback(
+    std::shared_ptr<std::function<void()>> callback) {
+  return _RankFrontSeqCallback("RankFrontSeqInferCallback", callback);
+}
+
 Maybe<void> InstructionsBuilder::RankFrontSeqComputeCallback(
     std::shared_ptr<std::function<void()>> callback) {
-  ObjectMsgPtr<vm::InstructionMsg> instruction =
-      ObjectMsgPtr<vm::InstructionMsg>::New("RankFrontSeqComputeCallback");
-  instruction->add_int64_operand(GlobalProcessCtx::Rank());
-  *instruction->mutable_no_arg_callback() = callback;
-  instruction_list_->PushBack(instruction.Mutable());
-  return Maybe<void>::Ok();
+  return _RankFrontSeqCallback("RankFrontSeqComputeCallback", callback);
 }
 
 Maybe<void> InstructionsBuilder::FetchBlobHeader(

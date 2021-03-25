@@ -351,6 +351,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
           const std::shared_ptr<compatible_py::BlobObject>&,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& GetDelegateBlobObject);
 
+  Maybe<void> _RankFrontSeqCallback(const std::string& instruction_name,
+                                    std::shared_ptr<std::function<void()>>& callback);
+
   Maybe<void> _FetchBlob(const std::string& instruction_name,
                          const std::shared_ptr<compatible_py::BlobObject>& blob_object,
                          int64_t callback_id);
