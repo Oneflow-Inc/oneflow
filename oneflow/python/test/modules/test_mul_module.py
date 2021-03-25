@@ -49,6 +49,23 @@ class TestModule(flow.unittest.TestCase):
         np_out = np.multiply(x.numpy(), y.numpy())
         np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
 
+        # test __mul__
+        x = flow.Tensor(np.random.randn(1, 1))
+        y = flow.Tensor(np.random.randn(2, 3))
+        of_out = x * y
+        np_out = np.multiply(x.numpy(), y.numpy())
+        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+
+        x = flow.Tensor(np.random.randn(2, 3))
+        of_out = x * 3
+        np_out = np.multiply(x.numpy(), 3)
+        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+
+        x = flow.Tensor(np.random.randn(2, 3))
+        of_out = 3 * x
+        np_out = np.multiply(3, x.numpy())
+        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+
 
 if __name__ == "__main__":
     unittest.main()
