@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace helper {
+namespace op_expr_helper {
 
 Maybe<one::UserOpExpr> AddNOp(int32_t n) {
   return one::OpBuilder("add_n").Input("in", n).Output("out").Build();
@@ -32,7 +32,7 @@ Maybe<one::UserOpExpr> GetZeroLikeOp() {
   return one::OpBuilder("zero_like").Input("in").Output("out").Build();
 }
 
-}  // namespace helper
+}  // namespace op_expr_helper
 
 }  // namespace oneflow
 

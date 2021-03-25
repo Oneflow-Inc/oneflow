@@ -24,7 +24,7 @@ class UserOpExpr;
 
 }  // namespace one
 
-namespace helper {
+namespace op_expr_helper {
 
 Maybe<one::UserOpExpr> AddNOp(int32_t n);
 
@@ -32,7 +32,7 @@ Maybe<one::UserOpExpr> AddOp();
 
 Maybe<one::UserOpExpr> ZeroLikeOp();
 
-}  // namespace helper
+}  // namespace op_expr_helper
 
 }  // namespace oneflow
 
