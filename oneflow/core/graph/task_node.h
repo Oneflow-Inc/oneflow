@@ -37,8 +37,10 @@ namespace oneflow {
 
 RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
                                                   const std::string& regst_desc_name);
-std::pair<RegstDescIdSet*, PbMap<int64_t, RegstDescAddr>*> FindOrCreateConsumedCtrlRegstDescIdSet(
-    TaskProto* task_proto, const std::string& regst_desc_name);
+RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
+                                                       const std::string& regst_desc_name);
+
+void DumpToConsumedRegstDescId2Addr(const RegstDescProto& regst_desc_proto, TaskProto* task_proto);
 
 class TaskEdge;
 

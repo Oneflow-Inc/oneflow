@@ -443,15 +443,23 @@ RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
   return &produced_regst_desc->at(regst_desc_name);
 }
 
-std::pair<RegstDescIdSet*, PbMap<int64_t, RegstDescAddr>*> FindOrCreateConsumedCtrlRegstDescIdSet(
-    TaskProto* task_proto, const std::string& regst_desc_name) {
+RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
+                                                       const std::string& regst_desc_name) {
   auto* consumed_regst_desc_id_sets = task_proto->mutable_consumed_regst_desc_id();
-  auto* consumed_regst_desc_id2addr = task_proto->mutable_consumed_regst_desc_id2addr();
   if (consumed_regst_desc_id_sets->find(regst_desc_name) == consumed_regst_desc_id_sets->end()) {
     CHECK(consumed_regst_desc_id_sets->insert({regst_desc_name, RegstDescIdSet()}).second);
   }
-  return std::make_pair(&consumed_regst_desc_id_sets->at(regst_desc_name),
-                        consumed_regst_desc_id2addr);
+  return &consumed_regst_desc_id_sets->at(regst_desc_name);
+}
+
+void DumpToConsumedRegstDescId2Addr(const RegstDescProto& regst_desc_proto, TaskProto* task_proto) {
+  auto* consumed_regst_desc_id2addr = task_proto->mutable_consumed_regst_desc_id2addr();
+  RegstDescAddr regst_desc_addr;
+  regst_desc_addr.set_rank(
+      Global<IDMgr>::Get()->MachineId4TaskId(regst_desc_proto.producer_task_id()));
+  regst_desc_addr.set_task_id(regst_desc_proto.producer_task_id());
+  CHECK(consumed_regst_desc_id2addr->insert({regst_desc_proto.regst_desc_id(), regst_desc_addr})
+            .second);
 }
 
 void TaskNode::ForEachInDataEdge(const std::function<void(TaskEdge*)>& Handler) const {

@@ -824,13 +824,7 @@ Maybe<void> ConnectCriticalSectionEndToReentrantLockEnd(
   cs_end_regst->add_consumer_task_id(reentrant_lock_task->task_id());
   reentrant_lock_task->mutable_consumed_regst_desc_id()->at("in").add_regst_desc_id(
       cs_end_regst->regst_desc_id());
-  auto* consumed_regst_desc_id2addr = reentrant_lock_task->mutable_consumed_regst_desc_id2addr();
-  RegstDescAddr regst_desc_addr;
-  regst_desc_addr.set_rank(
-      Global<IDMgr>::Get()->MachineId4TaskId(cs_end_regst->producer_task_id()));
-  regst_desc_addr.set_task_id(cs_end_regst->producer_task_id());
-  CHECK(
-      consumed_regst_desc_id2addr->insert({cs_end_regst->regst_desc_id(), regst_desc_addr}).second);
+  DumpToConsumedRegstDescId2Addr(*cs_end_regst, reentrant_lock_task);
 
   auto* reentrant_exec_node = reentrant_lock_task->mutable_exec_sequence()->mutable_exec_node(0);
   (*reentrant_exec_node->mutable_bn_in_op2regst_desc_id())["end"] = cs_end_regst->regst_desc_id();
