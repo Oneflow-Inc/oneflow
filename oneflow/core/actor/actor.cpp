@@ -315,8 +315,8 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       } else if (inplace_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
         CHECK_EQ(0, inplace_consumed_rs_.TryPushBackRegst(regst));
         int64_t out_regst_desc_id = inplace_regst_desc_id_in2out_.at(regst->regst_desc_id());
-        CHECK(regst->packed_blob()->dptr()
-              == inplace_produced_rs_.Front(out_regst_desc_id)->packed_blob()->dptr());
+        CHECK(regst->GetSoleBlob()->dptr()
+              == inplace_produced_rs_.Front(out_regst_desc_id)->GetSoleBlob()->dptr());
       } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
         // do nothing
       } else {
