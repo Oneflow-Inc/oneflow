@@ -29,25 +29,42 @@ class TestModule(flow.unittest.TestCase):
         y = flow.Tensor(np.random.randn(2, 3))
         of_out = div(x, y)
         np_out = np.divide(x.numpy(), y.numpy())
-        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
         x = 5
         y = flow.Tensor(np.random.randn(2, 3))
         of_out = div(x, y)
-        np_out = np.subtract(x, y.numpy())
-        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+        np_out = np.divide(x, y.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
         x = flow.Tensor(np.random.randn(2, 3))
         y = 5
         of_out = div(x, y)
-        np_out = np.subtract(x.numpy(), y)
-        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+        np_out = np.divide(x.numpy(), y)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
         x = flow.Tensor(np.random.randn(2, 3))
         y = flow.Tensor(np.random.randn(1, 1))
         of_out = div(x, y)
-        np_out = np.subtract(x.numpy(), y.numpy())
-        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4)
+        np_out = np.divide(x.numpy(), y.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        # test __truediv__
+        x = flow.Tensor(np.random.randn(1, 1))
+        y = flow.Tensor(np.random.randn(2, 3))
+        of_out = x / y
+        np_out = np.divide(x.numpy(), y.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        x = flow.Tensor(np.random.randn(2, 3))
+        of_out = x / 3
+        np_out = np.divide(x.numpy(), 3)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        x = flow.Tensor(np.random.randn(2, 3))
+        of_out = 3 / x
+        np_out = np.divide(3, x.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 if __name__ == "__main__":

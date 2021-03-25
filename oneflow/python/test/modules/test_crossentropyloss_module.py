@@ -52,15 +52,19 @@ class TestModule(flow.unittest.TestCase):
             input = flow.Tensor(sample["input"], dtype=flow.float32)
             target = flow.Tensor(sample["target"], dtype=flow.int32)
             of_out = loss(input, target)
-            assert np.allclose(of_out.numpy(), sample["out"], 1e-4, 1e-4)
+            test_case.assertTrue(np.allclose(of_out.numpy(), sample["out"], 1e-4, 1e-4))
 
             loss_sum = flow.nn.CrossEntropyLoss(reduction="sum")
             of_out_sum = loss_sum(input, target)
-            assert np.allclose(of_out_sum.numpy(), sample["out_sum"], 1e-4, 1e-4)
+            test_case.assertTrue(
+                np.allclose(of_out_sum.numpy(), sample["out_sum"], 1e-4, 1e-4)
+            )
 
             loss_mean = flow.nn.CrossEntropyLoss(reduction="mean")
             of_out_mean = loss_mean(input, target)
-            assert np.allclose(of_out_mean.numpy(), sample["out_mean"], 1e-4, 1e-4)
+            test_case.assertTrue(
+                np.allclose(of_out_mean.numpy(), sample["out_mean"], 1e-4, 1e-4)
+            )
 
 
 if __name__ == "__main__":
