@@ -86,7 +86,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void ForEachConsumedDataRegst(
       const std::function<void(const std::string&, const RegstDesc*)>& Handler) const;
   void Build();
-  virtual bool IsReadyForBuild() { return IsAllConsumedDataRegstLocked(); }
 
   void EraseZeroSizeProducedBlob();
   void EraseZeroSizeConsumedRegst();
@@ -132,13 +131,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void PinConsumedRegstMemCase(MemoryCase*);
   void ConsumeRegst(const std::string& name);
   void ConsumeRegst(const std::string& name, const std::shared_ptr<RegstDesc>&);
-  bool IsAllConsumedDataRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
-  void TryLockConsumedRegst(const std::string& name);
   void EraseConsumedRegstsByName(const std::string& name);
 
   virtual void BuildExecGphAndRegst() = 0;
-  virtual void LockRegsts();
 
   virtual void InferProducedDataRegstTimeShape() = 0;
   void NaiveInferProducedDataRegstTimeShape();
