@@ -1098,9 +1098,16 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
       PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
     }
+    double start = GetCurTime();
     PushPlan("merged_plan", *plan);
+    LOG(INFO) << " PushPlan merged_plan time: " << (GetCurTime() - start) / 1000000000.0
+              << " seconds.\n";
+
   } else {
+    double start = GetCurTime();
     PullPlan("merged_plan", plan);
+    LOG(INFO) << " PullPlan merged_plan time: " << (GetCurTime() - start) / 1000000000.0
+              << " seconds.\n";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
     }
