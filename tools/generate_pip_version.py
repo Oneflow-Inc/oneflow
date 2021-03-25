@@ -16,7 +16,9 @@ local_label = ""
 version = f"0.3.5"
 
 # set version if release of nightly
-assert os.getenv("ONEFLOW_RELEASE_VERSION") != ""  # either None or a valid string
+assert (
+    os.getenv("ONEFLOW_RELEASE_VERSION") != ""
+), "ONEFLOW_RELEASE_VERSION should be either None or a valid string"
 if os.getenv("ONEFLOW_RELEASE_VERSION"):
     release_version = os.getenv("ONEFLOW_RELEASE_VERSION")
     version = f"{release_version}"
