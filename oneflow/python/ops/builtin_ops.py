@@ -113,10 +113,10 @@ class BuiltinOp(object):
             assert isinstance(attr_value, bool)
             attribute.set_at_bool(attr_value)
         elif attr_type == user_op_attr_cfg.kAtFloat:
-            assert isinstance(attr_value, float)
+            assert isinstance(attr_value, (float, int))
             attribute.set_at_float(attr_value)
         elif attr_type == user_op_attr_cfg.kAtDouble:
-            assert isinstance(attr_value, float)
+            assert isinstance(attr_value, (float, int))
             attribute.set_at_double(attr_value)
         elif attr_type == user_op_attr_cfg.kAtString:
             assert isinstance(attr_value, str)
