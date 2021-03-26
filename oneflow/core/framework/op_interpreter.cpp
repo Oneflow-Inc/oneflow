@@ -82,8 +82,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const BuiltinOpExpr& op_expr, const Tenso
         compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, proto_op_attribute, obn));
     const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(proto_op_attribute, obn));
     if (!(outputs->at(i).get())) {
-      auto t = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
-      outputs->at(i).swap(t);
+      outputs->at(i) = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/true));
     } else {
       // TODO(hjchen2) Reset shape, dtype and so on.
       UNIMPLEMENTED();
@@ -139,8 +138,7 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
         std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util.get(), _1, _2, _3)));
     for (int i = 0; i < outputs->size(); ++i) {
       const std::string& obn = op_expr.indexed_obns().at(i);
-      auto t = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(bn2blob_object->at(obn)));
-      outputs->at(i).swap(t);
+      outputs->at(i) = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(bn2blob_object->at(obn)));
     }
   };
   return LogicalRun(build_instruction);
@@ -175,8 +173,7 @@ static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_ex
     const auto& out_blob_object = CHECK_JUST(builder->MakeReferenceBlobObject(
         in_blob_object,
         std::make_shared<compatible_py::OpArgParallelAttribute>(*op_arg_parallel_attr)));
-    auto t = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(out_blob_object));
-    outputs->at(0).swap(t);
+    outputs->at(0) = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(out_blob_object));
   };
   return LogicalRun(build_instruction);
 }
@@ -220,9 +217,8 @@ static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpE
     const auto& physical_out_blob_objects =
         CHECK_JUST(builder->UnpackLogicalBlobToPhysicalBlobs(logical_in_blob_object));
     for (int i = 0; i < physical_out_blob_objects->size(); ++i) {
-      auto t =
+      outputs->at(i) =
           CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(physical_out_blob_objects->at(i)));
-      outputs->at(i).swap(t);
     }
   };
   return LogicalRun(build_instruction);
@@ -262,8 +258,7 @@ static Maybe<void> BuildAndRunDistributeConcatAndAddInstruction(const BuiltinOpE
     }
     const auto& physical_out_blob_object = CHECK_JUST(builder->PackPhysicalBlobsToLogicalBlob(
         in_blob_objects, op_arg_parallel_attr, op_arg_blob_attr));
-    auto t = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(physical_out_blob_object));
-    outputs->at(0).swap(t);
+    outputs->at(0) = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(physical_out_blob_object));
   };
   return LogicalRun(build_instruction);
 }
