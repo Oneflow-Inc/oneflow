@@ -316,7 +316,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     JUST(DetermineRequiresGrad(inputs, outputs));
   }
   if (autograd::GradMode::is_enabled()) {
-    std::shared_ptr<OpExprGradClosure> grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
+    const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     grad_closure->Capture(inputs, *outputs);
 
     auto backward_fn =
