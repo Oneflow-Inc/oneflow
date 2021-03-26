@@ -40,6 +40,7 @@ class TensorArg;
 
 class TensorImpl {
  public:
+  TensorImpl();
   virtual ~TensorImpl() = default;
 
   // Getters
