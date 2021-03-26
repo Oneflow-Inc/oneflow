@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter.h"
+
+#include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/framework/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr_grad_closure.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -24,7 +28,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
@@ -282,10 +285,51 @@ Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const Ten
   return Maybe<void>::Ok();
 }
 
+namespace {
+
+Maybe<void> DetermineIsLeaf(const TensorTuple& inputs, TensorTuple* outputs) {
+  if (inputs.empty()) {
+    for (auto& output : *outputs) { output->set_is_leaf(true); }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DetermineRequiresGrad(const TensorTuple& inputs, TensorTuple* outputs) {
+  bool requires_grad =
+      std::any_of(inputs.begin(), inputs.end(),
+                  [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
+  for (auto& output : *outputs) {
+    output->set_requires_grad(requires_grad);
+    output->set_is_leaf(!requires_grad);
+  }
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs) const {
-  // TODO(hjchen2)
-  return internal_->Apply(op_expr, inputs, outputs);
+  {
+    autograd::AutoGradMode mode(false);
+    JUST(internal_->Apply(op_expr, inputs, outputs));
+    JUST(DetermineIsLeaf(inputs, outputs));
+    JUST(DetermineRequiresGrad(inputs, outputs));
+  }
+  if (autograd::GradMode::is_enabled()) {
+    auto grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
+    grad_closure->Capture(inputs, *outputs);
+
+    auto backward_fn =
+        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
+            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                bool create_graph) -> Maybe<void> {
+              autograd::AutoGradMode mode(create_graph);
+              JUST(grad_closure->DoBackward(out_grads, in_grads));
+              return Maybe<void>::Ok();
+            });
+    GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(backward_fn, inputs, outputs);
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace one
