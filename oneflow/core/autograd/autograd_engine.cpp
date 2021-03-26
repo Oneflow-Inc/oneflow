@@ -131,7 +131,15 @@ Maybe<void> StackFunctionNode::Apply(bool create_graph) {
       << "This FunctionNode with name `" << GetOpName() << "` has been released.";
   if (!IsReadyToRun(out_grads_)) { return Maybe<void>::Ok(); }
   InitEmptyTensorArgs2ZerosTensor(*outputs_, out_grads_);
-  TODO();  // wangyinggang: Calls backward_fn_ and passes arguments according to AutogradInterpreter
+  TensorTuple input_grads(in_grads_.size());
+  TensorTuple output_grads(out_grads_.size());
+  for (int i = 0; i < out_grads_.size(); ++i) {
+    output_grads.at(i) = JUST(out_grads_.at(i)->GetAccTensor());
+  }
+  JUST((*backward_fn_)(input_grads, &output_grads, create_graph));
+  for (int i = 0; i < in_grads_.size(); ++i) {
+    in_grads_.at(i)->PushPartialTensor(input_grads.at(i));
+  }
   return Maybe<void>::Ok();
 }
 
