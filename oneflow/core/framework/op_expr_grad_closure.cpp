@@ -162,12 +162,11 @@ Maybe<void> DefaultOpExprGradClosure::Init(const OpExpr& op) {
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   OperatorConf fw_op_conf;
   fw_op_expr->BuildOpConf(&fw_op_conf);
-  fw_op_conf.set_device_tag("cpu");
 
   // Generate backward operator conf for each input. The `LogicalBlobId` for
   // backward output gradient is dummy due to inaccessibility.
   std::vector<OperatorConf> bw_op_confs;
-  std::shared_ptr<Operator> op_adapter = ConstructOp(fw_op_conf);
+  std::shared_ptr<Operator> op_adapter = ConstructOp(fw_op_conf, DeviceType::kCPU);
   JUST(GenerateOpGradConf(*op_adapter, &bw_op_confs));
 
   CHECK_EQ_OR_RETURN(op.input_num(), in_bn2grad_lbi_.size())
