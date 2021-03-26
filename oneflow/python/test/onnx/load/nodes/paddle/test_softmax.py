@@ -23,7 +23,8 @@ from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 def test_softmax(test_case):
     class Net(nn.Layer):
         def forward(self, x):
-            x = nn.Softmax(x)
+            m = nn.Softmax()
+            x = m(x)
             return x
 
     load_paddle_module_and_check(test_case, Net)
@@ -32,7 +33,8 @@ def test_softmax(test_case):
 def test_softmax_with_axis(test_case):
     class Net(nn.Layer):
         def forward(self, x):
-            x = nn.Softmax(x, axis=1)
+            m = nn.Softmax(axis=1)
+            x = m(x)
             return x
 
     load_paddle_module_and_check(test_case, Net)

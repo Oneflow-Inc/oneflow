@@ -20,7 +20,7 @@ import paddle.nn.functional as F
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
 
-def test_Conv2D_k3s1p1(test_case):
+def test_conv2d_k3s1p1(test_case):
     class Net(nn.Layer):
         def __init__(self):
             super(Net, self).__init__()
@@ -33,7 +33,7 @@ def test_Conv2D_k3s1p1(test_case):
     load_paddle_module_and_check(test_case, Net, input_size=(2, 4, 3, 5))
 
 
-def test_Conv2D_k3s1p0(test_case):
+def test_conv2d_k3s1p0(test_case):
     class Net(nn.Layer):
         def __init__(self):
             super(Net, self).__init__()
@@ -46,7 +46,7 @@ def test_Conv2D_k3s1p0(test_case):
     load_paddle_module_and_check(test_case, Net, input_size=(2, 4, 3, 5))
 
 
-def test_Conv2D_k3s2p0(test_case):
+def test_conv2d_k3s2p0(test_case):
     class Net(nn.Layer):
         def __init__(self):
             super(Net, self).__init__()
@@ -59,7 +59,7 @@ def test_Conv2D_k3s2p0(test_case):
     load_paddle_module_and_check(test_case, Net, input_size=(2, 4, 9, 7))
 
 
-def test_Conv2D_k3s2p0g2(test_case):
+def test_conv2d_k3s2p0g2(test_case):
     class Net(nn.Layer):
         def __init__(self):
             super(Net, self).__init__()
@@ -72,7 +72,7 @@ def test_Conv2D_k3s2p0g2(test_case):
     load_paddle_module_and_check(test_case, Net, input_size=(2, 4, 9, 7))
 
 
-def test_Conv2D_k3s2p0g2d2(test_case):
+def test_conv2d_k3s2p0g2d2(test_case):
     class Net(nn.Layer):
         def __init__(self):
             super(Net, self).__init__()
@@ -84,8 +84,4 @@ def test_Conv2D_k3s2p0g2d2(test_case):
 
     load_paddle_module_and_check(test_case, Net, input_size=(2, 4, 13, 12))
 
-from absl import app
-from absl.testing import absltest
 
-test_case = absltest.TestCase
-test_Conv2D_k3s1p1(test_case)

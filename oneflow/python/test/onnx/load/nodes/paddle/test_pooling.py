@@ -121,5 +121,11 @@ def test_global_avg_pooling(test_case):
     _test_global_pooling(test_case, nn.AdaptiveAvgPool2D)
 
 
-def test_global_max_pooling(test_case):
-    _test_global_pooling(test_case, nn.AdaptiveMaxPool2D)
+# def test_global_max_pooling(test_case):
+#     _test_global_pooling(test_case, nn.AdaptiveMaxPool2D)
+
+# from absl import app
+# from absl.testing import absltest
+
+# test_case = absltest.TestCase
+# test_global_max_pooling(test_case)
