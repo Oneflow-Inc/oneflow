@@ -25,10 +25,10 @@ import oneflow.python.framework.id_util as id_util
 class Dropout(Module):
     def __init__(self, p: float = 0.5, inplace: bool = False):
         super().__init__()
-        self.rate = p
-        self.seed = random.randint(-sys.maxsize, sys.maxsize)
-        assert self.rate is not None and self.rate >= 0.0 and self.rate < 1.0
-        self.scale = float(1.0 / (1.0 - self.rate))
+        self._rate = p
+        _seed = random.randint(-sys.maxsize, sys.maxsize)
+        assert self._rate is not None and self._rate >= 0.0 and self._rate < 1.0
+        _scale = float(1.0 / (1.0 - self._rate))
         assert inplace==False, "Not support inplace=True yet!"
         self._op = (
             flow.builtin_op("dropout")
@@ -53,3 +53,4 @@ class Dropout(Module):
         mask = self._mask_op(x)[0]
         res = self._op(x, mask)[0]
         return res
+
