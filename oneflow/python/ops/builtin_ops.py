@@ -20,6 +20,7 @@ from google.protobuf import text_format
 import oneflow
 import oneflow_api
 import oneflow_api.oneflow.core.common.shape as shape_cfg
+import oneflow_api.oneflow.core.common.data_type as data_type_cfg
 import oneflow_api.oneflow.core.framework.user_op_attr as user_op_attr_cfg
 from oneflow.python.oneflow_export import oneflow_export
 
@@ -129,7 +130,7 @@ class BuiltinOp(object):
             assert attr_value in oneflow.dtypes()
             attr_value = oneflow_api.deprecated.GetProtoDtype4OfDtype(attr_value)
             assert isinstance(attr_value, int)
-            attribute.set_at_data_type(user_op_attr_cfg.AttrType(attr_value))
+            attribute.set_at_data_type(data_type_cfg.DataType(attr_value))
         elif attr_type == user_op_attr_cfg.kAtListInt32:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
@@ -151,9 +152,7 @@ class BuiltinOp(object):
                 assert x in oneflow.dtypes()
                 x = oneflow_api.deprecated.GetProtoDtype4OfDtype(x)
                 assert isinstance(x, int)
-                attribute.mutable_at_list_data_type.add_val(
-                    user_op_attr_cfg.AttrType(x)
-                )
+                attribute.mutable_at_list_data_type.add_val(data_type_cfg.DataType(x))
         elif attr_type == user_op_attr_cfg.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:

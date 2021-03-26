@@ -25,7 +25,8 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
 import oneflow_api.oneflow.core.framework.user_op_attr as user_op_attr_cfg
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.core.common.shape_pb2 as shape_util
+import oneflow_api.oneflow.core.common.shape as shape_cfg
+import oneflow_api.oneflow.core.common.data_type as data_type_cfg
 import oneflow
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.hob as hob
@@ -360,7 +361,7 @@ class UserOpConfBuilder(object):
             assert attr_value in oneflow.dtypes()
             attr_value = oneflow_api.deprecated.GetProtoDtype4OfDtype(attr_value)
             assert isinstance(attr_value, int)
-            attribute.set_at_data_type(user_op_attr_cfg.AttrType(attr_value))
+            attribute.set_at_data_type(data_type_cfg.DataType(attr_value))
         elif attr_type == user_op_attr_cfg.kAtListInt32:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
@@ -382,9 +383,7 @@ class UserOpConfBuilder(object):
                 assert x in oneflow.dtypes()
                 x = oneflow_api.deprecated.GetProtoDtype4OfDtype(x)
                 assert isinstance(x, int)
-                attribute.mutable_at_list_data_type.add_val(
-                    user_op_attr_cfg.AttrType(x)
-                )
+                attribute.mutable_at_list_data_type.add_val(data_type_cfg.DataType(x))
         elif attr_type == user_op_attr_cfg.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
