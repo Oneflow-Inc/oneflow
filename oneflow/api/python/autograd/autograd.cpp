@@ -44,7 +44,7 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
   auto gradients = std::make_shared<one::TensorTuple>(out_grads.size());
   for (int i = 0; i < out_grads.size(); ++i) {
     if (out_grads.at(i).get()) {
-      CHECK_OR_RETURN(outputs.at(i)->shape() == out_grads.at(i)->shape())
+      CHECK_OR_RETURN(*(outputs.at(i)->shape()) == *(out_grads.at(i)->shape()))
           << "out_grad's shape must be same as output's";
       gradients->at(i) = out_grads.at(i);
     } else {
