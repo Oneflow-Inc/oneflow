@@ -18,16 +18,10 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op_by_module
 from oneflow.python.framework.tensor import register_op_by_module
-from typing import (
-    Optional,
-    Union,
-    Tuple
-)
+from typing import Optional, Tuple
 
 
 @oneflow_export("nn.Ones")
-@register_tensor_op_by_module("ones")
-@register_op_by_module("ones")
 class Ones(Module):
     def __init__(self, dtype: Optional[flow.dtype] = None) -> None:
         super().__init__()
@@ -62,8 +56,6 @@ class Ones(Module):
 
 
 @oneflow_export("nn.Zeros")
-@register_tensor_op_by_module("zeros")
-@register_op_by_module("zeros")
 class Zeros(Module):
     def __init__(self, dtype: Optional[flow.dtype] = None) -> None:
         super().__init__()
