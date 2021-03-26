@@ -18,6 +18,10 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/autograd/autograd_mode.h"
 
 namespace oneflow {
 namespace one {
@@ -30,13 +34,30 @@ bool IsReadyToRun(const std::vector<std::shared_ptr<TensorArg>>& out_grads) {
       [](const std::shared_ptr<TensorArg>& tensor_arg) { return !tensor_arg->Empty(); });
 }
 
-Maybe<void> InitEmptyTensorArgs2ZerosTensor(
-    const TensorTuple& outputs, const std::vector<std::shared_ptr<TensorArg>>& out_grads) {
+Maybe<void> InitEmptyTensorArgs2ZerosTensor(const TensorTuple& outputs,
+                                            std::vector<std::shared_ptr<TensorArg>>& out_grads) {
+  const auto& zero_like = JUST(op_expr_helper::ZeroLikeOp());
   for (int i = 0; i < out_grads.size(); ++i) {
     if (out_grads.at(i)->Empty()) {
-      TODO();  // wangyinggang:
-               // out_grads.at(i)->PushPartialTensor(Tensor.zeros_like(outputs.at(i)));
+      TensorTuple output(1);
+      JUST(GetInterpreter()->Apply(zero_like, {outputs.at(i)}, output));
+      out_grads.at(i)->PushPartialTensor(output.at(0));
     }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CopyOrAccGrad(Tensor& tensor, bool autograd_mode) {
+  autograd::AutoGradMode mode(autograd_mode);
+  const auto& tensor_arg = tensor.now_grad_arg();
+  if (tensor.acc_grad()) {
+    TensorTuple input = {tensor.acc_grad(), tensor_arg->GetAccTensor().GetPtrOrThrow()};
+    TensorTuple output(1);
+    const auto& add = JUST(op_expr_helper::AddOp());
+    JUST(GetInterpreter()->Apply(add, input, output));
+    tensor.set_acc_grad(output.at(0));
+  } else {
+    tensor.set_acc_grad(tensor_arg->GetAccTensor().GetPtrOrThrow());
   }
   return Maybe<void>::Ok();
 }
@@ -54,7 +75,7 @@ StackFunctionNode::StackFunctionNode(
 
   outputs_ = std::make_shared<TensorTuple>(outputs.size());
   for (int i = 0; i < outputs.size(); ++i) {
-    TODO();  // shares data with output tensors but not grad_fn
+    outputs_->at(i) = outputs.at(i)->detach();
     out_grads_.emplace_back(outputs.at(i)->now_grad_arg());
   }
 
@@ -64,16 +85,27 @@ StackFunctionNode::StackFunctionNode(
 Maybe<void> StackFunctionNode::AccGrad4RetainGradTensor() {
   for (int i = 0; i < outputs_->size(); ++i) {
     if (outputs_->at(i)->retain_grad() && outputs_->at(i)->requires_grad()) {
-      TODO();  // wangyinggang: Accumulates out_grad to output.acc_grad
+      JUST(CopyOrAccGrad(outputs_->at(i), /*autograd_mode=*/false));
     }
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> StackFunctionNode::AccGrad4LeafTensor() {
+Maybe<void> StackFunctionNode::AccGrad4LeafTensor(bool create_graph) {
   for (int i = 0; i < outputs_->size(); ++i) {
     if (outputs_->at(i)->is_leaf() && outputs_->at(i)->requires_grad()) {
-      TODO();  // wangyinggang: Accumulates out_grad to output.acc_grad
+      JUST(CopyOrAccGrad(outputs_->at(i), /*autograd_mode=*/create_graph));
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> StackFunctionNode::GetNowGrad(TensorTuple* input_now_grads,
+                                          const HashMap<TensorArg*, size_t>& tensor_arg2idx) const {
+  for (const auto& out_tensor : *outputs_) {
+    const auto& iter = tensor_arg2idx.find(out_tensor->now_grad_arg().get());
+    if (iter != tensor_arg2idx.end()) {
+      input_now_grads->at(iter->second) = out_tensor->now_grad_arg()->GetAccTensor()->detach();
     }
   }
   return Maybe<void>::Ok();
@@ -132,6 +164,10 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
     bool retain_graph, bool create_graph) {
   std::shared_ptr<TensorTuple> input_now_grads = std::make_shared<TensorTuple>(inputs.size());
+  HashMap<TensorArg*, size_t> tensor_arg2idx;
+  for (int i = 0; i < inputs.size(); ++i) {
+    tensor_arg2idx.emplace(inputs.at(i)->now_grad_arg(), i);
+  }
   for (int i = 0; i < outputs.size(); ++i) {
     outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i));
   }
@@ -140,7 +176,7 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     const auto& func_node = weak_func_node.lock();
     if (!func_node) { continue; }
     JUST(func_node->Apply(create_graph));
-    TODO();  // wangyinggang: Get grads in out_grads to input_now_grads
+    JUST(func_node->GetNowGrad(input_now_grads.get(), tensor_arg2idx));
     JUST(func_node->AccGrad4RetainGradTensor());
     func_node->ReleaseOutTensorArgs();
   }
