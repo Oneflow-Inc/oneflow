@@ -136,7 +136,7 @@ Maybe<void> StackFunctionNode::Apply(bool create_graph) {
   for (int i = 0; i < out_grads_.size(); ++i) {
     output_grads.at(i) = JUST(out_grads_.at(i)->GetAccTensor());
   }
-  JUST((*backward_fn_)(input_grads, &output_grads, create_graph));
+  JUST((*backward_fn_)(output_grads, &input_grads, create_graph));
   for (int i = 0; i < in_grads_.size(); ++i) {
     in_grads_.at(i)->PushPartialTensor(input_grads.at(i));
   }
