@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-bool TensorArg::Empty() const { return partial_sum_tensors_.empty() && acc_tensor_; }
+bool TensorArg::Empty() const { return partial_sum_tensors_.empty() && !acc_tensor_; }
 
 void TensorArg::Release() {
   partial_sum_tensors_.clear();
@@ -36,6 +36,7 @@ void TensorArg::PushPartialTensor(const std::shared_ptr<Tensor>& partial_tensor)
 }
 
 Maybe<Tensor> TensorArg::GetAccTensor() {
+  CHECK_OR_RETURN(Empty() == false) << "Can not GetAccTensor because it is empty";
   if (!acc_tensor_) {
     size_t input_num = partial_sum_tensors_.size();
     if (input_num == 1) {
