@@ -217,6 +217,7 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
   auto* stream_type_id = infer_instr_msg->mut_instr_type_id()->mut_stream_type_id();
   CHECK_EQ(stream_type_id->interpret_type(), InterpretType::kCompute);
   stream_type_id->CopyFrom(LookupInferStreamTypeId(*stream_type_id));
+  *infer_instr_msg->mutable_no_arg_callback() = no_arg_callback();
   return infer_instr_msg;
 }
 
