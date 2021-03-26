@@ -66,7 +66,8 @@ Maybe<void> CopyOrAccGrad(Tensor* tensor, bool autograd_mode) {
 }  // namespace
 
 StackFunctionNode::StackFunctionNode(
-    const std::shared_ptr<const std::function<Maybe<void>()>>& backward_fn,
+    const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
+        backward_fn,
     const TensorTuple& inputs, const TensorTuple& outputs) {
   inputs_ = std::make_shared<TensorTuple>(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
@@ -106,7 +107,8 @@ Maybe<void> StackFunctionNode::GetNowGrad(TensorTuple* input_now_grads,
   for (const auto& out_tensor : *outputs_) {
     const auto& iter = tensor_arg2idx.find(out_tensor->now_grad_arg().get());
     if (iter != tensor_arg2idx.end()) {
-      input_now_grads->at(iter->second) = JUST(out_tensor->now_grad_arg()->GetAccTensor())->detach();
+      input_now_grads->at(iter->second) =
+          JUST(out_tensor->now_grad_arg()->GetAccTensor())->detach();
     }
   }
   return Maybe<void>::Ok();
@@ -167,7 +169,7 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   std::shared_ptr<TensorTuple> input_now_grads = std::make_shared<TensorTuple>(inputs.size());
   HashMap<TensorArg*, size_t> tensor_arg2idx;
   for (int i = 0; i < inputs.size(); ++i) {
-    tensor_arg2idx.emplace(inputs.at(i)->now_grad_arg(), i);
+    tensor_arg2idx.emplace(inputs.at(i)->now_grad_arg().get(), i);
   }
   for (int i = 0; i < outputs.size(); ++i) {
     outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i));
@@ -186,7 +188,8 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
 }
 
 std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
-    const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
+    const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
+        backward_fn,
     const TensorTuple& inputs, TensorTuple* outputs) {
   std::shared_ptr<FunctionNode> func_node =
       std::make_shared<StackFunctionNode>(backward_fn, inputs, *outputs);
