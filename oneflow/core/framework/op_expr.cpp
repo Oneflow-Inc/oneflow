@@ -16,37 +16,51 @@ limitations under the License.
 
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_grad.h"
+#include "oneflow/core/framework/op_expr_grad_closure.h"
 
 namespace oneflow {
 namespace one {
 
-Maybe<OpExprGradInterface> UserOpExpr::GetOrCreateOpGrad() const {
-  if (!op_grad_.get()) {
-    if (IsClassRegistered<std::string, OpExprGrad>(proto().op_type_name())) {
-      op_grad_.reset(NewObj<std::string, OpExprGrad>(proto().op_type_name()));
+Maybe<OpExprGradClosureWrapper> UserOpExpr::GetOrCreateOpGradClosure() const {
+  if (!op_grad_closure_.get()) {
+    if (IsClassRegistered<std::string, OpExprGradClosure>(proto().op_type_name())) {
+      op_grad_closure_.reset(NewObj<std::string, OpExprGradClosure>(proto().op_type_name()));
     } else {
-      op_grad_.reset(NewObj<std::string, OpExprGrad>("default"));
+      op_grad_closure_.reset(NewObj<std::string, OpExprGradClosure>("default"));
     }
   }
-  CHECK_NOTNULL_OR_RETURN(op_grad_.get());
-  op_grad_->Init(*this);
-  return std::make_shared<OpExprGradInterface>(op_grad_);
+  CHECK_NOTNULL_OR_RETURN(op_grad_closure_.get());
+  op_grad_closure_->Init(*this);
+  return std::make_shared<OpExprGradClosureWrapper>(op_grad_closure_);
 }
 
-Maybe<OpExprGradInterface> VariableOpExpr::GetOrCreateOpGrad() const { UNIMPLEMENTED(); }
+Maybe<OpExprGradClosureWrapper> VariableOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED();
+}
 
-Maybe<OpExprGradInterface> CastToMirroredOpExpr::GetOrCreateOpGrad() const { UNIMPLEMENTED(); }
+Maybe<OpExprGradClosureWrapper> CastToMirroredOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED();
+}
 
-Maybe<OpExprGradInterface> CastFromMirroredOpExpr::GetOrCreateOpGrad() const { UNIMPLEMENTED(); }
+Maybe<OpExprGradClosureWrapper> CastFromMirroredOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED();
+}
 
-Maybe<OpExprGradInterface> DistributeSplitOpExpr::GetOrCreateOpGrad() const { UNIMPLEMENTED(); }
+Maybe<OpExprGradClosureWrapper> DistributeSplitOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED();
+}
 
-Maybe<OpExprGradInterface> DistributeCloneOpExpr::GetOrCreateOpGrad() const { UNIMPLEMENTED(); }
+Maybe<OpExprGradClosureWrapper> DistributeCloneOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED();
+}
 
-Maybe<OpExprGradInterface> DistributeConcatOpExpr::GetOrCreateOpGrad() const { UNIMPLEMENTED(); }
+Maybe<OpExprGradClosureWrapper> DistributeConcatOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED();
+}
 
-Maybe<OpExprGradInterface> DistributeAddOpExpr::GetOrCreateOpGrad() const { UNIMPLEMENTED(); }
+Maybe<OpExprGradClosureWrapper> DistributeAddOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED();
+}
 
 }  // namespace one
 }  // namespace oneflow

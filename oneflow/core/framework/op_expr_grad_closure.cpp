@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/framework/op_expr_grad.h"
+#include "oneflow/core/framework/op_expr_grad_closure.h"
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -27,7 +27,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class DefaultOpExprGrad : public OpExprGrad {
+class DefaultOpExprGradClosure : public OpExprGradClosure {
  public:
   // The snapshot indicates the indices of the required forward inputs and outputs
   // by each backward operator.
@@ -76,7 +76,7 @@ Maybe<void> ProcessOpInputs(const Operator& op,  // NOLINT
                             const HashMap<std::string, int>& output_lbn_indices,
                             const HashMap<std::string, std::string>& grad_lbn2bn,
                             const HashMap<std::string, int>& obn_indices,
-                            DefaultOpExprGrad::Snapshot* snapshot,
+                            DefaultOpExprGradClosure::Snapshot* snapshot,
                             std::vector<int>* out_grad_indices,
                             std::vector<std::string>* indexed_ibns) {
   // Input blob names in the backward op will be divided into 3 types which
@@ -127,8 +127,8 @@ Maybe<void> ProcessOpOutputs(const Operator& op,
 
 }  // namespace
 
-Maybe<void> DefaultOpExprGrad::GenerateOpGradConf(const Operator& op,
-                                                  std::vector<OperatorConf>* bw_op_confs) {
+Maybe<void> DefaultOpExprGradClosure::GenerateOpGradConf(const Operator& op,
+                                                         std::vector<OperatorConf>* bw_op_confs) {
   auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
     const auto& input_bns = op.input_bns();
     const auto& output_bns = op.output_bns();
@@ -156,7 +156,7 @@ Maybe<void> DefaultOpExprGrad::GenerateOpGradConf(const Operator& op,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DefaultOpExprGrad::Init(const OpExpr& op) {
+Maybe<void> DefaultOpExprGradClosure::Init(const OpExpr& op) {
   if (op.input_num() == 0) { return Maybe<void>::Ok(); }
   const auto* fw_op_expr = dynamic_cast<const BuiltinOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
@@ -226,7 +226,7 @@ Maybe<void> DefaultOpExprGrad::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DefaultOpExprGrad::UpdateRequiresBackward(const TensorTuple& inputs) const {
+Maybe<void> DefaultOpExprGradClosure::UpdateRequiresBackward(const TensorTuple& inputs) const {
   for (int i = 0; i < in_grad_indices_.size(); ++i) {
     requires_backward_[i] = false;
     for (const auto& j : in_grad_indices_.at(i)) {
@@ -239,8 +239,8 @@ Maybe<void> DefaultOpExprGrad::UpdateRequiresBackward(const TensorTuple& inputs)
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DefaultOpExprGrad::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                                       const TensorTuple& outputs) const {
+Maybe<void> DefaultOpExprGradClosure::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
+                                              const TensorTuple& outputs) const {
   JUST(UpdateRequiresBackward(inputs));
   for (int i = 0; i < backward_ops_.size(); ++i) {
     if (!requires_backward_.at(i)) { continue; }
@@ -254,9 +254,9 @@ Maybe<void> DefaultOpExprGrad::Capture(OpExprInterpState* ctx, const TensorTuple
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DefaultOpExprGrad::DoBackward(const OpExprInterpState* ctx,
-                                          const TensorTuple& out_grads,
-                                          TensorTuple* in_grads) const {
+Maybe<void> DefaultOpExprGradClosure::DoBackward(const OpExprInterpState* ctx,
+                                                 const TensorTuple& out_grads,
+                                                 TensorTuple* in_grads) const {
   int input_size = in_bn2grad_lbi_.size();
   in_grads->resize(input_size);
   const auto& saved_tensors = ctx->SavedTensors();
@@ -276,7 +276,7 @@ Maybe<void> DefaultOpExprGrad::DoBackward(const OpExprInterpState* ctx,
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD("default", DefaultOpExprGrad);
+REGISTER_OP_EXPR_GRAD_CLOSURE("default", DefaultOpExprGradClosure);
 
 }  // namespace one
 }  // namespace oneflow

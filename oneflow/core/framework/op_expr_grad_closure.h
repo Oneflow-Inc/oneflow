@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_H_
-#define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_CLOSURE_H_
+#define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_CLOSURE_H_
 
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/op_interpreter.h"  // OpExprInterpState
@@ -25,10 +25,10 @@ namespace one {
 
 // Stateless container base of the backward op exprs.
 // The backward op exprs should be contained in the derived class.
-class OpExprGrad {
+class OpExprGradClosure {
  public:
-  OpExprGrad() = default;
-  virtual ~OpExprGrad() = default;
+  OpExprGradClosure() = default;
+  virtual ~OpExprGradClosure() = default;
 
   virtual Maybe<void> Init(const OpExpr& op) = 0;
 
@@ -40,17 +40,17 @@ class OpExprGrad {
                                  TensorTuple* in_grads) const = 0;
 };
 
-// Stateful interface of the `OpExprGrad`.
-class OpExprGradInterface {
+// Stateful wrapper of the `OpExprGradClosure`.
+class OpExprGradClosureWrapper {
  public:
   // Use `shared_ptr` in order to keep `impl` alive even if the forward op has been released.
-  explicit OpExprGradInterface(const std::shared_ptr<OpExprGrad>& impl)
+  explicit OpExprGradClosureWrapper(const std::shared_ptr<OpExprGradClosure>& impl)
       : impl_(impl), state_(new OpExprInterpState) {}
-  explicit OpExprGradInterface(const std::shared_ptr<OpExprGrad>& impl,
-                               const std::shared_ptr<OpExprInterpState>& state)
+  explicit OpExprGradClosureWrapper(const std::shared_ptr<OpExprGradClosure>& impl,
+                                    const std::shared_ptr<OpExprInterpState>& state)
       : impl_(impl), state_(state) {}
 
-  virtual ~OpExprGradInterface() = default;
+  virtual ~OpExprGradClosureWrapper() = default;
 
   Maybe<void> Capture(const TensorTuple& inputs, const TensorTuple& outputs) const {
     return impl_->Capture(state_.get(), inputs, outputs);
@@ -61,14 +61,14 @@ class OpExprGradInterface {
   }
 
  private:
-  std::shared_ptr<OpExprGrad> impl_;
+  std::shared_ptr<OpExprGradClosure> impl_;
   std::shared_ptr<OpExprInterpState> state_;
 };
 
-#define REGISTER_OP_EXPR_GRAD(op_type, op_grad) \
-  REGISTER_CLASS_CREATOR(std::string, op_type, OpExprGrad, ([]() { return new op_grad; }))
+#define REGISTER_OP_EXPR_GRAD_CLOSURE(op_type, op_grad) \
+  REGISTER_CLASS_CREATOR(std::string, op_type, OpExprGradClosure, ([]() { return new op_grad; }))
 
 }  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_CLOSURE_H_
