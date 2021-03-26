@@ -155,10 +155,54 @@ def slice(
     return SliceV2(slice_tup_list, name=name)(x)
 
 
+class Transpose(Module):
+    r"""
+    """
+
+    def __init__(
+        self,
+        perm: Sequence[int] = None,
+        conjugate: bool = False,
+        batch_axis_non_change: bool = False,
+        name: Optional[str] = None,
+    ) -> None:
+        super().__init__()
+
+        assert isinstance(perm, (tuple, list))
+
+        if conjugate:
+            raise NotImplementedError
+
+        self._op = (
+            flow.builtin_op("transpose", name)
+            .Input("input")
+            .Output("output")
+            .Attr("perm", perm)
+            .Build()
+        )
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+def transpose(
+    a,
+    perm: Sequence[int] = None,
+    conjugate: bool = False,
+    batch_axis_non_change: bool = False,
+    name: Optional[str] = None,
+):
+    return Transpose(perm, conjugate, batch_axis_non_change, name)(a)
+
+
 if __name__ == "__main__":
     import numpy as np
 
     flow.enable_eager_execution(True)
-    x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]))
-    y = slice(x, begin=[None, 0], size=[None, 2])
-    print(y.numpy())
+    # x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]))
+    # y = slice(x, begin=[None, 0], size=[None, 2])
+    # print(y.numpy())
+
+    x = flow.Tensor(np.random.randn(1, 2, 3))
+    y = transpose(x, perm=[2, 0, 1])
+    print(y.shape)
