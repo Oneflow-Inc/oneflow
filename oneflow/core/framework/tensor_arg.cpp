@@ -38,12 +38,16 @@ void TensorArg::PushPartialTensor(const std::shared_ptr<Tensor>& partial_tensor)
 Maybe<Tensor> TensorArg::GetAccTensor() {
   if (!acc_tensor_) {
     size_t input_num = partial_sum_tensors_.size();
-    TensorTuple input(input_num);
-    for (size_t i = 0; i < input_num; ++i) { input.at(i) = partial_sum_tensors_.at(i); }
-    TensorTuple output(1);
-    const auto& add_n = JUST(op_expr_helper::AddNOp(input_num));
-    JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*add_n, input, &output));
-    acc_tensor_ = output.at(0);
+    if (input_num == 1) {
+      acc_tensor_ = partial_sum_tensors_.at(0);
+    } else {
+      TensorTuple input(input_num);
+      for (size_t i = 0; i < input_num; ++i) { input.at(i) = partial_sum_tensors_.at(i); }
+      TensorTuple output(1);
+      const auto& add_n = JUST(op_expr_helper::AddNOp(input_num));
+      JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*add_n, input, &output));
+      acc_tensor_ = output.at(0);
+    }
     partial_sum_tensors_.clear();
   }
   return acc_tensor_;
