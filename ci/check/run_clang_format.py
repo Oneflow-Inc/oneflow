@@ -22,6 +22,7 @@ import pathlib
 import multiprocessing
 import subprocess
 import os
+import platform
 
 
 def split_and_print(prefix, text):
@@ -74,6 +75,8 @@ def check_version(bin):
 
 
 def download(dry=False):
+    if platform.system() != "Linux":
+        raise ValueError("Please install clang format 11.0.0")
     url = "https://oneflow-static.oss-cn-beijing.aliyuncs.com/bin/clang-format/linux-x86/clang-format-11"
     if os.getenv("CI"):
         url = "https://github.com/Oneflow-Inc/oneflow-fmt/raw/master/clang-format/linux-x86/clang-format-11"
