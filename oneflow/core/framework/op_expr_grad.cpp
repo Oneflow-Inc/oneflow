@@ -29,6 +29,8 @@ namespace one {
 
 class DefaultOpExprGrad : public OpExprGrad {
  public:
+  // The snapshot indicates the indices of the required forward inputs and outputs
+  // by each backward operator.
   struct Snapshot {
     std::vector<int> input_indices;
     std::vector<int> output_indices;
@@ -50,13 +52,20 @@ class DefaultOpExprGrad : public OpExprGrad {
 
  private:
   std::vector<std::shared_ptr<OpExpr>> backward_ops_;
+
   std::vector<std::vector<int>> in_grad_indices_;
-  std::vector<Snapshot> snapshots_;
   std::vector<std::vector<int>> out_grad_indices_;
 
+  // Snapshot information for each backward op.
+  std::vector<Snapshot> snapshots_;
+
+  // Whether each backward operator needs to do backward or not.
   mutable std::vector<bool> requires_backward_;
 
+  // The input gradient logical blob id for each forward input blob name which
+  // needs backward.
   HashMap<std::string, LogicalBlobId> in_bn2grad_lbi_;
+  // The output gradient logical blob id for each forward output blob name.
   HashMap<std::string, LogicalBlobId> out_bn2grad_lbi_;
 };
 
@@ -89,7 +98,7 @@ Maybe<void> ProcessOpInputs(const Operator& op,  // NOLINT
       const auto& it = grad_lbn2bn.find(lbn);
       // Otherwise this input should be output gradient.
       CHECK_OR_RETURN(it != grad_lbn2bn.end());
-      // The output gradient index is equal to the output index.
+      // The output gradient index is equal to the forward output index.
       out_grad_indices->emplace_back(obn_indices.at(it->second));
       typed_ibns[2].emplace_back(bn);
     }
@@ -110,7 +119,7 @@ Maybe<void> ProcessOpOutputs(const Operator& op,
     std::string lbn = GenLogicalBlobName(op.BnInOp2Lbi(bn));
     const auto& it = grad_lbn2bn.find(lbn);
     CHECK_OR_RETURN(it != grad_lbn2bn.end());
-    // The input gradient index is equal to the input index.
+    // The input gradient index is equal to the foward input index.
     in_grad_indices->emplace_back(ibn_indices.at(it->second));
   }
   return Maybe<void>::Ok();
@@ -149,7 +158,7 @@ Maybe<void> DefaultOpExprGrad::GenerateOpGradConf(const Operator& op,
 
 Maybe<void> DefaultOpExprGrad::Init(const OpExpr& op) {
   if (op.input_num() == 0) { return Maybe<void>::Ok(); }
-  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+  const auto* fw_op_expr = dynamic_cast<const BuiltinOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   OperatorConf fw_op_conf;
   fw_op_expr->BuildOpConf(&fw_op_conf);
@@ -162,7 +171,8 @@ Maybe<void> DefaultOpExprGrad::Init(const OpExpr& op) {
   JUST(GenerateOpGradConf(*op_adapter, &bw_op_confs));
 
   CHECK_EQ_OR_RETURN(op.input_num(), in_bn2grad_lbi_.size())
-      << "All inputs should need to calculate gradients.";
+      << "All inputs are considered to require gradients since the `requires_grad` does not known "
+         "to us here.";
   if (bw_op_confs.empty()) { return Maybe<void>::Ok(); }
   in_grad_indices_.resize(bw_op_confs.size());
   out_grad_indices_.resize(bw_op_confs.size());
@@ -187,8 +197,8 @@ Maybe<void> DefaultOpExprGrad::Init(const OpExpr& op) {
   }
 
   HashMap<std::string, std::string> grad_lbn2bn;
-  for (const auto& table : {in_bn2grad_lbi_, out_bn2grad_lbi_}) {
-    for (const auto& it : table) {
+  for (const auto& bn2lbi : {in_bn2grad_lbi_, out_bn2grad_lbi_}) {
+    for (const auto& it : bn2lbi) {
       std::string lbn = GenLogicalBlobName(it.second);
       grad_lbn2bn.emplace(lbn, it.first);
     }
@@ -203,10 +213,15 @@ Maybe<void> DefaultOpExprGrad::Init(const OpExpr& op) {
                     &snapshots_[i], &out_grad_indices_[i], &indexed_ibns);
     ProcessOpOutputs(*bw_op_adapter, grad_lbn2bn, ibn_indices, &in_grad_indices_[i], &indexed_obns);
 
-    CHECK_OR_RETURN(op_conf.has_user_conf());
-    UserOpConf user_conf(op_conf.user_conf());
-    backward_ops_.emplace_back(std::make_shared<UserOpExpr>(op_conf.name(), std::move(user_conf),
-                                                            indexed_ibns, indexed_obns));
+    // Currently only user op is considered.
+    if (op_conf.has_user_conf()) {
+      UserOpConf user_conf(op_conf.user_conf());
+      backward_ops_.emplace_back(std::make_shared<UserOpExpr>(op_conf.name(), std::move(user_conf),
+                                                              indexed_ibns, indexed_obns));
+    } else {
+      // TODO()
+      UNIMPLEMENTED();
+    }
   }
   return Maybe<void>::Ok();
 }
