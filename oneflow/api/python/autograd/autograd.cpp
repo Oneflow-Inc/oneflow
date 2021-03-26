@@ -52,8 +52,9 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
           << "Grad can be implicitly created only for scalar outputs";
       const auto& ones_like = JUST(op_expr_helper::OnesLikeOp());
       const auto& interpreter = JUST(one::OpInterpUtil::GetInterpreter());
-      one::TensorTuple grad_output({gradients->at(i)});
+      one::TensorTuple grad_output(1);
       interpreter->Apply(*ones_like, one::TensorTuple({outputs.at(i)}), &grad_output);
+      gradients->at(i) = grad_output.at(0);
     }
   }
   return gradients;
