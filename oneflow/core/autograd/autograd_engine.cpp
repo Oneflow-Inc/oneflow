@@ -186,7 +186,7 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
 }
 
 std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
-    const std::shared_ptr<const std::function<Maybe<void>()>>& backward_fn,
+    const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
     const TensorTuple& inputs, TensorTuple* outputs) {
   std::shared_ptr<FunctionNode> func_node =
       std::make_shared<StackFunctionNode>(backward_fn, inputs, *outputs);
