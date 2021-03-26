@@ -127,8 +127,8 @@ void StackFunctionNode::ReleaseData() {
 }
 
 Maybe<void> StackFunctionNode::Apply(bool create_graph) {
-  CHECK_OR_RETURN(!backward_fn_) << "This FunctionNode with name `" << GetOpName()
-                                 << "` has been released.";
+  CHECK_NOTNULL_OR_RETURN(backward_fn_.get())
+      << "This FunctionNode with name `" << GetOpName() << "` has been released.";
   if (!IsReadyToRun(out_grads_)) { return Maybe<void>::Ok(); }
   InitEmptyTensorArgs2ZerosTensor(*outputs_, out_grads_);
   TODO();  // wangyinggang: Calls backward_fn_ and passes arguments according to AutogradInterpreter
