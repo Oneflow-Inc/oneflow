@@ -65,9 +65,12 @@ def chunks(lst, n):
 
 
 def check_version(bin):
-    out = subprocess.check_output(["bash", "-c", f"{bin} --version"]).decode()
-    print(out)
-    return "version 11.0.0" in out
+    try:
+        out = subprocess.check_output(["bash", "-c", f"{bin} --version"]).decode()
+        print(out)
+        return "version 11.0.0" in out
+    except:
+        return False
 
 
 def download(dry=False):
