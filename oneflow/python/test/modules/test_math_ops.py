@@ -34,10 +34,17 @@ class TestModule(flow.unittest.TestCase):
     
     def test_cos(test_case):
         cos = flow.Cos()
-        input = flow.Tensor(np.random.randn(6, 7), dtype=flow.float32)
+        input = flow.Tensor(np.random.randn(1, 3, 6), dtype=flow.float32)
         of_out = cos(input)
         np_out = np.cos(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    def test_log(test_case):
+        log = flow.Log()
+        input = flow.Tensor(np.random.randn(2, 3, 4, 5), dtype=flow.float32)
+        of_out = log(input)
+        np_out = np.log(input.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, equal_nan=True))
 
 if __name__ == "__main__":
     unittest.main()

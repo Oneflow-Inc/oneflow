@@ -29,7 +29,7 @@ from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 import oneflow.python.framework.id_util as id_util
-from oneflow.python.framework.tensor import register_tensor_op_by_module
+from oneflow.python.framework.tensor import register_tensor_op_by_module, register_op_by_module
 
 
 def _check_axis(axis, shape):
@@ -648,6 +648,7 @@ class Add(Module):
 
 
 @register_tensor_op_by_module("sin")
+@register_op_by_module("sin")
 @oneflow_export("Sin")
 class Sin(Module):
     """This operator computes the sin value of Tensor."""
@@ -661,7 +662,9 @@ class Sin(Module):
     def forward(self, x):
         return self._op(x)[0]
 
+
 @register_tensor_op_by_module("cos")
+@register_op_by_module("cos")
 @oneflow_export("Cos")
 class Cos(Module):
     """This operator computes the cosine value of Tensor."""
@@ -670,6 +673,22 @@ class Cos(Module):
         name = id_util.UniqueStr("cos" + "_")
         self._op = (
             flow.builtin_op("cos", name).Input("x").Output("y").Build()
+        )
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@register_tensor_op_by_module("log")
+@register_op_by_module("log")
+@oneflow_export("Log")
+class Log(Module):
+    """This operator computes the Log value of Tensor."""
+    def __init__(self) -> None:
+        super().__init__()
+        name = id_util.UniqueStr("log" + "_")
+        self._op = (
+            flow.builtin_op("log", name).Input("x").Output("y").Build()
         )
 
     def forward(self, x):
