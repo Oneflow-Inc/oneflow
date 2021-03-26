@@ -42,7 +42,7 @@ class OneflowVM final {
   ObjectMsgPtr<vm::VirtualMachine> vm_;
   HashMap<vm::ThreadCtx*, std::unique_ptr<ThreadPool>> thread_ctx2thread_pool_;
   std::thread schedule_thread_;
-  bool exiting_;
+  std::atomic<bool> exiting_;
 
   void Loop();
 };
