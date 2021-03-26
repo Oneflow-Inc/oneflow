@@ -879,6 +879,20 @@ Maybe<void> InstructionsBuilder::RankFrontSeqComputeCallback(
   return RankFrontSeqCallback("RankFrontSeqComputeCallback", callback);
 }
 
+Maybe<void> InstructionsBuilder::GlobalFrontSeqInferBarrier() {
+  ObjectMsgPtr<vm::InstructionMsg> instruction =
+      ObjectMsgPtr<vm::InstructionMsg>::New("GlobalFrontSeqInferBarrier");
+  instruction_list_->PushBack(instruction.Mutable());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::GlobalFrontSeqComputeBarrier() {
+  ObjectMsgPtr<vm::InstructionMsg> instruction =
+      ObjectMsgPtr<vm::InstructionMsg>::New("GlobalFrontSeqComputeBarrier");
+  instruction_list_->PushBack(instruction.Mutable());
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InstructionsBuilder::FetchBlobHeader(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
   JUST(_FetchBlob("FetchBlobHeader", blob_object, callback_id));

@@ -111,6 +111,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> RankFrontSeqInferCallback(std::shared_ptr<std::function<void()>> callback);
   Maybe<void> RankFrontSeqComputeCallback(std::shared_ptr<std::function<void()>> callback);
 
+  Maybe<void> GlobalFrontSeqComputeBarrier();
+  Maybe<void> GlobalFrontSeqInferBarrier();
+
   Maybe<Scope> BuildInitialScope(int64_t session_id,
                                  const std::shared_ptr<cfg::JobConfigProto>& job_conf,
                                  const std::string& device_tag,
@@ -225,8 +228,8 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   }
 
  private:
-  Maybe<void> RankFrontSeqCallback(const std::string &instruction_name,
-      std::shared_ptr<std::function<void()>> &callback);
+  Maybe<void> RankFrontSeqCallback(const std::string& instruction_name,
+                                   std::shared_ptr<std::function<void()>>& callback);
 
   Maybe<std::vector<std::shared_ptr<compatible_py::OpArgBlobAttribute>>> GetPhysicalOpArgBlobAttrs(
       const std::shared_ptr<compatible_py::BlobObject>& logical_blob_object) const;

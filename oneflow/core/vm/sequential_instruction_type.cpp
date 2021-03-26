@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
@@ -32,7 +33,7 @@ class RankFrontSeqCallbackInstructionType : public InstructionType {
 
   using stream_type = ControlStreamType;
 
-  virtual bool IsFrontSequential() const { return true; }
+  virtual bool IsFrontSequential() const override { return true; }
 
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
   void Compute(Instruction*) const override { UNIMPLEMENTED(); }
@@ -80,6 +81,48 @@ class RankFrontSeqComputeCallbackInstructionType final
 };
 COMMAND(RegisterInstructionType<RankFrontSeqComputeCallbackInstructionType>(
     "RankFrontSeqComputeCallback"));
+
+class GlobalFrontSeqBarrierInstructionType : public InstructionType {
+ public:
+  GlobalFrontSeqBarrierInstructionType() = default;
+  virtual ~GlobalFrontSeqBarrierInstructionType() override = default;
+
+  using stream_type = ControlStreamType;
+
+  virtual bool IsFrontSequential() const override { return true; }
+
+  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
+
+ protected:
+  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const { OF_ENV_BARRIER(); }
+};
+
+class GlobalFrontSeqInferBarrierInstructionType final
+    : public GlobalFrontSeqBarrierInstructionType {
+ public:
+  GlobalFrontSeqInferBarrierInstructionType() = default;
+  ~GlobalFrontSeqInferBarrierInstructionType() override = default;
+
+  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override { Run(vm, instr_msg); }
+  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override { /* do nothing */
+  }
+};
+COMMAND(RegisterInstructionType<GlobalFrontSeqInferBarrierInstructionType>(
+    "GlobalFrontSeqInferBarrier"));
+
+class GlobalFrontSeqComputeBarrierInstructionType final
+    : public GlobalFrontSeqBarrierInstructionType {
+ public:
+  GlobalFrontSeqComputeBarrierInstructionType() = default;
+  ~GlobalFrontSeqComputeBarrierInstructionType() override = default;
+
+  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override { /* do nothing */
+  }
+  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override { Run(vm, instr_msg); }
+};
+COMMAND(RegisterInstructionType<GlobalFrontSeqComputeBarrierInstructionType>(
+    "GlobalFrontSeqComputeBarrier"));
 
 }  // namespace vm
 }  // namespace oneflow

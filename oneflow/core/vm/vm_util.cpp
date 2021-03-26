@@ -49,17 +49,15 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
 
 Maybe<void> Sync() {
   // TODO(jianhao): update it for multi client
-  if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendEagerSync(); }
-
   BlockingCounter bc(1);
-  PhysicalRun([&bc](const std::shared_ptr<InstructionsBuilder>& builder) {
+  LogicalRun([&bc](const std::shared_ptr<InstructionsBuilder>& builder) {
+    builder->GlobalFrontSeqComputeBarrier();
     builder->RankFrontSeqComputeCallback(
         std::make_shared<std::function<void()>>([&bc]() { bc.Decrease(); }));
   });
 
   bc.WaitUntilCntEqualZero();
 
-  ClusterInstruction::EagerSyncBarrier();
   return Maybe<void>::Ok();
 }
 
