@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/user_op_conf.cfg.h"
 
 namespace py = pybind11;
 
@@ -47,10 +48,29 @@ Maybe<std::vector<std::shared_ptr<one::Tensor>>> Interpret(
   return static_cast<std::shared_ptr<std::vector<std::shared_ptr<one::Tensor>>>>(outputs);
 }
 
+template<typename OpT, typename ConfT,
+         typename std::enable_if<std::is_base_of<one::BuiltinOpExpr, OpT>::value>::type* = nullptr>
+void PybindExportOpExpr(py::module& m, const char* op_type_name) {
+  using ProtoConfT = decltype(std::declval<OpT>().proto());
+  py::class_<OpT, one::BuiltinOpExpr, std::shared_ptr<OpT>>(m, op_type_name)
+      .def(py::init([](const std::string& op_name, const std::shared_ptr<ConfT>& op_conf,
+                       const std::vector<std::string>& indexed_ibns,
+                       const std::vector<std::string>& indexed_obns) {
+        typename std::decay<ProtoConfT>::type proto_op_conf;
+        op_conf->ToProto(&proto_op_conf);
+        return std::make_shared<OpT>(op_name, std::move(proto_op_conf), indexed_ibns, indexed_obns);
+      }))
+      .def_property_readonly("proto",
+                             [](const OpT& op) { return std::make_shared<ConfT>(op.proto()); });
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::OpExpr, std::shared_ptr<one::OpExpr>>(m, "OpExpr")
+      .def_property_readonly("type", &one::OpExpr::type)
+      .def_property_readonly("input_num", &one::OpExpr::input_num)
+      .def_property_readonly("output_num", &one::OpExpr::output_num)
       .def("apply",
            [](const one::OpExpr& op_expr, const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
              return Interpret(op_expr, inputs).GetOrThrow();
@@ -61,14 +81,12 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
 
   py::class_<one::BuiltinOpExpr, one::OpExpr, std::shared_ptr<one::BuiltinOpExpr>>(m,
                                                                                    "BuiltinOpExpr")
-      .def_property_readonly("name", &one::BuiltinOpExpr::op_name);
+      .def_property_readonly("name", &one::BuiltinOpExpr::op_name)
+      .def_property_readonly("indexed_ibns", &one::BuiltinOpExpr::indexed_ibns)
+      .def_property_readonly("indexed_obns", &one::BuiltinOpExpr::indexed_obns);
 
-  py::class_<one::UserOpExpr, one::BuiltinOpExpr, std::shared_ptr<one::UserOpExpr>>(m, "UserOpExpr")
-      .def_property_readonly("type", &one::UserOpExpr::type)
-      .def_property_readonly(
-          "proto", [](const one::UserOpExpr& op) { return PbMessage2TxtString(op.proto()); })
-      .def_property_readonly("indexed_ibns", &one::UserOpExpr::indexed_ibns)
-      .def_property_readonly("indexed_obns", &one::UserOpExpr::indexed_obns);
+  PybindExportOpExpr<one::UserOpExpr, cfg::UserOpConf>(m, "UserOpExpr");
+  PybindExportOpExpr<one::VariableOpExpr, cfg::VariableOpConf>(m, "VariableOpExpr");
 }
 
 }  // namespace oneflow
