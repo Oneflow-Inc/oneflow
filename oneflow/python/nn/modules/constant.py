@@ -21,7 +21,7 @@ from oneflow.python.framework.tensor import register_op_by_module
 from typing import Optional, Tuple
 
 
-@oneflow_export("nn.Ones")
+@oneflow_export("Ones")
 class Ones(Module):
     def __init__(self, dtype: Optional[flow.dtype] = None) -> None:
         super().__init__()
@@ -55,7 +55,7 @@ class Ones(Module):
 
 
 
-@oneflow_export("nn.Zeros")
+@oneflow_export("Zeros")
 class Zeros(Module):
     def __init__(self, dtype: Optional[flow.dtype] = None) -> None:
         super().__init__()

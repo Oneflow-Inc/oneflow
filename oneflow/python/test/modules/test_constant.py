@@ -27,19 +27,19 @@ import oneflow.typing as tp
 )
 class TestModule(flow.unittest.TestCase):
     def test_ones(test_case):
-        m = flow.nn.Ones()
+        m = flow.Ones()
         shape1 = (1,2,3,4)
         y1 = m(shape1)
         test_case.assertTrue(np.allclose(np.ones(shape1), y1.numpy()))
 
-        m2 = flow.nn.Ones(dtype=flow.float)
+        m2 = flow.Ones(dtype=flow.float)
         shape2 = 10
         y2 = m2(shape2)
         test_case.assertTrue(np.allclose(np.ones(shape2), y2.numpy()))
 
 
     def test_zeros(test_case):
-        m = flow.nn.Zeros()
+        m = flow.Zeros()
         shape = (3,2,5,1)
         y = m(shape)
         test_case.assertTrue(np.allclose(np.zeros(shape), y.numpy()))
