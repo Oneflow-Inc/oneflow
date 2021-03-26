@@ -25,6 +25,8 @@ namespace vm {
 
 namespace {
 
+static const int kReservedOperandVecSize = 64;
+
 template<InterpretType interpret_type>
 int64_t GetObjectId(int64_t);
 
@@ -60,7 +62,7 @@ InstructionOperand* InstructionMsg::add_instr_operand() {
 
 void InstructionMsg::__Init__() {
   *mutable_instr_type_name() = "";
-  mutable_operand_list();
+  mutable_operand_list()->mut_operand()->reserve(kReservedOperandVecSize);
 }
 
 void InstructionMsg::__Init__(const std::string& instr_type_name) {
@@ -200,6 +202,13 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
   CHECK(IdUtil::IsObjectId(logical_object_id));
   add_instr_operand()->mutable_mut2_operand()->mutable_operand()->__Init__(logical_object_id,
                                                                            all_mirrored_object);
+  return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_del_object_operand(ObjectId logical_object_id) {
+  CHECK(IdUtil::IsObjectId(logical_object_id));
+  auto* operand = add_instr_operand()->mutable_mut_operand()->mutable_operand();
+  operand->__Init__(logical_object_id, AllMirroredObject());
   return this;
 }
 

@@ -154,11 +154,7 @@ void TaskNode::ForEachProducedDataRegst(
   }
 }
 
-void TaskNode::Build() {
-  if (consumed_regsts_.size()) { CHECK(IsReadyForBuild()); }
-  BuildExecGphAndRegst();
-  LockRegsts();
-}
+void TaskNode::Build() { BuildExecGphAndRegst(); }
 
 void TaskNode::EraseZeroSizeProducedBlob() {
   for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
@@ -214,13 +210,13 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
   task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
   exec_gph_.ToExecSequence(parallel_ctx(), task_proto->mutable_exec_sequence());
-  auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
+  auto* produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
     pair.second->ToProto(&regst_desc_proto);
     CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
   }
-  auto consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
+  auto* consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
   for (const auto& pair : consumed_regsts_) {
     RegstDescIdSet regst_desc_ids;
     for (const std::shared_ptr<RegstDesc>& regst : pair.second) {
@@ -331,36 +327,6 @@ void TaskNode::ConsumeRegst(const std::string& name) {
 void TaskNode::ConsumeRegst(const std::string& name, const std::shared_ptr<RegstDesc>& regst) {
   regst->AddConsumer(this);
   consumed_regsts_[name].push_back(regst);
-}
-
-bool TaskNode::IsAllConsumedDataRegstLocked() {
-  for (const auto& pair : consumed_regsts_) {
-    for (const std::shared_ptr<RegstDesc>& regst_desc : pair.second) {
-      if (regst_desc->regst_desc_type().has_data_regst_desc() && regst_desc->IsLocked() == false) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-void TaskNode::TryLockConsumedRegst(const std::string& name) {
-  auto consumed_regsts_it = consumed_regsts_.find(name);
-  if (consumed_regsts_it == consumed_regsts_.end()) { return; }
-  for (const std::shared_ptr<RegstDesc>& wrd : consumed_regsts_it->second) {
-    const std::shared_ptr<RegstDesc>& srd = wrd;
-    if (srd->IsLocked() == false) { srd->Lock(); }
-  }
-}
-
-void TaskNode::LockRegsts() {
-  for (auto& pair : produced_regsts_) {
-    std::shared_ptr<RegstDesc> regst = pair.second;
-    regst->Lock();
-
-    // NOTE(chengcheng): CHECK 1 regst 1 blob.
-    if (regst->regst_desc_type().has_data_regst_desc()) { CHECK_LE(regst->NumOfLbi(), 1); }
-  }
 }
 
 void TaskNode::UpdateTaskId() {
