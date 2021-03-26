@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_interpreter_util.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/autograd/autograd_mode.h"
@@ -40,24 +41,24 @@ Maybe<void> InitEmptyTensorArgs2ZerosTensor(const TensorTuple& outputs,
   for (int i = 0; i < out_grads.size(); ++i) {
     if (out_grads.at(i)->Empty()) {
       TensorTuple output(1);
-      JUST(GetInterpreter()->Apply(zero_like, {outputs.at(i)}, output));
+      JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*zero_like, {outputs.at(i)}, &output));
       out_grads.at(i)->PushPartialTensor(output.at(0));
     }
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CopyOrAccGrad(Tensor& tensor, bool autograd_mode) {
+Maybe<void> CopyOrAccGrad(Tensor* tensor, bool autograd_mode) {
   autograd::AutoGradMode mode(autograd_mode);
-  const auto& tensor_arg = tensor.now_grad_arg();
-  if (tensor.acc_grad()) {
-    TensorTuple input = {tensor.acc_grad(), tensor_arg->GetAccTensor().GetPtrOrThrow()};
+  const auto& tensor_arg = tensor->now_grad_arg();
+  if (tensor->acc_grad()) {
+    TensorTuple input = {tensor->acc_grad(), tensor_arg->GetAccTensor().GetPtrOrThrow()};
     TensorTuple output(1);
     const auto& add = JUST(op_expr_helper::AddOp());
-    JUST(GetInterpreter()->Apply(add, input, output));
-    tensor.set_acc_grad(output.at(0));
+    JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*add, input, &output));
+    tensor->set_acc_grad(output.at(0));
   } else {
-    tensor.set_acc_grad(tensor_arg->GetAccTensor().GetPtrOrThrow());
+    tensor->set_acc_grad(tensor_arg->GetAccTensor().GetPtrOrThrow());
   }
   return Maybe<void>::Ok();
 }
@@ -85,7 +86,7 @@ StackFunctionNode::StackFunctionNode(
 Maybe<void> StackFunctionNode::AccGrad4RetainGradTensor() {
   for (int i = 0; i < outputs_->size(); ++i) {
     if (outputs_->at(i)->retain_grad() && outputs_->at(i)->requires_grad()) {
-      JUST(CopyOrAccGrad(outputs_->at(i), /*autograd_mode=*/false));
+      JUST(CopyOrAccGrad(outputs_->at(i).get(), /*autograd_mode=*/false));
     }
   }
   return Maybe<void>::Ok();
@@ -94,7 +95,7 @@ Maybe<void> StackFunctionNode::AccGrad4RetainGradTensor() {
 Maybe<void> StackFunctionNode::AccGrad4LeafTensor(bool create_graph) {
   for (int i = 0; i < outputs_->size(); ++i) {
     if (outputs_->at(i)->is_leaf() && outputs_->at(i)->requires_grad()) {
-      JUST(CopyOrAccGrad(outputs_->at(i), /*autograd_mode=*/create_graph));
+      JUST(CopyOrAccGrad(outputs_->at(i).get(), /*autograd_mode=*/create_graph));
     }
   }
   return Maybe<void>::Ok();
@@ -105,7 +106,7 @@ Maybe<void> StackFunctionNode::GetNowGrad(TensorTuple* input_now_grads,
   for (const auto& out_tensor : *outputs_) {
     const auto& iter = tensor_arg2idx.find(out_tensor->now_grad_arg().get());
     if (iter != tensor_arg2idx.end()) {
-      input_now_grads->at(iter->second) = out_tensor->now_grad_arg()->GetAccTensor()->detach();
+      input_now_grads->at(iter->second) = JUST(out_tensor->now_grad_arg()->GetAccTensor())->detach();
     }
   }
   return Maybe<void>::Ok();
@@ -152,7 +153,7 @@ Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
     const auto& func_node = weak_func_node.lock();
     if (!func_node) { continue; }
     JUST(func_node->Apply(create_graph));
-    JUST(func_node->AccGrad4LeafTensor());
+    JUST(func_node->AccGrad4LeafTensor(create_graph));
     JUST(func_node->AccGrad4RetainGradTensor());
     func_node->ReleaseOutTensorArgs();
   }
