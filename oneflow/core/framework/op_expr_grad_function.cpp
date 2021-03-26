@@ -262,14 +262,17 @@ Maybe<void> DefaultOpExprGradFunction::Apply(const OpExprInterpState* ctx,
   int offset = 0;
   for (int i = 0; i < backward_ops_.size(); ++i) {
     if (!requires_backward_.at(i)) { continue; }
-    TensorTuple inputs, outputs;
+    TensorTuple inputs;
     for (int j = 0; j < snapshots_.at(i).count; ++j) {
       inputs.emplace_back(saved_tensors.at(offset + j));
     }
     for (const int& index : out_grad_indices_.at(i)) { inputs.emplace_back(out_grads.at(index)); }
-    for (const int& index : in_grad_indices_.at(i)) { outputs.emplace_back(in_grads->at(index)); }
+    TensorTuple outputs(in_grad_indices_.at(i).size());
     const auto& interpreter = JUST(OpInterpUtil::GetInterpreter());
     JUST(interpreter->Apply(*(backward_ops_.at(i)), inputs, &outputs));
+
+    int j = 0;
+    for (const int& index : in_grad_indices_.at(i)) { in_grads->at(index) = outputs.at(j++); }
     offset += snapshots_.at(i).count;
   }
   return Maybe<void>::Ok();
