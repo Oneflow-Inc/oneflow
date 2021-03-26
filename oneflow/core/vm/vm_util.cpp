@@ -38,7 +38,7 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
   auto* oneflow_vm = JUST(GlobalMaybe<OneflowVM>());
   auto* vm = oneflow_vm->mut_vm();
   vm->Receive(instr_msg_list);
-  if (!Global<ResourceDesc, ForSession>::Get()->async_eager_execution()) {
+  if (!Global<ResourceDesc, ForEnv>::Get()->async_eager_execution()) {
     while (!vm->Empty()) {
       vm->Schedule();
       oneflow_vm->TryReceiveAndRun();

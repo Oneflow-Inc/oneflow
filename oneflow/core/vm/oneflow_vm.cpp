@@ -25,19 +25,19 @@ OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
     auto thread_pool = std::make_unique<ThreadPool>(1);
     CHECK(thread_ctx2thread_pool_.emplace(thread_ctx, std::move(thread_pool)).second);
   }
-  loop_thread_ = std::thread(&OneflowVM::Loop, this);
+  schedule_thread_ = std::thread(&OneflowVM::Loop, this);
   exiting_ = false;
 }
 
 OneflowVM::~OneflowVM() {
   exiting_ = true;
-  loop_thread_.join();
+  schedule_thread_.join();
 }
 
 void OneflowVM::Loop() {
   auto* vm = mut_vm();
   while (!exiting_) {
-    auto* resource = Global<ResourceDesc, ForSession>::Get();
+    auto* resource = Global<ResourceDesc, ForEnv>::Get();
     if (resource && resource->async_eager_execution()) {
       vm->Schedule();
       TryReceiveAndRun();

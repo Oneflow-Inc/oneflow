@@ -859,7 +859,7 @@ Maybe<void> InstructionsBuilder::FeedBlob(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::_RankFrontSeqCallback(
+Maybe<void> InstructionsBuilder::RankFrontSeqCallback(
     const std::string& instruction_name, std::shared_ptr<std::function<void()>>& callback) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instruction_name);
@@ -871,12 +871,12 @@ Maybe<void> InstructionsBuilder::_RankFrontSeqCallback(
 
 Maybe<void> InstructionsBuilder::RankFrontSeqInferCallback(
     std::shared_ptr<std::function<void()>> callback) {
-  return _RankFrontSeqCallback("RankFrontSeqInferCallback", callback);
+  return RankFrontSeqCallback("RankFrontSeqInferCallback", callback);
 }
 
 Maybe<void> InstructionsBuilder::RankFrontSeqComputeCallback(
     std::shared_ptr<std::function<void()>> callback) {
-  return _RankFrontSeqCallback("RankFrontSeqComputeCallback", callback);
+  return RankFrontSeqCallback("RankFrontSeqComputeCallback", callback);
 }
 
 Maybe<void> InstructionsBuilder::FetchBlobHeader(
