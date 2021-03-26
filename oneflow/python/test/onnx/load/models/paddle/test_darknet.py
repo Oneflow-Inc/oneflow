@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+# https://github.com/PaddlePaddle/PaddleClas/blob/develop/ppcls/modeling/architectures/darknet.py
 import paddle
 from paddle import ParamAttr
 import paddle.nn as nn
@@ -177,3 +178,9 @@ def test_darknet(test_case):
     load_paddle_module_and_check(
         test_case, DarkNet53, input_size=(1, 3, 224, 224), train_flag=False,
     )
+
+from absl import app
+from absl.testing import absltest
+
+test_case = absltest.TestCase
+test_darknet(test_case)
