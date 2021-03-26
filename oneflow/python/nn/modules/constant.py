@@ -29,21 +29,33 @@ from typing import (
 @register_tensor_op_by_module("ones")
 @register_op_by_module("ones")
 class Ones(Module):
-    def __init__(self) -> None:
+    def __init__(self, dtype: Optional[flow.dtype] = None) -> None:
         super().__init__()
+        if dtype==None or dtype==flow.int:
+            dtype = flow.int
+            floating_value = float(0)
+            integer_value = int(1)
+            is_floating_value = False
+        else:
+            dtype = flow.float
+            floating_value = float(1)
+            integer_value = int(0)
+            is_floating_value = True
+
         self._op = (
             flow.builtin_op("constant")
             .Output("out")
-            .Attr("floating_value", float(0))
-            .Attr("integer_value", 1)
-            .Attr("is_floating_value", False)
-            .Attr("dtype", flow.int)
+            .Attr("floating_value", floating_value)
+            .Attr("integer_value", integer_value)
+            .Attr("is_floating_value", is_floating_value)
+            .Attr("dtype", dtype)
         )
 
     def forward(self, shape):
-        assert shape is not None
-        if shape is not None:
-            assert isinstance(shape, (list, tuple))
+        assert shape is not None, "shape should not be None!"
+        assert isinstance(shape, (int, list, tuple)), "shape should be int, list or tuple format!"
+        if isinstance(shape, (int)):
+            shape = [shape]
         self._op = self._op.Attr("shape", shape).Build()
         return self._op()[0]
 
@@ -53,20 +65,32 @@ class Ones(Module):
 @register_tensor_op_by_module("zeros")
 @register_op_by_module("zeros")
 class Zeros(Module):
-    def __init__(self) -> None:
+    def __init__(self, dtype: Optional[flow.dtype] = None) -> None:
         super().__init__()
+        if dtype==None or dtype==flow.float:
+            dtype = flow.float
+            floating_value = float(0.)
+            integer_value = int(0)
+            is_floating_value = True
+        else:
+            dtype = flow.int
+            floating_value = float(0)
+            integer_value = int(0)
+            is_floating_value = False
+
         self._op = (
             flow.builtin_op("constant")
             .Output("out")
-            .Attr("floating_value", float(0.))
-            .Attr("integer_value", int(0))
-            .Attr("is_floating_value", True)
-            .Attr("dtype", flow.float)
+            .Attr("floating_value", floating_value)
+            .Attr("integer_value", integer_value)
+            .Attr("is_floating_value", is_floating_value)
+            .Attr("dtype", dtype)
         )
 
     def forward(self, shape):
-        assert shape is not None
-        if shape is not None:
-            assert isinstance(shape, (list, tuple))
+        assert shape is not None, "shape should not be None!"
+        assert isinstance(shape, (int, list, tuple)), "shape should be int, list or tuple format!"
+        if isinstance(shape, (int)):
+            shape = [shape]
         self._op = self._op.Attr("shape", shape).Build()
         return self._op()[0]

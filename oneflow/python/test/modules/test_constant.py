@@ -21,9 +21,6 @@ import oneflow as flow
 import oneflow.typing as tp
 
 
-flow.env.init()
-flow.enable_eager_execution()
-
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in eager mode",
@@ -34,6 +31,11 @@ class TestModule(flow.unittest.TestCase):
         shape1 = (1,2,3,4)
         y1 = m(shape1)
         test_case.assertTrue(np.allclose(np.ones(shape1), y1.numpy()))
+
+        m2 = flow.nn.Ones(dtype=flow.float)
+        shape2 = 10
+        y2 = m2(shape2)
+        test_case.assertTrue(np.allclose(np.ones(shape2), y2.numpy()))
 
 
     def test_zeros(test_case):
