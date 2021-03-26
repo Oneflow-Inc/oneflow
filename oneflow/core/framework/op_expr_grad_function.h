@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_CLOSURE_H_
-#define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_CLOSURE_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_FUNCTION_H_
+#define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_FUNCTION_H_
 
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/op_interpreter.h"  // OpExprInterpState
@@ -25,10 +25,10 @@ namespace one {
 
 // Stateless container base of the backward op exprs.
 // The backward op exprs should be contained in the derived class.
-class OpExprGradClosure {
+class OpExprGradFunction {
  public:
-  OpExprGradClosure() = default;
-  virtual ~OpExprGradClosure() = default;
+  OpExprGradFunction() = default;
+  virtual ~OpExprGradFunction() = default;
 
   virtual Maybe<void> Init(const OpExpr& op) = 0;
 
@@ -36,39 +36,39 @@ class OpExprGradClosure {
   virtual Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
                               const TensorTuple& outputs) const = 0;
 
-  virtual Maybe<void> DoBackward(const OpExprInterpState* ctx, const TensorTuple& out_grads,
-                                 TensorTuple* in_grads) const = 0;
+  virtual Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+                            TensorTuple* in_grads) const = 0;
 };
 
-// Stateful wrapper of the `OpExprGradClosure`.
-class OpExprGradClosureWrapper {
+// Stateful wrapper of the `OpExprGradFunction`.
+class OpExprGradClosure {
  public:
   // Use `shared_ptr` in order to keep `impl` alive even if the forward op has been released.
-  explicit OpExprGradClosureWrapper(const std::shared_ptr<OpExprGradClosure>& impl)
+  explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunction>& impl)
       : impl_(impl), state_(new OpExprInterpState) {}
-  explicit OpExprGradClosureWrapper(const std::shared_ptr<OpExprGradClosure>& impl,
-                                    const std::shared_ptr<OpExprInterpState>& state)
+  explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunction>& impl,
+                             const std::shared_ptr<OpExprInterpState>& state)
       : impl_(impl), state_(state) {}
 
-  virtual ~OpExprGradClosureWrapper() = default;
+  virtual ~OpExprGradClosure() = default;
 
   Maybe<void> Capture(const TensorTuple& inputs, const TensorTuple& outputs) const {
     return impl_->Capture(state_.get(), inputs, outputs);
   }
 
-  Maybe<void> DoBackward(const TensorTuple& out_grads, TensorTuple* in_grads) const {
-    return impl_->DoBackward(state_.get(), out_grads, in_grads);
+  Maybe<void> Apply(const TensorTuple& out_grads, TensorTuple* in_grads) const {
+    return impl_->Apply(state_.get(), out_grads, in_grads);
   }
 
  private:
-  std::shared_ptr<OpExprGradClosure> impl_;
+  std::shared_ptr<OpExprGradFunction> impl_;
   std::shared_ptr<OpExprInterpState> state_;
 };
 
-#define REGISTER_OP_EXPR_GRAD_CLOSURE(op_type, op_grad) \
-  REGISTER_CLASS_CREATOR(std::string, op_type, OpExprGradClosure, ([]() { return new op_grad; }))
+#define REGISTER_OP_EXPR_GRAD_FUNCTION(op_type, op_grad) \
+  REGISTER_CLASS_CREATOR(std::string, op_type, OpExprGradFunction, ([]() { return new op_grad; }))
 
 }  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_CLOSURE_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_FUNCTION_H_

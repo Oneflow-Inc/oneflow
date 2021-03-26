@@ -18,9 +18,9 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
-#include "oneflow/core/framework/op_interpreter_util.h"
-#include "oneflow/core/framework/op_expr_grad_closure.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/op_interpreter_util.h"
 #include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
@@ -316,7 +316,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     JUST(DetermineRequiresGrad(inputs, outputs));
   }
   if (autograd::GradMode::is_enabled()) {
-    auto grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
+    std::shared_ptr<OpExprGradClosure> grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     grad_closure->Capture(inputs, *outputs);
 
     auto backward_fn =
@@ -324,7 +324,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                 bool create_graph) -> Maybe<void> {
               autograd::AutoGradMode mode(create_graph);
-              JUST(grad_closure->DoBackward(out_grads, in_grads));
+              JUST(grad_closure->Apply(out_grads, in_grads));
               return Maybe<void>::Ok();
             });
     GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(backward_fn, inputs, outputs);
