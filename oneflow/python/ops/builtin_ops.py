@@ -144,7 +144,7 @@ class BuiltinOp(object):
         elif attr_type == user_op_attr_cfg.kAtListFloat:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
-                assert isinstance(x, float)
+                assert isinstance(x, (float, int))
                 attribute.mutable_at_list_float.add_val(x)
         elif attr_type == user_op_attr_cfg.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
