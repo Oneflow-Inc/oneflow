@@ -178,9 +178,3 @@ def test_darknet(test_case):
     load_paddle_module_and_check(
         test_case, DarkNet53, input_size=(1, 3, 224, 224), train_flag=False,
     )
-
-from absl import app
-from absl.testing import absltest
-
-test_case = absltest.TestCase
-test_darknet(test_case)
