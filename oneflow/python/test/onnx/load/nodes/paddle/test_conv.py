@@ -83,3 +83,9 @@ def test_Conv2D_k3s2p0g2d2(test_case):
             return x
 
     load_paddle_module_and_check(test_case, Net, input_size=(2, 4, 13, 12))
+
+from absl import app
+from absl.testing import absltest
+
+test_case = absltest.TestCase
+test_Conv2D_k3s1p1(test_case)

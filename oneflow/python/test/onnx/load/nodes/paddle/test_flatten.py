@@ -24,7 +24,8 @@ def test_flatten(test_case):
     class Net(nn.Layer):
         def forward(self, x):
             flatten = nn.Flatten()
-            x = nn.flatten(x)
+            x = flatten(x)
             return x
 
     load_paddle_module_and_check(test_case, Net)
+
