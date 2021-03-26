@@ -14,16 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
+
 namespace one {
 
-TensorTuple::TensorTuple(std::vector<std::shared_ptr<Tensor>>::size_type size) { resize(size); }
-
-TensorTuple::TensorTuple(std::initializer_list<std::shared_ptr<Tensor>> init_list) {
-  for (const auto& tensor : init_list) { emplace_back(tensor); }
-}
+class UserOpExpr;
 
 }  // namespace one
+
+namespace op_expr_helper {
+
+Maybe<one::UserOpExpr> AddNOp(int32_t n);
+
+Maybe<one::UserOpExpr> AddOp();
+
+Maybe<one::UserOpExpr> ZeroLikeOp();
+
+Maybe<one::UserOpExpr> OnesLikeOp();
+
+}  // namespace op_expr_helper
+
 }  // namespace oneflow
