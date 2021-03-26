@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter_util.h"
-#include "oneflow/core/framework/op_expr_grad.h"
+#include "oneflow/core/framework/op_expr_grad_closure.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/scope_util.h"
