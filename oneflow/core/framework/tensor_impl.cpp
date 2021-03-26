@@ -17,12 +17,9 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/framework/tensor_arg.h"
 
 namespace oneflow {
 namespace one {
-
-TensorImpl::TensorImpl() { now_grad_arg_.reset(new TensorArg); }
 
 Maybe<void> TensorImpl::SyncBlobObject2Attributes(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
