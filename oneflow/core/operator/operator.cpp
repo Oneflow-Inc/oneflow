@@ -708,36 +708,39 @@ Maybe<void> Operator::InferParallelDistributionSignature(
     const auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
       return JUST(ParallelDistributionInferHint4Ibn(ibn))->logical_blob_desc();
     };
+    HashMap<std::string, ParallelDistribution> ibn2parallel_distribution;
+    for (const auto& ibn : input_bns()) {
+      ParallelDistribution distribution =
+          JUST(ParallelDistributionInferHint4Ibn(ibn))->parallel_distribution();
+      if (parallel_distribution_constraints.bn_in_op2parallel_distribution_size() != 0) {
+        const auto parallel_distribution_constraints_it =
+            parallel_distribution_constraints.bn_in_op2parallel_distribution().find(ibn);
+        if (parallel_distribution_constraints_it
+            != parallel_distribution_constraints.bn_in_op2parallel_distribution().end()) {
+          distribution = parallel_distribution_constraints_it->second;
+        }
+      }
+      if (distribution.sbp_parallel_size() != parallel_hierarchy->NumAxes()) {
+        CHECK_OR_RETURN(IsBroadcast(distribution,
+                                    JUST(ParallelDistributionInferHint4Ibn(ibn))->parallel_desc()));
+        distribution.clear_sbp_parallel();
+        for (int64_t i = 0; i < parallel_hierarchy->NumAxes(); ++i) {
+          distribution.add_sbp_parallel()->mutable_broadcast_parallel();
+        }
+      }
+      CHECK_EQ_OR_RETURN(distribution.sbp_parallel_size(), parallel_hierarchy->NumAxes());
+      ibn2parallel_distribution[ibn] = std::move(distribution);
+    }
     CHECK_JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &list));
     for (int64_t i = 0; i < parallel_hierarchy->NumAxes(); ++i) {
       const SbpSignature* matched_sbp_signature = nullptr;
       for (const auto& sbp_signature : list.sbp_signature()) {
         bool all_match = true;
         for (const auto& ibn : input_bns()) {
-          ParallelDistribution distribution =
-              JUST(ParallelDistributionInferHint4Ibn(ibn))->parallel_distribution();
-          if (parallel_distribution_constraints.bn_in_op2parallel_distribution_size() != 0) {
-            const auto parallel_distribution_constraints_it =
-                parallel_distribution_constraints.bn_in_op2parallel_distribution().find(ibn);
-            if (parallel_distribution_constraints_it
-                != parallel_distribution_constraints.bn_in_op2parallel_distribution().end()) {
-              distribution = parallel_distribution_constraints_it->second;
-            }
-          }
-          SbpParallel in_sbp;
-          if (distribution.sbp_parallel_size() != parallel_hierarchy->NumAxes()) {
-            CHECK_OR_RETURN(IsBroadcast(
-                distribution, JUST(ParallelDistributionInferHint4Ibn(ibn))->parallel_desc()));
-            in_sbp.mutable_broadcast_parallel();
-          } else {
-            in_sbp = distribution.sbp_parallel(i);
-          }
-          if (sbp_signature.bn_in_op2sbp_parallel().at(ibn) != in_sbp) {
-            if (!(in_sbp.has_partial_sum_parallel()
-                  && sbp_signature.bn_in_op2sbp_parallel().at(ibn).has_broadcast_parallel())) {
-              all_match = false;
-              break;
-            }
+          if (sbp_signature.bn_in_op2sbp_parallel().at(ibn)
+              != ibn2parallel_distribution.at(ibn).sbp_parallel(i)) {
+            all_match = false;
+            break;
           }
         }
         if (all_match) {
