@@ -501,7 +501,12 @@ def sync_default_session() -> None:
 
 def _TryCompleteConfigProto(config_proto):
     if config_proto.resource.machine_num == 0:
-        config_proto.resource.machine_num = len(env_util.default_env_proto.machine)
+        if env_util.default_env_proto.HasField("ctrl_bootstrap_conf"):
+            config_proto.resource.machine_num = (
+                env_util.default_env_proto.ctrl_bootstrap_conf.world_size
+            )
+        else:
+            config_proto.resource.machine_num = len(env_util.default_env_proto.machine)
 
 
 def _GetDefaultConfigProto():
