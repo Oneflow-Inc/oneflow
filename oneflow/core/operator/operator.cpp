@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
+#include "oneflow/core/job/parallel_distribution_infer_hint.h"
 #include "oneflow/core/job/foreign_callback.h"
 
 namespace oneflow {
@@ -138,7 +139,6 @@ Maybe<void> Operator::FillOpParallelDesc(const ParallelDesc& parallel_desc) {
 }
 
 Maybe<void> Operator::FillOpParallelDesc(std::shared_ptr<const ParallelDesc> parallel_desc) {
-  CHECK_EQ_OR_RETURN(parallel_desc->hierarchy()->NumAxes(), 1);
   CHECK_OR_RETURN(!op_parallel_desc_);
   op_parallel_desc_ = std::move(parallel_desc);
   return Maybe<void>::Ok();
@@ -675,13 +675,23 @@ Maybe<void> Operator::InferParallelDistributionSignature(
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
         ParallelDistributionInferHint4Ibn) const {
+  const auto IsBroadcast = [](const ParallelDistribution& parallel_distribution,
+                              const ParallelDesc& parallel_desc) -> bool {
+    if (parallel_desc.hierarchy()->NumAxes() == 1) { return true; }
+    for (int64_t i = 0; i < parallel_distribution.sbp_parallel_size(); ++i) {
+      if (!parallel_distribution.sbp_parallel(i).has_broadcast_parallel()) { return false; }
+    }
+    return true;
+  };
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   CHECK_GT(parallel_hierarchy->NumAxes(), 0);
   if (parallel_hierarchy->NumAxes() == 1) {
     HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
     for (const auto& ibn : input_bns()) {
       const ParallelDistributionInferHint* hint = JUST(ParallelDistributionInferHint4Ibn(ibn));
-      CHECK_EQ(hint->parallel_distribution().sbp_parallel_size(), 1);
+      if (hint->parallel_distribution().sbp_parallel_size() != 1) {
+        CHECK_OR_RETURN(IsBroadcast(hint->parallel_distribution(), hint->parallel_desc()));
+      }
       ibn2sbp_infer_hint.emplace(ibn,
                                  SbpInferHint(&hint->parallel_desc(), &hint->logical_blob_desc(),
                                               &hint->parallel_distribution().sbp_parallel(0)));
@@ -694,7 +704,61 @@ Maybe<void> Operator::InferParallelDistributionSignature(
     SbpSignatureToParallelDistributionSignature(sbp_signature, parallel_distribution_signature);
     return Maybe<void>::Ok();
   } else {
-    UNIMPLEMENTED_THEN_RETURN();
+    SbpSignatureList list;
+    const auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
+      return JUST(ParallelDistributionInferHint4Ibn(ibn))->logical_blob_desc();
+    };
+    HashMap<std::string, ParallelDistribution> ibn2parallel_distribution;
+    for (const auto& ibn : input_bns()) {
+      ParallelDistribution distribution =
+          JUST(ParallelDistributionInferHint4Ibn(ibn))->parallel_distribution();
+      if (parallel_distribution_constraints.bn_in_op2parallel_distribution_size() != 0) {
+        const auto parallel_distribution_constraints_it =
+            parallel_distribution_constraints.bn_in_op2parallel_distribution().find(ibn);
+        if (parallel_distribution_constraints_it
+            != parallel_distribution_constraints.bn_in_op2parallel_distribution().end()) {
+          distribution = parallel_distribution_constraints_it->second;
+        }
+      }
+      if (distribution.sbp_parallel_size() != parallel_hierarchy->NumAxes()) {
+        CHECK_OR_RETURN(IsBroadcast(distribution,
+                                    JUST(ParallelDistributionInferHint4Ibn(ibn))->parallel_desc()));
+        distribution.clear_sbp_parallel();
+        for (int64_t i = 0; i < parallel_hierarchy->NumAxes(); ++i) {
+          distribution.add_sbp_parallel()->mutable_broadcast_parallel();
+        }
+      }
+      CHECK_EQ_OR_RETURN(distribution.sbp_parallel_size(), parallel_hierarchy->NumAxes());
+      ibn2parallel_distribution[ibn] = std::move(distribution);
+    }
+    CHECK_JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &list));
+    for (int64_t i = 0; i < parallel_hierarchy->NumAxes(); ++i) {
+      const SbpSignature* matched_sbp_signature = nullptr;
+      for (const auto& sbp_signature : list.sbp_signature()) {
+        bool all_match = true;
+        for (const auto& ibn : input_bns()) {
+          if (sbp_signature.bn_in_op2sbp_parallel().at(ibn)
+              != ibn2parallel_distribution.at(ibn).sbp_parallel(i)) {
+            all_match = false;
+            break;
+          }
+        }
+        if (all_match) {
+          matched_sbp_signature = &sbp_signature;
+          break;
+        }
+      }
+      CHECK_OR_RETURN(matched_sbp_signature != nullptr) << " op_name " << op_name();
+      for (const auto& bn : input_bns()) {
+        *((*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[bn]
+              .add_sbp_parallel()) = matched_sbp_signature->bn_in_op2sbp_parallel().at(bn);
+      }
+      for (const auto& bn : output_bns()) {
+        *((*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[bn]
+              .add_sbp_parallel()) = matched_sbp_signature->bn_in_op2sbp_parallel().at(bn);
+      }
+    }
+    return Maybe<void>::Ok();
   }
 }
 
