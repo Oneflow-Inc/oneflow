@@ -869,26 +869,26 @@ Maybe<void> InstructionsBuilder::RankFrontSeqCallback(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::RankFrontSeqInferCallback(
+Maybe<void> InstructionsBuilder::InferRankFrontSeqCallback(
     std::shared_ptr<std::function<void()>> callback) {
-  return RankFrontSeqCallback("RankFrontSeqInferCallback", callback);
+  return RankFrontSeqCallback("InferRankFrontSeqCallback", callback);
 }
 
-Maybe<void> InstructionsBuilder::RankFrontSeqComputeCallback(
+Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
     std::shared_ptr<std::function<void()>> callback) {
-  return RankFrontSeqCallback("RankFrontSeqComputeCallback", callback);
+  return RankFrontSeqCallback("ComputeRankFrontSeqCallback", callback);
 }
 
-Maybe<void> InstructionsBuilder::GlobalFrontSeqInferBarrier() {
+Maybe<void> InstructionsBuilder::InferGlobalFrontSeqBarrier() {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
-      ObjectMsgPtr<vm::InstructionMsg>::New("GlobalFrontSeqInferBarrier");
+      ObjectMsgPtr<vm::InstructionMsg>::New("InferGlobalFrontSeqBarrier");
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::GlobalFrontSeqComputeBarrier() {
+Maybe<void> InstructionsBuilder::ComputeGlobalFrontSeqBarrier() {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
-      ObjectMsgPtr<vm::InstructionMsg>::New("GlobalFrontSeqComputeBarrier");
+      ObjectMsgPtr<vm::InstructionMsg>::New("ComputeGlobalFrontSeqBarrier");
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }

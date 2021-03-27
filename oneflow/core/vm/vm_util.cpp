@@ -51,8 +51,8 @@ Maybe<void> Sync() {
   // TODO(jianhao): update it for multi client
   BlockingCounter bc(1);
   LogicalRun([&bc](const std::shared_ptr<InstructionsBuilder>& builder) {
-    builder->GlobalFrontSeqComputeBarrier();
-    builder->RankFrontSeqComputeCallback(
+    builder->ComputeGlobalFrontSeqBarrier();
+    builder->ComputeRankFrontSeqCallback(
         std::make_shared<std::function<void()>>([&bc]() { bc.Decrease(); }));
   });
 
