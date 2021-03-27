@@ -35,6 +35,7 @@ limitations under the License.
 #include <random>
 #include <thread>
 #include <utility>
+#include <cfenv>
 
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/meta_util.hpp"
@@ -192,6 +193,18 @@ bool IsKernelSafeInt32(int64_t n);
 inline void HashCombine(size_t* seed, size_t hash) {
   *seed ^= (hash + 0x9e3779b9 + (*seed << 6U) + (*seed >> 2U));
 }
+
+class RoundModeGuard final {
+ public:
+  RoundModeGuard(int mode) {
+    origin_mode_ = std::fegetround();
+    CHECK_EQ(std::fesetround(mode), 0);
+  }
+  ~RoundModeGuard() { std::fesetround(origin_mode_); }
+
+ private:
+  int origin_mode_;
+};
 
 }  // namespace oneflow
 

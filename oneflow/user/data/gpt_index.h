@@ -34,6 +34,7 @@ class GPTIndex final {
 
   uint64_t version() const { return version_; }
   DataType data_type() const { return data_type_; }
+  size_t num_docs() const { return sizes_.size(); }
   size_t doc_length(size_t doc_index) const { return sizes_.at(doc_index); }
   size_t doc_offset(size_t doc_index) const { return doc_offsets_.at(doc_index); }
   size_t address(size_t doc_index) const { return addresses_.at(doc_index); }

@@ -53,12 +53,14 @@ MMapFile::~MMapFile() {
 #endif
 }
 
-void MMapFile::read(void* buf, size_t offset, size_t length) {
+void MMapFile::read(void* buf, size_t offset, size_t length) const {
   memcpy(buf, mapped_ + offset, length);
-  offset_ = offset + length;
 }
 
-void MMapFile::read(void* buf, size_t length) { read(buf, offset_, length); }
+void MMapFile::read(void* buf, size_t length) {
+  read(buf, offset_, length);
+  offset_ += length;
+}
 
 }  // namespace data
 

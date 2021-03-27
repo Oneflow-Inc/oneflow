@@ -17,22 +17,27 @@ limitations under the License.
 #define ONEFLOW_USER_DATA_GPT_DATA_READER_H_
 
 #include "oneflow/user/data/data_reader.h"
-// #include "oneflow/user/data/coco_parser.h"
-#include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/tensor_buffer.h"
 
 namespace oneflow {
 
 namespace data {
 
-// class GPTDataReader final : public DataReader<GPTDocIndex> {
-//  public:
-//   GPTDataReader(user_op::KernelInitContext* ctx);
-//   ~GPTDataReader() = default;
+class GPTDataReader final : public DataReader<TensorBuffer> {
+ public:
+  GPTDataReader(user_op::KernelInitContext* ctx);
+  ~GPTDataReader() = default;
 
-//  protected:
-//   using DataReader<GPTDocIndex>::loader_;
-//   using DataReader<GPTDocIndex>::parser_;
-// };
+ protected:
+  using DataReader<TensorBuffer>::loader_;
+  using DataReader<TensorBuffer>::parser_;
+
+ private:
+  std::vector<size_t> GetSplitDocIndices(const std::vector<int64_t>& split_sizes,
+                                         int64_t split_index, size_t num_docs) const;
+  size_t GetDistributedBatchSize(size_t batch_size, const Shape& hierarchy,
+                                 const ParallelDistribution& parallel_dist) const;
+};
 
 }  // namespace data
 
