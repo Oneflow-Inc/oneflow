@@ -164,6 +164,11 @@ class FakeQuantization:
             node.output_tensor_names[0],
             name=id_util.UniqueStr(node.name),
         )
+        if opset == 10:
+            scale_node: Node = node.input_nodes[1]
+            scale_np: np.ndarray = scale_node.get_tensor_value(as_list=False)
+            if scale_np.size != 1:
+                raise RuntimeError("per-channel mode is not supported in version 10")
 
         if opset == 13:
             node.attrs["axis"] = 0
