@@ -122,15 +122,12 @@ class GlobalFrontSeqBarrierInstructionType : public InstructionType {
   GlobalFrontSeqBarrierInstructionType() = default;
   virtual ~GlobalFrontSeqBarrierInstructionType() override = default;
 
-  using stream_type = ControlStreamType;
+  using stream_type = HostStreamType;
 
   virtual bool IsFrontSequential() const override { return true; }
 
-  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
-  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
-
  protected:
-  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const { OF_ENV_BARRIER(); }
+  void Run() const { OF_ENV_BARRIER(); }
 };
 
 class InferGlobalFrontSeqBarrierInstructionType final
@@ -139,8 +136,8 @@ class InferGlobalFrontSeqBarrierInstructionType final
   InferGlobalFrontSeqBarrierInstructionType() = default;
   ~InferGlobalFrontSeqBarrierInstructionType() override = default;
 
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override { Run(vm, instr_msg); }
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override { /* do nothing */
+  void Infer(Instruction* instruction) const override { Run(); }
+  void Compute(Instruction* instruction) const override { /* do nothing */
   }
 };
 COMMAND(RegisterInstructionType<InferGlobalFrontSeqBarrierInstructionType>(
@@ -152,9 +149,9 @@ class ComputeGlobalFrontSeqBarrierInstructionType final
   ComputeGlobalFrontSeqBarrierInstructionType() = default;
   ~ComputeGlobalFrontSeqBarrierInstructionType() override = default;
 
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override { /* do nothing */
+  void Infer(Instruction* instruction) const override { /* do nothing */
   }
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override { Run(vm, instr_msg); }
+  void Compute(Instruction* instruction) const override { Run(); }
 };
 COMMAND(RegisterInstructionType<ComputeGlobalFrontSeqBarrierInstructionType>(
     "ComputeGlobalFrontSeqBarrier"));
