@@ -115,10 +115,6 @@ def test_fake_quantization_affine_per_channel(test_case):
     generate_fake_quantization_test(per_layer=False, formula="google", scheme="affine")
 
 
-def test_fake_quantization_cambricon(test_case):
-    generate_fake_quantization_test(per_layer=True, formula="cambricon")
-
-
 def test_fake_quantization_symmetric_gpu(test_case):
     generate_fake_quantization_test(
         per_layer=True, formula="google", scheme="symmetric", device_type="gpu"
@@ -143,12 +139,6 @@ def test_fake_quantization_affine_per_channel_gpu(test_case):
     )
 
 
-def test_fake_quantization_cambricon_gpu(test_case):
-    generate_fake_quantization_test(
-        per_layer=True, formula="cambricon", device_type="gpu"
-    )
-
-
 # moving_average_min_max_observer
 def test_fake_quantization_symmetric_moving_average(test_case):
     generate_fake_quantization_test_moving_average(formula="google", scheme="symmetric")
@@ -156,10 +146,6 @@ def test_fake_quantization_symmetric_moving_average(test_case):
 
 def test_fake_quantization_affine_moving_average(test_case):
     generate_fake_quantization_test_moving_average(formula="google", scheme="affine")
-
-
-def test_fake_quantization_cambricon_moving_average(test_case):
-    generate_fake_quantization_test_moving_average(formula="cambricon")
 
 
 def test_fake_quantization_symmetric_gpu_moving_average(test_case):
@@ -171,10 +157,4 @@ def test_fake_quantization_symmetric_gpu_moving_average(test_case):
 def test_fake_quantization_affine_gpu_moving_average(test_case):
     generate_fake_quantization_test_moving_average(
         formula="google", scheme="affine", device_type="gpu"
-    )
-
-
-def test_fake_quantization_cambricon_gpu_moving_average(test_case):
-    generate_fake_quantization_test_moving_average(
-        formula="cambricon", device_type="gpu"
     )

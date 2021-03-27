@@ -38,6 +38,7 @@ const std::string MOVING_MAX_SUFFIX = "-fake-quant-moving-max";
 const std::string MOVING_MIN_SUFFIX = "-fake-quant-moving-min";
 const std::string MUL_BIAS_SUFFIX = "-fake-quant-mul-bias";
 const std::string OBSERVER_SUFFIX = "-fake-quant-observer";
+const std::string TRAIN_STEP_SUFFIX = "-fake-train-step";
 
 void VerifyQATList(const OpTypeSet& op_list) {
   for (const auto& op_type : op_list) {
@@ -123,6 +124,7 @@ std::string OpTypeName4OpNode(const OpNode* node) {
 
 using OpConfMap = HashMap<std::string, OperatorConf>;
 
+template<DataType VALUE_TYPE = DataType::kFloat>
 OperatorConf Get1DZeroVariableOpConf(std::string name, const int64_t scope_symbol_id,
                                      const int64_t length, OpConfMap* inserted_ops) {
   OperatorConf variable_op_conf{};
@@ -131,7 +133,7 @@ OperatorConf Get1DZeroVariableOpConf(std::string name, const int64_t scope_symbo
   VariableOpConf* variable_conf = variable_op_conf.mutable_variable_conf();
   variable_conf->set_out("out");
   *variable_conf->mutable_shape()->mutable_dim()->Add() = length;
-  variable_conf->set_data_type(DataType::kFloat);
+  variable_conf->set_data_type(VALUE_TYPE);
   variable_conf->mutable_initializer()->mutable_constant_conf()->set_value(0);
   (*inserted_ops)[name] = variable_op_conf;
   return variable_op_conf;
@@ -257,7 +259,18 @@ user_op::UserOpConfWrapper MovingMinMaxObserver(const std::string& name, const s
       user_op::UserOpConfWrapperBuilder(name)
           .Op("moving_average_min_max_observer")
           .Input("in", input)
-          .Input("current_train_step", train_step_lbn)
+          .Input("current_train_step",
+                 [&] {
+                   const std::string train_step_name = name + TRAIN_STEP_SUFFIX;
+                   const auto train_step_var = Get1DZeroVariableOpConf<DataType::kInt64>(
+                       train_step_name, scope_symbol_id, 1, inserted_ops);
+                   if (GlobalJobDesc().IsTrain()) {
+                     return train_step_lbn;
+                   } else {
+                     return GenLogicalBlobName(train_step_var.name(),
+                                               train_step_var.variable_conf().out());
+                   }
+                 }())
           .Input("moving_max",
                  GenLogicalBlobName(moving_max_var.name(), moving_max_var.variable_conf().out()))
           .Input("moving_min",

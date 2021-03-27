@@ -24,6 +24,7 @@ from __future__ import absolute_import
 import logging
 import numpy as np
 from typing import Optional, Callable
+from oneflow.python.framework import id_util
 from oneflow.python.onnx.graph import Graph, Node
 from oneflow.python.onnx.handler import flow_op
 
@@ -147,58 +148,43 @@ class MovingAverageMinMaxObserver:
 
 
 @flow_op(
-    "fake_quantization", flow_ibns=["in", "scale", "zero_point"],
+    "fake_quantization",
+    onnx_op="QuantizeLinear",
+    flow_ibns=["in", "scale", "zero_point"],
 )
 class FakeQuantization:
     @classmethod
-    def Version_10(cls, ctx: Graph, node: Node, **kwargs):
-        in_np: np.ndarray = node.input_nodes[0].get_tensor_value(as_list=False)
-        scale_np: np.ndarray = node.input_nodes[1].get_tensor_value(as_list=False)
-        zero_point_np: np.ndarray = node.input_nodes[2].get_tensor_value(as_list=False)
-
-        bit = node.attrs["quantization_bit"]
-        scheme = node.attrs["quantization_scheme"]
+    def _Convert(cls, ctx: Graph, node: Node, opset: int, **kwargs):
         formula = node.attrs["quantization_formula"]
-        per_layer = scale_np.size == 1
-
-        if formula == "google":
-            if not per_layer:
-                scale_np = np.reshape(
-                    scale_np, (-1,) + tuple(1 for _ in range(len(in_np.shape) - 1))
-                )
-                zero_point_np = np.reshape(
-                    zero_point_np, (-1,) + tuple(1 for _ in range(len(in_np.shape) - 1))
-                )
-            if scheme == "symmetric":
-                upper_bound = 2.0 ** (bit - 1) - 1
-                lower_bound = -upper_bound
-                result = np.round(in_np / scale_np)
-                np.clip(result, lower_bound, upper_bound, out=result)
-                result = (result * scale_np).astype(in_np.dtype)
-
-            elif scheme == "affine":
-                upper_bound = 2.0 ** bit - 1
-                result = np.round(in_np / scale_np + zero_point_np)
-                np.clip(result, 0, upper_bound, out=result)
-                result = ((result - zero_point_np) * scale_np).astype(in_np.dtype)
-
-            else:
-                raise ValueError("invalid quantization scheme: " + scheme)
-
-        elif formula == "cambricon":
-            upper_bound = 2.0 ** (bit - 1) - 1
-            lower_bound = -upper_bound
-            scale_np = np.power(2.0, scale_np.astype(np.int32))
-            result = np.round(in_np / scale_np)
-            np.clip(result, lower_bound, upper_bound, out=result)
-            result = (result * scale_np).astype(in_np.dtype)
-
-        else:
+        if formula == "cambricon":
             raise ValueError("invalid quantization formula: " + formula)
 
-        ctx.RemoveNode(node.name)
-        ctx.MakeConst(node.output_tensor_names[0], result)
+        dequant_node = ctx.InsertNewNodeOnOutput(
+            "DequantizeLinear",
+            node.output_tensor_names[0],
+            name=id_util.UniqueStr(node.name),
+        )
+
+        if opset == 13:
+            node.attrs["axis"] = 0
+            dequant_node.attrs["axis"] = 0
+
+        dequant_node.input_tensor_names = [
+            node.output_tensor_names[0],
+            node.input_tensor_names[1],
+            node.input_tensor_names[2],
+        ]
+
+        ctx.set_dtype(
+            dequant_node.output_tensor_names[0],
+            ctx.get_dtype(node.input_tensor_names[0]),
+        )
+        ctx.CopyShape(node.output_tensor_names[0], dequant_node.output_tensor_names[0])
+
+    @classmethod
+    def Version_10(cls, ctx: Graph, node: Node, **kwargs):
+        cls._Convert(ctx, node, 10, **kwargs)
 
     @classmethod
     def Version_13(cls, ctx: Graph, node: Node, **kwargs):
-        cls.Version_10(ctx, node, **kwargs)
+        cls._Convert(ctx, node, 13, **kwargs)
