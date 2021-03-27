@@ -19,7 +19,7 @@ from util import convert_to_onnx_and_check
 
 
 def set_moving_max_min_value():
-    max_key, min_key = "", ""
+    max_key, min_key = None, None
     keys = flow.get_all_variables().keys()
     for key in keys:
         if max_key != "" and min_key != "":
@@ -28,19 +28,17 @@ def set_moving_max_min_value():
             max_key = key
         if key[-3:] == "min":
             min_key = key
-    flow.load_variables(
-        {
-            max_key: np.array([0.5]).astype(np.float32),
-            min_key: np.array([-0.2]).astype(np.float32),
-        }
-    )
+    if max_key is not None and min_key is not None:
+        flow.load_variables(
+            {
+                max_key: np.array([0.5]).astype(np.float32),
+                min_key: np.array([-0.2]).astype(np.float32),
+            }
+        )
 
 
 def generate_fake_quantization_test(
-    per_layer: bool = True,
-    formula: str = "google",
-    scheme: str = "symmetric",
-    device_type: str = "cpu",
+    per_layer: bool = True, scheme: str = "symmetric", device_type: str = "cpu",
 ):
     @flow.global_function()
     def fake_quantization():
@@ -54,12 +52,8 @@ def generate_fake_quantization_test(
             return flow.quantization.fake_quantization(
                 x,
                 *flow.quantization.min_max_observer(
-                    x,
-                    per_layer_quantization=per_layer,
-                    quantization_formula=formula,
-                    quantization_scheme=scheme,
+                    x, per_layer_quantization=per_layer, quantization_scheme=scheme,
                 ),
-                quantization_formula=formula,
                 quantization_scheme=scheme,
             )
 
@@ -67,7 +61,7 @@ def generate_fake_quantization_test(
 
 
 def generate_fake_quantization_test_moving_average(
-    formula: str = "google", scheme: str = "symmetric", device_type: str = "cpu",
+    scheme: str = "symmetric", device_type: str = "cpu",
 ):
     @flow.global_function()
     def fake_quantization_moving_average():
@@ -81,9 +75,8 @@ def generate_fake_quantization_test_moving_average(
             return flow.quantization.fake_quantization(
                 x,
                 *flow.quantization.moving_average_min_max_observer(
-                    x, quantization_formula=formula, quantization_scheme=scheme,
+                    x, quantization_scheme=scheme,
                 ),
-                quantization_formula=formula,
                 quantization_scheme=scheme,
             )
 
@@ -96,65 +89,55 @@ def generate_fake_quantization_test_moving_average(
 
 # min_max_observer
 def test_fake_quantization_symmetric(test_case):
-    generate_fake_quantization_test(
-        per_layer=True, formula="google", scheme="symmetric"
-    )
+    generate_fake_quantization_test(per_layer=True, scheme="symmetric")
 
 
 def test_fake_quantization_symmetric_per_channel(test_case):
-    generate_fake_quantization_test(
-        per_layer=False, formula="google", scheme="symmetric"
-    )
+    generate_fake_quantization_test(per_layer=False, scheme="symmetric")
 
 
 def test_fake_quantization_affine(test_case):
-    generate_fake_quantization_test(per_layer=True, formula="google", scheme="affine")
+    generate_fake_quantization_test(per_layer=True, scheme="affine")
 
 
 def test_fake_quantization_affine_per_channel(test_case):
-    generate_fake_quantization_test(per_layer=False, formula="google", scheme="affine")
+    generate_fake_quantization_test(per_layer=False, scheme="affine")
 
 
 def test_fake_quantization_symmetric_gpu(test_case):
     generate_fake_quantization_test(
-        per_layer=True, formula="google", scheme="symmetric", device_type="gpu"
+        per_layer=True, scheme="symmetric", device_type="gpu"
     )
 
 
 def test_fake_quantization_symmetric_per_channel_gpu(test_case):
     generate_fake_quantization_test(
-        per_layer=False, formula="google", scheme="symmetric", device_type="gpu"
+        per_layer=False, scheme="symmetric", device_type="gpu"
     )
 
 
 def test_fake_quantization_affine_gpu(test_case):
-    generate_fake_quantization_test(
-        per_layer=True, formula="google", scheme="affine", device_type="gpu"
-    )
+    generate_fake_quantization_test(per_layer=True, scheme="affine", device_type="gpu")
 
 
 def test_fake_quantization_affine_per_channel_gpu(test_case):
-    generate_fake_quantization_test(
-        per_layer=False, formula="google", scheme="affine", device_type="gpu"
-    )
+    generate_fake_quantization_test(per_layer=False, scheme="affine", device_type="gpu")
 
 
 # moving_average_min_max_observer
 def test_fake_quantization_symmetric_moving_average(test_case):
-    generate_fake_quantization_test_moving_average(formula="google", scheme="symmetric")
+    generate_fake_quantization_test_moving_average(scheme="symmetric")
 
 
 def test_fake_quantization_affine_moving_average(test_case):
-    generate_fake_quantization_test_moving_average(formula="google", scheme="affine")
+    generate_fake_quantization_test_moving_average(scheme="affine")
 
 
 def test_fake_quantization_symmetric_gpu_moving_average(test_case):
     generate_fake_quantization_test_moving_average(
-        formula="google", scheme="symmetric", device_type="gpu"
+        scheme="symmetric", device_type="gpu"
     )
 
 
 def test_fake_quantization_affine_gpu_moving_average(test_case):
-    generate_fake_quantization_test_moving_average(
-        formula="google", scheme="affine", device_type="gpu"
-    )
+    generate_fake_quantization_test_moving_average(scheme="affine", device_type="gpu")
