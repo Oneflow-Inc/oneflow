@@ -255,19 +255,19 @@ user_op::UserOpConfWrapper MovingMinMaxObserver(const std::string& name, const s
       Get1DZeroVariableOpConf(moving_max_name, scope_symbol_id, 1, inserted_ops);
   const auto moving_min_var =
       Get1DZeroVariableOpConf(moving_min_name, scope_symbol_id, 1, inserted_ops);
-  std::string train_step_value = train_step_lbn;
+  std::string observer_current_train_step = train_step_lbn;
   if (!GlobalJobDesc().IsTrain()) {
     const std::string train_step_name = name + TRAIN_STEP_SUFFIX;
     const auto train_step_var = Get1DZeroVariableOpConf<DataType::kInt64>(
         train_step_name, scope_symbol_id, 1, inserted_ops);
-    train_step_value =
+    observer_current_train_step =
         GenLogicalBlobName(train_step_var.name(), train_step_var.variable_conf().out());
   }
   const auto op_wrapper =
       user_op::UserOpConfWrapperBuilder(name)
           .Op("moving_average_min_max_observer")
           .Input("in", input)
-          .Input("current_train_step", train_step_value)
+          .Input("current_train_step", observer_current_train_step)
           .Input("moving_max",
                  GenLogicalBlobName(moving_max_var.name(), moving_max_var.variable_conf().out()))
           .Input("moving_min",
