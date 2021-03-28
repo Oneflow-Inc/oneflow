@@ -24,6 +24,7 @@ from __future__ import absolute_import
 import logging
 import numpy as np
 from typing import Optional, Callable
+from oneflow.python.framework import id_util
 from oneflow.python.onnx.graph import Graph, Node
 from oneflow.python.onnx.handler import flow_op
 
@@ -144,3 +145,51 @@ class MovingAverageMinMaxObserver:
         ctx.RemoveNode(node.name)
         ctx.MakeConst(node.output_tensor_names[0], scale.flatten())
         ctx.MakeConst(node.output_tensor_names[1], zero_point)
+
+
+@flow_op(
+    "fake_quantization",
+    onnx_op="QuantizeLinear",
+    flow_ibns=["in", "scale", "zero_point"],
+)
+class FakeQuantization:
+    @classmethod
+    def _Convert(cls, ctx: Graph, node: Node, opset: int, **kwargs):
+        formula = node.attrs["quantization_formula"]
+        if formula == "cambricon":
+            raise ValueError("invalid quantization formula: " + formula)
+
+        dequant_node = ctx.InsertNewNodeOnOutput(
+            "DequantizeLinear",
+            node.output_tensor_names[0],
+            name=id_util.UniqueStr(node.name),
+        )
+        if opset < 13:
+            scale_node: Node = node.input_nodes[1]
+            scale_np: np.ndarray = scale_node.get_tensor_value(as_list=False)
+            if scale_np.size != 1:
+                raise RuntimeError("per-channel mode is not supported in version 10")
+
+        else:
+            node.attrs["axis"] = 0
+            dequant_node.attrs["axis"] = 0
+
+        dequant_node.input_tensor_names = [
+            node.output_tensor_names[0],
+            node.input_tensor_names[1],
+            node.input_tensor_names[2],
+        ]
+
+        ctx.set_dtype(
+            dequant_node.output_tensor_names[0],
+            ctx.get_dtype(node.input_tensor_names[0]),
+        )
+        ctx.CopyShape(node.output_tensor_names[0], dequant_node.output_tensor_names[0])
+
+    @classmethod
+    def Version_10(cls, ctx: Graph, node: Node, **kwargs):
+        cls._Convert(ctx, node, 10, **kwargs)
+
+    @classmethod
+    def Version_13(cls, ctx: Graph, node: Node, **kwargs):
+        cls._Convert(ctx, node, 13, **kwargs)
