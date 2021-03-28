@@ -26,32 +26,33 @@ namespace oneflow {
 namespace data {
 
 GPTDataReader::GPTDataReader(user_op::KernelInitContext* ctx) : DataReader<TensorBuffer>(ctx) {
-  const std::string& data_file_prefix = ctx->Attr<std::string>("data_file_prefix");
-  auto gpt_index = std::make_shared<const GPTIndex>(data_file_prefix + ".idx");
-  auto gpt_bin = std::make_shared<MMapFile>(data_file_prefix + ".bin");
+  // const std::string& data_file_prefix = ctx->Attr<std::string>("data_file_prefix");
+  // auto gpt_index = std::make_shared<const GPTIndex>(data_file_prefix + ".idx");
+  // auto gpt_bin = std::make_shared<MMapFile>(data_file_prefix + ".bin");
 
-  auto doc_indices = GetSplitDocIndices(ctx->Attr<std::vector<int64_t>>("split_sizes"),
-                                        ctx->Attr<int64_t>("split_index"), gpt_index->num_docs());
-  std::unique_ptr<RandomAccessDataset<TensorBuffer>> gpt_dataset = std::make_unique<GPTDataset>(
-      gpt_index, gpt_bin, ctx->Attr<int64_t>("seq_length"), ctx->Attr<int64_t>("num_samples"),
-      doc_indices, ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed"));
+  // auto doc_indices = GetSplitDocIndices(ctx->Attr<std::vector<int64_t>>("split_sizes"),
+  //                                       ctx->Attr<int64_t>("split_index"),
+  //                                       gpt_index->num_docs());
+  // std::unique_ptr<RandomAccessDataset<TensorBuffer>> gpt_dataset = std::make_unique<GPTDataset>(
+  //     gpt_index, gpt_bin, ctx->Attr<int64_t>("seq_length"), ctx->Attr<int64_t>("num_samples"),
+  //     doc_indices, ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed"));
 
-  size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("sequence", 0)->shape().elem_cnt();
-  if (ctx->parallel_ctx().parallel_num() > 1) {
-    const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-    const ParallelDistribution& parl_dist =
-        ctx->ParallelDistribution4ArgNameAndIndex("sequence", 0);
-    std::unique_ptr<Dataset<TensorBuffer>> distributed_gpt_dataset =
-        std::make_unique<DistributedDataset<TensorBuffer>>(
-            hierarchy, parl_dist, ctx->parallel_ctx().parallel_id(), std::move(gpt_dataset));
-    size_t dist_batch_size = GetDistributedBatchSize(batch_size, hierarchy, parl_dist);
-    loader_.reset(
-        new BatchDataset<TensorBuffer>(dist_batch_size, std::move(distributed_gpt_dataset)));
-  } else {
-    loader_.reset(new BatchDataset<TensorBuffer>(batch_size, std::move(gpt_dataset)));
-  }
+  // size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("sequence", 0)->shape().elem_cnt();
+  // if (ctx->parallel_ctx().parallel_num() > 1) {
+  //   const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+  //   const ParallelDistribution& parl_dist =
+  //       ctx->ParallelDistribution4ArgNameAndIndex("sequence", 0);
+  //   std::unique_ptr<Dataset<TensorBuffer>> distributed_gpt_dataset =
+  //       std::make_unique<DistributedDataset<TensorBuffer>>(
+  //           hierarchy, parl_dist, ctx->parallel_ctx().parallel_id(), std::move(gpt_dataset));
+  //   size_t dist_batch_size = GetDistributedBatchSize(batch_size, hierarchy, parl_dist);
+  //   loader_.reset(
+  //       new BatchDataset<TensorBuffer>(dist_batch_size, std::move(distributed_gpt_dataset)));
+  // } else {
+  //   loader_.reset(new BatchDataset<TensorBuffer>(batch_size, std::move(gpt_dataset)));
+  // }
 
-  parser_.reset(new GPTParser());
+  // parser_.reset(new GPTParser());
   StartLoadThread();
 }
 

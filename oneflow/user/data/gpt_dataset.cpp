@@ -118,22 +118,20 @@ void GPTDataset::ShuffleSampleIndices() {
   }
 }
 
-GPTDataset::LoadTargetShdPtr GPTDataset::GetSample(int64_t index) const {
+void GPTDataset::Get(size_t index, void* buf) const {
   CHECK_LT(index, sample_indices_.size());
-  auto sample_ptr = std::make_shared<TensorBuffer>();
-  sample_ptr->Resize(Shape({static_cast<int64_t>(seq_len_ + 1)}), index_->data_type());
   const size_t cur_doc_index = sample_indices_[index].first;
   const size_t cur_doc_offset = sample_indices_[index].second;
   const size_t next_doc_index = sample_indices_[index + 1].first;
   const size_t next_doc_offset = sample_indices_[index + 1].second;
+  size_t seq_len = seq_len_ + 1;
   const size_t dtype_size = GetSizeOfDataType(index_->data_type());
   if (cur_doc_index == next_doc_index) {
-    // within the same document, just extract the chunk.
-    CHECK_EQ(sample_ptr->elem_cnt(), next_doc_offset - cur_doc_offset + 1);
+    CHECK_EQ(seq_len, next_doc_offset - cur_doc_offset + 1);
     size_t offset = index_->address(cur_doc_index) + cur_doc_offset * dtype_size;
-    data_->read(sample_ptr->mut_data(), offset, sample_ptr->elem_cnt());
+    data_->read(buf, offset, seq_len);
   } else {
-    char* dptr = sample_ptr->mut_data<char>();
+    char* dptr = static_cast<char*>(buf);
     size_t total_length = 0;
     size_t length = (index_->doc_length(cur_doc_index) - cur_doc_offset) * dtype_size;
     data_->read(dptr, index_->address(cur_doc_index), length);
@@ -148,15 +146,8 @@ GPTDataset::LoadTargetShdPtr GPTDataset::GetSample(int64_t index) const {
     length = (next_doc_offset + 1) * dtype_size;
     data_->read(dptr, index_->address(next_doc_index), length);
     total_length += length;
-    CHECK_EQ(sample_ptr->nbytes(), length);
+    CHECK_EQ(seq_len * dtype_size, total_length);
   }
-  return sample_ptr;
-}
-
-GPTDataset::LoadTargetShdPtrVec GPTDataset::At(int64_t index) const {
-  LoadTargetShdPtrVec ret;
-  ret.push_back(GetSample(index));
-  return ret;
 }
 
 }  // namespace data

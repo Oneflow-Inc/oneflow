@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_DATA_GPT_DATASET_H_
 #define ONEFLOW_USER_DATA_GPT_DATASET_H_
 
-#include "oneflow/user/data/dataset.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/user/data/gpt_index.h"
 #include "oneflow/user/data/mmap_file.h"
 
@@ -24,19 +24,16 @@ namespace oneflow {
 
 namespace data {
 
-class GPTDataset final : public RandomAccessDataset<TensorBuffer> {
+class GPTDataset final {
  public:
-  using LoadTargetShdPtr = std::shared_ptr<TensorBuffer>;
-  using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
-
   GPTDataset(const std::shared_ptr<const GPTIndex>& index, const std::shared_ptr<MMapFile>& data,
              size_t seq_len, size_t num_samples, const std::vector<size_t>& doc_indices,
              bool shuffle, uint32_t seed);
   OF_DISALLOW_COPY_AND_MOVE(GPTDataset);
   ~GPTDataset() = default;
 
-  LoadTargetShdPtrVec At(int64_t index) const override;
-  size_t Size() const override { return sample_indices_.size(); }
+  void Get(size_t index, void* sample_buf) const;
+  size_t Size() const { return sample_indices_.size(); }
 
  private:
   size_t GetNumEpochs() const;
@@ -45,7 +42,6 @@ class GPTDataset final : public RandomAccessDataset<TensorBuffer> {
   void InitDocIndices(const std::vector<size_t>& doc_indices, size_t num_epochs);
   void InitSampleIndices();
   void ShuffleSampleIndices();
-  LoadTargetShdPtr GetSample(int64_t index) const;
 
   // config
   std::shared_ptr<const GPTIndex> index_;
