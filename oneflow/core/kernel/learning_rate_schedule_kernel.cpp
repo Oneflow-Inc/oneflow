@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -199,6 +200,9 @@ void LearningRateScheduleKernel::ForwardDataContent(
     learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   }
   *BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    LOG(INFO) << "train_step: " << train_step << " LR: " << learning_rate;
+  }
 }
 
 REGISTER_KERNEL(OperatorConf::kLearningRateScheduleConf, LearningRateScheduleKernel);
