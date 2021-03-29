@@ -125,6 +125,9 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
   *(cluster_thrd_ids.mutable_machine_id2thrd_ids()) = HashMap2PbMap(machine_id2thrd_ids);
   Global<CtrlClient>::Get()->PushKV(cluster_thrd_ids_key(plan_name), cluster_thrd_ids);
 
+  PlanOpAttributeRefTable op_attribute_ref_table;
+  *op_attribute_ref_table.mutable_op_name2op_attribute() = plan.op_name2op_attribute();
+  Global<CtrlClient>::Get()->PushKV("op_name2op_attribute", op_attribute_ref_table);
   for (const auto& pair : mchn_thrd_id2task_protos) {
     SubPlan sub_plan;
     sub_plan.mutable_task()->Reserve(pair.second.size());
@@ -165,6 +168,17 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
     SubPlan sub_plan;
     Global<CtrlClient>::Get()->PullKV(sub_plan_key(plan_name, machine_id, thrd_id), &sub_plan);
     plan->mutable_task()->MergeFrom(sub_plan.task());
+  }
+  PlanOpAttributeRefTable op_attribute_ref_table;
+  Global<CtrlClient>::Get()->PullKV("op_name2op_attribute", &op_attribute_ref_table);
+  for (auto& task : *plan->mutable_task()) {
+    if (task.exec_sequence().exec_node_size() == 1
+        && task.exec_sequence().exec_node(0).kernel_conf().has_op_attribute_ref()) {
+      auto* kernel_conf = task.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
+      kernel_conf->clear_op_attribute_ref();
+      *kernel_conf->mutable_op_attribute() = op_attribute_ref_table.op_name2op_attribute().at(
+          task.exec_sequence().exec_node(0).kernel_conf().op_attribute_ref());
+    }
   }
   NetTopo net_topo;
   Global<CtrlClient>::Get()->PullKV(net_topo_key(plan_name), &net_topo);

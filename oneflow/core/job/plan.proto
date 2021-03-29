@@ -5,6 +5,7 @@ import "oneflow/core/job/task.proto";
 import "oneflow/core/job/job_conf.proto";
 import "oneflow/core/memory/memory_block.proto";
 import "oneflow/core/graph/boxing/collective_boxing.proto";
+import "oneflow/core/operator/op_attribute.proto";
 
 message MachineIds {
   repeated int64 machine_id = 1;
@@ -33,4 +34,9 @@ message Plan {
   required JobConfs job_confs = 4;
   required CollectiveBoxingPlan collective_boxing_plan= 5;
   required CtrlRegstDescInfo ctrl_regst_desc_info = 6;
+  map<string, OpAttribute> op_name2op_attribute = 7;
+}
+
+message PlanOpAttributeRefTable {
+  map<string, OpAttribute> op_name2op_attribute = 1;
 }
