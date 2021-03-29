@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/framework/blob_cache.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -234,11 +235,21 @@ Maybe<void> _Run(
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
   std::shared_ptr<vm::cfg::InstructionListProto> instruction_list = sess->instruction_list();
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list = sess->eager_symbol_list();
+  OF_PROFILER_RANGE_PUSH("_Run: Build");
   Build(std::make_shared<InstructionsBuilder>(id_generator, instruction_list, eager_symbol_list,
                                               ReleaseObject));
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("_Run: RunInstruction");
   JUST(RunInstruction(instruction_list, eager_symbol_list));
+  OF_PROFILER_RANGE_POP();
+
+  OF_PROFILER_RANGE_PUSH("_Run: ClearInstruction");
   instruction_list->clear_instruction();
+  OF_PROFILER_RANGE_POP();
+
+  OF_PROFILER_RANGE_PUSH("_Run: ClearEagerSymbol");
   eager_symbol_list->clear_eager_symbol();
+  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
 
@@ -1572,12 +1583,16 @@ Maybe<void> LogicalRun(
   const auto& RunInstruction =
       [](const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
          const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) -> Maybe<void> {
+    //OF_PROFILER_RANGE_PUSH("LogicalRun: RunInstruction");
     JUST(Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(instruction_list,
                                                                    eager_symbol_list));
+    //OF_PROFILER_RANGE_POP(); //LogicalRun: RunInstruction
     return Maybe<void>::Ok();
   };
+  //OF_PROFILER_RANGE_PUSH("LogicalRun: _Run");
   JUST(_Run(Build, std::make_shared<vm::LogicalIdGenerator>(), RunInstruction,
             _ReleaseLogicalObject));
+  //OF_PROFILER_RANGE_POP(); //LogicalRun: _Run
   return Maybe<void>::Ok();
 }
 
