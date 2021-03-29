@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace py = pybind11;
 namespace oneflow {
@@ -29,8 +30,10 @@ class PyForeignBoxingUtil : public ForeignBoxingUtil {
       const std::shared_ptr<compatible_py::BlobObject>& blob_object,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       const override {
+        OF_PROFILER_RANGE_PUSH("PyForeignBoxingUtil: BoxingTo");
     PYBIND11_OVERRIDE(std::shared_ptr<compatible_py::BlobObject>, ForeignBoxingUtil, BoxingTo,
                       builder, blob_object, op_arg_parallel_attr);
+        OF_PROFILER_RANGE_POP();
   }
 
   std::shared_ptr<ParallelDesc> TryReplaceDeviceTag(

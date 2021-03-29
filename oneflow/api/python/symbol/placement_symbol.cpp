@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement.cfg.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace py = pybind11;
 
@@ -44,7 +45,9 @@ struct PlacementSymbolExportUtil {
     std::shared_ptr<ParallelDesc> parallel_desc;
     JUST(LogicalRun([&parallel_desc, &parallel_conf](
                         const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
+      OF_PROFILER_RANGE_PUSH("CallLogicalRun: CreatePlacementSymbol");
       parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
+      OF_PROFILER_RANGE_POP();
       return Maybe<void>::Ok();
     }));
     return parallel_desc;

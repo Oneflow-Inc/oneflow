@@ -255,7 +255,11 @@ Maybe<void> _Run(
 
 Maybe<void> _ReleaseLogicalObject(compatible_py::Object* obj) {
   JUST(LogicalRun(
-      [&obj](const std::shared_ptr<InstructionsBuilder>& build) { build->DeleteObject(obj); }));
+      [&obj](const std::shared_ptr<InstructionsBuilder>& build) { 
+        OF_PROFILER_RANGE_PUSH("CallLogialRun: _ReleaseLogicalObject");
+        build->DeleteObject(obj); 
+        OF_PROFILER_RANGE_POP();
+        }));
   return Maybe<void>::Ok();
 }
 
@@ -1184,8 +1188,13 @@ Maybe<void> InstructionsBuilder::StatelessCall(
         const std::shared_ptr<InstructionsBuilder>&,
         const std::shared_ptr<compatible_py::BlobObject>&,
         const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo) {
+  OF_PROFILER_RANGE_PUSH("StatelessCall: GetParallelDescSymbol");
   std::shared_ptr<ParallelDesc> op_parallel_desc_sym = JUST(GetParallelDescSymbol(parallel_conf));
+  OF_PROFILER_RANGE_POP();
+
+  OF_PROFILER_RANGE_PUSH("StatelessCall: CheckRefInBlobObjectParallelDesc");
   JUST(CheckRefInBlobObjectParallelDesc(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object));
+  OF_PROFILER_RANGE_POP();
 
   const auto FetchDelegateBlobObject =
       [this, &BoxingTo](
@@ -1193,7 +1202,9 @@ Maybe<void> InstructionsBuilder::StatelessCall(
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> std::shared_ptr<compatible_py::BlobObject> {
     // TODO(hanbinbin): use Maybe as return after blobcache is migrated
+    OF_PROFILER_RANGE_PUSH("StatelessCall: BoxingTo");
     return BoxingTo(shared_from_this(), x_blob_object, op_arg_parallel_attr);
+    OF_PROFILER_RANGE_POP();
   };
 
   const auto GetDelegateBlobObject =
