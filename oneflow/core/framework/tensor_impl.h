@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/framework/object.h"
+#include "oneflow/core/framework/tensor_arg.h"
 
 namespace oneflow {
 
@@ -76,16 +77,19 @@ class TensorImpl {
 
  protected:
   TensorImpl(bool requires_grad, bool is_leaf, bool retain_grad)
-      : requires_grad_(requires_grad), is_leaf_(is_leaf), retain_grad_(retain_grad) {}
+      : requires_grad_(requires_grad),
+        is_leaf_(is_leaf),
+        retain_grad_(retain_grad),
+        now_grad_arg_(new TensorArg) {}
   Maybe<void> SyncBlobObject2Attributes(
       const std::shared_ptr<compatible_py::BlobObject>& blob_object);
 
   // For autograd
-  std::shared_ptr<Tensor> acc_grad_;
-  std::shared_ptr<TensorArg> now_grad_arg_;
   bool requires_grad_;
   bool is_leaf_;
   bool retain_grad_;
+  std::shared_ptr<Tensor> acc_grad_;
+  std::shared_ptr<TensorArg> now_grad_arg_;
 };
 
 class MirroredTensorImpl : public TensorImpl {
