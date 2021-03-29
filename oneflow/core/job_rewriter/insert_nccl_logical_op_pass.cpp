@@ -76,7 +76,7 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
 
       cur_node->ForEachNodeOnInOutEdge([&](const OpNode* next_node) {
         if (visited.find(next_node) == visited.end()
-            && next_node->parallel_desc() == seed_parallel_desc
+            && next_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc)
             && next_node->IsTimeShapeIdentity()) {
           CHECK(visited.insert(next_node).second);
           queued_nodes.push(next_node);
@@ -88,19 +88,10 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
   }
 }
 
-bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const OpNode* dst_node,
-                               const LogicalBlobId& lbi) {
-  const int64_t scope_symbol_id = src_node->op().op_conf().scope_symbol_id();
-  const std::string lbn = GenLogicalBlobName(lbi);
-  const SbpParallel& src_sbp = src_node->SbpParallel4Lbi(lbi);
-  const SbpParallel& dst_sbp = dst_node->SbpParallel4Lbi(lbi);
-  const BlobDesc& logical_blob_desc = src_node->LogicalBlobDesc4Lbi(lbi);
-  const ParallelDesc& parallel_desc = src_node->parallel_desc();
-
-  // NOTE(chengcheng): nccl donot support dynamic shape.
-  if (logical_blob_desc.is_dynamic()) { return false; }
-  CHECK_GT(logical_blob_desc.shape().elem_cnt(), 0);
-  CHECK_GT(logical_blob_desc.shape().NumAxes(), 0);
+bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
+                               const SbpParallel& dst_sbp, const std::string& lbn,
+                               const int64_t scope_symbol_id, const BlobDesc& logical_blob_desc,
+                               const int64_t parallel_num) {
   if (src_sbp.has_partial_sum_parallel() && dst_sbp.has_broadcast_parallel()) {
     // P2B : AllReduce
     *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2B-" + NewUniqueId())
@@ -111,7 +102,7 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
                .Build()
                .op_conf();
     return true;
-  } else if ((logical_blob_desc.shape().At(0) % parallel_desc.parallel_num() == 0)
+  } else if ((logical_blob_desc.shape().At(0) % parallel_num == 0)
              && (src_sbp.has_partial_sum_parallel() && dst_sbp.has_split_parallel())
              && (dst_sbp.split_parallel().axis() == 0)) {
     // P2S : ReduceScatter
@@ -123,7 +114,7 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
                .Build()
                .op_conf();
     return true;
-  } else if ((logical_blob_desc.shape().At(0) % parallel_desc.parallel_num() == 0)
+  } else if ((logical_blob_desc.shape().At(0) % parallel_num == 0)
              && (src_sbp.has_split_parallel() && dst_sbp.has_broadcast_parallel())
              && (src_sbp.split_parallel().axis() == 0)) {
     // S2B : AllGather
@@ -137,11 +128,8 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
     return true;
   } else if ((src_sbp.has_split_parallel() && dst_sbp.has_split_parallel())
              && (src_sbp.split_parallel().axis() != dst_sbp.split_parallel().axis())
-             && (logical_blob_desc.shape().At(src_sbp.split_parallel().axis())
-                     % parallel_desc.parallel_num()
-                 == 0)
-             && (logical_blob_desc.shape().At(dst_sbp.split_parallel().axis())
-                     % parallel_desc.parallel_num()
+             && (logical_blob_desc.shape().At(src_sbp.split_parallel().axis()) % parallel_num == 0)
+             && (logical_blob_desc.shape().At(dst_sbp.split_parallel().axis()) % parallel_num
                  == 0)) {
     // S2S : All2All
     *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2S-" + NewUniqueId())
@@ -154,6 +142,71 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
                .Build()
                .op_conf();
     return true;
+  }
+  return false;
+}
+
+bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
+                                       const ParallelDistribution& src_parallel_distribution,
+                                       const ParallelDistribution& dst_parallel_distribution,
+                                       const std::shared_ptr<Shape> hierarchy,
+                                       const std::string& lbn, const int64_t scope_symbol_id,
+                                       const BlobDesc& logical_blob_desc) {
+  // TODO
+  return false;
+}
+
+bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret,
+                                       const ParallelDistribution& src_parallel_distribution,
+                                       const ParallelDistribution& dst_parallel_distribution,
+                                       const std::shared_ptr<Shape> hierarchy,
+                                       const std::string& lbn, const int64_t scope_symbol_id,
+                                       const BlobDesc& logical_blob_desc) {
+  // TODO
+  return false;
+}
+
+bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const OpNode* dst_node,
+                               const LogicalBlobId& lbi) {
+  CHECK(src_node->op().op_conf().has_scope_symbol_id())
+      << " ERROR! op: " << src_node->op().op_conf().DebugString() << " has NOT scope. ";
+  const int64_t scope_symbol_id = src_node->op().op_conf().scope_symbol_id();
+  const std::string lbn = GenLogicalBlobName(lbi);
+  const BlobDesc& logical_blob_desc = src_node->LogicalBlobDesc4Lbi(lbi);
+  const ParallelDesc& src_parallel_desc = src_node->parallel_desc();
+  const ParallelDesc& dst_parallel_desc = dst_node->parallel_desc();
+  const int64_t parallel_num = src_parallel_desc.parallel_num();
+  CHECK_EQ(parallel_num, dst_parallel_desc.parallel_num());
+  const ParallelDistribution& src_parallel_distribution = src_node->ParallelDistribution4Lbi(lbi);
+  const ParallelDistribution& dst_parallel_distribution = dst_node->ParallelDistribution4Lbi(lbi);
+  const auto& src_hierarchy = src_parallel_desc.hierarchy();
+  const auto& dst_hierarchy = dst_parallel_desc.hierarchy();
+
+  if (src_hierarchy == dst_hierarchy && src_parallel_distribution == dst_parallel_distribution) {
+    // one to one
+    return false;
+  }
+
+  // NOTE(chengcheng): nccl donot support dynamic shape.
+  if (logical_blob_desc.is_dynamic()) { return false; }
+  CHECK_GT(logical_blob_desc.shape().elem_cnt(), 0);
+  CHECK_GT(logical_blob_desc.shape().NumAxes(), 0);
+
+  if (src_hierarchy->NumAxes() == 1 && dst_hierarchy->NumAxes() == 1) {
+    return TryBuildNcclBy1DHierarchy(ret, src_parallel_distribution.sbp_parallel(0),
+                                     dst_parallel_distribution.sbp_parallel(0), lbn,
+                                     scope_symbol_id, logical_blob_desc, parallel_num);
+  } else if (src_hierarchy->NumAxes() == 2 && (*src_hierarchy == *dst_hierarchy)) {
+    if (src_parallel_distribution.sbp_parallel(0) == dst_parallel_distribution.sbp_parallel(0)) {
+      return TryBuildNcclBy2DHierarchySameDim0(ret, src_parallel_distribution,
+                                               dst_parallel_distribution, src_hierarchy, lbn,
+                                               scope_symbol_id, logical_blob_desc);
+    } else if (src_parallel_distribution.sbp_parallel(1)
+               == dst_parallel_distribution.sbp_parallel(1)) {
+      return TryBuildNcclBy2DHierarchySameDim1(ret, src_parallel_distribution,
+                                               dst_parallel_distribution, src_hierarchy, lbn,
+                                               scope_symbol_id, logical_blob_desc);
+    }
   }
   return false;
 }

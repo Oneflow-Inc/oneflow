@@ -150,6 +150,12 @@ bool ParallelDesc::EqualsIgnoringDeviceType(const ParallelDesc& rhs) const {
          && *hierarchy_ == *rhs.hierarchy_;
 }
 
+bool ParallelDesc::EqualsIgnoringHierarchy(const ParallelDesc& rhs) const {
+  return (this == &rhs)
+         || (device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
+             && EqualsMachineId2SortedDevPhyIds(rhs));
+}
+
 bool ParallelDesc::EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const {
   for (int64_t machine_id : sorted_machine_ids_) {
     if (*machine_id2sorted_dev_phy_ids_->at(machine_id)
