@@ -2349,3 +2349,95 @@ def OneRecDecoder(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("data.gpt_data_loader", "data.GPTDataLoader")
+def gpt_data_loader(
+    data_file_prefix: str,
+    seq_length: int,
+    num_samples: int,
+    batch_size: int,
+    shuffle: bool = True,
+    random_seed: Optional[int] = None,
+    split_sizes: Optional[Sequence[str]] = None,
+    split_index: Optional[int] = None,
+    parallel_distribution: Optional[Sequence[str]] = None,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    if name is None:
+        name = id_util.UniqueStr("gpt_data_loader_")
+
+    if parallel_distribution is None:
+        parallel_distribution = ["B"]
+
+    if split_index is None:
+        split_index = 0
+
+    if split_sizes is None:
+        split_sizes = (1,)
+
+    if split_index >= len(split_sizes):
+        raise ValueError(
+            "split index {} is out of range, split_sizes {}".formart(
+                split_index, split_sizes
+            )
+        )
+
+    if random_seed is None:
+        from datetime import datetime
+
+        random_seed = int(datetime.utcnow().timestamp())
+
+    def distribute_to_str(dist):
+        if dist is None:
+            return ""
+        elif type(dist) is str:
+            return dist
+        elif type(dist) is oneflow_api.distribute.SplitDistribute:
+            return "S({})".format(dist.axis)
+        elif type(dist) is oneflow_api.distribute.BroadcastDistribute:
+            return "B"
+        else:
+            raise ValueError("unsupported distribute")
+
+    parallel_distribution = list(map(distribute_to_str, parallel_distribution))
+
+    iteration_name = "iteration-{}-{}-{}-{}-{}-{}".format(
+        seq_length,
+        num_samples,
+        batch_size,
+        random_seed,
+        str(list(split_sizes)),
+        split_index,
+        str(parallel_distribution),
+    )
+
+    iteration = flow.get_variable(
+        name=iteration_name,
+        shape=(1,),
+        dtype=flow.int64,
+        initializer=flow.zeros_initializer(),
+        trainable=True,
+        model_name="iteration",
+        distribute=oneflow_api.distribute.BroadcastDistribute,
+        reuse=False,
+    )
+
+    loader_op = (
+        flow.user_op_builder(name)
+        .Op("gpt_data_loader")
+        .Input("iteration", [iteration])
+        .Output("sequence")
+        .Attr("data_file_prefix", data_file_prefix)
+        .Attr("seq_length", seq_length)
+        .Attr("num_samples", num_samples)
+        .Attr("batch_size", batch_size)
+        .Attr("shuffle", shuffle)
+        .Attr("random_seed", random_seed)
+        .Attr("split_sizes", split_sizes)
+        .Attr("split_index", split_index)
+        .Attr("split_index", split_index)
+        .Attr("parallel_distribution", parallel_distribution)
+        .Build()
+    )
+    return loader_op.InferAndTryRun().SoleOutputBlob()
