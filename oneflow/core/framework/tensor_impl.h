@@ -37,6 +37,7 @@ namespace one {
 
 class Tensor;
 class TensorArg;
+class EagerBlobObject;
 
 class TensorImpl {
  public:
@@ -193,10 +194,16 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
   bool is_lazy() const override { return false; }
+  const std::shared_ptr<EagerBlobObject>& eager_blob_object() const { return eager_blob_object_; }
+  int64_t blob_object_id() const { return blob_object_id_; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
+  void set_eager_blob_object(const std::shared_ptr<EagerBlobObject>& eager_blob_object) {
+    eager_blob_object_ = eager_blob_object;
+  }
+  void set_blob_object_id(int64_t blob_object_id) { blob_object_id_ = blob_object_id; }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
@@ -208,9 +215,11 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
       const std::shared_ptr<compatible_py::BlobObject>& blob_object) override;
 
  private:
+  int64_t blob_object_id_;
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
   std::shared_ptr<compatible_py::BlobObject> blob_object_;
+  std::shared_ptr<EagerBlobObject> eager_blob_object_;
 };
 
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
