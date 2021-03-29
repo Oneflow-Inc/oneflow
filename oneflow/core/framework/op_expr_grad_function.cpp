@@ -27,6 +27,8 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+static constexpr char FakeGradientOpSuffix[] = ".grad";
+
 class DefaultOpExprGradFunction : public OpExprGradFunction {
  public:
   // The snapshot indicates the indices of the required forward inputs and outputs
@@ -138,7 +140,7 @@ Maybe<void> DefaultOpExprGradFunction::GenerateOpGradConf(const Operator& op,
       auto it = out_bn2grad_lbi_.find(bn);
       if (it == out_bn2grad_lbi_.end()) {
         LogicalBlobId lbi;
-        lbi.set_op_name("_");
+        lbi.set_op_name(op.op_name() + FakeGradientOpSuffix);
         lbi.set_blob_name(bn);
         it = out_bn2grad_lbi_.emplace(bn, lbi).first;
       }
