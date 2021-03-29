@@ -282,21 +282,14 @@ Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const Ten
 
 namespace {
 
-Maybe<void> DetermineIsLeaf(const TensorTuple& inputs, TensorTuple* outputs) {
-  if (inputs.empty()) {
-    for (auto& output : *outputs) { output->set_is_leaf(true); }
-  }
+Maybe<void> DetermineIsLeaf(TensorTuple* outputs, const bool& is_leaf, const bool& requires_grad) {
+  bool logical_is_leaf = is_leaf || !requires_grad;
+  for (auto& output : *outputs) { output->set_is_leaf(logical_is_leaf); }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DetermineRequiresGrad(const TensorTuple& inputs, TensorTuple* outputs) {
-  bool requires_grad =
-      std::any_of(inputs.begin(), inputs.end(),
-                  [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
-  for (auto& output : *outputs) {
-    output->set_requires_grad(requires_grad);
-    output->set_is_leaf(!requires_grad);
-  }
+Maybe<void> DetermineRequiresGrad(TensorTuple* outputs, const bool& requires_grad) {
+  for (auto& output : *outputs) { output->set_requires_grad(requires_grad); }
   return Maybe<void>::Ok();
 }
 
@@ -304,12 +297,17 @@ Maybe<void> DetermineRequiresGrad(const TensorTuple& inputs, TensorTuple* output
 
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs) const {
+  bool requires_grad = false;
   {
     autograd::AutoGradMode mode(false);
     JUST(internal_->Apply(op_expr, inputs, outputs));
-    JUST(DetermineIsLeaf(inputs, outputs));
-    JUST(DetermineRequiresGrad(inputs, outputs));
+    requires_grad =
+        std::any_of(inputs.begin(), inputs.end(),
+                    [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
+    JUST(DetermineIsLeaf(outputs, inputs.size() > 0, requires_grad));
+    JUST(DetermineRequiresGrad(outputs, requires_grad));
   }
+  // if (autograd::GradMode::is_enabled() && requires_grad) {
   if (autograd::GradMode::is_enabled()) {
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     grad_closure->Capture(inputs, *outputs);
