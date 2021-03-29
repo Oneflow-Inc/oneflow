@@ -143,7 +143,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
     if (it == arg2logical_tensor_desc_.end()) {
       return nullptr;
     } else {
-      return &it->second;
+      return &(it->second);
     }
   }
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
@@ -217,7 +217,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
     auto it = arg2logical_tensor_desc_.find(std::make_pair(arg_name, index));
     CHECK(it != arg2logical_tensor_desc_.end())
         << "Arg (" << arg_name << "," << index << ") is not found";
-    return &it->second;
+    return &(it->second);
   }
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override {
