@@ -362,6 +362,39 @@ DispatchHierarchicalSubTskGphBuilder::DispatchHierarchicalSubTskGphBuilder() {
 
 DispatchHierarchicalSubTskGphBuilder::~DispatchHierarchicalSubTskGphBuilder() = default;
 
+Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::BuildSame2DHierarchySubGraph(
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
+    std::vector<TaskNode*>* sorted_out_tasks,
+    std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
+    const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
+    const BlobDesc& logical_blob_desc, const ParallelDistribution& in_parallel_distribution,
+    const ParallelDistribution& out_parallel_distribution, const Shape& time_shape) const {
+  if ((in_parallel_desc.hierarchy()->NumAxes() == 2)
+      && (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy())) {
+    if (in_parallel_distribution.sbp_parallel(0) == out_parallel_distribution.sbp_parallel(0)) {
+      return impl_->intra_group_sub_tsk_gph_builder_->Build(
+          ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
+          out_parallel_desc, lbi, logical_blob_desc, in_parallel_distribution,
+          out_parallel_distribution, time_shape);
+    } else if (in_parallel_distribution.sbp_parallel(1)
+               == out_parallel_distribution.sbp_parallel(1)) {
+      if (!(ParallelDistributionAllSameSplitParallel(in_parallel_distribution)
+            || ParallelDistributionAllSameSplitParallel(out_parallel_distribution))) {
+        return impl_->inter_group_sub_tsk_gph_builder_->Build(
+            ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
+            out_parallel_desc, lbi, logical_blob_desc, in_parallel_distribution,
+            out_parallel_distribution, time_shape);
+      } else {
+        return Error::BoxingNotSupportedError();
+      }
+    } else {
+      return Error::BoxingNotSupportedError();
+    }
+  } else {
+    return Error::BoxingNotSupportedError();
+  }
+}
+
 Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
     std::vector<TaskNode*>* sorted_out_tasks,
@@ -386,22 +419,23 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
           reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
           reduced_out_parallel_distribution, time_shape);
     } else if ((in_hierarchy->NumAxes() == 2) && (*in_hierarchy == *out_hierarchy)) {
-      if (reduced_in_parallel_distribution.sbp_parallel(0)
-          == reduced_out_parallel_distribution.sbp_parallel(0)) {
-        return impl_->intra_group_sub_tsk_gph_builder_->Build(
-            ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
-            reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
-            reduced_out_parallel_distribution, time_shape);
-      } else if (reduced_in_parallel_distribution.sbp_parallel(1)
-                 == reduced_out_parallel_distribution.sbp_parallel(1)) {
-        if (!(ParallelDistributionAllSameSplitParallel(reduced_in_parallel_distribution)
-              || ParallelDistributionAllSameSplitParallel(reduced_out_parallel_distribution))) {
-          return impl_->inter_group_sub_tsk_gph_builder_->Build(
-              ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
-              reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
-              reduced_out_parallel_distribution, time_shape);
-        }
-      }
+      return BuildSame2DHierarchySubGraph(ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks,
+                                          reduced_in_parallel_desc, reduced_out_parallel_desc, lbi,
+                                          logical_blob_desc, reduced_in_parallel_distribution,
+                                          reduced_out_parallel_distribution, time_shape);
+    } else if (in_hierarchy->NumAxes() == 2 && out_hierarchy->NumAxes() == 1
+               && in_hierarchy->elem_cnt() == out_hierarchy->elem_cnt()) {
+      ParallelConf intermediate_parallel_conf = reduced_out_parallel_desc.parallel_conf();
+      reduced_in_parallel_desc.hierarchy()->ToProto(intermediate_parallel_conf.mutable_hierarchy());
+      ParallelDistribution intermediate_parallel_distribution;
+      *intermediate_parallel_distribution.add_sbp_parallel() =
+          reduced_out_parallel_distribution.sbp_parallel(0);
+      *intermediate_parallel_distribution.add_sbp_parallel() =
+          reduced_out_parallel_distribution.sbp_parallel(0);
+      return BuildSame2DHierarchySubGraph(
+          ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
+          ParallelDesc(intermediate_parallel_conf), lbi, logical_blob_desc,
+          reduced_in_parallel_distribution, intermediate_parallel_distribution, time_shape);
     }
   }
   return Error::BoxingNotSupportedError();

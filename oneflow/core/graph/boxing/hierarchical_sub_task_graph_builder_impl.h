@@ -37,6 +37,14 @@ class DispatchHierarchicalSubTskGphBuilder final : public HierarchicalSubTskGphB
                                       const ParallelDistribution& out_parallel_distribution,
                                       const Shape& time_shape) const override;
 
+  Maybe<SubTskGphBuilderStatus> BuildSame2DHierarchySubGraph(
+      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
+      std::vector<TaskNode*>* sorted_out_tasks,
+      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
+      const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
+      const BlobDesc& logical_blob_desc, const ParallelDistribution& in_parallel_distribution,
+      const ParallelDistribution& out_parallel_distribution, const Shape& time_shape) const;
+
  private:
   struct Impl;
   std::unique_ptr<Impl> impl_;

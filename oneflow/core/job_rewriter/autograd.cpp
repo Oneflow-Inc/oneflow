@@ -527,6 +527,12 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
         if (parallel_desc != any_parallel_desc) { all_same_parallel_desc = false; }
         int64_t scope_symbol_id =
             MakeScopeSymbolId(job_builder->job().job_conf(), parallel_desc.parallel_conf());
+
+        ParallelConf flat_parallel_conf = parallel_desc.parallel_conf();
+        flat_parallel_conf.mutable_hierarchy()->clear_dim();
+        std::vector<std::string> cast_parallel_distribution;
+        cast_parallel_distribution.push_back("P");
+
         if (job_builder->job().job_conf().enable_gradients_stats_aggregation()) {
           auto multi_square_sum_op_builder =
               user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-MultiSquareSum-"
@@ -539,7 +545,21 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
           }
           const auto multi_square_sum_op = multi_square_sum_op_builder.Build();
           job_builder->AddOps(parallel_desc.parallel_conf(), {multi_square_sum_op.op_conf()});
-          partial_square_sum_lbns.push_back(multi_square_sum_op.output("y", 0));
+
+          auto parallel_cast_op =
+              user_op::UserOpConfWrapperBuilder("System-ClipGradient-ParallelCast-" + NewUniqueId())
+                  .Op("hierarchical_parallel_cast")
+                  .Input("in", multi_square_sum_op.output("y", 0))
+                  .Output("out")
+                  .Attr<std::vector<std::string>>("parallel_distribution",
+                                                  cast_parallel_distribution)
+                  .Attr<std::string>("grad_mode", "auto")
+                  .Attr<std::vector<std::string>>("grad_parallel_distribution",
+                                                  std::vector<std::string>())
+                  .ScopeSymbolId(scope_symbol_id)
+                  .Build();
+          job_builder->AddOps(flat_parallel_conf, {parallel_cast_op.op_conf()});
+          partial_square_sum_lbns.push_back(parallel_cast_op.output("out", 0));
         } else {
           std::vector<std::string> lbns_to_add;
           for (const auto& lbi : lbis) {
@@ -553,7 +573,23 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                     .ScopeSymbolId(scope_symbol_id)
                     .Build();
             job_builder->AddOps(parallel_desc.parallel_conf(), {square_sum_op.op_conf()});
-            lbns_to_add.push_back(square_sum_op.output("y", 0));
+
+            auto parallel_cast_op =
+                user_op::UserOpConfWrapperBuilder("System-ClipGradient-ParallelCast-"
+                                                  + NewUniqueId())
+                    .Op("hierarchical_parallel_cast")
+                    .Input("in", square_sum_op.output("y", 0))
+                    .Output("out")
+                    .Attr<std::vector<std::string>>("parallel_distribution",
+                                                    cast_parallel_distribution)
+                    .Attr<std::string>("grad_mode", "auto")
+                    .Attr<std::vector<std::string>>("grad_parallel_distribution",
+                                                    std::vector<std::string>())
+                    .ScopeSymbolId(scope_symbol_id)
+                    .Build();
+            job_builder->AddOps(flat_parallel_conf, {parallel_cast_op.op_conf()});
+
+            lbns_to_add.push_back(parallel_cast_op.output("out", 0));
           }
           partial_square_sum_lbns.push_back(AddLbns(job_builder, lbns_to_add,
                                                     parallel_desc.parallel_conf(), scope_symbol_id,
