@@ -2419,7 +2419,7 @@ def gpt_data_loader(
         initializer=flow.zeros_initializer(),
         trainable=True,
         model_name="iteration",
-        distribute=oneflow_api.distribute.BroadcastDistribute,
+        distribute=oneflow_api.distribute.broadcast(),
         reuse=False,
     )
 

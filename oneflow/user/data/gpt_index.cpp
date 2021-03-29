@@ -40,7 +40,7 @@ GPTIndex::GPTIndex(const std::string& index_file_path) {
   char magic_code[sizeof(kMagicCode)];
   stream.read(magic_code, sizeof(kMagicCode) - 1);
   magic_code[sizeof(kMagicCode) - 1] = '\0';
-  CHECK_EQ(magic_code, kMagicCode);
+  CHECK_EQ(std::strcmp(magic_code, kMagicCode), 0);
   // read version
   stream.read(reinterpret_cast<char*>(&version_), sizeof(version_));
   // read dtype

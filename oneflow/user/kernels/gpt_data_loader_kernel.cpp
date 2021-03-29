@@ -94,6 +94,8 @@ class GPTDataLoader final : public OpKernelState {
                                   ctx->Attr<int64_t>("num_samples"), doc_indices,
                                   ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed")));
 
+    dtype_ = gpt_index->data_type();
+    seq_len_ = ctx->Attr<int64_t>("seq_length");
     batch_size_ = ctx->TensorDesc4ArgNameAndIndex("sequence", 0)->shape().elem_cnt();
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
@@ -115,6 +117,7 @@ class GPTDataLoader final : public OpKernelState {
     if (once_loaded_) { once_loaded_ = true; }
     auto* seq_tensor_buf = seq->mut_dptr<TensorBuffer>();
     for (size_t i = 0; i < batch_size_; ++i) {
+      seq_tensor_buf[i].Resize(Shape({static_cast<int64_t>(seq_len_ + 1)}), dtype_);
       dataset_->Get(sample_index_, seq_tensor_buf[i].mut_data());
       sample_index_ += num_shards_;
     }
@@ -123,7 +126,9 @@ class GPTDataLoader final : public OpKernelState {
   void Seek(size_t iter) { sample_index_ = shard_index_ + iter * batch_size_ * num_shards_; }
 
  private:
-  std::unique_ptr<data::GPTDataset> dataset_;
+  std::unique_ptr<GPTDataset> dataset_;
+  DataType dtype_;
+  size_t seq_len_;
   size_t batch_size_;
   size_t num_shards_;
   size_t shard_index_;

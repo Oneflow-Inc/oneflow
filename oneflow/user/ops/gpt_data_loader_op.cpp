@@ -56,20 +56,22 @@ REGISTER_CPU_ONLY_USER_OP("gpt_data_loader")
       *sequence_desc->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     })
-    .SetInferParallelDistributionFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          const Shape& hierarchy = ctx->parallel_hierarchy();
-          ParallelDistribution* seq_dist = ctx->ParallelDistribution4ArgNameAndIndex("sequence", 0);
-          const auto& dist_conf =
-              ctx->user_op_conf().attr<std::vector<std::string>>("parallel_distribution");
-          CHECK_EQ_OR_RETURN(dist_conf.size(), hierarchy.NumAxes());
-          for (const std::string& sbp_str : dist_conf) {
-            SbpParallel sbp_parallel;
-            CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
-            *seq_dist->add_sbp_parallel() = sbp_parallel;
-          }
-          return Maybe<void>::Ok();
-        })
+    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      const Shape& hierarchy = ctx->parallel_hierarchy();
+      ParallelDistribution* seq_dist = ctx->ParallelDistribution4ArgNameAndIndex("sequence", 0);
+      ParallelDistribution* iter_dist = ctx->ParallelDistribution4ArgNameAndIndex("iteration", 0);
+      const auto& dist_conf =
+          ctx->user_op_conf().attr<std::vector<std::string>>("parallel_distribution");
+      CHECK_EQ_OR_RETURN(dist_conf.size(), hierarchy.NumAxes());
+      for (const std::string& sbp_str : dist_conf) {
+        SbpParallel sbp_parallel;
+        CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
+        *seq_dist->add_sbp_parallel() = sbp_parallel;
+        iter_dist->add_sbp_parallel()->mutable_broadcast_parallel();
+      }
+      return Maybe<void>::Ok();
+    })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& conf) -> void {
       user_op::InputArgModifier* iteration_modifier = GetInputArgModifierFn("iteration", 0);
