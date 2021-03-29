@@ -84,7 +84,8 @@ def load_pytorch_module_and_check(
             )
             return y
 
-    flow.load_variables(flow.checkpoint.get(model_weight_save_dir))
+    flow.train.CheckPoint().load(model_weight_save_dir)
+    # flow.load_variables(flow.checkpoint.get(model_weight_save_dir))
 
     pt_module = pt_module.to("cuda")
     if train_flag == False:
@@ -127,6 +128,8 @@ def load_paddle_module_and_check(
         input_size = (2, 4, 3, 5)
     pd_module = pd_module_class()
 
+    flow.config.enable_debug_mode(True)
+    
     paddle.set_device("gpu")
     model_weight_save_dir = "/home/zhangxiaoyu/tmp"
 
@@ -171,8 +174,9 @@ def load_paddle_module_and_check(
                 train_flag=train_flag,
             )
             return y
-
-    flow.load_variables(flow.checkpoint.get(model_weight_save_dir))
+    print('load begin')
+    flow.train.CheckPoint().load(model_weight_save_dir)
+    print('load end')
 
     if train_flag == False:
         pd_module.eval()

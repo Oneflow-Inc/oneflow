@@ -29,3 +29,11 @@ def test_flatten(test_case):
 
     load_paddle_module_and_check(test_case, Net)
 
+def test_flatten_axis(test_case):
+    class Net(nn.Layer):
+        def forward(self, x):
+            flatten = nn.Flatten()
+            x = paddle.flatten(x, start_axis=1, stop_axis=-1, name='flatten')
+            return x
+
+    load_paddle_module_and_check(test_case, Net)
