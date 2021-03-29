@@ -17,7 +17,7 @@ export ONEFLOW_DRY_RUN=1
 # export ONEFLOW_DEBUG_MODE=1
 
 node_num=2
-generated_node_list=$(seq -f "host%02g" -s, $node_num)
+generated_node_list=$(seq -f "mockhost%02g" -s, $node_num)
 
 # heaptrack
 # valgrind --tool=massif --threshold=0.0001
