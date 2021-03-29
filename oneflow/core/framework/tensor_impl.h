@@ -187,7 +187,8 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
                           bool is_leaf, bool retain_grad)
       : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
         shape_(shape),
-        dtype_(dtype) {}
+        dtype_(dtype),
+        blob_object_id_(Error::ValueError("blob_object_id not initialized")) {}
   ~EagerMirroredTensorImpl() override = default;
 
   // Getters
@@ -195,7 +196,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
   bool is_lazy() const override { return false; }
   const std::shared_ptr<EagerBlobObject>& eager_blob_object() const { return eager_blob_object_; }
-  int64_t blob_object_id() const { return blob_object_id_; }
+  Maybe<int64_t> blob_object_id() const { return blob_object_id_; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
@@ -215,11 +216,11 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
       const std::shared_ptr<compatible_py::BlobObject>& blob_object) override;
 
  private:
-  int64_t blob_object_id_;
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
   std::shared_ptr<compatible_py::BlobObject> blob_object_;
   std::shared_ptr<EagerBlobObject> eager_blob_object_;
+  Maybe<int64_t> blob_object_id_;
 };
 
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
