@@ -368,24 +368,24 @@ class UserOpConfBuilder(object):
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
                 assert isinstance(x, int)
-                attribute.mutable_at_list_int32.add_val(x)
+                attribute.mutable_at_list_int32().add_val(x)
         elif attr_type == user_op_attr_cfg.kAtListInt64:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
                 assert isinstance(x, int)
-                attribute.mutable_at_list_int64.add_val(x)
+                attribute.mutable_at_list_int64().add_val(x)
         elif attr_type == user_op_attr_cfg.kAtListFloat:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
                 assert isinstance(x, (float, int))
-                attribute.mutable_at_list_float.add_val(x)
+                attribute.mutable_at_list_float().add_val(x)
         elif attr_type == user_op_attr_cfg.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
                 assert x in oneflow.dtypes()
                 x = oneflow_api.deprecated.GetProtoDtype4OfDtype(x)
                 assert isinstance(x, int)
-                attribute.mutable_at_list_data_type.add_val(data_type_cfg.DataType(x))
+                attribute.mutable_at_list_data_type().add_val(data_type_cfg.DataType(x))
         elif attr_type == user_op_attr_cfg.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
@@ -394,12 +394,12 @@ class UserOpConfBuilder(object):
                 for dim in x:
                     assert isinstance(dim, int)
                     shape.add_dim(dim)
-                attribute.mutable_at_list_shape.Add().CopyFrom(shape)
+                attribute.mutable_at_list_shape().mutable_val().Add().CopyFrom(shape)
         elif attr_type == user_op_attr_cfg.kAtListString:
             assert isinstance(attr_value, (tuple, list))
             for x in attr_value:
                 assert isinstance(x, str)
-                attribute.mutable_at_list_string.add_val(x)
+                attribute.mutable_at_list_string().add_val(x)
         else:
             raise ValueError("Invalid op attribute type {}".format(attr_type))
 
