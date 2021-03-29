@@ -133,8 +133,7 @@ UserOpWrapper::UserOpWrapper(
         CHECK((&blob_desc) != nullptr);
         BlobDescProto proto;
         blob_desc.ToProto(&proto);
-        TensorDesc tensor_desc(proto);
-        CHECK(bn2tensor_desc_.emplace(bn, tensor_desc).second);
+        CHECK(bn2tensor_desc_.emplace(bn, std::make_unique<NaiveTensorDesc>(proto)).second);
       }
     }
   };
@@ -186,7 +185,7 @@ void UserOpWrapper::BindGradTensorWithOpInput(const std::string& logical_grad_bl
 const TensorDesc& UserOpWrapper::arg_tensor_desc(const std::string& arg_name, int32_t index) const {
   std::string bn = GenRepeatedBn(arg_name, index);
   CHECK(bn2tensor_desc_.find(bn) != bn2tensor_desc_.end());
-  return bn2tensor_desc_.at(bn);
+  return *bn2tensor_desc_.at(bn);
 }
 
 const TensorDesc& UserOpWrapper::TensorDesc4ArgNameAndIndex(const std::string& arg_name,

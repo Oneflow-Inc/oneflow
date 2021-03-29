@@ -40,7 +40,7 @@ void FillTensorDescWithBlob(const Blob* blob, user_op::TensorDesc* tensor_desc) 
   blob->blob_desc().body().ToProto(proto.mutable_body());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   proto.set_header_is_opaque(blob->blob_desc().header_is_opaque());
-  *tensor_desc = proto;
+  tensor_desc = new user_op::NaiveTensorDesc(proto);
   tensor_desc->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
 }
 
@@ -67,7 +67,7 @@ class UserKernelBaseContext {
     device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
     parallel_ctx_ = kernel_conf.parallel_ctx();
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
-      arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::TensorDesc(pair.second));
+      arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::NaiveTensorDesc(pair.second));
     }
   }
   ~UserKernelBaseContext() = default;
@@ -80,7 +80,7 @@ class UserKernelBaseContext {
                                                         int32_t index) const {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; }
-    return &(it->second);
+    return it->second.get();
   }
 
   const ArgVec& inputs() const { return inputs_; }
@@ -92,7 +92,7 @@ class UserKernelBaseContext {
   DeviceType device_type_;
   std::string device_tag_;
   ParallelContext parallel_ctx_;
-  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::TensorDesc>> arg2tensor_desc_;
   const JobDesc& job_desc_;
 };
 
@@ -124,7 +124,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
     for (const auto& pair :
          kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
-                                       user_op::TensorDesc(pair.second));
+                                       std::make_unique<user_op::NaiveTensorDesc>(pair.second));
     }
   }
   ~UserKernelInitContext() override = default;
@@ -143,7 +143,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
     if (it == arg2logical_tensor_desc_.end()) {
       return nullptr;
     } else {
-      return &(it->second);
+      return it->second.get();
     }
   }
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
@@ -174,7 +174,8 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   const SbpSignature* sbp_signature_;
-  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2logical_tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::TensorDesc>>
+      arg2logical_tensor_desc_;
   ParallelDesc parallel_desc_;
   const ParallelDistributionSignature* parallel_distribution_signature_;
 };
@@ -207,7 +208,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
     for (const auto& pair :
          kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
-                                       user_op::TensorDesc(pair.second));
+                                       std::make_unique<user_op::NaiveTensorDesc>(pair.second));
     }
   }
   ~UserKernelOpInferContext() override = default;
@@ -217,7 +218,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
     auto it = arg2logical_tensor_desc_.find(std::make_pair(arg_name, index));
     CHECK(it != arg2logical_tensor_desc_.end())
         << "Arg (" << arg_name << "," << index << ") is not found";
-    return &(it->second);
+    return it->second.get();
   }
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override {
@@ -270,7 +271,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
       if (*arg_tensor_desc_ptr) {
         (*arg_tensor_desc_ptr)->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
       } else {
-        arg_tensor_desc_ptr->reset(new user_op::TensorDesc());
+        arg_tensor_desc_ptr->reset(new user_op::NaiveTensorDesc());
         FillTensorDescWithBlob(blob, arg_tensor_desc_ptr->get());
       }
     }
@@ -290,7 +291,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
   ParallelDistributionSignature parallel_distribution_signature_;
   ParallelDesc parallel_desc_;
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::TensorDesc>> arg2tensor_desc_;
-  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2logical_tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::TensorDesc>>
+      arg2logical_tensor_desc_;
 };
 
 class UserKernelInferContext final : public user_op::KernelInferContext {
