@@ -320,9 +320,7 @@ class Tensor:
         assert not self.is_determined
         if determining_initializer is None:
             determining_initializer = self._determining_initializer
-        self._local_or_consistent_tensor = determining_initializer(
-            self
-        )
+        self._local_or_consistent_tensor = determining_initializer(self)
         self._undetermined_tensor = None
 
     @property
@@ -670,4 +668,3 @@ def _convert_to_placement_scope(placement_or_device):
         return flow.scope.placement(
             device_tag, "{}:{}".format(machine_id, device.index), None
         )
-
