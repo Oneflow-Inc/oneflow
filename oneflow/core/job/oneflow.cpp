@@ -336,8 +336,11 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
   return Maybe<void>::Ok();
 }
 
-void MergePlanWithoutGenNetTopo(Plan* plan, const Plan& other) {
-  plan->mutable_task()->MergeFrom(other.task());
+void MergePlanWithoutGenNetTopo(Plan* plan, Plan&& other) {
+  PbRpf<TaskProto>* dst_tasks = plan->mutable_task();
+  PbRpf<TaskProto>* src_tasks = other.mutable_task();
+  dst_tasks->Reserve(dst_tasks->size() + src_tasks->size());
+  for (TaskProto& task : *src_tasks) { *(dst_tasks->Add()) = std::move(task); }
   plan->mutable_block_chunk_list()->MergeFrom(other.block_chunk_list());
 
   for (const auto& pair : other.job_confs().job_id2job_conf()) {
@@ -349,14 +352,16 @@ void MergePlanWithoutGenNetTopo(Plan* plan, const Plan& other) {
   }
 }
 
-void MergeSubPlanWithoutGenNetTopo(Plan* plan, const std::vector<Plan>& sub_plans) {
+void MergeSubPlanWithoutGenNetTopo(Plan* plan, std::vector<Plan>&& sub_plans) {
   CHECK(!sub_plans.empty());
-  *plan = sub_plans.at(0);
-  FOR_RANGE(int32_t, i, 1, sub_plans.size()) { MergePlanWithoutGenNetTopo(plan, sub_plans.at(i)); }
+  *plan = std::move(sub_plans.at(0));
+  FOR_RANGE(int32_t, i, 1, sub_plans.size()) {
+    MergePlanWithoutGenNetTopo(plan, std::move(sub_plans.at(i)));
+  }
 }
 
-void MergePlan(Plan* plan, const Plan& other) {
-  MergePlanWithoutGenNetTopo(plan, other);
+void MergePlan(Plan* plan, Plan&& other) {
+  MergePlanWithoutGenNetTopo(plan, std::move(other));
   Compiler().GenNetTopo(plan);
 }
 
@@ -441,7 +446,7 @@ void FixRegstHostMemCase(TaskProto* task_proto,
   }
 }
 
-void LinkMainPlan(Plan* plan, const Plan& main_plan,
+void LinkMainPlan(Plan* plan, Plan&& main_plan,
                   const std::vector<std::map<int64_t, std::string>>& identity_tick_op_names) {
   std::function<bool(const TaskProto*)> IsInterfaceTickTockTask;
   {
@@ -458,7 +463,7 @@ void LinkMainPlan(Plan* plan, const Plan& main_plan,
              || op_type_case == OperatorConf::kSinkTickConf;
     };
   }
-  MergePlan(plan, main_plan);
+  MergePlan(plan, std::move(main_plan));
   HashMap<std::string, TaskProto*> sole_tick_op_name2sole_task;
   FOR_RANGE(int64_t, i, 0, plan->task_size()) {
     TaskProto* task = plan->mutable_task(i);
@@ -1101,7 +1106,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     JUST(CompileCurJobOnMaster(jobs.at(i).get(), &sub_plans.at(i), true));
   }
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    MergeSubPlanWithoutGenNetTopo(plan, sub_plans);
+    MergeSubPlanWithoutGenNetTopo(plan, std::move(sub_plans));
     InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, plan);
     InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, plan);
     PlanUtil::SetForceInplaceMemBlock(plan);
@@ -1113,9 +1118,9 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
       std::vector<ReentrantLockBackEdge> lock_back_edges;
       JUST(MakeMainJob(&main_job, &identity_tick_op_names, &lock_back_edges));
       AddJobName2JobId(main_job.job_conf().job_name(), jobs.size());
-      JUST(CompileMainJob(&main_job, lock_back_edges, sub_plans.size(), &main_plan));
+      JUST(CompileMainJob(&main_job, lock_back_edges, jobs.size(), &main_plan));
     }
-    LinkMainPlan(plan, main_plan, identity_tick_op_names);
+    LinkMainPlan(plan, std::move(main_plan), identity_tick_op_names);
     PlanUtil::CleanUselessMemBlockAndCheckValid(plan);
     DumpCtrlRegstInfoToPlan(plan);
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
