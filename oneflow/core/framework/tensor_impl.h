@@ -188,7 +188,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
       : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
         shape_(shape),
         dtype_(dtype),
-        blob_object_id_(Error::ValueError("blob_object_id not initialized")) {}
+        blob_object_id_(Error::ValueError("blob_object_id is not initialized")) {}
   ~EagerMirroredTensorImpl() override = default;
 
   // Getters
