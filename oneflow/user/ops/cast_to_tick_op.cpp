@@ -28,10 +28,6 @@ REGISTER_USER_OP("cast_to_tick")
       *out_shape = Shape({1});
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
-      return Maybe<void>::Ok();
-    })
     .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
       SbpSignature* signature = ctx->mutable_sbp_signature();
       auto* bn2sbp = signature->mutable_bn_in_op2sbp_parallel();
