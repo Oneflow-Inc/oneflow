@@ -88,6 +88,16 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
   }
 }
 
+bool ParallelDistributionAllSameSplitParallel(const ParallelDistribution& parallel_distribution) {
+  CHECK_GT(parallel_distribution.sbp_parallel_size(), 0);
+  const SbpParallel& first_sbp = parallel_distribution.sbp_parallel(0);
+  if (!first_sbp.has_split_parallel()) { return false; }
+  FOR_RANGE(int64_t, i, 1, parallel_distribution.sbp_parallel_size()) {
+    if (parallel_distribution.sbp_parallel(i) != first_sbp) { return false; }
+  }
+  return true;
+}
+
 bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
                                const SbpParallel& dst_sbp, const std::string& lbn,
                                const int64_t scope_symbol_id, const BlobDesc& logical_blob_desc,
@@ -152,7 +162,23 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
                                        const std::shared_ptr<Shape> hierarchy,
                                        const std::string& lbn, const int64_t scope_symbol_id,
                                        const BlobDesc& logical_blob_desc) {
-  // TODO
+  CHECK_EQ(src_parallel_distribution.sbp_parallel_size(), 2);
+  CHECK_EQ(dst_parallel_distribution.sbp_parallel_size(), 2);
+  CHECK(src_parallel_distribution.sbp_parallel(0) == dst_parallel_distribution.sbp_parallel(0));
+  const SbpParallel& src_dim1_sbp = src_parallel_distribution.sbp_parallel(1);
+  const SbpParallel& dst_dim1_sbp = dst_parallel_distribution.sbp_parallel(1);
+  if (src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_broadcast_parallel()) {
+    // (*P)->(*B) : AllReduce
+    *ret =
+        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(*P)2(*B)-" + NewUniqueId())
+            .Op("_nccl_logical_2D_same_dim0_all_reduce")
+            .Input("in", lbn)
+            .Output("out")
+            .ScopeSymbolId(scope_symbol_id)
+            .Build()
+            .op_conf();
+    return true;
+  }
   return false;
 }
 
@@ -203,9 +229,12 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
                                                scope_symbol_id, logical_blob_desc);
     } else if (src_parallel_distribution.sbp_parallel(1)
                == dst_parallel_distribution.sbp_parallel(1)) {
-      return TryBuildNcclBy2DHierarchySameDim1(ret, src_parallel_distribution,
-                                               dst_parallel_distribution, src_hierarchy, lbn,
-                                               scope_symbol_id, logical_blob_desc);
+      if (!(ParallelDistributionAllSameSplitParallel(src_parallel_distribution)
+            || ParallelDistributionAllSameSplitParallel(dst_parallel_distribution))) {
+        return TryBuildNcclBy2DHierarchySameDim1(ret, src_parallel_distribution,
+                                                 dst_parallel_distribution, src_hierarchy, lbn,
+                                                 scope_symbol_id, logical_blob_desc);
+      }
     }
   }
   return false;
