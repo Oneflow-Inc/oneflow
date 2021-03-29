@@ -283,3 +283,4 @@ def test_MobileNetV2(test_case):
     load_paddle_module_and_check(
         test_case, MobileNetV2, input_size=(1, 3, 224, 224), train_flag=False,
     )
+
