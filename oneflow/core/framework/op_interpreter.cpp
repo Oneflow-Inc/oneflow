@@ -307,6 +307,9 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     JUST(DetermineIsLeaf(outputs, inputs.size() > 0, requires_grad));
     JUST(DetermineRequiresGrad(outputs, requires_grad));
   }
+  // Although current op `requires_grad` is false, we still need to add a
+  // function node for this op since it maybe reset to true by the user later,
+  // such as Variable op etc.
   // if (autograd::GradMode::is_enabled() && requires_grad) {
   if (autograd::GradMode::is_enabled()) {
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
