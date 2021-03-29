@@ -133,7 +133,8 @@ UserOpWrapper::UserOpWrapper(
         CHECK((&blob_desc) != nullptr);
         BlobDescProto proto;
         blob_desc.ToProto(&proto);
-        CHECK(bn2tensor_desc_.emplace(bn, std::make_unique<NaiveTensorDesc>(proto)).second);
+        NaiveTensorDesc tensor_desc(proto);
+        CHECK(bn2tensor_desc_.emplace(bn, tensor_desc).second);
       }
     }
   };

@@ -133,7 +133,7 @@ class UserOpWrapper final {
  private:
   UserOpConfWrapper conf_;
   std::function<LogicalBlobId*(const std::string&)> diff_fn_;
-  HashMap<std::string, std::unique_ptr<TensorDesc>> bn2tensor_desc_;
+  HashMap<std::string, NaiveTensorDesc> bn2tensor_desc_;
 };
 
 class UserOpConfWrapperBuilder final {
