@@ -41,8 +41,6 @@ class TestResourceDescScope final {
 };
 
 struct TestUtil {
-  using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
-
   static ObjectMsgPtr<VmResourceDesc> NewVmResourceDesc() { return NewVmResourceDesc(1); }
 
   static ObjectMsgPtr<VmResourceDesc> NewVmResourceDesc(int64_t device_num) {

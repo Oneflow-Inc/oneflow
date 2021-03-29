@@ -32,13 +32,13 @@ class TensorNameScope {
   void Record(const std::shared_ptr<Tensor>& tensor, const std::string& name);
 
  private:
-  TensorNameScope() = default;
+  TensorNameScope() : default_tensor_name_("") {}
   virtual ~TensorNameScope() = default;
 
  private:
   mutable std::mutex mutex_;
 
-  std::string default_tensor_name_ = "";
+  std::string default_tensor_name_;
   // uint64_t(Tensor*) -> the name of the tensor.
   std::unordered_map<uint64_t, std::string> tensor_names_;
 };

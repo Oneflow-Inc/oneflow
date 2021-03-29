@@ -41,6 +41,7 @@ from oneflow.python.framework.pull_util import (
 from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
+from oneflow.python.framework.check_point import SnapshotManager
 import oneflow.python.framework.check_point_v2 as check_point_v2
 from contextlib import contextmanager
 from typing import Callable
@@ -50,9 +51,8 @@ import oneflow_api
 import traceback
 
 
-class Session(oneflow_api.deprecated.Session):
+class Session(object):
     def __init__(self, sess_id):
-        oneflow_api.deprecated.Session.__init__(self, sess_id)
         self.job_name2function_desc_ = {}
         self.job_name2job_ = {}
         self.status_ = SessionStatus.OPEN
@@ -62,7 +62,6 @@ class Session(oneflow_api.deprecated.Session):
         self.uuid2watch_handler_ = {}
         self.config_proto_ = None
         self.resource_ = None
-        self.is_mirrored_strategy_enabled_stack_ = []
         self.job_name2var_name2var_blob_ = {}
         self.job_name2module_name2module_ = {}
         self.existed_module_names_ = set()
@@ -80,14 +79,14 @@ class Session(oneflow_api.deprecated.Session):
         self._UpdateFunctionFlagName2DefaultVal()
         self.scope_attr_name2default_val_ = {}
         self._UpdateScopeAttrName2DefaultVal()
+        self.sess_ = oneflow_api.RegsiterSession(sess_id)
         self.backward_blob_register_ = oneflow_api.BlobRegister()
+        self.snapshot_mgr_ = SnapshotManager()
         self.eager_config_proto_ctx_ = None
-
-        oneflow_api.deprecated.RegsiterSession(sess_id, self)
 
     @property
     def id(self):
-        return self.id_
+        return self.sess_.id
 
     @property
     def status(self):
@@ -115,10 +114,6 @@ class Session(oneflow_api.deprecated.Session):
         return self.uuid2watch_handler_
 
     @property
-    def is_mirrored_strategy_enabled_stack(self):
-        return self.is_mirrored_strategy_enabled_stack_
-
-    @property
     def function_flag_name2default_val(self):
         return self.function_flag_name2default_val_
 
@@ -140,7 +135,7 @@ class Session(oneflow_api.deprecated.Session):
 
     @property
     def snapshot_mgr(self):
-        return self.snapshot_mgr_()
+        return self.snapshot_mgr_
 
     @property
     def var_name2var_blob(self):
@@ -241,7 +236,7 @@ class Session(oneflow_api.deprecated.Session):
         self.resource_ = None
         if self.eager_config_proto_ctx_:
             del self.eager_config_proto_ctx_
-        oneflow_api.deprecated.ClearSessionById(self.id)
+        oneflow_api.ClearSessionById(self.id)
 
     def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN
@@ -390,31 +385,21 @@ class Session(oneflow_api.deprecated.Session):
             return None
         return self.eager_global_function_desc_stack_[0]
 
-    def NameScopeStackPush(self, job_name, name):
-        if job_name not in self.job_name2name_scope_stack_:
-            self.job_name2name_scope_stack_[job_name] = []
-        self.job_name2name_scope_stack_[job_name].append(name)
+    def has_empty_is_mirrored_strategy_enabled_stack(self):
+        return self.sess_.is_mirrored_strategy_enabled_stack_size() == 0
 
-    def NameScopeStackPop(self, job_name):
-        assert job_name in self.job_name2name_scope_stack_
-        assert len(self.job_name2name_scope_stack_[job_name]) > 0
-        return self.job_name2name_scope_stack_[job_name].pop()
+    def push_mirrored_strategy_enabled(self, val):
+        assert isinstance(val, bool)
+        self.sess_.push_mirrored_strategy_enabled(val)
 
-    def GetJobNameScopePrefix(self, job_name):
-        if job_name not in self.job_name2name_scope_stack_:
-            return ""
-        if len(self.job_name2name_scope_stack_[job_name]) == 0:
-            return ""
-        return "-".join(self.job_name2name_scope_stack_[job_name]) + "-"
+    def pop_mirrored_strategy_enabled(self):
+        self.sess_.pop_mirrored_strategy_enabled()
 
-    def IsMirroredStrategyEnabled(self):
-        return (
-            len(self.is_mirrored_strategy_enabled_stack) > 0
-            and self.is_mirrored_strategy_enabled_stack[-1]
-        )
+    def is_mirrored_strategy_enabled(self):
+        return self.sess_.is_mirrored_strategy_enabled()
 
-    def IsConsistentStrategyEnabled(self):
-        return not self.IsMirroredStrategyEnabled()
+    def is_consistent_strategy_enabled(self):
+        return self.sess_.is_consistent_strategy_enabled()
 
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):

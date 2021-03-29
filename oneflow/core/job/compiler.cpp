@@ -73,8 +73,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
                                               + "_op_graph.dot");
   }
-  auto logical_gph = std::make_unique<LogicalGraph>(*job);
-  auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
+  auto task_gph = std::make_unique<TaskGraph>();
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
@@ -87,6 +86,8 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     task_gph->EnableInplaceMemSharing(IsReachable);
   }
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
+
+  task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
