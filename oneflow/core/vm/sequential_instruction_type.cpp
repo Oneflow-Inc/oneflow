@@ -47,6 +47,7 @@ class RankFrontSeqCallbackInstructionType : public InstructionType {
     if (args->process_rank() == GlobalProcessCtx::Rank()) {
       CHECK(static_cast<bool>(phy_instr_operand));
       const auto* ptr = dynamic_cast<const NoArgCbPhyInstrOperand*>(phy_instr_operand.get());
+      CHECK_NOTNULL(ptr);
       ptr->callback()();
     } else {
       CHECK(!static_cast<bool>(phy_instr_operand));
