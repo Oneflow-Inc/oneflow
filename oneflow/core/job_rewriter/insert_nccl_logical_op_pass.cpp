@@ -188,7 +188,23 @@ bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret,
                                        const std::shared_ptr<Shape> hierarchy,
                                        const std::string& lbn, const int64_t scope_symbol_id,
                                        const BlobDesc& logical_blob_desc) {
-  // TODO
+  CHECK_EQ(src_parallel_distribution.sbp_parallel_size(), 2);
+  CHECK_EQ(dst_parallel_distribution.sbp_parallel_size(), 2);
+  CHECK(src_parallel_distribution.sbp_parallel(1) == dst_parallel_distribution.sbp_parallel(1));
+  const SbpParallel& src_dim1_sbp = src_parallel_distribution.sbp_parallel(0);
+  const SbpParallel& dst_dim1_sbp = dst_parallel_distribution.sbp_parallel(0);
+  if (src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_broadcast_parallel()) {
+    // (P*)->(B*) : AllReduce
+    *ret =
+        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(P*)2(B*)-" + NewUniqueId())
+            .Op("_nccl_logical_2D_same_dim1_all_reduce")
+            .Input("in", lbn)
+            .Output("out")
+            .ScopeSymbolId(scope_symbol_id)
+            .Build()
+            .op_conf();
+    return true;
+  }
   return false;
 }
 

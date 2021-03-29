@@ -49,4 +49,35 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_reduce")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("_nccl_logical_2D_same_dim1_all_reduce")
+    .Input("in")
+    .Output("out")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      const ParallelDistribution& in_dis_hint =
+          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+      CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
+      CHECK_OR_RETURN(in_dis_hint.sbp_parallel(0).has_partial_sum_parallel());
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
+
+      ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
+      // in use hint
+      in_distribution->CopyFrom(in_dis_hint);
+
+      // out dim0 = broadcast
+      out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
+      // out dim1 use hint
+      *out_distribution->add_sbp_parallel() = in_dis_hint.sbp_parallel(1);
+
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace oneflow
