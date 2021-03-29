@@ -45,12 +45,12 @@ class Tensor:
         dtype = dtype if dtype is not None else oneflow_api.float32
         if placement is None:
             device = device if device is not None else oneflow_api.device("cpu")
-        if _input_args_is_tensor:
+        if _input_args_is_tensor(*args):
             TODO()  # liyurui, construct using another tensor
-        elif _input_args_is_consistent_or_local:
+        elif _input_args_is_consistent_or_local(*args):
             self._local_or_consistent_tensor = args[0]
             self._undetermined_tensor = None
-        elif _input_args_is_data:
+        elif _input_args_is_data(*args):
             self._local_or_consistent_tensor = None
             self._construct_with_data(
                 *args,
@@ -210,11 +210,9 @@ class Tensor:
     def tolist(self):
         TODO()
 
-    def backward(
-        self, gradient=None, retain_graph=False, create_graph=False, inputs=None
-    ):
+    def backward(self, gradient=None, retain_graph=False, create_graph=False):
         assert self.is_determined
-        TODO()  # liyurui
+        flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
     def __str__(self):
         TODO()
