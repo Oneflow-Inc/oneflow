@@ -304,7 +304,6 @@ void OpGraph::InferOpNodeParallelDistributionSignature(
     const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
     const ParallelDistribution* parallel_distribution = &producer->ParallelDistribution4Lbi(lbi);
-    CHECK_EQ(parallel_distribution->sbp_parallel_size(), 1);
     ibn2parallel_distribution_infer_hint.emplace(
         ibn,
         ParallelDistributionInferHint(parallel_desc, logical_blob_desc, parallel_distribution));
@@ -383,7 +382,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
           CheckSbpSignatureAndParallelDistributionEquals(op_name2sbp_sig_conf_it->second,
                                                          iter->second);
         } else {
-          UNIMPLEMENTED();
+          // do nothing
         }
       }
     }

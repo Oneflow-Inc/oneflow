@@ -22,10 +22,15 @@ message CollectiveBoxingPlan {
   map<int64, boxing.collective.RequestSet> job_id2request_set = 1;
 }
 
+message CtrlRegstDescInfo {
+  map<int64, int64> ctrl_regst_desc_id2producer_task_id = 6;
+}
+
 message Plan {
   repeated TaskProto task = 1;
   required MemBlockAndChunkList block_chunk_list = 2;
   required NetTopo net_topo = 3;
   required JobConfs job_confs = 4;
   required CollectiveBoxingPlan collective_boxing_plan= 5;
+  required CtrlRegstDescInfo ctrl_regst_desc_info = 6;
 }

@@ -55,19 +55,23 @@ class UnsortedSegmentSumOpKernelState final : public user_op::OpKernelState {
 
 std::shared_ptr<user_op::OpKernelState> CreateUnsortedSegmentSumOpKernelState(
     user_op::KernelInitContext* ctx) {
-  const auto axis = ctx->Attr<int64_t>("axis");
-  const ParallelDistribution& out_parallel_distribution =
-      ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-  const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-  CheckParallelDistribution(
-      hierarchy, axis, ctx->ParallelDistribution4ArgNameAndIndex("segment_ids", 0),
-      ctx->ParallelDistribution4ArgNameAndIndex("data", 0), out_parallel_distribution);
-  const TensorDesc* out_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0);
-  TensorSliceView view =
-      GetTensorSliceView4ParallelId(hierarchy, out_parallel_distribution, out_logical_desc->shape(),
-                                    ctx->parallel_ctx().parallel_id());
-  return std::make_shared<UnsortedSegmentSumOpKernelState>(view.At(axis).begin(),
-                                                           view.At(axis).end());
+  if (ctx->parallel_ctx().parallel_num() > 1) {
+    const auto axis = ctx->Attr<int64_t>("axis");
+    const ParallelDistribution& out_parallel_distribution =
+        ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+    const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+    CheckParallelDistribution(
+        hierarchy, axis, ctx->ParallelDistribution4ArgNameAndIndex("segment_ids", 0),
+        ctx->ParallelDistribution4ArgNameAndIndex("data", 0), out_parallel_distribution);
+    const TensorDesc* out_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0);
+    TensorSliceView view =
+        GetTensorSliceView4ParallelId(hierarchy, out_parallel_distribution,
+                                      out_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
+    return std::make_shared<UnsortedSegmentSumOpKernelState>(view.At(axis).begin(),
+                                                             view.At(axis).end());
+  } else {
+    return std::shared_ptr<OpKernelState>(nullptr);
+  }
 }
 
 }  // namespace

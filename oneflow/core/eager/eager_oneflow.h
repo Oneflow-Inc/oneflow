@@ -45,18 +45,18 @@ namespace eager {
 class EagerOneflow final {
  public:
   Maybe<void> RunLogicalInstruction(
-      const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
-
-  Maybe<void> RunPhysicalInstruction(
-      const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
-
-  Maybe<void> RunLogicalInstruction(
       const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
       const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list);
 
   Maybe<void> RunPhysicalInstruction(
+      const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
+
+  Maybe<void> RunPhysicalInstruction(
       const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
       const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list);
+  Maybe<void> RunPhysicalInstruction(
+      const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
+      const eager::EagerSymbolList& eager_symbol_list);
 };
 
 }  // namespace eager
