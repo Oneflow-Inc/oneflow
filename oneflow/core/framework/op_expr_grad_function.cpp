@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/framework/op_expr_grad_closure.h"
+#include "oneflow/core/framework/op_expr_grad_function.h"
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -27,7 +27,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class DefaultOpExprGradClosure : public OpExprGradClosure {
+class DefaultOpExprGradFunction : public OpExprGradFunction {
  public:
   // The snapshot indicates the indices of the required forward inputs and outputs
   // by each backward operator.
@@ -42,8 +42,8 @@ class DefaultOpExprGradClosure : public OpExprGradClosure {
   Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs) const override;
 
-  Maybe<void> DoBackward(const OpExprInterpState* ctx, const TensorTuple& out_grads,
-                         TensorTuple* in_grads) const override;
+  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override;
 
  private:
   Maybe<void> GenerateOpGradConf(const Operator& op, std::vector<OperatorConf>* bw_op_confs);
@@ -76,7 +76,7 @@ Maybe<void> ProcessOpInputs(const Operator& op,  // NOLINT
                             const HashMap<std::string, int>& output_lbn_indices,
                             const HashMap<std::string, std::string>& grad_lbn2bn,
                             const HashMap<std::string, int>& obn_indices,
-                            DefaultOpExprGradClosure::Snapshot* snapshot,
+                            DefaultOpExprGradFunction::Snapshot* snapshot,
                             std::vector<int>* out_grad_indices,
                             std::vector<std::string>* indexed_ibns) {
   // Input blob names in the backward op will be divided into 3 types which
@@ -127,8 +127,8 @@ Maybe<void> ProcessOpOutputs(const Operator& op,
 
 }  // namespace
 
-Maybe<void> DefaultOpExprGradClosure::GenerateOpGradConf(const Operator& op,
-                                                         std::vector<OperatorConf>* bw_op_confs) {
+Maybe<void> DefaultOpExprGradFunction::GenerateOpGradConf(const Operator& op,
+                                                          std::vector<OperatorConf>* bw_op_confs) {
   auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
     const auto& input_bns = op.input_bns();
     const auto& output_bns = op.output_bns();
@@ -156,7 +156,7 @@ Maybe<void> DefaultOpExprGradClosure::GenerateOpGradConf(const Operator& op,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DefaultOpExprGradClosure::Init(const OpExpr& op) {
+Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
   if (op.input_num() == 0) { return Maybe<void>::Ok(); }
   const auto* fw_op_expr = dynamic_cast<const BuiltinOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
@@ -225,7 +225,7 @@ Maybe<void> DefaultOpExprGradClosure::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DefaultOpExprGradClosure::UpdateRequiresBackward(const TensorTuple& inputs) const {
+Maybe<void> DefaultOpExprGradFunction::UpdateRequiresBackward(const TensorTuple& inputs) const {
   for (int i = 0; i < in_grad_indices_.size(); ++i) {
     requires_backward_[i] = false;
     for (const auto& j : in_grad_indices_.at(i)) {
@@ -238,8 +238,8 @@ Maybe<void> DefaultOpExprGradClosure::UpdateRequiresBackward(const TensorTuple& 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DefaultOpExprGradClosure::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                                              const TensorTuple& outputs) const {
+Maybe<void> DefaultOpExprGradFunction::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
+                                               const TensorTuple& outputs) const {
   JUST(UpdateRequiresBackward(inputs));
   for (int i = 0; i < backward_ops_.size(); ++i) {
     if (!requires_backward_.at(i)) { continue; }
@@ -253,29 +253,32 @@ Maybe<void> DefaultOpExprGradClosure::Capture(OpExprInterpState* ctx, const Tens
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DefaultOpExprGradClosure::DoBackward(const OpExprInterpState* ctx,
-                                                 const TensorTuple& out_grads,
-                                                 TensorTuple* in_grads) const {
+Maybe<void> DefaultOpExprGradFunction::Apply(const OpExprInterpState* ctx,
+                                             const TensorTuple& out_grads,
+                                             TensorTuple* in_grads) const {
   int input_size = in_bn2grad_lbi_.size();
   in_grads->resize(input_size);
   const auto& saved_tensors = ctx->SavedTensors();
   int offset = 0;
   for (int i = 0; i < backward_ops_.size(); ++i) {
     if (!requires_backward_.at(i)) { continue; }
-    TensorTuple inputs, outputs;
+    TensorTuple inputs;
     for (int j = 0; j < snapshots_.at(i).count; ++j) {
       inputs.emplace_back(saved_tensors.at(offset + j));
     }
     for (const int& index : out_grad_indices_.at(i)) { inputs.emplace_back(out_grads.at(index)); }
-    for (const int& index : in_grad_indices_.at(i)) { outputs.emplace_back(in_grads->at(index)); }
+    TensorTuple outputs(in_grad_indices_.at(i).size());
     const auto& interpreter = JUST(OpInterpUtil::GetInterpreter());
     JUST(interpreter->Apply(*(backward_ops_.at(i)), inputs, &outputs));
+
+    int j = 0;
+    for (const int& index : in_grad_indices_.at(i)) { in_grads->at(index) = outputs.at(j++); }
     offset += snapshots_.at(i).count;
   }
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_CLOSURE("default", DefaultOpExprGradClosure);
+REGISTER_OP_EXPR_GRAD_FUNCTION("default", DefaultOpExprGradFunction);
 
 }  // namespace one
 }  // namespace oneflow

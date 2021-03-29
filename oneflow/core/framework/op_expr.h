@@ -25,8 +25,8 @@ namespace oneflow {
 namespace one {
 
 class OpExprInterpState;
+class OpExprGradFunction;
 class OpExprGradClosure;
-class OpExprGradClosureWrapper;
 
 class OpExpr {
  public:
@@ -37,7 +37,7 @@ class OpExpr {
 
   virtual int input_num() const = 0;
   virtual int output_num() const = 0;
-  virtual Maybe<OpExprGradClosureWrapper> GetOrCreateOpGradClosure() const = 0;
+  virtual Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const = 0;
 
  private:
   std::string type_;
@@ -69,7 +69,7 @@ class BuiltinOpExpr : public OpExpr {
   // The indexed output blob names.
   std::vector<std::string> indexed_obns_;
 
-  mutable std::shared_ptr<OpExprGradClosure> op_grad_closure_;
+  mutable std::shared_ptr<OpExprGradFunction> op_grad_closure_;
 };
 
 #define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name, _op_conf)                                  \
@@ -91,7 +91,7 @@ class BuiltinOpExpr : public OpExpr {
       *(op_conf->mutable_##_op_conf##_conf()) = proto_;                                  \
     }                                                                                    \
                                                                                          \
-    Maybe<OpExprGradClosureWrapper> GetOrCreateOpGradClosure() const override;           \
+    Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;                  \
                                                                                          \
    private:                                                                              \
     _op_name##Conf proto_;                                                               \
@@ -126,7 +126,7 @@ class FunctionOpExpr : public OpExpr {
   FType backward() const { return backward_; }
   std::shared_ptr<OpExprInterpState> state() const { return state_; }
 
-  Maybe<OpExprGradClosureWrapper> GetOrCreateOpGradClosure() const override { UNIMPLEMENTED(); }
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override { UNIMPLEMENTED(); }
 
  private:
   FType forward_;
