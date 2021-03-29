@@ -22,17 +22,6 @@ namespace data {
 
 constexpr char GPTIndex::kMagicCode[];
 
-const HashMap<char, DataType> GPTIndex::kDTypeCode2DataType = {
-    {1, DataType::kUInt8},
-    {2, DataType::kInt8},
-    // {3, DataType::kInt16},  // unsupported
-    {4, DataType::kInt32},
-    {5, DataType::kInt64},
-    {6, DataType::kFloat},
-    {7, DataType::kDouble},
-    // {8, DataType::kUInt16},  // unsupported
-};
-
 GPTIndex::GPTIndex(const std::string& index_file_path) {
   std::ifstream stream(index_file_path, std::ios::binary);
   CHECK(stream.is_open());
@@ -44,9 +33,7 @@ GPTIndex::GPTIndex(const std::string& index_file_path) {
   // read version
   stream.read(reinterpret_cast<char*>(&version_), sizeof(version_));
   // read dtype
-  char dtype_code;
-  stream.read(&dtype_code, 1);
-  data_type_ = kDTypeCode2DataType.at(dtype_code);
+  stream.read(&dtype_code_, 1);
   // read size of sizes and doc_offsets
   uint64_t sizes_size = 0;
   stream.read(reinterpret_cast<char*>(&sizes_size), sizeof(sizes_size));

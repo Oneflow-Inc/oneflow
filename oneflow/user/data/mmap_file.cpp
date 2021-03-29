@@ -62,6 +62,8 @@ void MMapFile::read(void* buf, size_t length) {
   offset_ += length;
 }
 
+const void* MMapFile::address(size_t offset) const { return mapped_ + offset; }
+
 }  // namespace data
 
 }  // namespace oneflow

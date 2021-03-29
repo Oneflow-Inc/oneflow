@@ -30,10 +30,9 @@ class GPTIndex final {
   ~GPTIndex() = default;
 
   static constexpr char kMagicCode[] = "MMIDIDX\x00\x00";
-  static const HashMap<char, DataType> kDTypeCode2DataType;
 
   uint64_t version() const { return version_; }
-  DataType data_type() const { return data_type_; }
+  char dtype_code() const { return dtype_code_; }
   size_t num_docs() const { return sizes_.size(); }
   size_t doc_length(size_t doc_index) const { return sizes_.at(doc_index); }
   size_t doc_offset(size_t doc_index) const { return doc_offsets_.at(doc_index); }
@@ -41,7 +40,7 @@ class GPTIndex final {
 
  private:
   uint64_t version_;
-  DataType data_type_;
+  char dtype_code_;
   std::vector<int32_t> sizes_;
   std::vector<int64_t> addresses_;
   std::vector<int64_t> doc_offsets_;

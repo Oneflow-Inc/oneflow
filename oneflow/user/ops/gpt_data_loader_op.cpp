@@ -25,6 +25,7 @@ REGISTER_CPU_ONLY_USER_OP("gpt_data_loader")
     .Attr<int64_t>("seq_length")
     .Attr<int64_t>("num_samples")
     .Attr<int64_t>("batch_size")
+    .Attr<DataType>("dtype")
     .Attr<std::vector<int64_t>>("split_sizes")
     .Attr<int64_t>("split_index")
     .Attr<bool>("shuffle")
@@ -44,16 +45,18 @@ REGISTER_CPU_ONLY_USER_OP("gpt_data_loader")
         }
       }
 
+      int64_t num_tokens = ctx->Attr<int64_t>("seq_length") + 1;
       user_op::TensorDesc* sequence_desc = ctx->TensorDesc4ArgNameAndIndex("sequence", 0);
-      *sequence_desc->mut_shape() = Shape({device_batch_size});
-      *sequence_desc->mut_data_type() = DataType::kTensorBuffer;
+      *sequence_desc->mut_shape() = Shape({device_batch_size, num_tokens});
+      *sequence_desc->mut_data_type() = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
+      int64_t num_tokens = ctx->Attr<int64_t>("seq_length") + 1;
       user_op::TensorDesc* sequence_desc = ctx->TensorDesc4ArgNameAndIndex("sequence", 0);
-      *sequence_desc->mut_shape() = Shape({batch_size});
-      *sequence_desc->mut_data_type() = DataType::kTensorBuffer;
+      *sequence_desc->mut_shape() = Shape({batch_size, num_tokens});
+      *sequence_desc->mut_data_type() = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
     })
     .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)

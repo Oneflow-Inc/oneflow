@@ -30,6 +30,7 @@ class MMapFile final {
 
   void read(void* buf, size_t offset, size_t length) const;
   void read(void* buf, size_t length);
+  const void* address(size_t offset) const;
 
  private:
   size_t size_;

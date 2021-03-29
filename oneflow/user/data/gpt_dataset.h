@@ -32,16 +32,23 @@ class GPTDataset final {
   OF_DISALLOW_COPY_AND_MOVE(GPTDataset);
   ~GPTDataset() = default;
 
-  void Get(size_t index, void* sample_buf) const;
+  template<typename T>
+  void Get(size_t index, T* data) const;
   size_t Size() const { return sample_indices_.size(); }
+  DataType data_type() const { return kDTypeCode2DataType.at(index_->dtype_code()); }
 
  private:
+  static const HashMap<char, DataType> kDTypeCode2DataType;
+  static const HashMap<char, size_t> kDTypeCode2Size;
+
   size_t GetNumEpochs() const;
   size_t GetNumCompleteEpochs() const;
   void InitDocIndices(const std::vector<size_t>& doc_indices);
   void InitDocIndices(const std::vector<size_t>& doc_indices, size_t num_epochs);
   void InitSampleIndices();
-  void ShuffleSampleIndices();
+  void InitShuffleIndices();
+  template<typename T>
+  void ReadTokens(const void* src, T* dst, size_t size) const;
 
   // config
   std::shared_ptr<const GPTIndex> index_;
@@ -58,7 +65,79 @@ class GPTDataset final {
   std::mt19937 gen_;
   std::vector<size_t> doc_indices_;
   std::vector<std::pair<size_t, size_t>> sample_indices_;
+  std::vector<size_t> shuffle_indices_;
 };
+
+template<typename T>
+void GPTDataset::Get(size_t index, T* data) const {
+  CHECK_LT(index, shuffle_indices_.size());
+  size_t sample_index = shuffle_indices_[index];
+  CHECK_LT(sample_index, sample_indices_.size() - 1);
+  const size_t cur_doc_index_idx = sample_indices_[sample_index].first;
+  const size_t cur_doc_index = doc_indices_.at(cur_doc_index_idx);
+  const size_t cur_doc_offset = sample_indices_[sample_index].second;
+  const size_t next_doc_index_idx = sample_indices_[sample_index + 1].first;
+  const size_t next_doc_index = doc_indices_.at(next_doc_index_idx);
+  const size_t next_doc_offset = sample_indices_[sample_index + 1].second;
+  const size_t dtype_size = kDTypeCode2Size.at(index_->dtype_code());
+  const size_t num_tokens = seq_len_ + 1;
+  if (cur_doc_index_idx == next_doc_index_idx) {
+    CHECK_EQ(num_tokens, next_doc_offset - cur_doc_offset + 1);
+    size_t offset = index_->address(cur_doc_index) + cur_doc_offset * dtype_size;
+    const void* data_addr = data_->address(offset);
+    ReadTokens(data_addr, data, num_tokens);
+  } else {
+    size_t total_num_tokens = 0;
+    // first
+    size_t partial_num_tokens = (index_->doc_length(cur_doc_index) - cur_doc_offset);
+    const void* data_addr =
+        data_->address(index_->address(cur_doc_index) + cur_doc_offset * dtype_size);
+    ReadTokens(data_addr, data, partial_num_tokens);
+    data += partial_num_tokens * sizeof(T);
+    total_num_tokens += partial_num_tokens;
+    // middle
+    FOR_RANGE(size_t, i, cur_doc_index_idx + 1, next_doc_index_idx) {
+      auto doc_index = doc_indices_.at(i);
+      partial_num_tokens = index_->doc_length(doc_index);
+      data_addr = data_->address(index_->address(doc_index));
+      ReadTokens(data_addr, data, partial_num_tokens);
+      data += partial_num_tokens * sizeof(T);
+      total_num_tokens += partial_num_tokens;
+    }
+    // last
+    partial_num_tokens = next_doc_offset + 1;
+    data_addr = data_->address(index_->address(next_doc_index));
+    ReadTokens(data_addr, data, partial_num_tokens);
+    total_num_tokens += partial_num_tokens;
+    // check
+    CHECK_EQ(total_num_tokens, num_tokens);
+  }
+}
+
+template<typename T>
+void GPTDataset::ReadTokens(const void* src, T* dst, size_t size) const {
+  switch (index_->dtype_code()) {
+#define SWITCH_CASE_ENTRY(type_code, type)         \
+  case type_code: {                                \
+    auto spec_src = static_cast<const type*>(src); \
+    std::copy(spec_src, spec_src + size, dst);     \
+    break;                                         \
+  }
+
+    SWITCH_CASE_ENTRY(1, uint8_t)
+    SWITCH_CASE_ENTRY(2, int8_t)
+    SWITCH_CASE_ENTRY(3, int16_t)
+    SWITCH_CASE_ENTRY(4, int32_t)
+    SWITCH_CASE_ENTRY(5, int64_t)
+    SWITCH_CASE_ENTRY(6, float)
+    SWITCH_CASE_ENTRY(7, double)
+    SWITCH_CASE_ENTRY(8, uint16_t)
+#undef SWITCH_CASE_ENTRY
+    default: {
+      UNIMPLEMENTED();
+    }
+  }
+}
 
 }  // namespace data
 

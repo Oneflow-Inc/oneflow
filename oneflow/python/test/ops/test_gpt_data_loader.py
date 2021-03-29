@@ -24,6 +24,7 @@ def _make_gpt_data_loader_func(
     seq_length,
     num_samples,
     batch_size,
+    dtype,
     shuffle=None,
     random_seed=None,
     split_sizes=None,
@@ -46,16 +47,13 @@ def _make_gpt_data_loader_func(
                 seq_length=seq_length,
                 num_samples=num_samples,
                 batch_size=batch_size,
+                dtype=dtype,
                 shuffle=shuffle,
                 random_seed=random_seed,
                 split_sizes=split_sizes,
                 split_index=split_index,
                 parallel_distribution=parallel_distribution,
                 name="GPTDataLoader",
-            )
-
-            tokens = flow.tensor_buffer_to_tensor(
-                tokens, instance_shape=(seq_length + 1,), dtype=flow.int64
             )
 
         return tokens
@@ -78,6 +76,7 @@ class TestGPTDataLoader(flow.unittest.TestCase):
             seq_length=self.SEQ_LENGTH,
             num_samples=8,
             batch_size=8,
+            dtype=flow.int64,
             shuffle=True,
             random_seed=self.RANDOM_SEED,
         )

@@ -2357,6 +2357,7 @@ def gpt_data_loader(
     seq_length: int,
     num_samples: int,
     batch_size: int,
+    dtype: flow.dtype = flow.int64,
     shuffle: bool = True,
     random_seed: Optional[int] = None,
     split_sizes: Optional[Sequence[str]] = None,
@@ -2416,7 +2417,7 @@ def gpt_data_loader(
         name=iteration_name,
         shape=(1,),
         dtype=flow.int64,
-        initializer=flow.zeros_initializer(),
+        initializer=flow.constant_initializer(0, flow.int64),
         trainable=True,
         model_name="iteration",
         distribute=oneflow_api.distribute.broadcast(),
@@ -2432,6 +2433,7 @@ def gpt_data_loader(
         .Attr("seq_length", seq_length)
         .Attr("num_samples", num_samples)
         .Attr("batch_size", batch_size)
+        .Attr("dtype", dtype)
         .Attr("shuffle", shuffle)
         .Attr("random_seed", random_seed)
         .Attr("split_sizes", split_sizes)
