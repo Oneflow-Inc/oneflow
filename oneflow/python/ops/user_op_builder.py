@@ -40,6 +40,8 @@ import oneflow as flow
 import oneflow_api
 import traceback
 
+from google.protobuf import text_format
+
 blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
