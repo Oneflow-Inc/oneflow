@@ -1653,10 +1653,10 @@ def clip_by_value(
     ]
 
     if min_value is not None:
-        floating_min_value = float(min_value) if is_floating else 0
+        floating_min_value = float(min_value) if is_floating else 0.0
         integral_min_value = 0 if is_floating else int(min_value)
     if max_value is not None:
-        floating_max_value = float(max_value) if is_floating else 0
+        floating_max_value = float(max_value) if is_floating else 0.0
         integral_max_value = 0 if is_floating else int(max_value)
 
     if min_value is not None and max_value is not None:
