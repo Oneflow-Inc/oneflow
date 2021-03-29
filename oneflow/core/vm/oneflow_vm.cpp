@@ -38,7 +38,7 @@ void OneflowVM::Loop() {
   auto* vm = mut_vm();
   while (!exiting_) {
     auto* resource = Global<ResourceDesc, ForEnv>::Get();
-    if (resource && resource->async_eager_execution()) {
+    if (!resource || resource->async_eager_execution()) {
       vm->Schedule();
       TryReceiveAndRun();
     }
