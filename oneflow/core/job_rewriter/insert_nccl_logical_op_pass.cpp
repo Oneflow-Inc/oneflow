@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 
 namespace oneflow {
 
@@ -71,7 +72,7 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
       const OpNode* cur_node = queued_nodes.front();
       queued_nodes.pop();
 
-      CHECK(cur_node->parallel_desc() == seed_parallel_desc);
+      CHECK(cur_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc));
       CHECK(this_subgraph.insert(cur_node).second);
 
       cur_node->ForEachNodeOnInOutEdge([&](const OpNode* next_node) {
@@ -167,13 +168,51 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
   CHECK(src_parallel_distribution.sbp_parallel(0) == dst_parallel_distribution.sbp_parallel(0));
   const SbpParallel& src_dim1_sbp = src_parallel_distribution.sbp_parallel(1);
   const SbpParallel& dst_dim1_sbp = dst_parallel_distribution.sbp_parallel(1);
+
+  // split when dim0 sbp is split parallel
+  DimVector dim_vec = logical_blob_desc.shape().dim_vec();
+  if (src_parallel_distribution.sbp_parallel(0).has_split_parallel()) {
+    const int64_t axis = src_parallel_distribution.sbp_parallel(0).split_parallel().axis();
+    dim_vec.at(axis) /= hierarchy->At(0);
+  }
+  const int64_t num_ranks = hierarchy->At(1);
+
   if (src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_broadcast_parallel()) {
-    // (*P)->(*B) : AllReduce
+    // (*, P)->(*, B) : AllReduce
     *ret =
         user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(*P)2(*B)-" + NewUniqueId())
             .Op("_nccl_logical_2D_same_dim0_all_reduce")
             .Input("in", lbn)
             .Output("out")
+            .ScopeSymbolId(scope_symbol_id)
+            .Build()
+            .op_conf();
+    return true;
+  } else if ((dim_vec.at(0) % num_ranks == 0)
+             && (src_dim1_sbp.has_split_parallel() && dst_dim1_sbp.has_broadcast_parallel())
+             && (src_dim1_sbp.split_parallel().axis() == 0)) {
+    // (*, S(0)) -> (*, B) : AllGather
+    *ret =
+        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(*S0)2(*B)-" + NewUniqueId())
+            .Op("_nccl_logical_2D_same_dim0_all_gather")
+            .Input("in", lbn)
+            .Output("out")
+            .ScopeSymbolId(scope_symbol_id)
+            .Build()
+            .op_conf();
+    return true;
+  } else if ((src_dim1_sbp.has_split_parallel() && dst_dim1_sbp.has_split_parallel())
+             && (src_dim1_sbp.split_parallel().axis() != dst_dim1_sbp.split_parallel().axis())
+             && (dim_vec.at(src_dim1_sbp.split_parallel().axis()) % num_ranks == 0)
+             && (dim_vec.at(dst_dim1_sbp.split_parallel().axis()) % num_ranks == 0)) {
+    // (*, S(src_split_axis)) -> (*, S(dst_split_axis)) : All2All
+    *ret =
+        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(*S)2(*S)-" + NewUniqueId())
+            .Op("_nccl_logical_2D_same_dim0_all2all")
+            .Input("in", lbn)
+            .Output("out")
+            .Attr<int64_t>("in_dim1_split_axis", src_dim1_sbp.split_parallel().axis())
+            .Attr<int64_t>("out_dim1_split_axis", dst_dim1_sbp.split_parallel().axis())
             .ScopeSymbolId(scope_symbol_id)
             .Build()
             .op_conf();
@@ -194,7 +233,7 @@ bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret,
   const SbpParallel& src_dim1_sbp = src_parallel_distribution.sbp_parallel(0);
   const SbpParallel& dst_dim1_sbp = dst_parallel_distribution.sbp_parallel(0);
   if (src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_broadcast_parallel()) {
-    // (P*)->(B*) : AllReduce
+    // (P, *) -> (B, *) : AllReduce
     *ret =
         user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(P*)2(B*)-" + NewUniqueId())
             .Op("_nccl_logical_2D_same_dim1_all_reduce")
@@ -210,17 +249,23 @@ bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret,
 
 bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const OpNode* dst_node,
                                const LogicalBlobId& lbi) {
-  CHECK(src_node->op().op_conf().has_scope_symbol_id())
-      << " ERROR! op: " << src_node->op().op_conf().DebugString() << " has NOT scope. ";
+  if (!src_node->op().op_conf().has_scope_symbol_id()) { return false; /* device_tick */ }
   const int64_t scope_symbol_id = src_node->op().op_conf().scope_symbol_id();
   const std::string lbn = GenLogicalBlobName(lbi);
   const BlobDesc& logical_blob_desc = src_node->LogicalBlobDesc4Lbi(lbi);
-  const ParallelDesc& src_parallel_desc = src_node->parallel_desc();
-  const ParallelDesc& dst_parallel_desc = dst_node->parallel_desc();
+
+  // reduce hierarchy
+  ParallelDesc src_parallel_desc = src_node->parallel_desc();
+  ParallelDesc dst_parallel_desc = dst_node->parallel_desc();
+  ParallelDistribution src_parallel_distribution = src_node->ParallelDistribution4Lbi(lbi);
+  ParallelDistribution dst_parallel_distribution = dst_node->ParallelDistribution4Lbi(lbi);
+  InOutParallelDimReduce(
+      src_node->parallel_desc(), dst_node->parallel_desc(), src_node->ParallelDistribution4Lbi(lbi),
+      dst_node->ParallelDistribution4Lbi(lbi), &src_parallel_desc, &dst_parallel_desc,
+      &src_parallel_distribution, &dst_parallel_distribution);
+
   const int64_t parallel_num = src_parallel_desc.parallel_num();
   CHECK_EQ(parallel_num, dst_parallel_desc.parallel_num());
-  const ParallelDistribution& src_parallel_distribution = src_node->ParallelDistribution4Lbi(lbi);
-  const ParallelDistribution& dst_parallel_distribution = dst_node->ParallelDistribution4Lbi(lbi);
   const auto& src_hierarchy = src_parallel_desc.hierarchy();
   const auto& dst_hierarchy = dst_parallel_desc.hierarchy();
 
