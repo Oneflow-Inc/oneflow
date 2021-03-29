@@ -160,7 +160,8 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
     }
     {
       const OpNode* loss_node = op_graph.OpNode4OpName(lbi.op_name());
-      const int64_t time_shape_elem_cnt = loss_node->GetInputOutputFastestTimeShape()->elem_cnt();
+      const int64_t time_shape_elem_cnt =
+          CHECK_JUST(loss_node->op().GetInputBlobFastestTimeShape())->elem_cnt();
       if (time_shape_elem_cnt != 1) {
         const auto repeat_op = user_op::UserOpConfWrapperBuilder(lbi.op_name() + "_"
                                                                  + lbi.blob_name() + "_grad_Repeat")
