@@ -90,9 +90,28 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
 
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 
+  auto* op_name2op_attribute = plan->mutable_op_name2op_attribute();
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
-    task_node->ToProto(plan->mutable_task()->Add());
+    const bool use_op_attribute_ref = task_node->GetTaskType() == kNormalForward;
+    TaskProto task_proto;
+    task_node->ToProto(&task_proto);
+    if (use_op_attribute_ref) {
+      CHECK(task_proto.exec_sequence().exec_node_size() == 1);
+      auto* exec_node = task_proto.mutable_exec_sequence()->mutable_exec_node(0);
+      const std::string& op_name = exec_node->kernel_conf().op_attribute().op_conf().name();
+      auto find_it = op_name2op_attribute->find(op_name);
+      if (find_it == op_name2op_attribute->end()) {
+        op_name2op_attribute->insert(
+            {op_name, task_proto.exec_sequence().exec_node(0).kernel_conf().op_attribute()});
+      } else {
+        auto* kernel_conf =
+            task_proto.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
+        kernel_conf->clear_op_attribute();
+        kernel_conf->set_op_attribute_ref(op_name);
+      }
+    }
+    plan->mutable_task()->Add(std::move(task_proto));
   });
   {
     auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
