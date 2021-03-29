@@ -139,6 +139,22 @@ class Sigmoid(BackendHandler):
     def version_13(cls, node, tensor_dict, **kwargs):
         return cls.run_onnx_node(node, tensor_dict, **kwargs)
 
+@onnx_op("HardSigmoid")
+class HardSigmoid(BackendHandler):
+    @classmethod
+    def _common(cls, node, tensor_dict, **kwargs):
+        x = tensor_dict[node.input_tensor_names[0]]
+        alpha = node.attrs.get("alpha")
+        beta = node.attrs.get("beta")
+        return flow.clip(x * alpha + beta, 0, 1.0)
+    
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_6(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
 @onnx_op("Gemm")
 class Gemm(BackendHandler):

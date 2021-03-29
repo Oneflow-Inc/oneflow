@@ -375,3 +375,10 @@ def test_MobileNetV3(test_case):
     load_paddle_module_and_check(
         test_case, MobileNetV3, input_size=(1, 3, 224, 224), train_flag=False,
     )
+
+
+from absl import app
+from absl.testing import absltest
+
+test_case = absltest.TestCase
+test_MobileNetV3(test_case)
