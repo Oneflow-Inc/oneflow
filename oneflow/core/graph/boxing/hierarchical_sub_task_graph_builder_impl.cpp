@@ -436,6 +436,21 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
           ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
           ParallelDesc(intermediate_parallel_conf), lbi, logical_blob_desc,
           reduced_in_parallel_distribution, intermediate_parallel_distribution, time_shape);
+    } else if (in_hierarchy->NumAxes() == 1 && out_hierarchy->NumAxes() == 2
+               && in_hierarchy->elem_cnt() == out_hierarchy->elem_cnt()) {
+      ParallelConf intermediate_parallel_conf = reduced_in_parallel_desc.parallel_conf();
+      reduced_out_parallel_desc.hierarchy()->ToProto(
+          intermediate_parallel_conf.mutable_hierarchy());
+      ParallelDistribution intermediate_parallel_distribution;
+      *intermediate_parallel_distribution.add_sbp_parallel() =
+          reduced_in_parallel_distribution.sbp_parallel(0);
+      *intermediate_parallel_distribution.add_sbp_parallel() =
+          reduced_in_parallel_distribution.sbp_parallel(0);
+      return BuildSame2DHierarchySubGraph(ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks,
+                                          ParallelDesc(intermediate_parallel_conf),
+                                          reduced_out_parallel_desc, lbi, logical_blob_desc,
+                                          intermediate_parallel_distribution,
+                                          reduced_out_parallel_distribution, time_shape);
     }
   }
   return Error::BoxingNotSupportedError();
