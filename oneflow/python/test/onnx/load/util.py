@@ -128,8 +128,6 @@ def load_paddle_module_and_check(
         input_size = (2, 4, 3, 5)
     pd_module = pd_module_class()
 
-    flow.config.enable_debug_mode(True)
-    
     paddle.set_device("gpu")
     model_weight_save_dir = "/home/zhangxiaoyu/tmp"
 
@@ -174,9 +172,7 @@ def load_paddle_module_and_check(
                 train_flag=train_flag,
             )
             return y
-    print('load begin')
     flow.train.CheckPoint().load(model_weight_save_dir)
-    print('load end')
 
     if train_flag == False:
         pd_module.eval()

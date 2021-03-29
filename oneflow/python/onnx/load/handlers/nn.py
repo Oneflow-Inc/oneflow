@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow as flow
 import string
 import random
 import operator
@@ -119,10 +120,11 @@ class PoolMixin(object):
 
             if (x.shape[3] + pads[3][0] + pads[3][1] - 1) % strides[1] != 0:
                 pads[3][1] = pads[3][1] + (strides[1] - 1)
-
         count_include_pad = bool(node.attrs.get("count_include_pad", 0))
         if count_include_pad != 0:
-            raise ValueError("count_include_pad != 0 is not supported")
+            x = flow.pad(x, paddings=((pads[0][0], pads[0][1]), (pads[1][0], pads[1][1]), (pads[2][0], pads[2][1]), (pads[3][0], pads[3][1])))
+            pads = [[0, 0], [0, 0], [0, 0], [0, 0]]
+            # raise ValueError("count_include_pad != 0 is not supported")
         if pooling_type == "AVG":
             op = nn_ops.avg_pool2d
         elif pooling_type == "MAX":
