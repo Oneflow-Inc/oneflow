@@ -19,18 +19,18 @@ namespace oneflow {
 
 namespace user_op {
 
-TensorDesc::TensorDesc(const TensorDesc& rhs) { *this = rhs; }
+NaiveTensorDesc::NaiveTensorDesc(const NaiveTensorDesc& rhs) { *this = rhs; }
 
-TensorDesc& TensorDesc::operator=(const TensorDesc& rhs) {
+NaiveTensorDesc& NaiveTensorDesc::operator=(const NaiveTensorDesc& rhs) {
   shape_ = rhs.shape_;
   data_type_ = rhs.data_type_;
   is_dynamic_ = rhs.is_dynamic_;
   return *this;
 }
 
-TensorDesc::TensorDesc(const BlobDescProto& proto) { *this = proto; }
+NaiveTensorDesc::NaiveTensorDesc(const BlobDescProto& proto) { *this = proto; }
 
-TensorDesc& TensorDesc::operator=(const BlobDescProto& proto) {
+NaiveTensorDesc& NaiveTensorDesc::operator=(const BlobDescProto& proto) {
   CHECK(proto.header_is_opaque() == false);
   data_type_ = proto.body().data_type();
   shape_ = Shape(proto.body().shape());
@@ -38,7 +38,7 @@ TensorDesc& TensorDesc::operator=(const BlobDescProto& proto) {
   return *this;
 }
 
-bool TensorDesc::operator==(const TensorDesc& rhs) const {
+bool NaiveTensorDesc::operator==(const NaiveTensorDesc& rhs) const {
   return (shape_ == rhs.shape_) && (data_type_ == rhs.data_type_)
          && (is_dynamic_ == rhs.is_dynamic_);
 }

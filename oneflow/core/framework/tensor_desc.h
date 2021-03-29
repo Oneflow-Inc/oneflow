@@ -24,26 +24,43 @@ namespace oneflow {
 
 namespace user_op {
 
-class TensorDesc final {
+class TensorDesc {
  public:
+  virtual ~TensorDesc() = default;
+
+  virtual const Shape& shape() const = 0;
+  virtual Shape* mut_shape() = 0;
+  virtual DataType data_type() const = 0;
+  virtual DataType* mut_data_type() = 0;
+
+  virtual bool is_dynamic() const = 0;
+  virtual bool* mut_is_dynamic() = 0;
+  virtual void set_is_dynamic(bool val) = 0;
+
+ protected:
   TensorDesc() = default;
-  ~TensorDesc() = default;
-  TensorDesc(const TensorDesc&);
-  TensorDesc(const BlobDescProto&);
+};
 
-  TensorDesc& operator=(const TensorDesc&);
-  TensorDesc& operator=(const BlobDescProto&);
+class NaiveTensorDesc final : public TensorDesc {
+ public:
+  NaiveTensorDesc() = default;
+  ~NaiveTensorDesc() override = default;
+  NaiveTensorDesc(const NaiveTensorDesc&);
+  NaiveTensorDesc(const BlobDescProto&);
 
-  bool operator==(const TensorDesc&) const;
+  NaiveTensorDesc& operator=(const NaiveTensorDesc&);
+  NaiveTensorDesc& operator=(const BlobDescProto&);
 
-  const Shape& shape() const { return shape_; }
-  Shape* mut_shape() { return &shape_; }
-  DataType data_type() const { return data_type_; }
-  DataType* mut_data_type() { return &data_type_; }
+  bool operator==(const NaiveTensorDesc&) const;
 
-  bool is_dynamic() const { return is_dynamic_; }
-  bool* mut_is_dynamic() { return &is_dynamic_; }
-  void set_is_dynamic(bool val) { is_dynamic_ = val; }
+  const Shape& shape() const override { return shape_; }
+  Shape* mut_shape() override { return &shape_; }
+  DataType data_type() const override { return data_type_; }
+  DataType* mut_data_type() override { return &data_type_; }
+
+  bool is_dynamic() const override { return is_dynamic_; }
+  bool* mut_is_dynamic() override { return &is_dynamic_; }
+  void set_is_dynamic(bool val) override { is_dynamic_ = val; }
 
  private:
   Shape shape_;
