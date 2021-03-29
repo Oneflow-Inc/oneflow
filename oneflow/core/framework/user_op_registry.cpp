@@ -194,6 +194,11 @@ OpRegistry& OpRegistry::SetInferParallelDistributionFn(
   return *this;
 }
 
+OpRegistry& OpRegistry::SetInferDataTypeFn(DataTypeInferFn data_type_infer_fn) {
+  result_.data_type_infer_fn = std::move(data_type_infer_fn);
+  return *this;
+}
+
 OpRegistry& OpRegistry::Finish() {
   CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
