@@ -201,21 +201,21 @@ class GoogLeNetDY(nn.Layer):
         x = paddle.squeeze(x, axis=[2, 3])
         out = self._fc_out(x)
 
-        x = self._pool_o1(ince4a)
-        x = self._conv_o1(x)
-        x = paddle.flatten(x, start_axis=1, stop_axis=-1)
-        x = self._fc_o1(x)
-        x = F.relu(x)
-        x = self._drop_o1(x)
-        out1 = self._out1(x)
+        # x = self._pool_o1(ince4a)
+        # x = self._conv_o1(x)
+        # x = paddle.flatten(x, start_axis=1, stop_axis=-1)
+        # x = self._fc_o1(x)
+        # x = F.relu(x)
+        # x = self._drop_o1(x)
+        # out1 = self._out1(x)
 
-        x = self._pool_o2(ince4d)
-        x = self._conv_o2(x)
-        x = paddle.flatten(x, start_axis=1, stop_axis=-1)
-        x = self._fc_o2(x)
-        x = self._drop_o2(x)
-        out2 = self._out2(x)
-        return [out, out1, out2]
+        # x = self._pool_o2(ince4d)
+        # x = self._conv_o2(x)
+        # x = paddle.flatten(x, start_axis=1, stop_axis=-1)
+        # x = self._fc_o2(x)
+        # x = self._drop_o2(x)
+        # out2 = self._out2(x)
+        return out
 
 
 def GoogLeNet(**args):
