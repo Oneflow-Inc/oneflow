@@ -50,6 +50,19 @@ class InsertNcclLogicalOpPass final : public JobPass {
 
 const std::string kNcclLogicalOpNamePrefix = "System-NCCL-Logical";
 
+std::string ParallelDistributionToString(const ParallelDistribution& parallel_distribution) {
+  std::string serialized_parallel_distribution;
+  const int64_t num_axes = parallel_distribution.sbp_parallel_size();
+  serialized_parallel_distribution += "[";
+  for (int64_t i = 0; i < num_axes - 1; ++i) {
+    serialized_parallel_distribution +=
+        SbpParallelToString(parallel_distribution.sbp_parallel(i)) + " ";
+  }
+  serialized_parallel_distribution +=
+      SbpParallelToString(parallel_distribution.sbp_parallel(num_axes - 1)) + "]";
+  return serialized_parallel_distribution;
+}
+
 void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const OpGraph& op_graph,
                                              const std::vector<const OpNode*>& order) {
   HashSet<const OpNode*> visited;
@@ -257,8 +270,8 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   // reduce hierarchy
   ParallelDesc src_parallel_desc = src_node->parallel_desc();
   ParallelDesc dst_parallel_desc = dst_node->parallel_desc();
-  ParallelDistribution src_parallel_distribution = src_node->ParallelDistribution4Lbi(lbi);
-  ParallelDistribution dst_parallel_distribution = dst_node->ParallelDistribution4Lbi(lbi);
+  ParallelDistribution src_parallel_distribution;
+  ParallelDistribution dst_parallel_distribution;
   InOutParallelDimReduce(
       src_node->parallel_desc(), dst_node->parallel_desc(), src_node->ParallelDistribution4Lbi(lbi),
       dst_node->ParallelDistribution4Lbi(lbi), &src_parallel_desc, &dst_parallel_desc,
@@ -307,7 +320,8 @@ bool ReverseOrderInsertNcclLogicalOps() {
 
 void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
     HashMap<std::string, OperatorConf>* subgraph_op_name2conf, HashSet<std::string>* mut_op_names,
-    std::vector<OperatorConf>* nccl_op_confs, const std::vector<const OpNode*>& subgraph_order,
+    std::vector<OperatorConf>* nccl_op_confs, std::vector<ParallelConf>* nccl_op_parallel_confs,
+    const std::vector<const OpNode*>& subgraph_order,
     const HashMap<const OpNode*, int64_t>& node2order) {
   for (const OpNode* src_node : subgraph_order) {
     const std::string& src_op_name = src_node->op().op_name();
@@ -347,11 +361,16 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          std::cout << "cc_debug_log: insert nccl op from: [" << src_op_name << "](" << src_order
-                    << ")->[" << dst_op_name << "](" << node2order.at(dst_node) << ") and before: ["
-                    << next_op_name << "](" << src_order + 1 << ")\n";
+          std::cout << "cc_debug_log: insert nccl op: " << nccl_op.name() << " from: ["
+                    << src_op_name << "](order=" << src_order << ", sbp_parallel_dis="
+                    << ParallelDistributionToString(src_node->ParallelDistribution4Lbi(lbi))
+                    << ")->[" << dst_op_name << "](order=" << node2order.at(dst_node)
+                    << ", sbp_parallel_dis="
+                    << ParallelDistributionToString(dst_node->ParallelDistribution4Lbi(lbi))
+                    << ") and before: [" << next_op_name << "](order=" << src_order + 1 << ")\n";
         }
         nccl_op_confs->push_back(nccl_op);
+        nccl_op_parallel_confs->push_back(src_node->parallel_desc().parallel_conf());
       }
     }
   }
@@ -359,7 +378,8 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
 
 void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
     HashMap<std::string, OperatorConf>* subgraph_op_name2conf, HashSet<std::string>* mut_op_names,
-    std::vector<OperatorConf>* nccl_op_confs, const std::vector<const OpNode*>& subgraph_order,
+    std::vector<OperatorConf>* nccl_op_confs, std::vector<ParallelConf>* nccl_op_parallel_confs,
+    const std::vector<const OpNode*>& subgraph_order,
     const HashMap<const OpNode*, int64_t>& node2order) {
   for (const OpNode* dst_node : subgraph_order) {
     const std::string& dst_op_name = dst_node->op().op_name();
@@ -402,11 +422,13 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          std::cout << "cc_debug_log: insert nccl op from: [" << src_op_name << "]("
-                    << node2order.at(src_node) << ")->[" << dst_op_name << "](" << dst_order
-                    << ") and after: [" << pre_op_name << "](" << dst_order - 1 << ")\n";
+          std::cout << "cc_debug_log: insert nccl op: " << nccl_op.name() << " from: ["
+                    << src_op_name << "](" << node2order.at(src_node) << ")->[" << dst_op_name
+                    << "](" << dst_order << ") and after: [" << pre_op_name << "](" << dst_order - 1
+                    << ")\n";
         }
         nccl_op_confs->push_back(nccl_op);
+        nccl_op_parallel_confs->push_back(src_node->parallel_desc().parallel_conf());
       }
     }
   }
@@ -465,12 +487,15 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   }
 
   std::vector<OperatorConf> nccl_op_confs;
+  std::vector<ParallelConf> nccl_op_parallel_confs;
   if (ReverseOrderInsertNcclLogicalOps()) {
     InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(&subgraph_op_name2conf, &mut_op_names,
-                                                   &nccl_op_confs, subgraph_order, node2order);
+                                                   &nccl_op_confs, &nccl_op_parallel_confs,
+                                                   subgraph_order, node2order);
   } else {
     InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(&subgraph_op_name2conf, &mut_op_names,
-                                                   &nccl_op_confs, subgraph_order, node2order);
+                                                   &nccl_op_confs, &nccl_op_parallel_confs,
+                                                   subgraph_order, node2order);
   }
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
@@ -483,7 +508,11 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     mut_op_confs.push_back(subgraph_op_name2conf.at(mut_op_name));
   }
   job_builder->MutOpsOnlyOnce(mut_op_confs);
-  job_builder->AddOps(first_node->parallel_desc().parallel_conf(), nccl_op_confs);
+
+  CHECK_EQ(nccl_op_confs.size(), nccl_op_parallel_confs.size());
+  for (int64_t i = 0; i < nccl_op_confs.size(); ++i) {
+    job_builder->AddOp(nccl_op_parallel_confs.at(i), nccl_op_confs.at(i));
+  }
 
   return Maybe<void>::Ok();
 }
