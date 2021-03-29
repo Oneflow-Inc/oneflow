@@ -1646,11 +1646,6 @@ def clip_by_value(
     if name is None:
         name = id_util.UniqueStr("ClipByValue_")
 
-    floating_min_value = None
-    integral_min_value = None
-    floating_max_value = None
-    integral_max_value = None
-
     is_floating = values.dtype in [
         flow.float32,
         flow.float16,
