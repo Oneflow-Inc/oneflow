@@ -29,28 +29,49 @@ import oneflow.typing as tp
     ".numpy() doesn't work in lazy mode",
 )
 class TestModule(flow.unittest.TestCase):
+    def test_nested_module(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.relu = flow.nn.ReLU()
+
+            def forward(self, x):
+                return self.relu(x)
+
+        m = CustomModule()
+        x = flow.Tensor(1, 3, 4, 5)
+        y = m(x)
+        print(y.numpy())
+
+    def test_conv2d(test_case):
+        conv2d = flow.nn.Conv2d(3, 3, 3)
+        x = flow.Tensor(1, 3, 4, 5)
+        y = conv2d(x)
+        print(y.numpy())
+        print(conv2d.weight.numpy())
+
+    def test_relu(test_case):
+        relu = flow.nn.ReLU()
+
+        x = flow.Tensor(2, 3)
+        y = relu(x)
+        print(y.numpy())
+
     def test_load_state_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
                 self.w = flow.nn.Parameter(flow.Tensor(2, 3))
 
-            def forward(self, x):
+            def forward(self):
                 return self.w
 
         m = CustomModule()
 
-        @flow.global_function()
-        def job() -> None:
-            x = flow.Tensor(2, 3)
-            global y
-            y = m(x).numpy()
-
-        job()
         ones = np.ones((2, 3), dtype=np.float32)
         m.load_state_dict({"w": ones})
-        job()
-        test_case.assertTrue(np.array_equal(y, ones))
+        y = m()
+        test_case.assertTrue(np.array_equal(y.numpy(), ones))
 
     def test_state_dict(test_case):
         class CustomModule(flow.nn.Module):
@@ -75,7 +96,7 @@ class TestModule(flow.unittest.TestCase):
         t = flow.Tensor(*shape)
         p = flow.nn.Parameter(t)
         test_case.assertEqual(type(p), flow.nn.Parameter)
-        test_case.assertEqual(p.shape, shape)
+        test_case.assertEqual(tuple(p.shape), shape)
 
     def test_module_forward(test_case):
         class CustomModule(flow.nn.Module):
@@ -146,6 +167,8 @@ class TestModule(flow.unittest.TestCase):
         net.apply(get_module_num)
 
         test_case.assertEqual(module_num, 2)
+
+    # TODO: add more tests about module api
 
 
 if __name__ == "__main__":

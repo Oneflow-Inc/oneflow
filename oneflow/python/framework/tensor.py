@@ -207,6 +207,99 @@ class Tensor:
             self._local_or_consistent_tensor._blob_object
         )
 
+    def _get_slice_obj(self, key):
+        def get_or_default(x, default):
+            return x if x is not None else default
+
+        def get_canonical_index(index, length, *, start=0):
+            if index < 0:
+                index += length
+            return max(min(index, length), start)
+
+        def get_slice_if_int(x):
+            if isinstance(x, slice):
+                return x
+            return slice(x, x + 1)
+
+        if isinstance(key, tuple):
+            assert all(isinstance(x, (slice, int)) for x in key)
+        else:
+            assert isinstance(key, (slice, int))
+            key = (key,)
+
+        key = list(map(get_slice_if_int, key))
+
+        assert len(key) <= len(self.shape)
+        for i in range(len(key), len(self.shape)):
+            key += (slice(None, None, None),)
+
+        starts = [
+            get_canonical_index(get_or_default(x.start, 0), self.shape[i])
+            for i, x in enumerate(key)
+        ]
+        stops = [
+            get_canonical_index(
+                get_or_default(x.stop, self.shape[i]), self.shape[i], start=starts[i]
+            )
+            for i, x in enumerate(key)
+        ]
+        steps = [get_or_default(x.step, 1) for x in key]
+        assert all(x > 0 for x in steps)
+        # np.abs is for compatibility of negative steps in the future
+        shape = (np.abs(np.array(stops) - np.array(starts)) - 1) // np.abs(
+            np.array(steps)
+        ) + 1
+        shape = shape.tolist()
+        return starts, stops, steps, shape
+
+    @_auto_determine
+    def __setitem__(self, key, value):
+        starts, stops, steps, shape = self._get_slice_obj(key)
+        if isinstance(value, (int, float)):
+            scalar = value
+            value = flow.Tensor(*shape)
+            value.fill_(scalar)
+
+        @global_function_or_identity()
+        def job():
+            with self._placement_scope():
+                op = (
+                    flow.builtin_op("logical_slice_assign")
+                    .Input("ref")
+                    .Input("value")
+                    .Attr("start", starts)
+                    .Attr("stop", stops)
+                    .Attr("step", steps)
+                    .Build()
+                )
+                op(self, value)
+
+        job()
+        return self
+
+    @_auto_determine
+    def __getitem__(self, key):
+        starts, stops, steps, _ = self._get_slice_obj(key)
+        result = None
+
+        @global_function_or_identity()
+        def job():
+            with self._placement_scope():
+                op = (
+                    flow.builtin_op("logical_slice")
+                    .Input("x")
+                    .Output("y")
+                    .Attr("start", starts)
+                    .Attr("stop", stops)
+                    .Attr("step", steps)
+                    .Build()
+                )
+                nonlocal result
+                result = op(self)[0]
+
+        job()
+        return result
+
     def tolist(self):
         TODO()
 
@@ -217,7 +310,7 @@ class Tensor:
         TODO()  # liyurui
 
     def __str__(self):
-        TODO()
+        return self.__repr__()
 
     def __repr__(self):
         return "[Tensor shape={} dtype={}]".format(self.shape, self.dtype)
@@ -230,6 +323,10 @@ class Tensor:
 
     def __deepcopy__(self, memo):
         TODO()
+
+    def _determine_if_needed(self, determining_initializer=None):
+        if not self.is_determined:
+            self.determine(determining_initializer)
 
     def determine(self, determining_initializer=None):
         assert not self.is_determined
@@ -334,17 +431,9 @@ class Tensor:
 
     def _placement_scope(self):
         if self.is_consistent:
-            return flow.scope.placement(
-                self.placement.device_tag,
-                list(self.placement.parallel_conf.device_name()),
-                self.placement.hierarchy,
-            )
+            return _convert_to_placement_scope(self.placement)
         else:
-            # TODO(jianhao): replace 0 with real machine id
-            machine_id = 0
-            return flow.scope.placement(
-                self.device.type, "{}:{}".format(machine_id, self.device.index), None
-            )
+            return _convert_to_placement_scope(self.device)
 
     @property
     @_auto_determine
@@ -559,3 +648,25 @@ def _input_args_is_data(*args):
 
 def _input_args_is_shape(*args):
     return all(isinstance(x, int) for x in args)
+
+
+def _convert_to_placement_scope(placement_or_device):
+    if isinstance(placement_or_device, flow.placement):
+        placement = placement_or_device
+        return flow.scope.placement(
+            placement.device_tag,
+            list(placement.parallel_conf.device_name()),
+            placement.hierarchy,
+        )
+    else:
+        device = placement_or_device
+        # TODO(jianhao): replace 0 with real machine id
+        machine_id = 0
+        # TODO(jianhao): support cuda in of
+        if device.type == "cuda":
+            device_tag = "gpu"
+        else:
+            device_tag = device.type
+        return flow.scope.placement(
+            device_tag, "{}:{}".format(machine_id, device.index), None
+        )
