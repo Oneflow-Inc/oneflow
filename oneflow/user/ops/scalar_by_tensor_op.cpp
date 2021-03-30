@@ -66,7 +66,7 @@ REGISTER_USER_OP("scalar_add_by_tensor")
     .Input("scalar")
     .Output("y")
     .SetTensorDescInferFn(TensorDescInferFn)
-    .SetInferDataTypeFn(DataTypeInferFn);
+    .SetInferDataTypeFn(DataTypeInferFn)
     .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("x", 0))
@@ -102,7 +102,7 @@ REGISTER_USER_OP("scalar_sub_by_tensor")
     .Input("scalar")
     .Output("y")
     .SetTensorDescInferFn(TensorDescInferFn)
-    .SetInferDataTypeFn(DataTypeInferFn);
+    .SetInferDataTypeFn(DataTypeInferFn)
     .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("x", 0))
@@ -149,7 +149,7 @@ REGISTER_USER_OP("scalar_mul_by_tensor")
     .Input("scalar")
     .Output("y")
     .SetTensorDescInferFn(TensorDescInferFn)
-    .SetInferDataTypeFn(DataTypeInferFn);
+    .SetInferDataTypeFn(DataTypeInferFn)
     .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("x", 0))
@@ -207,7 +207,7 @@ REGISTER_USER_OP("scalar_div_by_tensor")
     .Input("scalar")
     .Output("y")
     .SetTensorDescInferFn(TensorDescInferFn)
-    .SetInferDataTypeFn(DataTypeInferFn);
+    .SetInferDataTypeFn(DataTypeInferFn)
     .SetGetSbpFn(MakeGetSbpFn([](user_op::SbpContext* ctx) {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("x", 0))
