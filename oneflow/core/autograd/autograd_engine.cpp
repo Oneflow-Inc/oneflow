@@ -52,13 +52,13 @@ Maybe<void> CopyOrAccGrad(Tensor* tensor, bool autograd_mode) {
   autograd::AutoGradMode mode(autograd_mode);
   const auto& tensor_arg = tensor->now_grad_arg();
   if (tensor->acc_grad()) {
-    TensorTuple input = {tensor->acc_grad(), tensor_arg->GetAccTensor().GetPtrOrThrow()};
+    TensorTuple input = {tensor->acc_grad(), JUST(tensor_arg->GetAccTensor())};
     TensorTuple output(1);
     const auto& add = JUST(op_expr_helper::AddOp());
     JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*add, input, &output));
     tensor->set_acc_grad(output.at(0));
   } else {
-    tensor->set_acc_grad(tensor_arg->GetAccTensor().GetPtrOrThrow());
+    tensor->set_acc_grad(JUST(tensor_arg->GetAccTensor()));
   }
   return Maybe<void>::Ok();
 }

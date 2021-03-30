@@ -40,7 +40,7 @@ Maybe<one::UserOpExpr> AddNOp(int32_t n) {
 }
 
 Maybe<one::UserOpExpr> AddOp() {
-  return one::OpBuilder("add").Input("in", 2).Output("out").Build();
+  return AddNOp(2);
 }
 
 Maybe<one::UserOpExpr> ZeroLikeOp() {
