@@ -58,7 +58,7 @@ size_t GetShardIndex(const Shape& hierarchy, const ParallelDistribution& paralle
 
 class GPTDataLoader final : public OpKernelState {
  public:
-  GPTDataLoader(KernelInitContext* ctx) : num_shards_(1), sample_index_(0), once_loaded_(false) {
+  GPTDataLoader(KernelInitContext* ctx) : num_shards_(1), sample_index_(0) {
     seq_len_ = ctx->Attr<int64_t>("seq_length");
 
     dataset_.reset(new GPTDataset(
@@ -87,19 +87,17 @@ class GPTDataLoader final : public OpKernelState {
   ~GPTDataLoader() = default;
 
   template<typename T>
-  void Next(user_op::Tensor* tokens) {
+  void Get(size_t iter, user_op::Tensor* tokens) {
     CHECK_EQ(tokens->shape().NumAxes(), 2);
     CHECK_EQ(tokens->shape().At(0), batch_size_);
     CHECK_EQ(tokens->shape().At(1), seq_len_ + 1);
-    if (once_loaded_) { once_loaded_ = true; }
     T* dptr = tokens->mut_dptr<T>();
     for (size_t i = 0; i < batch_size_; ++i) {
-      dataset_->Get(sample_index_, dptr + i * (seq_len_ + 1));
+      size_t sample_iter = shard_index_ + iter * i * num_shards_;
+      dataset_->Get(sample_iter, dptr + i * (seq_len_ + 1));
       sample_index_ += num_shards_;
     }
   }
-  bool IsOnceLoaded() const { return once_loaded_; }
-  void Seek(size_t iter) { sample_index_ = shard_index_ + iter * batch_size_ * num_shards_; }
 
  private:
   std::unique_ptr<GPTDataset> dataset_;
@@ -108,7 +106,6 @@ class GPTDataLoader final : public OpKernelState {
   size_t num_shards_;
   size_t shard_index_;
   size_t sample_index_;
-  bool once_loaded_;
 };
 
 template<typename T>
@@ -128,9 +125,8 @@ class GPTDataLoaderKernel final : public OpKernel {
     user_op::Tensor* iteration_tensor = ctx->Tensor4ArgNameAndIndex("iteration", 0);
     CHECK_EQ(iteration_tensor->shape().elem_cnt(), 1);
     int64_t* iter_ptr = iteration_tensor->mut_dptr<int64_t>();
-    if (!loader->IsOnceLoaded()) { loader->Seek(*iter_ptr); }
     user_op::Tensor* tokens_tensor = ctx->Tensor4ArgNameAndIndex("tokens", 0);
-    loader->Next<T>(tokens_tensor);
+    loader->Get<T>(*iter_ptr, tokens_tensor);
     *iter_ptr += 1;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
