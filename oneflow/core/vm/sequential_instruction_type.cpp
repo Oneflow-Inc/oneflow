@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
@@ -43,12 +44,14 @@ class RankFrontSeqCallbackInstructionType : public InstructionType {
 
   void Run(const InstructionMsg& instr_msg) const {
     FlatMsgView<RankFrontSeqCallbackInstrOperand> args(instr_msg.operand());
-    const auto& callback = instr_msg.no_arg_callback();
+    const auto& phy_instr_operand = instr_msg.phy_instr_operand();
     if (args->process_rank() == GlobalProcessCtx::Rank()) {
-      CHECK(static_cast<bool>(callback));
-      (*callback)();
+      CHECK(static_cast<bool>(phy_instr_operand));
+      const auto* ptr = dynamic_cast<const NoArgCbPhyInstrOperand*>(phy_instr_operand.get());
+      CHECK_NOTNULL(ptr);
+      ptr->callback()();
     } else {
-      CHECK(!static_cast<bool>(callback));
+      CHECK(!static_cast<bool>(phy_instr_operand));
     }
   }
 };
