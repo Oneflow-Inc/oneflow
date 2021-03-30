@@ -41,8 +41,8 @@ class RtRegstDesc {
   int64_t GetOrdinalForLbi(const LogicalBlobId& lbi) const;
   const RtBlobDesc* GetRtBlobDescFromLbi(const LogicalBlobId& lbi) const;
   const RtBlobDesc* GetRtBlobDescByOrdinal(int64_t ordinal) const;
+  const RtBlobDesc* GetSoleRtBlobDesc() const;
   const LogicalBlobId& GetLbiByOrdinal(int64_t ordinal) const;
-  const RtBlobDesc* packed_blob_desc() const { return packed_blob_desc_.get(); }
   size_t TotalByteSize4AllRegst() const;
   size_t TotalMainByteSize4AllRegst() const;
   size_t TotalSeparatedHeaderByteSize4AllRegst() const;
@@ -62,7 +62,6 @@ class RtRegstDesc {
   RegstDescTypeProto regst_desc_type_;
   MemoryCase mem_case_;
   HashMap<LogicalBlobId, int64_t> lbi2blob_desc_ordinal_;
-  std::unique_ptr<RtBlobDesc> packed_blob_desc_;
   std::unique_ptr<Shape> data_regst_time_shape_;
   std::vector<std::unique_ptr<RtBlobDesc>> sorted_blob_desc_vec_;
   std::vector<LogicalBlobId> sorted_lbi_vec_;

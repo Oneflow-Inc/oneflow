@@ -46,7 +46,6 @@ OperatorConf GenForeignInputOpConf(const std::string& job_name, const int64_t in
   *blob_conf->mutable_shape()->mutable_dim()->Add() = input_size;
   blob_conf->set_is_dynamic(true);
   blob_conf->set_data_type(DataType::kInt8);
-  blob_conf->mutable_split_axis()->clear_value();
   return foreign_input_op_conf;
 }
 
