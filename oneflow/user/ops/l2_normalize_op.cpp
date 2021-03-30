@@ -50,7 +50,11 @@ REGISTER_USER_OP("l2_normalize")
         }
       }
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
     });
+
 
 REGISTER_USER_OP("l2_normalize_grad")
     .Input("dy")
@@ -94,7 +98,11 @@ REGISTER_USER_OP("l2_normalize_grad")
         }
       }
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
     });
+
 
 REGISTER_USER_OP_GRAD("l2_normalize")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {

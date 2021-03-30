@@ -72,19 +72,16 @@ REGISTER_USER_OP("layer_norm")
       if (center) {
         const user_op::TensorDesc* beta = ctx->TensorDesc4ArgNameAndIndex("beta", 0);
         CHECK_EQ_OR_RETURN(beta->shape(), param_shape);
-        CHECK_EQ_OR_RETURN(beta->data_type(), x->data_type());
       }
       if (scale) {
         user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
         const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
         CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
-        CHECK_EQ_OR_RETURN(gamma->data_type(), x->data_type());
         *normalized = *x;
       }
       const int64_t begin_norm_axis =
           ShiftNegativeAxisIfNeed(x->shape(), ctx->Attr<int64_t>("begin_norm_axis"));
       *mean->mut_shape() = InferBnParamShape(x->shape(), begin_norm_axis);
-      *mean->mut_data_type() = InferBnParamDataType(x->data_type());
       *inv_variance = *mean;
       return Maybe<void>::Ok();
     })
@@ -96,7 +93,25 @@ REGISTER_USER_OP("layer_norm")
           .Broadcast(user_op::OpArg("beta", 0))
           .Build();
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const bool center = ctx->Attr<bool>("center");
+      const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      if (center) {
+        const user_op::TensorDesc* beta = ctx->TensorDesc4ArgNameAndIndex("beta", 0);
+        CHECK_EQ_OR_RETURN(beta->data_type(), x->data_type());
+      }
+      const bool scale = ctx->Attr<bool>("scale");
+      if (scale) {
+        user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
+        const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
+        CHECK_EQ_OR_RETURN(gamma->data_type(), x->data_type());
+      }
+      user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);
+      *mean->mut_data_type() = InferBnParamDataType(x->data_type());
+      return Maybe<void>::Ok();
     });
+
 
 REGISTER_USER_OP("layer_norm_grad")
     .Input("dy")
@@ -113,26 +128,38 @@ REGISTER_USER_OP("layer_norm_grad")
       const user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);
       const user_op::TensorDesc* inv_variance = ctx->TensorDesc4ArgNameAndIndex("inv_variance", 0);
       user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
-      CHECK_EQ_OR_RETURN(dy->data_type(), x->data_type());
       CHECK_EQ_OR_RETURN(dy->shape(), x->shape());
       const int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
       CHECK_GT(begin_norm_axis, 0);
-      const DataType& bn_param_data_type = InferBnParamDataType(x->data_type());
       const Shape& bn_param_shape = InferBnParamShape(x->shape(), begin_norm_axis);
-      CHECK_EQ_OR_RETURN(mean->data_type(), bn_param_data_type);
       CHECK_EQ_OR_RETURN(mean->shape(), bn_param_shape);
-      CHECK_EQ_OR_RETURN(inv_variance->data_type(), bn_param_data_type);
       CHECK_EQ_OR_RETURN(inv_variance->shape(), bn_param_shape);
       *dx = *dy;
       if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
         const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
-        CHECK_EQ_OR_RETURN(add_to_output->data_type(), dx->data_type());
         CHECK_EQ_OR_RETURN(add_to_output->shape(), dx->shape());
       }
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      CHECK_EQ_OR_RETURN(dy->data_type(), x->data_type());
+      const user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);
+      const user_op::TensorDesc* inv_variance = ctx->TensorDesc4ArgNameAndIndex("inv_variance", 0);
+      const DataType& bn_param_data_type = InferBnParamDataType(x->data_type());
+      CHECK_EQ_OR_RETURN(mean->data_type(), bn_param_data_type);
+      CHECK_EQ_OR_RETURN(inv_variance->data_type(), bn_param_data_type);
+      user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+      *dx = *dy;
+      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+        const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
+        CHECK_EQ_OR_RETURN(add_to_output->data_type(), dx->data_type());
+      }
       return Maybe<void>::Ok();
     });
 
@@ -177,7 +204,6 @@ REGISTER_USER_OP("layer_norm_param_grad")
       const Shape param_shape(param_shape_dim_vec);
       if (has_beta_diff) {
         user_op::TensorDesc* beta_diff = ctx->TensorDesc4ArgNameAndIndex("beta_diff", 0);
-        *beta_diff->mut_data_type() = dy->data_type();
         *beta_diff->mut_shape() = param_shape;
       }
       if (has_gamma_diff) {
@@ -185,7 +211,6 @@ REGISTER_USER_OP("layer_norm_param_grad")
         const user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
         CHECK_EQ_OR_RETURN(normalized->data_type(), normalized->data_type());
         CHECK_EQ_OR_RETURN(normalized->shape(), normalized->shape());
-        *gamma_diff->mut_data_type() = dy->data_type();
         *gamma_diff->mut_shape() = param_shape;
       }
       if (has_normalized_diff) {
@@ -195,7 +220,6 @@ REGISTER_USER_OP("layer_norm_param_grad")
       }
       if (has_gamma) {
         const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
-        CHECK_EQ_OR_RETURN(gamma->data_type(), dy->data_type());
         CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
       }
       return Maybe<void>::Ok();
@@ -209,7 +233,39 @@ REGISTER_USER_OP("layer_norm_param_grad")
           .PartialSum(user_op::OpArg("beta_diff", 0))
           .Build();
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      auto has_tensor = [ctx](const std::string& bn) -> bool {
+        bool ret = false;
+        for (auto t : ctx->inputs()) {
+          if (bn == t.first) { return true; }
+        }
+        for (auto t : ctx->outputs()) {
+          if (bn == t.first) { return true; }
+        }
+        return ret;
+      };
+      const bool has_beta_diff = has_tensor("beta_diff");
+      const bool has_gamma_diff = has_tensor("gamma_diff");
+      const bool has_gamma = has_tensor("gamma");
+      const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      if (has_beta_diff) {
+        user_op::TensorDesc* beta_diff = ctx->TensorDesc4ArgNameAndIndex("beta_diff", 0);
+        *beta_diff->mut_data_type() = dy->data_type();
+      }
+      if (has_gamma_diff) {
+        user_op::TensorDesc* gamma_diff = ctx->TensorDesc4ArgNameAndIndex("gamma_diff", 0);
+        const user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
+        CHECK_EQ_OR_RETURN(normalized->data_type(), normalized->data_type());
+        *gamma_diff->mut_data_type() = dy->data_type();
+      }
+      if (has_gamma) {
+        const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
+        CHECK_EQ_OR_RETURN(gamma->data_type(), dy->data_type());
+      }
+      return Maybe<void>::Ok();
     });
+
 
 REGISTER_USER_OP_GRAD("layer_norm")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
