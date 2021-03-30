@@ -31,7 +31,8 @@ REGISTER_USER_OP("sigmoid_cross_entropy")
       const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
       CHECK_EQ_OR_RETURN(label_desc->shape(), prediction_desc->shape());
       user_op::TensorDesc* loss_desc = ctx->TensorDesc4ArgNameAndIndex("loss", 0);
-      *loss_desc = *prediction_desc;
+      *loss_desc->mut_shape() = prediction_desc->shape();
+      *loss_desc->mut_is_dynamic() = prediction_desc->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -44,6 +45,10 @@ REGISTER_USER_OP("sigmoid_cross_entropy")
             .Split(user_op::OpArg("loss", 0), i)
             .Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("loss", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
       return Maybe<void>::Ok();
     });
 
@@ -63,7 +68,9 @@ REGISTER_USER_OP("sigmoid_cross_entropy_grad")
       const user_op::TensorDesc* loss_diff_desc = ctx->TensorDesc4ArgNameAndIndex("loss_diff", 0);
       CHECK_EQ_OR_RETURN(label_desc->shape(), prediction_desc->shape());
       CHECK_EQ_OR_RETURN(loss_diff_desc->shape(), prediction_desc->shape());
-      *ctx->TensorDesc4ArgNameAndIndex("prediction_diff", 0) = *prediction_desc;
+      user_op::TensorDesc* prediction_diff = ctx->TensorDesc4ArgNameAndIndex("prediction_diff", 0);
+      *prediction_diff->mut_shape() = prediction_desc->shape();
+      *prediction_diff->mut_is_dynamic() = prediction_desc->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -77,6 +84,10 @@ REGISTER_USER_OP("sigmoid_cross_entropy_grad")
             .Split(user_op::OpArg("prediction_diff", 0), i)
             .Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
       return Maybe<void>::Ok();
     });
 
