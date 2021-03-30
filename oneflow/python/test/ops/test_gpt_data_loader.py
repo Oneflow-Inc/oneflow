@@ -58,7 +58,7 @@ def _make_gpt_data_loader_func(
     @flow.global_function("predict", function_config=func_cfg)
     def gpt_loader_fn() -> flow.typing.Numpy:
         with flow.scope.placement("cpu", device_strs, parallel_hierachy):
-            tokens = flow.data.gpt_data_loader(
+            tokens = flow.data.megatron_gpt_mmap_data_loader(
                 data_file_prefix=data_file_prefix,
                 seq_length=seq_length,
                 num_samples=num_samples,

@@ -21,7 +21,7 @@ namespace oneflow {
 
 REGISTER_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
     .Input("iteration")
-    .Output("tokens")
+    .Output("out")
     .Attr<std::string>("data_file_prefix")
     .Attr<int64_t>("seq_length")
     .Attr<int64_t>("num_samples")
@@ -35,16 +35,16 @@ REGISTER_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
       int64_t num_tokens = ctx->Attr<int64_t>("seq_length") + 1;
-      user_op::TensorDesc* tokens_desc = ctx->TensorDesc4ArgNameAndIndex("tokens", 0);
-      *tokens_desc->mut_shape() = Shape({batch_size, num_tokens});
-      *tokens_desc->mut_data_type() = ctx->Attr<DataType>("dtype");
+      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_desc->mut_shape() = Shape({batch_size, num_tokens});
+      *out_desc->mut_data_type() = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
     })
     .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       const Shape& hierarchy = ctx->parallel_hierarchy();
       ParallelDistribution* input_dist = ctx->ParallelDistribution4ArgNameAndIndex("iteration", 0);
-      ParallelDistribution* output_dist = ctx->ParallelDistribution4ArgNameAndIndex("tokens", 0);
+      ParallelDistribution* output_dist = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
       const auto& dist_conf =
           ctx->user_op_conf().attr<std::vector<std::string>>("parallel_distribution");
       CHECK_EQ_OR_RETURN(dist_conf.size(), hierarchy.NumAxes());

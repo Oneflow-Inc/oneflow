@@ -2428,7 +2428,7 @@ def gpt_data_loader(
         flow.user_op_builder(name)
         .Op("megatron_gpt_mmap_data_loader")
         .Input("iteration", [iteration])
-        .Output("tokens")
+        .Output("out")
         .Attr("data_file_prefix", data_file_prefix)
         .Attr("seq_length", seq_length)
         .Attr("num_samples", num_samples)

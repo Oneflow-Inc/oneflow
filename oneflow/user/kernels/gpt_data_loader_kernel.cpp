@@ -66,19 +66,17 @@ class GPTDataLoader final : public OpKernelState {
         ctx->Attr<std::vector<int64_t>>("split_sizes"), ctx->Attr<int64_t>("split_index"),
         ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed")));
 
-    batch_size_ = ctx->LogicalTensorDesc4ArgNameAndIndex("tokens", 0)->shape().At(0);
-    ctx->TensorDesc4ArgNameAndIndex("tokens", 0)->shape().At(0);
+    batch_size_ = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-      const ParallelDistribution& paral_dist =
-          ctx->ParallelDistribution4ArgNameAndIndex("tokens", 0);
+      const ParallelDistribution& paral_dist = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
       CHECK_EQ(hierarchy.NumAxes(), paral_dist.sbp_parallel_size());
       num_shards_ = GetNumShards(hierarchy, paral_dist);
       CHECK_EQ(dataset_->Size() % num_shards_, 0);
       shard_index_ = GetShardIndex(hierarchy, paral_dist, ctx->parallel_ctx().parallel_id());
       CHECK_LT(shard_index_, num_shards_);
       CHECK_EQ(batch_size_ % num_shards_, 0);
-      size_t device_batch_size = ctx->TensorDesc4ArgNameAndIndex("tokens", 0)->shape().At(0);
+      size_t device_batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
       CHECK_EQ(batch_size_ / num_shards_, device_batch_size);
       batch_size_ = device_batch_size;
       sample_index_ = shard_index_;
@@ -93,7 +91,7 @@ class GPTDataLoader final : public OpKernelState {
     CHECK_EQ(tokens->shape().At(1), seq_len_ + 1);
     T* dptr = tokens->mut_dptr<T>();
     for (size_t i = 0; i < batch_size_; ++i) {
-      size_t sample_iter = shard_index_ + iter * i * num_shards_;
+      size_t sample_iter = shard_index_ + iter * i * num_shards_ + i * num_shards_;
       dataset_->Get(sample_iter, dptr + i * (seq_len_ + 1));
       sample_index_ += num_shards_;
     }
@@ -125,8 +123,8 @@ class GPTDataLoaderKernel final : public OpKernel {
     user_op::Tensor* iteration_tensor = ctx->Tensor4ArgNameAndIndex("iteration", 0);
     CHECK_EQ(iteration_tensor->shape().elem_cnt(), 1);
     int64_t* iter_ptr = iteration_tensor->mut_dptr<int64_t>();
-    user_op::Tensor* tokens_tensor = ctx->Tensor4ArgNameAndIndex("tokens", 0);
-    loader->Get<T>(*iter_ptr, tokens_tensor);
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    loader->Get<T>(*iter_ptr, out_tensor);
     *iter_ptr += 1;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -139,7 +137,7 @@ class GPTDataLoaderKernel final : public OpKernel {
       .SetCreateFn<GPTDataLoaderKernel<dtype>>()                                    \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                           \
                        & (user_op::HobDataType("iteration", 0) == DataType::kInt64) \
-                       & (user_op::HobDataType("tokens", 0) == GetDataType<dtype>::value))
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))
 
 REGISTER_GPT_DATA_LOADER_KERNEL(int32_t);
 REGISTER_GPT_DATA_LOADER_KERNEL(int64_t);
