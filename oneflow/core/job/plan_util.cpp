@@ -344,7 +344,8 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     std::string op_name = "";
     std::string pass_tag = kNoPassTag;
     for (const ExecNodeProto& exec_node : task_proto.exec_sequence().exec_node()) {
-      const auto& op_conf = GetOpOpAttribute(&plan, exec_node.kernel_conf()).op_conf();
+      const auto& op_conf =
+          GetOpOpAttribute(&plan, task_proto.job_id(), exec_node.kernel_conf()).op_conf();
       op_name += op_conf.name();
       if (op_conf.has_pass_tag()) { pass_tag = op_conf.pass_tag(); }
     }

@@ -125,9 +125,10 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
   *(cluster_thrd_ids.mutable_machine_id2thrd_ids()) = HashMap2PbMap(machine_id2thrd_ids);
   Global<CtrlClient>::Get()->PushKV(cluster_thrd_ids_key(plan_name), cluster_thrd_ids);
 
-  PlanOpAttributeRefTable op_attribute_ref_table;
-  *op_attribute_ref_table.mutable_op_name2op_attribute() = plan.op_name2op_attribute();
-  Global<CtrlClient>::Get()->PushKV("op_name2op_attribute", op_attribute_ref_table);
+  OpAttributeInfo op_attribute_info;
+  *op_attribute_info.mutable_job_id2op_attribute_ref_table() = plan.job_id2op_attribute_ref_table();
+  Global<CtrlClient>::Get()->PushKV("op_attribute_info", op_attribute_info);
+
   for (const auto& pair : mchn_thrd_id2task_protos) {
     SubPlan sub_plan;
     sub_plan.mutable_task()->Reserve(pair.second.size());
@@ -169,21 +170,25 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
     Global<CtrlClient>::Get()->PullKV(sub_plan_key(plan_name, machine_id, thrd_id), &sub_plan);
     plan->mutable_task()->MergeFrom(sub_plan.task());
   }
-  PlanOpAttributeRefTable op_attribute_ref_table;
-  Global<CtrlClient>::Get()->PullKV("op_name2op_attribute", &op_attribute_ref_table);
+  OpAttributeInfo op_attribute_info;
+  Global<CtrlClient>::Get()->PullKV("op_attribute_info", &op_attribute_info);
   for (auto& task : *plan->mutable_task()) {
     if (task.exec_sequence().exec_node_size() == 1
         && task.exec_sequence().exec_node(0).kernel_conf().has_op_attribute_ref()) {
       auto* kernel_conf = task.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
       if (kernel_conf->has_op_attribute_ref()) {
-        kernel_conf->clear_op_attribute_ref();
-        auto it =
-            op_attribute_ref_table.op_name2op_attribute().find(kernel_conf->op_attribute_ref());
-        if (it == op_attribute_ref_table.op_name2op_attribute().end()) {
-          LOG(FATAL) << "ref: " << kernel_conf->op_attribute_ref() << " not found";
+        auto table_it = op_attribute_info.job_id2op_attribute_ref_table().find(task.job_id());
+        if (table_it == op_attribute_info.job_id2op_attribute_ref_table().end()) {
+          LOG(FATAL) << "op attribute ref table not found for job id: " << task.job_id();
         } else {
-          *kernel_conf->mutable_op_attribute() = it->second;
+          auto it = table_it->second.op_name2op_attribute().find(kernel_conf->op_attribute_ref());
+          if (it == table_it->second.op_name2op_attribute().end()) {
+            LOG(FATAL) << "ref: " << kernel_conf->op_attribute_ref() << " not found";
+          } else {
+            *kernel_conf->mutable_op_attribute() = it->second;
+          }
         }
+        kernel_conf->clear_op_attribute_ref();
       } else {
         CHECK(kernel_conf->has_op_attribute());
       }
@@ -221,7 +226,8 @@ const boxing::collective::RankDesc& GetRankDesc(const OperatorConf& conf) {
 const boxing::collective::RankDesc& GetRankDesc(Plan* plan, const TaskProto& task_proto) {
   CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
   return GetRankDesc(
-      PlanUtil::GetOpOpAttribute(plan, task_proto.exec_sequence().exec_node(0).kernel_conf())
+      PlanUtil::GetOpOpAttribute(plan, task_proto.job_id(),
+                                 task_proto.exec_sequence().exec_node(0).kernel_conf())
           .op_conf());
 }
 
@@ -374,6 +380,11 @@ void MergePlanWithoutGenNetTopo(Plan* plan, Plan&& other) {
     CHECK(
         plan->mutable_collective_boxing_plan()->mutable_job_id2request_set()->insert(pair).second);
   }
+  for (auto& pair : other.job_id2op_attribute_ref_table()) {
+    const bool result =
+        plan->mutable_job_id2op_attribute_ref_table()->insert(std::move(pair)).second;
+    CHECK(result) << "fail to merge op attribute info for job: " << pair.first;
+  }
 }
 
 void MergeSubPlanWithoutGenNetTopo(Plan* plan, std::vector<Plan>&& sub_plans) {
@@ -415,14 +426,16 @@ RegstDescProto* GetSoleDataRegstDescProto(TaskProto* task) {
 
 const OperatorConf& GetSoleOpConf(Plan* plan, const TaskProto& task) {
   CHECK_EQ(task.exec_sequence().exec_node_size(), 1);
-  return PlanUtil::GetOpOpAttribute(plan, task.exec_sequence().exec_node(0).kernel_conf())
+  return PlanUtil::GetOpOpAttribute(plan, task.job_id(),
+                                    task.exec_sequence().exec_node(0).kernel_conf())
       .op_conf();
 }
 
 void UpdateSoleObnRegstDescId(Plan* plan, TaskProto* task) {
   CHECK_EQ(task->exec_sequence().exec_node_size(), 1);
   auto* exec_node = task->mutable_exec_sequence()->mutable_exec_node(0);
-  const auto& obns = PlanUtil::GetOpOpAttribute(plan, exec_node->kernel_conf()).output_bns();
+  const auto& obns =
+      PlanUtil::GetOpOpAttribute(plan, task->job_id(), exec_node->kernel_conf()).output_bns();
   CHECK_EQ(obns.size(), 1);
   int64_t regst_desc_id = GetSoleDataRegstDescProto(task)->regst_desc_id();
   (*exec_node->mutable_bn_in_op2regst_desc_id())[obns.Get(0)] = regst_desc_id;
@@ -485,7 +498,7 @@ void LinkMainPlan(Plan* plan, Plan&& main_plan,
       if (task->exec_sequence().exec_node_size() != 1) { return false; }
       const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
       OperatorConf::OpTypeCase op_type_case =
-          PlanUtil::GetOpOpAttribute(plan, kernel_conf).op_conf().op_type_case();
+          PlanUtil::GetOpOpAttribute(plan, task->job_id(), kernel_conf).op_conf().op_type_case();
       return op_type_case == OperatorConf::kSourceTickConf
              || op_type_case == OperatorConf::kSinkTickConf;
     };
@@ -496,7 +509,8 @@ void LinkMainPlan(Plan* plan, Plan&& main_plan,
     TaskProto* task = plan->mutable_task(i);
     if (IsInterfaceTickTockTask(task) == false) { continue; }
     const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
-    const auto& op_name = PlanUtil::GetOpOpAttribute(plan, kernel_conf).op_conf().name();
+    const auto& op_name =
+        PlanUtil::GetOpOpAttribute(plan, task->job_id(), kernel_conf).op_conf().name();
     CHECK(sole_tick_op_name2sole_task.emplace(op_name, task).second);
   }
   auto TaskProto4TaskId = PlanUtil::MakeGetterTaskProto4TaskId(*plan);
@@ -527,7 +541,8 @@ void LinkMainPlan(Plan* plan, Plan&& main_plan,
       if (task.task_type() == TaskType::kSourceTick) {
         CHECK(task.exec_sequence().exec_node_size() == 1);
         const auto& kernel_conf = task.exec_sequence().exec_node(0).kernel_conf();
-        const auto& op_conf = PlanUtil::GetOpOpAttribute(plan, kernel_conf).op_conf();
+        const auto& op_conf =
+            PlanUtil::GetOpOpAttribute(plan, task.job_id(), kernel_conf).op_conf();
         CHECK(op_conf.has_source_tick_conf());
         CHECK(source_tick_op_names.find(op_conf.name()) != source_tick_op_names.end());
         return true;
@@ -862,7 +877,8 @@ Maybe<void> ConnectCriticalSectionEndToReentrantLockEnd(
     auto* task = main_plan->mutable_task(i);
     CHECK_EQ_OR_RETURN(task->exec_sequence().exec_node_size(), 1);
     const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
-    const auto& op_name = PlanUtil::GetOpOpAttribute(main_plan, kernel_conf).op_conf().name();
+    const auto& op_name =
+        PlanUtil::GetOpOpAttribute(main_plan, task->job_id(), kernel_conf).op_conf().name();
     if (op_name == lock_back_edge.reentrant_lock_op_name) {
       CHECK_ISNULL_OR_RETURN(reentrant_lock_task);
       reentrant_lock_task = task;
@@ -928,7 +944,8 @@ void FinishGlobalCriticalSectionDesc(const Plan& plan, int64_t job_size) {
   for (const auto& task : plan.task()) {
     if (task.exec_sequence().exec_node_size() == 1) {
       const auto& kernel_conf = task.exec_sequence().exec_node(0).kernel_conf();
-      const std::string& op_name = PlanUtil::GetOpOpAttribute(&plan, kernel_conf).op_conf().name();
+      const std::string& op_name =
+          PlanUtil::GetOpOpAttribute(&plan, task.job_id(), kernel_conf).op_conf().name();
       HashSet<int64_t>* mem_block_ids =
           &(job_id2sole_op_name2mem_block_ids.at(task.job_id())[op_name]);
       for (const auto& pair : task.produced_regst_desc()) {

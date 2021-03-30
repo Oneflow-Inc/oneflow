@@ -90,7 +90,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
 
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 
-  auto* op_name2op_attribute = plan->mutable_op_name2op_attribute();
+  auto* job_id2op_attribute_ref_table = plan->mutable_job_id2op_attribute_ref_table();
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
     const bool use_op_attribute_ref = task_node->GetTaskType() == kNormalForward;
@@ -100,6 +100,8 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
       CHECK(task_proto.exec_sequence().exec_node_size() == 1);
       auto* exec_node = task_proto.mutable_exec_sequence()->mutable_exec_node(0);
       const std::string op_name = exec_node->kernel_conf().op_attribute().op_conf().name();
+      auto* op_name2op_attribute =
+          (*job_id2op_attribute_ref_table)[job_desc.job_id()].mutable_op_name2op_attribute();
       auto find_it = op_name2op_attribute->find(op_name);
       if (find_it == op_name2op_attribute->end()) {
         op_name2op_attribute->insert(
