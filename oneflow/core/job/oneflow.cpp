@@ -104,6 +104,34 @@ std::string block7chunk_key(const std::string& plan_name, int64_t machine_id) {
   return plan_name + "_" + std::to_string(machine_id) + "_block7chunk";
 }
 
+void PopulateOpAttibute(
+    Plan* plan,
+    const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table) {
+  for (auto& task : *plan->mutable_task()) {
+    if (task.exec_sequence().exec_node_size() == 1
+        && task.exec_sequence().exec_node(0).kernel_conf().has_op_attribute_ref()) {
+      auto* kernel_conf = task.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
+      if (kernel_conf->has_op_attribute_ref()) {
+        auto table_it = job_id2op_attribute_ref_table.find(task.job_id());
+        if (table_it == job_id2op_attribute_ref_table.end()) {
+          LOG(FATAL) << "op attribute ref table not found for job id: " << task.job_id();
+        } else {
+          auto it = table_it->second.op_name2op_attribute().find(kernel_conf->op_attribute_ref());
+          if (it == table_it->second.op_name2op_attribute().end()) {
+            LOG(FATAL) << "ref: " << kernel_conf->op_attribute_ref() << " not found";
+          } else {
+            // it should be safe to move here because it should only be fetched once
+            *kernel_conf->mutable_op_attribute() = it->second;
+          }
+        }
+        kernel_conf->clear_op_attribute_ref();
+      } else {
+        CHECK(kernel_conf->has_op_attribute());
+      }
+    }
+  }
+}
+
 void PushPlan(const std::string& plan_name, const Plan& plan) {
   HashMap<int64_t, std::set<int64_t>> machine_id2thrd_id_set;
   HashMap<std::pair<int64_t, int64_t>, std::vector<const TaskProto*>> mchn_thrd_id2task_protos;
@@ -172,28 +200,7 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   }
   OpAttributeInfo op_attribute_info;
   Global<CtrlClient>::Get()->PullKV("op_attribute_info", &op_attribute_info);
-  for (auto& task : *plan->mutable_task()) {
-    if (task.exec_sequence().exec_node_size() == 1
-        && task.exec_sequence().exec_node(0).kernel_conf().has_op_attribute_ref()) {
-      auto* kernel_conf = task.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
-      if (kernel_conf->has_op_attribute_ref()) {
-        auto table_it = op_attribute_info.job_id2op_attribute_ref_table().find(task.job_id());
-        if (table_it == op_attribute_info.job_id2op_attribute_ref_table().end()) {
-          LOG(FATAL) << "op attribute ref table not found for job id: " << task.job_id();
-        } else {
-          auto it = table_it->second.op_name2op_attribute().find(kernel_conf->op_attribute_ref());
-          if (it == table_it->second.op_name2op_attribute().end()) {
-            LOG(FATAL) << "ref: " << kernel_conf->op_attribute_ref() << " not found";
-          } else {
-            *kernel_conf->mutable_op_attribute() = it->second;
-          }
-        }
-        kernel_conf->clear_op_attribute_ref();
-      } else {
-        CHECK(kernel_conf->has_op_attribute());
-      }
-    }
-  }
+  PopulateOpAttibute(plan, op_attribute_info.job_id2op_attribute_ref_table());
   NetTopo net_topo;
   Global<CtrlClient>::Get()->PullKV(net_topo_key(plan_name), &net_topo);
   *(plan->mutable_net_topo()) = net_topo;
@@ -1173,6 +1180,7 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     }
     double start = GetCurTime();
     PushPlan("merged_plan", *plan);
+    PopulateOpAttibute(plan, plan->job_id2op_attribute_ref_table());
     LOG(INFO) << " PushPlan merged_plan time: " << (GetCurTime() - start) / 1000000000.0
               << " seconds.\n";
 
