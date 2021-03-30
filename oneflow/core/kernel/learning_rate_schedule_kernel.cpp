@@ -77,61 +77,67 @@ double GetWarmupLearningRate(const WarmupConf& conf, double lr, int64_t train_st
 }
 
 double ExponentialDecayedLearningRate(const ExponentialDecayConf& conf, double lr,
-                                      int64_t cur_batch_num) {
-  CHECK_GT(conf.decay_batches(), 0);
-  double p = static_cast<double>(cur_batch_num) / static_cast<double>(conf.decay_batches());
+                                      int64_t cur_batch_num, int64_t excluded_warmup_batches) {
+  CHECK_GT(conf.decay_batches() - excluded_warmup_batches, 0);
+  double p = static_cast<double>(cur_batch_num - excluded_warmup_batches)
+             / static_cast<double>(conf.decay_batches() - excluded_warmup_batches);
   if (conf.staircase()) { p = std::floor(p); }
   return lr * std::pow(conf.decay_rate(), p);
 }
 
 double InverseTimeDecayedLearningRate(const InverseTimeDecayConf& conf, double lr,
-                                      int64_t cur_batch_num) {
-  CHECK_GT(conf.decay_batches(), 0);
-  double p = static_cast<double>(cur_batch_num) / static_cast<double>(conf.decay_batches());
+                                      int64_t cur_batch_num, int64_t excluded_warmup_batches) {
+  CHECK_GT(conf.decay_batches() - excluded_warmup_batches, 0);
+  double p = static_cast<double>(cur_batch_num - excluded_warmup_batches)
+             / static_cast<double>(conf.decay_batches() - excluded_warmup_batches);
   if (conf.staircase()) { p = std::floor(p); }
   return lr / (1.0 + conf.decay_rate() * p);
 }
 
 double NaturalExpDecayedLearningRate(const NaturalExpDecayConf& conf, double lr,
-                                     int64_t cur_batch_num) {
-  CHECK_GT(conf.decay_batches(), 0);
-  double p = static_cast<double>(cur_batch_num) / static_cast<double>(conf.decay_batches());
+                                     int64_t cur_batch_num, int64_t excluded_warmup_batches) {
+  CHECK_GT(conf.decay_batches() - excluded_warmup_batches, 0);
+  double p = static_cast<double>(cur_batch_num - excluded_warmup_batches)
+             / static_cast<double>(conf.decay_batches() - excluded_warmup_batches);
   if (conf.staircase()) { p = std::floor(p); }
   return lr * std::exp(-conf.decay_rate() * p);
 }
 
 double PiecewiseConstantLearningRate(const PiecewiseConstantConf& conf, double lr,
-                                     int64_t cur_batch_num) {
+                                     int64_t cur_batch_num, int64_t excluded_warmup_batches) {
   const PbRf<int64_t>& boundaries = conf.boundaries();
   const PbRf<double>& values = conf.values();
   CHECK_EQ(boundaries.size() + 1, values.size());
   size_t i = 0;
   for (; i < boundaries.size(); ++i) {
-    if (cur_batch_num <= boundaries[i]) { break; }
+    if (cur_batch_num - excluded_warmup_batches <= boundaries[i] - excluded_warmup_batches) {
+      break;
+    }
   }
   return values[i];
 }
 
 double PolynomialDecayedLearningRate(const PolynomialDecayConf& conf, double lr,
-                                     int64_t cur_batch_num) {
-  CHECK_GT(conf.decay_batches(), 0);
-  double cur_batch = static_cast<double>(cur_batch_num);
-  double decay_batches = static_cast<double>(conf.decay_batches());
+                                     int64_t cur_batch_num, int64_t excluded_warmup_batches) {
+  CHECK_GT(conf.decay_batches() - excluded_warmup_batches, 0);
+  double cur_batch = static_cast<double>(cur_batch_num - excluded_warmup_batches);
+  double decay_batches = static_cast<double>(conf.decay_batches() - excluded_warmup_batches);
   if (conf.cycle()) {
-    if (cur_batch_num == 0) { cur_batch = 1.0; }
+    if (cur_batch == 0) { cur_batch = 1.0; }
     decay_batches = decay_batches * std::ceil(cur_batch / decay_batches);
   } else {
     cur_batch = std::min(cur_batch, decay_batches);
   }
-  return (lr - conf.end_learning_rate()) * std::pow(1.0 - (cur_batch / decay_batches), conf.power())
+  return (lr - conf.end_learning_rate()) * std::pow((1.0 - cur_batch / decay_batches), conf.power())
          + conf.end_learning_rate();
 }
 
-double CosineDecayedLearningRate(const CosineDecayConf& conf, double lr, int64_t cur_batch_num) {
-  CHECK_GT(conf.decay_batches(), 0);
+double CosineDecayedLearningRate(const CosineDecayConf& conf, double lr, int64_t cur_batch_num,
+                                 int64_t excluded_warmup_batches) {
+  CHECK_GT(conf.decay_batches() - excluded_warmup_batches, 0);
   const double PI = std::atan(1.0) * 4.0;
-  double cur_batch = static_cast<double>(cur_batch_num);
-  double decay_batches = static_cast<double>(conf.decay_batches());
+  double cur_batch = static_cast<double>(cur_batch_num - excluded_warmup_batches);
+  double decay_batches = static_cast<double>(conf.decay_batches() - excluded_warmup_batches);
   cur_batch = std::min(cur_batch, decay_batches);
   double cosine_decay = 0.5 * (1.0 + std::cos(PI * cur_batch / decay_batches));
   double decayed = (1.0 - conf.alpha()) * cosine_decay + conf.alpha();
@@ -139,11 +145,11 @@ double CosineDecayedLearningRate(const CosineDecayConf& conf, double lr, int64_t
 }
 
 double LinearCosineDecayedLearningRate(const LinearCosineDecayConf& conf, double lr,
-                                       int64_t cur_batch_num) {
-  CHECK_GT(conf.decay_batches(), 0);
+                                       int64_t cur_batch_num, int64_t excluded_warmup_batches) {
+  CHECK_GT(conf.decay_batches() - excluded_warmup_batches, 0);
   const double PI = std::atan(1.0) * 4.0;
-  double cur_batch = static_cast<double>(cur_batch_num);
-  double decay_batches = static_cast<double>(conf.decay_batches());
+  double cur_batch = static_cast<double>(cur_batch_num - excluded_warmup_batches);
+  double decay_batches = static_cast<double>(conf.decay_batches() - excluded_warmup_batches);
   cur_batch = std::min(cur_batch, decay_batches);
   double linear_decay = (decay_batches - cur_batch) / decay_batches;
   double cosine_decay =
@@ -153,34 +159,45 @@ double LinearCosineDecayedLearningRate(const LinearCosineDecayConf& conf, double
 }
 
 double PiecewiseScalingLearningRate(const PiecewiseScalingConf& conf, double lr,
-                                    int64_t cur_batch_num) {
+                                    int64_t cur_batch_num, int64_t excluded_warmup_batches) {
   const PbRf<int64_t>& boundaries = conf.boundaries();
   const PbRf<double>& scales = conf.scales();
   CHECK_EQ(boundaries.size() + 1, scales.size());
   size_t i = 0;
   for (; i < boundaries.size(); ++i) {
-    if (cur_batch_num <= boundaries[i]) { break; }
+    if (cur_batch_num - excluded_warmup_batches <= boundaries[i] - excluded_warmup_batches) {
+      break;
+    }
   }
   return scales[i] * lr;
 }
 
-double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int64_t cur_batch_num) {
+double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int64_t cur_batch_num,
+                              int64_t excluded_warmup_batches) {
   if (conf.has_exponential_conf()) {
-    return ExponentialDecayedLearningRate(conf.exponential_conf(), lr, cur_batch_num);
+    return ExponentialDecayedLearningRate(conf.exponential_conf(), lr, cur_batch_num,
+                                          excluded_warmup_batches);
   } else if (conf.has_inverse_time_conf()) {
-    return InverseTimeDecayedLearningRate(conf.inverse_time_conf(), lr, cur_batch_num);
+    return InverseTimeDecayedLearningRate(conf.inverse_time_conf(), lr, cur_batch_num,
+                                          excluded_warmup_batches);
   } else if (conf.has_natural_exp_conf()) {
-    return NaturalExpDecayedLearningRate(conf.natural_exp_conf(), lr, cur_batch_num);
+    return NaturalExpDecayedLearningRate(conf.natural_exp_conf(), lr, cur_batch_num,
+                                         excluded_warmup_batches);
   } else if (conf.has_piecewise_constant_conf()) {
-    return PiecewiseConstantLearningRate(conf.piecewise_constant_conf(), lr, cur_batch_num);
+    return PiecewiseConstantLearningRate(conf.piecewise_constant_conf(), lr, cur_batch_num,
+                                         excluded_warmup_batches);
   } else if (conf.has_polynomial_conf()) {
-    return PolynomialDecayedLearningRate(conf.polynomial_conf(), lr, cur_batch_num);
+    return PolynomialDecayedLearningRate(conf.polynomial_conf(), lr, cur_batch_num,
+                                         excluded_warmup_batches);
   } else if (conf.has_cosine_conf()) {
-    return CosineDecayedLearningRate(conf.cosine_conf(), lr, cur_batch_num);
+    return CosineDecayedLearningRate(conf.cosine_conf(), lr, cur_batch_num,
+                                     excluded_warmup_batches);
   } else if (conf.has_linear_cosine_conf()) {
-    return LinearCosineDecayedLearningRate(conf.linear_cosine_conf(), lr, cur_batch_num);
+    return LinearCosineDecayedLearningRate(conf.linear_cosine_conf(), lr, cur_batch_num,
+                                           excluded_warmup_batches);
   } else if (conf.has_piecewise_scaling_conf()) {
-    return PiecewiseScalingLearningRate(conf.piecewise_scaling_conf(), lr, cur_batch_num);
+    return PiecewiseScalingLearningRate(conf.piecewise_scaling_conf(), lr, cur_batch_num,
+                                        excluded_warmup_batches);
   } else {
     UNIMPLEMENTED();
   }
@@ -196,7 +213,19 @@ void LearningRateScheduleKernel::ForwardDataContent(
   if (TriggerWarmup(conf, learning_rate, train_step)) {
     learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, train_step);
   } else if (conf.has_learning_rate_decay()) {
-    learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
+    int64_t excluded_warmup_batches = 0;
+    if (conf.has_warmup_conf() && conf.learning_rate_decay().exclude_warmup()) {
+      const auto& warmup_conf = conf.warmup_conf();
+      if (warmup_conf.has_constant_conf()) {
+        excluded_warmup_batches = warmup_conf.constant_conf().warmup_batches();
+      } else if (warmup_conf.has_linear_conf()) {
+        excluded_warmup_batches = warmup_conf.linear_conf().warmup_batches();
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
+    learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step,
+                                           excluded_warmup_batches);
   }
   *BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
 }
