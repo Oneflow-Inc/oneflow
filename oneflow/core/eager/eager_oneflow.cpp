@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace eager {
@@ -101,12 +102,22 @@ Maybe<void> EagerOneflow::RunLogicalInstruction(
     const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list_proto,
     const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) {
   auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
+
+  OF_PROFILER_RANGE_PUSH("RunLogicalInstruction: InstructionToProto");
   instruction_list_proto->ToProto(
       cluster_instruction->mutable_eager_instruction()->mutable_instruction_list());
+  OF_PROFILER_RANGE_POP();
+
+  OF_PROFILER_RANGE_PUSH("RunLogicalInstruction: SymbolToProto");
   eager_symbol_list->ToProto(
       cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list());
-  return RunLogicalInstruction(
+  OF_PROFILER_RANGE_POP();
+
+  OF_PROFILER_RANGE_PUSH("RunLogicalInstruction: RunLogicalInstruction");
+  auto ret = RunLogicalInstruction(
       std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
+  OF_PROFILER_RANGE_POP();
+  return ret;
 }
 
 COMMAND(Global<EagerOneflow>::SetAllocated(new EagerOneflow()));

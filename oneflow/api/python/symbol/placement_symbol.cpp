@@ -45,7 +45,7 @@ struct PlacementSymbolExportUtil {
     std::shared_ptr<ParallelDesc> parallel_desc;
     JUST(LogicalRun([&parallel_desc, &parallel_conf](
                         const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
-      OF_PROFILER_RANGE_PUSH("CallLogicalRun: CreatePlacementSymbol");
+      OF_PROFILER_RANGE_PUSH("CreatePlacementSymbol: LogicalRun/build");
       parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
       OF_PROFILER_RANGE_POP();
       return Maybe<void>::Ok();

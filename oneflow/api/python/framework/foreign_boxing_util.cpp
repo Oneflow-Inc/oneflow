@@ -30,10 +30,10 @@ class PyForeignBoxingUtil : public ForeignBoxingUtil {
       const std::shared_ptr<compatible_py::BlobObject>& blob_object,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       const override {
-        OF_PROFILER_RANGE_PUSH("PyForeignBoxingUtil: BoxingTo");
+        //OF_PROFILER_RANGE_PUSH("PyForeignBoxingUtil: BoxingTo");
     PYBIND11_OVERRIDE(std::shared_ptr<compatible_py::BlobObject>, ForeignBoxingUtil, BoxingTo,
                       builder, blob_object, op_arg_parallel_attr);
-        OF_PROFILER_RANGE_POP();
+        //OF_PROFILER_RANGE_POP();
   }
 
   std::shared_ptr<ParallelDesc> TryReplaceDeviceTag(

@@ -239,6 +239,7 @@ Maybe<void> _Run(
   Build(std::make_shared<InstructionsBuilder>(id_generator, instruction_list, eager_symbol_list,
                                               ReleaseObject));
   OF_PROFILER_RANGE_POP();
+
   OF_PROFILER_RANGE_PUSH("_Run: RunInstruction");
   JUST(RunInstruction(instruction_list, eager_symbol_list));
   OF_PROFILER_RANGE_POP();
@@ -250,13 +251,14 @@ Maybe<void> _Run(
   OF_PROFILER_RANGE_PUSH("_Run: ClearEagerSymbol");
   eager_symbol_list->clear_eager_symbol();
   OF_PROFILER_RANGE_POP();
+
   return Maybe<void>::Ok();
 }
 
 Maybe<void> _ReleaseLogicalObject(compatible_py::Object* obj) {
   JUST(LogicalRun(
       [&obj](const std::shared_ptr<InstructionsBuilder>& build) { 
-        OF_PROFILER_RANGE_PUSH("CallLogialRun: _ReleaseLogicalObject");
+        OF_PROFILER_RANGE_PUSH("_ReleaseLogicalObject: LogicalRun/build");
         build->DeleteObject(obj); 
         OF_PROFILER_RANGE_POP();
         }));
@@ -1188,13 +1190,13 @@ Maybe<void> InstructionsBuilder::StatelessCall(
         const std::shared_ptr<InstructionsBuilder>&,
         const std::shared_ptr<compatible_py::BlobObject>&,
         const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo) {
-  OF_PROFILER_RANGE_PUSH("StatelessCall: GetParallelDescSymbol");
+  //OF_PROFILER_RANGE_PUSH("StatelessCall: GetParallelDescSymbol");
   std::shared_ptr<ParallelDesc> op_parallel_desc_sym = JUST(GetParallelDescSymbol(parallel_conf));
-  OF_PROFILER_RANGE_POP();
+  //OF_PROFILER_RANGE_POP();
 
-  OF_PROFILER_RANGE_PUSH("StatelessCall: CheckRefInBlobObjectParallelDesc");
+  //OF_PROFILER_RANGE_PUSH("StatelessCall: CheckRefInBlobObjectParallelDesc");
   JUST(CheckRefInBlobObjectParallelDesc(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object));
-  OF_PROFILER_RANGE_POP();
+  //OF_PROFILER_RANGE_POP();
 
   const auto FetchDelegateBlobObject =
       [this, &BoxingTo](
@@ -1202,9 +1204,10 @@ Maybe<void> InstructionsBuilder::StatelessCall(
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> std::shared_ptr<compatible_py::BlobObject> {
     // TODO(hanbinbin): use Maybe as return after blobcache is migrated
-    OF_PROFILER_RANGE_PUSH("StatelessCall: BoxingTo");
-    return BoxingTo(shared_from_this(), x_blob_object, op_arg_parallel_attr);
-    OF_PROFILER_RANGE_POP();
+    //OF_PROFILER_RANGE_PUSH("StatelessCall: BoxingTo");
+    auto ret = BoxingTo(shared_from_this(), x_blob_object, op_arg_parallel_attr);
+    return ret;
+    //OF_PROFILER_RANGE_POP();
   };
 
   const auto GetDelegateBlobObject =
@@ -1594,16 +1597,16 @@ Maybe<void> LogicalRun(
   const auto& RunInstruction =
       [](const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
          const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) -> Maybe<void> {
-    //OF_PROFILER_RANGE_PUSH("LogicalRun: RunInstruction");
+    OF_PROFILER_RANGE_PUSH("LogicalRun: RunLogicalInstruction");
     JUST(Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(instruction_list,
                                                                    eager_symbol_list));
-    //OF_PROFILER_RANGE_POP(); //LogicalRun: RunInstruction
+    OF_PROFILER_RANGE_POP(); //LogicalRun: RunLogicalInstruction
     return Maybe<void>::Ok();
   };
-  //OF_PROFILER_RANGE_PUSH("LogicalRun: _Run");
+  OF_PROFILER_RANGE_PUSH("LogicalRun: _Run");
   JUST(_Run(Build, std::make_shared<vm::LogicalIdGenerator>(), RunInstruction,
             _ReleaseLogicalObject));
-  //OF_PROFILER_RANGE_POP(); //LogicalRun: _Run
+  OF_PROFILER_RANGE_POP(); //LogicalRun: _Run
   return Maybe<void>::Ok();
 }
 
