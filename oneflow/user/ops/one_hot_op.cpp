@@ -34,7 +34,8 @@ REGISTER_USER_OP("one_hot")
       CHECK_OR_RETURN(IsIndexDataType(indices_desc->data_type()));
       CHECK_GT_OR_RETURN(indices_desc->shape().NumAxes(), 0);
       user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_desc = *indices_desc;
+      *out_desc->mut_is_dynamic() = indices_desc->is_dynamic();
+      *out_desc->mut_shape() = indices_desc->shape();
       auto dtype = ctx->Attr<DataType>("dtype");
       *out_desc->mut_data_type() = dtype;
       DimVector dim_vec = indices_desc->shape().dim_vec();
@@ -59,6 +60,16 @@ REGISTER_USER_OP("one_hot")
       }
 
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* indices_desc = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
+      CHECK_OR_RETURN(IsIndexDataType(indices_desc->data_type()));
+      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_desc->mut_data_type() = indices_desc->data_type();
+      auto dtype = ctx->Attr<DataType>("dtype");
+      *out_desc->mut_data_type() = dtype;
+      return Maybe<void>::Ok();
     });
+
 
 }  // namespace oneflow
