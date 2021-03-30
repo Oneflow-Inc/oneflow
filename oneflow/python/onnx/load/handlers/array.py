@@ -278,9 +278,9 @@ class Split(BackendHandler):
         ans = []
         for i in range(len(split)):
             if axis == 1:
-                tmp = flow.slice_v2(x, [[None, None, None], [index, index+split[i], 1], [None, None, None], [None, None, None]])
+                tmp = flow.experimental.logical_slice(x, [[None, None, None], [index, index+split[i], 1], [None, None, None], [None, None, None]])
             elif axis == 3:
-                tmp = flow.slice_v2(x, [[None, None, None], [None, None, None], [None, None, None], [index, index+split[i], 1]])
+                tmp = flow.experimental.logical_slice(x, [[None, None, None], [None, None, None], [None, None, None], [index, index+split[i], 1]])
             else:
                 raise ValueError("axis != 0 or 3 is not supported")
             index += split[i]

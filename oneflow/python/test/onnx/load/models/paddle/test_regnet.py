@@ -401,5 +401,3 @@ def test_RegNetX_4GF(test_case):
     load_paddle_module_and_check(
         test_case, RegNetX_4GF, input_size=(1, 3, 224, 224), train_flag=False,
     )
-
-
