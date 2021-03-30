@@ -279,10 +279,11 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
 
   const int64_t parallel_num = src_parallel_desc.parallel_num();
   CHECK_EQ(parallel_num, dst_parallel_desc.parallel_num());
-  const auto& src_hierarchy = src_parallel_desc.hierarchy();
-  const auto& dst_hierarchy = dst_parallel_desc.hierarchy();
+  const std::shared_ptr<Shape> src_hierarchy = src_parallel_desc.hierarchy();
+  const std::shared_ptr<Shape> dst_hierarchy = dst_parallel_desc.hierarchy();
 
-  if (src_hierarchy == dst_hierarchy && src_parallel_distribution == dst_parallel_distribution) {
+  if ((*src_hierarchy) == (*dst_hierarchy)
+      && src_parallel_distribution == dst_parallel_distribution) {
     // one to one
     return false;
   }
@@ -428,6 +429,8 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
                     << ")\n";
         }
         nccl_op_confs->push_back(nccl_op);
+        // NOTE(chengcheng, guoran): set nccl op as src_node parallel_conf (hierarchy) may check
+        //   failed in complier.
         nccl_op_parallel_confs->push_back(src_node->parallel_desc().parallel_conf());
       }
     }
