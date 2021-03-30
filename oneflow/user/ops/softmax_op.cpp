@@ -25,7 +25,7 @@ REGISTER_USER_OP("softmax")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      *out_shape = *in_shape;
+      *out_shape = *in_shape;           
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -39,6 +39,7 @@ REGISTER_USER_OP("softmax")
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0); 
       return Maybe<void>::Ok();
     });
 
@@ -54,6 +55,11 @@ REGISTER_USER_OP("softmax_grad")
       *dx_shape = *dy_shape;
       return Maybe<void>::Ok();
     })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(ctx->Dtype4ArgNameAndIndex("y", 0), ctx->Dtype4ArgNameAndIndex("dy", 0));
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("y", 0);
+      return Maybe<void>::Ok();
+    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
       FOR_RANGE(int64_t, axis, 0, y_tensor.shape().NumAxes()) {
@@ -64,15 +70,8 @@ REGISTER_USER_OP("softmax_grad")
             .Build();
       }
       return Maybe<void>::Ok();
-    })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      return Maybe<void>::Ok();
-    })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      return Maybe<void>::Ok();
     });
     
-
 REGISTER_USER_OP_GRAD("softmax").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
