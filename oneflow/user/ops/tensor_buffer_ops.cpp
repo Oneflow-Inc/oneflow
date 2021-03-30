@@ -34,6 +34,9 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_tensor")
       dim_vec.insert(dim_vec.end(), instance_shape.dim_vec().cbegin(),
                      instance_shape.dim_vec().cend());
       *out->mut_shape() = Shape(dim_vec);
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto data_type = ctx->Attr<DataType>("dtype");
       CHECK_OR_RETURN(IsPODDataType(data_type));
       *out->mut_data_type() = data_type;
