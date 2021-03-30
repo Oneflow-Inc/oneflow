@@ -35,6 +35,9 @@ REGISTER_USER_OP("gelu")
             .Build();
       }
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("gelu_grad")
@@ -63,6 +66,9 @@ REGISTER_USER_OP("gelu_grad")
           .PartialSum(user_op::OpArg("dy", 0))
           .PartialSum(user_op::OpArg("dx", 0))
           .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
     });
 

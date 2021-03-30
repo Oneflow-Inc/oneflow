@@ -63,6 +63,22 @@ Maybe<void> InferTensorDesc(InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferDataType(InferContext* ctx) {
+  const TensorDesc* tensor_dz = ctx->TensorDesc4ArgNameAndIndex("dz", 0);
+  TensorDesc* tensor_dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+  TensorDesc* tensor_dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+
+  if (tensor_dx) {
+    *tensor_dx->mut_data_type() = tensor_dz->data_type();
+  }
+
+  if (tensor_dy) {
+    *tensor_dy->mut_data_type() = tensor_dz->data_type();
+  }
+
+  return Maybe<void>::Ok();
+}
+
 user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name) {
   return [=](user_op::BackwardOpConfContext* ctx) -> void {
     const bool x_need_grad = ctx->FwOp().NeedGenGradTensor4OpInput("x", 0);

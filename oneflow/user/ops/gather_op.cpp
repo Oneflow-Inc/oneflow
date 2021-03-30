@@ -80,6 +80,12 @@ REGISTER_USER_OP("gather")
         }
       }
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out->mut_data_type() = in->data_type();
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
