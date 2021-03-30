@@ -25,6 +25,12 @@ Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(scalar->shape().At(0), 1);
   user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   *y = *x;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DataTypeInfer(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* scalar = ctx->TensorDesc4ArgNameAndIndex("scalar", 0);
+  user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   *y->mut_data_type() = scalar->data_type();
   return Maybe<void>::Ok();
 }
@@ -56,7 +62,8 @@ REGISTER_USER_OP("fused_cast_scale")
     .Input("scalar")
     .Output("y")
     .SetTensorDescInferFn(TensorDescInfer)
-    .SetGetSbpFn(GetSbpSignatures);
+    .SetGetSbpFn(GetSbpSignatures)
+    .SetInferDataTypeFn(DataTypeInfer);
 
 }  // namespace
 }  // namespace oneflow
