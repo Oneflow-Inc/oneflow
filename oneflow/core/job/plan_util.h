@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_PLAN_UTIL_H_
 
 #include <functional>
+#include "glog/logging.h"
 #include "oneflow/core/job/plan.pb.h"
 
 namespace oneflow {
@@ -30,8 +31,15 @@ struct PlanUtil {
   static void ToDotFile(const Plan& plan, const std::string& filepath);
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);
   static void SetForceInplaceMemBlock(Plan* plan);
-  static const oneflow::OpAttribute& GetOpOpAttribute(const Plan* plan,
-                                                      const oneflow::KernelConf& kernel_conf);
+  inline static const oneflow::OpAttribute& GetOpOpAttribute(
+      const Plan* plan, const oneflow::KernelConf& kernel_conf) {
+    if (kernel_conf.has_op_attribute_ref()) {
+      return plan->op_name2op_attribute().at(kernel_conf.op_attribute_ref());
+    } else {
+      CHECK(kernel_conf.has_op_attribute());
+      return kernel_conf.op_attribute();
+    }
+  }
 };
 
 }  // namespace oneflow

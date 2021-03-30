@@ -525,14 +525,4 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
   }
 }
 
-const oneflow::OpAttribute& GetOpOpAttribute(const Plan* plan,
-                                             const oneflow::KernelConf& kernel_conf) {
-  if (kernel_conf.has_op_attribute_ref()) {
-    return plan->op_name2op_attribute().at(kernel_conf.op_attribute_ref());
-  } else {
-    CHECK(kernel_conf.has_op_attribute());
-    return kernel_conf.op_attribute();
-  }
-}
-
 }  // namespace oneflow
