@@ -39,7 +39,7 @@ struct PlanUtil {
       CHECK(kernel_conf.has_op_attribute_ref());
       auto it = plan->op_name2op_attribute().find(kernel_conf.op_attribute_ref());
       if (it == plan->op_name2op_attribute().end()) {
-        LOG(FATAL) << "ref: " << kernel_conf.op_attribute_ref() << " not found";
+        LOG(FATAL) << "op attribute ref: " << kernel_conf.op_attribute_ref() << " not found";
       } else {
         return it->second;
       }
