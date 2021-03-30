@@ -157,6 +157,27 @@ def data_port(val):
     default_env_proto.data_port = val
 
 
+@oneflow_export("env.rpc_backend")
+def api_rpc_backend(val: int) -> None:
+    r"""Set which rpc backend to use. For single process: local. For multiple nodes: grpc
+
+    Args:
+        val: rpc backend's name
+    """
+    return enable_if.unique([rpc_backend, do_nothing])(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
+def rpc_backend(val: str):
+    assert type(val) is str
+    val = val.lower()
+    if val == "grpc":
+        assert oneflow_api.flags.has_rpc_backend_grpc()
+    if val == "local":
+        assert oneflow_api.flags.has_rpc_backend_local()
+    default_env_proto.rpc_backend = val.lower()
+
+
 @oneflow_export("env.grpc_use_no_signal")
 @oneflow_deprecate()
 def api_grpc_use_no_signal(val: bool = True) -> None:
@@ -262,8 +283,8 @@ def _MakeMachine(machines):
 
 # only used by CI
 @oneflow_export("env.init_bootstrap_confs")
-def api_init_bootstrap_confs(*val: list) -> None:
-    return enable_if.unique([MakeBootstrapConfs, do_nothing])(*val)
+def api_init_bootstrap_confs(*val: list, **kargs) -> None:
+    return enable_if.unique([MakeBootstrapConfs, do_nothing])(*val, **kargs)
 
 
 def _MakeBootstrapConf(bootstrap_info: dict):
@@ -276,6 +297,9 @@ def _MakeBootstrapConf(bootstrap_info: dict):
     bootstrap_conf.world_size = config_world_size
     assert "rank" in bootstrap_info
     bootstrap_conf.rank = bootstrap_info["rank"]
+    global config_num_process_per_node
+    assert config_num_process_per_node >= 1
+    bootstrap_conf.num_process_per_node.value = config_num_process_per_node
     if "host" in bootstrap_info:
         bootstrap_conf.host = bootstrap_info["host"]
     global config_bootstrap_ctrl_port
@@ -290,7 +314,12 @@ def _MakeBootstrapConf(bootstrap_info: dict):
 # only used by CI
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
 def MakeBootstrapConfs(
-    node_list, master_port, world_size=0, ctrl_port=-1, node_size=-1
+    node_list,
+    master_port,
+    world_size=0,
+    ctrl_port=-1,
+    node_size=-1,
+    num_process_per_node=-1,
 ):
     r"""Set ctrl_bootstrap_conf' info.
 
@@ -322,6 +351,9 @@ def MakeBootstrapConfs(
     global config_node_size
     if node_size != -1:
         config_node_size = node_size
+    global config_num_process_per_node
+    if num_process_per_node != -1:
+        config_num_process_per_node = num_process_per_node
     rank = 0
     for rank_host in node_list:
         assert isinstance(rank_host, str)
@@ -340,6 +372,14 @@ def _DefaultEnvProto():
     machine = env_proto.machine.add()
     machine.id = 0
     machine.addr = "127.0.0.1"
+    if oneflow_api.flags.has_rpc_backend_grpc():
+        env_proto.rpc_backend = "grpc"
+    elif oneflow_api.flags.has_rpc_backend_local():
+        env_proto.rpc_backend = "local"
+    else:
+        raise ValueError(
+            "at least one of rpc backend: 'grpc, local' should be available"
+        )
     return env_proto
 
 
@@ -372,5 +412,8 @@ config_world_size = 0
 config_bootstrap_ctrl_port = 0
 
 config_node_size = 0
+
+# One process per machine by default
+config_num_process_per_node = 1
 
 global_ctrl_bootstrap_confs = []

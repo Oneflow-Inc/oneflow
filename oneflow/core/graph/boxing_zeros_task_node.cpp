@@ -20,9 +20,9 @@ namespace oneflow {
 
 void BoxingZerosTaskNode::Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi,
                                const Shape& shape, DataType data_type, const Shape& time_shape) {
-  lbi_ = lbi;
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
+  set_lbi(lbi);
   shape_ = shape;
   data_type_ = data_type;
   time_shape_ = time_shape;
@@ -42,7 +42,7 @@ void BoxingZerosTaskNode::BuildExecGphAndRegst() {
   OperatorConf op_conf;
   op_conf.set_name("System-Boxing-Zeros-" + NewUniqueId());
   op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
-  *op_conf.mutable_boxing_zeros_conf()->mutable_lbi() = lbi_;
+  *op_conf.mutable_boxing_zeros_conf()->mutable_lbi() = lbi();
   shape_.ToProto(op_conf.mutable_boxing_zeros_conf()->mutable_shape());
   op_conf.mutable_boxing_zeros_conf()->set_data_type(data_type_);
   std::shared_ptr<Operator> sole_op = ConstructOp(op_conf);

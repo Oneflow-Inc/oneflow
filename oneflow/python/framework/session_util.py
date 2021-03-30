@@ -62,7 +62,6 @@ class Session(object):
         self.uuid2watch_handler_ = {}
         self.config_proto_ = None
         self.resource_ = None
-        self.is_mirrored_strategy_enabled_stack_ = []
         self.job_name2var_name2var_blob_ = {}
         self.job_name2module_name2module_ = {}
         self.existed_module_names_ = set()
@@ -113,10 +112,6 @@ class Session(object):
     @property
     def uuid2watch_handler(self):
         return self.uuid2watch_handler_
-
-    @property
-    def is_mirrored_strategy_enabled_stack(self):
-        return self.is_mirrored_strategy_enabled_stack_
 
     @property
     def function_flag_name2default_val(self):
@@ -390,6 +385,22 @@ class Session(object):
             return None
         return self.eager_global_function_desc_stack_[0]
 
+    def has_empty_is_mirrored_strategy_enabled_stack(self):
+        return self.sess_.is_mirrored_strategy_enabled_stack_size() == 0
+
+    def push_mirrored_strategy_enabled(self, val):
+        assert isinstance(val, bool)
+        self.sess_.push_mirrored_strategy_enabled(val)
+
+    def pop_mirrored_strategy_enabled(self):
+        self.sess_.pop_mirrored_strategy_enabled()
+
+    def is_mirrored_strategy_enabled(self):
+        return self.sess_.is_mirrored_strategy_enabled()
+
+    def is_consistent_strategy_enabled(self):
+        return self.sess_.is_consistent_strategy_enabled()
+
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):
         assert len(self.backward_blob_register.blob_name2object) == 0
@@ -490,7 +501,33 @@ def sync_default_session() -> None:
 
 def _TryCompleteConfigProto(config_proto):
     if config_proto.resource.machine_num == 0:
-        config_proto.resource.machine_num = len(env_util.default_env_proto.machine)
+        if env_util.default_env_proto.HasField("ctrl_bootstrap_conf"):
+            ctrl_bootstrap_conf = env_util.default_env_proto.ctrl_bootstrap_conf
+            assert ctrl_bootstrap_conf.HasField(
+                "node_size"
+            ) or ctrl_bootstrap_conf.HasField("num_process_per_node")
+            if ctrl_bootstrap_conf.HasField(
+                "node_size"
+            ) and ctrl_bootstrap_conf.HasField("num_process_per_node"):
+                assert (
+                    ctrl_bootstrap_conf.node_size
+                    * ctrl_bootstrap_conf.num_process_per_node.value
+                    == ctrl_bootstrap_conf.world_size
+                )
+            if ctrl_bootstrap_conf.HasField("node_size"):
+                config_proto.resource.machine_num = ctrl_bootstrap_conf.node_size
+            else:
+                assert (
+                    ctrl_bootstrap_conf.world_size
+                    % ctrl_bootstrap_conf.num_process_per_node.value
+                    == 0
+                )
+                config_proto.resource.machine_num = (
+                    ctrl_bootstrap_conf.world_size
+                    // ctrl_bootstrap_conf.num_process_per_node.value
+                )
+        else:
+            config_proto.resource.machine_num = len(env_util.default_env_proto.machine)
 
 
 def _GetDefaultConfigProto():
