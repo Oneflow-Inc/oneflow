@@ -51,7 +51,7 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
                                      - 2 * padding_before.at(i) + output_padding.at(i)
                                      + effective_filter_size;
     }
-    *out = *in;
+    *out->mut_is_dynamic() = in->is_dynamic();
     *out->mut_shape() = Shape(out_shape);
   }
 
@@ -74,6 +74,12 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
 
   return Maybe<void>::Ok();
 }
+
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+  return Maybe<void>::Ok();
+}
+
 
 Maybe<void> GetSbpSignatures4DeConv(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
@@ -199,7 +205,8 @@ REGISTER_USER_OP("deconv1d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<1>)
     .SetTensorDescInferFn(InferTensorDesc4DeConv<1>)
-    .SetGetSbpFn(GetSbpSignatures4DeConv);
+    .SetGetSbpFn(GetSbpSignatures4DeConv)
+    .SetInferDataTypeFn(InferDataType);
 
 REGISTER_USER_OP("deconv2d")
     .Input("in")

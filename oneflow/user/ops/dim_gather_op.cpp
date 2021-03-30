@@ -32,7 +32,6 @@ REGISTER_USER_OP("dim_gather")
 
       const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
       int64_t index_num_axes = index->shape().NumAxes();
-      CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
 
       const int32_t dim = ctx->Attr<int32_t>("dim");
       CHECK_GE_OR_RETURN(dim, 0);
@@ -48,8 +47,15 @@ REGISTER_USER_OP("dim_gather")
 
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
       *out->mut_shape() = index->shape();
-      *out->mut_data_type() = in->data_type();
 
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
+      CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
+      const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
+      *out->mut_data_type() = in->data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -117,6 +123,12 @@ REGISTER_USER_OP("dim_scatter_add_like")
       *out->mut_shape() = like_shape;
       *out->mut_data_type() = input->data_type();
 
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const TensorDesc* input = ctx->TensorDesc4ArgNameAndIndex("input", 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
+      *out->mut_data_type() = input->data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
