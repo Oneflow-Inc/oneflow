@@ -30,28 +30,22 @@ GPTDataset::GPTDataset(const std::shared_ptr<const GPTIndex>& index,
       shuffle_(shuffle),
       seed_(seed),
       gen_(seed) {
-  auto step = std::chrono::system_clock::now();
-  tokens_per_epoch_ = 0;
-  for (auto doc_index : doc_indices) { tokens_per_epoch_ += index_->doc_length(doc_index); }
-  std::chrono::duration<double, std::milli> elapse = std::chrono::system_clock::now() - step;
-  LOG(ERROR) << "calc tokens_per_epoch_ elapsed " << elapse.count() << " ms";
+  auto start = std::chrono::system_clock::now();
+  tokens_per_epoch_ = index_->num_tokens();
   num_epochs_ = GetNumEpochs();
-  elapse = std::chrono::system_clock::now() - step;
-  LOG(ERROR) << "calc num_epochs elapsed " << elapse.count() << " ms";
   num_complete_epochs_ = GetNumCompleteEpochs();
-  elapse = std::chrono::system_clock::now() - step;
-  LOG(ERROR) << "calc num_complete_epochs elapsed " << elapse.count() << " ms";
   InitDocIndices(doc_indices);
-  elapse = std::chrono::system_clock::now() - step;
-  LOG(ERROR) << "init doc_indices elapsed " << elapse.count() << " ms";
   InitSampleIndices();
-  elapse = std::chrono::system_clock::now() - step;
-  LOG(ERROR) << "init sample_indices elapsed " << elapse.count() << " ms";
   InitShuffleIndices();
-  elapse = std::chrono::system_clock::now() - step;
-  LOG(ERROR) << "init shuffle_indices elapsed " << elapse.count() << " ms";
-  LOG(ERROR) << "last doc index: " << doc_indices[doc_indices.size() - 1]
-             << ", num_docs: " << index_->num_docs();
+  std::chrono::duration<double, std::milli> elapse = std::chrono::system_clock::now() - start;
+  LOG(INFO) << "Create GPT Dataset successed, sequence length: " << seq_len_
+            << ", number of samples: " << num_samples_
+            << ", total number of samples: " << this->Size()
+            << ", total number of documents: " << doc_indices_.size()
+            << ", number of epochs: " << num_epochs_
+            << ", number of complete epochs: " << num_complete_epochs_
+            << ", shuffle: " << std::boolalpha << shuffle_ << ", random_seed: " << seed_
+            << ", elapsed time: " << elapse.count() << " ms";
 }
 
 size_t GPTDataset::GetNumEpochs() const {
@@ -93,8 +87,12 @@ void GPTDataset::InitDocIndices(const std::vector<size_t>& doc_indices, size_t n
 }
 
 void GPTDataset::InitSampleIndices() {
-  size_t total_num_samples = static_cast<size_t>(
-      std::floor(static_cast<double>(num_epochs_ * tokens_per_epoch_ - 1) / seq_len_));
+  // + 1 is because sample_indices need an `end` mark to indicate the end position of the last
+  // sample the actual total number of samples is sample_indices_.size() - 1
+  size_t total_num_samples =
+      static_cast<size_t>(
+          std::floor(static_cast<double>(num_epochs_ * tokens_per_epoch_ - 1) / seq_len_))
+      + 1;
   sample_indices_.reserve(total_num_samples);
 
   size_t doc_indices_idx = 0;
@@ -102,8 +100,11 @@ void GPTDataset::InitSampleIndices() {
   FOR_RANGE(size_t, i, 0, total_num_samples) {
     if (doc_indices_idx >= doc_indices_.size()) { break; }
     sample_indices_.emplace_back(doc_indices_idx, doc_offset);
+    // the last sample is only used as `end` mark, there is not need to care its tokens
+    if (i == total_num_samples - 1) { break; }
     int remaining_tokens = seq_len_;
     while (remaining_tokens > 0) {
+      CHECK_LT(doc_indices_idx, doc_indices_.size());
       size_t doc_len = index_->doc_length(doc_indices_[doc_indices_idx]);
       CHECK_LT(doc_offset, doc_len);
       doc_len -= doc_offset;
@@ -114,7 +115,6 @@ void GPTDataset::InitSampleIndices() {
         // move to next doc
         doc_indices_idx += 1;
         doc_offset = 0;
-        CHECK_LT(doc_indices_idx, doc_indices_.size());
       }
       remaining_tokens -= doc_len;
     }
@@ -124,7 +124,8 @@ void GPTDataset::InitSampleIndices() {
 }
 
 void GPTDataset::InitShuffleIndices() {
-  shuffle_indices_.resize(sample_indices_.size());
+  // the last sample index in sample_indices_ is an `end` mark
+  shuffle_indices_.resize(sample_indices_.size() - 1);
   std::iota(shuffle_indices_.begin(), shuffle_indices_.end(), 0);
   if (shuffle_) {
     size_t num_samples = static_cast<size_t>(

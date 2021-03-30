@@ -22,7 +22,14 @@ namespace data {
 
 constexpr char GPTIndex::kMagicCode[];
 
+size_t GPTIndex::num_tokens() const {
+  size_t num_tokens = 0;
+  for (auto size : sizes_) { num_tokens += size; }
+  return num_tokens;
+}
+
 GPTIndex::GPTIndex(const std::string& index_file_path) {
+  auto start = std::chrono::system_clock::now();
   std::ifstream stream(index_file_path, std::ios::binary);
   CHECK(stream.is_open());
   // verify magic code
@@ -53,6 +60,12 @@ GPTIndex::GPTIndex(const std::string& index_file_path) {
   doc_offsets_.resize(doc_offsets_size);
   stream.read(reinterpret_cast<char*>(doc_offsets_.data()),
               sizeof(decltype(doc_offsets_)::value_type) * doc_offsets_.size());
+  // log
+  std::chrono::duration<double, std::milli> elapse = std::chrono::system_clock::now() - start;
+  LOG(INFO) << "Load GPT Dataset index file successed, file_path: " << index_file_path
+            << ", number of documents: " << this->num_docs()
+            << ", number of tokens: " << this->num_tokens() << ", elapsed time: " << elapse.count()
+            << " ms";
 }
 
 }  // namespace data

@@ -34,8 +34,8 @@ class GPTDataset final {
 
   template<typename T>
   void Get(size_t index, T* data) const;
-  size_t Size() const { return sample_indices_.size(); }
-  DataType data_type() const { return kDTypeCode2DataType.at(index_->dtype_code()); }
+  size_t Size() const { return sample_indices_.size() - 1; }
+  // DataType data_type() const { return kDTypeCode2DataType.at(index_->dtype_code()); }
 
  private:
   static const HashMap<char, DataType> kDTypeCode2DataType;
@@ -72,8 +72,7 @@ template<typename T>
 void GPTDataset::Get(size_t index, T* data) const {
   CHECK_LT(index, shuffle_indices_.size());
   size_t sample_index = shuffle_indices_[index];
-  CHECK_LT(sample_index, sample_indices_.size() - 1)
-      << "index: " << index << ", sample_index: " << sample_index;
+  CHECK_LT(sample_index, sample_indices_.size() - 1);
   const size_t doc_indices_idx = sample_indices_[sample_index].first;
   const size_t doc_offset = sample_indices_[sample_index].second;
   const size_t next_doc_indices_idx = sample_indices_[sample_index + 1].first;

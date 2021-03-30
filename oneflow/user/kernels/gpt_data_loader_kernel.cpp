@@ -95,7 +95,7 @@ class GPTDataLoader final : public OpKernelState {
                                   ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed")));
 
     seq_len_ = ctx->Attr<int64_t>("seq_length");
-    batch_size_ = ctx->TensorDesc4ArgNameAndIndex("sequence", 0)->shape().elem_cnt();
+    batch_size_ = ctx->TensorDesc4ArgNameAndIndex("sequence", 0)->shape().At(0);
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       const ParallelDistribution& paral_dist =
