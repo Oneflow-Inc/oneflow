@@ -126,10 +126,10 @@ void StackFunctionNode::ReleaseData() {
   backward_fn_.reset();
 }
 
-Maybe<void> StackFunctionNode::Apply(bool create_graph) {
+Maybe<bool> StackFunctionNode::Apply(bool create_graph) {
   CHECK_NOTNULL_OR_RETURN(backward_fn_.get())
       << "This FunctionNode with name `" << GetOpName() << "` has been released.";
-  if (!IsReadyToRun(out_grads_)) { return Maybe<void>::Ok(); }
+  if (!IsReadyToRun(out_grads_)) { return false; }
   InitEmptyTensorArgs2ZerosTensor(*outputs_, out_grads_);
   TensorTuple input_grads(in_grads_.size());
   TensorTuple output_grads(out_grads_.size());
@@ -140,7 +140,7 @@ Maybe<void> StackFunctionNode::Apply(bool create_graph) {
   for (int i = 0; i < in_grads_.size(); ++i) {
     in_grads_.at(i)->PushPartialTensor(input_grads.at(i));
   }
-  return Maybe<void>::Ok();
+  return true;
 }
 
 void StackAutogradEngine::ClearEngine() {
@@ -162,10 +162,11 @@ Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
   for (const auto& weak_func_node : node_list_) {
     const auto& func_node = weak_func_node.lock();
     if (!func_node) { continue; }
-    JUST(func_node->Apply(create_graph));
-    JUST(func_node->AccGrad4LeafTensor(create_graph));
-    JUST(func_node->AccGrad4RetainGradTensor());
-    func_node->ReleaseOutTensorArgs();
+    if (JUST(func_node->Apply(create_graph))) {
+      JUST(func_node->AccGrad4LeafTensor(create_graph));
+      JUST(func_node->AccGrad4RetainGradTensor());
+      func_node->ReleaseOutTensorArgs();
+    }
   }
   if (!retain_graph) { ClearEngine(); }
   return Maybe<void>::Ok();
@@ -186,10 +187,11 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   for (const auto& weak_func_node : node_list_) {
     const auto& func_node = weak_func_node.lock();
     if (!func_node) { continue; }
-    JUST(func_node->Apply(create_graph));
-    JUST(func_node->GetNowGrad(input_now_grads.get(), tensor_arg2idx));
-    JUST(func_node->AccGrad4RetainGradTensor());
-    func_node->ReleaseOutTensorArgs();
+    if (JUST(func_node->Apply(create_graph))) {
+      JUST(func_node->GetNowGrad(input_now_grads.get(), tensor_arg2idx));
+      JUST(func_node->AccGrad4RetainGradTensor());
+      func_node->ReleaseOutTensorArgs();
+    }
   }
   if (!retain_graph) { ClearEngine(); }
   return input_now_grads;

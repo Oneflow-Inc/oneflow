@@ -36,7 +36,7 @@ class FunctionNode {
  public:
   virtual ~FunctionNode() = default;
 
-  virtual Maybe<void> Apply(bool create_graph) = 0;
+  virtual Maybe<bool> Apply(bool create_graph) = 0;
   virtual Maybe<void> AccGrad4LeafTensor(bool create_graph) = 0;
   virtual Maybe<void> AccGrad4RetainGradTensor() = 0;
   virtual Maybe<void> GetNowGrad(TensorTuple* input_now_grads,
@@ -101,7 +101,7 @@ class StackFunctionNode final : public FunctionNode {
                          const HashMap<TensorArg*, size_t>& tensor_arg2idx) const override;
   void ReleaseOutTensorArgs() override;
   void ReleaseData() override;
-  Maybe<void> Apply(bool create_graph) override;
+  Maybe<bool> Apply(bool create_graph) override;
 
  private:
   // FunctionNode shares Tensor with `inputs_`, and only shares TensorImpl with `outputs_`.
