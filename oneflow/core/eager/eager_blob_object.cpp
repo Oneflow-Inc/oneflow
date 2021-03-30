@@ -27,6 +27,7 @@ Maybe<void> EagerBlobObject::TryInitBlob() {
 }
 
 Maybe<void> EagerBlobObject::InitBlob() {
+  CHECK_ISNULL_OR_RETURN(static_cast<bool>(blob_));
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
   rt_blob_desc_.reset(new RtBlobDesc(blob_desc_));
   {
