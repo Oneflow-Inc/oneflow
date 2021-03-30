@@ -270,7 +270,8 @@ def load_tensorflow2_module_and_check(
     else:
         flow_res = job_eval(ipt1)
 
-    tensorflow_res = tf_module.predict(ipt1)
+    tf_input = tf.constant(ipt1, dtype=tf.float32)
+    tensorflow_res = tf_module.predict(tf_input)
 
     print(tensorflow_res)
     print(flow_res)
