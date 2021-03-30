@@ -16,7 +16,6 @@ limitations under the License.
 import tensorflow as tf
 
 from oneflow.python.test.onnx.load.util import load_tensorflow2_module_and_check
-from tensorflow.keras.applications.resnet50 import ResNet50
 
 def test_relu(test_case):
     class Net(tf.keras.Model):
@@ -27,9 +26,3 @@ def test_relu(test_case):
 
     load_tensorflow2_module_and_check(test_case, Net)
 
-
-from absl import app
-from absl.testing import absltest
-
-test_case = absltest.TestCase
-test_relu(test_case)
