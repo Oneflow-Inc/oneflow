@@ -44,12 +44,14 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
                              pool_size, strides, ceil_mode);
     user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
+    *y_desc->mut_is_dynamic() = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
     return Maybe<void>::Ok();
   };
 }
 
 Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
   *ctx->Shape4ArgNameAndIndex("dx", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
+  *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 

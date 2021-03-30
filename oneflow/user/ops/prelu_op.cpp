@@ -31,6 +31,7 @@ REGISTER_USER_OP("prelu")
                         || (alpha_shape->At(i - 1) == 1));
       }
       *y_desc->mut_shape() = x_desc->shape();
+      *y_desc->mut_is_dynamic() = x_desc->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -77,6 +78,7 @@ REGISTER_USER_OP("prelu_grad")
       CHECK_EQ_OR_RETURN(dy_desc->shape(), x_desc->shape());
       CHECK_EQ_OR_RETURN(dy_desc->data_type(), x_desc->data_type());
       *dx_desc->mut_shape() = x_desc->shape();
+      *dx_desc->mut_is_dynamic() = x_desc->is_dynamic();
       *ctx->TensorDesc4ArgNameAndIndex("alpha_diff", 0) = *alpha_desc;
       return Maybe<void>::Ok();
     })
