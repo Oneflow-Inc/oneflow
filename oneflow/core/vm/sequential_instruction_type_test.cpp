@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/test_util.h"
+#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/common/cached_object_msg_allocator.h"
 
 namespace oneflow {
@@ -73,7 +74,8 @@ TEST(SequentialInstruction, front_seq_compute) {
     auto instruction = NewInstruction("ComputeRankFrontSeqCallback");
     instruction->add_int64_operand(GlobalProcessCtx::Rank());
     const auto Callback = [&]() { sixsixsix = 666; };
-    *instruction->mutable_no_arg_callback() = std::make_shared<std::function<void()>>(Callback);
+    *instruction->mutable_phy_instr_operand() =
+        std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
     list.EmplaceBack(std::move(instruction));
   }
   bool infer_finished = false;
@@ -81,7 +83,8 @@ TEST(SequentialInstruction, front_seq_compute) {
     auto instruction = NewInstruction("CtrlInferRankFrontSeqCallback");
     instruction->add_int64_operand(GlobalProcessCtx::Rank());
     const auto Callback = [&]() { infer_finished = true; };
-    *instruction->mutable_no_arg_callback() = std::make_shared<std::function<void()>>(Callback);
+    *instruction->mutable_phy_instr_operand() =
+        std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
     list.EmplaceBack(std::move(instruction));
   }
   bool compute_finished = false;
@@ -93,7 +96,8 @@ TEST(SequentialInstruction, front_seq_compute) {
       is_666 = sixsixsix == 666;
       compute_finished = true;
     };
-    *instruction->mutable_no_arg_callback() = std::make_shared<std::function<void()>>(Callback);
+    *instruction->mutable_phy_instr_operand() =
+        std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
     list.EmplaceBack(std::move(instruction));
   }
   vm->Receive(&list);
