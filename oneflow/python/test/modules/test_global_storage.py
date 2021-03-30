@@ -13,20 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import Tensor
+global_storage = {}
 
 
-@oneflow_export("nn.Parameter")
-class Parameter(Tensor):
-    def __init__(self, data, requires_grad=True):
-        # TODO: uncomment this line when autograd is ready
-        # data.requires_grad = True
-        data.set_is_consistent(True)
-        # TODO: set a proper placement
-        data.set_placement(flow.placement("cpu", ["0:0"], None))
-        self._data = data
+def Get(name):
+    return global_storage.get(name).numpy()
 
-    def __getattr__(self, name):
-        return getattr(self._data, name)
+
+def Setter(name):
+    global global_storage
+
+    def _set(x):
+        global_storage[name] = x
+
+    return _set
