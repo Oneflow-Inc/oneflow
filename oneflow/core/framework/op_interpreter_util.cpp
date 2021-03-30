@@ -27,21 +27,21 @@ namespace one {
 
 namespace {
 
-std::shared_ptr<OpExprInterpreter> BuildInterpreter(const bool& eager_mode) {
-  std::shared_ptr<NormalInterpreter> normal_interp;
+std::shared_ptr<AutogradInterpreter> BuildInterpreter(const bool& eager_mode) {
+  std::shared_ptr<OpExprInterpreter> internal;
   if (eager_mode) {
-    normal_interp = std::make_shared<EagerInterpreter>();
+    internal = std::make_shared<EagerInterpreter>();
   } else {
-    normal_interp = std::make_shared<LazyInterpreter>();
+    internal = std::make_shared<LazyInterpreter>();
   }
-  return std::make_shared<AutogradInterpreter>(normal_interp);
+  return std::make_shared<AutogradInterpreter>(internal);
 }
 
 }  // namespace
 
-/*static*/ Maybe<OpExprInterpreter> OpInterpUtil::GetInterpreter() {
-  static auto g_lazy_interpreter = BuildInterpreter(false);
-  static auto g_eager_interpreter = BuildInterpreter(true);
+/*static*/ Maybe<AutogradInterpreter> OpInterpUtil::GetInterpreter() {
+  static const auto& g_lazy_interpreter = BuildInterpreter(false);
+  static const auto& g_eager_interpreter = BuildInterpreter(true);
   if (EagerExecutionEnabled()) { return g_eager_interpreter; }
   return g_lazy_interpreter;
 }
@@ -88,20 +88,19 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
 /*static*/ Maybe<Bn2BlobObjectMap> OpInterpUtil::MakeBn2BlobObjectMap(
     const std::vector<std::string>& indexed_ibns, const TensorTuple& inputs) {
   CHECK_EQ_OR_RETURN(indexed_ibns.size(), inputs.size());
-  auto* bn2blob_object(new HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>{});
+  auto bn2blob_object = std::make_shared<Bn2BlobObjectMap>();
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& ibn = indexed_ibns.at(i);
     const auto& blob_object = JUST(GetTensorBlobObject(inputs[i]));
     bn2blob_object->emplace(ibn, blob_object);
   }
-  return std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>(
-      bn2blob_object);
+  return bn2blob_object;
 }
 
 /*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr) {
-  auto* op_conf = new OperatorConf;
-  op_expr.BuildOpConf(op_conf);
-  return std::shared_ptr<OperatorConf>(op_conf);
+  auto op_conf = std::make_shared<OperatorConf>();
+  op_expr.BuildOpConf(op_conf.get());
+  return op_conf;
 }
 
 /*static*/ Maybe<compatible_py::BlobObject> OpInterpUtil::GetTensorBlobObject(
@@ -111,7 +110,8 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   } else if (auto* consistent_tensor = dynamic_cast<ConsistentTensor*>(tensor.get())) {
     return consistent_tensor->blob_object();
   } else {
-    CHECK_OR_RETURN(false) << "The tensor should be either Mirrored Tensor or Consistent Tensor.";
+    UNIMPLEMENTED_THEN_RETURN()
+        << "The tensor should be either Mirrored Tensor or Consistent Tensor.";
   }
 }
 

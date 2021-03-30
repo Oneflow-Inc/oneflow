@@ -102,6 +102,11 @@ def min_max_observer(
         scale, zero_point = QuantizeJob(input)
 
     """
+    if quantization_formula == "cambricon" and not per_layer_quantization:
+        raise NotImplementedError(
+            "per-channel mode is not supported in cambricon scheme"
+        )
+
     scale, zero_point = (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("MinMaxObserver_")
@@ -122,7 +127,7 @@ def min_max_observer(
     return scale, zero_point
 
 
-@oneflow_export("quantization.moving_average_min_maxObserver")
+@oneflow_export("quantization.moving_average_min_max_observer")
 def moving_average_min_max_observer(
     input: oneflow_api.BlobDesc,
     quantization_bit: int = 8,
@@ -199,7 +204,7 @@ def moving_average_min_max_observer(
             input: tp.Numpy.Placeholder(input_shape, dtype=type_name_to_flow_type[dtype])
         ): tp.Numpy
             with flow.scope.placement(device_type, "0:0"):
-                scale, zero_point = flow.quantization.moving_average_min_maxObserver(
+                scale, zero_point = flow.quantization.moving_average_min_max_observer(
                     input, quantization_bit=8,
                     quantization_scheme="symmetric",
                     quantization_formula="google",
@@ -299,8 +304,8 @@ def fake_quantization(
 
     Args:
         input (oneflow_api.BlobDesc): input tensor.
-        scale (oneflow_api.BlobDesc): Computed by min_max_observer or moving_average_min_maxObserver op.
-        zero_point (oneflow_api.BlobDesc): Computed by min_max_observer or moving_average_min_maxObserver op.
+        scale (oneflow_api.BlobDesc): Computed by min_max_observer or moving_average_min_max_observer op.
+        zero_point (oneflow_api.BlobDesc): Computed by min_max_observer or moving_average_min_max_observer op.
         quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8. 
         quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric". 
         quantization_formula (str): Support "google" or "cambricon".

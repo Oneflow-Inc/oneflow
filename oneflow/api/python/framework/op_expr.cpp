@@ -30,25 +30,38 @@ namespace oneflow {
 
 namespace {
 
-Maybe<one::TensorTuple> Interpret(const std::shared_ptr<one::OpExpr>& op,
-                                  const one::TensorTuple& inputs) {
-  CHECK_EQ_OR_RETURN(op->input_num(), inputs.size())
-      << "The operation requires " << op->input_num() << " inputs, but " << inputs.size()
+Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const one::TensorTuple& inputs) {
+  CHECK_EQ_OR_RETURN(op.input_num(), inputs.size())
+      << "The operation requires " << op.input_num() << " inputs, but " << inputs.size()
       << " is given.";
-  one::OpExprInterpState state;
-  auto outputs = std::make_shared<one::TensorTuple>(op->output_num());
+  auto outputs = std::make_shared<one::TensorTuple>(op.output_num());
   auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
-  JUST(interperter->Apply(*op.get(), &state, inputs, outputs.get()));
+  JUST(interperter->Apply(op, inputs, outputs.get()));
   return outputs;
 }
 
 Maybe<std::vector<std::shared_ptr<one::Tensor>>> Interpret(
-    const std::shared_ptr<one::OpExpr>& op,
-    const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
+    const one::OpExpr& op, const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
   one::TensorTuple input_list(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) { input_list[i] = inputs[i]; }
   const auto& outputs = JUST(Interpret(op, input_list));
   return static_cast<std::shared_ptr<std::vector<std::shared_ptr<one::Tensor>>>>(outputs);
+}
+
+template<typename OpT, typename ConfT,
+         typename std::enable_if<std::is_base_of<one::BuiltinOpExpr, OpT>::value>::type* = nullptr>
+void PybindExportOpExpr(py::module& m, const char* op_type_name) {
+  using ProtoConfT = decltype(std::declval<OpT>().proto());
+  py::class_<OpT, one::BuiltinOpExpr, std::shared_ptr<OpT>>(m, op_type_name)
+      .def(py::init([](const std::string& op_name, const std::shared_ptr<ConfT>& op_conf,
+                       const std::vector<std::string>& indexed_ibns,
+                       const std::vector<std::string>& indexed_obns) {
+        typename std::decay<ProtoConfT>::type proto_op_conf;
+        op_conf->ToProto(&proto_op_conf);
+        return std::make_shared<OpT>(op_name, std::move(proto_op_conf), indexed_ibns, indexed_obns);
+      }))
+      .def_property_readonly("proto",
+                             [](const OpT& op) { return std::make_shared<ConfT>(op.proto()); });
 }
 
 }  // namespace
@@ -59,13 +72,11 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def_property_readonly("input_num", &one::OpExpr::input_num)
       .def_property_readonly("output_num", &one::OpExpr::output_num)
       .def("apply",
-           [](const std::shared_ptr<one::OpExpr>& op_expr,
-              const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
+           [](const one::OpExpr& op_expr, const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
              return Interpret(op_expr, inputs).GetOrThrow();
            })
-      .def("apply", [](const std::shared_ptr<one::OpExpr>& op_expr,
-                       const std::shared_ptr<one::TensorTuple>& inputs) {
-        return Interpret(op_expr, *inputs).GetPtrOrThrow();
+      .def("apply", [](const one::OpExpr& op_expr, const one::TensorTuple& inputs) {
+        return Interpret(op_expr, inputs).GetPtrOrThrow();
       });
 
   py::class_<one::BuiltinOpExpr, one::OpExpr, std::shared_ptr<one::BuiltinOpExpr>>(m,
@@ -74,30 +85,8 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def_property_readonly("indexed_ibns", &one::BuiltinOpExpr::indexed_ibns)
       .def_property_readonly("indexed_obns", &one::BuiltinOpExpr::indexed_obns);
 
-#define PYBIND_EXPORT_OP_EXPR(_op_type) PYBIND_EXPORT_OP_EXPR_IMPL(_op_type##Expr, _op_type##Conf)
-
-#define PYBIND_EXPORT_OP_EXPR_IMPL(_op_expr_type, _op_conf_type)                      \
-  {                                                                                   \
-    using T = one::_op_expr_type;                                                     \
-    py::class_<T, one::BuiltinOpExpr, std::shared_ptr<T>>(m, #_op_expr_type)          \
-        .def(py::init([](const std::string& op_name,                                  \
-                         const std::shared_ptr<cfg::_op_conf_type>& op_conf,          \
-                         const std::vector<std::string>& indexed_ibns,                \
-                         const std::vector<std::string>& indexed_obns) {              \
-          _op_conf_type proto_op_conf;                                                \
-          op_conf->ToProto(&proto_op_conf);                                           \
-          return std::make_shared<T>(op_name, std::move(proto_op_conf), indexed_ibns, \
-                                     indexed_obns);                                   \
-        }))                                                                           \
-        .def_property_readonly("proto", [](const T& op) {                             \
-          return std::make_shared<cfg::_op_conf_type>(op.proto());                    \
-        });                                                                           \
-  }
-
-  PYBIND_EXPORT_OP_EXPR(UserOp);
-  PYBIND_EXPORT_OP_EXPR(VariableOp);
-
-#undef PYBIND_EXPORT_OP_EXPR
+  PybindExportOpExpr<one::UserOpExpr, cfg::UserOpConf>(m, "UserOpExpr");
+  PybindExportOpExpr<one::VariableOpExpr, cfg::VariableOpConf>(m, "VariableOpExpr");
 }
 
 }  // namespace oneflow
