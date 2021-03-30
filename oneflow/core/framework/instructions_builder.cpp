@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/framework/blob_cache.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 
 namespace oneflow {
 
@@ -860,22 +861,22 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 }
 
 Maybe<void> InstructionsBuilder::RankFrontSeqCallback(
-    const std::string& instruction_name, std::shared_ptr<std::function<void()>>& callback) {
+    const std::string& instruction_name, const std::function<void()>& callback) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instruction_name);
   instruction->add_int64_operand(GlobalProcessCtx::Rank());
-  *instruction->mutable_no_arg_callback() = callback;
+  *instruction->mutable_phy_instr_operand() = std::make_shared<vm::NoArgCbPhyInstrOperand>(callback);
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InstructionsBuilder::InferRankFrontSeqCallback(
-    std::shared_ptr<std::function<void()>> callback) {
+    const std::function<void()>& callback) {
   return RankFrontSeqCallback("InferRankFrontSeqCallback", callback);
 }
 
 Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
-    std::shared_ptr<std::function<void()>> callback) {
+    const std::function<void()>& callback) {
   return RankFrontSeqCallback("ComputeRankFrontSeqCallback", callback);
 }
 
