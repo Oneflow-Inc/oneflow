@@ -87,7 +87,7 @@ void GPTDataset::InitDocIndices(const std::vector<size_t>& doc_indices, size_t n
 
 void GPTDataset::InitSampleIndices() {
   // + 1 is because sample_indices need an `end` mark to indicate the end position of the last
-  // sample the actual total number of samples is sample_indices_.size() - 1
+  // sample, the actual total number of samples is sample_indices_.size() - 1
   size_t total_num_samples =
       static_cast<size_t>(
           std::floor(static_cast<double>(num_epochs_ * tokens_per_epoch_ - 1) / seq_len_))

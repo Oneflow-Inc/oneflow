@@ -29,9 +29,25 @@ def _make_gpt_data_loader_func(
     random_seed=None,
     split_sizes=None,
     split_index=None,
-    parallel_hierachy=None,
+    machine_num=1,
+    device_num=1,
     parallel_distribution=None,
 ):
+    assert machine_num > 0
+    assert device_num > 0 and device_num <= 4
+
+    parallel_hierachy = None
+    if machine_num == 1:
+        device_strs = "0:0-{}".format(device_num - 1)
+    elif machine_num > 1:
+        device_strs = [
+            "{}:0-{}".format(machine_id, device_num - 1)
+            for machine_id in range(machine_num)
+        ]
+        parallel_hierachy = (machine_num, device_num)
+    else:
+        raise ValueError("invalid machine_num", machine_num)
+
     flow.clear_default_session()
     flow.config.cpu_device_num(4)
     flow.config.enable_legacy_model_io(True)
@@ -41,7 +57,7 @@ def _make_gpt_data_loader_func(
 
     @flow.global_function("predict", function_config=func_cfg)
     def gpt_loader_fn() -> flow.typing.Numpy:
-        with flow.scope.placement("cpu", "0:0"):
+        with flow.scope.placement("cpu", device_strs, parallel_hierachy):
             tokens = flow.data.gpt_data_loader(
                 data_file_prefix=data_file_prefix,
                 seq_length=seq_length,
@@ -79,6 +95,23 @@ class TestGPTDataLoader(flow.unittest.TestCase):
             dtype=flow.int64,
             shuffle=True,
             random_seed=self.RANDOM_SEED,
+        )
+        tokens = of_gpt_data_loader_fn()
+        print(tokens.shape)
+        print(tokens)
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_1n4d(self):
+        of_gpt_data_loader_fn = _make_gpt_data_loader_func(
+            data_file_prefix=self.DATA_FILE_PREFIX,
+            seq_length=self.SEQ_LENGTH,
+            num_samples=8,
+            batch_size=8,
+            dtype=flow.int64,
+            shuffle=True,
+            random_seed=self.RANDOM_SEED,
+            device_num=4,
+            parallel_distribution=["S(0)"],
         )
         tokens = of_gpt_data_loader_fn()
         print(tokens.shape)

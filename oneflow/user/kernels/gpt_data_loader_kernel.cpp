@@ -65,12 +65,14 @@ size_t GetShardIndex(const Shape& hierarchy, const ParallelDistribution& paralle
                      size_t rank) {
   using index_helper_t = NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE>;
   size_t ndim = hierarchy.NumAxes();
+  CHECK_GT(ndim, 0);
+  CHECK_LE(ndim, SHAPE_MAX_AXIS_SIZE);
   index_helper_t index_helper(hierarchy.dim_vec().data(), ndim);
   int64_t nd_index[SHAPE_MAX_AXIS_SIZE] = {0};
   index_helper.OffsetToNdIndex(rank, nd_index);
   size_t stride = 1;
   size_t index = 0;
-  for (size_t i = ndim - 1; i >= 0; --i) {
+  for (int i = ndim - 1; i >= 0; --i) {
     const auto& sbp_parallel = parallel_dist.sbp_parallel(i);
     if (sbp_parallel.has_split_parallel()) {
       index += nd_index[i] * stride;
@@ -94,7 +96,8 @@ class GPTDataLoader final : public OpKernelState {
                                   ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed")));
 
     seq_len_ = ctx->Attr<int64_t>("seq_length");
-    batch_size_ = ctx->TensorDesc4ArgNameAndIndex("tokens", 0)->shape().At(0);
+    batch_size_ = ctx->LogicalTensorDesc4ArgNameAndIndex("tokens", 0)->shape().At(0);
+    ctx->TensorDesc4ArgNameAndIndex("tokens", 0)->shape().At(0);
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       const ParallelDistribution& paral_dist =
@@ -105,7 +108,9 @@ class GPTDataLoader final : public OpKernelState {
       shard_index_ = GetShardIndex(hierarchy, paral_dist, ctx->parallel_ctx().parallel_id());
       CHECK_LT(shard_index_, num_shards_);
       CHECK_EQ(batch_size_ % num_shards_, 0);
-      batch_size_ /= num_shards_;
+      size_t device_batch_size = ctx->TensorDesc4ArgNameAndIndex("tokens", 0)->shape().At(0);
+      CHECK_EQ(batch_size_ / num_shards_, device_batch_size);
+      batch_size_ = device_batch_size;
       sample_index_ = shard_index_;
     }
   }
