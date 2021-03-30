@@ -114,10 +114,12 @@ class GPTDataLoader final : public OpKernelState {
   template<typename T>
   void Next(user_op::Tensor* tokens) {
     CHECK_EQ(tokens->shape().NumAxes(), 2);
+    CHECK_EQ(tokens->shape().At(0), batch_size_);
+    CHECK_EQ(tokens->shape().At(1), seq_len_ + 1);
     if (once_loaded_) { once_loaded_ = true; }
-    auto* dptr = tokens->mut_dptr<T>();
+    T* dptr = tokens->mut_dptr<T>();
     for (size_t i = 0; i < batch_size_; ++i) {
-      dataset_->Get(sample_index_, dptr + i * tokens->shape().At(1));
+      dataset_->Get(sample_index_, dptr + i * (seq_len_ + 1));
       sample_index_ += num_shards_;
     }
   }

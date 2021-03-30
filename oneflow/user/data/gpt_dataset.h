@@ -92,7 +92,7 @@ void GPTDataset::Get(size_t index, T* data) const {
     size_t part_num_tokens = (index_->doc_length(doc_index) - doc_offset);
     const void* data_addr = data_->address(index_->address(doc_index) + doc_offset * dtype_size);
     ReadTokens(data_addr, data, part_num_tokens);
-    data += part_num_tokens * sizeof(T);
+    data += part_num_tokens;
     total_num_tokens += part_num_tokens;
     // middle
     FOR_RANGE(size_t, i, doc_indices_idx + 1, next_doc_indices_idx) {
@@ -100,7 +100,7 @@ void GPTDataset::Get(size_t index, T* data) const {
       part_num_tokens = index_->doc_length(cur_doc_index);
       data_addr = data_->address(index_->address(cur_doc_index));
       ReadTokens(data_addr, data, part_num_tokens);
-      data += part_num_tokens * sizeof(T);
+      data += part_num_tokens;
       total_num_tokens += part_num_tokens;
     }
     // last

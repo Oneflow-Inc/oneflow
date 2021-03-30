@@ -54,6 +54,7 @@ MMapFile::~MMapFile() {
 }
 
 void MMapFile::read(void* buf, size_t offset, size_t length) const {
+  CHECK_LT(offset + length, size_);
   memcpy(buf, mapped_ + offset, length);
 }
 
@@ -62,7 +63,10 @@ void MMapFile::read(void* buf, size_t length) {
   offset_ += length;
 }
 
-const void* MMapFile::address(size_t offset) const { return mapped_ + offset; }
+const void* MMapFile::address(size_t offset) const {
+  CHECK_LT(offset, size_);
+  return mapped_ + offset;
+}
 
 }  // namespace data
 

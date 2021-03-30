@@ -20,6 +20,15 @@ namespace oneflow {
 
 namespace data {
 
+namespace {
+
+std::ifstream::pos_type FileSize(const std::string& filename) {
+  std::ifstream stream(filename, std::ifstream::ate | std::ifstream::binary);
+  return stream.tellg();
+}
+
+}  // namespace
+
 constexpr char GPTIndex::kMagicCode[];
 
 size_t GPTIndex::num_tokens() const {
@@ -60,6 +69,8 @@ GPTIndex::GPTIndex(const std::string& index_file_path) {
   doc_offsets_.resize(doc_offsets_size);
   stream.read(reinterpret_cast<char*>(doc_offsets_.data()),
               sizeof(decltype(doc_offsets_)::value_type) * doc_offsets_.size());
+  // check eof
+  CHECK_EQ(stream.tellg(), FileSize(index_file_path));
   // log
   std::chrono::duration<double, std::milli> elapse = std::chrono::system_clock::now() - start;
   LOG(INFO) << "Load GPT Dataset index file successed, file_path: " << index_file_path
