@@ -37,6 +37,9 @@ REGISTER_USER_OP("relu")
             .Build();
       }
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("relu_grad")
@@ -60,7 +63,9 @@ REGISTER_USER_OP("relu_grad")
             .Split(user_op::OpArg("dx", 0), i)
             .Build();
       }
-
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
     });
 

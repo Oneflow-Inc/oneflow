@@ -35,6 +35,8 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferDataType(user_op::InferContext* ctx) { return Maybe<void>::Ok(); }
+
 template<template<typename> class binary_func>
 void GeneratePartialSbp(user_op::SbpContext* ctx, int64_t axis) {
   // TODO(lixinqi)
@@ -77,7 +79,8 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
       .Attr<std::vector<int32_t>>("axis")             \
       .Attr<bool>("keepdims")                         \
       .SetTensorDescInferFn(InferTensorDescFn)        \
-      .SetGetSbpFn(GetSbpFn<binary_func>);
+      .SetGetSbpFn(GetSbpFn<binary_func>)             \
+      .SetInferDataTypeFn(InferDataType);
 
 REGISTER_REDUCE_USER_OP("reduce_any", BinaryFuncAny)
 REGISTER_REDUCE_USER_OP("reduce_all", BinaryFuncAll)

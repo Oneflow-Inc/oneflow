@@ -30,7 +30,7 @@ REGISTER_USER_OP("prelu")
         CHECK_OR_RETURN((alpha_shape->At(i - 1) == x_desc->shape().At(i))
                         || (alpha_shape->At(i - 1) == 1));
       }
-      *y_desc = *x_desc;
+      *y_desc->mut_shape() = x_desc->shape();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -52,6 +52,10 @@ REGISTER_USER_OP("prelu")
         }
       }
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("prelu_grad")
@@ -72,7 +76,7 @@ REGISTER_USER_OP("prelu_grad")
       }
       CHECK_EQ_OR_RETURN(dy_desc->shape(), x_desc->shape());
       CHECK_EQ_OR_RETURN(dy_desc->data_type(), x_desc->data_type());
-      *dx_desc = *x_desc;
+      *dx_desc->mut_shape() = x_desc->shape();
       *ctx->TensorDesc4ArgNameAndIndex("alpha_diff", 0) = *alpha_desc;
       return Maybe<void>::Ok();
     })
@@ -105,6 +109,10 @@ REGISTER_USER_OP("prelu_grad")
               .Build();
         }
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
       return Maybe<void>::Ok();
     });
 

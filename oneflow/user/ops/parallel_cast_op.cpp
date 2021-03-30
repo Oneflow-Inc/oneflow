@@ -24,7 +24,7 @@ REGISTER_USER_OP("parallel_cast")
     .Attr<std::string>("sbp_parallel", "")
     .Attr<std::string>("grad_sbp_parallel", "")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
@@ -50,6 +50,10 @@ REGISTER_USER_OP("parallel_cast")
         (*bn2sbp)[ibn] = sbp_parallel;
         (*bn2sbp)[obn] = sbp_parallel;
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 

@@ -24,7 +24,7 @@ REGISTER_USER_OP("repeat")
     .Output("out")
     .Attr<int32_t>("repeat_num")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -47,7 +47,11 @@ REGISTER_USER_OP("repeat")
           dim_vec.push_back(ctx->user_op_conf().attr<int32_t>("repeat_num"));
           *ctx->mut_output_blob_time_shape() = Shape(dim_vec);
           return Maybe<void>::Ok();
-        });
+        })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_USER_OP_GRAD("repeat").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
   const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
