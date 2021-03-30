@@ -17,6 +17,7 @@ import operator
 from functools import reduce
 
 import numpy as np
+import oneflow as flow
 
 from oneflow.python.onnx.load.handler import BackendHandler
 from oneflow.python.onnx.load.handler import onnx_op
@@ -265,3 +266,38 @@ class Slice(BackendHandler):
     @classmethod
     def version_11(cls, node, tensor_dict, **kwargs):
         return cls.version_10(node, tensor_dict, **kwargs)
+
+@onnx_op("Split")
+class Split(BackendHandler):
+    @classmethod
+    def _common(cls, node, tensor_dict, **kwargs):
+        x = tensor_dict[node.input_tensor_names[0]]
+        axis = node.attrs.get("axis")
+        split = node.attrs.get("split")
+        index = 0
+        ans = []
+        for i in range(len(split)):
+            if axis == 1:
+                tmp = flow.slice_v2(x, [[None, None, None], [index, index+split[i], 1], [None, None, None], [None, None, None]])
+            elif axis == 3:
+                tmp = flow.slice_v2(x, [[None, None, None], [None, None, None], [None, None, None], [index, index+split[i], 1]])
+            else:
+                raise ValueError("axis != 0 or 3 is not supported")
+            index += split[i]
+            ans.append(tmp)
+        return ans
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_2(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_11(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_13(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
