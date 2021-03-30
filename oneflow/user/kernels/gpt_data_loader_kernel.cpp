@@ -94,11 +94,11 @@ class GPTDataLoader final : public OpKernelState {
                                   ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed")));
 
     seq_len_ = ctx->Attr<int64_t>("seq_length");
-    batch_size_ = ctx->TensorDesc4ArgNameAndIndex("sequence", 0)->shape().At(0);
+    batch_size_ = ctx->TensorDesc4ArgNameAndIndex("tokens", 0)->shape().At(0);
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       const ParallelDistribution& paral_dist =
-          ctx->ParallelDistribution4ArgNameAndIndex("sequence", 0);
+          ctx->ParallelDistribution4ArgNameAndIndex("tokens", 0);
       CHECK_EQ(hierarchy.NumAxes(), paral_dist.sbp_parallel_size());
       num_shards_ = GetNumShards(hierarchy, paral_dist);
       CHECK_EQ(dataset_->Size() % num_shards_, 0);
@@ -154,7 +154,7 @@ class GPTDataLoaderKernel final : public OpKernel {
     CHECK_EQ(iteration_tensor->shape().elem_cnt(), 1);
     int64_t* iter_ptr = iteration_tensor->mut_dptr<int64_t>();
     if (loader->IsOnceLoaded()) { loader->Seek(*iter_ptr); }
-    user_op::Tensor* tokens_tensor = ctx->Tensor4ArgNameAndIndex("sequence", 0);
+    user_op::Tensor* tokens_tensor = ctx->Tensor4ArgNameAndIndex("tokens", 0);
     loader->Next<T>(tokens_tensor);
     *iter_ptr += 1;
   }
@@ -168,7 +168,7 @@ class GPTDataLoaderKernel final : public OpKernel {
       .SetCreateFn<GPTDataLoaderKernel<dtype>>()                                    \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                           \
                        & (user_op::HobDataType("iteration", 0) == DataType::kInt64) \
-                       & (user_op::HobDataType("sequence", 0) == GetDataType<dtype>::value))
+                       & (user_op::HobDataType("tokens", 0) == GetDataType<dtype>::value))
 
 REGISTER_GPT_DATA_LOADER_KERNEL(int32_t);
 REGISTER_GPT_DATA_LOADER_KERNEL(int64_t);

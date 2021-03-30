@@ -20,7 +20,7 @@ namespace oneflow {
 
 REGISTER_CPU_ONLY_USER_OP("gpt_data_loader")
     .Input("iteration")
-    .Output("sequence")
+    .Output("tokens")
     .Attr<std::string>("data_file_prefix")
     .Attr<int64_t>("seq_length")
     .Attr<int64_t>("num_samples")
@@ -33,7 +33,7 @@ REGISTER_CPU_ONLY_USER_OP("gpt_data_loader")
     .Attr<std::vector<std::string>>("parallel_distribution")
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const ParallelDistribution& paral_dist =
-          ctx->ParallelDistribution4ArgNameAndIndex("sequence", 0);
+          ctx->ParallelDistribution4ArgNameAndIndex("tokens", 0);
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       int64_t device_batch_size = ctx->Attr<int64_t>("batch_size");
       FOR_RANGE(size_t, i, 0, paral_dist.sbp_parallel_size()) {
@@ -46,47 +46,47 @@ REGISTER_CPU_ONLY_USER_OP("gpt_data_loader")
       }
 
       int64_t num_tokens = ctx->Attr<int64_t>("seq_length") + 1;
-      user_op::TensorDesc* sequence_desc = ctx->TensorDesc4ArgNameAndIndex("sequence", 0);
-      *sequence_desc->mut_shape() = Shape({device_batch_size, num_tokens});
-      *sequence_desc->mut_data_type() = ctx->Attr<DataType>("dtype");
+      user_op::TensorDesc* tokens_desc = ctx->TensorDesc4ArgNameAndIndex("tokens", 0);
+      *tokens_desc->mut_shape() = Shape({device_batch_size, num_tokens});
+      *tokens_desc->mut_data_type() = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
       int64_t num_tokens = ctx->Attr<int64_t>("seq_length") + 1;
-      user_op::TensorDesc* sequence_desc = ctx->TensorDesc4ArgNameAndIndex("sequence", 0);
-      *sequence_desc->mut_shape() = Shape({batch_size, num_tokens});
-      *sequence_desc->mut_data_type() = ctx->Attr<DataType>("dtype");
+      user_op::TensorDesc* tokens_desc = ctx->TensorDesc4ArgNameAndIndex("tokens", 0);
+      *tokens_desc->mut_shape() = Shape({batch_size, num_tokens});
+      *tokens_desc->mut_data_type() = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
     })
     .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       const Shape& hierarchy = ctx->parallel_hierarchy();
-      ParallelDistribution* seq_dist = ctx->ParallelDistribution4ArgNameAndIndex("sequence", 0);
-      ParallelDistribution* iter_dist = ctx->ParallelDistribution4ArgNameAndIndex("iteration", 0);
+      ParallelDistribution* input_dist = ctx->ParallelDistribution4ArgNameAndIndex("iteration", 0);
+      ParallelDistribution* output_dist = ctx->ParallelDistribution4ArgNameAndIndex("tokens", 0);
       const auto& dist_conf =
           ctx->user_op_conf().attr<std::vector<std::string>>("parallel_distribution");
       CHECK_EQ_OR_RETURN(dist_conf.size(), hierarchy.NumAxes());
       for (const std::string& sbp_str : dist_conf) {
         SbpParallel sbp_parallel;
         CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
-        *seq_dist->add_sbp_parallel() = sbp_parallel;
-        iter_dist->add_sbp_parallel()->mutable_broadcast_parallel();
+        input_dist->add_sbp_parallel()->mutable_broadcast_parallel();
+        *output_dist->add_sbp_parallel() = sbp_parallel;
       }
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& conf) -> void {
-      user_op::InputArgModifier* iteration_modifier = GetInputArgModifierFn("iteration", 0);
-      CHECK(iteration_modifier != nullptr);
-      iteration_modifier->set_is_mutable(true);
-      iteration_modifier->set_requires_grad(false);
+      user_op::InputArgModifier* input_modifier = GetInputArgModifierFn("iteration", 0);
+      CHECK(input_modifier != nullptr);
+      input_modifier->set_is_mutable(true);
+      input_modifier->set_requires_grad(false);
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
                              const user_op::UserOpConfWrapper& conf) {
-      user_op::OutputArgModifier* sequence_modifier = GetOutputArgModifierFn("sequence", 0);
-      CHECK(sequence_modifier != nullptr);
-      sequence_modifier->set_header_infered_before_compute(false);
+      user_op::OutputArgModifier* output_modifier = GetOutputArgModifierFn("tokens", 0);
+      CHECK(output_modifier != nullptr);
+      output_modifier->set_header_infered_before_compute(false);
     });
 
 }  // namespace oneflow

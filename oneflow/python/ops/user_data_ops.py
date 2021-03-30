@@ -2428,7 +2428,7 @@ def gpt_data_loader(
         flow.user_op_builder(name)
         .Op("gpt_data_loader")
         .Input("iteration", [iteration])
-        .Output("sequence")
+        .Output("tokens")
         .Attr("data_file_prefix", data_file_prefix)
         .Attr("seq_length", seq_length)
         .Attr("num_samples", num_samples)

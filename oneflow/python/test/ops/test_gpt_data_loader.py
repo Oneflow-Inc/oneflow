@@ -65,9 +65,9 @@ def _make_gpt_data_loader_func(
 
 # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestGPTDataLoader(flow.unittest.TestCase):
-    DATA_FILE_PREFIX = "/dataset/Megatron-LM/gpt_sample_dataset_text_document"
+    DATA_FILE_PREFIX = "/dataset/Megatron-LM/small/gpt_sample_dataset_text_document"
     SEQ_LENGTH = 1024
-    RANDOM_SEED = 123456
+    RANDOM_SEED = 12345
 
     @flow.unittest.skip_unless_1n1d()
     def test_1n1d(self):
@@ -81,6 +81,7 @@ class TestGPTDataLoader(flow.unittest.TestCase):
             random_seed=self.RANDOM_SEED,
         )
         tokens = of_gpt_data_loader_fn()
+        print(tokens.shape)
         print(tokens)
 
 
