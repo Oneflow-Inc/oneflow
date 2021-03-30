@@ -62,7 +62,6 @@ REGISTER_USER_OP("cast_like")
       const user_op::TensorDesc* dtype_like_tensor_desc =
           ctx->TensorDesc4ArgNameAndIndex("dtype_like", 0);
       user_op::TensorDesc* output_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       *output_tensor_desc->mut_data_type() = dtype_like_tensor_desc->data_type();
       return Maybe<void>::Ok();
     });
