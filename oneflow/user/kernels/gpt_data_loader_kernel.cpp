@@ -58,7 +58,7 @@ size_t GetShardIndex(const Shape& hierarchy, const ParallelDistribution& paralle
 
 class GPTDataLoader final : public OpKernelState {
  public:
-  GPTDataLoader(KernelInitContext* ctx) : num_shards_(1), sample_index_(0) {
+  GPTDataLoader(KernelInitContext* ctx) : num_shards_(1) {
     seq_len_ = ctx->Attr<int64_t>("seq_length");
 
     dataset_.reset(new GPTDataset(
@@ -79,7 +79,6 @@ class GPTDataLoader final : public OpKernelState {
       size_t device_batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
       CHECK_EQ(batch_size_ / num_shards_, device_batch_size);
       batch_size_ = device_batch_size;
-      sample_index_ = shard_index_;
     }
   }
   ~GPTDataLoader() = default;
@@ -93,7 +92,6 @@ class GPTDataLoader final : public OpKernelState {
     for (size_t i = 0; i < batch_size_; ++i) {
       size_t sample_iter = shard_index_ + iter * i * num_shards_ + i * num_shards_;
       dataset_->Get(sample_iter, dptr + i * (seq_len_ + 1));
-      sample_index_ += num_shards_;
     }
   }
 
@@ -103,7 +101,6 @@ class GPTDataLoader final : public OpKernelState {
   size_t batch_size_;
   size_t num_shards_;
   size_t shard_index_;
-  size_t sample_index_;
 };
 
 template<typename T>

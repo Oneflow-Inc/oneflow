@@ -82,7 +82,6 @@ class GPTDataset final {
   template<typename T>
   void ReadTokens(const void* src, size_t offset, T* dst, size_t size) const;
 
-  // config
   std::unique_ptr<const GPTIndex> index_;
   std::unique_ptr<MappedBuffer> data_;
   size_t seq_len_;
@@ -90,7 +89,6 @@ class GPTDataset final {
   bool shuffle_;
   uint32_t seed_;
 
-  // middle state
   size_t tokens_per_epoch_;
   size_t num_epochs_;
   size_t num_complete_epochs_;
@@ -146,6 +144,7 @@ void GPTDataset::Get(size_t index, T* data) const {
 
 template<typename T>
 void GPTDataset::ReadTokens(const void* src, size_t bytes_offset, T* dst, size_t size) const {
+  CHECK_NOTNULL(src);
   switch (index_->dtype_code()) {
 #define SWITCH_CASE_ENTRY(type_code, type)                                           \
   case type_code: {                                                                  \
