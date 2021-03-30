@@ -303,15 +303,11 @@ class Model(
                 " {}'s fit() will not do training.".format(self.__class__.__name__),
             )
 
-<<<<<<< HEAD
         self._val_model = (
             ValidateModel(validation_config, self, callbacks)
             if self._is_deprecated_function_style
             else OOPStyleValidateModel(validation_config, self, callbacks)
         )
-=======
-        self._val_model = ValidateModel(validation_config, self, callbacks)
->>>>>>> a396662438c5575eefedb8c218421b980a3fed14
         if self._val_model.is_valid:
             sub_models.append(self._val_model)
         else:
@@ -452,14 +448,6 @@ class TrainModel(SubModel):
             for opt in opt_conf:
                 assert isinstance(
                     opt, Optimizer
-<<<<<<< HEAD
-                ), "model.configure_optimizers() must return Optimizer "
-                "or List[Optimizer, ...] or Tuple[Optimizer, ...]"
-            self._opts = opt_conf
-        else:
-            assert False, "model.configure_optimizers() must return Optimizer "
-            "or List[Optimizer, ...] or Tuple[Optimizer, ...]"
-=======
                 ), "model.configure_optimizers() must return Optimizer \
                     or List[Optimizer, ...] or Tuple[Optimizer, ...]"
             self._opts = opt_conf
@@ -468,7 +456,6 @@ class TrainModel(SubModel):
                 False
             ), "model.configure_optimizers() must return Optimizer \
                 or List[Optimizer, ...] or Tuple[Optimizer, ...]"
->>>>>>> a396662438c5575eefedb8c218421b980a3fed14
 
         return True
 
@@ -648,7 +635,6 @@ class CheckpointModel(SubModel):
         SaveVarDict(path=dirpath)
 
 
-<<<<<<< HEAD
 class OOPStyleValidateModel(SubModel):
     def __init__(
         self,
@@ -679,8 +665,6 @@ class OOPStyleValidateModel(SubModel):
             return True
 
 
-=======
->>>>>>> a396662438c5575eefedb8c218421b980a3fed14
 def _infer_job_signature(data_module, batch, optimizer_idx, job):
     para_list = []
     placeholder_list = data_module.infer_oneflow_data_placeholder(batch, optimizer_idx)
