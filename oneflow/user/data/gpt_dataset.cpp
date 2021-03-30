@@ -60,7 +60,7 @@ size_t GPTDataset::GetNumEpochs() const {
   // but the last token will overlap with the first token of the next
   // sample except for the last sample.
   return static_cast<size_t>(
-      std::ceil((num_samples_ * seq_len_ + 1) / static_cast<double>(tokens_per_epoch_)));
+      std::ceil(static_cast<double>(num_samples_ * seq_len_ + 1) / tokens_per_epoch_));
 }
 
 size_t GPTDataset::GetNumCompleteEpochs() const {
@@ -93,19 +93,25 @@ void GPTDataset::InitDocIndices(const std::vector<size_t>& doc_indices, size_t n
 }
 
 void GPTDataset::InitSampleIndices() {
-  size_t total_num_samples =
-      static_cast<size_t>(
-          std::floor(static_cast<double>(num_epochs_ * tokens_per_epoch_ - 1) / seq_len_))
-      + 1;
+  size_t total_num_samples = static_cast<size_t>(
+      std::floor(static_cast<double>(num_epochs_ * tokens_per_epoch_ - 1) / seq_len_));
+  sample_indices_.reserve(total_num_samples);
 
   size_t doc_indices_idx = 0;
   size_t doc_offset = 0;
   FOR_RANGE(size_t, i, 0, total_num_samples) {
-    sample_indices_.emplace_back(doc_indices_idx, doc_offset);
+    LOG(INFO) << "InitSampleIndices, sample " << i;
     if (doc_indices_idx >= doc_indices_.size()) { break; }
-    size_t remaining_tokens = seq_len_;
-    int32_t doc_len = index_->doc_length(doc_indices_[doc_indices_idx]);
+    sample_indices_.emplace_back(doc_indices_idx, doc_offset);
+    int remaining_tokens = seq_len_;
     while (remaining_tokens > 0) {
+      size_t doc_len = index_->doc_length(doc_indices_[doc_indices_idx]);
+      CHECK_LT(doc_offset, doc_len);
+      doc_len -= doc_offset;
+      LOG(INFO) << "sample " << i << ", doc_indices_idx: " << doc_indices_idx
+                << ", doc_index: " << doc_indices_[doc_indices_idx]
+                << ", doc_offset: " << doc_offset << ", doc_len: " << doc_len
+                << ", remaining_tokens: " << remaining_tokens;
       if (remaining_tokens < doc_len) {
         // move offset inside doc
         doc_offset += remaining_tokens;
@@ -113,6 +119,9 @@ void GPTDataset::InitSampleIndices() {
         // move to next doc
         doc_indices_idx += 1;
         doc_offset = 0;
+        CHECK_LT(doc_indices_idx, doc_indices_.size())
+            << "sample_index: " << i << ", remaining_tokens: " << remaining_tokens
+            << ", doc_len: " << doc_len;
       }
       remaining_tokens -= doc_len;
     }
@@ -139,12 +148,12 @@ const HashMap<char, DataType> GPTDataset::kDTypeCode2DataType = {
     {1, DataType::kUInt8},
     {2, DataType::kInt8},
     {3, DataType::kInt32},  // origin {3,
-                            // DataType::kInt16}
+                            // DataType::kInt16},
     {4, DataType::kInt32},
     {5, DataType::kInt64},
     {6, DataType::kFloat},
     {7, DataType::kDouble},
-    {8, DataType::kInt32},  // origin {8, DataType::kUInt16}
+    {8, DataType::kInt32},  // origin {8, DataType::kUInt16},
 };
 
 const HashMap<char, size_t> GPTDataset::kDTypeCode2Size = {

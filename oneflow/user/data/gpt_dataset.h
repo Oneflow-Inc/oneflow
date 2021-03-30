@@ -72,43 +72,58 @@ template<typename T>
 void GPTDataset::Get(size_t index, T* data) const {
   CHECK_LT(index, shuffle_indices_.size());
   size_t sample_index = shuffle_indices_[index];
-  CHECK_LT(sample_index, sample_indices_.size() - 1);
-  const size_t cur_doc_index_idx = sample_indices_[sample_index].first;
-  const size_t cur_doc_index = doc_indices_.at(cur_doc_index_idx);
-  const size_t cur_doc_offset = sample_indices_[sample_index].second;
-  const size_t next_doc_index_idx = sample_indices_[sample_index + 1].first;
-  const size_t next_doc_index = doc_indices_.at(next_doc_index_idx);
+  CHECK_LT(sample_index, sample_indices_.size() - 1)
+      << "index: " << index << ", sample_index: " << sample_index;
+  const size_t doc_indices_idx = sample_indices_[sample_index].first;
+  const size_t doc_offset = sample_indices_[sample_index].second;
+  const size_t next_doc_indices_idx = sample_indices_[sample_index + 1].first;
   const size_t next_doc_offset = sample_indices_[sample_index + 1].second;
+  CHECK_LE(doc_indices_idx, next_doc_indices_idx);
+  CHECK_LT(next_doc_indices_idx, doc_indices_.size());
+  const size_t doc_index = doc_indices_[doc_indices_idx];
+  const size_t next_doc_index = doc_indices_[next_doc_indices_idx];
   const size_t dtype_size = kDTypeCode2Size.at(index_->dtype_code());
   const size_t num_tokens = seq_len_ + 1;
-  if (cur_doc_index_idx == next_doc_index_idx) {
-    CHECK_EQ(num_tokens, next_doc_offset - cur_doc_offset + 1);
-    size_t offset = index_->address(cur_doc_index) + cur_doc_offset * dtype_size;
+  LOG(INFO) << "GPTDataset::Get, index: " << index << ", sample_index: " << sample_index;
+  if (doc_indices_idx == next_doc_indices_idx) {
+    CHECK_EQ(num_tokens, next_doc_offset - doc_offset + 1);
+    size_t offset = index_->address(doc_index) + doc_offset * dtype_size;
     const void* data_addr = data_->address(offset);
     ReadTokens(data_addr, data, num_tokens);
   } else {
     size_t total_num_tokens = 0;
     // first
-    size_t partial_num_tokens = (index_->doc_length(cur_doc_index) - cur_doc_offset);
-    const void* data_addr =
-        data_->address(index_->address(cur_doc_index) + cur_doc_offset * dtype_size);
-    ReadTokens(data_addr, data, partial_num_tokens);
-    data += partial_num_tokens * sizeof(T);
-    total_num_tokens += partial_num_tokens;
+    size_t part_num_tokens = (index_->doc_length(doc_index) - doc_offset);
+    const void* data_addr = data_->address(index_->address(doc_index) + doc_offset * dtype_size);
+    ReadTokens(data_addr, data, part_num_tokens);
+    data += part_num_tokens * sizeof(T);
+    total_num_tokens += part_num_tokens;
+    LOG(INFO) << "doc_indices_idx: " << doc_indices_idx << ", doc_index: " << doc_index
+              << ", doc_offset: " << doc_offset << ", part_num_tokens: " << part_num_tokens
+              << ", total_num_tokens: " << total_num_tokens << ", sample_index: " << sample_index
+              << " [first]";
     // middle
-    FOR_RANGE(size_t, i, cur_doc_index_idx + 1, next_doc_index_idx) {
-      auto doc_index = doc_indices_.at(i);
-      partial_num_tokens = index_->doc_length(doc_index);
-      data_addr = data_->address(index_->address(doc_index));
-      ReadTokens(data_addr, data, partial_num_tokens);
-      data += partial_num_tokens * sizeof(T);
-      total_num_tokens += partial_num_tokens;
+    FOR_RANGE(size_t, i, doc_indices_idx + 1, next_doc_indices_idx) {
+      size_t cur_doc_index = doc_indices_[i];
+      part_num_tokens = index_->doc_length(cur_doc_index);
+      data_addr = data_->address(index_->address(cur_doc_index));
+      ReadTokens(data_addr, data, part_num_tokens);
+      data += part_num_tokens * sizeof(T);
+      total_num_tokens += part_num_tokens;
+      LOG(INFO) << "doc_indices_idx: " << i << ", doc_index: " << cur_doc_index
+                << ", part_num_tokens: " << part_num_tokens
+                << ", total_num_tokens: " << total_num_tokens << ", sample_index: " << sample_index
+                << " [middle]";
     }
     // last
-    partial_num_tokens = next_doc_offset + 1;
+    part_num_tokens = next_doc_offset + 1;
     data_addr = data_->address(index_->address(next_doc_index));
-    ReadTokens(data_addr, data, partial_num_tokens);
-    total_num_tokens += partial_num_tokens;
+    ReadTokens(data_addr, data, part_num_tokens);
+    total_num_tokens += part_num_tokens;
+    LOG(INFO) << "doc_indices_idx: " << next_doc_indices_idx << ", doc_index: " << next_doc_index
+              << ", part_num_tokens: " << part_num_tokens
+              << ", total_num_tokens: " << total_num_tokens << ", sample_index: " << sample_index
+              << " [last]";
     // check
     CHECK_EQ(total_num_tokens, num_tokens);
   }
