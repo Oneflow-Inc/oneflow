@@ -37,6 +37,9 @@ REGISTER_USER_OP("softmax")
             .Build();
       }
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("softmax_grad")
@@ -60,6 +63,9 @@ REGISTER_USER_OP("softmax_grad")
             .Split(user_op::OpArg("dx", 0), axis)
             .Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
