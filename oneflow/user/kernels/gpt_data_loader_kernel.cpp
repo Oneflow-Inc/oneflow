@@ -153,7 +153,7 @@ class GPTDataLoaderKernel final : public OpKernel {
     user_op::Tensor* iteration_tensor = ctx->Tensor4ArgNameAndIndex("iteration", 0);
     CHECK_EQ(iteration_tensor->shape().elem_cnt(), 1);
     int64_t* iter_ptr = iteration_tensor->mut_dptr<int64_t>();
-    if (loader->IsOnceLoaded()) { loader->Seek(*iter_ptr); }
+    if (!loader->IsOnceLoaded()) { loader->Seek(*iter_ptr); }
     user_op::Tensor* tokens_tensor = ctx->Tensor4ArgNameAndIndex("tokens", 0);
     loader->Next<T>(tokens_tensor);
     *iter_ptr += 1;
