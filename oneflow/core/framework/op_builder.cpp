@@ -75,12 +75,15 @@ OpBuilder& OpBuilder::Output(const std::string& output_name, const int count) {
   return CHECK_JUST(MaybeOutput(output_name, count));
 }
 
-Maybe<OpBuilder&> OpBuilder::MaybeAttr(const std::string& attr_name, const AttrValue& attr_value) {
-  (*(proto_.mutable_attr()))[attr_name] = attr_value;
+Maybe<OpBuilder&> OpBuilder::MaybeAttr(const std::string& attr_name,
+                                       const cfg::AttrValue& attr_value) {
+  AttrValue pb_attr_value;
+  attr_value.ToProto(&pb_attr_value);
+  (*(proto_.mutable_attr()))[attr_name] = pb_attr_value;
   return *this;
 }
 
-OpBuilder& OpBuilder::Attr(const std::string& attr_name, const AttrValue& attr_value) {
+OpBuilder& OpBuilder::Attr(const std::string& attr_name, const cfg::AttrValue& attr_value) {
   return CHECK_JUST(MaybeAttr(attr_name, attr_value));
 }
 
