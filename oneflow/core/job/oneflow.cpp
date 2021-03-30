@@ -177,8 +177,13 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
       auto* kernel_conf = task.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
       if (kernel_conf->has_op_attribute_ref()) {
         kernel_conf->clear_op_attribute_ref();
-        *kernel_conf->mutable_op_attribute() = op_attribute_ref_table.op_name2op_attribute().at(
-            task.exec_sequence().exec_node(0).kernel_conf().op_attribute_ref());
+        auto it =
+            op_attribute_ref_table.op_name2op_attribute().find(kernel_conf->op_attribute_ref());
+        if (it == op_attribute_ref_table.op_name2op_attribute().end()) {
+          LOG(FATAL) << "ref: " << kernel_conf->op_attribute_ref() << " not found";
+        } else {
+          *kernel_conf->mutable_op_attribute() = it->second;
+        }
       } else {
         CHECK(kernel_conf->has_op_attribute());
       }

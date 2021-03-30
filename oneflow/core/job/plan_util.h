@@ -34,7 +34,12 @@ struct PlanUtil {
   inline static const oneflow::OpAttribute& GetOpOpAttribute(
       const Plan* plan, const oneflow::KernelConf& kernel_conf) {
     if (kernel_conf.has_op_attribute_ref()) {
-      return plan->op_name2op_attribute().at(kernel_conf.op_attribute_ref());
+      auto it = plan->op_name2op_attribute().find(kernel_conf.op_attribute_ref());
+      if (it == plan->op_name2op_attribute().end()) {
+        LOG(FATAL) << "ref: " << kernel_conf.op_attribute_ref() << " not found";
+      } else {
+        return it->second;
+      }
     } else {
       CHECK(kernel_conf.has_op_attribute());
       return kernel_conf.op_attribute();
