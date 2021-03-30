@@ -130,7 +130,11 @@ class GlobalFrontSeqBarrierInstructionType : public InstructionType {
   virtual bool IsFrontSequential() const override { return true; }
 
  protected:
-  void Run() const { OF_ENV_BARRIER(); }
+  void Run() const {
+    std::cout << "begin" << std::endl;
+    OF_ENV_BARRIER();
+    std::cout << "end" << std::endl;
+  }
 };
 
 class InferGlobalFrontSeqBarrierInstructionType final

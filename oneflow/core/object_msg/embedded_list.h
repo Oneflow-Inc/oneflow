@@ -142,6 +142,7 @@ class EmbeddedListHead {
   }
 
   void Erase(value_type* elem) {
+    CheckSize();
     CHECK_GT(size_, 0);
     CHECK_NE(elem, End());
     EmbeddedListLink* list_link = LinkField::FieldPtr4StructPtr(elem);
