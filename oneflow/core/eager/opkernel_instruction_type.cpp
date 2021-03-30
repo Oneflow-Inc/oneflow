@@ -508,9 +508,9 @@ private:
     const auto& mem_case = JUST(GetMemCase(operand));
     JUST(CheckMemCase(mem_case, device_type, stream.device_id()));
     JUST(operand->ForEachOutputTensor([&](one::EagerMirroredTensorImpl* tensor) -> Maybe<void> {
-      CHECK_OR_RETURN(static_cast<bool>(tensor->blob_object()));
+      CHECK_OR_RETURN(static_cast<bool>(tensor->eager_blob_object()));
       if (operand->opkernel().need_check_mem_case()) {
-        JUST(CheckMemCase(tensor->blob_object().mem_case(), device_type, stream.device_id()));
+        JUST(CheckMemCase(tensor->eager_blob_object().mem_case(), device_type, stream.device_id()));
       }
       return Maybe<void>::Ok();
     }));
@@ -519,7 +519,7 @@ private:
 
   static inline Maybe<void> InitOutputBlobs(LocalCallOpKernelPhyInstrOperand* operand) {
     JUST(operand->ForEachOutputTensor([&](one::EagerMirroredTensorImpl* tensor) -> Maybe<void> {
-      const auto& blob_object = tensor->blob_object();
+      const auto& blob_object = tensor->eager_blob_object();
       CHECK_OR_RETURN(static_cast<bool>(blob_object));
       JUST(blob_object->InitBlob());
       return Maybe<void>::Ok();
@@ -581,7 +581,7 @@ private:
   static inline Maybe<void> AllocateOutputBlobsMemory(
       LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
     JUST(operand->ForEachOutputTensor([&](one::EagerMirroredTensorImpl* tensor) -> Maybe<void> {
-      JUST(tensor->blob_object()->TryAllocateBlobBodyMemory(device_ctx));
+      JUST(tensor->eager_blob_object()->TryAllocateBlobBodyMemory(device_ctx));
       return Maybe<void>::Ok();
     }));
     return Maybe<void>::Ok();
