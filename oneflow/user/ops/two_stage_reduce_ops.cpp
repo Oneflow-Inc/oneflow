@@ -21,6 +21,13 @@ namespace oneflow {
 
 namespace {
 
+Maybe<void> InferReduceDeviceStageLogicalDtypeFn(user_op::InferContext* ctx){
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+  *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
+  *ctx->Dtype4ArgNameAndIndex("count", 0) = DataType::kInt32;  
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx) {
   Shape* input_shape = ctx->Shape4ArgNameAndIndex("in", 0);
   const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
@@ -41,12 +48,9 @@ Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx
     }
     *output_shape = Shape(dim_vec);
   }
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-  *ctx->Shape4ArgNameAndIndex("mask", 0) = *input_shape;
-  *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
 
+  *ctx->Shape4ArgNameAndIndex("mask", 0) = *input_shape;
   *ctx->Shape4ArgNameAndIndex("count", 0) = *output_shape;
-  *ctx->Dtype4ArgNameAndIndex("count", 0) = DataType::kInt32;
 
   return Maybe<void>::Ok();
 }
@@ -73,13 +77,25 @@ Maybe<void> InferReduceDeviceStagePhysicalTensorDescFn(user_op::InferContext* ct
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferReduceDeviceStageGradDtypeFn(user_op::InferContext* ctx){
+  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
+  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("count", 0), DataType::kInt32);
+  *ctx->Dtype4ArgNameAndIndex("in_diff", 0) = *ctx->Dtype4ArgNameAndIndex("out_diff", 0);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InferReduceDeviceStageGradTensorDescFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("out_diff", 0),
-                     *ctx->Shape4ArgNameAndIndex("count", 0));
   CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
   CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("count", 0), DataType::kInt32);
   *ctx->Shape4ArgNameAndIndex("in_diff", 0) = *ctx->Shape4ArgNameAndIndex("mask", 0);
-  *ctx->Dtype4ArgNameAndIndex("in_diff", 0) = *ctx->Dtype4ArgNameAndIndex("out_diff", 0);
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferReduceGlobalStageDtypeFn(user_op::InferContext* ctx) {
+  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_count", 0), DataType::kInt32);
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+  *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
 
   return Maybe<void>::Ok();
 }
@@ -88,7 +104,6 @@ Maybe<void> InferReduceGlobalStageTensorDescFn(user_op::InferContext* ctx) {
   const Shape* input_shape = ctx->Shape4ArgNameAndIndex("in", 0);
   const Shape* device_count_shape = ctx->Shape4ArgNameAndIndex("device_count", 0);
   CHECK_EQ_OR_RETURN(*input_shape, *device_count_shape);
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_count", 0), DataType::kInt32);
   const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
   bool keepdims = ctx->Attr<bool>("keepdims");
   Shape* output_shape = ctx->Shape4ArgNameAndIndex("out", 0);
@@ -108,9 +123,16 @@ Maybe<void> InferReduceGlobalStageTensorDescFn(user_op::InferContext* ctx) {
     }
   }
 
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
   *ctx->Shape4ArgNameAndIndex("mask", 0) = *input_shape;
-  *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferReduceGlobalStageGradDtypeFn(user_op::InferContext* ctx) {
+  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
+  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_count", 0), DataType::kInt32);
+
+  *ctx->Dtype4ArgNameAndIndex("in_diff", 0) = *ctx->Dtype4ArgNameAndIndex("out_diff", 0);
 
   return Maybe<void>::Ok();
 }
@@ -119,13 +141,7 @@ Maybe<void> InferReduceGlobalStageGradTensorDescFn(user_op::InferContext* ctx) {
   Shape* mask_shape = ctx->Shape4ArgNameAndIndex("mask", 0);
   Shape* device_count_shape = ctx->Shape4ArgNameAndIndex("device_count", 0);
   CHECK_EQ_OR_RETURN(*device_count_shape, *mask_shape);
-
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_count", 0), DataType::kInt32);
-
   *ctx->Shape4ArgNameAndIndex("in_diff", 0) = *mask_shape;
-  *ctx->Dtype4ArgNameAndIndex("in_diff", 0) = *ctx->Dtype4ArgNameAndIndex("out_diff", 0);
-
   return Maybe<void>::Ok();
 }
 
@@ -186,6 +202,7 @@ Maybe<void> GetReduceDeviceStageGradSbpFn(user_op::SbpContext* ctx) {
       .Attr<std::vector<int32_t>>("axis")                                       \
       .SetLogicalTensorDescInferFn(InferReduceDeviceStageLogicalTensorDescFn)   \
       .SetPhysicalTensorDescInferFn(InferReduceDeviceStagePhysicalTensorDescFn) \
+      .SetInferDataTypeFn(InferReduceDeviceStageLogicalDtypeFn) \
       .SetGetSbpFn(GetReduceDeviceStageSbpFn);
 
 REGISTER_REDUCE_DEVICE_STAGE_USER_OP("reduce_min_device_stage")
@@ -199,6 +216,7 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP("reduce_max_device_stage")
       .Output("in_diff")                                            \
       .Attr<std::vector<int32_t>>("axis")                           \
       .SetTensorDescInferFn(InferReduceDeviceStageGradTensorDescFn) \
+      .SetInferDataTypeFn(InferReduceDeviceStageGradDtypeFn) \
       .SetGetSbpFn(GetReduceDeviceStageGradSbpFn);
 
 REGISTER_REDUCE_DEVICE_STAGE_GRAD_USER_OP("reduce_min_device_stage_grad")
@@ -238,6 +256,7 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max
       .Attr<std::vector<int32_t>>("axis")                                         \
       .Attr<bool>("keepdims")                                                     \
       .SetTensorDescInferFn(InferReduceGlobalStageTensorDescFn)                   \
+      .SetInferDataTypeFn(InferReduceGlobalStageDtypeFn) \
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn, \
                               const user_op::UserOpConfWrapper&) {                \
         user_op::InputArgModifier* device_count_modifier =                        \
@@ -258,6 +277,7 @@ REGISTER_REDUCE_GLOBAL_STAGE_USER_OP("reduce_max_global_stage")
       .Attr<std::vector<int32_t>>("axis")                           \
       .Attr<bool>("keepdims")                                       \
       .SetTensorDescInferFn(InferReduceGlobalStageGradTensorDescFn) \
+      .SetInferDataTypeFn(InferReduceGlobalStageGradDtypeFn) \
       .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); });
 
 REGISTER_REDUCE_GLOBAL_STAGE_GRAD_USER_OP("reduce_min_global_stage_grad")

@@ -338,7 +338,7 @@ REGISTER_USER_OP("test_user_op_attr_auto_type")
     .Attr<int32_t>("int1")
     .Attr<int32_t>("int2")
     .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)
-    .SetInferDataTypeFn(TensorDescInferFnUtil::UnchangedDataType);
+    .SetInferDataTypeFn(user_op::TensorDescInferFnUtil::UnchangedDataType);
 
 REGISTER_CPU_ONLY_USER_OP("cpu_only_relu_test")
     .Input("in")
