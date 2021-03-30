@@ -84,10 +84,12 @@ class Module(object):
                 args = result
 
         res = None
+
         @global_function_or_identity()
         def job():
             nonlocal res
             res = self.forward(*args)
+
         job()
 
         return res
