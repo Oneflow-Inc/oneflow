@@ -218,6 +218,7 @@ jobs:
           fi
           # duplicate one for cuda_op
           if [ "$test_suite" == "cuda" ]; then
+            rm -f build.cuda_op.env
             ln -s build.cuda.env build.cuda_op.env
           fi
       - name: Upload shared env
