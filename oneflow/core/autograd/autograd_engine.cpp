@@ -50,15 +50,15 @@ Maybe<void> InitEmptyTensorArgs2ZerosTensor(const TensorTuple& outputs,
 
 Maybe<void> CopyOrAccGrad(Tensor* tensor, bool autograd_mode) {
   autograd::AutoGradMode mode(autograd_mode);
-  const auto& tensor_arg = tensor->now_grad_arg();
+  const auto& now_grad = JUST(tensor->now_grad_arg()->GetAccTensor());
   if (tensor->acc_grad()) {
-    TensorTuple input = {tensor->acc_grad(), JUST(tensor_arg->GetAccTensor())};
+    TensorTuple input = {tensor->acc_grad(), now_grad};
     TensorTuple output(1);
     const auto& add = JUST(op_expr_helper::AddOp());
     JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*add, input, &output));
     tensor->set_acc_grad(output.at(0));
   } else {
-    tensor->set_acc_grad(JUST(tensor_arg->GetAccTensor()));
+    tensor->set_acc_grad(now_grad);
   }
   return Maybe<void>::Ok();
 }
