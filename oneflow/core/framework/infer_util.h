@@ -70,6 +70,7 @@ class InferContext {
 
 struct TensorDescInferFnUtil {
   static Maybe<void> Unchanged(InferContext*);
+  static Maybe<void> UnchangedDataType(InferContext*);
   static Maybe<void> InOutCorrespond(InferContext*);
 };
 
