@@ -87,7 +87,6 @@ class AutogradEngine {
 class StackFunctionNode final : public FunctionNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StackFunctionNode);
-  // TODO: update constructor according to op_builder interface
   StackFunctionNode(
       const std::shared_ptr<
           const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
@@ -111,7 +110,6 @@ class StackFunctionNode final : public FunctionNode {
   std::vector<std::shared_ptr<TensorArg>> in_grads_;
   std::vector<std::shared_ptr<TensorArg>> out_grads_;
   // Actual backward function builds in `AutogradInterpreter` to calculate one backward op
-  // TODO: add parameters
   std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>
       backward_fn_;
 };
