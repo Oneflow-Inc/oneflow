@@ -173,8 +173,8 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
       fake_op_conf.set_name(fake_op_name);
       const int64_t old_scope_symbol_id = fake_op_conf.scope_symbol_id();
       // update fake op conf scope from fw to bw
-      const int64_t new_scope_symbol_id = JUST(NewScopeSymbolIdWihtModifier(
-          old_scope_symbol_id, [](std::shared_ptr<cfg::ScopeProto> new_scope) {
+      const int64_t new_scope_symbol_id = JUST(
+          NewScopeSymbolId(old_scope_symbol_id, [](std::shared_ptr<cfg::ScopeProto> new_scope) {
             CHECK_EQ(new_scope->calculation_pass_name(), kForwardPass);
             new_scope->set_calculation_pass_name(kBackwardPass);
           }));
