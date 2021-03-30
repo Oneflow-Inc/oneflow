@@ -116,6 +116,24 @@ class TestGPTDataLoader(flow.unittest.TestCase):
         print(tokens.shape)
         print(tokens)
 
+    @flow.unittest.skip_unless_2n4d()
+    def test_2n4d(self):
+        of_gpt_data_loader_fn = _make_gpt_data_loader_func(
+            data_file_prefix=self.DATA_FILE_PREFIX,
+            seq_length=self.SEQ_LENGTH,
+            num_samples=8,
+            batch_size=8,
+            dtype=flow.int64,
+            shuffle=True,
+            random_seed=self.RANDOM_SEED,
+            machine_num=2,
+            device_num=4,
+            parallel_distribution=["S(0)", "B"],
+        )
+        tokens = of_gpt_data_loader_fn()
+        print(tokens.shape)
+        print(tokens)
+
 
 if __name__ == "__main__":
     unittest.main()
