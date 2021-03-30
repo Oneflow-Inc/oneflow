@@ -101,11 +101,7 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_opaque_header()) {
-    ForwardPackedHeader(ctx, BnInOp2Blob);
-  } else {
-    if (kernel_conf_.need_do_shape()) { ForwardShape(ctx, BnInOp2Blob); }
-  }
+  if (kernel_conf_.need_do_shape()) { ForwardShape(ctx, BnInOp2Blob); }
 }
 
 void Kernel::ForwardShape(const KernelCtx& ctx,
