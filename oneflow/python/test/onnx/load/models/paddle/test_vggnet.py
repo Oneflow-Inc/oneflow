@@ -24,6 +24,7 @@ __all__ = ["VGG11", "VGG13", "VGG16", "VGG19"]
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
+
 class ConvBlock(nn.Layer):
     def __init__(self, input_channels, output_channels, groups, name=None):
         super(ConvBlock, self).__init__()
@@ -36,7 +37,8 @@ class ConvBlock(nn.Layer):
             stride=1,
             padding=1,
             weight_attr=ParamAttr(name=name + "1_weights"),
-            bias_attr=False)
+            bias_attr=False,
+        )
         if groups == 2 or groups == 3 or groups == 4:
             self._conv_2 = Conv2D(
                 in_channels=output_channels,
@@ -45,7 +47,8 @@ class ConvBlock(nn.Layer):
                 stride=1,
                 padding=1,
                 weight_attr=ParamAttr(name=name + "2_weights"),
-                bias_attr=False)
+                bias_attr=False,
+            )
         if groups == 3 or groups == 4:
             self._conv_3 = Conv2D(
                 in_channels=output_channels,
@@ -54,7 +57,8 @@ class ConvBlock(nn.Layer):
                 stride=1,
                 padding=1,
                 weight_attr=ParamAttr(name=name + "3_weights"),
-                bias_attr=False)
+                bias_attr=False,
+            )
         if groups == 4:
             self._conv_4 = Conv2D(
                 in_channels=output_channels,
@@ -63,7 +67,8 @@ class ConvBlock(nn.Layer):
                 stride=1,
                 padding=1,
                 weight_attr=ParamAttr(name=name + "4_weights"),
-                bias_attr=False)
+                bias_attr=False,
+            )
 
         self._pool = MaxPool2D(kernel_size=2, stride=2, padding=0)
 
@@ -93,11 +98,13 @@ class VGGNet(nn.Layer):
             11: [1, 1, 2, 2, 2],
             13: [2, 2, 2, 2, 2],
             16: [2, 2, 3, 3, 3],
-            19: [2, 2, 4, 4, 4]
+            19: [2, 2, 4, 4, 4],
         }
-        assert self.layers in self.vgg_configure.keys(), \
-            "supported layers are {} but input layer is {}".format(
-                self.vgg_configure.keys(), layers)
+        assert (
+            self.layers in self.vgg_configure.keys()
+        ), "supported layers are {} but input layer is {}".format(
+            self.vgg_configure.keys(), layers
+        )
         self.groups = self.vgg_configure[self.layers]
 
         self._conv_block_1 = ConvBlock(3, 64, self.groups[0], name="conv1_")
@@ -106,10 +113,15 @@ class VGGNet(nn.Layer):
         self._conv_block_4 = ConvBlock(256, 512, self.groups[3], name="conv4_")
         self._conv_block_5 = ConvBlock(512, 512, self.groups[4], name="conv5_")
 
-        for idx, block in enumerate([
-                self._conv_block_1, self._conv_block_2, self._conv_block_3,
-                self._conv_block_4, self._conv_block_5
-        ]):
+        for idx, block in enumerate(
+            [
+                self._conv_block_1,
+                self._conv_block_2,
+                self._conv_block_3,
+                self._conv_block_4,
+                self._conv_block_5,
+            ]
+        ):
             if self.stop_grad_layers >= idx + 1:
                 for param in block.parameters():
                     param.trainable = False
@@ -119,17 +131,20 @@ class VGGNet(nn.Layer):
             7 * 7 * 512,
             4096,
             weight_attr=ParamAttr(name="fc6_weights"),
-            bias_attr=ParamAttr(name="fc6_offset"))
+            bias_attr=ParamAttr(name="fc6_offset"),
+        )
         self._fc2 = Linear(
             4096,
             4096,
             weight_attr=ParamAttr(name="fc7_weights"),
-            bias_attr=ParamAttr(name="fc7_offset"))
+            bias_attr=ParamAttr(name="fc7_offset"),
+        )
         self._out = Linear(
             4096,
             class_dim,
             weight_attr=ParamAttr(name="fc8_weights"),
-            bias_attr=ParamAttr(name="fc8_offset"))
+            bias_attr=ParamAttr(name="fc8_offset"),
+        )
 
     def forward(self, inputs):
         x = self._conv_block_1(inputs)
@@ -166,6 +181,7 @@ def VGG16(**args):
 def VGG19(**args):
     model = VGGNet(layers=19, **args)
     return model
+
 
 def test_VGG16(test_case):
     load_paddle_module_and_check(

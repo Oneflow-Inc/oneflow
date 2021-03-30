@@ -372,6 +372,7 @@ def test_GhostNet_x1_3(test_case):
         test_case, GhostNet_x1_3, input_size=(1, 3, 224, 224), train_flag=False,
     )
 
+
 from absl import app
 from absl.testing import absltest
 

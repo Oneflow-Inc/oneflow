@@ -122,7 +122,15 @@ class PoolMixin(object):
                 pads[3][1] = pads[3][1] + (strides[1] - 1)
         count_include_pad = bool(node.attrs.get("count_include_pad", 0))
         if count_include_pad != 0:
-            x = flow.pad(x, paddings=((pads[0][0], pads[0][1]), (pads[1][0], pads[1][1]), (pads[2][0], pads[2][1]), (pads[3][0], pads[3][1])))
+            x = flow.pad(
+                x,
+                paddings=(
+                    (pads[0][0], pads[0][1]),
+                    (pads[1][0], pads[1][1]),
+                    (pads[2][0], pads[2][1]),
+                    (pads[3][0], pads[3][1]),
+                ),
+            )
             pads = [[0, 0], [0, 0], [0, 0], [0, 0]]
             # raise ValueError("count_include_pad != 0 is not supported")
         if pooling_type == "AVG":

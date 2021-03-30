@@ -42,4 +42,3 @@ def test_reduce_mean_axis_keepdim(test_case):
             return paddle.mean(x, axis=3, keepdim=True)
 
     load_paddle_module_and_check(test_case, Net)
-

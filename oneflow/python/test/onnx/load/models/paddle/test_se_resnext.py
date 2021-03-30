@@ -32,15 +32,18 @@ __all__ = ["SE_ResNeXt50_32x4d", "SE_ResNeXt101_32x4d", "SE_ResNeXt152_64x4d"]
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
+
 class ConvBNLayer(nn.Layer):
-    def __init__(self,
-                 num_channels,
-                 num_filters,
-                 filter_size,
-                 stride=1,
-                 groups=1,
-                 act=None,
-                 name=None):
+    def __init__(
+        self,
+        num_channels,
+        num_filters,
+        filter_size,
+        stride=1,
+        groups=1,
+        act=None,
+        name=None,
+    ):
         super(ConvBNLayer, self).__init__()
 
         self._conv = Conv2D(
@@ -51,15 +54,17 @@ class ConvBNLayer(nn.Layer):
             padding=(filter_size - 1) // 2,
             groups=groups,
             weight_attr=ParamAttr(name=name + "_weights"),
-            bias_attr=False)
-        bn_name = name + '_bn'
+            bias_attr=False,
+        )
+        bn_name = name + "_bn"
         self._batch_norm = BatchNorm(
             num_filters,
             act=act,
-            param_attr=ParamAttr(name=bn_name + '_scale'),
-            bias_attr=ParamAttr(bn_name + '_offset'),
-            moving_mean_name=bn_name + '_mean',
-            moving_variance_name=bn_name + '_variance')
+            param_attr=ParamAttr(name=bn_name + "_scale"),
+            bias_attr=ParamAttr(bn_name + "_offset"),
+            moving_mean_name=bn_name + "_mean",
+            moving_variance_name=bn_name + "_variance",
+        )
 
     def forward(self, inputs):
         y = self._conv(inputs)
@@ -68,51 +73,57 @@ class ConvBNLayer(nn.Layer):
 
 
 class BottleneckBlock(nn.Layer):
-    def __init__(self,
-                 num_channels,
-                 num_filters,
-                 stride,
-                 cardinality,
-                 reduction_ratio,
-                 shortcut=True,
-                 if_first=False,
-                 name=None):
+    def __init__(
+        self,
+        num_channels,
+        num_filters,
+        stride,
+        cardinality,
+        reduction_ratio,
+        shortcut=True,
+        if_first=False,
+        name=None,
+    ):
         super(BottleneckBlock, self).__init__()
 
         self.conv0 = ConvBNLayer(
             num_channels=num_channels,
             num_filters=num_filters,
             filter_size=1,
-            act='relu',
-            name='conv' + name + '_x1')
+            act="relu",
+            name="conv" + name + "_x1",
+        )
         self.conv1 = ConvBNLayer(
             num_channels=num_filters,
             num_filters=num_filters,
             filter_size=3,
             groups=cardinality,
             stride=stride,
-            act='relu',
-            name='conv' + name + '_x2')
+            act="relu",
+            name="conv" + name + "_x2",
+        )
         self.conv2 = ConvBNLayer(
             num_channels=num_filters,
             num_filters=num_filters * 2 if cardinality == 32 else num_filters,
             filter_size=1,
             act=None,
-            name='conv' + name + '_x3')
+            name="conv" + name + "_x3",
+        )
         self.scale = SELayer(
             num_channels=num_filters * 2 if cardinality == 32 else num_filters,
             num_filters=num_filters * 2 if cardinality == 32 else num_filters,
             reduction_ratio=reduction_ratio,
-            name='fc' + name)
+            name="fc" + name,
+        )
 
         if not shortcut:
             self.short = ConvBNLayer(
                 num_channels=num_channels,
-                num_filters=num_filters * 2
-                if cardinality == 32 else num_filters,
+                num_filters=num_filters * 2 if cardinality == 32 else num_filters,
                 filter_size=1,
                 stride=stride,
-                name='conv' + name + '_prj')
+                name="conv" + name + "_prj",
+            )
 
         self.shortcut = shortcut
 
@@ -145,16 +156,20 @@ class SELayer(nn.Layer):
             num_channels,
             med_ch,
             weight_attr=ParamAttr(
-                initializer=Uniform(-stdv, stdv), name=name + "_sqz_weights"),
-            bias_attr=ParamAttr(name=name + '_sqz_offset'))
+                initializer=Uniform(-stdv, stdv), name=name + "_sqz_weights"
+            ),
+            bias_attr=ParamAttr(name=name + "_sqz_offset"),
+        )
         self.relu = nn.ReLU()
         stdv = 1.0 / math.sqrt(med_ch * 1.0)
         self.excitation = Linear(
             med_ch,
             num_filters,
             weight_attr=ParamAttr(
-                initializer=Uniform(-stdv, stdv), name=name + "_exc_weights"),
-            bias_attr=ParamAttr(name=name + '_exc_offset'))
+                initializer=Uniform(-stdv, stdv), name=name + "_exc_weights"
+            ),
+            bias_attr=ParamAttr(name=name + "_exc_offset"),
+        )
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, input):
@@ -177,13 +192,17 @@ class ResNeXt(nn.Layer):
         self.cardinality = cardinality
         self.reduction_ratio = 16
         supported_layers = [50, 101, 152]
-        assert layers in supported_layers, \
-            "supported layers are {} but input layer is {}".format(
-                supported_layers, layers)
+        assert (
+            layers in supported_layers
+        ), "supported layers are {} but input layer is {}".format(
+            supported_layers, layers
+        )
         supported_cardinality = [32, 64]
-        assert cardinality in supported_cardinality, \
-            "supported cardinality is {} but input cardinality is {}" \
-            .format(supported_cardinality, cardinality)
+        assert (
+            cardinality in supported_cardinality
+        ), "supported cardinality is {} but input cardinality is {}".format(
+            supported_cardinality, cardinality
+        )
         if layers == 50:
             depth = [3, 4, 6, 3]
         elif layers == 101:
@@ -191,38 +210,43 @@ class ResNeXt(nn.Layer):
         elif layers == 152:
             depth = [3, 8, 36, 3]
         num_channels = [64, 256, 512, 1024]
-        num_filters = [128, 256, 512,
-                       1024] if cardinality == 32 else [256, 512, 1024, 2048]
+        num_filters = (
+            [128, 256, 512, 1024] if cardinality == 32 else [256, 512, 1024, 2048]
+        )
         if layers < 152:
             self.conv = ConvBNLayer(
                 num_channels=3,
                 num_filters=64,
                 filter_size=7,
                 stride=2,
-                act='relu',
-                name="conv1")
+                act="relu",
+                name="conv1",
+            )
         else:
             self.conv1_1 = ConvBNLayer(
                 num_channels=3,
                 num_filters=64,
                 filter_size=3,
                 stride=2,
-                act='relu',
-                name="conv1")
+                act="relu",
+                name="conv1",
+            )
             self.conv1_2 = ConvBNLayer(
                 num_channels=64,
                 num_filters=64,
                 filter_size=3,
                 stride=1,
-                act='relu',
-                name="conv2")
+                act="relu",
+                name="conv2",
+            )
             self.conv1_3 = ConvBNLayer(
                 num_channels=64,
                 num_filters=128,
                 filter_size=3,
                 stride=1,
-                act='relu',
-                name="conv3")
+                act="relu",
+                name="conv3",
+            )
 
         self.pool2d_max = MaxPool2D(kernel_size=3, stride=2, padding=1)
 
@@ -233,17 +257,20 @@ class ResNeXt(nn.Layer):
             shortcut = False
             for i in range(depth[block]):
                 bottleneck_block = self.add_sublayer(
-                    'bb_%d_%d' % (block, i),
+                    "bb_%d_%d" % (block, i),
                     BottleneckBlock(
-                        num_channels=num_channels[block] if i == 0 else
-                        num_filters[block] * int(64 // self.cardinality),
+                        num_channels=num_channels[block]
+                        if i == 0
+                        else num_filters[block] * int(64 // self.cardinality),
                         num_filters=num_filters[block],
                         stride=2 if i == 0 and block != 0 else 1,
                         cardinality=self.cardinality,
                         reduction_ratio=self.reduction_ratio,
                         shortcut=shortcut,
                         if_first=block == 0,
-                        name=str(n) + '_' + str(i + 1)))
+                        name=str(n) + "_" + str(i + 1),
+                    ),
+                )
                 self.block_list.append(bottleneck_block)
                 shortcut = True
 
@@ -256,9 +283,9 @@ class ResNeXt(nn.Layer):
         self.out = Linear(
             self.pool2d_avg_channels,
             class_dim,
-            weight_attr=ParamAttr(
-                initializer=Uniform(-stdv, stdv), name="fc6_weights"),
-            bias_attr=ParamAttr(name="fc6_offset"))
+            weight_attr=ParamAttr(initializer=Uniform(-stdv, stdv), name="fc6_weights"),
+            bias_attr=ParamAttr(name="fc6_offset"),
+        )
 
     def forward(self, inputs):
         if self.layers < 152:
@@ -290,6 +317,7 @@ def SE_ResNeXt101_32x4d(**args):
 def SE_ResNeXt152_64x4d(**args):
     model = ResNeXt(layers=152, cardinality=64, **args)
     return model
+
 
 def test_SE_ResNeXt50_32x4d(test_case):
     load_paddle_module_and_check(

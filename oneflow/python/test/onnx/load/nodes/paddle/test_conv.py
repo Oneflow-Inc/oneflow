@@ -83,5 +83,3 @@ def test_conv2d_k3s2p0g2d2(test_case):
             return x
 
     load_paddle_module_and_check(test_case, Net, input_size=(2, 4, 13, 12))
-
-

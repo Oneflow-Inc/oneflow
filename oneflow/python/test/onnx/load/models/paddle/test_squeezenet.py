@@ -24,13 +24,11 @@ __all__ = ["SqueezeNet1_0", "SqueezeNet1_1"]
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
+
 class MakeFireConv(nn.Layer):
-    def __init__(self,
-                 input_channels,
-                 output_channels,
-                 filter_size,
-                 padding=0,
-                 name=None):
+    def __init__(
+        self, input_channels, output_channels, filter_size, padding=0, name=None
+    ):
         super(MakeFireConv, self).__init__()
         self._conv = Conv2D(
             input_channels,
@@ -38,7 +36,8 @@ class MakeFireConv(nn.Layer):
             filter_size,
             padding=padding,
             weight_attr=ParamAttr(name=name + "_weights"),
-            bias_attr=ParamAttr(name=name + "_offset"))
+            bias_attr=ParamAttr(name=name + "_offset"),
+        )
 
     def forward(self, x):
         x = self._conv(x)
@@ -47,23 +46,24 @@ class MakeFireConv(nn.Layer):
 
 
 class MakeFire(nn.Layer):
-    def __init__(self,
-                 input_channels,
-                 squeeze_channels,
-                 expand1x1_channels,
-                 expand3x3_channels,
-                 name=None):
+    def __init__(
+        self,
+        input_channels,
+        squeeze_channels,
+        expand1x1_channels,
+        expand3x3_channels,
+        name=None,
+    ):
         super(MakeFire, self).__init__()
         self._conv = MakeFireConv(
-            input_channels, squeeze_channels, 1, name=name + "_squeeze1x1")
+            input_channels, squeeze_channels, 1, name=name + "_squeeze1x1"
+        )
         self._conv_path1 = MakeFireConv(
-            squeeze_channels, expand1x1_channels, 1, name=name + "_expand1x1")
+            squeeze_channels, expand1x1_channels, 1, name=name + "_expand1x1"
+        )
         self._conv_path2 = MakeFireConv(
-            squeeze_channels,
-            expand3x3_channels,
-            3,
-            padding=1,
-            name=name + "_expand3x3")
+            squeeze_channels, expand3x3_channels, 3, padding=1, name=name + "_expand3x3"
+        )
 
     def forward(self, inputs):
         x = self._conv(inputs)
@@ -84,7 +84,8 @@ class SqueezeNet(nn.Layer):
                 7,
                 stride=2,
                 weight_attr=ParamAttr(name="conv1_weights"),
-                bias_attr=ParamAttr(name="conv1_offset"))
+                bias_attr=ParamAttr(name="conv1_offset"),
+            )
             self._pool = MaxPool2D(kernel_size=3, stride=2, padding=0)
             self._conv1 = MakeFire(96, 16, 64, 64, name="fire2")
             self._conv2 = MakeFire(128, 16, 64, 64, name="fire3")
@@ -104,7 +105,8 @@ class SqueezeNet(nn.Layer):
                 stride=2,
                 padding=1,
                 weight_attr=ParamAttr(name="conv1_weights"),
-                bias_attr=ParamAttr(name="conv1_offset"))
+                bias_attr=ParamAttr(name="conv1_offset"),
+            )
             self._pool = MaxPool2D(kernel_size=3, stride=2, padding=0)
             self._conv1 = MakeFire(64, 16, 64, 64, name="fire2")
             self._conv2 = MakeFire(128, 16, 64, 64, name="fire3")
@@ -123,7 +125,8 @@ class SqueezeNet(nn.Layer):
             class_dim,
             1,
             weight_attr=ParamAttr(name="conv10_weights"),
-            bias_attr=ParamAttr(name="conv10_offset"))
+            bias_attr=ParamAttr(name="conv10_offset"),
+        )
         self._avg_pool = AdaptiveAvgPool2D(1)
 
     def forward(self, inputs):
@@ -168,6 +171,7 @@ def SqueezeNet1_0(**args):
 def SqueezeNet1_1(**args):
     model = SqueezeNet(version="1.1", **args)
     return model
+
 
 def test_SqueezeNet1_0(test_case):
     load_paddle_module_and_check(

@@ -172,6 +172,7 @@ def load_paddle_module_and_check(
                 train_flag=train_flag,
             )
             return y
+
     flow.train.CheckPoint().load(model_weight_save_dir)
 
     if train_flag == False:

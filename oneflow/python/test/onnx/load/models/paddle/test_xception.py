@@ -23,19 +23,22 @@ from paddle.nn.initializer import Uniform
 import math
 import sys
 
-__all__ = ['Xception41', 'Xception65', 'Xception71']
+__all__ = ["Xception41", "Xception65", "Xception71"]
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
+
 class ConvBNLayer(nn.Layer):
-    def __init__(self,
-                 num_channels,
-                 num_filters,
-                 filter_size,
-                 stride=1,
-                 groups=1,
-                 act=None,
-                 name=None):
+    def __init__(
+        self,
+        num_channels,
+        num_filters,
+        filter_size,
+        stride=1,
+        groups=1,
+        act=None,
+        name=None,
+    ):
         super(ConvBNLayer, self).__init__()
 
         self._conv = Conv2D(
@@ -46,15 +49,17 @@ class ConvBNLayer(nn.Layer):
             padding=(filter_size - 1) // 2,
             groups=groups,
             weight_attr=ParamAttr(name=name + "_weights"),
-            bias_attr=False)
+            bias_attr=False,
+        )
         bn_name = "bn_" + name
         self._batch_norm = BatchNorm(
             num_filters,
             act=act,
             param_attr=ParamAttr(name=bn_name + "_scale"),
             bias_attr=ParamAttr(name=bn_name + "_offset"),
-            moving_mean_name=bn_name + '_mean',
-            moving_variance_name=bn_name + '_variance')
+            moving_mean_name=bn_name + "_mean",
+            moving_variance_name=bn_name + "_variance",
+        )
 
     def forward(self, inputs):
         y = self._conv(inputs)
@@ -67,14 +72,16 @@ class SeparableConv(nn.Layer):
         super(SeparableConv, self).__init__()
 
         self._pointwise_conv = ConvBNLayer(
-            input_channels, output_channels, 1, name=name + "_sep")
+            input_channels, output_channels, 1, name=name + "_sep"
+        )
         self._depthwise_conv = ConvBNLayer(
             output_channels,
             output_channels,
             3,
             stride=stride,
             groups=output_channels,
-            name=name + "_dw")
+            name=name + "_dw",
+        )
 
     def forward(self, inputs):
         x = self._pointwise_conv(inputs)
@@ -83,12 +90,9 @@ class SeparableConv(nn.Layer):
 
 
 class EntryFlowBottleneckBlock(nn.Layer):
-    def __init__(self,
-                 input_channels,
-                 output_channels,
-                 stride=2,
-                 name=None,
-                 relu_first=False):
+    def __init__(
+        self, input_channels, output_channels, stride=2, name=None, relu_first=False
+    ):
         super(EntryFlowBottleneckBlock, self).__init__()
         self.relu_first = relu_first
 
@@ -99,17 +103,14 @@ class EntryFlowBottleneckBlock(nn.Layer):
             stride=stride,
             padding=0,
             weight_attr=ParamAttr(name + "_branch1_weights"),
-            bias_attr=False)
+            bias_attr=False,
+        )
         self._conv1 = SeparableConv(
-            input_channels,
-            output_channels,
-            stride=1,
-            name=name + "_branch2a_weights")
+            input_channels, output_channels, stride=1, name=name + "_branch2a_weights"
+        )
         self._conv2 = SeparableConv(
-            output_channels,
-            output_channels,
-            stride=1,
-            name=name + "_branch2b_weights")
+            output_channels, output_channels, stride=1, name=name + "_branch2b_weights"
+        )
         self._pool = MaxPool2D(kernel_size=3, stride=stride, padding=1)
 
     def forward(self, inputs):
@@ -130,27 +131,34 @@ class EntryFlow(nn.Layer):
 
         name = "entry_flow"
         self.block_num = block_num
-        self._conv1 = ConvBNLayer(
-            3, 32, 3, stride=2, act="relu", name=name + "_conv1")
+        self._conv1 = ConvBNLayer(3, 32, 3, stride=2, act="relu", name=name + "_conv1")
         self._conv2 = ConvBNLayer(32, 64, 3, act="relu", name=name + "_conv2")
         if block_num == 3:
             self._conv_0 = EntryFlowBottleneckBlock(
-                64, 128, stride=2, name=name + "_0", relu_first=False)
+                64, 128, stride=2, name=name + "_0", relu_first=False
+            )
             self._conv_1 = EntryFlowBottleneckBlock(
-                128, 256, stride=2, name=name + "_1", relu_first=True)
+                128, 256, stride=2, name=name + "_1", relu_first=True
+            )
             self._conv_2 = EntryFlowBottleneckBlock(
-                256, 728, stride=2, name=name + "_2", relu_first=True)
+                256, 728, stride=2, name=name + "_2", relu_first=True
+            )
         elif block_num == 5:
             self._conv_0 = EntryFlowBottleneckBlock(
-                64, 128, stride=2, name=name + "_0", relu_first=False)
+                64, 128, stride=2, name=name + "_0", relu_first=False
+            )
             self._conv_1 = EntryFlowBottleneckBlock(
-                128, 256, stride=1, name=name + "_1", relu_first=True)
+                128, 256, stride=1, name=name + "_1", relu_first=True
+            )
             self._conv_2 = EntryFlowBottleneckBlock(
-                256, 256, stride=2, name=name + "_2", relu_first=True)
+                256, 256, stride=2, name=name + "_2", relu_first=True
+            )
             self._conv_3 = EntryFlowBottleneckBlock(
-                256, 728, stride=1, name=name + "_3", relu_first=True)
+                256, 728, stride=1, name=name + "_3", relu_first=True
+            )
             self._conv_4 = EntryFlowBottleneckBlock(
-                728, 728, stride=2, name=name + "_4", relu_first=True)
+                728, 728, stride=2, name=name + "_4", relu_first=True
+            )
         else:
             sys.exit(-1)
 
@@ -176,20 +184,14 @@ class MiddleFlowBottleneckBlock(nn.Layer):
         super(MiddleFlowBottleneckBlock, self).__init__()
 
         self._conv_0 = SeparableConv(
-            input_channels,
-            output_channels,
-            stride=1,
-            name=name + "_branch2a_weights")
+            input_channels, output_channels, stride=1, name=name + "_branch2a_weights"
+        )
         self._conv_1 = SeparableConv(
-            output_channels,
-            output_channels,
-            stride=1,
-            name=name + "_branch2b_weights")
+            output_channels, output_channels, stride=1, name=name + "_branch2b_weights"
+        )
         self._conv_2 = SeparableConv(
-            output_channels,
-            output_channels,
-            stride=1,
-            name=name + "_branch2c_weights")
+            output_channels, output_channels, stride=1, name=name + "_branch2c_weights"
+        )
 
     def forward(self, inputs):
         conv0 = F.relu(inputs)
@@ -206,39 +208,23 @@ class MiddleFlow(nn.Layer):
         super(MiddleFlow, self).__init__()
 
         self.block_num = block_num
-        self._conv_0 = MiddleFlowBottleneckBlock(
-            728, 728, name="middle_flow_0")
-        self._conv_1 = MiddleFlowBottleneckBlock(
-            728, 728, name="middle_flow_1")
-        self._conv_2 = MiddleFlowBottleneckBlock(
-            728, 728, name="middle_flow_2")
-        self._conv_3 = MiddleFlowBottleneckBlock(
-            728, 728, name="middle_flow_3")
-        self._conv_4 = MiddleFlowBottleneckBlock(
-            728, 728, name="middle_flow_4")
-        self._conv_5 = MiddleFlowBottleneckBlock(
-            728, 728, name="middle_flow_5")
-        self._conv_6 = MiddleFlowBottleneckBlock(
-            728, 728, name="middle_flow_6")
-        self._conv_7 = MiddleFlowBottleneckBlock(
-            728, 728, name="middle_flow_7")
+        self._conv_0 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_0")
+        self._conv_1 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_1")
+        self._conv_2 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_2")
+        self._conv_3 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_3")
+        self._conv_4 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_4")
+        self._conv_5 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_5")
+        self._conv_6 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_6")
+        self._conv_7 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_7")
         if block_num == 16:
-            self._conv_8 = MiddleFlowBottleneckBlock(
-                728, 728, name="middle_flow_8")
-            self._conv_9 = MiddleFlowBottleneckBlock(
-                728, 728, name="middle_flow_9")
-            self._conv_10 = MiddleFlowBottleneckBlock(
-                728, 728, name="middle_flow_10")
-            self._conv_11 = MiddleFlowBottleneckBlock(
-                728, 728, name="middle_flow_11")
-            self._conv_12 = MiddleFlowBottleneckBlock(
-                728, 728, name="middle_flow_12")
-            self._conv_13 = MiddleFlowBottleneckBlock(
-                728, 728, name="middle_flow_13")
-            self._conv_14 = MiddleFlowBottleneckBlock(
-                728, 728, name="middle_flow_14")
-            self._conv_15 = MiddleFlowBottleneckBlock(
-                728, 728, name="middle_flow_15")
+            self._conv_8 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_8")
+            self._conv_9 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_9")
+            self._conv_10 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_10")
+            self._conv_11 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_11")
+            self._conv_12 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_12")
+            self._conv_13 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_13")
+            self._conv_14 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_14")
+            self._conv_15 = MiddleFlowBottleneckBlock(728, 728, name="middle_flow_15")
 
     def forward(self, inputs):
         x = self._conv_0(inputs)
@@ -262,8 +248,7 @@ class MiddleFlow(nn.Layer):
 
 
 class ExitFlowBottleneckBlock(nn.Layer):
-    def __init__(self, input_channels, output_channels1, output_channels2,
-                 name):
+    def __init__(self, input_channels, output_channels1, output_channels2, name):
         super(ExitFlowBottleneckBlock, self).__init__()
 
         self._short = Conv2D(
@@ -273,17 +258,17 @@ class ExitFlowBottleneckBlock(nn.Layer):
             stride=2,
             padding=0,
             weight_attr=ParamAttr(name + "_branch1_weights"),
-            bias_attr=False)
+            bias_attr=False,
+        )
         self._conv_1 = SeparableConv(
-            input_channels,
-            output_channels1,
-            stride=1,
-            name=name + "_branch2a_weights")
+            input_channels, output_channels1, stride=1, name=name + "_branch2a_weights"
+        )
         self._conv_2 = SeparableConv(
             output_channels1,
             output_channels2,
             stride=1,
-            name=name + "_branch2b_weights")
+            name=name + "_branch2b_weights",
+        )
         self._pool = MaxPool2D(kernel_size=3, stride=2, padding=1)
 
     def forward(self, inputs):
@@ -302,8 +287,7 @@ class ExitFlow(nn.Layer):
 
         name = "exit_flow"
 
-        self._conv_0 = ExitFlowBottleneckBlock(
-            728, 728, 1024, name=name + "_1")
+        self._conv_0 = ExitFlowBottleneckBlock(728, 728, 1024, name=name + "_1")
         self._conv_1 = SeparableConv(1024, 1536, stride=1, name=name + "_2")
         self._conv_2 = SeparableConv(1536, 2048, stride=1, name=name + "_3")
         self._pool = AdaptiveAvgPool2D(1)
@@ -311,9 +295,9 @@ class ExitFlow(nn.Layer):
         self._out = Linear(
             2048,
             class_dim,
-            weight_attr=ParamAttr(
-                name="fc_weights", initializer=Uniform(-stdv, stdv)),
-            bias_attr=ParamAttr(name="fc_offset"))
+            weight_attr=ParamAttr(name="fc_weights", initializer=Uniform(-stdv, stdv)),
+            bias_attr=ParamAttr(name="fc_offset"),
+        )
 
     def forward(self, inputs):
         conv0 = self._conv_0(inputs)
@@ -328,10 +312,7 @@ class ExitFlow(nn.Layer):
 
 
 class Xception(nn.Layer):
-    def __init__(self,
-                 entry_flow_block_num=3,
-                 middle_flow_block_num=8,
-                 class_dim=1000):
+    def __init__(self, entry_flow_block_num=3, middle_flow_block_num=8, class_dim=1000):
         super(Xception, self).__init__()
         self.entry_flow_block_num = entry_flow_block_num
         self.middle_flow_block_num = middle_flow_block_num
@@ -360,10 +341,12 @@ def Xception71(**args):
     model = Xception(entry_flow_block_num=5, middle_flow_block_num=16, **args)
     return model
 
+
 def test_Xception41(test_case):
     load_paddle_module_and_check(
         test_case, Xception41, input_size=(1, 3, 224, 224), train_flag=False,
     )
+
 
 from absl import app
 from absl.testing import absltest

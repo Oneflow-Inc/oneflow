@@ -29,23 +29,31 @@ from paddle.nn.initializer import Uniform
 import math
 
 __all__ = [
-    "Res2Net50_48w_2s", "Res2Net50_26w_4s", "Res2Net50_14w_8s",
-    "Res2Net50_48w_2s", "Res2Net50_26w_6s", "Res2Net50_26w_8s",
-    "Res2Net101_26w_4s", "Res2Net152_26w_4s", "Res2Net200_26w_4s"
+    "Res2Net50_48w_2s",
+    "Res2Net50_26w_4s",
+    "Res2Net50_14w_8s",
+    "Res2Net50_48w_2s",
+    "Res2Net50_26w_6s",
+    "Res2Net50_26w_8s",
+    "Res2Net101_26w_4s",
+    "Res2Net152_26w_4s",
+    "Res2Net200_26w_4s",
 ]
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
+
 class ConvBNLayer(nn.Layer):
     def __init__(
-            self,
-            num_channels,
-            num_filters,
-            filter_size,
-            stride=1,
-            groups=1,
-            act=None,
-            name=None, ):
+        self,
+        num_channels,
+        num_filters,
+        filter_size,
+        stride=1,
+        groups=1,
+        act=None,
+        name=None,
+    ):
         super(ConvBNLayer, self).__init__()
 
         self._conv = Conv2D(
@@ -56,7 +64,8 @@ class ConvBNLayer(nn.Layer):
             padding=(filter_size - 1) // 2,
             groups=groups,
             weight_attr=ParamAttr(name=name + "_weights"),
-            bias_attr=False)
+            bias_attr=False,
+        )
         if name == "conv1":
             bn_name = "bn_" + name
         else:
@@ -64,10 +73,11 @@ class ConvBNLayer(nn.Layer):
         self._batch_norm = BatchNorm(
             num_filters,
             act=act,
-            param_attr=ParamAttr(name=bn_name + '_scale'),
-            bias_attr=ParamAttr(bn_name + '_offset'),
-            moving_mean_name=bn_name + '_mean',
-            moving_variance_name=bn_name + '_variance')
+            param_attr=ParamAttr(name=bn_name + "_scale"),
+            bias_attr=ParamAttr(bn_name + "_offset"),
+            moving_mean_name=bn_name + "_mean",
+            moving_variance_name=bn_name + "_variance",
+        )
 
     def forward(self, inputs):
         y = self._conv(inputs)
@@ -76,15 +86,17 @@ class ConvBNLayer(nn.Layer):
 
 
 class BottleneckBlock(nn.Layer):
-    def __init__(self,
-                 num_channels1,
-                 num_channels2,
-                 num_filters,
-                 stride,
-                 scales,
-                 shortcut=True,
-                 if_first=False,
-                 name=None):
+    def __init__(
+        self,
+        num_channels1,
+        num_channels2,
+        num_filters,
+        stride,
+        scales,
+        shortcut=True,
+        if_first=False,
+        name=None,
+    ):
         super(BottleneckBlock, self).__init__()
         self.stride = stride
         self.scales = scales
@@ -92,19 +104,22 @@ class BottleneckBlock(nn.Layer):
             num_channels=num_channels1,
             num_filters=num_filters,
             filter_size=1,
-            act='relu',
-            name=name + "_branch2a")
+            act="relu",
+            name=name + "_branch2a",
+        )
         self.conv1_list = []
         for s in range(scales - 1):
             conv1 = self.add_sublayer(
-                name + '_branch2b_' + str(s + 1),
+                name + "_branch2b_" + str(s + 1),
                 ConvBNLayer(
                     num_channels=num_filters // scales,
                     num_filters=num_filters // scales,
                     filter_size=3,
                     stride=stride,
-                    act='relu',
-                    name=name + '_branch2b_' + str(s + 1)))
+                    act="relu",
+                    name=name + "_branch2b_" + str(s + 1),
+                ),
+            )
             self.conv1_list.append(conv1)
         self.pool2d_avg = AvgPool2D(kernel_size=3, stride=stride, padding=1)
 
@@ -113,7 +128,8 @@ class BottleneckBlock(nn.Layer):
             num_filters=num_channels2,
             filter_size=1,
             act=None,
-            name=name + "_branch2c")
+            name=name + "_branch2c",
+        )
 
         if not shortcut:
             self.short = ConvBNLayer(
@@ -121,7 +137,8 @@ class BottleneckBlock(nn.Layer):
                 num_filters=num_channels2,
                 filter_size=1,
                 stride=stride,
-                name=name + "_branch1")
+                name=name + "_branch1",
+            )
 
         self.shortcut = shortcut
 
@@ -159,9 +176,11 @@ class Res2Net(nn.Layer):
         self.width = width
         basic_width = self.width * self.scales
         supported_layers = [50, 101, 152, 200]
-        assert layers in supported_layers, \
-            "supported layers are {} but input layer is {}".format(
-                supported_layers, layers)
+        assert (
+            layers in supported_layers
+        ), "supported layers are {} but input layer is {}".format(
+            supported_layers, layers
+        )
 
         if layers == 50:
             depth = [3, 4, 6, 3]
@@ -180,8 +199,9 @@ class Res2Net(nn.Layer):
             num_filters=64,
             filter_size=7,
             stride=2,
-            act='relu',
-            name="conv1")
+            act="relu",
+            name="conv1",
+        )
         self.pool2d_max = MaxPool2D(kernel_size=3, stride=2, padding=1)
 
         self.block_list = []
@@ -196,17 +216,20 @@ class Res2Net(nn.Layer):
                 else:
                     conv_name = "res" + str(block + 2) + chr(97 + i)
                 bottleneck_block = self.add_sublayer(
-                    'bb_%d_%d' % (block, i),
+                    "bb_%d_%d" % (block, i),
                     BottleneckBlock(
                         num_channels1=num_channels[block]
-                        if i == 0 else num_channels2[block],
+                        if i == 0
+                        else num_channels2[block],
                         num_channels2=num_channels2[block],
                         num_filters=num_filters[block],
                         stride=2 if i == 0 and block != 0 else 1,
                         scales=scales,
                         shortcut=shortcut,
                         if_first=block == i == 0,
-                        name=conv_name))
+                        name=conv_name,
+                    ),
+                )
                 self.block_list.append(bottleneck_block)
                 shortcut = True
 
@@ -219,9 +242,9 @@ class Res2Net(nn.Layer):
         self.out = Linear(
             self.pool2d_avg_channels,
             class_dim,
-            weight_attr=ParamAttr(
-                initializer=Uniform(-stdv, stdv), name="fc_weights"),
-            bias_attr=ParamAttr(name="fc_offset"))
+            weight_attr=ParamAttr(initializer=Uniform(-stdv, stdv), name="fc_weights"),
+            bias_attr=ParamAttr(name="fc_offset"),
+        )
 
     def forward(self, inputs):
         y = self.conv1(inputs)
@@ -273,15 +296,18 @@ def Res2Net200_26w_4s(**args):
     model = Res2Net(layers=200, scales=4, width=26, **args)
     return model
 
-def test_Res2Net200_26w_4s(test_case):
-    load_paddle_module_and_check(
-        test_case, Res2Net50_48w_2s, input_size=(1, 3, 224, 224), train_flag=False,
-    )
 
 def test_Res2Net200_26w_4s(test_case):
     load_paddle_module_and_check(
         test_case, Res2Net50_48w_2s, input_size=(1, 3, 224, 224), train_flag=False,
     )
+
+
+def test_Res2Net200_26w_4s(test_case):
+    load_paddle_module_and_check(
+        test_case, Res2Net50_48w_2s, input_size=(1, 3, 224, 224), train_flag=False,
+    )
+
 
 from absl import app
 from absl.testing import absltest

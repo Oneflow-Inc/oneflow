@@ -28,11 +28,16 @@ from paddle.nn.initializer import Uniform
 import math
 
 __all__ = [
-    "RegNetX_200MF", "RegNetX_4GF", "RegNetX_32GF", "RegNetY_200MF",
-    "RegNetY_4GF", "RegNetY_32GF"
+    "RegNetX_200MF",
+    "RegNetX_4GF",
+    "RegNetX_32GF",
+    "RegNetY_200MF",
+    "RegNetY_4GF",
+    "RegNetY_32GF",
 ]
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
+
 
 def quantize_float(f, q):
     """Converts a float to closest non-zero int divisible by q."""
@@ -72,15 +77,17 @@ def generate_regnet(w_a, w_0, w_m, d, q=8):
 
 
 class ConvBNLayer(nn.Layer):
-    def __init__(self,
-                 num_channels,
-                 num_filters,
-                 filter_size,
-                 stride=1,
-                 groups=1,
-                 padding=0,
-                 act=None,
-                 name=None):
+    def __init__(
+        self,
+        num_channels,
+        num_filters,
+        filter_size,
+        stride=1,
+        groups=1,
+        padding=0,
+        act=None,
+        name=None,
+    ):
         super(ConvBNLayer, self).__init__()
 
         self._conv = Conv2D(
@@ -91,7 +98,8 @@ class ConvBNLayer(nn.Layer):
             padding=padding,
             groups=groups,
             weight_attr=ParamAttr(name=name + ".conv2d.output.1.w_0"),
-            bias_attr=ParamAttr(name=name + ".conv2d.output.1.b_0"))
+            bias_attr=ParamAttr(name=name + ".conv2d.output.1.b_0"),
+        )
         bn_name = name + "_bn"
         self._batch_norm = BatchNorm(
             num_filters,
@@ -99,7 +107,8 @@ class ConvBNLayer(nn.Layer):
             param_attr=ParamAttr(name=bn_name + ".output.1.w_0"),
             bias_attr=ParamAttr(bn_name + ".output.1.b_0"),
             moving_mean_name=bn_name + "_mean",
-            moving_variance_name=bn_name + "_variance")
+            moving_variance_name=bn_name + "_variance",
+        )
 
     def forward(self, inputs):
         y = self._conv(inputs)
@@ -108,16 +117,18 @@ class ConvBNLayer(nn.Layer):
 
 
 class BottleneckBlock(nn.Layer):
-    def __init__(self,
-                 num_channels,
-                 num_filters,
-                 stride,
-                 bm,
-                 gw,
-                 se_on,
-                 se_r,
-                 shortcut=True,
-                 name=None):
+    def __init__(
+        self,
+        num_channels,
+        num_filters,
+        stride,
+        bm,
+        gw,
+        se_on,
+        se_r,
+        shortcut=True,
+        name=None,
+    ):
         super(BottleneckBlock, self).__init__()
 
         # Compute the bottleneck width
@@ -131,7 +142,8 @@ class BottleneckBlock(nn.Layer):
             filter_size=1,
             padding=0,
             act="relu",
-            name=name + "_branch2a")
+            name=name + "_branch2a",
+        )
         self.conv1 = ConvBNLayer(
             num_channels=w_b,
             num_filters=w_b,
@@ -140,20 +152,23 @@ class BottleneckBlock(nn.Layer):
             padding=1,
             groups=num_gs,
             act="relu",
-            name=name + "_branch2b")
+            name=name + "_branch2b",
+        )
         if se_on:
             w_se = int(round(num_channels * se_r))
             self.se_block = SELayer(
                 num_channels=w_b,
                 num_filters=w_b,
                 reduction_ratio=w_se,
-                name=name + "_branch2se")
+                name=name + "_branch2se",
+            )
         self.conv2 = ConvBNLayer(
             num_channels=w_b,
             num_filters=num_filters,
             filter_size=1,
             act=None,
-            name=name + "_branch2c")
+            name=name + "_branch2c",
+        )
 
         if not shortcut:
             self.short = ConvBNLayer(
@@ -161,7 +176,8 @@ class BottleneckBlock(nn.Layer):
                 num_filters=num_filters,
                 filter_size=1,
                 stride=stride,
-                name=name + "_branch1")
+                name=name + "_branch1",
+            )
 
         self.shortcut = shortcut
 
@@ -196,16 +212,20 @@ class SELayer(nn.Layer):
             num_channels,
             med_ch,
             weight_attr=ParamAttr(
-                initializer=Uniform(-stdv, stdv), name=name + "_sqz_weights"),
-            bias_attr=ParamAttr(name=name + "_sqz_offset"))
+                initializer=Uniform(-stdv, stdv), name=name + "_sqz_weights"
+            ),
+            bias_attr=ParamAttr(name=name + "_sqz_offset"),
+        )
 
         stdv = 1.0 / math.sqrt(med_ch * 1.0)
         self.excitation = Linear(
             med_ch,
             num_filters,
             weight_attr=ParamAttr(
-                initializer=Uniform(-stdv, stdv), name=name + "_exc_weights"),
-            bias_attr=ParamAttr(name=name + "_exc_offset"))
+                initializer=Uniform(-stdv, stdv), name=name + "_exc_weights"
+            ),
+            bias_attr=ParamAttr(name=name + "_exc_offset"),
+        )
 
     def forward(self, input):
         pool = self.pool2d_gap(input)
@@ -214,23 +234,15 @@ class SELayer(nn.Layer):
         squeeze = F.relu(squeeze)
         excitation = self.excitation(squeeze)
         excitation = F.sigmoid(excitation)
-        excitation = paddle.reshape(
-            excitation, shape=[-1, self._num_channels, 1, 1])
+        excitation = paddle.reshape(excitation, shape=[-1, self._num_channels, 1, 1])
         out = input * excitation
         return out
 
 
 class RegNet(nn.Layer):
-    def __init__(self,
-                 w_a,
-                 w_0,
-                 w_m,
-                 d,
-                 group_w,
-                 bot_mul,
-                 q=8,
-                 se_on=False,
-                 class_dim=1000):
+    def __init__(
+        self, w_a, w_0, w_m, d, group_w, bot_mul, q=8, se_on=False, class_dim=1000
+    ):
         super(RegNet, self).__init__()
 
         # Generate RegNet ws per block
@@ -261,7 +273,8 @@ class RegNet(nn.Layer):
             stride=2,
             padding=1,
             act="relu",
-            name="stem_conv")
+            name="stem_conv",
+        )
 
         self.block_list = []
         for block, (d, w_out, stride, bm, gw) in enumerate(stage_params):
@@ -270,8 +283,7 @@ class RegNet(nn.Layer):
                 num_channels = stem_w if block == i == 0 else in_channels
                 # Stride apply to the first block of the stage
                 b_stride = stride if i == 0 else 1
-                conv_name = "s" + str(block + 1) + "_b" + str(i +
-                                                              1)  # chr(97 + i)
+                conv_name = "s" + str(block + 1) + "_b" + str(i + 1)  # chr(97 + i)
                 bottleneck_block = self.add_sublayer(
                     conv_name,
                     BottleneckBlock(
@@ -283,7 +295,9 @@ class RegNet(nn.Layer):
                         se_on=se_on,
                         se_r=se_r,
                         shortcut=shortcut,
-                        name=conv_name))
+                        name=conv_name,
+                    ),
+                )
                 in_channels = w_out
                 self.block_list.append(bottleneck_block)
                 shortcut = True
@@ -297,9 +311,9 @@ class RegNet(nn.Layer):
         self.out = Linear(
             self.pool2d_avg_channels,
             class_dim,
-            weight_attr=ParamAttr(
-                initializer=Uniform(-stdv, stdv), name="fc_0.w_0"),
-            bias_attr=ParamAttr(name="fc_0.b_0"))
+            weight_attr=ParamAttr(initializer=Uniform(-stdv, stdv), name="fc_0.w_0"),
+            bias_attr=ParamAttr(name="fc_0.b_0"),
+        )
 
     def forward(self, inputs):
         y = self.conv(inputs)
@@ -313,33 +327,22 @@ class RegNet(nn.Layer):
 
 def RegNetX_200MF(**args):
     model = RegNet(
-        w_a=36.44, w_0=24, w_m=2.49, d=13, group_w=8, bot_mul=1.0, q=8, **args)
+        w_a=36.44, w_0=24, w_m=2.49, d=13, group_w=8, bot_mul=1.0, q=8, **args
+    )
     return model
 
 
 def RegNetX_4GF(**args):
     model = RegNet(
-        w_a=38.65,
-        w_0=96,
-        w_m=2.43,
-        d=23,
-        group_w=40,
-        bot_mul=1.0,
-        q=8,
-        **args)
+        w_a=38.65, w_0=96, w_m=2.43, d=23, group_w=40, bot_mul=1.0, q=8, **args
+    )
     return model
 
 
 def RegNetX_32GF(**args):
     model = RegNet(
-        w_a=69.86,
-        w_0=320,
-        w_m=2.0,
-        d=23,
-        group_w=168,
-        bot_mul=1.0,
-        q=8,
-        **args)
+        w_a=69.86, w_0=320, w_m=2.0, d=23, group_w=168, bot_mul=1.0, q=8, **args
+    )
     return model
 
 
@@ -353,7 +356,8 @@ def RegNetY_200MF(**args):
         bot_mul=1.0,
         q=8,
         se_on=True,
-        **args)
+        **args
+    )
     return model
 
 
@@ -367,7 +371,8 @@ def RegNetY_4GF(**args):
         bot_mul=1.0,
         q=8,
         se_on=True,
-        **args)
+        **args
+    )
     return model
 
 
@@ -381,16 +386,18 @@ def RegNetY_32GF(**args):
         bot_mul=1.0,
         q=8,
         se_on=True,
-        **args)
+        **args
+    )
     return model
+
 
 def test_RegNetX_200MF(test_case):
     load_paddle_module_and_check(
         test_case, RegNetX_200MF, input_size=(1, 3, 224, 224), train_flag=False,
     )
 
+
 def test_RegNetX_4GF(test_case):
     load_paddle_module_and_check(
         test_case, RegNetX_4GF, input_size=(1, 3, 224, 224), train_flag=False,
     )
-

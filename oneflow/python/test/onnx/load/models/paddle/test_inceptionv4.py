@@ -479,4 +479,3 @@ def test_InceptionV4(test_case):
     load_paddle_module_and_check(
         test_case, InceptionV4, input_size=(1, 3, 224, 224), train_flag=False,
     )
-
