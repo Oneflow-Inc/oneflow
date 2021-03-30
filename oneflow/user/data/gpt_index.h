@@ -16,9 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_USER_DATA_GPT_INDEX_H_
 #define ONEFLOW_USER_DATA_GPT_INDEX_H_
 
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/hash_container.h"
+#include <string>
 #include <vector>
+#include <stddef.h>
 
 namespace oneflow {
 

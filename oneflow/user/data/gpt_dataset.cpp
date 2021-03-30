@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/data/gpt_dataset.h"
-#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 

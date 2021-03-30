@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/user/data/gpt_dataset.h"
 #include "oneflow/user/data/gpt_index.h"
 #include "oneflow/user/data/mmap_file.h"
-#include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
