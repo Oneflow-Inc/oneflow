@@ -28,9 +28,8 @@ REGISTER_USER_OP("add_n")
       for (const auto& pair : ctx->inputs()) {
         const auto* cur_in = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
         CHECK_EQ_OR_RETURN(in_0->shape(), cur_in->shape());
-        CHECK_EQ_OR_RETURN(in_0->data_type(), cur_in->data_type());
       }
-      *out = *in_0;
+      *out->mut_shape() = in_0->shape();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) {
@@ -39,6 +38,16 @@ REGISTER_USER_OP("add_n")
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(user_op::OpArg("out", 0), i).Build();
       }
       ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(user_op::OpArg("out", 0)).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const auto* in_0 = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      for (const auto& pair : ctx->inputs()) {
+        const auto* cur_in = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
+        CHECK_EQ_OR_RETURN(in_0->data_type(), cur_in->data_type());
+      }
+      *out->mut_data_type() = in_0->data_type();
       return Maybe<void>::Ok();
     });
 

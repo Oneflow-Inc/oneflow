@@ -21,9 +21,7 @@ namespace {
 Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
   const user_op::TensorDesc* input_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   user_op::TensorDesc* output_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  *output_tensor_desc = *input_tensor_desc;
-  DataType* dtype = output_tensor_desc->mut_data_type();
-  *dtype = ctx->Attr<DataType>("dtype");
+  *output_tensor_desc->mut_shape() = input_tensor_desc->shape();
   return Maybe<void>::Ok();
 }
 
@@ -36,12 +34,20 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
+  user_op::TensorDesc* output_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  DataType* dtype = output_tensor_desc->mut_data_type();
+  *dtype = ctx->Attr<DataType>("dtype");
+  return Maybe<void>::Ok();
+}
+
 REGISTER_USER_OP("cast")
     .Input("in")
     .Attr<DataType>("dtype")
     .Output("out")
     .SetTensorDescInferFn(TensorDescInfer)
-    .SetGetSbpFn(GetSbpSignatures);
+    .SetGetSbpFn(GetSbpSignatures)
+    .SetInferDataTypeFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("cast").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                         user_op::AddOpFn AddOp) {
