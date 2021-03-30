@@ -33,6 +33,9 @@ REGISTER_USER_OP("leaky_relu")
         ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
       }
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("leaky_relu_grad")
@@ -62,6 +65,9 @@ REGISTER_USER_OP("leaky_relu_grad")
           .PartialSum(user_op::OpArg("dy", 0))
           .PartialSum(user_op::OpArg("dx", 0))
           .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
     });
 
