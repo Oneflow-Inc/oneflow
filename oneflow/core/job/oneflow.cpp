@@ -179,6 +179,8 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
         kernel_conf->clear_op_attribute_ref();
         *kernel_conf->mutable_op_attribute() = op_attribute_ref_table.op_name2op_attribute().at(
             task.exec_sequence().exec_node(0).kernel_conf().op_attribute_ref());
+      } else {
+        CHECK(kernel_conf->has_op_attribute());
       }
     }
   }
@@ -211,10 +213,11 @@ const boxing::collective::RankDesc& GetRankDesc(const OperatorConf& conf) {
   }
 }
 
-const boxing::collective::RankDesc& GetRankDesc(const TaskProto& task_proto) {
+const boxing::collective::RankDesc& GetRankDesc(Plan* plan, const TaskProto& task_proto) {
   CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
   return GetRankDesc(
-      task_proto.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf());
+      PlanUtil::GetOpOpAttribute(plan, task_proto.exec_sequence().exec_node(0).kernel_conf())
+          .op_conf());
 }
 
 void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* device_desc) {
@@ -291,7 +294,7 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
     HashMap<std::string, RequestInfo> name2request_info;
     for (const PlanTaskNode* node : collective_boxing_nodes) {
       const TaskProto* task_proto = node->task_proto();
-      const RankDesc& rank_desc = GetRankDesc(*task_proto);
+      const RankDesc& rank_desc = GetRankDesc(plan, *task_proto);
       CHECK_GE(rank_desc.rank(), 0);
       CHECK_LT(rank_desc.rank(), rank_desc.op_desc().num_ranks());
       const std::string& name = rank_desc.op_desc().name();
@@ -405,15 +408,16 @@ RegstDescProto* GetSoleDataRegstDescProto(TaskProto* task) {
   return ret;
 }
 
-const OperatorConf& GetSoleOpConf(const TaskProto& task) {
+const OperatorConf& GetSoleOpConf(Plan* plan, const TaskProto& task) {
   CHECK_EQ(task.exec_sequence().exec_node_size(), 1);
-  return task.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf();
+  return PlanUtil::GetOpOpAttribute(plan, task.exec_sequence().exec_node(0).kernel_conf())
+      .op_conf();
 }
 
-void UpdateSoleObnRegstDescId(TaskProto* task) {
+void UpdateSoleObnRegstDescId(Plan* plan, TaskProto* task) {
   CHECK_EQ(task->exec_sequence().exec_node_size(), 1);
   auto* exec_node = task->mutable_exec_sequence()->mutable_exec_node(0);
-  const auto& obns = exec_node->kernel_conf().op_attribute().output_bns();
+  const auto& obns = PlanUtil::GetOpOpAttribute(plan, exec_node->kernel_conf()).output_bns();
   CHECK_EQ(obns.size(), 1);
   int64_t regst_desc_id = GetSoleDataRegstDescProto(task)->regst_desc_id();
   (*exec_node->mutable_bn_in_op2regst_desc_id())[obns.Get(0)] = regst_desc_id;
@@ -428,22 +432,23 @@ void UpdateSoleObnRegstDescId(TaskProto* task) {
 //                        op_src_tick -->/
 //
 // note: after this function called, op_src_tick is illegal and need to be deleted from plan
-void LinkTickTaskProto(TaskProto* identity_tick, TaskProto* src_tick, TaskProto* sink_tick) {
-  CHECK(GetSoleOpConf(*identity_tick).has_tick_conf());
-  CHECK(GetSoleOpConf(*src_tick).has_source_tick_conf());
-  CHECK(GetSoleOpConf(*sink_tick).has_sink_tick_conf());
+void LinkTickTaskProto(Plan* plan, TaskProto* identity_tick, TaskProto* src_tick,
+                       TaskProto* sink_tick) {
+  CHECK(GetSoleOpConf(plan, *identity_tick).has_tick_conf());
+  CHECK(GetSoleOpConf(plan, *src_tick).has_source_tick_conf());
+  CHECK(GetSoleOpConf(plan, *sink_tick).has_sink_tick_conf());
   RegstDescProto* id_tick_sole_regst = GetSoleDataRegstDescProto(identity_tick);
   RegstDescProto* src_tick_sole_regst = GetSoleDataRegstDescProto(src_tick);
   RegstDescProto* sink_tick_sole_regst = GetSoleDataRegstDescProto(sink_tick);
 
   sink_tick_sole_regst->set_regst_desc_id(id_tick_sole_regst->regst_desc_id());
   *sink_tick_sole_regst->mutable_consumer_task_id() = id_tick_sole_regst->consumer_task_id();
-  UpdateSoleObnRegstDescId(sink_tick);
+  UpdateSoleObnRegstDescId(plan, sink_tick);
   CHECK_EQ(identity_tick->machine_id(), sink_tick->machine_id());
 
   id_tick_sole_regst->set_regst_desc_id(src_tick_sole_regst->regst_desc_id());
   *id_tick_sole_regst->mutable_consumer_task_id() = src_tick_sole_regst->consumer_task_id();
-  UpdateSoleObnRegstDescId(identity_tick);
+  UpdateSoleObnRegstDescId(plan, identity_tick);
 }
 
 void FixRegstHostMemCase(TaskProto* task_proto,
@@ -470,11 +475,12 @@ void LinkMainPlan(Plan* plan, Plan&& main_plan,
     for (const auto& task : main_plan.task()) {
       if (task.task_type() == TaskType::kTick) { CHECK(task_ids->emplace(task.task_id()).second); }
     }
-    IsInterfaceTickTockTask = [task_ids](const TaskProto* task) {
+    IsInterfaceTickTockTask = [task_ids, plan](const TaskProto* task) {
       if (task_ids->find(task->task_id()) != task_ids->end()) { return true; }
       if (task->exec_sequence().exec_node_size() != 1) { return false; }
       const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
-      OperatorConf::OpTypeCase op_type_case = kernel_conf.op_attribute().op_conf().op_type_case();
+      OperatorConf::OpTypeCase op_type_case =
+          PlanUtil::GetOpOpAttribute(plan, kernel_conf).op_conf().op_type_case();
       return op_type_case == OperatorConf::kSourceTickConf
              || op_type_case == OperatorConf::kSinkTickConf;
     };
@@ -485,7 +491,7 @@ void LinkMainPlan(Plan* plan, Plan&& main_plan,
     TaskProto* task = plan->mutable_task(i);
     if (IsInterfaceTickTockTask(task) == false) { continue; }
     const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
-    const auto& op_name = kernel_conf.op_attribute().op_conf().name();
+    const auto& op_name = PlanUtil::GetOpOpAttribute(plan, kernel_conf).op_conf().name();
     CHECK(sole_tick_op_name2sole_task.emplace(op_name, task).second);
   }
   auto TaskProto4TaskId = PlanUtil::MakeGetterTaskProto4TaskId(*plan);
@@ -496,7 +502,7 @@ void LinkMainPlan(Plan* plan, Plan&& main_plan,
       TaskProto* identity_tick =
           sole_tick_op_name2sole_task.at(identity_tick_op_names.at(i).at(machine_id));
       LinkTickTaskProto(
-          identity_tick,
+          plan, identity_tick,
           sole_tick_op_name2sole_task.at(cs.machine_id2source_tick_op_name().at(machine_id)),
           sole_tick_op_name2sole_task.at(cs.machine_id2sink_tick_op_name().at(machine_id)));
       FixRegstHostMemCase(identity_tick, TaskProto4TaskId);
@@ -516,7 +522,7 @@ void LinkMainPlan(Plan* plan, Plan&& main_plan,
       if (task.task_type() == TaskType::kSourceTick) {
         CHECK(task.exec_sequence().exec_node_size() == 1);
         const auto& kernel_conf = task.exec_sequence().exec_node(0).kernel_conf();
-        const auto& op_conf = kernel_conf.op_attribute().op_conf();
+        const auto& op_conf = PlanUtil::GetOpOpAttribute(plan, kernel_conf).op_conf();
         CHECK(op_conf.has_source_tick_conf());
         CHECK(source_tick_op_names.find(op_conf.name()) != source_tick_op_names.end());
         return true;
@@ -851,7 +857,7 @@ Maybe<void> ConnectCriticalSectionEndToReentrantLockEnd(
     auto* task = main_plan->mutable_task(i);
     CHECK_EQ_OR_RETURN(task->exec_sequence().exec_node_size(), 1);
     const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
-    const auto& op_name = kernel_conf.op_attribute().op_conf().name();
+    const auto& op_name = PlanUtil::GetOpOpAttribute(main_plan, kernel_conf).op_conf().name();
     if (op_name == lock_back_edge.reentrant_lock_op_name) {
       CHECK_ISNULL_OR_RETURN(reentrant_lock_task);
       reentrant_lock_task = task;
@@ -917,7 +923,7 @@ void FinishGlobalCriticalSectionDesc(const Plan& plan, int64_t job_size) {
   for (const auto& task : plan.task()) {
     if (task.exec_sequence().exec_node_size() == 1) {
       const auto& kernel_conf = task.exec_sequence().exec_node(0).kernel_conf();
-      const std::string& op_name = kernel_conf.op_attribute().op_conf().name();
+      const std::string& op_name = PlanUtil::GetOpOpAttribute(&plan, kernel_conf).op_conf().name();
       HashSet<int64_t>* mem_block_ids =
           &(job_id2sole_op_name2mem_block_ids.at(task.job_id())[op_name]);
       for (const auto& pair : task.produced_regst_desc()) {

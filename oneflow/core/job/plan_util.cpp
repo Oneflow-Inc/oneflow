@@ -344,7 +344,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     std::string op_name = "";
     std::string pass_tag = kNoPassTag;
     for (const ExecNodeProto& exec_node : task_proto.exec_sequence().exec_node()) {
-      const auto& op_conf = exec_node.kernel_conf().op_attribute().op_conf();
+      const auto& op_conf = GetOpOpAttribute(&plan, exec_node.kernel_conf()).op_conf();
       op_name += op_conf.name();
       if (op_conf.has_pass_tag()) { pass_tag = op_conf.pass_tag(); }
     }
@@ -522,6 +522,16 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
         regst_desc->set_inplace_consumed_regst_desc_id(force_id);
       }
     }
+  }
+}
+
+const oneflow::OpAttribute& GetOpOpAttribute(const Plan* plan,
+                                             const oneflow::KernelConf& kernel_conf) {
+  if (kernel_conf.has_op_attribute_ref()) {
+    return plan->op_name2op_attribute().at(kernel_conf.op_attribute_ref());
+  } else {
+    CHECK(kernel_conf.has_op_attribute());
+    return kernel_conf.op_attribute();
   }
 }
 
