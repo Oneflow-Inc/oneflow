@@ -39,15 +39,12 @@ class BlobDesc final {
 
   BlobDesc& operator=(const BlobDesc&);
 
-  void SetOpaqueHeader(const StructPodDesc& header_pod_desc);
-
   const Shape& shape() const { return body_.shape(); }
   Shape& mut_shape() { return *body_.mut_shape(); }
 
   DataType data_type() const { return body_.data_type(); }
   void set_data_type(DataType val) { body_.set_data_type(val); }
 
-  bool header_is_opaque() const { return opaque_header_ != nullptr; }
   bool is_dynamic() const { return is_dynamic_; }
   void set_is_dynamic(bool);
 
@@ -61,9 +58,6 @@ class BlobDesc final {
 
   TensorPodDesc body_;
   bool is_dynamic_;
-
-  // TODO(chengcheng): remove opaque_header
-  std::unique_ptr<StructPodDesc> opaque_header_;
 };
 
 bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs);
