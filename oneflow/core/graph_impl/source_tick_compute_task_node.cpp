@@ -13,11 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/source_tick_compute_task_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
+
+class SourceTickCompTaskNode final : public CompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SourceTickCompTaskNode);
+  SourceTickCompTaskNode() = default;
+  ~SourceTickCompTaskNode() = default;
+
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override {}
+  void BuildExecGphAndRegst() override;
+  bool IsMeaningLess() override { return false; }
+
+  TaskType GetTaskType() const override { return TaskType::kSourceTick; }
+
+ private:
+  bool IsIndependent() const override { return true; }
+};
 
 void SourceTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 2, 2);
