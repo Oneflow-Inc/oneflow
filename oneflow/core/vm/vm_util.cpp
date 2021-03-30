@@ -53,8 +53,7 @@ Maybe<void> Sync() {
   BlockingCounter bc(1);
   LogicalRun([&bc](const std::shared_ptr<InstructionsBuilder>& builder) {
     builder->ComputeGlobalFrontSeqBarrier();
-    builder->ComputeRankFrontSeqCallback(
-        std::make_shared<std::function<void()>>([&bc]() { bc.Decrease(); }));
+    builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); });
   });
 
   bc.WaitUntilCntEqualZero();
