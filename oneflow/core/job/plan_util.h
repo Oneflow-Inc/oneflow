@@ -31,7 +31,7 @@ struct PlanUtil {
   static void ToDotFile(const Plan& plan, const std::string& filepath);
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);
   static void SetForceInplaceMemBlock(Plan* plan);
-  // has to be incline otherwise it fails when compiling to shared libs
+  // has to be inline otherwise it fails when compiling to shared libs
   inline static const oneflow::OpAttribute& GetOpOpAttribute(
       const Plan* plan, int64_t job_id, const oneflow::KernelConf& kernel_conf) {
     if (kernel_conf.has_op_attribute()) {
