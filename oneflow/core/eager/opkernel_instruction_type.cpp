@@ -394,7 +394,7 @@ Maybe<void> OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instr
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   JUST(ForEachOutputBnAndBlobObject(
       instruction, args, [&](const std::string&, BlobObject* blob_object) -> Maybe<void> {
-        blob_object->TryAllocateBlobBodyMemory(device_ctx);
+        JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
         return Maybe<void>::Ok();
       }));
   std::shared_ptr<user_op::OpKernelState> new_state;
@@ -418,7 +418,7 @@ Maybe<void> OpKernelCompute(SystemOpKernelObject* opkernel_obj, vm::Instruction*
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   JUST(ForEachOutputBnAndBlobObject(
       instruction, args, [&](const std::string&, BlobObject* blob_object) -> Maybe<void> {
-        blob_object->TryAllocateBlobBodyMemory(device_ctx);
+        JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
         return Maybe<void>::Ok();
       }));
   KernelCtx kernel_ctx;
@@ -453,23 +453,23 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 struct LocalCallOpKernelUtil final {
 
   static inline Maybe<void> Infer(vm::Instruction* instruction) {
-    auto* phy_instr_operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
-    const auto& CheckMemCase = [instruction](const MemoryCase* mem_case)->Maybe<void>{
-      return CheckMemCase(mem_case, instruction->stream());
-    };
-    JUST(InitOutputBlobObjects(phy_instr_operand, CheckMemCase));
-    JUST(InferOutputTensorDescs(phy_instr_operand));
-    JUST(InitOutputBlobs(phy_instr_operand));
-    JUST(TryInitTempStorageBlob(phy_instr_operand));
+    auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    JUST(CheckOutputBlobObjectsMemCase(operand, instruction->stream()));
+    JUST(InferOutputTensorDescs(operand));
+    JUST(InitOutputBlobs(operand));
+    JUST(InferTempStorageBlobDesc(operand));
+    JUST(ResetTempStorageBlob(operand));
     return Maybe<void>::Ok();
   }
 
   static inline Maybe<void> Compute(vm::Instruction* instruction) {
-    auto* phy_instr_operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
-    JUST(AllocateMemoryForOutputBlobs(phy_instr_operand));
-    JUST(AllocateMemoryForTempStorageBlob(phy_instr_operand));
-    JUST(TryInitOpKernelState(phy_instr_operand));
-    JUST(ForwardOpKernel(phy_instr_operand));
+    auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+    JUST(AllocateOutputBlobsMemory(operand, device_ctx));
+    JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
+    JUST(TryInitOpKernelState(operand, device_ctx));
+    JUST(OpKernelCompute(operand, device_ctx));
+    JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
     return Maybe<void>::Ok();
   }
 
@@ -477,33 +477,41 @@ private:
 
   static inline Maybe<LocalCallOpKernelPhyInstrOperand*> GetLocalCallOpKernelPhyInstrOperand(
       vm::Instruction* instruction) {
-    const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
-    CHECK_OR_RETURN(static_cast<bool>(phy_instr_operand));
-    auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(phy_instr_operand.get());
+    const auto& operand = instruction->instr_msg().phy_instr_operand();
+    CHECK_OR_RETURN(static_cast<bool>(operand));
+    auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand.get());
     CHECK_NOTNULL_OR_RETURN(ptr);
     return ptr;
   }
 
-  static inline Maybe<MemoryCase> GetMemCase(LocalCallOpKernelPhyInstrOperand* operand) {
-    TODO();
-    return std::shared_ptr<MemoryCase>();
+  static inline Maybe<const MemoryCase&> GetMemCase(LocalCallOpKernelPhyInstrOperand* operand) {
+    const auto& mem_case = operand->opkernel()->mem_case();
+    CHECK_OR_RETURN(static_cast<bool>(mem_case));
+    return *mem_case;
   }
 
-  static inline Maybe<void> CheckMemCase(const MemoryCase* mem_case, const vm::Stream& stream) {
-    if (mem_case != nullptr) {
-      TODO();
+  static inline Maybe<void> CheckMemCase(
+      const MemoryCase& mem_case, DeviceType device_type, int64_t device_id) {
+    if (mem_case.has_host_mem()) {
+      CHECK_EQ_OR_RETURN(device_type, DeviceType::kCPU);
+    } else if (mem_case.has_device_cuda_mem()) {
+      CHECK_EQ_OR_RETURN(mem_case.device_cuda_mem().device_id(), device_id);
+    } else {
+      OF_UNIMPLEMENTED();
     }
     return Maybe<void>::Ok();
   }
 
-  template<template CheckMemCaseT>
-  static inline Maybe<void> InitOutputBlobObjects(LocalCallOpKernelPhyInstrOperand* operand,
-      const CheckMemCaseT& CheckMemCase) {
+  static inline Maybe<void> CheckOutputBlobObjectsMemCase(LocalCallOpKernelPhyInstrOperand* operand,
+      const vm::Stream& stream) {
+    DeviceType device_type = JUST(DeviceType4DeviceTag(stream.stream_type().device_tag()));
     const auto& mem_case = JUST(GetMemCase(operand));
-    JUST(CheckMemCase(mem_case.get()));
+    JUST(CheckMemCase(mem_case, device_type, stream.device_id()));
     JUST(operand->ForEachOutputTensor([&](one::EagerMirroredTensorImpl* tensor) -> Maybe<void> {
-      CHECK_OR_RETURN(!static_cast<bool>(tensor->blob_object()));
-      tensor->reset_blob_object(new EagerBlobObject(mem_case, tensor->dtype()->data_type()));
+      CHECK_OR_RETURN(static_cast<bool>(tensor->blob_object()));
+      if (operand->opkernel().need_check_mem_case()) {
+        JUST(CheckMemCase(tensor->blob_object().mem_case(), device_type, stream.device_id()));
+      }
       return Maybe<void>::Ok();
     }));
     return Maybe<void>::Ok();
@@ -513,13 +521,27 @@ private:
     JUST(operand->ForEachOutputTensor([&](one::EagerMirroredTensorImpl* tensor) -> Maybe<void> {
       const auto& blob_object = tensor->blob_object();
       CHECK_OR_RETURN(static_cast<bool>(blob_object));
-      return blob_object->InitBlob();
+      JUST(blob_object->InitBlob());
+      return Maybe<void>::Ok();
     }));
     return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> TryInitTempStorageBlob(LocalCallOpKernelPhyInstrOperand* operand) {
-    TODO();
+  static inline Maybe<void> InferTempStorageBlobDesc(LocalCallOpKernelPhyInstrOperand* operand) {
+    const auto& InferTmpSizeFn = operand->opkernel().GetInferTmpSizeFn();
+    auto* temp_blob_desc = operand->opkernel()->mut_temp_blob_object()->mut_blob_desc();
+    CHECK_OR_RETURN(temp_blob_desc->data_type == DataType::kChar);
+    JUST(WithOpInferContext(operand, [&](user_op::InferContext* infer_ctx) -> Maybe<void> {
+      size_t temp_size = InferTmpSizeFn(infer_ctx);
+      temp_blob_desc->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
+      temp_blob_desc->set_is_dynamic(true);
+      return Maybe<void>::Ok();
+    }));
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> ResetTempStorageBlob(LocalCallOpKernelPhyInstrOperand* operand) {
+    JUST(operand->opkernel()->mut_temp_blob_object()->InitBlob());
     return Maybe<void>::Ok();
   }
 
@@ -527,9 +549,20 @@ private:
   static inline Maybe<void> WithOpInferContext(LocalCallOpKernelPhyInstrOperand* operand,
       const CallbackT& Callback) {
     auto* opkernel = operand->mut_opkernel();
-    JUST(Callback(opkernel->UpdateInferContext(operand->mut_inputs())));
+    JUST(Callback(opkernel->UpdateInferContext(operand->mut_inputs().get())));
     // tensor tuples are not allowed to be hold by StatefullOpKernel
-    opkernel->UpdateInferContext(std::shared_ptr<TensorTuple>());
+    opkernel->UpdateInferContext(nullptr);
+    return Maybe<void>::Ok();
+  }
+
+  template<typename CallbackT>
+  static inline Maybe<void> WithComputeContext(
+      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx,
+      const CallbackT& Callback) {
+    auto* opkernel = operand->mut_opkernel();
+    JUST(Callback(opkernel->UpdateComputeContext(operand->mut_inputs(), device_ctx)));
+    // tensor tuples are not allowed to be hold by StatefullOpKernel
+    opkernel->UpdateComputeContext(nullptr, nullptr);
     return Maybe<void>::Ok();
   }
 
@@ -537,25 +570,41 @@ private:
     return WithOpInferContext(operand, operand->opkernel().TensorDescInferFn());
   }
 
-  static inline Maybe<void> TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* phy_instr_operand) {
-    TODO();
+  static inline Maybe<void> TryInitOpKernelState(
+      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+    JUST(operand->mut_opkernel()->TryInitOpKernelState(device_ctx));
     return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> AllocateMemoryForOutputBlobs(
-      LocalCallOpKernelPhyInstrOperand* phy_instr_operand) {
-    TODO();
+  static inline Maybe<void> AllocateOutputBlobsMemory(
+      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+    JUST(operand->ForEachOutputTensor([&](one::EagerMirroredTensorImpl* tensor) -> Maybe<void> {
+      JUST(tensor->blob_object()->TryAllocateBlobBodyMemory(device_ctx));
+      return Maybe<void>::Ok();
+    }));
     return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> AllocateMemoryForTempStorageBlob(LocalCallOpKernelPhyInstrOperand*
-      phy_instr_operand) {
-    TODO();
+  static inline Maybe<void> TryAllocateTempStorageBlobMemory(
+      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+    JUST(operand->opkernel()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(device_ctx));
+    return Maybe<void>::Ok();
+  }
+  
+  static inline Maybe<void> DeallocateTempStorageBlobMemory(
+      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+    JUST(operand->opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr(device_ctx));
     return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> ForwardOpKernel(LocalCallOpKernelPhyInstrOperand* phy_instr_operand) {
-    TODO();
+  static inline Maybe<void> OpKernelCompute(
+      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+    auto* opkernel = operand->mut_opkernel();
+    JUST(WithComputeContext(operand, device_ctx,
+      [&](user_op::KernelComputeContext* compute_ctx)-> Maybe<void> {
+        opkernel->mut_user_opkernel()->Compute(compute_ctx, opkernel->mut_opkernel_state());
+        return Maybe<void>::Ok();
+      }));
     return Maybe<void>::Ok();
   }
 

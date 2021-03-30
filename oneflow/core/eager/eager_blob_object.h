@@ -24,22 +24,23 @@ namespace oneflow {
 
 namespace eager {
 
-class EagerBlobObject : public BlobObject {
+class EagerBlobObject final : public BlobObject {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, DataType data_type)
       : BlobObject(mem_case, data_type), blob_body_bytes_(0) {}
-  virtual ~EagerBlobObject() override = default;
+  ~EagerBlobObject() override = default;
 
-  virtual BlobDesc* mut_blob_desc() override { return &blob_desc_; }
+  BlobDesc* mut_blob_desc() override { return &blob_desc_; }
 
-  virtual const Blob& blob() const override { return *blob_; }
-  virtual Blob* mut_blob() override { return blob_.get(); }
-  virtual Maybe<void> TryInitBlob() override;
+  const Blob& blob() const override { return *blob_; }
+  Blob* mut_blob() override { return blob_.get(); }
+  Maybe<void> TryInitBlob() override;
   Maybe<void> InitBlob();
 
-  virtual void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
+  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
+  Maybe<void> DeallocateBlobDataPtr() override { blob_dptr_.reset(); }
 
  private:
 
