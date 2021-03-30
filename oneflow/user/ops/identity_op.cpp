@@ -41,6 +41,9 @@ REGISTER_USER_OP("identity")
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("identity")
