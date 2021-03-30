@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("gpt_data_loader")
+REGISTER_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
     .Input("iteration")
     .Output("tokens")
     .Attr<std::string>("data_file_prefix")
@@ -31,26 +32,6 @@ REGISTER_CPU_ONLY_USER_OP("gpt_data_loader")
     .Attr<bool>("shuffle")
     .Attr<int64_t>("random_seed")
     .Attr<std::vector<std::string>>("parallel_distribution")
-    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const ParallelDistribution& paral_dist =
-          ctx->ParallelDistribution4ArgNameAndIndex("tokens", 0);
-      const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-      int64_t device_batch_size = ctx->Attr<int64_t>("batch_size");
-      FOR_RANGE(size_t, i, 0, paral_dist.sbp_parallel_size()) {
-        const auto& sbp_parallel = paral_dist.sbp_parallel(i);
-        if (sbp_parallel.has_split_parallel()) {
-          int64_t split_num = hierarchy.At(i);
-          CHECK_EQ_OR_RETURN(device_batch_size % split_num, 0);
-          device_batch_size /= split_num;
-        }
-      }
-
-      int64_t num_tokens = ctx->Attr<int64_t>("seq_length") + 1;
-      user_op::TensorDesc* tokens_desc = ctx->TensorDesc4ArgNameAndIndex("tokens", 0);
-      *tokens_desc->mut_shape() = Shape({device_batch_size, num_tokens});
-      *tokens_desc->mut_data_type() = ctx->Attr<DataType>("dtype");
-      return Maybe<void>::Ok();
-    })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
       int64_t num_tokens = ctx->Attr<int64_t>("seq_length") + 1;
@@ -70,6 +51,9 @@ REGISTER_CPU_ONLY_USER_OP("gpt_data_loader")
       for (const std::string& sbp_str : dist_conf) {
         SbpParallel sbp_parallel;
         CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
+        CHECK_OR_RETURN(
+            (sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == 0)
+            || sbp_parallel.has_broadcast_parallel());
         input_dist->add_sbp_parallel()->mutable_broadcast_parallel();
         *output_dist->add_sbp_parallel() = sbp_parallel;
       }
@@ -81,12 +65,6 @@ REGISTER_CPU_ONLY_USER_OP("gpt_data_loader")
       CHECK(input_modifier != nullptr);
       input_modifier->set_is_mutable(true);
       input_modifier->set_requires_grad(false);
-    })
-    .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
-                             const user_op::UserOpConfWrapper& conf) {
-      user_op::OutputArgModifier* output_modifier = GetOutputArgModifierFn("tokens", 0);
-      CHECK(output_modifier != nullptr);
-      output_modifier->set_header_infered_before_compute(false);
     });
 
 }  // namespace oneflow

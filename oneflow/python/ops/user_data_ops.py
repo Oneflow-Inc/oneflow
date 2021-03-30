@@ -2351,7 +2351,7 @@ def OneRecDecoder(
     )
 
 
-@oneflow_export("data.gpt_data_loader", "data.GPTDataLoader")
+@oneflow_export("data.megatron_gpt_mmap_data_loader", "data.MegatronGPTMMapDataLoader")
 def gpt_data_loader(
     data_file_prefix: str,
     seq_length: int,
@@ -2426,7 +2426,7 @@ def gpt_data_loader(
 
     loader_op = (
         flow.user_op_builder(name)
-        .Op("gpt_data_loader")
+        .Op("megatron_gpt_mmap_data_loader")
         .Input("iteration", [iteration])
         .Output("tokens")
         .Attr("data_file_prefix", data_file_prefix)

@@ -17,18 +17,52 @@ limitations under the License.
 #define ONEFLOW_USER_DATA_GPT_DATASET_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/user/data/gpt_index.h"
-#include "oneflow/user/data/mmap_file.h"
 
 namespace oneflow {
 
 namespace data {
 
+class GPTIndex final {
+ public:
+  GPTIndex(const std::string& index_file);
+  ~GPTIndex() = default;
+
+  static constexpr char kMagicCode[] = "MMIDIDX\x00\x00";
+
+  uint64_t version() const { return version_; }
+  char dtype_code() const { return dtype_code_; }
+  size_t num_docs() const { return sizes_.size(); }
+  size_t num_tokens() const;
+  size_t doc_length(size_t doc_index) const { return sizes_.at(doc_index); }
+  size_t doc_offset(size_t doc_index) const { return doc_offsets_.at(doc_index); }
+  size_t address(size_t doc_index) const { return addresses_.at(doc_index); }
+
+ private:
+  uint64_t version_;
+  char dtype_code_;
+  std::vector<int32_t> sizes_;
+  std::vector<int64_t> addresses_;
+  std::vector<int64_t> doc_offsets_;
+};
+
+class MappedBuffer final {
+ public:
+  MappedBuffer(const char* filename);
+  ~MappedBuffer();
+
+  const void* ptr() const { return mapped_; }
+  size_t size() const { return size_; }
+
+ private:
+  void* mapped_;
+  size_t size_;
+};
+
 class GPTDataset final {
  public:
-  GPTDataset(const std::shared_ptr<const GPTIndex>& index, const std::shared_ptr<MMapFile>& data,
-             size_t seq_len, size_t num_samples, const std::vector<size_t>& doc_indices,
-             bool shuffle, uint32_t seed);
+  GPTDataset(const std::string& data_file_prefix, size_t seq_len, size_t num_samples,
+             const std::vector<int64_t>& split_sizes, size_t split_index, bool shuffle,
+             uint32_t seed);
   OF_DISALLOW_COPY_AND_MOVE(GPTDataset);
   ~GPTDataset() = default;
 
@@ -41,16 +75,16 @@ class GPTDataset final {
 
   size_t GetNumEpochs() const;
   size_t GetNumCompleteEpochs() const;
-  void InitDocIndices(const std::vector<size_t>& doc_indices);
+  void InitDocIndices(const std::vector<int64_t>& split_sizes, size_t split_index);
   void InitDocIndices(const std::vector<size_t>& doc_indices, size_t num_epochs);
   void InitSampleIndices();
   void InitShuffleIndices();
   template<typename T>
-  void ReadTokens(const void* src, T* dst, size_t size) const;
+  void ReadTokens(const void* src, size_t offset, T* dst, size_t size) const;
 
   // config
-  std::shared_ptr<const GPTIndex> index_;
-  std::shared_ptr<MMapFile> data_;
+  std::unique_ptr<const GPTIndex> index_;
+  std::unique_ptr<MappedBuffer> data_;
   size_t seq_len_;
   size_t num_samples_;
   bool shuffle_;
@@ -84,29 +118,26 @@ void GPTDataset::Get(size_t index, T* data) const {
   if (doc_indices_idx == next_doc_indices_idx) {
     CHECK_EQ(num_tokens, next_doc_offset - doc_offset + 1);
     size_t offset = index_->address(doc_index) + doc_offset * dtype_size;
-    const void* data_addr = data_->address(offset);
-    ReadTokens(data_addr, data, num_tokens);
+    ReadTokens(data_->ptr(), offset, data, num_tokens);
   } else {
     size_t total_num_tokens = 0;
     // first
     size_t part_num_tokens = (index_->doc_length(doc_index) - doc_offset);
-    const void* data_addr = data_->address(index_->address(doc_index) + doc_offset * dtype_size);
-    ReadTokens(data_addr, data, part_num_tokens);
+    size_t offset = index_->address(doc_index) + doc_offset * dtype_size;
+    ReadTokens(data_->ptr(), offset, data, part_num_tokens);
     data += part_num_tokens;
     total_num_tokens += part_num_tokens;
     // middle
     FOR_RANGE(size_t, i, doc_indices_idx + 1, next_doc_indices_idx) {
       size_t cur_doc_index = doc_indices_[i];
       part_num_tokens = index_->doc_length(cur_doc_index);
-      data_addr = data_->address(index_->address(cur_doc_index));
-      ReadTokens(data_addr, data, part_num_tokens);
+      ReadTokens(data_->ptr(), index_->address(cur_doc_index), data, part_num_tokens);
       data += part_num_tokens;
       total_num_tokens += part_num_tokens;
     }
     // last
     part_num_tokens = next_doc_offset + 1;
-    data_addr = data_->address(index_->address(next_doc_index));
-    ReadTokens(data_addr, data, part_num_tokens);
+    ReadTokens(data_->ptr(), index_->address(next_doc_index), data, part_num_tokens);
     total_num_tokens += part_num_tokens;
     // check
     CHECK_EQ(total_num_tokens, num_tokens);
@@ -114,13 +145,14 @@ void GPTDataset::Get(size_t index, T* data) const {
 }
 
 template<typename T>
-void GPTDataset::ReadTokens(const void* src, T* dst, size_t size) const {
+void GPTDataset::ReadTokens(const void* src, size_t bytes_offset, T* dst, size_t size) const {
   switch (index_->dtype_code()) {
-#define SWITCH_CASE_ENTRY(type_code, type)         \
-  case type_code: {                                \
-    auto spec_src = static_cast<const type*>(src); \
-    std::copy(spec_src, spec_src + size, dst);     \
-    break;                                         \
+#define SWITCH_CASE_ENTRY(type_code, type)                                           \
+  case type_code: {                                                                  \
+    const auto* src_ptr =                                                            \
+        reinterpret_cast<const type*>(static_cast<const char*>(src) + bytes_offset); \
+    std::copy(src_ptr, src_ptr + size, dst);                                         \
+    break;                                                                           \
   }
 
     SWITCH_CASE_ENTRY(1, uint8_t)

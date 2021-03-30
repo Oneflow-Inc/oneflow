@@ -197,13 +197,13 @@ inline void HashCombine(size_t* seed, size_t hash) {
 class RoundModeGuard final {
  public:
   RoundModeGuard(int mode) {
-    origin_mode_ = std::fegetround();
+    saved_mode_ = std::fegetround();
     CHECK_EQ(std::fesetround(mode), 0);
   }
-  ~RoundModeGuard() { std::fesetround(origin_mode_); }
+  ~RoundModeGuard() { std::fesetround(saved_mode_); }
 
  private:
-  int origin_mode_;
+  int saved_mode_;
 };
 
 }  // namespace oneflow

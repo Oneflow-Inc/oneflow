@@ -15,8 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/data/gpt_dataset.h"
-#include "oneflow/user/data/gpt_index.h"
-#include "oneflow/user/data/mmap_file.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
@@ -25,30 +23,6 @@ namespace {
 
 using namespace user_op;
 using namespace data;
-
-std::vector<size_t> GetSplitDocIndices(const std::vector<int64_t>& split_sizes, int64_t split_index,
-                                       size_t num_docs) {
-  CHECK_LT(split_index, split_sizes.size());
-  size_t total_size = 0;
-  FOR_RANGE(size_t, i, 0, split_sizes.size()) { total_size += split_sizes[i]; }
-
-  std::vector<size_t> splits;
-  splits.reserve(split_sizes.size());
-  std::vector<size_t> splits_offsets;
-  splits_offsets.reserve(split_sizes.size() + 1);
-  splits_offsets.push_back(0);
-  RoundModeGuard round_guard(FE_TONEAREST);
-  FOR_RANGE(size_t, i, 0, split_sizes.size()) {
-    float ratio = static_cast<float>(split_sizes[i]) / total_size;
-    size_t split_size = static_cast<size_t>(std::nearbyint(ratio * num_docs));
-    splits.push_back(split_size);
-    splits_offsets.push_back(splits_offsets[i] + split_size);
-  }
-
-  std::vector<size_t> doc_indices(splits[split_index]);
-  std::iota(doc_indices.begin(), doc_indices.end(), splits_offsets[split_index]);
-  return doc_indices;
-}
 
 size_t GetNumShards(const Shape& hierarchy, const ParallelDistribution& parallel_dist) {
   size_t num_shards = 1;
@@ -85,17 +59,13 @@ size_t GetShardIndex(const Shape& hierarchy, const ParallelDistribution& paralle
 class GPTDataLoader final : public OpKernelState {
  public:
   GPTDataLoader(KernelInitContext* ctx) : num_shards_(1), sample_index_(0), once_loaded_(false) {
-    const std::string& data_file_prefix = ctx->Attr<std::string>("data_file_prefix");
-    auto gpt_index = std::make_shared<const GPTIndex>(data_file_prefix + ".idx");
-    auto gpt_bin = std::make_shared<MMapFile>(data_file_prefix + ".bin");
-    auto doc_indices = GetSplitDocIndices(ctx->Attr<std::vector<int64_t>>("split_sizes"),
-                                          ctx->Attr<int64_t>("split_index"), gpt_index->num_docs());
-
-    dataset_.reset(new GPTDataset(gpt_index, gpt_bin, ctx->Attr<int64_t>("seq_length"),
-                                  ctx->Attr<int64_t>("num_samples"), doc_indices,
-                                  ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed")));
-
     seq_len_ = ctx->Attr<int64_t>("seq_length");
+
+    dataset_.reset(new GPTDataset(
+        ctx->Attr<std::string>("data_file_prefix"), seq_len_, ctx->Attr<int64_t>("num_samples"),
+        ctx->Attr<std::vector<int64_t>>("split_sizes"), ctx->Attr<int64_t>("split_index"),
+        ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed")));
+
     batch_size_ = ctx->LogicalTensorDesc4ArgNameAndIndex("tokens", 0)->shape().At(0);
     ctx->TensorDesc4ArgNameAndIndex("tokens", 0)->shape().At(0);
     if (ctx->parallel_ctx().parallel_num() > 1) {
@@ -169,7 +139,7 @@ class GPTDataLoaderKernel final : public OpKernel {
 }  // namespace
 
 #define REGISTER_GPT_DATA_LOADER_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("gpt_data_loader")                                           \
+  REGISTER_USER_KERNEL("megatron_gpt_mmap_data_loader")                             \
       .SetCreateFn<GPTDataLoaderKernel<dtype>>()                                    \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                           \
                        & (user_op::HobDataType("iteration", 0) == DataType::kInt64) \

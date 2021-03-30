@@ -79,7 +79,6 @@ def _make_gpt_data_loader_func(
     return gpt_loader_fn
 
 
-# @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestGPTDataLoader(flow.unittest.TestCase):
     DATA_FILE_PREFIX = "/dataset/Megatron-LM/small/gpt_sample_dataset_text_document"
     SEQ_LENGTH = 1024
