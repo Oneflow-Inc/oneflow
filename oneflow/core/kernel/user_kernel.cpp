@@ -34,13 +34,13 @@ using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
 namespace {
 
-void FillTensorDescWithBlob(const Blob* blob, user_op::TensorDesc* tensor_desc) {
+void FillTensorDescWithBlob(const Blob* blob, user_op::NaiveTensorDesc* tensor_desc) {
   BlobDescProto proto;
   blob->blob_desc().header_pod_desc().ToProto(proto.mutable_header());
   blob->blob_desc().body().ToProto(proto.mutable_body());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   proto.set_header_is_opaque(blob->blob_desc().header_is_opaque());
-  tensor_desc = new user_op::NaiveTensorDesc(proto);
+  *tensor_desc = proto;
   tensor_desc->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
 }
 
