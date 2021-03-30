@@ -122,9 +122,10 @@ class BuiltinOp(object):
             attribute.set_at_string(attr_value)
         elif attr_type == user_op_attr_cfg.kAtShape:
             assert isinstance(attr_value, (tuple, list))
+            attribute_mutable_at_shape = attribute.mutable_at_shape()
             for x in attr_value:
                 assert isinstance(x, int)
-                attribute.mutable_at_shape().add_dim(x)
+                attribute_mutable_at_shape.add_dim(x)
         elif attr_type == user_op_attr_cfg.kAtDataType:
             assert attr_value in oneflow.dtypes()
             attr_value = oneflow_api.deprecated.GetProtoDtype4OfDtype(attr_value)
@@ -132,40 +133,48 @@ class BuiltinOp(object):
             attribute.set_at_data_type(data_type_cfg.DataType(attr_value))
         elif attr_type == user_op_attr_cfg.kAtListInt32:
             assert isinstance(attr_value, (tuple, list))
+            attribute_mutable_at_list_int32 = attribute.mutable_at_list_int32()
             for x in attr_value:
                 assert isinstance(x, int)
-                attribute.mutable_at_list_int32().add_val(x)
+                attribute_mutable_at_list_int32.add_val(x)
         elif attr_type == user_op_attr_cfg.kAtListInt64:
             assert isinstance(attr_value, (tuple, list))
+            attribute_mutable_at_list_int64 = attribute.mutable_at_list_int64()
             for x in attr_value:
                 assert isinstance(x, int)
-                attribute.mutable_at_list_int64().add_val(x)
+                attribute_mutable_at_list_int64.add_val(x)
         elif attr_type == user_op_attr_cfg.kAtListFloat:
             assert isinstance(attr_value, (tuple, list))
+            attribute_mutable_at_list_float = attribute.mutable_at_list_float()
             for x in attr_value:
                 assert isinstance(x, (float, int))
-                attribute.mutable_at_list_float().add_val(x)
+                attribute_mutable_at_list_float.add_val(x)
         elif attr_type == user_op_attr_cfg.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
+            attribute_mutable_at_list_data_type = attribute.mutable_at_list_data_type()
             for x in attr_value:
                 assert x in oneflow.dtypes()
                 x = oneflow_api.deprecated.GetProtoDtype4OfDtype(x)
                 assert isinstance(x, int)
-                attribute.mutable_at_list_data_type().add_val(data_type_cfg.DataType(x))
+                attribute_mutable_at_list_data_type.add_val(data_type_cfg.DataType(x))
         elif attr_type == user_op_attr_cfg.kAtListShape:
             assert isinstance(attr_value, (tuple, list))
+            attribute_mutable_at_list_shape = (
+                attribute.mutable_at_list_shape().mutable_val()
+            )
             for x in attr_value:
                 assert isinstance(x, (tuple, list))
                 shape = shape_cfg.ShapeProto()
                 for dim in x:
                     assert isinstance(dim, int)
                     shape.add_dim(dim)
-                attribute.mutable_at_list_shape().mutable_val().Add().CopyFrom(shape)
+                attribute_mutable_at_list_shape.Add().CopyFrom(shape)
         elif attr_type == user_op_attr_cfg.kAtListString:
             assert isinstance(attr_value, (tuple, list))
+            attribute_mutable_at_list_string = attribute.mutable_at_list_string()
             for x in attr_value:
                 assert isinstance(x, str)
-                attribute.mutable_at_list_string().add_val(x)
+                attribute_mutable_at_list_string.add_val(x)
         else:
             raise ValueError("Invalid op attribute type {}".format(attr_type))
 
