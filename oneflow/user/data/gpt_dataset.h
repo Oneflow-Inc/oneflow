@@ -84,7 +84,6 @@ void GPTDataset::Get(size_t index, T* data) const {
   const size_t next_doc_index = doc_indices_[next_doc_indices_idx];
   const size_t dtype_size = kDTypeCode2Size.at(index_->dtype_code());
   const size_t num_tokens = seq_len_ + 1;
-  LOG(INFO) << "GPTDataset::Get, index: " << index << ", sample_index: " << sample_index;
   if (doc_indices_idx == next_doc_indices_idx) {
     CHECK_EQ(num_tokens, next_doc_offset - doc_offset + 1);
     size_t offset = index_->address(doc_index) + doc_offset * dtype_size;
@@ -98,10 +97,6 @@ void GPTDataset::Get(size_t index, T* data) const {
     ReadTokens(data_addr, data, part_num_tokens);
     data += part_num_tokens * sizeof(T);
     total_num_tokens += part_num_tokens;
-    LOG(INFO) << "doc_indices_idx: " << doc_indices_idx << ", doc_index: " << doc_index
-              << ", doc_offset: " << doc_offset << ", part_num_tokens: " << part_num_tokens
-              << ", total_num_tokens: " << total_num_tokens << ", sample_index: " << sample_index
-              << " [first]";
     // middle
     FOR_RANGE(size_t, i, doc_indices_idx + 1, next_doc_indices_idx) {
       size_t cur_doc_index = doc_indices_[i];
@@ -110,20 +105,12 @@ void GPTDataset::Get(size_t index, T* data) const {
       ReadTokens(data_addr, data, part_num_tokens);
       data += part_num_tokens * sizeof(T);
       total_num_tokens += part_num_tokens;
-      LOG(INFO) << "doc_indices_idx: " << i << ", doc_index: " << cur_doc_index
-                << ", part_num_tokens: " << part_num_tokens
-                << ", total_num_tokens: " << total_num_tokens << ", sample_index: " << sample_index
-                << " [middle]";
     }
     // last
     part_num_tokens = next_doc_offset + 1;
     data_addr = data_->address(index_->address(next_doc_index));
     ReadTokens(data_addr, data, part_num_tokens);
     total_num_tokens += part_num_tokens;
-    LOG(INFO) << "doc_indices_idx: " << next_doc_indices_idx << ", doc_index: " << next_doc_index
-              << ", part_num_tokens: " << part_num_tokens
-              << ", total_num_tokens: " << total_num_tokens << ", sample_index: " << sample_index
-              << " [last]";
     // check
     CHECK_EQ(total_num_tokens, num_tokens);
   }

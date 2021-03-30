@@ -109,7 +109,6 @@ class GPTDataLoader final : public OpKernelState {
       batch_size_ /= num_shards_;
       sample_index_ = shard_index_;
     }
-    LOG(ERROR) << "construct GPTDataLoader finish";
   }
   ~GPTDataLoader() = default;
 
@@ -119,7 +118,6 @@ class GPTDataLoader final : public OpKernelState {
     if (once_loaded_) { once_loaded_ = true; }
     auto* dptr = tokens->mut_dptr<T>();
     for (size_t i = 0; i < batch_size_; ++i) {
-      LOG(ERROR) << "GPTDataset::Get " << sample_index_;
       dataset_->Get(sample_index_, dptr + i * tokens->shape().At(1));
       sample_index_ += num_shards_;
     }
@@ -150,7 +148,6 @@ class GPTDataLoaderKernel final : public OpKernel {
 
  private:
   void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
-    LOG(ERROR) << "GPTDataLoaderKernel::Compute";
     auto* loader = dynamic_cast<GPTDataLoader*>(state);
     user_op::Tensor* iteration_tensor = ctx->Tensor4ArgNameAndIndex("iteration", 0);
     CHECK_EQ(iteration_tensor->shape().elem_cnt(), 1);

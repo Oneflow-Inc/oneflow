@@ -100,7 +100,6 @@ void GPTDataset::InitSampleIndices() {
   size_t doc_indices_idx = 0;
   size_t doc_offset = 0;
   FOR_RANGE(size_t, i, 0, total_num_samples) {
-    LOG(INFO) << "InitSampleIndices, sample " << i;
     if (doc_indices_idx >= doc_indices_.size()) { break; }
     sample_indices_.emplace_back(doc_indices_idx, doc_offset);
     int remaining_tokens = seq_len_;
@@ -108,10 +107,6 @@ void GPTDataset::InitSampleIndices() {
       size_t doc_len = index_->doc_length(doc_indices_[doc_indices_idx]);
       CHECK_LT(doc_offset, doc_len);
       doc_len -= doc_offset;
-      LOG(INFO) << "sample " << i << ", doc_indices_idx: " << doc_indices_idx
-                << ", doc_index: " << doc_indices_[doc_indices_idx]
-                << ", doc_offset: " << doc_offset << ", doc_len: " << doc_len
-                << ", remaining_tokens: " << remaining_tokens;
       if (remaining_tokens < doc_len) {
         // move offset inside doc
         doc_offset += remaining_tokens;
@@ -119,9 +114,7 @@ void GPTDataset::InitSampleIndices() {
         // move to next doc
         doc_indices_idx += 1;
         doc_offset = 0;
-        CHECK_LT(doc_indices_idx, doc_indices_.size())
-            << "sample_index: " << i << ", remaining_tokens: " << remaining_tokens
-            << ", doc_len: " << doc_len;
+        CHECK_LT(doc_indices_idx, doc_indices_.size());
       }
       remaining_tokens -= doc_len;
     }
