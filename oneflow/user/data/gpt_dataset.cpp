@@ -138,18 +138,6 @@ void GPTDataset::InitShuffleIndices() {
   }
 }
 
-const HashMap<char, DataType> GPTDataset::kDTypeCode2DataType = {
-    {1, DataType::kUInt8},
-    {2, DataType::kInt8},
-    {3, DataType::kInt32},  // origin {3,
-                            // DataType::kInt16},
-    {4, DataType::kInt32},
-    {5, DataType::kInt64},
-    {6, DataType::kFloat},
-    {7, DataType::kDouble},
-    {8, DataType::kInt32},  // origin {8, DataType::kUInt16},
-};
-
 const HashMap<char, size_t> GPTDataset::kDTypeCode2Size = {
     {1, 1},  // DataType::kUInt8
     {2, 1},  // DataType::kInt8

@@ -35,10 +35,8 @@ class GPTDataset final {
   template<typename T>
   void Get(size_t index, T* data) const;
   size_t Size() const { return sample_indices_.size() - 1; }
-  // DataType data_type() const { return kDTypeCode2DataType.at(index_->dtype_code()); }
 
  private:
-  static const HashMap<char, DataType> kDTypeCode2DataType;
   static const HashMap<char, size_t> kDTypeCode2Size;
 
   size_t GetNumEpochs() const;
