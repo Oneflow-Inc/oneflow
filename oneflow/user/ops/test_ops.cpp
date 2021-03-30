@@ -50,10 +50,7 @@ REGISTER_USER_OP("ccrelu")
       *out_shape = *in_shape;
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      
-      return Maybe<void>::Ok();
-    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
@@ -71,10 +68,7 @@ REGISTER_USER_OP("ccrelu_grad")
       *dx_shape = *y_shape;
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      
-      return Maybe<void>::Ok();
-    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .Split(user_op::OpArg("y", 0), 0)
@@ -112,7 +106,6 @@ REGISTER_USER_OP("TestReshape")
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      
       return Maybe<void>::Ok();
     });
 
@@ -128,7 +121,7 @@ REGISTER_USER_OP("TestSource")
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;      
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     });
 
@@ -146,10 +139,7 @@ REGISTER_USER_OP("TestMultiOutputOrder")
       out2_shape->Set(last_axis, in_shape->At(last_axis) * 2);
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      
-      return Maybe<void>::Ok();
-    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
@@ -200,10 +190,7 @@ REGISTER_USER_OP("TestMultiInput")
       *y_shape = *x1_shape;
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      
-      return Maybe<void>::Ok();
-    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x1_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
       FOR_RANGE(int64_t, i, 0, x1_tensor.shape().NumAxes()) {
@@ -227,10 +214,7 @@ REGISTER_USER_OP("TestMultiInputGrad")
       *x2_diff_shape = *x2_shape;
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      
-      return Maybe<void>::Ok();
-    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x1_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x1", 0);
       FOR_RANGE(int64_t, i, 0, x1_tensor.shape().NumAxes()) {
@@ -266,7 +250,7 @@ REGISTER_USER_OP("TestDynamicSource")
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;      
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -289,7 +273,7 @@ REGISTER_USER_OP("TestRandomSource")
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;  
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     });
 
@@ -328,7 +312,7 @@ REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
       const auto& out_types = ctx->Attr<std::vector<DataType>>("out_types");
       FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
         *ctx->Dtype4ArgNameAndIndex("out", i) = out_types.at(i);
-      }    
+      }
       return Maybe<void>::Ok();
     });
 

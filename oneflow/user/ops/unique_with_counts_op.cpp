@@ -54,11 +54,11 @@ REGISTER_USER_OP("unique_with_counts")
       user_op::TensorDesc* idx = ctx->TensorDesc4ArgNameAndIndex("idx", 0);
       *idx->mut_data_type() = x->data_type();
       *idx->mut_data_type() = out_idx;
-      
+
       user_op::TensorDesc* count = ctx->TensorDesc4ArgNameAndIndex("count", 0);
       *count->mut_data_type() = out_idx;
       user_op::TensorDesc* num_unique = ctx->TensorDesc4ArgNameAndIndex("num_unique", 0);
-      *num_unique->mut_data_type() = out_idx;      
+      *num_unique->mut_data_type() = out_idx;
       return Maybe<void>::Ok();
     });
 

@@ -68,13 +68,9 @@ Maybe<void> InferDataType(InferContext* ctx) {
   TensorDesc* tensor_dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
   TensorDesc* tensor_dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
 
-  if (tensor_dx) {
-    *tensor_dx->mut_data_type() = tensor_dz->data_type();
-  }
+  if (tensor_dx) { *tensor_dx->mut_data_type() = tensor_dz->data_type(); }
 
-  if (tensor_dy) {
-    *tensor_dy->mut_data_type() = tensor_dz->data_type();
-  }
+  if (tensor_dy) { *tensor_dy->mut_data_type() = tensor_dz->data_type(); }
 
   return Maybe<void>::Ok();
 }
@@ -117,9 +113,9 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
       .Input("y")                                                      \
       .Output("z")                                                     \
       .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged) \
-      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)  \
+      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)            \
       .SetInferDataTypeFn(user_op::TensorDescInferFnUtil::UnchangedDataType)
-      
+
 #define REGISTER_ELEMENTWISE_XIMUM_BW_OP(op_type_name) \
   REGISTER_USER_OP(op_type_name)                       \
       .Input("dz")                                     \
@@ -128,7 +124,7 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
       .OptionalOutput("dx")                            \
       .OptionalOutput("dy")                            \
       .SetTensorDescInferFn(InferTensorDesc)           \
-      .SetGetSbpFn(GetSbpSignature) \
+      .SetGetSbpFn(GetSbpSignature)                    \
       .SetInferDataTypeFn(InferDataType)
 
 #define REGISTER_ELEMENTWISE_XIMUM_GRAD(op_type_name) \

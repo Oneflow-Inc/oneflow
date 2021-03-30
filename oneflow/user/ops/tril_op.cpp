@@ -90,7 +90,7 @@ REGISTER_USER_OP("fused_scale_tril")
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out->mut_data_type() = in->data_type();      
+      *out->mut_data_type() = in->data_type();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
