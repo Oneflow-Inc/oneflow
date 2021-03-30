@@ -44,6 +44,7 @@ class TestModule(flow.unittest.TestCase):
 
         m = CustomModule()
         x = flow.Tensor(2, 3)
+        flow.nn.init.uniform_(x, a=-1.0, b=1.0)
         y = m(x)
         test_case.assertTrue(np.array_equal(np_relu(x.numpy()), y.numpy()))
 
@@ -51,6 +52,7 @@ class TestModule(flow.unittest.TestCase):
         relu = flow.nn.ReLU()
 
         x = flow.Tensor(2, 3)
+        flow.nn.init.uniform_(x, a=-1.0, b=1.0)
         y = relu(x)
         test_case.assertTrue(np.array_equal(np_relu(x.numpy()), y.numpy()))
 
