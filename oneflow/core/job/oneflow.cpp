@@ -120,7 +120,6 @@ void PopulateOpAttibute(
           if (it == table_it->second.op_name2op_attribute().end()) {
             LOG(FATAL) << "ref: " << kernel_conf->op_attribute_ref() << " not found";
           } else {
-            // it should be safe to move here because it should only be fetched once
             *kernel_conf->mutable_op_attribute() = it->second;
           }
         }
