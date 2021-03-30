@@ -33,6 +33,8 @@ REGISTER_USER_OP("combined_margin_loss")
       CHECK_EQ_OR_RETURN(label->shape().At(0), x->shape().At(0));
       CHECK_GE_OR_RETURN(x->shape().NumAxes(), 2);
       *ctx->Shape4ArgNameAndIndex("y", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("y", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
+      *theta->mut_is_dynamic() = x->is_dynamic();
       *theta->mut_shape() = label->shape();
       return Maybe<void>::Ok();
     })

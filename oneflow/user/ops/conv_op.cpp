@@ -47,6 +47,7 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
       CalcConvOut(in->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
                   strides.at(i), padding_before.at(i), &out_shape.at(idx_offset + i));
     }
+    *out->mut_is_dynamic() = in->is_dynamic();
     *out->mut_shape() = Shape(out_shape);
   }
 
