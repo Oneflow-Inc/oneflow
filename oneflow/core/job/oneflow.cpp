@@ -175,9 +175,11 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
     if (task.exec_sequence().exec_node_size() == 1
         && task.exec_sequence().exec_node(0).kernel_conf().has_op_attribute_ref()) {
       auto* kernel_conf = task.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
-      kernel_conf->clear_op_attribute_ref();
-      *kernel_conf->mutable_op_attribute() = op_attribute_ref_table.op_name2op_attribute().at(
-          task.exec_sequence().exec_node(0).kernel_conf().op_attribute_ref());
+      if (kernel_conf->has_op_attribute_ref()) {
+        kernel_conf->clear_op_attribute_ref();
+        *kernel_conf->mutable_op_attribute() = op_attribute_ref_table.op_name2op_attribute().at(
+            task.exec_sequence().exec_node(0).kernel_conf().op_attribute_ref());
+      }
     }
   }
   NetTopo net_topo;
