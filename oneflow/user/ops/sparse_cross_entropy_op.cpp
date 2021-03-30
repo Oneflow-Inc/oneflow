@@ -36,8 +36,8 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
   JUST(CheckPredictionLabelDesc(prediction_desc, label_desc));
   user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  *out_desc = *prediction_desc;
-  ctx->Shape4ArgNameAndIndex("out", 0) = 
+  // *out_desc = *prediction_desc;
+  *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("prediction", 0);
   *out_desc->mut_shape() = label_desc->shape();
   return Maybe<void>::Ok();
 }
@@ -48,7 +48,8 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
   JUST(CheckPredictionLabelDesc(prediction_desc, label_desc));
   CHECK_EQ_OR_RETURN(dy_desc->shape(), label_desc->shape());
-  *ctx->TensorDesc4ArgNameAndIndex("prediction_diff", 0) = *prediction_desc;
+  // *ctx->TensorDesc4ArgNameAndIndex("prediction_diff", 0) = *prediction_desc;
+  *ctx->Shape4ArgNameAndIndex("prediction_diff", 0) = *ctx->Shape4ArgNameAndIndex("prob_desc", 0);
   return Maybe<void>::Ok();
 }
 
@@ -57,6 +58,8 @@ Maybe<void> InferDataType(const user_op::TensorDesc* label_desc, user_op::InferC
   const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
   const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
   CHECK_EQ_OR_RETURN(dy_desc->data_type(), prediction_desc->data_type());
+  *out_desc->mut_data_type() = prediction_desc->data_type();
+  *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = *ctx->Dtype4ArgNameAndIndex("prob_desc", 0);
   return Maybe<void>::Ok();
 }
 
