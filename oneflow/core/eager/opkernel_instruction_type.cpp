@@ -549,9 +549,10 @@ private:
   static inline Maybe<void> WithOpInferContext(LocalCallOpKernelPhyInstrOperand* operand,
       const CallbackT& Callback) {
     auto* opkernel = operand->mut_opkernel();
-    JUST(Callback(opkernel->UpdateInferContext(operand->mut_inputs().get())));
+    JUST(Callback(opkernel->UpdateInferContext(operand->mut_inputs().get(),
+                                               operand->mut_outputs().get())));
     // tensor tuples are not allowed to be hold by StatefullOpKernel
-    opkernel->UpdateInferContext(nullptr);
+    opkernel->UpdateInferContext(nullptr, nullptr);
     return Maybe<void>::Ok();
   }
 
@@ -560,9 +561,10 @@ private:
       LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx,
       const CallbackT& Callback) {
     auto* opkernel = operand->mut_opkernel();
-    JUST(Callback(opkernel->UpdateComputeContext(operand->mut_inputs(), device_ctx)));
+    JUST(Callback(opkernel->UpdateComputeContext(operand->mut_inputs().get(),
+                                                 operand->mut_outputs().get(), device_ctx)));
     // tensor tuples are not allowed to be hold by StatefullOpKernel
-    opkernel->UpdateComputeContext(nullptr, nullptr);
+    opkernel->UpdateComputeContext(nullptr, nullptr, nullptr);
     return Maybe<void>::Ok();
   }
 
@@ -591,12 +593,6 @@ private:
     return Maybe<void>::Ok();
   }
   
-  static inline Maybe<void> DeallocateTempStorageBlobMemory(
-      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
-    JUST(operand->opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr(device_ctx));
-    return Maybe<void>::Ok();
-  }
-
   static inline Maybe<void> OpKernelCompute(
       LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
     auto* opkernel = operand->mut_opkernel();
@@ -605,6 +601,12 @@ private:
         opkernel->mut_user_opkernel()->Compute(compute_ctx, opkernel->mut_opkernel_state());
         return Maybe<void>::Ok();
       }));
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> DeallocateTempStorageBlobMemory(
+      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+    JUST(operand->opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr(device_ctx));
     return Maybe<void>::Ok();
   }
 
