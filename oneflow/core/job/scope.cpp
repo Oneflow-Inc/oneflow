@@ -96,7 +96,7 @@ Maybe<cfg::ScopeProto> Scope::MakeChildScopeProto() const {
   return child;
 }
 
-Maybe<int64_t> GenNewScopeSymbolId(
+Maybe<int64_t> NewScopeSymbolIdWihtModifier(
     int64_t old_scope_symbol_id,
     const std::function<void(std::shared_ptr<cfg::ScopeProto> new_scope)>& InitNewScopeProto) {
   CHECK_OR_RETURN(Global<symbol::Storage<Scope>>::Get()->Has(old_scope_symbol_id));
