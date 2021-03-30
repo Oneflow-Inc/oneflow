@@ -546,7 +546,7 @@ __global__ void LarsUpdateGpu(int64_t n, float momentum_beta, T* momentum, float
                               T* model) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   CUDA_1D_KERNEL_LOOP(i, n) {
-    LarsUpdateFunctor<T>()(model_diff_tmp + i, model + i, momentum_beta, momentum + i, weight_decay,
+    LarsUpdateFunctor<T>()(model_diff_tmp + i, model + i, momentum_beta, momentum + i, 0,
                            *local_learning_rate);
   }
 }

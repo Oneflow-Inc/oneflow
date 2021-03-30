@@ -312,7 +312,7 @@ void LarsUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
   }
   T local_learning_rate = *learning_rate * lars;
   FOR_RANGE(int64_t, i, 0, n) {
-    LarsUpdateFunctor<T>()(model_diff_tmp + i, model + i, momentum_beta, momentum + i, weight_decay,
+    LarsUpdateFunctor<T>()(model_diff_tmp + i, model + i, momentum_beta, momentum + i, 0,
                            local_learning_rate);
   }
 }
