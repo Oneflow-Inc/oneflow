@@ -13,20 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
+
+import numpy as np
+
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import Tensor
+import oneflow.typing as tp
 
 
-@oneflow_export("nn.Parameter")
-class Parameter(Tensor):
-    def __init__(self, data, requires_grad=True):
-        # TODO: uncomment this line when autograd is ready
-        # data.requires_grad = True
-        data.set_is_consistent(True)
-        # TODO: set a proper placement
-        data.set_placement(flow.placement("cpu", ["0:0"], None))
-        self._data = data
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in eager mode",
+)
+class TestModule(flow.unittest.TestCase):
+    def test_identity(test_case):
+        m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
+        x = flow.Tensor(np.random.rand(2, 3, 4, 5))
+        y = m(x)
+        print(np.allclose(x.numpy(), y.numpy()))
 
-    def __getattr__(self, name):
-        return getattr(self._data, name)
+
+if __name__ == "__main__":
+    unittest.main()
