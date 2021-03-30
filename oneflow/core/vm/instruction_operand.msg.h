@@ -83,6 +83,15 @@ FLAT_MSG_BEGIN(InstructionOperand);
 FLAT_MSG_END(InstructionOperand);
 // clang-format on
 
+// physical instruction operand
+class PhyInstrOperand {
+ public:
+  virtual ~PhyInstrOperand() = default;
+
+ protected:
+  PhyInstrOperand() = default;
+};
+
 }  // namespace vm
 }  // namespace oneflow
 
