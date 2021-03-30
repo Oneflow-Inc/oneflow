@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/test_util.h"
+#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/common/cached_object_msg_allocator.h"
 
 namespace oneflow {
@@ -54,10 +55,11 @@ struct GlobalProcessCtxScope {
   }
 };
 
-TEST(ControlStreamType, front_seq_compute) {
+TEST(SequentialInstruction, front_seq_compute) {
   GlobalProcessCtxScope scope;
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
-  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
+  TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(),
+                                      {"NewObject", "ComputeRankFrontSeqCallback"});
   CachedObjectMsgAllocator allocator(20, 100);
   auto vm = ObjectMsgPtr<VirtualMachine>::NewFrom(&allocator, vm_desc.Get());
   InstructionMsgList list;
@@ -67,28 +69,48 @@ TEST(ControlStreamType, front_seq_compute) {
         NewInstruction("DeleteObject")->add_mut_operand(logical_object_id, AllMirroredObject()));
     ASSERT_TRUE(vm->pending_msg_list().empty());
   }
-  volatile bool finished = false;
-  volatile bool* finished_ptr = &finished;
+  int64_t sixsixsix = 0;
   {
-    auto instruction = NewInstruction("RankFrontSeqComputeCallback");
+    auto instruction = NewInstruction("ComputeRankFrontSeqCallback");
     instruction->add_int64_operand(GlobalProcessCtx::Rank());
-    const auto& Callback = [&]() {
-      *finished_ptr = true;
-      LOG(ERROR) << "Callback";
+    const auto Callback = [&]() { sixsixsix = 666; };
+    *instruction->mutable_phy_instr_operand() =
+        std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
+    list.EmplaceBack(std::move(instruction));
+  }
+  bool infer_finished = false;
+  {
+    auto instruction = NewInstruction("CtrlInferRankFrontSeqCallback");
+    instruction->add_int64_operand(GlobalProcessCtx::Rank());
+    const auto Callback = [&]() { infer_finished = true; };
+    *instruction->mutable_phy_instr_operand() =
+        std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
+    list.EmplaceBack(std::move(instruction));
+  }
+  bool compute_finished = false;
+  bool is_666 = false;
+  {
+    auto instruction = NewInstruction("CtrlComputeRankFrontSeqCallback");
+    instruction->add_int64_operand(GlobalProcessCtx::Rank());
+    const auto Callback = [&]() {
+      is_666 = sixsixsix == 666;
+      compute_finished = true;
     };
-    *instruction->mutable_no_arg_callback() = std::make_shared<std::function<void()>>(Callback);
+    *instruction->mutable_phy_instr_operand() =
+        std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
     list.EmplaceBack(std::move(instruction));
   }
   vm->Receive(&list);
   BlockingCounter bc(1);
   std::thread t([&]() {
-    while (!*finished_ptr) {
+    while (!(infer_finished && compute_finished)) {
       vm->Schedule();
       OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
     }
     bc.Decrease();
   });
   bc.WaitUntilCntEqualZero();
+  ASSERT_TRUE(is_666);
   ASSERT_TRUE(vm->Empty());
   t.join();
 }
