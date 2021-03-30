@@ -40,7 +40,7 @@ template<typename T, typename K>
 class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
  public:
   SparseSoftmaxCrossEntropyKernel() = default;
-  ~SparseSoftmaxCrossEntropyKernel() = default;
+  ~SparseSoftmaxCrossEntropyKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {

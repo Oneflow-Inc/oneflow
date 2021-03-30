@@ -129,6 +129,35 @@ __global__ void ComputeDiffWithSoftmaxGpuHalf(const int64_t elem_cnt, const int6
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
+template<typename K>
+__global__ void ComputeDiffWithSoftmaxGpuHalf2(const int64_t elem_cnt, const int64_t num_classes,
+                                               const int64_t depth, const int64_t lower_bound,
+                                               const half* prob, const K* labels, const half* dy,
+                                               half* dx) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  const int64_t h2_num_classes = num_classes / 2;
+  const int64_t h2_elem_cnt = elem_cnt / 2;
+  const auto* prob_h2 = reinterpret_cast<const half2*>(prob);
+  auto* dx_h2 = reinterpret_cast<half2*>(dx);
+  CUDA_1D_KERNEL_LOOP(i, h2_elem_cnt) {
+    const int32_t row_id = i / h2_num_classes;
+    const int32_t h2_col_id = i - row_id * h2_num_classes;
+    assert(labels[row_id] >= 0);
+    assert(labels[row_id] < depth);
+    K label = labels[row_id] - lower_bound;
+    const half2 prob_h2_i = prob_h2[i];
+    const half dy_row = dy[row_id];
+    half2 dx_h2_i;
+    dx_h2_i.x = __hmul(dy_row, __hsub(prob_h2_i.x, static_cast<half>(label == 2 * h2_col_id)));
+    dx_h2_i.y = __hmul(dy_row, __hsub(prob_h2_i.y, static_cast<half>(label == 2 * h2_col_id + 1)));
+    dx_h2[i] = dx_h2_i;
+  }
+#else
+  printf("use half need nvcc arch >= 530");
+  assert(false);
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
+}
+
 }  // namespace
 
 template<typename T, typename K>
@@ -183,10 +212,17 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, float16, K> {
                                      const int64_t num_classes, const int64_t depth,
                                      const int64_t lower_bound, const float16* prob,
                                      const K* labels, const float16* dy, float16* dx) {
-    ComputeDiffWithSoftmaxGpuHalf<K>
-        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            elem_cnt, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob), labels,
-            reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+    if (num_classes % 2 == 0) {
+      ComputeDiffWithSoftmaxGpuHalf2<K>
+          <<<BlocksNum4ThreadsNum(elem_cnt / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+              elem_cnt, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob),
+              labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+    } else {
+      ComputeDiffWithSoftmaxGpuHalf<K>
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+              elem_cnt, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob),
+              labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+    }
   }
 };
 
