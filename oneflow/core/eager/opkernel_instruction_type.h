@@ -23,6 +23,21 @@ limitations under the License.
 namespace oneflow {
 namespace eager {
 
+class LocalCallOpKernelInstructionType : public vm::InstructionType {
+ public:
+  void Infer(vm::Instruction* instruction) const override;
+  void Compute(vm::Instruction* instruction) const override;
+
+ protected:
+  LocalCallOpKernelInstructionType() = default;
+  virtual ~LocalCallOpKernelInstructionType() = default;
+
+ private:
+  Maybe<void> MaybeInfer(vm::Instruction* instruction) const;
+  Maybe<void> MaybeCompute(vm::Instruction* instruction) const;
+  virtual const char* device_tag() const = 0;
+};
+
 class CallOpKernelInstructionType : public vm::InstructionType {
  public:
   void Infer(vm::Instruction* instruction) const override;

@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/eager/opkernel_instruction.msg.h"
 #include "oneflow/core/eager/opkernel_instruction_type.h"
+#include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -37,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
+#include "oneflow/core/framework/tensor_impl.h"
 
 namespace oneflow {
 namespace eager {
@@ -446,7 +448,126 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
   return rw_mutexed_object->Init<T>(op_conf, job_desc_ptr, device_type);
 }
 
-}  // namespace
+}
+
+struct LocalCallOpKernelUtil final {
+
+  static inline Maybe<void> Infer(vm::Instruction* instruction) {
+    auto* phy_instr_operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    const auto& CheckMemCase = [instruction](const MemoryCase* mem_case)->Maybe<void>{
+      return CheckMemCase(mem_case, instruction->stream());
+    };
+    JUST(InitOutputBlobObjects(phy_instr_operand, CheckMemCase));
+    JUST(InferOutputTensorDescs(phy_instr_operand));
+    JUST(InitOutputBlobs(phy_instr_operand));
+    JUST(TryInitTempStorageBlob(phy_instr_operand));
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> Compute(vm::Instruction* instruction) {
+    auto* phy_instr_operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    JUST(AllocateMemoryForOutputBlobs(phy_instr_operand));
+    JUST(AllocateMemoryForTempStorageBlob(phy_instr_operand));
+    JUST(TryInitOpKernelState(phy_instr_operand));
+    JUST(ForwardOpKernel(phy_instr_operand));
+    return Maybe<void>::Ok();
+  }
+
+private:
+
+  static inline Maybe<LocalCallOpKernelPhyInstrOperand*> GetLocalCallOpKernelPhyInstrOperand(
+      vm::Instruction* instruction) {
+    const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
+    CHECK_OR_RETURN(static_cast<bool>(phy_instr_operand));
+    auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(phy_instr_operand.get());
+    CHECK_NOTNULL_OR_RETURN(ptr);
+    return ptr;
+  }
+
+  static inline Maybe<MemoryCase> GetMemCase(LocalCallOpKernelPhyInstrOperand* operand) {
+    TODO();
+    return std::shared_ptr<MemoryCase>();
+  }
+
+  static inline Maybe<void> CheckMemCase(const MemoryCase* mem_case, const vm::Stream& stream) {
+    if (mem_case != nullptr) {
+      TODO();
+    }
+    return Maybe<void>::Ok();
+  }
+
+  template<template CheckMemCaseT>
+  static inline Maybe<void> InitOutputBlobObjects(LocalCallOpKernelPhyInstrOperand* operand,
+      const CheckMemCaseT& CheckMemCase) {
+    const auto& mem_case = JUST(GetMemCase(operand));
+    JUST(CheckMemCase(mem_case.get()));
+    JUST(operand->ForEachOutputTensor([&](one::EagerMirroredTensorImpl* tensor) -> Maybe<void> {
+      CHECK_OR_RETURN(!static_cast<bool>(tensor->blob_object()));
+      tensor->reset_blob_object(new EagerBlobObject(mem_case, tensor->dtype()->data_type()));
+      return Maybe<void>::Ok();
+    }));
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> InitOutputBlobs(LocalCallOpKernelPhyInstrOperand* operand) {
+    JUST(operand->ForEachOutputTensor([&](one::EagerMirroredTensorImpl* tensor) -> Maybe<void> {
+      const auto& blob_object = tensor->blob_object();
+      CHECK_OR_RETURN(static_cast<bool>(blob_object));
+      return blob_object->InitBlob();
+    }));
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> TryInitTempStorageBlob(LocalCallOpKernelPhyInstrOperand* operand) {
+    TODO();
+    return Maybe<void>::Ok();
+  }
+
+  template<typename CallbackT>
+  static inline Maybe<void> WithOpInferContext(LocalCallOpKernelPhyInstrOperand* operand,
+      const CallbackT& Callback) {
+    auto* opkernel = operand->mut_opkernel();
+    JUST(Callback(opkernel->UpdateInferContext(operand->mut_inputs())));
+    // tensor tuples are not allowed to be hold by StatefullOpKernel
+    opkernel->UpdateInferContext(std::shared_ptr<TensorTuple>());
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> InferOutputTensorDescs(LocalCallOpKernelPhyInstrOperand* operand) {
+    return WithOpInferContext(operand, operand->opkernel().TensorDescInferFn());
+  }
+
+  static inline Maybe<void> TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* phy_instr_operand) {
+    TODO();
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> AllocateMemoryForOutputBlobs(
+      LocalCallOpKernelPhyInstrOperand* phy_instr_operand) {
+    TODO();
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> AllocateMemoryForTempStorageBlob(LocalCallOpKernelPhyInstrOperand*
+      phy_instr_operand) {
+    TODO();
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> ForwardOpKernel(LocalCallOpKernelPhyInstrOperand* phy_instr_operand) {
+    TODO();
+    return Maybe<void>::Ok();
+  }
+
+};
+
+void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
+  CHECK_OK(LocalCallOpKernelUtil::Infer(instruction));
+}
+
+void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
+  CHECK_OK(LocalCallOpKernelUtil::Compute(instruction));
+}
 
 Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction,
                                                     const CallOpKernelInstrOperand& args) const {

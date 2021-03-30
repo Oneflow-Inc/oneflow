@@ -37,11 +37,11 @@ class EagerBlobObject : public BlobObject {
   virtual const Blob& blob() const override { return *blob_; }
   virtual Blob* mut_blob() override { return blob_.get(); }
   virtual Maybe<void> TryInitBlob() override;
+  Maybe<void> InitBlob();
 
   virtual void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
 
  private:
-  Maybe<void> InitBlob();
 
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char, std::function<void(char*)>> header_buffer_;

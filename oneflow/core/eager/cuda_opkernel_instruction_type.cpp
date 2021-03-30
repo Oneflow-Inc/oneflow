@@ -32,6 +32,18 @@ limitations under the License.
 namespace oneflow {
 namespace eager {
 
+class CudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
+ public:
+  CudaLocalCallOpKernelInstructionType() = default;
+  ~CudaLocalCallOpKernelInstructionType() override = default;
+
+  using stream_type = vm::CudaStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<CudaLocalCallOpKernelInstructionType>("gpu.LocalCallOpKernel"));
+
 class CudaCallOpKernelInstructionType final : public CallOpKernelInstructionType {
  public:
   CudaCallOpKernelInstructionType() = default;
