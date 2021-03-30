@@ -21,16 +21,14 @@ from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
 
 class ConvBNReLU(nn.Layer):
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 kernel_size,
-                 padding='same',
-                 **kwargs):
+    def __init__(
+        self, in_channels, out_channels, kernel_size, padding="same", **kwargs
+    ):
         super().__init__()
 
         self._conv = nn.Conv2D(
-            in_channels, out_channels, kernel_size, padding=padding, **kwargs)
+            in_channels, out_channels, kernel_size, padding=padding, **kwargs
+        )
 
         self._batch_norm = nn.BatchNorm2D(out_channels)
 
@@ -39,6 +37,7 @@ class ConvBNReLU(nn.Layer):
         x = self._batch_norm(x)
         x = F.relu(x)
         return x
+
 
 class UNet(nn.Layer):
     """
@@ -55,21 +54,16 @@ class UNet(nn.Layer):
         pretrained (str, optional): The path or url of pretrained model for fine tuning. Default: None.
     """
 
-    def __init__(self,
-                 num_classes,
-                 align_corners=False,
-                 use_deconv=False,
-                 pretrained=None):
+    def __init__(
+        self, num_classes, align_corners=False, use_deconv=False, pretrained=None
+    ):
         super().__init__()
 
         self.encode = Encoder()
         self.decode = Decoder(align_corners, use_deconv=use_deconv)
         self.cls = self.conv = nn.Conv2D(
-            in_channels=64,
-            out_channels=num_classes,
-            kernel_size=3,
-            stride=1,
-            padding=1)
+            in_channels=64, out_channels=num_classes, kernel_size=3, stride=1, padding=1
+        )
 
         self.pretrained = pretrained
 
@@ -86,13 +80,11 @@ class Encoder(nn.Layer):
     def __init__(self):
         super().__init__()
 
-        self.double_conv = nn.Sequential(
-            ConvBNReLU(3, 64, 3), ConvBNReLU(64, 64, 3))
+        self.double_conv = nn.Sequential(ConvBNReLU(3, 64, 3), ConvBNReLU(64, 64, 3))
         down_channels = [[64, 128], [128, 256], [256, 512], [512, 512]]
-        self.down_sample_list = nn.LayerList([
-            self.down_sampling(channel[0], channel[1])
-            for channel in down_channels
-        ])
+        self.down_sample_list = nn.LayerList(
+            [self.down_sampling(channel[0], channel[1]) for channel in down_channels]
+        )
 
     def down_sampling(self, in_channels, out_channels):
         modules = []
@@ -115,10 +107,12 @@ class Decoder(nn.Layer):
         super().__init__()
 
         up_channels = [[512, 256], [256, 128], [128, 64], [64, 64]]
-        self.up_sample_list = nn.LayerList([
-            UpSampling(channel[0], channel[1], align_corners, use_deconv)
-            for channel in up_channels
-        ])
+        self.up_sample_list = nn.LayerList(
+            [
+                UpSampling(channel[0], channel[1], align_corners, use_deconv)
+                for channel in up_channels
+            ]
+        )
 
     def forward(self, x, short_cuts):
         for i in range(len(short_cuts)):
@@ -127,11 +121,7 @@ class Decoder(nn.Layer):
 
 
 class UpSampling(nn.Layer):
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 align_corners,
-                 use_deconv=False):
+    def __init__(self, in_channels, out_channels, align_corners, use_deconv=False):
         super().__init__()
 
         self.align_corners = align_corners
@@ -139,18 +129,16 @@ class UpSampling(nn.Layer):
         self.use_deconv = use_deconv
         if self.use_deconv:
             self.deconv = nn.Conv2DTranspose(
-                in_channels,
-                out_channels // 2,
-                kernel_size=2,
-                stride=2,
-                padding=0)
+                in_channels, out_channels // 2, kernel_size=2, stride=2, padding=0
+            )
             in_channels = in_channels + out_channels // 2
         else:
             in_channels *= 2
 
         self.double_conv = nn.Sequential(
             ConvBNReLU(in_channels, out_channels, 3),
-            ConvBNReLU(out_channels, out_channels, 3))
+            ConvBNReLU(out_channels, out_channels, 3),
+        )
 
     def forward(self, x, short_cut):
         if self.use_deconv:
@@ -159,19 +147,23 @@ class UpSampling(nn.Layer):
             x = F.interpolate(
                 x,
                 short_cut.shape[2:],
-                mode='bilinear',
-                align_corners=self.align_corners)
+                mode="bilinear",
+                align_corners=self.align_corners,
+            )
         x = paddle.concat([x, short_cut], axis=1)
         x = self.double_conv(x)
         return x
 
+
 def unet():
     return UNet(num_classes=21)
+
 
 def test_unet(test_case):
     load_paddle_module_and_check(
         test_case, unet, input_size=(1, 3, 1024, 512), train_flag=False,
     )
+
 
 from absl import app
 from absl.testing import absltest

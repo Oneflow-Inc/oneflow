@@ -343,4 +343,3 @@ def test_ShuffleNetV2_swish(test_case):
     load_paddle_module_and_check(
         test_case, ShuffleNetV2_swish, input_size=(1, 3, 224, 224), train_flag=False,
     )
-

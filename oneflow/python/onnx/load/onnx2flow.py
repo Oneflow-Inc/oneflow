@@ -44,8 +44,9 @@ import shutil
 import numpy as np
 import onnx
 import torch
-
 import paddle
+import tensorflow as tf
+import tf2onnx
 import logging
 
 try:
@@ -180,6 +181,30 @@ def from_paddle(
 
     return from_onnx(
         onnx_model,
+        dict(zip([input_names], [inputs])),
+        model_weight_dir=model_weight_dir,
+        do_onnxsim=do_onnxsim,
+    )
+
+
+@oneflow_export("from_tensorflow2")
+def from_tensorflow2(
+    tf_model, inputs, model_weight_dir="/tmp", do_onnxsim=True, train_flag=True
+):
+    input_names = "x_0"
+    # input_spec = paddle.static.InputSpec(
+    #     shape=inputs.shape, dtype="float32", name=input_names
+    # )
+    spec = (tf.TensorSpec(inputs.shape, tf.float32, name=input_names),)
+
+    mode_str = "/tmp/model.onnx"
+
+    model_proto, _ = tf2onnx.convert.from_keras(
+        tf_model, input_signature=spec, opset=12, output_path=mode_str
+    )
+
+    return from_onnx(
+        model_proto,
         dict(zip([input_names], [inputs])),
         model_weight_dir=model_weight_dir,
         do_onnxsim=do_onnxsim,

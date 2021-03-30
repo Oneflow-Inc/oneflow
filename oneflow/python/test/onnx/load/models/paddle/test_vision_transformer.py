@@ -19,32 +19,38 @@ import paddle.nn as nn
 from paddle.nn.initializer import TruncatedNormal, Constant
 
 __all__ = [
-    "VisionTransformer", "ViT_small_patch16_224", "ViT_base_patch16_224",
-    "ViT_base_patch16_384", "ViT_base_patch32_384", "ViT_large_patch16_224",
-    "ViT_large_patch16_384", "ViT_large_patch32_384", "ViT_huge_patch16_224",
-    "ViT_huge_patch32_384"
+    "VisionTransformer",
+    "ViT_small_patch16_224",
+    "ViT_base_patch16_224",
+    "ViT_base_patch16_384",
+    "ViT_base_patch32_384",
+    "ViT_large_patch16_224",
+    "ViT_large_patch16_384",
+    "ViT_large_patch32_384",
+    "ViT_huge_patch16_224",
+    "ViT_huge_patch32_384",
 ]
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
-trunc_normal_ = TruncatedNormal(std=.02)
-zeros_ = Constant(value=0.)
-ones_ = Constant(value=1.)
+trunc_normal_ = TruncatedNormal(std=0.02)
+zeros_ = Constant(value=0.0)
+ones_ = Constant(value=1.0)
 
 
 def to_2tuple(x):
     return tuple([x] * 2)
 
 
-def drop_path(x, drop_prob=0., training=False):
+def drop_path(x, drop_prob=0.0, training=False):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
     the original name is misleading as 'Drop Connect' is a different form of dropout in a separate paper...
     See discussion: https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956 ...
     """
-    if drop_prob == 0. or not training:
+    if drop_prob == 0.0 or not training:
         return x
     keep_prob = paddle.to_tensor(1 - drop_prob)
-    shape = (paddle.shape(x)[0], ) + (1, ) * (x.ndim - 1)
+    shape = (paddle.shape(x)[0],) + (1,) * (x.ndim - 1)
     random_tensor = keep_prob + paddle.rand(shape, dtype=x.dtype)
     random_tensor = paddle.floor(random_tensor)  # binarize
     output = x.divide(keep_prob) * random_tensor
@@ -72,12 +78,14 @@ class Identity(nn.Layer):
 
 
 class Mlp(nn.Layer):
-    def __init__(self,
-                 in_features,
-                 hidden_features=None,
-                 out_features=None,
-                 act_layer=nn.GELU,
-                 drop=0.):
+    def __init__(
+        self,
+        in_features,
+        hidden_features=None,
+        out_features=None,
+        act_layer=nn.GELU,
+        drop=0.0,
+    ):
         super().__init__()
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
@@ -96,17 +104,19 @@ class Mlp(nn.Layer):
 
 
 class Attention(nn.Layer):
-    def __init__(self,
-                 dim,
-                 num_heads=8,
-                 qkv_bias=False,
-                 qk_scale=None,
-                 attn_drop=0.,
-                 proj_drop=0.):
+    def __init__(
+        self,
+        dim,
+        num_heads=8,
+        qkv_bias=False,
+        qk_scale=None,
+        attn_drop=0.0,
+        proj_drop=0.0,
+    ):
         super().__init__()
         self.num_heads = num_heads
         head_dim = dim // num_heads
-        self.scale = qk_scale or head_dim**-0.5
+        self.scale = qk_scale or head_dim ** -0.5
 
         self.qkv = nn.Linear(dim, dim * 3, bias_attr=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
@@ -116,8 +126,11 @@ class Attention(nn.Layer):
     def forward(self, x):
         # B= paddle.shape(x)[0]
         N, C = x.shape[1:]
-        qkv = self.qkv(x).reshape((-1, N, 3, self.num_heads, C //
-                                   self.num_heads)).transpose((2, 0, 3, 1, 4))
+        qkv = (
+            self.qkv(x)
+            .reshape((-1, N, 3, self.num_heads, C // self.num_heads))
+            .transpose((2, 0, 3, 1, 4))
+        )
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         attn = (q.matmul(k.transpose((0, 1, 3, 2)))) * self.scale
@@ -131,18 +144,20 @@ class Attention(nn.Layer):
 
 
 class Block(nn.Layer):
-    def __init__(self,
-                 dim,
-                 num_heads,
-                 mlp_ratio=4.,
-                 qkv_bias=False,
-                 qk_scale=None,
-                 drop=0.,
-                 attn_drop=0.,
-                 drop_path=0.,
-                 act_layer=nn.GELU,
-                 norm_layer='nn.LayerNorm',
-                 epsilon=1e-5):
+    def __init__(
+        self,
+        dim,
+        num_heads,
+        mlp_ratio=4.0,
+        qkv_bias=False,
+        qk_scale=None,
+        drop=0.0,
+        attn_drop=0.0,
+        drop_path=0.0,
+        act_layer=nn.GELU,
+        norm_layer="nn.LayerNorm",
+        epsilon=1e-5,
+    ):
         super().__init__()
         self.norm1 = eval(norm_layer)(dim, epsilon=epsilon)
         self.attn = Attention(
@@ -151,15 +166,18 @@ class Block(nn.Layer):
             qkv_bias=qkv_bias,
             qk_scale=qk_scale,
             attn_drop=attn_drop,
-            proj_drop=drop)
+            proj_drop=drop,
+        )
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
-        self.drop_path = DropPath(drop_path) if drop_path > 0. else Identity()
+        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else Identity()
         self.norm2 = eval(norm_layer)(dim, epsilon=epsilon)
         mlp_hidden_dim = int(dim * mlp_ratio)
-        self.mlp = Mlp(in_features=dim,
-                       hidden_features=mlp_hidden_dim,
-                       act_layer=act_layer,
-                       drop=drop)
+        self.mlp = Mlp(
+            in_features=dim,
+            hidden_features=mlp_hidden_dim,
+            act_layer=act_layer,
+            drop=drop,
+        )
 
     def forward(self, x):
         x = x + self.drop_path(self.attn(self.norm1(x)))
@@ -175,19 +193,20 @@ class PatchEmbed(nn.Layer):
         super().__init__()
         img_size = to_2tuple(img_size)
         patch_size = to_2tuple(patch_size)
-        num_patches = (img_size[1] // patch_size[1]) * \
-            (img_size[0] // patch_size[0])
+        num_patches = (img_size[1] // patch_size[1]) * (img_size[0] // patch_size[0])
         self.img_size = img_size
         self.patch_size = patch_size
         self.num_patches = num_patches
 
         self.proj = nn.Conv2D(
-            in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
+            in_chans, embed_dim, kernel_size=patch_size, stride=patch_size
+        )
 
     def forward(self, x):
         B, C, H, W = x.shape
-        assert H == self.img_size[0] and W == self.img_size[1], \
-            "Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
+        assert (
+            H == self.img_size[0] and W == self.img_size[1]
+        ), "Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
 
         x = self.proj(x).flatten(2).transpose((0, 2, 1))
         return x
@@ -197,23 +216,25 @@ class VisionTransformer(nn.Layer):
     """ Vision Transformer with support for patch input
     """
 
-    def __init__(self,
-                 img_size=224,
-                 patch_size=16,
-                 in_chans=3,
-                 class_dim=1000,
-                 embed_dim=768,
-                 depth=12,
-                 num_heads=12,
-                 mlp_ratio=4,
-                 qkv_bias=False,
-                 qk_scale=None,
-                 drop_rate=0.,
-                 attn_drop_rate=0.,
-                 drop_path_rate=0.,
-                 norm_layer='nn.LayerNorm',
-                 epsilon=1e-5,
-                 **args):
+    def __init__(
+        self,
+        img_size=224,
+        patch_size=16,
+        in_chans=3,
+        class_dim=1000,
+        embed_dim=768,
+        depth=12,
+        num_heads=12,
+        mlp_ratio=4,
+        qkv_bias=False,
+        qk_scale=None,
+        drop_rate=0.0,
+        attn_drop_rate=0.0,
+        drop_path_rate=0.0,
+        norm_layer="nn.LayerNorm",
+        epsilon=1e-5,
+        **args
+    ):
         super().__init__()
         self.class_dim = class_dim
 
@@ -223,38 +244,44 @@ class VisionTransformer(nn.Layer):
             img_size=img_size,
             patch_size=patch_size,
             in_chans=in_chans,
-            embed_dim=embed_dim)
+            embed_dim=embed_dim,
+        )
         num_patches = self.patch_embed.num_patches
 
         self.pos_embed = self.create_parameter(
-            shape=(1, num_patches + 1, embed_dim), default_initializer=zeros_)
+            shape=(1, num_patches + 1, embed_dim), default_initializer=zeros_
+        )
         self.add_parameter("pos_embed", self.pos_embed)
         self.cls_token = self.create_parameter(
-            shape=(1, 1, embed_dim), default_initializer=zeros_)
+            shape=(1, 1, embed_dim), default_initializer=zeros_
+        )
         self.add_parameter("cls_token", self.cls_token)
         self.pos_drop = nn.Dropout(p=drop_rate)
 
         dpr = np.linspace(0, drop_path_rate, depth)
 
-        self.blocks = nn.LayerList([
-            Block(
-                dim=embed_dim,
-                num_heads=num_heads,
-                mlp_ratio=mlp_ratio,
-                qkv_bias=qkv_bias,
-                qk_scale=qk_scale,
-                drop=drop_rate,
-                attn_drop=attn_drop_rate,
-                drop_path=dpr[i],
-                norm_layer=norm_layer,
-                epsilon=epsilon) for i in range(depth)
-        ])
+        self.blocks = nn.LayerList(
+            [
+                Block(
+                    dim=embed_dim,
+                    num_heads=num_heads,
+                    mlp_ratio=mlp_ratio,
+                    qkv_bias=qkv_bias,
+                    qk_scale=qk_scale,
+                    drop=drop_rate,
+                    attn_drop=attn_drop_rate,
+                    drop_path=dpr[i],
+                    norm_layer=norm_layer,
+                    epsilon=epsilon,
+                )
+                for i in range(depth)
+            ]
+        )
 
         self.norm = eval(norm_layer)(embed_dim, epsilon=epsilon)
 
         # Classifier head
-        self.head = nn.Linear(embed_dim,
-                              class_dim) if class_dim > 0 else Identity()
+        self.head = nn.Linear(embed_dim, class_dim) if class_dim > 0 else Identity()
 
         # TODO(littletomatodonkey): same init in static mode
         if paddle.in_dynamic_mode():
@@ -297,8 +324,9 @@ def ViT_small_patch16_224(**kwargs):
         depth=8,
         num_heads=8,
         mlp_ratio=3,
-        qk_scale=768**-0.5,
-        **kwargs)
+        qk_scale=768 ** -0.5,
+        **kwargs
+    )
     return model
 
 
@@ -311,7 +339,8 @@ def ViT_base_patch16_224(**kwargs):
         mlp_ratio=4,
         qkv_bias=True,
         epsilon=1e-6,
-        **kwargs)
+        **kwargs
+    )
     return model
 
 
@@ -325,7 +354,8 @@ def ViT_base_patch16_384(**kwargs):
         mlp_ratio=4,
         qkv_bias=True,
         epsilon=1e-6,
-        **kwargs)
+        **kwargs
+    )
     return model
 
 
@@ -339,7 +369,8 @@ def ViT_base_patch32_384(**kwargs):
         mlp_ratio=4,
         qkv_bias=True,
         epsilon=1e-6,
-        **kwargs)
+        **kwargs
+    )
     return model
 
 
@@ -352,7 +383,8 @@ def ViT_large_patch16_224(**kwargs):
         mlp_ratio=4,
         qkv_bias=True,
         epsilon=1e-6,
-        **kwargs)
+        **kwargs
+    )
     return model
 
 
@@ -366,7 +398,8 @@ def ViT_large_patch16_384(**kwargs):
         mlp_ratio=4,
         qkv_bias=True,
         epsilon=1e-6,
-        **kwargs)
+        **kwargs
+    )
     return model
 
 
@@ -380,18 +413,15 @@ def ViT_large_patch32_384(**kwargs):
         mlp_ratio=4,
         qkv_bias=True,
         epsilon=1e-6,
-        **kwargs)
+        **kwargs
+    )
     return model
 
 
 def ViT_huge_patch16_224(**kwargs):
     model = VisionTransformer(
-        patch_size=16,
-        embed_dim=1280,
-        depth=32,
-        num_heads=16,
-        mlp_ratio=4,
-        **kwargs)
+        patch_size=16, embed_dim=1280, depth=32, num_heads=16, mlp_ratio=4, **kwargs
+    )
     return model
 
 
@@ -403,13 +433,16 @@ def ViT_huge_patch32_384(**kwargs):
         depth=32,
         num_heads=16,
         mlp_ratio=4,
-        **kwargs)
+        **kwargs
+    )
     return model
+
 
 def test_ViT_small_patch16_224(test_case):
     load_paddle_module_and_check(
         test_case, ViT_small_patch16_224, input_size=(1, 3, 224, 224), train_flag=False,
     )
+
 
 from absl import app
 from absl.testing import absltest

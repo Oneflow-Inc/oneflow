@@ -24,6 +24,7 @@ __all__ = ["Xception41_deeplab", "Xception65_deeplab", "Xception71_deeplab"]
 
 from oneflow.python.test.onnx.load.util import load_paddle_module_and_check
 
+
 def check_data(data, number):
     if type(data) == int:
         return [data] * number
@@ -43,29 +44,29 @@ def check_points(count, points):
         return False
     else:
         if isinstance(points, list):
-            return (True if count in points else False)
+            return True if count in points else False
         else:
-            return (True if count == points else False)
+            return True if count == points else False
 
 
-def gen_bottleneck_params(backbone='xception_65'):
-    if backbone == 'xception_65':
+def gen_bottleneck_params(backbone="xception_65"):
+    if backbone == "xception_65":
         bottleneck_params = {
             "entry_flow": (3, [2, 2, 2], [128, 256, 728]),
             "middle_flow": (16, 1, 728),
-            "exit_flow": (2, [2, 1], [[728, 1024, 1024], [1536, 1536, 2048]])
+            "exit_flow": (2, [2, 1], [[728, 1024, 1024], [1536, 1536, 2048]]),
         }
-    elif backbone == 'xception_41':
+    elif backbone == "xception_41":
         bottleneck_params = {
             "entry_flow": (3, [2, 2, 2], [128, 256, 728]),
             "middle_flow": (8, 1, 728),
-            "exit_flow": (2, [2, 1], [[728, 1024, 1024], [1536, 1536, 2048]])
+            "exit_flow": (2, [2, 1], [[728, 1024, 1024], [1536, 1536, 2048]]),
         }
-    elif backbone == 'xception_71':
+    elif backbone == "xception_71":
         bottleneck_params = {
             "entry_flow": (5, [2, 1, 2, 1, 2], [128, 256, 256, 728, 728]),
             "middle_flow": (16, 1, 728),
-            "exit_flow": (2, [2, 1], [[728, 1024, 1024], [1536, 1536, 2048]])
+            "exit_flow": (2, [2, 1], [[728, 1024, 1024], [1536, 1536, 2048]]),
         }
     else:
         raise Exception(
@@ -75,14 +76,16 @@ def gen_bottleneck_params(backbone='xception_65'):
 
 
 class ConvBNLayer(nn.Layer):
-    def __init__(self,
-                 input_channels,
-                 output_channels,
-                 filter_size,
-                 stride=1,
-                 padding=0,
-                 act=None,
-                 name=None):
+    def __init__(
+        self,
+        input_channels,
+        output_channels,
+        filter_size,
+        stride=1,
+        padding=0,
+        act=None,
+        name=None,
+    ):
         super(ConvBNLayer, self).__init__()
 
         self._conv = Conv2D(
@@ -92,7 +95,8 @@ class ConvBNLayer(nn.Layer):
             stride=stride,
             padding=padding,
             weight_attr=ParamAttr(name=name + "/weights"),
-            bias_attr=False)
+            bias_attr=False,
+        )
         self._bn = BatchNorm(
             num_channels=output_channels,
             act=act,
@@ -101,21 +105,24 @@ class ConvBNLayer(nn.Layer):
             param_attr=ParamAttr(name=name + "/BatchNorm/gamma"),
             bias_attr=ParamAttr(name=name + "/BatchNorm/beta"),
             moving_mean_name=name + "/BatchNorm/moving_mean",
-            moving_variance_name=name + "/BatchNorm/moving_variance")
+            moving_variance_name=name + "/BatchNorm/moving_variance",
+        )
 
     def forward(self, inputs):
         return self._bn(self._conv(inputs))
 
 
 class Seperate_Conv(nn.Layer):
-    def __init__(self,
-                 input_channels,
-                 output_channels,
-                 stride,
-                 filter,
-                 dilation=1,
-                 act=None,
-                 name=None):
+    def __init__(
+        self,
+        input_channels,
+        output_channels,
+        stride,
+        filter,
+        dilation=1,
+        act=None,
+        name=None,
+    ):
         super(Seperate_Conv, self).__init__()
 
         self._conv1 = Conv2D(
@@ -127,7 +134,8 @@ class Seperate_Conv(nn.Layer):
             padding=(filter) // 2 * dilation,
             dilation=dilation,
             weight_attr=ParamAttr(name=name + "/depthwise/weights"),
-            bias_attr=False)
+            bias_attr=False,
+        )
         self._bn1 = BatchNorm(
             input_channels,
             act=act,
@@ -136,7 +144,8 @@ class Seperate_Conv(nn.Layer):
             param_attr=ParamAttr(name=name + "/depthwise/BatchNorm/gamma"),
             bias_attr=ParamAttr(name=name + "/depthwise/BatchNorm/beta"),
             moving_mean_name=name + "/depthwise/BatchNorm/moving_mean",
-            moving_variance_name=name + "/depthwise/BatchNorm/moving_variance")
+            moving_variance_name=name + "/depthwise/BatchNorm/moving_variance",
+        )
         self._conv2 = Conv2D(
             input_channels,
             output_channels,
@@ -145,7 +154,8 @@ class Seperate_Conv(nn.Layer):
             groups=1,
             padding=0,
             weight_attr=ParamAttr(name=name + "/pointwise/weights"),
-            bias_attr=False)
+            bias_attr=False,
+        )
         self._bn2 = BatchNorm(
             output_channels,
             act=act,
@@ -154,7 +164,8 @@ class Seperate_Conv(nn.Layer):
             param_attr=ParamAttr(name=name + "/pointwise/BatchNorm/gamma"),
             bias_attr=ParamAttr(name=name + "/pointwise/BatchNorm/beta"),
             moving_mean_name=name + "/pointwise/BatchNorm/moving_mean",
-            moving_variance_name=name + "/pointwise/BatchNorm/moving_variance")
+            moving_variance_name=name + "/pointwise/BatchNorm/moving_variance",
+        )
 
     def forward(self, inputs):
         x = self._conv1(inputs)
@@ -165,16 +176,18 @@ class Seperate_Conv(nn.Layer):
 
 
 class Xception_Block(nn.Layer):
-    def __init__(self,
-                 input_channels,
-                 output_channels,
-                 strides=1,
-                 filter_size=3,
-                 dilation=1,
-                 skip_conv=True,
-                 has_skip=True,
-                 activation_fn_in_separable_conv=False,
-                 name=None):
+    def __init__(
+        self,
+        input_channels,
+        output_channels,
+        strides=1,
+        filter_size=3,
+        dilation=1,
+        skip_conv=True,
+        has_skip=True,
+        activation_fn_in_separable_conv=False,
+        name=None,
+    ):
         super(Xception_Block, self).__init__()
 
         repeat_number = 3
@@ -192,21 +205,24 @@ class Xception_Block(nn.Layer):
                 stride=strides[0],
                 filter=filter_size[0],
                 dilation=dilation,
-                name=name + "/separable_conv1")
+                name=name + "/separable_conv1",
+            )
             self._conv2 = Seperate_Conv(
                 output_channels[0],
                 output_channels[1],
                 stride=strides[1],
                 filter=filter_size[1],
                 dilation=dilation,
-                name=name + "/separable_conv2")
+                name=name + "/separable_conv2",
+            )
             self._conv3 = Seperate_Conv(
                 output_channels[1],
                 output_channels[2],
                 stride=strides[2],
                 filter=filter_size[2],
                 dilation=dilation,
-                name=name + "/separable_conv3")
+                name=name + "/separable_conv3",
+            )
         else:
             self._conv1 = Seperate_Conv(
                 input_channels,
@@ -215,7 +231,8 @@ class Xception_Block(nn.Layer):
                 filter=filter_size[0],
                 act="relu",
                 dilation=dilation,
-                name=name + "/separable_conv1")
+                name=name + "/separable_conv1",
+            )
             self._conv2 = Seperate_Conv(
                 output_channels[0],
                 output_channels[1],
@@ -223,7 +240,8 @@ class Xception_Block(nn.Layer):
                 filter=filter_size[1],
                 act="relu",
                 dilation=dilation,
-                name=name + "/separable_conv2")
+                name=name + "/separable_conv2",
+            )
             self._conv3 = Seperate_Conv(
                 output_channels[1],
                 output_channels[2],
@@ -231,7 +249,8 @@ class Xception_Block(nn.Layer):
                 filter=filter_size[2],
                 act="relu",
                 dilation=dilation,
-                name=name + "/separable_conv3")
+                name=name + "/separable_conv3",
+            )
 
         if has_skip and skip_conv:
             self._short = ConvBNLayer(
@@ -240,7 +259,8 @@ class Xception_Block(nn.Layer):
                 1,
                 stride=strides[-1],
                 padding=0,
-                name=name + "/shortcut")
+                name=name + "/shortcut",
+            )
 
     def forward(self, inputs):
         if not self.activation_fn_in_separable_conv:
@@ -278,7 +298,8 @@ class XceptionDeeplab(nn.Layer):
             stride=2,
             padding=1,
             act="relu",
-            name=self.backbone + "/entry_flow/conv1")
+            name=self.backbone + "/entry_flow/conv1",
+        )
         self._conv2 = ConvBNLayer(
             32,
             64,
@@ -286,7 +307,8 @@ class XceptionDeeplab(nn.Layer):
             stride=1,
             padding=1,
             act="relu",
-            name=self.backbone + "/entry_flow/conv2")
+            name=self.backbone + "/entry_flow/conv2",
+        )
 
         self.block_num = bottleneck_params["entry_flow"][0]
         self.strides = bottleneck_params["entry_flow"][1]
@@ -302,15 +324,20 @@ class XceptionDeeplab(nn.Layer):
         s = self.stride
 
         for i in range(self.block_num):
-            stride = self.strides[i] if check_stride(s * self.strides[i],
-                                                     self.output_stride) else 1
+            stride = (
+                self.strides[i]
+                if check_stride(s * self.strides[i], self.output_stride)
+                else 1
+            )
             xception_block = self.add_sublayer(
                 self.backbone + "/entry_flow/block" + str(i + 1),
                 Xception_Block(
                     input_channels=64 if i == 0 else self.chns[i - 1],
                     output_channels=self.chns[i],
                     strides=[1, 1, self.stride],
-                    name=self.backbone + "/entry_flow/block" + str(i + 1)))
+                    name=self.backbone + "/entry_flow/block" + str(i + 1),
+                ),
+            )
             self.entry_flow.append(xception_block)
             s = s * stride
         self.stride = s
@@ -323,8 +350,11 @@ class XceptionDeeplab(nn.Layer):
         s = self.stride
 
         for i in range(self.block_num):
-            stride = self.strides[i] if check_stride(s * self.strides[i],
-                                                     self.output_stride) else 1
+            stride = (
+                self.strides[i]
+                if check_stride(s * self.strides[i], self.output_stride)
+                else 1
+            )
             xception_block = self.add_sublayer(
                 self.backbone + "/middle_flow/block" + str(i + 1),
                 Xception_Block(
@@ -332,7 +362,9 @@ class XceptionDeeplab(nn.Layer):
                     output_channels=728,
                     strides=[1, 1, self.strides[i]],
                     skip_conv=False,
-                    name=self.backbone + "/middle_flow/block" + str(i + 1)))
+                    name=self.backbone + "/middle_flow/block" + str(i + 1),
+                ),
+            )
             self.middle_flow.append(xception_block)
             s = s * stride
         self.stride = s
@@ -343,22 +375,29 @@ class XceptionDeeplab(nn.Layer):
         self.strides = check_data(self.strides, self.block_num)
         self.chns = check_data(self.chns, self.block_num)
         s = self.stride
-        stride = self.strides[0] if check_stride(s * self.strides[0],
-                                                 self.output_stride) else 1
+        stride = (
+            self.strides[0]
+            if check_stride(s * self.strides[0], self.output_stride)
+            else 1
+        )
         self._exit_flow_1 = Xception_Block(
-            728,
-            self.chns[0], [1, 1, stride],
-            name=self.backbone + "/exit_flow/block1")
+            728, self.chns[0], [1, 1, stride], name=self.backbone + "/exit_flow/block1"
+        )
         s = s * stride
-        stride = self.strides[1] if check_stride(s * self.strides[1],
-                                                 self.output_stride) else 1
+        stride = (
+            self.strides[1]
+            if check_stride(s * self.strides[1], self.output_stride)
+            else 1
+        )
         self._exit_flow_2 = Xception_Block(
             self.chns[0][-1],
-            self.chns[1], [1, 1, stride],
+            self.chns[1],
+            [1, 1, stride],
             dilation=2,
             has_skip=False,
             activation_fn_in_separable_conv=True,
-            name=self.backbone + "/exit_flow/block2")
+            name=self.backbone + "/exit_flow/block2",
+        )
         s = s * stride
 
         self.stride = s
@@ -369,7 +408,8 @@ class XceptionDeeplab(nn.Layer):
             self.chns[1][-1],
             class_dim,
             weight_attr=ParamAttr(name="fc_weights"),
-            bias_attr=ParamAttr(name="fc_bias"))
+            bias_attr=ParamAttr(name="fc_bias"),
+        )
 
     def forward(self, inputs):
         x = self._conv1(inputs)
@@ -388,7 +428,7 @@ class XceptionDeeplab(nn.Layer):
 
 
 def Xception41_deeplab(**args):
-    model = XceptionDeeplab('xception_41', **args)
+    model = XceptionDeeplab("xception_41", **args)
     return model
 
 
@@ -400,6 +440,7 @@ def Xception65_deeplab(**args):
 def Xception71_deeplab(**args):
     model = XceptionDeeplab("xception_71", **args)
     return model
+
 
 def test_Xception41_deeplab(test_case):
     load_paddle_module_and_check(
