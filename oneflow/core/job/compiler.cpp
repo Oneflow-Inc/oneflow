@@ -99,7 +99,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     if (use_op_attribute_ref) {
       CHECK(task_proto.exec_sequence().exec_node_size() == 1);
       auto* exec_node = task_proto.mutable_exec_sequence()->mutable_exec_node(0);
-      const std::string& op_name = exec_node->kernel_conf().op_attribute().op_conf().name();
+      const std::string op_name = exec_node->kernel_conf().op_attribute().op_conf().name();
       auto find_it = op_name2op_attribute->find(op_name);
       if (find_it == op_name2op_attribute->end()) {
         op_name2op_attribute->insert(
@@ -107,8 +107,8 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
       }
       auto* kernel_conf =
           task_proto.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
-      kernel_conf->clear_op_attribute();
       kernel_conf->set_op_attribute_ref(op_name);
+      kernel_conf->clear_op_attribute();
     }
     plan->mutable_task()->Add(std::move(task_proto));
   });
