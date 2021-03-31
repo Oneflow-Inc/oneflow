@@ -30,7 +30,8 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(prediction_desc->shape().At(i), label_desc->shape().At(i));
   }
   *ctx->IsDynamic4ArgNameAndIndex("prob", 0) = *ctx->IsDynamic4ArgNameAndIndex("prediction", 0);
-  *ctx->Shape4ArgNameAndIndex("prob", 0) = *ctx->Shape4ArgNameAndIndex("prediction", 0); //'prob' is just for compute prediction's grad, prob's grad will be ignored
+  *ctx->Shape4ArgNameAndIndex("prob", 0) = *ctx->Shape4ArgNameAndIndex(
+      "prediction", 0);  //'prob' is just for compute prediction's grad, prob's grad will be ignored
   user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("prediction", 0);
   *out_desc->mut_shape() = label_desc->shape();
@@ -50,12 +51,12 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   }
   CHECK_EQ_OR_RETURN(dy_desc->shape(), label_desc->shape());
   *ctx->Shape4ArgNameAndIndex("prediction_diff", 0) = *ctx->Shape4ArgNameAndIndex("prob_desc", 0);
-  *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) = *ctx->IsDynamic4ArgNameAndIndex("prob_desc", 0);
+  *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) =
+      *ctx->IsDynamic4ArgNameAndIndex("prob_desc", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
   const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
   CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
   *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("prob", 0);
@@ -155,7 +156,7 @@ void GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_type_name
         label_modifier->set_requires_grad(false);                                      \
       })                                                                               \
       .SetGetSbpFn(GetSbpFn<sbp_sig>)                                                  \
-      .SetInferDataTypeFn(InferDataType);                                              
+      .SetInferDataTypeFn(InferDataType);
 
 #define REGISTER_SPAESE_SOFTMAX_CROSS_ENTROPY_GRAD_USER_OP(op_name, sbp_sig) \
   REGISTER_USER_OP(op_name)                                                  \
@@ -166,7 +167,7 @@ void GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_type_name
       .Attr<int64_t>("depth")                                                \
       .SetTensorDescInferFn(InferGradTensorDescFn)                           \
       .SetGetSbpFn(GetSbpFn<sbp_sig>)                                        \
-      .SetInferDataTypeFn(InferDataTypeGrad);                                    
+      .SetInferDataTypeFn(InferDataTypeGrad);
 
 REGISTER_SPAESE_SOFTMAX_CROSS_ENTROPY_USER_OP("sparse_softmax_cross_entropy", AddSignature);
 REGISTER_SPAESE_SOFTMAX_CROSS_ENTROPY_USER_OP("sparse_softmax_cross_entropy_ms", AddMsSignature);

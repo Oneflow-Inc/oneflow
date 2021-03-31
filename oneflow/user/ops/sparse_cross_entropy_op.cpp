@@ -48,7 +48,8 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   JUST(CheckPredictionLabelDesc(prediction_desc, label_desc));
   CHECK_EQ_OR_RETURN(dy_desc->shape(), label_desc->shape());
   *ctx->Shape4ArgNameAndIndex("prediction_diff", 0) = *ctx->Shape4ArgNameAndIndex("prob_desc", 0);
-  *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) = *ctx->IsDynamic4ArgNameAndIndex("prob_desc", 0);
+  *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) =
+      *ctx->IsDynamic4ArgNameAndIndex("prob_desc", 0);
   return Maybe<void>::Ok();
 }
 
@@ -152,7 +153,7 @@ void GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
         label_modifier->set_requires_grad(false);                                      \
       })                                                                               \
       .SetGetSbpFn(GetSbpFn<sbp_sig>)                                                  \
-      .SetInferDataTypeFn(InferDataType);                                              
+      .SetInferDataTypeFn(InferDataType);
 
 #define REGISTER_SPAESE_CROSS_ENTROPY_GRAD_USER_OP(op_name, sbp_sig) \
   REGISTER_USER_OP(op_name)                                          \
@@ -163,7 +164,7 @@ void GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
       .Attr<int64_t>("depth")                                        \
       .SetTensorDescInferFn(InferGradTensorDescFn)                   \
       .SetGetSbpFn(GetSbpFn<sbp_sig>)                                \
-      .SetInferDataTypeFn(InferDataTypeGrad);                            
+      .SetInferDataTypeFn(InferDataTypeGrad);
 
 REGISTER_SPAESE_CROSS_ENTROPY_USER_OP("sparse_cross_entropy", AddSignature);
 REGISTER_SPAESE_CROSS_ENTROPY_USER_OP("sparse_cross_entropy_ms", AddMsSignature);
