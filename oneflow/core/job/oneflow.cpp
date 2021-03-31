@@ -1149,14 +1149,12 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
       jobs.emplace_back(pull_job);
     }
   }
-  if (std::getenv("ONEFLOW_DRY_RUN_EXIT_BEFORE_SUB_PLAN") != nullptr) { exit(0); }
   std::vector<Plan> sub_plans(jobs.size());
   FOR_RANGE(int64_t, i, 0, jobs.size()) {
     AddJobName2JobId(jobs.at(i)->job_conf().job_name(), i);
     auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(i)->job_conf(), i);
     JUST(CompileCurJobOnMaster(jobs.at(i).get(), &sub_plans.at(i), true));
   }
-  if (std::getenv("ONEFLOW_DRY_RUN_EXIT_BEFORE_MERGE_PLAN") != nullptr) { exit(0); }
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     MergeSubPlanWithoutGenNetTopo(plan, std::move(sub_plans));
     InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, plan);
