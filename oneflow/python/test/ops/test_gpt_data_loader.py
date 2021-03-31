@@ -72,6 +72,16 @@ def _make_gpt_data_loader_func(
                 name="GPTDataLoader",
             )
 
+            if (
+                isinstance(parallel_distribution, list)
+                and len(parallel_distribution) > 1
+            ):
+                tokens = flow.hierarchical_parallel_cast(
+                    tokens, parallel_distribution=["B", "B"]
+                )
+
+        tokens = flow.hierarchical_parallel_cast(tokens, parallel_distribution=["B"])
+
         return tokens
 
     check_point = flow.train.CheckPoint()
@@ -97,7 +107,8 @@ class TestGPTDataLoader(flow.unittest.TestCase):
         )
         tokens = of_gpt_data_loader_fn()
         print(tokens.shape)
-        print(tokens)
+        print(tokens[:, 0:4])
+        print(tokens[:, -4:])
 
     @flow.unittest.skip_unless_1n4d()
     def test_1n4d(self):
@@ -132,7 +143,8 @@ class TestGPTDataLoader(flow.unittest.TestCase):
         )
         tokens = of_gpt_data_loader_fn()
         print(tokens.shape)
-        print(tokens)
+        print(tokens[:, 0:4])
+        print(tokens[:, -4:])
 
 
 if __name__ == "__main__":
