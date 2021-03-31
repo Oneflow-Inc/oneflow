@@ -59,6 +59,10 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
     dim_vec[i] = diff / step + 1;
   }
   *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(dim_vec);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferSliceOpDataType(user_op::InferContext* ctx) {
   *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
@@ -96,6 +100,10 @@ Maybe<void> InferSliceGradOpTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
 
   *ctx->Shape4ArgNameAndIndex("dx", 0) = *like_shape;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferSliceGradDataType(user_op::InferContext* ctx) {
   *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
   return Maybe<void>::Ok();
 }
@@ -144,8 +152,6 @@ Maybe<void> InferSliceUpdateOpTensorDesc(user_op::InferContext* ctx) {
   const int64_t ndim = x_desc->shape().NumAxes();
   const auto* update_desc = ctx->TensorDesc4ArgNameAndIndex("update", 0);
   CHECK_EQ_OR_RETURN(update_desc->shape().NumAxes(), ndim);
-  CHECK_EQ_OR_RETURN(update_desc->data_type(), x_desc->data_type());
-
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
@@ -172,9 +178,18 @@ Maybe<void> InferSliceUpdateOpTensorDesc(user_op::InferContext* ctx) {
         << "sliced dim size " << sliced_dim_size << " at axis " << i
         << " not equal to the update shape " << update_desc->shape().ToString();
   }
-
   auto* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  *y_desc = *x_desc;
+  *y_desc->mut_shape() = x_desc->shape();
+  *y_desc->mut_is_dynamic() = x_desc->is_dynamic();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferSliceUpdateOpDataType(user_op::InferContext* ctx) {
+  const auto* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const auto* update_desc = ctx->TensorDesc4ArgNameAndIndex("update", 0);
+  CHECK_EQ_OR_RETURN(update_desc->data_type(), x_desc->data_type());
+  auto* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  *y_desc->mut_data_type() = x_desc->data_type();
   return Maybe<void>::Ok();
 }
 
@@ -220,7 +235,6 @@ Maybe<void> InferLogicalSliceAssignTensorDesc(user_op::InferContext* ctx) {
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
   CHECK_OR_RETURN(!ref_desc->is_dynamic());
-  CHECK_OR_RETURN(ref_desc->data_type() == value_desc->data_type());
   FOR_RANGE(size_t, i, 0, step_vec.size()) {
     const int64_t step = step_vec.at(i);
     const int64_t start = start_vec.at(i);
@@ -230,6 +244,13 @@ Maybe<void> InferLogicalSliceAssignTensorDesc(user_op::InferContext* ctx) {
     CHECK_GT_OR_RETURN(stop, 0) << "logical_slice_assign stop must be greater than 0";
     CHECK_LT_OR_RETURN(start, stop) << "logical_slice_assign start must be less than stop";
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferLogicalSliceAssignDataType(user_op::InferContext* ctx) {
+  user_op::TensorDesc* ref_desc = ctx->TensorDesc4ArgNameAndIndex("ref", 0);
+  user_op::TensorDesc* value_desc = ctx->TensorDesc4ArgNameAndIndex("value", 0);
+  CHECK_OR_RETURN(ref_desc->data_type() == value_desc->data_type());
   return Maybe<void>::Ok();
 }
 
@@ -278,6 +299,10 @@ Maybe<void> InferLogicalSliceTensorDesc(user_op::InferContext* ctx) {
     dim_vec[i] = diff / step + 1;
   }
   *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(dim_vec);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferLogicalSliceDataType(user_op::InferContext* ctx) {
   *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
@@ -342,6 +367,7 @@ REGISTER_USER_OP("slice")
     .Attr<std::vector<int64_t>>("stop")
     .Attr<std::vector<int64_t>>("step")
     .SetTensorDescInferFn(InferSliceOpTensorDesc)
+    .SetInferDataTypeFn(InferSliceOpDataType)
     .SetGetSbpFn(GetSliceOpSbpSignature);
 
 REGISTER_USER_OP("slice_grad")
@@ -352,6 +378,7 @@ REGISTER_USER_OP("slice_grad")
     .Attr<std::vector<int64_t>>("stop")
     .Attr<std::vector<int64_t>>("step")
     .SetTensorDescInferFn(InferSliceGradOpTensorDesc)
+    .SetInferDataTypeFn(InferSliceGradDataType)
     .SetGetSbpFn(GetSliceGradOpSbpSignature)
     .SetInputArgModifyFn(InferSliceGradInputArgModifier);
 
@@ -362,6 +389,7 @@ REGISTER_USER_OP("logical_slice_assign")
     .Attr<std::vector<int64_t>>("stop")
     .Attr<std::vector<int64_t>>("step")
     .SetTensorDescInferFn(InferLogicalSliceAssignTensorDesc)
+    .SetInferDataTypeFn(InferLogicalSliceAssignDataType)
     .SetGetSbpFn(GetLogicalSliceAssignSbpSignatures)
     .SetInputArgModifyFn(InferLogicalSliceAssignInputArgModifier);
 
@@ -372,6 +400,7 @@ REGISTER_USER_OP("logical_slice")
     .Attr<std::vector<int64_t>>("stop")
     .Attr<std::vector<int64_t>>("step")
     .SetTensorDescInferFn(InferLogicalSliceTensorDesc)
+    .SetInferDataTypeFn(InferLogicalSliceDataType)
     .SetGetSbpFn(GetLogicalSliceSbpSignatures);
 
 REGISTER_USER_OP_GRAD("slice").SetGenBackwardOpConfFn(GenSliceGradOp);
@@ -384,6 +413,7 @@ REGISTER_USER_OP("slice_update")
     .Attr<std::vector<int64_t>>("stop")
     .Attr<std::vector<int64_t>>("step")
     .SetTensorDescInferFn(InferSliceUpdateOpTensorDesc)
+    .SetInferDataTypeFn(InferSliceUpdateOpDataType)
     .SetGetSbpFn(GetSliceUpdateOpSbpSignature);
 
 REGISTER_USER_OP_GRAD("slice_update").SetBackwardOpConfGenFn(GenSliceUpdateGradOp);
