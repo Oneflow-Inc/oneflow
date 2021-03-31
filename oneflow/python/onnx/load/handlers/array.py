@@ -23,6 +23,7 @@ from oneflow.python.onnx.load.handler import BackendHandler
 from oneflow.python.onnx.load.handler import onnx_op
 from oneflow.python.onnx.load.handler import flow_func
 from oneflow.python.ops import array_ops
+import oneflow.typing as tp
 
 
 @onnx_op("Identity")
@@ -155,10 +156,8 @@ class Squeeze(BackendHandler):
     def version_13(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
 
-
 # TODO(BBuf) add expand op: https://github.com/Oneflow-Inc/oneflow/pull/4164
 # This is a temporary solution of senet
-
 
 @onnx_op("Expand")
 @flow_func(array_ops.broadcast_like)
@@ -314,6 +313,65 @@ class Split(BackendHandler):
 
     @classmethod
     def version_11(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_13(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+
+@onnx_op("Min")
+class Min(BackendHandler):
+    @classmethod
+    def _common(cls, node, tensor_dict, **kwargs):
+        x = tensor_dict[node.input_tensor_names[0]]
+        min_v = kwargs["init_dict"][node.input_tensor_names[1]]
+        return flow.math.clip_by_value(x, min_value=min_v)
+
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_6(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_8(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_12(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_13(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+
+@onnx_op("Max")
+class Max(BackendHandler):
+    @classmethod
+    def _common(cls, node, tensor_dict, **kwargs):
+        x = tensor_dict[node.input_tensor_names[0]]
+        max_v = tensor_dict[node.input_tensor_names[1]]
+        max_v = kwargs["init_dict"][node.input_tensor_names[1]]
+        return flow.math.clip_by_value(x, max_value=max_v)
+
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_6(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_8(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_12(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
 
     @classmethod
