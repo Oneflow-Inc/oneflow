@@ -21,7 +21,8 @@ generated_node_list=$(seq -f "mockhost%02g" -s, $node_num)
 
 # heaptrack
 # valgrind --tool=massif --threshold=0.0001
-/usr/bin/time -v python3 bert_benchmark/run_pretraining.py \
+# /usr/bin/time
+time -v python3 bert_benchmark/run_pretraining.py \
     --learning_rate=1e-4 \
     --weight_decay_rate=0.01 \
     --batch_size_per_device=24 \
