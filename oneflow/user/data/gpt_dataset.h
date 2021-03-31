@@ -47,7 +47,7 @@ class MegatronGPTIndex final {
 
 class MegatronGPTMappedBuffer final {
  public:
-  MegatronGPTMappedBuffer(const char* filename);
+  MegatronGPTMappedBuffer(const std::string& filename);
   ~MegatronGPTMappedBuffer();
 
   const void* ptr() const { return mapped_; }

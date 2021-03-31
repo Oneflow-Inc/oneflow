@@ -108,9 +108,9 @@ MegatronGPTIndex::MegatronGPTIndex(const std::string& index_file_path) {
             << " ms";
 }
 
-MegatronGPTMappedBuffer::MegatronGPTMappedBuffer(const char* filename) : mapped_(nullptr), size_(0) {
+MegatronGPTMappedBuffer::MegatronGPTMappedBuffer(const std::string& filename) : mapped_(nullptr), size_(0) {
 #ifdef __linux__
-  int fd = open(filename, O_RDONLY);
+  int fd = open(filename.c_str(), O_RDONLY);
   CHECK(fd != -1) << "open " << filename << " failed: " << strerror(errno);
 
   struct stat s;
@@ -136,7 +136,7 @@ MegatronGPTMMapDataset::MegatronGPTMMapDataset(const std::string& data_file_pref
     : seq_len_(seq_len), num_samples_(num_samples), shuffle_(shuffle), seed_(seed), gen_(seed) {
   auto start = std::chrono::system_clock::now();
   index_ = std::make_unique<const MegatronGPTIndex>(data_file_prefix + ".idx");
-  data_ = std::make_unique<MegatronGPTMappedBuffer>((data_file_prefix + ".bin").c_str());
+  data_ = std::make_unique<MegatronGPTMappedBuffer>(data_file_prefix + ".bin");
   tokens_per_epoch_ = index_->num_tokens();
   num_epochs_ = GetNumEpochs();
   num_complete_epochs_ = GetNumCompleteEpochs();
