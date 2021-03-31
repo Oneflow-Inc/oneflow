@@ -84,14 +84,14 @@ class GPTDataLoader final : public OpKernelState {
   ~GPTDataLoader() = default;
 
   template<typename T>
-  void Get(size_t iter, user_op::Tensor* tokens) {
+  void GetBatch(size_t iter, user_op::Tensor* tokens) {
     CHECK_EQ(tokens->shape().NumAxes(), 2);
     CHECK_EQ(tokens->shape().At(0), batch_size_);
     CHECK_EQ(tokens->shape().At(1), seq_len_ + 1);
     T* dptr = tokens->mut_dptr<T>();
     for (size_t i = 0; i < batch_size_; ++i) {
       size_t sample_iter = shard_index_ + (iter + 1) * i * num_shards_;
-      dataset_->Get(sample_iter, dptr + i * (seq_len_ + 1));
+      dataset_->GetSample(sample_iter, dptr + i * (seq_len_ + 1));
     }
   }
 
@@ -121,7 +121,7 @@ class GPTDataLoaderKernel final : public OpKernel {
     CHECK_EQ(iteration_tensor->shape().elem_cnt(), 1);
     int64_t* iter_ptr = iteration_tensor->mut_dptr<int64_t>();
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    loader->Get<T>(*iter_ptr, out_tensor);
+    loader->GetBatch<T>(*iter_ptr, out_tensor);
     *iter_ptr += 1;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

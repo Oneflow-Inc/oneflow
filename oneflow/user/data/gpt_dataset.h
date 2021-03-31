@@ -67,7 +67,7 @@ class MegatronGPTMMapDataset final {
   ~MegatronGPTMMapDataset() = default;
 
   template<typename T>
-  void Get(size_t index, T* data) const;
+  void GetSample(size_t index, T* data) const;
   size_t Size() const { return sample_indices_.size() - 1; }
 
  private:
@@ -99,7 +99,7 @@ class MegatronGPTMMapDataset final {
 };
 
 template<typename T>
-void MegatronGPTMMapDataset::Get(size_t index, T* data) const {
+void MegatronGPTMMapDataset::GetSample(size_t index, T* data) const {
   CHECK_LT(index, shuffle_indices_.size());
   size_t sample_index = shuffle_indices_[index];
   CHECK_LT(sample_index, sample_indices_.size() - 1);
