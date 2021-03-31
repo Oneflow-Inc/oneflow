@@ -2439,7 +2439,6 @@ def gpt_data_loader(
         .Attr("random_seed", random_seed)
         .Attr("split_sizes", split_sizes)
         .Attr("split_index", split_index)
-        .Attr("split_index", split_index)
         .Attr("parallel_distribution", parallel_distribution)
         .Build()
     )
