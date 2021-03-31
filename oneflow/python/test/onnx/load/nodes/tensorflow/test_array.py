@@ -67,8 +67,3 @@ def test_tensor_index(test_case):
 
     load_tensorflow2_module_and_check(test_case, Net)
 
-from absl import app
-from absl.testing import absltest
-
-test_case = absltest.TestCase
-test_concat(test_case)

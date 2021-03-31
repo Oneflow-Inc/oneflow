@@ -61,7 +61,7 @@ logger = logging.getLogger(__name__)
 
 @oneflow_export("from_onnx")
 def from_onnx(
-    onnx_model: onnx.ModelProto, inputs, model_weight_dir="/tmp/tmp", do_onnxsim=True
+    onnx_model: onnx.ModelProto, inputs, model_weight_dir="/tmp/tmp", do_onnxsim=True, from_tf2=False
 ):
     input_names = [x.name for x in onnx_model.graph.input]
     if type(inputs) is not dict:
@@ -81,6 +81,19 @@ def from_onnx(
         logger.info(
             "We recommend installing onnx-simplifier so that OneFlow can remove the redundant ONNX nodes"
         )
+    if from_tf2:
+        for i, node in enumerate(onnx_model.graph.node):
+            node.name = node.name.replace('/', '_')
+            node.name = node.name.replace(':', '_')
+            for j in range(len(node.input)):
+                node.input[j] = node.input[j].replace('/', '_')
+                node.input[j] = node.input[j].replace(':', '_')
+            for j in range(len(node.output)):
+                node.output[j] = node.output[j].replace('/', '_')
+                node.output[j] = node.output[j].replace(':', '_')
+        for x in onnx_model.graph.initializer:
+            x.name = x.name.replace('/', '_')
+            x.name = x.name.replace(':', '_')
 
     if not os.path.exists("/home/zhangxiaoyu/temp_onnx"):
         os.makedirs("/home/zhangxiaoyu/temp_onnx")
@@ -89,6 +102,7 @@ def from_onnx(
     if os.path.exists(model_weight_dir):
         shutil.rmtree(model_weight_dir)
     BackendHandler.WEIGHT_SAVE_DIR = model_weight_dir
+
     for x in onnx_model.graph.initializer:
         dir_name = os.path.join(model_weight_dir, x.name)
         if not os.path.exists(dir_name):
@@ -208,6 +222,7 @@ def from_tensorflow2(
         dict(zip([input_names], [inputs])),
         model_weight_dir=model_weight_dir,
         do_onnxsim=do_onnxsim,
+        from_tf2=True,
     )
 
 

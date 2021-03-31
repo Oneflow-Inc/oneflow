@@ -215,6 +215,8 @@ def load_tensorflow2_module_and_check(
     if input_size is None:
         input_size = (2, 4, 3, 5)
     tf_module = tf_module_class()
+    
+    # flow.config.enable_debug_mode(True)
 
     model_weight_save_dir = "/home/zhangxiaoyu/tmp"
 
@@ -273,7 +275,6 @@ def load_tensorflow2_module_and_check(
     tf_input = tf.constant(ipt1, dtype=tf.float32)
     tensorflow_res = tf_module.predict(tf_input)
 
-    print(tensorflow_res)
     print(flow_res)
     print("-------------")
     print(tensorflow_res)
