@@ -152,7 +152,8 @@ class DryRunCtrlClient : public CtrlClient {
     Barrier(barrier_name, Global<EnvDesc>::Get()->TotalMachineNum());
   }
   void Barrier(const std::string& barrier_name, int32_t barrier_num) override {
-    LOG(INFO) << "skipping barrier in dry run, barrier name: " << barrier_name;
+    LOG(INFO) << "skipping barrier in dry run, barrier name: " << barrier_name
+              << ", barrier num: " << barrier_num;
   }
 
   TryLockResult TryLock(const std::string& name) override {
@@ -205,19 +206,28 @@ Maybe<void> LocalRpcManager::Bootstrap() {
 }
 
 Maybe<void> LocalRpcManager::CreateClient() {
-  CtrlClient* client;
-  if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
-    client = new DryRunCtrlClient(*Global<ProcessCtx>::Get());
-  } else {
-    client = new LocalCtrlClient(*Global<ProcessCtx>::Get());
-  }
+  auto* client = new LocalCtrlClient(*Global<ProcessCtx>::Get());
   Global<CtrlClient>::SetAllocated(client);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LocalRpcManager::CreateServer() { return Maybe<void>::Ok(); }
-
 LocalRpcManager::~LocalRpcManager() { Global<CtrlClient>::Delete(); }
+
+Maybe<void> DryRunRpcManager::Bootstrap() {
+  Address* addr = Global<ProcessCtx>::Get()->add_ctrl_addr();
+  addr->set_host("localhost");
+  Global<ProcessCtx>::Get()->set_rank(0);
+  Global<ProcessCtx>::Get()->set_node_size(1);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DryRunRpcManager::CreateClient() {
+  auto* client = new DryRunCtrlClient(*Global<ProcessCtx>::Get());
+  Global<CtrlClient>::SetAllocated(client);
+  return Maybe<void>::Ok();
+}
+
+DryRunRpcManager::~DryRunRpcManager() { Global<CtrlClient>::Delete(); }
 
 }  // namespace oneflow
 
