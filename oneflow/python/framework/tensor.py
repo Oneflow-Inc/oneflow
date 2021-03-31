@@ -163,6 +163,18 @@ class Tensor:
         else:
             return True
 
+    @requires_grad.setter
+    def requires_grad(self, is_requires_grad):
+        if self._local_or_consistent_tensor is not None:
+            if self.is_leaf:
+                self._local_or_consistent_tensor._set_requires_grad(is_requires_grad)
+            else:
+                raise RuntimeError(
+                    "You can only change requires_grad flags of leaf variables."
+                )
+        else:
+            self._undetermined_tensor.requires_grad = is_requires_grad
+
     def size(self):
         return self.shape
 
@@ -178,6 +190,9 @@ class Tensor:
             return flow.Tensor(self._local_or_consistent_tensor.detach())
         else:
             return None
+
+    def requires_grad_(self, is_requires_grad):
+        self.requires_grad = is_requires_grad
 
     def get_device(self):
         if self._local_or_consistent_tensor is not None:
