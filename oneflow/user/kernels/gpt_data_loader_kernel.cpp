@@ -91,7 +91,7 @@ class GPTDataLoader final : public OpKernelState {
     CHECK_EQ(tokens->shape().At(1), sample_len);
     T* dptr = tokens->mut_dptr<T>();
     for (size_t i = 0; i < batch_size_; ++i) {
-      size_t sample_iter = shard_index_ + (iter + 1) * i * num_shards_;
+      size_t sample_iter = iter * batch_size_ * num_shards_ + shard_index_ * batch_size_ + i;
       dataset_->GetSample(sample_iter, dptr + i * sample_len);
     }
   }
