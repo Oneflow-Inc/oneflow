@@ -32,7 +32,7 @@ namespace one {
 static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
                                   TensorTuple* outputs) {
   // TODO()
-  UNIMPLEMENTED();
+  OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const UserOpExpr& op_expr,
@@ -53,7 +53,7 @@ static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_ex
                                                       const TensorTuple& inputs,
                                                       TensorTuple* outputs) {
   // TODO()
-  UNIMPLEMENTED();
+  OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToMirroredOpExpr& op_expr,
@@ -72,7 +72,7 @@ static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpE
                                                                 const TensorTuple& inputs,
                                                                 TensorTuple* outputs) {
   // TODO()
-  UNIMPLEMENTED();
+  OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeSplitOpExpr& op_expr,
@@ -91,7 +91,7 @@ static Maybe<void> BuildAndRunDistributeConcatAndAddInstruction(const BuiltinOpE
                                                                 const TensorTuple& inputs,
                                                                 TensorTuple* outputs) {
   // TODO()
-  UNIMPLEMENTED();
+  OF_UNIMPLEMENTED();
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeConcatOpExpr& op_expr,
