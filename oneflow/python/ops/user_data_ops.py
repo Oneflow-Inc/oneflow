@@ -2368,6 +2368,9 @@ def gpt_data_loader(
     if name is None:
         name = id_util.UniqueStr("gpt_data_loader_")
 
+    # consider being exported as parameters
+    label_length = 1
+
     if parallel_distribution is None:
         parallel_distribution = ["B"]
 
@@ -2429,6 +2432,7 @@ def gpt_data_loader(
         .Output("out")
         .Attr("data_file_prefix", data_file_prefix)
         .Attr("seq_length", seq_length)
+        .Attr("label_length", label_length)
         .Attr("num_samples", num_samples)
         .Attr("batch_size", batch_size)
         .Attr("dtype", dtype)
