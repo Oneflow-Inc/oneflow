@@ -30,3 +30,4 @@ compile_commands.json
 /oneflow_temp
 /distributed-tmp
 /serving-tmp
+test_tmp_dir
