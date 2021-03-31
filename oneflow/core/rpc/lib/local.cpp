@@ -34,7 +34,7 @@ void LocalCtrlClient::Barrier(const std::string& barrier_name) {
 
 void LocalCtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
-    LOG(ERROR) << "skipping barrier: " << barrier_name;
+    LOG(INFO) << "skipping barrier: " << barrier_name;
     return;
   }
   CHECK(barrier_num == 1);
