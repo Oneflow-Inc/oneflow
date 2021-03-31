@@ -42,7 +42,6 @@ Maybe<void> InferScatterNdTensorDesc(user_op::InferContext* ctx) {
   const Shape& params_shape = ctx->Attr<Shape>("shape");
   JUST(CheckScatterNdShape(params_shape, *indices_shape, *updates_shape));
   *ctx->Shape4ArgNameAndIndex("out", 0) = params_shape;
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
   return Maybe<void>::Ok();
 }
 
@@ -57,7 +56,6 @@ Maybe<void> InferScatterNdLikeTensorDesc(user_op::InferContext* ctx) {
   Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
   JUST(CheckScatterNdShape(*like_shape, *indices_shape, *updates_shape));
   *ctx->Shape4ArgNameAndIndex("out", 0) = *like_shape;
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
   return Maybe<void>::Ok();
 }
 
@@ -72,7 +70,6 @@ Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
   Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
   JUST(CheckScatterNdShape(*params_shape, *indices_shape, *updates_shape));
   *ctx->Shape4ArgNameAndIndex("out", 0) = *params_shape;
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
   return Maybe<void>::Ok();
 }
 

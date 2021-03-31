@@ -31,12 +31,9 @@ REGISTER_USER_OP("one_hot")
       const int64_t depth = ctx->Attr<int64_t>("depth");
       CHECK_GT_OR_RETURN(depth, 0);
       const user_op::TensorDesc* indices_desc = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
-      CHECK_OR_RETURN(IsIndexDataType(indices_desc->data_type()));
       CHECK_GT_OR_RETURN(indices_desc->shape().NumAxes(), 0);
       user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out_desc->mut_is_dynamic() = indices_desc->is_dynamic();
-      auto dtype = ctx->Attr<DataType>("dtype");
-      *out_desc->mut_data_type() = dtype;
       DimVector dim_vec = indices_desc->shape().dim_vec();
       dim_vec.push_back(depth);
       *out_desc->mut_shape() = Shape(dim_vec);
@@ -68,6 +65,5 @@ REGISTER_USER_OP("one_hot")
       *out_desc->mut_data_type() = dtype;
       return Maybe<void>::Ok();
     });
-
 
 }  // namespace oneflow

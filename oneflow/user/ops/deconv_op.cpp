@@ -80,7 +80,6 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-
 Maybe<void> GetSbpSignatures4DeConv(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("in", 0), 0)

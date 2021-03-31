@@ -34,8 +34,8 @@ std::function<Maybe<void>(const std::string&)> MakeCheckParamTensorDescFn(
   };
 }
 
-std::function<Maybe<void>(const std::string&)> MakeCheckParamDataTypeFn(
-    user_op::InferContext* ctx, DataType data_type) {
+std::function<Maybe<void>(const std::string&)> MakeCheckParamDataTypeFn(user_op::InferContext* ctx,
+                                                                        DataType data_type) {
   return [=](const std::string& bn) -> Maybe<void> {
     if (ctx->user_op_conf().has_input(bn, 0)) {
       const auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
@@ -59,7 +59,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetParamTensorDescFn(user_op:
 }
 
 std::function<Maybe<void>(const std::string&)> MakeSetParamDataTypeFn(user_op::InferContext* ctx,
-                                                                        DataType data_type) {
+                                                                      DataType data_type) {
   return [=](const std::string& bn) -> Maybe<void> {
     if (ctx->user_op_conf().has_output(bn, 0)) {
       auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
@@ -257,7 +257,7 @@ REGISTER_USER_OP("normalization_add_relu")
     .SetGetSbpFn(FwGetSbpFn)
     .SetInferDataTypeFn(
         MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
-                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
+                                 user_op::TensorDesc* reserve_space) -> Maybe<void> {
           *reserve_space->mut_data_type() = DataType::kInt32;
           return Maybe<void>::Ok();
         }));
@@ -343,7 +343,7 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
     .SetGetSbpFn(FwGetSbpFn)
     .SetInferDataTypeFn(
         MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
-                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
+                                 user_op::TensorDesc* reserve_space) -> Maybe<void> {
           *reserve_space->mut_data_type() = DataType::kChar;
           return Maybe<void>::Ok();
         }));

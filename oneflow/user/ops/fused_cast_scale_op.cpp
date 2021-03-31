@@ -24,7 +24,8 @@ Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(scalar->shape().NumAxes(), 1);
   CHECK_EQ_OR_RETURN(scalar->shape().At(0), 1);
   user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  *y = *x;
+  *y->mut_is_dynamic() = x->is_dynamic();
+  *y->mut_shape() = x->shape();
   return Maybe<void>::Ok();
 }
 
