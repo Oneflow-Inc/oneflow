@@ -29,9 +29,9 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   FOR_RANGE(int64_t, i, 0, num_out_axes) {
     CHECK_EQ_OR_RETURN(prediction_desc->shape().At(i), label_desc->shape().At(i));
   }
-  *ctx->TensorDesc4ArgNameAndIndex("prob", 0) = *prediction_desc;  //'prob' is just for compute prediction's grad, prob's grad will be ignored
+  *ctx->IsDynamic4ArgNameAndIndex("prob", 0) = *ctx->IsDynamic4ArgNameAndIndex("prediction", 0);
+  *ctx->Shape4ArgNameAndIndex("prob", 0) = *ctx->Shape4ArgNameAndIndex("prediction", 0); //'prob' is just for compute prediction's grad, prob's grad will be ignored
   user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("prediction", 0);
   *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("prediction", 0);
   *out_desc->mut_shape() = label_desc->shape();
   return Maybe<void>::Ok();
@@ -54,33 +54,21 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(const user_op::TensorDesc* label_desc, user_op::InferContext* ctx) {
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
   const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
   CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
-  const user_op::TensorDesc* prob_desc = ctx->TensorDesc4ArgNameAndIndex("prob", 0);
-  const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-  CHECK_EQ_OR_RETURN(dy_desc->data_type(), prob_desc->data_type());
-  user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  *out_desc->mut_data_type() = prediction_desc->data_type();
-  *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = *ctx->Dtype4ArgNameAndIndex("prob_desc", 0);
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("prediction", 0), *ctx->Dtype4ArgNameAndIndex("label", 0));
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
-  *ctx->Dtype4ArgNameAndIndex("prob", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("prob", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataTypeGrad(const user_op::TensorDesc* label_desc, user_op::InferContext* ctx) {
+Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* prob_desc = ctx->TensorDesc4ArgNameAndIndex("prob", 0);
   const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
   CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
-  const user_op::TensorDesc* prob_desc = ctx->TensorDesc4ArgNameAndIndex("prob", 0);
   const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
   CHECK_EQ_OR_RETURN(dy_desc->data_type(), prob_desc->data_type());
-  user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  *out_desc->mut_data_type() = prediction_desc->data_type();
-  *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = *ctx->Dtype4ArgNameAndIndex("prob_desc", 0);
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("label", 0), *ctx->Dtype4ArgNameAndIndex("dy", 0));
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("dy", 0), *ctx->Dtype4ArgNameAndIndex("prob", 0));
-  *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
+  *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = prob_desc->data_type();
   return Maybe<void>::Ok();
 }
 

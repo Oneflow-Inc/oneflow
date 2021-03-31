@@ -23,9 +23,7 @@ REGISTER_USER_OP("softmax")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      *out_shape = *in_shape;           
+      *ctx->Shape4ArgNameAndIndex("in", 0) = *ctx->Shape4ArgNameAndIndex("out", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

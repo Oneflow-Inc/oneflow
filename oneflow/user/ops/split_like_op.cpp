@@ -59,9 +59,11 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
   const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  *out_i_desc->mut_data_type() = in_desc->data_type();
+  FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
+    user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
+    *out_i_desc->mut_data_type() = in_desc->data_type();
+  }
   return Maybe<void>::Ok();
 }
 
