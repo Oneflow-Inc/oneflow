@@ -214,7 +214,7 @@ def from_tensorflow2(
     mode_str = "/tmp/model.onnx"
 
     model_proto, _ = tf2onnx.convert.from_keras(
-        tf_model, input_signature=spec, opset=12, output_path=mode_str
+        tf_model, input_signature=spec, opset=11, output_path=mode_str
     )
 
     return from_onnx(
