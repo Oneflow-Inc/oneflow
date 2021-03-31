@@ -23,6 +23,7 @@ from oneflow.python.onnx.load.handler import onnx_op
 from oneflow.python.onnx.load.handler import flow_func
 from oneflow.python.onnx.load.handlers.common import ReductionMixin
 from oneflow.python.ops import reduce_mean
+import oneflow as flow
 
 
 @onnx_op("ReduceMean")
@@ -35,3 +36,39 @@ class ReduceMean(ReductionMixin, BackendHandler):
     @classmethod
     def version_11(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
+    
+    @classmethod
+    def version_12(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+    
+    @classmethod
+    def version_13(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+
+@onnx_op("ReduceMax")
+class ReduceMax(BackendHandler):
+    @classmethod
+    def _common(cls, node, tensor_dict, **kwargs):
+        x = tensor_dict[node.input_tensor_names[0]]
+        axes = node.attrs.get("axes")
+        keepdims = node.attrs.get("keepdims")
+        return flow.math.reduce_max(x, axis=axes, keepdims=bool(keepdims))
+    
+    @classmethod
+    def version_1(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_11(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+    
+    @classmethod
+    def version_12(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+    
+    @classmethod
+    def version_13(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+
