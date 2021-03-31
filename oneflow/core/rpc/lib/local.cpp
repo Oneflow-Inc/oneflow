@@ -33,10 +33,6 @@ void LocalCtrlClient::Barrier(const std::string& barrier_name) {
 }
 
 void LocalCtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
-  if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
-    LOG(ERROR) << "skipping barrier: " << barrier_name;
-    return;
-  }
   CHECK(barrier_num == 1);
 }
 
@@ -93,11 +89,7 @@ void LocalCtrlClient::PullKV(const std::string& k,
   while (true) {
     auto it = kv_.find(k);
     if (it == kv_.end()) {
-      if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
-        LOG(ERROR) << "waiting for key: " << k;
-      } else {
-        LOG(INFO) << "waiting for key: " << k;
-      }
+      LOG(INFO) << "waiting for key: " << k;
       kv_cv_.wait(lck);
     } else {
       VGetter(it->second);
@@ -149,11 +141,74 @@ void LocalCtrlClient::EraseCount(const std::string& k) {
   counter_.erase(k);
 }
 
-Maybe<void> LocalRpcManager::Bootstrap() {
-  Address* addr = Global<ProcessCtx>::Get()->add_ctrl_addr();
+class DryRunCtrlClient : public CtrlClient {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DryRunCtrlClient);
+  explicit DryRunCtrlClient(const ProcessCtx& process_ctx)
+      : local_ctrl_client_{std::unique_ptr<LocalCtrlClient>(new LocalCtrlClient(process_ctx))} {
+    CHECK(process_ctx.ctrl_addr_size() == 1);
+    CHECK(process_ctx.node_size() == 1);
+  }
+  ~DryRunCtrlClient() override = default;
+
+  void Barrier(const std::string& barrier_name) override {
+    Barrier(barrier_name, Global<EnvDesc>::Get()->TotalMachineNum());
+  }
+  void Barrier(const std::string& barrier_name, int32_t barrier_num) override {
+    LOG(INFO) << "skipping barrier in dry run, barrier name: " << barrier_name
+              << ", barrier num: " << barrier_num;
+  }
+
+  TryLockResult TryLock(const std::string& name) override {
+    return local_ctrl_client_->TryLock(name);
+  }
+  void NotifyDone(const std::string& name) override { local_ctrl_client_->NotifyDone(name); }
+  void WaitUntilDone(const std::string& name) override { local_ctrl_client_->WaitUntilDone(name); }
+
+  void PushKV(const std::string& k, std::function<void(std::string*)> VSetter) override {
+    local_ctrl_client_->PushKV(k, VSetter);
+  }
+  void PushKV(const std::string& k, const std::string& v) override {
+    local_ctrl_client_->PushKV(k, v);
+  }
+  void PushKV(const std::string& k, const PbMessage& msg) override {
+    local_ctrl_client_->PushKV(k, msg);
+  }
+  void PushMasterKV(const std::string& k, const PbMessage& msg) override {
+    local_ctrl_client_->PushMasterKV(k, msg);
+  }
+
+  void ClearKV(const std::string& k) override { local_ctrl_client_->ClearKV(k); }
+  void ClearMasterKV(const std::string& k) override { local_ctrl_client_->ClearMasterKV(k); }
+
+  void PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) override {
+    local_ctrl_client_->PullKV(k, VGetter);
+  }
+  void PullKV(const std::string& k, std::string* v) override { local_ctrl_client_->PullKV(k, v); }
+  void PullKV(const std::string& k, PbMessage* msg) override { local_ctrl_client_->PullKV(k, msg); }
+  void PullMasterKV(const std::string& k, PbMessage* msg) override {
+    local_ctrl_client_->PullMasterKV(k, msg);
+  }
+  void PushActEvent(const ActEvent& ev) override { local_ctrl_client_->PushActEvent(ev); }
+  void Clear() override { local_ctrl_client_->Clear(); }
+  int32_t IncreaseCount(const std::string& k, int32_t v) override {
+    return local_ctrl_client_->IncreaseCount(k, v);
+  }
+  void EraseCount(const std::string& k) override { local_ctrl_client_->EraseCount(k); }
+
+ private:
+  std::unique_ptr<LocalCtrlClient> local_ctrl_client_;
+};
+
+void SetLocalProcessCtx(oneflow::ProcessCtx* ctx) {
+  Address* addr = ctx->add_ctrl_addr();
   addr->set_host("localhost");
-  Global<ProcessCtx>::Get()->set_rank(0);
-  Global<ProcessCtx>::Get()->set_node_size(1);
+  ctx->set_rank(0);
+  ctx->set_node_size(1);
+}
+
+Maybe<void> LocalRpcManager::Bootstrap() {
+  SetLocalProcessCtx(Global<ProcessCtx>::Get());
   return Maybe<void>::Ok();
 }
 
@@ -163,9 +218,20 @@ Maybe<void> LocalRpcManager::CreateClient() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LocalRpcManager::CreateServer() { return Maybe<void>::Ok(); }
-
 LocalRpcManager::~LocalRpcManager() { Global<CtrlClient>::Delete(); }
+
+Maybe<void> DryRunRpcManager::Bootstrap() {
+  SetLocalProcessCtx(Global<ProcessCtx>::Get());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DryRunRpcManager::CreateClient() {
+  auto* client = new DryRunCtrlClient(*Global<ProcessCtx>::Get());
+  Global<CtrlClient>::SetAllocated(client);
+  return Maybe<void>::Ok();
+}
+
+DryRunRpcManager::~DryRunRpcManager() { Global<CtrlClient>::Delete(); }
 
 }  // namespace oneflow
 
