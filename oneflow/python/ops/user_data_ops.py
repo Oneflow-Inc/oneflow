@@ -2372,7 +2372,7 @@ def gpt_data_loader(
     label_length = 1
 
     if parallel_distribution is None:
-        parallel_distribution = ["B"]
+        parallel_distribution = []
 
     if split_index is None:
         split_index = 0
