@@ -72,7 +72,6 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
-
     def test_indexing(test_case):
         class SliceExtracter:
             def __getitem__(self, key):

@@ -21,8 +21,7 @@ from oneflow.python.framework.tensor import Tensor
 @oneflow_export("nn.Parameter")
 class Parameter(Tensor):
     def __init__(self, data, requires_grad=True):
-        # TODO: uncomment this line when autograd is ready
-        # data.requires_grad = True
+        data.requires_grad = True
         data.set_is_consistent(True)
         # TODO: set a proper placement
         data.set_placement(flow.placement("cpu", ["0:0"], None))
