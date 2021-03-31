@@ -61,6 +61,22 @@ Maybe<void> InferDataType(const user_op::TensorDesc* label_desc, user_op::InferC
   user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   *out_desc->mut_data_type() = prediction_desc->data_type();
   *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = *ctx->Dtype4ArgNameAndIndex("prob_desc", 0);
+  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("prediction", 0), *ctx->Dtype4ArgNameAndIndex("label", 0));
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferDataTypeGrad(const user_op::TensorDesc* label_desc, user_op::InferContext* ctx) {
+  CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
+  const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
+  const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+  CHECK_EQ_OR_RETURN(dy_desc->data_type(), prediction_desc->data_type());
+  user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  *out_desc->mut_data_type() = prediction_desc->data_type();
+  *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = *ctx->Dtype4ArgNameAndIndex("prob_desc", 0);
+  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("prediction", 0), *ctx->Dtype4ArgNameAndIndex("label", 0));
+  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("prediction", 0), *ctx->Dtype4ArgNameAndIndex("dy", 0));
+  *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
   return Maybe<void>::Ok();
 }
 
@@ -156,7 +172,7 @@ void GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
       .Attr<int64_t>("depth")                                        \
       .SetTensorDescInferFn(InferGradTensorDescFn)                   \
       .SetGetSbpFn(GetSbpFn<sbp_sig>)                                \
-      .SetInferDataTypeFn(InferDataType);                            
+      .SetInferDataTypeFn(InferDataTypeGrad);                            
 
 REGISTER_SPAESE_CROSS_ENTROPY_USER_OP("sparse_cross_entropy", AddSignature);
 REGISTER_SPAESE_CROSS_ENTROPY_USER_OP("sparse_cross_entropy_ms", AddMsSignature);
