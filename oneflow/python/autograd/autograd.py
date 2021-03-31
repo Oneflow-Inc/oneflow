@@ -26,10 +26,15 @@ def _convert2tensor_tuple(args: Union[Tensor, Sequence[Tensor], None]):
     if args is None:
         return TensorTuple()
     elif isinstance(args, Tensor):
+        if not args.is_determined:
+            args.determine()
         tensor_tuple = TensorTuple()
         tensor_tuple.append(args._local_or_consistent_tensor)
         return tensor_tuple
     else:
+        for tensor in args:
+            if not tensor.is_determined:
+                tensor.determine()
         return TensorTuple([x._local_or_consistent_tensor for x in args])
 
 
