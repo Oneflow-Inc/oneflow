@@ -353,8 +353,8 @@ def GenerateVariableOpConf(
     if model_name is not None:
         op_conf.variable_conf.model_name = model_name
 
-    if parallel_distribution is None or len(parallel_distribution) == 0:
-        parallel_distribution = ["B"]
+    if parallel_distribution is None:
+        parallel_distribution = []
 
     op_conf.variable_conf.parallel_distribution.extend(parallel_distribution)
 
