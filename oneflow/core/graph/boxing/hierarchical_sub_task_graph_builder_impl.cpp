@@ -97,6 +97,31 @@ void CollaborativeParallelDimReduce(const ParallelDesc& in_parallel_desc,
   *reduced_out_parallel_desc = ParallelDesc(reduced_out_parallel_conf);
 }
 
+std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
+  std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
+  builders.emplace_back(new OneToOneSubTskGphBuilder());
+  builders.emplace_back(new B21SubTskGphBuilder());
+  if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+    builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
+  }
+  builders.emplace_back(new SliceBoxingSubTskGphBuilder());
+  builders.emplace_back(new NaiveB2BSubTskGphBuilder());
+  builders.emplace_back(new NaiveB2PSubTskGphBuilder());
+  return std::make_shared<ChainSubTskGphBuilder>(builders);
+}
+
+bool ParallelDistributionAllSameSplitParallel(const ParallelDistribution& parallel_distribution) {
+  CHECK_GT(parallel_distribution.sbp_parallel_size(), 0);
+  const SbpParallel& first_sbp = parallel_distribution.sbp_parallel(0);
+  if (!first_sbp.has_split_parallel()) { return false; }
+  FOR_RANGE(int64_t, i, 1, parallel_distribution.sbp_parallel_size()) {
+    if (parallel_distribution.sbp_parallel(i) != first_sbp) { return false; }
+  }
+  return true;
+}
+
+}  // namespace
+
 void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
                             const ParallelDesc& out_parallel_desc,
                             const ParallelDistribution& in_parallel_distribution,
@@ -124,31 +149,6 @@ void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
                                    reduced_out_parallel_distribution);
   }
 }
-
-std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
-  std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
-  builders.emplace_back(new OneToOneSubTskGphBuilder());
-  builders.emplace_back(new B21SubTskGphBuilder());
-  if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
-    builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
-  }
-  builders.emplace_back(new SliceBoxingSubTskGphBuilder());
-  builders.emplace_back(new NaiveB2BSubTskGphBuilder());
-  builders.emplace_back(new NaiveB2PSubTskGphBuilder());
-  return std::make_shared<ChainSubTskGphBuilder>(builders);
-}
-
-bool ParallelDistributionAllSameSplitParallel(const ParallelDistribution& parallel_distribution) {
-  CHECK_GT(parallel_distribution.sbp_parallel_size(), 0);
-  const SbpParallel& first_sbp = parallel_distribution.sbp_parallel(0);
-  if (!first_sbp.has_split_parallel()) { return false; }
-  FOR_RANGE(int64_t, i, 1, parallel_distribution.sbp_parallel_size()) {
-    if (parallel_distribution.sbp_parallel(i) != first_sbp) { return false; }
-  }
-  return true;
-}
-
-}  // namespace
 
 class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
  public:
