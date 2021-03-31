@@ -31,8 +31,12 @@ class SoftmaxKernel final : public user_op::OpKernel {
     const ShapeView& in_shape = in->shape();
     const int64_t cols = in_shape.At(in_shape.NumAxes() - 1);
     const int64_t rows = in_shape.Count(0, in_shape.NumAxes() - 1);
-    cuda::softmax::DispatchSoftmax(ctx->device_ctx()->cuda_stream(), rows, cols, in->dptr<T>(),
-                                   out->mut_dptr<T>());
+    cuda::softmax::UnaryMultiFetch<T> multi_fetch;
+    multi_fetch.src = in->dptr<T>();
+    multi_fetch.row_size = cols;
+    cuda::softmax::DispatchSoftmax<decltype(multi_fetch), T>(ctx->device_ctx()->cuda_stream(),
+                                                             multi_fetch, rows, cols, in->dptr<T>(),
+                                                             out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -60,8 +64,13 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int64_t cols = y->shape().At(y->shape().NumAxes() - 1);
     const int64_t rows = y->shape().elem_cnt() / cols;
-    cuda::softmax::DispatchSoftmaxGrad(ctx->device_ctx()->cuda_stream(), rows, cols, y->dptr<T>(),
-                                       dy->dptr<T>(), dx->mut_dptr<T>());
+    cuda::softmax::GradMultiFetch<T> multi_fetch;
+    multi_fetch.y = y->dptr<T>();
+    multi_fetch.dy = dy->dptr<T>();
+    multi_fetch.row_size = cols;
+    cuda::softmax::DispatchSoftmaxGrad<decltype(multi_fetch), T>(
+        ctx->device_ctx()->cuda_stream(), multi_fetch, rows, cols, y->dptr<T>(), dy->dptr<T>(),
+        dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

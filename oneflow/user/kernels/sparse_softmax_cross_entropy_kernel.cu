@@ -24,14 +24,22 @@ namespace {
 
 template<typename T>
 void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const T* in, T* prob) {
-  cuda::softmax::DispatchSoftmax(ctx->cuda_stream(), row, col, in, prob);
+  cuda::softmax::UnaryMultiFetch<T> multi_fetch;
+  multi_fetch.src = in;
+  multi_fetch.row_size = col;
+  cuda::softmax::DispatchSoftmax<decltype(multi_fetch), T>(ctx->cuda_stream(), multi_fetch, row,
+                                                           col, in, prob);
 }
 
 template<>
 void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const float16* in,
                  float16* prob) {
-  cuda::softmax::DispatchSoftmax(ctx->cuda_stream(), row, col, reinterpret_cast<const half*>(in),
-                                 reinterpret_cast<half*>(prob));
+  cuda::softmax::UnaryMultiFetch<half> multi_fetch;
+  multi_fetch.src = reinterpret_cast<const half*>(in);
+  multi_fetch.row_size = col;
+  cuda::softmax::DispatchSoftmax<decltype(multi_fetch), half>(
+      ctx->cuda_stream(), multi_fetch, row, col, reinterpret_cast<const half*>(in),
+      reinterpret_cast<half*>(prob));
 }
 
 }  // namespace
