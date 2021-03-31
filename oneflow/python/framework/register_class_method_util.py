@@ -15,12 +15,15 @@ limitations under the License.
 """
 import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.eager_blob_util as eager_blob_util
+import oneflow.python.framework.op_expr_util as op_expr_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.blob_trait as blob_trait
 import oneflow_api
 
 
 def RegisterMethod4Class():
+    op_expr_util.RegisterMethod4UserOpExpr()
+
     eager_blob_util.RegisterMethod4EagerPhysicalBlob()
 
     blob_trait.RegisterBlobOperatorTraitMethod(oneflow_api.EagerPhysicalBlob)
