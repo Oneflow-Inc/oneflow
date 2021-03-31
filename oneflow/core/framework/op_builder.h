@@ -43,12 +43,11 @@ class OpBuilder {
   OpBuilder& Output(const std::string& output_name);
   OpBuilder& Output(const std::string& output_name, const int count);
 
-  Maybe<OpBuilder&> MaybeAttr(const std::string& attr_name, const cfg::AttrValue& attr_value);
-  OpBuilder& Attr(const std::string& attr_name, const cfg::AttrValue& attr_value);
+  template<typename T>
+  Maybe<OpBuilder&> MaybeAttr(const std::string& attr_name, const T& attr_value);
 
-  // TODO(): Set attribute from primitive type.
-  // template <typename T>
-  // OpBuilder& Attr(const std::string& attr_name, const T& attr_value);
+  template<typename T>
+  OpBuilder& Attr(const std::string& attr_name, const T& attr_value);
 
   Maybe<UserOpExpr> Build();
 

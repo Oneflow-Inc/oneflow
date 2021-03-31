@@ -16,7 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
 
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -27,8 +26,6 @@ limitations under the License.
 
 namespace oneflow {
 namespace one {
-
-static constexpr char FakeGradientOpSuffix[] = ".grad";
 
 class DefaultOpExprGradFunction : public OpExprGradFunction {
  public:
@@ -315,42 +312,6 @@ Maybe<void> DefaultOpExprGradFunction::Apply(const OpExprInterpState* ctx,
 }
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("default", DefaultOpExprGradFunction);
-
-class ReshapeOpExprGrad : public OpExprGradFunction {
- public:
-  Maybe<void> Init(const OpExpr& op) override {
-    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    backward_op_ = JUST(OpBuilder("reshape_like", fw_op_expr->op_name() + FakeGradientOpSuffix)
-                            .Input("in")
-                            .Input("like")
-                            .Output("out")
-                            .Build());
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs) const override {
-    ctx->SaveTensorForBackward(inputs.at(0));
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override {
-    const auto& saved_tensors = ctx->SavedTensors();
-    const auto& interpreter = JUST(OpInterpUtil::GetInterpreter());
-    TensorTuple outputs(1);
-    JUST(interpreter->Apply(*backward_op_, {out_grads.at(0), saved_tensors.at(0)}, &outputs));
-    in_grads->resize(1);
-    in_grads->at(0) = outputs.at(0);
-    return Maybe<void>::Ok();
-  }
-
- private:
-  std::shared_ptr<OpExpr> backward_op_;
-};
-
-REGISTER_OP_EXPR_GRAD_FUNCTION("reshape", ReshapeOpExprGrad);
 
 }  // namespace one
 }  // namespace oneflow
