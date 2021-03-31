@@ -24,7 +24,7 @@ namespace {
 
 template<typename T>
 void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const T* in, T* prob) {
-  cuda::softmax::UnaryMultiFetch<T> multi_fetch;
+  cuda::softmax::MultiFetch<T> multi_fetch;
   multi_fetch.src = in;
   multi_fetch.row_size = col;
   cuda::softmax::MultiStore<T> multi_store;
@@ -37,7 +37,7 @@ void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const T* 
 template<>
 void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const float16* in,
                  float16* prob) {
-  cuda::softmax::UnaryMultiFetch<half> multi_fetch;
+  cuda::softmax::MultiFetch<half> multi_fetch;
   multi_fetch.src = reinterpret_cast<const half*>(in);
   multi_fetch.row_size = col;
   cuda::softmax::MultiStore<half> multi_store;
