@@ -254,7 +254,10 @@ def CompleteEnvProto(env_proto):
         if len(env_proto.machine) == 1:
             env_proto.ctrl_port = _FindFreePort()
         else:
-            raise ValueError("a ctrl_port is required if running multi-node, set it with 'oneflow.env.ctrl_port([YOUR PORT])'")
+            raise ValueError(
+                "a ctrl_port is required if running multi-node, set it with 'oneflow.env.ctrl_port([YOUR PORT])'"
+            )
+
 
 def _MakeMachine(machines):
     if isinstance(machines, str):
