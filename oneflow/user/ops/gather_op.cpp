@@ -27,7 +27,6 @@ REGISTER_USER_OP("gather")
       CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
       const int64_t axis = ctx->Attr<int64_t>("axis");
       const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
-      CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
       CHECK_GT_OR_RETURN(indices->shape().NumAxes(), 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
 
@@ -40,7 +39,6 @@ REGISTER_USER_OP("gather")
                      in->shape().dim_vec().end());
       *out->mut_shape() = Shape(dim_vec);
       out->set_is_dynamic(indices->is_dynamic() || in->is_dynamic());
-      *out->mut_data_type() = in->data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -83,7 +81,9 @@ REGISTER_USER_OP("gather")
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
       *out->mut_data_type() = in->data_type();
       return Maybe<void>::Ok();
     });

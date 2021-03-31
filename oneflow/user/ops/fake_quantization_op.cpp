@@ -110,7 +110,7 @@ REGISTER_USER_OP("fake_quantization")
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
-                        });
+    });
 
 REGISTER_USER_OP_GRAD("fake_quantization")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
