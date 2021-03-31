@@ -24,16 +24,14 @@ namespace oneflow {
       .Output("y")                                                                            \
       .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)                        \
       .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)                                   \
-      .SetInferDataTypeFn(user_op::TensorDescInferFnUtil::UnchangedDataType);                                  
-                                                                                              \
+      .SetInferDataTypeFn(user_op::TensorDescInferFnUtil::UnchangedDataType);                 \                
   REGISTER_USER_OP((std::string("") + math_unary_elementwise_type + "_grad"))                 \
       .Input("x")                                                                             \
       .Input("dy")                                                                            \
       .Output("dx")                                                                           \
       .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)                        \
       .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)                                   \
-      .SetInferDataTypeFn(user_op::TensorDescInferFnUtil::UnchangedDataType);                                
-                                                                                              \
+      .SetInferDataTypeFn(user_op::TensorDescInferFnUtil::UnchangedDataType);                 \              
   REGISTER_USER_OP_GRAD(math_unary_elementwise_type)                                          \
       .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {  \
         if (op.NeedGenGradTensor4OpInput("x", 0)) {                                           \
