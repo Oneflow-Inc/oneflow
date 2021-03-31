@@ -35,7 +35,10 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) { return Maybe<void>::Ok(); }
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
+  *ctx->Dtype4ArgNameAndIndex("output_tensor", 0) = *ctx->Dtype4ArgNameAndIndex("input_tensor", 0);
+  return Maybe<void>::Ok();
+}
 
 template<template<typename> class binary_func>
 void GeneratePartialSbp(user_op::SbpContext* ctx, int64_t axis) {
