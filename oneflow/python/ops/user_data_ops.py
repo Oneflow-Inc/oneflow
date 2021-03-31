@@ -2413,15 +2413,12 @@ def gpt_data_loader(
         str(parallel_distribution),
     )
 
-    broadcast_paral_dist = [oneflow_api.distribute.broadcast()] * len(parallel_distribution)
     iteration = flow.get_variable(
         name=iteration_name,
         shape=(1,),
         dtype=flow.int64,
         initializer=flow.constant_initializer(0, flow.int64),
-        trainable=True,
         model_name="iteration",
-        parallel_distribution=broadcast_paral_dist,
         reuse=False,
     )
 
