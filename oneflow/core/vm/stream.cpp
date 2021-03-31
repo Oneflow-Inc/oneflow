@@ -56,6 +56,7 @@ void Stream::DeleteInstruction(ObjectMsgPtr<Instruction>&& instruction) {
   CHECK(instruction->is_pending_instruction_link_empty());
   CHECK(instruction->is_instruction_link_empty());
   CHECK_EQ(instruction->ref_cnt(), 1);
+  instruction->clear_instr_msg();
   auto* instruction_ptr = instruction.Mutable();
   mut_free_instruction_list()->EmplaceBack(std::move(instruction));
   instruction_ptr->__Delete__();
