@@ -16,10 +16,63 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_KERNEL_EAGER_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_EAGER_KERNEL_H_
 
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/framework/op_kernel.h"
 
 namespace oneflow {
+
+namespace one {
+
+class LocalUserKernelInferContext;
+class LocalUserKernelComputeContext;
+
+class TensorTuple;
+
+class StatefulOpKernel final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(StatefulOpKernel);
+  StatefulOpKernel(const JobDesc* job_desc, const KernelConf& kernel_conf,
+                   std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+                       bn_in_op2bn_index2input_tensor_index,
+                   std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+                       bn_in_op2bn_index2output_tensor_index);
+  ~StatefulOpKernel() = default;
+
+  LocalUserKernelInferContext* UpdateInferContext(one::TensorTuple* inputs,
+                                                  one::TensorTuple* outputs);
+  LocalUserKernelComputeContext* UpdateComputeContext(one::TensorTuple* inputs,
+                                                      one::TensorTuple* outputs,
+                                                      DeviceCtx* device_ctx);
+
+  user_op::TensorDescInferFn TensorDescInferFn() const;
+
+  Maybe<void> TryInitOpKernelState(DeviceCtx* device_ctx);
+
+  eager::EagerBlobObject mut_temp_blob_object() { TODO(); };
+
+  std::shared_ptr<user_op::OpKernelState> mut_opkernel_state() { return state_; }
+
+  // TODO: implement
+  bool need_check_mem_case() { TODO(); };
+  const MemoryCase& mem_case() { TODO(); };
+
+ private:
+  void InitOpKernel(const KernelConf& kernel_conf);
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    UNIMPLEMENTED();
+  }
+  std::unique_ptr<const user_op::OpKernel> kernel_;
+  std::unique_ptr<LocalUserKernelInferContext> infer_ctx_;
+  std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
+  std::shared_ptr<user_op::OpKernelState> state_;
+  std::shared_ptr<HashMap<std::string, std::vector<int64_t>>> bn_in_op2bn_index2input_tensor_index_;
+  std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+      bn_in_op2bn_index2output_tensor_index_;
+};
+
+}  // namespace one
 
 class EagerKernel final : public Kernel {
  public:

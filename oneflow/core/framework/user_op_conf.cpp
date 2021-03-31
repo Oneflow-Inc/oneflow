@@ -46,6 +46,11 @@ UserOpConfWrapper::UserOpConfWrapper(std::shared_ptr<const OperatorConf> op_conf
   }
 }
 
+UserOpConfWrapper::UserOpConfWrapper(const OperatorConf* op_conf)
+    : UserOpConfWrapper(std::shared_ptr<const OperatorConf>(op_conf, [](const OperatorConf*) {
+        // do nothing
+      })) {}
+
 UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf)
     : UserOpConfWrapper(std::make_shared<OperatorConf>(op_conf)) {}
 

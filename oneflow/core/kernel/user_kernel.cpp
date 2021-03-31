@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/user_kernel.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
@@ -55,6 +56,7 @@ class UserKernelBaseContext {
 
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                            ArgVec* arg_vec) {
+      arg_vec->reserve(arg_map.size());
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
           arg_vec->emplace_back(std::make_pair(it->first, i));
@@ -303,6 +305,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         op_infer_ctx_(kernel_conf, &job_desc) {
     auto InitArg2Blob = [this](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
+      arg2tensor_.reserve(arg2tensor_.size() + arg_map.size());
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         const std::string& arg_name = it->first;
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
@@ -411,6 +414,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
         device_ctx_(device_ctx),
         base_ctx_(std::move(UserKernelBaseContext(kernel_conf, job_desc))) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
+      arg2bn_tensor_pair_.reserve(arg2bn_tensor_pair_.size() + arg_map.size());
       for (const auto& it : arg_map) {
         const std::string& arg_name = it.first;
         for (int32_t i = 0; i < it.second.s_size(); ++i) {
@@ -611,5 +615,319 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   kernel_->Compute(&compute_ctx, new_opkernel_state.get());
   return new_opkernel_state;
 }
+
+namespace one {
+
+class LocalUserKernelBaseContext {
+ public:
+  LocalUserKernelBaseContext(const KernelConf& kernel_conf, const JobDesc& job_desc,
+                             std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+                                 bn_in_op2bn_index2input_tensor_index,
+                             std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+                                 bn_in_op2bn_index2output_tensor_index)
+      : job_desc_(job_desc),
+        bn_in_op2bn_index2input_tensor_index_(bn_in_op2bn_index2input_tensor_index),
+        bn_in_op2bn_index2output_tensor_index_(bn_in_op2bn_index2output_tensor_index) {
+    CHECK(kernel_conf.has_user_conf());
+    CHECK(kernel_conf.op_attribute().op_conf().has_user_conf());
+
+    device_tag_ = kernel_conf.op_attribute().op_conf().device_tag();
+    device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
+
+    // TODO: set inputs_ and outputs_
+  }
+  ~LocalUserKernelBaseContext() = default;
+
+  DeviceType device_type() const { return device_type_; }
+  const std::string& device_tag() const { return device_tag_; }
+  const JobDesc& job_desc() const { return job_desc_; }
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const {
+    if (bn_in_op2bn_index2input_tensor_index_->find(arg_name)
+        != bn_in_op2bn_index2input_tensor_index_->end()) {
+      // return input_tensors_.....
+      TODO();
+    }
+    if (bn_in_op2bn_index2input_tensor_index_->find(arg_name)
+        != bn_in_op2bn_index2input_tensor_index_->end()) {
+      // return output_tensors_....
+      TODO();
+    }
+    TODO();
+  }
+
+  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) const {
+    if (bn_in_op2bn_index2input_tensor_index_->find(arg_name)
+        != bn_in_op2bn_index2input_tensor_index_->end()) {
+      // return input_tensors_.....
+      TODO();
+    }
+    if (bn_in_op2bn_index2input_tensor_index_->find(arg_name)
+        != bn_in_op2bn_index2input_tensor_index_->end()) {
+      // return output_tensors_....
+      TODO();
+    }
+    TODO();
+  }
+
+  void Update(one::TensorTuple* inputs, one::TensorTuple* outputs) {
+    input_tensors_ = inputs;
+    output_tensors_ = outputs;
+  }
+
+  const ArgVec& inputs() const { return *inputs_; }
+  const ArgVec& outputs() const { return *outputs_; }
+
+ private:
+  std::shared_ptr<ArgVec> inputs_;
+  std::shared_ptr<ArgVec> outputs_;
+  DeviceType device_type_;
+  std::string device_tag_;
+  const JobDesc& job_desc_;
+  std::shared_ptr<HashMap<std::string, std::vector<int64_t>>> bn_in_op2bn_index2input_tensor_index_;
+  std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+      bn_in_op2bn_index2output_tensor_index_;
+  one::TensorTuple* input_tensors_;
+  one::TensorTuple* output_tensors_;
+};
+
+class LocalKernelCreateContext final : public user_op::KernelCreateContext {
+ public:
+  explicit LocalKernelCreateContext(const KernelConf& kernel_conf)
+      : user_op_conf_(&kernel_conf.op_attribute().op_conf()) {}
+
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
+ private:
+  user_op::UserOpConfWrapper user_op_conf_;
+};
+
+class LocalUserKernelInitContext final : public user_op::KernelInitContext {
+ public:
+  explicit LocalUserKernelInitContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
+                                      const JobDesc& job_desc,
+                                      std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+                                          bn_in_op2bn_index2input_tensor_index,
+                                      std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+                                          bn_in_op2bn_index2output_tensor_index)
+      : user_op::KernelInitContext(
+          user_op::UserOpConfWrapper(&kernel_conf.op_attribute().op_conf())),
+        device_ctx_(device_ctx),
+        base_ctx_(LocalUserKernelBaseContext(kernel_conf, job_desc,
+                                             bn_in_op2bn_index2input_tensor_index,
+                                             bn_in_op2bn_index2output_tensor_index)) {}
+  ~LocalUserKernelInitContext() override = default;
+
+  DeviceCtx* device_ctx() override { return device_ctx_; }
+
+  DeviceType device_type() const override { return base_ctx_.device_type(); }
+  const ParallelContext& parallel_ctx() const override { UNIMPLEMENTED(); }
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const override {
+    return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+  const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                               int32_t index) const override {
+    UNIMPLEMENTED();
+  }
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                 int32_t index) const override {
+    UNIMPLEMENTED();
+  }
+
+  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
+                                                                   int32_t index) const override {
+    UNIMPLEMENTED();
+  }
+
+  const ArgVec& inputs() const override { return base_ctx_.inputs(); }
+  const ArgVec& outputs() const override { return base_ctx_.outputs(); }
+  const ParallelDesc& parallel_desc() const override { UNIMPLEMENTED(); }
+
+ private:
+  DeviceCtx* device_ctx_;
+  LocalUserKernelBaseContext base_ctx_;
+};
+
+class LocalUserKernelInferContext final : public user_op::KernelInferContext {
+ public:
+  explicit LocalUserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
+                                       const JobDesc& job_desc,
+                                       std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+                                           bn_in_op2bn_index2input_tensor_index,
+                                       std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+                                           bn_in_op2bn_index2output_tensor_index)
+      : user_op::KernelInferContext(
+          user_op::UserOpConfWrapper(&kernel_conf.op_attribute().op_conf())),
+        device_ctx_(device_ctx),
+        base_ctx_(LocalUserKernelBaseContext(kernel_conf, job_desc,
+                                             bn_in_op2bn_index2input_tensor_index,
+                                             bn_in_op2bn_index2output_tensor_index)),
+        op_infer_ctx_(kernel_conf, &job_desc) {
+    const auto* op_reg_val = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(
+        kernel_conf.op_attribute().op_conf().user_conf().op_type_name());
+    CHECK_NOTNULL(op_reg_val);
+    if (op_reg_val->physical_tensor_desc_infer_fn) {
+      tensor_desc_infer_fn_ = op_reg_val->physical_tensor_desc_infer_fn;
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+  ~LocalUserKernelInferContext() = default;
+
+  DeviceType device_type() const override { return base_ctx_.device_type(); }
+  const ParallelContext& parallel_ctx() const override { UNIMPLEMENTED(); }
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const override {
+    return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+  const ArgVec& inputs() const override { return base_ctx_.inputs(); }
+  const ArgVec& outputs() const override { return base_ctx_.outputs(); }
+
+  DeviceCtx* device_ctx() override { return device_ctx_; }
+  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) override {
+    return base_ctx_.Tensor4ArgNameAndIndex(arg_name, arg_index);
+  }
+  const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name,
+                                             int32_t arg_index) override {
+    user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
+    CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
+                                 << ") is not found";
+    return arg_tensor->shape();
+  }
+  MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
+                                             int32_t arg_index) override {
+    user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
+    CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
+                                 << ") is not found";
+    return arg_tensor->mut_shape();
+  }
+
+  user_op::InferContext* MutOpInferContext() override { return &op_infer_ctx_; }
+  const user_op::TensorDescInferFn& GetOpInferFn() const override { return tensor_desc_infer_fn_; }
+
+  void Update(one::TensorTuple* inputs, one::TensorTuple* outputs) {
+    input_tensors_ = inputs;
+    output_tensors_ = outputs;
+    base_ctx_.Update(inputs, outputs);
+  }
+
+ private:
+  DeviceCtx* device_ctx_;
+  LocalUserKernelBaseContext base_ctx_;
+  UserKernelOpInferContext op_infer_ctx_;
+  user_op::TensorDescInferFn tensor_desc_infer_fn_;
+
+  std::shared_ptr<HashMap<std::string, std::vector<int64_t>>> bn_in_op2bn_index2input_tensor_index_;
+  std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+      bn_in_op2bn_index2output_tensor_index_;
+  one::TensorTuple* input_tensors_;
+  one::TensorTuple* output_tensors_;
+};
+
+class LocalUserKernelComputeContext final : public user_op::KernelComputeContext {
+ public:
+  explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
+                                         const JobDesc& job_desc,
+                                         std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+                                             bn_in_op2bn_index2input_tensor_index,
+                                         std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+                                             bn_in_op2bn_index2output_tensor_index)
+      : user_op::KernelComputeContext(
+          user_op::UserOpConfWrapper(&kernel_conf.op_attribute().op_conf())),
+        device_ctx_(device_ctx),
+        base_ctx_(LocalUserKernelBaseContext(kernel_conf, job_desc,
+                                             bn_in_op2bn_index2input_tensor_index,
+                                             bn_in_op2bn_index2output_tensor_index)) {}
+  ~LocalUserKernelComputeContext() = default;
+
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const override {
+    return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+
+  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return base_ctx_.Tensor4ArgNameAndIndex(arg_name, index);
+  }
+  DeviceCtx* device_ctx() override { return device_ctx_; }
+
+  DeviceType device_type() const override { return base_ctx_.device_type(); }
+  const ParallelContext& parallel_ctx() const override { UNIMPLEMENTED(); }
+  const JobDesc& job_desc() const override { return base_ctx_.job_desc(); }
+
+  const ArgVec& inputs() const override { return base_ctx_.inputs(); }
+  const ArgVec& outputs() const override { return base_ctx_.outputs(); }
+
+  void Update(one::TensorTuple* inputs, one::TensorTuple* outputs, DeviceCtx* device_ctx) {
+    input_tensors_ = inputs;
+    output_tensors_ = outputs;
+    device_ctx_ = device_ctx;
+    base_ctx_.Update(inputs, outputs);
+  }
+
+ private:
+  DeviceCtx* device_ctx_;
+  LocalUserKernelBaseContext base_ctx_;
+  std::shared_ptr<HashMap<std::string, std::vector<int64_t>>> bn_in_op2bn_index2input_tensor_index_;
+  std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+      bn_in_op2bn_index2output_tensor_index_;
+  one::TensorTuple* input_tensors_;
+  one::TensorTuple* output_tensors_;
+};
+
+StatefulOpKernel::StatefulOpKernel(const JobDesc* job_desc, const KernelConf& kernel_conf,
+                                   std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+                                       bn_in_op2bn_index2input_tensor_index,
+                                   std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>
+                                       bn_in_op2bn_index2output_tensor_index)
+    : bn_in_op2bn_index2input_tensor_index_(bn_in_op2bn_index2input_tensor_index),
+      bn_in_op2bn_index2output_tensor_index_(bn_in_op2bn_index2output_tensor_index) {
+  InitBase(job_desc, kernel_conf);
+  InitOpKernel(kernel_conf);
+  infer_ctx_.reset(new LocalUserKernelInferContext(nullptr, kernel_conf, *job_desc,
+                                                   bn_in_op2bn_index2input_tensor_index,
+                                                   bn_in_op2bn_index2output_tensor_index));
+  compute_ctx_.reset(new LocalUserKernelComputeContext(nullptr, kernel_conf, *job_desc,
+                                                       bn_in_op2bn_index2input_tensor_index,
+                                                       bn_in_op2bn_index2output_tensor_index));
+}
+
+void StatefulOpKernel::InitOpKernel(const KernelConf& kernel_conf) {
+  const std::string& op_type_name = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
+  auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+      op_type_name, UserKernelRegContext(kernel_conf, job_desc())));
+  CHECK_NOTNULL(kernel_reg_val);
+  LocalKernelCreateContext create_ctx(kernel_conf);
+  kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
+}
+
+Maybe<void> StatefulOpKernel::TryInitOpKernelState(DeviceCtx* device_ctx) {
+  if (state_ == nullptr) {
+    LocalUserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc(),
+                                        bn_in_op2bn_index2input_tensor_index_,
+                                        bn_in_op2bn_index2output_tensor_index_);
+    state_ = kernel_->CreateOpKernelState(&init_ctx);
+  }
+  return Maybe<void>::Ok();
+}
+
+user_op::TensorDescInferFn StatefulOpKernel::TensorDescInferFn() const {
+  return infer_ctx_->GetOpInferFn();
+}
+
+LocalUserKernelInferContext* StatefulOpKernel::UpdateInferContext(one::TensorTuple* inputs,
+                                                                  one::TensorTuple* outputs) {
+  infer_ctx_->Update(inputs, outputs);
+  return infer_ctx_.get();
+}
+
+LocalUserKernelComputeContext* StatefulOpKernel::UpdateComputeContext(one::TensorTuple* inputs,
+                                                                      one::TensorTuple* outputs,
+                                                                      DeviceCtx* device_ctx) {
+  compute_ctx_->Update(inputs, outputs, device_ctx);
+  return compute_ctx_.get();
+}
+
+}  // namespace one
 
 }  // namespace oneflow

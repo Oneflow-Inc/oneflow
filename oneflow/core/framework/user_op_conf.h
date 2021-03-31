@@ -67,6 +67,7 @@ class TypedAttrVal final : public AttrVal {
 
 class UserOpConfWrapper final {
  public:
+  UserOpConfWrapper(const OperatorConf*);
   UserOpConfWrapper(const OperatorConf&);
   UserOpConfWrapper(std::shared_ptr<const OperatorConf> op_conf);
   const OperatorConf& op_conf() const;
