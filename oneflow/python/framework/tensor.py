@@ -21,7 +21,7 @@ import numpy as np
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.check_point_v2 as check_point_v2
-import oneflow.python.framework.runtime_mode as rt_mode
+from oneflow.python.framework.function_util import global_function_or_identity
 import oneflow as flow
 
 
@@ -477,16 +477,6 @@ def _default_initializer_for_determining(tensor):
         )
     determined_tensor._set_blob_object(blob.blob_object)
     return determined_tensor
-
-
-def global_function_or_identity(*args, **kwargs):
-    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
-        assert flow.eager_execution_enabled()
-        return flow.global_function(*args, **kwargs)
-    else:
-        assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
-        identity_decorator = lambda func: func
-        return identity_decorator
 
 
 def _numpy_initializer_for_determining(tensor):

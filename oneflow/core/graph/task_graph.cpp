@@ -371,7 +371,7 @@ void ForEachOpGraphNecessaryCtrlEdge(
       const OpNode* src = op_graph->OpNode4OpName(ctrl_in_op_name);
       CHECK(!IsOpGraphDataReachable(dst, src));
       if (!IsOpGraphDataReachable(src, dst)) {
-        CHECK(src->parallel_desc().EqualsIgnoringDeviceType(dst->parallel_desc()));
+        CHECK(src->parallel_desc().EqualsOnlyForMachineAndDeviceIds(dst->parallel_desc()));
         const Shape* src_time_shape = CHECK_JUST(src->op().GetOpTimeShape()).get();
         const Shape* dst_time_shape = CHECK_JUST(dst->op().GetInputBlobFastestTimeShape()).get();
         if (dst_time_shape == nullptr) {

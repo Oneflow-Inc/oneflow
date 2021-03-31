@@ -24,6 +24,7 @@ import numpy as np
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.check_point_v2 import FeedValueToVariable
+from oneflow.python.framework.function_util import global_function_or_identity
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.parameter import Parameter
 
@@ -82,7 +83,16 @@ class Module(object):
                     result = (result,)
                 args = result
 
-        return self.forward(*args)
+        res = None
+
+        @global_function_or_identity()
+        def job():
+            nonlocal res
+            res = self.forward(*args)
+
+        job()
+
+        return res
 
     def add_module(self, name: str, module: Optional["Module"]) -> None:
         r"""Adds a child module to the current module.

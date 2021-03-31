@@ -81,7 +81,7 @@ Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorT
   CHECK_OR_RETURN(std::all_of(
       inputs.begin(), inputs.end(),
       [](const std::shared_ptr<one::Tensor>& tensor) { return tensor->requires_grad(); }))
-      << "All inputs tensor `.requires_grad` will be true";
+      << "All input tensors `.requires_grad` should be true";
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
   return one::GetThreadLocalAutogradEngine()->RunBackwardAndReturnInputsTensorGrad(
       outputs, inputs, *gradients, retain_graph, create_graph);

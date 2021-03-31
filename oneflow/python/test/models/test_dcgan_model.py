@@ -14,114 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-import oneflow.typing as oft
 import numpy as np
 import os
 import unittest
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_1n1c(test_case):
-    dcgan = DCGAN()
-    dcgan.compare_with_tf(1)
-
-
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-def test_1n4c(test_case):
-    dcgan = DCGAN()
-    dcgan.compare_with_tf(4)
-
-
-class DCGAN:
-    def __init__(self):
+class DCGAN(flow.model.Model):
+    def __init__(self, gpu_num, batch_size, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.gpu_num = gpu_num
         self.lr = 1e-4
         self.z_dim = 100
-        self.batch_size = 32
+        self.batch_size = batch_size
 
-    def compare_with_tf(self, gpu_num, result_dir="/dataset/gan_test/dcgan/"):
-        flow.config.gpu_device_num(gpu_num)
-        func_config = flow.FunctionConfig()
-        func_config.default_data_type(flow.float)
-        func_config.default_logical_view(flow.scope.consistent_view())
-
-        @flow.global_function(type="train", function_config=func_config)
-        def test_generator(
-            z: oft.Numpy.Placeholder((self.batch_size, self.z_dim)),
-            label1: oft.Numpy.Placeholder((self.batch_size, 1)),
-        ):
-            g_out = self.generator(z, trainable=True, const_init=True)
-            g_logits = self.discriminator(g_out, trainable=False, const_init=True)
-            g_loss = flow.nn.sigmoid_cross_entropy_with_logits(
-                flow.ones_like(g_logits),
-                g_logits,
-                name="Gloss_sigmoid_cross_entropy_with_logits",
-            )
-
-            flow.optimizer.SGD(
-                flow.optimizer.PiecewiseConstantScheduler([], [self.lr]), momentum=0
-            ).minimize(g_loss)
-            return g_loss
-
-        @flow.global_function(type="train", function_config=func_config)
-        def test_discriminator(
-            z: oft.Numpy.Placeholder((self.batch_size, 100)),
-            images: oft.Numpy.Placeholder((self.batch_size, 1, 28, 28)),
-            label1: oft.Numpy.Placeholder((self.batch_size, 1)),
-            label0: oft.Numpy.Placeholder((self.batch_size, 1)),
-        ):
-            g_out = self.generator(z, trainable=False, const_init=True)
-            g_logits = self.discriminator(g_out, trainable=True, const_init=True)
-            d_loss_fake = flow.nn.sigmoid_cross_entropy_with_logits(
-                flow.zeros_like(g_logits),
-                g_logits,
-                name="Dloss_fake_sigmoid_cross_entropy_with_logits",
-            )
-
-            d_logits = self.discriminator(
-                images, trainable=True, reuse=True, const_init=True
-            )
-            d_loss_real = flow.nn.sigmoid_cross_entropy_with_logits(
-                flow.ones_like(d_logits),
-                d_logits,
-                name="Dloss_real_sigmoid_cross_entropy_with_logits",
-            )
-            d_loss = d_loss_fake + d_loss_real
-            flow.optimizer.SGD(
-                flow.optimizer.PiecewiseConstantScheduler([], [self.lr]), momentum=0
-            ).minimize(d_loss)
-
-            return d_loss
-
-        check_point = flow.train.CheckPoint()
-        check_point.init()
-
-        z = np.load(os.path.join(result_dir, "z.npy"))
-        imgs = np.load(os.path.join(result_dir, "img.npy")).transpose(0, 3, 1, 2)
-        label1 = np.ones((self.batch_size, 1)).astype(np.float32)
-        label0 = np.zeros((self.batch_size, 1)).astype(np.float32)
-        g_loss = test_generator(z, label1).get()
-        d_loss = test_discriminator(z, imgs, label1, label0).get()
-        tf_g_loss = np.load(os.path.join(result_dir, "g_loss.npy"))
-        tf_d_loss = np.load(os.path.join(result_dir, "d_loss.npy"))
-
-        if gpu_num == 1:  # multi-gpu result can not pass
-            assert np.allclose(
-                g_loss.numpy(), tf_g_loss, rtol=1e-2, atol=1e-1
-            ), "{}-{}".format(g_loss.ndarray().mean(), tf_g_loss.mean())
-            assert np.allclose(
-                d_loss.numpy(), tf_d_loss, rtol=1e-2, atol=1e-1
-            ), "{}-{}".format(d_loss.ndarray().mean(), tf_d_loss.mean())
-
-    def generator(self, z, const_init=False, trainable=True):
+    def _generator(self, z, const_init=False, trainable=True):
         # (n, 256, 7, 7)
-        h0 = layers.dense(
+        h0 = Layers.dense(
             z, 7 * 7 * 256, name="g_fc1", const_init=const_init, trainable=trainable
         )
-        h0 = layers.batchnorm(h0, axis=1, name="g_bn1")
+        h0 = Layers.batchnorm(h0, axis=1, name="g_bn1")
         h0 = flow.nn.leaky_relu(h0, 0.3)
         h0 = flow.reshape(h0, (-1, 256, 7, 7))
         # (n, 128, 7, 7)
-        h1 = layers.deconv2d(
+        h1 = Layers.deconv2d(
             h0,
             128,
             5,
@@ -130,10 +45,10 @@ class DCGAN:
             const_init=const_init,
             trainable=trainable,
         )
-        h1 = layers.batchnorm(h1, name="g_bn2")
+        h1 = Layers.batchnorm(h1, name="g_bn2")
         h1 = flow.nn.leaky_relu(h1, 0.3)
         # (n, 64, 14, 14)
-        h2 = layers.deconv2d(
+        h2 = Layers.deconv2d(
             h1,
             64,
             5,
@@ -142,10 +57,10 @@ class DCGAN:
             const_init=const_init,
             trainable=trainable,
         )
-        h2 = layers.batchnorm(h2, name="g_bn3")
+        h2 = Layers.batchnorm(h2, name="g_bn3")
         h2 = flow.nn.leaky_relu(h2, 0.3)
         # (n, 1, 28, 28)
-        out = layers.deconv2d(
+        out = Layers.deconv2d(
             h2,
             1,
             5,
@@ -157,9 +72,9 @@ class DCGAN:
         out = flow.math.tanh(out)
         return out
 
-    def discriminator(self, img, const_init=False, trainable=True, reuse=False):
+    def _discriminator(self, img, const_init=False, trainable=True, reuse=False):
         # (n, 1, 28, 28)
-        h0 = layers.conv2d(
+        h0 = Layers.conv2d(
             img,
             64,
             5,
@@ -171,7 +86,7 @@ class DCGAN:
         h0 = flow.nn.leaky_relu(h0, 0.3)
         # h0 = flow.nn.dropout(h0, rate=0.3)
         # (n, 64, 14, 14)
-        h1 = layers.conv2d(
+        h1 = Layers.conv2d(
             h0,
             128,
             5,
@@ -185,13 +100,133 @@ class DCGAN:
         # (n, 128 * 7 * 7)
         out = flow.reshape(h1, (self.batch_size, -1))
         # (n, 1)
-        out = layers.dense(
+        out = Layers.dense(
             out, 1, name="d_fc", const_init=const_init, trainable=trainable, reuse=reuse
         )
         return out
 
+    def forward(self, batch, const_init=False, trainable=False):
+        return self._generator(batch, const_init=const_init, trainable=trainable)
 
-class layers:
+    def training_step(self, batch, optimizer_idx):
+        if optimizer_idx == 0:
+            # generator
+            (z,) = batch
+            g_out = self._generator(z, trainable=True, const_init=True)
+            g_logits = self._discriminator(g_out, trainable=False, const_init=True)
+            g_loss = flow.nn.sigmoid_cross_entropy_with_logits(
+                flow.ones_like(g_logits),
+                g_logits,
+                name="Gloss_sigmoid_cross_entropy_with_logits",
+            )
+            return (g_loss, g_out)
+        elif optimizer_idx == 1:
+            # discriminator
+            z, images = batch
+            g_out = self._generator(z, trainable=False, const_init=True)
+            g_logits = self._discriminator(g_out, trainable=True, const_init=True)
+            d_loss_fake = flow.nn.sigmoid_cross_entropy_with_logits(
+                flow.zeros_like(g_logits),
+                g_logits,
+                name="Dloss_fake_sigmoid_cross_entropy_with_logits",
+            )
+
+            d_logits = self._discriminator(
+                images, trainable=True, reuse=True, const_init=True
+            )
+            d_loss_real = flow.nn.sigmoid_cross_entropy_with_logits(
+                flow.ones_like(d_logits),
+                d_logits,
+                name="Dloss_real_sigmoid_cross_entropy_with_logits",
+            )
+            d_loss = d_loss_fake + d_loss_real
+            return d_loss
+
+    def configure_optimizers(self):
+        generator_opt = flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [self.lr]), momentum=0
+        )
+        discriminator_opt = flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [self.lr]), momentum=0
+        )
+        return [generator_opt, discriminator_opt]
+
+
+class LossMoniter(flow.model.Callback):
+    def __init__(self, result_dir):
+        self.result_dir = result_dir
+
+    def on_training_step_end(self, step_idx, outputs, optimizer_idx):
+        if optimizer_idx == 0:
+            g_loss, g_out = outputs
+            fmt_str = "{:>12}  {:>12}  {:>12.6f}"
+            print(fmt_str.format(step_idx, "train g_loss:", g_loss.numpy().mean()))
+            print(fmt_str.format(step_idx, "train g_out:", g_out.numpy().mean()))
+            tf_g_loss = np.load(os.path.join(self.result_dir, "g_loss.npy"))
+            assert np.allclose(
+                g_loss.numpy(), tf_g_loss, rtol=1e-2, atol=1e-1
+            ), "{}-{}".format(g_loss.numpy().mean(), tf_g_loss.mean())
+        elif optimizer_idx == 1:
+            d_loss = outputs
+            fmt_str = "{:>12}  {:>12}  {:>12.6f}"
+            print(fmt_str.format(step_idx, "train d_loss:", d_loss.numpy().mean()))
+            tf_d_loss = np.load(os.path.join(self.result_dir, "d_loss.npy"))
+            assert np.allclose(
+                d_loss.numpy(), tf_d_loss, rtol=1e-2, atol=1e-1
+            ), "{}-{}".format(d_loss.numpy().mean(), tf_d_loss.mean())
+
+
+class NumpyTrainData(flow.model.NumpyDataModule):
+    def __init__(self, result_dir, batch_size):
+        super().__init__()
+        self.z = np.load(os.path.join(result_dir, "z.npy"))
+        self.images = np.load(os.path.join(result_dir, "img.npy")).transpose(0, 3, 1, 2)
+
+    def forward(self, step_idx, optimizer_idx):
+        if optimizer_idx == 0:
+            return (self.z,)
+        else:
+            return (self.z, self.images)
+
+
+class NumpyValData(flow.model.NumpyDataModule):
+    def __init__(self, result_dir, batch_size):
+        super().__init__()
+        self.z = np.load(os.path.join(result_dir, "z.npy"))
+
+    def forward(self, step_idx):
+        return (self.z,)
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+def test_1n1c(test_case):
+    dcgan_compare = DCGANCompare()
+    dcgan_compare.compare_with_tf(1)
+
+
+class DCGANCompare:
+    def compare_with_tf(self, gpu_num, result_dir="/dataset/gan_test/dcgan/"):
+        batch_size = 32
+
+        flow.config.gpu_device_num(gpu_num)
+
+        train_exe_config = flow.ExecutionConfig()
+        train_exe_config.default_data_type(flow.float)
+        train_exe_config.default_logical_view(flow.scope.consistent_view())
+        train_config = flow.model.TrainingConfig()
+        train_config.config_execution(train_exe_config)
+        train_config.config_data(NumpyTrainData(result_dir, batch_size))
+
+        loss_monitor_cb = LossMoniter(result_dir)
+
+        dcgan_md = DCGAN(gpu_num, batch_size, is_deprecated_function_style=True,)
+
+        dcgan_md.fit(
+            training_config=train_config, callbacks=[loss_monitor_cb], max_steps=3,
+        )
+
+
+class Layers:
     @staticmethod
     def deconv2d(
         input,
@@ -204,7 +239,7 @@ class layers:
         const_init=False,
         use_bias=False,
     ):
-        name_ = name if reuse == False else name + "_reuse"
+        name_ = name if not reuse else name + "_reuse"
         # weight : [in_channels, out_channels, height, width]
         weight_shape = (input.shape[1], filters, size, size)
         output_shape = (
@@ -261,7 +296,7 @@ class layers:
         const_init=False,
         use_bias=True,
     ):
-        name_ = name if reuse == False else name + "_reuse"
+        name_ = name if not reuse else name + "_reuse"
 
         # (output_dim, k_h, k_w, input.shape[3]) if NHWC
         weight_shape = (filters, input.shape[1], size, size)
@@ -308,7 +343,7 @@ class layers:
         reuse=False,
         const_init=False,
     ):
-        name_ = name if reuse == False else name + "_reuse"
+        name_ = name if not reuse else name + "_reuse"
 
         in_shape = input.shape
         in_num_axes = len(in_shape)
@@ -349,5 +384,5 @@ class layers:
 
     @staticmethod
     def batchnorm(input, name, axis=1, reuse=False):
-        name_ = name if reuse == False else name + "_reuse"
+        name_ = name if not reuse else name + "_reuse"
         return flow.layers.batch_normalization(input, axis=axis, name=name_)

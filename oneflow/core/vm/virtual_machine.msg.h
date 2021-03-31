@@ -61,6 +61,8 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(InstructionMsg, instr_msg_link, pending_msg_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, waiting_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, ready_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, vm_stat_running_instruction_link,
+                              vm_stat_running_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, front_seq_infer_instr_link, front_seq_infer_instr_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, front_seq_compute_instr_link, front_seq_compute_instr_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Stream, active_stream_link, active_stream_list);
@@ -78,7 +80,10 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   using Id2LogicalObject = VirtualMachine::id2logical_object_ObjectMsgSkipListType;
   using ActiveStreamList = VirtualMachine::active_stream_list_ObjectMsgListType;
 
-  void TryRunFrontSeqInstructions();
+  template<typename ContainerT>
+  void TryRunFrontSeqInstruction(ContainerT* front_seq_list,
+                                        /*out*/ ReadyInstructionList* ready_instruction_list);
+  void TryRunFrontSeqInstruction(/*out*/ ReadyInstructionList* ready_instruction_list);
   void ReleaseInstruction(Instruction* instruction,
                             /*out*/ ReadyInstructionList* ready_instruction_list);
   void TryReleaseFinishedInstructions(
