@@ -38,8 +38,7 @@ class SoftmaxKernel final : public user_op::OpKernel {
     multi_store.dst = out->mut_dptr<T>();
     multi_store.row_size = cols;
     cuda::softmax::DispatchSoftmax<decltype(multi_fetch), decltype(multi_store), T>(
-        ctx->device_ctx()->cuda_stream(), multi_fetch, multi_store, rows, cols, in->dptr<T>(),
-        out->mut_dptr<T>());
+        ctx->device_ctx()->cuda_stream(), multi_fetch, multi_store, rows, cols);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -75,8 +74,7 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
     multi_store.dst = dx->mut_dptr<T>();
     multi_store.row_size = cols;
     cuda::softmax::DispatchSoftmaxGrad<decltype(multi_fetch), decltype(multi_store), T>(
-        ctx->device_ctx()->cuda_stream(), multi_fetch, multi_store, rows, cols, y->dptr<T>(),
-        dy->dptr<T>(), dx->mut_dptr<T>());
+        ctx->device_ctx()->cuda_stream(), multi_fetch, multi_store, rows, cols);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

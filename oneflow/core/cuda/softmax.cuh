@@ -177,8 +177,7 @@ struct MultiStore {
 
 template<typename FETCH, typename STORE, typename T, int pack_size, int cols_per_thread,
          bool padding>
-__global__ void SoftmaxWarpImpl(FETCH fetch, STORE store, const int64_t rows, const int64_t cols,
-                                const T* x, T* y) {
+__global__ void SoftmaxWarpImpl(FETCH fetch, STORE store, const int64_t rows, const int64_t cols) {
   static_assert(cols_per_thread % pack_size == 0, "");
   constexpr int num_packs = cols_per_thread / pack_size;
   assert(cols <= cols_per_thread * kWarpSize);
@@ -188,9 +187,6 @@ __global__ void SoftmaxWarpImpl(FETCH fetch, STORE store, const int64_t rows, co
   const int num_global_warp = gridDim.x * blockDim.y;
   const int lane_id = threadIdx.x;
   for (int64_t row = global_warp_id; row < rows; row += num_global_warp) {
-    const int64_t row_offset = row * cols;
-    const T* row_x = x + row_offset;
-    T* row_y = y + row_offset;
     ComputeType thread_max = -Inf<ComputeType>();
 #pragma unroll
     for (int pack_id = 0; pack_id < num_packs; ++pack_id) {
@@ -229,7 +225,7 @@ __global__ void SoftmaxWarpImpl(FETCH fetch, STORE store, const int64_t rows, co
 template<typename FETCH, typename STORE, typename T, int pack_size, int cols_per_thread,
          bool padding>
 inline void LaunchSoftmaxWarpImpl(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                                  const int64_t cols, const T* x, T* y) {
+                                  const int64_t cols) {
   constexpr int block_size = 128;
   constexpr int waves = 32;
   static_assert(block_size % kWarpSize == 0, "");
@@ -238,31 +234,29 @@ inline void LaunchSoftmaxWarpImpl(cudaStream_t stream, FETCH fetch, STORE store,
   const int64_t num_blocks = (rows + rows_per_block - 1) / rows_per_block;
   const int grid_dim_x = GetNumBlocks(block_size, num_blocks, waves);
   SoftmaxWarpImpl<FETCH, STORE, T, pack_size, cols_per_thread, padding>
-      <<<grid_dim_x, block_dim, 0, stream>>>(fetch, store, rows, cols, x, y);
+      <<<grid_dim_x, block_dim, 0, stream>>>(fetch, store, rows, cols);
 }
 
 template<typename FETCH, typename STORE, typename T, int pack_size, int cols_per_thread>
 inline void DispatchSoftmaxWarpImplPadding(cudaStream_t stream, FETCH fetch, STORE store,
-                                           const int64_t rows, const int64_t cols, const T* x,
-                                           T* y) {
+                                           const int64_t rows, const int64_t cols) {
   if (cols == cols_per_thread * kWarpSize) {
     LaunchSoftmaxWarpImpl<FETCH, STORE, T, pack_size, cols_per_thread, false>(stream, fetch, store,
-                                                                              rows, cols, x, y);
+                                                                              rows, cols);
   } else {
     LaunchSoftmaxWarpImpl<FETCH, STORE, T, pack_size, cols_per_thread, true>(stream, fetch, store,
-                                                                             rows, cols, x, y);
+                                                                             rows, cols);
   }
 }
 
 template<typename FETCH, typename STORE, typename T, int pack_size>
 typename std::enable_if<pack_size == 1, void>::type DispatchSoftmaxWarpImplCols(
-    cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows, const int64_t cols,
-    const T* x, T* y) {
+    cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows, const int64_t cols) {
   if (cols <= 0) { UNIMPLEMENTED(); }
 #define DEFINE_ONE_ELIF(col)                                                                    \
   else if (cols <= (col)*kWarpSize) {                                                           \
     DispatchSoftmaxWarpImplPadding<FETCH, STORE, T, pack_size, col>(stream, fetch, store, rows, \
-                                                                    cols, x, y);                \
+                                                                    cols);                      \
   }
   DEFINE_ONE_ELIF(1)
   DEFINE_ONE_ELIF(2)
@@ -304,13 +298,12 @@ typename std::enable_if<pack_size == 1, void>::type DispatchSoftmaxWarpImplCols(
 
 template<typename FETCH, typename STORE, typename T, int pack_size>
 typename std::enable_if<pack_size == 2, void>::type DispatchSoftmaxWarpImplCols(
-    cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows, const int64_t cols,
-    const T* x, T* y) {
+    cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows, const int64_t cols) {
   if (cols <= 0) { UNIMPLEMENTED(); }
 #define DEFINE_ONE_ELIF(col)                                                                    \
   else if (cols <= (col)*kWarpSize) {                                                           \
     DispatchSoftmaxWarpImplPadding<FETCH, STORE, T, pack_size, col>(stream, fetch, store, rows, \
-                                                                    cols, x, y);                \
+                                                                    cols);                      \
   }
   DEFINE_ONE_ELIF(2)
   DEFINE_ONE_ELIF(4)
@@ -337,32 +330,32 @@ typename std::enable_if<pack_size == 2, void>::type DispatchSoftmaxWarpImplCols(
 template<typename FETCH, typename STORE, typename T>
 struct DispatchSoftmaxWarpImplPackSize {
   void operator()(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                  const int64_t cols, const T* x, T* y) {
-    DispatchSoftmaxWarpImplCols<FETCH, STORE, T, 1>(stream, fetch, store, rows, cols, x, y);
+                  const int64_t cols) {
+    DispatchSoftmaxWarpImplCols<FETCH, STORE, T, 1>(stream, fetch, store, rows, cols);
   }
 };
 
 template<typename FETCH, typename STORE>
 struct DispatchSoftmaxWarpImplPackSize<FETCH, STORE, half> {
   void operator()(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                  const int64_t cols, const half* x, half* y) {
+                  const int64_t cols) {
     if (cols % 2 == 0 && cols > kWarpSize) {
-      DispatchSoftmaxWarpImplCols<FETCH, STORE, half, 2>(stream, fetch, store, rows, cols, x, y);
+      DispatchSoftmaxWarpImplCols<FETCH, STORE, half, 2>(stream, fetch, store, rows, cols);
     } else {
-      DispatchSoftmaxWarpImplCols<FETCH, STORE, half, 1>(stream, fetch, store, rows, cols, x, y);
+      DispatchSoftmaxWarpImplCols<FETCH, STORE, half, 1>(stream, fetch, store, rows, cols);
     }
   }
 };
 
 template<typename FETCH, typename STORE, typename T>
 inline void DispatchSoftmaxWarpImpl(cudaStream_t stream, FETCH fetch, STORE store,
-                                    const int64_t rows, const int64_t cols, const T* x, T* y) {
-  DispatchSoftmaxWarpImplPackSize<FETCH, STORE, T>()(stream, fetch, store, rows, cols, x, y);
+                                    const int64_t rows, const int64_t cols) {
+  DispatchSoftmaxWarpImplPackSize<FETCH, STORE, T>()(stream, fetch, store, rows, cols);
 }
 
 template<typename FETCH, typename STORE, typename T, int pack_size, int block_size>
 __global__ void SoftmaxBlockSMemImpl(FETCH fetch, STORE store, const int64_t rows,
-                                     const int64_t cols, const T* x, T* y) {
+                                     const int64_t cols) {
   using ComputeType = typename GetComputeType<T>::type;
   extern __shared__ __align__(sizeof(ComputeType)) unsigned char shared_buf[];
   auto* buf = reinterpret_cast<ComputeType*>(shared_buf);
@@ -370,9 +363,6 @@ __global__ void SoftmaxBlockSMemImpl(FETCH fetch, STORE store, const int64_t row
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
-    const int64_t row_offset = row * cols;
-    const T* row_x = x + row_offset;
-    T* row_y = y + row_offset;
     ComputeType thread_max = -Inf<ComputeType>();
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
@@ -405,17 +395,16 @@ __global__ void SoftmaxBlockSMemImpl(FETCH fetch, STORE store, const int64_t row
 
 template<typename FETCH, typename STORE, typename T, int pack_size, int block_size>
 inline void LaunchSoftmaxBlockSMemImpl(cudaStream_t stream, FETCH fetch, STORE store, int smem,
-                                       const int64_t rows, const int64_t cols, const T* x, T* y) {
+                                       const int64_t rows, const int64_t cols) {
   constexpr int waves = 32;
   const int grid_dim_x = GetNumBlocks(block_size, rows, waves);
   SoftmaxBlockSMemImpl<FETCH, STORE, T, pack_size, block_size>
-      <<<grid_dim_x, block_size, smem, stream>>>(fetch, store, rows, cols, x, y);
+      <<<grid_dim_x, block_size, smem, stream>>>(fetch, store, rows, cols);
 }
 
 template<typename FETCH, typename STORE, typename T, int pack_size>
 inline bool TryDispatchSoftmaxBlockSMemImplBlockSize(cudaStream_t stream, FETCH fetch, STORE store,
-                                                     const int64_t rows, const int64_t cols,
-                                                     const T* x, T* y) {
+                                                     const int64_t rows, const int64_t cols) {
   constexpr int block_size_conf_1 = 128;
   constexpr int block_size_conf_2 = 256;
   const size_t smem = cols * sizeof(typename GetComputeType<T>::type);
@@ -431,11 +420,11 @@ inline bool TryDispatchSoftmaxBlockSMemImplBlockSize(cudaStream_t stream, FETCH 
       SoftmaxBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_2>, block_size_conf_2,
       smem));
   if (max_active_blocks_conf_2 == max_active_blocks_conf_1) {
-    LaunchSoftmaxBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_2>(
-        stream, fetch, store, smem, rows, cols, x, y);
+    LaunchSoftmaxBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_2>(stream, fetch, store,
+                                                                              smem, rows, cols);
   } else {
-    LaunchSoftmaxBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_1>(
-        stream, fetch, store, smem, rows, cols, x, y);
+    LaunchSoftmaxBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_1>(stream, fetch, store,
+                                                                              smem, rows, cols);
   }
   return true;
 }
@@ -443,45 +432,41 @@ inline bool TryDispatchSoftmaxBlockSMemImplBlockSize(cudaStream_t stream, FETCH 
 template<typename FETCH, typename STORE, typename T>
 struct TryDispatchSoftmaxBlockSMemImplPackSize {
   bool operator()(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                  const int64_t cols, const T* x, T* y) {
+                  const int64_t cols) {
     return TryDispatchSoftmaxBlockSMemImplBlockSize<FETCH, STORE, T, 1>(stream, fetch, store, rows,
-                                                                        cols, x, y);
+                                                                        cols);
   }
 };
 
 template<typename FETCH, typename STORE>
 struct TryDispatchSoftmaxBlockSMemImplPackSize<FETCH, STORE, half> {
   bool operator()(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                  const int64_t cols, const half* x, half* y) {
+                  const int64_t cols) {
     if (cols % 2 == 0) {
       return TryDispatchSoftmaxBlockSMemImplBlockSize<FETCH, STORE, half, 2>(stream, fetch, store,
-                                                                             rows, cols, x, y);
+                                                                             rows, cols);
     } else {
       return TryDispatchSoftmaxBlockSMemImplBlockSize<FETCH, STORE, half, 1>(stream, fetch, store,
-                                                                             rows, cols, x, y);
+                                                                             rows, cols);
     }
   }
 };
 
 template<typename FETCH, typename STORE, typename T>
 inline bool TryDispatchSoftmaxBlockSMemImpl(cudaStream_t stream, FETCH fetch, STORE store,
-                                            const int64_t rows, const int64_t cols, const T* x,
-                                            T* y) {
+                                            const int64_t rows, const int64_t cols) {
   return TryDispatchSoftmaxBlockSMemImplPackSize<FETCH, STORE, T>()(stream, fetch, store, rows,
-                                                                    cols, x, y);
+                                                                    cols);
 }
 
 template<typename FETCH, typename STORE, typename T, int pack_size, int block_size>
 __global__ void SoftmaxBlockUncachedImpl(FETCH fetch, STORE store, const int64_t rows,
-                                         const int64_t cols, const T* x, T* y) {
+                                         const int64_t cols) {
   using ComputeType = typename GetComputeType<T>::type;
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
-    const int64_t row_offset = row * cols;
-    const T* row_x = x + row_offset;
-    T* row_y = y + row_offset;
     ComputeType thread_max = -Inf<ComputeType>();
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
@@ -510,57 +495,55 @@ __global__ void SoftmaxBlockUncachedImpl(FETCH fetch, STORE store, const int64_t
 
 template<typename FETCH, typename STORE, typename T, int pack_size>
 inline void LaunchSoftmaxBlockUncachedImpl(cudaStream_t stream, FETCH fetch, STORE store,
-                                           const int64_t rows, const int64_t cols, const T* x,
-                                           T* y) {
+                                           const int64_t rows, const int64_t cols) {
   constexpr int block_size = 1024;
   constexpr int waves = 32;
   const int grid_dim_x = GetNumBlocks(block_size, rows, waves);
   SoftmaxBlockUncachedImpl<FETCH, STORE, T, pack_size, block_size>
-      <<<grid_dim_x, block_size, 0, stream>>>(fetch, store, rows, cols, x, y);
+      <<<grid_dim_x, block_size, 0, stream>>>(fetch, store, rows, cols);
 }
 
 template<typename FETCH, typename STORE, typename T>
 struct DispatchSoftmaxBlockUncachedImplPackSize {
   void operator()(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                  const int64_t cols, const T* x, T* y) {
-    LaunchSoftmaxBlockUncachedImpl<FETCH, STORE, T, 1>(stream, fetch, store, rows, cols, x, y);
+                  const int64_t cols) {
+    LaunchSoftmaxBlockUncachedImpl<FETCH, STORE, T, 1>(stream, fetch, store, rows, cols);
   }
 };
 
 template<typename FETCH, typename STORE>
 struct DispatchSoftmaxBlockUncachedImplPackSize<FETCH, STORE, half> {
   void operator()(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                  const int64_t cols, const half* x, half* y) {
+                  const int64_t cols) {
     if (cols % 2 == 0) {
-      LaunchSoftmaxBlockUncachedImpl<FETCH, STORE, half, 2>(stream, fetch, store, rows, cols, x, y);
+      LaunchSoftmaxBlockUncachedImpl<FETCH, STORE, half, 2>(stream, fetch, store, rows, cols);
     } else {
-      LaunchSoftmaxBlockUncachedImpl<FETCH, STORE, half, 1>(stream, fetch, store, rows, cols, x, y);
+      LaunchSoftmaxBlockUncachedImpl<FETCH, STORE, half, 1>(stream, fetch, store, rows, cols);
     }
   }
 };
 
 template<typename FETCH, typename STORE, typename T>
 inline void DispatchSoftmaxBlockUncachedImpl(cudaStream_t stream, FETCH fetch, STORE store,
-                                             const int64_t rows, const int64_t cols, const T* x,
-                                             T* y) {
+                                             const int64_t rows, const int64_t cols) {
   return DispatchSoftmaxBlockUncachedImplPackSize<FETCH, STORE, T>()(stream, fetch, store, rows,
-                                                                     cols, x, y);
+                                                                     cols);
 }
 
 template<typename FETCH, typename STORE, typename T>
 inline void DispatchSoftmax(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                            const int64_t cols, const T* x, T* y) {
+                            const int64_t cols) {
   if (cols <= 1024) {
-    DispatchSoftmaxWarpImpl<FETCH, STORE, T>(stream, fetch, store, rows, cols, x, y);
-  } else if (!TryDispatchSoftmaxBlockSMemImpl(stream, fetch, store, rows, cols, x, y)) {
-    DispatchSoftmaxBlockUncachedImpl<FETCH, STORE, T>(stream, fetch, store, rows, cols, x, y);
+    DispatchSoftmaxWarpImpl<FETCH, STORE, T>(stream, fetch, store, rows, cols);
+  } else if (!TryDispatchSoftmaxBlockSMemImpl<FETCH, STORE, T>(stream, fetch, store, rows, cols)) {
+    DispatchSoftmaxBlockUncachedImpl<FETCH, STORE, T>(stream, fetch, store, rows, cols);
   }
 }
 
 template<typename FETCH, typename STORE, typename T, int pack_size, int cols_per_thread,
          bool padding>
 __global__ void SoftmaxGradWarpImpl(FETCH fetch, STORE store, const int64_t rows,
-                                    const int64_t cols, const T* y, const T* dy, T* dx) {
+                                    const int64_t cols) {
   static_assert(cols_per_thread % pack_size == 0, "");
   constexpr int pack_per_thread = cols_per_thread / pack_size;
   assert(cols <= cols_per_thread * kWarpSize);
@@ -571,10 +554,6 @@ __global__ void SoftmaxGradWarpImpl(FETCH fetch, STORE store, const int64_t rows
   const int num_global_warp = gridDim.x * blockDim.y;
   const int lane_id = threadIdx.x;
   for (int64_t row = global_warp_id; row < rows; row += num_global_warp) {
-    const int64_t row_offset = row * cols;
-    const T* row_y = y + row_offset;
-    const T* row_dy = dy + row_offset;
-    T* row_dx = dx + row_offset;
     ComputeType thread_sum = 0;
 #pragma unroll
     for (int pack_id = 0; pack_id < pack_per_thread; ++pack_id) {
@@ -606,8 +585,7 @@ __global__ void SoftmaxGradWarpImpl(FETCH fetch, STORE store, const int64_t rows
 template<typename FETCH, typename STORE, typename T, int pack_size, int cols_per_thread,
          bool padding>
 inline void LaunchSoftmaxGradWarpImpl(cudaStream_t stream, FETCH fetch, STORE store,
-                                      const int64_t rows, const int64_t cols, const T* y,
-                                      const T* dy, T* dx) {
+                                      const int64_t rows, const int64_t cols) {
   constexpr int block_size = 128;
   constexpr int waves = 32;
   static_assert(block_size % kWarpSize == 0, "");
@@ -616,31 +594,29 @@ inline void LaunchSoftmaxGradWarpImpl(cudaStream_t stream, FETCH fetch, STORE st
   const int64_t num_blocks = (rows + rows_per_block - 1) / rows_per_block;
   const int grid_dim_x = GetNumBlocks(block_size, num_blocks, waves);
   SoftmaxGradWarpImpl<FETCH, STORE, T, pack_size, cols_per_thread, padding>
-      <<<grid_dim_x, block_dim, 0, stream>>>(fetch, store, rows, cols, y, dy, dx);
+      <<<grid_dim_x, block_dim, 0, stream>>>(fetch, store, rows, cols);
 }
 
 template<typename FETCH, typename STORE, typename T, int pack_size, int cols_per_thread>
 inline void DispatchSoftmaxGradWarpImplPadding(cudaStream_t stream, FETCH fetch, STORE store,
-                                               const int64_t rows, const int64_t cols, const T* y,
-                                               const T* dy, T* dx) {
+                                               const int64_t rows, const int64_t cols) {
   if (cols == cols_per_thread * kWarpSize) {
     LaunchSoftmaxGradWarpImpl<FETCH, STORE, T, pack_size, cols_per_thread, false>(
-        stream, fetch, store, rows, cols, y, dy, dx);
+        stream, fetch, store, rows, cols);
   } else {
-    LaunchSoftmaxGradWarpImpl<FETCH, STORE, T, pack_size, cols_per_thread, true>(
-        stream, fetch, store, rows, cols, y, dy, dx);
+    LaunchSoftmaxGradWarpImpl<FETCH, STORE, T, pack_size, cols_per_thread, true>(stream, fetch,
+                                                                                 store, rows, cols);
   }
 }
 
 template<typename FETCH, typename STORE, typename T, int pack_size>
 typename std::enable_if<pack_size == 1, void>::type DispatchSoftmaxGradWarpImplCols(
-    cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows, const int64_t cols,
-    const T* y, const T* dy, T* dx) {
+    cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows, const int64_t cols) {
   if (cols <= 0) { UNIMPLEMENTED(); }
-#define DEFINE_ONE_ELIF(col)                                                                    \
-  else if (cols <= (col)*kWarpSize) {                                                           \
-    DispatchSoftmaxGradWarpImplPadding<FETCH, STORE, T, pack_size, col>(stream, fetch, store,   \
-                                                                        rows, cols, y, dy, dx); \
+#define DEFINE_ONE_ELIF(col)                                                                  \
+  else if (cols <= (col)*kWarpSize) {                                                         \
+    DispatchSoftmaxGradWarpImplPadding<FETCH, STORE, T, pack_size, col>(stream, fetch, store, \
+                                                                        rows, cols);          \
   }
   DEFINE_ONE_ELIF(1)
   DEFINE_ONE_ELIF(2)
@@ -682,13 +658,12 @@ typename std::enable_if<pack_size == 1, void>::type DispatchSoftmaxGradWarpImplC
 
 template<typename FETCH, typename STORE, typename T, int pack_size>
 typename std::enable_if<pack_size == 2, void>::type DispatchSoftmaxGradWarpImplCols(
-    cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows, const int64_t cols,
-    const T* y, const T* dy, T* dx) {
+    cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows, const int64_t cols) {
   if (cols <= 0) { UNIMPLEMENTED(); }
-#define DEFINE_ONE_ELIF(col)                                                                    \
-  else if (cols <= (col)*kWarpSize) {                                                           \
-    DispatchSoftmaxGradWarpImplPadding<FETCH, STORE, T, pack_size, col>(stream, fetch, store,   \
-                                                                        rows, cols, y, dy, dx); \
+#define DEFINE_ONE_ELIF(col)                                                                  \
+  else if (cols <= (col)*kWarpSize) {                                                         \
+    DispatchSoftmaxGradWarpImplPadding<FETCH, STORE, T, pack_size, col>(stream, fetch, store, \
+                                                                        rows, cols);          \
   }
   DEFINE_ONE_ELIF(2)
   DEFINE_ONE_ELIF(4)
@@ -715,37 +690,32 @@ typename std::enable_if<pack_size == 2, void>::type DispatchSoftmaxGradWarpImplC
 template<typename FETCH, typename STORE, typename T>
 struct DispatchSoftmaxGradWarpImplPackSize {
   void operator()(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                  const int64_t cols, const T* y, const T* dy, T* dx) {
-    DispatchSoftmaxGradWarpImplCols<FETCH, STORE, T, 1>(stream, fetch, store, rows, cols, y, dy,
-                                                        dx);
+                  const int64_t cols) {
+    DispatchSoftmaxGradWarpImplCols<FETCH, STORE, T, 1>(stream, fetch, store, rows, cols);
   }
 };
 
 template<typename FETCH, typename STORE>
 struct DispatchSoftmaxGradWarpImplPackSize<FETCH, STORE, half> {
   void operator()(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                  const int64_t cols, const half* y, const half* dy, half* dx) {
+                  const int64_t cols) {
     if (cols % 2 == 0 && cols > kWarpSize) {
-      DispatchSoftmaxGradWarpImplCols<FETCH, STORE, half, 2>(stream, fetch, store, rows, cols, y,
-                                                             dy, dx);
+      DispatchSoftmaxGradWarpImplCols<FETCH, STORE, half, 2>(stream, fetch, store, rows, cols);
     } else {
-      DispatchSoftmaxGradWarpImplCols<FETCH, STORE, half, 1>(stream, fetch, store, rows, cols, y,
-                                                             dy, dx);
+      DispatchSoftmaxGradWarpImplCols<FETCH, STORE, half, 1>(stream, fetch, store, rows, cols);
     }
   }
 };
 
 template<typename FETCH, typename STORE, typename T>
 inline void DispatchSoftmaxGradWarpImpl(cudaStream_t stream, FETCH fetch, STORE store,
-                                        const int64_t rows, const int64_t cols, const T* y,
-                                        const T* dy, T* dx) {
-  DispatchSoftmaxGradWarpImplPackSize<FETCH, STORE, T>()(stream, fetch, store, rows, cols, y, dy,
-                                                         dx);
+                                        const int64_t rows, const int64_t cols) {
+  DispatchSoftmaxGradWarpImplPackSize<FETCH, STORE, T>()(stream, fetch, store, rows, cols);
 }
 
 template<typename FETCH, typename STORE, typename T, int pack_size, int block_size>
 __global__ void SoftmaxGradBlockSMemImpl(FETCH fetch, STORE store, const int64_t rows,
-                                         const int64_t cols, const T* y, const T* dy, T* dx) {
+                                         const int64_t cols) {
   using ComputeType = typename GetComputeType<T>::type;
   extern __shared__ __align__(sizeof(ComputeType)) unsigned char grad_shared_buf[];
   auto* y_buf = reinterpret_cast<ComputeType*>(grad_shared_buf);
@@ -754,10 +724,6 @@ __global__ void SoftmaxGradBlockSMemImpl(FETCH fetch, STORE store, const int64_t
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
-    const int64_t row_offset = row * cols;
-    const T* row_y = y + row_offset;
-    const T* row_dy = dy + row_offset;
-    T* row_dx = dx + row_offset;
     ComputeType thread_sum = 0;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType y_pack[pack_size];
@@ -784,19 +750,17 @@ __global__ void SoftmaxGradBlockSMemImpl(FETCH fetch, STORE store, const int64_t
 
 template<typename FETCH, typename STORE, typename T, int pack_size, int block_size>
 inline void LaunchSoftmaxGradBlockSMemImpl(cudaStream_t stream, FETCH fetch, STORE store, int smem,
-                                           const int64_t rows, const int64_t cols, const T* y,
-                                           const T* dy, T* dx) {
+                                           const int64_t rows, const int64_t cols) {
   constexpr int waves = 32;
   const int grid_dim_x = GetNumBlocks(block_size, rows, waves);
   SoftmaxGradBlockSMemImpl<FETCH, STORE, T, pack_size, block_size>
-      <<<grid_dim_x, block_size, smem, stream>>>(fetch, store, rows, cols, y, dy, dx);
+      <<<grid_dim_x, block_size, smem, stream>>>(fetch, store, rows, cols);
 }
 
 template<typename FETCH, typename STORE, typename T, int pack_size>
 inline bool TryDispatchSoftmaxGradBlockSMemImplBlockSize(cudaStream_t stream, FETCH fetch,
                                                          STORE store, const int64_t rows,
-                                                         const int64_t cols, const T* y,
-                                                         const T* dy, T* dx) {
+                                                         const int64_t cols) {
   constexpr int block_size_conf_1 = 128;
   constexpr int block_size_conf_2 = 256;
   const size_t smem = cols * sizeof(typename GetComputeType<T>::type) * 2;
@@ -813,10 +777,10 @@ inline bool TryDispatchSoftmaxGradBlockSMemImplBlockSize(cudaStream_t stream, FE
       smem));
   if (max_active_blocks_conf_2 == max_active_blocks_conf_1) {
     LaunchSoftmaxGradBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_2>(
-        stream, fetch, store, smem, rows, cols, y, dy, dx);
+        stream, fetch, store, smem, rows, cols);
   } else {
     LaunchSoftmaxGradBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_1>(
-        stream, fetch, store, smem, rows, cols, y, dy, dx);
+        stream, fetch, store, smem, rows, cols);
   }
   return true;
 }
@@ -824,46 +788,41 @@ inline bool TryDispatchSoftmaxGradBlockSMemImplBlockSize(cudaStream_t stream, FE
 template<typename FETCH, typename STORE, typename T>
 struct TryDispatchSoftmaxGradBlockSMemImplPackSize {
   bool operator()(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                  const int64_t cols, const T* y, const T* dy, T* dx) {
+                  const int64_t cols) {
     return TryDispatchSoftmaxGradBlockSMemImplBlockSize<FETCH, STORE, T, 1>(stream, fetch, store,
-                                                                            rows, cols, y, dy, dx);
+                                                                            rows, cols);
   }
 };
 
 template<typename FETCH, typename STORE>
 struct TryDispatchSoftmaxGradBlockSMemImplPackSize<FETCH, STORE, half> {
   bool operator()(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                  const int64_t cols, const half* y, const half* dy, half* dx) {
+                  const int64_t cols) {
     if (cols % 2 == 0) {
-      return TryDispatchSoftmaxGradBlockSMemImplBlockSize<FETCH, STORE, half, 2>(
-          stream, fetch, store, rows, cols, y, dy, dx);
+      return TryDispatchSoftmaxGradBlockSMemImplBlockSize<FETCH, STORE, half, 2>(stream, fetch,
+                                                                                 store, rows, cols);
     } else {
-      return TryDispatchSoftmaxGradBlockSMemImplBlockSize<FETCH, STORE, half, 1>(
-          stream, fetch, store, rows, cols, y, dy, dx);
+      return TryDispatchSoftmaxGradBlockSMemImplBlockSize<FETCH, STORE, half, 1>(stream, fetch,
+                                                                                 store, rows, cols);
     }
   }
 };
 
 template<typename FETCH, typename STORE, typename T>
 inline bool TryDispatchSoftmaxGradBlockSMemImpl(cudaStream_t stream, FETCH fetch, STORE store,
-                                                const int64_t rows, const int64_t cols, const T* y,
-                                                const T* dy, T* dx) {
+                                                const int64_t rows, const int64_t cols) {
   return TryDispatchSoftmaxGradBlockSMemImplPackSize<FETCH, STORE, T>()(stream, fetch, store, rows,
-                                                                        cols, y, dy, dx);
+                                                                        cols);
 }
 
 template<typename FETCH, typename STORE, typename T, int pack_size, int block_size>
 __global__ void SoftmaxGradBlockUncachedImpl(FETCH fetch, STORE store, const int64_t rows,
-                                             const int64_t cols, const T* y, const T* dy, T* dx) {
+                                             const int64_t cols) {
   using ComputeType = typename GetComputeType<T>::type;
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;
   for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
-    const int64_t row_offset = row * cols;
-    const T* row_y = y + row_offset;
-    const T* row_dy = dy + row_offset;
-    T* row_dx = dx + row_offset;
     ComputeType thread_sum = 0;
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType y_pack[pack_size];
@@ -887,55 +846,49 @@ __global__ void SoftmaxGradBlockUncachedImpl(FETCH fetch, STORE store, const int
 
 template<typename FETCH, typename STORE, typename T, int pack_size>
 inline void LaunchSoftmaxGradBlockUncachedImpl(cudaStream_t stream, FETCH fetch, STORE store,
-                                               const int64_t rows, const int64_t cols, const T* y,
-                                               const T* dy, T* dx) {
+                                               const int64_t rows, const int64_t cols) {
   constexpr int block_size = 1024;
   constexpr int waves = 32;
   const int grid_dim_x = GetNumBlocks(block_size, rows, waves);
   SoftmaxGradBlockUncachedImpl<FETCH, STORE, T, pack_size, block_size>
-      <<<grid_dim_x, block_size, 0, stream>>>(fetch, store, rows, cols, y, dy, dx);
+      <<<grid_dim_x, block_size, 0, stream>>>(fetch, store, rows, cols);
 }
 
 template<typename FETCH, typename STORE, typename T>
 struct DispatchSoftmaxGradBlockUncachedImplPackSize {
   void operator()(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                  const int64_t cols, const T* y, const T* dy, T* dx) {
-    LaunchSoftmaxGradBlockUncachedImpl<FETCH, STORE, T, 1>(stream, fetch, store, rows, cols, y, dy,
-                                                           dx);
+                  const int64_t cols) {
+    LaunchSoftmaxGradBlockUncachedImpl<FETCH, STORE, T, 1>(stream, fetch, store, rows, cols);
   }
 };
 
 template<typename FETCH, typename STORE>
 struct DispatchSoftmaxGradBlockUncachedImplPackSize<FETCH, STORE, half> {
   void operator()(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                  const int64_t cols, const half* y, const half* dy, half* dx) {
+                  const int64_t cols) {
     if (cols % 2 == 0 && cols > kWarpSize) {
-      LaunchSoftmaxGradBlockUncachedImpl<FETCH, STORE, half, 2>(stream, fetch, store, rows, cols, y,
-                                                                dy, dx);
+      LaunchSoftmaxGradBlockUncachedImpl<FETCH, STORE, half, 2>(stream, fetch, store, rows, cols);
     } else {
-      LaunchSoftmaxGradBlockUncachedImpl<FETCH, STORE, half, 1>(stream, fetch, store, rows, cols, y,
-                                                                dy, dx);
+      LaunchSoftmaxGradBlockUncachedImpl<FETCH, STORE, half, 1>(stream, fetch, store, rows, cols);
     }
   }
 };
 
 template<typename FETCH, typename STORE, typename T>
 inline void DispatchSoftmaxGradBlockUncachedImpl(cudaStream_t stream, FETCH fetch, STORE store,
-                                                 const int64_t rows, const int64_t cols, const T* y,
-                                                 const T* dy, T* dx) {
+                                                 const int64_t rows, const int64_t cols) {
   return DispatchSoftmaxGradBlockUncachedImplPackSize<FETCH, STORE, T>()(stream, fetch, store, rows,
-                                                                         cols, y, dy, dx);
+                                                                         cols);
 }
 
 template<typename FETCH, typename STORE, typename T>
 inline void DispatchSoftmaxGrad(cudaStream_t stream, FETCH fetch, STORE store, const int64_t rows,
-                                const int64_t cols, const T* y, const T* dy, T* dx) {
+                                const int64_t cols) {
   if (cols <= 1024) {
-    DispatchSoftmaxGradWarpImpl<FETCH, STORE, T>(stream, fetch, store, rows, cols, y, dy, dx);
-  } else if (!TryDispatchSoftmaxGradBlockSMemImpl<FETCH, STORE, T>(stream, fetch, store, rows, cols,
-                                                                   y, dy, dx)) {
-    DispatchSoftmaxGradBlockUncachedImpl<FETCH, STORE, T>(stream, fetch, store, rows, cols, y, dy,
-                                                          dx);
+    DispatchSoftmaxGradWarpImpl<FETCH, STORE, T>(stream, fetch, store, rows, cols);
+  } else if (!TryDispatchSoftmaxGradBlockSMemImpl<FETCH, STORE, T>(stream, fetch, store, rows,
+                                                                   cols)) {
+    DispatchSoftmaxGradBlockUncachedImpl<FETCH, STORE, T>(stream, fetch, store, rows, cols);
   }
 }
 

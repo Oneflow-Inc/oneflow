@@ -31,7 +31,7 @@ void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const T* 
   multi_store.dst = prob;
   multi_store.row_size = col;
   cuda::softmax::DispatchSoftmax<decltype(multi_fetch), decltype(multi_store), T>(
-      ctx->cuda_stream(), multi_fetch, multi_store, row, col, in, prob);
+      ctx->cuda_stream(), multi_fetch, multi_store, row, col);
 }
 
 template<>
@@ -44,8 +44,7 @@ void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const flo
   multi_store.dst = reinterpret_cast<half*>(prob);
   multi_store.row_size = col;
   cuda::softmax::DispatchSoftmax<decltype(multi_fetch), decltype(multi_store), half>(
-      ctx->cuda_stream(), multi_fetch, multi_store, row, col, reinterpret_cast<const half*>(in),
-      reinterpret_cast<half*>(prob));
+      ctx->cuda_stream(), multi_fetch, multi_store, row, col);
 }
 
 }  // namespace
