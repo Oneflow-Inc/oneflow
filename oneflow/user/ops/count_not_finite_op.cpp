@@ -23,7 +23,6 @@ REGISTER_USER_OP("count_not_finite")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
       *y_desc->mut_shape() = Shape({1});
-      *y_desc->mut_data_type() = DataType::kInt64;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -35,21 +34,19 @@ REGISTER_USER_OP("count_not_finite")
             .Build();
       }
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      *y_desc->mut_data_type() = DataType::kInt64;
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("multi_count_not_finite")
     .InputWithMinimum("x", 1)
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* first_x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      for (const auto& in_arg_pair : ctx->inputs()) {
-        const user_op::TensorDesc* x_desc =
-            ctx->TensorDesc4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
-        CHECK_EQ_OR_RETURN(x_desc->data_type(), first_x_desc->data_type());
-      }
       user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
       *y_desc->mut_shape() = Shape({1});
-      *y_desc->mut_data_type() = DataType::kInt64;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -61,6 +58,17 @@ REGISTER_USER_OP("multi_count_not_finite")
       for (int64_t i = 0; i < min_num_axes; ++i) {
         ctx->NewBuilder().Split(ctx->inputs(), i).PartialSum(user_op::OpArg("y", 0)).Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* first_x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      for (const auto& in_arg_pair : ctx->inputs()) {
+        const user_op::TensorDesc* x_desc =
+            ctx->TensorDesc4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
+        CHECK_EQ_OR_RETURN(x_desc->data_type(), first_x_desc->data_type());
+      }
+      user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      *y_desc->mut_data_type() = DataType::kInt64;
       return Maybe<void>::Ok();
     });
 

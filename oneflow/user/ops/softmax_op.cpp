@@ -23,9 +23,7 @@ REGISTER_USER_OP("softmax")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      *out_shape = *in_shape;
+      *ctx->Shape4ArgNameAndIndex("in", 0) = *ctx->Shape4ArgNameAndIndex("out", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -36,6 +34,10 @@ REGISTER_USER_OP("softmax")
             .Split(user_op::OpArg("out", 0), axis)
             .Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -49,6 +51,11 @@ REGISTER_USER_OP("softmax_grad")
       Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
       CHECK(*dy_shape == *y_shape);
       *dx_shape = *dy_shape;
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("y", 0), *ctx->Dtype4ArgNameAndIndex("dy", 0));
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("y", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

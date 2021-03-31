@@ -74,6 +74,10 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const AxisVector axis_vec = {broadcast_axes.begin(), broadcast_axes.end()};
   CHECK_OR_RETURN(IsAxesLegal(axis_vec, *like_shape, *in_shape));
   *out_shape = *like_shape;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
   *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
   return Maybe<void>::Ok();
 }
@@ -92,7 +96,8 @@ REGISTER_USER_OP("broadcast_like")
       CHECK(like_modifier != nullptr);
       like_modifier->set_requires_grad(false);
     })
-    .SetGetSbpFn(GetSbpSignatures);
+    .SetGetSbpFn(GetSbpSignatures)
+    .SetInferDataTypeFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("broadcast_like")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {

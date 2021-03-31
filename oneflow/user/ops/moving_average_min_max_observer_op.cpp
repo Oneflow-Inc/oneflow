@@ -51,6 +51,9 @@ REGISTER_USER_OP("moving_average_min_max_observer")
 
       *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({1});
       *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({1});
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("scale", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       *ctx->Dtype4ArgNameAndIndex("zero_point", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
