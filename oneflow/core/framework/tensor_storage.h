@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_TENSOR_STORAGE_H_
 
 #include <memory>
+#include <functional>
 
 namespace oneflow {
 
