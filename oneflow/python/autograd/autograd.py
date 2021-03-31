@@ -14,7 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from oneflow_api import Tensor, TensorTuple
+from oneflow_api import TensorTuple
+from ..framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow_api.autograd import grad as grad_api
 from oneflow_api.autograd import backward as backward_api
@@ -25,7 +26,9 @@ def _convert2tensor_tuple(args: Union[Tensor, Sequence[Tensor], None]):
     if args is None:
         return TensorTuple()
     elif isinstance(args, Tensor):
-        return TensorTuple((args._local_or_consistent_tensor))
+        tensor_tuple = TensorTuple()
+        tensor_tuple.append(args._local_or_consistent_tensor)
+        return tensor_tuple
     else:
         return TensorTuple([x._local_or_consistent_tensor for x in args])
 
