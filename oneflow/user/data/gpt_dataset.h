@@ -32,7 +32,6 @@ class MegatronGPTIndex final {
   uint64_t version() const { return version_; }
   char dtype_code() const { return dtype_code_; }
   size_t num_docs() const { return sizes_.size(); }
-  size_t num_tokens() const;
   size_t doc_length(size_t doc_index) const { return sizes_.at(doc_index); }
   size_t doc_offset(size_t doc_index) const { return doc_offsets_.at(doc_index); }
   size_t address(size_t doc_index) const { return addresses_.at(doc_index); }
@@ -68,14 +67,14 @@ class MegatronGPTMMapDataset final {
 
   template<typename T>
   void GetSample(size_t index, T* data) const;
-  size_t Size() const { return sample_indices_.size() - 1; }
 
  private:
   static const HashMap<char, size_t> kDTypeCode2Size;
 
+  size_t GetNumTokens(const std::vector<size_t>& doc_indices) const;
   size_t GetNumEpochs() const;
   size_t GetNumCompleteEpochs() const;
-  void InitDocIndices(const std::vector<int64_t>& split_sizes, size_t split_index);
+  void InitDocIndices(const std::vector<size_t>& epoch_doc_indices);
   void InitDocIndices(const std::vector<size_t>& doc_indices, size_t num_epochs);
   void InitSampleIndices();
   void InitShuffleIndices();

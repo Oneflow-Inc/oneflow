@@ -60,12 +60,6 @@ std::vector<size_t> GetSplitDocIndices(const std::vector<int64_t>& split_sizes, 
 
 constexpr char MegatronGPTIndex::kMagicCode[];
 
-size_t MegatronGPTIndex::num_tokens() const {
-  size_t num_tokens = 0;
-  for (auto size : sizes_) { num_tokens += size; }
-  return num_tokens;
-}
-
 MegatronGPTIndex::MegatronGPTIndex(const std::string& index_file_path) {
   auto start = std::chrono::system_clock::now();
   std::ifstream stream(index_file_path, std::ios::binary);
@@ -103,8 +97,7 @@ MegatronGPTIndex::MegatronGPTIndex(const std::string& index_file_path) {
   // log
   std::chrono::duration<double, std::milli> elapse = std::chrono::system_clock::now() - start;
   LOG(INFO) << "Load GPT Dataset index file successed, file_path: " << index_file_path
-            << ", number of documents: " << this->num_docs()
-            << ", number of tokens: " << this->num_tokens() << ", elapsed time: " << elapse.count()
+            << ", number of documents: " << this->num_docs() << ", elapsed time: " << elapse.count()
             << " ms";
 }
 
@@ -144,21 +137,28 @@ MegatronGPTMMapDataset::MegatronGPTMMapDataset(const std::string& data_file_pref
   auto start = std::chrono::system_clock::now();
   index_ = std::make_unique<const MegatronGPTIndex>(data_file_prefix + ".idx");
   data_ = std::make_unique<MegatronGPTMappedBuffer>(data_file_prefix + ".bin");
-  tokens_per_epoch_ = index_->num_tokens();
+  auto epoch_doc_indices = GetSplitDocIndices(split_sizes, split_index, index_->num_docs());
+  tokens_per_epoch_ = GetNumTokens(epoch_doc_indices);
   num_epochs_ = GetNumEpochs();
   num_complete_epochs_ = GetNumCompleteEpochs();
-  InitDocIndices(split_sizes, split_index);
+  InitDocIndices(epoch_doc_indices);
   InitSampleIndices();
   InitShuffleIndices();
   std::chrono::duration<double, std::milli> elapse = std::chrono::system_clock::now() - start;
   LOG(INFO) << "Create GPT Dataset successed, sequence length: " << seq_len_
             << ", number of samples: " << num_samples_
-            << ", total number of samples: " << this->Size()
+            << ", total number of samples: " << shuffle_indices_.size()
             << ", total number of documents: " << doc_indices_.size()
             << ", number of epochs: " << num_epochs_
             << ", number of complete epochs: " << num_complete_epochs_
             << ", shuffle: " << std::boolalpha << shuffle_ << ", random_seed: " << seed_
             << ", elapsed time: " << elapse.count() << " ms";
+}
+
+size_t MegatronGPTMMapDataset::GetNumTokens(const std::vector<size_t>& doc_indices) const {
+  size_t num_tokens = 0;
+  for (auto doc_index : doc_indices) { num_tokens += index_->doc_length(doc_index); }
+  return num_tokens;
 }
 
 size_t MegatronGPTMMapDataset::GetNumEpochs() const {
@@ -185,21 +185,19 @@ size_t MegatronGPTMMapDataset::GetNumCompleteEpochs() const {
   return separate_last_epoch ? (num_epochs_ - 1) : num_epochs_;
 }
 
-void MegatronGPTMMapDataset::InitDocIndices(const std::vector<int64_t>& split_sizes,
-                                            size_t split_index) {
-  auto epoch_doc_indices = GetSplitDocIndices(split_sizes, split_index, index_->num_docs());
-  doc_indices_.reserve(epoch_doc_indices.size() * num_complete_epochs_);
+void MegatronGPTMMapDataset::InitDocIndices(const std::vector<size_t>& epoch_doc_indices) {
+  doc_indices_.reserve(epoch_doc_indices.size() * num_epochs_);
   InitDocIndices(epoch_doc_indices, num_complete_epochs_);
   if (num_epochs_ != num_complete_epochs_) { InitDocIndices(epoch_doc_indices, 1); }
 }
 
 void MegatronGPTMMapDataset::InitDocIndices(const std::vector<size_t>& epoch_doc_indices,
                                             size_t num_epochs) {
-  auto start = doc_indices_.end();
+  auto start = std::distance(doc_indices_.cbegin(), doc_indices_.cend());
   FOR_RANGE(size_t, i, 0, num_epochs) {
     doc_indices_.insert(doc_indices_.end(), epoch_doc_indices.cbegin(), epoch_doc_indices.cend());
   }
-  if (shuffle_) { std::shuffle(start, doc_indices_.end(), gen_); }
+  if (shuffle_) { std::shuffle(doc_indices_.begin() + start, doc_indices_.end(), gen_); }
 }
 
 void MegatronGPTMMapDataset::InitSampleIndices() {

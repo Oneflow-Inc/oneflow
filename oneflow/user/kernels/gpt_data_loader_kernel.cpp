@@ -61,18 +61,18 @@ class GPTDataLoader final : public OpKernelState {
   GPTDataLoader(KernelInitContext* ctx) : num_shards_(1) {
     seq_len_ = ctx->Attr<int64_t>("seq_length");
     label_len_ = 1;
+    int64_t num_samples = ctx->Attr<int64_t>("num_samples");
 
     dataset_.reset(new MegatronGPTMMapDataset(
-        ctx->Attr<std::string>("data_file_prefix"), seq_len_, label_len_,
-        ctx->Attr<int64_t>("num_samples"), ctx->Attr<std::vector<int64_t>>("split_sizes"),
-        ctx->Attr<int64_t>("split_index"), ctx->Attr<bool>("shuffle"),
-        ctx->Attr<int64_t>("random_seed")));
+        ctx->Attr<std::string>("data_file_prefix"), seq_len_, label_len_, num_samples,
+        ctx->Attr<std::vector<int64_t>>("split_sizes"), ctx->Attr<int64_t>("split_index"),
+        ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed")));
 
     const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
     const ParallelDistribution& paral_dist = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
     CHECK_EQ(hierarchy.NumAxes(), paral_dist.sbp_parallel_size());
     num_shards_ = GetNumShards(hierarchy, paral_dist);
-    CHECK_EQ(dataset_->Size() % num_shards_, 0);
+    CHECK_EQ(num_samples % num_shards_, 0);
     shard_index_ = GetShardIndex(hierarchy, paral_dist, ctx->parallel_ctx().parallel_id());
     CHECK_LT(shard_index_, num_shards_);
     size_t logical_batch_size = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
