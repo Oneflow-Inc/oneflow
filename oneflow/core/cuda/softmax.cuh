@@ -103,6 +103,11 @@ struct GetPackType<half, 2> {
   using type = half2;
 };
 
+template<>
+struct GetPackType<int8_t, 2> {
+  using type = char2;
+};
+
 template<typename T, int N>
 using PackType = typename GetPackType<T, N>::type;
 

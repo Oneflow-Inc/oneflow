@@ -31,16 +31,9 @@ half GetAttrVal<half>(bool is_floating_val, double floating_value, int64_t integ
 template<typename SRC>
 struct TrilScaleMultiFetch {
   template<typename DST, int N>
-  __device__ void fetch(DST* dst, int64_t row, int64_t col) {
-    bool need_fetch = false;
-    int64_t tril_row = row % tril_num_rows;
-#pragma unroll
-    for (int i = 0; i < N; ++i) {
-      if (col + i <= tril_row + diagonal) {
-        need_fetch = true;
-        break;
-      }
-    }
+  __device__ void fetch(DST* dst, int32_t row, int64_t col) {
+    int32_t tril_row = row % tril_num_rows;
+    bool need_fetch = (col <= (tril_row + diagonal));
     cuda::softmax::Pack<SRC, N> pack;
     if (need_fetch) {
       int64_t offset = row * row_size + col;
@@ -57,7 +50,7 @@ struct TrilScaleMultiFetch {
   }
 
   const SRC* src;
-  int64_t tril_num_rows;
+  int32_t tril_num_rows;
   int64_t row_size;
   int64_t diagonal;
   SRC fill;
@@ -70,10 +63,14 @@ struct MaskAndScaleMultiStore {
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     cuda::softmax::Pack<DST, N> pack;
     int64_t offset = row * row_size + col;
+
+    cuda::softmax::Pack<int8_t, N> mask_pack;
+    mask_pack.storage = *reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask + offset);
+
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       pack.elem[i] =
-          static_cast<DST>(src[i]) * static_cast<DST>(mask[offset + i]) * static_cast<DST>(scale);
+          static_cast<DST>(src[i]) * static_cast<DST>(mask_pack.elem[i]) * static_cast<DST>(scale);
     }
     *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst + offset) = pack.storage;
   }
