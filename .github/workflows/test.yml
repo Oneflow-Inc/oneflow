@@ -305,7 +305,7 @@ jobs:
           fi
 
           # set container_name
-          container_name=pr-run-id-${{ github.run_id }}-${{ github.event.pull_request.number }}-${test_suite}-build
+          container_name=pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${test_suite}-test
           extra_docker_args+=" --name ${container_name}"
           echo "container_name=${container_name}" >> $GITHUB_ENV
 
