@@ -60,11 +60,13 @@ class GPTDataLoader final : public OpKernelState {
  public:
   GPTDataLoader(KernelInitContext* ctx) : num_shards_(1) {
     seq_len_ = ctx->Attr<int64_t>("seq_length");
+    label_len_ = 1;
 
     dataset_.reset(new MegatronGPTMMapDataset(
-        ctx->Attr<std::string>("data_file_prefix"), seq_len_, ctx->Attr<int64_t>("num_samples"),
-        ctx->Attr<std::vector<int64_t>>("split_sizes"), ctx->Attr<int64_t>("split_index"),
-        ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed")));
+        ctx->Attr<std::string>("data_file_prefix"), seq_len_, label_len_,
+        ctx->Attr<int64_t>("num_samples"), ctx->Attr<std::vector<int64_t>>("split_sizes"),
+        ctx->Attr<int64_t>("split_index"), ctx->Attr<bool>("shuffle"),
+        ctx->Attr<int64_t>("random_seed")));
 
     batch_size_ = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
     if (ctx->parallel_ctx().parallel_num() > 1) {
@@ -85,19 +87,21 @@ class GPTDataLoader final : public OpKernelState {
 
   template<typename T>
   void GetBatch(size_t iter, user_op::Tensor* tokens) {
+    const size_t sample_len = seq_len_ + label_len_;
     CHECK_EQ(tokens->shape().NumAxes(), 2);
     CHECK_EQ(tokens->shape().At(0), batch_size_);
-    CHECK_EQ(tokens->shape().At(1), seq_len_ + 1);
+    CHECK_EQ(tokens->shape().At(1), sample_len);
     T* dptr = tokens->mut_dptr<T>();
     for (size_t i = 0; i < batch_size_; ++i) {
       size_t sample_iter = shard_index_ + (iter + 1) * i * num_shards_;
-      dataset_->GetSample(sample_iter, dptr + i * (seq_len_ + 1));
+      dataset_->GetSample(sample_iter, dptr + i * sample_len);
     }
   }
 
  private:
   std::unique_ptr<MegatronGPTMMapDataset> dataset_;
   size_t seq_len_;
+  size_t label_len_;
   size_t batch_size_;
   size_t num_shards_;
   size_t shard_index_;

@@ -108,7 +108,8 @@ MegatronGPTIndex::MegatronGPTIndex(const std::string& index_file_path) {
             << " ms";
 }
 
-MegatronGPTMappedBuffer::MegatronGPTMappedBuffer(const std::string& filename) : mapped_(nullptr), size_(0) {
+MegatronGPTMappedBuffer::MegatronGPTMappedBuffer(const std::string& filename)
+    : mapped_(nullptr), size_(0) {
 #ifdef __linux__
   int fd = open(filename.c_str(), O_RDONLY);
   CHECK(fd != -1) << "open " << filename << " failed: " << strerror(errno);
@@ -130,10 +131,16 @@ MegatronGPTMappedBuffer::~MegatronGPTMappedBuffer() {
 #endif
 }
 
-MegatronGPTMMapDataset::MegatronGPTMMapDataset(const std::string& data_file_prefix, size_t seq_len, size_t num_samples,
-                       const std::vector<int64_t>& split_sizes, size_t split_index, bool shuffle,
-                       uint32_t seed)
-    : seq_len_(seq_len), num_samples_(num_samples), shuffle_(shuffle), seed_(seed), gen_(seed) {
+MegatronGPTMMapDataset::MegatronGPTMMapDataset(const std::string& data_file_prefix, size_t seq_len,
+                                               size_t label_len, size_t num_samples,
+                                               const std::vector<int64_t>& split_sizes,
+                                               size_t split_index, bool shuffle, uint32_t seed)
+    : seq_len_(seq_len),
+      sample_len_(seq_len + label_len),
+      num_samples_(num_samples),
+      shuffle_(shuffle),
+      seed_(seed),
+      gen_(seed) {
   auto start = std::chrono::system_clock::now();
   index_ = std::make_unique<const MegatronGPTIndex>(data_file_prefix + ".idx");
   data_ = std::make_unique<MegatronGPTMappedBuffer>(data_file_prefix + ".bin");
@@ -178,14 +185,16 @@ size_t MegatronGPTMMapDataset::GetNumCompleteEpochs() const {
   return separate_last_epoch ? (num_epochs_ - 1) : num_epochs_;
 }
 
-void MegatronGPTMMapDataset::InitDocIndices(const std::vector<int64_t>& split_sizes, size_t split_index) {
+void MegatronGPTMMapDataset::InitDocIndices(const std::vector<int64_t>& split_sizes,
+                                            size_t split_index) {
   auto epoch_doc_indices = GetSplitDocIndices(split_sizes, split_index, index_->num_docs());
   doc_indices_.reserve(epoch_doc_indices.size() * num_complete_epochs_);
   InitDocIndices(epoch_doc_indices, num_complete_epochs_);
   if (num_epochs_ != num_complete_epochs_) { InitDocIndices(epoch_doc_indices, 1); }
 }
 
-void MegatronGPTMMapDataset::InitDocIndices(const std::vector<size_t>& epoch_doc_indices, size_t num_epochs) {
+void MegatronGPTMMapDataset::InitDocIndices(const std::vector<size_t>& epoch_doc_indices,
+                                            size_t num_epochs) {
   auto start = doc_indices_.end();
   FOR_RANGE(size_t, i, 0, num_epochs) {
     doc_indices_.insert(doc_indices_.end(), epoch_doc_indices.cbegin(), epoch_doc_indices.cend());

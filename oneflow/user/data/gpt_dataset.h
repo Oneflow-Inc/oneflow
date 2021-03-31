@@ -60,9 +60,9 @@ class MegatronGPTMappedBuffer final {
 
 class MegatronGPTMMapDataset final {
  public:
-  MegatronGPTMMapDataset(const std::string& data_file_prefix, size_t seq_len, size_t num_samples,
-             const std::vector<int64_t>& split_sizes, size_t split_index, bool shuffle,
-             uint32_t seed);
+  MegatronGPTMMapDataset(const std::string& data_file_prefix, size_t seq_len, size_t label_len,
+                         size_t num_samples, const std::vector<int64_t>& split_sizes,
+                         size_t split_index, bool shuffle, uint32_t seed);
   OF_DISALLOW_COPY_AND_MOVE(MegatronGPTMMapDataset);
   ~MegatronGPTMMapDataset() = default;
 
@@ -85,6 +85,7 @@ class MegatronGPTMMapDataset final {
   std::unique_ptr<const MegatronGPTIndex> index_;
   std::unique_ptr<MegatronGPTMappedBuffer> data_;
   size_t seq_len_;
+  size_t sample_len_;
   size_t num_samples_;
   bool shuffle_;
   uint32_t seed_;
@@ -112,38 +113,38 @@ void MegatronGPTMMapDataset::GetSample(size_t index, T* data) const {
   const size_t doc_index = doc_indices_[doc_indices_idx];
   const size_t next_doc_index = doc_indices_[next_doc_indices_idx];
   const size_t dtype_size = kDTypeCode2Size.at(index_->dtype_code());
-  const size_t num_tokens = seq_len_ + 1;
   if (doc_indices_idx == next_doc_indices_idx) {
-    CHECK_EQ(num_tokens, next_doc_offset - doc_offset + 1);
+    CHECK_EQ(sample_len_, next_doc_offset - doc_offset + 1);
     size_t offset = index_->address(doc_index) + doc_offset * dtype_size;
-    ReadTokens(data_->ptr(), offset, data, num_tokens);
+    ReadTokens(data_->ptr(), offset, data, sample_len_);
   } else {
     size_t total_num_tokens = 0;
     // first
-    size_t part_num_tokens = (index_->doc_length(doc_index) - doc_offset);
+    size_t num_tokens = (index_->doc_length(doc_index) - doc_offset);
     size_t offset = index_->address(doc_index) + doc_offset * dtype_size;
-    ReadTokens(data_->ptr(), offset, data, part_num_tokens);
-    data += part_num_tokens;
-    total_num_tokens += part_num_tokens;
+    ReadTokens(data_->ptr(), offset, data, num_tokens);
+    data += num_tokens;
+    total_num_tokens += num_tokens;
     // middle
     FOR_RANGE(size_t, i, doc_indices_idx + 1, next_doc_indices_idx) {
       size_t cur_doc_index = doc_indices_[i];
-      part_num_tokens = index_->doc_length(cur_doc_index);
-      ReadTokens(data_->ptr(), index_->address(cur_doc_index), data, part_num_tokens);
-      data += part_num_tokens;
-      total_num_tokens += part_num_tokens;
+      num_tokens = index_->doc_length(cur_doc_index);
+      ReadTokens(data_->ptr(), index_->address(cur_doc_index), data, num_tokens);
+      data += num_tokens;
+      total_num_tokens += num_tokens;
     }
     // last
-    part_num_tokens = next_doc_offset + 1;
-    ReadTokens(data_->ptr(), index_->address(next_doc_index), data, part_num_tokens);
-    total_num_tokens += part_num_tokens;
+    num_tokens = next_doc_offset + 1;
+    ReadTokens(data_->ptr(), index_->address(next_doc_index), data, num_tokens);
+    total_num_tokens += num_tokens;
     // check
-    CHECK_EQ(total_num_tokens, num_tokens);
+    CHECK_EQ(total_num_tokens, sample_len_);
   }
 }
 
 template<typename T>
-void MegatronGPTMMapDataset::ReadTokens(const void* src, size_t bytes_offset, T* dst, size_t size) const {
+void MegatronGPTMMapDataset::ReadTokens(const void* src, size_t bytes_offset, T* dst,
+                                        size_t size) const {
   CHECK_NOTNULL(src);
   switch (index_->dtype_code()) {
 #define SWITCH_CASE_ENTRY(type_code, type)                                           \
