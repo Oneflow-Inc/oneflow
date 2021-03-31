@@ -21,7 +21,7 @@ import numpy as np
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.check_point_v2 as check_point_v2
-import oneflow.python.framework.runtime_mode as rt_mode
+from oneflow.python.framework.function_util import global_function_or_identity
 import oneflow as flow
 
 
@@ -45,12 +45,12 @@ class Tensor:
         dtype = dtype if dtype is not None else oneflow_api.float32
         if placement is None:
             device = device if device is not None else oneflow_api.device("cpu")
-        if _input_args_is_tensor:
+        if _input_args_is_tensor(*args):
             TODO()  # liyurui, construct using another tensor
-        elif _input_args_is_consistent_or_local:
+        elif _input_args_is_consistent_or_local(*args):
             self._local_or_consistent_tensor = args[0]
             self._undetermined_tensor = None
-        elif _input_args_is_data:
+        elif _input_args_is_data(*args):
             self._local_or_consistent_tensor = None
             self._construct_with_data(
                 *args,
@@ -479,16 +479,6 @@ def _default_initializer_for_determining(tensor):
         )
     determined_tensor._set_blob_object(blob.blob_object)
     return determined_tensor
-
-
-def global_function_or_identity(*args, **kwargs):
-    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
-        assert flow.eager_execution_enabled()
-        return flow.global_function(*args, **kwargs)
-    else:
-        assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
-        identity_decorator = lambda func: func
-        return identity_decorator
 
 
 def _numpy_initializer_for_determining(tensor):

@@ -16,10 +16,12 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/control_stream_type.h"
+#include "oneflow/core/vm/host_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
+#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
@@ -30,12 +32,7 @@ class RankFrontSeqCallbackInstructionType : public InstructionType {
   RankFrontSeqCallbackInstructionType() = default;
   virtual ~RankFrontSeqCallbackInstructionType() override = default;
 
-  using stream_type = ControlStreamType;
-
-  virtual bool IsFrontSequential() const { return true; }
-
-  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
-  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
+  bool IsFrontSequential() const override { return true; }
 
  protected:
   // clang-format off
@@ -44,42 +41,83 @@ class RankFrontSeqCallbackInstructionType : public InstructionType {
   FLAT_MSG_VIEW_END(RankFrontSeqCallbackInstrOperand);
   // clang-format on
 
-  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
-    FlatMsgView<RankFrontSeqCallbackInstrOperand> args(instr_msg->operand());
-    const auto& callback = instr_msg->no_arg_callback();
+  void Run(const InstructionMsg& instr_msg) const {
+    FlatMsgView<RankFrontSeqCallbackInstrOperand> args(instr_msg.operand());
+    const auto& phy_instr_operand = instr_msg.phy_instr_operand();
     if (args->process_rank() == GlobalProcessCtx::Rank()) {
-      CHECK(static_cast<bool>(callback));
-      (*callback)();
+      CHECK(static_cast<bool>(phy_instr_operand));
+      const auto* ptr = dynamic_cast<const NoArgCbPhyInstrOperand*>(phy_instr_operand.get());
+      CHECK_NOTNULL(ptr);
+      ptr->callback()();
     } else {
-      CHECK(!static_cast<bool>(callback));
+      CHECK(!static_cast<bool>(phy_instr_operand));
     }
   }
 };
 
-class RankFrontSeqInferCallbackInstructionType final : public RankFrontSeqCallbackInstructionType {
+class InferRankFrontSeqCallbackInstructionType final : public RankFrontSeqCallbackInstructionType {
  public:
-  RankFrontSeqInferCallbackInstructionType() = default;
-  ~RankFrontSeqInferCallbackInstructionType() override = default;
+  InferRankFrontSeqCallbackInstructionType() = default;
+  ~InferRankFrontSeqCallbackInstructionType() override = default;
 
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override { Run(vm, instr_msg); }
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override { /* do nothing */
+  using stream_type = HostStreamType;
+
+  void Infer(Instruction* instruction) const override { Run(instruction->instr_msg()); }
+  void Compute(Instruction* instruction) const override { /* do nothing */
   }
 };
 COMMAND(
-    RegisterInstructionType<RankFrontSeqInferCallbackInstructionType>("RankFrontSeqInferCallback"));
+    RegisterInstructionType<InferRankFrontSeqCallbackInstructionType>("InferRankFrontSeqCallback"));
 
-class RankFrontSeqComputeCallbackInstructionType final
+class ComputeRankFrontSeqCallbackInstructionType final
     : public RankFrontSeqCallbackInstructionType {
  public:
-  RankFrontSeqComputeCallbackInstructionType() = default;
-  ~RankFrontSeqComputeCallbackInstructionType() override = default;
+  ComputeRankFrontSeqCallbackInstructionType() = default;
+  ~ComputeRankFrontSeqCallbackInstructionType() override = default;
 
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override { /* do nothing */
+  using stream_type = HostStreamType;
+
+  void Infer(Instruction* instruction) const override { /* do nothing */
   }
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override { Run(vm, instr_msg); }
+  void Compute(Instruction* instruction) const override { Run(instruction->instr_msg()); }
 };
-COMMAND(RegisterInstructionType<RankFrontSeqComputeCallbackInstructionType>(
-    "RankFrontSeqComputeCallback"));
+COMMAND(RegisterInstructionType<ComputeRankFrontSeqCallbackInstructionType>(
+    "ComputeRankFrontSeqCallback"));
+
+class CtrlInferRankFrontSeqCallbackInstructionType final
+    : public RankFrontSeqCallbackInstructionType {
+ public:
+  CtrlInferRankFrontSeqCallbackInstructionType() = default;
+  ~CtrlInferRankFrontSeqCallbackInstructionType() override = default;
+
+  using stream_type = ControlStreamType;
+
+  void Infer(VirtualMachine*, InstructionMsg* instr_msg) const override { Run(*instr_msg); }
+  void Compute(VirtualMachine*, InstructionMsg* instr_msg) const override { /* do nothing */
+    ;
+  }
+  void Infer(Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction* instruction) const override { UNIMPLEMENTED(); }
+};
+COMMAND(RegisterInstructionType<CtrlInferRankFrontSeqCallbackInstructionType>(
+    "CtrlInferRankFrontSeqCallback"));
+
+class CtrlComputeRankFrontSeqCallbackInstructionType final
+    : public RankFrontSeqCallbackInstructionType {
+ public:
+  CtrlComputeRankFrontSeqCallbackInstructionType() = default;
+  ~CtrlComputeRankFrontSeqCallbackInstructionType() override = default;
+
+  using stream_type = ControlStreamType;
+
+  void Infer(VirtualMachine*, InstructionMsg* instr_msg) const override { /* do nothing */
+  }
+  void Compute(VirtualMachine*, InstructionMsg* instr_msg) const override { Run(*instr_msg); }
+  void Infer(Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction* instruction) const override { UNIMPLEMENTED(); }
+};
+COMMAND(RegisterInstructionType<CtrlComputeRankFrontSeqCallbackInstructionType>(
+    "CtrlComputeRankFrontSeqCallback"));
 
 }  // namespace vm
 }  // namespace oneflow
