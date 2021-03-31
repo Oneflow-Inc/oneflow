@@ -203,11 +203,12 @@ class FusedTrilScaleSoftmaxMaskAndScaleGradKernel final : public user_op::OpKern
     multi_fetch_dy.src = dy->dptr<T>();
     multi_fetch_dy.row_size = cols;
     TrilScaleMultiStore<T> multi_store;
+    CHECK_NOTNULL(dx);
     multi_store.dst = dx->mut_dptr<T>();
     multi_store.tril_num_rows = y->shape().At(y->shape().NumAxes() - 2);
     multi_store.row_size = cols;
     multi_store.diagonal = ctx->Attr<int64_t>("diagonal");
-    multi_store.fill = 0;
+    multi_store.fill = static_cast<T>(0);
     multi_store.scale = scale;
 
     cuda::softmax::DispatchSoftmaxGrad<decltype(multi_fetch_y), decltype(multi_fetch_dy),

@@ -157,6 +157,7 @@ REGISTER_USER_OP_GRAD("fused_tril_scale_softmax_mask_and_scale")
                 .Attr("floating_scale_value", op.attr<double>("floating_scale_value"))
                 .Attr("integer_scale_value", op.attr<int64_t>("integer_scale_value"))
                 .Attr("is_floating_scale_value", op.attr<bool>("is_floating_scale_value"))
+                .Attr("scale", op.attr<float>("scale"))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "in", 0);
         AddOp(grad_op);
