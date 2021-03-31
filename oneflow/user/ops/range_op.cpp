@@ -29,13 +29,15 @@ REGISTER_USER_OP("range")
       int64_t limit = ctx->Attr<int64_t>("limit");
       int64_t range_elem_cnt = (((limit - start) + delta - 1)
                                 / delta);  // Do the ceil division, ceil((limit-start)/delta)
-      auto dtype = ctx->Attr<DataType>("dtype");
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
       *out_shape = Shape({range_elem_cnt});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
     });
 

@@ -61,7 +61,11 @@ REGISTER_USER_OP("softmax_grad")
             .Build();
       }
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
     });
+    
 
 REGISTER_USER_OP_GRAD("softmax").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) {
