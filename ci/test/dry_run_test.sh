@@ -16,8 +16,13 @@ export ONEFLOW_DRY_RUN=1
 # trun on ONEFLOW_DEBUG_MODE will cause protobuf err
 # export ONEFLOW_DEBUG_MODE=1
 
-generated_node_list=$(python3 -c 'print(",".join(["mocknode_" + str(x) for x in range(2)]))')
-heaptrack python3 bert_benchmark/run_pretraining.py \
+node_num=2
+generated_node_list=$(seq -f "mockhost%02g" -s, $node_num)
+
+# heaptrack
+# valgrind --tool=massif --threshold=0.0001
+# /usr/bin/time -v
+time python3 bert_benchmark/run_pretraining.py \
     --learning_rate=1e-4 \
     --weight_decay_rate=0.01 \
     --batch_size_per_device=24 \
@@ -36,5 +41,5 @@ heaptrack python3 bert_benchmark/run_pretraining.py \
     --hidden_dropout_prob=0.1 \
     --hidden_size_per_head=64 \
     --node_list=${generated_node_list} \
-    --node_num=2 \
+    --node_num=${node_num} \
     --gpu_num_per_node=8
