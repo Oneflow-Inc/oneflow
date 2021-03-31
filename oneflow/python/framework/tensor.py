@@ -305,11 +305,9 @@ class Tensor:
     def tolist(self):
         TODO()
 
-    def backward(
-        self, gradient=None, retain_graph=False, create_graph=False, inputs=None
-    ):
+    def backward(self, gradient=None, retain_graph=False, create_graph=False):
         assert self.is_determined
-        TODO()  # liyurui
+        flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
     def __str__(self):
         return self.__repr__()
