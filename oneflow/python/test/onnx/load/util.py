@@ -274,6 +274,8 @@ def load_tensorflow2_module_and_check(
 
     tf_input = tf.constant(ipt1, dtype=tf.float32)
     tensorflow_res = tf_module.predict(tf_input)
+    if type(tensorflow_res) is not list:
+        tensorflow_res = np.array(tensorflow_res)
 
     print(flow_res)
     print("-------------")
