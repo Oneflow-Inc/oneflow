@@ -22,10 +22,10 @@ namespace oneflow {
 
 namespace data {
 
-class GPTIndex final {
+class MegatronGPTIndex final {
  public:
-  GPTIndex(const std::string& index_file);
-  ~GPTIndex() = default;
+  MegatronGPTIndex(const std::string& index_file);
+  ~MegatronGPTIndex() = default;
 
   static constexpr char kMagicCode[] = "MMIDIDX\x00\x00";
 
@@ -45,10 +45,10 @@ class GPTIndex final {
   std::vector<int64_t> doc_offsets_;
 };
 
-class MappedBuffer final {
+class MegatronGPTMappedBuffer final {
  public:
-  MappedBuffer(const char* filename);
-  ~MappedBuffer();
+  MegatronGPTMappedBuffer(const char* filename);
+  ~MegatronGPTMappedBuffer();
 
   const void* ptr() const { return mapped_; }
   size_t size() const { return size_; }
@@ -58,13 +58,13 @@ class MappedBuffer final {
   size_t size_;
 };
 
-class GPTDataset final {
+class MegatronGPTMMapDataset final {
  public:
-  GPTDataset(const std::string& data_file_prefix, size_t seq_len, size_t num_samples,
+  MegatronGPTMMapDataset(const std::string& data_file_prefix, size_t seq_len, size_t num_samples,
              const std::vector<int64_t>& split_sizes, size_t split_index, bool shuffle,
              uint32_t seed);
-  OF_DISALLOW_COPY_AND_MOVE(GPTDataset);
-  ~GPTDataset() = default;
+  OF_DISALLOW_COPY_AND_MOVE(MegatronGPTMMapDataset);
+  ~MegatronGPTMMapDataset() = default;
 
   template<typename T>
   void Get(size_t index, T* data) const;
@@ -82,8 +82,8 @@ class GPTDataset final {
   template<typename T>
   void ReadTokens(const void* src, size_t offset, T* dst, size_t size) const;
 
-  std::unique_ptr<const GPTIndex> index_;
-  std::unique_ptr<MappedBuffer> data_;
+  std::unique_ptr<const MegatronGPTIndex> index_;
+  std::unique_ptr<MegatronGPTMappedBuffer> data_;
   size_t seq_len_;
   size_t num_samples_;
   bool shuffle_;
@@ -99,7 +99,7 @@ class GPTDataset final {
 };
 
 template<typename T>
-void GPTDataset::Get(size_t index, T* data) const {
+void MegatronGPTMMapDataset::Get(size_t index, T* data) const {
   CHECK_LT(index, shuffle_indices_.size());
   size_t sample_index = shuffle_indices_[index];
   CHECK_LT(sample_index, sample_indices_.size() - 1);
@@ -143,7 +143,7 @@ void GPTDataset::Get(size_t index, T* data) const {
 }
 
 template<typename T>
-void GPTDataset::ReadTokens(const void* src, size_t bytes_offset, T* dst, size_t size) const {
+void MegatronGPTMMapDataset::ReadTokens(const void* src, size_t bytes_offset, T* dst, size_t size) const {
   CHECK_NOTNULL(src);
   switch (index_->dtype_code()) {
 #define SWITCH_CASE_ENTRY(type_code, type)                                           \

@@ -58,15 +58,15 @@ std::vector<size_t> GetSplitDocIndices(const std::vector<int64_t>& split_sizes, 
 
 }  // namespace
 
-constexpr char GPTIndex::kMagicCode[];
+constexpr char MegatronGPTIndex::kMagicCode[];
 
-size_t GPTIndex::num_tokens() const {
+size_t MegatronGPTIndex::num_tokens() const {
   size_t num_tokens = 0;
   for (auto size : sizes_) { num_tokens += size; }
   return num_tokens;
 }
 
-GPTIndex::GPTIndex(const std::string& index_file_path) {
+MegatronGPTIndex::MegatronGPTIndex(const std::string& index_file_path) {
   auto start = std::chrono::system_clock::now();
   std::ifstream stream(index_file_path, std::ios::binary);
   CHECK(stream.is_open());
@@ -108,7 +108,7 @@ GPTIndex::GPTIndex(const std::string& index_file_path) {
             << " ms";
 }
 
-MappedBuffer::MappedBuffer(const char* filename) : mapped_(nullptr), size_(0) {
+MegatronGPTMappedBuffer::MegatronGPTMappedBuffer(const char* filename) : mapped_(nullptr), size_(0) {
 #ifdef __linux__
   int fd = open(filename, O_RDONLY);
   CHECK(fd != -1) << "open " << filename << " failed: " << strerror(errno);
@@ -124,19 +124,19 @@ MappedBuffer::MappedBuffer(const char* filename) : mapped_(nullptr), size_(0) {
 #endif
 }
 
-MappedBuffer::~MappedBuffer() {
+MegatronGPTMappedBuffer::~MegatronGPTMappedBuffer() {
 #ifdef __linux__
   CHECK(munmap(mapped_, size_) == 0) << "munmap failed";
 #endif
 }
 
-GPTDataset::GPTDataset(const std::string& data_file_prefix, size_t seq_len, size_t num_samples,
+MegatronGPTMMapDataset::MegatronGPTMMapDataset(const std::string& data_file_prefix, size_t seq_len, size_t num_samples,
                        const std::vector<int64_t>& split_sizes, size_t split_index, bool shuffle,
                        uint32_t seed)
     : seq_len_(seq_len), num_samples_(num_samples), shuffle_(shuffle), seed_(seed), gen_(seed) {
   auto start = std::chrono::system_clock::now();
-  index_ = std::make_unique<const GPTIndex>(data_file_prefix + ".idx");
-  data_ = std::make_unique<MappedBuffer>((data_file_prefix + ".bin").c_str());
+  index_ = std::make_unique<const MegatronGPTIndex>(data_file_prefix + ".idx");
+  data_ = std::make_unique<MegatronGPTMappedBuffer>((data_file_prefix + ".bin").c_str());
   tokens_per_epoch_ = index_->num_tokens();
   num_epochs_ = GetNumEpochs();
   num_complete_epochs_ = GetNumCompleteEpochs();
@@ -154,7 +154,7 @@ GPTDataset::GPTDataset(const std::string& data_file_prefix, size_t seq_len, size
             << ", elapsed time: " << elapse.count() << " ms";
 }
 
-size_t GPTDataset::GetNumEpochs() const {
+size_t MegatronGPTMMapDataset::GetNumEpochs() const {
   // num_epochs * tokens_per_epoch >= num_samples * seq_length + 1
   // +1 is because we need to retrieve seq_length + 1 token each time
   // but the last token will overlap with the first token of the next
@@ -163,7 +163,7 @@ size_t GPTDataset::GetNumEpochs() const {
       std::ceil(static_cast<double>(num_samples_ * seq_len_ + 1) / tokens_per_epoch_));
 }
 
-size_t GPTDataset::GetNumCompleteEpochs() const {
+size_t MegatronGPTMMapDataset::GetNumCompleteEpochs() const {
   if (num_epochs_ == 1) { return 1; }
   size_t num_samples_per_epoch =
       static_cast<size_t>(std::floor(static_cast<double>(tokens_per_epoch_ - 1) / seq_len_));
@@ -178,14 +178,14 @@ size_t GPTDataset::GetNumCompleteEpochs() const {
   return separate_last_epoch ? (num_epochs_ - 1) : num_epochs_;
 }
 
-void GPTDataset::InitDocIndices(const std::vector<int64_t>& split_sizes, size_t split_index) {
+void MegatronGPTMMapDataset::InitDocIndices(const std::vector<int64_t>& split_sizes, size_t split_index) {
   auto epoch_doc_indices = GetSplitDocIndices(split_sizes, split_index, index_->num_docs());
   doc_indices_.reserve(epoch_doc_indices.size() * num_complete_epochs_);
   InitDocIndices(epoch_doc_indices, num_complete_epochs_);
   if (num_epochs_ != num_complete_epochs_) { InitDocIndices(epoch_doc_indices, 1); }
 }
 
-void GPTDataset::InitDocIndices(const std::vector<size_t>& epoch_doc_indices, size_t num_epochs) {
+void MegatronGPTMMapDataset::InitDocIndices(const std::vector<size_t>& epoch_doc_indices, size_t num_epochs) {
   auto start = doc_indices_.end();
   FOR_RANGE(size_t, i, 0, num_epochs) {
     doc_indices_.insert(doc_indices_.end(), epoch_doc_indices.cbegin(), epoch_doc_indices.cend());
@@ -193,7 +193,7 @@ void GPTDataset::InitDocIndices(const std::vector<size_t>& epoch_doc_indices, si
   if (shuffle_) { std::shuffle(start, doc_indices_.end(), gen_); }
 }
 
-void GPTDataset::InitSampleIndices() {
+void MegatronGPTMMapDataset::InitSampleIndices() {
   // + 1 is because sample_indices need an `end` mark to indicate the end position of the last
   // sample, the actual total number of samples is sample_indices_.size() - 1
   size_t total_num_samples =
@@ -230,7 +230,7 @@ void GPTDataset::InitSampleIndices() {
   CHECK_GE(sample_indices_.size(), num_samples_);
 }
 
-void GPTDataset::InitShuffleIndices() {
+void MegatronGPTMMapDataset::InitShuffleIndices() {
   // the last sample index in sample_indices_ is an `end` mark
   shuffle_indices_.resize(sample_indices_.size() - 1);
   std::iota(shuffle_indices_.begin(), shuffle_indices_.end(), 0);
@@ -245,7 +245,7 @@ void GPTDataset::InitShuffleIndices() {
   }
 }
 
-const HashMap<char, size_t> GPTDataset::kDTypeCode2Size = {
+const HashMap<char, size_t> MegatronGPTMMapDataset::kDTypeCode2Size = {
     {1, 1},  // DataType::kUInt8
     {2, 1},  // DataType::kInt8
     {3, 2},  // DataType::kInt16

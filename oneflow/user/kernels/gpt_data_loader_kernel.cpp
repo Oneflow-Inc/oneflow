@@ -61,7 +61,7 @@ class GPTDataLoader final : public OpKernelState {
   GPTDataLoader(KernelInitContext* ctx) : num_shards_(1) {
     seq_len_ = ctx->Attr<int64_t>("seq_length");
 
-    dataset_.reset(new GPTDataset(
+    dataset_.reset(new MegatronGPTMMapDataset(
         ctx->Attr<std::string>("data_file_prefix"), seq_len_, ctx->Attr<int64_t>("num_samples"),
         ctx->Attr<std::vector<int64_t>>("split_sizes"), ctx->Attr<int64_t>("split_index"),
         ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed")));
@@ -96,7 +96,7 @@ class GPTDataLoader final : public OpKernelState {
   }
 
  private:
-  std::unique_ptr<GPTDataset> dataset_;
+  std::unique_ptr<MegatronGPTMMapDataset> dataset_;
   size_t seq_len_;
   size_t batch_size_;
   size_t num_shards_;
