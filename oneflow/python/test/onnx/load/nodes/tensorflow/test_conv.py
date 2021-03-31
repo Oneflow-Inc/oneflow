@@ -82,3 +82,28 @@ def test_conv2d_k3s2p0(test_case):
 
 #     load_tensorflow2_module_and_check(test_case, Net, input_size=(2, 4, 13, 12))
 
+
+def test_depthwise_conv2d_k3s2p0(test_case):
+    class Net(tf.keras.Model):
+        def __init__(self):
+            super(Net, self).__init__()
+            self.conv = tf.keras.layers.DepthwiseConv2D(3, strides=(2, 2), padding="valid")
+
+        def call(self, x):
+            x = self.conv(x)
+            return x
+
+    load_tensorflow2_module_and_check(test_case, Net, input_size=(2, 4, 9, 7))
+
+def test_depthwise_conv2d_k3s2p1(test_case):
+    class Net(tf.keras.Model):
+        def __init__(self):
+            super(Net, self).__init__()
+            self.conv = tf.keras.layers.DepthwiseConv2D(3, strides=(2, 2), padding="same")
+
+        def call(self, x):
+            x = self.conv(x)
+            return x
+
+    load_tensorflow2_module_and_check(test_case, Net, input_size=(2, 4, 9, 7))
+
