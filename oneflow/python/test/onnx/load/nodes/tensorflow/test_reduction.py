@@ -39,9 +39,3 @@ def test_reduce_mean_axis_keepdim(test_case):
             return tf.math.reduce_mean(x, axis=3, keepdims=True)
 
     load_tensorflow2_module_and_check(test_case, Net)
-
-from absl import app
-from absl.testing import absltest
-
-test_case = absltest.TestCase
-test_reduce_mean_axis_keepdim(test_case)
