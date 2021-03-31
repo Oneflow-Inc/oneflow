@@ -52,7 +52,6 @@ REGISTER_USER_OP("unique_with_counts")
       *y->mut_data_type() = x->data_type();
 
       user_op::TensorDesc* idx = ctx->TensorDesc4ArgNameAndIndex("idx", 0);
-      *idx->mut_data_type() = x->data_type();
       *idx->mut_data_type() = out_idx;
 
       user_op::TensorDesc* count = ctx->TensorDesc4ArgNameAndIndex("count", 0);
