@@ -31,8 +31,8 @@ REGISTER_USER_OP("same_padding")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      *y_desc->mut_shape() = *x_desc->shape();
-      *y_desc->mut_is_dynamic() = *x_desc->is_dynamic();
+      *y_desc->mut_shape() = x_desc->shape();
+      *y_desc->mut_is_dynamic() = x_desc->is_dynamic();
       const std::string& data_format = ctx->Attr<std::string>("data_format");
       const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
       const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");

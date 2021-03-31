@@ -45,7 +45,6 @@ REGISTER_USER_OP("multi_count_not_finite")
     .InputWithMinimum("x", 1)
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* first_x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
       *y_desc->mut_shape() = Shape({1});
       return Maybe<void>::Ok();

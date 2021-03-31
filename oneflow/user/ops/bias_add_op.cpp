@@ -55,7 +55,7 @@ REGISTER_USER_OP("bias_add")
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("a", 0);
       return Maybe<void>::Ok();
-    });  
+    });
 
 REGISTER_USER_OP_GRAD("bias_add")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {

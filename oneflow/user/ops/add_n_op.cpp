@@ -30,7 +30,7 @@ REGISTER_USER_OP("add_n")
         CHECK_EQ_OR_RETURN(in_0->shape(), cur_in->shape());
       }
       *out->mut_shape() = in_0->shape();
-      *out->mut_is_dynamic() = in_0->mut_is_dynamic();
+      *out->mut_is_dynamic() = in_0->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) {
