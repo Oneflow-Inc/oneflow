@@ -121,7 +121,6 @@ REGISTER_USER_OP("dim_scatter_add_like")
 
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
       *out->mut_shape() = like_shape;
-      *out->mut_data_type() = input->data_type();
 
       return Maybe<void>::Ok();
     })

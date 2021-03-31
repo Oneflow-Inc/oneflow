@@ -471,6 +471,9 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
 
   UserOpInferContext infer_ctx(this, nullptr, nullptr, BlobDesc4BnInOp);
 
+  CHECK_OR_RETURN(val_->data_type_infer_fn)
+      << "No InferDataType function for " << val_->op_type_name;
+  JUST(val_->data_type_infer_fn(&infer_ctx));
   JUST(val_->logical_tensor_desc_infer_fn(&infer_ctx));
   for (const auto& pair : infer_ctx.outputs()) {
     BlobDesc* out_blob_desc = BlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
@@ -501,6 +504,9 @@ Maybe<void> UserOp::InferOutBlobDescs(
     }
     UserOpInferContext infer_ctx(this, parallel_ctx, nullptr, GetBlobDesc4BnInOp);
 
+    CHECK_OR_RETURN(val_->data_type_infer_fn)
+        << "No InferDataType function for " << val_->op_type_name;
+    JUST(val_->data_type_infer_fn(&infer_ctx));
     JUST(val_->physical_tensor_desc_infer_fn(&infer_ctx));
     for (const auto& pair : infer_ctx.outputs()) {
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));

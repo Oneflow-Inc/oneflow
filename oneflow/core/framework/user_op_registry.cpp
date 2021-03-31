@@ -204,12 +204,8 @@ OpRegistry& OpRegistry::Finish() {
       << "No TensorDescInfer function for " << result_.op_type_name;
   if (!result_.physical_tensor_desc_infer_fn) {
     const auto& logical_fn = result_.logical_tensor_desc_infer_fn;
-    CHECK(result_.data_type_infer_fn != nullptr)
-        << "No DataTypeInfer function for " << result_.op_type_name;
-    const auto& data_type_fn = result_.data_type_infer_fn;
     result_.physical_tensor_desc_infer_fn =
-        [logical_fn, data_type_fn](user_op::InferContext* ctx) -> Maybe<void> {
-      data_type_fn(ctx);
+        [logical_fn](user_op::InferContext* ctx) -> Maybe<void> {
       if (ctx->parallel_num() == 1) {
         logical_fn(ctx);
       } else {

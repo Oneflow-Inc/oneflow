@@ -45,9 +45,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
         local_batch_size /= parallel_num;
       }
       *image_tensor->mut_shape() = Shape({local_batch_size});
-      *image_tensor->mut_data_type() = DataType::kTensorBuffer;
       *label_tensor->mut_shape() = Shape({local_batch_size});
-      *label_tensor->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -55,9 +53,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
       user_op::TensorDesc* label_tensor = ctx->TensorDesc4ArgNameAndIndex("label", 0);
       int32_t batch_size = ctx->Attr<int32_t>("batch_size");
       *image_tensor->mut_shape() = Shape({batch_size});
-      *image_tensor->mut_data_type() = DataType::kTensorBuffer;
       *label_tensor->mut_shape() = Shape({batch_size});
-      *label_tensor->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -72,6 +68,12 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
       user_op::OutputArgModifier* label_modifier = GetOutputArgModifierFn("label", 0);
       CHECK(label_modifier != nullptr);
       label_modifier->set_header_infered_before_compute(false);
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
+      *ctx->Dtype4ArgNameAndIndex("image", 0) = DataType::kTensorBuffer;
+      *ctx->Dtype4ArgNameAndIndex("label", 0) = DataType::kTensorBuffer;
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

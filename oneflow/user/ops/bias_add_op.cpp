@@ -30,7 +30,8 @@ REGISTER_USER_OP("bias_add")
       CHECK_GE_OR_RETURN(bias_add_axis, 0);
       CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc->shape().NumAxes());
       CHECK_EQ_OR_RETURN(a_tensor_desc->shape().At(bias_add_axis), b_tensor_desc->shape().At(0));
-      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *a_tensor_desc;
+      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("a", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("a", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -50,7 +51,11 @@ REGISTER_USER_OP("bias_add")
           .Split(ctx->outputs(), axis)
           .Build();
       return Maybe<void>::Ok();
-    });
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("a", 0);
+      return Maybe<void>::Ok();
+    });  
 
 REGISTER_USER_OP_GRAD("bias_add")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
