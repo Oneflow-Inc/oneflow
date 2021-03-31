@@ -94,7 +94,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     LOG(INFO) << "using rpc backend: dry-run";
     Global<RpcManager>::SetAllocated(new DryRunRpcManager());
 #else
-    static_assert(false, "requires rpc backend local to run oneflow in single processs");
+    static_assert(false, "requires rpc backend dry-run to dry run oneflow");
 #endif  // RPC_BACKEND_LOCAL
   } else if ((env_proto.machine_size() == 1 && env_proto.has_ctrl_bootstrap_conf() == false)
              || (env_proto.has_ctrl_bootstrap_conf()
