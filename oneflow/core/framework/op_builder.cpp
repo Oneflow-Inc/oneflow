@@ -13,11 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <glog/logging.h>
+#include "oneflow/core/framework/op_builder.h"
 
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/id_util.h"
-#include "oneflow/core/framework/op_builder.h"
 
 namespace oneflow {
 namespace one {
@@ -76,6 +76,18 @@ OpBuilder& OpBuilder::Output(const std::string& output_name, const int count) {
   return CHECK_JUST(MaybeOutput(output_name, count));
 }
 
+template<>
+Maybe<OpBuilder&> OpBuilder::MaybeAttr(const std::string& attr_name, const AttrValue& attr_value) {
+  (*(proto_.mutable_attr()))[attr_name] = attr_value;
+  return *this;
+}
+
+template<>
+OpBuilder& OpBuilder::Attr(const std::string& attr_name, const AttrValue& attr_value) {
+  return CHECK_JUST(MaybeAttr<AttrValue>(attr_name, attr_value));
+}
+
+template<>
 Maybe<OpBuilder&> OpBuilder::MaybeAttr(const std::string& attr_name,
                                        const cfg::AttrValue& attr_value) {
   AttrValue pb_attr_value;
@@ -84,9 +96,27 @@ Maybe<OpBuilder&> OpBuilder::MaybeAttr(const std::string& attr_name,
   return *this;
 }
 
+template<>
 OpBuilder& OpBuilder::Attr(const std::string& attr_name, const cfg::AttrValue& attr_value) {
   return CHECK_JUST(MaybeAttr(attr_name, attr_value));
 }
+
+#define DEFINE_OP_BUILDER_ATTR_FUNC(field, cpp_type, attr_type)                             \
+  template<>                                                                                \
+  Maybe<OpBuilder&> OpBuilder::MaybeAttr<cpp_type>(const std::string& attr_name,            \
+                                                   const cpp_type& val) {                   \
+    AttrValue attr_val;                                                                     \
+    user_op::AttrValueAccessor<cpp_type>::Attr(val, &attr_val);                             \
+    return this->MaybeAttr<AttrValue>(attr_name, attr_val);                                 \
+  }                                                                                         \
+                                                                                            \
+  template<>                                                                                \
+  OpBuilder& OpBuilder::Attr<cpp_type>(const std::string& attr_name, const cpp_type& val) { \
+    return CHECK_JUST(MaybeAttr<cpp_type>(attr_name, val));                                 \
+  }
+
+OF_PP_FOR_EACH_TUPLE(DEFINE_OP_BUILDER_ATTR_FUNC, ATTR_SEQ)
+#undef DEFINE_OP_BUILDER_ATTR_FUNC
 
 Maybe<UserOpExpr> OpBuilder::Build() {
   return std::make_shared<UserOpExpr>(op_name_, std::move(proto_), indexed_ibns_, indexed_obns_);

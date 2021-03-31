@@ -23,6 +23,8 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+static constexpr char FakeGradientOpSuffix[] = ".grad";
+
 // Stateless container base of the backward op exprs.
 // The backward op exprs should be contained in the derived class.
 class OpExprGradFunction {
