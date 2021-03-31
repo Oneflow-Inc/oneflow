@@ -64,6 +64,23 @@ AvailableMemDesc PullAvailableMemDesc() {
   return ret;
 }
 
+AvailableMemDesc GetDryRunAvailableMemDesc() {
+  AvailableMemDescOfMachine this_machine_mem_desc;
+#ifdef WITH_CUDA
+  FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
+    this_machine_mem_desc.add_zone_size(std::numeric_limits<size_t>::max());
+  }
+#endif
+  this_machine_mem_desc.add_zone_size(std::numeric_limits<size_t>::max());
+
+  AvailableMemDesc ret;
+  AvailableMemDescOfMachine machine_amd_i;
+  for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
+    *ret.add_machine_amd() = this_machine_mem_desc;
+  }
+  return ret;
+}
+
 }  // namespace
 
 SessionGlobalObjectsScope::SessionGlobalObjectsScope() {}
