@@ -102,7 +102,11 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   PushAvailableMemDescOfThisMachine();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<AvailableMemDesc>::New();
-    *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
+    if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+      *Global<AvailableMemDesc>::Get() = GetDryRunAvailableMemDesc();
+    } else {
+      *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
+    }
     Global<JobName2JobId>::New();
     Global<CriticalSectionDesc>::New();
     Global<InterUserJobInfo>::New();
