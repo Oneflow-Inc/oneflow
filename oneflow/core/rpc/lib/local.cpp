@@ -145,7 +145,10 @@ class DryRunCtrlClient : public CtrlClient {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DryRunCtrlClient);
   explicit DryRunCtrlClient(const ProcessCtx& process_ctx)
-      : local_ctrl_client_{std::unique_ptr<LocalCtrlClient>(new LocalCtrlClient(process_ctx))} {}
+      : local_ctrl_client_{std::unique_ptr<LocalCtrlClient>(new LocalCtrlClient(process_ctx))} {
+    CHECK(process_ctx.ctrl_addr_size() == 1);
+    CHECK(process_ctx.node_size() == 1);
+  }
   ~DryRunCtrlClient() override = default;
 
   void Barrier(const std::string& barrier_name) override {
@@ -197,11 +200,15 @@ class DryRunCtrlClient : public CtrlClient {
   std::unique_ptr<LocalCtrlClient> local_ctrl_client_;
 };
 
-Maybe<void> LocalRpcManager::Bootstrap() {
-  Address* addr = Global<ProcessCtx>::Get()->add_ctrl_addr();
+void SetLocalProcessCtx(oneflow::ProcessCtx* ctx) {
+  Address* addr = ctx->add_ctrl_addr();
   addr->set_host("localhost");
-  Global<ProcessCtx>::Get()->set_rank(0);
-  Global<ProcessCtx>::Get()->set_node_size(1);
+  ctx->set_rank(0);
+  ctx->set_node_size(1);
+}
+
+Maybe<void> LocalRpcManager::Bootstrap() {
+  SetLocalProcessCtx(Global<ProcessCtx>::Get());
   return Maybe<void>::Ok();
 }
 
@@ -214,10 +221,7 @@ Maybe<void> LocalRpcManager::CreateClient() {
 LocalRpcManager::~LocalRpcManager() { Global<CtrlClient>::Delete(); }
 
 Maybe<void> DryRunRpcManager::Bootstrap() {
-  Address* addr = Global<ProcessCtx>::Get()->add_ctrl_addr();
-  addr->set_host("localhost");
-  Global<ProcessCtx>::Get()->set_rank(0);
-  Global<ProcessCtx>::Get()->set_node_size(1);
+  SetLocalProcessCtx(Global<ProcessCtx>::Get());
   return Maybe<void>::Ok();
 }
 
