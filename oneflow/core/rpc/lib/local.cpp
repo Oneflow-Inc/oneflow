@@ -100,7 +100,7 @@ void LocalCtrlClient::PullKV(const std::string& k,
       }
       kv_cv_.wait(lck);
     } else {
-      VGetter(kv_.at(k));
+      VGetter(it->second);
       break;
     }
   }
