@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 import getpass
+import uuid
 
 
 def get_arg_env(env_var_name: str, mode="run"):
@@ -349,6 +350,10 @@ if __name__ == "__main__":
             user = getpass.getuser()
             versioned_img_tag = f"{img_prefix}:0.1"
             user_img_tag = f"{img_prefix}:{user}"
+            extra_docker_args = (
+                args.extra_docker_args
+                + f" --name run-by-{getpass.getuser()}-{str(uuid.uuid4())}"
+            )
             if args.custom_img_tag:
                 img_tag = args.custom_img_tag
                 skip_img = True
@@ -398,7 +403,7 @@ gcc --version
                     args.oneflow_src_dir,
                     cache_dir,
                     extra_oneflow_cmake_args,
-                    args.extra_docker_args,
+                    extra_docker_args,
                     bash_args,
                     bash_wrap,
                     args.dry,
@@ -415,7 +420,7 @@ gcc --version
                     args.oneflow_src_dir,
                     cache_dir,
                     extra_oneflow_cmake_args,
-                    args.extra_docker_args,
+                    extra_docker_args,
                     python_version,
                     args.skip_wheel,
                     args.package_name,

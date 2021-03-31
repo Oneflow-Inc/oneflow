@@ -345,6 +345,12 @@ jobs:
           oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/oneflow_temp
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      - name: Dry run test (run without runtime)
+        if: matrix.test_suite == 'cuda'
+        run: |
+          docker run $extra_docker_args \
+            oneflow-test:$USER \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/dry_run_test.sh"
       - name: Op test
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
         run: |
