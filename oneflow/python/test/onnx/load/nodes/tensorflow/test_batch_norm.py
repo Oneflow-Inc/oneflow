@@ -30,3 +30,20 @@ def test_bn(test_case):
 
     load_tensorflow2_module_and_check(test_case, Net)
 
+def test_bn_withoutscale(test_case):
+    class Net(tf.keras.Model):
+        def __init__(self):
+            super(Net, self).__init__()
+            self.bn = tf.keras.layers.BatchNormalization(axis=1, scale=False, trainable=False)
+
+        def call(self, x):
+            x = self.bn(x)
+            return x
+
+    load_tensorflow2_module_and_check(test_case, Net)
+
+from absl import app
+from absl.testing import absltest
+
+test_case = absltest.TestCase
+test_bn_withoutscale(test_case)

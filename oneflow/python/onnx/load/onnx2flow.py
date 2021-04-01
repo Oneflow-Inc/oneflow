@@ -48,6 +48,7 @@ import paddle
 import tensorflow as tf
 import tf2onnx
 import logging
+import onnxoptimizer
 
 try:
     import onnxsim
@@ -81,7 +82,12 @@ def from_onnx(
         logger.info(
             "We recommend installing onnx-simplifier so that OneFlow can remove the redundant ONNX nodes"
         )
+    
+    initializer_name = []
     if from_tf2:
+        for x in onnx_model.graph.input:
+            x.name = x.name.replace('/', '_')
+            x.name = x.name.replace(':', '_')
         for i, node in enumerate(onnx_model.graph.node):
             node.name = node.name.replace('/', '_')
             node.name = node.name.replace(':', '_')
@@ -94,6 +100,28 @@ def from_onnx(
         for x in onnx_model.graph.initializer:
             x.name = x.name.replace('/', '_')
             x.name = x.name.replace(':', '_')
+            initializer_name.append(x.name)
+        # to solve tf batchnorm without scale params
+        delete_node_name = []
+        for i, node in enumerate(onnx_model.graph.node):
+            if node.op_type == "BatchNormalization":
+                if node.input[1] in initializer_name:
+                    pass
+                else:
+                    delete_node_name.append(node.input[1])
+        
+        for i, x in enumerate(onnx_model.graph.input):
+            if x.name in delete_node_name:
+                tensor_dim = onnx_model.graph.input[i].type.tensor_type.shape.dim
+                new_bn_value = []
+                for j in range(int(tensor_dim[0].dim_value)):
+                    new_bn_value.append(1.0)
+                new_bn_scale_node = onnx.helper.make_tensor(name=x.name, data_type=onnx.TensorProto.FLOAT, dims=(int(tensor_dim[0].dim_value),), vals=new_bn_value)
+                onnx_model.graph.initializer.extend([new_bn_scale_node])
+        
+        for x in onnx_model.graph.input:
+            if x.name in delete_node_name:
+                onnx_model.graph.input.remove(x)
 
     if not os.path.exists("/home/zhangxiaoyu/temp_onnx"):
         os.makedirs("/home/zhangxiaoyu/temp_onnx")
