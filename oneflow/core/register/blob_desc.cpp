@@ -23,10 +23,9 @@ bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& r
   return lhs.lbi() < rhs.lbi();
 }
 
+BlobDesc::BlobDesc(const Shape& shape, DataType dtype) : body_(shape, dtype), is_dynamic_(false) {}
 BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype)
     : body_(shape, dtype), is_dynamic_(false) {}
-BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
-    : BlobDesc(std::make_shared<Shape>(shape), dtype) {}
 
 BlobDesc::BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
 
@@ -42,9 +41,8 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
   proto->set_is_dynamic(is_dynamic_);
 
   StructPodDesc header;
-  header.AddField(
-      FieldKey::kTensorShape,
-      TensorPodDesc(std::make_shared<Shape>(DimVector{shape().NumAxes()}), DataType::kInt64));
+  header.AddField(FieldKey::kTensorShape,
+                  TensorPodDesc(Shape(DimVector{shape().NumAxes()}), DataType::kInt64));
   header.ToProto(proto->mutable_header());
 }
 
