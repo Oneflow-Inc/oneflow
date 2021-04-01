@@ -64,11 +64,11 @@ MegatronGPTIndex::MegatronGPTIndex(const std::string& index_file_path) {
   char magic_code[sizeof(kMagicCode)];
   stream.read(magic_code, sizeof(kMagicCode) - 1);
   magic_code[sizeof(kMagicCode) - 1] = '\0';
-  CHECK_EQ(std::strcmp(magic_code, kMagicCode), 0);
+  CHECK_EQ(std::strncmp(magic_code, kMagicCode, sizeof(kMagicCode)), 0);
   // read version
   stream.read(reinterpret_cast<char*>(&version_), sizeof(version_));
   // read dtype
-  stream.read(&dtype_code_, 1);
+  stream.read(&dtype_code_, sizeof(dtype_code_));
   // read size of sizes and doc_offsets
   uint64_t sizes_size = 0;
   stream.read(reinterpret_cast<char*>(&sizes_size), sizeof(sizes_size));
