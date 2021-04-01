@@ -27,13 +27,13 @@ namespace data {
 
 namespace {
 
-std::ifstream::pos_type FileSize(const std::string& filename) {
+size_t FileSize(const std::string& filename) {
   std::ifstream stream(filename, std::ifstream::ate | std::ifstream::binary);
   return stream.tellg();
 }
 
-std::vector<size_t> GetSplitDocIndices(const std::vector<int64_t>& split_sizes, size_t split_index,
-                                       size_t num_docs) {
+void GetSplitDocIndices(std::vector<size_t>* doc_indices, const std::vector<int64_t>& split_sizes,
+                        size_t split_index, size_t num_docs) {
   CHECK_LT(split_index, split_sizes.size());
   size_t total_size = 0;
   FOR_RANGE(size_t, i, 0, split_sizes.size()) { total_size += split_sizes[i]; }
@@ -51,9 +51,8 @@ std::vector<size_t> GetSplitDocIndices(const std::vector<int64_t>& split_sizes, 
     splits_offsets.push_back(splits_offsets[i] + split_size);
   }
 
-  std::vector<size_t> doc_indices(splits[split_index]);
-  std::iota(doc_indices.begin(), doc_indices.end(), splits_offsets[split_index]);
-  return doc_indices;
+  doc_indices->resize(splits[split_index]);
+  std::iota(doc_indices->begin(), doc_indices->end(), splits_offsets[split_index]);
 }
 
 }  // namespace
@@ -138,7 +137,8 @@ MegatronGPTMMapDataset::MegatronGPTMMapDataset(const std::string& data_file_pref
   index_ = std::make_unique<const MegatronGPTIndex>(data_file_prefix + ".idx");
   data_ = std::make_unique<MegatronGPTMappedBuffer>(data_file_prefix + ".bin");
   dtype_size_ = kDTypeCode2Size.at(index_->dtype_code());
-  auto epoch_doc_indices = GetSplitDocIndices(split_sizes, split_index, index_->num_docs());
+  std::vector<size_t> epoch_doc_indices;
+  GetSplitDocIndices(&epoch_doc_indices, split_sizes, split_index, index_->num_docs());
   tokens_per_epoch_ = GetNumTokens(epoch_doc_indices);
   num_epochs_ = GetNumEpochs();
   num_complete_epochs_ = GetNumCompleteEpochs();
