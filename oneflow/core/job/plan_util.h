@@ -46,7 +46,9 @@ struct PlanUtil {
           << "op attribute ref: " << kernel_conf.op_attribute_ref() << " not found";
       return it->second;
     } else {
-      UNIMPLEMENTED() << "kernel_conf must has either op_attribute or op_attribute_ref";
+      UNIMPLEMENTED()
+          << "kernel_conf must has either op_attribute or op_attribute_ref. kernel_conf: "
+          << kernel_conf.DebugString();
     }
   }
 };
