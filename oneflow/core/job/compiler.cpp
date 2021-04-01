@@ -68,6 +68,7 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   auto* job_id2op_attribute_ref_table = plan->mutable_job_id2op_attribute_ref_table();
   CHECK(task_proto->exec_sequence().exec_node_size() == 1);
   auto* exec_node = task_proto->mutable_exec_sequence()->mutable_exec_node(0);
+  CHECK(exec_node->kernel_conf().has_op_attribute());
   const std::string op_name = exec_node->kernel_conf().op_attribute().op_conf().name();
   auto* op_name2op_attribute =
       (*job_id2op_attribute_ref_table)[job_id].mutable_op_name2op_attribute();
