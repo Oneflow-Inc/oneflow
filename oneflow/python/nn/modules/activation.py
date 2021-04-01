@@ -91,6 +91,60 @@ class Softmax(Module):
         return res
 
 
+@oneflow_export("nn.LogSoftmax")
+class LogSoftmax(Module):
+    r"""Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional
+    input Tensor. The LogSoftmax formulation can be simplified as:
+
+    .. math::
+        \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right)
+
+    Shape:
+        - Input: :math:`(*)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(*)`, same shape as the input
+
+    Args:
+        dim (int): A dimension along which LogSoftmax will be computed.
+
+    Returns:
+        a Tensor of the same dimension and shape as the input with
+        values in the range [-inf, 0)
+    """
+    def __init__(
+        self, dim: Optional[int] = 1,
+    ):
+        super().__init__()
+
+        self.dim = dim
+        self._softmax_op = flow.builtin_op("softmax").Input("in").Output("out").Build()
+        self._log_op = flow.builtin_op("log").Input("x").Output("y").Build()
+        self._transpose_op = flow.builtin_op("transpose").Input("input").Output("output")
+    
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if not hasattr(self, 'dim'):
+            self.dim = None
+
+    def forward(self, x):
+        need_transpose, permute = _softmax_need_transpose(x, self.dim)
+
+        if need_transpose:
+            self._transpose_op = self._transpose_op.Attr("perm", permute).Build()
+            x = self._transpose_op(x)[0]
+        res = self._softmax_op(x)[0]
+        res = self._log_op(res)[0]
+        if need_transpose:
+            res = transpose(res, perm=permute)
+        
+        return res
+
+    def extra_repr(self):
+        return 'dim={dim}'.format(dim=self.dim)
+
+
+
 if __name__ == "__main__":
     flow.enable_eager_execution(True)
     import numpy as np
