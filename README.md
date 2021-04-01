@@ -42,7 +42,7 @@
   - To install nightly release of OneFlow with CUDA support:
 
     ```
-    python3 -m pip install --find-links https://staging.oneflow.info/branch/master/cu102 oneflow+cu102 --user
+    python3 -m pip install --find-links https://staging.oneflow.info/branch/master/cu102 oneflow --user
 
   - To install other available builds for different CUDA versions:
     ```
