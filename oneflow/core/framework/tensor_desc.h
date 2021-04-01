@@ -27,6 +27,8 @@ namespace user_op {
 class TensorDesc {
  public:
   virtual ~TensorDesc() = default;
+  TensorDesc& operator=(const TensorDesc& rhs);
+  bool operator==(const TensorDesc&) const;
 
   virtual const Shape& shape() const = 0;
   virtual Shape* mut_shape() = 0;
@@ -48,10 +50,7 @@ class NaiveTensorDesc final : public TensorDesc {
   NaiveTensorDesc(const NaiveTensorDesc&);
   NaiveTensorDesc(const BlobDescProto&);
 
-  NaiveTensorDesc& operator=(const NaiveTensorDesc&);
   NaiveTensorDesc& operator=(const BlobDescProto&);
-
-  bool operator==(const NaiveTensorDesc&) const;
 
   const Shape& shape() const override { return shape_; }
   Shape* mut_shape() override { return &shape_; }
