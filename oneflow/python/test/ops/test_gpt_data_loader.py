@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import os
 import numpy as np
 import unittest
 import oneflow as flow
@@ -90,7 +89,7 @@ def _make_gpt_data_loader_func(
 
 
 class TestGPTDataLoader(flow.unittest.TestCase):
-    DATA_FILE_PREFIX = "/dataset/Megatron-LM/small/gpt_sample_dataset_text_document"
+    DATA_FILE_PREFIX = "/dataset/Megatron-LM/dummy/gpt_sample_dataset_text_document"
     SEQ_LENGTH = 1024
     RANDOM_SEED = 12345
 
