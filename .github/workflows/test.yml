@@ -74,7 +74,7 @@ jobs:
     strategy:
       max-parallel: 5
       matrix:
-        test_suite: ["cuda", "cpu", "xla", "mac"]
+        test_suite: ["cuda", "cpu", "xla"]
         include:
           - test_suite: cuda
             cuda_version: 10.2
