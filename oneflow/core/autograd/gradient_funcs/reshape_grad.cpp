@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter_util.h"
 
 namespace oneflow {
@@ -28,11 +29,7 @@ class ReshapeOpExprGrad : public OpExprGradFunction {
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    backward_op_ = JUST(OpBuilder("reshape_like", fw_op_expr->op_name() + FakeGradientOpSuffix)
-                            .Input("in")
-                            .Input("like")
-                            .Output("out")
-                            .Build());
+    backward_op_ = JUST(op_expr_helper::ReshapeLikeOp(GradientOpName(fw_op_expr->op_name())));
     return Maybe<void>::Ok();
   }
 
