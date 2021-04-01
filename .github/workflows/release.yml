@@ -134,13 +134,13 @@ jobs:
           echo "wheelhouse_dir=${tmp_dir}/wheelhouse" >> $GITHUB_ENV
 
           git_branch=${GITHUB_REF##*/}
-          oss_branch_dir=branch/${git_branch}
+          oss_branch_dir=branch/${git_branch}/${{ matrix.compute_platform }}
           oss_dir=${oss_branch_dir}/${GITHUB_SHA}
           echo "oss_branch_dir=${oss_branch_dir}" >> $GITHUB_ENV
           echo "oss_dir=${oss_dir}" >> $GITHUB_ENV
           echo "git_branch=${git_branch}" >> $GITHUB_ENV
 
-          $(python3 tools/oss_file_exist.py --bucket oneflow-staging --path ${oss_dir}/oneflow_${{ matrix.compute_platform }})
+          $(python3 tools/oss_file_exist.py --bucket oneflow-staging --path ${oss_dir}/oneflow)
           echo "is_built=${OSS_FILE_EXISTED}" >> $GITHUB_ENV
 
           container_name=release-run-id-${{ github.run_id }}-${{ matrix.compute_platform }}
