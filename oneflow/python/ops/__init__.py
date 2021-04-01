@@ -28,7 +28,6 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
-import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
