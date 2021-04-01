@@ -122,7 +122,7 @@ union Pack {
 };
 
 template<typename SRC>
-struct MultiFetch {
+struct DirectFetch {
   template<typename DST, int N>
   __device__ void fetch(DST* dst, int64_t row, int64_t col) const {
     Pack<SRC, N> pack;
@@ -137,7 +137,7 @@ struct MultiFetch {
 };
 
 template<typename DST>
-struct MultiStore {
+struct DirectStore {
   template<typename SRC, int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     Pack<DST, N> pack;

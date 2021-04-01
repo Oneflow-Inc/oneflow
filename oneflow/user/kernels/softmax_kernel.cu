@@ -31,14 +31,14 @@ class SoftmaxKernel final : public user_op::OpKernel {
     const ShapeView& in_shape = in->shape();
     const int64_t cols = in_shape.At(in_shape.NumAxes() - 1);
     const int64_t rows = in_shape.Count(0, in_shape.NumAxes() - 1);
-    cuda::softmax::MultiFetch<T> multi_fetch;
-    multi_fetch.src = in->dptr<T>();
-    multi_fetch.row_size = cols;
-    cuda::softmax::MultiStore<T> multi_store;
-    multi_store.dst = out->mut_dptr<T>();
-    multi_store.row_size = cols;
-    cuda::softmax::DispatchSoftmax<decltype(multi_fetch), decltype(multi_store), T>(
-        ctx->device_ctx()->cuda_stream(), multi_fetch, multi_store, rows, cols);
+    cuda::softmax::DirectFetch<T> fetch;
+    fetch.src = in->dptr<T>();
+    fetch.row_size = cols;
+    cuda::softmax::DirectStore<T> store;
+    store.dst = out->mut_dptr<T>();
+    store.row_size = cols;
+    cuda::softmax::DispatchSoftmax<decltype(fetch), decltype(store), T>(
+        ctx->device_ctx()->cuda_stream(), fetch, store, rows, cols);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -66,18 +66,17 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int64_t cols = y->shape().At(y->shape().NumAxes() - 1);
     const int64_t rows = y->shape().elem_cnt() / cols;
-    cuda::softmax::MultiFetch<T> multi_fetch_y;
-    multi_fetch_y.src = y->dptr<T>();
-    multi_fetch_y.row_size = cols;
-    cuda::softmax::MultiFetch<T> multi_fetch_dy;
-    multi_fetch_dy.src = dy->dptr<T>();
-    multi_fetch_dy.row_size = cols;
-    cuda::softmax::MultiStore<T> multi_store;
-    multi_store.dst = dx->mut_dptr<T>();
-    multi_store.row_size = cols;
-    cuda::softmax::DispatchSoftmaxGrad<decltype(multi_fetch_y), decltype(multi_fetch_dy),
-                                       decltype(multi_store), T>(
-        ctx->device_ctx()->cuda_stream(), multi_fetch_y, multi_fetch_dy, multi_store, rows, cols);
+    cuda::softmax::DirectFetch<T> fetch_y;
+    fetch_y.src = y->dptr<T>();
+    fetch_y.row_size = cols;
+    cuda::softmax::DirectFetch<T> fetch_dy;
+    fetch_dy.src = dy->dptr<T>();
+    fetch_dy.row_size = cols;
+    cuda::softmax::DirectStore<T> store;
+    store.dst = dx->mut_dptr<T>();
+    store.row_size = cols;
+    cuda::softmax::DispatchSoftmaxGrad<decltype(fetch_y), decltype(fetch_dy), decltype(store), T>(
+        ctx->device_ctx()->cuda_stream(), fetch_y, fetch_dy, store, rows, cols);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -28,7 +28,9 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(test_case, device_type, x_shape, data_type, rate, seed):
+def compare_with_tensorflow(
+    test_case, device_type, x_shape, data_type, diagonal, fill_value, scale, rate, seed
+):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -56,12 +58,14 @@ def compare_with_tensorflow(test_case, device_type, x_shape, data_type, rate, se
             flow.watch_diff(x1, test_global_storage.Setter("x1_diff"))
             flow.watch_diff(x2, test_global_storage.Setter("x2_diff"))
             if data_type == "float16":
-                print("fp16")
                 y1 = flow.cast(
                     flow.nn.dropout(
                         flow.nn.softmax(
                             flow.math.fused_scale_tril(
-                                flow.cast(x1, dtype=flow.float16), diagonal=0, scale=1.0
+                                flow.cast(x1, dtype=flow.float16),
+                                diagonal=diagonal,
+                                fill_value=fill_value,
+                                scale=scale,
                             ),
                         ),
                         rate=rate,
@@ -73,8 +77,9 @@ def compare_with_tensorflow(test_case, device_type, x_shape, data_type, rate, se
                 y2 = flow.cast(
                     flow.nn.fused_scale_tril_softmax_dropout(
                         flow.cast(x2, dtype=flow.float16),
-                        diagonal=0,
-                        scale=1.0,
+                        diagonal=diagonal,
+                        fill_value=fill_value,
+                        scale=scale,
                         rate=rate,
                         seed=seed,
                     ),
@@ -105,31 +110,24 @@ def compare_with_tensorflow(test_case, device_type, x_shape, data_type, rate, se
 
         return loss
 
-    # OneFlow
-    print("start")
-
     of_out = test_fused_scale_tril_softmax_dropout_fw_bw_job().get()
 
     y1 = test_global_storage.Get("y1")
     y2 = test_global_storage.Get("y2")
 
-    print("y1", y1.flatten()[0:20])
-    print("y2", y2.flatten()[0:20])
     tol = 1e-3 if data_type == "float16" else 1e-5
-    test_case.assertTrue(np.allclose(y1, y2, rtol=tol, atol=tol))
+    test_case.assertTrue(np.allclose(y1, y2, rtol=tol, atol=tol, equal_nan=True))
     x1_diff = test_global_storage.Get("x1_diff")
     x2_diff = test_global_storage.Get("x2_diff")
-    print("x1_diff", x1_diff.flatten())
-    print("x2_diff", x2_diff.flatten())
-    print("tol", tol)
-    test_case.assertTrue(np.allclose(x1_diff, x2_diff, rtol=tol, atol=tol))
-    print("end")
+    test_case.assertTrue(
+        np.allclose(x1_diff, x2_diff, rtol=tol, atol=tol, equal_nan=True)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestSoftmax(flow.unittest.TestCase):
+class TestFusedScaleTrilSoftmaxMaskAndScale(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_softmax_shape(test_case):
+    def test_fused_scale_tril_softmax_mask_and_scale_shape(test_case):
         if flow.eager_execution_enabled():
             print("\nSkip under erger mode!")
             return
@@ -151,12 +149,14 @@ class TestSoftmax(flow.unittest.TestCase):
             (10, 65535),
         ]
         arg_dict["data_type"] = ["float16", "float32", "double"]
+        arg_dict["diagonal"] = [-1, 0]
+        arg_dict["fill_value"] = [float("-inf"), 0]
+        arg_dict["scale"] = [0.125]
         arg_dict["rate"] = [0.5]
         arg_dict["seed"] = [12345]
         for arg in GenArgList(arg_dict):
             if arg[0] == "cpu" and arg[2] == "float16":
                 continue
-            print(*arg)
             compare_with_tensorflow(test_case, *arg)
 
 

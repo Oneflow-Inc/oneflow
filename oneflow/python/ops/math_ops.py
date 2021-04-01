@@ -1968,26 +1968,26 @@ def fused_scale_tril_softmax_dropout(
         is_floating_scale_value = False
         floating_scale_value = float(1)
         integer_scale_value = int(scale)
-    out, softmax_out = (
+    y, softmax_y = (
         flow.user_op_builder(name)
         .Op("fused_tril_scale_softmax_mask_and_scale")
-        .Input("in", [x])
+        .Input("x", [x])
         .Input("mask", [mask])
         .Attr("diagonal", diagonal)
         .Attr("is_floating_fill_value", is_floating_fill_value)
         .Attr("floating_fill_value", floating_fill_value)
         .Attr("integer_fill_value", integer_fill_value)
-        .Attr("is_floating_scale_value", is_floating_scale_value)
-        .Attr("floating_scale_value", floating_scale_value)
-        .Attr("integer_scale_value", integer_scale_value)
-        .Attr("scale", float(1.0 / (1.0 - rate)))
-        .Output("out")
-        .Output("softmax_out")
+        .Attr("is_floating_prologue_scale_value", is_floating_scale_value)
+        .Attr("floating_prologue_scale_value", floating_scale_value)
+        .Attr("integer_prologue_scale_value", integer_scale_value)
+        .Attr("epilogue_scale", float(1.0 / (1.0 - rate)))
+        .Output("y")
+        .Output("softmax_y")
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()
     )
-    return out
+    return y
 
 
 @oneflow_export("math.polyval")
