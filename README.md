@@ -29,7 +29,7 @@
 
     - CUDA runtime is statically linked into OneFlow. OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 
-    - Support for latest stable version of CUDA will be prioritized. Please upgrade your Nvidia driver to version 440.33 or above and install OneFlow for CUDA 10.2 if possible.
+    - Please upgrade your Nvidia driver to version 440.33 or above and install OneFlow for CUDA 10.2 if possible.
 
   ### Install with Pip Package
 
@@ -45,7 +45,7 @@
     python3 -m pip install oneflow --user -f https://staging.oneflow.info/branch/master/cu102
     ```
 
-  - To install other available builds for different CUDA versions:
+  - To install other available builds for different variants:
     ```
     python3 -m pip install oneflow --user -f https://staging.oneflow.info/branch/master/[PLATFORM]
     ```
