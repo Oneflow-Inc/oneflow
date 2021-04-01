@@ -743,18 +743,22 @@ def register_op_by_module(op_name):
         return module
 
     def _get_unary_module_impl(module):
-        global unary_module_impl
-
         def unary_module_impl(x, *args, **kwargs):
             return module(*args, **kwargs).forward(x)
+
+        name = module.__name__ + "_op"
+        unary_module_impl.__name__ = name
+        globals()[name] = unary_module_impl
 
         return unary_module_impl
 
     def _get_binary_module_impl(module):
-        global binary_module_impl
-
         def binary_module_impl(x, y, *args, **kwargs):
             return module(*args, **kwargs).forward(x, y)
+
+        name = module.__name__ + "_op"
+        binary_module_impl.__name__ = name
+        globals()[name] = binary_module_impl
 
         return binary_module_impl
 
