@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-static constexpr char FakeGradientOpSuffix[] = ".grad";
+static constexpr char GradientOpSuffix[] = ".grad";
 
 // Stateless container base of the backward op exprs.
 // The backward op exprs should be contained in the derived class.
@@ -40,6 +40,11 @@ class OpExprGradFunction {
 
   virtual Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
                             TensorTuple* in_grads) const = 0;
+
+ protected:
+  std::string GradientOpName(const std::string& prefix) const {
+    return prefix + std::string(GradientOpSuffix);
+  }
 };
 
 // Stateful wrapper of the `OpExprGradFunction`.
