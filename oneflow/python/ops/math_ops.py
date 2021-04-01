@@ -1968,7 +1968,7 @@ def fused_scale_tril_softmax_dropout(
         is_floating_scale_value = False
         floating_scale_value = float(1)
         integer_scale_value = int(scale)
-    return (
+    out, softmax_out = (
         flow.user_op_builder(name)
         .Op("fused_tril_scale_softmax_mask_and_scale")
         .Input("in", [x])
@@ -1982,10 +1982,12 @@ def fused_scale_tril_softmax_dropout(
         .Attr("integer_scale_value", integer_scale_value)
         .Attr("scale", float(1.0 / (1.0 - rate)))
         .Output("out")
+        .Output("softmax_out")
         .Build()
         .InferAndTryRun()
-        .RemoteBlobList()[0]
+        .RemoteBlobList()
     )
+    return out
 
 
 @oneflow_export("math.polyval")

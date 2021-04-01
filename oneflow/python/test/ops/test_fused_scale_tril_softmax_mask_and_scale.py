@@ -28,7 +28,7 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def compare_with_tensorflow(test_case, device_type, x_shape, data_type, axis):
+def compare_with_tensorflow(test_case, device_type, x_shape, data_type, rate, seed):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -58,24 +58,40 @@ def compare_with_tensorflow(test_case, device_type, x_shape, data_type, axis):
             if data_type == "float16":
                 print("fp16")
                 y1 = flow.cast(
-                    flow.nn.softmax(
-                        flow.math.fused_scale_tril(
-                            flow.cast(x1, dtype=flow.float16), diagonal=0, scale=1.0
-                        )
+                    flow.nn.dropout(
+                        flow.nn.softmax(
+                            flow.math.fused_scale_tril(
+                                flow.cast(x1, dtype=flow.float16), diagonal=0, scale=1.0
+                            ),
+                        ),
+                        rate=rate,
+                        seed=seed,
+                        name="dropout",
                     ),
                     dtype=flow.float,
                 )
                 y2 = flow.cast(
                     flow.nn.fused_scale_tril_softmax_dropout(
-                        flow.cast(x2, dtype=flow.float16), diagonal=0, scale=1.0
+                        flow.cast(x2, dtype=flow.float16),
+                        diagonal=0,
+                        scale=1.0,
+                        rate=rate,
+                        seed=seed,
                     ),
                     dtype=flow.float,
                 )
             else:
-                y1 = flow.nn.softmax(
-                    flow.math.fused_scale_tril(x1, diagonal=0, scale=1.0)
+                y1 = flow.nn.dropout(
+                    flow.nn.softmax(
+                        flow.math.fused_scale_tril(x1, diagonal=0, scale=1.0)
+                    ),
+                    rate=rate,
+                    seed=seed,
+                    name="dropout",
                 )
-                y2 = flow.nn.fused_scale_tril_softmax_dropout(x2, diagonal=0, scale=1.0)
+                y2 = flow.nn.fused_scale_tril_softmax_dropout(
+                    x2, diagonal=0, scale=1.0, rate=rate, seed=seed
+                )
             flow.watch(y1, test_global_storage.Setter("y1"))
             flow.watch(y2, test_global_storage.Setter("y2"))
             flow.watch_diff(y1, test_global_storage.Setter("y1_diff"))
@@ -93,17 +109,19 @@ def compare_with_tensorflow(test_case, device_type, x_shape, data_type, axis):
     print("start")
 
     of_out = test_fused_scale_tril_softmax_dropout_fw_bw_job().get()
-    print("start")
 
     y1 = test_global_storage.Get("y1")
     y2 = test_global_storage.Get("y2")
+
     print("y1", y1.flatten()[0:20])
     print("y2", y2.flatten()[0:20])
-    tol = 1e-3 if data_type == flow.float16 else 1e-5
+    tol = 1e-3 if data_type == "float16" else 1e-5
+    test_case.assertTrue(np.allclose(y1, y2, rtol=tol, atol=tol))
     x1_diff = test_global_storage.Get("x1_diff")
     x2_diff = test_global_storage.Get("x2_diff")
-    print("x1_diff", x1_diff.flatten()[0:20])
-    print("x2_diff", x2_diff.flatten()[0:20])
+    print("x1_diff", x1_diff.flatten())
+    print("x2_diff", x2_diff.flatten())
+    print("tol", tol)
     test_case.assertTrue(np.allclose(x1_diff, x2_diff, rtol=tol, atol=tol))
     print("end")
 
@@ -118,7 +136,7 @@ class TestSoftmax(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [
-            (10, 10, 20, 30),
+            (2, 2, 5, 5),
             (10, 20, 13),
             (10, 20, 30),
             (10, 20),
@@ -132,8 +150,9 @@ class TestSoftmax(flow.unittest.TestCase):
             (100, 65536),
             (10, 65535),
         ]
-        arg_dict["data_type"] = ["float16", "float32"]
-        arg_dict["axis"] = [-1]
+        arg_dict["data_type"] = ["float16", "float32", "double"]
+        arg_dict["rate"] = [0.5]
+        arg_dict["seed"] = [12345]
         for arg in GenArgList(arg_dict):
             if arg[0] == "cpu" and arg[2] == "float16":
                 continue

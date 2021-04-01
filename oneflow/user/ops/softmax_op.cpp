@@ -82,6 +82,7 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_and_scale")
     .Input("in")
     .Input("mask")
     .Output("out")
+    .Output("softmax_out")
     .Attr<int64_t>("diagonal")
     .Attr<double>("floating_fill_value", 0)
     .Attr<int64_t>("integer_fill_value", 0)
@@ -92,6 +93,8 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_and_scale")
     .Attr<float>("scale")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      *ctx->TensorDesc4ArgNameAndIndex("softmax_out", 0) =
+          *ctx->TensorDesc4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -107,6 +110,7 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_and_scale")
             .Split(user_op::OpArg("in", 0), axis)
             .Split(user_op::OpArg("mask", 0), axis)
             .Split(user_op::OpArg("out", 0), axis)
+            .Split(user_op::OpArg("softmax_out", 0), axis)
             .Build();
       }
       return Maybe<void>::Ok();
@@ -149,7 +153,7 @@ REGISTER_USER_OP_GRAD("fused_tril_scale_softmax_mask_and_scale")
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
             builder.Op("fused_tril_scale_softmax_mask_and_scale_grad")
-                .Input("y", op.output("out", 0))
+                .Input("y", op.output("softmax_out", 0))
                 .Input("mask", op.input("mask", 0))
                 .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
                 .Output("dx")

@@ -61,6 +61,7 @@ template<typename DST>
 struct MaskAndScaleMultiStore {
   template<typename SRC, int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
+    cuda::softmax::Pack<DST, N> softmax_out_pack;
     cuda::softmax::Pack<DST, N> pack;
     int64_t offset = row * row_size + col;
 
@@ -69,12 +70,16 @@ struct MaskAndScaleMultiStore {
 
 #pragma unroll
     for (int i = 0; i < N; ++i) {
+      softmax_out_pack.elem[i] = static_cast<DST>(src[i]);
       pack.elem[i] =
           static_cast<DST>(src[i]) * static_cast<DST>(mask_pack.elem[i]) * static_cast<DST>(scale);
     }
+    *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(softmax_out + offset) =
+        softmax_out_pack.storage;
     *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst + offset) = pack.storage;
   }
   DST* dst;
+  DST* softmax_out;
   int64_t row_size;
   const int8_t* mask;
   DST scale;
@@ -136,6 +141,7 @@ class FusedTrilScaleSoftmaxMaskAndScaleKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor* softmax_out = ctx->Tensor4ArgNameAndIndex("softmax_out", 0);
     const ShapeView& in_shape = in->shape();
     const int64_t cols = in_shape.At(in_shape.NumAxes() - 1);
     const int64_t rows = in_shape.Count(0, in_shape.NumAxes() - 1);
@@ -155,6 +161,7 @@ class FusedTrilScaleSoftmaxMaskAndScaleKernel final : public user_op::OpKernel {
     multi_fetch.scale = scale;
     MaskAndScaleMultiStore<T> multi_store;
     multi_store.dst = out->mut_dptr<T>();
+    multi_store.softmax_out = softmax_out->mut_dptr<T>();
     multi_store.mask = mask->dptr<int8_t>();
     multi_store.row_size = cols;
     multi_store.scale = ctx->Attr<float>("scale");
@@ -196,9 +203,11 @@ class FusedTrilScaleSoftmaxMaskAndScaleGradKernel final : public user_op::OpKern
     cuda::softmax::MultiFetch<T> multi_fetch_y;
     multi_fetch_y.src = y->dptr<T>();
     multi_fetch_y.row_size = cols;
-    cuda::softmax::MultiFetch<T> multi_fetch_dy;
+    MaskAndScaleMultiFetch<T> multi_fetch_dy;
     multi_fetch_dy.src = dy->dptr<T>();
     multi_fetch_dy.row_size = cols;
+    multi_fetch_dy.scale = ctx->Attr<float>("scale");
+    multi_fetch_dy.mask = mask->dptr<int8_t>();
     TrilScaleMultiStore<T> multi_store;
     CHECK_NOTNULL(dx);
     multi_store.dst = dx->mut_dptr<T>();
