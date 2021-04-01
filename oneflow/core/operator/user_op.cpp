@@ -35,8 +35,8 @@ BlobDesc* FindValidBlobDescOfBnsInOp(
   return nullptr;
 }
 
-user_op::TensorDesc GenTensorDescFromBlobDesc(const BlobDesc* blob_desc) {
-  user_op::TensorDesc tensor_desc;
+user_op::NaiveTensorDesc GenTensorDescFromBlobDesc(const BlobDesc* blob_desc) {
+  user_op::NaiveTensorDesc tensor_desc;
   *tensor_desc.mut_shape() = blob_desc->shape();
   *tensor_desc.mut_data_type() = blob_desc->data_type();
   *tensor_desc.mut_is_dynamic() = blob_desc->is_dynamic();
@@ -106,7 +106,7 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   DeviceType device_type_;
   std::string device_tag_;
   const ParallelContext* parallel_ctx_;
-  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
 };
 
 class UserOpInferContext : public user_op::InferContext {
@@ -116,7 +116,7 @@ class UserOpInferContext : public user_op::InferContext {
   UserOpInferContext(const UserOp* op, const ParallelContext* parallel_ctx, const JobDesc* job_desc,
                      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp)
       : op_(op), parallel_ctx_(parallel_ctx), job_desc_(job_desc) {
-    bn2logical_tensor_desc_.reset(new HashMap<std::string, user_op::TensorDesc>());
+    bn2logical_tensor_desc_.reset(new HashMap<std::string, user_op::NaiveTensorDesc>());
     auto InitTensorDesc = [&](const ArgVec& arg_vec, const PbRpf<std::string>& bns) {
       CHECK_EQ(arg_vec.size(), bns.size());
       for (int32_t i = 0; i < arg_vec.size(); ++i) {
@@ -206,8 +206,8 @@ class UserOpInferContext : public user_op::InferContext {
   const UserOp* op_;
   const ParallelContext* parallel_ctx_;
   const JobDesc* job_desc_;
-  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
-  std::unique_ptr<HashMap<std::string, user_op::TensorDesc>> bn2logical_tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
+  std::unique_ptr<HashMap<std::string, user_op::NaiveTensorDesc>> bn2logical_tensor_desc_;
 };
 
 class UserOpSbpContext : public user_op::SbpContext {
@@ -249,7 +249,7 @@ class UserOpSbpContext : public user_op::SbpContext {
  private:
   const UserOp* op_;
   SbpSignatureList* sbp_sig_list_;
-  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
 };
 
 class UserOpInferSbpSignatureFnContext : public user_op::InferSbpSignatureFnContext {
@@ -300,7 +300,7 @@ class UserOpInferSbpSignatureFnContext : public user_op::InferSbpSignatureFnCont
 
  private:
   const UserOp* op_;
-  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
   HashMap<std::pair<std::string, int32_t>, SbpParallel> arg2sbp_parallel_hint_;
   SbpSignature* signature_;
   SbpSignature sbp_signature_conf_;
