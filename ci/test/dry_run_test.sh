@@ -13,7 +13,7 @@ cp -r $src_dir/oneflow/python/benchmarks $test_tmp_dir
 cd $test_tmp_dir/benchmarks
 
 export ONEFLOW_DRY_RUN=1
-# trun on ONEFLOW_DEBUG_MODE will cause protobuf err
+# turn on ONEFLOW_DEBUG_MODE will cause protobuf err
 # export ONEFLOW_DEBUG_MODE=1
 
 node_num=2

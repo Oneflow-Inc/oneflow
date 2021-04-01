@@ -287,6 +287,7 @@ def main():
             nodes.append(addr_dict)
 
         flow.env.machine(nodes)
+    # TODO: make ctrl_port optional in EnvProto, here we must set it otherwise proto serialization will fail
     if os.getenv("ONEFLOW_DRY_RUN"):
         flow.env.ctrl_port(9788)
     check_point = flow.train.CheckPoint()
