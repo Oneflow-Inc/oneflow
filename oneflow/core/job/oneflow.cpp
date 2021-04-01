@@ -111,22 +111,14 @@ void PopulateOpAttibute(
     if (task.exec_sequence().exec_node_size() == 1
         && task.exec_sequence().exec_node(0).kernel_conf().has_op_attribute_ref()) {
       auto* kernel_conf = task.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
-      if (kernel_conf->has_op_attribute_ref()) {
-        auto table_it = job_id2op_attribute_ref_table.find(task.job_id());
-        if (table_it == job_id2op_attribute_ref_table.end()) {
-          LOG(FATAL) << "op attribute ref table not found for job id: " << task.job_id();
-        } else {
-          auto it = table_it->second.op_name2op_attribute().find(kernel_conf->op_attribute_ref());
-          if (it == table_it->second.op_name2op_attribute().end()) {
-            LOG(FATAL) << "ref: " << kernel_conf->op_attribute_ref() << " not found";
-          } else {
-            *kernel_conf->mutable_op_attribute() = it->second;
-          }
-        }
-        kernel_conf->clear_op_attribute_ref();
-      } else {
-        CHECK(kernel_conf->has_op_attribute());
-      }
+      auto table_it = job_id2op_attribute_ref_table.find(task.job_id());
+      CHECK(table_it != job_id2op_attribute_ref_table.end())
+          << "op attribute ref table not found for job id: " << task.job_id();
+      auto it = table_it->second.op_name2op_attribute().find(kernel_conf->op_attribute_ref());
+      CHECK(it != table_it->second.op_name2op_attribute().end())
+          << "ref: " << kernel_conf->op_attribute_ref() << " not found";
+      *kernel_conf->mutable_op_attribute() = it->second;
+      kernel_conf->clear_op_attribute_ref();
     } else {
       for (auto& exec_node : task.exec_sequence().exec_node()) {
         CHECK(exec_node.kernel_conf().has_op_attribute())
