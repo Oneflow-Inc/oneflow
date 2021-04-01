@@ -2,5 +2,5 @@ Sphinx==2.2.0
 recommonmark==0.6.0
 sphinx_material==0.0.30
 sphinx_rtd_theme==0.5.0
---find-links https://release.oneflow.info
-oneflow_cu102
+--find-links https://staging.oneflow.info/branch/master/cu102
+oneflow
