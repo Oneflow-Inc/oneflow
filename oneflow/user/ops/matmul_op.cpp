@@ -36,7 +36,10 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   }
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  *out = *a;
+
+  *ctx->Shape4ArgNameAndIndex("out",0) = *ctx->Shape4ArgNameAndIndex("a",0);
+  *ctx->IsDynamic4ArgNameAndIndex("out",0) = *ctx->IsDynamic4ArgNameAndIndex("a",0);
+
   int64_t m, n, k;  // tensor a (no trans): m*k, tensor b (no trans): k*n
   if (!transpose_a) {
     m = a->shape().At(num_axes - 2);
@@ -58,6 +61,15 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
     const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output->data_type(), out->data_type());
     CHECK_EQ_OR_RETURN(add_to_output->shape(), out->shape());
+  }
+  return Maybe<void>::Ok();
+}
+Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
+  *ctx->Dtype4ArgNameAndIndex("out",0) = *ctx->Dtype4ArgNameAndIndex("a",0);
+  if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
+    user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+    CHECK_EQ_OR_RETURN(add_to_output->data_type(), out->data_type());
   }
   return Maybe<void>::Ok();
 }
@@ -185,7 +197,8 @@ REGISTER_USER_OP("matmul")
           .PartialSum(out_and_add_to_output_args)
           .Build();
       return Maybe<void>::Ok();
-    });
+    })
+    .SetInferDataTypeFn(InferDataType4Matmul);
 
 REGISTER_USER_OP_GRAD("matmul").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                           user_op::AddOpFn AddOp) {
@@ -211,7 +224,8 @@ REGISTER_USER_OP("batch_matmul")
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(out_and_add_to_output_args, i).Build();
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetInferDataTypeFn(InferDataType4Matmul);
 
 REGISTER_USER_OP_GRAD("batch_matmul")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {

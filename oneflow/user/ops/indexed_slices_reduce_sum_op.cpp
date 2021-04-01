@@ -30,7 +30,7 @@ REGISTER_USER_OP("indexed_slices_reduce_sum")
       FOR_RANGE(int64_t, i, 0, x_indices->shape().NumAxes()) {
         CHECK_EQ_OR_RETURN(x_indices->shape().At(i), x_values->shape().At(i));
       }
-      CHECK_OR_RETURN(IsIndexDataType(x_indices->data_type()));
+      
       const int64_t n = x_indices->shape().elem_cnt();
       const int64_t m = x_values->shape().elem_cnt() / n;
       user_op::TensorDesc* y_indices = ctx->TensorDesc4ArgNameAndIndex("y_indices", 0);
@@ -41,8 +41,15 @@ REGISTER_USER_OP("indexed_slices_reduce_sum")
       *y_values->mut_shape() = Shape({n, m});
       user_op::TensorDesc* num_unique = ctx->TensorDesc4ArgNameAndIndex("num_unique", 0);
       *num_unique->mut_shape() = Shape({1});
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* x_indices = ctx->TensorDesc4ArgNameAndIndex("x_indices", 0);
+      CHECK_OR_RETURN(IsIndexDataType(x_indices->data_type()));
+      user_op::TensorDesc* num_unique = ctx->TensorDesc4ArgNameAndIndex("num_unique", 0);
       *num_unique->mut_data_type() = DataType::kInt64;
       return Maybe<void>::Ok();
     });
+
 
 }  // namespace oneflow

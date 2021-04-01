@@ -23,9 +23,8 @@ REGISTER_USER_OP("identity")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_desc = *in_desc;
+      *ctx->Shape4ArgNameAndIndex("out",0) = *ctx->Shape4ArgNameAndIndex("in",0);
+      *ctx->IsDynamic4ArgNameAndIndex("out",0) = *ctx->IsDynamic4ArgNameAndIndex("in",0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -40,6 +39,10 @@ REGISTER_USER_OP("identity")
           .PartialSum(user_op::OpArg("in", 0))
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out",0) = *ctx->Dtype4ArgNameAndIndex("in",0);
       return Maybe<void>::Ok();
     });
 
