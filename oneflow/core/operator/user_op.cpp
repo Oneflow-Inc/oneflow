@@ -380,6 +380,9 @@ class UserOpInferParallelDistributionFnContext
     return *(CHECK_JUST(op_->GetOpParallelDesc())->hierarchy());
   }
 
+  const ArgVec& inputs() const override { return op_->inputs(); }
+  const ArgVec& outputs() const override { return op_->outputs(); }
+
  private:
   const UserOp* op_;
   ParallelDistributionSignature* parallel_distribution_signature_;
