@@ -27,11 +27,6 @@ namespace data {
 
 namespace {
 
-size_t FileSize(const std::string& filename) {
-  std::ifstream stream(filename, std::ifstream::ate | std::ifstream::binary);
-  return stream.tellg();
-}
-
 void GetSplitDocIndices(std::vector<size_t>* doc_indices, const std::vector<int64_t>& split_sizes,
                         size_t split_index, size_t num_docs) {
   CHECK_LT(split_index, split_sizes.size());
@@ -89,7 +84,9 @@ MegatronGPTIndex::MegatronGPTIndex(const std::string& index_file_path) {
   stream.read(reinterpret_cast<char*>(doc_offsets_.data()),
               sizeof(decltype(doc_offsets_)::value_type) * doc_offsets_.size());
   // check eof
-  CHECK_EQ(stream.tellg(), FileSize(index_file_path));
+  int pos = stream.tellg();
+  stream.seekg(0, std::ios_base::end);
+  CHECK_EQ(pos, stream.tellg());
   // log
   std::chrono::duration<double, std::milli> elapse = std::chrono::system_clock::now() - start;
   LOG(INFO) << "Load GPT Dataset index file successed, file_path: " << index_file_path
