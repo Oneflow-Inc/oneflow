@@ -31,26 +31,8 @@ struct PlanUtil {
   static void ToDotFile(const Plan& plan, const std::string& filepath);
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);
   static void SetForceInplaceMemBlock(Plan* plan);
-  // has to be inline otherwise it fails when compiling to shared libs
-  inline static const oneflow::OpAttribute& GetOpOpAttribute(
-      const Plan* plan, int64_t job_id, const oneflow::KernelConf& kernel_conf) {
-    if (kernel_conf.has_op_attribute()) {
-      return kernel_conf.op_attribute();
-    } else if (kernel_conf.has_op_attribute_ref()) {
-      auto table_it = plan->job_id2op_attribute_ref_table().find(job_id);
-      CHECK(table_it != plan->job_id2op_attribute_ref_table().end())
-          << "op attribute ref table not found for job id: " << job_id;
-      ;
-      auto it = table_it->second.op_name2op_attribute().find(kernel_conf.op_attribute_ref());
-      CHECK(it != table_it->second.op_name2op_attribute().end())
-          << "op attribute ref: " << kernel_conf.op_attribute_ref() << " not found";
-      return it->second;
-    } else {
-      UNIMPLEMENTED()
-          << "kernel_conf must has either op_attribute or op_attribute_ref. kernel_conf: "
-          << kernel_conf.DebugString();
-    }
-  }
+  static const oneflow::OpAttribute& GetOpOpAttribute(const Plan* plan, int64_t job_id,
+                                                      const oneflow::KernelConf& kernel_conf);
 };
 
 }  // namespace oneflow
