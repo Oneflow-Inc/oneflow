@@ -41,6 +41,12 @@ FieldId NewFieldId(const LogicalBlobId& lbi) {
   return ret;
 }
 
+TensorPodDesc::TensorPodDesc() : PodDesc(), shape_(std::make_shared<Shape>()) {}
+TensorPodDesc::TensorPodDesc(const Shape& shape, DataType data_type)
+    : PodDesc(), shape_(std::make_shared<Shape>(shape)), data_type_(data_type) {}
+TensorPodDesc::TensorPodDesc(const std::shared_ptr<Shape>& shape, DataType data_type)
+    : PodDesc(), shape_(shape), data_type_(data_type) {}
+
 TensorPodDesc::TensorPodDesc(const TensorPodProto& tensor_pod) {
   shape_ = std::make_shared<Shape>();
   InitFromProto(tensor_pod);
