@@ -38,21 +38,18 @@ void GetSplitDocIndices(std::vector<size_t>* doc_indices, const std::vector<int6
   size_t total_size = 0;
   FOR_RANGE(size_t, i, 0, split_sizes.size()) { total_size += split_sizes[i]; }
 
-  std::vector<size_t> splits;
-  splits.reserve(split_sizes.size());
-  std::vector<size_t> splits_offsets;
-  splits_offsets.reserve(split_sizes.size() + 1);
-  splits_offsets.push_back(0);
+  size_t split_offset = 0;
   RoundModeGuard round_guard(FE_TONEAREST);
-  FOR_RANGE(size_t, i, 0, split_sizes.size()) {
+  FOR_RANGE(size_t, i, 0, split_index) {
     float ratio = static_cast<float>(split_sizes[i]) / total_size;
     size_t split_size = static_cast<size_t>(std::nearbyint(ratio * num_docs));
-    splits.push_back(split_size);
-    splits_offsets.push_back(splits_offsets[i] + split_size);
+    split_offset += split_size;
   }
 
-  doc_indices->resize(splits[split_index]);
-  std::iota(doc_indices->begin(), doc_indices->end(), splits_offsets[split_index]);
+  float ratio = static_cast<float>(split_sizes[split_index]) / total_size;
+  size_t split_size = static_cast<size_t>(std::nearbyint(ratio * num_docs));
+  doc_indices->resize(split_size);
+  std::iota(doc_indices->begin(), doc_indices->end(), split_offset);
 }
 
 }  // namespace
