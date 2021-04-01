@@ -15,6 +15,7 @@ limitations under the License.
 """
 import tensorflow as tf
 from tensorflow.keras.applications.vgg16 import VGG16
+from tensorflow.keras.applications.vgg19 import VGG19
 
 from oneflow.python.test.onnx.load.util import load_tensorflow2_module_and_check
 
@@ -23,6 +24,17 @@ def test_vgg16(test_case):
         def __init__(self):
             super(Net, self).__init__()
             self.vgg = VGG16(weights=None)
+        def call(self, x):
+            x = self.vgg(x)
+            return x
+
+    load_tensorflow2_module_and_check(test_case, Net, input_size=(1, 224, 224, 3), train_flag=False)
+
+def test_vgg19(test_case):
+    class Net(tf.keras.Model):
+        def __init__(self):
+            super(Net, self).__init__()
+            self.vgg = VGG19(weights=None)
         def call(self, x):
             x = self.vgg(x)
             return x
