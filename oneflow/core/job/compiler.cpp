@@ -64,9 +64,8 @@ void Compiler::GenNetTopo(Plan* plan) const {
   *(pb_net_topo.mutable_peer_machine_ids()) = HashMap2PbMap(std_net_topo);
 }
 
-void CreateOpAttributeRef(
-    Plan* plan, PbMap<int64_t, ::oneflow::OpAttributeRefTable>* job_id2op_attribute_ref_table,
-    int64_t job_id, TaskProto* task_proto) {
+void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
+  auto* job_id2op_attribute_ref_table = plan->mutable_job_id2op_attribute_ref_table();
   CHECK(task_proto->exec_sequence().exec_node_size() == 1);
   auto* exec_node = task_proto->mutable_exec_sequence()->mutable_exec_node(0);
   const std::string op_name = exec_node->kernel_conf().op_attribute().op_conf().name();
@@ -109,15 +108,12 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
 
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 
-  auto* job_id2op_attribute_ref_table = plan->mutable_job_id2op_attribute_ref_table();
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
     const bool use_op_attribute_ref = task_node->GetTaskType() == kNormalForward;
     TaskProto task_proto;
     task_node->ToProto(&task_proto);
-    if (use_op_attribute_ref) {
-      CreateOpAttributeRef(plan, job_id2op_attribute_ref_table, job_desc.job_id(), &task_proto);
-    }
+    if (use_op_attribute_ref) { CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto); }
     plan->mutable_task()->Add(std::move(task_proto));
   });
   {
