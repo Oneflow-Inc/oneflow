@@ -28,6 +28,7 @@ class MegatronGPTIndex final {
   ~MegatronGPTIndex() = default;
 
   static constexpr char kMagicCode[] = "MMIDIDX\x00\x00";
+  static constexpr size_t kMagicCodeLen = sizeof(kMagicCode) - 1;
 
   uint64_t version() const { return version_; }
   char dtype_code() const { return dtype_code_; }

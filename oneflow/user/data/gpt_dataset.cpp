@@ -83,10 +83,9 @@ MegatronGPTIndex::MegatronGPTIndex(const std::string& index_file_path) {
   std::ifstream stream(index_file_path, std::ios::binary);
   CHECK(stream.is_open());
   // verify magic code
-  char magic_code[sizeof(kMagicCode)];
-  stream.read(magic_code, sizeof(kMagicCode) - 1);
-  magic_code[sizeof(kMagicCode) - 1] = '\0';
-  CHECK_EQ(std::strncmp(magic_code, kMagicCode, sizeof(kMagicCode)), 0);
+  char magic_code[kMagicCodeLen];
+  stream.read(magic_code, kMagicCodeLen);
+  CHECK_EQ(std::memcmp(magic_code, kMagicCode, kMagicCodeLen), 0);
   // read version
   stream.read(reinterpret_cast<char*>(&version_), sizeof(version_));
   // read dtype
