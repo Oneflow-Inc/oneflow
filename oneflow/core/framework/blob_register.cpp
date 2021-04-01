@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/blob_register.h"
-#include "oneflow/core/framework/blob_cache.h"
 
 namespace oneflow {
 
@@ -99,7 +98,6 @@ void BlobRegister::TrySetObject4BlobName(const std::string& blob_name,
 
 void BlobRegister::ClearObject4BlobName(const std::string& blob_name) {
   CHECK(HasObject4BlobName(blob_name)) << "blob_name " << blob_name << " not found";
-  CHECK_JUST(TryDisableBlobCache(blob_name2object_->at(blob_name)));
   blob_name2object_->erase(blob_name);
 }
 
