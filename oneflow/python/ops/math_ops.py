@@ -1946,41 +1946,20 @@ def fused_scale_tril_softmax_dropout(
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     if name is None:
-        name = id_util.UniqueStr("FusedTrilScaleSoftmaxMaskAndScale_")
+        name = id_util.UniqueStr("FusedTrilScaleSoftmaxMaskScale_")
     mask = flow.nn.random_mask_like(
         x, rate, seed, noise_shape, "%s-dropout_random_mask_like" % name
     )
 
-    if isinstance(fill_value, float):
-        is_floating_fill_value = True
-        floating_fill_value = float(fill_value)
-        integer_fill_value = int(0)
-    else:
-        is_floating_fill_value = False
-        floating_fill_value = float(0)
-        integer_fill_value = int(fill_value)
-
-    if isinstance(scale, float):
-        is_floating_scale_value = True
-        floating_scale_value = float(scale)
-        integer_scale_value = int(1)
-    else:
-        is_floating_scale_value = False
-        floating_scale_value = float(1)
-        integer_scale_value = int(scale)
     y, softmax_y = (
         flow.user_op_builder(name)
-        .Op("fused_tril_scale_softmax_mask_and_scale")
+        .Op("fused_tril_scale_softmax_mask_scale")
         .Input("x", [x])
         .Input("mask", [mask])
         .Attr("diagonal", diagonal)
-        .Attr("is_floating_tril_fill_value", is_floating_fill_value)
-        .Attr("floating_tril_fill_value", floating_fill_value)
-        .Attr("integer_tril_fill_value", integer_fill_value)
-        .Attr("is_floating_prologue_scale_value", is_floating_scale_value)
-        .Attr("floating_prologue_scale_value", floating_scale_value)
-        .Attr("integer_prologue_scale_value", integer_scale_value)
-        .Attr("epilogue_scale_value", float(1.0 / (1.0 - rate)))
+        .Attr("tril_fill_value", float(fill_value))
+        .Attr("tril_scale_value", float(scale))
+        .Attr("mask_scale_value", float(1.0 / (1.0 - rate)))
         .Output("y")
         .Output("softmax_y")
         .Build()

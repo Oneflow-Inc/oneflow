@@ -18,16 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T>
-T GetAttrVal(bool is_floating_val, double floating_value, int64_t integer_value) {
-  return is_floating_val ? static_cast<T>(floating_value) : static_cast<T>(integer_value);
-}
-
-template<>
-half GetAttrVal<half>(bool is_floating_val, double floating_value, int64_t integer_value) {
-  return is_floating_val ? __float2half(floating_value) : __float2half(integer_value);
-}
-
 template<typename SRC>
 struct TrilScaleFetch {
   TrilScaleFetch(const SRC* src, int64_t tril_num_rows, int64_t row_size, int64_t diagonal,
@@ -151,10 +141,10 @@ struct TrilScaleStore {
 };
 
 template<typename T>
-class FusedTrilScaleSoftmaxMaskAndScaleKernel final : public user_op::OpKernel {
+class FusedTrilScaleSoftmaxMaskScaleKernel final : public user_op::OpKernel {
  public:
-  FusedTrilScaleSoftmaxMaskAndScaleKernel() = default;
-  ~FusedTrilScaleSoftmaxMaskAndScaleKernel() override = default;
+  FusedTrilScaleSoftmaxMaskScaleKernel() = default;
+  ~FusedTrilScaleSoftmaxMaskScaleKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -166,38 +156,33 @@ class FusedTrilScaleSoftmaxMaskAndScaleKernel final : public user_op::OpKernel {
     CHECK_GE(x_shape.NumAxes(), 2);
     const int64_t cols = x_shape.At(x_shape.NumAxes() - 1);
     const int64_t rows = x_shape.Count(0, x_shape.NumAxes() - 1);
-    const T tril_fill = GetAttrVal<T>(ctx->Attr<bool>("is_floating_tril_fill_value"),
-                                      ctx->Attr<double>("floating_tril_fill_value"),
-                                      ctx->Attr<int64_t>("integer_tril_fill_value"));
-    const T prologue_scale = GetAttrVal<T>(ctx->Attr<bool>("is_floating_prologue_scale_value"),
-                                           ctx->Attr<double>("floating_prologue_scale_value"),
-                                           ctx->Attr<int64_t>("integer_prologue_scale_value"));
     TrilScaleFetch<T> fetch(x->dptr<T>(), x_shape.At(x_shape.NumAxes() - 2), cols,
-                            ctx->Attr<int64_t>("diagonal"), tril_fill, prologue_scale);
+                            ctx->Attr<int64_t>("diagonal"), ctx->Attr<float>("tril_fill_value"),
+                            ctx->Attr<float>("tril_scale_value"));
     MaskAndScaleStore<T> store(y->mut_dptr<T>(), softmax_y->mut_dptr<T>(), mask->dptr<int8_t>(),
-                               cols, ctx->Attr<float>("epilogue_scale_value"));
+                               cols, ctx->Attr<float>("mask_scale_value"));
     cuda::softmax::DispatchSoftmax<decltype(fetch), decltype(store), T>(
         ctx->device_ctx()->cuda_stream(), fetch, store, rows, cols);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_AND_SCALE_GPU_KERNEL(dtype) \
-  REGISTER_USER_KERNEL("fused_tril_scale_softmax_mask_and_scale")          \
-      .SetCreateFn<FusedTrilScaleSoftmaxMaskAndScaleKernel<dtype>>()       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)       \
+#define REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GPU_KERNEL(dtype) \
+  REGISTER_USER_KERNEL("fused_tril_scale_softmax_mask_scale")          \
+      .SetCreateFn<FusedTrilScaleSoftmaxMaskScaleKernel<dtype>>()      \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)   \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_AND_SCALE_GPU_KERNEL(half)
-REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_AND_SCALE_GPU_KERNEL(float)
-REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_AND_SCALE_GPU_KERNEL(double)
-#undef REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_AND_SCALE_GPU_KERNEL
+REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GPU_KERNEL(half)
+REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GPU_KERNEL(float)
+REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GPU_KERNEL(double)
+#undef REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GPU_KERNEL
 
 template<typename T>
-class FusedTrilScaleSoftmaxMaskAndScaleGradKernel final : public user_op::OpKernel {
+class FusedTrilScaleSoftmaxMaskScaleGradKernel final : public user_op::OpKernel {
  public:
-  FusedTrilScaleSoftmaxMaskAndScaleGradKernel() = default;
-  ~FusedTrilScaleSoftmaxMaskAndScaleGradKernel() override = default;
+  FusedTrilScaleSoftmaxMaskScaleGradKernel() = default;
+  ~FusedTrilScaleSoftmaxMaskScaleGradKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -209,14 +194,12 @@ class FusedTrilScaleSoftmaxMaskAndScaleGradKernel final : public user_op::OpKern
     CHECK_GE(dy_shape.NumAxes(), 2);
     const int64_t cols = dy_shape.At(dy_shape.NumAxes() - 1);
     const int64_t rows = dy_shape.elem_cnt() / cols;
-    const T epilogue_scale = GetAttrVal<T>(ctx->Attr<bool>("is_floating_epilogue_scale_value"),
-                                           ctx->Attr<double>("floating_epilogue_scale_value"),
-                                           ctx->Attr<int64_t>("integer_epilogue_scale_value"));
     cuda::softmax::DirectFetch<T> fetch_softmax_y(softmax_y->dptr<T>(), cols);
     MaskAndScaleFetch<T> fetch_dy(dy->dptr<T>(), mask->dptr<int8_t>(), cols,
-                                  ctx->Attr<float>("prologue_scale_value"));
+                                  ctx->Attr<float>("mask_scale_value"));
     TrilScaleStore<T> store(dx->mut_dptr<T>(), dy_shape.At(dy_shape.NumAxes() - 2), cols,
-                            ctx->Attr<int64_t>("diagonal"), static_cast<T>(0), epilogue_scale);
+                            ctx->Attr<int64_t>("diagonal"), static_cast<T>(0.0),
+                            ctx->Attr<float>("tril_scale_value"));
     cuda::softmax::DispatchSoftmaxGrad<decltype(fetch_softmax_y), decltype(fetch_dy),
                                        decltype(store), T>(
         ctx->device_ctx()->cuda_stream(), fetch_softmax_y, fetch_dy, store, rows, cols);
@@ -224,15 +207,15 @@ class FusedTrilScaleSoftmaxMaskAndScaleGradKernel final : public user_op::OpKern
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_AND_SCALE_GRAD_KERNEL(dtype) \
-  REGISTER_USER_KERNEL("fused_tril_scale_softmax_mask_and_scale_grad")      \
-      .SetCreateFn<FusedTrilScaleSoftmaxMaskAndScaleGradKernel<dtype>>()    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)        \
+#define REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GRAD_KERNEL(dtype) \
+  REGISTER_USER_KERNEL("fused_tril_scale_softmax_mask_scale_grad")      \
+      .SetCreateFn<FusedTrilScaleSoftmaxMaskScaleGradKernel<dtype>>()   \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)    \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_AND_SCALE_GRAD_KERNEL(half)
-REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_AND_SCALE_GRAD_KERNEL(float)
-REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_AND_SCALE_GRAD_KERNEL(double)
-#undef REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_AND_SCALE_GRAD_KERNEL
+REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GRAD_KERNEL(half)
+REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GRAD_KERNEL(float)
+REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GRAD_KERNEL(double)
+#undef REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GRAD_KERNEL
 
 }  // namespace oneflow

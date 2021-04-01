@@ -19,19 +19,15 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("fused_tril_scale_softmax_mask_and_scale")
+REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale")
     .Input("x")
     .Input("mask")
     .Output("y")
     .Output("softmax_y")
     .Attr<int64_t>("diagonal")
-    .Attr<double>("floating_tril_fill_value", 0)
-    .Attr<int64_t>("integer_tril_fill_value", 0)
-    .Attr<bool>("is_floating_tril_fill_value", false)
-    .Attr<double>("floating_prologue_scale_value", 1)
-    .Attr<int64_t>("integer_prologue_scale_value", 1)
-    .Attr<bool>("is_floating_prologue_scale_value", false)
-    .Attr<float>("epilogue_scale_value")
+    .Attr<float>("tril_fill_value", 0)
+    .Attr<float>("tril_scale_value", 1.0)
+    .Attr<float>("mask_scale_value", 1.0)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       *ctx->TensorDesc4ArgNameAndIndex("y", 0) = *x_desc;
@@ -58,16 +54,14 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_and_scale")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("fused_tril_scale_softmax_mask_and_scale_grad")
+REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale_grad")
     .Input("softmax_y")
     .Input("dy")
     .Input("mask")
     .Output("dx")
     .Attr<int64_t>("diagonal")
-    .Attr<double>("floating_epilogue_scale_value", 1)
-    .Attr<int64_t>("integer_epilogue_scale_value", 1)
-    .Attr<bool>("is_floating_epilogue_scale_value", false)
-    .Attr<float>("prologue_scale_value")
+    .Attr<float>("tril_scale_value")
+    .Attr<float>("mask_scale_value")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* softmax_y_desc = ctx->TensorDesc4ArgNameAndIndex("softmax_y", 0);
       const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
@@ -91,24 +85,19 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_and_scale_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("fused_tril_scale_softmax_mask_and_scale")
+REGISTER_USER_OP_GRAD("fused_tril_scale_softmax_mask_scale")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
-            builder.Op("fused_tril_scale_softmax_mask_and_scale_grad")
+            builder.Op("fused_tril_scale_softmax_mask_scale_grad")
                 .Input("softmax_y", op.output("softmax_y", 0))
                 .Input("mask", op.input("mask", 0))
                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
                 .Output("dx")
-                .Attr("prologue_scale_value", op.attr<float>("epilogue_scale_value"))
                 .Attr("diagonal", op.attr<int64_t>("diagonal"))
-                .Attr("floating_epilogue_scale_value",
-                      op.attr<double>("floating_prologue_scale_value"))
-                .Attr("integer_epilogue_scale_value",
-                      op.attr<int64_t>("integer_prologue_scale_value"))
-                .Attr("is_floating_epilogue_scale_value",
-                      op.attr<bool>("is_floating_prologue_scale_value"))
+                .Attr("tril_scale_value", op.attr<float>("tril_scale_value"))
+                .Attr("mask_scale_value", op.attr<float>("mask_scale_value"))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
