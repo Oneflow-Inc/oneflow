@@ -25,7 +25,6 @@ from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.hob as hob
 import oneflow.python.eager.eager_blob_util as eager_blob_util
-import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
@@ -196,8 +195,7 @@ def BlobObjectNumpy(blob_object, tmp_name=None):
             eager_blob_util._GetPhysicalBlobHeaderCache,
         ).numpy()
 
-    blob_cache = oneflow_api.FindOrCreateBlobCache(blob_object)
-    return blob_cache.GetCachedNumpy(FetchBlobNumpy)
+    return FetchBlobNumpy(blob_object)
 
 
 def _Numpy(self):
