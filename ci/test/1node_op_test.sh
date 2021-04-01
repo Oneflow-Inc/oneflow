@@ -13,8 +13,6 @@ mkdir -p $test_tmp_dir
 cp -r $src_dir/oneflow/python/test $test_tmp_dir
 cd $test_tmp_dir
 
-export ONEFLOW_MLIR_STRICT=1
-
 gpu_num=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
 for CHUNK in 1
 do
