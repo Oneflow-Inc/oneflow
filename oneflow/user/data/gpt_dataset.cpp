@@ -15,11 +15,13 @@ limitations under the License.
 */
 #include "oneflow/user/data/gpt_dataset.h"
 
+#ifdef __linux__
 #include <fcntl.h>
 #include <stdio.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#endif
 
 namespace oneflow {
 
