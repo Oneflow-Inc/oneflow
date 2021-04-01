@@ -69,6 +69,7 @@ def glob_files(path):
     for ext in ("**/*.cpp", "**/*.h", "**/*.hpp", "**/*.cu", "**/*.cuh", "**/*.py"):
         joined = os.path.join(path, ext)
         files.extend(glob.glob(joined, recursive=True))
+    files = [f for f in files if "version.py" not in f]
     return files
 
 

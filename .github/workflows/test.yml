@@ -125,7 +125,7 @@ jobs:
           fi
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
           extra_docker_args=""
-          container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
+          container_name=pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${test_suite}-build
           echo "container_name=${container_name}" >> $GITHUB_ENV
           extra_docker_args+=" --name ${container_name}"
           if [ "$test_suite" == "cpu" ]; then
@@ -140,6 +140,8 @@ jobs:
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
         if: env.is_built != '1'
       - name: Build OneFlow
         if: env.is_built != '1' && matrix.test_suite != 'mac'
@@ -218,6 +220,7 @@ jobs:
           fi
           # duplicate one for cuda_op
           if [ "$test_suite" == "cuda" ]; then
+            rm -f build.cuda_op.env
             ln -s build.cuda.env build.cuda_op.env
           fi
       - name: Upload shared env
@@ -261,6 +264,8 @@ jobs:
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Download shared env
         uses: actions/download-artifact@v2
         with:
@@ -300,7 +305,7 @@ jobs:
           fi
 
           # set container_name
-          container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
+          container_name=pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${test_suite}-test
           extra_docker_args+=" --name ${container_name}"
           echo "container_name=${container_name}" >> $GITHUB_ENV
 
@@ -340,6 +345,12 @@ jobs:
           oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/oneflow_temp
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      - name: Dry run test (run without runtime)
+        if: matrix.test_suite == 'cuda'
+        run: |
+          docker run $extra_docker_args \
+            oneflow-test:$USER \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/dry_run_test.sh"
       - name: Op test
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
         run: |
