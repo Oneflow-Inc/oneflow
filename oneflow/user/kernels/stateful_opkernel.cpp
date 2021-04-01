@@ -143,9 +143,9 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   LocalUserKernelBaseContext base_ctx_;
 };
 
-class LocalKernelCreateContext final : public user_op::KernelCreateContext {
+class LocalUserKernelCreateContext final : public user_op::KernelCreateContext {
  public:
-  explicit LocalKernelCreateContext(const KernelConf& kernel_conf)
+  explicit LocalUserKernelCreateContext(const KernelConf& kernel_conf)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()) {}
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
@@ -354,7 +354,6 @@ StatefulOpKernel::StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc
       kernel_conf_(kernel_conf),
       bn_in_op2bn_index2input_tensor_index_(bn_in_op2bn_index2input_tensor_index),
       bn_in_op2bn_index2output_tensor_index_(bn_in_op2bn_index2output_tensor_index) {
-  InitOpKernel(kernel_conf);
   op_infer_ctx_.reset(new LocalUserOpInferContext(kernel_conf, job_desc,
                                                   bn_in_op2bn_index2input_tensor_index,
                                                   bn_in_op2bn_index2output_tensor_index));
@@ -364,6 +363,9 @@ StatefulOpKernel::StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc
   init_ctx_.reset(new LocalUserKernelInitContext(nullptr, kernel_conf, job_desc,
                                                  bn_in_op2bn_index2input_tensor_index,
                                                  bn_in_op2bn_index2output_tensor_index));
+  create_ctx_.reset(new LocalUserKernelCreateContext(kernel_conf));
+  reg_ctx_.reset(new LocalUserKernelRegContext(kernel_conf, job_desc, bn_in_op2bn_index2input_tensor_index_,
+                                bn_in_op2bn_index2output_tensor_index_));
   const auto* op_reg_val = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(
       kernel_conf.op_attribute().op_conf().user_conf().op_type_name());
   CHECK_NOTNULL(op_reg_val);
@@ -372,17 +374,16 @@ StatefulOpKernel::StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc
   } else {
     UNIMPLEMENTED();
   }
+  InitOpKernel(kernel_conf);
 }
 
 void StatefulOpKernel::InitOpKernel(const KernelConf& kernel_conf) {
   const std::string& op_type_name = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
   auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
       op_type_name,
-      LocalUserKernelRegContext(kernel_conf, job_desc(), bn_in_op2bn_index2input_tensor_index_,
-                                bn_in_op2bn_index2output_tensor_index_)));
+      *reg_ctx_));
   CHECK_NOTNULL(kernel_reg_val);
-  LocalKernelCreateContext create_ctx(kernel_conf);
-  kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
+  kernel_.reset(kernel_reg_val->create_fn(create_ctx_.get()));
 }
 
 Maybe<void> StatefulOpKernel::TryInitOpKernelState(DeviceCtx* device_ctx) {

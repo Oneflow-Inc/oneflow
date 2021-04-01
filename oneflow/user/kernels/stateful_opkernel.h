@@ -29,6 +29,8 @@ class EagerBlobObject;
 
 namespace one {
 
+class LocalUserKernelRegContext;
+class LocalUserKernelCreateContext;
 class LocalUserKernelInitContext;
 class LocalUserOpInferContext;
 class LocalUserKernelComputeContext;
@@ -69,6 +71,8 @@ class StatefulOpKernel final {
   std::shared_ptr<const JobDesc> job_desc_;
   const KernelConf& kernel_conf_;
   std::unique_ptr<const user_op::OpKernel> kernel_;
+  std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
+  std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
   std::unique_ptr<LocalUserKernelInitContext> init_ctx_;
