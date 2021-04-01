@@ -73,7 +73,7 @@ def from_onnx(
         dict(zip(input_names, [x.shape for x in inputs.values()]))
         onnx_model, _ = onnxsim.simplify(
             onnx_model,
-            skip_fuse_bn=True,
+            skip_fuse_bn=False,
             skip_shape_inference=False,
             input_shapes=dict(zip(input_names, [x.shape for x in inputs.values()])),
         )
