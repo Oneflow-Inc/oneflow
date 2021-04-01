@@ -656,9 +656,9 @@ class Pow(Module):
     def __init__(self) -> None:
         super().__init__()
         name = id_util.UniqueStr("pow_")
-        self._op = flow.builtin_op("pow", name).Input("x").Output("y")
+        self._op = flow.builtin_op("scalar_pow", name).Input("in").Output("out")
 
     def forward(self, x, exponent: Union[int, float]):
-        self._op.Attr("exponent", float(exponent)).Build()
+        self._op = self._op.Attr("exponent", float(exponent)).Build()
         return self._op(x)[0]
 
