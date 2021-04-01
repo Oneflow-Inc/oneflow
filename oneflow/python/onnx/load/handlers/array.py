@@ -57,6 +57,14 @@ class Reshape(BackendHandler):
     @classmethod
     def version_5(cls, node, tensor_dict, **kwargs):
         return cls._common(node, tensor_dict, **kwargs)
+    
+    @classmethod
+    def version_13(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
+
+    @classmethod
+    def version_14(cls, node, tensor_dict, **kwargs):
+        return cls._common(node, tensor_dict, **kwargs)
 
 
 @onnx_op("Flatten")
@@ -190,6 +198,9 @@ class Expand(BackendHandler):
 class Transpose(BackendHandler):
     @classmethod
     def version_1(cls, node, tensor_dict, **kwargs):
+        return cls.run_onnx_node(node, tensor_dict, **kwargs)
+    @classmethod
+    def version_13(cls, node, tensor_dict, **kwargs):
         return cls.run_onnx_node(node, tensor_dict, **kwargs)
 
 
