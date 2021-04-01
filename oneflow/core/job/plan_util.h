@@ -31,8 +31,8 @@ struct PlanUtil {
   static void ToDotFile(const Plan& plan, const std::string& filepath);
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);
   static void SetForceInplaceMemBlock(Plan* plan);
-  static const oneflow::OpAttribute& GetOpOpAttribute(const Plan* plan, int64_t job_id,
-                                                      const oneflow::KernelConf& kernel_conf);
+  static const oneflow::OpAttribute& GeOpAttribute(const Plan* plan, int64_t job_id,
+                                                   const oneflow::KernelConf& kernel_conf);
 };
 
 }  // namespace oneflow

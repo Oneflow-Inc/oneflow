@@ -198,8 +198,8 @@ void GenMemChainTasksAndRegsts(
                                          std::string* op_name) -> bool {
     if (task_proto->task_type() == TaskType::kNormalForward
         && task_proto->exec_sequence().exec_node_size() == 1) {
-      *op_name = PlanUtil::GetOpOpAttribute(plan, task_proto->job_id(),
-                                            task_proto->exec_sequence().exec_node(0).kernel_conf())
+      *op_name = PlanUtil::GeOpAttribute(plan, task_proto->job_id(),
+                                         task_proto->exec_sequence().exec_node(0).kernel_conf())
                      .op_conf()
                      .name();
       return true;
