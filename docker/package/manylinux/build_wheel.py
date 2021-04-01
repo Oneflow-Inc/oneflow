@@ -311,6 +311,7 @@ if __name__ == "__main__":
         "--use_system_proxy", default=False, action="store_true", required=False
     )
     parser.add_argument("--xla", default=False, action="store_true", required=False)
+    parser.add_argument("--gcc7", default=False, action="store_true", required=False)
     parser.add_argument(
         "--use_aliyun_mirror", default=False, action="store_true", required=False
     )
@@ -378,7 +379,7 @@ if __name__ == "__main__":
             if args.xla:
                 bash_args = "-l"
             bash_wrap = ""
-            if args.xla:
+            if args.xla or args.gcc7:
                 bash_wrap = """
 source scl_source enable devtoolset-7
 gcc --version
