@@ -27,12 +27,35 @@ class UserOpExpr;
 namespace op_expr_helper {
 
 Maybe<one::UserOpExpr> AddNOp(int32_t n);
+Maybe<one::UserOpExpr> AddNOp(int32_t n, const std::string& name);
 
 Maybe<one::UserOpExpr> AddOp();
+Maybe<one::UserOpExpr> AddOp(const std::string& name);
 
 Maybe<one::UserOpExpr> ZeroLikeOp();
+Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name);
 
 Maybe<one::UserOpExpr> OnesLikeOp();
+Maybe<one::UserOpExpr> OnesLikeOp(const std::string& name);
+
+Maybe<one::UserOpExpr> IdentityOp();
+Maybe<one::UserOpExpr> IdentityOp(const std::string& name);
+
+Maybe<one::UserOpExpr> ReshapeLikeOp();
+Maybe<one::UserOpExpr> ReshapeLikeOp(const std::string& name);
+
+Maybe<one::UserOpExpr> ReduceSumOp(const std::vector<int32_t>& reduce_axes, const bool& keepdims);
+Maybe<one::UserOpExpr> ReduceSumOp(const std::vector<int32_t>& reduce_axes, const bool& keepdims,
+                                   const std::string& name);
+
+Maybe<one::UserOpExpr> ReduceSumLikeOp(const std::vector<int32_t>& axis);
+Maybe<one::UserOpExpr> ReduceSumLikeOp(const std::vector<int32_t>& axis, const std::string& name);
+
+template<typename T>
+Maybe<one::UserOpExpr> ScalarMulOp(const T& scalar);
+
+template<typename T>
+Maybe<one::UserOpExpr> ScalarMulOp(const T& scalar, const std::string& name);
 
 }  // namespace op_expr_helper
 
