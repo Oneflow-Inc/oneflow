@@ -44,10 +44,10 @@ class MegatronGPTIndex final {
   std::vector<int64_t> doc_offsets_;
 };
 
-class MegatronGPTMappedBuffer final {
+class MappedBuffer final {
  public:
-  MegatronGPTMappedBuffer(const std::string& filename);
-  ~MegatronGPTMappedBuffer();
+  MappedBuffer(const std::string& filename);
+  ~MappedBuffer();
 
   const void* ptr() const { return mapped_; }
   size_t size() const { return size_; }
@@ -82,7 +82,7 @@ class MegatronGPTMMapDataset final {
   void ReadTokens(const void* src, size_t offset, T* dst, size_t size) const;
 
   std::unique_ptr<const MegatronGPTIndex> index_;
-  std::unique_ptr<MegatronGPTMappedBuffer> data_;
+  std::unique_ptr<const MappedBuffer> data_;
   size_t seq_len_;
   size_t sample_len_;
   size_t num_samples_;

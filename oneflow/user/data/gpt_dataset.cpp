@@ -96,7 +96,7 @@ MegatronGPTIndex::MegatronGPTIndex(const std::string& index_file_path) {
             << " ms";
 }
 
-MegatronGPTMappedBuffer::MegatronGPTMappedBuffer(const std::string& filename)
+MappedBuffer::MappedBuffer(const std::string& filename)
     : mapped_(nullptr), size_(0) {
 #ifdef __linux__
   int fd = open(filename.c_str(), O_RDONLY);
@@ -113,7 +113,7 @@ MegatronGPTMappedBuffer::MegatronGPTMappedBuffer(const std::string& filename)
 #endif
 }
 
-MegatronGPTMappedBuffer::~MegatronGPTMappedBuffer() {
+MappedBuffer::~MappedBuffer() {
 #ifdef __linux__
   CHECK(munmap(mapped_, size_) == 0) << "munmap failed";
 #endif
@@ -131,7 +131,7 @@ MegatronGPTMMapDataset::MegatronGPTMMapDataset(const std::string& data_file_pref
       gen_(seed) {
   auto start = std::chrono::system_clock::now();
   index_ = std::make_unique<const MegatronGPTIndex>(data_file_prefix + ".idx");
-  data_ = std::make_unique<MegatronGPTMappedBuffer>(data_file_prefix + ".bin");
+  data_ = std::make_unique<const MappedBuffer>(data_file_prefix + ".bin");
   dtype_size_ = kDTypeCode2Size.at(index_->dtype_code());
   std::vector<size_t> epoch_doc_indices;
   GetSplitDocIndices(&epoch_doc_indices, split_sizes, split_index, index_->num_docs());
