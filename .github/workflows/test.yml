@@ -125,7 +125,7 @@ jobs:
           fi
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
           extra_docker_args=""
-          container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
+          container_name=pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${test_suite}-build
           echo "container_name=${container_name}" >> $GITHUB_ENV
           extra_docker_args+=" --name ${container_name}"
           if [ "$test_suite" == "cpu" ]; then
@@ -140,6 +140,8 @@ jobs:
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
         if: env.is_built != '1'
       - name: Build OneFlow
         if: env.is_built != '1' && matrix.test_suite != 'mac'
@@ -262,6 +264,8 @@ jobs:
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Download shared env
         uses: actions/download-artifact@v2
         with:
@@ -301,7 +305,7 @@ jobs:
           fi
 
           # set container_name
-          container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
+          container_name=pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${test_suite}-test
           extra_docker_args+=" --name ${container_name}"
           echo "container_name=${container_name}" >> $GITHUB_ENV
 

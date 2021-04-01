@@ -41,20 +41,26 @@ FieldId NewFieldId(const LogicalBlobId& lbi) {
   return ret;
 }
 
-TensorPodDesc::TensorPodDesc(const TensorPodProto& tensor_pod) { InitFromProto(tensor_pod); }
+TensorPodDesc::TensorPodDesc(const TensorPodProto& tensor_pod) {
+  shape_ = std::make_shared<Shape>();
+  InitFromProto(tensor_pod);
+}
 
 TensorPodDesc::TensorPodDesc(const TensorPodDesc& tensor_pod) {
+  shape_ = std::make_shared<Shape>();
   PodProto pod_proto;
   tensor_pod.ToProto(&pod_proto);
   InitFromProto(pod_proto.tensor_pod());
 }
 
 void TensorPodDesc::InitFromProto(const TensorPodProto& tensor_pod) {
-  shape_ = Shape(tensor_pod.shape());
+  *mut_shape() = Shape(tensor_pod.shape());
   data_type_ = tensor_pod.data_type();
 }
 
-size_t TensorPodDesc::ByteSize() const { return shape_.elem_cnt() * GetSizeOfDataType(data_type_); }
+size_t TensorPodDesc::ByteSize() const {
+  return shape().elem_cnt() * GetSizeOfDataType(data_type_);
+}
 
 bool TensorPodDesc::operator==(const PodDesc& rhs) const {
   const auto* tensor_rhs = dynamic_cast<const TensorPodDesc*>(&rhs);
@@ -65,7 +71,7 @@ bool TensorPodDesc::operator==(const PodDesc& rhs) const {
 void TensorPodDesc::ToProto(PodProto* pod_proto) const { ToProto(pod_proto->mutable_tensor_pod()); }
 
 void TensorPodDesc::ToProto(TensorPodProto* proto) const {
-  shape_.ToProto(proto->mutable_shape());
+  shape().ToProto(proto->mutable_shape());
   proto->set_data_type(data_type_);
 }
 
