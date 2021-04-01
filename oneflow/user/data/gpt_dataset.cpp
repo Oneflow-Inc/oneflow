@@ -137,6 +137,7 @@ MegatronGPTMMapDataset::MegatronGPTMMapDataset(const std::string& data_file_pref
   auto start = std::chrono::system_clock::now();
   index_ = std::make_unique<const MegatronGPTIndex>(data_file_prefix + ".idx");
   data_ = std::make_unique<MegatronGPTMappedBuffer>(data_file_prefix + ".bin");
+  dtype_size_ = kDTypeCode2Size.at(index_->dtype_code());
   auto epoch_doc_indices = GetSplitDocIndices(split_sizes, split_index, index_->num_docs());
   tokens_per_epoch_ = GetNumTokens(epoch_doc_indices);
   num_epochs_ = GetNumEpochs();
@@ -201,12 +202,8 @@ void MegatronGPTMMapDataset::InitDocIndices(const std::vector<size_t>& epoch_doc
 }
 
 void MegatronGPTMMapDataset::InitSampleIndices() {
-  // + 1 is because sample_indices need an `end` mark to indicate the end position of the last
-  // sample, the actual total number of samples is sample_indices_.size() - 1
-  size_t total_num_samples =
-      static_cast<size_t>(
-          std::floor(static_cast<double>(num_epochs_ * tokens_per_epoch_ - 1) / seq_len_))
-      + 1;
+  size_t total_num_samples = static_cast<size_t>(
+      std::floor(static_cast<double>(num_epochs_ * tokens_per_epoch_ - 1) / seq_len_));
   sample_indices_.reserve(total_num_samples);
 
   size_t doc_indices_idx = 0;
@@ -214,8 +211,6 @@ void MegatronGPTMMapDataset::InitSampleIndices() {
   FOR_RANGE(size_t, i, 0, total_num_samples) {
     if (doc_indices_idx >= doc_indices_.size()) { break; }
     sample_indices_.emplace_back(doc_indices_idx, doc_offset);
-    // the last sample is only used as `end` mark, there is not need to care its tokens
-    if (i == total_num_samples - 1) { break; }
     int remaining_tokens = seq_len_;
     while (remaining_tokens > 0) {
       CHECK_LT(doc_indices_idx, doc_indices_.size());
@@ -238,8 +233,7 @@ void MegatronGPTMMapDataset::InitSampleIndices() {
 }
 
 void MegatronGPTMMapDataset::InitShuffleIndices() {
-  // the last sample index in sample_indices_ is an `end` mark
-  shuffle_indices_.resize(sample_indices_.size() - 1);
+  shuffle_indices_.resize(sample_indices_.size());
   std::iota(shuffle_indices_.begin(), shuffle_indices_.end(), 0);
   if (shuffle_) {
     size_t num_samples = static_cast<size_t>(

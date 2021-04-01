@@ -89,6 +89,7 @@ class MegatronGPTMMapDataset final {
   bool shuffle_;
   uint32_t seed_;
 
+  size_t dtype_size_;
   size_t tokens_per_epoch_;
   size_t num_epochs_;
   size_t num_complete_epochs_;
@@ -101,44 +102,29 @@ class MegatronGPTMMapDataset final {
 template<typename T>
 void MegatronGPTMMapDataset::GetSample(size_t index, T* data) const {
   CHECK_LT(index, shuffle_indices_.size());
-  size_t sample_index = shuffle_indices_[index];
-  CHECK_LT(sample_index, sample_indices_.size() - 1);
-  const size_t doc_indices_idx = sample_indices_[sample_index].first;
-  const size_t doc_offset = sample_indices_[sample_index].second;
-  const size_t next_doc_indices_idx = sample_indices_[sample_index + 1].first;
-  const size_t next_doc_offset = sample_indices_[sample_index + 1].second;
-  CHECK_LE(doc_indices_idx, next_doc_indices_idx);
-  CHECK_LT(next_doc_indices_idx, doc_indices_.size());
-  const size_t doc_index = doc_indices_[doc_indices_idx];
-  const size_t next_doc_index = doc_indices_[next_doc_indices_idx];
-  const size_t dtype_size = kDTypeCode2Size.at(index_->dtype_code());
-  if (doc_indices_idx == next_doc_indices_idx) {
-    CHECK_EQ(sample_len_, next_doc_offset - doc_offset + 1);
-    size_t offset = index_->address(doc_index) + doc_offset * dtype_size;
-    ReadTokens(data_->ptr(), offset, data, sample_len_);
-  } else {
-    size_t total_num_tokens = 0;
-    // first
-    size_t num_tokens = (index_->doc_length(doc_index) - doc_offset);
-    size_t offset = index_->address(doc_index) + doc_offset * dtype_size;
+  const size_t sample_index = shuffle_indices_[index];
+  CHECK_LT(sample_index, sample_indices_.size());
+  size_t doc_indices_idx = sample_indices_[sample_index].first;
+  size_t doc_offset = sample_indices_[sample_index].second;
+  int remaining_tokens = sample_len_;
+  while (remaining_tokens > 0) {
+    CHECK_LT(doc_indices_idx, doc_indices_.size());
+    const size_t doc_index = doc_indices_[doc_indices_idx];
+    size_t offset = index_->address(doc_index) + doc_offset * dtype_size_;
+    size_t num_tokens = index_->doc_length(doc_index);
+    CHECK_LT(doc_offset, num_tokens);
+    num_tokens -= doc_offset;
+    if (num_tokens > remaining_tokens) {
+      num_tokens = remaining_tokens;
+    } else {
+      doc_indices_idx += 1;
+      doc_offset = 0;
+    }
     ReadTokens(data_->ptr(), offset, data, num_tokens);
     data += num_tokens;
-    total_num_tokens += num_tokens;
-    // middle
-    FOR_RANGE(size_t, i, doc_indices_idx + 1, next_doc_indices_idx) {
-      size_t cur_doc_index = doc_indices_[i];
-      num_tokens = index_->doc_length(cur_doc_index);
-      ReadTokens(data_->ptr(), index_->address(cur_doc_index), data, num_tokens);
-      data += num_tokens;
-      total_num_tokens += num_tokens;
-    }
-    // last
-    num_tokens = next_doc_offset + 1;
-    ReadTokens(data_->ptr(), index_->address(next_doc_index), data, num_tokens);
-    total_num_tokens += num_tokens;
-    // check
-    CHECK_EQ(total_num_tokens, sample_len_);
+    remaining_tokens -= num_tokens;
   }
+  CHECK_EQ(remaining_tokens, 0);
 }
 
 template<typename T>
