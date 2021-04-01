@@ -82,6 +82,7 @@ void CreateOpAttributeRef(
   kernel_conf->set_op_attribute_ref(op_name);
   kernel_conf->clear_op_attribute();
 }
+
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   const JobDesc& job_desc = GlobalJobDesc();
   if (need_job_complete) { JobCompleter().Complete(job); }
