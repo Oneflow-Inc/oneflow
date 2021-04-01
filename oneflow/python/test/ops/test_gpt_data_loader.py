@@ -31,6 +31,7 @@ def _make_gpt_data_loader_func(
     machine_num=1,
     device_num=1,
     parallel_distribution=None,
+    start_from_saved_progress=False,
 ):
     assert machine_num > 0
     assert device_num > 0 and device_num <= 4
@@ -68,6 +69,7 @@ def _make_gpt_data_loader_func(
                 split_sizes=split_sizes,
                 split_index=split_index,
                 parallel_distribution=parallel_distribution,
+                start_from_saved_progress=start_from_saved_progress,
                 name="GPTDataLoader",
             )
 
@@ -102,6 +104,7 @@ class TestGPTDataLoader(flow.unittest.TestCase):
             batch_size=2,
             dtype=flow.int64,
             shuffle=False,
+            start_from_saved_progress=True,
         )
         tokens = of_gpt_data_loader_fn()
         # this comparison tokens is from megatron-lm gpt data loader

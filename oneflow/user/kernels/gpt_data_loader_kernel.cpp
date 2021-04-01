@@ -58,15 +58,15 @@ size_t GetShardIndex(const Shape& hierarchy, const ParallelDistribution& paralle
 
 class GPTDataLoader final : public OpKernelState {
  public:
-  GPTDataLoader(KernelInitContext* ctx) : num_shards_(1) {
+  GPTDataLoader(KernelInitContext* ctx) : batch_cnt_(0) {
     seq_len_ = ctx->Attr<int64_t>("seq_length");
     label_len_ = 1;
     int64_t num_samples = ctx->Attr<int64_t>("num_samples");
 
-    dataset_.reset(new MegatronGPTMMapDataset(
+    dataset_ = std::make_unique<const MegatronGPTMMapDataset>(
         ctx->Attr<std::string>("data_file_prefix"), seq_len_, label_len_, num_samples,
         ctx->Attr<std::vector<int64_t>>("split_sizes"), ctx->Attr<int64_t>("split_index"),
-        ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed")));
+        ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed"));
 
     const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
     const ParallelDistribution& paral_dist = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
@@ -84,7 +84,7 @@ class GPTDataLoader final : public OpKernelState {
   ~GPTDataLoader() = default;
 
   template<typename T>
-  void GetBatch(size_t iter, user_op::Tensor* tokens) {
+  void GetBatch(size_t iter, user_op::Tensor* tokens) const {
     const size_t sample_len = seq_len_ + label_len_;
     CHECK_EQ(tokens->shape().NumAxes(), 2);
     CHECK_EQ(tokens->shape().At(0), batch_size_);
@@ -96,13 +96,20 @@ class GPTDataLoader final : public OpKernelState {
     }
   }
 
+  template<typename T>
+  void NextBatch(user_op::Tensor* tokens) {
+    GetBatch<T>(batch_cnt_, tokens);
+    batch_cnt_ += 1;
+  }
+
  private:
-  std::unique_ptr<MegatronGPTMMapDataset> dataset_;
+  std::unique_ptr<const MegatronGPTMMapDataset> dataset_;
   size_t seq_len_;
   size_t label_len_;
   size_t batch_size_;
   size_t num_shards_;
   size_t shard_index_;
+  size_t batch_cnt_;
 };
 
 template<typename T>
@@ -120,22 +127,26 @@ class GPTDataLoaderKernel final : public OpKernel {
   void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
     auto* loader = dynamic_cast<GPTDataLoader*>(state);
     user_op::Tensor* iteration_tensor = ctx->Tensor4ArgNameAndIndex("iteration", 0);
-    CHECK_EQ(iteration_tensor->shape().elem_cnt(), 1);
-    int64_t* iter_ptr = iteration_tensor->mut_dptr<int64_t>();
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    loader->GetBatch<T>(*iter_ptr, out_tensor);
-    *iter_ptr += 1;
+    if (iteration_tensor) {
+      CHECK_EQ(iteration_tensor->shape().elem_cnt(), 1);
+      CHECK_EQ(iteration_tensor->data_type(), DataType::kInt64);
+      int64_t* iter_ptr = iteration_tensor->mut_dptr<int64_t>();
+      loader->GetBatch<T>(*iter_ptr, out_tensor);
+      *iter_ptr += 1;
+    } else {
+      loader->NextBatch<T>(out_tensor);
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 }  // namespace
 
-#define REGISTER_GPT_DATA_LOADER_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("megatron_gpt_mmap_data_loader")                             \
-      .SetCreateFn<GPTDataLoaderKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                           \
-                       & (user_op::HobDataType("iteration", 0) == DataType::kInt64) \
+#define REGISTER_GPT_DATA_LOADER_KERNEL(dtype)            \
+  REGISTER_USER_KERNEL("megatron_gpt_mmap_data_loader")   \
+      .SetCreateFn<GPTDataLoaderKernel<dtype>>()          \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))
 
 REGISTER_GPT_DATA_LOADER_KERNEL(int32_t);

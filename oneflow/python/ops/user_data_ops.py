@@ -2363,6 +2363,7 @@ def gpt_data_loader(
     split_sizes: Optional[Sequence[str]] = None,
     split_index: Optional[int] = None,
     parallel_distribution: Optional[Sequence[str]] = None,
+    start_from_saved_progress: bool = False,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     if name is None:
@@ -2406,30 +2407,31 @@ def gpt_data_loader(
 
     parallel_distribution = list(map(distribute_to_str, parallel_distribution))
 
-    iteration_name = "iteration-{}-{}-{}-{}-{}-{}".format(
-        seq_length,
-        num_samples,
-        batch_size,
-        random_seed,
-        str(list(split_sizes)),
-        split_index,
-        str(parallel_distribution),
-    )
+    if start_from_saved_progress:
+        iteration_name = "iteration-{}-{}-{}-{}-{}-{}".format(
+            seq_length,
+            num_samples,
+            batch_size,
+            random_seed,
+            str(list(split_sizes)),
+            split_index,
+            str(parallel_distribution),
+        )
+        iteration = flow.get_variable(
+            name=iteration_name,
+            shape=(1,),
+            dtype=flow.int64,
+            initializer=flow.constant_initializer(0, flow.int64),
+            model_name="iteration",
+            reuse=False,
+        )
 
-    iteration = flow.get_variable(
-        name=iteration_name,
-        shape=(1,),
-        dtype=flow.int64,
-        initializer=flow.constant_initializer(0, flow.int64),
-        model_name="iteration",
-        reuse=False,
-    )
+    op_builder = flow.user_op_builder(name).Op("megatron_gpt_mmap_data_loader")
+    if start_from_saved_progress:
+        op_builder.Input("iteration", [iteration])
 
-    loader_op = (
-        flow.user_op_builder(name)
-        .Op("megatron_gpt_mmap_data_loader")
-        .Input("iteration", [iteration])
-        .Output("out")
+    op = (
+        op_builder.Output("out")
         .Attr("data_file_prefix", data_file_prefix)
         .Attr("seq_length", seq_length)
         .Attr("label_length", label_length)
@@ -2443,4 +2445,5 @@ def gpt_data_loader(
         .Attr("parallel_distribution", parallel_distribution)
         .Build()
     )
-    return loader_op.InferAndTryRun().SoleOutputBlob()
+
+    return op.InferAndTryRun().SoleOutputBlob()
