@@ -24,13 +24,27 @@ namespace oneflow {
 
 namespace eager {
 
+class TensorBuffer {
+ public:
+  char* blob_dptr() { return blob_dptr_.get(); }
+  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr) {
+    blob_dptr_ = std::move(blob_dptr);
+  }
+
+ private:
+  std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
+};
+
 class EagerBlobObject : public BlobObject {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type)
-      : BlobObject(mem_case, shape, data_type), blob_body_bytes_(0) {}
+                  DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer)
+      : BlobObject(mem_case, shape, data_type), tensor_buffer_(tensor_buffer), blob_body_bytes_(0) {
+    CHECK(static_cast<bool>(shape));
+    CHECK(static_cast<bool>(tensor_buffer));
+  }
   virtual ~EagerBlobObject() override = default;
 
   virtual BlobDesc* mut_blob_desc() override { return &blob_desc_; }
@@ -46,7 +60,7 @@ class EagerBlobObject : public BlobObject {
 
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char, std::function<void(char*)>> header_buffer_;
-  std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
+  std::shared_ptr<TensorBuffer> tensor_buffer_;
   std::size_t blob_body_bytes_;
   MemoryAllocator non_pod_initer_;
 
