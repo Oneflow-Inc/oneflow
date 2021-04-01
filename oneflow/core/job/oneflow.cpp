@@ -149,10 +149,6 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
   *(cluster_thrd_ids.mutable_machine_id2thrd_ids()) = HashMap2PbMap(machine_id2thrd_ids);
   Global<CtrlClient>::Get()->PushKV(cluster_thrd_ids_key(plan_name), cluster_thrd_ids);
 
-  OpAttributeInfo op_attribute_info;
-  *op_attribute_info.mutable_job_id2op_attribute_ref_table() = plan.job_id2op_attribute_ref_table();
-  Global<CtrlClient>::Get()->PushKV("op_attribute_info", op_attribute_info);
-
   for (const auto& pair : mchn_thrd_id2task_protos) {
     SubPlan sub_plan;
     sub_plan.mutable_task()->Reserve(pair.second.size());
@@ -194,9 +190,6 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
     Global<CtrlClient>::Get()->PullKV(sub_plan_key(plan_name, machine_id, thrd_id), &sub_plan);
     plan->mutable_task()->MergeFrom(sub_plan.task());
   }
-  OpAttributeInfo op_attribute_info;
-  Global<CtrlClient>::Get()->PullKV("op_attribute_info", &op_attribute_info);
-  PopulateOpAttibute(plan, op_attribute_info.job_id2op_attribute_ref_table());
   NetTopo net_topo;
   Global<CtrlClient>::Get()->PullKV(net_topo_key(plan_name), &net_topo);
   *(plan->mutable_net_topo()) = net_topo;
@@ -1173,12 +1166,26 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
       PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
     }
     double start = GetCurTime();
+    // push op_attribute_info
+    OpAttributeInfo op_attribute_info;
+    *op_attribute_info.mutable_job_id2op_attribute_ref_table() =
+        plan->job_id2op_attribute_ref_table();
+    Global<CtrlClient>::Get()->PushKV("op_attribute_info", op_attribute_info);
+    // push plan
     PushPlan("merged_plan", *plan);
+    // populate op_attribute_info
+    PopulateOpAttibute(plan, plan->job_id2op_attribute_ref_table());
     LOG(INFO) << " PushPlan merged_plan time: " << (GetCurTime() - start) / 1e9 << " seconds.\n";
 
   } else {
     double start = GetCurTime();
+    // pull plan
     PullPlan("merged_plan", plan);
+    // pull op_attribute_info
+    OpAttributeInfo op_attribute_info;
+    Global<CtrlClient>::Get()->PullKV("op_attribute_info", &op_attribute_info);
+    // populate op_attribute_info
+    PopulateOpAttibute(plan, op_attribute_info.job_id2op_attribute_ref_table());
     LOG(INFO) << " PullPlan merged_plan time: " << (GetCurTime() - start) / 1e9 << " seconds.\n";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
