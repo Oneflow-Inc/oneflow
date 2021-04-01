@@ -72,9 +72,9 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
-      CHECK_GE(y_tensor.shape().NumAxes(), 2);
-      FOR_RANGE(int64_t, axis, 0, y_tensor.shape().NumAxes() - 2) {
+      const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
+      CHECK_GE(dy_tensor.shape().NumAxes(), 2);
+      FOR_RANGE(int64_t, axis, 0, dy_tensor.shape().NumAxes() - 2) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("softmax_y", 0), axis)
             .Split(user_op::OpArg("dy", 0), axis)
