@@ -129,7 +129,8 @@ void PopulateOpAttibute(
       }
     } else {
       for (auto& exec_node : task.exec_sequence().exec_node()) {
-        CHECK(exec_node.kernel_conf().has_op_attribute());
+        CHECK(exec_node.kernel_conf().has_op_attribute())
+            << "op_attribute absent, exec_node: " << exec_node.DebugString();
       }
     }
   }
