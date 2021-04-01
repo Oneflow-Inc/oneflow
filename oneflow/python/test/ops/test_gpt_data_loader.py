@@ -95,45 +95,80 @@ class TestGPTDataLoader(flow.unittest.TestCase):
     RANDOM_SEED = 12345
 
     @flow.unittest.skip_unless_1n1d()
+    def test_simple(self):
+        of_gpt_data_loader_fn = _make_gpt_data_loader_func(
+            data_file_prefix=self.DATA_FILE_PREFIX,
+            seq_length=10,
+            num_samples=10,
+            batch_size=2,
+            dtype=flow.int64,
+            shuffle=False,
+        )
+        tokens = of_gpt_data_loader_fn()
+        # this comparison tokens is from megatron-lm gpt data loader
+        cmp_tokens = np.array(
+            [
+                [40, 1101, 845, 845, 3772, 13, 428, 318, 257, 1492, 13],
+                [13, 612, 318, 257, 18739, 550, 257, 3290, 13, 50256, 464],
+            ],
+            dtype=np.int64,
+        )
+        self.assertTrue(np.array_equal(tokens, cmp_tokens))
+
     def test_1n1d(self):
         of_gpt_data_loader_fn = _make_gpt_data_loader_func(
             data_file_prefix=self.DATA_FILE_PREFIX,
             seq_length=self.SEQ_LENGTH,
-            num_samples=8,
+            num_samples=648,
             batch_size=8,
+            split_sizes=[949, 50, 1],
+            split_index=0,
             dtype=flow.int64,
             shuffle=True,
             random_seed=self.RANDOM_SEED,
         )
-        tokens = of_gpt_data_loader_fn()
-        print(tokens.shape)
-        print(tokens[:, 0:4])
-        print(tokens[:, -4:])
+        tokens_list = []
+        for _ in range(5):
+            tokens = of_gpt_data_loader_fn()
+            tokens_list.append(tokens)
+
+        return np.stack(tokens_list, axis=0)
 
     @flow.unittest.skip_unless_1n4d()
     def test_1n4d(self):
         of_gpt_data_loader_fn = _make_gpt_data_loader_func(
             data_file_prefix=self.DATA_FILE_PREFIX,
             seq_length=self.SEQ_LENGTH,
-            num_samples=8,
+            num_samples=648,
             batch_size=8,
+            split_sizes=[949, 50, 1],
+            split_index=0,
             dtype=flow.int64,
             shuffle=True,
             random_seed=self.RANDOM_SEED,
             device_num=4,
             parallel_distribution=["S(0)"],
         )
-        tokens = of_gpt_data_loader_fn()
-        print(tokens.shape)
-        print(tokens)
+
+        tokens_list = []
+        for _ in range(5):
+            tokens = of_gpt_data_loader_fn()
+            tokens_list.append(tokens)
+
+        result_1n4d = np.stack(tokens_list, axis=0)
+        result_1n1d = self.test_1n1d()
+        self.assertTrue(np.array_equal(result_1n4d, result_1n1d))
+        return result_1n4d
 
     @flow.unittest.skip_unless_2n4d()
     def test_2n4d(self):
         of_gpt_data_loader_fn = _make_gpt_data_loader_func(
             data_file_prefix=self.DATA_FILE_PREFIX,
             seq_length=self.SEQ_LENGTH,
-            num_samples=8,
+            num_samples=648,
             batch_size=8,
+            split_sizes=[949, 50, 1],
+            split_index=0,
             dtype=flow.int64,
             shuffle=True,
             random_seed=self.RANDOM_SEED,
@@ -141,10 +176,16 @@ class TestGPTDataLoader(flow.unittest.TestCase):
             device_num=4,
             parallel_distribution=["S(0)", "B"],
         )
-        tokens = of_gpt_data_loader_fn()
-        print(tokens.shape)
-        print(tokens[:, 0:4])
-        print(tokens[:, -4:])
+
+        tokens_list = []
+        for _ in range(5):
+            tokens = of_gpt_data_loader_fn()
+            tokens_list.append(tokens)
+
+        result_2n4d = np.stack(tokens_list, axis=0)
+        result_1n1d = self.test_1n1d()
+        self.assertTrue(np.array_equal(result_2n4d, result_1n1d))
+        return result_2n4d
 
 
 if __name__ == "__main__":
