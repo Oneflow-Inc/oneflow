@@ -30,18 +30,27 @@ half GetAttrVal<half>(bool is_floating_val, double floating_value, int64_t integ
 
 template<typename SRC>
 struct TrilScaleFetch {
+  TrilScaleFetch(const SRC* src, int64_t tril_num_rows, int64_t row_size, int64_t diagonal,
+                 SRC fill, SRC scale)
+      : src(src),
+        tril_num_rows(tril_num_rows),
+        row_size(row_size),
+        diagonal(diagonal),
+        fill(fill),
+        scale(scale) {}
   template<typename DST, int N>
-  __device__ void fetch(DST* dst, int32_t row, int64_t col) {
-    int32_t tril_row = row % tril_num_rows;
-    bool need_fetch = (col <= (tril_row + diagonal));
+  __device__ void fetch(DST* dst, int64_t row, int64_t col) {
+    int64_t tril_row = row % tril_num_rows;
+    int64_t diagonal_col_id = tril_row + diagonal;
+    bool need_fetch = (col <= diagonal_col_id);
     cuda::softmax::Pack<SRC, N> pack;
     if (need_fetch) {
-      int64_t offset = row * row_size + col;
+      const int64_t offset = row * row_size + col;
       pack.storage = *reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src + offset);
     }
 #pragma unroll
     for (int i = 0; i < N; ++i) {
-      if (col + i > tril_row + diagonal) {
+      if (col + i > diagonal_col_id) {
         dst[i] = static_cast<DST>(fill);
       } else {
         dst[i] = static_cast<DST>(pack.elem[i]) * static_cast<DST>(scale);
@@ -50,7 +59,7 @@ struct TrilScaleFetch {
   }
 
   const SRC* src;
-  int32_t tril_num_rows;
+  int64_t tril_num_rows;
   int64_t row_size;
   int64_t diagonal;
   SRC fill;
@@ -59,38 +68,41 @@ struct TrilScaleFetch {
 
 template<typename DST>
 struct MaskAndScaleStore {
+  MaskAndScaleStore(DST* dst, DST* softmax_y, const int8_t* mask, int64_t row_size, DST scale)
+      : dst(dst), softmax_y(softmax_y), mask(mask), row_size(row_size), scale(scale) {}
   template<typename SRC, int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
-    cuda::softmax::Pack<DST, N> softmax_out_pack;
-    cuda::softmax::Pack<DST, N> pack;
-    int64_t offset = row * row_size + col;
-
+    cuda::softmax::Pack<DST, N> softmax_y_pack;
+    cuda::softmax::Pack<DST, N> dst_pack;
+    const int64_t offset = row * row_size + col;
     cuda::softmax::Pack<int8_t, N> mask_pack;
     mask_pack.storage = *reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask + offset);
-
 #pragma unroll
     for (int i = 0; i < N; ++i) {
-      softmax_out_pack.elem[i] = static_cast<DST>(src[i]);
-      pack.elem[i] =
+      softmax_y_pack.elem[i] = static_cast<DST>(src[i]);
+      dst_pack.elem[i] =
           static_cast<DST>(src[i]) * static_cast<DST>(mask_pack.elem[i]) * static_cast<DST>(scale);
     }
     *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(softmax_y + offset) =
-        softmax_out_pack.storage;
-    *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst + offset) = pack.storage;
+        softmax_y_pack.storage;
+    *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst + offset) = dst_pack.storage;
   }
+
   DST* dst;
   DST* softmax_y;
-  int64_t row_size;
   const int8_t* mask;
+  int64_t row_size;
   DST scale;
 };
 
 template<typename SRC>
 struct MaskAndScaleFetch {
+  MaskAndScaleFetch(const SRC* src, const int8_t* mask, int64_t row_size, SRC scale)
+      : src(src), mask(mask), row_size(row_size), scale(scale) {}
   template<typename DST, int N>
   __device__ void fetch(DST* dst, int64_t row, int64_t col) const {
     cuda::softmax::Pack<SRC, N> pack;
-    int64_t offset = row * row_size + col;
+    const int64_t offset = row * row_size + col;
     pack.storage = *reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
@@ -100,17 +112,25 @@ struct MaskAndScaleFetch {
   }
 
   const SRC* src;
-  int64_t row_size;
   const int8_t* mask;
+  int64_t row_size;
   SRC scale;
 };
 
 template<typename DST>
 struct TrilScaleStore {
+  TrilScaleStore(DST* dst, int64_t tril_num_rows, int64_t row_size, int64_t diagonal, DST fill,
+                 DST scale)
+      : dst(dst),
+        tril_num_rows(tril_num_rows),
+        row_size(row_size),
+        diagonal(diagonal),
+        fill(fill),
+        scale(scale) {}
   template<typename SRC, int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     cuda::softmax::Pack<DST, N> pack;
-    int64_t offset = row * row_size + col;
+    const int64_t offset = row * row_size + col;
     int64_t tril_row = row % tril_num_rows;
 #pragma unroll
     for (int i = 0; i < N; ++i) {
@@ -146,25 +166,16 @@ class FusedTrilScaleSoftmaxMaskAndScaleKernel final : public user_op::OpKernel {
     CHECK_GE(x_shape.NumAxes(), 2);
     const int64_t cols = x_shape.At(x_shape.NumAxes() - 1);
     const int64_t rows = x_shape.Count(0, x_shape.NumAxes() - 1);
-    const T fill = GetAttrVal<T>(ctx->Attr<bool>("is_floating_fill_value"),
-                                 ctx->Attr<double>("floating_fill_value"),
-                                 ctx->Attr<int64_t>("integer_fill_value"));
+    const T tril_fill = GetAttrVal<T>(ctx->Attr<bool>("is_floating_tril_fill_value"),
+                                      ctx->Attr<double>("floating_tril_fill_value"),
+                                      ctx->Attr<int64_t>("integer_tril_fill_value"));
     const T prologue_scale = GetAttrVal<T>(ctx->Attr<bool>("is_floating_prologue_scale_value"),
                                            ctx->Attr<double>("floating_prologue_scale_value"),
                                            ctx->Attr<int64_t>("integer_prologue_scale_value"));
-    TrilScaleFetch<T> fetch;
-    fetch.src = x->dptr<T>();
-    fetch.tril_num_rows = x_shape.At(x_shape.NumAxes() - 2);
-    fetch.row_size = cols;
-    fetch.diagonal = ctx->Attr<int64_t>("diagonal");
-    fetch.fill = fill;
-    fetch.scale = prologue_scale;
-    MaskAndScaleStore<T> store;
-    store.dst = y->mut_dptr<T>();
-    store.softmax_y = softmax_y->mut_dptr<T>();
-    store.mask = mask->dptr<int8_t>();
-    store.row_size = cols;
-    store.scale = ctx->Attr<float>("epilogue_scale");
+    TrilScaleFetch<T> fetch(x->dptr<T>(), x_shape.At(x_shape.NumAxes() - 2), cols,
+                            ctx->Attr<int64_t>("diagonal"), tril_fill, prologue_scale);
+    MaskAndScaleStore<T> store(y->mut_dptr<T>(), softmax_y->mut_dptr<T>(), mask->dptr<int8_t>(),
+                               cols, ctx->Attr<float>("epilogue_scale_value"));
     cuda::softmax::DispatchSoftmax<decltype(fetch), decltype(store), T>(
         ctx->device_ctx()->cuda_stream(), fetch, store, rows, cols);
   }
@@ -201,23 +212,11 @@ class FusedTrilScaleSoftmaxMaskAndScaleGradKernel final : public user_op::OpKern
     const T epilogue_scale = GetAttrVal<T>(ctx->Attr<bool>("is_floating_epilogue_scale_value"),
                                            ctx->Attr<double>("floating_epilogue_scale_value"),
                                            ctx->Attr<int64_t>("integer_epilogue_scale_value"));
-
-    cuda::softmax::DirectFetch<T> fetch_softmax_y;
-    fetch_softmax_y.src = softmax_y->dptr<T>();
-    fetch_softmax_y.row_size = cols;
-    MaskAndScaleFetch<T> fetch_dy;
-    fetch_dy.src = dy->dptr<T>();
-    fetch_dy.row_size = cols;
-    fetch_dy.scale = ctx->Attr<float>("prologue_scale");
-    fetch_dy.mask = mask->dptr<int8_t>();
-    TrilScaleStore<T> store;
-    store.dst = dx->mut_dptr<T>();
-    store.tril_num_rows = dy_shape.At(dy_shape.NumAxes() - 2);
-    store.row_size = cols;
-    store.diagonal = ctx->Attr<int64_t>("diagonal");
-    store.fill = static_cast<T>(0);
-    store.scale = epilogue_scale;
-
+    cuda::softmax::DirectFetch<T> fetch_softmax_y(softmax_y->dptr<T>(), cols);
+    MaskAndScaleFetch<T> fetch_dy(dy->dptr<T>(), mask->dptr<int8_t>(), cols,
+                                  ctx->Attr<float>("prologue_scale_value"));
+    TrilScaleStore<T> store(dx->mut_dptr<T>(), dy_shape.At(dy_shape.NumAxes() - 2), cols,
+                            ctx->Attr<int64_t>("diagonal"), static_cast<T>(0), epilogue_scale);
     cuda::softmax::DispatchSoftmaxGrad<decltype(fetch_softmax_y), decltype(fetch_dy),
                                        decltype(store), T>(
         ctx->device_ctx()->cuda_stream(), fetch_softmax_y, fetch_dy, store, rows, cols);

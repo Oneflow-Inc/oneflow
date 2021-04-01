@@ -123,10 +123,11 @@ union Pack {
 
 template<typename SRC>
 struct DirectFetch {
+  DirectFetch(const SRC* src, int64_t row_size) : src(src), row_size(row_size) {}
   template<typename DST, int N>
   __device__ void fetch(DST* dst, int64_t row, int64_t col) const {
     Pack<SRC, N> pack;
-    int64_t offset = row * row_size + col;
+    const int64_t offset = row * row_size + col;
     pack.storage = *reinterpret_cast<const PackType<SRC, N>*>(src + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) { dst[i] = static_cast<DST>(pack.elem[i]); }
@@ -138,10 +139,12 @@ struct DirectFetch {
 
 template<typename DST>
 struct DirectStore {
+  DirectStore(DST* dst, int64_t row_size) : dst(dst), row_size(row_size) {}
+
   template<typename SRC, int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     Pack<DST, N> pack;
-    int64_t offset = row * row_size + col;
+    const int64_t offset = row * row_size + col;
 #pragma unroll
     for (int i = 0; i < N; ++i) { pack.elem[i] = static_cast<DST>(src[i]); }
     *reinterpret_cast<PackType<DST, N>*>(dst + offset) = pack.storage;

@@ -24,12 +24,8 @@ namespace {
 
 template<typename T>
 void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const T* in, T* prob) {
-  cuda::softmax::DirectFetch<T> fetch;
-  fetch.src = in;
-  fetch.row_size = col;
-  cuda::softmax::DirectStore<T> store;
-  store.dst = prob;
-  store.row_size = col;
+  cuda::softmax::DirectFetch<T> fetch(in, col);
+  cuda::softmax::DirectStore<T> store(prob, col);
   cuda::softmax::DispatchSoftmax<decltype(fetch), decltype(store), T>(ctx->cuda_stream(), fetch,
                                                                       store, row, col);
 }
@@ -37,12 +33,8 @@ void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const T* 
 template<>
 void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const float16* in,
                  float16* prob) {
-  cuda::softmax::DirectFetch<half> fetch;
-  fetch.src = reinterpret_cast<const half*>(in);
-  fetch.row_size = col;
-  cuda::softmax::DirectStore<half> store;
-  store.dst = reinterpret_cast<half*>(prob);
-  store.row_size = col;
+  cuda::softmax::DirectFetch<half> fetch(reinterpret_cast<const half*>(in), col);
+  cuda::softmax::DirectStore<half> store(reinterpret_cast<half*>(prob), col);
   cuda::softmax::DispatchSoftmax<decltype(fetch), decltype(store), half>(ctx->cuda_stream(), fetch,
                                                                          store, row, col);
 }

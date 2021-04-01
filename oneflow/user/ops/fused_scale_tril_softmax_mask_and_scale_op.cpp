@@ -25,16 +25,17 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_and_scale")
     .Output("y")
     .Output("softmax_y")
     .Attr<int64_t>("diagonal")
-    .Attr<double>("floating_fill_value", 0)
-    .Attr<int64_t>("integer_fill_value", 0)
-    .Attr<bool>("is_floating_fill_value", false)
+    .Attr<double>("floating_tril_fill_value", 0)
+    .Attr<int64_t>("integer_tril_fill_value", 0)
+    .Attr<bool>("is_floating_tril_fill_value", false)
     .Attr<double>("floating_prologue_scale_value", 1)
     .Attr<int64_t>("integer_prologue_scale_value", 1)
     .Attr<bool>("is_floating_prologue_scale_value", false)
-    .Attr<float>("epilogue_scale")
+    .Attr<float>("epilogue_scale_value")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->TensorDesc4ArgNameAndIndex("y", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      *ctx->TensorDesc4ArgNameAndIndex("softmax_y", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      *ctx->TensorDesc4ArgNameAndIndex("y", 0) = *x_desc;
+      *ctx->TensorDesc4ArgNameAndIndex("softmax_y", 0) = *x_desc;
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -45,7 +46,8 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_and_scale")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      FOR_RANGE(int64_t, axis, 0, x_tensor.shape().NumAxes()) {
+      CHECK_GE(x_tensor.shape().NumAxes(), 2);
+      FOR_RANGE(int64_t, axis, 0, x_tensor.shape().NumAxes() - 2) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("x", 0), axis)
             .Split(user_op::OpArg("mask", 0), axis)
@@ -65,18 +67,20 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_and_scale_grad")
     .Attr<double>("floating_epilogue_scale_value", 1)
     .Attr<int64_t>("integer_epilogue_scale_value", 1)
     .Attr<bool>("is_floating_epilogue_scale_value", false)
-    .Attr<float>("prologue_scale")
+    .Attr<float>("prologue_scale_value")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* softmax_y_desc = ctx->TensorDesc4ArgNameAndIndex("softmax_y", 0);
       const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
-      CHECK(*dy_desc == *softmax_y_desc);
+      CHECK(dy_desc->shape() == softmax_y_desc->shape());
+      CHECK(dy_desc->data_type() == softmax_y_desc->data_type());
       *dx_desc = *dy_desc;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
-      FOR_RANGE(int64_t, axis, 0, y_tensor.shape().NumAxes()) {
+      CHECK_GE(y_tensor.shape().NumAxes(), 2);
+      FOR_RANGE(int64_t, axis, 0, y_tensor.shape().NumAxes() - 2) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("softmax_y", 0), axis)
             .Split(user_op::OpArg("dy", 0), axis)
@@ -97,7 +101,7 @@ REGISTER_USER_OP_GRAD("fused_tril_scale_softmax_mask_and_scale")
                 .Input("mask", op.input("mask", 0))
                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
                 .Output("dx")
-                .Attr("prologue_scale", op.attr<float>("epilogue_scale"))
+                .Attr("prologue_scale_value", op.attr<float>("epilogue_scale_value"))
                 .Attr("diagonal", op.attr<int64_t>("diagonal"))
                 .Attr("floating_epilogue_scale_value",
                       op.attr<double>("floating_prologue_scale_value"))
