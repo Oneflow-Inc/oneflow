@@ -39,6 +39,7 @@ REGISTER_CPU_ONLY_USER_OP("bernoulli")
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out_tensor->mut_data_type() = ctx->Attr<DataType>("dtype");
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow
