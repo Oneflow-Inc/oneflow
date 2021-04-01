@@ -221,7 +221,8 @@ REGISTER_USER_OP("deconv2d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<2>)
     .SetTensorDescInferFn(InferTensorDesc4DeConv<2>)
-    .SetGetSbpFn(GetSbpSignatures4DeConv);
+    .SetGetSbpFn(GetSbpSignatures4DeConv)
+    .SetInferDataTypeFn(InferDataType);
 
 REGISTER_USER_OP("deconv3d")
     .Input("in")
@@ -237,6 +238,7 @@ REGISTER_USER_OP("deconv3d")
     .Attr<int32_t>("groups", 1)
     .SetCheckAttrFn(CheckAttr<3>)
     .SetTensorDescInferFn(InferTensorDesc4DeConv<3>)
+    .SetInferDataTypeFn(InferDataType)
     .SetGetSbpFn(GetSbpSignatures4DeConv);
 
 REGISTER_USER_OP_GRAD("deconv1d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4DeConv);
