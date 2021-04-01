@@ -44,24 +44,30 @@ class OpExprInterpreter {
                             TensorTuple* outputs) const = 0;
 };
 
-#define FOR_EACH_OPS(_macro)  \
-  _macro(UserOp);             \
-  _macro(VariableOp);         \
-  _macro(CastToMirroredOp);   \
-  _macro(CastFromMirroredOp); \
-  _macro(DistributeSplitOp);  \
-  _macro(DistributeCloneOp);  \
-  _macro(DistributeConcatOp); \
-  _macro(DistributeAddOp);    \
-  _macro(FunctionOp);
+#define FOR_EACH_BUILTIN_OPS(_macro) \
+  _macro(UserOp);                    \
+  _macro(VariableOp);                \
+  _macro(CastToMirroredOp);          \
+  _macro(CastFromMirroredOp);        \
+  _macro(DistributeSplitOp);         \
+  _macro(DistributeCloneOp);         \
+  _macro(DistributeConcatOp);        \
+  _macro(DistributeAddOp);
 
 #define DECLARE_NORMAL_APPLY_FUNC(op_type)                                               \
   virtual Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs, \
-                                TensorTuple* outputs) const;
+                                TensorTuple* outputs) const
+
+#define DECLARE_PURE_VIRTUAL_APPLY_FUNC(op_type) DECLARE_NORMAL_APPLY_FUNC(op_type) = 0;
+
+#define DECLARE_OVERRIDE_APPLY_FUNC(op_type)                                     \
+  Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs, \
+                        TensorTuple* outputs) const override;
 
 class LazyInterpreter : public OpExprInterpreter {
  public:
   LazyInterpreter() : OpExprInterpreter() {}
+  virtual ~LazyInterpreter() = default;
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                     TensorTuple* outputs) const override;
@@ -74,16 +80,38 @@ class LazyInterpreter : public OpExprInterpreter {
 class EagerInterpreter : public OpExprInterpreter {
  public:
   EagerInterpreter() : OpExprInterpreter() {}
+  virtual ~EagerInterpreter() = default;
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                     TensorTuple* outputs) const override;
 
  private:
-  FOR_EACH_OPS(DECLARE_NORMAL_APPLY_FUNC);
+  FOR_EACH_BUILTIN_OPS(DECLARE_PURE_VIRTUAL_APPLY_FUNC);
+  DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
 };
 
+class EagerConsistentInterpreter : public EagerInterpreter {
+ public:
+  EagerConsistentInterpreter() : EagerInterpreter() {}
+  virtual ~EagerConsistentInterpreter() = default;
+
+ private:
+  FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
+};
+
+class EagerMirroredInterpreter : public EagerInterpreter {
+ public:
+  EagerMirroredInterpreter() : EagerInterpreter() {}
+  virtual ~EagerMirroredInterpreter() = default;
+
+ private:
+  FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
+};
+
+#undef DECLARE_OVERRIDE_APPLY_FUNC
+#undef DECLARE_PURE_VIRTUAL_APPLY_FUNC
 #undef DECLARE_NORMAL_APPLY_FUNC
-#undef FOR_EACH_OPS
+#undef FOR_EACH_BUILTIN_OPS
 
 class AutogradInterpreter {
  public:
