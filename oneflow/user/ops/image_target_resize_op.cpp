@@ -69,5 +69,4 @@ REGISTER_CPU_ONLY_USER_OP("image_target_resize")
       return Maybe<void>::Ok();
     });
 
-
 }  // namespace oneflow

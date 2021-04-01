@@ -103,7 +103,6 @@ REGISTER_USER_OP("layer_norm")
       }
       const bool scale = ctx->Attr<bool>("scale");
       if (scale) {
-        user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
         const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
         CHECK_EQ_OR_RETURN(gamma->data_type(), x->data_type());
       }
@@ -111,7 +110,6 @@ REGISTER_USER_OP("layer_norm")
       *mean->mut_data_type() = InferBnParamDataType(x->data_type());
       return Maybe<void>::Ok();
     });
-
 
 REGISTER_USER_OP("layer_norm_grad")
     .Input("dy")
@@ -265,7 +263,6 @@ REGISTER_USER_OP("layer_norm_param_grad")
       }
       return Maybe<void>::Ok();
     });
-
 
 REGISTER_USER_OP_GRAD("layer_norm")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {

@@ -66,7 +66,7 @@ REGISTER_USER_OP("hardswish_grad")
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("x", 0), *ctx->Dtype4ArgNameAndIndex("dy", 0));
-      *ctx->Dtype4ArgNameAndIndex("dx",0) = *ctx->Dtype4ArgNameAndIndex("x",0);
+      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
       return Maybe<void>::Ok();
     });
 

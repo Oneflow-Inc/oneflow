@@ -85,7 +85,6 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_to_fixed")
       return Maybe<void>::Ok();
     });
 
-
 REGISTER_CPU_ONLY_USER_OP("image_resize_keep_aspect_ratio")
     .Input("in")
     .Output("out")
@@ -143,6 +142,5 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_keep_aspect_ratio")
       *scale_desc->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     });
-
 
 }  // namespace oneflow

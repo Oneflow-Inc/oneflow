@@ -81,7 +81,7 @@ REGISTER_USER_OP("reduce_sum_like")
       const user_op::TensorDesc* x_tensor = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* like_tensor = ctx->TensorDesc4ArgNameAndIndex("like", 0);
       CHECK_EQ_OR_RETURN(x_tensor->data_type(), like_tensor->data_type());
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = ctx->Attr<DataType>("like");
+      *ctx->Dtype4ArgNameAndIndex("y", 0) = like_tensor->data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,

@@ -68,19 +68,15 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
       CHECK_EQ_OR_RETURN(in_tensor->data_type(), DataType::kTensorBuffer);
 
       user_op::TensorDesc* mirror_tensor = ctx->TensorDesc4ArgNameAndIndex("mirror", 0);
-      if (mirror_tensor) {
-        CHECK_EQ_OR_RETURN(mirror_tensor->data_type(), DataType::kInt8);
-      }
+      if (mirror_tensor) { CHECK_EQ_OR_RETURN(mirror_tensor->data_type(), DataType::kInt8); }
 
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       DataType output_dtype = ctx->Attr<DataType>("output_dtype");
-      CHECK_EQ_OR_RETURN(output_dtype,
-                         DataType::kFloat);
+      CHECK_EQ_OR_RETURN(output_dtype, DataType::kFloat);
       *out_tensor->mut_data_type() = output_dtype;
-      
+
       return Maybe<void>::Ok();
     });
-
 
 REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
     .Input("in")
@@ -126,7 +122,7 @@ REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
         return Error::CheckFailedError()
                << "output_layout: " << output_layout << " is not supported";
       }
-      
+
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -138,9 +134,7 @@ REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
       CHECK_EQ_OR_RETURN(in_tensor->data_type(), DataType::kUInt8);
 
       user_op::TensorDesc* mirror_tensor = ctx->TensorDesc4ArgNameAndIndex("mirror", 0);
-      if (mirror_tensor) {
-        CHECK_EQ_OR_RETURN(mirror_tensor->data_type(), DataType::kInt8);
-      }
+      if (mirror_tensor) { CHECK_EQ_OR_RETURN(mirror_tensor->data_type(), DataType::kInt8); }
 
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       DataType output_dtype = ctx->Attr<DataType>("output_dtype");
@@ -149,7 +143,6 @@ REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
       *out_tensor->mut_data_type() = output_dtype;
       return Maybe<void>::Ok();
     });
-
 
 REGISTER_CPU_ONLY_USER_OP("coin_flip")
     .Output("out")
@@ -186,7 +179,6 @@ REGISTER_CPU_ONLY_USER_OP("coin_flip")
       return Maybe<void>::Ok();
     });
 
-
 REGISTER_CPU_ONLY_USER_OP("image_random_crop")
     .Input("in")
     .Output("out")
@@ -213,6 +205,5 @@ REGISTER_CPU_ONLY_USER_OP("image_random_crop")
       CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
       return Maybe<void>::Ok();
     });
-
 
 }  // namespace oneflow

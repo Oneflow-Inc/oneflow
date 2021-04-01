@@ -37,8 +37,8 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
 
-  *ctx->Shape4ArgNameAndIndex("out",0) = *ctx->Shape4ArgNameAndIndex("a",0);
-  *ctx->IsDynamic4ArgNameAndIndex("out",0) = *ctx->IsDynamic4ArgNameAndIndex("a",0);
+  *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("a", 0);
+  *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("a", 0);
 
   int64_t m, n, k;  // tensor a (no trans): m*k, tensor b (no trans): k*n
   if (!transpose_a) {
@@ -65,7 +65,7 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("out",0) = *ctx->Dtype4ArgNameAndIndex("a",0);
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("a", 0);
   if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
     const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
     user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);

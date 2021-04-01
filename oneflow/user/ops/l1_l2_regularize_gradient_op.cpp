@@ -23,8 +23,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
   const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
   CHECK_EQ_OR_RETURN(model_diff->shape(), model->shape());
-  *ctx->Shape4ArgNameAndIndex("out",0) = *ctx->Shape4ArgNameAndIndex("model",0);
-  *ctx->IsDynamic4ArgNameAndIndex("out",0) = *ctx->IsDynamic4ArgNameAndIndex("model",0);
+  *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("model", 0);
+  *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("model", 0);
   return Maybe<void>::Ok();
 }
 
@@ -50,9 +50,8 @@ REGISTER_USER_OP("l1_l2_regularize_gradient")
       const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
       const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
       CHECK_EQ_OR_RETURN(model_diff->data_type(), model->data_type());
-      *ctx->Dtype4ArgNameAndIndex("out",0) = *ctx->Dtype4ArgNameAndIndex("model",0);
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("model", 0);
       return Maybe<void>::Ok();
     });
-
 
 }  // namespace oneflow

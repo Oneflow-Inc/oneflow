@@ -20,12 +20,12 @@ namespace oneflow {
 namespace {
 
 Maybe<void> CheckShapeLike(const user_op::TensorDesc* tensor_desc,
-                                const user_op::TensorDesc* like) {
+                           const user_op::TensorDesc* like) {
   CHECK_EQ_OR_RETURN(tensor_desc->shape(), like->shape());
   return Maybe<void>::Ok();
 }
 Maybe<void> CheckDataTypeLike(const user_op::TensorDesc* tensor_desc,
-                                const user_op::TensorDesc* like) {
+                              const user_op::TensorDesc* like) {
   CHECK_EQ_OR_RETURN(tensor_desc->data_type(), like->data_type());
   return Maybe<void>::Ok();
 }
@@ -34,8 +34,7 @@ Maybe<void> CheckScalarShape(const user_op::TensorDesc* tensor_desc) {
   CHECK_EQ_OR_RETURN(tensor_desc->shape(), Shape({1}));
   return Maybe<void>::Ok();
 }
-Maybe<void> CheckScalarDataType(const user_op::TensorDesc* tensor_desc,
-                                  const DataType data_type) {
+Maybe<void> CheckScalarDataType(const user_op::TensorDesc* tensor_desc, const DataType data_type) {
   CHECK_EQ_OR_RETURN(tensor_desc->data_type(), data_type);
   return Maybe<void>::Ok();
 }
@@ -54,7 +53,6 @@ Maybe<void> CheckLearningRateDataType(user_op::InferContext* ctx) {
 Maybe<void> CheckIndexedSlicesModelDiffDesc(const user_op::TensorDesc* model,
                                             const user_op::TensorDesc* model_diff_indices,
                                             const user_op::TensorDesc* model_diff_values) {
-  
   const int64_t num_indices_axes = model_diff_indices->shape().NumAxes();
   const int64_t num_values_axes = model_diff_values->shape().NumAxes();
   CHECK_GE_OR_RETURN(num_values_axes, num_indices_axes);
@@ -70,8 +68,8 @@ Maybe<void> CheckIndexedSlicesModelDiffDesc(const user_op::TensorDesc* model,
   return Maybe<void>::Ok();
 }
 Maybe<void> CheckIndexedSlicesModelDiffDataType(const user_op::TensorDesc* model,
-                                            const user_op::TensorDesc* model_diff_indices,
-                                            const user_op::TensorDesc* model_diff_values) {
+                                                const user_op::TensorDesc* model_diff_indices,
+                                                const user_op::TensorDesc* model_diff_values) {
   CHECK_OR_RETURN(IsIndexDataType(model_diff_indices->data_type()));
   CHECK_EQ_OR_RETURN(model->data_type(), model_diff_values->data_type());
   return Maybe<void>::Ok();
@@ -229,7 +227,7 @@ Maybe<void> InferLambUpdateTensorDesc(user_op::InferContext* ctx) {
   CHECK_GE_OR_RETURN(beta2, 0);
   CHECK_LT_OR_RETURN(beta2, 1);
   const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  
+
   const Shape& shape = model->shape();
   const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
   CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
@@ -292,7 +290,7 @@ void LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifie
 
 Maybe<void> InferRmsPropUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  
+
   const Shape& shape = model->shape();
   const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
   CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
@@ -332,7 +330,7 @@ Maybe<void> InferRmsPropUpdateDataType(user_op::InferContext* ctx) {
 }
 Maybe<void> InferLarsUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  
+
   const Shape& shape = model->shape();
   const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
   CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
@@ -592,12 +590,14 @@ REGISTER_USER_OP("adam_bias_correction_learning_rate")
     .Attr<float>("beta1", 0.9)
     .Attr<float>("beta2", 0.999)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out",0) = *ctx->Shape4ArgNameAndIndex("learning_rate",0);
-      *ctx->IsDynamic4ArgNameAndIndex("out",0) = *ctx->IsDynamic4ArgNameAndIndex("learning_rate",0);
+      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("learning_rate", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("out", 0) =
+          *ctx->IsDynamic4ArgNameAndIndex("learning_rate", 0);
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out",0) = *ctx->Dtype4ArgNameAndIndex("learning_rate",0);
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("learning_rate", 0);
+      return Maybe<void>::Ok();
     });
 
 // every bn has sbp broadcast signature

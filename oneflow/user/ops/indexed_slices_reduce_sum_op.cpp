@@ -30,7 +30,7 @@ REGISTER_USER_OP("indexed_slices_reduce_sum")
       FOR_RANGE(int64_t, i, 0, x_indices->shape().NumAxes()) {
         CHECK_EQ_OR_RETURN(x_indices->shape().At(i), x_values->shape().At(i));
       }
-      
+
       const int64_t n = x_indices->shape().elem_cnt();
       const int64_t m = x_values->shape().elem_cnt() / n;
       user_op::TensorDesc* y_indices = ctx->TensorDesc4ArgNameAndIndex("y_indices", 0);
@@ -50,6 +50,5 @@ REGISTER_USER_OP("indexed_slices_reduce_sum")
       *num_unique->mut_data_type() = DataType::kInt64;
       return Maybe<void>::Ok();
     });
-
 
 }  // namespace oneflow

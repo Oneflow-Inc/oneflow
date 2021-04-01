@@ -29,19 +29,19 @@ Maybe<void> InferTensorDescBinaryBroadcast(user_op::InferContext* ctx) {
   const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   user_op::TensorDesc* tensor_z = ctx->TensorDesc4ArgNameAndIndex("z", 0);
-  
+
   size_t output_num_axes = std::max(tensor_x->shape().NumAxes(), tensor_y->shape().NumAxes());
   if (IsScalarTensor(tensor_x)) {
-    *ctx->Shape4ArgNameAndIndex("z",0) = *ctx->Shape4ArgNameAndIndex("y",0);
-    *ctx->IsDynamic4ArgNameAndIndex("z",0) = *ctx->IsDynamic4ArgNameAndIndex("y",0);
+    *ctx->Shape4ArgNameAndIndex("z", 0) = *ctx->Shape4ArgNameAndIndex("y", 0);
+    *ctx->IsDynamic4ArgNameAndIndex("z", 0) = *ctx->IsDynamic4ArgNameAndIndex("y", 0);
   } else if (IsScalarTensor(tensor_y)) {
-    *ctx->Shape4ArgNameAndIndex("z",0) = *ctx->Shape4ArgNameAndIndex("x",0);
-    *ctx->IsDynamic4ArgNameAndIndex("z",0) = *ctx->IsDynamic4ArgNameAndIndex("x",0);
+    *ctx->Shape4ArgNameAndIndex("z", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
+    *ctx->IsDynamic4ArgNameAndIndex("z", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
   } else {
     const auto& x_shape = CreateLeftExtendedShape(ShapeView(tensor_x->shape()), output_num_axes);
     const auto& y_shape = CreateLeftExtendedShape(ShapeView(tensor_y->shape()), output_num_axes);
-    *ctx->Shape4ArgNameAndIndex("z",0) = *ctx->Shape4ArgNameAndIndex("x",0);
-    *ctx->IsDynamic4ArgNameAndIndex("z",0) = *ctx->IsDynamic4ArgNameAndIndex("x",0);
+    *ctx->Shape4ArgNameAndIndex("z", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
+    *ctx->IsDynamic4ArgNameAndIndex("z", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
     Shape out_shape(x_shape);
     FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
       CHECK_OR_RETURN(x_shape.At(i) == 1 || y_shape.At(i) == 1 || x_shape.At(i) == y_shape.At(i))
@@ -61,9 +61,9 @@ Maybe<void> InferDataTypeBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   CHECK_EQ_OR_RETURN(tensor_x->data_type(), tensor_y->data_type());
   if (IsScalarTensor(tensor_x)) {
-    *ctx->Dtype4ArgNameAndIndex("z",0) = *ctx->Dtype4ArgNameAndIndex("y",0);
+    *ctx->Dtype4ArgNameAndIndex("z", 0) = *ctx->Dtype4ArgNameAndIndex("y", 0);
   } else {
-    *ctx->Dtype4ArgNameAndIndex("z",0) = *ctx->Dtype4ArgNameAndIndex("x",0);
+    *ctx->Dtype4ArgNameAndIndex("z", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
   }
   return Maybe<void>::Ok();
 }
@@ -183,7 +183,7 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
       .Input("x")                                                             \
       .Input("y")                                                             \
       .Output("z")                                                            \
-      .SetTensorDescInferFn(InferTensorDescBinaryBroadcast)    \
+      .SetTensorDescInferFn(InferTensorDescBinaryBroadcast)                   \
       .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>)    \
       .SetInferDataTypeFn(InferDataTypeBinaryBroadcast##tensor_suffix);
 
