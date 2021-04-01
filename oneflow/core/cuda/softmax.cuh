@@ -132,7 +132,6 @@ struct DirectFetch {
 #pragma unroll
     for (int i = 0; i < N; ++i) { dst[i] = static_cast<DST>(pack.elem[i]); }
   }
-
   const SRC* src;
   int64_t row_size;
 };
@@ -140,7 +139,6 @@ struct DirectFetch {
 template<typename DST>
 struct DirectStore {
   DirectStore(DST* dst, int64_t row_size) : dst(dst), row_size(row_size) {}
-
   template<typename SRC, int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     Pack<DST, N> pack;

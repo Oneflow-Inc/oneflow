@@ -47,7 +47,6 @@ struct TrilScaleFetch {
       }
     }
   }
-
   const SRC* src;
   int64_t tril_num_rows;
   int64_t row_size;
@@ -77,7 +76,6 @@ struct MaskAndScaleStore {
         softmax_y_pack.storage;
     *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst + offset) = dst_pack.storage;
   }
-
   DST* dst;
   DST* softmax_y;
   const int8_t* mask;
@@ -94,13 +92,14 @@ struct MaskAndScaleFetch {
     cuda::softmax::Pack<SRC, N> pack;
     const int64_t offset = row * row_size + col;
     pack.storage = *reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src + offset);
+    cuda::softmax::Pack<int8_t, N> mask_pack;
+    mask_pack.storage = *reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
-      dst[i] = static_cast<DST>(pack.elem[i]) * static_cast<DST>(mask[offset + i])
+      dst[i] = static_cast<DST>(pack.elem[i]) * static_cast<DST>(mask_pack.elem[i])
                * static_cast<DST>(scale);
     }
   }
-
   const SRC* src;
   const int8_t* mask;
   int64_t row_size;
@@ -156,8 +155,9 @@ class FusedTrilScaleSoftmaxMaskScaleKernel final : public user_op::OpKernel {
     CHECK_GE(x_shape.NumAxes(), 2);
     const int64_t cols = x_shape.At(x_shape.NumAxes() - 1);
     const int64_t rows = x_shape.Count(0, x_shape.NumAxes() - 1);
-    TrilScaleFetch<T> fetch(x->dptr<T>(), x_shape.At(x_shape.NumAxes() - 2), cols,
-                            ctx->Attr<int64_t>("diagonal"), ctx->Attr<float>("tril_fill_value"),
+    const int64_t tril_num_rows = x_shape.At(x_shape.NumAxes() - 2);
+    TrilScaleFetch<T> fetch(x->dptr<T>(), tril_num_rows, cols, ctx->Attr<int64_t>("diagonal"),
+                            ctx->Attr<float>("tril_fill_value"),
                             ctx->Attr<float>("tril_scale_value"));
     MaskAndScaleStore<T> store(y->mut_dptr<T>(), softmax_y->mut_dptr<T>(), mask->dptr<int8_t>(),
                                cols, ctx->Attr<float>("mask_scale_value"));
@@ -193,13 +193,13 @@ class FusedTrilScaleSoftmaxMaskScaleGradKernel final : public user_op::OpKernel 
     const ShapeView& dy_shape = dy->shape();
     CHECK_GE(dy_shape.NumAxes(), 2);
     const int64_t cols = dy_shape.At(dy_shape.NumAxes() - 1);
-    const int64_t rows = dy_shape.elem_cnt() / cols;
+    const int64_t rows = dy_shape.Count(0, dy_shape.NumAxes() - 1);
+    const int64_t tril_num_rows = dy_shape.At(dy_shape.NumAxes() - 2);
     cuda::softmax::DirectFetch<T> fetch_softmax_y(softmax_y->dptr<T>(), cols);
     MaskAndScaleFetch<T> fetch_dy(dy->dptr<T>(), mask->dptr<int8_t>(), cols,
                                   ctx->Attr<float>("mask_scale_value"));
-    TrilScaleStore<T> store(dx->mut_dptr<T>(), dy_shape.At(dy_shape.NumAxes() - 2), cols,
-                            ctx->Attr<int64_t>("diagonal"), static_cast<T>(0.0),
-                            ctx->Attr<float>("tril_scale_value"));
+    TrilScaleStore<T> store(dx->mut_dptr<T>(), tril_num_rows, cols, ctx->Attr<int64_t>("diagonal"),
+                            static_cast<T>(0.0), ctx->Attr<float>("tril_scale_value"));
     cuda::softmax::DispatchSoftmaxGrad<decltype(fetch_softmax_y), decltype(fetch_dy),
                                        decltype(store), T>(
         ctx->device_ctx()->cuda_stream(), fetch_softmax_y, fetch_dy, store, rows, cols);

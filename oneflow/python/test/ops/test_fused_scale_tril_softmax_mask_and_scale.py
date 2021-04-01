@@ -19,16 +19,11 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type
 
-gpus = tf.config.experimental.list_physical_devices("GPU")
-for gpu in gpus:
-    tf.config.experimental.set_memory_growth(gpu, True)
 
-
-def compare_with_tensorflow(
+def compare_with_not_fused(
     test_case, device_type, x_shape, data_type, diagonal, fill_value, scale, rate, seed
 ):
     assert device_type in ["gpu", "cpu"]
@@ -88,14 +83,21 @@ def compare_with_tensorflow(
             else:
                 y1 = flow.nn.dropout(
                     flow.nn.softmax(
-                        flow.math.fused_scale_tril(x1, diagonal=0, scale=1.0)
+                        flow.math.fused_scale_tril(
+                            x1, diagonal=diagonal, fill_value=fill_value, scale=scale
+                        )
                     ),
                     rate=rate,
                     seed=seed,
                     name="dropout",
                 )
                 y2 = flow.nn.fused_scale_tril_softmax_dropout(
-                    x2, diagonal=0, scale=1.0, rate=rate, seed=seed
+                    x2,
+                    diagonal=diagonal,
+                    fill_value=fill_value,
+                    scale=scale,
+                    rate=rate,
+                    seed=seed,
                 )
             flow.watch(y1, test_global_storage.Setter("y1"))
             flow.watch(y2, test_global_storage.Setter("y2"))
@@ -125,9 +127,9 @@ def compare_with_tensorflow(
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestFusedScaleTrilSoftmaxMaskAndScale(flow.unittest.TestCase):
+class TestFusedScaleTrilSoftmaxDropout(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_fused_scale_tril_softmax_mask_and_scale_shape(test_case):
+    def test_fused_scale_tril_softmax_dropout(test_case):
         if flow.eager_execution_enabled():
             print("\nSkip under erger mode!")
             return
@@ -135,18 +137,9 @@ class TestFusedScaleTrilSoftmaxMaskAndScale(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [
             (2, 2, 5, 5),
-            (10, 20, 13),
-            (10, 20, 30),
             (10, 20),
-            (10, 60),
             (32, 12, 128),
             (10, 960),
-            (12, 2001),
-            (10, 4096),
-            (10, 8092),
-            (256, 1001),
-            (100, 65536),
-            (10, 65535),
         ]
         arg_dict["data_type"] = ["float16", "float32", "double"]
         arg_dict["diagonal"] = [-1, 0]
@@ -157,7 +150,7 @@ class TestFusedScaleTrilSoftmaxMaskAndScale(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             if arg[0] == "cpu" and arg[2] == "float16":
                 continue
-            compare_with_tensorflow(test_case, *arg)
+            compare_with_not_fused(test_case, *arg)
 
 
 if __name__ == "__main__":
