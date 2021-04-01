@@ -50,6 +50,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "gelu",
                               "normalization",
                               "normalization_add_relu",
+                              "sparse_softmax_cross_entropy",
                               "acc"};
   return gray_list;
 }

@@ -28,8 +28,9 @@ class EagerBlobObject : public BlobObject {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
-  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, DataType data_type)
-      : BlobObject(mem_case, data_type), blob_body_bytes_(0) {}
+  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+                  DataType data_type)
+      : BlobObject(mem_case, shape, data_type), blob_body_bytes_(0) {}
   virtual ~EagerBlobObject() override = default;
 
   virtual BlobDesc* mut_blob_desc() override { return &blob_desc_; }

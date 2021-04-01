@@ -68,7 +68,8 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   const JobDesc& job_desc = GlobalJobDesc();
   if (need_job_complete) { JobCompleter().Complete(job); }
   Global<OpGraph>::New(*job);
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
+      || Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
     TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
     Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
                                               + "_op_graph.dot");
