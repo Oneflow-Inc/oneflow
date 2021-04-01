@@ -71,29 +71,30 @@ class MegatronGPTMMapDataset final {
  private:
   static const HashMap<char, size_t> kDTypeCode2Size;
 
-  size_t GetNumTokens(const std::vector<size_t>& doc_indices) const;
-  size_t GetNumEpochs() const;
-  size_t GetNumCompleteEpochs() const;
-  void InitDocIndices(const std::vector<size_t>& epoch_doc_indices);
+  size_t GetEpochNumTokens(const std::vector<size_t>& doc_indices) const;
+  void InitDocIndices(const std::vector<size_t>& epoch_doc_indices, size_t num_epochs,
+                      size_t num_complete_epochs);
   void InitDocIndices(const std::vector<size_t>& doc_indices, size_t num_epochs);
-  void InitSampleIndices();
-  void InitShuffleIndices();
+  void InitSampleIndices(size_t total_num_samples);
+  void InitShuffleIndices(size_t total_num_samples);
   template<typename T>
   void ReadTokens(const void* src, size_t offset, T* dst, size_t size) const;
 
-  std::unique_ptr<const MegatronGPTIndex> index_;
-  std::unique_ptr<const MappedBuffer> data_;
+  // initializer list
   size_t seq_len_;
   size_t sample_len_;
   size_t num_samples_;
   bool shuffle_;
   uint32_t seed_;
+  std::mt19937 gen_;
 
+  // initializing in constructor (in order as below)
+  std::unique_ptr<const MegatronGPTIndex> index_;
+  std::unique_ptr<const MappedBuffer> data_;
   size_t dtype_size_;
   size_t tokens_per_epoch_;
   size_t num_epochs_;
   size_t num_complete_epochs_;
-  std::mt19937 gen_;
   std::vector<size_t> doc_indices_;
   std::vector<std::pair<size_t, size_t>> sample_indices_;
   std::vector<size_t> shuffle_indices_;

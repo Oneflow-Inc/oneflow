@@ -49,6 +49,31 @@ void GetSplitDocIndices(std::vector<size_t>* doc_indices, const std::vector<int6
   std::iota(doc_indices->begin(), doc_indices->end(), split_offset);
 }
 
+size_t GetNumEpochs(size_t num_samples, size_t seq_length, size_t tokens_per_epoch) {
+  // num_epochs * tokens_per_epoch >= num_samples * seq_length + 1
+  // +1 is because we need to retrieve seq_length + 1 token each time
+  // but the last token will overlap with the first token of the next
+  // sample except for the last sample.
+  return static_cast<size_t>(
+      std::ceil(static_cast<double>(num_samples * seq_length + 1) / tokens_per_epoch));
+}
+
+size_t GetNumCompleteEpochs(size_t num_samples, size_t seq_length, size_t tokens_per_epoch) {
+  size_t num_epochs = GetNumEpochs(num_samples, seq_length, tokens_per_epoch);
+  if (num_epochs == 1) { return 1; }
+  size_t num_samples_per_epoch =
+      static_cast<size_t>(std::floor(static_cast<double>(tokens_per_epoch - 1) / seq_length));
+  size_t num_samples_exclude_last_epoch = static_cast<size_t>(
+      std::floor(static_cast<double>((num_epochs - 1) * tokens_per_epoch - 1) / seq_length));
+  CHECK_LE(num_samples_exclude_last_epoch, num_samples);
+  size_t last_epoch_num_samples = num_samples - num_samples_exclude_last_epoch;
+  CHECK_LT(last_epoch_num_samples, num_samples_per_epoch);
+
+  bool separate_last_epoch =
+      last_epoch_num_samples < static_cast<size_t>(0.8f * num_samples_per_epoch);
+  return separate_last_epoch ? (num_epochs - 1) : num_epochs;
+}
+
 }  // namespace
 
 constexpr char MegatronGPTIndex::kMagicCode[];
@@ -96,8 +121,7 @@ MegatronGPTIndex::MegatronGPTIndex(const std::string& index_file_path) {
             << " ms";
 }
 
-MappedBuffer::MappedBuffer(const std::string& filename)
-    : mapped_(nullptr), size_(0) {
+MappedBuffer::MappedBuffer(const std::string& filename) : mapped_(nullptr), size_(0) {
 #ifdef __linux__
   int fd = open(filename.c_str(), O_RDONLY);
   CHECK(fd != -1) << "open " << filename << " failed: " << strerror(errno);
@@ -135,12 +159,14 @@ MegatronGPTMMapDataset::MegatronGPTMMapDataset(const std::string& data_file_pref
   dtype_size_ = kDTypeCode2Size.at(index_->dtype_code());
   std::vector<size_t> epoch_doc_indices;
   GetSplitDocIndices(&epoch_doc_indices, split_sizes, split_index, index_->num_docs());
-  tokens_per_epoch_ = GetNumTokens(epoch_doc_indices);
-  num_epochs_ = GetNumEpochs();
-  num_complete_epochs_ = GetNumCompleteEpochs();
-  InitDocIndices(epoch_doc_indices);
-  InitSampleIndices();
-  InitShuffleIndices();
+  tokens_per_epoch_ = GetEpochNumTokens(epoch_doc_indices);
+  num_epochs_ = GetNumEpochs(num_samples_, seq_len_, tokens_per_epoch_);
+  num_complete_epochs_ = GetNumCompleteEpochs(num_samples_, seq_len_, tokens_per_epoch_);
+  InitDocIndices(epoch_doc_indices, num_epochs_, num_complete_epochs_);
+  size_t total_num_samples = static_cast<size_t>(
+      std::floor(static_cast<double>(num_epochs_ * tokens_per_epoch_ - 1) / seq_len_));
+  InitSampleIndices(total_num_samples);
+  InitShuffleIndices(sample_indices_.size());
   std::chrono::duration<double, std::milli> elapse = std::chrono::system_clock::now() - start;
   LOG(INFO) << "Create GPT Dataset successed, sequence length: " << seq_len_
             << ", number of samples: " << num_samples_
@@ -152,40 +178,20 @@ MegatronGPTMMapDataset::MegatronGPTMMapDataset(const std::string& data_file_pref
             << ", elapsed time: " << elapse.count() << " ms";
 }
 
-size_t MegatronGPTMMapDataset::GetNumTokens(const std::vector<size_t>& doc_indices) const {
+size_t MegatronGPTMMapDataset::GetEpochNumTokens(const std::vector<size_t>& doc_indices) const {
   size_t num_tokens = 0;
   for (auto doc_index : doc_indices) { num_tokens += index_->doc_length(doc_index); }
   return num_tokens;
 }
 
-size_t MegatronGPTMMapDataset::GetNumEpochs() const {
-  // num_epochs * tokens_per_epoch >= num_samples * seq_length + 1
-  // +1 is because we need to retrieve seq_length + 1 token each time
-  // but the last token will overlap with the first token of the next
-  // sample except for the last sample.
-  return static_cast<size_t>(
-      std::ceil(static_cast<double>(num_samples_ * seq_len_ + 1) / tokens_per_epoch_));
-}
-
-size_t MegatronGPTMMapDataset::GetNumCompleteEpochs() const {
-  if (num_epochs_ == 1) { return 1; }
-  size_t num_samples_per_epoch =
-      static_cast<size_t>(std::floor(static_cast<double>(tokens_per_epoch_ - 1) / seq_len_));
-  size_t num_samples_exclude_last_epoch = static_cast<size_t>(
-      std::floor(static_cast<double>((num_epochs_ - 1) * tokens_per_epoch_ - 1) / seq_len_));
-  CHECK_LE(num_samples_exclude_last_epoch, num_samples_);
-  size_t last_epoch_num_samples = num_samples_ - num_samples_exclude_last_epoch;
-  CHECK_LT(last_epoch_num_samples, num_samples_per_epoch);
-
-  bool separate_last_epoch =
-      last_epoch_num_samples < static_cast<size_t>(0.8f * num_samples_per_epoch);
-  return separate_last_epoch ? (num_epochs_ - 1) : num_epochs_;
-}
-
-void MegatronGPTMMapDataset::InitDocIndices(const std::vector<size_t>& epoch_doc_indices) {
-  doc_indices_.reserve(epoch_doc_indices.size() * num_epochs_);
-  InitDocIndices(epoch_doc_indices, num_complete_epochs_);
-  if (num_epochs_ != num_complete_epochs_) { InitDocIndices(epoch_doc_indices, 1); }
+void MegatronGPTMMapDataset::InitDocIndices(const std::vector<size_t>& epoch_doc_indices,
+                                            size_t num_epochs, size_t num_complete_epochs) {
+  doc_indices_.reserve(epoch_doc_indices.size() * num_epochs);
+  InitDocIndices(epoch_doc_indices, num_complete_epochs);
+  if (num_epochs != num_complete_epochs) {
+    CHECK_EQ(num_complete_epochs + 1, num_epochs);
+    InitDocIndices(epoch_doc_indices, 1);
+  }
 }
 
 void MegatronGPTMMapDataset::InitDocIndices(const std::vector<size_t>& epoch_doc_indices,
@@ -197,11 +203,8 @@ void MegatronGPTMMapDataset::InitDocIndices(const std::vector<size_t>& epoch_doc
   if (shuffle_) { std::shuffle(doc_indices_.begin() + start, doc_indices_.end(), gen_); }
 }
 
-void MegatronGPTMMapDataset::InitSampleIndices() {
-  size_t total_num_samples = static_cast<size_t>(
-      std::floor(static_cast<double>(num_epochs_ * tokens_per_epoch_ - 1) / seq_len_));
+void MegatronGPTMMapDataset::InitSampleIndices(size_t total_num_samples) {
   sample_indices_.reserve(total_num_samples);
-
   size_t doc_indices_idx = 0;
   size_t doc_offset = 0;
   FOR_RANGE(size_t, i, 0, total_num_samples) {
@@ -228,8 +231,8 @@ void MegatronGPTMMapDataset::InitSampleIndices() {
   CHECK_GE(sample_indices_.size(), num_samples_);
 }
 
-void MegatronGPTMMapDataset::InitShuffleIndices() {
-  shuffle_indices_.resize(sample_indices_.size());
+void MegatronGPTMMapDataset::InitShuffleIndices(size_t total_num_samples) {
+  shuffle_indices_.resize(total_num_samples);
   std::iota(shuffle_indices_.begin(), shuffle_indices_.end(), 0);
   if (shuffle_) {
     size_t num_samples = static_cast<size_t>(
