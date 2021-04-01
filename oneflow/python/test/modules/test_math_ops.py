@@ -21,9 +21,9 @@ import numpy as np
 )
 class TestModule(flow.unittest.TestCase):
     def test_pow(test_case):
-        pow_of = flow.Pow()
+        pow = flow.Pow()
         input = flow.Tensor(np.array([1,2,3,4,5,6]), dtype=flow.float32)
-        of_out = pow_of(input, 2.1)
+        of_out = pow(input, 2.1)
         np_out = np.power(input.numpy(), 2.1)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
