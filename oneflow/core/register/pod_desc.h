@@ -64,11 +64,9 @@ class PodDesc {
 
 class TensorPodDesc final : public PodDesc {
  public:
-  TensorPodDesc() : PodDesc(), shape_(std::make_shared<Shape>()) {}
-  TensorPodDesc(const Shape& shape, DataType data_type)
-      : PodDesc(), shape_(std::make_shared<Shape>(shape)), data_type_(data_type) {}
-  TensorPodDesc(const std::shared_ptr<Shape>& shape, DataType data_type)
-      : PodDesc(), shape_(shape), data_type_(data_type) {}
+  TensorPodDesc();
+  TensorPodDesc(const Shape& shape, DataType data_type);
+  TensorPodDesc(const std::shared_ptr<Shape>& shape, DataType data_type);
   explicit TensorPodDesc(const TensorPodProto& shape_pod_proto);
   explicit TensorPodDesc(const TensorPodDesc& shape_pod);
   ~TensorPodDesc() = default;
