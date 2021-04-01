@@ -1121,9 +1121,14 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
       PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
     }
+    double start = GetCurTime();
     PushPlan("merged_plan", *plan);
+    LOG(INFO) << " PushPlan merged_plan time: " << (GetCurTime() - start) / 1e9 << " seconds.\n";
+
   } else {
+    double start = GetCurTime();
     PullPlan("merged_plan", plan);
+    LOG(INFO) << " PullPlan merged_plan time: " << (GetCurTime() - start) / 1e9 << " seconds.\n";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
     }
@@ -1144,6 +1149,10 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
     runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_));
   }
   OF_PROFILER_RANGE_PUSH("new Runtime");
+  if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+    LOG(ERROR) << "this is dry run, exiting";
+    exit(0);
+  }
   runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false));
   OF_PROFILER_RANGE_POP();  // new Runtime
   return Maybe<void>::Ok();

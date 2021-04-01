@@ -898,15 +898,9 @@ void Operator::GenKernelConf(
     (*dtype_signature->mutable_name2dtype())[ibn] = blob_desc->data_type();
   }
   CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
-        return blob_desc->header_is_opaque();
-      })) {
-    kernel_conf->set_need_do_opaque_header(true);
-  } else {
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
-                             [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); })) {
-      kernel_conf->set_need_do_shape(true);
-    }
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
+                           [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); })) {
+    kernel_conf->set_need_do_shape(true);
   }
 
   {

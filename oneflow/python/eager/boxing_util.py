@@ -26,7 +26,6 @@ import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.lib.core.high_order_bool as high_order_bool
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_hob as boxing_hob
 import oneflow.python.eager.op_infer_util as op_infer_util
 from oneflow.python.eager.boxing_hob import BoxingHobContext
@@ -743,7 +742,6 @@ def _AssignOpConf():
 
 
 def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf):
-    oneflow_api.TryDisableBlobCache(ref_blob_object)
     ref_parallel_conf = ref_blob_object.parallel_desc_symbol.parallel_conf
     ref_devices = ref_blob_object.parallel_desc_symbol.machine_id2device_id_list
     value_devices = value_blob_object.parallel_desc_symbol.machine_id2device_id_list
