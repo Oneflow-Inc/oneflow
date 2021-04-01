@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 
-from typing import Optional, Sequence, Sized, Union
+from typing import ForwardRef, Optional, Sequence, Sized, Union
 import collections
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
@@ -29,7 +29,10 @@ from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 import oneflow.python.framework.id_util as id_util
-from oneflow.python.framework.tensor import register_tensor_op_by_module
+from oneflow.python.framework.tensor import (
+    register_op_by_module,
+    register_tensor_op_by_module,
+)
 
 
 def _check_axis(axis, shape):
@@ -645,3 +648,17 @@ class Add(Module):
             return ScalarAddByTensor()(x, y)
         else:
             return BroadcastAdd()(x, y)
+
+
+@register_op_by_module("pow")
+@oneflow_export("Pow")
+class Pow(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        name = id_util.UniqueStr("pow_")
+        self._op = flow.builtin_op("pow", name).Input("x").Output("y")
+
+    def forward(self, x, exponent: Union[int, float]):
+        self._op.Attr("exponent", float(exponent)).Build()
+        return self._op(x)[0]
+
