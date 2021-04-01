@@ -135,7 +135,7 @@ jobs:
 
           git_branch=${GITHUB_REF##*/}
           oss_branch_dir=branch/${git_branch}/${{ matrix.compute_platform }}
-          oss_dir=${oss_branch_dir}/${GITHUB_SHA}/${{ matrix.compute_platform }}
+          oss_dir=${oss_branch_dir}/${GITHUB_SHA}
           echo "oss_branch_dir=${oss_branch_dir}" >> $GITHUB_ENV
           echo "oss_dir=${oss_dir}" >> $GITHUB_ENV
           echo "git_branch=${git_branch}" >> $GITHUB_ENV

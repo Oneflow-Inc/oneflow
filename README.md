@@ -36,17 +36,17 @@
   - To install latest stable release of OneFlow with CUDA support:
 
     ```
-    python3 -m pip install --find-links https://release.oneflow.info oneflow_cu102 --user
+    python3 -m pip install -f https://release.oneflow.info oneflow_cu102 --user
     ```
 
   - To install nightly release of OneFlow with CUDA support:
 
     ```
-    python3 -m pip install --find-links https://staging.oneflow.info/branch/master/cu102 oneflow --user
+    python3 -m pip install -f https://staging.oneflow.info/branch/master/cu102 oneflow --user
 
   - To install other available builds for different CUDA versions:
     ```
-    python3 -m pip install --find-links https://staging.oneflow.info/branch/master/[PLATFORM] oneflow --user
+    python3 -m pip install -f https://staging.oneflow.info/branch/master/[PLATFORM] oneflow --user
     ```
 
     All available `[PLATFORM]`:
