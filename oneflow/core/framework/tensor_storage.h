@@ -33,20 +33,20 @@ class TensorStorage final {
  public:
   TensorStorage();
   ~TensorStorage() {
-    if (releaser_) { (*releaser_)(buffer_); }
+    if (releaser_hook_) { (*releaser_hook_)(buffer_); }
   }
 
-  using ReleaserT = std::function<void(const std::shared_ptr<eager::TensorBuffer>&)>;
+  using ReleaserHookT = std::function<void(const std::shared_ptr<eager::TensorBuffer>&)>;
 
   const std::shared_ptr<eager::TensorBuffer> buffer() const { return buffer_; }
 
-  void set_releaser(const ReleaserT& releaser) {
-    releaser_ = std::make_shared<ReleaserT>(releaser);
+  void set_releaser_hook(const ReleaserHookT& releaser_hook) {
+    releaser_hook_ = std::make_shared<ReleaserHookT>(releaser_hook);
   }
 
  private:
   std::shared_ptr<eager::TensorBuffer> buffer_;
-  std::shared_ptr<ReleaserT> releaser_;
+  std::shared_ptr<ReleaserHookT> releaser_hook_;
 };
 
 }  // namespace one
