@@ -127,6 +127,10 @@ void PopulateOpAttibute(
       } else {
         CHECK(kernel_conf->has_op_attribute());
       }
+    } else {
+      for (auto& exec_node : task.exec_sequence().exec_node()) {
+        CHECK(exec_node.kernel_conf().has_op_attribute());
+      }
     }
   }
 }
