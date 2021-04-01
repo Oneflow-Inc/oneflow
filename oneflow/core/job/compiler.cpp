@@ -64,6 +64,24 @@ void Compiler::GenNetTopo(Plan* plan) const {
   *(pb_net_topo.mutable_peer_machine_ids()) = HashMap2PbMap(std_net_topo);
 }
 
+void CreateOpAttributeRef(
+    Plan* plan, PbMap<int64_t, ::oneflow::OpAttributeRefTable>* job_id2op_attribute_ref_table,
+    int64_t job_id, TaskProto* task_proto) {
+  CHECK(task_proto.exec_sequence().exec_node_size() == 1);
+  auto* exec_node = task_proto.mutable_exec_sequence()->mutable_exec_node(0);
+  const std::string op_name = exec_node->kernel_conf().op_attribute().op_conf().name();
+  auto* op_name2op_attribute =
+      (*job_id2op_attribute_ref_table)[job_id].mutable_op_name2op_attribute();
+  auto find_it = op_name2op_attribute->find(op_name);
+  if (find_it == op_name2op_attribute->end()) {
+    op_name2op_attribute->insert(
+        {op_name, task_proto.exec_sequence().exec_node(0).kernel_conf().op_attribute()});
+  }
+  auto* kernel_conf =
+      task_proto.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
+  kernel_conf->set_op_attribute_ref(op_name);
+  kernel_conf->clear_op_attribute();
+}
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   const JobDesc& job_desc = GlobalJobDesc();
   if (need_job_complete) { JobCompleter().Complete(job); }
@@ -97,20 +115,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     TaskProto task_proto;
     task_node->ToProto(&task_proto);
     if (use_op_attribute_ref) {
-      CHECK(task_proto.exec_sequence().exec_node_size() == 1);
-      auto* exec_node = task_proto.mutable_exec_sequence()->mutable_exec_node(0);
-      const std::string op_name = exec_node->kernel_conf().op_attribute().op_conf().name();
-      auto* op_name2op_attribute =
-          (*job_id2op_attribute_ref_table)[job_desc.job_id()].mutable_op_name2op_attribute();
-      auto find_it = op_name2op_attribute->find(op_name);
-      if (find_it == op_name2op_attribute->end()) {
-        op_name2op_attribute->insert(
-            {op_name, task_proto.exec_sequence().exec_node(0).kernel_conf().op_attribute()});
-      }
-      auto* kernel_conf =
-          task_proto.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
-      kernel_conf->set_op_attribute_ref(op_name);
-      kernel_conf->clear_op_attribute();
+      CreateOpAttributeRef(plan, job_id2op_attribute_ref_table, job_desc.job_id(), &task_proto);
     }
     plan->mutable_task()->Add(std::move(task_proto));
   });
