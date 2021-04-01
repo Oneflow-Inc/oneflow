@@ -134,7 +134,7 @@ Maybe<void> DefaultOpExprGradFunction::GenerateOpGradConf(const Operator& op,
       auto it = out_bn2grad_lbi_.find(bn);
       if (it == out_bn2grad_lbi_.end()) {
         LogicalBlobId lbi;
-        lbi.set_op_name(op.op_name() + FakeGradientOpSuffix);
+        lbi.set_op_name(GradientOpName(op.op_name()));
         lbi.set_blob_name(bn);
         it = out_bn2grad_lbi_.emplace(bn, lbi).first;
       }
