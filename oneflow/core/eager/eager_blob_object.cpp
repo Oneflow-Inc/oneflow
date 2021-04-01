@@ -55,14 +55,13 @@ void EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     return;
   }
   {
-    // reset blob_dptr_;
+    // reset tensor_buffer_;
     const auto& Free = [allocator, required_body_bytes](char* dptr) {
       allocator->Deallocate(dptr, required_body_bytes);
     };
     char* dptr = nullptr;
-    blob_dptr_.reset();
     allocator->Allocate(&dptr, required_body_bytes);
-    blob_dptr_ = std::unique_ptr<char, std::function<void(char*)>>(dptr, Free);
+    tensor_buffer_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free));
     blob->reset_dptr(dptr);
     InitNonPODTypeBlobIfNeed(&non_pod_initer_, blob_.get());
   }
