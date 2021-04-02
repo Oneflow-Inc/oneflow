@@ -148,6 +148,21 @@ void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
                                    reduced_out_parallel_desc, reduced_in_parallel_distribution,
                                    reduced_out_parallel_distribution);
   }
+  if (reduced_in_parallel_desc->hierarchy()->NumAxes() == 2
+      && reduced_out_parallel_desc->hierarchy()->NumAxes() == 1) {
+    *reduced_out_parallel_distribution->add_sbp_parallel() =
+        reduced_out_parallel_distribution->sbp_parallel(0);
+    ParallelConf new_parallel_conf = reduced_out_parallel_desc->parallel_conf();
+    reduced_in_parallel_desc->hierarchy()->ToProto(new_parallel_conf.mutable_hierarchy());
+    *reduced_out_parallel_desc = ParallelDesc(new_parallel_conf);
+  } else if (reduced_in_parallel_desc->hierarchy()->NumAxes() == 1
+             && reduced_out_parallel_desc->hierarchy()->NumAxes() == 2) {
+    *reduced_in_parallel_distribution->add_sbp_parallel() =
+        reduced_in_parallel_distribution->sbp_parallel(0);
+    ParallelConf new_parallel_conf = reduced_in_parallel_desc->parallel_conf();
+    reduced_out_parallel_desc->hierarchy()->ToProto(new_parallel_conf.mutable_hierarchy());
+    *reduced_in_parallel_desc = ParallelDesc(new_parallel_conf);
+  }
 }
 
 class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {

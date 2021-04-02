@@ -16,9 +16,27 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
+#include "oneflow/core/job/parallel_distribution_util.h"
 
 namespace oneflow {
 namespace user_op {
+
+namespace {
+
+class SparseCrossEntropyOpKernelState final : public user_op::OpKernelState {
+ public:
+  SparseCrossEntropyOpKernelState(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
+  ~SparseCrossEntropyOpKernelState() override = default;
+
+  int64_t lower() const { return lower_; }
+  int64_t upper() const { return upper_; }
+
+ private:
+  const int64_t lower_;
+  const int64_t upper_;
+};
+
+}  // namespace
 
 template<DeviceType device_type, typename T, typename K>
 class SparseCrossEntropyKernel final : public user_op::OpKernel {
@@ -49,8 +67,26 @@ class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
   SparseCrossEntropyMsKernel() = default;
   ~SparseCrossEntropyMsKernel() = default;
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    if (ctx->parallel_ctx().parallel_num() > 1) {
+      const ParallelDistribution& parallel_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("prediction", 0);
+      const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+      const TensorDesc* prediction_logical_desc =
+          ctx->LogicalTensorDesc4ArgNameAndIndex("prediction", 0);
+      TensorSliceView view = GetTensorSliceView4ParallelId(hierarchy, parallel_distribution,
+                                                           prediction_logical_desc->shape(),
+                                                           ctx->parallel_ctx().parallel_id());
+      return std::make_shared<SparseCrossEntropyOpKernelState>(view.At(1).begin(),
+                                                               view.At(1).end());
+    } else {
+      return std::shared_ptr<OpKernelState>(nullptr);
+    }
+  }
+
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -59,9 +95,11 @@ class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
     const int64_t depth = ctx->Attr<int64_t>("depth");
     int64_t lower_bound = 0;
-    if (ctx->parallel_ctx().parallel_num() > 1) {
-      BalancedSplitter bs(depth, ctx->parallel_ctx().parallel_num());
-      lower_bound = bs.At(ctx->parallel_ctx().parallel_id()).begin();
+    if (state != nullptr) {
+      auto* kernel_state = dynamic_cast<SparseCrossEntropyOpKernelState*>(state);
+      CHECK_NOTNULL(kernel_state);
+      CHECK_EQ(num_classes, kernel_state->upper() - kernel_state->lower());
+      lower_bound = kernel_state->lower();
     }
     Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
                         out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
