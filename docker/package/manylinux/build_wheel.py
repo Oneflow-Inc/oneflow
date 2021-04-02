@@ -311,6 +311,7 @@ if __name__ == "__main__":
         "--use_system_proxy", default=False, action="store_true", required=False
     )
     parser.add_argument("--xla", default=False, action="store_true", required=False)
+    parser.add_argument("--gcc7", default=False, action="store_true", required=False)
     parser.add_argument(
         "--use_aliyun_mirror", default=False, action="store_true", required=False
     )
@@ -350,10 +351,11 @@ if __name__ == "__main__":
             user = getpass.getuser()
             versioned_img_tag = f"{img_prefix}:0.1"
             user_img_tag = f"{img_prefix}:{user}"
-            extra_docker_args = (
-                args.extra_docker_args
-                + f" --name run-by-{getpass.getuser()}-{str(uuid.uuid4())}"
-            )
+            extra_docker_args = args.extra_docker_args
+            if "--name" not in extra_docker_args:
+                extra_docker_args += (
+                    f" --name run-by-{getpass.getuser()}-{str(uuid.uuid4())}"
+                )
             if args.custom_img_tag:
                 img_tag = args.custom_img_tag
                 skip_img = True
@@ -377,7 +379,7 @@ if __name__ == "__main__":
             if args.xla:
                 bash_args = "-l"
             bash_wrap = ""
-            if args.xla:
+            if args.xla or args.gcc7:
                 bash_wrap = """
 source scl_source enable devtoolset-7
 gcc --version
