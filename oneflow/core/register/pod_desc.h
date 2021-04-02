@@ -64,15 +64,15 @@ class PodDesc {
 
 class TensorPodDesc final : public PodDesc {
  public:
-  TensorPodDesc() : PodDesc(), shape_(std::make_shared<Shape>()), data_type_(kInvalidDataType) {}
-  TensorPodDesc(const std::shared_ptr<Shape>& shape, DataType data_type)
-      : PodDesc(), shape_(shape), data_type_(data_type) {}
+  TensorPodDesc();
+  TensorPodDesc(const Shape& shape, DataType data_type);
+  TensorPodDesc(const std::shared_ptr<Shape>& shape, DataType data_type);
   explicit TensorPodDesc(const TensorPodProto& shape_pod_proto);
   explicit TensorPodDesc(const TensorPodDesc& shape_pod);
   ~TensorPodDesc() = default;
-  const Shape& shape() const { return *shape_; }
+  const Shape& shape() const { return *CHECK_NOTNULL(shape_.get()); }
   DataType data_type() const { return data_type_; }
-  Shape* mut_shape() { return shape_.get(); }
+  Shape* mut_shape() { return CHECK_NOTNULL(shape_.get()); }
   void set_data_type(DataType data_type) { data_type_ = data_type; }
 
   void InitFromProto(const TensorPodProto& shape_pod);
