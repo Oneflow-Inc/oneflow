@@ -29,7 +29,7 @@ parser.add_argument(
     default=False,
     help="Package xla libraries if true, otherwise not.",
 )
-parser.add_argument("--build_dir", type=str, default="build")
+parser.add_argument("--build_dir", type=str, default="build-release")
 parser.add_argument("--package_name", type=str, default="oneflow")
 args, remain_args = parser.parse_known_args()
 sys.argv = ["setup.py"] + remain_args

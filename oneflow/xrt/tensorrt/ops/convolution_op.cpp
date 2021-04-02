@@ -40,14 +40,14 @@ class ConvolutionOp : public TrtOpKernel {
     const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
     const auto& dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     const int groups = ctx->Attr<int32_t>("groups");
-    CHECK_EQ(groups, 1)<<"only support groups = 1 in TensorRT";
-    int filters = ctx->Attr<int32_t>("filters");
+    const int filters = ctx->Attr<int32_t>("filters");
     auto *layer = ctx->builder()->addConvolution(
         *in, filters, nvinfer1::DimsHW(kernel_size[0], kernel_size[1]), weight, bias);
     layer->setName(ctx->op_name().c_str());
 
     layer->setStride(nvinfer1::DimsHW(strides[0], strides[1]));
     layer->setDilation(nvinfer1::DimsHW(dilation[0], dilation[1]));
+    layer->setNbGroups(groups);
     
     const auto& pads = ctx->Attr<std::vector<int32_t>>("padding_before");
     layer->setPaddingMode(nvinfer1::PaddingMode::kEXPLICIT_ROUND_DOWN);

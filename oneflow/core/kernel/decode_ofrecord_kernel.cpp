@@ -30,16 +30,16 @@ int32_t DecodeOFRecordKernel::NextRandomInt() const { return (*distribution_)(*r
 void DecodeOFRecordKernel::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* in_blob = BnInOp2Blob("in");
-  const DecodeOFRecordOpConf& decode_conf = op_conf().decode_ofrecord_conf();
-  CHECK_EQ(op_attribute().output_bns_size(), decode_conf.blob_size());
-  FOR_RANGE(int32_t, i, 0, op_attribute().output_bns_size()) {
-    Blob* out_blob = BnInOp2Blob(op_attribute().output_bns(i));
-    const BlobConf& blob_conf = decode_conf.blob(i);
-    OFRecordDecoderIf* decoder =
-        GetOFRecordDecoder(blob_conf.encode_case().encode_case(), blob_conf.data_type());
-    decoder->DecodeOneCol(ctx.device_ctx, in_blob, blob_conf, 0, out_blob,
-                          std::bind(&DecodeOFRecordKernel::NextRandomInt, this));
-  }
+  //   const DecodeOFRecordOpConf& decode_conf = op_conf().decode_ofrecord_conf();
+  //   CHECK_EQ(op_attribute().output_bns_size(), decode_conf.blob_size());
+  //   FOR_RANGE(int32_t, i, 0, op_attribute().output_bns_size()) {
+  //     Blob* out_blob = BnInOp2Blob(op_attribute().output_bns(i));
+  //     const BlobConf& blob_conf = decode_conf.blob(i);
+  //     OFRecordDecoderIf* decoder =
+  //         GetOFRecordDecoder(blob_conf.encode_case().encode_case(), blob_conf.data_type());
+  //     // decoder->DecodeOneCol(ctx.device_ctx, in_blob, blob_conf, 0, out_blob,
+  //     //                       std::bind(&DecodeOFRecordKernel::NextRandomInt, this));
+  //   }
 }
 
 REGISTER_KERNEL(OperatorConf::kDecodeOfrecordConf, DecodeOFRecordKernel);
