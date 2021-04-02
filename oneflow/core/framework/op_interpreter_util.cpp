@@ -65,9 +65,9 @@ std::shared_ptr<AutogradInterpreter> BuildInterpreter(const bool& eager_mode) {
   auto op_conf = JUST(GenBuiltinOpConf(op_expr));
   int64_t symbol_id = JUST(scope->symbol_id());
   op_conf->set_scope_symbol_id(symbol_id);
-  if (!op_conf->has_device_tag()) {
-    op_conf->set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
-  }
+  // if (!op_conf->has_device_tag()) {
+  op_conf->set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
+  // }
   const auto& ibn2blob_object = JUST(MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
   OpNodeSignature upstream_signature;
   if (ibn2blob_object->size()) {
