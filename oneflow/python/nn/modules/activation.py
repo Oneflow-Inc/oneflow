@@ -16,7 +16,6 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow.python.framework.id_util as id_util
 from oneflow.python.framework.tensor import register_tensor_op_by_module
 from oneflow.python.framework.tensor import register_op_by_module
 from typing import Optional, Sequence, Sized, Union, List, Tuple
