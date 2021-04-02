@@ -197,7 +197,7 @@ Maybe<void> GetReduceDeviceStageGradSbpFn(user_op::SbpContext* ctx) {
       .Attr<std::vector<int32_t>>("axis")                                       \
       .SetLogicalTensorDescInferFn(InferReduceDeviceStageLogicalTensorDescFn)   \
       .SetPhysicalTensorDescInferFn(InferReduceDeviceStagePhysicalTensorDescFn) \
-      .SetInferDataTypeFn(InferReduceDeviceStageDtypeFn)                 \
+      .SetInferDataTypeFn(InferReduceDeviceStageDtypeFn)                        \
       .SetGetSbpFn(GetReduceDeviceStageSbpFn);
 
 REGISTER_REDUCE_DEVICE_STAGE_USER_OP("reduce_min_device_stage")

@@ -59,7 +59,6 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   out->mut_shape()->Set(num_axes - 1, n);
   if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
     const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
-    CHECK_EQ_OR_RETURN(add_to_output->data_type(), out->data_type());
     CHECK_EQ_OR_RETURN(add_to_output->shape(), out->shape());
   }
   return Maybe<void>::Ok();
