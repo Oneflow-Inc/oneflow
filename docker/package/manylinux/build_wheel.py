@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 import getpass
+import uuid
 
 
 def get_arg_env(env_var_name: str, mode="run"):
@@ -282,6 +283,9 @@ if __name__ == "__main__":
         "--cuda_version", type=str, required=False, default="10.2",
     )
     parser.add_argument(
+        "--package_name", type=str, required=False, default="oneflow",
+    )
+    parser.add_argument(
         "--extra_oneflow_cmake_args", action="append", nargs="+", default=[]
     )
     parser.add_argument(
@@ -307,6 +311,7 @@ if __name__ == "__main__":
         "--use_system_proxy", default=False, action="store_true", required=False
     )
     parser.add_argument("--xla", default=False, action="store_true", required=False)
+    parser.add_argument("--gcc7", default=False, action="store_true", required=False)
     parser.add_argument(
         "--use_aliyun_mirror", default=False, action="store_true", required=False
     )
@@ -314,6 +319,7 @@ if __name__ == "__main__":
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
     print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
+    assert args.package_name
     extra_oneflow_cmake_args = " ".join(
         [" ".join(l) for l in args.extra_oneflow_cmake_args]
     )
@@ -345,6 +351,11 @@ if __name__ == "__main__":
             user = getpass.getuser()
             versioned_img_tag = f"{img_prefix}:0.1"
             user_img_tag = f"{img_prefix}:{user}"
+            extra_docker_args = args.extra_docker_args
+            if "--name" not in extra_docker_args:
+                extra_docker_args += (
+                    f" --name run-by-{getpass.getuser()}-{str(uuid.uuid4())}"
+                )
             if args.custom_img_tag:
                 img_tag = args.custom_img_tag
                 skip_img = True
@@ -368,7 +379,7 @@ if __name__ == "__main__":
             if args.xla:
                 bash_args = "-l"
             bash_wrap = ""
-            if args.xla:
+            if args.xla or args.gcc7:
                 bash_wrap = """
 source scl_source enable devtoolset-7
 gcc --version
@@ -394,7 +405,7 @@ gcc --version
                     args.oneflow_src_dir,
                     cache_dir,
                     extra_oneflow_cmake_args,
-                    args.extra_docker_args,
+                    extra_docker_args,
                     bash_args,
                     bash_wrap,
                     args.dry,
@@ -404,23 +415,17 @@ gcc --version
             assert len(cuda_version_literal) == 3
             python_versions = args.python_version.split(",")
             python_versions = [pv.strip() for pv in python_versions]
-            package_name = None
-            if args.cpu:
-                package_name = "oneflow_cpu"
-            else:
-                package_name = f"oneflow_cu{cuda_version_literal}"
-                if args.xla:
-                    package_name += "_xla"
             for python_version in python_versions:
+                print("building for python version:", python_version)
                 build_oneflow(
                     img_tag,
                     args.oneflow_src_dir,
                     cache_dir,
                     extra_oneflow_cmake_args,
-                    args.extra_docker_args,
+                    extra_docker_args,
                     python_version,
                     args.skip_wheel,
-                    package_name,
+                    args.package_name,
                     args.wheel_house_dir,
                     bash_args,
                     bash_wrap,

@@ -28,9 +28,9 @@ Maybe<OpExprGradClosure> UserOpExpr::GetOrCreateOpGradClosure() const {
     } else {
       op_grad_closure_.reset(NewObj<std::string, OpExprGradFunction>("default"));
     }
+    CHECK_NOTNULL_OR_RETURN(op_grad_closure_.get());
+    op_grad_closure_->Init(*this);
   }
-  CHECK_NOTNULL_OR_RETURN(op_grad_closure_.get());
-  op_grad_closure_->Init(*this);
   return std::make_shared<OpExprGradClosure>(op_grad_closure_);
 }
 

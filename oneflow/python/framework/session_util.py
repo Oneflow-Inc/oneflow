@@ -18,7 +18,6 @@ from __future__ import absolute_import
 import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.job.job_set_pb2 as job_set_util
-import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.config_util as config_util
@@ -501,7 +500,33 @@ def sync_default_session() -> None:
 
 def _TryCompleteConfigProto(config_proto):
     if config_proto.resource.machine_num == 0:
-        config_proto.resource.machine_num = len(env_util.default_env_proto.machine)
+        if env_util.default_env_proto.HasField("ctrl_bootstrap_conf"):
+            ctrl_bootstrap_conf = env_util.default_env_proto.ctrl_bootstrap_conf
+            assert ctrl_bootstrap_conf.HasField(
+                "node_size"
+            ) or ctrl_bootstrap_conf.HasField("num_process_per_node")
+            if ctrl_bootstrap_conf.HasField(
+                "node_size"
+            ) and ctrl_bootstrap_conf.HasField("num_process_per_node"):
+                assert (
+                    ctrl_bootstrap_conf.node_size
+                    * ctrl_bootstrap_conf.num_process_per_node.value
+                    == ctrl_bootstrap_conf.world_size
+                )
+            if ctrl_bootstrap_conf.HasField("node_size"):
+                config_proto.resource.machine_num = ctrl_bootstrap_conf.node_size
+            else:
+                assert (
+                    ctrl_bootstrap_conf.world_size
+                    % ctrl_bootstrap_conf.num_process_per_node.value
+                    == 0
+                )
+                config_proto.resource.machine_num = (
+                    ctrl_bootstrap_conf.world_size
+                    // ctrl_bootstrap_conf.num_process_per_node.value
+                )
+        else:
+            config_proto.resource.machine_num = len(env_util.default_env_proto.machine)
 
 
 def _GetDefaultConfigProto():

@@ -172,11 +172,6 @@ _unittest_worker_initilized = False
 @oneflow_export("unittest.TestCase")
 class TestCase(unittest.TestCase):
     def setUp(self):
-        if platform.system() == "Darwin" or (
-            os.environ.get("ONEFLOW_TEST_RPC_BACKEND")
-            and os.environ.get("ONEFLOW_TEST_RPC_BACKEND").lower() == "local"
-        ):
-            oneflow.env.rpc_backend("local")
         global _unittest_env_initilized
         global _unittest_worker_initilized
         if has_node_list():
@@ -242,7 +237,10 @@ class TestCase(unittest.TestCase):
             oneflow.env.ctrl_port(master_port)
             config_world_size = device_num()
             bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
-                ["127.0.0.1"], master_port, config_world_size
+                ["127.0.0.1"],
+                master_port,
+                config_world_size,
+                num_process_per_node=device_num(),
             )
             env_proto = env_util.default_env_proto
             assert (
