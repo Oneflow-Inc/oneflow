@@ -49,6 +49,16 @@ class PyForeignBoxingUtil : public ForeignBoxingUtil {
   }
 };
 
+Maybe<void> RegisterBoxingUtilOnlyOnce(const std::shared_ptr<ForeignBoxingUtil>& boxing_util) {
+  CHECK_ISNULL_OR_RETURN(Global<std::shared_ptr<ForeignBoxingUtil>>::Get())
+      << "Foreign Boxing util has been registered.";
+  // Global<T>::SetAllocated is preferred since Global<T>::New will output logs but
+  // glog is not constructed yet.
+  Global<std::shared_ptr<ForeignBoxingUtil>>::SetAllocated(
+      new std::shared_ptr<ForeignBoxingUtil>(boxing_util));
+  return Maybe<void>::Ok();
+}
+
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   using namespace oneflow;
   py::class_<ForeignBoxingUtil, PyForeignBoxingUtil, std::shared_ptr<ForeignBoxingUtil>>(
@@ -57,6 +67,11 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("BoxingTo", &ForeignBoxingUtil::BoxingTo)
       .def("TryReplaceDeviceTag", &ForeignBoxingUtil::TryReplaceDeviceTag)
       .def("Assign", &ForeignBoxingUtil::Assign);
+
+  m.def("RegisterBoxingUtilOnlyOnce",
+        [](const std::shared_ptr<oneflow::ForeignBoxingUtil>& boxing_util) {
+          oneflow::RegisterBoxingUtilOnlyOnce(boxing_util).GetOrThrow();
+        });
 }
 
 }  // namespace oneflow

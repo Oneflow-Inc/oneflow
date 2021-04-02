@@ -19,6 +19,7 @@ limitations under the License.
 #include <string>
 
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/user_op_attr.cfg.h"
 
 namespace oneflow {
 namespace one {
@@ -29,18 +30,10 @@ namespace one {
 // operations on this builder instance after the calling.
 class OpBuilder {
  public:
-  OpBuilder() = default;
+  OpBuilder() = delete;
   explicit OpBuilder(const std::string& op_type_name);
+  explicit OpBuilder(const std::string& op_type_name, const std::string& op_name);
   virtual ~OpBuilder() = default;
-
-  Maybe<OpBuilder&> MaybeName(const std::string& op_name) {
-    op_name_ = op_name;
-    return *this;
-  }
-  OpBuilder& Name(const std::string& op_name) { return CHECK_JUST(MaybeName(op_name)); }
-
-  Maybe<OpBuilder&> MaybeOp(const std::string& op_type_name);
-  OpBuilder& Op(const std::string& op_type_name);
 
   Maybe<OpBuilder&> MaybeInput(const std::string& input_name, const int count);
   OpBuilder& Input(const std::string& input_name);
@@ -50,8 +43,8 @@ class OpBuilder {
   OpBuilder& Output(const std::string& output_name);
   OpBuilder& Output(const std::string& output_name, const int count);
 
-  Maybe<OpBuilder&> MaybeAttr(const std::string& attr_name, const AttrValue& attr_value);
-  OpBuilder& Attr(const std::string& attr_name, const AttrValue& attr_value);
+  Maybe<OpBuilder&> MaybeAttr(const std::string& attr_name, const cfg::AttrValue& attr_value);
+  OpBuilder& Attr(const std::string& attr_name, const cfg::AttrValue& attr_value);
 
   // TODO(): Set attribute from primitive type.
   // template <typename T>

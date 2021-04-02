@@ -83,7 +83,9 @@ def _wrapper(func):
 
 @_wrapper
 def op_expr_call(self, *args):
-    return self.apply(args)
+    # TODO(jianhao): remove hardcoded cpu here
+    with flow.scope.placement("gpu", "0:0"):
+        return self.apply(args)
 
 
 def global_function_or_identity(*args, **kwargs):

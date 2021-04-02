@@ -46,11 +46,12 @@ bool IsSourceInstruction(const InstructionMsg& instr_msg) {
 void VirtualMachine::ReleaseInstruction(Instruction* instruction,
                                         /*out*/ ReadyInstructionList* ready_instruction_list) {
   auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
-  OBJECT_MSG_SKIPLIST_FOR_EACH_PTR(rw_mutexed_object_accesses, access) {
-    rw_mutexed_object_accesses->Erase(access);
+  OBJECT_MSG_SKIPLIST_FOR_EACH(rw_mutexed_object_accesses, access) {
+    CHECK_GT(access->ref_cnt(), 1);
+    rw_mutexed_object_accesses->Erase(access.Mutable());
     if (access->is_rw_mutexed_object_access_link_empty()) { continue; }
     auto* mirrored_object = access->mut_mirrored_object();
-    mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access);
+    mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access.Mutable());
   }
   TryMoveWaitingToReady(instruction, ready_instruction_list, [](Instruction*) { return true; });
 }
@@ -59,10 +60,24 @@ void VirtualMachine::TryReleaseFinishedInstructions(
     Stream* stream,
     /*out*/ ReadyInstructionList* ready_instruction_list) {
   auto* running_instruction_list = stream->mut_running_instruction_list();
+  auto* front_seq_infer_list = mutable_front_seq_infer_instr_list();
+  auto* front_seq_compute_list = mutable_front_seq_compute_instr_list();
+  auto* vm_stat_running_list = mut_vm_stat_running_instruction_list();
   while (true) {
     auto* instruction_ptr = running_instruction_list->Begin();
     if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
     ReleaseInstruction(instruction_ptr, /*out*/ ready_instruction_list);
+    const auto interpret_type = instruction_ptr->stream().stream_type_id().interpret_type();
+    if (interpret_type == kInfer) {
+      CHECK(!instruction_ptr->is_front_seq_infer_instr_link_empty());
+      front_seq_infer_list->Erase(instruction_ptr);
+    } else if (interpret_type == kCompute) {
+      CHECK(!instruction_ptr->is_front_seq_compute_instr_link_empty());
+      front_seq_compute_list->Erase(instruction_ptr);
+    } else {
+      UNIMPLEMENTED();
+    }
+    vm_stat_running_list->Erase(instruction_ptr);
     stream->DeleteInstruction(running_instruction_list->Erase(instruction_ptr));
   }
 }
@@ -71,7 +86,8 @@ void VirtualMachine::FilterAndRunSourceInstructions(TmpPendingInstrMsgList* inst
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const auto& instr_type_id = instr_msg->instr_type_id();
     const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
-    if (stream_type.SharingVirtualMachineThread() && IsSourceInstruction(*instr_msg)) {
+    if (stream_type.SharingVirtualMachineThread()
+        && !instr_type_id.instruction_type().IsSequential() && IsSourceInstruction(*instr_msg)) {
       const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
       if (!parallel_desc || parallel_desc->ContainingMachineId(this_machine_id())) {
         stream_type.Run(this, instr_msg);
@@ -86,26 +102,44 @@ int64_t VirtualMachine::this_machine_id() const {
   return machine_id_range().begin();
 }
 
+namespace {
+
+bool IsStreamInParallelDesc(const ParallelDesc* parallel_desc, const Stream& stream) {
+  if (parallel_desc == nullptr) { return true; }
+  if (stream.stream_type().SharingVirtualMachineThread()) {
+    return parallel_desc->ContainingMachineId(stream.machine_id());
+  }
+  return parallel_desc->Containing(stream.machine_id(), stream.device_id());
+}
+
+}  // namespace
+
 void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
                                       /*out*/ NewInstructionList* new_instruction_list) {
-  auto IsStreamInParallelDesc = [](const ParallelDesc* parallel_desc, const Stream& stream) {
-    if (parallel_desc == nullptr) { return true; }
-    if (stream.stream_type().SharingVirtualMachineThread()) {
-      return parallel_desc->ContainingMachineId(stream.machine_id());
-    }
-    return parallel_desc->Containing(stream.machine_id(), stream.device_id());
-  };
+  auto* front_seq_infer_list = mutable_front_seq_infer_instr_list();
+  auto* front_seq_compute_list = mutable_front_seq_compute_instr_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
     auto* stream_rt_desc = mut_stream_type_id2stream_rt_desc()->FindPtr(stream_type_id);
+    const auto& instruction_type = instr_msg->instr_type_id().instruction_type();
     if (stream_rt_desc == nullptr) {
-      LOG(FATAL) << typeid(instr_msg->instr_type_id().instruction_type()).name() << " "
+      LOG(FATAL) << typeid(instruction_type).name() << " "
                  << typeid(stream_type_id.stream_type()).name();
     }
+    bool is_front_seq = instruction_type.IsFrontSequential();
+    if (is_front_seq) { CHECK_EQ(stream_rt_desc->stream_id2stream().size(), 1); }
     const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
       if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
-      new_instruction_list->EmplaceBack(stream->NewInstruction(instr_msg, parallel_desc));
+      ObjectMsgPtr<Instruction> instr = stream->NewInstruction(instr_msg, parallel_desc);
+      if (stream_type_id.interpret_type() == kInfer) {
+        front_seq_infer_list->PushBack(instr.Mutable());
+      } else if (stream_type_id.interpret_type() == kCompute) {
+        front_seq_compute_list->PushBack(instr.Mutable());
+      } else {
+        UNIMPLEMENTED();
+      }
+      if (!is_front_seq) { new_instruction_list->PushBack(instr.Mutable()); }
     }
     instr_msg_list->Erase(instr_msg);
   }
@@ -333,7 +367,9 @@ void VirtualMachine::DispatchAndPrescheduleInstructions(
     ReadyInstructionList* ready_instruction_list) {
   PrescheduledInstructionList prescheduled;
   auto* active_stream_list = mut_active_stream_list();
+  auto* vm_stat_running_list = mut_vm_stat_running_instruction_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(ready_instruction_list, instruction) {
+    vm_stat_running_list->PushBack(instruction);
     auto* stream = instruction->mut_stream();
     ready_instruction_list->MoveToDstBack(instruction, stream->mut_running_instruction_list());
     if (stream->is_active_stream_link_empty()) { active_stream_list->PushBack(stream); }
@@ -406,6 +442,29 @@ void VirtualMachine::Receive(ObjectMsgPtr<InstructionMsg>&& compute_instr_msg) {
   Receive(&instr_msg_list);
 }
 
+template<typename ContainerT>
+void VirtualMachine::TryRunFrontSeqInstruction(
+    ContainerT* front_seq_list, /*out*/ ReadyInstructionList* ready_instruction_list) {
+  auto* instruction = front_seq_list->Begin();
+  if (instruction == nullptr) { return; }
+  const auto& instr_type_id = instruction->instr_msg().instr_type_id();
+  const auto& instruction_type = instr_type_id.instruction_type();
+  if (!instruction_type.IsFrontSequential()) { return; }
+  if (!instruction->is_vm_stat_running_instruction_link_empty()) { return; }
+  const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
+  if (stream_type.SharingVirtualMachineThread()) {
+    stream_type.Run(this, instruction);
+    front_seq_list->Erase(instruction);
+  } else {
+    ready_instruction_list->EmplaceBack(std::move(instruction));
+  }
+}
+
+void VirtualMachine::TryRunFrontSeqInstruction(ReadyInstructionList* ready_instruction_list) {
+  TryRunFrontSeqInstruction(mutable_front_seq_infer_instr_list(), ready_instruction_list);
+  TryRunFrontSeqInstruction(mutable_front_seq_compute_instr_list(), ready_instruction_list);
+}
+
 void VirtualMachine::Schedule() {
   ReadyInstructionList* ready_instruction_list = mut_ready_instruction_list();
   auto* active_stream_list = mut_active_stream_list();
@@ -413,6 +472,7 @@ void VirtualMachine::Schedule() {
     TryReleaseFinishedInstructions(stream, /*out*/ ready_instruction_list);
     if (stream->running_instruction_list().empty()) { active_stream_list->Erase(stream); }
   }
+  TryRunFrontSeqInstruction(/*out*/ ready_instruction_list);
   auto* waiting_instruction_list = mut_waiting_instruction_list();
   if (pending_msg_list().size() > 0) {
     TmpPendingInstrMsgList tmp_pending_msg_list;

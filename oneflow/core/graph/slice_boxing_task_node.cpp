@@ -21,13 +21,13 @@ namespace oneflow {
 void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice,
                                const SliceBoxingTaskMode mode, int64_t machine_id, int64_t thrd_id,
                                int64_t mem_zone_id) {
-  lbi_ = lbi;
   out_slice_ = out_slice;
   out_shape_ = out_slice.shape();
   mode_ = mode;
   mem_zone_id_ = mem_zone_id;
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
+  set_lbi(lbi);
 }
 
 void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice,
@@ -77,7 +77,7 @@ void SliceBoxingTaskNode::BuildExecGphAndRegst() {
     node->BindBnWithRegst(ibn, GetSoleConsumedRegst("in_" + std::to_string(i)));
   }
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  out_regst->AddLbi(lbi_);
+  out_regst->AddLbi(lbi());
   node->BindBnWithRegst(op->SoleObn(), out_regst);
   node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
   node->InferBlobDescs(parallel_ctx());
@@ -94,6 +94,7 @@ void SliceBoxingTaskNode::SetInDataEdgeSlice(const TaskEdge* edge, const TensorS
 
 void SliceBoxingTaskNode::ConnectToSrcNodeWithSlice(TaskNode* src, TaskEdge* edge,
                                                     const TensorSliceView& slice) {
+  edge->AddLbi(lbi());
   Connect<TaskNode>(src, edge, this);
   SetInDataEdgeSlice(edge, slice);
 }
@@ -102,9 +103,9 @@ void SliceBoxingTaskNode::SetOutShape(const Shape& shape) { out_shape_ = shape; 
 
 OperatorConf SliceBoxingTaskNode::GetBoxingOpConf() {
   OperatorConf op_conf{};
-  op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type())));
+  op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type())));
   SliceBoxingConf boxing_conf{};
-  *boxing_conf.mutable_lbi() = lbi_;
+  *boxing_conf.mutable_lbi() = lbi();
   out_slice_.ToProto(boxing_conf.mutable_out_slice());
   out_shape_.ToProto(boxing_conf.mutable_out_shape());
   for (const TaskEdge* edge : ordered_in_data_edges_) {

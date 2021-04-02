@@ -31,24 +31,26 @@ class OpGraph;
 class OpNode final : public Node<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpNode);
-  explicit OpNode(const ParallelDesc& parallel_desc, const OperatorConf& op_conf)
-      : parallel_desc_(parallel_desc),
-        op_(ConstructOp(op_conf, parallel_desc.device_type())),
-        ibns_(op_->input_bns().begin(), op_->input_bns().end()) {}
+  explicit OpNode(const std::shared_ptr<const ParallelDesc>& parallel_desc,
+                  const OperatorConf& op_conf);
   ~OpNode() = default;
 
   // Getters
   bool IsTimeShapeIdentity() const;
   const Operator& op() const { return *op_; }
   std::shared_ptr<const Operator> shared_op() const { return op_; }
-  const ParallelDesc& parallel_desc() const { return parallel_desc_; }
+  const ParallelDesc& parallel_desc() const { return *parallel_desc_; }
   const SbpSignature& sbp_signature() const { return *CHECK_JUST(op().sbp_signature()); }
+  const ParallelDistributionSignature& parallel_distribution_signature() const {
+    return *CHECK_JUST(op().parallel_distribution_signature());
+  }
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
+  const ParallelDistribution& ParallelDistribution4Lbi(const LogicalBlobId& lbi) const;
+  const ParallelDistribution& ParallelDistribution4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& SrcNode4Ibn(const std::string& bn_in_op) const;
-  const ParallelDesc& BlobParallelDesc4Obn(const std::string& obn) const;
 
   std::string VisualStr() const override;
 
@@ -60,16 +62,14 @@ class OpNode final : public Node<OpNode, OpEdge> {
   Operator* mut_op() { return op_.get(); }
   OpNode* MutSrcNode4Ibn(const std::string& bn_in_op) const;
   OpNode* MutSrcNode4InputLbi(const LogicalBlobId& lbi) const;
-  void InferBlobParallelDesc();
   void InitLbi2SourceNode();
-  void InitLbi2SbpParallel();
+  void InitLbi2ParallelDistribution();
 
-  ParallelDesc parallel_desc_;
-  HashMap<std::string, ParallelDesc> obn2blob_parallel_desc_;
+  std::shared_ptr<const ParallelDesc> parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;
-  HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_;
+  HashMap<LogicalBlobId, ParallelDistribution> lbi2parallel_distribution_;
   std::vector<std::pair<const OpNode*, int32_t>> input_index2producer_and_output_index_;
 };
 
@@ -82,24 +82,16 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
       : lbis_(std::move(lbis)), lbi2obn_(std::move(lbi2obn)), lbi2ibns_(std::move(lbi2ibns)) {}
   ~OpEdge() override = default;
 
-  void InitDistributeHierarchyInfo();
-
   // Getters
   const std::vector<LogicalBlobId>& lbis() const { return *lbis_; }
   const HashMap<LogicalBlobId, std::string>& lbi2obn() const { return *lbi2obn_; }
   const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns() const { return *lbi2ibns_; }
   std::string VisualStr() const override;
-  bool is_strict_121() const { return is_strict_121_; }
 
  private:
-  void InitIsStrict121();
-  bool CalcIsStrict121Connected() const;
-
   std::shared_ptr<std::vector<LogicalBlobId>> lbis_;
   std::shared_ptr<HashMap<LogicalBlobId, std::string>> lbi2obn_;
   std::shared_ptr<HashMap<LogicalBlobId, std::vector<std::string>>> lbi2ibns_;
-
-  bool is_strict_121_;
 };
 
 class OpGraph final : public Graph<OpNode, OpEdge> {
@@ -117,6 +109,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   int64_t GetParallelNum(const std::string& op_name) const;
   const SbpParallel& GetSbpParallel(const std::string& op_name, const LogicalBlobId& lbi) const;
+  const ParallelDistribution& GetParallelDistribution(const std::string& op_name,
+                                                      const LogicalBlobId& lbi) const;
   DataType GetBlobDataType(const LogicalBlobId& lbi) const;
   const BlobDesc& GetLogicalBlobDesc(const LogicalBlobId& lbi) const;
 
@@ -129,8 +123,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   std::list<OpNode*> DataOrCtrlSourceNodes() const;
 
   void DumpLogicalBlobDesc(Job* job) const;
-  void DumpSbpSignature(Job* job) const;
   void DumpArgSignature(Job* job) const;
+  void DumpParallelDistributionSignature(Job* job) const;
 
   Maybe<void> Init(const Job& job);
 
@@ -141,7 +135,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void CheckIsDAG() const;
   void InferBlobLastUsed() const;
   void InferTimeShape() const;
-  void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
+  void InferOpNodeParallelDistributionSignature(
+      OpNode* op_node, const ParallelDistributionSignature& parallel_distribution_sig_conf) const;
   Maybe<void> InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const;
   Maybe<void> InferLogicalBlobDesc(const Job& job) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;

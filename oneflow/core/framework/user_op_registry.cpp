@@ -188,6 +188,12 @@ OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
   return *this;
 }
 
+OpRegistry& OpRegistry::SetInferParallelDistributionFn(
+    InferParallelDistributionFn infer_parallel_distribution_fn) {
+  result_.infer_parallel_distribution_fn = std::move(infer_parallel_distribution_fn);
+  return *this;
+}
+
 OpRegistry& OpRegistry::Finish() {
   CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
@@ -199,22 +205,22 @@ OpRegistry& OpRegistry::Finish() {
         logical_fn(ctx);
       } else {
         for (const auto& pair : ctx->inputs()) {
-          const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex(pair.first, pair.second);
+          const auto& parallel_distribution =
+              ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
           const TensorDesc* in_logical =
               ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
           const TensorDesc* in_physical = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
-          CHECK_OR_RETURN(*JUST(GetPhysicalShape(in_logical->shape(), sbp_parallel,
-                                                 ctx->parallel_ctx().parallel_num(),
-                                                 ctx->parallel_ctx().parallel_id()))
+          CHECK_OR_RETURN(*JUST(GetPhysicalShape(in_logical->shape(), parallel_distribution,
+                                                 ctx->parallel_desc(), ctx->parallel_ctx()))
                           == in_physical->shape());
         }
         for (const auto& pair : ctx->outputs()) {
           TensorDesc* desc = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
           *desc = *ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
-          const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex(pair.first, pair.second);
-          *desc->mut_shape() = *JUST(GetPhysicalShape(desc->shape(), sbp_parallel,
-                                                      ctx->parallel_ctx().parallel_num(),
-                                                      ctx->parallel_ctx().parallel_id()));
+          const auto& parallel_distribution =
+              ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
+          *desc->mut_shape() = *JUST(GetPhysicalShape(desc->shape(), parallel_distribution,
+                                                      ctx->parallel_desc(), ctx->parallel_ctx()));
         }
       }
       return Maybe<void>::Ok();
@@ -223,12 +229,6 @@ OpRegistry& OpRegistry::Finish() {
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
   if (result_.get_sbp_fn == nullptr) {
     result_.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
-  }
-  if (result_.input_arg_modify_fn == nullptr) {
-    result_.input_arg_modify_fn = [](GetInputArgModifier, const UserOpConfWrapper&) {};
-  }
-  if (result_.output_arg_modify_fn == nullptr) {
-    result_.output_arg_modify_fn = [](GetOutputArgModifier, const UserOpConfWrapper&) {};
   }
   return *this;
 }

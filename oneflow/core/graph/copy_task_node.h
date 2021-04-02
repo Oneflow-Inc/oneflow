@@ -16,11 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_COPY_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_COPY_TASK_NODE_H_
 
-#include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/graph/transport_task_node.h"
 
 namespace oneflow {
 
-class CopyTaskNode : public TaskNode {
+class CopyTaskNode : public TransportTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyTaskNode);
   CopyTaskNode() = default;
@@ -45,7 +45,7 @@ class CopyHdTaskNode final : public CopyTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCopyHd; }
 
-  void Init(CopyHdOpConf::Type, int64_t machine_id, int64_t dev_phy_id);
+  void Init(CopyHdOpConf::Type, int64_t machine_id, int64_t dev_phy_id, const LogicalBlobId& lbi);
 
   CopyHdOpConf::Type copy_type() const { return copy_type_; }
   int64_t MemZoneId121() const override {
@@ -74,7 +74,7 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCopyCommNet; }
 
-  void Init(int64_t machine_id);
+  void Init(int64_t machine_id, const LogicalBlobId& lbi);
 
  private:
   void InitProducedRegstMemCase(MemoryCase*) override;

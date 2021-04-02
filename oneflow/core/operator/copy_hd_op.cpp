@@ -24,6 +24,11 @@ class CopyHdOp final : public Operator {
   ~CopyHdOp() override = default;
 
   void InitFromOpConf() override;
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
   Maybe<void> InferOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
@@ -57,19 +62,11 @@ Maybe<void> CopyHdOp::InferOutBlobDescs(
 }
 
 LogicalBlobId CopyHdOp::lbi4ibn(const std::string& input_bn) const {
-  if (this->op_conf().copy_hd_conf().has_lbi()) {
-    return this->op_conf().copy_hd_conf().lbi();
-  } else {
-    return GenPackedLbi();
-  }
+  return this->op_conf().copy_hd_conf().lbi();
 }
 
 LogicalBlobId CopyHdOp::lbi4obn(const std::string& output_bn) const {
-  if (this->op_conf().copy_hd_conf().has_lbi()) {
-    return this->op_conf().copy_hd_conf().lbi();
-  } else {
-    return GenPackedLbi();
-  }
+  return this->op_conf().copy_hd_conf().lbi();
 }
 
 REGISTER_OP(OperatorConf::kCopyHdConf, CopyHdOp);
