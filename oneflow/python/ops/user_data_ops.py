@@ -2367,7 +2367,11 @@ def gpt_data_loader(
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     if name is None:
-        name = id_util.UniqueStr("gpt_data_loader_")
+        name = (
+            "gpt_data_loader"
+            if start_from_saved_progress
+            else id_util.UniqueStr("gpt_data_loader_")
+        )
 
     # consider being exported as parameters
     label_length = 1
@@ -2408,7 +2412,8 @@ def gpt_data_loader(
     parallel_distribution = list(map(distribute_to_str, parallel_distribution))
 
     if start_from_saved_progress:
-        iteration_name = "iteration-sq{}-sa{}-bs{}-sd{}-sp{}-spi{}-{}".format(
+        iteration_name = "{}-iteration-sq{}-sa{}-bs{}-sd{}-sp{}-spi{}-{}".format(
+            name,
             seq_length,
             num_samples,
             batch_size,
