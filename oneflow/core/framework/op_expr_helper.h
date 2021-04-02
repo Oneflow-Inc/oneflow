@@ -15,6 +15,8 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/shape.h"
 
 namespace oneflow {
 
@@ -41,6 +43,9 @@ Maybe<one::UserOpExpr> OnesLikeOp(const std::string& name);
 Maybe<one::UserOpExpr> IdentityOp();
 Maybe<one::UserOpExpr> IdentityOp(const std::string& name);
 
+Maybe<one::UserOpExpr> ReshapeOp(const Shape& shape);
+Maybe<one::UserOpExpr> ReshapeOp(const Shape& shape, const std::string& name);
+
 Maybe<one::UserOpExpr> ReshapeLikeOp();
 Maybe<one::UserOpExpr> ReshapeLikeOp(const std::string& name);
 
@@ -52,10 +57,29 @@ Maybe<one::UserOpExpr> ReduceSumLikeOp(const std::vector<int32_t>& axis);
 Maybe<one::UserOpExpr> ReduceSumLikeOp(const std::vector<int32_t>& axis, const std::string& name);
 
 template<typename T>
+Maybe<one::UserOpExpr> ScalarAddOp(const T& scalar);
+
+template<typename T>
+Maybe<one::UserOpExpr> ScalarAddOp(const T& scalar, const std::string& name);
+
+template<typename T>
 Maybe<one::UserOpExpr> ScalarMulOp(const T& scalar);
 
 template<typename T>
 Maybe<one::UserOpExpr> ScalarMulOp(const T& scalar, const std::string& name);
+
+Maybe<one::UserOpExpr> RsqrtOp();
+Maybe<one::UserOpExpr> RsqrtOp(const std::string& name);
+
+Maybe<one::UserOpExpr> BroadcastMulOp();
+Maybe<one::UserOpExpr> BroadcastMulOp(const std::string& name);
+
+Maybe<one::UserOpExpr> CastOp(const DataType& to_type);
+Maybe<one::UserOpExpr> CastOp(const DataType& to_type, const std::string& name);
+
+Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& epsilon);
+Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& epsilon,
+                                           const std::string& name);
 
 }  // namespace op_expr_helper
 
