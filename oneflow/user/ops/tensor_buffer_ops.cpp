@@ -68,6 +68,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
       DimVector out_dim_vec;
       out_dim_vec.insert(out_dim_vec.end(), in_shape.dim_vec().cbegin(),
                          in_shape.dim_vec().cend() - instance_dims);
+      *out->mut_shape() = Shape(out_dim_vec);
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -135,18 +136,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      CHECK_EQ_OR_RETURN(in->data_type(), DataType::kTensorBuffer);
-      const DataType out_dtype = ctx->Attr<DataType>("out_dtype");
-      CHECK_OR_RETURN(IsPODDataType(out_dtype));
-      int64_t num_tensor_buffers = in->shape().elem_cnt();
-      for (int64_t i = 0; i < num_tensor_buffers; ++i) {
-        user_op::TensorDesc* out_i = ctx->TensorDesc4ArgNameAndIndex("out", i);
-        *out_i->mut_data_type() = out_dtype;
-      }
-      return Maybe<void>::Ok();
-    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> { OF_TODO(); })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
                              const user_op::UserOpConfWrapper& conf) {
       if (conf.attr<bool>("dynamic_out")) {

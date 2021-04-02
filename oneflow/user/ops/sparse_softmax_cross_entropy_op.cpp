@@ -30,9 +30,8 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(prediction_desc->shape().At(i), label_desc->shape().At(i));
   }
   *ctx->IsDynamic4ArgNameAndIndex("prob", 0) = prediction_desc->is_dynamic();
-  *ctx->Shape4ArgNameAndIndex("prob", 0) =
-      prediction_desc
-          ->shape();  //'prob' is just for compute prediction's grad, prob's grad will be ignored
+  // 'prob' is just for compute prediction's grad, prob's grad will be ignored
+  *ctx->Shape4ArgNameAndIndex("prob", 0) = prediction_desc->shape();
   user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   *out_desc->mut_is_dynamic() = prediction_desc->is_dynamic();
   *out_desc->mut_shape() = label_desc->shape();
@@ -59,6 +58,7 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
   CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
+  *ctx->Dtype4ArgNameAndIndex("prob", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
   *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
   return Maybe<void>::Ok();
 }
