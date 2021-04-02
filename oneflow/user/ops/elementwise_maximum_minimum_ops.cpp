@@ -38,7 +38,6 @@ Maybe<void> GetSbpSignature(SbpContext* ctx) {
 Maybe<void> InferTensorDesc(InferContext* ctx) {
   const TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  const TensorDesc* tensor_dz = ctx->TensorDesc4ArgNameAndIndex("dz", 0);
 
   CHECK_EQ_OR_RETURN(tensor_x->shape().NumAxes(), tensor_y->shape().NumAxes())
       << "Shape of tensor x and y should be same";
@@ -51,12 +50,10 @@ Maybe<void> InferTensorDesc(InferContext* ctx) {
   TensorDesc* tensor_dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
 
   if (tensor_dx) {
-    *tensor_dx->mut_data_type() = tensor_dz->data_type();
     *tensor_dx->mut_shape() = tensor_x->shape();
   }
 
   if (tensor_dy) {
-    *tensor_dy->mut_data_type() = tensor_dz->data_type();
     *tensor_dy->mut_shape() = tensor_y->shape();
   }
 
