@@ -41,19 +41,28 @@ class Tensor:
         is_consistent=False,
         is_lazy=False,
         data_initializer=None,
-        determining_initializer=None
+        determining_initializer=None,
     ):
         assert len(args) > 0
         dtype = dtype if dtype is not None else oneflow_api.float32
         if placement is None:
             device = device if device is not None else oneflow_api.device("cpu")
-        if _input_args_is_other_data(*args):
-            self._immediately_construct(
+        if _input_args_is_tensor(*args):
+            TODO()  # liyurui, construct using another tensor
+        elif _input_args_is_consistent_or_local(*args):
+            self._local_or_consistent_tensor = args[0]
+            self._undetermined_tensor = None
+        elif _input_args_is_data(*args):
+            self._local_or_consistent_tensor = None
+            self._construct_with_data(
                 *args,
                 dtype=dtype,
                 device=device,
                 requires_grad=requires_grad,
                 retain_grad=retain_grad,
+                placement=placement,
+                sbp=sbp,
+                is_consistent=is_consistent,
                 is_lazy=is_lazy,
             )
         elif _input_args_is_shape(*args):
@@ -110,7 +119,18 @@ class Tensor:
         else:
             return self._undetermined_tensor.dtype
 
+    # internal decorator
+    def _auto_determine(func):
+        def wrapped_func(*args, **kwargs):
+            tensor = args[0]
+            if not tensor.is_determined:
+                tensor.determine()
+            return func(*args, **kwargs)
+
+        return wrapped_func
+
     @property
+    @_auto_determine
     def data(self):
         if self._local_or_consistent_tensor is not None:
             return flow.Tensor(self._local_or_consistent_tensor.data)
@@ -154,6 +174,7 @@ class Tensor:
     def ndimension(self):
         return self.ndim
 
+    @_auto_determine
     def detach(self):
         if self._local_or_consistent_tensor is not None:
             return flow.Tensor(self._local_or_consistent_tensor.detach())
@@ -171,15 +192,6 @@ class Tensor:
         for dim in self.shape:
             prod *= dim
         return prod
-
-    # internal decorator
-    def _auto_determine(func):
-        def wrapped_func(*args, **kwargs):
-            tensor = args[0]
-            tensor._determine_if_needed()
-            return func(*args, **kwargs)
-
-        return wrapped_func
 
     def retain_grad(self):
         assert self.is_determined
@@ -467,28 +479,6 @@ class Tensor:
         initializer_conf = flow.constant_initializer(value=value, dtype=self.dtype)
         return self._init_by_initializer_conf(initializer_conf)
 
-    def _construct_determined_tensor_with_numpy(
-        self,
-        dtype=None,
-        device=None,
-        requires_grad=False,
-        retain_grad=False,
-        is_lazy=False,
-        numpy_data=None,
-    ):
-        shape = oneflow_api.Size(tuple(numpy_data.shape))
-        # Only local tensor will be created
-        self._local_or_consistent_tensor = _initialized_job(
-            shape=shape,
-            dtype=dtype,
-            device=device,
-            requires_grad=requires_grad,
-            retain_grad=retain_grad,
-            is_lazy=is_lazy,
-            numpy_data=numpy_data,
-        )
-        self._undetermined_tensor = None
-
     def _init_by_initializer_conf(self, initializer_conf):
         if self.is_determined:
             with self._placement_scope():
@@ -498,43 +488,6 @@ class Tensor:
         else:
             self.set_data_initializer(initializer_conf)
         return self
-
-    def _immediately_construct(
-        self,
-        *args,
-        dtype=None,
-        device=None,
-        requires_grad=False,
-        retain_grad=False,
-        is_lazy=False
-    ):
-        if _input_args_is_tuple_or_list(*args):
-            numpy_data = np.array(args[0]).astype(
-                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-            )
-            self._construct_determined_tensor_with_numpy(
-                dtype=dtype,
-                device=device,
-                requires_grad=requires_grad,
-                retain_grad=retain_grad,
-                is_lazy=is_lazy,
-                numpy_data=numpy_data,
-            )
-        elif _input_args_is_numpy(*args):
-            numpy_data = args[0].astype(
-                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-            )
-            self._construct_determined_tensor_with_numpy(
-                dtype=dtype,
-                device=device,
-                requires_grad=requires_grad,
-                retain_grad=retain_grad,
-                is_lazy=is_lazy,
-                numpy_data=numpy_data,
-            )
-        elif _input_args_is_consistent_or_mirrored(*args):
-            self._local_or_consistent_tensor = args[0]
-            self._undetermined_tensor = None
 
     def _placement_scope(self):
         if self.is_consistent:
@@ -546,6 +499,42 @@ class Tensor:
     @_auto_determine
     def _blob_object(self):
         return self._local_or_consistent_tensor._blob_object
+
+    def _construct_with_data(
+        self,
+        *args,
+        dtype=None,
+        device=None,
+        requires_grad=False,
+        retain_grad=False,
+        placement=None,
+        sbp=None,
+        is_consistent=False,
+        is_lazy=False,
+    ):
+        numpy_data = None
+        if _input_args_is_tuple_or_list(*args):
+            numpy_data = np.array(args[0]).astype(
+                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+            )
+        elif _input_args_is_numpy(*args):
+            numpy_data = args[0].astype(
+                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
+            )
+        shape = oneflow_api.Size(tuple(numpy_data.shape))
+        self._determining_initializer = _numpy_initializer_for_determining
+        self._undetermined_tensor = UndeterminedTensor(
+            shape,
+            dtype,
+            device=device,
+            requires_grad=requires_grad,
+            retain_grad=retain_grad,
+            placement=placement,
+            sbp=sbp,
+            is_consistent=is_consistent,
+            is_lazy=is_lazy,
+            numpy_data=numpy_data,
+        )
 
 
 class UndeterminedTensor:
@@ -561,6 +550,7 @@ class UndeterminedTensor:
         is_consistent=False,
         is_lazy=False,
         data_initializer=None,
+        numpy_data=None,
     ):
         if not isinstance(shape, oneflow_api.Size):
             if not isinstance(shape, tuple):
@@ -582,6 +572,7 @@ class UndeterminedTensor:
         self.is_consistent = is_consistent
         self.is_lazy = is_lazy
         self.data_initializer = data_initializer
+        self.numpy_data = numpy_data
 
     @property
     def is_cuda(self):
@@ -649,35 +640,46 @@ def global_function_or_identity(*args, **kwargs):
         return identity_decorator
 
 
-def _initialized_job(
-    shape=None,
-    dtype=None,
-    device=None,
-    requires_grad=None,
-    retain_grad=None,
-    is_lazy=False,
-    numpy_data=None,
-):
-    assert numpy_data is not None
+def _numpy_initializer_for_determining(tensor):
+    assert not tensor.is_determined
+    undetermined_tensor = tensor._undetermined_tensor
+    assert undetermined_tensor.numpy_data is not None
     variable_name = id_util.UniqueStr("tensor_")
 
     @global_function_or_identity()
-    def set_data():
-        with _convert_to_placement_scope(device):
+    def set_numpy_data():
+        with tensor._placement_scope():
             flow.get_variable(
                 name=variable_name,
-                shape=tuple(shape),
-                dtype=dtype,
-                initializer=flow.zeros_initializer(dtype=dtype),
+                shape=tuple(undetermined_tensor.shape),
+                dtype=undetermined_tensor.dtype,
+                initializer=undetermined_tensor.data_initializer,
             )
 
-    if not is_lazy:
-        set_data()
-    flow.load_variables({variable_name: numpy_data})
+    set_numpy_data()
+    flow.load_variables({variable_name: undetermined_tensor.numpy_data})
     blob = flow.get_all_variables()[variable_name]
-    determined_tensor = oneflow_api.LocalTensor(
-        shape, dtype, device, is_lazy, requires_grad, True, retain_grad,
-    )
+    if undetermined_tensor.is_consistent:
+        determined_tensor = oneflow_api.ConsistentTensor(
+            undetermined_tensor.shape,
+            undetermined_tensor.dtype,
+            undetermined_tensor.sbp,
+            undetermined_tensor.placement,
+            undetermined_tensor.is_lazy,
+            undetermined_tensor.requires_grad,
+            True,
+            undetermined_tensor.retain_grad,
+        )
+    else:
+        determined_tensor = oneflow_api.LocalTensor(
+            undetermined_tensor.shape,
+            undetermined_tensor.dtype,
+            undetermined_tensor.device,
+            undetermined_tensor.is_lazy,
+            undetermined_tensor.requires_grad,
+            True,
+            undetermined_tensor.retain_grad,
+        )
     determined_tensor._set_blob_object(blob.blob_object)
     return determined_tensor
 
@@ -690,18 +692,18 @@ def _input_args_is_numpy(*args):
     return len(args) == 1 and isinstance(args[0], np.ndarray)
 
 
-def _input_args_is_consistent_or_mirrored(*args):
+def _input_args_is_consistent_or_local(*args):
     return len(args) == 1 and isinstance(
         args[0], (oneflow_api.ConsistentTensor, oneflow_api.LocalTensor)
     )
 
 
-def _input_args_is_other_data(*args):
-    return (
-        _input_args_is_consistent_or_mirrored(*args)
-        or _input_args_is_numpy(*args)
-        or _input_args_is_tuple_or_list(*args)
-    )
+def _input_args_is_tensor(*args):
+    return len(args) == 1 and isinstance(args[0], flow.Tensor)
+
+
+def _input_args_is_data(*args):
+    return _input_args_is_numpy(*args) or _input_args_is_tuple_or_list(*args)
 
 
 def _input_args_is_shape(*args):
@@ -741,18 +743,22 @@ def register_op_by_module(op_name):
         return module
 
     def _get_unary_module_impl(module):
-        global unary_module_impl
-
         def unary_module_impl(x, *args, **kwargs):
             return module(*args, **kwargs).forward(x)
+
+        name = module.__name__ + "_op"
+        unary_module_impl.__name__ = name
+        globals()[name] = unary_module_impl
 
         return unary_module_impl
 
     def _get_binary_module_impl(module):
-        global binary_module_impl
-
         def binary_module_impl(x, y, *args, **kwargs):
             return module(*args, **kwargs).forward(x, y)
+
+        name = module.__name__ + "_op"
+        binary_module_impl.__name__ = name
+        globals()[name] = binary_module_impl
 
         return binary_module_impl
 

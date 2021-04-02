@@ -13,13 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/distribute_concat_compute_task_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/operator/variable_op.h"
 
 namespace oneflow {
 
-bool DistributeConcatCompTaskNode::HasBackwardCompTaskNode() { return false; }
+class DistributeConcatCompTaskNode final : public CompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DistributeConcatCompTaskNode);
+  DistributeConcatCompTaskNode() = default;
+  ~DistributeConcatCompTaskNode() = default;
+
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+
+  TaskType GetTaskType() const override { return TaskType::kDistributeConcat; }
+
+ private:
+  void BuildExecGphAndRegst() override;
+  void BuildExecGphStructAndBindInRegst();
+  void BuildOutRegst();
+};
 
 void DistributeConcatCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", true);
@@ -33,10 +48,6 @@ void DistributeConcatCompTaskNode::ConsumeAllRegsts() {
     ConsumeRegst("in", edge->GetSoleRegst());
   });
   CHECK_EQ(cnt, 1);
-}
-
-bool DistributeConcatCompTaskNode::IsReadyForBuild() {
-  return GetSoleConsumedRegst("in")->IsLocked();
 }
 
 void DistributeConcatCompTaskNode::BuildExecGphAndRegst() {

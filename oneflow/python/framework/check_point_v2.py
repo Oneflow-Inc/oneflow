@@ -23,6 +23,7 @@ import oneflow_api
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.dtype as dtype_util
+import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.ops.initializer_util as initializer_util
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.python.framework.id_util as id_util
@@ -52,6 +53,13 @@ OP_PREFIX = "system_checkpoint"
 
 
 blob_register = oneflow_api.GetDefaultBlobRegister()
+
+
+def sync_default_session_if_normal():
+    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        oneflow.sync_default_session()
+    else:
+        pass
 
 
 class FileBackendVariableBlob:
@@ -135,7 +143,7 @@ def GetAllVariables() -> Dict[str, oneflow_api.EagerConsistentBlob]:
     """
     Get all variables of all jobs as a dict.
     """
-    oneflow.sync_default_session()
+    sync_default_session_if_normal()
 
     sess = session_ctx.GetDefaultSession()
     interface_ops = sess.interface_ops
@@ -250,7 +258,7 @@ def SaveVarDict(
     """
     Save `var_dict` to `path`
     """
-    oneflow.sync_default_session()
+    sync_default_session_if_normal()
 
     if var_dict is None:
         var_dict = GetAllVariables()
@@ -480,7 +488,7 @@ def LoadVariables(
     If `ignore_mismatch` is False, an exception will be raised when
     there is a name in `value_dict` not belonging to any variable.
     """
-    oneflow.sync_default_session()
+    sync_default_session_if_normal()
 
     all_vars = GetAllVariables()
     for name, value in value_dict.items():
@@ -591,7 +599,7 @@ def init_by_initializer_conf(
 
 
 def Init() -> None:
-    oneflow.sync_default_session()
+    sync_default_session_if_normal()
 
     sess = session_ctx.GetDefaultSession()
     for op_name, var_blob in GetAllVariables().items():
