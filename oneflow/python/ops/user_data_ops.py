@@ -2408,14 +2408,19 @@ def gpt_data_loader(
     parallel_distribution = list(map(distribute_to_str, parallel_distribution))
 
     if start_from_saved_progress:
-        iteration_name = "iteration-{}-{}-{}-{}-{}-{}".format(
+        iteration_name = "iteration-sq{}-sa{}-bs{}-sd{}-sp{}-spi{}-{}".format(
             seq_length,
             num_samples,
             batch_size,
             random_seed,
-            str(list(split_sizes)),
+            "_".join([str(s) for s in split_sizes]),
             split_index,
-            str(parallel_distribution),
+            "_".join(
+                [
+                    "S{}".format(p[2:-1]) if p.startswith("S") else p
+                    for p in parallel_distribution
+                ]
+            ),
         )
         iteration = flow.get_variable(
             name=iteration_name,
