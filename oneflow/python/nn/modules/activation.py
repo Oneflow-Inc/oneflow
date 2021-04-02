@@ -96,17 +96,12 @@ class Softmax(Module):
 class Tanh(Module):
     def __init__(self):
         super().__init__()
-        self._op = (
-            flow.builtin_op("tanh")
-            .Name(id_util.UniqueStr("tanh"))
-            .Input("x")
-            .Output("y")
-            .Build()
-        )
+        self._op = flow.builtin_op("tanh").Input("x").Output("y").Build()
 
     def forward(self, x):
         res = self._op(x)[0]
         return res
+
 
 if __name__ == "__main__":
     flow.enable_eager_execution(True)
