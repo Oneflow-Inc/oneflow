@@ -21,7 +21,7 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InferReduceDeviceStageLogicalDtypeFn(user_op::InferContext* ctx) {
+Maybe<void> InferReduceDeviceStageDtypeFn(user_op::InferContext* ctx) {
   *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
   *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
   *ctx->Dtype4ArgNameAndIndex("count", 0) = DataType::kInt32;
@@ -67,12 +67,8 @@ Maybe<void> InferReduceDeviceStagePhysicalTensorDescFn(user_op::InferContext* ct
     *output_shape = reduced_shape;
   }
 
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
   *ctx->Shape4ArgNameAndIndex("mask", 0) = *input_shape;
-  *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
-
   *ctx->Shape4ArgNameAndIndex("count", 0) = *output_shape;
-  *ctx->Dtype4ArgNameAndIndex("count", 0) = DataType::kInt32;
 
   return Maybe<void>::Ok();
 }
@@ -85,10 +81,9 @@ Maybe<void> InferReduceDeviceStageGradDtypeFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferReduceDeviceStageGradTensorDescFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
-  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("count", 0), DataType::kInt32);
+  CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("out_diff", 0),
+                     *ctx->Shape4ArgNameAndIndex("count", 0));
   *ctx->Shape4ArgNameAndIndex("in_diff", 0) = *ctx->Shape4ArgNameAndIndex("mask", 0);
-
   return Maybe<void>::Ok();
 }
 
@@ -202,7 +197,7 @@ Maybe<void> GetReduceDeviceStageGradSbpFn(user_op::SbpContext* ctx) {
       .Attr<std::vector<int32_t>>("axis")                                       \
       .SetLogicalTensorDescInferFn(InferReduceDeviceStageLogicalTensorDescFn)   \
       .SetPhysicalTensorDescInferFn(InferReduceDeviceStagePhysicalTensorDescFn) \
-      .SetInferDataTypeFn(InferReduceDeviceStageLogicalDtypeFn)                 \
+      .SetInferDataTypeFn(InferReduceDeviceStageDtypeFn)                 \
       .SetGetSbpFn(GetReduceDeviceStageSbpFn);
 
 REGISTER_REDUCE_DEVICE_STAGE_USER_OP("reduce_min_device_stage")
