@@ -43,7 +43,7 @@ REGISTER_USER_OP("cast_to_static_shape")
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("input", 0) = *ctx->Dtype4ArgNameAndIndex("output", 0);
+      *ctx->Dtype4ArgNameAndIndex("output", 0) = *ctx->Dtype4ArgNameAndIndex("input", 0);
       return Maybe<void>::Ok();
     });
 
