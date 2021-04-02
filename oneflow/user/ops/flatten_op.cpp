@@ -60,7 +60,7 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
   CHECK_LE_OR_RETURN(start_dim, true_end_dim);
 
-  *out_tensor_desc = *in_tensor_desc;
+  *out_tensor_desc->mut_is_dynamic() = in_tensor_desc->is_dynamic();
 
   Shape* out_shape = out_tensor_desc->mut_shape();
 
