@@ -20,42 +20,15 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 import oneflow.typing as tp
-from test_util import Args, GenArgDict, GenArgList
-
-
-def flatten_array(input_array):
-    output_array = list()
-    for x in np.nditer(input_array):
-        output_array.append(x.tolist())
-    return output_array
-
-
-def array_to_numpy(input_array, target_shape):
-    return np.array(input_array).reshape(target_shape, order="C")
-
-
-def index2coordinate(idx, tensor_shape):
-    coordinate = []
-    tmp = idx
-    for i in range(len(tensor_shape) - 1, -1, -1):
-        axis_size = tensor_shape[i]
-        coor = tmp % axis_size
-        coordinate.insert(0, int(coor))
-        tmp = (tmp - coor) / axis_size
-    return coordinate
-
-
-def coordinate2index(coordinate, tensor_shape):
-    if len(coordinate) != len(tensor_shape):
-        raise "wrong coordinate or shape"
-    idx = 0
-    for i, coor in enumerate(coordinate):
-        size_at_axis = coor
-        for j in range(i + 1, len(tensor_shape)):
-            size_at_axis *= tensor_shape[j]
-
-        idx += size_at_axis
-    return idx
+from test_util import (
+    Args,
+    GenArgDict,
+    GenArgList,
+    FlattenArray,
+    Array2Numpy,
+    Index2Coordinate,
+    Coordinate2Index,
+)
 
 
 def _make_op_function(
@@ -160,8 +133,10 @@ def _make_op_function(
 
 def gen_numpy_test_sample(input_shape, padding, is_float=True):
     c_idx, h_idx, w_idx = 1, 2, 3
-    pad_top = pad_bottom = padding[h_idx]
-    pad_left = pad_right = padding[w_idx]
+    pad_left = padding[0]
+    pad_right = padding[1]
+    pad_top = padding[2]
+    pad_bottom = padding[3]
     pad_shape = ((0, 0), (0, 0), (pad_top, pad_bottom), (pad_left, pad_right))
 
     def _np_reflection_pad2d(input, pad_shape):
@@ -174,14 +149,14 @@ def gen_numpy_test_sample(input_shape, padding, is_float=True):
 
         numpy_src = np.ones(src.shape, np.int32)
         numpy_dest = np.zeros(dest.shape, np.int32)
-        array_src = flatten_array(numpy_src)
-        array_dest = flatten_array(numpy_dest)
+        array_src = FlattenArray(numpy_src)
+        array_dest = FlattenArray(numpy_dest)
 
         src_num = src.shape[c_idx] * src.shape[h_idx] * src.shape[w_idx]
         dest_num = dest.shape[c_idx] * dest.shape[h_idx] * dest.shape[w_idx]
         elements_num = src.shape[0] * src_num
         for iter_n in range(elements_num):
-            coords = index2coordinate(iter_n, src.shape)
+            coords = Index2Coordinate(iter_n, src.shape)
             n, c, i, j = coords[0], coords[c_idx], coords[h_idx], coords[w_idx]
             ip_x = ip_y = 0
             if j < pad_left:
@@ -206,7 +181,7 @@ def gen_numpy_test_sample(input_shape, padding, is_float=True):
             )
             array_dest[dest_index] += array_src[src_index]
 
-        numpy_dest = array_to_numpy(array_dest, dest.shape)
+        numpy_dest = Array2Numpy(array_dest, dest.shape)
         return numpy_dest
 
     if is_float:
@@ -261,9 +236,9 @@ def _gen_arg_dict(
     arg_dict = OrderedDict()
     arg_dict["device_type"] = [device_type]
     arg_dict["samples"] = []
-    arg_dict["samples"].append(gen_numpy_test_sample((2, 1, 2, 2), [0, 0, 1, 1]))
-    arg_dict["samples"].append(gen_numpy_test_sample((4, 2, 3, 3), [0, 0, 2, 2]))
-    arg_dict["samples"].append(gen_numpy_test_sample((2, 3, 4, 5), [0, 0, 2, 3]))
+    arg_dict["samples"].append(gen_numpy_test_sample((2, 1, 2, 2), [1, 1, 1, 1]))
+    arg_dict["samples"].append(gen_numpy_test_sample((4, 2, 3, 3), [2, 2, 2, 2]))
+    arg_dict["samples"].append(gen_numpy_test_sample((2, 3, 4, 5), [3, 2, 1, 2]))
     if value_type == "float":
         if device_type == "gpu":
             arg_dict["value_type"] = [

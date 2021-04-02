@@ -30,17 +30,18 @@ from oneflow.python.framework.function_desc import FunctionDesc
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.typing_util as oft_util
+import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.lib.core.pb_util as pb_util
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow_api.oneflow.core.common.data_type as data_type_cfg
+import oneflow_api
 import traceback
 import sys
 
 
-@oneflow_export("FunctionConfig", "function_config")
+@oneflow_export("FunctionConfig", "function_config", "ExecutionConfig")
 class FunctionConfig(object):
     r"""OneFlow function's configurations.
     """
@@ -169,6 +170,15 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
     return Decorator
 
 
+def global_function_or_identity(*args, **kwargs):
+    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        return api_oneflow_function(*args, **kwargs)
+    else:
+        assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
+        identity_decorator = lambda func: func
+        return identity_decorator
+
+
 def _CloneFunctionDesc(func_desc, job_func):
     new_func_desc = FunctionDesc(job_func=job_func)
     new_func_desc.job_config_proto.CopyFrom(func_desc.job_config_proto)
@@ -230,7 +240,7 @@ def set_default_data_type(func_desc, value):
         value ([type]): data type. e.g. flow.float
     """
     func_desc.job_config_proto.set_default_data_type(
-        data_type_cfg.DataType(value.oneflow_proto_dtype)
+        data_type_cfg.DataType(oneflow_api.deprecated.GetProtoDtype4OfDtype(value))
     )
 
 
@@ -688,7 +698,52 @@ def set_enable_float_compute_for_half_gemm(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_enable_float_compute_for_half_gemm(value)
+    print(
+        """WARNING: enable_float_compute_for_half_gemm has been deprecated, because we always use float compute for half gemm. Please remove it.
+        """
+    )
+    print(traceback.format_stack()[-3])
+
+
+@oneflow_function_config("enable_quantization_aware_training")
+@oneflow_function_config("enable_qat")
+def set_enable_quantization_aware_training(func_desc, value=True):
+    r"""If true, then job will use quantization aware training
+
+    Args:
+        func_desc ([type]): [description]
+        value (bool, optional): [description]. Defaults to True.
+    """
+    func_desc.job_config_proto.set_enable_quantization_aware_training(value)
+
+
+@oneflow_function_config("qat.per_channel_weight_quantization")
+def set_qat_per_channel(func_desc, value=True):
+    func_desc.job_config_proto.mutable_qat_config().set_per_channel_weight_quantization(
+        value
+    )
+
+
+@oneflow_function_config("qat.symmetric")
+def set_qat_symmetric(func_desc, value=True):
+    func_desc.job_config_proto.mutable_qat_config().set_symmetric(value)
+
+
+@oneflow_function_config("qat.moving_min_max_momentum")
+def set_qat_moving_min_max_momentum(func_desc, value: float):
+    func_desc.job_config_proto.mutable_qat_config().set_moving_min_max_momentum(value)
+
+
+@oneflow_function_config("qat.moving_min_max_stop_update_after_iters")
+def set_qat_moving_min_max_momentum(func_desc, value: float):
+    func_desc.job_config_proto.mutable_qat_config().set_moving_min_max_stop_update_after_iters(
+        value
+    )
+
+
+@oneflow_function_config("qat.target_backend")
+def set_qat_symmetric(func_desc, value: str):
+    func_desc.job_config_proto.mutable_qat_config().set_target_backend(value)
 
 
 @oneflow_function_config("enable_auto_mixed_precision")
@@ -704,13 +759,13 @@ def set_enable_auto_mixed_precision(func_desc, value=True):
 
 @oneflow_function_config("enable_keep_header_only")
 def set_enable_keep_header_only(func_desc, value=True):
-    r"""Whether keep header only or not
+    r"""deprecated api.
 
     Args:
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_enable_keep_header_only(value)
+    print("Sorry! enable_keep_header_only is deprecated and it doesn't work.\n")
 
 
 @oneflow_function_config("concurrency_width")

@@ -41,22 +41,10 @@ void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
   }
 }
 
-void BindIdenticalSbpObaPairsBetweenIbns(const OpNode& op_node, JobBuilder* job_builder) {
-  HashMap<LogicalBlobId, std::vector<OpBlobArg>> in_lbi2obas;
-  for (const std::string& ibn : op_node.op().input_bns()) {
-    in_lbi2obas[op_node.op().BnInOp2Lbi(ibn)].push_back(GenOpBlobArg(op_node.op().op_name(), ibn));
-  }
-  for (const auto& pair : in_lbi2obas) {
-    if (pair.second.size() > 1) {
-      FOR_RANGE(int32_t, i, 1, pair.second.size()) {
-        job_builder->BindIdenticalSbpOpBlobArgPair(pair.second.at(0), pair.second.at(i));
-      }
-    }
-  }
-}
-
-void SetSbpSignatureHintByIdenticalSbpObaPairs(const OpGraph& op_graph, JobBuilder* job_builder) {
-  HashMap<OpBlobArg, const SbpParallel*> oba2sbp_parallel;
+void SetParallelDistributionSignatureHintByIdenticalSbpObaPairs(
+    const OpGraph& op_graph, const OpBlobArgPairs& identical_sbp_oba_pairs,
+    JobBuilder* job_builder) {
+  HashMap<OpBlobArg, const ParallelDistribution*> oba2parallel_distribution;
   op_graph.ForEachNode([&](OpNode* op_node) {
     auto ForEachBn = [&](const std::function<void(const std::string&)>& Handler) {
       for (const auto& ibn : op_node->op().input_bns()) { Handler(ibn); }
@@ -64,33 +52,29 @@ void SetSbpSignatureHintByIdenticalSbpObaPairs(const OpGraph& op_graph, JobBuild
     };
     ForEachBn([&](const std::string& bn_in_op) {
       const auto& oba = GenOpBlobArg(op_node->op().op_name(), bn_in_op);
-      oba2sbp_parallel[oba] = &op_node->SbpParallel4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
+      oba2parallel_distribution[oba] =
+          &op_node->ParallelDistribution4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
     });
   });
-  auto HasSbpParallel = [&](const OpBlobArg& oba) {
-    return oba2sbp_parallel.find(oba) != oba2sbp_parallel.end();
+  auto HasParallelDistribution = [&](const OpBlobArg& oba) {
+    return oba2parallel_distribution.find(oba) != oba2parallel_distribution.end();
   };
-  for (const auto& pair : job_builder->job().helper().identical_sbp_oba_pairs().pair()) {
-    const SbpParallel* sbp_parallel = nullptr;
-    if (HasSbpParallel(pair.first()) && HasSbpParallel(pair.second())) {
-      CHECK(oba2sbp_parallel.at(pair.first()) == oba2sbp_parallel.at(pair.second()));
-      sbp_parallel = oba2sbp_parallel.at(pair.first());
-    } else if (HasSbpParallel(pair.first())) {
-      sbp_parallel = oba2sbp_parallel.at(pair.first());
-    } else if (HasSbpParallel(pair.second())) {
-      sbp_parallel = oba2sbp_parallel.at(pair.second());
+  for (const auto& pair : identical_sbp_oba_pairs.pair()) {
+    const ParallelDistribution* parallel_distribution = nullptr;
+    if (HasParallelDistribution(pair.first()) && HasParallelDistribution(pair.second())) {
+      CHECK(oba2parallel_distribution.at(pair.first())
+            == oba2parallel_distribution.at(pair.second()));
+      parallel_distribution = oba2parallel_distribution.at(pair.first());
+    } else if (HasParallelDistribution(pair.first())) {
+      parallel_distribution = oba2parallel_distribution.at(pair.first());
+    } else if (HasParallelDistribution(pair.second())) {
+      parallel_distribution = oba2parallel_distribution.at(pair.second());
     } else {
       UNIMPLEMENTED();
     }
-    *job_builder->MutSbpParallel4Oba(pair.first()) = *sbp_parallel;
-    *job_builder->MutSbpParallel4Oba(pair.second()) = *sbp_parallel;
+    job_builder->SetParallelDistribution4Oba(pair.first(), *parallel_distribution);
+    job_builder->SetParallelDistribution4Oba(pair.second(), *parallel_distribution);
   }
-}
-
-void UpdateOpSbpSignatureHint(const OpGraph& op_graph, JobBuilder* job_builder) {
-  op_graph.ForEachNode(
-      [&](OpNode* op_node) { BindIdenticalSbpObaPairsBetweenIbns(*op_node, job_builder); });
-  SetSbpSignatureHintByIdenticalSbpObaPairs(op_graph, job_builder);
 }
 
 class GenerateBackwardAndOptimizerOpConfs final : public JobPass {
@@ -104,15 +88,27 @@ class GenerateBackwardAndOptimizerOpConfs final : public JobPass {
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
 };
 
-void FilterModelLbi2DiffLbi(const OpGraph& op_graph,
-                            const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
-                            HashMap<LogicalBlobId, LogicalBlobId>* model_lbi2model_diff_lbi) {
+void FilterModelLbi2ModelDiffLbiByOpConf(
+    const OpGraph& op_graph, const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
+    HashMap<LogicalBlobId, LogicalBlobId>* model_lbi2model_diff_lbi) {
   for (const auto& pair : lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     const LogicalBlobId& diff_lbi = pair.second;
     const OpNode* producer = op_graph.OpNode4OpName(lbi.op_name());
     if (producer->op().op_conf().has_variable_conf()) {
       (*model_lbi2model_diff_lbi)[lbi] = diff_lbi;
+    }
+  }
+}
+
+void FilterCurModelLbi2ModelDiffLbiByName(
+    const ::google::protobuf::RepeatedPtrField<std::string>& variables,
+    const HashMap<LogicalBlobId, LogicalBlobId>& model_lbi2model_diff_lbi,
+    HashMap<LogicalBlobId, LogicalBlobId>* cur_model_lbi2model_diff_lbi) {
+  for (const std::string& variable : variables) {
+    const LogicalBlobId& lbi = GenLogicalBlobId(variable + "/out");
+    if (model_lbi2model_diff_lbi.find(lbi) != model_lbi2model_diff_lbi.end()) {
+      (*cur_model_lbi2model_diff_lbi)[lbi] = model_lbi2model_diff_lbi.at(lbi);
     }
   }
 }
@@ -179,13 +175,14 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
   const JobBuilder* old_job_builder = job_builder.get();
   LogicalBlobId total_loss_instance_num;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
+  OpBlobArgPairs identical_sbp_oba_pairs;
   job_builder = JUST(WithCalculationPassScope(kBackwardPass, job, [&]() -> Maybe<void> {
     CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
-    JUST(AutoGrad(ctx, op_graph, job_builder.get(), &lbi2diff_lbi));
+    JUST(AutoGrad(ctx, op_graph, job_builder.get(), &lbi2diff_lbi, &identical_sbp_oba_pairs));
     return Maybe<void>::Ok();
   }));
   HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
-  FilterModelLbi2DiffLbi(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
+  FilterModelLbi2ModelDiffLbiByOpConf(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
   old_job_builder = job_builder.get();
   job_builder = JUST(WithCalculationPassScope(kOptimizerPass, job, [&]() -> Maybe<void> {
     CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
@@ -194,18 +191,32 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder.get(), &model_lbi2model_diff_lbi));
     ScaleModelDiffByLossScale(ctx, op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     JUST(CountNotFiniteIfNeeded(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi));
-    const NormalModelUpdateOpUserConf& model_update_conf =
-        job->job_conf().train_conf().model_update_conf();
     RegularizeGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
-    if (model_update_conf.has_clip_conf()) {
-      ClipGradient(op_graph, job_builder.get(), &model_lbi2model_diff_lbi,
-                   model_update_conf.clip_conf());
+    for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
+      HashMap<LogicalBlobId, LogicalBlobId> cur_model_lbi2model_diff_lbi;
+      FilterCurModelLbi2ModelDiffLbiByName(optimizer_conf.variable_op_names(),
+                                           model_lbi2model_diff_lbi, &cur_model_lbi2model_diff_lbi);
+      if (optimizer_conf.has_clip_conf()) {
+        ClipGradient(op_graph, job_builder.get(), &cur_model_lbi2model_diff_lbi,
+                     optimizer_conf.clip_conf());
+      }
+      op_graph.ForEachNode([&](OpNode* op_node) {
+        const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
+        if (var_op == nullptr
+            || cur_model_lbi2model_diff_lbi.find(var_op->BnInOp2Lbi(var_op->SoleObn()))
+                   == lbi2diff_lbi.end()) {
+          return;
+        }
+        const std::string& model_diff_lbn = GenLogicalBlobName(
+            cur_model_lbi2model_diff_lbi.at(var_op->BnInOp2Lbi(var_op->SoleObn())));
+        AddOptimizerOp(ctx, *op_node, model_diff_lbn, optimizer_conf, job_builder.get());
+      });
     }
-    AddOptimizerOpConf(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi);
     return Maybe<void>::Ok();
   }));
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder.get());
-  UpdateOpSbpSignatureHint(op_graph, job_builder.get());
+  SetParallelDistributionSignatureHintByIdenticalSbpObaPairs(op_graph, identical_sbp_oba_pairs,
+                                                             job_builder.get());
   return Maybe<void>::Ok();
 }
 

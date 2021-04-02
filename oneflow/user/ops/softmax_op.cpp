@@ -28,13 +28,9 @@ REGISTER_USER_OP("softmax")
       *out_shape = *in_shape;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      FOR_RANGE(int64_t, axis, 0, in_tensor.shape().NumAxes()) {
+      FOR_RANGE(int64_t, axis, 0, in_tensor.shape().NumAxes() - 1) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("in", 0), axis)
             .Split(user_op::OpArg("out", 0), axis)
@@ -55,13 +51,9 @@ REGISTER_USER_OP("softmax_grad")
       *dx_shape = *dy_shape;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("y", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
-      FOR_RANGE(int64_t, axis, 0, y_tensor.shape().NumAxes()) {
+      FOR_RANGE(int64_t, axis, 0, y_tensor.shape().NumAxes() - 1) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("y", 0), axis)
             .Split(user_op::OpArg("dy", 0), axis)

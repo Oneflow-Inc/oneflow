@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from collections import OrderedDict
+import math
 import numpy as np
 import unittest
 
@@ -34,8 +35,14 @@ def gen_quant_scale_for_min_max_affine(weight, quantization_bit):
     weight_min = np.min(weight)
     denominator = 2.0 ** (quantization_bit) - 1
     scale = (weight_max - weight_min) / denominator
-    zero_point = -weight_min / scale
+    zero_point = -np.round(weight_min / scale)
     return scale, zero_point
+
+
+def gen_quant_scale_for_min_max_cambricon(weight, quantization_bit):
+    weight_max = np.max(np.abs(weight))
+    scale = math.floor(math.log2(weight_max)) - (quantization_bit - 2)
+    return scale, 0
 
 
 def product(tu):
@@ -49,9 +56,10 @@ def _check_min_max_observer(
     zero_point_of,
     quantization_bit,
     quantization_scheme,
+    quantization_formula,
     per_layer_quantization,
 ):
-    if per_layer_quantization:
+    if per_layer_quantization or quantization_formula == "cambricon":
         outer_num = 1
         inner_num = product(weight.shape[0:])
     else:
@@ -60,20 +68,28 @@ def _check_min_max_observer(
 
     scale_np = np.zeros((outer_num,))
     zero_point_np = np.zeros((outer_num,))
-
     weight_flatten = weight.flatten()
 
-    if quantization_scheme == "symmetric":
-        for c in range(outer_num):
-            (scale_np[c], zero_point_np[c],) = gen_quant_scale_for_min_max_symmetric(
-                weight_flatten[c * inner_num : (c + 1) * inner_num], quantization_bit
-            )
-    else:  # "affine"
-        for c in range(outer_num):
-            scale_np[c], zero_point_np[c] = gen_quant_scale_for_min_max_affine(
-                weight_flatten[c * inner_num : (c + 1) * inner_num], quantization_bit
-            )
-
+    if quantization_formula == "google":
+        if quantization_scheme == "symmetric":
+            for c in range(outer_num):
+                (
+                    scale_np[c],
+                    zero_point_np[c],
+                ) = gen_quant_scale_for_min_max_symmetric(
+                    weight_flatten[c * inner_num : (c + 1) * inner_num],
+                    quantization_bit,
+                )
+        else:  # "affine"
+            for c in range(outer_num):
+                scale_np[c], zero_point_np[c] = gen_quant_scale_for_min_max_affine(
+                    weight_flatten[c * inner_num : (c + 1) * inner_num],
+                    quantization_bit,
+                )
+    else:  # quantization_formula == "cambricon"
+        scale_np[0], zero_point_np[0] = gen_quant_scale_for_min_max_cambricon(
+            weight_flatten, quantization_bit
+        )
     test_case.assertTrue(np.allclose(scale_of, scale_np, rtol=1e-3))
     test_case.assertTrue(
         np.allclose(
@@ -90,6 +106,7 @@ def _run_test_min_max_observer(
     weight_shape,
     quantization_bit,
     quantization_scheme,
+    quantization_formula,
     per_layer_quantization,
 ):
     assert device_type in ["gpu", "cpu"]
@@ -105,12 +122,14 @@ def _run_test_min_max_observer(
     ):
         with flow.scope.placement(device_type, "0:0-%d" % (device_num - 1)):
             scale, zero_point = flow.quantization.min_max_observer(
-                weight, quantization_bit, quantization_scheme, per_layer_quantization
+                weight,
+                quantization_bit,
+                quantization_scheme,
+                quantization_formula,
+                per_layer_quantization,
             )
         return scale, zero_point
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     weight = (np.random.random(weight_shape) - 0.5).astype(type_name_to_np_type[dtype])
     scale, zero_point = QuantizeJob(weight).get()
     _check_min_max_observer(
@@ -120,6 +139,7 @@ def _run_test_min_max_observer(
         zero_point.numpy(),
         quantization_bit,
         quantization_scheme,
+        quantization_formula,
         per_layer_quantization,
     )
 
@@ -160,9 +180,24 @@ def gen_quant_scale_for_moving_average_min_max_affine(
         moving_min[0] = moving_min[0] * momentum + activation_min * (1 - momentum)
 
     scale = (moving_max[0] - moving_min[0]) / denominator
-    zero_point = -moving_min[0] / scale
+    zero_point = -np.round(moving_min[0] / scale)
 
     return scale, zero_point
+
+
+def gen_quant_scale_for_moving_average_min_max_cambricon(
+    activation, quantization_bit, momentum, moving_max, moving_min
+):
+    activation_max = np.max(np.abs(activation))
+
+    if moving_max[0] == 0:
+        moving_max[0] = activation_max
+    else:
+        moving_max[0] = moving_max[0] * momentum + activation_max * (1 - momentum)
+
+    moving_min[0] = moving_max[0]
+
+    return math.floor(math.log2(moving_max[0])) - (quantization_bit - 2), 0
 
 
 def _check_moving_average_min_max_observer(
@@ -174,25 +209,37 @@ def _check_moving_average_min_max_observer(
     moving_min_np,
     quantization_bit,
     quantization_scheme,
+    quantization_formula,
     momentum,
 ):
-    if quantization_scheme == "symmetric":
-        scale_np, zero_point_np = gen_quant_scale_for_moving_average_min_max_symmetric(
+    if quantization_formula == "google":
+        if quantization_scheme == "symmetric":
+            (
+                scale_np,
+                zero_point_np,
+            ) = gen_quant_scale_for_moving_average_min_max_symmetric(
+                activation.flatten(),
+                quantization_bit,
+                momentum,
+                moving_max_np,
+                moving_min_np,
+            )
+        else:  # "affine"
+            scale_np, zero_point_np = gen_quant_scale_for_moving_average_min_max_affine(
+                activation.flatten(),
+                quantization_bit,
+                momentum,
+                moving_max_np,
+                moving_min_np,
+            )
+    else:  # quantization_formula == "cambricon":
+        scale_np, zero_point_np = gen_quant_scale_for_moving_average_min_max_cambricon(
             activation.flatten(),
             quantization_bit,
             momentum,
             moving_max_np,
             moving_min_np,
         )
-    else:  # "affine"
-        scale_np, zero_point_np = gen_quant_scale_for_moving_average_min_max_affine(
-            activation.flatten(),
-            quantization_bit,
-            momentum,
-            moving_max_np,
-            moving_min_np,
-        )
-
     test_case.assertTrue(np.allclose(scale_of[0], scale_np, rtol=1e-3))
     test_case.assertTrue(np.allclose(zero_point_of[0], zero_point_np, rtol=1e-3))
 
@@ -205,6 +252,7 @@ def _run_test_moving_average_min_max_observer(
     activation_shape,
     quantization_bit,
     quantization_scheme,
+    quantization_formula,
     momentum,
 ):
     assert device_type in ["gpu", "cpu"]
@@ -228,8 +276,12 @@ def _run_test_moving_average_min_max_observer(
                 initializer=flow.zeros_initializer(activation.dtype),
                 trainable=True,
             )
-            scale, zero_point = flow.quantization.moving_average_min_maxObserver(
-                activation, quantization_bit, quantization_scheme, momentum,
+            scale, zero_point = flow.quantization.moving_average_min_max_observer(
+                activation,
+                quantization_bit,
+                quantization_scheme,
+                quantization_formula,
+                momentum,
             )
             fake = x + activation
             loss = flow.math.reduce_mean(fake)
@@ -237,9 +289,6 @@ def _run_test_moving_average_min_max_observer(
                 flow.optimizer.PiecewiseConstantScheduler([], [0.001]),
             ).minimize(loss)
         return scale, zero_point
-
-    check_point = flow.train.CheckPoint()
-    check_point.init()
 
     moving_max_np = np.zeros((1,))
     moving_min_np = np.zeros((1,))
@@ -258,6 +307,7 @@ def _run_test_moving_average_min_max_observer(
             moving_min_np,
             quantization_bit,
             quantization_scheme,
+            quantization_formula,
             momentum,
         )
 
@@ -277,6 +327,13 @@ def fake_quant_per_layer_affine(input, quantization_bit, scale, zero_point):
     ) * scale
 
 
+def fake_quant_per_layer_cambricon(input, quantization_bit, shift):
+    upper_bound = 2.0 ** (quantization_bit - 1) - 1
+    lower_bound = -upper_bound
+    scale = 2 ** shift
+    return np.clip(np.rint(input / scale), lower_bound, upper_bound) * scale
+
+
 def _check_fake_quantize(
     test_case,
     input,
@@ -284,9 +341,10 @@ def _check_fake_quantize(
     out_of,
     quantization_bit,
     quantization_scheme,
+    quantization_formula,
     per_layer_quantization,
 ):
-    if per_layer_quantization:
+    if per_layer_quantization or quantization_formula == "cambricon":
         outer_num = 1
         inner_num = product(input.shape[0:])
     else:
@@ -300,30 +358,41 @@ def _check_fake_quantize(
     input_flatten = input.flatten()
     input_diff_np = np.full((inner_num * outer_num,), 1.0 / (inner_num * outer_num))
 
-    if quantization_scheme == "symmetric":
-        for c in range(outer_num):
-            (scale_np[c], zero_point_np[c],) = gen_quant_scale_for_min_max_symmetric(
-                input_flatten[c * inner_num : (c + 1) * inner_num], quantization_bit
-            )
-            out = fake_quant_per_layer_symmetric(
-                input_flatten[c * inner_num : (c + 1) * inner_num],
-                quantization_bit,
-                scale_np[c],
-            )
-            out_np[c * inner_num : (c + 1) * inner_num] = out
+    if quantization_formula == "google":
+        if quantization_scheme == "symmetric":
+            for c in range(outer_num):
+                (
+                    scale_np[c],
+                    zero_point_np[c],
+                ) = gen_quant_scale_for_min_max_symmetric(
+                    input_flatten[c * inner_num : (c + 1) * inner_num], quantization_bit
+                )
+                out = fake_quant_per_layer_symmetric(
+                    input_flatten[c * inner_num : (c + 1) * inner_num],
+                    quantization_bit,
+                    scale_np[c],
+                )
+                out_np[c * inner_num : (c + 1) * inner_num] = out
 
-    else:  # "affine"
-        for c in range(outer_num):
-            scale_np[c], zero_point_np[c] = gen_quant_scale_for_min_max_affine(
-                input_flatten[c * inner_num : (c + 1) * inner_num], quantization_bit
-            )
-            out = fake_quant_per_layer_affine(
-                input_flatten[c * inner_num : (c + 1) * inner_num],
-                quantization_bit,
-                scale_np[c],
-                zero_point_np[c],
-            )
-            out_np[c * inner_num : (c + 1) * inner_num] = out
+        else:  # "affine"
+            for c in range(outer_num):
+                scale_np[c], zero_point_np[c] = gen_quant_scale_for_min_max_affine(
+                    input_flatten[c * inner_num : (c + 1) * inner_num], quantization_bit
+                )
+                out = fake_quant_per_layer_affine(
+                    input_flatten[c * inner_num : (c + 1) * inner_num],
+                    quantization_bit,
+                    scale_np[c],
+                    zero_point_np[c],
+                )
+                out_np[c * inner_num : (c + 1) * inner_num] = out
+    else:  # quantization_formula == "cambricon"
+        scale_np[0], zero_point_np[0] = gen_quant_scale_for_min_max_cambricon(
+            input_flatten, quantization_bit
+        )
+        out_np = fake_quant_per_layer_cambricon(
+            input_flatten, quantization_bit, scale_np[0]
+        )
 
     # NOTE(Liang Depeng):
     # The slightly different rounding results between C++ and Python will make
@@ -341,6 +410,7 @@ def _run_test_fake_quantize(
     in_shape,
     quantization_bit,
     quantization_scheme,
+    quantization_formula,
     per_layer_quantization,
 ):
     assert device_type in ["gpu", "cpu"]
@@ -368,10 +438,19 @@ def _run_test_fake_quantize(
 
         with flow.scope.placement(device_type, "0:0-%d" % (device_num - 1)):
             scale, zero_point = flow.quantization.min_max_observer(
-                input_x, quantization_bit, quantization_scheme, per_layer_quantization
+                input_x,
+                quantization_bit,
+                quantization_scheme,
+                quantization_formula,
+                per_layer_quantization,
             )
             out = flow.quantization.fake_quantization(
-                input_x, scale, zero_point, quantization_bit, quantization_scheme
+                input_x,
+                scale,
+                zero_point,
+                quantization_bit,
+                quantization_scheme,
+                quantization_formula,
             )
             loss = flow.math.reduce_mean(out)
 
@@ -380,9 +459,6 @@ def _run_test_fake_quantize(
             ).minimize(loss)
 
         return out
-
-    check_point = flow.train.CheckPoint()
-    check_point.init()
 
     input = (np.random.random(in_shape) - 0.5).astype(type_name_to_np_type[dtype])
     out = QuantizeJob(input).get()
@@ -396,6 +472,7 @@ def _run_test_fake_quantize(
         out.numpy().flatten(),
         quantization_bit,
         quantization_scheme,
+        quantization_formula,
         per_layer_quantization,
     )
 
@@ -408,16 +485,19 @@ class TestMinMaxObserver(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
-        arg_dict["weight_shape"] = [(89, 40, 20, 10)]
+        arg_dict["weight_shape"] = [(9, 40, 20, 10)]
         arg_dict["quantization_bit"] = [8, 2]
         arg_dict["quantization_scheme"] = ["symmetric", "affine"]
+        arg_dict["quantization_formula"] = ["google", "cambricon"]
         arg_dict["per_layer_quantization"] = [True, False]
 
         for arg in GenArgList(arg_dict):
+            if arg[-2] == "cambricon" and arg[-1] == False:
+                continue
             _run_test_min_max_observer(*arg)
 
 
-@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(True, "skip for now")
 class TestMovingAverageMinMaxObserver(flow.unittest.TestCase):
     def test_moving_average_min_max_observer(test_case):
         arg_dict = OrderedDict()
@@ -425,9 +505,10 @@ class TestMovingAverageMinMaxObserver(flow.unittest.TestCase):
         arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
-        arg_dict["activation_shape"] = [(89, 40, 20, 10)]
+        arg_dict["activation_shape"] = [(9, 40, 20, 10)]
         arg_dict["quantization_bit"] = [8, 2]
         arg_dict["quantization_scheme"] = ["symmetric", "affine"]
+        arg_dict["quantization_formula"] = ["google", "cambricon"]
         arg_dict["momentum"] = [0.95]
 
         for arg in GenArgList(arg_dict):
@@ -442,12 +523,15 @@ class TestFakeQuantize(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
-        arg_dict["in_shape"] = [(89, 40, 20, 10)]
+        arg_dict["in_shape"] = [(9, 40, 20, 10)]
         arg_dict["quantization_bit"] = [8, 2]
         arg_dict["quantization_scheme"] = ["symmetric", "affine"]
+        arg_dict["quantization_formula"] = ["google", "cambricon"]
         arg_dict["per_layer_quantization"] = [True, False]
 
         for arg in GenArgList(arg_dict):
+            if arg[-2] == "cambricon" and arg[-1] == False:
+                continue
             _run_test_fake_quantize(*arg)
 
 

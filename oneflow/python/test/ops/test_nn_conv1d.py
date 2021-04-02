@@ -40,6 +40,8 @@ def compare_with_tensorflow(
     data_format="NCDHW",
     dilation=1,
 ):
+    if os.getenv("ONEFLOW_TEST_CPU_ONLY") and dilation > 1:
+        return
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -96,8 +98,6 @@ def compare_with_tensorflow(
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = ConvJob().get()
     # TensorFlow
     with tf.GradientTape(persistent=True) as tape:

@@ -30,6 +30,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
     std::vector<LbiBlobDescPair> lbi_pairs(
         {data_regst_desc.lbi2blob_desc().cbegin(), data_regst_desc.lbi2blob_desc().cend()});
     std::sort(lbi_pairs.begin(), lbi_pairs.end(), &CompareLbiBlobDescPair);
+    CHECK_EQ(lbi_pairs.size(), 1);
     sorted_blob_desc_vec_.reserve(lbi_pairs.size());
     sorted_lbi_vec_.reserve(lbi_pairs.size());
     for (int64_t i = 0; i < lbi_pairs.size(); ++i) {
@@ -38,11 +39,10 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
       sorted_lbi_vec_.push_back(pair.lbi());
       lbi2blob_desc_ordinal_.emplace(pair.lbi(), i);
     }
-    packed_blob_desc_.reset(new RtBlobDesc(data_regst_desc.packed_blob_desc()));
     CHECK(data_regst_desc.has_time_shape());
     data_regst_time_shape_.reset(new Shape(data_regst_desc.time_shape()));
   } else {
-    packed_blob_desc_.reset(new RtBlobDesc(BlobDesc(DataType::kChar)));
+    sorted_blob_desc_vec_.push_back(std::make_unique<RtBlobDesc>(BlobDesc(DataType::kChar)));
   }
 }
 
@@ -58,8 +58,7 @@ int64_t RtRegstDesc::GetOrdinalForLbi(const LogicalBlobId& lbi) const {
 const RtBlobDesc* RtRegstDesc::GetRtBlobDescFromLbi(const LogicalBlobId& lbi) const {
   auto it = lbi2blob_desc_ordinal_.find(lbi);
   if (it == lbi2blob_desc_ordinal_.end()) {
-    CHECK(lbi.is_packed_id());
-    return packed_blob_desc_.get();
+    return nullptr;
   } else {
     return GetRtBlobDescByOrdinal(it->second);
   }
@@ -73,8 +72,13 @@ const LogicalBlobId& RtRegstDesc::GetLbiByOrdinal(int64_t ordinal) const {
   return sorted_lbi_vec_.at(ordinal);
 }
 
+const RtBlobDesc* RtRegstDesc::GetSoleRtBlobDesc() const {
+  CHECK_EQ(sorted_blob_desc_vec_.size(), 1);
+  return sorted_blob_desc_vec_.at(0).get();
+}
+
 size_t RtRegstDesc::TotalByteSize4AllRegst() const {
-  return packed_blob_desc_->AlignedTotalByteSize() * register_num_;
+  return GetSoleRtBlobDesc()->AlignedTotalByteSize() * register_num_;
 }
 
 size_t RtRegstDesc::TotalMainByteSize4AllRegst() const {
@@ -82,18 +86,10 @@ size_t RtRegstDesc::TotalMainByteSize4AllRegst() const {
 }
 
 size_t RtRegstDesc::MainByteSize4OneRegst() const {
-  if (packed_blob_desc_->is_body_disabled()) {
-    if (mem_case_.has_device_cuda_mem()) {
-      return 0;
-    } else {
-      return packed_blob_desc_->ByteSizeOfBlobHeader();
-    }
+  if (mem_case_.has_device_cuda_mem()) {
+    return GetSoleRtBlobDesc()->AlignedByteSizeOfBlobBody();
   } else {
-    if (mem_case_.has_device_cuda_mem()) {
-      return packed_blob_desc_->AlignedByteSizeOfBlobBody();
-    } else {
-      return packed_blob_desc_->AlignedTotalByteSize();
-    }
+    return GetSoleRtBlobDesc()->AlignedTotalByteSize();
   }
 }
 
@@ -103,7 +99,7 @@ size_t RtRegstDesc::TotalSeparatedHeaderByteSize4AllRegst() const {
 
 size_t RtRegstDesc::SeparatedHeaderByteSize4OneRegst() const {
   if (mem_case_.has_device_cuda_mem()) {
-    return packed_blob_desc_->ByteSizeOfBlobHeader();
+    return GetSoleRtBlobDesc()->ByteSizeOfBlobHeader();
   } else {
     return 0;
   }

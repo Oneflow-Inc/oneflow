@@ -42,6 +42,30 @@ def import_oneflow_internal2():
 
 
 oneflow_api = import_oneflow_internal2()
+
+Size = oneflow_api.Size
+device = oneflow_api.device
+placement = oneflow_api.PlacementSymbol
+
+# define dtype at the begining of oneflow init
+
+locals()["dtype"] = oneflow_api.dtype
+locals()["char"] = oneflow_api.char
+locals()["float16"] = oneflow_api.float16
+locals()["half"] = oneflow_api.float16
+locals()["float32"] = oneflow_api.float32
+locals()["float"] = oneflow_api.float
+locals()["double"] = oneflow_api.double
+locals()["float64"] = oneflow_api.float64
+locals()["int8"] = oneflow_api.int8
+locals()["int"] = oneflow_api.int32
+locals()["int32"] = oneflow_api.int32
+locals()["int64"] = oneflow_api.int64
+locals()["long"] = oneflow_api.int64
+locals()["uint8"] = oneflow_api.uint8
+locals()["record"] = oneflow_api.record
+locals()["tensor_buffer"] = oneflow_api.tensor_buffer
+
 del import_secondary_module
 del import_oneflow_internal2
 
@@ -59,15 +83,16 @@ import oneflow.python_gen.__export_symbols__
 
 import atexit
 import oneflow.python.framework.c_api_util
-import oneflow.python.framework.python_interpreter_util
+import oneflow.python.framework.register_class_method_util as register_class_method_util
 import oneflow_api
 
-INVALID_BATCH_AXIS = oneflow_api.INVALID_BATCH_AXIS
 INVALID_SPLIT_AXIS = oneflow_api.INVALID_SPLIT_AXIS
+
+register_class_method_util.RegisterMethod4Class()
 
 atexit.register(oneflow_api.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
-atexit.register(oneflow.python.framework.python_interpreter_util.SetShuttingDown)
+atexit.register(oneflow_api.SetShuttingDown)
 del atexit
 
 import sys

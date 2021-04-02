@@ -20,18 +20,19 @@ limitations under the License.
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/control/ctrl_server.h"
+#include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/persistence/file_system.h"
-#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/vm/virtual_machine_scope.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
+#include "oneflow/core/rpc/include/manager.h"
 
 namespace oneflow {
 
@@ -67,7 +68,11 @@ int32_t GetDefaultGpuDeviceNum() {
 
 Resource GetDefaultResource(const EnvProto& env_proto) {
   Resource resource;
-  resource.set_machine_num(env_proto.machine_size());
+  if (env_proto.has_ctrl_bootstrap_conf()) {
+    resource.set_machine_num(env_proto.ctrl_bootstrap_conf().world_size());
+  } else {
+    resource.set_machine_num(env_proto.machine_size());
+  }
   resource.set_cpu_device_num(GetDefaultCpuDeviceNum());
   resource.set_gpu_device_num(GetDefaultGpuDeviceNum());
   return resource;
@@ -81,13 +86,41 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitGlobalCudaDeviceProp();
 #endif
   Global<EnvDesc>::New(env_proto);
-  Global<CtrlServer>::New();
-  Global<CtrlClient>::New();
-  int64_t this_mchn_id =
-      Global<EnvDesc>::Get()->GetMachineId(Global<CtrlServer>::Get()->this_machine_addr());
-  Global<MachineCtx>::New(this_mchn_id);
-  Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
-  Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));
+  Global<ProcessCtx>::New();
+  // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
+  // ~CtrlBootstrap.
+  if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+#ifdef RPC_BACKEND_LOCAL
+    LOG(INFO) << "using rpc backend: dry-run";
+    Global<RpcManager>::SetAllocated(new DryRunRpcManager());
+#else
+    static_assert(false, "requires rpc backend dry-run to dry run oneflow");
+#endif  // RPC_BACKEND_LOCAL
+  } else if ((env_proto.machine_size() == 1 && env_proto.has_ctrl_bootstrap_conf() == false)
+             || (env_proto.has_ctrl_bootstrap_conf()
+                 && env_proto.ctrl_bootstrap_conf().world_size() == 1)) /*single process*/ {
+#ifdef RPC_BACKEND_LOCAL
+    LOG(INFO) << "using rpc backend: local";
+    Global<RpcManager>::SetAllocated(new LocalRpcManager());
+#else
+    static_assert(false, "requires rpc backend local to run oneflow in single processs");
+#endif  // RPC_BACKEND_LOCAL
+  } else /*multi process, multi machine*/ {
+#ifdef RPC_BACKEND_GRPC
+    LOG(INFO) << "using rpc backend: gRPC";
+    Global<RpcManager>::SetAllocated(new GrpcRpcManager());
+#else
+    UNIMPLEMENTED() << "to run distributed oneflow, you must enable at least one multi-node rpc "
+                       "backend by adding cmake argument, for instance: -DRPC_BACKEND=GRPC";
+#endif  // RPC_BACKEND_GRPC
+  }
+  CHECK_JUST(Global<RpcManager>::Get()->CreateServer());
+  CHECK_JUST(Global<RpcManager>::Get()->Bootstrap());
+  CHECK_JUST(Global<RpcManager>::Get()->CreateClient());
+  Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto),
+                                    GlobalProcessCtx::NumOfProcessPerNode());
+  Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto),
+                                        GlobalProcessCtx::NumOfProcessPerNode());
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
   Global<EagerJobBuildAndInferCtxMgr>::New();
@@ -110,13 +143,10 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
     Global<ResourceDesc, ForSession>::Delete();
   }
   Global<ResourceDesc, ForEnv>::Delete();
-  CHECK_NOTNULL(Global<MachineCtx>::Get());
   CHECK_NOTNULL(Global<CtrlClient>::Get());
-  CHECK_NOTNULL(Global<CtrlServer>::Get());
   CHECK_NOTNULL(Global<EnvDesc>::Get());
-  Global<MachineCtx>::Delete();
-  Global<CtrlClient>::Delete();
-  Global<CtrlServer>::Delete();
+  Global<RpcManager>::Delete();
+  Global<ProcessCtx>::Delete();
   Global<EnvDesc>::Delete();
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();

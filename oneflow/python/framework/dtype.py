@@ -18,83 +18,23 @@ from __future__ import absolute_import
 import numpy as np
 import oneflow.core.common.data_type_pb2 as data_type_pb2
 from oneflow.python.oneflow_export import oneflow_export
-
-
-class dtype(object):
-    oneflow_proto_dtype = data_type_pb2.kInvalidDataType
-
-
-@oneflow_export("char")
-class char(dtype):
-    oneflow_proto_dtype = data_type_pb2.kChar
-
-
-@oneflow_export("float16")
-class float16(dtype):
-    oneflow_proto_dtype = data_type_pb2.kFloat16
-
-
-@oneflow_export("float")
-@oneflow_export("float32")
-class float32(dtype):
-    oneflow_proto_dtype = data_type_pb2.kFloat
-
-
-float = float32
-
-
-@oneflow_export("double")
-@oneflow_export("float64")
-class float64(dtype):
-    oneflow_proto_dtype = data_type_pb2.kDouble
-
-
-double = float64
-
-
-@oneflow_export("int8")
-class int8(dtype):
-    oneflow_proto_dtype = data_type_pb2.kInt8
-
-
-@oneflow_export("int32")
-class int32(dtype):
-    oneflow_proto_dtype = data_type_pb2.kInt32
-
-
-@oneflow_export("int64")
-class int64(dtype):
-    oneflow_proto_dtype = data_type_pb2.kInt64
-
-
-@oneflow_export("uint8")
-class uint8(dtype):
-    oneflow_proto_dtype = data_type_pb2.kUInt8
-
-
-@oneflow_export("record")
-class record(dtype):
-    oneflow_proto_dtype = data_type_pb2.kOFRecord
-
-
-@oneflow_export("tensor_buffer")
-class tensor_buffer(dtype):
-    oneflow_proto_dtype = data_type_pb2.kTensorBuffer
+import oneflow
+import oneflow_api
 
 
 _dtypes = [
-    char,
-    float,
-    float32,
-    double,
-    float64,
-    float16,
-    int8,
-    int32,
-    int64,
-    uint8,
-    record,
-    tensor_buffer,
+    oneflow.char,
+    oneflow.float,
+    oneflow.float32,
+    oneflow.double,
+    oneflow.float64,
+    oneflow.float16,
+    oneflow.int8,
+    oneflow.int32,
+    oneflow.int64,
+    oneflow.uint8,
+    oneflow.record,
+    oneflow.tensor_buffer,
 ]
 
 
@@ -103,43 +43,27 @@ def dtypes():
     return _dtypes
 
 
-_PROTO_DTYPE2ONEFLOW_DTYPE = {
-    data_type_pb2.kInt8: int8,
-    data_type_pb2.kInt32: int32,
-    data_type_pb2.kInt64: int64,
-    data_type_pb2.kUInt8: uint8,
-    data_type_pb2.kFloat: float32,
-    data_type_pb2.kDouble: double,
-    data_type_pb2.kFloat16: float16,
-    data_type_pb2.kChar: char,
-    data_type_pb2.kOFRecord: record,
-    data_type_pb2.kTensorBuffer: tensor_buffer,
-}
-
-
 def convert_proto_dtype_to_oneflow_dtype(proto_dtype):
-    if proto_dtype not in _PROTO_DTYPE2ONEFLOW_DTYPE:
-        raise NotImplementedError("proto_dtype %s not found in dict" % proto_dtype)
-    return _PROTO_DTYPE2ONEFLOW_DTYPE[proto_dtype]
+    return oneflow_api.deprecated.GetDTypeByDataType(proto_dtype)
 
 
 _ONEFLOW_DTYPE_TO_NUMPY_DTYPE = {
     # could be np.ubyte on some platform
-    char: np.byte,
-    float: np.float32,
-    float16: np.float16,
-    float32: np.float32,
-    float64: np.double,
-    double: np.double,
-    int8: np.int8,
-    int32: np.int32,
-    int64: np.int64,
-    uint8: np.uint8,
+    oneflow.char: np.byte,
+    oneflow.float: np.float32,
+    oneflow.float16: np.float16,
+    oneflow.float32: np.float32,
+    oneflow.float64: np.double,
+    oneflow.double: np.double,
+    oneflow.int8: np.int8,
+    oneflow.int32: np.int32,
+    oneflow.int64: np.int64,
+    oneflow.uint8: np.uint8,
 }
 
 
 @oneflow_export("convert_oneflow_dtype_to_numpy_dtype")
-def convert_oneflow_dtype_to_numpy_dtype(oneflow_dtype: dtype):
+def convert_oneflow_dtype_to_numpy_dtype(oneflow_dtype: oneflow.dtype):
     if oneflow_dtype not in _ONEFLOW_DTYPE_TO_NUMPY_DTYPE:
         raise NotImplementedError
     return _ONEFLOW_DTYPE_TO_NUMPY_DTYPE[oneflow_dtype]

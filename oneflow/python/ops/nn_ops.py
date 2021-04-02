@@ -674,6 +674,10 @@ def conv3d(
     if need_transpose:
         input = flow.transpose(input, perm=[0, 4, 1, 2, 3])
         filters = flow.transpose(filters, perm=[0, 4, 1, 2, 3])
+        # padding for `NDHWC` is [0, 0, 1, 1, 1] to `NCDHW` format [0, 1, 1, 1, 0]
+        if isinstance(padding, (list, tuple)):
+            padding = list(padding)
+            padding[1], padding[4] = padding[4], padding[1]
 
     assert len(input.shape) == 5
     assert len(filters.shape) == 5
@@ -2322,21 +2326,18 @@ def sigmoid_cross_entropy_with_logits(
     """
     assert labels is not None
     assert logits is not None
-    op_conf = op_conf_util.OperatorConf()
-    setattr(
-        op_conf,
-        "name",
-        name if name is not None else id_util.UniqueStr("SigmoidCrossEntropy_"),
+
+    op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("SigmoidCrossEntropy_")
+        )
+        .Op("sigmoid_cross_entropy")
+        .Input("prediction", [logits])
+        .Input("label", [labels])
+        .Output("loss")
+        .Build()
     )
-    op_conf.sigmoid_cross_entropy_conf.prediction = logits.unique_name
-    op_conf.sigmoid_cross_entropy_conf.label = labels.unique_name
-    op_conf.sigmoid_cross_entropy_conf.loss = "loss"
-    op_conf.sigmoid_cross_entropy_conf.label_type = labels.dtype.oneflow_proto_dtype
-    interpret_util.Forward(op_conf)
-    lbi = logical_blob_id_util.LogicalBlobId()
-    lbi.op_name = op_conf.name
-    lbi.blob_name = "loss"
-    return remote_blob_util.RemoteBlob(lbi)
+    return op.InferAndTryRun().RemoteBlobList()[0]
 
 
 def _GetSequence(value, n, name):
@@ -3032,7 +3033,7 @@ def hard_sigmoid(
 
         @flow.global_function()
         def hardsigmoid_job(x: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
-            out = flow.math.hardsigmoid(x)
+            out = flow.nn.hardsigmoid(x)
 
             return out
 
@@ -3128,6 +3129,8 @@ def swish(
         @flow.global_function()
         def swish_job(x: tp.Numpy.Placeholder(shape=(5, )))->tp.Numpy: 
             return flow.nn.swish(x)
+
+
         x = np.array([-0.5, 0, 0.5, 1, 1.5]).astype(np.float32)
 
 

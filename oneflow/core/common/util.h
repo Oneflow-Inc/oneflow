@@ -34,10 +34,10 @@ limitations under the License.
 #include <queue>
 #include <random>
 #include <thread>
-#include <unordered_map>
-#include <unordered_set>
 #include <utility>
+#include <cfenv>
 
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/meta_util.hpp"
 #include "oneflow/core/common/global.h"
 
@@ -96,12 +96,6 @@ template<typename T>
 bool operator==(const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {
   return lhs.lock().get() == rhs.lock().get();
 }
-
-template<typename Key, typename T, typename Hash = std::hash<Key>>
-using HashMap = std::unordered_map<Key, T, Hash>;
-
-template<typename Key, typename Hash = std::hash<Key>>
-using HashSet = std::unordered_set<Key, Hash>;
 
 template<typename T>
 void SortAndRemoveDuplication(std::vector<T>* vec) {
@@ -199,6 +193,18 @@ bool IsKernelSafeInt32(int64_t n);
 inline void HashCombine(size_t* seed, size_t hash) {
   *seed ^= (hash + 0x9e3779b9 + (*seed << 6U) + (*seed >> 2U));
 }
+
+class RoundModeGuard final {
+ public:
+  RoundModeGuard(int mode) {
+    saved_mode_ = std::fegetround();
+    CHECK_EQ(std::fesetround(mode), 0);
+  }
+  ~RoundModeGuard() { std::fesetround(saved_mode_); }
+
+ private:
+  int saved_mode_;
+};
 
 }  // namespace oneflow
 

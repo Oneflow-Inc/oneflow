@@ -33,10 +33,6 @@ std::tuple<int32_t, int32_t, int32_t> CalcMNK(const ShapeView& a_shape, const Sh
 
 }  // namespace
 
-REGISTER_FUNCTION_CONFIG_DEF().Bool(
-    "enable_float_compute_for_half_gemm", false,
-    "true means that the type of intermedia value is float when compute half gemm");
-
 template<DeviceType device_type, typename T>
 class MatmulFloatingKernel final : public user_op::OpKernel {
  public:
@@ -122,17 +118,10 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
           ctx->device_ctx(), out->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
     }
-    if (ctx->job_desc().Bool("enable_float_compute_for_half_gemm")) {
-      const float beta = has_add_to_output ? GetOneVal<float>() : GetZeroVal<float>();
-      NewKernelUtil<DeviceType::kGPU>::OFHGemmWithFloat(
-          ctx->device_ctx(), trans_a, trans_b, m, n, k, GetOneVal<float>(), a->dptr<float16>(),
-          b->dptr<float16>(), beta, out->mut_dptr<float16>());
-    } else {
-      const float16 beta = has_add_to_output ? GetOneVal<float16>() : GetZeroVal<float16>();
-      NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
-                                              GetOneVal<float16>(), a->dptr<float16>(),
-                                              b->dptr<float16>(), beta, out->mut_dptr<float16>());
-    }
+    const float16 beta = has_add_to_output ? GetOneVal<float16>() : GetZeroVal<float16>();
+    NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
+                                            GetOneVal<float16>(), a->dptr<float16>(),
+                                            b->dptr<float16>(), beta, out->mut_dptr<float16>());
   }
 };
 
@@ -242,17 +231,10 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
     }
     size_t batch_size = a->shape().Count(0, num_axes - 2);
     float16** buf_dptr = reinterpret_cast<float16**>(tmp_buf->mut_dptr<void>());
-    if (ctx->job_desc().Bool("enable_float_compute_for_half_gemm")) {
-      const float beta = has_add_to_output ? GetOneVal<float>() : GetZeroVal<float>();
-      NewKernelUtil<DeviceType::kGPU>::OFBatchedHGemmWithFloat(
-          ctx->device_ctx(), trans_a, trans_b, batch_size, m, n, k, GetOneVal<float>(),
-          a->dptr<float16>(), b->dptr<float16>(), beta, out->mut_dptr<float16>(), buf_dptr);
-    } else {
-      const float16 beta = has_add_to_output ? GetOneVal<float16>() : GetZeroVal<float16>();
-      NewKernelUtil<DeviceType::kGPU>::OFBatchedGemm(
-          ctx->device_ctx(), trans_a, trans_b, batch_size, m, n, k, GetOneVal<float16>(),
-          a->dptr<float16>(), b->dptr<float16>(), beta, out->mut_dptr<float16>(), buf_dptr);
-    }
+    const float16 beta = has_add_to_output ? GetOneVal<float16>() : GetZeroVal<float16>();
+    NewKernelUtil<DeviceType::kGPU>::OFBatchedGemm(
+        ctx->device_ctx(), trans_a, trans_b, batch_size, m, n, k, GetOneVal<float16>(),
+        a->dptr<float16>(), b->dptr<float16>(), beta, out->mut_dptr<float16>(), buf_dptr);
   }
 };
 

@@ -32,12 +32,11 @@ class UserOpConfWrapper;
 class InferContext;
 class SbpContext;
 class InferSbpSignatureFnContext;
-class BatchAxisContext;
 class InferOutputBlobTimeShapeFnContext;
+class InferParallelDistributionFnContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
-using BatchAxisInferFn = std::function<Maybe<void>(BatchAxisContext*)>;
 using GetSbpFn = std::function<Maybe<void>(SbpContext*)>;
 using InferSbpSignatureFn = std::function<Maybe<void>(InferSbpSignatureFnContext*)>;
 using InputArgModifier = InputBlobModifier;
@@ -49,6 +48,7 @@ using GetOutputArgModifier =
     std::function<OutputArgModifier*(const std::string& out_arg_name, int32_t out_arg_index)>;
 using OutputArgModifyFn = std::function<void(GetOutputArgModifier, const UserOpConfWrapper&)>;
 using InferOutputBlobTimeShapeFn = std::function<Maybe<void>(InferOutputBlobTimeShapeFnContext*)>;
+using InferParallelDistributionFn = std::function<Maybe<void>(InferParallelDistributionFnContext*)>;
 
 struct OpRegistryResult {
   OpRegistryResult() : cpu_only_supported(false), same_output_regst_num(-1) {}
@@ -59,8 +59,8 @@ struct OpRegistryResult {
   int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;
-  TensorDescInferFn tensor_desc_infer_fn;
-  BatchAxisInferFn batch_axis_infer_fn;
+  TensorDescInferFn logical_tensor_desc_infer_fn;
+  TensorDescInferFn physical_tensor_desc_infer_fn;
   GetSbpFn get_sbp_fn;
   InferSbpSignatureFn infer_sbp_signature_fn;
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistryResult since it is more about
@@ -68,6 +68,7 @@ struct OpRegistryResult {
   InputArgModifyFn input_arg_modify_fn;
   OutputArgModifyFn output_arg_modify_fn;
   InferOutputBlobTimeShapeFn infer_output_blob_time_shape_fn;
+  InferParallelDistributionFn infer_parallel_distribution_fn;
 };
 
 class OpRegistry final {
@@ -101,12 +102,14 @@ class OpRegistry final {
   OpRegistry& Attr(const std::string& name);
 
   OpRegistry& SetTensorDescInferFn(TensorDescInferFn fn);
-  OpRegistry& SetBatchAxisInferFn(BatchAxisInferFn fn);
+  OpRegistry& SetLogicalTensorDescInferFn(TensorDescInferFn fn);
+  OpRegistry& SetPhysicalTensorDescInferFn(TensorDescInferFn fn);
   OpRegistry& SetGetSbpFn(GetSbpFn fn);
   OpRegistry& SetInferSbpSignatureFn(InferSbpSignatureFn fn);
   OpRegistry& SetInputArgModifyFn(InputArgModifyFn fn);
   OpRegistry& SetOutputArgModifyFn(OutputArgModifyFn fn);
   OpRegistry& SetInferOutputBlobTimeShapeFn(InferOutputBlobTimeShapeFn fn);
+  OpRegistry& SetInferParallelDistributionFn(InferParallelDistributionFn fn);
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
 
   OpRegistry& Finish();

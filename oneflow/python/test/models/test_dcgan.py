@@ -192,9 +192,8 @@ class DCGAN:
 
 
 class layers:
-    @classmethod
+    @staticmethod
     def deconv2d(
-        cls,
         input,
         filters,
         size,
@@ -249,9 +248,8 @@ class layers:
             output = flow.nn.bias_add(output, bias, "NCHW")
         return output
 
-    @classmethod
+    @staticmethod
     def conv2d(
-        cls,
         input,
         filters,
         size,
@@ -300,9 +298,8 @@ class layers:
             output = flow.nn.bias_add(output, bias, "NCHW")
         return output
 
-    @classmethod
+    @staticmethod
     def dense(
-        cls,
         input,
         units,
         name,
@@ -350,7 +347,7 @@ class layers:
         out = flow.reshape(out, in_shape[:-1] + (units,)) if in_num_axes > 2 else out
         return out
 
-    @classmethod
-    def batchnorm(cls, input, name, axis=1, reuse=False):
+    @staticmethod
+    def batchnorm(input, name, axis=1, reuse=False):
         name_ = name if reuse == False else name + "_reuse"
         return flow.layers.batch_normalization(input, axis=axis, name=name_)

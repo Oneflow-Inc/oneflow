@@ -16,55 +16,73 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/naive_b2p_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing_zeros_task_node.h"
+#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/id_serialization.h"
+#include "oneflow/core/device/stream_index.h"
 
 namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
-    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
-    const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
-    const SbpParallel& dst_sbp_parallel) const {
-  if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
-      && dst_parallel_desc.parallel_num() != 1 && dst_sbp_parallel.has_partial_sum_parallel()) {
-    HashMap<CompTaskNode*, CompTaskNode*> dst_node2nearest_src_node;
-    int64_t nearest_dst_node_idx = -1;
-    int64_t nearest_dst_node_distance = -1;
-    std::vector<CompTaskNode*> nearest_src_comp_tasks;
-    for (int64_t dst_node_idx = 0; dst_node_idx < sorted_dst_comp_tasks.size(); ++dst_node_idx) {
-      CompTaskNode* dst_node = sorted_dst_comp_tasks.at(dst_node_idx);
-      const int64_t nearest_src_node_idx =
-          SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_src_comp_tasks, dst_node);
-      CHECK_NE_OR_RETURN(nearest_src_node_idx, -1);
-      CompTaskNode* nearest_src_node = sorted_src_comp_tasks.at(nearest_src_node_idx);
-      CHECK_OR_RETURN(dst_node2nearest_src_node.emplace(dst_node, nearest_src_node).second);
-      const int64_t distance = SubTskGphBuilderUtil::GetDistance(nearest_src_node, dst_node);
-      if (nearest_dst_node_idx == -1 || distance < nearest_dst_node_distance) {
-        nearest_dst_node_idx = dst_node_idx;
-        nearest_dst_node_distance = distance;
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
+    std::vector<TaskNode*>* sorted_out_tasks,
+    std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
+    const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
+    const BlobDesc& logical_blob_desc, const SbpParallel& in_sbp_parallel,
+    const SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
+  if ((in_parallel_desc.parallel_num() == 1 || in_sbp_parallel.has_broadcast_parallel())
+      && out_parallel_desc.parallel_num() != 1 && out_sbp_parallel.has_partial_sum_parallel()) {
+    HashMap<int64_t, int64_t> out_id2nearest_in_id;
+    int64_t nearest_out_node_idx = -1;
+    int64_t nearest_out_node_distance = -1;
+
+    FOR_RANGE(int64_t, out_id, 0, out_parallel_desc.parallel_num()) {
+      const int64_t nearest_in_parallel_id = SubTskGphBuilderUtil::FindNearestSrcParallelId(
+          in_parallel_desc, out_parallel_desc, out_id);
+      out_id2nearest_in_id.emplace(out_id, nearest_in_parallel_id);
+      const int64_t distance = SubTskGphBuilderUtil::GetDistance(
+          in_parallel_desc, nearest_in_parallel_id, out_parallel_desc, out_id);
+      if (nearest_out_node_idx == -1 || distance < nearest_out_node_distance) {
+        nearest_out_node_idx = out_id;
+        nearest_out_node_distance = distance;
       }
     }
-    for (int64_t dst_node_idx = 0; dst_node_idx < sorted_dst_comp_tasks.size(); ++dst_node_idx) {
-      CompTaskNode* dst_node = sorted_dst_comp_tasks.at(dst_node_idx);
-      CompTaskNode* nearest_src_node = dst_node2nearest_src_node.at(dst_node);
-      if (dst_node_idx == nearest_dst_node_idx) {
-        TaskNode* proxy = ctx->GetProxyNode(nearest_src_node, nearest_src_node->MemZoneId121(),
-                                            dst_node->machine_id(), dst_node->MemZoneId121());
-        Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
+    FOR_RANGE(int64_t, out_id, 0, out_parallel_desc.parallel_num()) {
+      const int64_t nearest_in_id = out_id2nearest_in_id.at(out_id);
+      TaskNode* nearest_in_node = sorted_in_tasks.at(nearest_in_id);
+      if (out_id == nearest_out_node_idx) {
+        TaskNode* proxy =
+            ctx->task_graph()->GetProxyNode(nearest_in_node, lbi, out_parallel_desc, out_id);
+
+        sorted_out_tasks->push_back(proxy);
       } else {
+        const int64_t out_machine_id = CHECK_JUST(out_parallel_desc.MachineId4ParallelId(out_id));
+        const int64_t out_dev_phy_id = CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(out_id));
+        int64_t thrd_id;
+        if (out_parallel_desc.device_type() == DeviceType::kGPU) {
+#ifdef WITH_CUDA
+          DeviceId device_id{static_cast<DeviceId::rank_t>(out_machine_id), DeviceType::kGPU,
+                             static_cast<DeviceId::device_index_t>(out_dev_phy_id)};
+          auto* stream_index_generator =
+              Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
+          auto stream_index = stream_index_generator->GenerateComputeStreamIndex();
+          thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
+#else
+          UNIMPLEMENTED();
+#endif
+        } else if (out_parallel_desc.device_type() == DeviceType::kCPU) {
+          thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(out_machine_id);
+        } else {
+          UNIMPLEMENTED();
+        }
         auto* zeros_node = ctx->task_graph()->NewNode<BoxingZerosTaskNode>();
-        zeros_node->Init(dst_node->machine_id(), dst_node->thrd_id(), dst_node->area_id(), lbi,
-                         logical_blob_desc.shape(), logical_blob_desc.data_type(),
-                         *nearest_src_node->logical_node()->out_blob_time_shape());
-        nearest_src_node->BuildCtrlRegstDesc(zeros_node);
-        Connect<TaskNode>(nearest_src_node, ctx->task_graph()->NewEdge(), zeros_node);
-        Connect<TaskNode>(zeros_node, ctx->task_graph()->NewEdge(), dst_node);
+        zeros_node->Init(out_machine_id, thrd_id, lbi, logical_blob_desc.shape(),
+                         logical_blob_desc.data_type(), time_shape);
+        nearest_in_node->BuildCtrlRegstDesc(zeros_node);
+        Connect<TaskNode>(nearest_in_node, ctx->task_graph()->NewEdge(), zeros_node);
+        sorted_out_tasks->push_back(zeros_node);
       }
     }
-    return TRY(BuildSubTskGphBuilderStatus(sorted_src_comp_tasks.front(),
-                                           sorted_dst_comp_tasks.front(), src_parallel_desc,
-                                           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                                           lbi, logical_blob_desc, "NaiveB2PSubTskGphBuilder", ""));
+    return TRY(BuildSubTskGphBuilderStatus("NaiveB2PSubTskGphBuilder", ""));
   } else {
     return Error::BoxingNotSupportedError();
   }

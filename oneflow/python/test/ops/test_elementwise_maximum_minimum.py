@@ -24,10 +24,19 @@ import os
 
 
 def _compare_Xmum_with_np(
-    input_shape, compare_type, device_type, machine_ids, device_counts, value_type
+    input_shape,
+    compare_type,
+    device_type,
+    machine_ids,
+    device_counts,
+    value_type,
+    dx_only,
 ):
     input_1 = np.random.random(size=input_shape).astype(value_type["np_type"])
-    input_2 = np.random.random(size=input_shape).astype(value_type["np_type"])
+    if dx_only:
+        input_2 = (np.zeros(input_shape) + 1.5).astype(value_type["np_type"])
+    else:
+        input_2 = np.random.random(size=input_shape).astype(value_type["np_type"])
 
     assert compare_type in ["maximum", "minimum"]
     assert device_type in ["cpu", "gpu"]
@@ -88,7 +97,7 @@ def _compare_Xmum_with_np(
                 name="x1_var",
             )
             x1_var = of_input_1 + v1
-
+        if not dx_only:
             v2 = flow.get_variable(
                 shape=input_2.shape,
                 dtype=value_type["of_type"],
@@ -96,6 +105,10 @@ def _compare_Xmum_with_np(
                 name="x2_var",
             )
             x2_var = of_input_2 + v2
+        else:
+            x2_var = flow.constant(
+                value=1.5, shape=of_input_2.shape, dtype=value_type["of_type"]
+            )
 
         flow.watch_diff(x1_var, assert_prediction_grad)  # Only Compare input1 Grad
 
@@ -116,7 +129,7 @@ def _compare_Xmum_with_np(
 
 
 def _gen_arg_dict(
-    shape, compare_type, device_type, machine_ids, device_counts, value_type
+    shape, compare_type, device_type, machine_ids, device_counts, value_type, dx_only,
 ):
     arg_dict = OrderedDict()
     arg_dict["input_shape"] = [*shape]
@@ -125,6 +138,7 @@ def _gen_arg_dict(
     arg_dict["machine_ids"] = [machine_ids]
     arg_dict["device_counts"] = [device_counts]
     arg_dict["value_type"] = [*value_type]
+    arg_dict["dx_only"] = [*dx_only]
     return arg_dict
 
 
@@ -138,6 +152,7 @@ class TestXmum1n1d(flow.unittest.TestCase):
             machine_ids="0:0",
             device_counts=1,
             value_type=[{"np_type": np.float32, "of_type": flow.float32}],
+            dx_only=[True, False],
         )
         for arg in GenArgList(arg_dict):
             _compare_Xmum_with_np(*arg)
@@ -154,6 +169,7 @@ class TestXmum1n1d(flow.unittest.TestCase):
                 {"np_type": np.float32, "of_type": flow.float32},
                 {"np_type": np.float64, "of_type": flow.float64},
             ],
+            dx_only=[True, False],
         )
         for arg in GenArgList(arg_dict):
             _compare_Xmum_with_np(*arg)
@@ -169,6 +185,7 @@ class TestXmum1n2d(flow.unittest.TestCase):
             machine_ids="0:0-1",
             device_counts=2,
             value_type=[{"np_type": np.float32, "of_type": flow.float32}],
+            dx_only=[True, False],
         )
         for arg in GenArgList(arg_dict):
             _compare_Xmum_with_np(*arg)
@@ -182,6 +199,7 @@ class TestXmum1n2d(flow.unittest.TestCase):
             machine_ids="0:0-1",
             device_counts=2,
             value_type=[{"np_type": np.float32, "of_type": flow.float32}],
+            dx_only=[True, False],
         )
         for arg in GenArgList(arg_dict):
             _compare_Xmum_with_np(*arg)

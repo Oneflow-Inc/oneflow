@@ -28,12 +28,12 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
-import oneflow.python.eager.vm_util as vm_util
+import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.blob_register as blob_register_util
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 def InputOpByArgBlobDef(blob_def):
@@ -81,15 +81,19 @@ def EagerReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
     op_attribute = add_and_infer(op_conf, scope)
 
     def BuildInstruction(builder):
-        get_blob_scope = blob_register.BnInOp2BlobObjectScope
-        with get_blob_scope(op_attribute) as bn_in_op2blob_object:
+        get_blob_scope = blob_register_util.BnInOp2BlobObjectScope
+        with get_blob_scope(blob_register, op_attribute) as bn_in_op2blob_object:
+            cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+                str(op_attribute)
+            )
             builder.StatelessCall(
-                op_attribute,
+                cfg_op_attribute,
                 remote_blob.blob_object.parallel_desc_symbol.parallel_conf,
-                bn_in_op2blob_object=bn_in_op2blob_object,
+                bn_in_op2blob_object,
+                boxing_util.BoxingTo,
             )
 
-    vm_util.LogicalRun(BuildInstruction)
+    oneflow_api.deprecated.LogicalRun(BuildInstruction)
     return remote_blob_util.RemoteBlob(lbi)
 
 

@@ -17,6 +17,7 @@ import unittest
 from collections import OrderedDict
 import numpy as np
 import oneflow as flow
+import os
 
 from test_util import (
     GenArgDict,
@@ -96,8 +97,6 @@ def _test_masked_fill_fw_bw(test_case, device, x_shape, mask_shape, type_name, v
             flow.watch_diff(out, test_global_storage.Setter("out_diff"))
             return out
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     x = np.random.randint(low=0, high=100, size=x_shape)
     mask = np.random.randint(low=0, high=2, size=mask_shape)
 
@@ -125,6 +124,7 @@ def _test_masked_fill_fw_bw(test_case, device, x_shape, mask_shape, type_name, v
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaskedFill(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_masked_fill_fw_bw(test_case):
         arg_dict = OrderedDict()
         arg_dict["type_name"] = [
@@ -137,15 +137,12 @@ class TestMaskedFill(flow.unittest.TestCase):
         ]
         arg_dict["device"] = ["gpu", "cpu"]
         arg_dict["x_shape"] = [
-            (2, 4),
-            (1, 4),
             (2, 2, 4),
             (2, 1, 4),
-            (2, 3, 2, 4),
             (2, 2, 3, 2, 4),
         ]
         arg_dict["mask_shape"] = [(2, 1, 2, 4)]
-        arg_dict["value"] = [2.5, 3.3, -5.5]
+        arg_dict["value"] = [2.5, -5.5]
         for arg in GenArgDict(arg_dict):
             if arg["device"] == "cpu" and arg["type_name"] == "float16":
                 continue

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/eager/eager_symbol.pb.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
@@ -21,15 +22,16 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/vm/string_symbol.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/scope.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
+#include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 
@@ -41,7 +43,7 @@ namespace {
 Maybe<void> StorageAdd(const EagerSymbol& symbol) {
   int64_t symbol_id = symbol.symbol_id();
   if (symbol.has_string_symbol()) {
-    JUST(Global<symbol::Storage<std::string>>::Get()->Add(symbol_id, symbol.string_symbol()));
+    JUST(Global<symbol::Storage<StringSymbol>>::Get()->TryAdd(symbol_id, symbol.string_symbol()));
   } else if (symbol.has_scope_symbol()) {
     JUST(Global<symbol::Storage<Scope>>::Get()->TryAdd(symbol_id, symbol.scope_symbol()));
   } else if (symbol.has_job_conf_symbol()) {
@@ -50,7 +52,8 @@ Maybe<void> StorageAdd(const EagerSymbol& symbol) {
     JUST(Global<symbol::Storage<ParallelDesc>>::Get()->TryAdd(symbol_id,
                                                               symbol.parallel_conf_symbol()));
   } else if (symbol.has_op_conf_symbol()) {
-    JUST(Global<symbol::Storage<OperatorConf>>::Get()->Add(symbol_id, symbol.op_conf_symbol()));
+    JUST(Global<symbol::Storage<OperatorConfSymbol>>::Get()->TryAdd(symbol_id,
+                                                                    symbol.op_conf_symbol()));
   } else if (symbol.has_op_node_signature_symbol()) {
     JUST(Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->TryAdd(
         symbol_id, symbol.op_node_signature_symbol()));
@@ -64,76 +67,47 @@ Maybe<void> StorageAdd(const EagerSymbol& symbol) {
 
 Maybe<void> EagerOneflow::RunPhysicalInstruction(
     const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction) {
-  const vm::InstructionListProto& instruction_list_proto =
-      cluster_instruction->eager_instruction().instruction_list();
-  const EagerSymbolList& eager_symbol_list =
-      cluster_instruction->eager_instruction().eager_symbol_list();
+  const auto& instruction_list = std::make_shared<vm::InstructionMsgList>();
+  const auto& eage_instructions = cluster_instruction->eager_instruction();
+  for (const auto& instr_proto : eage_instructions.instruction_list().instruction()) {
+    instruction_list->EmplaceBack(ObjectMsgPtr<vm::InstructionMsg>::New(instr_proto));
+  }
+  return RunPhysicalInstruction(instruction_list, eage_instructions.eager_symbol_list());
+}
+
+Maybe<void> EagerOneflow::RunPhysicalInstruction(
+    const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
+    const std::shared_ptr<eager::cfg::EagerSymbolList>& cfg_eager_symbol_list) {
+  eager::EagerSymbolList eager_symbol_list;
+  cfg_eager_symbol_list->ToProto(&eager_symbol_list);
+  return RunPhysicalInstruction(instruction_list, eager_symbol_list);
+}
+
+Maybe<void> EagerOneflow::RunPhysicalInstruction(
+    const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
+    const eager::EagerSymbolList& eager_symbol_list) {
   for (const auto& eager_symbol : eager_symbol_list.eager_symbol()) {
     JUST(StorageAdd(eager_symbol));
   }
-  return vm::Run(instruction_list_proto);
-}
-
-Maybe<void> EagerOneflow::RunPhysicalInstruction(
-    const vm::cfg::InstructionListProto& instruction_list_proto,
-    const eager::cfg::EagerSymbolList& eager_symbol_list) {
-  auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
-  instruction_list_proto.ToProto(
-      cluster_instruction->mutable_eager_instruction()->mutable_instruction_list());
-  eager_symbol_list.ToProto(
-      cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list());
-  return RunPhysicalInstruction(
-      std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
-}
-
-Maybe<void> EagerOneflow::RunPhysicalInstruction(
-    const std::shared_ptr<vm::cfg::InstructionListProto>& cfg_instruction_list,
-    const std::string& eager_symbol_list_str) {
-  auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
-  vm::InstructionListProto* instruction_list_proto =
-      cluster_instruction->mutable_eager_instruction()->mutable_instruction_list();
-  cfg_instruction_list->ToProto(instruction_list_proto);
-  EagerSymbolList* eager_symbol_list =
-      cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list();
-  CHECK_OR_RETURN(TxtString2PbMessage(eager_symbol_list_str, eager_symbol_list))
-      << "EagerSymbolList parse failed";
-  return RunPhysicalInstruction(
-      std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
+  return vm::Run(instruction_list.get());
 }
 
 Maybe<void> EagerOneflow::RunLogicalInstruction(
-    const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction) {
-  CHECK(cluster_instruction->has_eager_instruction());
-  CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  ClusterInstruction::MasterSendEagerInstruction(*cluster_instruction);
-  return RunPhysicalInstruction(cluster_instruction);
-}
-
-Maybe<void> EagerOneflow::RunLogicalInstruction(
-    const vm::cfg::InstructionListProto& instruction_list_proto,
-    const eager::cfg::EagerSymbolList& eager_symbol_list) {
-  auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
-  instruction_list_proto.ToProto(
-      cluster_instruction->mutable_eager_instruction()->mutable_instruction_list());
-  eager_symbol_list.ToProto(
-      cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list());
-  return RunLogicalInstruction(
-      std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
-}
-
-Maybe<void> EagerOneflow::RunLogicalInstruction(
-    const std::shared_ptr<vm::cfg::InstructionListProto>& cfg_instruction_list,
-    const std::string& eager_symbol_list_str) {
-  auto cluster_instruction = std::make_shared<ClusterInstructionProto>();
-  vm::InstructionListProto* instruction_list_proto =
-      cluster_instruction->mutable_eager_instruction()->mutable_instruction_list();
-  cfg_instruction_list->ToProto(instruction_list_proto);
-  EagerSymbolList* eager_symbol_list =
-      cluster_instruction->mutable_eager_instruction()->mutable_eager_symbol_list();
-  CHECK_OR_RETURN(TxtString2PbMessage(eager_symbol_list_str, eager_symbol_list))
-      << "EagerSymbolList parse failed";
-  return RunLogicalInstruction(
-      std::const_pointer_cast<const ClusterInstructionProto>(cluster_instruction));
+    const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
+    const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) {
+  ClusterInstructionProto cluster_instruction;
+  auto* repeated_instruction_proto = cluster_instruction.mutable_eager_instruction()
+                                         ->mutable_instruction_list()
+                                         ->mutable_instruction();
+  OBJECT_MSG_LIST_FOR_EACH_PTR(instruction_list.get(), instruction_msg) {
+    instruction_msg->ToProto(repeated_instruction_proto->Add());
+  }
+  eager_symbol_list->ToProto(
+      cluster_instruction.mutable_eager_instruction()->mutable_eager_symbol_list());
+  CHECK(GlobalProcessCtx::IsThisProcessMaster());
+  ClusterInstruction::MasterSendEagerInstruction(cluster_instruction);
+  const auto& eage_instruction = cluster_instruction.eager_instruction();
+  return RunPhysicalInstruction(instruction_list, eage_instruction.eager_symbol_list());
 }
 
 COMMAND(Global<EagerOneflow>::SetAllocated(new EagerOneflow()));

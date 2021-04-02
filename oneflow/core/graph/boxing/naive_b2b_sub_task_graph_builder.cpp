@@ -19,26 +19,23 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> NaiveB2BSubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
-    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
-    const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
-    const SbpParallel& dst_sbp_parallel) const {
-  if ((src_parallel_desc.parallel_num() == 1 || src_sbp_parallel.has_broadcast_parallel())
-      && (dst_parallel_desc.parallel_num() == 1 || dst_sbp_parallel.has_broadcast_parallel())) {
-    std::vector<CompTaskNode*> nearest_src_comp_tasks;
-    for (CompTaskNode* dst_node : sorted_dst_comp_tasks) {
-      CompTaskNode* nearest_src_node =
-          SubTskGphBuilderUtil::FindNearestNode(sorted_src_comp_tasks, dst_node);
-      CHECK_NOTNULL(nearest_src_node);
-      TaskNode* proxy = ctx->GetProxyNode(nearest_src_node, nearest_src_node->MemZoneId121(),
-                                          dst_node->machine_id(), dst_node->MemZoneId121());
-      Connect<TaskNode>(proxy, ctx->task_graph()->NewEdge(), dst_node);
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
+    std::vector<TaskNode*>* sorted_out_tasks,
+    std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
+    const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
+    const BlobDesc& logical_blob_desc, const SbpParallel& in_sbp_parallel,
+    const SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
+  if ((in_parallel_desc.parallel_num() == 1 || in_sbp_parallel.has_broadcast_parallel())
+      && (out_parallel_desc.parallel_num() == 1 || out_sbp_parallel.has_broadcast_parallel())) {
+    FOR_RANGE(int64_t, out_id, 0, out_parallel_desc.parallel_num()) {
+      const int64_t nearest_in_parallel_id = SubTskGphBuilderUtil::FindNearestSrcParallelId(
+          in_parallel_desc, out_parallel_desc, out_id);
+      TaskNode* nearest_in_node = sorted_in_tasks.at(nearest_in_parallel_id);
+      TaskNode* proxy =
+          ctx->task_graph()->GetProxyNode(nearest_in_node, lbi, out_parallel_desc, out_id);
+      sorted_out_tasks->push_back(proxy);
     }
-    return TRY(BuildSubTskGphBuilderStatus(sorted_src_comp_tasks.front(),
-                                           sorted_dst_comp_tasks.front(), src_parallel_desc,
-                                           dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                                           lbi, logical_blob_desc, "NaiveB2BSubTskGphBuilder", ""));
+    return TRY(BuildSubTskGphBuilderStatus("NaiveB2BSubTskGphBuilder", ""));
   } else {
     return Error::BoxingNotSupportedError();
   }

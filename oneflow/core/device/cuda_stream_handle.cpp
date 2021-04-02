@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
 
@@ -61,7 +60,11 @@ const cublasHandle_t* CudaStreamHandle::cublas_tensor_op_math_handle() {
     cublas_tensor_op_math_handle_.reset(new cublasHandle_t);
     OF_CUBLAS_CHECK(cublasCreate(cublas_tensor_op_math_handle_.get()));
     OF_CUBLAS_CHECK(cublasSetStream(*cublas_tensor_op_math_handle_, *cuda_stream()));
+#if CUDA_VERSION >= 11000
+    OF_CUBLAS_CHECK(cublasSetMathMode(*cublas_tensor_op_math_handle_, CUBLAS_DEFAULT_MATH));
+#else
     OF_CUBLAS_CHECK(cublasSetMathMode(*cublas_tensor_op_math_handle_, CUBLAS_TENSOR_OP_MATH));
+#endif
   }
   return cublas_tensor_op_math_handle_.get();
 }

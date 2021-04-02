@@ -1,12 +1,10 @@
 from __future__ import absolute_import
 
 import os
-import re
 import sys
 import argparse
-import shutil
 import glob
-
+import platform
 from setuptools import find_packages
 from setuptools import setup
 from setuptools.dist import Distribution
@@ -37,11 +35,13 @@ sys.argv = ["setup.py"] + remain_args
 
 REQUIRED_PACKAGES = [
     "numpy",
-    "protobuf",
+    "protobuf>=3.9.2",
     "tqdm",
     "requests",
-    "onnx",
 ]
+
+if platform.system() != "Darwin":
+    REQUIRED_PACKAGES += ["onnx"]
 
 
 class BinaryDistribution(Distribution):

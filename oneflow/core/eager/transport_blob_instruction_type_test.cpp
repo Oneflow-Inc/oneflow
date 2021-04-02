@@ -138,7 +138,7 @@ int64_t NewJobDescSymbol(InstructionMsgList* list,
 
 int64_t NewOpConfSymbol(InstructionMsgList* list, const std::shared_ptr<OperatorConf>& op_conf) {
   int64_t op_conf_id = vm::TestUtil::NewSymbol(list);
-  CHECK_JUST(Global<symbol::Storage<OperatorConf>>::Get()->Add(op_conf_id, *op_conf));
+  CHECK_JUST(Global<symbol::Storage<OperatorConfSymbol>>::Get()->Add(op_conf_id, *op_conf));
   list->EmplaceBack(
       vm::NewInstruction("InitOperatorConfSymbol")->add_init_symbol_operand(op_conf_id));
   return op_conf_id;
@@ -249,9 +249,17 @@ class SendRecvUtil {
   std::string recv_instr_name_;
 };
 
+void InitNumProcessPerNode() {
+  Global<NumProcessPerNode>::New();
+  Global<NumProcessPerNode>::Get()->set_value(1);
+}
+
+void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+
 }  // namespace
 
 TEST(SendReceiveInstructionType, naive) {
+  InitNumProcessPerNode();
   vm::TestResourceDescScope scope(1, 1, 2);
   auto vm0 = MakeVM(0);
   int64_t src_blob_id = 0;
@@ -292,6 +300,7 @@ TEST(SendReceiveInstructionType, naive) {
   ASSERT_TRUE(token2recv_request.find(header_token) != token2recv_request.end());
   ASSERT_TRUE(token2send_request.find(body_token) != token2send_request.end());
   ASSERT_TRUE(token2recv_request.find(body_token) != token2recv_request.end());
+  DestroyNumProcessPerNode();
 }
 
 }  // namespace test

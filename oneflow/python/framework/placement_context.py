@@ -22,9 +22,9 @@ import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.op_util as op_util
 import oneflow.python.framework.session_context as session_ctx
-import oneflow.python.framework.parallel_conf_util as parallel_conf_util
 import oneflow
 import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api
 
 
 class PlacementScope(object):
@@ -32,11 +32,12 @@ class PlacementScope(object):
 
 
 class EmptyPlacementScope(PlacementScope):
-    def __init__(self, device_tag, machine_device_ids):
+    def __init__(self, device_tag, machine_device_ids, hierarchy):
         if isinstance(machine_device_ids, (list, tuple)) == False:
             machine_device_ids = [machine_device_ids]
         self.device_tag_ = device_tag
         self.machine_device_ids_ = machine_device_ids
+        self.hierarchy_ = hierarchy
 
     @property
     def device_tag(self):
@@ -45,6 +46,10 @@ class EmptyPlacementScope(PlacementScope):
     @property
     def machine_device_ids(self):
         return self.machine_device_ids_
+
+    @property
+    def hierarchy(self):
+        return self.hierarchy_
 
     def __enter__(self):
         # do nothing
@@ -75,7 +80,7 @@ def MakeParallelConf4Resource(device_tag, resource):
         machine_device_ids = GetCpuMachineDeviceIds(resource)
     else:
         raise NotImplementedError
-    return parallel_conf_util.MakeParallelConf(device_tag, machine_device_ids)
+    return oneflow_api.MakeParallelConf(device_tag, machine_device_ids)
 
 
 def MakeMachineId2DeviceIdList(parallel_conf):

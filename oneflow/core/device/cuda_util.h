@@ -179,6 +179,10 @@ class CudaCurrentDeviceGuard final {
   int32_t saved_dev_id_ = -1;
 };
 
+int GetCudaSmVersion();
+
+int GetCudaPtxVersion();
+
 }  // namespace oneflow
 
 #else

@@ -28,6 +28,7 @@ def min_max_observer(
     input: oneflow_api.BlobDesc,
     quantization_bit: int = 8,
     quantization_scheme: str = "symmetric",
+    quantization_formula: str = "google",
     per_layer_quantization: bool = True,
     name: Optional[str] = None,
 ) -> Tuple[oneflow_api.BlobDesc, oneflow_api.BlobDesc]:
@@ -67,10 +68,11 @@ def min_max_observer(
 
     Args:
         input (oneflow_api.BlobDesc): input tensor.
-        quantization_bit (Optional[int], optional): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8. 
-        quantization_scheme (Optional[str], optional): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric". 
-        per_layer_quantization (Optional[bool], optional): True or False, means per-layer / per-channel quantization. Defaults to True.
-        name (Optional[str], optional): This operator's name(optional). Defaults to None.
+        quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8. 
+        quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric". 
+        quantization_formula (str): Support "google" or "cambricon".
+        per_layer_quantization (bool): True or False, means per-layer / per-channel quantization. Defaults to True.
+        name (Optional[str]): This operator's name. Defaults to None.
 
     Returns:
         Tuple[oneflow_api.BlobDesc, oneflow_api.BlobDesc]: The scale and zero_point of input tensor.
@@ -89,16 +91,22 @@ def min_max_observer(
         ): tp.Numpy
             with flow.scope.placement(device_type, "0:0"):
                 scale, zero_point = flow.quantization.min_max_observer(
-                    input, quantization_bit=8, quantization_scheme="symmetric", per_layer_quantization=True
+                    input, quantization_bit=8,
+                    quantization_scheme="symmetric",
+                    quantization_formula="google",
+                    per_layer_quantization=True
                 )
             return scale, zero_point
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         input = (np.random.random(input_shape) - 0.5).astype(type_name_to_np_type[dtype])
         scale, zero_point = QuantizeJob(input)
 
     """
+    if quantization_formula == "cambricon" and not per_layer_quantization:
+        raise NotImplementedError(
+            "per-channel mode is not supported in cambricon scheme"
+        )
+
     scale, zero_point = (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("MinMaxObserver_")
@@ -109,6 +117,7 @@ def min_max_observer(
         .Output("zero_point")
         .Attr("quantization_bit", quantization_bit)
         .Attr("quantization_scheme", quantization_scheme)
+        .Attr("quantization_formula", quantization_formula)
         .Attr("per_layer_quantization", per_layer_quantization)
         .Build()
         .InferAndTryRun()
@@ -118,11 +127,12 @@ def min_max_observer(
     return scale, zero_point
 
 
-@oneflow_export("quantization.moving_average_min_maxObserver")
+@oneflow_export("quantization.moving_average_min_max_observer")
 def moving_average_min_max_observer(
     input: oneflow_api.BlobDesc,
     quantization_bit: int = 8,
     quantization_scheme: str = "symmetric",
+    quantization_formula: str = "google",
     momentum: float = 0.95,
     name: Optional[str] = None,
 ) -> Tuple[oneflow_api.BlobDesc, oneflow_api.BlobDesc]:
@@ -172,10 +182,11 @@ def moving_average_min_max_observer(
     
     Args:
         input (oneflow_api.BlobDesc): input tensor.
-        quantization_bit (Optional[int], optional): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8. 
-        quantization_scheme (Optional[str], optional): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric". 
-        momentum (Optional[float], optional): Smoothing parameter for exponential moving average operation. Defaults to 0.95.
-        name (Optional[str], optional): This operator's name(optional). Defaults to None.
+        quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8. 
+        quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric". 
+        quantization_formula (str): Support "google" or "cambricon".
+        momentum (float): Smoothing parameter for exponential moving average operation. Defaults to 0.95.
+        name (Optional[str]): This operator's name. Defaults to None.
 
     Returns:
         Tuple[oneflow_api.BlobDesc, oneflow_api.BlobDesc]: The scale and zero_point of input tensor.
@@ -193,13 +204,14 @@ def moving_average_min_max_observer(
             input: tp.Numpy.Placeholder(input_shape, dtype=type_name_to_flow_type[dtype])
         ): tp.Numpy
             with flow.scope.placement(device_type, "0:0"):
-                scale, zero_point = flow.quantization.moving_average_min_maxObserver(
-                    input, quantization_bit=8, quantization_scheme="symmetric", momentum=0.95
+                scale, zero_point = flow.quantization.moving_average_min_max_observer(
+                    input, quantization_bit=8,
+                    quantization_scheme="symmetric",
+                    quantization_formula="google",
+                    momentum=0.95
                 )
             return scale, zero_point
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         input = (np.random.random(input_shape) - 0.5).astype(type_name_to_np_type[dtype])
         scale, zero_point = QuantizeJob(input)
 
@@ -246,6 +258,7 @@ def moving_average_min_max_observer(
         .Attr("stop_update_after_iters", stop_update_after_iters)
         .Attr("quantization_bit", quantization_bit)
         .Attr("quantization_scheme", quantization_scheme)
+        .Attr("quantization_formula", quantization_formula)
         .Attr("momentum", momentum)
         .Build()
         .InferAndTryRun()
@@ -262,6 +275,7 @@ def fake_quantization(
     zero_point: oneflow_api.BlobDesc,
     quantization_bit: int = 8,
     quantization_scheme: str = "symmetric",
+    quantization_formula: str = "google",
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     r"""Simulate the quantize and dequantize operations in training time.
@@ -290,11 +304,12 @@ def fake_quantization(
 
     Args:
         input (oneflow_api.BlobDesc): input tensor.
-        scale (oneflow_api.BlobDesc): Computed by min_max_observer or moving_average_min_maxObserver op.
-        zero_point (oneflow_api.BlobDesc): Computed by min_max_observer or moving_average_min_maxObserver op.
-        quantization_bit (Optional[int], optional): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8. 
-        quantization_scheme (Optional[str], optional): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric". 
-        name (Optional[str], optional): This operator's name(optional). Defaults to None.
+        scale (oneflow_api.BlobDesc): Computed by min_max_observer or moving_average_min_max_observer op.
+        zero_point (oneflow_api.BlobDesc): Computed by min_max_observer or moving_average_min_max_observer op.
+        quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8. 
+        quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric". 
+        quantization_formula (str): Support "google" or "cambricon".
+        name (Optional[str]): This operator's name. Defaults to None.
 
     Returns:
         oneflow_api.BlobDesc: Input tensor after quantize and dequantize operations.
@@ -313,15 +328,19 @@ def fake_quantization(
         ): tp.Numpy
             with flow.scope.placement(device_type, "0:0"):
                 scale, zero_point = flow.quantization.min_max_observer(
-                    input, quantization_bit=8, quantization_scheme="symmetric", per_layer_quantization=True
+                    input, quantization_bit=8,
+                    quantization_scheme="symmetric",
+                    quantization_formula="google",
+                    per_layer_quantization=True
                 )
                 fake_quantize_out = flow.quantization.fake_quantization(
-                    input, scale, zero_point, quantization_bit=8, quantization_scheme="symmetric"
+                    input, scale, zero_point,
+                    quantization_bit=8,
+                    quantization_scheme="symmetric",
+                    quantization_formula="google"
                 )
             return fake_quantize_out
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         input = (np.random.random(input_shape) - 0.5).astype(type_name_to_np_type[dtype])
         fake_quantize_out = QuantizeJob(input)
 
@@ -337,6 +356,7 @@ def fake_quantization(
         .Output("out")
         .Attr("quantization_bit", quantization_bit)
         .Attr("quantization_scheme", quantization_scheme)
+        .Attr("quantization_formula", quantization_formula)
         .Build()
         .InferAndTryRun()
         .SoleOutputBlob()

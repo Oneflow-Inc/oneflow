@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_PY_DISTRIBUTE_H_
 #define ONEFLOW_CORE_FRAMEWORK_PY_DISTRIBUTE_H_
 
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace oneflow {
@@ -68,6 +69,8 @@ class SplitDistribute : public Distribute {
 std::shared_ptr<AutoDistribute> GlobalAutoDistribute();
 std::shared_ptr<BroadcastDistribute> GlobalBroadcastDistribute();
 Maybe<SplitDistribute> GlobalSplitDistribute(int axis);
+
+Maybe<Distribute> MakeDistribute(const cfg::SbpParallel& sbp_parallel);
 
 }  // namespace compatible_py
 

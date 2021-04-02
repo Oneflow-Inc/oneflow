@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/id_serialization.h"
+#include "oneflow/core/job/id_manager.h"
 
 namespace oneflow {
 
@@ -38,12 +41,7 @@ void ForEachDataEdge(const std::unordered_set<TaskEdge*>& edges,
 }  // namespace
 
 TaskNode::TaskNode()
-    : machine_id_(-1),
-      thrd_id_(-1),
-      task_id_(-1),
-      area_id_(0),
-      chain_id_(-1),
-      order_in_graph_(-1) {}
+    : machine_id_(-1), thrd_id_(-1), task_id_(-1), chain_id_(-1), order_in_graph_(-1) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   auto produced_regsts_it = produced_regsts_.find(name);
@@ -81,11 +79,6 @@ void TaskNode::set_thrd_id(int64_t val) {
   thrd_id_ = val;
   CHECK_GE(thrd_id_, 0);
   if (machine_id_ != -1) { UpdateTaskId(); }
-}
-
-void TaskNode::set_area_id(int64_t val) {
-  CHECK_EQ(area_id_, 0);
-  area_id_ = val;
 }
 
 void TaskNode::set_chain_id(int64_t val) {
@@ -161,12 +154,7 @@ void TaskNode::ForEachProducedDataRegst(
   }
 }
 
-void TaskNode::Build() {
-  if (consumed_regsts_.size()) { CHECK(IsReadyForBuild()); }
-  BuildExecGphAndRegst();
-  LockRegsts();
-  FixRegisterNumRange();
-}
+void TaskNode::Build() { BuildExecGphAndRegst(); }
 
 void TaskNode::EraseZeroSizeProducedBlob() {
   for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
@@ -219,17 +207,16 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
   task_proto->set_job_id(GlobalJobDesc().job_id());
-  task_proto->mutable_task_set_info()->set_area_id(area_id_);
   task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
   task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
   exec_gph_.ToExecSequence(parallel_ctx(), task_proto->mutable_exec_sequence());
-  auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
+  auto* produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
     pair.second->ToProto(&regst_desc_proto);
     CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
   }
-  auto consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
+  auto* consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
   for (const auto& pair : consumed_regsts_) {
     RegstDescIdSet regst_desc_ids;
     for (const std::shared_ptr<RegstDesc>& regst : pair.second) {
@@ -248,12 +235,13 @@ int64_t TaskNode::MemZoneId121() const {
   }
 }
 
-void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
-  if (IsMeaningLess() || dst_node->IsMeaningLess()) { return; }
+bool TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node, std::string* name) {
+  if (IsMeaningLess() || dst_node->IsMeaningLess()) { return false; }
   for (const TaskEdge* in_edge : dst_node->in_edges()) {
-    if (in_edge->src_node() == this) { return; }
+    if (in_edge->src_node() == this) { return false; }
   }
-  BuildCtrlRegstDesc(dst_node);
+  BuildCtrlRegstDesc(dst_node, name);
+  return true;
 }
 
 RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node) {
@@ -341,62 +329,12 @@ void TaskNode::ConsumeRegst(const std::string& name, const std::shared_ptr<Regst
   consumed_regsts_[name].push_back(regst);
 }
 
-bool TaskNode::IsAllConsumedDataRegstLocked() {
-  for (const auto& pair : consumed_regsts_) {
-    for (const std::shared_ptr<RegstDesc>& regst_desc : pair.second) {
-      if (regst_desc->regst_desc_type().has_data_regst_desc() && regst_desc->IsLocked() == false) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-void TaskNode::TryLockConsumedRegst(const std::string& name) {
-  auto consumed_regsts_it = consumed_regsts_.find(name);
-  if (consumed_regsts_it == consumed_regsts_.end()) { return; }
-  for (const std::shared_ptr<RegstDesc>& wrd : consumed_regsts_it->second) {
-    const std::shared_ptr<RegstDesc>& srd = wrd;
-    if (srd->IsLocked() == false) { srd->Lock(); }
-  }
-}
-
-void TaskNode::LockRegsts() {
-  for (auto& pair : produced_regsts_) { pair.second->Lock(); }
-}
-
-void TaskNode::FixRegisterNumRange() {
-  for (auto& pair : produced_regsts_) {
-    RegstDesc* produced_regst = pair.second.get();
-    bool in_same_stream = true;
-    for (const TaskNode* consumer : produced_regst->consumers()) {
-      if (consumer->GlobalWorkStreamId() != GlobalWorkStreamId()) {
-        in_same_stream = false;
-        break;
-      }
-    }
-    if (in_same_stream == false && area_id_ != static_cast<int64_t>(kMdUpdtArea)
-        && GetTaskType() == TaskType::kCopyHd) {  // TODO: delete this hack
-      if (produced_regst->max_register_num() >= 2) { produced_regst->UpdtMinRegstNumIfNeed(2); }
-    }
-  }
-}
-
-int64_t TaskNode::AllocateLocalWorkStreamId() {
-  CHECK_NE(machine_id_, -1);
-  CHECK_NE(thrd_id_, -1);
-  return 0;
-}
-
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_, AllocateLocalWorkStreamId());
-}
-
-int64_t TaskNode::LocalWorkStreamId() const {
-  CHECK_NE(task_id_, -1);
-  return Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task_id_);
+  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
+  TaskId task_id = Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id);
+  task_id_ = SerializeTaskIdToInt64(task_id);
 }
 
 int64_t TaskNode::GlobalWorkStreamId() const {
@@ -429,6 +367,30 @@ std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
 void TaskEdge::AddRegst(const std::string& name_in_producer,
                         const std::shared_ptr<RegstDesc>& regst) {
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
+}
+
+void TaskEdge::CheckRegstLbiValid() const {
+  HashMap<LogicalBlobId, std::shared_ptr<RegstDesc>> lbi2data_regst;
+  for (auto& pair : name_in_producer2regst_) {
+    std::shared_ptr<RegstDesc> regst = pair.second;
+    if (regst->regst_desc_type().has_data_regst_desc()) {
+      // NOTE(chengcheng): regst_desc_type is Set, BUT regst_desc_type.data_regst_desc is UNSET!
+      //  So you can ONLY use NumOfLbi and ForEachLbi interface.
+      CHECK_EQ(regst->NumOfLbi(), 1);
+      regst->ForEachLbi(
+          [&](const LogicalBlobId& lbi) { CHECK(lbi2data_regst.emplace(lbi, regst).second); });
+    }
+  }
+
+  CHECK_EQ(lbi2data_regst.size(), lbis_.size())
+      << " \n\n TaskEdge lbi and regst NOT match."
+      << " TaskEdge: edge_id = " << edge_id() << " From: [" << src_node()->VisualStr() << "] To: ["
+      << dst_node()->VisualStr() << "]\n";
+  for (auto& lbi : lbis_) {
+    CHECK(lbi2data_regst.find(lbi) != lbi2data_regst.end())
+        << " \n\n Cannot find lbi: " << lbi.DebugString() << " in TaskEdge From: ["
+        << src_node()->VisualStr() << "] To: [" << dst_node()->VisualStr() << "]\n\n";
+  }
 }
 
 RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,

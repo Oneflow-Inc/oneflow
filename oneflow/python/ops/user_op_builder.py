@@ -23,25 +23,26 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.framework.user_op_attr_pb2 as attr_value_pb
+import oneflow_api.oneflow.core.framework.user_op_attr as user_op_attr_cfg
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.core.common.shape_pb2 as shape_util
+import oneflow_api.oneflow.core.common.shape as shape_cfg
+import oneflow_api.oneflow.core.common.data_type as data_type_cfg
 import oneflow
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.hob as hob
 import oneflow.python.experimental.name_scope as name_scope
 import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
-import oneflow.python.vm.id_util as id_util
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import random
 import oneflow.python.eager.gradient_util as gradient_util
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow as flow
 import oneflow_api
 import traceback
 
-blob_register = blob_register_util.GetDefaultBlobRegister()
+from google.protobuf import text_format
+
+blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 class UserOp(object):
@@ -330,75 +331,90 @@ class UserOpConfBuilder(object):
             )
             print(traceback.format_stack()[-2])
 
-        attribute = attr_value_pb.AttrValue()
+        attribute = user_op_attr_cfg.AttrValue()
         assert isinstance(attr_name, str)
         attr_type = oneflow_api.GetUserOpAttrType(
             self.user_op_.op_conf_.user_conf.op_type_name, attr_name
         )
-        if attr_type == attr_value_pb.kAtInt32:
+        if attr_type == user_op_attr_cfg.kAtInt32:
             assert isinstance(attr_value, int)
-            attribute.at_int32 = attr_value
-        elif attr_type == attr_value_pb.kAtInt64:
+            attribute.set_at_int32(attr_value)
+        elif attr_type == user_op_attr_cfg.kAtInt64:
             assert isinstance(attr_value, int)
-            attribute.at_int64 = attr_value
-        elif attr_type == attr_value_pb.kAtBool:
+            attribute.set_at_int64(attr_value)
+        elif attr_type == user_op_attr_cfg.kAtBool:
             assert isinstance(attr_value, bool)
-            attribute.at_bool = attr_value
-        elif attr_type == attr_value_pb.kAtFloat:
-            assert isinstance(attr_value, float)
-            attribute.at_float = attr_value
-        elif attr_type == attr_value_pb.kAtDouble:
-            assert isinstance(attr_value, float)
-            attribute.at_double = attr_value
-        elif attr_type == attr_value_pb.kAtString:
+            attribute.set_at_bool(attr_value)
+        elif attr_type == user_op_attr_cfg.kAtFloat:
+            assert isinstance(attr_value, (float, int))
+            attribute.set_at_float(attr_value)
+        elif attr_type == user_op_attr_cfg.kAtDouble:
+            assert isinstance(attr_value, (float, int))
+            attribute.set_at_double(attr_value)
+        elif attr_type == user_op_attr_cfg.kAtString:
             assert isinstance(attr_value, str)
-            attribute.at_string = attr_value
-        elif attr_type == attr_value_pb.kAtShape:
+            attribute.set_at_string(attr_value)
+        elif attr_type == user_op_attr_cfg.kAtShape:
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, int) for x in attr_value)
-            attribute.at_shape.dim[:] = list(attr_value)
-        elif attr_type == attr_value_pb.kAtDataType:
-            assert (
-                isinstance(attr_value.oneflow_proto_dtype, int)
-                and attr_value in oneflow.dtypes()
+            attribute_mutable_at_shape = attribute.mutable_at_shape()
+            for x in attr_value:
+                assert isinstance(x, int)
+                attribute_mutable_at_shape.add_dim(x)
+        elif attr_type == user_op_attr_cfg.kAtDataType:
+            assert attr_value in oneflow.dtypes()
+            attr_value = oneflow_api.deprecated.GetProtoDtype4OfDtype(attr_value)
+            assert isinstance(attr_value, int)
+            attribute.set_at_data_type(data_type_cfg.DataType(attr_value))
+        elif attr_type == user_op_attr_cfg.kAtListInt32:
+            assert isinstance(attr_value, (tuple, list))
+            attribute_mutable_at_list_int32 = attribute.mutable_at_list_int32()
+            for x in attr_value:
+                assert isinstance(x, int)
+                attribute_mutable_at_list_int32.add_val(x)
+        elif attr_type == user_op_attr_cfg.kAtListInt64:
+            assert isinstance(attr_value, (tuple, list))
+            attribute_mutable_at_list_int64 = attribute.mutable_at_list_int64()
+            for x in attr_value:
+                assert isinstance(x, int)
+                attribute_mutable_at_list_int64.add_val(x)
+        elif attr_type == user_op_attr_cfg.kAtListFloat:
+            assert isinstance(attr_value, (tuple, list))
+            attribute_mutable_at_list_float = attribute.mutable_at_list_float()
+            for x in attr_value:
+                assert isinstance(x, (float, int))
+                attribute_mutable_at_list_float.add_val(x)
+        elif attr_type == user_op_attr_cfg.kAtListDataType:
+            assert isinstance(attr_value, (tuple, list))
+            attribute_mutable_at_list_data_type = attribute.mutable_at_list_data_type()
+            for x in attr_value:
+                assert x in oneflow.dtypes()
+                x = oneflow_api.deprecated.GetProtoDtype4OfDtype(x)
+                assert isinstance(x, int)
+                attribute_mutable_at_list_data_type.add_val(data_type_cfg.DataType(x))
+        elif attr_type == user_op_attr_cfg.kAtListShape:
+            assert isinstance(attr_value, (tuple, list))
+            attribute_mutable_at_list_shape = (
+                attribute.mutable_at_list_shape().mutable_val()
             )
-            attribute.at_data_type = attr_value.oneflow_proto_dtype
-        elif attr_type == attr_value_pb.kAtListInt32:
+            for x in attr_value:
+                assert isinstance(x, (tuple, list))
+                shape = shape_cfg.ShapeProto()
+                for dim in x:
+                    assert isinstance(dim, int)
+                    shape.add_dim(dim)
+                attribute_mutable_at_list_shape.Add().CopyFrom(shape)
+        elif attr_type == user_op_attr_cfg.kAtListString:
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, int) for x in attr_value)
-            attribute.at_list_int32.val[:] = list(attr_value)
-        elif attr_type == attr_value_pb.kAtListInt64:
-            assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, int) for x in attr_value)
-            attribute.at_list_int64.val[:] = list(attr_value)
-        elif attr_type == attr_value_pb.kAtListFloat:
-            assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, float) for x in attr_value)
-            attribute.at_list_float.val[:] = list(attr_value)
-        elif attr_type == attr_value_pb.kAtListDataType:
-            assert isinstance(attr_value, (tuple, list))
-            assert all(
-                isinstance(x.oneflow_proto_dtype, int) and x in oneflow.dtypes()
-                for x in attr_value
-            )
-            attribute.at_list_data_type.val[:] = list(
-                [x.oneflow_proto_dtype for x in attr_value]
-            )
-        elif attr_type == attr_value_pb.kAtListShape:
-            assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, tuple) or isinstance(x, list) for x in attr_value)
-            for i in range(len(attr_value)):
-                shape = shape_util.ShapeProto()
-                shape.dim[:] = list(attr_value[i])
-                attribute.at_list_shape.val.append(shape)
-        elif attr_type == attr_value_pb.kAtListString:
-            assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, str) for x in attr_value)
-            attribute.at_list_string.val[:] = list(attr_value)
+            attribute_mutable_at_list_string = attribute.mutable_at_list_string()
+            for x in attr_value:
+                assert isinstance(x, str)
+                attribute_mutable_at_list_string.add_val(x)
         else:
             raise ValueError("Invalid op attribute type {}".format(attr_type))
 
-        self.user_op_.op_conf_.user_conf.attr[attr_name].CopyFrom(attribute)
+        self.user_op_.op_conf_.user_conf.attr[attr_name].CopyFrom(
+            text_format.Parse(str(attribute), attr_value_pb.AttrValue())
+        )
         return self
 
 
@@ -463,9 +479,15 @@ class EagerLogicalUserOpModule(UserOpModule, UserOp):
 
     def InitOpKernel(self):
         def BuildInstruction(builder):
-            self.set_opkernel_object(builder.NewOpKernelObject(self.op_conf))
+            if not isinstance(
+                self.op_conf, oneflow_api.oneflow.core.operator.op_conf.OperatorConf
+            ):
+                cfg_op_conf = oneflow_api.deprecated.MakeOpConfByString(
+                    str(self.op_conf)
+                )
+            self.set_opkernel_object(builder.NewOpKernelObject(cfg_op_conf))
 
-        vm_util.LogicalRun(BuildInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildInstruction)
 
     def InferAndTryRun(self):
         assert hob.in_global_mode(None)
@@ -523,9 +545,15 @@ class EagerConsistentUserOpModule(UserOpModule, UserOp):
 
     def InitOpKernel(self):
         def BuildInstruction(builder):
-            self.set_opkernel_object(builder.NewOpKernelObject(self.op_conf))
+            if not isinstance(
+                self.op_conf, oneflow_api.oneflow.core.operator.op_conf.OperatorConf
+            ):
+                cfg_op_conf = oneflow_api.deprecated.MakeOpConfByString(
+                    str(self.op_conf)
+                )
+            self.set_opkernel_object(builder.NewOpKernelObject(cfg_op_conf))
 
-        vm_util.LogicalRun(BuildInstruction)
+        oneflow_api.deprecated.LogicalRun(BuildInstruction)
 
     def InferAndTryRun(self):
         assert hob.in_global_mode(None)

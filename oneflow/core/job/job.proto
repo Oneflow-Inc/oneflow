@@ -1,7 +1,6 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/common/data_type.proto";
 import "oneflow/core/job/dlnet_conf.proto";
 import "oneflow/core/job/placement.proto";
 import "oneflow/core/job/job_conf.proto";
@@ -9,29 +8,22 @@ import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/register/op_blob_arg.proto";
 import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/operator/op_conf.proto";
-import "oneflow/core/common/shape.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/job/lbi_diff_watcher_info.proto";
 
 message JobParallelViewConf {
   map<string, SbpSignature> op_name2sbp_signature_conf = 1;
   map<string, bool> op_name2is_mirrored_parallel_view = 2;
-}
-
-message OpTimeShape {
-  optional ShapeProto in_blob_fastest_time_shape = 1;
-  optional ShapeProto out_blob_time_shape = 2;
+  map<string, ParallelDistributionSignature> op_name2parallel_distribution_signature_conf = 3;
 }
 
 message JobHelperConf {
   map<string, LogicalBlobIdPairs> tag2lbi_relations = 1;
   map<string, OpNameRelations> tag2op_name_relations = 2;
-  map<string, OpTimeShape> op_name2op_time_shape = 3;
   map<string, BlobDescProto> lbn2logical_blob_desc = 4;
   map<string, int64> lbn2logical_object_id = 5;
-  map<string, OptInt64> lbn2batch_axis = 6;
-  optional OpBlobArgPairs identical_sbp_oba_pairs = 7;
   optional LbiDiffWatcherInfo lbi_diff_watcher_info = 8;
+  map<string, ArgSignature> op_name2arg_signature = 9;
 }
 
 message Job {

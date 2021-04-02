@@ -24,10 +24,14 @@ namespace oneflow {
 struct PlanUtil {
   static RegstDescProto* GetSoleProducedDataRegst(TaskProto* task_proto);
   static std::function<const TaskProto*(int64_t)> MakeGetterTaskProto4TaskId(const Plan& plan);
+  static void SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan);
+  static void GenMemBlockAndChunk4Plan(Plan* plan);
   static void CleanUselessMemBlockAndCheckValid(Plan* plan);
   static void ToDotFile(const Plan& plan, const std::string& filepath);
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);
   static void SetForceInplaceMemBlock(Plan* plan);
+  static const oneflow::OpAttribute& GeOpAttribute(const Plan* plan, int64_t job_id,
+                                                   const oneflow::KernelConf& kernel_conf);
 };
 
 }  // namespace oneflow

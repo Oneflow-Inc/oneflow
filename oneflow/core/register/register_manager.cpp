@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/comm_network/comm_network.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/memory/memory_allocator.h"
 
@@ -29,14 +29,23 @@ namespace {
 
 void CheckBlobInRegstNotDisabled(const RegstDescProto& regst_desc) {
   CHECK(regst_desc.regst_desc_type().has_data_regst_desc());
-  CHECK(regst_desc.regst_desc_type().data_regst_desc().packed_blob_desc().is_body_disabled()
-        == false);
 }
+
+struct PackedChunkInfo {
+  MemoryCase mem_case;
+  int64_t size;
+  std::vector<const MemBlockProto*> blocks;
+  PackedChunkInfo(const MemoryCase& mem) {
+    mem_case = mem;
+    size = 0;
+  }
+};
 
 }  // namespace
 
 RegstMgr::RegstMgr(const Plan& plan) {
-  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  int64_t this_machine_id = GlobalProcessCtx::Rank();
+
   HashMap<int64_t, char*> chunk_id2ptr;
   for (const ChunkProto& chunk : plan.block_chunk_list().chunk()) {
     if (chunk.machine_id() != this_machine_id) { continue; }
@@ -44,20 +53,56 @@ RegstMgr::RegstMgr(const Plan& plan) {
     char* chunk_ptr = Global<MemoryAllocator>::Get()->Allocate(chunk.mem_case(), chunk.mem_size());
     CHECK(chunk_id2ptr.emplace(chunk.chunk_id(), chunk_ptr).second);
   }
+
+  HashSet<int64_t> all_block_ids;
+  HashMap<int64_t, PackedChunkInfo> zone_id2packed_chunk;
   for (const MemBlockProto& mem_block : plan.block_chunk_list().mem_block()) {
     if (mem_block.machine_id() != this_machine_id) { continue; }
     if (mem_block.mem_size() == 0) { continue; }
-    char* mem_block_ptr = nullptr;
+    const int64_t mem_block_id = mem_block.mem_block_id();
+    CHECK(all_block_ids.insert(mem_block_id).second);
     if (mem_block.has_chunk_id()) {
       CHECK(mem_block.has_chunk_offset());
       CHECK(chunk_id2ptr.find(mem_block.chunk_id()) != chunk_id2ptr.end());
-      mem_block_ptr = chunk_id2ptr.at(mem_block.chunk_id()) + mem_block.chunk_offset();
+      char* mem_block_ptr = chunk_id2ptr.at(mem_block.chunk_id()) + mem_block.chunk_offset();
+      CHECK(mem_block_id2ptr_.emplace(mem_block_id, mem_block_ptr).second);
     } else {
-      mem_block_ptr =
-          Global<MemoryAllocator>::Get()->Allocate(mem_block.mem_case(), mem_block.mem_size());
+      int64_t zone_id = MemoryCaseUtil::GenMemZoneId(mem_block.mem_case());
+      if (zone_id2packed_chunk.find(zone_id) == zone_id2packed_chunk.end()) {
+        zone_id2packed_chunk.emplace(zone_id, PackedChunkInfo(mem_block.mem_case()));
+      }
+      PackedChunkInfo* packed_chunk = &(zone_id2packed_chunk.at(zone_id));
+      packed_chunk->blocks.push_back(&mem_block);
+      packed_chunk->size += mem_block.mem_size();
+      CHECK(packed_chunk->mem_case == mem_block.mem_case());
     }
-    CHECK(mem_block_id2ptr_.emplace(mem_block.mem_block_id(), mem_block_ptr).second);
   }
+
+  for (auto& pair : zone_id2packed_chunk) {
+    PackedChunkInfo* packed_chunk = &pair.second;
+    char* ptr =
+        Global<MemoryAllocator>::Get()->Allocate(packed_chunk->mem_case, packed_chunk->size);
+    // sort blocks as thrd id
+    std::vector<const MemBlockProto*>* blocks = &(packed_chunk->blocks);
+    std::sort(blocks->begin(), blocks->end(),
+              [](const MemBlockProto* lhs, const MemBlockProto* rhs) {
+                if (lhs->thrd_id_hint() == rhs->thrd_id_hint()) {
+                  return lhs->mem_block_id() < rhs->mem_block_id();
+                }
+                return lhs->thrd_id_hint() < rhs->thrd_id_hint();
+              });
+    int64_t offset = 0;
+    for (const MemBlockProto* block : packed_chunk->blocks) {
+      CHECK(mem_block_id2ptr_.emplace(block->mem_block_id(), ptr + offset).second);
+      offset += block->mem_size();
+    }
+    CHECK_EQ(offset, packed_chunk->size);
+  }
+
+  for (int64_t mem_block_id : all_block_ids) {
+    CHECK(mem_block_id2ptr_.find(mem_block_id) != mem_block_id2ptr_.end());
+  }
+
   for (const TaskProto& task : plan.task()) {
     if (task.machine_id() != this_machine_id) { continue; }
     for (const auto& pair : task.produced_regst_desc()) {
@@ -68,6 +113,9 @@ RegstMgr::RegstMgr(const Plan& plan) {
                 .second);
       CHECK(regst_desc_id2parallel_ctx_.emplace(regst_desc_id, task.parallel_ctx()).second);
     }
+  }
+  for (const auto& pair : plan.ctrl_regst_desc_info().ctrl_regst_desc_id2producer_task_id()) {
+    CHECK(ctrl_regst_desc_id2producer_task_id_.emplace(pair.first, pair.second).second);
   }
 }
 
@@ -122,7 +170,6 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
                                   const RtRegstDesc* rt_regst_desc, char* main_mem_ptr,
                                   char* separated_header_mem_ptr) {
   size_t separated_header_mem_size = rt_regst_desc->SeparatedHeaderByteSize4OneRegst();
-  const RtBlobDesc* packed_blob_desc = rt_regst_desc->packed_blob_desc();
   char* cur_body_pointer = nullptr;
   char* cur_header_pointer = nullptr;
   if (separated_header_mem_size > 0) {
@@ -132,19 +179,15 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
       separated_header_mem_ptr =
           Global<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);
     }
-    regst->packed_blob_.reset(new Blob(regst->regst_desc()->mem_case(), packed_blob_desc,
-                                       separated_header_mem_ptr, main_mem_ptr));
     cur_header_pointer = separated_header_mem_ptr;
     cur_body_pointer = main_mem_ptr;
   } else {
     CHECK(separated_header_mem_ptr == nullptr);
-    regst->packed_blob_.reset(
-        new Blob(regst->regst_desc()->mem_case(), packed_blob_desc, main_mem_ptr));
     cur_header_pointer = main_mem_ptr;
-    if (main_mem_ptr == nullptr || packed_blob_desc->is_body_disabled()) {
+    if (main_mem_ptr == nullptr) {
       cur_body_pointer = nullptr;
     } else {
-      cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
+      cur_body_pointer = main_mem_ptr + rt_regst_desc->GetSoleRtBlobDesc()->ByteSizeOfBlobHeader();
     }
   }
   rt_regst_desc->ForEachBlobDescOffsetInOnRegst([&](int64_t ordinal, const LogicalBlobId& lbi,
@@ -152,11 +195,9 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
                                                     int64_t body_offset, int64_t header_offset) {
     std::unique_ptr<Blob> blob_ptr;
     if (cur_body_pointer == nullptr) {
-      CHECK(rt_regst_desc->is_body_disabled());
       blob_ptr.reset(new Blob(regst->regst_desc()->mem_case(), blob_desc,
                               cur_header_pointer + header_offset, nullptr));
     } else {
-      CHECK(rt_regst_desc->is_body_disabled() == false);
       blob_ptr.reset(new Blob(regst->regst_desc()->mem_case(), blob_desc,
                               cur_header_pointer + header_offset, cur_body_pointer + body_offset));
       InitNonPODTypeBlobIfNeed(Global<MemoryAllocator>::Get(), blob_ptr.get());
@@ -182,6 +223,17 @@ const RtRegstDesc& RegstMgr::RegstDesc4RegstDescId(int64_t regst_desc_id) const 
 
 bool RegstMgr::HasRegstDescId(int64_t regst_desc_id) const {
   return regst_desc_id2rt_regst_desc_.find(regst_desc_id) != regst_desc_id2rt_regst_desc_.end();
+}
+
+int64_t RegstMgr::ProducerTaskId4RegstDescId(int64_t regst_desc_id) const {
+  const auto& it = ctrl_regst_desc_id2producer_task_id_.find(regst_desc_id);
+  CHECK(it != ctrl_regst_desc_id2producer_task_id_.end());
+  return it->second;
+}
+
+bool RegstMgr::HasProducerTaskId4RegstDescId(int64_t regst_desc_id) const {
+  return ctrl_regst_desc_id2producer_task_id_.find(regst_desc_id)
+         != ctrl_regst_desc_id2producer_task_id_.end();
 }
 
 Blob* RegstMgr::Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id) {

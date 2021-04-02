@@ -38,11 +38,6 @@ void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, Device
   VirtualKernelInit(device_ctx);
 }
 
-void Kernel::InitModelAndConstBuf(const KernelCtx& ctx,
-                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitConstBufBlobs(ctx.device_ctx, BnInOp2Blob);
-}
-
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Forward(ctx, BnInOp2Blob);
@@ -106,15 +101,7 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_opaque_header()) {
-    ForwardPackedHeader(ctx, BnInOp2Blob);
-  } else {
-    CHECK(!this->kernel_conf().need_do_tensor_list())
-        << "Op's kernel (op_name: " << this->op_conf().name()
-        << ", op_type_case: " << this->op_conf().op_type_case()
-        << ") need to override ForwardHeader because of tensor list.";
-    if (kernel_conf_.need_do_shape()) { ForwardShape(ctx, BnInOp2Blob); }
-  }
+  if (kernel_conf_.need_do_shape()) { ForwardShape(ctx, BnInOp2Blob); }
 }
 
 void Kernel::ForwardShape(const KernelCtx& ctx,

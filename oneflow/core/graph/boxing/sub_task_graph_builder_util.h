@@ -30,10 +30,6 @@ struct SubTskGphBuilderUtil {
   static constexpr int64_t kDistanceMax = 3;
 
   static bool IsDeviceTypeCPUOrGPU(const ParallelDesc& parallel_desc);
-  static std::vector<TensorSliceView> GetTensorSliceView(int64_t parallel_num,
-                                                         const SbpParallel& sbp_parallel,
-                                                         const BlobDesc& blob_desc);
-  static TensorSliceView GetBroadcastTensorSliceView(const BlobDesc& blob_desc);
   static bool HasEmptySliceIfSplit(int64_t parallel_num, const SbpParallel& sbp_parallel,
                                    const BlobDesc& blob_desc);
   static bool IsOnSameGPU(const TaskNode* lhs, const TaskNode* rhs);
@@ -45,7 +41,13 @@ struct SubTskGphBuilderUtil {
   static bool IsBoxingB2S(const SbpParallel& src, const SbpParallel& dst);
   static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
   static bool IsErrorBoxingNotSupported(const cfg::ErrorProto& error);
+  static int64_t GetDistance(int64_t src_machine_id, int64_t src_dev_phy_id,
+                             DeviceType src_device_type, int64_t dst_machine_id,
+                             int64_t dst_dev_phy_id, DeviceType dst_device_type);
+  static int64_t GetDistance(const ParallelDesc& src_parallel_desc, int64_t src_parallel_id,
+                             const ParallelDesc& dst_parallel_desc, int64_t dst_parallel_id);
   static int64_t GetDistance(const TaskNode* src, const TaskNode* dst);
+
   template<typename NodeType>
   static int64_t FindNearestNodeIndex(const std::vector<NodeType*> from_nodes,
                                       const NodeType* to_node) {
@@ -69,6 +71,10 @@ struct SubTskGphBuilderUtil {
     const int64_t idx = FindNearestNodeIndex<NodeType>(from_nodes, to_node);
     return from_nodes.at(idx);
   }
+
+  static int64_t FindNearestSrcParallelId(const ParallelDesc& from_parallel_desc,
+                                          const ParallelDesc& to_parallel_desc,
+                                          int64_t to_parallel_id);
 };
 
 }  // namespace oneflow

@@ -16,7 +16,6 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow as flow
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.module as module_util
@@ -33,7 +32,7 @@ def OFRecordRawDecoder(
     input_blob: oneflow_api.BlobDesc,
     blob_name: str,
     shape: Sequence[int],
-    dtype: dtype_util.dtype,
+    dtype: flow.dtype,
     dim1_varying_length: bool = False,
     auto_zero_padding: bool = False,
     name: Optional[str] = None,
@@ -285,7 +284,7 @@ def api_image_resize(
     keep_aspect_ratio: bool = False,
     resize_side: str = "shorter",
     channels: int = 3,
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     interpolation_type: str = "auto",
     name: Optional[str] = None,
     # deprecated params, reserve for backward compatible
@@ -615,7 +614,7 @@ def CropMirrorNormalize(
     crop_pos_x: float = 0.5,
     mean: Sequence[float] = [0.0],
     std: Sequence[float] = [1.0],
-    output_dtype: dtype_util.dtype = dtype_util.float,
+    output_dtype: flow.dtype = flow.float,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     """This operator performs the cropping, normalization, and horizontal flip for input Blob. 
@@ -643,7 +642,7 @@ def CropMirrorNormalize(
         crop_pos_x (float, optional): The horizontal position of the image cropping window, the value range is normalized to (0.0, 1.0). Defaults to 0.5.
         mean (Sequence[float], optional): The mean value for normalization. Defaults to [0.0].
         std (Sequence[float], optional): The standard deviation values for normalization. Defaults to [1.0].
-        output_dtype (dtype_util.dtype, optional): The datatype of output Blob. Defaults to dtype_util.float.
+        output_dtype (flow.dtype, optional): The datatype of output Blob. Defaults to flow.float.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Raises:
@@ -707,9 +706,9 @@ def CropMirrorNormalize(
     if name is None:
         name = id_util.UniqueStr("CropMirrorNormalize_")
     op_type_name = ""
-    if input_blob.dtype is dtype_util.tensor_buffer:
+    if input_blob.dtype is flow.tensor_buffer:
         op_type_name = "crop_mirror_normalize_from_tensorbuffer"
-    elif input_blob.dtype is dtype_util.uint8:
+    elif input_blob.dtype is flow.uint8:
         op_type_name = "crop_mirror_normalize_from_uint8"
     else:
         print(
@@ -1006,7 +1005,7 @@ class CoinFlipModule(module_util.Module):
 @oneflow_export("image.decode", "image_decode")
 def image_decode(
     images_bytes_buffer: oneflow_api.BlobDesc,
-    dtype: dtype_util.dtype = dtype_util.uint8,
+    dtype: flow.dtype = flow.uint8,
     color_space: str = "BGR",
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
@@ -1014,7 +1013,7 @@ def image_decode(
 
     Args:
         images_bytes_buffer (oneflow_api.BlobDesc): The input Blob. Its type should be `kTensorBuffer`. More details please refer to the code example. 
-        dtype (dtype_util.dtype, optional): The data type. Defaults to dtype_util.uint8.
+        dtype (flow.dtype, optional): The data type. Defaults to flow.uint8.
         color_space (str, optional): The color space. Defaults to "BGR".
         name (Optional[str], optional): The name for the opreation. Defaults to None.
 
@@ -1087,7 +1086,7 @@ def image_decode(
 def image_batch_align(
     images: oneflow_api.BlobDesc,
     shape: Sequence[int],
-    dtype: dtype_util.dtype,
+    dtype: flow.dtype,
     alignment: int,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
@@ -1104,7 +1103,7 @@ def image_batch_align(
     Args:
         images (oneflow_api.BlobDesc): The images. 
         shape (Sequence[int]): The maximum static shape of input images. 
-        dtype (dtype_util.dtype): The data type. 
+        dtype (flow.dtype): The data type. 
         alignment (int): The align factor. 
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
@@ -2133,6 +2132,7 @@ def api_coco_reader(
     random_seed: Optional[int] = None,
     group_by_aspect_ratio: bool = True,
     stride_partition: bool = True,
+    remove_images_without_annotations: bool = True,
     name: str = None,
 ) -> oneflow_api.BlobDesc:
     assert name is not None
@@ -2145,6 +2145,7 @@ def api_coco_reader(
             shuffle=shuffle,
             random_seed=random_seed,
             group_by_aspect_ratio=group_by_aspect_ratio,
+            remove_images_without_annotations=remove_images_without_annotations,
             stride_partition=stride_partition,
             name=name,
         ),
@@ -2348,3 +2349,101 @@ def OneRecDecoder(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
+
+
+@oneflow_export("data.megatron_gpt_mmap_data_loader", "data.MegatronGPTMMapDataLoader")
+def gpt_data_loader(
+    data_file_prefix: str,
+    seq_length: int,
+    num_samples: int,
+    batch_size: int,
+    dtype: flow.dtype = flow.int64,
+    shuffle: bool = True,
+    random_seed: Optional[int] = None,
+    split_sizes: Optional[Sequence[str]] = None,
+    split_index: Optional[int] = None,
+    parallel_distribution: Optional[Sequence[str]] = None,
+    start_from_saved_progress: bool = False,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    if name is None:
+        name = id_util.UniqueStr("gpt_data_loader_")
+
+    # consider being exported as parameters
+    label_length = 1
+
+    if parallel_distribution is None:
+        parallel_distribution = []
+
+    if split_index is None:
+        split_index = 0
+
+    if split_sizes is None:
+        split_sizes = (1,)
+
+    if split_index >= len(split_sizes):
+        raise ValueError(
+            "split index {} is out of range, split_sizes {}".formart(
+                split_index, split_sizes
+            )
+        )
+
+    if random_seed is None:
+        from datetime import datetime
+
+        random_seed = int(datetime.utcnow().timestamp())
+
+    def distribute_to_str(dist):
+        if dist is None:
+            return ""
+        elif type(dist) is str:
+            return dist
+        elif type(dist) is oneflow_api.distribute.SplitDistribute:
+            return "S({})".format(dist.axis)
+        elif type(dist) is oneflow_api.distribute.BroadcastDistribute:
+            return "B"
+        else:
+            raise ValueError("unsupported distribute")
+
+    parallel_distribution = list(map(distribute_to_str, parallel_distribution))
+
+    if start_from_saved_progress:
+        iteration_name = "iteration-{}-{}-{}-{}-{}-{}".format(
+            seq_length,
+            num_samples,
+            batch_size,
+            random_seed,
+            str(list(split_sizes)),
+            split_index,
+            str(parallel_distribution),
+        )
+        iteration = flow.get_variable(
+            name=iteration_name,
+            shape=(1,),
+            dtype=flow.int64,
+            initializer=flow.constant_initializer(0, flow.int64),
+            model_name="iteration",
+            reuse=False,
+        )
+
+    op_builder = flow.user_op_builder(name).Op("megatron_gpt_mmap_data_loader")
+    if start_from_saved_progress:
+        op_builder.Input("iteration", [iteration])
+
+    op = (
+        op_builder.Output("out")
+        .Attr("data_file_prefix", data_file_prefix)
+        .Attr("seq_length", seq_length)
+        .Attr("label_length", label_length)
+        .Attr("num_samples", num_samples)
+        .Attr("batch_size", batch_size)
+        .Attr("dtype", dtype)
+        .Attr("shuffle", shuffle)
+        .Attr("random_seed", random_seed)
+        .Attr("split_sizes", split_sizes)
+        .Attr("split_index", split_index)
+        .Attr("parallel_distribution", parallel_distribution)
+        .Build()
+    )
+
+    return op.InferAndTryRun().SoleOutputBlob()

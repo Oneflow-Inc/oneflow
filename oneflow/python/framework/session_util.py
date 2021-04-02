@@ -17,7 +17,6 @@ from __future__ import absolute_import
 
 import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
-import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
@@ -29,7 +28,6 @@ import oneflow.python.framework.job_instance as job_instance_util
 import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.op_executor as op_executor
 from oneflow.python.experimental import interface_op_read_and_write
 from oneflow.core.job.job_set_pb2 import ConfigProto
@@ -44,20 +42,18 @@ from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.framework.check_point import SnapshotManager
 import oneflow.python.framework.check_point_v2 as check_point_v2
-import oneflow.python.eager.blob_register as blob_register_util
 from contextlib import contextmanager
 from typing import Callable
 import inspect
 import oneflow
 import oneflow_api
-import oneflow_api.oneflow.core.vm.instruction as instr_cfg
 import traceback
 
 
 class Session(object):
-    def __init__(self):
-        self.id_ = oneflow_api.NewSessionId()
+    def __init__(self, sess_id):
         self.job_name2function_desc_ = {}
+        self.job_name2job_ = {}
         self.status_ = SessionStatus.OPEN
         self.cond_var_ = threading.Condition()
         self.running_job_cnt_ = 0
@@ -65,7 +61,6 @@ class Session(object):
         self.uuid2watch_handler_ = {}
         self.config_proto_ = None
         self.resource_ = None
-        self.is_mirrored_strategy_enabled_stack_ = []
         self.job_name2var_name2var_blob_ = {}
         self.job_name2module_name2module_ = {}
         self.existed_module_names_ = set()
@@ -83,15 +78,14 @@ class Session(object):
         self._UpdateFunctionFlagName2DefaultVal()
         self.scope_attr_name2default_val_ = {}
         self._UpdateScopeAttrName2DefaultVal()
-        self.instruction_list_ = instr_cfg.InstructionListProto()
-        self.eager_symbol_list_ = eager_symbol_util.EagerSymbolList()
-        self.backward_blob_register_ = blob_register_util.BlobRegister()
+        self.sess_ = oneflow_api.RegsiterSession(sess_id)
+        self.backward_blob_register_ = oneflow_api.BlobRegister()
         self.snapshot_mgr_ = SnapshotManager()
         self.eager_config_proto_ctx_ = None
 
     @property
     def id(self):
-        return self.id_
+        return self.sess_.id
 
     @property
     def status(self):
@@ -119,10 +113,6 @@ class Session(object):
         return self.uuid2watch_handler_
 
     @property
-    def is_mirrored_strategy_enabled_stack(self):
-        return self.is_mirrored_strategy_enabled_stack_
-
-    @property
     def function_flag_name2default_val(self):
         return self.function_flag_name2default_val_
 
@@ -137,14 +127,6 @@ class Session(object):
     @property
     def job_name2name_scope_stack(self):
         return self.job_name2name_scope_stack_
-
-    @property
-    def instruction_list(self):
-        return self.instruction_list_
-
-    @property
-    def eager_symbol_list(self):
-        return self.eager_symbol_list_
 
     @property
     def backward_blob_register(self):
@@ -253,11 +235,31 @@ class Session(object):
         self.resource_ = None
         if self.eager_config_proto_ctx_:
             del self.eager_config_proto_ctx_
+        oneflow_api.ClearSessionById(self.id)
 
     def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN
         assert isinstance(function_desc, FunctionDesc)
         self.job_name2function_desc_[function_desc.job_func.__name__] = function_desc
+
+    def StashJob(self, job_name=None):
+        assert self.status_ is SessionStatus.RUNNING, "current status {}".format(
+            self.status_
+        )
+        job = c_api_util.GetCurrentJob()
+        if job_name is not None:
+            assert (
+                job.job_conf.job_name == job_name
+            ), "{} is not current job name".format(job_name)
+        else:
+            job_name = job.job_conf.job_name
+        self.job_name2job_[job_name] = job
+
+    def Job(self, job_name):
+        assert self.status_ is SessionStatus.RUNNING
+        if job_name not in self.job_name2job_:
+            return None
+        return self.job_name2job_[job_name]
 
     def Sync(self):
         assert self.status_ is SessionStatus.RUNNING
@@ -271,7 +273,7 @@ class Session(object):
         self.op_name2lazy_blob_cache_.clear()
 
     def ForceReleaseEagerBlobs(self):
-        blob_register_util.GetDefaultBlobRegister().ForceReleaseAll()
+        oneflow_api.GetDefaultBlobRegister().ForceReleaseAll()
         self.backward_blob_register_.ForceReleaseAll()
 
     def LazyRun(self, job_func, *arg):
@@ -382,6 +384,22 @@ class Session(object):
             return None
         return self.eager_global_function_desc_stack_[0]
 
+    def has_empty_is_mirrored_strategy_enabled_stack(self):
+        return self.sess_.is_mirrored_strategy_enabled_stack_size() == 0
+
+    def push_mirrored_strategy_enabled(self, val):
+        assert isinstance(val, bool)
+        self.sess_.push_mirrored_strategy_enabled(val)
+
+    def pop_mirrored_strategy_enabled(self):
+        self.sess_.pop_mirrored_strategy_enabled()
+
+    def is_mirrored_strategy_enabled(self):
+        return self.sess_.is_mirrored_strategy_enabled()
+
+    def is_consistent_strategy_enabled(self):
+        return self.sess_.is_consistent_strategy_enabled()
+
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):
         assert len(self.backward_blob_register.blob_name2object) == 0
@@ -393,9 +411,9 @@ class Session(object):
             self.existed_module_names_ = set()
             self.job_name2var_name2var_blob_ = dict()
             self.eager_global_function_desc_stack_.pop(0)
-            keys = list(self.backward_blob_register.blob_name2object.keys())
+            keys = list(dict(self.backward_blob_register.blob_name2object).keys())
             for key in keys:
-                del self.backward_blob_register.blob_name2object[key]
+                self.backward_blob_register.ClearObject4BlobName(key)
 
     def _IncRunningJobCnt(self):
         assert self.status_ is SessionStatus.RUNNING
@@ -464,7 +482,7 @@ def api_clear_default_session() -> None:
 @enable_if.condition(hob.in_normal_mode)
 def clear_default_session():
     session_ctx.TryCloseDefaultSession()
-    session_ctx.OpenDefaultSession(Session())
+    session_ctx.OpenDefaultSession(Session(oneflow_api.NewSessionId()))
 
 
 @oneflow_export("sync_default_session")
@@ -482,15 +500,39 @@ def sync_default_session() -> None:
 
 def _TryCompleteConfigProto(config_proto):
     if config_proto.resource.machine_num == 0:
-        config_proto.resource.machine_num = len(env_util.default_env_proto.machine)
+        if env_util.default_env_proto.HasField("ctrl_bootstrap_conf"):
+            ctrl_bootstrap_conf = env_util.default_env_proto.ctrl_bootstrap_conf
+            assert ctrl_bootstrap_conf.HasField(
+                "node_size"
+            ) or ctrl_bootstrap_conf.HasField("num_process_per_node")
+            if ctrl_bootstrap_conf.HasField(
+                "node_size"
+            ) and ctrl_bootstrap_conf.HasField("num_process_per_node"):
+                assert (
+                    ctrl_bootstrap_conf.node_size
+                    * ctrl_bootstrap_conf.num_process_per_node.value
+                    == ctrl_bootstrap_conf.world_size
+                )
+            if ctrl_bootstrap_conf.HasField("node_size"):
+                config_proto.resource.machine_num = ctrl_bootstrap_conf.node_size
+            else:
+                assert (
+                    ctrl_bootstrap_conf.world_size
+                    % ctrl_bootstrap_conf.num_process_per_node.value
+                    == 0
+                )
+                config_proto.resource.machine_num = (
+                    ctrl_bootstrap_conf.world_size
+                    // ctrl_bootstrap_conf.num_process_per_node.value
+                )
+        else:
+            config_proto.resource.machine_num = len(env_util.default_env_proto.machine)
 
 
 def _GetDefaultConfigProto():
-    from oneflow.python_gen.compatibility import with_cuda
-
     config_proto = job_set_util.ConfigProto()
     config_proto.resource.machine_num = 0
-    if with_cuda:
+    if oneflow_api.flags.with_cuda():
         config_proto.resource.gpu_device_num = 1
     else:
         config_proto.resource.cpu_device_num = 1
@@ -501,4 +543,4 @@ def _GetDefaultConfigProto():
     return config_proto
 
 
-session_ctx.OpenDefaultSession(Session())
+session_ctx.OpenDefaultSession(Session(oneflow_api.NewSessionId()))

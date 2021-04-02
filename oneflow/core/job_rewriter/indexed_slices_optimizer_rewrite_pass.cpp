@@ -68,7 +68,8 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     do {
       if (dst_node->op().output_bns().empty()) { break; }
       const OperatorConf& dst_op_conf = dst_node->op().op_conf();
-      if (dst_op_conf.has_parallel_cast_conf()) {
+      if (dst_op_conf.has_user_conf()
+          && dst_op_conf.user_conf().op_type_name() == "hierarchical_parallel_cast") {
         if (dst_node->out_edges().size() != 1) { return; }
         op_nodes_to_remove.push_back(dst_node);
         dst_node = dst_node->SoleOutEdge()->dst_node();
