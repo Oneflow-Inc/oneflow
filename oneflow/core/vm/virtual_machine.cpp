@@ -51,6 +51,7 @@ void VirtualMachine::ReleaseInstruction(Instruction* instruction,
     rw_mutexed_object_accesses->Erase(access.Mutable());
     if (access->is_rw_mutexed_object_access_link_empty()) { continue; }
     auto* mirrored_object = access->mut_mirrored_object();
+    CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
     mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access.Mutable());
   }
   TryMoveWaitingToReady(instruction, ready_instruction_list, [](Instruction*) { return true; });
@@ -347,6 +348,7 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
           if (access->mut_instruction() != instruction) {
             ConnectInstruction(access->mut_instruction(), instruction);
           }
+          CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
           access_list->Erase(access);
         }
       }

@@ -31,6 +31,7 @@ namespace vm {
 
 class Instruction;
 class MirroredObject;
+class RwMutexedObject;
 
 // clang-format off
 OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
@@ -42,6 +43,7 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   OBJECT_MSG_DEFINE_OPTIONAL(bool, is_const_operand);
   OBJECT_MSG_DEFINE_PTR(Instruction, instruction);
   OBJECT_MSG_DEFINE_PTR(MirroredObject, mirrored_object);
+  OBJECT_MSG_DEFINE_PTR(RwMutexedObject, rw_mutexed_object);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(rw_mutexed_object_access_link);

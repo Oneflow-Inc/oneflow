@@ -24,6 +24,7 @@ void RwMutexedObjectAccess::__Init__(Instruction* instruction, MirroredObject* m
                                      bool is_const_operand) {
   set_instruction(instruction);
   set_mirrored_object(mirrored_object);
+  set_rw_mutexed_object(mirrored_object->mut_rw_mutexed_object());
   set_is_const_operand(is_const_operand);
   mut_mirrored_object_id()->CopyFrom(mirrored_object->mirrored_object_id());
 }
