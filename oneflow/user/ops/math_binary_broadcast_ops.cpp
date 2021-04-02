@@ -56,18 +56,11 @@ Maybe<void> InferTensorDescBinaryBroadcast(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataTypeBinaryBroadcastNormal(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  CHECK_EQ_OR_RETURN(tensor_x->data_type(), tensor_y->data_type());
-  *ctx->Dtype4ArgNameAndIndex("z", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
-  return Maybe<void>::Ok();
-}
-Maybe<void> InferDataTypeBinaryBroadcastLogical(user_op::InferContext* ctx) {
-  JUST(InferDataTypeBinaryBroadcastNormal(ctx));
+Maybe<void> InferDataTypeBinaryBroadcast(user_op::InferContext* ctx) {
   *ctx->Dtype4ArgNameAndIndex("z", 0) = DataType::kInt8;
   return Maybe<void>::Ok();
 }
+
 template<template<typename> class binary_func>
 void GenPartialSbpSign(user_op::SbpContext* ctx) {}
 
@@ -181,7 +174,7 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
       .Output("z")                                                            \
       .SetTensorDescInferFn(InferTensorDescBinaryBroadcast)                   \
       .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>)    \
-      .SetInferDataTypeFn(InferDataTypeBinaryBroadcast##tensor_suffix);
+      .SetInferDataTypeFn(InferDataTypeBinaryBroadcast);
 
 #define REGISTER_BINARY_BROADCAST_NORMAL_USER_OP(op_name, suffix) \
   REGISTER_BINARY_BROADCAST_USER_OP(op_name, suffix, Normal)
