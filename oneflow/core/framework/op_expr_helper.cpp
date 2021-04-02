@@ -57,6 +57,13 @@ Maybe<one::UserOpExpr> IdentityOp(const std::string& name) {
   return one::OpBuilder("identity", name).Input("in").Output("out").Build();
 }
 
+Maybe<one::UserOpExpr> ReshapeOp(const Shape& shape) {
+  return ReshapeOp(shape, UniqueOpName("reshape"));
+}
+Maybe<one::UserOpExpr> ReshapeOp(const Shape& shape, const std::string& name) {
+  return one::OpBuilder("reshape", name).Input("in").Output("out").Attr("shape", shape).Build();
+}
+
 Maybe<one::UserOpExpr> ReshapeLikeOp() { return ReshapeLikeOp(UniqueOpName("reshape_like")); }
 Maybe<one::UserOpExpr> ReshapeLikeOp(const std::string& name) {
   return one::OpBuilder("reshape_like", name).Input("in").Input("like").Output("out").Build();
@@ -93,7 +100,7 @@ Maybe<one::UserOpExpr> ScalarMulOp(const float& scalar, const std::string& name)
       .Input("in")
       .Attr("has_int_operand", false)
       .Attr("has_float_operand", true)
-      .Attr<int64_t>("int_operand", -1)
+      .Attr<int64_t>("int_operand", 0)
       .Attr<double>("float_operand", scalar)
       .Output("out")
       .Build();
@@ -111,7 +118,7 @@ Maybe<one::UserOpExpr> ScalarMulOp(const int32_t& scalar, const std::string& nam
       .Attr("has_int_operand", true)
       .Attr("has_float_operand", false)
       .Attr<int64_t>("int_operand", scalar)
-      .Attr<double>("float_operand", -1.0f)
+      .Attr<double>("float_operand", 0.f)
       .Output("out")
       .Build();
 }
@@ -119,6 +126,77 @@ Maybe<one::UserOpExpr> ScalarMulOp(const int32_t& scalar, const std::string& nam
 template<>
 Maybe<one::UserOpExpr> ScalarMulOp(const int32_t& scalar) {
   return ScalarMulOp<int32_t>(scalar, UniqueOpName("scalar_mul"));
+}
+
+template<>
+Maybe<one::UserOpExpr> ScalarAddOp(const float& scalar, const std::string& name) {
+  return one::OpBuilder("scalar_add", name)
+      .Input("in")
+      .Attr("has_int_operand", false)
+      .Attr("has_float_operand", true)
+      .Attr<int64_t>("int_operand", 0)
+      .Attr<double>("float_operand", scalar)
+      .Output("out")
+      .Build();
+}
+
+template<>
+Maybe<one::UserOpExpr> ScalarAddOp(const float& scalar) {
+  return ScalarAddOp<float>(scalar, UniqueOpName("scalar_add"));
+}
+
+template<>
+Maybe<one::UserOpExpr> ScalarAddOp(const int32_t& scalar, const std::string& name) {
+  return one::OpBuilder("scalar_add", name)
+      .Input("in")
+      .Attr("has_int_operand", true)
+      .Attr("has_float_operand", false)
+      .Attr<int64_t>("int_operand", scalar)
+      .Attr<double>("float_operand", 0.f)
+      .Output("out")
+      .Build();
+}
+
+template<>
+Maybe<one::UserOpExpr> ScalarAddOp(const int32_t& scalar) {
+  return ScalarAddOp<int32_t>(scalar, UniqueOpName("scalar_add"));
+}
+
+Maybe<one::UserOpExpr> RsqrtOp() { return RsqrtOp(UniqueOpName("rsqrt")); }
+Maybe<one::UserOpExpr> RsqrtOp(const std::string& name) {
+  return one::OpBuilder("rsqrt", name).Input("x").Output("y").Build();
+}
+
+Maybe<one::UserOpExpr> BroadcastMulOp() { return BroadcastMulOp(UniqueOpName("broadcast_mul")); }
+Maybe<one::UserOpExpr> BroadcastMulOp(const std::string& name) {
+  return one::OpBuilder("broadcast_mul", name).Input("x").Input("y").Output("z").Build();
+}
+
+Maybe<one::UserOpExpr> CastOp(const DataType& to_type) {
+  return CastOp(to_type, UniqueOpName("cast"));
+}
+Maybe<one::UserOpExpr> CastOp(const DataType& to_type, const std::string& name) {
+  return one::OpBuilder("cast", name).Input("in").Output("out").Attr("dtype", to_type).Build();
+}
+
+Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& epsilon) {
+  return NormalizationGradOp(axis, epsilon, UniqueOpName("normalization_grad"));
+}
+
+Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& epsilon,
+                                           const std::string& name) {
+  return one::OpBuilder("normalization_grad", name)
+      .Input("x")
+      .Input("dy")
+      .Input("gamma")
+      .Input("mean")
+      .Input("inv_variance")
+      .Output("dx")
+      .Output("gamma_diff")
+      .Output("beta_diff")
+      .Attr("axis", axis)
+      .Attr("epsilon", epsilon)
+      .Build();
 }
 
 }  // namespace op_expr_helper
