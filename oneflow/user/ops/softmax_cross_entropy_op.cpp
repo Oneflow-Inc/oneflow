@@ -85,8 +85,6 @@ REGISTER_USER_OP("softmax_cross_entropy_grad")
         CHECK_EQ_OR_RETURN(dy_desc->shape().At(i), label_desc->shape().At(i));
       }
       CHECK_EQ_OR_RETURN(label_desc->shape(), prob_desc->shape());
-      CHECK_EQ_OR_RETURN(label_desc->data_type(), prob_desc->data_type());
-      CHECK_EQ_OR_RETURN(dy_desc->data_type(), prob_desc->data_type());
       *ctx->Shape4ArgNameAndIndex("prediction_diff", 0) = *ctx->Shape4ArgNameAndIndex("prob", 0);
       *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) =
           *ctx->IsDynamic4ArgNameAndIndex("prob", 0);
