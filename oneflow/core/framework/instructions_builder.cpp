@@ -29,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/eager/eager_oneflow.h"
-#include "oneflow/core/framework/blob_cache.h"
 #include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
@@ -166,6 +165,16 @@ Maybe<void> _ReleasePhysicalObject(compatible_py::Object* obj) {
   JUST(PhysicalRun(
       [&obj](const std::shared_ptr<InstructionsBuilder>& build) { build->DeleteObject(obj); }));
   return Maybe<void>::Ok();
+}
+
+Maybe<compatible_py::BlobObject> CreateDelegateBlobObject(
+    const std::function<std::shared_ptr<compatible_py::BlobObject>(
+        const std::shared_ptr<compatible_py::BlobObject>&,
+        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& Fetch,
+    const std::shared_ptr<compatible_py::BlobObject>& x_blob_object,
+    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr) {
+  if ((*x_blob_object->op_arg_parallel_attr()) == (*op_arg_parallel_attr)) { return x_blob_object; }
+  return Fetch(x_blob_object, op_arg_parallel_attr);
 }
 
 }  // namespace
@@ -1056,8 +1065,7 @@ Maybe<void> InstructionsBuilder::StatefulCall(
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
-    return FindOrCreateDelegateBlobObject(FetchDelegateBlobObject, blob_object,
-                                          op_arg_parallel_attr);
+    return CreateDelegateBlobObject(FetchDelegateBlobObject, blob_object, op_arg_parallel_attr);
   };
 
   JUST(_StatefulCall(op_attribute, opkernel_object, bn_in_op2blob_object, GetDelegateBlobObject));
@@ -1091,8 +1099,7 @@ Maybe<void> InstructionsBuilder::StatelessCall(
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
-    return FindOrCreateDelegateBlobObject(FetchDelegateBlobObject, blob_object,
-                                          op_arg_parallel_attr);
+    return CreateDelegateBlobObject(FetchDelegateBlobObject, blob_object, op_arg_parallel_attr);
   };
 
   JUST(_StatelessCall("compute", op_attribute, op_parallel_desc_sym, op_parallel_desc_sym,
@@ -1135,8 +1142,7 @@ Maybe<void> InstructionsBuilder::NoBoxingStatelessCall(
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
-    return FindOrCreateDelegateBlobObject(FetchDelegateBlobObject, blob_object,
-                                          op_arg_parallel_attr);
+    return CreateDelegateBlobObject(FetchDelegateBlobObject, blob_object, op_arg_parallel_attr);
   };
   JUST(_StatelessCall("compute", op_attribute, op_parallel_desc_sym, op_parallel_desc_sym,
                       bn_in_op2blob_object, GetDirectOr121BlobObject));
