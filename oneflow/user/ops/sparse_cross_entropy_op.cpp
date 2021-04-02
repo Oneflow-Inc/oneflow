@@ -47,9 +47,8 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
   JUST(CheckPredictionLabelDesc(prediction_desc, label_desc));
   CHECK_EQ_OR_RETURN(dy_desc->shape(), label_desc->shape());
-  *ctx->Shape4ArgNameAndIndex("prediction_diff", 0) = *ctx->Shape4ArgNameAndIndex("prob_desc", 0);
-  *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) =
-      *ctx->IsDynamic4ArgNameAndIndex("prob_desc", 0);
+  *ctx->Shape4ArgNameAndIndex("prediction_diff", 0) = prediction_desc->shape();
+  *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) = prediction_desc->is_dynamic();
   return Maybe<void>::Ok();
 }
 
@@ -68,7 +67,7 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
   const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
   CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
   CHECK_EQ_OR_RETURN(dy_desc->data_type(), prediction_desc->data_type());
-  *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
+  *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = prediction_desc->data_type();
   return Maybe<void>::Ok();
 }
 

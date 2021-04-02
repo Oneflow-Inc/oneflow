@@ -29,11 +29,12 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   FOR_RANGE(int64_t, i, 0, num_out_axes) {
     CHECK_EQ_OR_RETURN(prediction_desc->shape().At(i), label_desc->shape().At(i));
   }
-  *ctx->IsDynamic4ArgNameAndIndex("prob", 0) = *ctx->IsDynamic4ArgNameAndIndex("prediction", 0);
-  *ctx->Shape4ArgNameAndIndex("prob", 0) = *ctx->Shape4ArgNameAndIndex(
-      "prediction", 0);  //'prob' is just for compute prediction's grad, prob's grad will be ignored
+  *ctx->IsDynamic4ArgNameAndIndex("prob", 0) = prediction_desc->is_dynamic();
+  *ctx->Shape4ArgNameAndIndex("prob", 0) =
+      prediction_desc
+          ->shape();  //'prob' is just for compute prediction's grad, prob's grad will be ignored
   user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("prediction", 0);
+  *out_desc->mut_is_dynamic() = prediction_desc->is_dynamic();
   *out_desc->mut_shape() = label_desc->shape();
   return Maybe<void>::Ok();
 }
@@ -50,16 +51,15 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(prob_desc->shape().At(i), label_desc->shape().At(i));
   }
   CHECK_EQ_OR_RETURN(dy_desc->shape(), label_desc->shape());
-  *ctx->Shape4ArgNameAndIndex("prediction_diff", 0) = *ctx->Shape4ArgNameAndIndex("prob_desc", 0);
-  *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) =
-      *ctx->IsDynamic4ArgNameAndIndex("prob_desc", 0);
+  *ctx->Shape4ArgNameAndIndex("prediction_diff", 0) = prob_desc->shape();
+  *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) = prob_desc->is_dynamic();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
   CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("prob", 0);
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
   return Maybe<void>::Ok();
 }
 
