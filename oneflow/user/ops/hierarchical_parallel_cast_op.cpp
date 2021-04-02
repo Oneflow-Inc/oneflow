@@ -25,7 +25,8 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
     .Attr<std::string>("grad_mode")
     .Attr<std::vector<std::string>>("grad_parallel_distribution")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
