@@ -124,7 +124,9 @@ class FunctionOpExpr : public OpExpr {
 
   FType forward() const { return forward_; }
   FType backward() const { return backward_; }
-  std::shared_ptr<OpExprInterpState> state() const { return state_; }
+
+  std::shared_ptr<const OpExprInterpState> state() const { return state_; }
+  std::shared_ptr<OpExprInterpState> mutable_state() { return state_; }
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override { UNIMPLEMENTED(); }
 
