@@ -25,7 +25,7 @@ bool IsScalarTensor(const user_op::TensorDesc* tensor) {
   return tensor->shape().NumAxes() == 1 && tensor->shape().At(0) == 1;
 }
 
-Maybe<void> InferTensorDescBinaryBroadcast(user_op::InferContext* ctx) {
+Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   user_op::TensorDesc* tensor_z = ctx->TensorDesc4ArgNameAndIndex("z", 0);
@@ -56,7 +56,14 @@ Maybe<void> InferTensorDescBinaryBroadcast(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferTensorDescBinaryBroadcastLogical(user_op::InferContext* ctx) {
+  return InferTensorDescBinaryBroadcastNormal(ctx);
+}
+
 Maybe<void> InferDataTypeBinaryBroadcast(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  CHECK_EQ_OR_RETURN(tensor_x->data_type(), tensor_y->data_type());
   *ctx->Dtype4ArgNameAndIndex("z", 0) = DataType::kInt8;
   return Maybe<void>::Ok();
 }
@@ -172,7 +179,7 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
       .Input("x")                                                             \
       .Input("y")                                                             \
       .Output("z")                                                            \
-      .SetTensorDescInferFn(InferTensorDescBinaryBroadcast)                   \
+      .SetTensorDescInferFn(InferTensorDescBinaryBroadcast##tensor_suffix)                   \
       .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>)    \
       .SetInferDataTypeFn(InferDataTypeBinaryBroadcast);
 
