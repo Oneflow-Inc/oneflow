@@ -64,6 +64,6 @@ REGISTER_USER_OP("dynamic_loss_scale_schedule")
     .Attr<float>("multiplier", 2.0)
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn(InputArgModifierFn)
-    .SetInferDataTypeFn(InferTensorDesc);
+    .SetInferDataTypeFn(InferDataType);
 
 }  // namespace oneflow
