@@ -266,6 +266,7 @@ def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):
             )
             if ofblob.CopyFromNdarray(ndarray) is False:
                 raise ValueError
+            print("feed finishes")
 
     elif isinstance(blob_def, input_blob_def.MirroredTensorDef):
 

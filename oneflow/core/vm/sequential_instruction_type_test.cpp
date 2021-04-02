@@ -100,7 +100,6 @@ TEST(SequentialInstruction, front_seq_compute) {
         std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
     list.EmplaceBack(std::move(instruction));
   }
-  vm->Receive(&list);
   BlockingCounter bc(1);
   std::thread t([&]() {
     while (!(infer_finished && compute_finished)) {
@@ -109,6 +108,7 @@ TEST(SequentialInstruction, front_seq_compute) {
     }
     bc.Decrease();
   });
+  vm->Receive(&list);
   bc.WaitUntilCntEqualZero();
   ASSERT_TRUE(is_666);
   ASSERT_TRUE(vm->Empty());

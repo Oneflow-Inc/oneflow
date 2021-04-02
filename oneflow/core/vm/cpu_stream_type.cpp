@@ -50,10 +50,19 @@ void CpuStreamType::Compute(Instruction* instruction) const {
   {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
+    if (instruction->instr_msg().instr_type_name() == "cpu.FeedBlob") {
+      std::cout << "cpu.FeedBlob instruction " << instruction << " start" << std::endl;
+    }
     instr_type_id.instruction_type().Compute(instruction);
+    if (instruction->instr_msg().instr_type_name() == "cpu.FeedBlob") {
+      std::cout << "cpu.FeedBlob instruction " << instruction << " end" << std::endl;
+    }
   }
   auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
+  if (instruction->instr_msg().instr_type_name() == "cpu.FeedBlob") {
+    std::cout << "cpu.FeedBlob instruction " << instruction << " set done" << std::endl;
+  }
 }
 
 ObjectMsgPtr<StreamDesc> CpuStreamType::MakeStreamDesc(const Resource& resource,

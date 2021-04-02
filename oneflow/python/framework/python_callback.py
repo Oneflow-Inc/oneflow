@@ -43,19 +43,27 @@ class PythonCallback(oneflow_api.ForeignCallback):
         oneflow_api.ForeignCallback.__init__(self)
 
     def OfBlobCall(self, unique_id, of_blob_ptr):
+        # print("call start in python")
         try:
             _WatcherHandler(unique_id, of_blob_ptr)
         except Exception as e:
             print(traceback.format_exc())
             raise e
+        finally:
+            # print("call end in python")
+            pass
 
     def RemoveForeignCallback(self, unique_id):
+        # print("remove start in python")
         global unique_id2handler
         try:
             del unique_id2handler[unique_id]
         except Exception as e:
             print(traceback.format_exc())
             raise e
+        finally:
+            # print("remove end in python")
+            pass
 
     def EagerInterpretCompletedOp(self, op_attribute, parallel_conf):
         try:
