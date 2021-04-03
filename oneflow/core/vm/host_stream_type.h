@@ -46,6 +46,7 @@ class HostStreamType final : public StreamType {
   void Compute(Instruction* instruction) const override;
   ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                           int64_t this_machine_id) const override;
+  bool SharingVirtualMachineThread() const override { return true; }
 };
 
 }  // namespace vm
