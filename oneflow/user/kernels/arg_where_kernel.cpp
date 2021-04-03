@@ -22,7 +22,7 @@ namespace oneflow {
 
 namespace {
 
-template<DeviceType device_type, typename IN_T, typename OUT_T, int NDIM>
+template<DeviceType device_type, typename IN_T, typename OUT_T>
 class ArgWhereKernel final : public user_op::OpKernel {
  public:
   ArgWhereKernel() = default;
@@ -30,6 +30,17 @@ class ArgWhereKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    int64_t ndims = ctx->Tensor4ArgNameAndIndex("input", 0)->shape().NumAxes();
+    SwitchNdimCompute(SwitchCase(ndims), ctx);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+#define COMPUTE_SWITCH_ENTRY(func_name, ndim) func_name<ndim>
+  DEFINE_STATIC_SWITCH_FUNC(void, NdimCompute, COMPUTE_SWITCH_ENTRY, MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+#undef COMPUTE_SWITCH_ENTRY
+
+  template<int NDIM>
+  static void NdimCompute(user_op::KernelComputeContext* ctx) {
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
     user_op::Tensor* output_size = ctx->Tensor4ArgNameAndIndex("output_size", 0);
@@ -40,19 +51,12 @@ class ArgWhereKernel final : public user_op::OpKernel {
         ctx->device_ctx(), input->shape(), input->dptr<IN_T>(), tmp_ptr, tmp_size,
         output->mut_dptr<OUT_T>(), output_size->mut_dptr<OUT_T>());
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<DeviceType device_type, typename IN_T, typename OUT_T, int NDIM>
 size_t GetWorkspaceBytesSize(int64_t elem_cnt) {
   return ArgWhereKernelUtil<device_type, IN_T, OUT_T, NDIM>::GetWorkspaceBytesSize(nullptr,
                                                                                    elem_cnt);
-}
-
-template<DeviceType device_type, int NDIM>
-user_op::IsMatchedHob GetIsMatchedHob(user_op::IsMatchedHob dtype_relative_hob) {
-  return (user_op::HobDeviceTag() == device_type) & (user_op::HobNumAxes("input", 0) == NDIM)
-         & dtype_relative_hob;
 }
 
 struct SwitchUtil {
@@ -64,12 +68,6 @@ struct SwitchUtil {
                             MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ),
                             MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
 #undef SWITCH_ENTRY
-
-#define HOB_SWITCH_ENTRY(func_name, device, ndim) func_name<device, ndim>
-  DEFINE_STATIC_SWITCH_FUNC(user_op::IsMatchedHob, GetIsMatchedHob, HOB_SWITCH_ENTRY,
-                            MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),
-                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
-#undef HOB_SWITCH_ENTRY
 };
 
 size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
@@ -83,27 +81,21 @@ size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
       input_shape->elem_cnt());
 }
 
-template<DeviceType device_type, typename IN_T, typename OUT_T, int NDIM>
-user_op::IsMatchedHob InferMatchedHob() {
-  return SwitchUtil::SwitchGetIsMatchedHob(
-      SwitchCase(device_type, NDIM),
-      (user_op::HobDataType("input", 0) == GetDataType<IN_T>::value)
-          & (user_op::HobDataType("output", 0) == GetDataType<OUT_T>::value)
-          & (user_op::HobDataType("output_size", 0) == GetDataType<OUT_T>::value));
-}
-
 }  // namespace
 
-#define REGISTER_ARG_WHERE_KERNEL(device, itype, otype, ndim)         \
-  REGISTER_USER_KERNEL("argwhere")                                    \
-      .SetCreateFn<ArgWhereKernel<device, itype, otype, ndim>>()      \
-      .SetIsMatchedHob(InferMatchedHob<device, itype, otype, ndim>()) \
+#define REGISTER_ARG_WHERE_KERNEL(device, itype, otype)                                         \
+  REGISTER_USER_KERNEL("argwhere")                                                              \
+      .SetCreateFn<ArgWhereKernel<device, itype, otype>>()                                      \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+                       & (user_op::HobDataType("input", 0) == GetDataType<itype>::value)        \
+                       & (user_op::HobDataType("output", 0) == GetDataType<otype>::value)       \
+                       & (user_op::HobDataType("output_size", 0) == GetDataType<otype>::value)) \
       .SetInferTmpSizeFn(InferTempStorageBytesSize);
 
-#define REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR(device, itype_pair, otype_pair, ndim)         \
-  REGISTER_ARG_WHERE_KERNEL(device, OF_PP_PAIR_FIRST(itype_pair), OF_PP_PAIR_FIRST(otype_pair), \
-                            ndim)
+#define REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR(device, itype_pair, otype_pair) \
+  REGISTER_ARG_WHERE_KERNEL(device, OF_PP_PAIR_FIRST(itype_pair), OF_PP_PAIR_FIRST(otype_pair))
+
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ, DIM_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
