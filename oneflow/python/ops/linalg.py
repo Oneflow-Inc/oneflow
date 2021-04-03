@@ -15,15 +15,13 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import os
+from typing import Optional
 
 import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
+
 import oneflow_api
 from typing import Optional
 
@@ -104,3 +102,73 @@ def matmul(
             .Build()
         )
     return op.InferAndTryRun().RemoteBlobList()[0]
+
+
+@oneflow_export("spmm_coo")
+def spmm_coo(
+    a_cooRowInd: oneflow_api.BlobDesc,
+    a_cooColInd: oneflow_api.BlobDesc,
+    a_cooValues: oneflow_api.BlobDesc,
+    a_rows: int,
+    a_cols: int,
+    b: oneflow_api.BlobDesc,
+) -> oneflow_api.BlobDesc:
+    r"""This operator applies COO sparse matrix multiplication to two Blobs.
+
+    Args:
+        a_cooRowInd (oneflow_api.BlobDesc): Row indices of the sparse matrix
+        a_cooColInd (oneflow_api.BlobDesc): Column indices of the sparse matrix.
+        a_cooValues (oneflow_api.BlobDesc): Values of the sparse martix
+        a_rows (int): Number of rows of the sparse matrix
+        a_cols (int): Number of columns of the sparse matrix
+        b (oneflow_api.BlobDesc): A Blob
+
+    Returns:
+        oneflow_api.BlobDesc: The result Blob
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        a_rows = 4
+        a_cols = 4
+
+        @flow.global_function()
+        def MyJob(a_cooRowInd: tp.Numpy.Placeholder((9,), dtype=flow.int64),
+                  a_cooColInd: tp.Numpy.Placeholder((9,), dtype=flow.int64),
+                  a_cooValues: tp.Numpy.Placeholder((9,), dtype=flow.float32),
+                  b: tp.Numpy.Placeholder((4, 3), dtype=flow.float32),) -> tp.Numpy:
+            with flow.scope.placement("gpu", "0:0"):
+                return flow.spmm_coo(a_cooRowInd, a_cooColInd, a_cooValues, a_rows, a_cols, b)
+
+
+        a_cooRowInd = np.array([0, 0, 0, 1, 2, 2, 2, 3, 3], dtype=np.int64)
+        a_cooColInd = np.array([0, 2, 3, 1, 0, 2, 3, 1, 3], dtype=np.int64)
+        a_cooValues = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], dtype=np.float32)
+        b = np.array([[1.0, 5.0, 9.0], [2.0, 6.0, 10.0], [3.0, 7.0, 11.0], [4.0, 8.0, 12.0]], dtype=np.float32)
+
+        output = MyJob(a_cooRowInd, a_cooColInd, a_cooValues, b)
+
+        # output [[ 19.  43.  67.]
+        #         [  8.  24.  40.]
+        #         [ 51. 123. 195.]
+        #         [ 52. 120. 188.]]
+
+    """
+    op = (
+        flow.user_op_builder("op_spmm_coo")
+        .Op("spmm_coo")
+        .Input("a_cooRowInd", [a_cooRowInd])
+        .Input("a_cooColInd", [a_cooColInd])
+        .Input("a_cooValues", [a_cooValues])
+        .Input("b", [b])
+        .Output("out")
+        .Attr("a_rows", a_rows)
+        .Attr("a_cols", a_cols)
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
