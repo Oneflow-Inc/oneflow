@@ -151,11 +151,12 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
           ctx->ParallelDistribution4ArgNameAndIndex("prob", 0);
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       const TensorDesc* prob_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("prob", 0);
+      const int64_t class_axis = prob_logical_desc->shape().NumAxes() - 1;
       TensorSliceView view = GetTensorSliceView4ParallelId(hierarchy, parallel_distribution,
                                                            prob_logical_desc->shape(),
                                                            ctx->parallel_ctx().parallel_id());
-      return std::make_shared<SparseSoftmaxCrossEntropyOpKernelState>(view.At(1).begin(),
-                                                                      view.At(1).end());
+      return std::make_shared<SparseSoftmaxCrossEntropyOpKernelState>(view.At(class_axis).begin(),
+                                                                      view.At(class_axis).end());
     } else {
       return std::shared_ptr<OpKernelState>(nullptr);
     }

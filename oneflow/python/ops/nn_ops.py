@@ -2273,7 +2273,7 @@ def sparse_softmax_cross_entropy_with_logits(
     return out
 
 
-@oneflow_export("nn.sparse_softmax_cross_entropy_with_logits_ms")
+@oneflow_export("nn.distributed_sparse_softmax_cross_entropy_with_logits")
 def sparse_softmax_cross_entropy_with_logits_ms(
     labels: oneflow_api.BlobDesc,
     logits: oneflow_api.BlobDesc,
@@ -2291,7 +2291,7 @@ def sparse_softmax_cross_entropy_with_logits_ms(
         flow.user_op_builder(
             name
             if name is not None
-            else id_util.UniqueStr("SparseSoftmaxCrossEntropyMs_")
+            else id_util.UniqueStr("DistributedSparseSoftmaxCrossEntropy_")
         )
         .Op("sparse_softmax_cross_entropy_ms")
         .Input("prediction", [logits])

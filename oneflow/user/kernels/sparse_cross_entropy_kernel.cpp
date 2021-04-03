@@ -75,11 +75,12 @@ class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       const TensorDesc* prediction_logical_desc =
           ctx->LogicalTensorDesc4ArgNameAndIndex("prediction", 0);
+      const int64_t class_axis = prediction_logical_desc->shape().NumAxes() - 1;
       TensorSliceView view = GetTensorSliceView4ParallelId(hierarchy, parallel_distribution,
                                                            prediction_logical_desc->shape(),
                                                            ctx->parallel_ctx().parallel_id());
-      return std::make_shared<SparseCrossEntropyOpKernelState>(view.At(1).begin(),
-                                                               view.At(1).end());
+      return std::make_shared<SparseCrossEntropyOpKernelState>(view.At(class_axis).begin(),
+                                                               view.At(class_axis).end());
     } else {
       return std::shared_ptr<OpKernelState>(nullptr);
     }
