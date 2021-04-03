@@ -2274,7 +2274,7 @@ def sparse_softmax_cross_entropy_with_logits(
 
 
 @oneflow_export("nn.distributed_sparse_softmax_cross_entropy_with_logits")
-def sparse_softmax_cross_entropy_with_logits_ms(
+def distributed_sparse_softmax_cross_entropy_with_logits(
     labels: oneflow_api.BlobDesc,
     logits: oneflow_api.BlobDesc,
     name: Optional[str] = None,
