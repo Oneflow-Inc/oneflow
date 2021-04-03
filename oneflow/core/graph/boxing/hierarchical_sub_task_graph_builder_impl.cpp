@@ -343,13 +343,14 @@ class InterGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
   std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
 };
 
-class ChangeDim0DistributionSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
+class Dim0ParallelDistributionMismatchedSubTskGphBuilder final
+    : public HierarchicalSubTskGphBuilder {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ChangeDim0DistributionSubTskGphBuilder);
-  ChangeDim0DistributionSubTskGphBuilder() {
+  OF_DISALLOW_COPY_AND_MOVE(Dim0ParallelDistributionMismatchedSubTskGphBuilder);
+  Dim0ParallelDistributionMismatchedSubTskGphBuilder() {
     inter_group_sub_tsk_gph_builder_.reset(new InterGroupSubTskGphBuilder());
   }
-  ~ChangeDim0DistributionSubTskGphBuilder() override = default;
+  ~Dim0ParallelDistributionMismatchedSubTskGphBuilder() override = default;
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
@@ -388,7 +389,8 @@ class Same2DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
   OF_DISALLOW_COPY_AND_MOVE(Same2DHierarchySubTskGphBuilder);
   Same2DHierarchySubTskGphBuilder() {
     intra_group_sub_tsk_gph_builder_.reset(new IntraGroupSubTskGphBuilder());
-    change_dim0_sub_tsk_gph_builder_.reset(new ChangeDim0DistributionSubTskGphBuilder());
+    dim0_parallel_distribution_mismatched_sub_tsk_gph_builder_.reset(
+        new Dim0ParallelDistributionMismatchedSubTskGphBuilder());
   }
   ~Same2DHierarchySubTskGphBuilder() override = default;
 
@@ -411,7 +413,7 @@ class Same2DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
             out_parallel_distribution, time_shape);
       } else if (in_parallel_distribution.sbp_parallel(1)
                  == out_parallel_distribution.sbp_parallel(1)) {
-        return change_dim0_sub_tsk_gph_builder_->Build(
+        return dim0_parallel_distribution_mismatched_sub_tsk_gph_builder_->Build(
             ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
             out_parallel_desc, lbi, logical_blob_desc, in_parallel_distribution,
             out_parallel_distribution, time_shape);
@@ -425,16 +427,17 @@ class Same2DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
 
  private:
   std::unique_ptr<IntraGroupSubTskGphBuilder> intra_group_sub_tsk_gph_builder_;
-  std::unique_ptr<ChangeDim0DistributionSubTskGphBuilder> change_dim0_sub_tsk_gph_builder_;
+  std::unique_ptr<Dim0ParallelDistributionMismatchedSubTskGphBuilder>
+      dim0_parallel_distribution_mismatched_sub_tsk_gph_builder_;
 };
 
-class ConvertHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
+class ExpandToSame2DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvertHierarchySubTskGphBuilder);
-  ConvertHierarchySubTskGphBuilder() {
+  OF_DISALLOW_COPY_AND_MOVE(ExpandToSame2DHierarchySubTskGphBuilder);
+  ExpandToSame2DHierarchySubTskGphBuilder() {
     same_2d_hierarchy_sub_tsk_gph_builder_.reset(new Same2DHierarchySubTskGphBuilder());
   }
-  ~ConvertHierarchySubTskGphBuilder() override = default;
+  ~ExpandToSame2DHierarchySubTskGphBuilder() override = default;
 
   Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
                                       const std::vector<TaskNode*>& sorted_in_tasks,
@@ -485,13 +488,15 @@ struct DispatchHierarchicalSubTskGphBuilder::Impl {
   Impl();
   std::unique_ptr<FlatSubTskGphBuilder> flat_sub_tsk_gph_builder_;
   std::unique_ptr<Same2DHierarchySubTskGphBuilder> same_2d_hierarchy_sub_tsk_gph_builder_;
-  std::unique_ptr<ConvertHierarchySubTskGphBuilder> convert_hierarchy_sub_tsk_gph_builder_;
+  std::unique_ptr<ExpandToSame2DHierarchySubTskGphBuilder>
+      expand_to_same_2d_hierarchy_sub_tsk_gph_builder_;
 };
 
 DispatchHierarchicalSubTskGphBuilder::Impl::Impl() {
   flat_sub_tsk_gph_builder_.reset(new FlatSubTskGphBuilder());
   same_2d_hierarchy_sub_tsk_gph_builder_.reset(new Same2DHierarchySubTskGphBuilder());
-  convert_hierarchy_sub_tsk_gph_builder_.reset(new ConvertHierarchySubTskGphBuilder());
+  expand_to_same_2d_hierarchy_sub_tsk_gph_builder_.reset(
+      new ExpandToSame2DHierarchySubTskGphBuilder());
 }
 
 DispatchHierarchicalSubTskGphBuilder::DispatchHierarchicalSubTskGphBuilder() {
@@ -529,7 +534,7 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
           reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
           reduced_out_parallel_distribution, time_shape);
     } else {
-      return impl_->convert_hierarchy_sub_tsk_gph_builder_->Build(
+      return impl_->expand_to_same_2d_hierarchy_sub_tsk_gph_builder_->Build(
           ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
           reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
           reduced_out_parallel_distribution, time_shape);
