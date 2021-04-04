@@ -26,9 +26,12 @@ namespace profiler {
 namespace {
 
 bool profile_cuda_memory_bandwidth = false;
+bool profile_kernel_forward_range = false;
 
 COMMAND(ParseBoolFlagFromEnv("ONEFLOW_PROFILER_KERNEL_PROFILE_CUDA_MEMORY_BANDWIDTH",
                              &profile_cuda_memory_bandwidth));
+COMMAND(ParseBoolFlagFromEnv("ONEFLOW_PROFILER_KERNEL_PROFILE_KERNEL_FORWARD_RANGE",
+                             &profile_kernel_forward_range));
 
 #if defined(WITH_CUDA)
 thread_local cudaEvent_t cuda_memory_bandwidth_profile_start_event = nullptr;
@@ -38,7 +41,7 @@ thread_local cudaEvent_t cuda_memory_bandwidth_profile_end_event = nullptr;
 }  // namespace
 
 void TraceKernelForwardDataContentStart(
-    const Kernel*, const KernelCtx& ctx,
+    const Kernel* kernel, const KernelCtx& ctx,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
 #if defined(WITH_CUDA)
   if (profile_cuda_memory_bandwidth) {
@@ -52,12 +55,14 @@ void TraceKernelForwardDataContentStart(
                                     cuda_device_ctx->cuda_stream()));
     }
   }
+  if (profile_kernel_forward_range) { OF_PROFILER_RANGE_PUSH(kernel->op_conf().name()); }
 #endif  // WITH_CUDA
 }
 
 void TraceKernelForwardDataContentEnd(const Kernel* kernel, const KernelCtx& ctx,
                                       const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
 #if defined(WITH_CUDA)
+  if (profile_kernel_forward_range) { OF_PROFILER_RANGE_POP(); }
   // The memory bandwidth profiler only works in lazy mode.
   if (profile_cuda_memory_bandwidth) {
     auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(ctx.device_ctx);

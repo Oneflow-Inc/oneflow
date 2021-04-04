@@ -27,6 +27,8 @@ class UserOp final : public Operator {
   UserOp() = default;
   ~UserOp() = default;
 
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
   void InitFromOpConf() override;
   Maybe<void> InferInternalBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
@@ -43,6 +45,9 @@ class UserOp final : public Operator {
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
+  const user_op::UserOpConfWrapper& user_op_conf() const;
+  const ArgVec& inputs() const { return inputs_; }
+  const ArgVec& outputs() const { return outputs_; }
 
  private:
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
@@ -56,13 +61,22 @@ class UserOp final : public Operator {
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override;
   Maybe<void> InferOpTimeShape(
-      const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
-      Shape* time_shape) const override;
+      const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
+      std::shared_ptr<const Shape>* time_shape) const override;
+  Maybe<void> InferParallelDistributionSignature(
+      ParallelDistributionSignature* parallel_distribution_signature,
+      const ParallelDistributionSignature& parallel_distribution_constraints,
+      const ParallelDesc& parallel_desc,
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+          ParallelDistributionInferHint4Ibn) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
 
   const user_op::OpRegistryResult* val_;
+  std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
+  ArgVec inputs_;
+  ArgVec outputs_;
 };
 
 }  // namespace oneflow

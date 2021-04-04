@@ -19,71 +19,31 @@ limitations under the License.
 
 namespace oneflow {
 
-std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
-    const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc) {
-  // TODO(chengcheng) : remove PackedBlob
-  int64_t body_byte_size = 0;
-  StructPodDesc opaque_header_pod_desc;
-  std::unique_ptr<BlobDesc> ret;
-  for (const auto& pair : lbi2blob_desc) {
-    if (lbi2blob_desc.size() == 1) {
-      ret.reset(new BlobDesc(*(pair.second)));
-      break;
-    }
-    RtBlobDesc rt_blob_desc(*(pair.second));
-    // CHECK(!rt_blob_desc.is_dynamic());
-    body_byte_size += rt_blob_desc.AlignedByteSizeOfBlobBody();
-    *opaque_header_pod_desc.MutStructField(NewFieldId(pair.first)) = rt_blob_desc.header_pod_desc();
-  }
-  if (lbi2blob_desc.size() > 1) {
-    ret.reset(new BlobDesc(Shape(DimVector{body_byte_size}), DataType::kChar));
-    ret->SetOpaqueHeader(opaque_header_pod_desc);
-  }
-  return ret;
-}
-
 bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs) {
   return lhs.lbi() < rhs.lbi();
 }
 
-BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
-    : body_(shape, dtype), is_dynamic_(false), opaque_header_() {}
+BlobDesc::BlobDesc(const Shape& shape, DataType dtype) : body_(shape, dtype), is_dynamic_(false) {}
+BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype)
+    : body_(shape, dtype), is_dynamic_(false) {}
 
 BlobDesc::BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
 
-BlobDesc::BlobDesc(const BlobDesc& other) {
-  // *body_.mut_shape() = other.body_.shape();
-  // body_.set_data_type(other.body_.data_type());
-  // header_ = other.header_;
-  BlobDescProto proto;
-  other.ToProto(&proto);
-  InitFromProto(proto);
-}
+BlobDesc::BlobDesc(const BlobDesc& other) { CopyFrom(other); }
 
 void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   body_.InitFromProto(proto.body());
   is_dynamic_ = proto.is_dynamic();
-  if (proto.header_is_opaque()) {
-    opaque_header_.reset(new StructPodDesc(proto.header()));
-  } else {
-    opaque_header_.reset(nullptr);
-  }
 }
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   body_.ToProto(proto->mutable_body());
   proto->set_is_dynamic(is_dynamic_);
 
-  if (opaque_header_) {
-    opaque_header_->ToProto(proto->mutable_header());
-    proto->set_header_is_opaque(true);
-  } else {
-    StructPodDesc header;
-    header.AddField(FieldKey::kTensorShape,
-                    TensorPodDesc(Shape(DimVector{shape().NumAxes()}), DataType::kInt64));
-    header.ToProto(proto->mutable_header());
-    proto->set_header_is_opaque(false);
-  }
+  StructPodDesc header;
+  header.AddField(FieldKey::kTensorShape,
+                  TensorPodDesc(Shape(DimVector{shape().NumAxes()}), DataType::kInt64));
+  header.ToProto(proto->mutable_header());
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& rhs) {
@@ -92,22 +52,15 @@ BlobDesc& BlobDesc::operator=(const BlobDesc& rhs) {
 }
 
 void BlobDesc::CopyFrom(const BlobDesc& other) {
-  BlobDescProto proto;
-  other.ToProto(&proto);
-  this->InitFromProto(proto);
-}
-
-void BlobDesc::SetOpaqueHeader(const StructPodDesc& header_pod_desc) {
-  CHECK(!is_dynamic_);
-  CHECK_GT(header_pod_desc.ByteSize(), 0);
-  opaque_header_.reset(new StructPodDesc(header_pod_desc));
+  *body_.mut_shape() = other.body_.shape();
+  body_.set_data_type(other.body_.data_type());
+  is_dynamic_ = other.is_dynamic_;
 }
 
 void BlobDesc::set_is_dynamic(bool is_dynamic) { is_dynamic_ = is_dynamic; }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
-  return (body_ == rhs.body_) && (is_dynamic_ == rhs.is_dynamic_)
-         && (opaque_header_ == rhs.opaque_header_);
+  return (body_ == rhs.body_) && (is_dynamic_ == rhs.is_dynamic_);
 }
 
 }  // namespace oneflow

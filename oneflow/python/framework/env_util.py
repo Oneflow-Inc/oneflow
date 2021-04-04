@@ -229,8 +229,13 @@ def do_nothing(*args, **kwargs):
 
 
 def CompleteEnvProto(env_proto):
-    if len(env_proto.machine) == 1 and env_proto.HasField("ctrl_port") == False:
-        env_proto.ctrl_port = _FindFreePort()
+    if env_proto.HasField("ctrl_port") == False:
+        if len(env_proto.machine) == 1:
+            env_proto.ctrl_port = _FindFreePort()
+        else:
+            raise ValueError(
+                "a ctrl_port is required if running multi-node, set it with 'oneflow.env.ctrl_port([YOUR PORT])'"
+            )
 
 
 def _MakeMachine(machines):
@@ -262,8 +267,8 @@ def _MakeMachine(machines):
 
 # only used by CI
 @oneflow_export("env.init_bootstrap_confs")
-def api_init_bootstrap_confs(*val: list) -> None:
-    return enable_if.unique([MakeBootstrapConfs, do_nothing])(*val)
+def api_init_bootstrap_confs(*val: list, **kargs) -> None:
+    return enable_if.unique([MakeBootstrapConfs, do_nothing])(*val, **kargs)
 
 
 def _MakeBootstrapConf(bootstrap_info: dict):
@@ -276,17 +281,30 @@ def _MakeBootstrapConf(bootstrap_info: dict):
     bootstrap_conf.world_size = config_world_size
     assert "rank" in bootstrap_info
     bootstrap_conf.rank = bootstrap_info["rank"]
+    global config_num_process_per_node
+    assert config_num_process_per_node >= 1
+    bootstrap_conf.num_process_per_node.value = config_num_process_per_node
     if "host" in bootstrap_info:
         bootstrap_conf.host = bootstrap_info["host"]
     global config_bootstrap_ctrl_port
     if config_bootstrap_ctrl_port != 0:
         bootstrap_conf.ctrl_port = config_bootstrap_ctrl_port
+    global config_node_size
+    if config_node_size != 0:
+        bootstrap_conf.node_size = config_node_size
     return bootstrap_conf
 
 
 # only used by CI
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def MakeBootstrapConfs(node_list, master_port, world_size=0, ctrl_port=-1):
+def MakeBootstrapConfs(
+    node_list,
+    master_port,
+    world_size=0,
+    ctrl_port=-1,
+    node_size=-1,
+    num_process_per_node=-1,
+):
     r"""Set ctrl_bootstrap_conf' info.
 
     For instance:
@@ -314,6 +332,12 @@ def MakeBootstrapConfs(node_list, master_port, world_size=0, ctrl_port=-1):
     global config_bootstrap_ctrl_port
     if ctrl_port != -1:
         config_bootstrap_ctrl_port = ctrl_port
+    global config_node_size
+    if node_size != -1:
+        config_node_size = node_size
+    global config_num_process_per_node
+    if num_process_per_node != -1:
+        config_num_process_per_node = num_process_per_node
     rank = 0
     for rank_host in node_list:
         assert isinstance(rank_host, str)
@@ -362,5 +386,10 @@ config_master_addr = ctrl_bootstrap_pb.Address()
 config_world_size = 0
 
 config_bootstrap_ctrl_port = 0
+
+config_node_size = 0
+
+# One process per machine by default
+config_num_process_per_node = 1
 
 global_ctrl_bootstrap_confs = []

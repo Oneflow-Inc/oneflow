@@ -262,7 +262,8 @@ void InitOutputBlobObjects(vm::Instruction* instruction, const T& args,
       // mutable input
       CHECK(rw_mutexed_object->Has<BlobObject>());
     } else {
-      rw_mutexed_object->Init<EagerBlobObject>(mem_case, data_type);
+      rw_mutexed_object->Init<EagerBlobObject>(mem_case, std::make_shared<Shape>(), data_type,
+                                               std::make_shared<TensorBuffer>());
     }
   };
   FOR_RANGE(int, i, 0, args.output_blob_size()) {
@@ -583,7 +584,8 @@ void FeedOrFetchBlob(vm::Instruction* instruction) {
   auto* blob_object = CHECK_JUST(rw_mutext_blob->template Mut<BlobObject>());
   OfBlob of_blob(device_ctx, blob_object->mut_blob());
   int64_t of_blob_ptr = reinterpret_cast<int64_t>(&of_blob);
-  Global<ForeignCallback>::Get()->OfBlobCall(args->unique_callback_id(), of_blob_ptr);
+  (*Global<std::shared_ptr<ForeignCallback>>::Get())
+      ->OfBlobCall(args->unique_callback_id(), of_blob_ptr);
 }
 
 void FetchBlobHeaderInstructionType::Infer(vm::Instruction* instruction) const {

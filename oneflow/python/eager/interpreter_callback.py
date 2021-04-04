@@ -28,10 +28,14 @@ import oneflow_api
 
 
 def MakeScopeSymbol(job_conf, parallel_conf, is_mirrored):
+    parallel_hierarchy = None
+    if parallel_conf.has_hierarchy():
+        parallel_hierarchy = oneflow_api.Size(tuple(parallel_conf.hierarchy().dim()))
     return scope_util.MakeInitialScope(
         job_conf,
         parallel_conf.device_tag(),
         list(parallel_conf.device_name()),
+        parallel_hierarchy,
         is_mirrored,
     ).symbol_id
 

@@ -24,7 +24,8 @@ namespace oneflow {
 
 struct InterfaceOpUtil final {
   static Maybe<void> InferOutBlobDesc(const InterfaceBlobConf& blob_conf, BlobDesc* out_blob_desc,
-                                      const ParallelContext* parallel_ctx);
+                                      const ParallelContext* parallel_ctx,
+                                      const ParallelDesc& parallel_desc);
   static Maybe<void> InferLogicalOutBlobDesc(const InterfaceBlobConf& blob_conf,
                                              BlobDesc* out_blob_desc,
                                              const ParallelDesc& parallel_desc);
@@ -38,6 +39,10 @@ struct InterfaceOpUtil final {
                                                  SbpSignature* sbp_signature);
   static Maybe<void> InitBlobConf(InterfaceBlobConf* blob_conf,
                                   const ParallelBlobConf& parallel_blob_conf);
+
+  static Maybe<void> ParseParallelDistributionFromBlobConf(
+      const InterfaceBlobConf& blob_conf, const ParallelDesc& parallel_desc,
+      ParallelDistribution* parallel_distribution);
 };
 
 }  // namespace oneflow

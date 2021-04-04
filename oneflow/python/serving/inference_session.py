@@ -28,6 +28,7 @@ import oneflow_api.oneflow.core.job.job_conf as job_conf_proto_cfg
 import oneflow_api.oneflow.core.operator.interface_blob_conf as interface_blob_conf_proto_cfg
 import oneflow_api.oneflow.core.common.shape as shape_proto_cfg
 import oneflow_api.oneflow.core.common.data_type as dtype_proto_cfg
+import oneflow_api.oneflow.core.job.sbp_parallel as sbp_parallel_cfg
 import oneflow.core.job.job_conf_pb2 as job_conf_proto
 import oneflow.core.operator.interface_blob_conf_pb2 as interface_blob_conf_proto
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
@@ -106,10 +107,17 @@ def _inferface_blob_conf_proto_to_cfg(
     dtype = dtype_proto_cfg.DataType(int(inferface_blob_conf_proto.data_type))
     mut_inferface_blob_conf_cfg.set_data_type(dtype)
 
-    split_axis = dtype_proto_cfg.OptInt64()
-    if inferface_blob_conf_proto.split_axis.HasField("value"):
-        split_axis.set_value(inferface_blob_conf_proto.split_axis.value)
-    mut_inferface_blob_conf_cfg.mutable_split_axis().CopyFrom(split_axis)
+    if inferface_blob_conf_proto.HasField("parallel_distribution"):
+        # TODO(guoran): Process Nd sbp, parallel_distribution_cfg CopyFrom parallel_distribution_proto
+        assert len(inferface_blob_conf_proto.parallel_distribution.sbp_parallel) == 1
+        sbp_proto = inferface_blob_conf_proto.parallel_distribution.sbp_parallel[0]
+        if sbp_proto.HasField("split_parallel"):
+            split_axis = sbp_proto.split_parallel.axis
+            sbp = sbp_parallel_cfg.SbpParallel()
+            sbp.mutable_split_parallel().set_axis(split_axis)
+            mut_inferface_blob_conf_cfg.mutable_parallel_distribution().mutable_sbp_parallel().Add().CopyFrom(
+                sbp
+            )
 
     mut_inferface_blob_conf_cfg.set_is_dynamic(inferface_blob_conf_proto.is_dynamic)
 
@@ -267,7 +275,7 @@ class InferenceSession(object):
             self.config_proto_.resource
         )
         scope = scope_util.MakeInitialScope(
-            job_conf, *tag_and_dev_ids, self.is_mirrored_
+            job_conf, *tag_and_dev_ids, None, self.is_mirrored_
         )
 
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):

@@ -18,26 +18,35 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/vm/instruction.cfg.h"
+#include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
 
 namespace oneflow {
 
 class Session {
  public:
-  Session(int64_t id, const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
-          const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list);
+  Session(int64_t id);
   Session(const Session&) = delete;
   Session(Session&&) = delete;
   ~Session() = default;
 
   int64_t id() const;
-  std::shared_ptr<vm::cfg::InstructionListProto> instruction_list() const;
+  const std::shared_ptr<vm::InstructionMsgList>& instruction_list() const;
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list() const;
+
+  std::shared_ptr<const std::vector<bool>> is_mirrored_strategy_enabled_stack() const {
+    return is_mirrored_strategy_enabled_stack_;
+  }
+  Maybe<void> PushMirroredStrategyEnabled(bool is_mirrored);
+  Maybe<void> PopMirroredStrategyEnabled();
+  Maybe<bool> IsMirroredStrategyEnabled() const;
+  Maybe<bool> IsConsistentStrategyEnabled() const;
 
  private:
   int64_t id_;
-  std::shared_ptr<vm::cfg::InstructionListProto> instruction_list_;
+  std::shared_ptr<vm::InstructionMsgList> instruction_list_;
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
+  std::shared_ptr<std::vector<bool>> is_mirrored_strategy_enabled_stack_;
 };
 
 Maybe<int64_t> GetDefaultSessionId();

@@ -15,7 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.framework.input_blob_def as input_blob_def_util
 import oneflow.python.framework.dtype as dtype_util
@@ -26,6 +25,7 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager.op_executor as op_executor
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
+import oneflow_api.oneflow.core.common.shape as shape_proto_cfg
 import oneflow_api
 
 blob_register = oneflow_api.GetDefaultBlobRegister()
@@ -46,7 +46,14 @@ def _GetInterfaceBlobObject(builder, op_name):
         parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
         for device_name in parallel_conf.device_name:
             parallel_conf_cfg.add_device_name(device_name)
+        if parallel_conf.HasField("hierarchy"):
+            hierarchy = shape_proto_cfg.ShapeProto()
+            for dim in parallel_conf.hierarchy.dim:
+                hierarchy.add_dim(dim)
+            assert hierarchy.dim_size() > 0
+            parallel_conf_cfg.mutable_hierarchy().CopyFrom(hierarchy)
         parallel_conf = parallel_conf_cfg
+
     blob_object = builder.MakeLazyRefBlobObject(
         op_name, cfg_op_attribute, parallel_conf
     )

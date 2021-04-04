@@ -85,15 +85,20 @@ std::shared_ptr<Scope> BuildInitialScope(const std::shared_ptr<InstructionsBuild
                                          const std::shared_ptr<cfg::JobConfigProto>& job_conf,
                                          const std::string& device_tag,
                                          const std::vector<std::string>& machine_device_ids,
+                                         const std::shared_ptr<Shape>& hierarchy,
                                          bool is_mirrored) {
-  return x->BuildInitialScope(session_id, job_conf, device_tag, machine_device_ids, is_mirrored)
+  return x
+      ->BuildInitialScope(session_id, job_conf, device_tag, machine_device_ids, hierarchy,
+                          is_mirrored)
       .GetPtrOrThrow();
 }
 
 std::shared_ptr<Scope> BuildScopeWithNewParallelDesc(
     const std::shared_ptr<InstructionsBuilder>& x, const std::shared_ptr<Scope>& scope,
-    const std::string& device_tag, const std::vector<std::string>& machine_device_ids) {
-  return x->BuildScopeWithNewParallelDesc(scope, device_tag, machine_device_ids).GetPtrOrThrow();
+    const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
+    const std::shared_ptr<Shape>& hierarchy) {
+  return x->BuildScopeWithNewParallelDesc(scope, device_tag, machine_device_ids, hierarchy)
+      .GetPtrOrThrow();
 }
 
 std::shared_ptr<Scope> BuildScopeWithNewParallelConf(
@@ -304,14 +309,13 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
 
   py::class_<InstructionsBuilder, std::shared_ptr<InstructionsBuilder>>(m, "InstructionsBuilder")
       .def(py::init([](const std::shared_ptr<vm::IdGenerator>& id_generator,
-                       const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
+                       const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
                        const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list,
                        const std::function<void(compatible_py::Object*)>& release_object) {
         return std::make_shared<InstructionsBuilder>(id_generator, instruction_list, symbol_list,
                                                      release_object);
       }))
       .def("id_generator", &InstructionsBuilder::id_generator)
-      .def("instruction_list", &InstructionsBuilder::instruction_list)
       .def("eager_symbol_list", &InstructionsBuilder::eager_symbol_list)
       .def("object_releaser", &InstructionsBuilder::object_releaser)
       .def("PackPhysicalBlobsToLogicalBlob", &PackPhysicalBlobsToLogicalBlob)
@@ -322,8 +326,13 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("GetPhysicalParallelDescSymbols", &GetPhysicalParallelDescSymbols)
       .def("UnpackLogicalBlobToPhysicalBlobs", &UnpackLogicalBlobToPhysicalBlobs)
       .def("MakeReferenceBlobObject", &MakeReferenceBlobObject)
-      .def("BuildInitialScope", &BuildInitialScope)
-      .def("BuildScopeWithNewParallelDesc", &BuildScopeWithNewParallelDesc)
+      .def("BuildInitialScope", &BuildInitialScope, py::arg("session_id").none(false),
+           py::arg("job_conf").none(false), py::arg("device_tag").none(false),
+           py::arg("machine_device_ids").none(false), py::arg("hierarchy").none(true),
+           py::arg("is_mirrored").none(false))
+      .def("BuildScopeWithNewParallelDesc", &BuildScopeWithNewParallelDesc,
+           py::arg("scope").none(false), py::arg("device_tag").none(false),
+           py::arg("machine_device_ids").none(false), py::arg("hierarchy").none(true))
       .def("BuildScopeWithNewParallelConf", &BuildScopeWithNewParallelConf)
       .def("BuildScopeWithNewIsMirrored", &BuildScopeWithNewIsMirrored)
       .def("BuildScopeWithNewScopeName", &BuildScopeWithNewScopeName)

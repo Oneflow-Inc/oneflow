@@ -58,8 +58,25 @@ void PushAvailableMemDescOfThisMachine() {
 AvailableMemDesc PullAvailableMemDesc() {
   AvailableMemDesc ret;
   AvailableMemDescOfMachine machine_amd_i;
-  FOR_RANGE(int64_t, i, 0, (Global<ResourceDesc, ForSession>::Get()->TotalMachineNum())) {
+  for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
     Global<CtrlClient>::Get()->PullKV(GetAmdCtrlKey(i), ret.add_machine_amd());
+  }
+  return ret;
+}
+
+AvailableMemDesc GetDryRunAvailableMemDesc() {
+  AvailableMemDescOfMachine this_machine_mem_desc;
+#ifdef WITH_CUDA
+  FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
+    this_machine_mem_desc.add_zone_size(std::numeric_limits<size_t>::max());
+  }
+#endif
+  this_machine_mem_desc.add_zone_size(std::numeric_limits<size_t>::max());
+
+  AvailableMemDesc ret;
+  AvailableMemDescOfMachine machine_amd_i;
+  for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
+    *ret.add_machine_amd() = this_machine_mem_desc;
   }
   return ret;
 }
@@ -72,7 +89,8 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   session_id_ = config_proto.session_id();
   Global<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
-  Global<ResourceDesc, ForSession>::New(config_proto.resource());
+  Global<ResourceDesc, ForSession>::New(config_proto.resource(),
+                                        GlobalProcessCtx::NumOfProcessPerNode());
   Global<const IOConf>::New(config_proto.io_conf());
   Global<const IOConf>::SessionNew(config_proto.session_id(), config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
@@ -84,7 +102,11 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   PushAvailableMemDescOfThisMachine();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<AvailableMemDesc>::New();
-    *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
+    if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+      *Global<AvailableMemDesc>::Get() = GetDryRunAvailableMemDesc();
+    } else {
+      *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
+    }
     Global<JobName2JobId>::New();
     Global<CriticalSectionDesc>::New();
     Global<InterUserJobInfo>::New();
@@ -92,7 +114,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<JobSetCompileCtx>::New();
     Global<RuntimeBufferManagersScope>::New();
   }
-  for (const std::string lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
+  for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
   return Maybe<void>::Ok();
 }
 
@@ -112,7 +134,8 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   Global<const IOConf>::Delete();
   Global<const IOConf>::SessionDelete(session_id_);
   Global<ResourceDesc, ForSession>::Delete();
-  Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource());
+  Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
+                                        GlobalProcessCtx::NumOfProcessPerNode());
 }
 
 }  // namespace oneflow

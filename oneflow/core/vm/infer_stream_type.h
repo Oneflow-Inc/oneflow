@@ -75,6 +75,7 @@ class InferStreamType final : public StreamType {
     }
     return stream_desc;
   }
+  bool SharingVirtualMachineThread() const override { return true; }
 };
 
 }  // namespace vm

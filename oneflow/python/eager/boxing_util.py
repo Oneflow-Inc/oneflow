@@ -26,7 +26,6 @@ import oneflow.python.framework.balanced_splitter as balanced_splitter
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.lib.core.high_order_bool as high_order_bool
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_hob as boxing_hob
 import oneflow.python.eager.op_infer_util as op_infer_util
 from oneflow.python.eager.boxing_hob import BoxingHobContext
@@ -34,6 +33,7 @@ import oneflow.python.eager.boxing_middle as boxing_middle
 import random
 import oneflow
 import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow_api.oneflow.core.common.shape as shape_proto_cfg
 import oneflow_api
 
 
@@ -256,7 +256,7 @@ def InterNodeOneToMany(builder, produced_blob_object, consumer_op_arg_parallel_a
         for device_id in device_ids:
             parallel_conf = placement_cfg.ParallelConf()
             parallel_conf.set_device_tag("cpu")
-            parallel_conf.add_device_name("%s:%s" % (machine_id, device_id))
+            parallel_conf.add_device_name("@%s:%s" % (machine_id, device_id))
             parallel_desc_symbol = builder.GetParallelDescSymbol(parallel_conf)
             out_blob = builder.Build121To(produced_blob_object, parallel_desc_symbol)
             out_blobs.append(out_blob)
@@ -598,7 +598,7 @@ def GetConcatSplitBoxingParallelDescSymbol(
     parallel_conf = placement_cfg.ParallelConf()
     parallel_conf.set_device_tag("cpu")
     for machine_id, _ in blob_parallel_desc_symbol.machine_id2device_id_list.items():
-        parallel_conf.add_device_name("%s:%s" % (machine_id, random_rank_id))
+        parallel_conf.add_device_name("@%s:%s" % (machine_id, random_rank_id))
     return builder.GetParallelDescSymbol(parallel_conf)
 
 
@@ -742,7 +742,6 @@ def _AssignOpConf():
 
 
 def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf):
-    oneflow_api.TryDisableBlobCache(ref_blob_object)
     ref_parallel_conf = ref_blob_object.parallel_desc_symbol.parallel_conf
     ref_devices = ref_blob_object.parallel_desc_symbol.machine_id2device_id_list
     value_devices = value_blob_object.parallel_desc_symbol.machine_id2device_id_list
@@ -982,3 +981,21 @@ conditional_function_table = [
         OptionalBoxing(CopyH2D),
     ),
 ]
+
+
+class BoxingUtil(oneflow_api.deprecated.ForeignBoxingUtil):
+    def __init__(self):
+        oneflow_api.deprecated.ForeignBoxingUtil.__init__(self)
+
+    def BoxingTo(self, builder, blob_object, op_arg_parallel_attr):
+        return BoxingTo(builder, blob_object, op_arg_parallel_attr)
+
+    def TryReplaceDeviceTag(self, builder, parallel_desc_symbol, device_tag):
+        return TryReplaceDeviceTag(builder, parallel_desc_symbol, device_tag)
+
+    def Assign(self, builder, target_blob_object, source_blob_object):
+        return Assign(builder, target_blob_object, source_blob_object)
+
+
+_global_boxing_util = BoxingUtil()
+oneflow_api.deprecated.RegisterBoxingUtilOnlyOnce(_global_boxing_util)

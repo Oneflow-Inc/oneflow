@@ -5,6 +5,7 @@ import "oneflow/core/job/task.proto";
 import "oneflow/core/job/job_conf.proto";
 import "oneflow/core/memory/memory_block.proto";
 import "oneflow/core/graph/boxing/collective_boxing.proto";
+import "oneflow/core/operator/op_attribute.proto";
 
 message MachineIds {
   repeated int64 machine_id = 1;
@@ -22,10 +23,24 @@ message CollectiveBoxingPlan {
   map<int64, boxing.collective.RequestSet> job_id2request_set = 1;
 }
 
+message CtrlRegstDescInfo {
+  map<int64, int64> ctrl_regst_desc_id2producer_task_id = 6;
+}
+
+message OpAttributeRefTable {
+  map<string, OpAttribute> op_name2op_attribute = 1;
+}
+
+message OpAttributeInfo {
+  map<int64, OpAttributeRefTable> job_id2op_attribute_ref_table = 1;
+}
+
 message Plan {
   repeated TaskProto task = 1;
   required MemBlockAndChunkList block_chunk_list = 2;
   required NetTopo net_topo = 3;
   required JobConfs job_confs = 4;
   required CollectiveBoxingPlan collective_boxing_plan= 5;
+  required CtrlRegstDescInfo ctrl_regst_desc_info = 6;
+  map<int64, OpAttributeRefTable> job_id2op_attribute_ref_table = 7;
 }

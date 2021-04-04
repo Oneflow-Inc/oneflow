@@ -36,6 +36,8 @@ class TensorArg final {
 
   bool Empty() const;
   void Release();
+  void PushPartialTensor(const std::shared_ptr<Tensor>& partial_tensor);
+  Maybe<Tensor> GetAccTensor();
 
  private:
   std::vector<std::shared_ptr<Tensor>> partial_sum_tensors_;
