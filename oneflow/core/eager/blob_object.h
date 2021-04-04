@@ -28,8 +28,9 @@ namespace eager {
 
 class BlobObject : public vm::Object {
  public:
-  BlobObject(const std::shared_ptr<MemoryCase>& mem_case, DataType data_type)
-      : mem_case_(mem_case), blob_desc_(data_type) {}
+  BlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+             DataType data_type)
+      : mem_case_(mem_case), blob_desc_(shape, data_type) {}
   BlobObject(const BlobObject&) = delete;
   BlobObject(BlobObject&&) = delete;
   virtual ~BlobObject() override = default;

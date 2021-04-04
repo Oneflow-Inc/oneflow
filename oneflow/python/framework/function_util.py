@@ -30,8 +30,8 @@ from oneflow.python.framework.function_desc import FunctionDesc
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.framework.placement_context as placement_ctx
-import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.typing_util as oft_util
+import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.lib.core.pb_util as pb_util
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.oneflow_export import oneflow_export
@@ -41,7 +41,7 @@ import traceback
 import sys
 
 
-@oneflow_export("FunctionConfig", "function_config")
+@oneflow_export("FunctionConfig", "function_config", "ExecutionConfig")
 class FunctionConfig(object):
     r"""OneFlow function's configurations.
     """
@@ -168,6 +168,15 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
         return Func
 
     return Decorator
+
+
+def global_function_or_identity(*args, **kwargs):
+    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        return api_oneflow_function(*args, **kwargs)
+    else:
+        assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
+        identity_decorator = lambda func: func
+        return identity_decorator
 
 
 def _CloneFunctionDesc(func_desc, job_func):

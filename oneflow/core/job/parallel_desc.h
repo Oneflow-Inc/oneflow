@@ -79,6 +79,8 @@ class ParallelDesc final {
   ParallelConf GetParallelIdOnlyParallelConf(int64_t parallel_id) const;
 
   bool EqualsIgnoringDeviceType(const ParallelDesc& rhs) const;
+  bool EqualsIgnoringHierarchy(const ParallelDesc& rhs) const;
+  bool EqualsOnlyForMachineAndDeviceIds(const ParallelDesc& rhs) const;
   bool Equals(const ParallelDesc& rhs) const;
   bool operator==(const ParallelDesc& rhs) const { return Equals(rhs); }
   bool operator!=(const ParallelDesc& rhs) const { return !(*this == rhs); }
