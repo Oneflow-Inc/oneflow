@@ -829,7 +829,7 @@ Maybe<void> InstructionsBuilder::InsertRemoveForeignCallbackInstruction(int64_t 
                                                                         int64_t callback_id) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New("RemoveForeignCallback");
-  instruction->add_del_object_operand(object_id);
+  instruction->add_mut_operand(object_id, vm::AllMirroredObject());
   instruction->add_int64_operand(callback_id);
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
@@ -919,7 +919,7 @@ Maybe<void> InstructionsBuilder::_DeleteObject(compatible_py::Object* blob_objec
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New("DeleteObject");
   instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
-  instruction->add_del_object_operand(blob_object->object_id());
+  instruction->add_del_operand(blob_object->object_id());
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }

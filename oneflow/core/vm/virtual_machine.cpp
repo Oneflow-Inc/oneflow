@@ -32,6 +32,7 @@ bool IsSourceInstruction(const InstructionMsg& instr_msg) {
     if (instr_operand->has_const_operand()) { return false; }
     if (instr_operand->has_mut_operand()) { return false; }
     if (instr_operand->has_mut2_operand()) { return false; }
+    if (instr_operand->has_del_operand()) { return false; }
     if (instr_operand->has_symbol_operand()) { return false; }
     if (instr_operand->has_init_symbol_operand()) { return false; }
     CHECK(instr_operand->has_separator() || instr_operand->has_double_operand()
@@ -45,15 +46,21 @@ bool IsSourceInstruction(const InstructionMsg& instr_msg) {
 
 void VirtualMachine::ReleaseInstruction(Instruction* instruction,
                                         /*out*/ ReadyInstructionList* ready_instruction_list) {
+  auto* access_list = instruction->mut_access_list();
   auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
-  OBJECT_MSG_SKIPLIST_FOR_EACH(rw_mutexed_object_accesses, access) {
+  OBJECT_MSG_LIST_FOR_EACH(access_list, access) {
     CHECK_GT(access->ref_cnt(), 1);
-    rw_mutexed_object_accesses->Erase(access.Mutable());
-    if (access->is_rw_mutexed_object_access_link_empty()) { continue; }
+    access_list->Erase(access.Mutable());
+    if (access->is_mirrored_object_id_inserted()) {
+      rw_mutexed_object_accesses->Erase(access.Mutable());
+    }
     auto* mirrored_object = access->mut_mirrored_object();
-    CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
-    mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access.Mutable());
+    if (!access->is_rw_mutexed_object_access_link_empty()) {
+      CHECK_EQ(access->mut_rw_mutexed_object(), mirrored_object->mut_rw_mutexed_object());
+      mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Erase(access.Mutable());
+    }
   }
+  CHECK_EQ(rw_mutexed_object_accesses->size(), 0);
   TryMoveWaitingToReady(instruction, ready_instruction_list, [](Instruction*) { return true; });
 }
 
@@ -251,19 +258,31 @@ void VirtualMachine::ForEachMutMirroredObject(
   }
 }
 
+template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
+void VirtualMachine::ForEachMutMirroredObject(
+    const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
+    const ModifiedOperand<kDeleteModifier, mem_zone_modifier>& mutable_operand,
+    int64_t global_device_id, const DoEachT& DoEach) {
+  const Operand& operand = mutable_operand.operand();
+  if (interpret_type == InterpretType::kCompute) {
+    ForEachMirroredObject<&IdUtil::GetValueId>(id2logical_object, operand, global_device_id,
+                                               DoEach);
+  } else if (interpret_type == InterpretType::kInfer) {
+    ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 void VirtualMachine::ConsumeMirroredObject(OperandAccessType access_type,
                                            MirroredObject* mirrored_object,
                                            Instruction* instruction) {
-  bool is_const_operand = (access_type == kConstOperandAccess);
   auto rw_mutexed_object_access = ObjectMsgPtr<RwMutexedObjectAccess>::NewFrom(
-      instruction->mut_allocator(), instruction, mirrored_object, is_const_operand);
-  bool success = instruction->mut_mirrored_object_id2access()
-                     ->Insert(rw_mutexed_object_access.Mutable())
-                     .second;
-  if (success) {
-    mirrored_object->mut_rw_mutexed_object()->mut_access_list()->EmplaceBack(
-        std::move(rw_mutexed_object_access));
-  }
+      instruction->mut_allocator(), instruction, mirrored_object, access_type);
+  instruction->mut_mirrored_object_id2access()->Insert(rw_mutexed_object_access.Mutable());
+  instruction->mut_access_list()->PushBack(rw_mutexed_object_access.Mutable());
+  mirrored_object->mut_rw_mutexed_object()->mut_access_list()->EmplaceBack(
+      std::move(rw_mutexed_object_access));
 }
 
 void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
@@ -284,6 +303,9 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
     auto ConsumeMutMirroredObject = [&](MirroredObject* mirrored_object) {
       ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
     };
+    auto ConsumeDelMirroredObject = [&](MirroredObject* mirrored_object) {
+      ConsumeMirroredObject(kDeleteOperandAccess, mirrored_object, instruction);
+    };
     auto ConsumeConstMirroredObject = [&](MirroredObject* mirrored_object) {
       ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instruction);
     };
@@ -297,6 +319,10 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
         ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
                                                          operand->mut2_operand(), global_device_id,
                                                          ConsumeMutMirroredObject);
+      } else if (operand->has_del_operand()) {
+        ForEachMutMirroredObject<kDeviceMemZoneModifier>(interpret_type, id2logical_object,
+                                                         operand->del_operand(), global_device_id,
+                                                         ConsumeDelMirroredObject);
       } else if (operand->has_init_symbol_operand()) {
         const auto& symbol_operand = operand->init_symbol_operand().operand();
         CHECK(symbol_operand.has_sole_mirrored_object());
@@ -338,13 +364,25 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
       if (mirrored_object->rw_mutexed_object().access_list().size() == 1) { continue; }
       if (rw_mutexed_object_access->is_const_operand()) {
         auto* first = mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Begin();
-        if (!first->is_const_operand() && first->mut_instruction() != instruction) {
-          ConnectInstruction(first->mut_instruction(), instruction);
+        if (first->is_const_operand()) {
+          // do nothing
+        } else if (first->is_mut_operand()) {
+          if (first->mut_instruction() != instruction) {
+            ConnectInstruction(first->mut_instruction(), instruction);
+          }
+        } else if (first->is_del_operand()) {
+          UNIMPLEMENTED() << " accessing a deleting object";
+        } else {
+          UNIMPLEMENTED();
         }
       } else {
+        CHECK(rw_mutexed_object_access->is_mut_operand()
+              || rw_mutexed_object_access->is_del_operand());
         auto* access_list = mirrored_object->mut_rw_mutexed_object()->mut_access_list();
         OBJECT_MSG_LIST_FOR_EACH_PTR(access_list, access) {
           if (access == rw_mutexed_object_access) { break; }
+          CHECK(access->is_const_operand() || access->is_mut_operand())
+              << "access type " << access->access_type() << " not supported";
           if (access->mut_instruction() != instruction) {
             ConnectInstruction(access->mut_instruction(), instruction);
           }
@@ -467,6 +505,28 @@ void VirtualMachine::TryRunFrontSeqInstruction(ReadyInstructionList* ready_instr
   TryRunFrontSeqInstruction(mutable_front_seq_compute_instr_list(), ready_instruction_list);
 }
 
+void VirtualMachine::TryDeleteLogicalObjects() {
+  auto* delete_list = mut_delete_logical_object_list();
+  // OBJECT_MSG_LIST_FOR_EACH_PTR supports removing elements at the end of iteration code
+  OBJECT_MSG_LIST_FOR_EACH_PTR(delete_list, logical_object) {
+    auto* global_device_id2mirrored_object = logical_object->mut_global_device_id2mirrored_object();
+    OBJECT_MSG_MAP_FOR_EACH_PTR(global_device_id2mirrored_object, mirrored_object) {
+      CHECK_EQ(mirrored_object->ref_cnt(), 1);
+      if (mirrored_object->rw_mutexed_object().ref_cnt() == 1) {
+        CHECK_EQ(mirrored_object->rw_mutexed_object().access_list().size(), 0);
+        // TODO(lixinqi) fix the bug occured when uncommenting the next line
+        // CHECK(!mirrored_object->rw_mutexed_object().has_object());
+      }
+      // `mirrored_object' is deleted by erasing
+      global_device_id2mirrored_object->Erase(mirrored_object);
+    }
+    mut_id2logical_object()->Erase(logical_object);
+    CHECK_EQ(logical_object->ref_cnt(), 1);
+    // `logical_object' is deleted by erasing
+    delete_list->Erase(logical_object);
+  }
+}
+
 void VirtualMachine::Schedule() {
   ReadyInstructionList* ready_instruction_list = mut_ready_instruction_list();
   auto* active_stream_list = mut_active_stream_list();
@@ -474,6 +534,7 @@ void VirtualMachine::Schedule() {
     TryReleaseFinishedInstructions(stream, /*out*/ ready_instruction_list);
     if (stream->running_instruction_list().empty()) { active_stream_list->Erase(stream); }
   }
+  TryDeleteLogicalObjects();
   TryRunFrontSeqInstruction(/*out*/ ready_instruction_list);
   auto* waiting_instruction_list = mut_waiting_instruction_list();
   if (pending_msg_list().size() > 0) {
