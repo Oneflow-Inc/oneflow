@@ -123,7 +123,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
                                 int64_t global_device_id, const DoEachT& DoEach);
 
   void ConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
-  void ConsumeMirroredObject(OperandAccessType access_type, MirroredObject* mirrored_object,
+  RwMutexedObjectAccess* ConsumeMirroredObject(OperandAccessType access_type, MirroredObject* mirrored_object,
                              Instruction* instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                               NewInstructionList* new_instruction_list);

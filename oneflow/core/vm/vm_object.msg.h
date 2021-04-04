@@ -36,7 +36,6 @@ class RwMutexedObject;
 enum OperandAccessType {
   kConstOperandAccess = 0,
   kMutableOperandAccess,
-  kDeleteOperandAccess,
 };
 
 // clang-format off
@@ -47,7 +46,6 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
 
   OF_PUBLIC bool is_const_operand() const;
   OF_PUBLIC bool is_mut_operand() const;
-  OF_PUBLIC bool is_del_operand() const;
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(OperandAccessType, access_type);
@@ -109,6 +107,8 @@ OBJECT_MSG_BEGIN(MirroredObject);
   //fields
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
   OBJECT_MSG_DEFINE_OPTIONAL(RwMutexedObject, rw_mutexed_object);
+  OBJECT_MSG_DEFINE_PTR(RwMutexedObjectAccess, deleting_access);
+
 
   // links
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, global_device_id);

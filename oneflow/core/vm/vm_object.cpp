@@ -37,8 +37,6 @@ bool RwMutexedObjectAccess::is_mut_operand() const {
   return kMutableOperandAccess == access_type();
 }
 
-bool RwMutexedObjectAccess::is_del_operand() const { return kDeleteOperandAccess == access_type(); }
-
 void MirroredObject::__Init__(LogicalObject* logical_object, int64_t global_device_id) {
   mut_mirrored_object_id()->__Init__(logical_object->logical_object_id(), global_device_id);
   set_global_device_id(global_device_id);

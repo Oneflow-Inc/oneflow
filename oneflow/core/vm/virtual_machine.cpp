@@ -274,15 +274,16 @@ void VirtualMachine::ForEachMutMirroredObject(
   }
 }
 
-void VirtualMachine::ConsumeMirroredObject(OperandAccessType access_type,
-                                           MirroredObject* mirrored_object,
-                                           Instruction* instruction) {
+RwMutexedObjectAccess* VirtualMachine::ConsumeMirroredObject(OperandAccessType access_type,
+                                                             MirroredObject* mirrored_object,
+                                                             Instruction* instruction) {
   auto rw_mutexed_object_access = ObjectMsgPtr<RwMutexedObjectAccess>::NewFrom(
       instruction->mut_allocator(), instruction, mirrored_object, access_type);
   instruction->mut_mirrored_object_id2access()->Insert(rw_mutexed_object_access.Mutable());
   instruction->mut_access_list()->PushBack(rw_mutexed_object_access.Mutable());
   mirrored_object->mut_rw_mutexed_object()->mut_access_list()->EmplaceBack(
       std::move(rw_mutexed_object_access));
+  return rw_mutexed_object_access.Mutable();
 }
 
 void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
@@ -300,14 +301,16 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
   OBJECT_MSG_LIST_FOR_EACH_PTR(new_instruction_list, instruction) {
     int64_t global_device_id = instruction->stream().global_device_id();
     InterpretType interpret_type = instruction->stream().stream_type_id().interpret_type();
+    auto ConsumeConstMirroredObject = [&](MirroredObject* mirrored_object) {
+      ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instruction);
+    };
     auto ConsumeMutMirroredObject = [&](MirroredObject* mirrored_object) {
       ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
     };
     auto ConsumeDelMirroredObject = [&](MirroredObject* mirrored_object) {
-      ConsumeMirroredObject(kDeleteOperandAccess, mirrored_object, instruction);
-    };
-    auto ConsumeConstMirroredObject = [&](MirroredObject* mirrored_object) {
-      ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instruction);
+      auto* access = ConsumeMirroredObject(kMutableOperandAccess, mirrored_object, instruction);
+      CHECK(!mirrored_object->has_deleting_access());
+      mirrored_object->set_deleting_access(access);
     };
     const auto& operands = instruction->instr_msg().operand();
     for (const auto& operand : operands) {
@@ -361,6 +364,11 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
     auto* rw_mutexed_object_accesses = instruction->mut_mirrored_object_id2access();
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(rw_mutexed_object_accesses, rw_mutexed_object_access) {
       auto* mirrored_object = rw_mutexed_object_access->mut_mirrored_object();
+      if (mirrored_object->has_deleting_access()
+          && mirrored_object->mut_deleting_access() != rw_mutexed_object_access) {
+        UNIMPLEMENTED() << " accessing a deleting object "
+                        << mirrored_object->mirrored_object_id().logical_object_id_value();
+      }
       if (mirrored_object->rw_mutexed_object().access_list().size() == 1) { continue; }
       if (rw_mutexed_object_access->is_const_operand()) {
         auto* first = mirrored_object->mut_rw_mutexed_object()->mut_access_list()->Begin();
@@ -370,14 +378,11 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
           if (first->mut_instruction() != instruction) {
             ConnectInstruction(first->mut_instruction(), instruction);
           }
-        } else if (first->is_del_operand()) {
-          UNIMPLEMENTED() << " accessing a deleting object";
         } else {
           UNIMPLEMENTED();
         }
       } else {
-        CHECK(rw_mutexed_object_access->is_mut_operand()
-              || rw_mutexed_object_access->is_del_operand());
+        CHECK(rw_mutexed_object_access->is_mut_operand());
         auto* access_list = mirrored_object->mut_rw_mutexed_object()->mut_access_list();
         OBJECT_MSG_LIST_FOR_EACH_PTR(access_list, access) {
           if (access == rw_mutexed_object_access) { break; }
