@@ -22,7 +22,7 @@ def set_moving_max_min_value():
     max_key, min_key = None, None
     keys = flow.get_all_variables().keys()
     for key in keys:
-        if max_key != "" and min_key != "":
+        if max_key is not None and min_key is not None:
             break
         if key[-3:] == "max":
             max_key = key
