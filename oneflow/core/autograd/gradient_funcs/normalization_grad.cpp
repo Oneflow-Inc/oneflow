@@ -106,15 +106,16 @@ class NormalizationGrad : public OpExprGradFunction {
       }
     }
     const auto& reshape_op = JUST(op_expr_helper::ReshapeOp(Shape(dim_vec)));
-    const auto& gamma_1 = JUST(Dispatch<Tensor>(*reshape_op, {gamma}));
-    const auto& inv_variance_1 = JUST(Dispatch<Tensor>(*reshape_op, {inv_variance}));
+    const auto& reshaped_gamma = JUST(Dispatch<Tensor>(*reshape_op, {gamma}));
+    const auto& reshaped_inv_variance = JUST(Dispatch<Tensor>(*reshape_op, {inv_variance}));
 
     std::shared_ptr<Tensor> y_grad_fp32 = y_grad;
     bool is_fp16 = y_grad->dtype()->data_type() == DataType::kFloat16;
     if (is_fp16) { y_grad_fp32 = JUST(Dispatch<Tensor>(*h2f_cast_op_, {y_grad})); }
-    const auto& dy_mul_gamma = JUST(Dispatch<Tensor>(*broadcast_mul_op_, {gamma_1, y_grad_fp32}));
+    const auto& dy_mul_gamma =
+        JUST(Dispatch<Tensor>(*broadcast_mul_op_, {reshaped_gamma, y_grad_fp32}));
     const auto& dy_mul_inv_var =
-        JUST(Dispatch<Tensor>(*broadcast_mul_op_, {dy_mul_gamma, inv_variance_1}));
+        JUST(Dispatch<Tensor>(*broadcast_mul_op_, {dy_mul_gamma, reshaped_inv_variance}));
     if (is_fp16) {
       in_grads->at(0) = JUST(Dispatch<Tensor>(*f2h_cast_op_, {dy_mul_inv_var}));
     } else {
