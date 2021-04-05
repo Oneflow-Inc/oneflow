@@ -66,13 +66,17 @@ void Stream::MoveFromZombieListToFreeList() {
     ObjectMsgPtr<Instruction> first = zombie_list->Begin();
     if (!first) { break; }
     zombie_list->Erase(first.Mutable());
-    if (first->ref_cnt() == 1) {
+    size_t ref_cnt = first->ref_cnt();
+    if (ref_cnt == 1) {
       MoveToFreeList(std::move(first));
-    } else if (first->ref_cnt() == 2) {
+    } else if (ref_cnt == 2) {
       // put `first` back to zombie_list because a worker is holding a reference to `first`
       zombie_list->EmplaceBack(std::move(first));
     } else {
-      UNIMPLEMENTED();
+      InstructionProto proto;
+      first->instr_msg().ToProto(&proto);
+      UNIMPLEMENTED() << "ref_cnt: " << ref_cnt << " first->ref_cnt():" << first->ref_cnt() << "\n"
+                      << proto.DebugString();
     }
   }
 }
@@ -80,14 +84,20 @@ void Stream::MoveFromZombieListToFreeList() {
 void Stream::DeleteInstruction(ObjectMsgPtr<Instruction>&& instruction) {
   CHECK(instruction->is_pending_instruction_link_empty());
   CHECK(instruction->is_instruction_link_empty());
-  if (instruction->ref_cnt() == 1) {
+  // the value of instruction->ref_cnt() may be updated by a worker thread
+  size_t ref_cnt = instruction->ref_cnt();
+  if (ref_cnt == 1) {
     MoveToFreeList(std::move(instruction));
-  } else if (instruction->ref_cnt() == 2) {
+  } else if (ref_cnt == 2) {
     // a worker is holding a reference to `instruction`
     mut_zombie_instruction_list()->EmplaceBack(std::move(instruction));
     MoveFromZombieListToFreeList();
   } else {
-    UNIMPLEMENTED();
+    InstructionProto proto;
+    instruction->instr_msg().ToProto(&proto);
+    UNIMPLEMENTED() << "ref_cnt: " << ref_cnt
+                    << " instruction->ref_cnt():" << instruction->ref_cnt() << "\n"
+                    << proto.DebugString();
   }
 }
 
