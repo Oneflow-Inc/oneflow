@@ -81,9 +81,9 @@ OneflowVM::~OneflowVM() {
       thread_ctx->mut_pending_instruction_list()->Close();
     }
     for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
+    schedule_thread_.join();
     CHECK(scheduler_exited_);
     CHECK(mut_vm()->Empty());
-    schedule_thread_.join();
   }
 }
 
