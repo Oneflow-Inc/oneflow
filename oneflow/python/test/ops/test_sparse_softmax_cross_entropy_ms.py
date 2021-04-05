@@ -56,11 +56,12 @@ def compare_with_tensorflow(
             )
 
         with flow.scope.placement(device_type, "0:0-3"):
-            lebels_distribute = flow.distribute.broadcast()
-            logits_distribute = flow.distribute.split(len(x.shape) - 1)
-            loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
-                labels=labels.with_distribute(lebels_distribute),
-                logits=x.with_distribute(logits_distribute),
+            labels = flow.parallel_cast(labels, distribute=flow.distribute.broadcast())
+            logits = flow.parallel_cast(
+                x, distribute=flow.distribute.split(len(x.shape) - 1)
+            )
+            loss = flow.nn.distributed_sparse_softmax_cross_entropy_with_logits(
+                labels, logits,
             )
             loss = flow.math.square(loss)
 
