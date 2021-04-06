@@ -25,6 +25,7 @@ namespace mlir {
 
 class RoundTripOneFlowJobWrapperInterface {
  public:
+  virtual ~RoundTripOneFlowJobWrapperInterface() {}
   virtual const ::oneflow::Job* job() const = 0;
   virtual void UpdateJob(const ::oneflow::Job* new_job) = 0;
   virtual void DumpMLIR(const std::string& filename, const std::string& content) = 0;
