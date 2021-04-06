@@ -27,14 +27,8 @@ namespace oneflow {
 OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
     : vm_(ObjectMsgPtr<vm::VirtualMachine>::New(vm::MakeVmDesc(resource, this_machine_id).Get())) {
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_->mut_thread_ctx_list(), thread_ctx) {
-    auto* resource = Global<ResourceDesc, ForEnv>::Get();
-    if (!resource || resource->async_eager_execution()) {
-      auto thread = std::make_unique<std::thread>(&vm::ThreadCtx::LoopRun, thread_ctx);
-      worker_threads_.push_back(std::move(thread));
-    } else {
-      auto thread_pool = std::make_unique<ThreadPool>(1);
-      CHECK(thread_ctx2thread_pool_.emplace(thread_ctx, std::move(thread_pool)).second);
-    }
+    auto thread = std::make_unique<std::thread>(&vm::ThreadCtx::LoopRun, thread_ctx);
+    worker_threads_.push_back(std::move(thread));
   }
   schedule_thread_ = std::thread(&OneflowVM::Loop, this);
   exiting_ = false;
@@ -75,33 +69,19 @@ void ControlSync(vm::VirtualMachine* vm) {
 OneflowVM::~OneflowVM() {
   ControlSync(mut_vm());
   exiting_ = true;
-  auto* resource = Global<ResourceDesc, ForEnv>::Get();
-  if (!resource || resource->async_eager_execution()) {
-    OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_->mut_thread_ctx_list(), thread_ctx) {
-      thread_ctx->mut_pending_instruction_list()->Close();
-    }
-    for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
-    schedule_thread_.join();
-    CHECK(scheduler_exited_);
-    CHECK(mut_vm()->Empty());
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_->mut_thread_ctx_list(), thread_ctx) {
+    thread_ctx->mut_pending_instruction_list()->Close();
   }
+  for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
+  schedule_thread_.join();
+  CHECK(scheduler_exited_);
+  CHECK(mut_vm()->Empty());
 }
 
 void OneflowVM::Loop() {
   auto* vm = mut_vm();
-  while (!exiting_) {
-    auto* resource = Global<ResourceDesc, ForEnv>::Get();
-    if (!resource || resource->async_eager_execution()) { vm->Schedule(); }
-  }
+  while (!exiting_) { vm->Schedule(); }
   scheduler_exited_ = true;
-}
-
-void OneflowVM::TryReceiveAndRun() {
-  for (auto& pair : thread_ctx2thread_pool_) {
-    vm::ThreadCtx* thread_ctx = pair.first;
-    if (thread_ctx->mut_pending_instruction_list()->Empty()) { continue; }
-    pair.second->AddWork([thread_ctx]() { thread_ctx->TryReceiveAndRun(); });
-  }
 }
 
 }  // namespace oneflow

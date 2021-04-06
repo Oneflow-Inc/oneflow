@@ -35,11 +35,9 @@ class RemoveForeignCallbackInstructionType : public vm::InstructionType {
   }
 
   void Compute(vm::Instruction* instruction) const override {
-    std::cout << "remove foreign callback start in c++" << std::endl;
     FlatMsgView<RemoveForeignCallbackInstrOperand> args(instruction->instr_msg().operand());
     (*Global<std::shared_ptr<ForeignCallback>>::Get())
         ->RemoveForeignCallback(args->unique_callback_id());
-    std::cout << "remove foreign callback end in c++" << std::endl;
   }
 };
 
