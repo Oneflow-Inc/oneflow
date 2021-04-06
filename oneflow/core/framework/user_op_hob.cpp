@@ -51,16 +51,6 @@ hob::HobContextGetter<KernelRegContext, DataType> HobDataType(const std::string&
       });
 }
 
-hob::HobContextGetter<KernelRegContext, int> HobNumAxes(const std::string& arg_name,
-                                                        int arg_index) {
-  std::ostringstream ss;
-  ss << "number of axes of tensor \'" << arg_name << "\'";
-  return hob::HobContextGetter<KernelRegContext, int>(
-      ss.str(), [arg_name, arg_index](const KernelRegContext& ctx) -> int {
-        return ctx.TensorDesc4ArgNameAndIndex(arg_name, arg_index)->shape().NumAxes();
-      });
-}
-
 HobStringContextGetter<KernelRegContext> HobDeviceTag() {
   return HobStringContextGetter<KernelRegContext>(
       "device_tag",

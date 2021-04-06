@@ -36,15 +36,29 @@ Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx
   if (axis.empty()) {
     *output_shape = Shape::Ones(num_axes);
   } else {
-    const int64_t parallel_num = ctx->parallel_num();
-    const auto& input_sbp = ctx->SbpParallel4ArgNameAndIndex("in", 0);
+    const ParallelDesc& parallel_desc = ctx->parallel_desc();
+    const ParallelDistribution& in_parallel_distribution =
+        ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
     DimVector dim_vec = input_shape->dim_vec();
-    for (auto i : axis) {
-      const int64_t regular_axis = ShiftNegativeAxis(i, num_axes);
-      dim_vec.at(regular_axis) =
-          (input_sbp.has_split_parallel() && input_sbp.split_parallel().axis() == regular_axis)
-              ? parallel_num
-              : 1;
+    if (parallel_desc.hierarchy()->NumAxes() == 1) {
+      const auto& input_sbp = in_parallel_distribution.sbp_parallel(0);
+      for (auto i : axis) {
+        const int64_t regular_axis = ShiftNegativeAxis(i, num_axes);
+        dim_vec.at(regular_axis) =
+            (input_sbp.has_split_parallel() && input_sbp.split_parallel().axis() == regular_axis)
+                ? parallel_desc.parallel_num()
+                : 1;
+      }
+    } else {
+      CHECK_EQ_OR_RETURN(axis.size(), 1);
+      const int64_t regular_axis = ShiftNegativeAxis(axis.at(0), num_axes);
+      dim_vec.at(regular_axis) = 1;
+      for (int64_t i = 0; i < parallel_desc.hierarchy()->NumAxes(); ++i) {
+        const auto& input_sbp = in_parallel_distribution.sbp_parallel(i);
+        if (input_sbp.has_split_parallel() && input_sbp.split_parallel().axis() == regular_axis) {
+          dim_vec.at(regular_axis) *= parallel_desc.hierarchy()->At(i);
+        }
+      }
     }
     *output_shape = Shape(dim_vec);
   }
@@ -151,14 +165,12 @@ Maybe<void> GetReduceDeviceStageSbpFn(user_op::SbpContext* ctx) {
   }
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
   FOR_RANGE(int64_t, i, 0, num_axes) {
-    if (IsReducedAxis(i)) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("in", 0), i)
-          .Split(user_op::OpArg("out", 0), i)
-          .Split(user_op::OpArg("mask", 0), i)
-          .Split(user_op::OpArg("count", 0), i)
-          .Build();
-    }
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("in", 0), i)
+        .Split(user_op::OpArg("out", 0), i)
+        .Split(user_op::OpArg("mask", 0), i)
+        .Split(user_op::OpArg("count", 0), i)
+        .Build();
   }
   return Maybe<void>::Ok();
 }
@@ -258,7 +270,15 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max
             GetInputArgModifierFn("device_count", 0);                             \
         device_count_modifier->set_requires_grad(false);                          \
       })                                                                          \
-      .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); });
+      .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {                  \
+        ctx->NewBuilder()                                                         \
+            .Split(user_op::OpArg("in", 0), 0)                                    \
+            .Split(user_op::OpArg("device_count", 0), 0)                          \
+            .Split(user_op::OpArg("out", 0), 0)                                   \
+            .Split(user_op::OpArg("mask", 0), 0)                                  \
+            .Build();                                                             \
+        return Maybe<void>::Ok();                                                 \
+      });
 
 REGISTER_REDUCE_GLOBAL_STAGE_USER_OP("reduce_min_global_stage")
 REGISTER_REDUCE_GLOBAL_STAGE_USER_OP("reduce_max_global_stage")

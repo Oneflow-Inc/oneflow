@@ -1932,6 +1932,43 @@ def fused_scale_tril(
     )
 
 
+@oneflow_export(
+    "math.fused_scale_tril_softmax_dropout", "nn.fused_scale_tril_softmax_dropout"
+)
+def fused_scale_tril_softmax_dropout(
+    x: oneflow_api.BlobDesc,
+    diagonal: int = 0,
+    fill_value: Union[int, float] = 0,
+    scale: Union[int, float] = 1,
+    rate: float = 0.0,
+    noise_shape: Optional[oneflow_api.BlobDesc] = None,
+    seed: Optional[int] = None,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    if name is None:
+        name = id_util.UniqueStr("FusedTrilScaleSoftmaxMaskScale_")
+    mask = flow.nn.random_mask_like(
+        x, rate, seed, noise_shape, "%s-dropout_random_mask_like" % name
+    )
+
+    y, softmax_y = (
+        flow.user_op_builder(name)
+        .Op("fused_tril_scale_softmax_mask_scale")
+        .Input("x", [x])
+        .Input("mask", [mask])
+        .Attr("diagonal", diagonal)
+        .Attr("tril_fill_value", float(fill_value))
+        .Attr("tril_scale_value", float(scale))
+        .Attr("mask_scale_value", float(1.0 / (1.0 - rate)))
+        .Output("y")
+        .Output("softmax_y")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    return y
+
+
 @oneflow_export("math.polyval")
 def polyval(
     coeffs: Union[List, Tuple], x: oneflow_api.BlobDesc, name: Optional[str] = None

@@ -87,6 +87,12 @@ Maybe<void> AddMsSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& prediction =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
   ctx->NewBuilder()
+      .Split(user_op::OpArg("prediction", 0), 0)
+      .Split(user_op::OpArg("prob", 0), 0)
+      .Split(user_op::OpArg("label", 0), 0)
+      .Split(user_op::OpArg("out", 0), 0)
+      .Build();
+  ctx->NewBuilder()
       .Split(user_op::OpArg("prediction", 0), prediction.shape().NumAxes() - 1)
       .Split(user_op::OpArg("prob", 0), prediction.shape().NumAxes() - 1)
       .Broadcast(user_op::OpArg("label", 0))
@@ -107,6 +113,12 @@ Maybe<void> AddGradSignature(user_op::SbpContext* ctx) {
 
 Maybe<void> AddGradMsSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& prob = ctx->LogicalTensorDesc4InputArgNameAndIndex("prob", 0);
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("prob", 0), 0)
+      .Split(user_op::OpArg("label", 0), 0)
+      .Split(user_op::OpArg("dy", 0), 0)
+      .Split(user_op::OpArg("prediction_diff", 0), 0)
+      .Build();
   ctx->NewBuilder()
       .Split(user_op::OpArg("prob", 0), prob.shape().NumAxes() - 1)
       .Broadcast(user_op::OpArg("label", 0))

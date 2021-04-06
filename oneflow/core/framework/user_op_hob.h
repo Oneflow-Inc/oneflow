@@ -32,8 +32,6 @@ hob::BoolFunctorPtr<KernelRegContext> HobFalse();
 hob::HobContextGetter<KernelRegContext, DataType> HobDataType(const std::string& tensor_name,
                                                               int tensor_idx);
 
-hob::HobContextGetter<KernelRegContext, int> HobNumAxes(const std::string& arg_name, int arg_index);
-
 template<typename T>
 hob::HobContextGetter<user_op::KernelRegContext, T> HobCtxGetter(
     const std::string& debug_str,
