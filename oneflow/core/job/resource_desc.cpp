@@ -65,6 +65,7 @@ bool ResourceDesc::enable_debug_mode() const {
 }
 
 bool ResourceDesc::async_eager_execution() const { return resource_.async_eager_execution(); }
+bool ResourceDesc::enable_dry_run() const { return std::getenv("ONEFLOW_DRY_RUN") != nullptr; }
 
 CollectiveBoxingConf ResourceDesc::collective_boxing_conf() const {
   if (resource_.has_collective_boxing_conf()) {

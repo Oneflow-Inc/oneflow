@@ -26,34 +26,39 @@
 
   - Python >= 3.5
   - CUDA Toolkit Linux x86_64 Driver
-    | OneFlow |CUDA Driver Version|
-    |---|---|
-    | oneflow_cu111  | >= 450.80.02  |
-    | oneflow_cu110  | >= 450.36.06  |
-    | oneflow_cu102  | >= 440.33  |
-    | oneflow_cu101  | >= 418.39  |
-    | oneflow_cu100  | >= 410.48  |
-    | oneflow_cpu  | N/A  |
 
     - CUDA runtime is statically linked into OneFlow. OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 
-    - Support for latest stable version of CUDA will be prioritized. Please upgrade your Nvidia driver to version 440.33 or above and install `oneflow_cu102` if possible.
-
-    - We are sorry that due to limits on bandwidth and other resources, we could only guarantee the efficiency and stability of `oneflow_cu102`. We will improve it ASAP.
+    - Please upgrade your Nvidia driver to version 440.33 or above and install OneFlow for CUDA 10.2 if possible.
 
   ### Install with Pip Package
 
-  - To install latest release of OneFlow with CUDA support:
+  - To install latest stable release of OneFlow with CUDA support:
 
     ```
-    python3 -m pip install --find-links https://release.oneflow.info oneflow_cu102 --user
+    python3 -m pip install -f https://release.oneflow.info oneflow_cu102 --user
     ```
 
-  - To install master branch release of OneFlow with CUDA support:
+  - To install nightly release of OneFlow with CUDA support:
 
     ```
-    python3 -m pip install --find-links https://staging.oneflow.info/branch/master oneflow_cu102 --user
+    python3 -m pip install oneflow --user -f https://staging.oneflow.info/branch/master/cu102
     ```
+
+  - To install other available builds for different variants:
+    ```
+    python3 -m pip install oneflow --user -f https://staging.oneflow.info/branch/master/[PLATFORM]
+    ```
+
+    All available `[PLATFORM]`:
+    | Platform |CUDA Driver Version| Supported GPUs |
+    |---|---|---|
+    | cu111  | >= 450.80.02  | GTX 10xx, RTX 20xx, A100, RTX 30xx |
+    | cu110, cu110_xla  | >= 450.36.06  | GTX 10xx, RTX 20xx, A100|
+    | cu102, cu102_xla  | >= 440.33  | GTX 10xx, RTX 20xx |
+    | cu101, cu101_xla  | >= 418.39  | GTX 10xx, RTX 20xx |
+    | cu100, cu100_xla  | >= 410.48  | GTX 10xx, RTX 20xx |
+    | cpu  | N/A | N/A |
 
   - To install latest release of CPU-only OneFlow:
 

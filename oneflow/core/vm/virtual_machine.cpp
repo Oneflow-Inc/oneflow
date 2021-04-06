@@ -94,8 +94,8 @@ void VirtualMachine::FilterAndRunSourceInstructions(TmpPendingInstrMsgList* inst
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const auto& instr_type_id = instr_msg->instr_type_id();
     const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
-    if (stream_type.SharingVirtualMachineThread()
-        && !instr_type_id.instruction_type().IsSequential() && IsSourceInstruction(*instr_msg)) {
+    if (stream_type.IsControlStreamType() && !instr_type_id.instruction_type().IsSequential()
+        && IsSourceInstruction(*instr_msg)) {
       const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
       if (!parallel_desc || parallel_desc->ContainingMachineId(this_machine_id())) {
         stream_type.Run(this, instr_msg);
@@ -114,7 +114,7 @@ namespace {
 
 bool IsStreamInParallelDesc(const ParallelDesc* parallel_desc, const Stream& stream) {
   if (parallel_desc == nullptr) { return true; }
-  if (stream.stream_type().SharingVirtualMachineThread()) {
+  if (stream.stream_type().IsControlStreamType()) {
     return parallel_desc->ContainingMachineId(stream.machine_id());
   }
   return parallel_desc->Containing(stream.machine_id(), stream.device_id());

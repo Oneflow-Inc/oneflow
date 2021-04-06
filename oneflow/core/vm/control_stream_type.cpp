@@ -60,6 +60,7 @@ class InferStreamType<ControlStreamType> final : public StreamType {
   void Compute(VirtualMachine*, InstructionMsg*) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
 
   bool SharingVirtualMachineThread() const override { return true; }
+  bool IsControlStreamType() const override { return true; }
 
   ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                           int64_t this_machine_id) const override {

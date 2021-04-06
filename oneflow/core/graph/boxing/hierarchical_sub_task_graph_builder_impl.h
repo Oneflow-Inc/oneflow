@@ -42,6 +42,15 @@ class DispatchHierarchicalSubTskGphBuilder final : public HierarchicalSubTskGphB
   std::unique_ptr<Impl> impl_;
 };
 
+void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
+                            const ParallelDesc& out_parallel_desc,
+                            const ParallelDistribution& in_parallel_distribution,
+                            const ParallelDistribution& out_parallel_distribution,
+                            ParallelDesc* reduced_in_parallel_desc,
+                            ParallelDesc* reduced_out_parallel_desc,
+                            ParallelDistribution* reduced_in_parallel_distribution,
+                            ParallelDistribution* reduced_out_parallel_distribution);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_BOXING_HIERARCHICAL_SUB_TASK_GRAPH_BUILDER_IMPL_H_

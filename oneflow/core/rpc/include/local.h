@@ -69,7 +69,16 @@ class LocalRpcManager : public RpcManager {
   LocalRpcManager() = default;
   ~LocalRpcManager() override;
   Maybe<void> Bootstrap() override;
-  Maybe<void> CreateServer() override;
+  Maybe<void> CreateServer() override { return Maybe<void>::Ok(); }
+  Maybe<void> CreateClient() override;
+};
+
+class DryRunRpcManager : public RpcManager {
+ public:
+  DryRunRpcManager() = default;
+  ~DryRunRpcManager() override;
+  Maybe<void> Bootstrap() override;
+  Maybe<void> CreateServer() override { return Maybe<void>::Ok(); }
   Maybe<void> CreateClient() override;
 };
 

@@ -54,6 +54,7 @@ class ResourceDesc final {
   int32_t ComputeThreadPoolSize() const;
   bool enable_debug_mode() const;
   bool async_eager_execution() const;
+  bool enable_dry_run() const;
   CollectiveBoxingConf collective_boxing_conf() const;
   bool nccl_use_compute_stream() const;
 

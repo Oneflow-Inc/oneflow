@@ -30,7 +30,7 @@ REGISTER_USER_OP("softmax")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      FOR_RANGE(int64_t, axis, 0, in_tensor.shape().NumAxes()) {
+      FOR_RANGE(int64_t, axis, 0, in_tensor.shape().NumAxes() - 1) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("in", 0), axis)
             .Split(user_op::OpArg("out", 0), axis)
@@ -53,7 +53,7 @@ REGISTER_USER_OP("softmax_grad")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
-      FOR_RANGE(int64_t, axis, 0, y_tensor.shape().NumAxes()) {
+      FOR_RANGE(int64_t, axis, 0, y_tensor.shape().NumAxes() - 1) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("y", 0), axis)
             .Split(user_op::OpArg("dy", 0), axis)
