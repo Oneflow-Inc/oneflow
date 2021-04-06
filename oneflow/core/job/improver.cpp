@@ -391,8 +391,8 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
       const auto* id_mgr = Global<IDMgr>::Get();
       if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
         LOG(ERROR) << "machine_id: " << machine_id << ", mem_zone_id: " << mem_zone_id
-                   << ", CalcMemoryConsumed: " << calc
-                   << ", is_gpu: " << (id_mgr->IsGpuMemZone(mem_zone_id) ? "yes" : "no");
+                   << ", is_gpu: " << (id_mgr->IsGpuMemZone(mem_zone_id) ? "yes" : "no")
+                   << ", CalcMemoryConsumed: " << calc;
       }
       if (calc >= available) {
         const std::string device_tag = *JUST(DeviceTag4DeviceType(
