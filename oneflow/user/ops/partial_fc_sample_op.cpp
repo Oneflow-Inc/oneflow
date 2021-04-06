@@ -103,8 +103,7 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
           *ctx->IsDynamic4ArgNameAndIndex("sampled_weight_diff", 0);
       user_op::TensorDesc* boxing_disabled_sampled_label =
           ctx->TensorDesc4ArgNameAndIndex("boxing_disabled_sampled_label", 0);
-      *boxing_disabled_sampled_label->mut_shape() =
-          *ctx->Shape4ArgNameAndIndex("sampled_label", 0);
+      *boxing_disabled_sampled_label->mut_shape() = *ctx->Shape4ArgNameAndIndex("sampled_label", 0);
       CHECK_EQ_OR_RETURN(boxing_disabled_sampled_label->shape().At(0) % ctx->parallel_num(), 0);
       boxing_disabled_sampled_label->mut_shape()->Set(
           0, boxing_disabled_sampled_label->shape().At(0) / ctx->parallel_num());

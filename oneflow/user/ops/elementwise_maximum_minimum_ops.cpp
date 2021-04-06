@@ -49,13 +49,9 @@ Maybe<void> InferTensorDesc(InferContext* ctx) {
   TensorDesc* tensor_dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
   TensorDesc* tensor_dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
 
-  if (tensor_dx) {
-    *tensor_dx->mut_shape() = tensor_x->shape();
-  }
+  if (tensor_dx) { *tensor_dx->mut_shape() = tensor_x->shape(); }
 
-  if (tensor_dy) {
-    *tensor_dy->mut_shape() = tensor_y->shape();
-  }
+  if (tensor_dy) { *tensor_dy->mut_shape() = tensor_y->shape(); }
 
   return Maybe<void>::Ok();
 }
