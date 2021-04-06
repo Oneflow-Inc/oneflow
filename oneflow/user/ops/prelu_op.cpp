@@ -79,7 +79,8 @@ REGISTER_USER_OP("prelu_grad")
       CHECK_EQ_OR_RETURN(dy_desc->data_type(), x_desc->data_type());
       *dx_desc->mut_shape() = x_desc->shape();
       *dx_desc->mut_is_dynamic() = x_desc->is_dynamic();
-      *ctx->TensorDesc4ArgNameAndIndex("alpha_diff", 0) = *alpha_desc;
+      *ctx->Shape4ArgNameAndIndex("alpha_diff", 0) = alpha_desc->shape();
+      *ctx->IsDynamic4ArgNameAndIndex("alpha_diff", 0) = alpha_desc->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -115,6 +116,7 @@ REGISTER_USER_OP("prelu_grad")
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      *ctx->Dtype4ArgNameAndIndex("alpha_diff", 0) = *ctx->Dtype4ArgNameAndIndex("alpha", 0);
       return Maybe<void>::Ok();
     });
 
