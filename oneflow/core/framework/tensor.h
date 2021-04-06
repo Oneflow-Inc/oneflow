@@ -195,7 +195,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
 
   // Setters for autograd
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
-  void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
+  void set_requires_grad(bool requires_grad) override;
   void set_retain_grad(bool retain_grad) override { impl_->set_requires_grad(retain_grad); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
 
@@ -267,7 +267,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   // Setters for autograd
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
-  void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
+  void set_requires_grad(bool requires_grad) override;
   void set_retain_grad(bool retain_grad) override { impl_->set_requires_grad(retain_grad); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
 
