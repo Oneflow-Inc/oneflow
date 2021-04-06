@@ -510,12 +510,20 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
 
 CollectiveBoxingExecutor::CollectiveBoxingExecutor(const Plan& plan)
     : collective_boxing_plan_(plan.collective_boxing_plan()) {
+  HashMap<Backend, int64_t> backend2count;
+  for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
+    for (const auto& request : job_id7request_set.second.request()) {
+      backend2count[request.op_desc().backend()] += 1;
+    }
+  }
 #ifdef WITH_CUDA
-  auto it =
-      backends_
-          .emplace(Backend::kBackendNCCL, std::make_unique<NcclCollectiveBoxingExecutorBackend>())
-          .first;
-  it->second->Init(collective_boxing_plan_);
+  if (backend2count.count(Backend::kBackendNCCL) != 0) {
+    auto it =
+        backends_
+            .emplace(Backend::kBackendNCCL, std::make_unique<NcclCollectiveBoxingExecutorBackend>())
+            .first;
+    it->second->Init(collective_boxing_plan_);
+  }
 #endif
   Init();
   DumpSummary();
