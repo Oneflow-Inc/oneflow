@@ -190,7 +190,8 @@ REGISTER_CPU_ONLY_USER_OP("image_random_crop")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_tensor = *in_tensor;
+      *out_tensor->mut_shape() = in_tensor->shape();
+      *out_tensor->mut_is_dynamic() = in_tensor->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
