@@ -388,8 +388,13 @@ Maybe<void> Improver::CheckAllZoneNotOOM(
       const uint64_t calc =
           CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId, PathIIScales4RegstDescId, ii);
       const uint64_t available = AvailableMemSize(machine_id, mem_zone_id);
+      const auto* id_mgr = Global<IDMgr>::Get();
+      if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+        LOG(ERROR) << "machine_id: " << machine_id << ", mem_zone_id: " << mem_zone_id
+                   << ", CalcMemoryConsumed: " << calc
+                   << ", is_gpu: " << (id_mgr->IsGpuMemZone(mem_zone_id) ? "yes" : "no");
+      }
       if (calc >= available) {
-        const auto* id_mgr = Global<IDMgr>::Get();
         const std::string device_tag = *JUST(DeviceTag4DeviceType(
             id_mgr->IsGpuMemZone(mem_zone_id) ? DeviceType::kGPU : DeviceType::kCPU));
         return Error::MemoryZoneOutOfMemoryError(machine_id, mem_zone_id, calc, available,
