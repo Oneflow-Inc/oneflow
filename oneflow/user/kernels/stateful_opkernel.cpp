@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_helper.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/memory/memory_case_util.h"
 
 namespace oneflow {
 namespace one {
@@ -47,6 +46,19 @@ class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
 
  private:
   std::shared_ptr<eager::EagerBlobObject> blob_object_;
+};
+
+template<class T>
+class TensorsPtrScope {
+ public:
+  TensorsPtrScope(T* ctx, TensorsPtr inputs, TensorsPtr outputs) {
+    ctx_ = ctx;
+    ctx_->Update(inputs, outputs);
+  }
+  ~TensorsPtrScope() { ctx_->Update(nullptr, nullptr); }
+
+ private:
+  T* ctx_;
 };
 
 class LocalUserKernelBaseContext {
@@ -101,6 +113,7 @@ class LocalUserKernelBaseContext {
 
     auto UpdateArg2TensorAndTensorDesc = [this](TensorsPtr tensors_ptr,
                                                 TensorIndexMap tensor_index_map) {
+      if (!tensors_ptr) { return; }
       for (auto& pair : *tensor_index_map) {
         const auto& bn_in_op = pair.first;
         for (int64_t bn_index = 0; bn_index < pair.second.size(); bn_index++) {
@@ -293,6 +306,7 @@ class LocalUserOpInferContext : public user_op::InferContext {
 
     arg2tensor_desc_.clear();
     auto UpdateArg2TensorDesc = [this](TensorsPtr tensors_ptr, TensorIndexMap tensor_index_map) {
+      if (!tensors_ptr) { return; }
       for (auto& pair : *tensor_index_map) {
         const auto& bn_in_op = pair.first;
         for (int64_t bn_index = 0; bn_index < pair.second.size(); bn_index++) {
@@ -368,7 +382,6 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
 };
 
 StatefulOpKernel::StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc,
-
                                    const OperatorConf& op_conf,
                                    const std::shared_ptr<MemoryCase>& mem_case,
                                    TensorIndexMap bn_in_op2bn_index2input_tensor_index,
@@ -406,7 +419,7 @@ StatefulOpKernel::StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc
 
 Maybe<const user_op::OpKernel*> StatefulOpKernel::GetOpKernel(TensorsPtr inputs,
                                                               TensorsPtr outputs) {
-  reg_ctx_->Update(inputs, outputs);
+  TensorsPtrScope<LocalUserKernelRegContext> reg_ctx_scope(reg_ctx_.get(), inputs, outputs);
   const auto& op_type_name = op_conf_.user_conf().op_type_name();
   const auto* kernel_reg_val = CHECK_JUST(
       user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, *reg_ctx_));
@@ -425,8 +438,6 @@ Maybe<const user_op::OpKernel*> StatefulOpKernel::GetOpKernel(TensorsPtr inputs,
 
   infer_tmp_size_fn_map_.emplace(std::make_pair(kernel, &kernel_reg_val->infer_tmp_size_fn));
 
-  reg_ctx_->Update(nullptr, nullptr);
-
   return kernel;
 }
 
@@ -439,6 +450,7 @@ Maybe<user_op::OpKernelState> StatefulOpKernel::GetOpKernelState(user_op::OpKern
   init_ctx->set_device_ctx(device_ctx);
   auto state = kernel_->CreateOpKernelState(init_ctx.get());
   op_kernel_state_map_.emplace(std::make_pair(op_kernel, state));
+  init_ctx->set_device_ctx(nullptr);
   return state;
 }
 

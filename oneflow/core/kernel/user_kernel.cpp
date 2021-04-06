@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/user_kernel.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
@@ -55,7 +54,6 @@ class UserKernelBaseContext {
 
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                            ArgVec* arg_vec) {
-      arg_vec->reserve(arg_map.size());
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
           arg_vec->emplace_back(std::make_pair(it->first, i));
@@ -305,7 +303,6 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         op_infer_ctx_(kernel_conf, &job_desc) {
     auto InitArg2Blob = [this](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
-      arg2tensor_.reserve(arg2tensor_.size() + arg_map.size());
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         const std::string& arg_name = it->first;
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
@@ -414,7 +411,6 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
         device_ctx_(device_ctx),
         base_ctx_(std::move(UserKernelBaseContext(kernel_conf, job_desc))) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
-      arg2bn_tensor_pair_.reserve(arg2bn_tensor_pair_.size() + arg_map.size());
       for (const auto& it : arg_map) {
         const std::string& arg_name = it.first;
         for (int32_t i = 0; i < it.second.s_size(); ++i) {
