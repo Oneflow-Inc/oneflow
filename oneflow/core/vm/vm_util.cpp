@@ -42,7 +42,6 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
 }
 
 Maybe<void> Sync() {
-  // TODO(jianhao): update it for multi client
   BlockingCounter bc(1);
   LogicalRun([&bc](const std::shared_ptr<InstructionsBuilder>& builder) {
     builder->ComputeGlobalFrontSeqBarrier();
