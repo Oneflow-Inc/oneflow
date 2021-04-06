@@ -55,13 +55,40 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     if (!op_conf.has_user_conf()) { return; }
     if (op_conf.user_conf().op_type_name() != "sparse_softmax_cross_entropy_ms") { return; }
 
+    const int64_t scope_symbol_id = node->op().op_conf().scope_symbol_id();
     user_op::UserOpConfWrapper cur_op(op_conf);
     const std::string op_prediction_blob_name = cur_op.input("prediction", 0);
     const std::string op_label_blob_name = cur_op.input("label", 0);
     const int64_t depth = cur_op.attr<int64_t>("depth");
-    std::vector<int32_t> axis_vec(1, 1);
+    const int32_t split_axis =
+        node->LogicalBlobDesc4Lbi(node->op().BnInOp2Lbi("prediction_0")).shape().NumAxes() - 1;
+    const std::vector<int32_t> axis_vec(1, split_axis);
 
     std::string op_name = node->op().op_name();
+    const auto& op_parallel_distribution_sig =
+        job_builder->ParallelDistributionSignature4OpName(op_name);
+    const auto& parallel_distribution_map =
+        op_parallel_distribution_sig.bn_in_op2parallel_distribution();
+    const auto it = parallel_distribution_map.find("prediction_0");
+    CHECK(it != parallel_distribution_map.end());
+    const auto& prediction_parallel_distribution = it->second;
+
+    ParallelDistribution stat_distribution_for_consumer;
+
+    bool has_split_axis_parallel = false;
+    CHECK_EQ(prediction_parallel_distribution.sbp_parallel_size(),
+             node->parallel_desc().hierarchy()->NumAxes());
+    for (int64_t i = 0; i < node->parallel_desc().hierarchy()->NumAxes(); ++i) {
+      const auto& sbp = prediction_parallel_distribution.sbp_parallel(i);
+      if (sbp.has_split_parallel() && sbp.split_parallel().axis() == split_axis) {
+        has_split_axis_parallel = true;
+        stat_distribution_for_consumer.add_sbp_parallel()->mutable_broadcast_parallel();
+      } else {
+        CHECK(!sbp.has_partial_sum_parallel());
+        *stat_distribution_for_consumer.add_sbp_parallel() = sbp;
+      }
+    }
+    CHECK(has_split_axis_parallel);
 
     auto reduce_max_device_stage_op =
         user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_reduce_max_device_stage")
@@ -74,19 +101,17 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
             .Build();
     job_builder->AddOps(node->parallel_desc().parallel_conf(),
                         {reduce_max_device_stage_op.op_conf()});
-
-    const int32_t split_axis =
-        node->LogicalBlobDesc4Lbi(node->op().BnInOp2Lbi("prediction_0")).shape().NumAxes() - 1;
-
-    SbpSignature reduce_max_device_stage_sbp_signature;
-    (*reduce_max_device_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["in_0"]
-        .mutable_split_parallel()
-        ->set_axis(split_axis);
-    (*reduce_max_device_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["out_0"]
-        .mutable_split_parallel()
-        ->set_axis(split_axis);
-    job_builder->AddSbpSignature4OpName(reduce_max_device_stage_op.op_name(),
-                                        reduce_max_device_stage_sbp_signature);
+    ParallelDistributionSignature reduce_max_device_stage_signature;
+    (*reduce_max_device_stage_signature.mutable_bn_in_op2parallel_distribution())["in_0"] =
+        prediction_parallel_distribution;
+    (*reduce_max_device_stage_signature.mutable_bn_in_op2parallel_distribution())["out_0"] =
+        prediction_parallel_distribution;
+    (*reduce_max_device_stage_signature.mutable_bn_in_op2parallel_distribution())["mask_0"] =
+        prediction_parallel_distribution;
+    (*reduce_max_device_stage_signature.mutable_bn_in_op2parallel_distribution())["count_0"] =
+        prediction_parallel_distribution;
+    job_builder->AddParallelDistributionSignature4OpName(reduce_max_device_stage_op.op_name(),
+                                                         reduce_max_device_stage_signature);
 
     auto reduce_max_global_stage_op =
         user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_reduce_max_global_stage")
@@ -100,14 +125,16 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
             .Build();
     job_builder->AddOps(node->parallel_desc().parallel_conf(),
                         {reduce_max_global_stage_op.op_conf()});
-
-    SbpSignature reduce_max_global_stage_sbp_signature;
-    (*reduce_max_global_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["in_0"]
-        .mutable_broadcast_parallel();
-    (*reduce_max_global_stage_sbp_signature.mutable_bn_in_op2sbp_parallel())["out_0"]
-        .mutable_broadcast_parallel();
-    job_builder->AddSbpSignature4OpName(reduce_max_global_stage_op.op_name(),
-                                        reduce_max_global_stage_sbp_signature);
+    ParallelDistributionSignature reduce_max_global_stage_signature;
+    (*reduce_max_global_stage_signature.mutable_bn_in_op2parallel_distribution())["in_0"] =
+        stat_distribution_for_consumer;
+    (*reduce_max_global_stage_signature
+          .mutable_bn_in_op2parallel_distribution())["device_count_0"] =
+        stat_distribution_for_consumer;
+    (*reduce_max_global_stage_signature.mutable_bn_in_op2parallel_distribution())["out_0"] =
+        stat_distribution_for_consumer;
+    job_builder->AddParallelDistributionSignature4OpName(reduce_max_global_stage_op.op_name(),
+                                                         reduce_max_global_stage_signature);
 
     auto broadcast_sub_max_op =
         user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_sub_max")
@@ -134,10 +161,32 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
                              .Build();
     job_builder->AddOps(node->parallel_desc().parallel_conf(), {reduce_sum_op.op_conf()});
 
+    std::string reduce_sum_op_out;
+    if (node->parallel_desc().hierarchy()->NumAxes() > 1) {
+      std::vector<std::string> parallel_distribution_conf;
+      for (const auto& sbp_parallel : stat_distribution_for_consumer.sbp_parallel()) {
+        parallel_distribution_conf.push_back(SbpParallelToString(sbp_parallel));
+      }
+      auto parallel_cast_sum_op =
+          user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_reduce_sum_cast_P2B")
+              .Op("hierarchical_parallel_cast")
+              .Input("in", reduce_sum_op.output("output_tensor", 0))
+              .Output("out")
+              .Attr<std::vector<std::string>>("parallel_distribution", parallel_distribution_conf)
+              .Attr<std::string>("grad_mode", "auto")
+              .Attr<std::vector<std::string>>("grad_parallel_distribution",
+                                              std::vector<std::string>())
+              .ScopeSymbolId(scope_symbol_id)
+              .Build();
+      job_builder->AddOps(node->parallel_desc().parallel_conf(), {parallel_cast_sum_op.op_conf()});
+      reduce_sum_op_out = parallel_cast_sum_op.output("out", 0);
+    } else {
+      reduce_sum_op_out = reduce_sum_op.output("output_tensor", 0);
+    }
     auto broadcast_div_op = user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_div")
                                 .Op("broadcast_div")
                                 .Input("x", exp_op.output("y", 0))
-                                .Input("y", reduce_sum_op.output("output_tensor", 0))
+                                .Input("y", reduce_sum_op_out)
                                 .Output("z")
                                 .Build();
     job_builder->AddOps(node->parallel_desc().parallel_conf(), {broadcast_div_op.op_conf()});
