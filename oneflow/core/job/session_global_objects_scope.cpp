@@ -96,6 +96,22 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto) {
+  session_id_ = config_proto.session_id();
+  Global<ResourceDesc, ForSession>::Delete();
+  DumpVersionInfo();
+  Global<ResourceDesc, ForSession>::New(config_proto.resource());
+  Global<const IOConf>::New(config_proto.io_conf());
+  Global<const ProfilerConf>::New(config_proto.profiler_conf());
+  if (GlobalProcessCtx::IsThisProcessMaster()
+      && Global<const ProfilerConf>::Get()->collect_act_event()) {
+    Global<Profiler>::New();
+  }
+  PushAvailableMemDescOfThisMachine();
+  for (const std::string lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
+  return Maybe<void>::Ok();
+}
+
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<RuntimeBufferManagersScope>::Delete();

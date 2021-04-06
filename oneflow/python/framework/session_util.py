@@ -519,3 +519,12 @@ def _GetDefaultConfigProto():
 
 
 session_ctx.OpenDefaultSession(Session(oneflow_api.NewSessionId()))
+
+from google.protobuf import text_format
+
+
+@oneflow_export("InitEagerGlobalSession")
+def TmpInitEagerGlobalSession():
+    config_pb = _GetDefaultConfigProto()
+    config_proto_str = text_format.MessageToString(config_pb)
+    oneflow_api.InitEagerGlobalSession(config_proto_str)
