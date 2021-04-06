@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/reshape_user_op_util.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -49,24 +50,17 @@ Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
 
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   const Shape& shape = ctx->Attr<Shape>("shape");
+  CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
+  FOR_RANGE(int32_t, i, 0, shape.NumAxes()) { CHECK_GT_OR_RETURN(shape.At(i), 0); }
   const user_op::TensorDesc* in_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   const Shape& in_shape = in_tensor_desc->shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
   CHECK_OR_RETURN(in_tensor_desc->is_dynamic() == false);
   *out_tensor_desc = *in_tensor_desc;
-  CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
-  DimVector dim_vec = {shape.dim_vec().begin(), shape.dim_vec().end()};
-  FOR_RANGE(int32_t, i, 0, dim_vec.size()) { CHECK_GT_OR_RETURN(dim_vec.at(i), 0); }
-  const auto& sbp_parallel = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-  const auto& parallel_ctx = ctx->parallel_ctx();
-  if (sbp_parallel.has_split_parallel()) {
-    const int64_t split_axis = sbp_parallel.split_parallel().axis();
-    BalancedSplitter spliter(shape.dim_vec().at(split_axis), parallel_ctx.parallel_num());
-    CHECK_GE_OR_RETURN(shape.dim_vec().at(split_axis), parallel_ctx.parallel_num());
-    dim_vec.at(split_axis) = spliter.At(parallel_ctx.parallel_id()).size();
-  }
-  *out_shape = Shape(dim_vec);
+  const auto& parallel_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+  *out_shape = *JUST(
+      GetPhysicalShape(shape, parallel_distribution, ctx->parallel_desc(), ctx->parallel_ctx()));
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
   return Maybe<void>::Ok();
 }

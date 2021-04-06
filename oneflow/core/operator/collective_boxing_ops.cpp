@@ -42,6 +42,11 @@ class CollectiveBoxingGenericOp : public Operator {
     return this->op_conf().collective_boxing_generic_conf().lbi();
   }
 
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
   Maybe<void> InferOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override {

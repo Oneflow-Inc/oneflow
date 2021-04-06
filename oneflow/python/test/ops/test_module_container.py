@@ -16,22 +16,8 @@ limitations under the License.
 import unittest
 from typing import Tuple
 
-import numpy as np
-
 import oneflow as flow
 import oneflow.typing as tp
-
-
-_counter = 0
-
-
-def get_var_helper(shape):
-    global _counter
-    var = flow.get_variable(
-        "x_" + str(_counter), shape=shape, initializer=flow.kaiming_initializer(shape)
-    )
-    _counter += 1
-    return var
 
 
 class TestContainer(flow.unittest.TestCase):

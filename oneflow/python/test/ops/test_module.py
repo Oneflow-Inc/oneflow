@@ -17,6 +17,7 @@ import collections.abc
 from itertools import repeat
 import unittest
 from typing import Tuple, Union
+import tempfile
 
 import numpy as np
 
@@ -83,6 +84,11 @@ class TestModule(flow.unittest.TestCase):
         y = m()
         test_case.assertTrue(np.array_equal(y.numpy(), ones))
 
+        twos_tensor = flow.Tensor(ones * 2)
+        m.load_state_dict({"w": twos_tensor})
+        y = m()
+        test_case.assertTrue(np.array_equal(y.numpy(), twos_tensor.numpy()))
+
     def test_state_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self, param1, param2):
@@ -100,6 +106,27 @@ class TestModule(flow.unittest.TestCase):
             state_dict,
             {"param2.param1": tensor0, "param2.param2": tensor1, "param1": tensor1},
         )
+
+    def test_save_load(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.param = flow.nn.Parameter(flow.Tensor(2, 3))
+
+            def forward(self):
+                return self.param
+
+        m1 = CustomModule()
+
+        res1 = m1()
+
+        with tempfile.TemporaryDirectory() as save_dir:
+            flow.save(m1.state_dict(), save_dir)
+            m2 = CustomModule()
+            m2.load_state_dict(flow.load(save_dir))
+            res2 = m2()
+
+            test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
 
     def test_parameter(test_case):
         shape = (3, 4)
@@ -172,7 +199,6 @@ class TestModule(flow.unittest.TestCase):
         def get_module_num(m):
             global module_num
             module_num += 1
-            print(module_num)
 
         net = CustomModule()
         net.apply(get_module_num)

@@ -44,16 +44,15 @@ Maybe<void> SetDefaultSessionId(int64_t val) {
 
 }  // namespace
 
-Session::Session(int64_t id, const std::shared_ptr<vm::cfg::InstructionListProto>& instruction_list,
-                 const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list)
-    : id_(id),
-      instruction_list_(instruction_list),
-      eager_symbol_list_(symbol_list),
-      snapshot_mgr_(new SnapshotManager) {}
+Session::Session(int64_t id)
+    : id_(id), is_mirrored_strategy_enabled_stack_(new std::vector<bool>()) {
+  instruction_list_.reset(new vm::InstructionMsgList());
+  eager_symbol_list_.reset(new eager::cfg::EagerSymbolList());
+}
 
 int64_t Session::id() const { return id_; }
 
-std::shared_ptr<vm::cfg::InstructionListProto> Session::instruction_list() const {
+const std::shared_ptr<vm::InstructionMsgList>& Session::instruction_list() const {
   return instruction_list_;
 }
 
@@ -61,15 +60,34 @@ std::shared_ptr<eager::cfg::EagerSymbolList> Session::eager_symbol_list() const 
   return eager_symbol_list_;
 }
 
+Maybe<void> Session::PushMirroredStrategyEnabled(bool is_mirrored) {
+  is_mirrored_strategy_enabled_stack_->push_back(is_mirrored);
+  return Maybe<void>::Ok();
+}
+Maybe<void> Session::PopMirroredStrategyEnabled() {
+  is_mirrored_strategy_enabled_stack_->pop_back();
+  return Maybe<void>::Ok();
+}
+
+Maybe<bool> Session::IsMirroredStrategyEnabled() const {
+  return is_mirrored_strategy_enabled_stack_->size() > 0
+         && is_mirrored_strategy_enabled_stack_->back();
+}
+Maybe<bool> Session::IsConsistentStrategyEnabled() const {
+  return is_mirrored_strategy_enabled_stack_->size() > 0
+         && !is_mirrored_strategy_enabled_stack_->back();
+}
+
 Maybe<int64_t> GetDefaultSessionId() { return *(DefaultSessionId()); }
 
-Maybe<void> RegsiterSession(int64_t id, const std::shared_ptr<Session>& sess) {
+Maybe<Session> RegsiterSession(int64_t id) {
+  std::shared_ptr<Session> sess = std::make_shared<Session>(id);
   std::unique_lock<std::mutex> lock(*GlobalSessionUtilMutex());
   auto* id2session_map = GlobalId2SessionMap();
   CHECK_OR_RETURN(id2session_map->find(id) == id2session_map->end());
   (*id2session_map)[id] = sess;
   JUST(SetDefaultSessionId(id));
-  return Maybe<void>::Ok();
+  return id2session_map->at(id);
 }
 
 Maybe<Session> GetDefaultSession() {

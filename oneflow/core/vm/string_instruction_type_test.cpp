@@ -33,8 +33,6 @@ namespace oneflow {
 namespace vm {
 namespace test {
 
-using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
-
 TEST(StringStreamType, init_string_object) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol", "InitStringSymbol"});

@@ -13,10 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/device_tick_compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 
 namespace oneflow {
+
+class DeviceTickCompTaskNode final : public CompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DeviceTickCompTaskNode);
+  DeviceTickCompTaskNode() = default;
+  ~DeviceTickCompTaskNode() = default;
+
+  bool IsMeaningLess() override { return false; }
+  TaskType GetTaskType() const override { return TaskType::kDeviceTick; }
+
+ private:
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void BuildExecGphAndRegst() override;
+  bool IsIndependent() const override { return true; }
+};
 
 void DeviceTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", false, 1, 1);
@@ -30,7 +45,7 @@ void DeviceTickCompTaskNode::ConsumeAllRegsts() {
 
 void DeviceTickCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = logical_node()->SoleOp();
+  node->mut_op() = op();
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   for (const std::string& ibn : node->op()->input_bns()) {
     node->BindBnWithOneOfTheRegsts(ibn, in_regsts);
@@ -45,5 +60,12 @@ void DeviceTickCompTaskNode::BuildExecGphAndRegst() {
 }
 
 REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kDeviceTick);
+
+REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kDeviceTick)
+    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
+      return generator->GenerateTickTockStreamIndex();
+    });
+
+REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kDeviceTickConf, DeviceTickCompTaskNode);
 
 }  // namespace oneflow

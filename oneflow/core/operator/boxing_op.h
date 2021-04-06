@@ -39,6 +39,8 @@ class BoxingOp final : public Operator {
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
 
+  void AddLbi2OutputIndex(const LogicalBlobId& lbi, int32_t output_index) override {}
+
  private:
   Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
                              bool is_logical) const;
@@ -52,7 +54,6 @@ class BoxingOp final : public Operator {
   Maybe<void> InferTmpBlobDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                DimVector* data_tmp_vec_ptr, bool is_logical) const;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
-  void EmplaceLbi2Obn(const LogicalBlobId& lbi, const std::string& obn) override {}
 };
 
 }  // namespace oneflow

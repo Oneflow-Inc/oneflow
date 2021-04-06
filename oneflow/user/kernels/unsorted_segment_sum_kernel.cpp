@@ -14,14 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/unsorted_segment_sum_kernel_util.h"
-#include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
+#include "oneflow/core/job/parallel_distribution_util.h"
 
 namespace oneflow {
 
 namespace user_op {
 
 namespace {
+
+void CheckParallelDistribution(const Shape& hierarchy, int64_t sum_axis,
+                               const ParallelDistribution& segment_ids_parallel_distribution,
+                               const ParallelDistribution& data_parallel_distribution,
+                               const ParallelDistribution& out_parallel_distribution) {
+  CHECK_EQ(hierarchy.NumAxes(), segment_ids_parallel_distribution.sbp_parallel_size());
+  CHECK_EQ(hierarchy.NumAxes(), data_parallel_distribution.sbp_parallel_size());
+  CHECK_EQ(hierarchy.NumAxes(), out_parallel_distribution.sbp_parallel_size());
+  if (hierarchy.elem_cnt() == 1) { return; }
+  FOR_RANGE(int64_t, i, 0, hierarchy.NumAxes()) {
+    const auto& out_sbp = out_parallel_distribution.sbp_parallel(i);
+    if (out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == sum_axis) {
+      CHECK(segment_ids_parallel_distribution.sbp_parallel(i).has_broadcast_parallel());
+      CHECK(data_parallel_distribution.sbp_parallel(i).has_broadcast_parallel());
+    }
+  }
+}
 
 class UnsortedSegmentSumOpKernelState final : public user_op::OpKernelState {
  public:
@@ -38,22 +55,25 @@ class UnsortedSegmentSumOpKernelState final : public user_op::OpKernelState {
 
 std::shared_ptr<user_op::OpKernelState> CreateUnsortedSegmentSumOpKernelState(
     user_op::KernelInitContext* ctx) {
-  const auto axis = ctx->Attr<int64_t>("axis");
-  const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-  if (out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == axis
-      && ctx->parallel_ctx().parallel_num() > 1) {
-    CHECK(ctx->SbpParallel4ArgNameAndIndex("segment_ids", 0).has_broadcast_parallel());
-    CHECK(ctx->SbpParallel4ArgNameAndIndex("data", 0).has_broadcast_parallel());
+  if (ctx->parallel_ctx().parallel_num() > 1) {
+    const auto axis = ctx->Attr<int64_t>("axis");
+    const ParallelDistribution& out_parallel_distribution =
+        ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+    const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+    CheckParallelDistribution(
+        hierarchy, axis, ctx->ParallelDistribution4ArgNameAndIndex("segment_ids", 0),
+        ctx->ParallelDistribution4ArgNameAndIndex("data", 0), out_parallel_distribution);
     const TensorDesc* out_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0);
-    const int64_t sum_dim_size = out_logical_desc->shape().At(axis);
-    BalancedSplitter bs(sum_dim_size, ctx->parallel_ctx().parallel_num());
-    return std::make_shared<UnsortedSegmentSumOpKernelState>(
-        bs.At(ctx->parallel_ctx().parallel_id()).begin(),
-        bs.At(ctx->parallel_ctx().parallel_id()).end());
+    TensorSliceView view =
+        GetTensorSliceView4ParallelId(hierarchy, out_parallel_distribution,
+                                      out_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
+    return std::make_shared<UnsortedSegmentSumOpKernelState>(view.At(axis).begin(),
+                                                             view.At(axis).end());
   } else {
     return std::shared_ptr<OpKernelState>(nullptr);
   }
 }
+
 }  // namespace
 
 template<DeviceType device_type, typename T, typename K>

@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
+#include "oneflow/core/framework/infer_parallel_distribution_fn_context.h"
 
 namespace oneflow {
 
@@ -167,6 +168,9 @@ class UserOpInferContext : public user_op::InferContext {
   const ArgVec& inputs() const override { return op_->inputs(); }
   const ArgVec& outputs() const override { return op_->outputs(); }
   const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; };
+  const ParallelDesc& parallel_desc() const override {
+    return *CHECK_JUST(op_->GetOpParallelDesc());
+  };
   const JobDesc* job_desc() const override {
     CHECK_NOTNULL(job_desc_);
     return job_desc_;
@@ -174,10 +178,21 @@ class UserOpInferContext : public user_op::InferContext {
 
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                  int32_t index) const override {
+    CHECK_EQ(CHECK_JUST(op_->GetOpParallelDesc())->hierarchy()->NumAxes(), 1);
     const auto& bn2sbp = CHECK_JUST(op_->sbp_signature())->bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2sbp.find(bn);
     CHECK(it != bn2sbp.end());
+    return it->second;
+  }
+
+  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
+                                                                   int32_t index) const override {
+    const auto& bn2parallel_distribution =
+        CHECK_JUST(op_->parallel_distribution_signature())->bn_in_op2parallel_distribution();
+    std::string bn = GenRepeatedBn(arg_name, index);
+    auto it = bn2parallel_distribution.find(bn);
+    CHECK(it != bn2parallel_distribution.end());
     return it->second;
   }
 
@@ -295,14 +310,15 @@ class UserOpInferSbpSignatureFnContext : public user_op::InferSbpSignatureFnCont
 class UserOpInferOutputBlobTimeShapeFnContext : public user_op::InferOutputBlobTimeShapeFnContext {
  public:
   UserOpInferOutputBlobTimeShapeFnContext(
-      const UserOp* op, const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
+      const UserOp* op,
+      const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
       Shape* output_blob_time_shape)
       : op_(op), output_blob_time_shape_(output_blob_time_shape) {
     for (const auto& it : op->op_conf().user_conf().input()) {
       const std::string& arg_name = it.first;
       for (int32_t i = 0; i < it.second.s_size(); ++i) {
         std::string ibn = GenRepeatedBn(arg_name, i);
-        arg2time_shape_.emplace(std::make_pair(arg_name, i), *GetTimeShape4BnInOp(ibn));
+        arg2time_shape_.emplace(std::make_pair(arg_name, i), *CHECK_JUST(GetTimeShape4BnInOp(ibn)));
       }
     }
   }
@@ -322,6 +338,56 @@ class UserOpInferOutputBlobTimeShapeFnContext : public user_op::InferOutputBlobT
   Shape* output_blob_time_shape_;
 };
 
+class UserOpInferParallelDistributionFnContext
+    : public user_op::InferParallelDistributionFnContext {
+ public:
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+  UserOpInferParallelDistributionFnContext(
+      const UserOp* op, ParallelDistributionSignature* parallel_distribution_signature,
+      const ParallelDistributionSignature& parallel_distribution_constraints,
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+          ParallelDistributionInferHint4Ibn)
+      : op_(op),
+        parallel_distribution_signature_(parallel_distribution_signature),
+        parallel_distribution_constraints_(parallel_distribution_constraints),
+        parallel_distribution_infer_hint4ibn_fn_(std::move(ParallelDistributionInferHint4Ibn)) {}
+  ~UserOpInferParallelDistributionFnContext() override = default;
+
+  const ParallelDistributionSignature& parallel_distribution_constraints() const override {
+    return parallel_distribution_constraints_;
+  }
+
+  ParallelDistribution* ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
+                                                             int32_t index) override {
+    return &(*parallel_distribution_signature_
+                  ->mutable_bn_in_op2parallel_distribution())[GenRepeatedBn(arg_name, index)];
+  }
+
+  const ParallelDistribution& ParallelDistributionHint4InputArgNameAndIndex(
+      const std::string& arg_name, int32_t index) override {
+    auto hint =
+        CHECK_JUST(parallel_distribution_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, index)));
+    return hint->parallel_distribution();
+  }
+
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return op_->user_op_conf(); }
+
+  int64_t parallel_num() const override {
+    return CHECK_JUST(op_->GetOpParallelDesc())->parallel_num();
+  }
+
+  const Shape& parallel_hierarchy() override {
+    return *(CHECK_JUST(op_->GetOpParallelDesc())->hierarchy());
+  }
+
+ private:
+  const UserOp* op_;
+  ParallelDistributionSignature* parallel_distribution_signature_;
+  ParallelDistributionSignature parallel_distribution_constraints_;
+  std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+      parallel_distribution_infer_hint4ibn_fn_;
+};
+
 void UserOp::InitFromOpConf() {
   CHECK(op_conf().has_user_conf());
   for (const auto& pair : op_conf().user_conf().input()) {
@@ -337,31 +403,34 @@ void UserOp::InitFromOpConf() {
     }
   }
   EnrollTmpBn(GenRepeatedBn("tmp_buffer", 0));
+  user_op_conf_.reset(new user_op::UserOpConfWrapper(shared_op_conf()));
   val_ =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf().user_conf().op_type_name());
   if (val_ != nullptr) {
-    user_op::UserOpConfWrapper user_conf_wrapper(op_conf());
-    user_op::GetInputArgModifier GetInputArgModifierFn =
-        [&](const std::string& in_arg_name, int32_t in_arg_index) -> user_op::InputArgModifier* {
-      std::string ibn = GenRepeatedBn(in_arg_name, in_arg_index);
-      if (std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end()) {
-        return MutInputBlobModifier4Ibn(ibn);
-      }
-      return nullptr;
-    };
-    val_->input_arg_modify_fn(GetInputArgModifierFn, user_conf_wrapper);
-
-    user_op::GetOutputArgModifier GetOutputArgModifierFn =
-        [&](const std::string& out_arg_name, int32_t out_arg_index) -> user_op::OutputArgModifier* {
-      std::string obn = GenRepeatedBn(out_arg_name, out_arg_index);
-      if (std::find(output_bns().begin(), output_bns().end(), obn) != output_bns().end()) {
-        return MutOutputBlobModifier4Obn(obn);
-      }
-      return nullptr;
-    };
-    val_->output_arg_modify_fn(GetOutputArgModifierFn, user_conf_wrapper);
+    if (val_->input_arg_modify_fn) {
+      user_op::GetInputArgModifier GetInputArgModifierFn =
+          [&](const std::string& in_arg_name, int32_t in_arg_index) -> user_op::InputArgModifier* {
+        std::string ibn = GenRepeatedBn(in_arg_name, in_arg_index);
+        if (std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end()) {
+          return MutInputBlobModifier4Ibn(ibn);
+        }
+        return nullptr;
+      };
+      val_->input_arg_modify_fn(GetInputArgModifierFn, *user_op_conf_);
+    }
+    if (val_->output_arg_modify_fn) {
+      user_op::GetOutputArgModifier GetOutputArgModifierFn =
+          [&](const std::string& out_arg_name,
+              int32_t out_arg_index) -> user_op::OutputArgModifier* {
+        std::string obn = GenRepeatedBn(out_arg_name, out_arg_index);
+        if (std::find(output_bns().begin(), output_bns().end(), obn) != output_bns().end()) {
+          return MutOutputBlobModifier4Obn(obn);
+        }
+        return nullptr;
+      };
+      val_->output_arg_modify_fn(GetOutputArgModifierFn, *user_op_conf_);
+    }
   }
-  user_op_conf_.reset(new user_op::UserOpConfWrapper(op_conf()));
 }
 
 Maybe<void> UserOp::InferInternalBlobDescs(
@@ -559,14 +628,34 @@ Maybe<void> UserOp::GetSbpSignatures(
 }
 
 Maybe<void> UserOp::InferOpTimeShape(
-    const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
-    Shape* time_shape) const {
+    const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
+    std::shared_ptr<const Shape>* time_shape) const {
   if (val_->infer_output_blob_time_shape_fn) {
+    std::shared_ptr<Shape> op_time_shape(new Shape());
     UserOpInferOutputBlobTimeShapeFnContext infer_output_blob_time_shape_fn_ctx(
-        this, GetTimeShape4BnInOp, time_shape);
+        this, GetTimeShape4BnInOp, op_time_shape.get());
+    *time_shape = op_time_shape;
     return val_->infer_output_blob_time_shape_fn(&infer_output_blob_time_shape_fn_ctx);
   } else {
     return Operator::InferOpTimeShape(GetTimeShape4BnInOp, time_shape);
+  }
+}
+
+Maybe<void> UserOp::InferParallelDistributionSignature(
+    ParallelDistributionSignature* parallel_distribution_signature,
+    const ParallelDistributionSignature& parallel_distribution_constraints,
+    const ParallelDesc& parallel_desc,
+    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+        ParallelDistributionInferHint4Ibn) const {
+  if (val_->infer_parallel_distribution_fn) {
+    UserOpInferParallelDistributionFnContext ctx(this, parallel_distribution_signature,
+                                                 parallel_distribution_constraints,
+                                                 ParallelDistributionInferHint4Ibn);
+    return val_->infer_parallel_distribution_fn(&ctx);
+  } else {
+    return Operator::InferParallelDistributionSignature(
+        parallel_distribution_signature, parallel_distribution_constraints, parallel_desc,
+        ParallelDistributionInferHint4Ibn);
   }
 }
 

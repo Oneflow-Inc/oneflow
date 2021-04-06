@@ -62,9 +62,19 @@ def build_img(
     subprocess.check_call(cmd, cwd=oneflow_src_dir, shell=True)
 
 
-def common_cmake_args(cache_dir):
+def common_cmake_args(cache_dir=None, extra_oneflow_cmake_args=None):
+    assert cache_dir
+    ret = ""
+    if (
+        not extra_oneflow_cmake_args
+        or "-DCMAKE_BUILD_TYPE" not in extra_oneflow_cmake_args
+    ):
+        ret += " -DCMAKE_BUILD_TYPE=Release"
+    if not extra_oneflow_cmake_args or "-DBUILD_RDMA" not in extra_oneflow_cmake_args:
+        ret += " -DBUILD_RDMA=ON"
     third_party_install_dir = os.path.join(cache_dir, "build-third-party-install")
-    return f"-DCMAKE_BUILD_TYPE=Release -DBUILD_RDMA=ON -DTHIRD_PARTY_DIR={third_party_install_dir}"
+    ret += f" -DTHIRD_PARTY_DIR={third_party_install_dir}"
+    return ret
 
 
 def get_build_dir_arg(cache_dir, oneflow_src_dir):
@@ -76,7 +86,7 @@ def get_build_dir_arg(cache_dir, oneflow_src_dir):
 def force_rm_dir(dir_to_clean):
     print("cleaning:", dir_to_clean)
     assert dir_to_clean
-    clean_cmd = f"docker run --rm -v {dir_to_clean}:{dir_to_clean} -w {dir_to_clean} busybox rm -rf {dir_to_clean}/*"
+    clean_cmd = f"docker run --network=host --rm -v {dir_to_clean}:{dir_to_clean} -w {dir_to_clean} busybox rm -rf {dir_to_clean}/*"
     subprocess.check_call(clean_cmd, shell=True)
 
 
@@ -140,7 +150,9 @@ def build_third_party(
     cmake_cmd = " ".join(
         [
             "cmake",
-            common_cmake_args(cache_dir),
+            common_cmake_args(
+                cache_dir=cache_dir, extra_oneflow_cmake_args=extra_oneflow_cmake_args
+            ),
             "-DTHIRD_PARTY=ON -DONEFLOW=OFF",
             extra_oneflow_cmake_args,
             oneflow_src_dir,
@@ -158,7 +170,9 @@ make -j`nproc` prepare_oneflow_third_party
         current_dir=third_party_build_dir,
         use_system_proxy=use_system_proxy,
     )
-    docker_cmd = f"docker run {extra_docker_args} --rm {common_docker_args}"
+    docker_cmd = (
+        f"docker run --network=host {extra_docker_args} --rm {common_docker_args}"
+    )
     create_tmp_bash_and_run(docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry)
 
 
@@ -193,7 +207,9 @@ def build_oneflow(
     cmake_cmd = " ".join(
         [
             "cmake",
-            common_cmake_args(cache_dir),
+            common_cmake_args(
+                cache_dir=cache_dir, extra_oneflow_cmake_args=extra_oneflow_cmake_args
+            ),
             "-DTHIRD_PARTY=OFF -DONEFLOW=ON",
             extra_oneflow_cmake_args,
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
@@ -208,7 +224,9 @@ def build_oneflow(
         house_dir=house_dir,
         use_system_proxy=use_system_proxy,
     )
-    docker_cmd = f"docker run --rm {common_docker_args} {extra_docker_args}"
+    docker_cmd = (
+        f"docker run --network=host --rm {common_docker_args} {extra_docker_args}"
+    )
     bash_cmd = f"""set -ex
 export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
@@ -225,9 +243,9 @@ rm -rf build/*
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
 auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
 """
-        return create_tmp_bash_and_run(
-            docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry
-        )
+    return create_tmp_bash_and_run(
+        docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry
+    )
 
 
 def is_img_existing(tag):
@@ -264,7 +282,7 @@ if __name__ == "__main__":
         "--cuda_version", type=str, required=False, default="10.2",
     )
     parser.add_argument(
-        "--extra_oneflow_cmake_args", type=str, required=False, default="",
+        "--extra_oneflow_cmake_args", action="append", nargs="+", default=[]
     )
     parser.add_argument(
         "--extra_docker_args", type=str, required=False, default="",
@@ -295,7 +313,10 @@ if __name__ == "__main__":
     parser.add_argument("--cpu", default=False, action="store_true", required=False)
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
-    extra_oneflow_cmake_args = args.extra_oneflow_cmake_args
+    print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
+    extra_oneflow_cmake_args = " ".join(
+        [" ".join(l) for l in args.extra_oneflow_cmake_args]
+    )
 
     cuda_versions = []
     if args.use_aliyun_mirror:
