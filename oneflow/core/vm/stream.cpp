@@ -91,7 +91,6 @@ void Stream::DeleteInstruction(ObjectMsgPtr<Instruction>&& instruction) {
   } else if (ref_cnt == 2) {
     // a worker is holding a reference to `instruction`
     mut_zombie_instruction_list()->EmplaceBack(std::move(instruction));
-    MoveFromZombieListToFreeList();
   } else {
     InstructionProto proto;
     instruction->instr_msg().ToProto(&proto);
@@ -99,6 +98,7 @@ void Stream::DeleteInstruction(ObjectMsgPtr<Instruction>&& instruction) {
                     << " instruction->ref_cnt():" << instruction->ref_cnt() << "\n"
                     << proto.DebugString();
   }
+  MoveFromZombieListToFreeList();
 }
 
 }  // namespace vm
