@@ -131,32 +131,11 @@ def get_ofrecord_handle(
 
 
 if __name__ == "__main__":
-    # import oneflow.typing as tp
-
-    # @flow.global_function(type="predict")
-    # def ofrecord_reader_job() -> Tuple[tp.Numpy, tp.Numpy]:
-    #     with flow.scope.placement("cpu", "0:0"):
-    #         ofrecord = flow.data.ofrecord_reader(
-    #             "/dataset/lenet_mnist/data/ofrecord/train"
-    #         )
-    #         # image shape is (28*28, )
-    #         image = flow.data.OFRecordRawDecoder(
-    #             ofrecord, "image_raw", shape=(784,), dtype=flow.int32
-    #         )
-    #         # label shape is (1, )
-    #         label = flow.data.OFRecordRawDecoder(
-    #             ofrecord, "label", shape=(1,), dtype=flow.int32
-    #         )
-
-    #         return image, label
-
-    # images, labels = ofrecord_reader_job()
-    # print("In per batch, images shape is", images.shape)
-    # print("In per batch, labels shape is", labels.shape)
-
     flow.env.init()
     flow.tmp.InitEagerGlobalSession()
     flow.enable_eager_execution(True)
     flow.env.init()
     record = OfrecordReader("/dataset/lenet_mnist/data/ofrecord/train")()
+    i = raw_decoder(record, "image_raw", shape=(784,), dtype=flow.float32)
     print(type(record))
+    print(i.numpy())
