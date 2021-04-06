@@ -38,6 +38,26 @@ inline void FixCpuDeviceNum(ConfigProto* config_proto) {
   config_proto->mutable_resource()->set_cpu_device_num(std::thread::hardware_concurrency());
 }
 
+// 单独暴露给python用
+inline Maybe<void> InitEagerGlobalSession(const std::string& config_proto_str){
+  CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get()) << "env not found";
+  CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster()); // 可能不需要
+
+  ClusterInstruction::MasterSendSessionStart(); //可能不需要
+
+  ConfigProto config_proto;
+  CHECK_OR_RETURN(TxtString2PbMessage(config_proto_str, &config_proto))
+      << "failed to parse config_proto: " << config_proto_str;
+  FixCpuDeviceNum(&config_proto);
+  Global<CtrlClient>::Get()->PushKV("config_proto", config_proto);
+
+  CHECK_ISNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get());
+  Global<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
+  JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto)); // 最核心
+  LOG(INFO) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
+  return Maybe<void>::Ok();  
+}
+
 inline Maybe<void> InitLazyGlobalSession(const std::string& config_proto_str) {
   CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get()) << "env not found";
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
