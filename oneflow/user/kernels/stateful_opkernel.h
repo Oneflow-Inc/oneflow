@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_KERNEL_EAGER_KERNEL_H_
 
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/framework/op_kernel.h"
 
@@ -37,11 +38,17 @@ class LocalUserKernelComputeContext;
 
 using TensorsPtr = std::vector<std::shared_ptr<eager::EagerBlobObject>>*;
 using TensorIndexMap = std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>;
+using OpKernelMap =
+    HashMap<const user_op::OpKernelRegistryResult*, std::shared_ptr<const user_op::OpKernel>>;
+using InitCtxMap = HashMap<const user_op::OpKernel*, std::shared_ptr<LocalUserKernelInitContext>>;
+using OpKernelStateMap = HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>>;
+using InferTmpSizeFnMap = HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*>;
 
 class StatefulOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulOpKernel);
-  StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc, const KernelConf& kernel_conf,
+  StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc, const OperatorConf& op_conf,
+                   const std::shared_ptr<MemoryCase>& mem_case,
                    TensorIndexMap bn_in_op2bn_index2input_tensor_index,
                    TensorIndexMap bn_in_op2bn_index2output_tensor_index);
   ~StatefulOpKernel() = default;
@@ -52,35 +59,41 @@ class StatefulOpKernel final {
 
   user_op::TensorDescInferFn TensorDescInferFn() const;
 
-  Maybe<void> TryInitOpKernelState(DeviceCtx* device_ctx);
+  Maybe<user_op::OpKernelState> GetOpKernelState(user_op::OpKernel* op_kernel,
+                                                 DeviceCtx* device_ctx);
 
-  eager::EagerBlobObject mut_temp_blob_object() { TODO(); };
+  eager::EagerBlobObject* mut_temp_blob_object();
 
   std::shared_ptr<user_op::OpKernelState> mut_opkernel_state() { return state_; }
 
-  const MemoryCase& mem_case() { TODO(); };
+  const MemoryCase& mem_case() { return *mem_case_; };
   bool need_check_mem_case() const { return need_check_mem_case_; }
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
-  const std::shared_ptr<const JobDesc> job_desc() const { return job_desc_; };
-  const KernelConf& kernel_conf() const { return kernel_conf_; }
+  Maybe<const user_op::OpKernel*> GetOpKernel(TensorsPtr inputs, TensorsPtr outputs);
+
+  const user_op::InferTmpSizeFn& GetInferTmpSizeFn(user_op::OpKernel* op_kernel);
 
  private:
   friend class eager::LocalCallOpKernelUtil;
-  void InitOpKernel(const KernelConf& kernel_conf);
   std::shared_ptr<const JobDesc> job_desc_;
-  const KernelConf& kernel_conf_;
+  OperatorConf op_conf_;
+  std::shared_ptr<MemoryCase> mem_case_;
   std::unique_ptr<const user_op::OpKernel> kernel_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
-  std::unique_ptr<LocalUserKernelInitContext> init_ctx_;
   std::shared_ptr<user_op::OpKernelState> state_;
   TensorIndexMap bn_in_op2bn_index2input_tensor_index_;
   TensorIndexMap bn_in_op2bn_index2output_tensor_index_;
   bool need_check_mem_case_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
+  OpKernelMap op_kernel_map_;
+  OpKernelStateMap op_kernel_state_map_;
+  InitCtxMap init_ctx_map_;
+  InferTmpSizeFnMap infer_tmp_size_fn_map_;
+  std::unique_ptr<eager::EagerBlobObject> tmp_blob_object_;
 };
 
 }  // namespace one

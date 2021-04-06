@@ -72,6 +72,7 @@ class TensorPodDesc final : public PodDesc {
   ~TensorPodDesc() = default;
   const Shape& shape() const { return *CHECK_NOTNULL(shape_.get()); }
   DataType data_type() const { return data_type_; }
+  DataType* mut_data_type() { return &data_type_; }
   Shape* mut_shape() { return CHECK_NOTNULL(shape_.get()); }
   void set_data_type(DataType data_type) { data_type_ = data_type; }
 

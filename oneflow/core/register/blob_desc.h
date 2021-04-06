@@ -45,10 +45,12 @@ class BlobDesc final {
   Shape& mut_shape() { return *body_.mut_shape(); }
 
   DataType data_type() const { return body_.data_type(); }
+  DataType* mut_data_type() { return body_.mut_data_type(); }
   void set_data_type(DataType val) { body_.set_data_type(val); }
 
   bool is_dynamic() const { return is_dynamic_; }
   void set_is_dynamic(bool);
+  bool* mut_is_dynamic() { return &is_dynamic_; }
 
   bool operator==(const BlobDesc&) const;
   void ToProto(BlobDescProto*) const;
