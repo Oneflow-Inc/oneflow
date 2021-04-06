@@ -513,8 +513,8 @@ std::string AddLbns(JobBuilder* job_builder, const std::vector<std::string>& lbn
 }
 
 std::string AddCastToP(JobBuilder* job_builder, const std::string& in_lbn,
-                       const ParallelConf& parallel_conf, int64_t scope_symbol_id,
-                       const std::string& op_name_prefix) {
+                       const ParallelConf& parallel_conf, const std::string& op_name_prefix) {
+  const int64_t scope_symbol_id = MakeScopeSymbolId(job_builder->job().job_conf(), parallel_conf);
   ParallelConf flat_parallel_conf = parallel_conf;
   flat_parallel_conf.mutable_hierarchy()->clear_dim();
   std::vector<std::string> cast_parallel_distribution;
@@ -550,14 +550,20 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   const ParallelDesc& any_parallel_desc =
       op_graph.OpNode4OpName(lbi2diff_lbi->begin()->first.op_name())->parallel_desc();
   std::vector<std::string> partial_square_sum_lbns;
+  std::vector<bool> is_broadcast_parallel_distribution;
+  std::vector<ParallelConf> param_group_parallel_confs;
   ForEachAggregatedParamGroup(
       op_graph, *lbi2diff_lbi,
       [&](const ParallelDesc& parallel_desc, const ParallelDistribution& parallel_distribution,
           const std::vector<LogicalBlobId>& lbis) {
-        if (parallel_desc != any_parallel_desc) { all_same_parallel_desc = false; }
+        if (!parallel_desc.EqualsIgnoringHierarchy(any_parallel_desc)) {
+          all_same_parallel_desc = false;
+        }
         int64_t scope_symbol_id =
             MakeScopeSymbolId(job_builder->job().job_conf(), parallel_desc.parallel_conf());
-        std::string partial_square_sum_lbn;
+        is_broadcast_parallel_distribution.push_back(
+            IsBroadcast(parallel_distribution, parallel_desc));
+        param_group_parallel_confs.push_back(parallel_desc.parallel_conf());
         if (job_builder->job().job_conf().enable_gradients_stats_aggregation()) {
           auto multi_square_sum_op_builder =
               user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-MultiSquareSum-"
@@ -570,7 +576,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
           }
           const auto multi_square_sum_op = multi_square_sum_op_builder.Build();
           job_builder->AddOps(parallel_desc.parallel_conf(), {multi_square_sum_op.op_conf()});
-          partial_square_sum_lbn = multi_square_sum_op.output("y", 0);
+          partial_square_sum_lbns.push_back(multi_square_sum_op.output("y", 0));
         } else {
           std::vector<std::string> lbns_to_add;
           for (const auto& lbi : lbis) {
@@ -586,13 +592,24 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
             job_builder->AddOps(parallel_desc.parallel_conf(), {square_sum_op.op_conf()});
             lbns_to_add.push_back(square_sum_op.output("y", 0));
           }
-          partial_square_sum_lbn = AddLbns(job_builder, lbns_to_add, parallel_desc.parallel_conf(),
-                                           scope_symbol_id, "System-ClipGradient-GlobalNorm-Add-");
+          partial_square_sum_lbns.push_back(AddLbns(job_builder, lbns_to_add,
+                                                    parallel_desc.parallel_conf(), scope_symbol_id,
+                                                    "System-ClipGradient-GlobalNorm-Add-"));
         }
-        partial_square_sum_lbns.push_back(AddCastToP(job_builder, partial_square_sum_lbn,
-                                                     parallel_desc.parallel_conf(), scope_symbol_id,
-                                                     "System-ClipGradient-ParallelCast-"));
       });
+  const bool all_group_broadcast =
+      std::all_of(is_broadcast_parallel_distribution.begin(),
+                  is_broadcast_parallel_distribution.end(), [](bool i) { return i; });
+  std::vector<std::string> square_sum_lbns_for_add;
+  if (!all_group_broadcast) {
+    for (int64_t i = 0; i < partial_square_sum_lbns.size(); ++i) {
+      square_sum_lbns_for_add.push_back(AddCastToP(job_builder, partial_square_sum_lbns.at(i),
+                                                   param_group_parallel_confs.at(i),
+                                                   "System-ClipGradient-ParallelCast-"));
+    }
+  } else {
+    square_sum_lbns_for_add = std::move(partial_square_sum_lbns);
+  }
 
   const ParallelConf global_norm_parallel_conf = all_same_parallel_desc
                                                      ? any_parallel_desc.parallel_conf()
@@ -600,7 +617,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   const int64_t scope_symbol_id =
       MakeScopeSymbolId(job_builder->job().job_conf(), global_norm_parallel_conf);
   const std::string square_sum_lbn =
-      AddLbns(job_builder, partial_square_sum_lbns, global_norm_parallel_conf, scope_symbol_id,
+      AddLbns(job_builder, square_sum_lbns_for_add, global_norm_parallel_conf, scope_symbol_id,
               "System-ClipGradient-GlobalNorm-Add-");
   auto inv_global_norm_op = user_op::UserOpConfWrapperBuilder(
                                 "System-ClipGradient-GlobalNorm-InvGlobalNorm-" + NewUniqueId())
@@ -1041,22 +1058,21 @@ Maybe<void> CountNotFiniteIfNeeded(JobPassCtx* ctx, const OpGraph& op_graph,
   bool all_same_parallel_desc = true;
   const ParallelDesc& any_parallel_desc =
       op_graph.OpNode4OpName(lbi2diff_lbi.begin()->first.op_name())->parallel_desc();
-  bool need_cast_to_p = false;
-  ForEachAggregatedParamGroup(
-      op_graph, lbi2diff_lbi,
-      [&](const ParallelDesc& parallel_desc, const ParallelDistribution& parallel_distribution,
-          const std::vector<LogicalBlobId>& lbis) {
-        if (!IsBroadcast(parallel_distribution, parallel_desc)) { need_cast_to_p = true; }
-      });
   std::vector<std::string> partial_count_not_finite_lbns;
+  std::vector<bool> is_broadcast_parallel_distribution;
+  std::vector<ParallelConf> param_group_parallel_confs;
   ForEachAggregatedParamGroup(
       op_graph, lbi2diff_lbi,
       [&](const ParallelDesc& parallel_desc, const ParallelDistribution& parallel_distribution,
           const std::vector<LogicalBlobId>& lbis) {
-        if (parallel_desc != any_parallel_desc) { all_same_parallel_desc = false; }
+        if (!parallel_desc.EqualsIgnoringHierarchy(any_parallel_desc)) {
+          all_same_parallel_desc = false;
+        }
         const int64_t scope_symbol_id =
             MakeScopeSymbolId(job_builder->job().job_conf(), parallel_desc.parallel_conf());
-        std::string partial_count_not_finite_lbn;
+        is_broadcast_parallel_distribution.push_back(
+            IsBroadcast(parallel_distribution, parallel_desc));
+        param_group_parallel_confs.push_back(parallel_desc.parallel_conf());
         if (job_builder->job().job_conf().enable_gradients_stats_aggregation()) {
           auto multi_count_not_finite_op_builder =
               user_op::UserOpConfWrapperBuilder("System-DynamicLossScale-MultiCountNotFinite-"
@@ -1069,7 +1085,7 @@ Maybe<void> CountNotFiniteIfNeeded(JobPassCtx* ctx, const OpGraph& op_graph,
           }
           const auto multi_count_not_finite_op = multi_count_not_finite_op_builder.Build();
           job_builder->AddOps(parallel_desc.parallel_conf(), {multi_count_not_finite_op.op_conf()});
-          partial_count_not_finite_lbn = multi_count_not_finite_op.output("y", 0);
+          partial_count_not_finite_lbns.push_back(multi_count_not_finite_op.output("y", 0));
         } else {
           std::vector<std::string> lbns_to_add;
           for (const auto& lbi : lbis) {
@@ -1084,26 +1100,32 @@ Maybe<void> CountNotFiniteIfNeeded(JobPassCtx* ctx, const OpGraph& op_graph,
             job_builder->AddOps(parallel_desc.parallel_conf(), {count_not_finite_op.op_conf()});
             lbns_to_add.push_back(count_not_finite_op.output("y", 0));
           }
-          partial_count_not_finite_lbn =
-              AddLbns(job_builder, lbns_to_add, parallel_desc.parallel_conf(), scope_symbol_id,
-                      "System-DynamicLossScale-CountNotFinite-Add-");
-        }
-        if (need_cast_to_p) {
           partial_count_not_finite_lbns.push_back(
-              AddCastToP(job_builder, partial_count_not_finite_lbn, parallel_desc.parallel_conf(),
-                         scope_symbol_id, "System-DynamicLossScale-ParallelCast-"));
-        } else {
-          partial_count_not_finite_lbns.push_back(partial_count_not_finite_lbn);
+              AddLbns(job_builder, lbns_to_add, parallel_desc.parallel_conf(), scope_symbol_id,
+                      "System-DynamicLossScale-CountNotFinite-Add-"));
         }
       });
 
+  const bool all_group_broadcast =
+      std::all_of(is_broadcast_parallel_distribution.begin(),
+                  is_broadcast_parallel_distribution.end(), [](bool i) { return i; });
+  std::vector<std::string> count_not_finite_lbns_for_add;
+  if (!all_group_broadcast) {
+    for (int64_t i = 0; i < partial_count_not_finite_lbns.size(); ++i) {
+      count_not_finite_lbns_for_add.push_back(
+          AddCastToP(job_builder, partial_count_not_finite_lbns.at(i),
+                     param_group_parallel_confs.at(i), "System-DynamicLossScale-ParallelCast-"));
+    }
+  } else {
+    count_not_finite_lbns_for_add = std::move(partial_count_not_finite_lbns);
+  }
   const ParallelConf count_all_parallel_conf = all_same_parallel_desc
                                                    ? any_parallel_desc.parallel_conf()
                                                    : GenParallelConfOfCpuZeroOnMaster();
   const int64_t scope_symbol_id =
       MakeScopeSymbolId(job_builder->job().job_conf(), count_all_parallel_conf);
   const std::string count_all_lbn =
-      AddLbns(job_builder, partial_count_not_finite_lbns, count_all_parallel_conf, scope_symbol_id,
+      AddLbns(job_builder, count_not_finite_lbns_for_add, count_all_parallel_conf, scope_symbol_id,
               "System-DynamicLossScale-CountNotFinite-Add-");
   const LogicalBlobId count_not_finite_lbi =
       GenLogicalBlobId(JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"))
