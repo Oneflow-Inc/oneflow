@@ -40,6 +40,7 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
 #else
     return false;
 #endif  // WITH_MLIR
+  });
 
   m.def("with_xla", []() {
 #ifdef WITH_XLA
@@ -63,7 +64,6 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
 #else
     return false;
 #endif  // RPC_BACKEND_LOCAL
-    
   });
 }
 
