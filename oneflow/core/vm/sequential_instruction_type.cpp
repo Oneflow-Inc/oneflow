@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/object_msg/flat_msg_view.h"
+#include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/host_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -118,6 +119,42 @@ class CtrlComputeRankFrontSeqCallbackInstructionType final
 };
 COMMAND(RegisterInstructionType<CtrlComputeRankFrontSeqCallbackInstructionType>(
     "CtrlComputeRankFrontSeqCallback"));
+
+class GlobalFrontSeqBarrierInstructionType : public InstructionType {
+ public:
+  GlobalFrontSeqBarrierInstructionType() = default;
+  virtual ~GlobalFrontSeqBarrierInstructionType() override = default;
+
+  using stream_type = HostStreamType;
+
+  virtual bool IsFrontSequential() const override { return true; }
+};
+
+class InferGlobalFrontSeqBarrierInstructionType final
+    : public GlobalFrontSeqBarrierInstructionType {
+ public:
+  InferGlobalFrontSeqBarrierInstructionType() = default;
+  ~InferGlobalFrontSeqBarrierInstructionType() override = default;
+
+  void Infer(Instruction* instruction) const override { OF_ENV_BARRIER(); }
+  void Compute(Instruction* instruction) const override { /* do nothing */
+  }
+};
+COMMAND(RegisterInstructionType<InferGlobalFrontSeqBarrierInstructionType>(
+    "InferGlobalFrontSeqBarrier"));
+
+class ComputeGlobalFrontSeqBarrierInstructionType final
+    : public GlobalFrontSeqBarrierInstructionType {
+ public:
+  ComputeGlobalFrontSeqBarrierInstructionType() = default;
+  ~ComputeGlobalFrontSeqBarrierInstructionType() override = default;
+
+  void Infer(Instruction* instruction) const override { /* do nothing */
+  }
+  void Compute(Instruction* instruction) const override { OF_ENV_BARRIER(); }
+};
+COMMAND(RegisterInstructionType<ComputeGlobalFrontSeqBarrierInstructionType>(
+    "ComputeGlobalFrontSeqBarrier"));
 
 }  // namespace vm
 }  // namespace oneflow
