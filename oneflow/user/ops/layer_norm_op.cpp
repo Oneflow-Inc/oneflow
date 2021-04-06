@@ -62,7 +62,8 @@ REGISTER_USER_OP("layer_norm")
       const bool scale = ctx->Attr<bool>("scale");
       const int64_t begin_params_axis =
           ShiftNegativeAxisIfNeed(x->shape(), ctx->Attr<int64_t>("begin_params_axis"));
-      *y = *x;
+      *y->mut_shape() = x->shape();
+      *y->mut_is_dynamic() = x->is_dynamic();
       DimVector param_shape_dim_vec;
       param_shape_dim_vec.insert(param_shape_dim_vec.end(),
                                  x->shape().dim_vec().cbegin() + begin_params_axis,
@@ -97,6 +98,8 @@ REGISTER_USER_OP("layer_norm")
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const bool center = ctx->Attr<bool>("center");
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      *y->mut_data_type() = x->data_type();
       if (center) {
         const user_op::TensorDesc* beta = ctx->TensorDesc4ArgNameAndIndex("beta", 0);
         CHECK_EQ_OR_RETURN(beta->data_type(), x->data_type());
@@ -132,7 +135,8 @@ REGISTER_USER_OP("layer_norm_grad")
       const Shape& bn_param_shape = InferBnParamShape(x->shape(), begin_norm_axis);
       CHECK_EQ_OR_RETURN(mean->shape(), bn_param_shape);
       CHECK_EQ_OR_RETURN(inv_variance->shape(), bn_param_shape);
-      *dx = *dy;
+      *dx->mut_shape() = dy->shape();
+      *dx->mut_is_dynamic() = dy->is_dynamic();
       if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
         const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output->shape(), dx->shape());
@@ -153,7 +157,7 @@ REGISTER_USER_OP("layer_norm_grad")
       CHECK_EQ_OR_RETURN(mean->data_type(), bn_param_data_type);
       CHECK_EQ_OR_RETURN(inv_variance->data_type(), bn_param_data_type);
       user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
-      *dx = *dy;
+      *dx->mut_data_type() = dy->data_type();
       if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
         const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output->data_type(), dx->data_type());
