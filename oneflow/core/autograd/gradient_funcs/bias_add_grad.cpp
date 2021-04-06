@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/autograd/gradient_funcs/utility.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/op_dispatch.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter_util.h"
@@ -54,17 +55,13 @@ class BiasAdd : public OpExprGradFunction {
       backward_bias_op_ = JUST(op_expr_helper::ReduceSumOp(reduce_axes_vec_, /*keepdims=*/false,
                                                            GradientOpName(op_name_ + "_bias")));
     }
-    const auto& interpreter = JUST(OpInterpUtil::GetInterpreter());
-    TensorTuple input_grad(1), bias_grad(1);
+    in_grads->resize(2);
     if (input_requires_grad_) {
-      JUST(interpreter->Apply(*backward_input_op_, {out_grads.at(0)}, &input_grad));
+      in_grads->at(0) = JUST(Dispatch<Tensor>(*backward_input_op_, {out_grads.at(0)}));
     }
     if (bias_requires_grad_) {
-      JUST(interpreter->Apply(*backward_bias_op_, {out_grads.at(0)}, &bias_grad));
+      in_grads->at(1) = JUST(Dispatch<Tensor>(*backward_bias_op_, {out_grads.at(0)}));
     }
-    in_grads->resize(2);
-    in_grads->at(0) = input_grad.at(0);
-    in_grads->at(1) = bias_grad.at(0);
     return Maybe<void>::Ok();
   }
 
