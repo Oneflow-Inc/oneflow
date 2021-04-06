@@ -2273,6 +2273,39 @@ def sparse_softmax_cross_entropy_with_logits(
     return out
 
 
+@oneflow_export("nn.distributed_sparse_softmax_cross_entropy_with_logits")
+def distributed_sparse_softmax_cross_entropy_with_logits(
+    labels: oneflow_api.BlobDesc,
+    logits: oneflow_api.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    assert labels is not None
+    assert logits is not None
+    if len(labels.shape) == len(logits.shape):
+        assert labels.shape[-1] == 1
+        labels = flow.squeeze(labels, axis=[-1])
+    else:
+        assert len(labels.shape) == len(logits.shape) - 1
+
+    prob, out = (
+        flow.user_op_builder(
+            name
+            if name is not None
+            else id_util.UniqueStr("DistributedSparseSoftmaxCrossEntropy_")
+        )
+        .Op("sparse_softmax_cross_entropy_ms")
+        .Input("prediction", [logits])
+        .Input("label", [labels])
+        .Output("prob")
+        .Output("out")
+        .Attr("depth", int(logits.shape[-1]))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    return out
+
+
 @oneflow_export("nn.sigmoid_cross_entropy_with_logits")
 def sigmoid_cross_entropy_with_logits(
     labels: oneflow_api.BlobDesc,

@@ -362,7 +362,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          std::cout << "cc_debug_log: insert nccl op: " << nccl_op.name() << " from: ["
+          LOG(INFO) << "cc_debug_log: insert nccl op: " << nccl_op.name() << " from: ["
                     << src_op_name << "](order=" << src_order << ", sbp_parallel_dis="
                     << ParallelDistributionToString(src_node->ParallelDistribution4Lbi(lbi))
                     << ")->[" << dst_op_name << "](order=" << node2order.at(dst_node)
@@ -423,7 +423,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          std::cout << "cc_debug_log: insert nccl op: " << nccl_op.name() << " from: ["
+          LOG(INFO) << "cc_debug_log: insert nccl op: " << nccl_op.name() << " from: ["
                     << src_op_name << "](" << node2order.at(src_node) << ")->[" << dst_op_name
                     << "](" << dst_order << ") and after: [" << pre_op_name << "](" << dst_order - 1
                     << ")\n";
@@ -485,7 +485,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   }
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    std::cout << "cc_debug_log: Try insert nccl logical ops into job: "
+    LOG(INFO) << "cc_debug_log: Try insert nccl logical ops into job: "
               << job_builder->job().job_conf().job_name() << ". Begin...\n";
   }
 
@@ -502,7 +502,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   }
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    std::cout << "cc_debug_log: Try insert nccl logical ops into job: "
+    LOG(INFO) << "cc_debug_log: Try insert nccl logical ops into job: "
               << job_builder->job().job_conf().job_name() << ". ...End\n\n";
   }
 
