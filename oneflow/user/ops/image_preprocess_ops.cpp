@@ -72,7 +72,7 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
 
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       DataType output_dtype = ctx->Attr<DataType>("output_dtype");
-      CHECK_EQ_OR_RETURN(output_dtype, DataType::kFloat);
+      CHECK_EQ_OR_RETURN(output_dtype, DataType::kFloat); // only support float now; for float16 in future
       *out_tensor->mut_data_type() = output_dtype;
 
       return Maybe<void>::Ok();
