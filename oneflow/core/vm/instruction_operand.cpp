@@ -30,6 +30,8 @@ void InitFromProto(InstructionOperand* that, const T& proto) {
     that->mutable_mut_operand()->mutable_operand()->__Init__(proto.mut_operand());
   } else if (proto.has_mut2_operand()) {
     that->mutable_mut2_operand()->mutable_operand()->__Init__(proto.mut2_operand());
+  } else if (proto.has_del_operand()) {
+    that->mutable_del_operand()->mutable_operand()->__Init__(proto.del_operand());
   } else if (proto.has_symbol_operand()) {
     that->mutable_symbol_operand()->mutable_operand()->__Init__(proto.symbol_operand());
   } else if (proto.has_init_symbol_operand()) {
@@ -64,6 +66,8 @@ void InstructionOperand::ToProto(InstructionOperandProto* proto) const {
     mut_operand().operand().ToProto(proto->mutable_mut_operand());
   } else if (has_mut2_operand()) {
     mut2_operand().operand().ToProto(proto->mutable_mut2_operand());
+  } else if (has_del_operand()) {
+    del_operand().operand().ToProto(proto->mutable_del_operand());
   } else if (has_symbol_operand()) {
     symbol_operand().operand().ToProto(proto->mutable_symbol_operand());
   } else if (has_init_symbol_operand()) {
