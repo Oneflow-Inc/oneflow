@@ -28,7 +28,7 @@ class InstructionMsg;
 ObjectMsgPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name);
 
 Maybe<void> Run(vm::InstructionMsgList* instr_msg_list);
-Maybe<void> Sync();
+Maybe<void> SingleClientSync();
 
 }  // namespace vm
 }  // namespace oneflow

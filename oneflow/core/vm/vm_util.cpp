@@ -41,7 +41,7 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Sync() {
+Maybe<void> SingleClientSync() {
   BlockingCounter bc(1);
   LogicalRun([&bc](const std::shared_ptr<InstructionsBuilder>& builder) {
     builder->ComputeGlobalFrontSeqBarrier();

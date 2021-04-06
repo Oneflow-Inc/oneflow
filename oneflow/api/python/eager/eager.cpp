@@ -17,9 +17,10 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/vm/vm_util.h"
 
-ONEFLOW_API_PYBIND11_MODULE("eager", m) {
+ONEFLOW_API_PYBIND11_MODULE("eager.single_client", m) {
   using namespace oneflow;
   namespace py = pybind11;
   m.def(
-      "Sync", []() { vm::Sync().GetOrThrow(); }, py::call_guard<py::gil_scoped_release>());
+      "Sync", []() { vm::SingleClientSync().GetOrThrow(); },
+      py::call_guard<py::gil_scoped_release>());
 }

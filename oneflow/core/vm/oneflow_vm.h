@@ -33,14 +33,14 @@ class OneflowVM final {
   vm::VirtualMachine* mut_vm() { return vm_.Mutable(); }
 
  private:
+  void Loop();
+
   ObjectMsgPtr<vm::VirtualMachine> vm_;
   // for asynchronized execution
   std::list<std::unique_ptr<std::thread>> worker_threads_;
   std::thread schedule_thread_;
   std::atomic<bool> exiting_;
   std::atomic<bool> scheduler_exited_;
-
-  void Loop();
 };
 
 }  // namespace oneflow
