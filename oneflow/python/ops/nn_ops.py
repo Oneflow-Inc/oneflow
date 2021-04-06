@@ -1450,6 +1450,39 @@ def bias_add(
     )
 
 
+@oneflow_export("nn.fused_bias_add_gelu")
+def fused_bias_add_gelu(
+    value: oneflow_api.BlobDesc,
+    bias: oneflow_api.BlobDesc,
+    data_format: Optional[str] = None,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    if name is None:
+        name = id_util.UniqueStr("BiasAdd_")
+
+    if data_format is None:
+        bias_add_axis = 1
+    else:
+        if data_format.startswith("NC"):
+            bias_add_axis = 1
+        elif data_format.startswith("N") and data_format.endswith("C"):
+            bias_add_axis = len(value.shape) - 1
+        else:
+            raise ValueError("data_format must be of the form `N...C` or `NC...`")
+
+    return (
+        flow.user_op_builder(name)
+        .Op("fused_bias_add_gelu")
+        .Input("a", [value])
+        .Input("b", [bias])
+        .Output("out")
+        .Attr("axis", bias_add_axis)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("nn.max_pool1d")
 def max_pool1d(
     input: oneflow_api.BlobDesc,
