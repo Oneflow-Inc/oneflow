@@ -239,10 +239,10 @@ REGISTER_USER_OP("layer_norm_param_grad")
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       auto has_tensor = [ctx](const std::string& bn) -> bool {
         bool ret = false;
-        for (auto t : ctx->inputs()) {
+        for (auto& t : ctx->inputs()) {
           if (bn == t.first) { return true; }
         }
-        for (auto t : ctx->outputs()) {
+        for (auto& t : ctx->outputs()) {
           if (bn == t.first) { return true; }
         }
         return ret;
