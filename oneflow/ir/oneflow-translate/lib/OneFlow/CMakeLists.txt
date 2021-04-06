@@ -8,6 +8,7 @@ add_llvm_library(MLIROneFlowTranslation
 
 	LINK_LIBS PUBLIC
 	MLIRIR
+  BUILDTREE_ONLY
         )
 llvm_update_compile_flags(MLIROneFlowTranslation)
 
