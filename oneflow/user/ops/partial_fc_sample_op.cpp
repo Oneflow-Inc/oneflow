@@ -54,8 +54,8 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
       user_op::TensorDesc* sampled_label = ctx->TensorDesc4ArgNameAndIndex("sampled_label", 0);
       *mapped_label->mut_shape() = label->shape();
       *mapped_label->mut_is_dynamic() = label->is_dynamic();
-      sampled_weight->mut_shape()->Set(0, num_sample_per_rank);
       *sampled_weight->mut_shape() = weight->shape();
+      sampled_weight->mut_shape()->Set(0, num_sample_per_rank);
       *sampled_weight->mut_is_dynamic() = weight->is_dynamic();
       *sampled_label->mut_shape() = label->shape();
       sampled_label->mut_shape()->Set(0, num_sample_per_rank);
