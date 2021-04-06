@@ -30,8 +30,9 @@ OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
     auto thread = std::make_unique<std::thread>(&vm::ThreadCtx::LoopRun, thread_ctx);
     worker_threads_.push_back(std::move(thread));
   }
-  schedule_thread_ = std::thread(&OneflowVM::Loop, this);
   exiting_ = false;
+  scheduler_exited_ = false;
+  schedule_thread_ = std::thread(&OneflowVM::Loop, this);
 }
 
 namespace {
