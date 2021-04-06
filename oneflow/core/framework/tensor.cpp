@@ -41,11 +41,11 @@ std::shared_ptr<MirroredTensor> MirroredTensor::MakeTensor(
 }
 
 void MirroredTensor::set_requires_grad(bool requires_grad) {
-    if (!impl_->requires_grad() && requires_grad && autograd::GradMode::is_enabled()) {
-        TensorTuple tensor_tuple({shared_from_this()});
-        AddAccumulateFunctionNode(&tensor_tuple);
-    }
-    impl_->set_requires_grad(requires_grad);
+  if (!impl_->requires_grad() && requires_grad && autograd::GradMode::is_enabled()) {
+    TensorTuple tensor_tuple({shared_from_this()});
+    AddAccumulateFunctionNode(&tensor_tuple);
+  }
+  impl_->set_requires_grad(requires_grad);
 }
 
 bool MirroredTensor::is_cuda() const { return device()->type() == "cuda"; }
@@ -85,11 +85,11 @@ std::shared_ptr<ConsistentTensor> ConsistentTensor::MakeTensor(
 }
 
 void ConsistentTensor::set_requires_grad(bool requires_grad) {
-    if (!impl_->requires_grad() && requires_grad && autograd::GradMode::is_enabled()) {
-        TensorTuple tensor_tuple({shared_from_this()});
-        AddAccumulateFunctionNode(&tensor_tuple);
-    }
-    impl_->set_requires_grad(requires_grad);
+  if (!impl_->requires_grad() && requires_grad && autograd::GradMode::is_enabled()) {
+    TensorTuple tensor_tuple({shared_from_this()});
+    AddAccumulateFunctionNode(&tensor_tuple);
+  }
+  impl_->set_requires_grad(requires_grad);
 }
 
 bool ConsistentTensor::is_cuda() const {
