@@ -51,7 +51,7 @@ TryLockResult LocalCtrlClient::TryLock(const std::string& name) {
 void LocalCtrlClient::NotifyDone(const std::string& name) {
   std::unique_lock<std::mutex> lck(done_names_mtx_);
   done_names_.insert(name);
-  doing_names_.erase(name);
+  CHECK_EQ(doing_names_.erase(name), 1);
   done_names_cv_.notify_all();
 }
 
