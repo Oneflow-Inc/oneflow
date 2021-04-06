@@ -40,7 +40,10 @@ TryLockResult LocalCtrlClient::TryLock(const std::string& name) {
   std::unique_lock<std::mutex> lck(done_names_mtx_);
   if (done_names_.find(name) != done_names_.end()) {
     return TryLockResult::kDone;
+  } else if (doing_names_.find(name) != doing_names_.end()) {
+    return TryLockResult::kDoing;
   } else {
+    doing_names_.insert(name);
     return TryLockResult::kLocked;
   }
 }
@@ -48,6 +51,7 @@ TryLockResult LocalCtrlClient::TryLock(const std::string& name) {
 void LocalCtrlClient::NotifyDone(const std::string& name) {
   std::unique_lock<std::mutex> lck(done_names_mtx_);
   done_names_.insert(name);
+  doing_names_.erase(name);
   done_names_cv_.notify_all();
 }
 
