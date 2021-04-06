@@ -28,6 +28,7 @@ enum OperandAccessModifier {
   kConstModifier,
   kDataMutableModifier,
   kTypeAndDataMutableModifier,
+  kDeleteModifier,
 };
 
 enum OperandMemZoneModifier {
@@ -50,6 +51,7 @@ FLAT_MSG_END(ModifiedOperand);
 using ConstOperand = ModifiedOperand<kConstModifier, kDeviceMemZoneModifier>;
 using MutOperand = ModifiedOperand<kDataMutableModifier, kDeviceMemZoneModifier>;
 using Mut2Operand = ModifiedOperand<kTypeAndDataMutableModifier, kDeviceMemZoneModifier>;
+using DelOperand = ModifiedOperand<kDeleteModifier, kDeviceMemZoneModifier>;
 
 using SymbolOperand = ModifiedOperand<kConstModifier, kHostConstMemZoneModifier>;
 using InitSymbolOperand = ModifiedOperand<kDataMutableModifier, kHostConstMemZoneModifier>;
@@ -73,6 +75,7 @@ FLAT_MSG_BEGIN(InstructionOperand);
     FLAT_MSG_ONEOF_FIELD(ConstOperand, const_operand)
     FLAT_MSG_ONEOF_FIELD(MutOperand, mut_operand)
     FLAT_MSG_ONEOF_FIELD(Mut2Operand, mut2_operand)
+    FLAT_MSG_ONEOF_FIELD(DelOperand, del_operand)
     FLAT_MSG_ONEOF_FIELD(SymbolOperand, symbol_operand)
     FLAT_MSG_ONEOF_FIELD(InitSymbolOperand, init_symbol_operand)
     FLAT_MSG_ONEOF_FIELD(OperandSeparator, separator)
