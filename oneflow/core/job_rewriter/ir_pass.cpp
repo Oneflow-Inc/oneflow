@@ -119,7 +119,7 @@ class IRRoundTrip final : public JobPass {
       return true;
     });
     TeePersistentLogStream::Create(
-        ("job_after_ir_round_trip." + job->job_conf().job_name() + ".prototxt"))
+        ("ir/job_after_ir_round_trip." + job->job_conf().job_name() + ".prototxt"))
         ->Write(*job);
     return Maybe<void>::Ok();
   }
