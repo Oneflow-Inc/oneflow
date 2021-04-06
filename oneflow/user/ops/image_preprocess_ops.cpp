@@ -203,6 +203,7 @@ REGISTER_CPU_ONLY_USER_OP("image_random_crop")
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = in_tensor->data_type();
       return Maybe<void>::Ok();
     });
 
