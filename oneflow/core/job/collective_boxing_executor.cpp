@@ -517,7 +517,7 @@ CollectiveBoxingExecutor::CollectiveBoxingExecutor(const Plan& plan)
     }
   }
 #ifdef WITH_CUDA
-  if (backend2count.count(static_cast<int32_t>(request.op_desc().backend())) != 0) {
+  if (backend2count.count(static_cast<int32_t>(Backend::kBackendNCCL) != 0)) {
     auto it =
         backends_
             .emplace(Backend::kBackendNCCL, std::make_unique<NcclCollectiveBoxingExecutorBackend>())
