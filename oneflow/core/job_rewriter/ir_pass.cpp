@@ -112,14 +112,14 @@ class IRRoundTrip final : public JobPass {
     const OpGraph op_graph(*job);
     RoundTripOneFlowJobWrapper w(job);
     TeePersistentLogStream::Create(
-        ("job_before_ir_round_trip." + job->job_conf().job_name() + ".prototxt"))
+        ("ir/" + job->job_conf().job_name() + ".job_before_ir_round_trip.prototxt"))
         ->Write(*job);
     mlir::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
       TODO();
       return true;
     });
     TeePersistentLogStream::Create(
-        ("ir/job_after_ir_round_trip." + job->job_conf().job_name() + ".prototxt"))
+        ("ir/" + job->job_conf().job_name() + ".job_after_ir_round_trip.prototxt"))
         ->Write(*job);
     return Maybe<void>::Ok();
   }
