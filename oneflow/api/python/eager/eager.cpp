@@ -19,5 +19,7 @@ limitations under the License.
 
 ONEFLOW_API_PYBIND11_MODULE("eager", m) {
   using namespace oneflow;
-  m.def("Sync", []() { vm::Sync().GetOrThrow(); });
+  namespace py = pybind11;
+  m.def(
+      "Sync", []() { vm::Sync().GetOrThrow(); }, py::call_guard<py::gil_scoped_release>());
 }

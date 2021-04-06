@@ -36,8 +36,9 @@ OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
       CHECK(thread_ctx2thread_pool_.emplace(thread_ctx, std::move(thread_pool)).second);
     }
   }
-  schedule_thread_ = std::thread(&OneflowVM::Loop, this);
   exiting_ = false;
+  scheduler_exited_ = false;
+  schedule_thread_ = std::thread(&OneflowVM::Loop, this);
 }
 
 namespace {
