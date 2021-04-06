@@ -91,6 +91,18 @@ class Softmax(Module):
         return res
 
 
+@oneflow_export("nn.GeLU")
+@register_tensor_op_by_module("gelu")
+@register_op_by_module("gelu")
+class GeLU(Module):
+    def __init__(self):
+        super().__init__()
+        self._op = flow.builtin_op("gelu").Input("in").Output("out").Build()
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
+
 if __name__ == "__main__":
     flow.enable_eager_execution(True)
     import numpy as np
