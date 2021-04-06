@@ -92,6 +92,8 @@ class Softmax(Module):
 
 
 @oneflow_export("nn.Tanh")
+@register_tensor_op_by_module("tanh")
+@register_op_by_module("tanh")
 class Tanh(Module):
     def __init__(self):
         super().__init__()
