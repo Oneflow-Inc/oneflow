@@ -36,6 +36,8 @@ OBJECT_MSG_BEGIN(Stream);
   OF_PUBLIC int64_t device_id() const;
   OF_PUBLIC const StreamType& stream_type() const;
   OF_PUBLIC const StreamTypeId& stream_type_id() const;
+  OF_PRIVATE void MoveToFreeList(ObjectMsgPtr<Instruction>&& instruction);
+  OF_PRIVATE void MoveFromZombieListToFreeList();
 
   // fields
   OBJECT_MSG_DEFINE_PTR(ThreadCtx, thread_ctx); 
@@ -46,8 +48,11 @@ OBJECT_MSG_BEGIN(Stream);
   OBJECT_MSG_DEFINE_LIST_LINK(active_stream_link);
   OBJECT_MSG_DEFINE_LIST_LINK(thread_ctx_stream_link);
   OBJECT_MSG_DEFINE_MAP_KEY(StreamId, stream_id);
+
+  // heads 
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, running_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, free_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, zombie_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(CallbackMsg, callback_link, callback_list);
 OBJECT_MSG_END(Stream);
 // clang-format on
