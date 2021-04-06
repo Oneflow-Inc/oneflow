@@ -139,18 +139,15 @@ class EmbeddedListHead {
   void Clear() {
     container_.__Init__();
     size_ = 0;
-    CheckSize();
   }
 
   void Erase(value_type* elem) {
-    CheckSize();
     CHECK_GT(size_, 0);
     CHECK_NE(elem, End());
     EmbeddedListLink* list_link = LinkField::FieldPtr4StructPtr(elem);
     CHECK(!list_link->empty());
     list_link->Erase();
     --size_;
-    CheckSize();
   }
   void MoveToDstBack(value_type* elem, EmbeddedListHead* dst) {
     CHECK(!container_.empty());
@@ -161,9 +158,7 @@ class EmbeddedListHead {
     elem_link->AppendTo(dst_rbegin);
     dst_end->AppendTo(elem_link);
     --size_;
-    CheckSize();
     ++dst->size_;
-    dst->CheckSize();
   }
   void MoveToDstFront(value_type* elem, EmbeddedListHead* dst) {
     CHECK(!container_.empty());
@@ -174,9 +169,7 @@ class EmbeddedListHead {
     elem_link->AppendTo(dst_end);
     dst_begin->AppendTo(elem_link);
     --size_;
-    CheckSize();
     ++dst->size_;
-    dst->CheckSize();
   }
   void PushBack(value_type* elem) { InsertAfter(Last(), elem); }
   void PushFront(value_type* elem) { InsertAfter(End(), elem); }
@@ -201,7 +194,6 @@ class EmbeddedListHead {
     this_first->AppendTo(dst_last);
     dst_end->AppendTo(this_last);
     dst->size_ += size();
-    dst->CheckSize();
     this->Clear();
   }
 
@@ -214,7 +206,6 @@ class EmbeddedListHead {
     new_list_link->AppendTo(prev_list_link);
     next_list_link->AppendTo(new_list_link);
     ++size_;
-    CheckSize();
   }
   const EmbeddedListLink& container() const { return container_; }
   EmbeddedListLink* mut_container() { return &container_; }

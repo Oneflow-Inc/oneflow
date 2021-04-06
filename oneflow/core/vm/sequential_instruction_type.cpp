@@ -128,9 +128,6 @@ class GlobalFrontSeqBarrierInstructionType : public InstructionType {
   using stream_type = HostStreamType;
 
   virtual bool IsFrontSequential() const override { return true; }
-
- protected:
-  void Run() const { OF_ENV_BARRIER(); }
 };
 
 class InferGlobalFrontSeqBarrierInstructionType final
@@ -139,7 +136,7 @@ class InferGlobalFrontSeqBarrierInstructionType final
   InferGlobalFrontSeqBarrierInstructionType() = default;
   ~InferGlobalFrontSeqBarrierInstructionType() override = default;
 
-  void Infer(Instruction* instruction) const override { Run(); }
+  void Infer(Instruction* instruction) const override { OF_ENV_BARRIER(); }
   void Compute(Instruction* instruction) const override { /* do nothing */
   }
 };
@@ -154,7 +151,7 @@ class ComputeGlobalFrontSeqBarrierInstructionType final
 
   void Infer(Instruction* instruction) const override { /* do nothing */
   }
-  void Compute(Instruction* instruction) const override { Run(); }
+  void Compute(Instruction* instruction) const override { OF_ENV_BARRIER(); }
 };
 COMMAND(RegisterInstructionType<ComputeGlobalFrontSeqBarrierInstructionType>(
     "ComputeGlobalFrontSeqBarrier"));
