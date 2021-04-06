@@ -205,9 +205,9 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
   return this;
 }
 
-ObjectMsgPtr<InstructionMsg> InstructionMsg::add_del_object_operand(ObjectId logical_object_id) {
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_del_operand(ObjectId logical_object_id) {
   CHECK(IdUtil::IsObjectId(logical_object_id));
-  auto* operand = add_instr_operand()->mutable_mut_operand()->mutable_operand();
+  auto* operand = add_instr_operand()->mutable_del_operand()->mutable_operand();
   operand->__Init__(logical_object_id, AllMirroredObject());
   return this;
 }
