@@ -197,7 +197,7 @@ jobs:
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Custom Op test (run by oneflow build docker)
-        if: matrix.test_suite == 'cuda' && env.is_built != '1' && matrix.test_suite != 'mac'
+        if: matrix.test_suite == 'cpu' && env.is_built != '1' && matrix.test_suite != 'mac'
         run: |
           docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
             $extra_docker_args \
