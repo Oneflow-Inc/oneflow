@@ -75,7 +75,7 @@ jobs:
     strategy:
       max-parallel: 5
       matrix:
-        test_suite: ["cuda", "cpu", "xla"]
+        test_suite: ["cuda", "cpu", "xla", "mac", "mlir"]
         include:
           - test_suite: cuda
             cuda_version: 10.2
@@ -97,6 +97,11 @@ jobs:
             extra_flags: ""
             os: "macos-latest"
             allow_fail: true
+          - test_suite: mlir
+            cuda_version: 10.2
+            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --extra_oneflow_cmake_args=-DWITH_MLIR=ON
+            os: [self-hosted, linux, release]
+            allow_fail: false
     steps:
       - name: Set environments from secrets
         if: contains(${{ github.repository }}, "Oneflow-Inc")
