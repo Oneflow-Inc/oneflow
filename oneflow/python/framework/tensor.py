@@ -18,11 +18,13 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow_api
 import numpy as np
+import inspect
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.check_point_v2 as check_point_v2
-from oneflow.python.framework.function_util import global_function_or_identity
+import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow as flow
+from oneflow.python.nn.modules import *
 
 
 @oneflow_export("Tensor")
@@ -207,6 +209,99 @@ class Tensor:
             self._local_or_consistent_tensor._blob_object
         )
 
+    def _get_slice_obj(self, key):
+        def get_or_default(x, default):
+            return x if x is not None else default
+
+        def get_canonical_index(index, length, *, start=0):
+            if index < 0:
+                index += length
+            return max(min(index, length), start)
+
+        def get_slice_if_int(x):
+            if isinstance(x, slice):
+                return x
+            return slice(x, x + 1)
+
+        if isinstance(key, tuple):
+            assert all(isinstance(x, (slice, int)) for x in key)
+        else:
+            assert isinstance(key, (slice, int))
+            key = (key,)
+
+        key = list(map(get_slice_if_int, key))
+
+        assert len(key) <= len(self.shape)
+        for i in range(len(key), len(self.shape)):
+            key += (slice(None, None, None),)
+
+        starts = [
+            get_canonical_index(get_or_default(x.start, 0), self.shape[i])
+            for i, x in enumerate(key)
+        ]
+        stops = [
+            get_canonical_index(
+                get_or_default(x.stop, self.shape[i]), self.shape[i], start=starts[i]
+            )
+            for i, x in enumerate(key)
+        ]
+        steps = [get_or_default(x.step, 1) for x in key]
+        assert all(x > 0 for x in steps)
+        # np.abs is for compatibility of negative steps in the future
+        shape = (np.abs(np.array(stops) - np.array(starts)) - 1) // np.abs(
+            np.array(steps)
+        ) + 1
+        shape = shape.tolist()
+        return starts, stops, steps, shape
+
+    @_auto_determine
+    def __setitem__(self, key, value):
+        starts, stops, steps, shape = self._get_slice_obj(key)
+        if isinstance(value, (int, float)):
+            scalar = value
+            value = flow.Tensor(*shape)
+            value.fill_(scalar)
+
+        @global_function_or_identity()
+        def job():
+            with self._placement_scope():
+                op = (
+                    flow.builtin_op("logical_slice_assign")
+                    .Input("ref")
+                    .Input("value")
+                    .Attr("start", starts)
+                    .Attr("stop", stops)
+                    .Attr("step", steps)
+                    .Build()
+                )
+                op(self, value)
+
+        job()
+        return self
+
+    @_auto_determine
+    def __getitem__(self, key):
+        starts, stops, steps, _ = self._get_slice_obj(key)
+        result = None
+
+        @global_function_or_identity()
+        def job():
+            with self._placement_scope():
+                op = (
+                    flow.builtin_op("logical_slice")
+                    .Input("x")
+                    .Output("y")
+                    .Attr("start", starts)
+                    .Attr("stop", stops)
+                    .Attr("step", steps)
+                    .Build()
+                )
+                nonlocal result
+                result = op(self)[0]
+
+        job()
+        return result
+
     def tolist(self):
         TODO()
 
@@ -217,7 +312,7 @@ class Tensor:
         TODO()  # liyurui
 
     def __str__(self):
-        TODO()
+        return self.__repr__()
 
     def __repr__(self):
         return "[Tensor shape={} dtype={}]".format(self.shape, self.dtype)
@@ -230,6 +325,34 @@ class Tensor:
 
     def __deepcopy__(self, memo):
         TODO()
+
+    def __mul__(self, other):
+        return self.mul(other)
+
+    def __rmul__(self, other):
+        return self.mul(other)
+
+    def __add__(self, other):
+        return self.add(other)
+
+    def __radd__(self, other):
+        return self.add(other)
+
+    def __sub__(self, other):
+        return self.sub(other)
+
+    def __rsub__(self, other):
+        return flow.Sub().forward(other, self)
+
+    def __truediv__(self, other):
+        return self.div(other)
+
+    def __rtruediv__(self, other):
+        return flow.Div().forward(other, self)
+
+    def _determine_if_needed(self, determining_initializer=None):
+        if not self.is_determined:
+            self.determine(determining_initializer)
 
     def determine(self, determining_initializer=None):
         assert not self.is_determined
@@ -312,10 +435,44 @@ class Tensor:
         )
         return self._init_by_initializer_conf(initializer_conf)
 
-    def normal_(self, mean=0, std=1):
-        initializer_conf = flow.random_normal_initializer(
-            mean=mean, stddev=std, dtype=self.dtype
+    def kaiming_uniform_(
+        self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
+    ):
+        initializer_conf = flow.kaiming_initializer(
+            shape=self.shape,
+            distribution="random_uniform",
+            mode=mode,
+            nonlinearity=nonlinearity,
+            negative_slope=a,
+            data_format=data_format,
         )
+        return self._init_by_initializer_conf(initializer_conf)
+
+    def kaiming_normal_(
+        self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
+    ):
+        initializer_conf = flow.kaiming_initializer(
+            shape=self.shape,
+            distribution="random_normal",
+            mode=mode,
+            nonlinearity=nonlinearity,
+            negative_slope=a,
+            data_format=data_format,
+        )
+        return self._init_by_initializer_conf(initializer_conf)
+
+    def xavier_normal_(self, gain=1.0, *, data_format="NCHW"):
+        assert gain == 1.0, "Only gain == 1.0 is supported now"
+        initializer_conf = flow.xavier_normal_initializer(data_format=data_format)
+        return self._init_by_initializer_conf(initializer_conf)
+
+    def xavier_uniform_(self, gain=1.0, *, data_format="NCHW"):
+        assert gain == 1.0, "Only gain == 1.0 is supported now"
+        initializer_conf = flow.xavier_uniform_initializer(data_format=data_format)
+        return self._init_by_initializer_conf(initializer_conf)
+
+    def normal_(self, mean=0, std=1):
+        initializer_conf = flow.random_normal_initializer(mean=mean, stddev=std)
         return self._init_by_initializer_conf(initializer_conf)
 
     def fill_(self, value):
@@ -334,17 +491,9 @@ class Tensor:
 
     def _placement_scope(self):
         if self.is_consistent:
-            return flow.scope.placement(
-                self.placement.device_tag,
-                list(self.placement.parallel_conf.device_name()),
-                self.placement.hierarchy,
-            )
+            return _convert_to_placement_scope(self.placement)
         else:
-            # TODO(jianhao): replace 0 with real machine id
-            machine_id = 0
-            return flow.scope.placement(
-                self.device.type, "{}:{}".format(machine_id, self.device.index), None
-            )
+            return _convert_to_placement_scope(self.device)
 
     @property
     @_auto_determine
@@ -481,6 +630,16 @@ def _default_initializer_for_determining(tensor):
     return determined_tensor
 
 
+def global_function_or_identity(*args, **kwargs):
+    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        assert flow.eager_execution_enabled()
+        return flow.global_function(*args, **kwargs)
+    else:
+        assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
+        identity_decorator = lambda func: func
+        return identity_decorator
+
+
 def _numpy_initializer_for_determining(tensor):
     assert not tensor.is_determined
     undetermined_tensor = tensor._undetermined_tensor
@@ -549,3 +708,86 @@ def _input_args_is_data(*args):
 
 def _input_args_is_shape(*args):
     return all(isinstance(x, int) for x in args)
+def register_tensor_op_by_module(op_name):
+    def set_method(module):
+        if is_unary_module(module):
+            setattr(
+                Tensor,
+                op_name,
+                lambda self, *args, **kwargs: module(*args, **kwargs).forward(self),
+            )
+        else:
+            assert is_binary_module(module)
+            setattr(
+                Tensor,
+                op_name,
+                lambda self, x, *args, **kwargs: module(*args, **kwargs).forward(
+                    self, x
+                ),
+            )
+        return module
+
+    return set_method
+
+
+def register_op_by_module(op_name):
+    def set_method(module):
+        if is_unary_module(module):
+            oneflow_export(op_name)(_get_unary_module_impl(module))
+        else:
+            assert is_binary_module(module)
+            oneflow_export(op_name)(_get_binary_module_impl(module))
+
+        return module
+
+    def _get_unary_module_impl(module):
+        def unary_module_impl(x, *args, **kwargs):
+            return module(*args, **kwargs).forward(x)
+
+        name = module.__name__ + "_op"
+        unary_module_impl.__name__ = name
+        globals()[name] = unary_module_impl
+
+        return unary_module_impl
+
+    def _get_binary_module_impl(module):
+        def binary_module_impl(x, y, *args, **kwargs):
+            return module(*args, **kwargs).forward(x, y)
+
+        name = module.__name__ + "_op"
+        binary_module_impl.__name__ = name
+        globals()[name] = binary_module_impl
+
+        return binary_module_impl
+
+    return set_method
+
+
+def is_unary_module(module):
+    return True if len(inspect.signature(module.forward).parameters) == 2 else False
+
+
+def is_binary_module(module):
+    return True if len(inspect.signature(module.forward).parameters) == 3 else False
+
+
+def _convert_to_placement_scope(placement_or_device):
+    if isinstance(placement_or_device, flow.placement):
+        placement = placement_or_device
+        return flow.scope.placement(
+            placement.device_tag,
+            list(placement.parallel_conf.device_name()),
+            placement.hierarchy,
+        )
+    else:
+        device = placement_or_device
+        # TODO(jianhao): replace 0 with real machine id
+        machine_id = 0
+        # TODO(jianhao): support cuda in of
+        if device.type == "cuda":
+            device_tag = "gpu"
+        else:
+            device_tag = device.type
+        return flow.scope.placement(
+            device_tag, "{}:{}".format(machine_id, device.index), None
+        )
