@@ -50,9 +50,19 @@ Maybe<void> AccTickOp::InferOpTimeShape(
     const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
     std::shared_ptr<const Shape>* time_shape) const {
   const int32_t max_acc_num = op_conf().acc_tick_conf().max_acc_num();
-  CHECK_EQ_OR_RETURN(JUST(GetTimeShape4BnInOp("one"))->elem_cnt() % max_acc_num, 0);
-  std::shared_ptr<Shape> op_time_shape(
-      new Shape({JUST(GetTimeShape4BnInOp("one"))->elem_cnt() / max_acc_num}));
+  std::shared_ptr<const Shape> in_shape = JUST(GetTimeShape4BnInOp("one"));
+  CHECK_EQ_OR_RETURN(in_shape->elem_cnt() % max_acc_num, 0);
+  DimVector in_dim_vec = in_shape->dim_vec();
+  std::shared_ptr<Shape> op_time_shape;
+  if (in_dim_vec.back() == max_acc_num) {
+    in_dim_vec.pop_back();
+    op_time_shape.reset(new Shape(in_dim_vec));
+  } else if (in_dim_vec.back() % max_acc_num == 0) {
+    in_dim_vec.back() /= max_acc_num;
+    op_time_shape.reset(new Shape(in_dim_vec));
+  } else {
+    op_time_shape.reset(new Shape({in_shape->elem_cnt() / max_acc_num}));
+  }
   *time_shape = op_time_shape;
   return Maybe<void>::Ok();
 }
