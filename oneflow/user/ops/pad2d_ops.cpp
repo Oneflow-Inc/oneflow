@@ -24,22 +24,23 @@ namespace {
 
 Maybe<void> GetOpSbpSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-  FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
-    if (padding[i] == 0) {
-      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-    }
+  const int64_t input_dims = x_tensor.shape().NumAxes();
+  CHECK_EQ_OR_RETURN(input_dims, 4);
+  // NOTE(Liang Depeng): assume data format is NCHW.
+  const int64_t first_two_dims = input_dims - 2;
+  FOR_RANGE(int64_t, i, 0, first_two_dims) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-  FOR_RANGE(int64_t, i, 0, dy_tensor.shape().NumAxes()) {
-    if (padding[i] == 0) {
-      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-    }
+  const int64_t grad_dims = dy_tensor.shape().NumAxes();
+  CHECK_EQ_OR_RETURN(grad_dims, 4);
+  const int64_t first_two_dims = grad_dims - 2;
+  FOR_RANGE(int64_t, i, 0, first_two_dims) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
   return Maybe<void>::Ok();
 }

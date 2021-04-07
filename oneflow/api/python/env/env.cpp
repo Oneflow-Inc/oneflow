@@ -26,7 +26,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   m.def("IsEnvInited", &IsEnvInited);
   m.def("InitEnv", &InitEnv);
-  m.def("DestroyEnv", &DestroyEnv);
+  m.def("DestroyEnv", &DestroyEnv, py::call_guard<py::gil_scoped_release>());
 
   m.def("CurrentMachineId", &CurrentMachineId);
 }
