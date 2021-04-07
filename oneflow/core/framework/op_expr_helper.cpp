@@ -262,5 +262,19 @@ Maybe<one::UserOpExpr> LayerNormParamGradOp(const int64_t& begin_params_axis,
   return builder.Attr("begin_params_axis", begin_params_axis).Build();
 }
 
+Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size) {
+  return ConcatOp(n, axis, max_dim_size, UniqueOpName("concat"));
+}
+
+Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size,
+                                const std::string& name) {
+  return one::OpBuilder("concat", name)
+      .Input("in", n)
+      .Output("out")
+      .Attr("axis", axis)
+      .Attr("max_dim_size", max_dim_size)
+      .Build();
+}
+
 }  // namespace op_expr_helper
 }  // namespace oneflow
