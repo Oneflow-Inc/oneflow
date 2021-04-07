@@ -171,6 +171,7 @@ message TickOpConf {
 message DeviceTickOpConf {
   repeated string tick = 1;
   required string out = 2;
+  optional ShapeProto time_shape = 3;
 }
 
 message WaitAndSendIdsOpConf {
