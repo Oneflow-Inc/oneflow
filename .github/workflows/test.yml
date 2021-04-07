@@ -36,11 +36,15 @@ jobs:
     if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - uses: actions/checkout@v2
-      - name: Check license and format (please run 'make of_format' if failed)
+      - name: Check license (please run 'make of_format' if failed)
+        run: |
+          python3 ci/check/run_license_format.py -i oneflow -c
+      - name: Check license C++/CUDA format (please run 'make of_format' if failed)
+        run: |
+          python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
+      - name: Check Python format (please run 'make of_format' if failed)
         run: |
           python3 -m pip install black==19.10b0
-          python3 ci/check/run_license_format.py -i oneflow -c
-          python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
           python3 ci/check/run_py_format.py --source_dir $PWD
 
   wait_for_gpu_slot:
@@ -74,7 +78,7 @@ jobs:
     strategy:
       max-parallel: 5
       matrix:
-        test_suite: ["cuda", "cpu", "xla"]
+        test_suite: ["cuda", "cpu", "xla", "mac"]
         include:
           - test_suite: cuda
             cuda_version: 10.2
