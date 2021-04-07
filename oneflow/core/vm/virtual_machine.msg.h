@@ -69,6 +69,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   OBJECT_MSG_DEFINE_LIST_HEAD(ThreadCtx, thread_ctx_link, thread_ctx_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamRtDesc, stream_type_id, stream_type_id2stream_rt_desc);
   OBJECT_MSG_DEFINE_MAP_HEAD(LogicalObject, logical_object_id, id2logical_object);
+  OBJECT_MSG_DEFINE_LIST_HEAD(LogicalObject, delete_link, delete_logical_object_list);
 
   // methods
  private:
@@ -114,13 +115,15 @@ OBJECT_MSG_BEGIN(VirtualMachine);
                                 Id2LogicalObject* id2logical_object,
                                 const ModifiedOperand<kTypeAndDataMutableModifier, mem_zone_modifier>& mut2_operand,
                                 int64_t global_device_id, const DoEachT& DoEach);
-  enum OperandAccessType {
-    kMutableOperandAccess = 0,
-    kConstOperandAccess
-  };
+
+  template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
+  void ForEachMutMirroredObject(const InterpretType interpret_type,
+                                Id2LogicalObject* id2logical_object,
+                                const ModifiedOperand<kDeleteModifier, mem_zone_modifier>& mut2_operand,
+                                int64_t global_device_id, const DoEachT& DoEach);
 
   void ConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
-  void ConsumeMirroredObject(OperandAccessType access_type, MirroredObject* mirrored_object,
+  RwMutexedObjectAccess* ConsumeMirroredObject(OperandAccessType access_type, MirroredObject* mirrored_object,
                              Instruction* instrution);
   void ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                               NewInstructionList* new_instruction_list);
@@ -131,6 +134,8 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   template<typename ReadyList, typename IsEdgeReadyT>
   void TryMoveWaitingToReady(Instruction* instruction, ReadyList* ready_list,
                              const IsEdgeReadyT& IsEdgeReady);
+
+  void TryDeleteLogicalObjects();
 
 OBJECT_MSG_END(VirtualMachine);
 // clang-format on
