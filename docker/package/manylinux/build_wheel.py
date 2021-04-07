@@ -352,6 +352,10 @@ if __name__ == "__main__":
             versioned_img_tag = f"{img_prefix}:0.1"
             user_img_tag = f"{img_prefix}:{user}"
             extra_docker_args = args.extra_docker_args
+            is_with_mlir = (
+                "-DWITH_MLIR=ON" in args.extra_oneflow_cmake_args
+                or "-DWITH_MLIR=1" in args.extra_oneflow_cmake_args
+            )
             if "--name" not in extra_docker_args:
                 extra_docker_args += (
                     f" --name run-by-{getpass.getuser()}-{str(uuid.uuid4())}"
@@ -379,7 +383,7 @@ if __name__ == "__main__":
             if args.xla:
                 bash_args = "-l"
             bash_wrap = ""
-            if args.xla or args.gcc7:
+            if args.xla or args.gcc7 or is_with_mlir:
                 bash_wrap = """
 source scl_source enable devtoolset-7
 gcc --version
@@ -397,10 +401,7 @@ gcc --version
                     sub_dir += "-xla"
                 if args.gcc7:
                     sub_dir += "-gcc7"
-                if (
-                    "-DWITH_MLIR=ON" in args.extra_oneflow_cmake_args
-                    or "-DWITH_MLIR=1" in args.extra_oneflow_cmake_args
-                ):
+                if is_with_mlir:
                     sub_dir += "-mlir"
                 if args.cpu:
                     assert len(cuda_versions) == 1
