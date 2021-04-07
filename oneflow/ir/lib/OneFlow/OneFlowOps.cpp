@@ -26,7 +26,7 @@ limitations under the License.
 using namespace mlir;
 using namespace mlir::oneflow;
 
-static mlir::ParseResult parseConstantOp(mlir::OpAsmParser &parser, mlir::OperationState &result) {
+static mlir::ParseResult parseConstantOp(mlir::OpAsmParser& parser, mlir::OperationState& result) {
   mlir::DenseElementsAttr value;
   if (parser.parseOptionalAttrDict(result.attributes)
       || parser.parseAttribute(value, "value", result.attributes))
@@ -39,7 +39,7 @@ static mlir::ParseResult parseConstantOp(mlir::OpAsmParser &parser, mlir::Operat
 static mlir::LogicalResult verify(ConstantOp op) { return mlir::success(); }
 
 template<typename OpType>
-LogicalResult TrimRedundantCtrl(OpType op, PatternRewriter &rewriter) {
+LogicalResult TrimRedundantCtrl(OpType op, PatternRewriter& rewriter) {
   if (op.ctrl_output() && op.ctrl_output().use_empty()) {
     const int32_t num_data_inputs =
         op.result_segment_sizes().template getValue<IntegerAttr>({0}).getInt();
@@ -60,10 +60,10 @@ LogicalResult TrimRedundantCtrl(OpType op, PatternRewriter &rewriter) {
 }
 
 struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
-  ConcreteUserOps(mlir::MLIRContext *context)
+  ConcreteUserOps(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::UserOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(oneflow::UserOp op,
-                                      mlir::PatternRewriter &rewriter) const override {
+                                      mlir::PatternRewriter& rewriter) const override {
     auto op_type_name = op->getAttrOfType<StringAttr>("op_type_name").getValue();
     if /* convert opaque user op to a concrete op */ (
         op_type_name.equals("abs") || op_type_name.equals("ceil") || op_type_name.equals("floor")
@@ -94,26 +94,26 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
   }
 };
 
-void UserOp::getCanonicalizationPatterns(::mlir::OwningRewritePatternList &results,
-                                         ::mlir::MLIRContext *context) {
+void UserOp::getCanonicalizationPatterns(::mlir::OwningRewritePatternList& results,
+                                         ::mlir::MLIRContext* context) {
   results.insert<ConcreteUserOps>(context);
 }
 
 struct ConcreteSystemOps : public mlir::OpRewritePattern<oneflow::SystemOp> {
-  ConcreteSystemOps(mlir::MLIRContext *context)
+  ConcreteSystemOps(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::SystemOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(oneflow::SystemOp op,
-                                      mlir::PatternRewriter &rewriter) const override {
+                                      mlir::PatternRewriter& rewriter) const override {
     return TrimRedundantCtrl(op, rewriter);
   }
 };
 
-void SystemOp::getCanonicalizationPatterns(::mlir::OwningRewritePatternList &results,
-                                           ::mlir::MLIRContext *context) {
+void SystemOp::getCanonicalizationPatterns(::mlir::OwningRewritePatternList& results,
+                                           ::mlir::MLIRContext* context) {
   results.insert<ConcreteSystemOps>(context);
 }
 
-bool HaveIdenticalPlacement(mlir::Operation *op, mlir::Operation *argument_op) {
+bool HaveIdenticalPlacement(mlir::Operation* op, mlir::Operation* argument_op) {
   return op->hasAttr("device") && argument_op->hasAttr("device")
          && (op->getAttrOfType<StringAttr>("device")
              == argument_op->getAttrOfType<StringAttr>("device"))
@@ -122,8 +122,8 @@ bool HaveIdenticalPlacement(mlir::Operation *op, mlir::Operation *argument_op) {
              == argument_op->getAttrOfType<ArrayAttr>("placement"));
 }
 
-OpFoldResult OpTrait::impl::foldIdempotentOfIdenticalPlacement(Operation *op) {
-  auto *argument_op = op->getOperand(0).getDefiningOp();
+OpFoldResult OpTrait::impl::foldIdempotentOfIdenticalPlacement(Operation* op) {
+  auto* argument_op = op->getOperand(0).getDefiningOp();
   if (argument_op && op->getName() == argument_op->getName()
       && HaveIdenticalPlacement(op, argument_op)) {
     return op->getOperand(0);
@@ -131,8 +131,8 @@ OpFoldResult OpTrait::impl::foldIdempotentOfIdenticalPlacement(Operation *op) {
   return {};
 }
 
-OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation *op) {
-  auto *argument_op = op->getOperand(0).getDefiningOp();
+OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
+  auto* argument_op = op->getOperand(0).getDefiningOp();
   if (argument_op && op->getName() == argument_op->getName()
       && HaveIdenticalPlacement(op, argument_op)) {
     return argument_op->getOperand(0);
