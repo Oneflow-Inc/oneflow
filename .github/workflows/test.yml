@@ -265,6 +265,9 @@ jobs:
           - test_suite: "xla"
             os: [self-hosted, linux, gpu]
             allow_fail: true
+          - test_suite: "mlir"
+            os: [self-hosted, linux, gpu]
+            allow_fail: false
     steps:
       - name: Fix permissions
         run: |
@@ -330,7 +333,7 @@ jobs:
             oneflow-test:$USER \
             ${bin_dir}/oneflow_testexe
       - name: Op test (distributed)
-        if: matrix.test_suite == 'cuda'
+        if: contains(['cuda', 'mlir'], matrix.test_suite)
         run: |
           python3 ci/test/distributed_run.py --make_dotssh
           python3 ci/test/distributed_run.py --run --bash_script=ci/test/2node_op_test.sh \
@@ -338,13 +341,13 @@ jobs:
             --oneflow_wheel_path=${wheelhouse_dir} \
             --oneflow_worker_bin=${bin_dir}/oneflow_worker
       - name: Print backtrace (distributed test)
-        if: always() && matrix.test_suite == 'cuda'
+        if: always() && contains(['cuda', 'mlir'], matrix.test_suite)
         run: |
           docker run \
             $extra_docker_args \
             oneflow-test:$USER bash ci/test/print_stack_from_core.sh python3 distributed-tmp
       - name: Upload log (distributed test)
-        if: always() && matrix.test_suite == 'cuda'
+        if: always() && contains(['cuda', 'mlir'], matrix.test_suite)
         uses: ./.github/actions/upload_oss
         with:
           src_path: oneflow_temp
@@ -358,7 +361,7 @@ jobs:
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/dry_run_test.sh"
       - name: Op test
-        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
+        if: contains(['cuda_op', 'mlir', 'cpu'], matrix.test_suite)
         run: |
           docker run \
             $extra_docker_args \
