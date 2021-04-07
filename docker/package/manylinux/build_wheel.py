@@ -312,6 +312,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--xla", default=False, action="store_true", required=False)
     parser.add_argument("--gcc7", default=False, action="store_true", required=False)
+    parser.add_argument("--gcc9", default=False, action="store_true", required=False)
     parser.add_argument(
         "--use_aliyun_mirror", default=False, action="store_true", required=False
     )
@@ -384,6 +385,11 @@ if __name__ == "__main__":
 source scl_source enable devtoolset-7
 gcc --version
 """
+            if args.gcc9:
+                bash_wrap = """
+source scl_source enable devtoolset-9
+gcc --version
+"""
             else:
                 bash_wrap = "gcc --version"
 
@@ -395,6 +401,10 @@ gcc --version
                 sub_dir = cuda_version
                 if args.xla:
                     sub_dir += "-xla"
+                if args.gcc7:
+                    sub_dir += "-gcc7"
+                if args.gcc9:
+                    sub_dir += "-gcc9"
                 if args.cpu:
                     assert len(cuda_versions) == 1
                     sub_dir = "cpu"
