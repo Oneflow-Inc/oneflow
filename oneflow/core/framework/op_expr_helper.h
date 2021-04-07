@@ -105,6 +105,10 @@ Maybe<one::UserOpExpr> LayerNormParamGradOp(const int64_t& begin_params_axis,
                                             const bool& has_normalized_diff,
                                             const std::string& name);
 
+Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size);
+Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size,
+                                const std::string& name);
+
 }  // namespace op_expr_helper
 
 }  // namespace oneflow
