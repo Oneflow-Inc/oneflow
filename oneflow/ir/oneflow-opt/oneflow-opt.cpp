@@ -41,7 +41,7 @@ void registerTestOneFlowTraitsPass() {
 }
 }  // namespace mlir
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   mlir::registerAllPasses();
   mlir::registerTestOneFlowTraitsPass();
   mlir::DialectRegistry registry;

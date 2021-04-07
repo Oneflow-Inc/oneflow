@@ -18,7 +18,7 @@ limitations under the License.
 #include "mlir/Translation.h"
 #include "mlir/Support/LogicalResult.h"
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   mlir::registerAllTranslations();
   mlir::registerFromOneFlowJobTranslation();
 

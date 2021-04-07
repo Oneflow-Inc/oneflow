@@ -29,15 +29,15 @@ namespace mlir {
 namespace OpTrait {
 
 namespace impl {
-OpFoldResult foldIdempotentOfIdenticalPlacement(Operation *op);
-OpFoldResult foldInvolutionOfIdenticalPlacement(Operation *op);
+OpFoldResult foldIdempotentOfIdenticalPlacement(Operation* op);
+OpFoldResult foldInvolutionOfIdenticalPlacement(Operation* op);
 }  // namespace impl
 
 template<typename ConcreteType>
 class IsIdempotentOfIdenticalPlacement
     : public TraitBase<ConcreteType, IsIdempotentOfIdenticalPlacement> {
  public:
-  static LogicalResult verifyTrait(Operation *op) {
+  static LogicalResult verifyTrait(Operation* op) {
     static_assert(ConcreteType::template hasTrait<OneResult>(),
                   "expected operation to produce one result");
     static_assert(ConcreteType::template hasTrait<OneOperand>(),
@@ -47,7 +47,7 @@ class IsIdempotentOfIdenticalPlacement
     return impl::verifyIsIdempotent(op);
   }
 
-  static OpFoldResult foldTrait(Operation *op, ArrayRef<Attribute> operands) {
+  static OpFoldResult foldTrait(Operation* op, ArrayRef<Attribute> operands) {
     assert(op->hasAttr("placement"));
     return impl::foldIdempotentOfIdenticalPlacement(op);
   }
@@ -57,7 +57,7 @@ template<typename ConcreteType>
 class IsInvolutionOfIdenticalPlacement
     : public TraitBase<ConcreteType, IsInvolutionOfIdenticalPlacement> {
  public:
-  static LogicalResult verifyTrait(Operation *op) {
+  static LogicalResult verifyTrait(Operation* op) {
     static_assert(ConcreteType::template hasTrait<OneResult>(),
                   "expected operation to produce one result");
     static_assert(ConcreteType::template hasTrait<OneOperand>(),
@@ -67,7 +67,7 @@ class IsInvolutionOfIdenticalPlacement
     return impl::verifyIsInvolution(op);
   }
 
-  static OpFoldResult foldTrait(Operation *op, ArrayRef<Attribute> operands) {
+  static OpFoldResult foldTrait(Operation* op, ArrayRef<Attribute> operands) {
     assert(op->hasAttr("placement"));
     return impl::foldInvolutionOfIdenticalPlacement(op);
   }
