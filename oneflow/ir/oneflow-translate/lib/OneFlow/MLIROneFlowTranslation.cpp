@@ -400,6 +400,10 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
 }
 
 LogicalResult Importer::InsertOpResults(Operation* created_op) {
+  if (std::getenv("ONEFLOW_IR_DEBUG_VERBOSE") != nullptr) {
+    std::cerr << "InsertOpResults: " << created_op->getName().getStringRef().str() << " ---- ";
+    created_op->dump();
+  }
   for (auto data_out : llvm::enumerate(GetDataOutputResults(created_op))) {
     auto output_lbns = created_op->getAttrOfType<ArrayAttr>("output_lbns");
     lbn2result_.insert({output_lbns[data_out.index()].dyn_cast<StringAttr>().getValue().str(),
@@ -437,6 +441,9 @@ LogicalResult Importer::AddOpConf(const ::oneflow::OperatorConf& op,
 }
 
 LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
+  if (std::getenv("ONEFLOW_IR_DEBUG_VERBOSE") != nullptr) {
+    std::cerr << "ProcessUserOp: " << op.name() << "\n";
+  }
   if (op.has_user_conf() == false) {
     module_.emitError("Not a user op. op name: " + op.name());
     return failure();
@@ -492,7 +499,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
       if (na.first.str() == "output_lbns") {
         AddResultSegmentSizes(na.second.dyn_cast<ArrayAttr>().size(), attr_vec);
         if (na.second.dyn_cast<ArrayAttr>().size() != out_types.size() - 1) {
-          module_->emitError("out_types - 1 != output_lbns, op: " + op.name());
+          module_->emitError("len(out_types) - 1 != len(output_lbns), op: " + op.name());
           return failure();
         }
       }
