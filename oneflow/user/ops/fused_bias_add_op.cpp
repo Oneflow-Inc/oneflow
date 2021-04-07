@@ -156,7 +156,6 @@ REGISTER_USER_OP("fused_bias_add_mask_scale")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto axis = ctx->Attr<int32_t>("axis");
-
       std::vector<user_op::OpArg> split_args;
       split_args.emplace_back("a", 0);
       split_args.emplace_back("mask", 0);
@@ -164,8 +163,6 @@ REGISTER_USER_OP("fused_bias_add_mask_scale")
       if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
         split_args.emplace_back("_add_to_output", 0);
       }
-      ctx->NewBuilder().Split(split_args, 0).Broadcast(user_op::OpArg("filter", 0)).Build();
-
       for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape().NumAxes();
            ++i) {
         if (i == axis) { continue; }

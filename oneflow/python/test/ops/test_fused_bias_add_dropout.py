@@ -155,29 +155,21 @@ def compare_with_not_fused(
 
     y1 = test_global_storage.Get("y1")
     y2 = test_global_storage.Get("y2")
-    print("y1", y1.flatten()[0:10])
-    print("y2", y2.flatten()[0:10])
 
-    tol = 1e-3 if data_type == "float16" else 1e-5
+    tol = 1e-5
     test_case.assertTrue(np.allclose(y1, y2, rtol=tol, atol=tol, equal_nan=True))
     x1_diff = test_global_storage.Get("x1_diff")
     x2_diff = test_global_storage.Get("x2_diff")
-    print("x1_diff", x1_diff.flatten()[0:10])
-    print("x2_diff", x2_diff.flatten()[0:10])
     test_case.assertTrue(
         np.allclose(x1_diff, x2_diff, rtol=tol, atol=tol, equal_nan=True)
     )
     bias1_diff = test_global_storage.Get("bias1_diff")
     bias2_diff = test_global_storage.Get("bias2_diff")
-    print("bias1_diff", bias1_diff.flatten()[0:10])
-    print("bias2_diff", bias2_diff.flatten()[0:10])
     test_case.assertTrue(
         np.allclose(bias1_diff, bias2_diff, rtol=tol, atol=tol, equal_nan=True)
     )
     bias1_diff = test_global_storage.Get("bias1_diff")
     bias2_diff = test_global_storage.Get("bias2_diff")
-    print("bias1_diff", bias1_diff.flatten()[0:10])
-    print("bias2_diff", bias2_diff.flatten()[0:10])
     test_case.assertTrue(
         np.allclose(bias1_diff, bias2_diff, rtol=tol, atol=tol, equal_nan=True)
     )
@@ -194,13 +186,15 @@ class TestFusedBiasAdd(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [
             (10, 10),
-            (10, 10, 10, 10),
+            (10, 5),
+            (1, 10, 10, 10),
+            (2, 10, 10, 10),
         ]
         arg_dict["data_type"] = ["float16", "float32", "double"]
         arg_dict["data_format"] = ["NCHW"]
         arg_dict["rate"] = [0.1]
         arg_dict["seed"] = [1234]
-        arg_dict["fuse_add_to_output"] = [True]
+        arg_dict["fuse_add_to_output"] = [True, False]
         for arg in GenArgList(arg_dict):
             if arg[0] == "cpu" and arg[2] == "float16":
                 continue
