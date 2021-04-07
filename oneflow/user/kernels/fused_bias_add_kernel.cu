@@ -22,24 +22,59 @@ namespace {
 
 template<typename T>
 struct GeluFunctor {
-  OF_DEVICE_FUNC T compute(T x, int64_t i) const {
+  OF_DEVICE_FUNC T Compute(T x, int64_t i) const {
     return static_cast<T>(0.5) * x * (static_cast<T>(1.0) + erf(static_cast<T>(M_SQRT1_2) * x));
+  }
+};
+
+template<>
+struct GeluFunctor<half> {
+  GeluFunctor<float> float_functor;
+  __device__ half Compute(half x, int64_t i) const {
+    return __float2half(float_functor.Compute(__half2float(x), i));
+  }
+  __device__ half2 ComputeHalf2(half2 x, int64_t i) const {
+    half2 y;
+    y.x = __float2half(float_functor.Compute(__half2float(x.x), 2 * i));
+    y.y = __float2half(float_functor.Compute(__half2float(x.y), 2 * i + 1));
+    return y;
   }
 };
 
 template<typename T>
 struct MaskAndScaleFunctor {
-  MaskAndScaleFunctor(const int8_t* mask, T scale) : mask(mask), scale(scale) {}
-  OF_DEVICE_FUNC T compute(T x, int64_t i) const { return x * static_cast<T>(mask[i]) * scale; }
+  MaskAndScaleFunctor(const int8_t* mask, float scale) : mask(mask), scale(scale) {}
+  OF_DEVICE_FUNC T Compute(T x, int64_t i) const { return x * static_cast<T>(mask[i]) * scale; }
   const int8_t* mask;
-  T scale;
+  float scale;
+};
+
+template<>
+struct MaskAndScaleFunctor<half> {
+  MaskAndScaleFunctor(const int8_t* mask, float scale) : mask(mask), scale(scale) {
+    mask_c2 = reinterpret_cast<const char2*>(mask);
+  }
+  __device__ half Compute(half x, int64_t i) const {
+    return x * static_cast<half>(mask[i] * scale);
+  }
+  __device__ half2 ComputeHalf2(half2 x, int64_t i) const {
+    char2 mask_val = mask_c2[i];
+    half2 one_or_zero_h2;
+    half2 h2_scale = __float2half2_rn(scale);
+    one_or_zero_h2.x = mask_val.x;
+    one_or_zero_h2.y = mask_val.y;
+    return __hmul2(__hmul2(x, one_or_zero_h2), h2_scale);
+  }
+  const int8_t* mask;
+  const char2* mask_c2;
+  float scale;
 };
 
 template<typename T>
 struct MaskAndScaleAddFunctor {
   MaskAndScaleAddFunctor(const int8_t* mask, const T* addend, T scale)
       : mask(mask), addend(addend), scale(scale) {}
-  OF_DEVICE_FUNC T compute(T x, int64_t i) const {
+  OF_DEVICE_FUNC T Compute(T x, int64_t i) const {
     return x * static_cast<T>(mask[i]) * scale + addend[i];
   }
   const int8_t* mask;
@@ -47,10 +82,35 @@ struct MaskAndScaleAddFunctor {
   T scale;
 };
 
+template<>
+struct MaskAndScaleAddFunctor<half> {
+  MaskAndScaleAddFunctor(const int8_t* mask, const half* addend, float scale)
+      : mask(mask), addend(addend), scale(scale) {
+    mask_c2 = reinterpret_cast<const char2*>(mask);
+    addend_h2 = reinterpret_cast<const half2*>(addend);
+  }
+  __device__ half Compute(half x, int64_t i) const {
+    return x * static_cast<half>(mask[i] * scale) + addend[i];
+  }
+  __device__ half2 ComputeHalf2(half2 x, int64_t i) const {
+    char2 mask_val = mask_c2[i];
+    half2 one_or_zero_h2;
+    half2 h2_scale = __float2half2_rn(scale);
+    one_or_zero_h2.x = mask_val.x;
+    one_or_zero_h2.y = mask_val.y;
+    return __hadd2(__hmul2(__hmul2(x, one_or_zero_h2), h2_scale), addend_h2[i]);
+  }
+  const int8_t* mask;
+  const half* addend;
+  const char2* mask_c2;
+  const half2* addend_h2;
+  float scale;
+};
+
 template<typename T>
 struct GeluGradFunctor {
   const T coef = sqrt(static_cast<T>(2.0) / acos(static_cast<T>(-1.0)));
-  OF_DEVICE_FUNC T compute(T x, T dy, int64_t i) const {
+  OF_DEVICE_FUNC T Compute(T x, T dy, int64_t i) const {
     return static_cast<T>(0.5)
            * (static_cast<T>(1.0) + erf(static_cast<T>(M_SQRT1_2) * x)
               + x * coef * exp(static_cast<T>(-0.5) * x * x))
@@ -59,18 +119,10 @@ struct GeluGradFunctor {
 };
 
 template<>
-struct GeluFunctor<half> {
-  GeluFunctor<float> float_functor;
-  OF_DEVICE_FUNC half compute(half x, int64_t i) const {
-    return __float2half(float_functor.compute(__half2float(x), i));
-  }
-};
-
-template<>
 struct GeluGradFunctor<half> {
   GeluGradFunctor<float> float_functor;
-  OF_DEVICE_FUNC half compute(half x, half dy, int64_t i) const {
-    return __float2half(float_functor.compute(__half2float(x), __half2float(dy), i));
+  OF_DEVICE_FUNC half Compute(half x, half dy, int64_t i) const {
+    return __float2half(float_functor.Compute(__half2float(x), __half2float(dy), i));
   }
 };
 
@@ -80,7 +132,7 @@ __global__ void FusedBiasAddGpu(FUNCTOR functor, const Index elem_cnt, const Ind
   const Index block_size = bias_size * inner_size;
   CUDA_1D_KERNEL_LOOP_T(Index, i, elem_cnt) {
     T x_i = x[i] + bias[(i % block_size) / inner_size];
-    y[i] = functor.compute(x_i, i);
+    y[i] = functor.Compute(x_i, i);
   }
 }
 
@@ -91,7 +143,7 @@ __global__ void FusedBiasAddGradGpu(FUNCTOR grad_functor, const Index elem_cnt,
   const Index block_size = bias_size * inner_size;
   CUDA_1D_KERNEL_LOOP_T(Index, i, elem_cnt) {
     T x_i = x[i] + bias[(i % block_size) / inner_size];
-    dx[i] = grad_functor.compute(x_i, dy[i], i);
+    dx[i] = grad_functor.Compute(x_i, dy[i], i);
   }
 }
 
@@ -100,7 +152,7 @@ __global__ void FusedBiasAddRowGpu(FUNCTOR functor, const Index elem_cnt, const 
                                    const T* x, const T* bias, T* y) {
   CUDA_1D_KERNEL_LOOP_T(Index, i, elem_cnt) {
     T x_i = x[i] + bias[i % bias_size];
-    y[i] = functor.compute(x_i, i);
+    y[i] = functor.Compute(x_i, i);
   }
 }
 
@@ -110,7 +162,7 @@ __global__ void FusedBiasAddGradRowGpu(FUNCTOR grad_functor, const Index elem_cn
                                        const T* dy, T* dx) {
   CUDA_1D_KERNEL_LOOP_T(Index, i, elem_cnt) {
     T x_i = x[i] + bias[i % bias_size];
-    dx[i] = grad_functor.compute(x_i, dy[i], i);
+    dx[i] = grad_functor.Compute(x_i, dy[i], i);
   }
 }
 
@@ -125,10 +177,7 @@ __global__ void FusedBiasAddRowGpuHalf2(FUNCTOR functor, const Index elem_cnt,
   auto* y_h2 = reinterpret_cast<half2*>(y);
   CUDA_1D_KERNEL_LOOP_T(Index, i, h2_elem_cnt) {
     half2 x_i = __hadd2(x_h2[i], bias_h2[i % h2_bias_size]);
-    half2 y_i;
-    y_i.x = functor.compute(x_i.x, 2 * i);
-    y_i.y = functor.compute(x_i.y, 2 * i + 1);
-    y_h2[i] = y_i;
+    y_h2[i] = functor.ComputeHalf2(x_i, i);
   }
 }
 
@@ -146,8 +195,8 @@ __global__ void FusedBiasAddGradRowGpuHalf2(FUNCTOR grad_functor, const Index el
     half2 x_i = __hadd2(x_h2[i], bias_h2[i % h2_bias_size]);
     half2 dy_i = dy_h2[i];
     half2 dx_i;
-    dx_i.x = grad_functor.compute(x_i.x, dy_i.x, 2 * i);
-    dx_i.y = grad_functor.compute(x_i.y, dy_i.y, 2 * i + 1);
+    dx_i.x = grad_functor.Compute(x_i.x, dy_i.x, 2 * i);
+    dx_i.y = grad_functor.Compute(x_i.y, dy_i.y, 2 * i + 1);
     dx_h2[i] = dx_i;
   }
 }
@@ -157,7 +206,7 @@ __global__ void FusedBiasAddColGpu(FUNCTOR functor, const Index elem_cnt, const 
                                    const T* x, const T* bias, T* y) {
   CUDA_1D_KERNEL_LOOP_T(Index, i, elem_cnt) {
     T x_i = x[i] + bias[i / inner_size];
-    y[i] = functor.compute(x_i, i);
+    y[i] = functor.Compute(x_i, i);
   }
 }
 
@@ -167,7 +216,7 @@ __global__ void FusedBiasAddGradColGpu(FUNCTOR grad_functor, const Index elem_cn
                                        const T* dy, T* dx) {
   CUDA_1D_KERNEL_LOOP_T(Index, i, elem_cnt) {
     T x_i = x[i] + bias[i / inner_size];
-    dx[i] = grad_functor.compute(x_i, dy[i], i);
+    dx[i] = grad_functor.Compute(x_i, dy[i], i);
   }
 }
 
