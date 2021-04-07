@@ -132,7 +132,7 @@ def get_ofrecord_handle(
 
 if __name__ == "__main__":
     flow.env.init()
-    flow.tmp.InitEagerGlobalSession()
+    flow.InitEagerGlobalSession()
     flow.enable_eager_execution(True)
     flow.env.init()
     record = OfrecordReader("/dataset/lenet_mnist/data/ofrecord/train")()
