@@ -147,11 +147,11 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
   attr_vec.push_back(builder_.getNamedAttr("input_lbn_segment_sizes",
                                            builder_.getI32ArrayAttr(input_lbn_segment_sizes)));
 
-  std::vector<llvm::StringRef> output_lbns;
-  std::vector<llvm::StringRef> output_lbn_segment_keys;
-  std::vector<int> output_lbn_segment_sizes;
+  SmallVector<StringRef, 8> output_lbns;
+  SmallVector<StringRef, 8> output_lbn_segment_keys;
+  SmallVector<int32_t, 8> output_lbn_segment_sizes;
   int data_output_size = 0;
-  for (auto output : op.user_conf().output()) {
+  for (auto& output : op.user_conf().output()) {
     output_lbns.insert(output_lbns.end(), output.second.s().begin(), output.second.s().end());
     output_lbn_segment_keys.push_back(output.first);
     output_lbn_segment_sizes.push_back(output.second.s_size());
