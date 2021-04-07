@@ -65,8 +65,7 @@ TEST(SequentialInstruction, front_seq_compute) {
   InstructionMsgList list;
   {
     int64_t logical_object_id = TestUtil::NewObject(&list, "cpu", "0:0");
-    list.EmplaceBack(
-        NewInstruction("DeleteObject")->add_mut_operand(logical_object_id, AllMirroredObject()));
+    list.EmplaceBack(NewInstruction("DeleteObject")->add_del_operand(logical_object_id));
     ASSERT_TRUE(vm->pending_msg_list().empty());
   }
   int64_t sixsixsix = 0;
@@ -100,7 +99,6 @@ TEST(SequentialInstruction, front_seq_compute) {
         std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
     list.EmplaceBack(std::move(instruction));
   }
-  vm->Receive(&list);
   BlockingCounter bc(1);
   std::thread t([&]() {
     while (!(infer_finished && compute_finished)) {
@@ -109,6 +107,7 @@ TEST(SequentialInstruction, front_seq_compute) {
     }
     bc.Decrease();
   });
+  vm->Receive(&list);
   bc.WaitUntilCntEqualZero();
   ASSERT_TRUE(is_666);
   ASSERT_TRUE(vm->Empty());
