@@ -276,5 +276,66 @@ Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t
       .Build();
 }
 
+Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments) {
+  return UnsortedBatchSegmentSumOp(num_segments, UniqueOpName("unsorted_batch_segment_sum"));
+}
+Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments, const std::string& name) {
+  return one::OpBuilder("unsorted_batch_segment_sum", name)
+      .Input("data")
+      .Input("segment_ids")
+      .Output("out")
+      .Attr("num_segments", num_segments)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> ScalarAddByTensorOp() {
+  return ScalarAddByTensorOp(UniqueOpName("scalar_add_by_tensor"));
+}
+Maybe<one::UserOpExpr> ScalarAddByTensorOp(const std::string& name) {
+  return one::OpBuilder("scalar_add_by_tensor", name)
+      .Input("x")
+      .Input("scalar")
+      .Output("y")
+      .Build();
+}
+
+Maybe<one::UserOpExpr> ScalarSubByTensorOp() {
+  return ScalarSubByTensorOp(UniqueOpName("scalar_sub_by_tensor"));
+}
+Maybe<one::UserOpExpr> ScalarSubByTensorOp(const std::string& name) {
+  return one::OpBuilder("scalar_sub_by_tensor", name)
+      .Input("x")
+      .Input("scalar")
+      .Output("y")
+      .Build();
+}
+
+Maybe<one::UserOpExpr> ScalarMulByTensorOp() {
+  return ScalarMulByTensorOp(UniqueOpName("scalar_mul_by_tensor"));
+}
+Maybe<one::UserOpExpr> ScalarMulByTensorOp(const std::string& name) {
+  return one::OpBuilder("scalar_mul_by_tensor", name)
+      .Input("x")
+      .Input("scalar")
+      .Output("y")
+      .Build();
+}
+
+Maybe<one::UserOpExpr> ScalarDivByTensorOp() {
+  return ScalarDivByTensorOp(UniqueOpName("scalar_div_by_tensor"));
+}
+Maybe<one::UserOpExpr> ScalarDivByTensorOp(const std::string& name) {
+  return one::OpBuilder("scalar_div_by_tensor", name)
+      .Input("x")
+      .Input("scalar")
+      .Output("y")
+      .Build();
+}
+
+Maybe<one::UserOpExpr> MultiplyOp() { return MultiplyOp(UniqueOpName("multiply")); }
+Maybe<one::UserOpExpr> MultiplyOp(const std::string& name) {
+  return one::OpBuilder("multiply", name).Input("x").Input("y").Output("out").Build();
+}
+
 }  // namespace op_expr_helper
 }  // namespace oneflow
