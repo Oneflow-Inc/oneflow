@@ -80,7 +80,12 @@ REGISTER_USER_OP("combined_margin_loss_grad")
       CHECK_EQ_OR_RETURN(label->shape().At(0), dy->shape().At(0));
       CHECK_EQ_OR_RETURN(label->shape().At(0), theta->shape().At(0));
       CHECK_GE_OR_RETURN(dy->shape().NumAxes(), 2);
-      *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *dy;
+      *ctx->Shape4ArgNameAndIndex("dx", 0) = *ctx->Shape4ArgNameAndIndex("dy", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = *ctx->IsDynamic4ArgNameAndIndex("dy", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
