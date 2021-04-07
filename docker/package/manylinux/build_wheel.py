@@ -407,7 +407,7 @@ gcc --version
                     sub_dir += "-gcc9"
                 if args.cpu:
                     assert len(cuda_versions) == 1
-                    sub_dir = "cpu"
+                    sub_dir += "-cpu"
                 cache_dir = os.path.join(cache_dir, sub_dir)
             if args.skip_third_party == False:
                 build_third_party(
