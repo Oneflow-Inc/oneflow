@@ -341,7 +341,7 @@ jobs:
             --oneflow_wheel_path=${wheelhouse_dir} \
             --oneflow_worker_bin=${bin_dir}/oneflow_worker
       - name: Print backtrace (distributed test)
-        if: always() && fromJson('["cuda", "mlir"]'), matrix.test_suite)
+        if: always() && contains(fromJson('["cuda", "mlir"]'), matrix.test_suite)
         run: |
           docker run \
             $extra_docker_args \
