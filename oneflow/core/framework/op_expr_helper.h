@@ -127,6 +127,29 @@ Maybe<one::UserOpExpr> ScalarDivByTensorOp(const std::string& name);
 Maybe<one::UserOpExpr> MultiplyOp();
 Maybe<one::UserOpExpr> MultiplyOp(const std::string& name);
 
+Maybe<one::UserOpExpr> ConvNdOp(const int& filters, const std::vector<int32_t>& kernel_size,
+                                const std::vector<int32_t>& strides,
+                                const std::vector<int32_t>& padding_before,
+                                const std::vector<int32_t>& dilation_rate, const int& groups,
+                                const std::string& data_format);
+Maybe<one::UserOpExpr> ConvNdOp(const int& filters, const std::vector<int32_t>& kernel_size,
+                                const std::vector<int32_t>& strides,
+                                const std::vector<int32_t>& padding_before,
+                                const std::vector<int32_t>& dilation_rate, const int& groups,
+                                const std::string& data_format, const std::string& name);
+
+Maybe<one::UserOpExpr> ConvNdFilterGradOp(const std::vector<int32_t>& kernel_size,
+                                          const std::vector<int32_t>& strides,
+                                          const std::vector<int32_t>& padding_before,
+                                          const std::vector<int32_t>& dilation_rate,
+                                          const int& groups, const std::string& data_format);
+Maybe<one::UserOpExpr> ConvNdFilterGradOp(const std::vector<int32_t>& kernel_size,
+                                          const std::vector<int32_t>& strides,
+                                          const std::vector<int32_t>& padding_before,
+                                          const std::vector<int32_t>& dilation_rate,
+                                          const int& groups, const std::string& data_format,
+                                          const std::string& name);
+
 }  // namespace op_expr_helper
 
 }  // namespace oneflow
