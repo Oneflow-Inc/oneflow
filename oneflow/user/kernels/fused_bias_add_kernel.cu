@@ -95,28 +95,6 @@ __global__ void FusedBiasAddGradGpu(FUNCTOR grad_functor, const Index elem_cnt,
   }
 }
 
-template<typename FUNCTOR, typename Index>
-__global__ void FusedBiasAddGpuHalf(FUNCTOR functor, const Index elem_cnt, const Index bias_size,
-                                    const Index inner_size, const half* x, const half* bias,
-                                    half* y) {
-  const Index block_size = bias_size * inner_size;
-  CUDA_1D_KERNEL_LOOP_T(Index, i, elem_cnt) {
-    float x_i = __half2float(x[i]) + __half2float(bias[(i % block_size) / inner_size]);
-    y[i] = __float2half(functor.compute(x_i, i));
-  }
-}
-
-template<typename FUNCTOR, typename Index>
-__global__ void FusedBiasAddGradGpuHalf(FUNCTOR grad_functor, const Index elem_cnt,
-                                        const Index bias_size, const Index inner_size,
-                                        const half* x, const half* bias, const half* dy, half* dx) {
-  const Index block_size = bias_size * inner_size;
-  CUDA_1D_KERNEL_LOOP_T(Index, i, elem_cnt) {
-    float x_i = __half2float(x[i]) + __half2float(bias[(i % block_size) / inner_size]);
-    dx[i] = __float2half(grad_functor.compute(x_i, __half2float(dy[i]), i));
-  }
-}
-
 template<typename FUNCTOR, typename T, typename Index>
 __global__ void FusedBiasAddRowGpu(FUNCTOR functor, const Index elem_cnt, const Index bias_size,
                                    const T* x, const T* bias, T* y) {
@@ -146,12 +124,11 @@ __global__ void FusedBiasAddRowGpuHalf2(FUNCTOR functor, const Index elem_cnt,
   const auto* bias_h2 = reinterpret_cast<const half2*>(bias);
   auto* y_h2 = reinterpret_cast<half2*>(y);
   CUDA_1D_KERNEL_LOOP_T(Index, i, h2_elem_cnt) {
-    float x_i_0 = __half2float(x_h2[i].x) + __half2float(bias_h2[i % h2_bias_size].x);
-    float x_i_1 = __half2float(x_h2[i].y) + __half2float(bias_h2[i % h2_bias_size].y);
-    float2 y_i;
-    y_i.x = functor.compute(x_i_0, 2 * i);
-    y_i.y = functor.compute(x_i_1, 2 * i + 1);
-    y_h2[i] = __float22half2_rn(y_i);
+    half2 x_i = __hadd2(x_h2[i], bias_h2[i % h2_bias_size]);
+    half2 y_i;
+    y_i.x = functor.compute(x_i.x, 2 * i);
+    y_i.y = functor.compute(x_i.y, 2 * i + 1);
+    y_h2[i] = y_i;
   }
 }
 
@@ -166,13 +143,12 @@ __global__ void FusedBiasAddGradRowGpuHalf2(FUNCTOR grad_functor, const Index el
   const auto* dy_h2 = reinterpret_cast<const half2*>(dy);
   auto* dx_h2 = reinterpret_cast<half2*>(dx);
   CUDA_1D_KERNEL_LOOP_T(Index, i, h2_elem_cnt) {
-    float x_i_0 = __half2float(x_h2[i].x) + __half2float(bias_h2[i % h2_bias_size].x);
-    float x_i_1 = __half2float(x_h2[i].y) + __half2float(bias_h2[i % h2_bias_size].y);
-    float2 dy_i = __half2float2(dy_h2[i]);
-    float2 dx_i;
-    dx_i.x = grad_functor.compute(x_i_0, __half2float(dy_i.x), 2 * i);
-    dx_i.y = grad_functor.compute(x_i_1, __half2float(dy_i.y), 2 * i + 1);
-    dx_h2[i] = __float22half2_rn(dx_i);
+    half2 x_i = __hadd2(x_h2[i], bias_h2[i % h2_bias_size]);
+    half2 dy_i = dy_h2[i];
+    half2 dx_i;
+    dx_i.x = grad_functor.compute(x_i.x, dy_i.x, 2 * i);
+    dx_i.y = grad_functor.compute(x_i.y, dy_i.y, 2 * i + 1);
+    dx_h2[i] = dx_i;
   }
 }
 
@@ -218,31 +194,27 @@ struct FusedBiasAddCalculation {
 };
 
 template<typename FUNCTOR, typename Index>
-struct FusedBiasAddCalculation<FUNCTOR, float16, Index> {
+struct FusedBiasAddCalculation<FUNCTOR, half, Index> {
   static void Invoke(DeviceCtx* ctx, FUNCTOR functor, Index outer_size, Index bias_size,
-                     Index inner_size, const float16* x, const float16* bias, float16* y) {
+                     Index inner_size, const half* x, const half* bias, half* y) {
     const Index elem_cnt = outer_size * bias_size * inner_size;
     if (inner_size == 1) {
       if (bias_size % 2 == 0) {
-        FusedBiasAddRowGpuHalf2<FUNCTOR, Index><<<BlocksNum4ThreadsNum(elem_cnt / 2),
-                                                  kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            functor, elem_cnt, bias_size, reinterpret_cast<const half*>(x),
-            reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
+        FusedBiasAddRowGpuHalf2<FUNCTOR, Index>
+            <<<BlocksNum4ThreadsNum(elem_cnt / 2), kCudaThreadsNumPerBlock, 0,
+               ctx->cuda_stream()>>>(functor, elem_cnt, bias_size, x, bias, y);
       } else {
         FusedBiasAddRowGpu<FUNCTOR, half, Index>
             <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-                functor, elem_cnt, bias_size, reinterpret_cast<const half*>(x),
-                reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
+                functor, elem_cnt, bias_size, x, bias, y);
       }
     } else if (outer_size == 1) {
       FusedBiasAddColGpu<FUNCTOR, half, Index>
           <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              functor, elem_cnt, inner_size, reinterpret_cast<const half*>(x),
-              reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
+              functor, elem_cnt, inner_size, x, bias, y);
     } else {
-      RUN_CUDA_KERNEL((FusedBiasAddGpuHalf<FUNCTOR, Index>), ctx, elem_cnt, functor, elem_cnt,
-                      bias_size, inner_size, reinterpret_cast<const half*>(x),
-                      reinterpret_cast<const half*>(bias), reinterpret_cast<half*>(y));
+      RUN_CUDA_KERNEL((FusedBiasAddGpu<FUNCTOR, half, Index>), ctx, elem_cnt, functor, elem_cnt,
+                      bias_size, inner_size, x, bias, y);
     }
   }
 };
@@ -268,40 +240,43 @@ struct FusedBiasAddGradCalculation {
 };
 
 template<typename FUNCTOR, typename Index>
-struct FusedBiasAddGradCalculation<FUNCTOR, float16, Index> {
+struct FusedBiasAddGradCalculation<FUNCTOR, half, Index> {
   static void Invoke(DeviceCtx* ctx, FUNCTOR grad_functor, Index outer_size, Index bias_size,
-                     Index inner_size, const float16* x, const float16* bias, const float16* dy,
-                     float16* dx) {
+                     Index inner_size, const half* x, const half* bias, const half* dy, half* dx) {
     const Index elem_cnt = outer_size * bias_size * inner_size;
     if (inner_size == 1) {
       if (bias_size % 2 == 0) {
         FusedBiasAddGradRowGpuHalf2<FUNCTOR, Index>
             <<<BlocksNum4ThreadsNum(elem_cnt / 2), kCudaThreadsNumPerBlock, 0,
-               ctx->cuda_stream()>>>(
-                grad_functor, elem_cnt, bias_size, reinterpret_cast<const half*>(x),
-                reinterpret_cast<const half*>(bias), reinterpret_cast<const half*>(dy),
-                reinterpret_cast<half*>(dx));
+               ctx->cuda_stream()>>>(grad_functor, elem_cnt, bias_size, x, bias, dy, dx);
       } else {
         FusedBiasAddGradRowGpu<FUNCTOR, half, Index>
             <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-                grad_functor, elem_cnt, bias_size, reinterpret_cast<const half*>(x),
-                reinterpret_cast<const half*>(bias), reinterpret_cast<const half*>(dy),
-                reinterpret_cast<half*>(dx));
+                grad_functor, elem_cnt, bias_size, x, bias, dy, dx);
       }
     } else if (outer_size == 1) {
       FusedBiasAddGradColGpu<FUNCTOR, half, Index>
           <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              grad_functor, elem_cnt, inner_size, reinterpret_cast<const half*>(x),
-              reinterpret_cast<const half*>(bias), reinterpret_cast<const half*>(dy),
-              reinterpret_cast<half*>(dx));
+              grad_functor, elem_cnt, inner_size, x, bias, dy, dx);
     } else {
-      RUN_CUDA_KERNEL((FusedBiasAddGradGpuHalf<FUNCTOR, Index>), ctx, elem_cnt, grad_functor,
-                      elem_cnt, bias_size, inner_size, reinterpret_cast<const half*>(x),
-                      reinterpret_cast<const half*>(bias), reinterpret_cast<const half*>(dy),
-                      reinterpret_cast<half*>(dx));
+      RUN_CUDA_KERNEL((FusedBiasAddGradGpu<FUNCTOR, half, Index>), ctx, elem_cnt, grad_functor,
+                      elem_cnt, bias_size, inner_size, x, bias, dy, dx);
     }
   }
 };
+
+template<typename FUNCTOR, typename T>
+void DispatchFusedBiasAddCalculation(DeviceCtx* ctx, FUNCTOR functor, int64_t n, int64_t outer_size,
+                                     int64_t bias_size, int64_t inner_size, const T* x,
+                                     const T* bias, T* y) {
+  if (IsKernelSafeInt32(n)) {
+    FusedBiasAddCalculation<FUNCTOR, T, int32_t>::Invoke(ctx, functor, outer_size, bias_size,
+                                                         inner_size, x, bias, y);
+  } else {
+    FusedBiasAddCalculation<FUNCTOR, T, int64_t>::Invoke(ctx, functor, outer_size, bias_size,
+                                                         inner_size, x, bias, y);
+  }
+}
 
 template<typename T>
 class FusedFusedBiasAddKernel final : public user_op::OpKernel {
@@ -320,15 +295,9 @@ class FusedFusedBiasAddKernel final : public user_op::OpKernel {
     const int64_t inner_size = a_tensor->shape().Count(bias_add_axis + 1);
     const auto n = a_tensor->shape().elem_cnt();
     GeluFunctor<T> gelu_functor;
-    if (IsKernelSafeInt32(n)) {
-      FusedBiasAddCalculation<decltype(gelu_functor), T, int32_t>::Invoke(
-          ctx->device_ctx(), gelu_functor, outer_size, bias_size, inner_size, a_tensor->dptr<T>(),
-          b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
-    } else {
-      FusedBiasAddCalculation<decltype(gelu_functor), T, int64_t>::Invoke(
-          ctx->device_ctx(), gelu_functor, outer_size, bias_size, inner_size, a_tensor->dptr<T>(),
-          b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
-    }
+    DispatchFusedBiasAddCalculation<decltype(gelu_functor), T>(
+        ctx->device_ctx(), gelu_functor, n, outer_size, bias_size, inner_size, a_tensor->dptr<T>(),
+        b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -366,26 +335,14 @@ class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       MaskAndScaleAddFunctor<T> mask_and_scale_add_functor(mask_tensor->dptr<int8_t>(),
                                                            addend->dptr<T>(), scale);
-      if (IsKernelSafeInt32(n)) {
-        FusedBiasAddCalculation<decltype(mask_and_scale_add_functor), T, int32_t>::Invoke(
-            ctx->device_ctx(), mask_and_scale_add_functor, outer_size, bias_size, inner_size,
-            a_tensor->dptr<T>(), b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
-      } else {
-        FusedBiasAddCalculation<decltype(mask_and_scale_add_functor), T, int64_t>::Invoke(
-            ctx->device_ctx(), mask_and_scale_add_functor, outer_size, bias_size, inner_size,
-            a_tensor->dptr<T>(), b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
-      }
+      DispatchFusedBiasAddCalculation<decltype(mask_and_scale_add_functor), T>(
+          ctx->device_ctx(), mask_and_scale_add_functor, n, outer_size, bias_size, inner_size,
+          a_tensor->dptr<T>(), b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
     } else {
       MaskAndScaleFunctor<T> mask_and_scale_functor(mask_tensor->dptr<int8_t>(), scale);
-      if (IsKernelSafeInt32(n)) {
-        FusedBiasAddCalculation<decltype(mask_and_scale_functor), T, int32_t>::Invoke(
-            ctx->device_ctx(), mask_and_scale_functor, outer_size, bias_size, inner_size,
-            a_tensor->dptr<T>(), b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
-      } else {
-        FusedBiasAddCalculation<decltype(mask_and_scale_functor), T, int64_t>::Invoke(
-            ctx->device_ctx(), mask_and_scale_functor, outer_size, bias_size, inner_size,
-            a_tensor->dptr<T>(), b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
-      }
+      DispatchFusedBiasAddCalculation<decltype(mask_and_scale_functor), T>(
+          ctx->device_ctx(), mask_and_scale_functor, n, outer_size, bias_size, inner_size,
+          a_tensor->dptr<T>(), b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
     }
   };
 
