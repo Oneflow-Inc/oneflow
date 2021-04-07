@@ -337,5 +337,62 @@ Maybe<one::UserOpExpr> MultiplyOp(const std::string& name) {
   return one::OpBuilder("multiply", name).Input("x").Input("y").Output("out").Build();
 }
 
+Maybe<one::UserOpExpr> ConvNdOp(const int& filters, const std::vector<int32_t>& kernel_size,
+                                const std::vector<int32_t>& strides,
+                                const std::vector<int32_t>& padding_before,
+                                const std::vector<int32_t>& dilation_rate, const int& groups,
+                                const std::string& data_format) {
+  return ConvNdOp(filters, kernel_size, strides, padding_before, dilation_rate, groups, data_format,
+                  UniqueOpName("conv_nd"));
+}
+Maybe<one::UserOpExpr> ConvNdOp(const int& filters, const std::vector<int32_t>& kernel_size,
+                                const std::vector<int32_t>& strides,
+                                const std::vector<int32_t>& padding_before,
+                                const std::vector<int32_t>& dilation_rate, const int& groups,
+                                const std::string& data_format, const std::string& name) {
+  int ndims = kernel_size.size();
+  std::string op_type_name = "conv" + std::to_string(ndims) + "d";
+  return one::OpBuilder(op_type_name, name)
+      .Input("in")
+      .Input("weight")
+      .Output("out")
+      .Attr<int32_t>("filters", filters)
+      .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
+      .Attr("strides", strides)
+      .Attr("padding_before", padding_before)
+      .Attr("dilation_rate", dilation_rate)
+      .Attr("groups", groups)
+      .Attr("data_format", data_format)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> ConvNdFilterGradOp(const std::vector<int32_t>& kernel_size,
+                                          const std::vector<int32_t>& strides,
+                                          const std::vector<int32_t>& padding_before,
+                                          const std::vector<int32_t>& dilation_rate,
+                                          const int& groups, const std::string& data_format) {
+  return ConvNdFilterGradOp(kernel_size, strides, padding_before, dilation_rate, groups,
+                            data_format, UniqueOpName("conv_filter_grad"));
+}
+Maybe<one::UserOpExpr> ConvNdFilterGradOp(const std::vector<int32_t>& kernel_size,
+                                          const std::vector<int32_t>& strides,
+                                          const std::vector<int32_t>& padding_before,
+                                          const std::vector<int32_t>& dilation_rate,
+                                          const int& groups, const std::string& data_format,
+                                          const std::string& name) {
+  return one::OpBuilder("conv_filter_grad", name)
+      .Input("dy")
+      .Input("x")
+      .Output("filter_diff")
+      .Attr("num_spatial_dims", (int)kernel_size.size())
+      .Attr("kernel_size", kernel_size)
+      .Attr("strides", strides)
+      .Attr("padding_before", padding_before)
+      .Attr("dilation_rate", dilation_rate)
+      .Attr("groups", groups)
+      .Attr("data_format", data_format)
+      .Build();
+}
+
 }  // namespace op_expr_helper
 }  // namespace oneflow
