@@ -1458,7 +1458,7 @@ def fused_bias_add_gelu(
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     if name is None:
-        name = id_util.UniqueStr("BiasAdd_")
+        name = id_util.UniqueStr("BiasAddGelu_")
 
     if data_format is None:
         bias_add_axis = 1
@@ -1477,6 +1477,47 @@ def fused_bias_add_gelu(
         .Input("b", [bias])
         .Output("out")
         .Attr("axis", bias_add_axis)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("nn.fused_bias_add_dropout")
+def fused_bias_add_dropout(
+    value: oneflow_api.BlobDesc,
+    bias: oneflow_api.BlobDesc,
+    data_format: Optional[str] = None,
+    rate: float = 0.0,
+    noise_shape: Optional[oneflow_api.BlobDesc] = None,
+    seed: Optional[int] = None,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    if name is None:
+        name = id_util.UniqueStr("BiasAddDropout_")
+    mask = flow.nn.random_mask_like(
+        value, rate, seed, noise_shape, "%s-dropout_random_mask_like" % name
+    )
+
+    if data_format is None:
+        bias_add_axis = 1
+    else:
+        if data_format.startswith("NC"):
+            bias_add_axis = 1
+        elif data_format.startswith("N") and data_format.endswith("C"):
+            bias_add_axis = len(value.shape) - 1
+        else:
+            raise ValueError("data_format must be of the form `N...C` or `NC...`")
+
+    return (
+        flow.user_op_builder(name)
+        .Op("fused_bias_add_mask_scale")
+        .Input("a", [value])
+        .Input("b", [bias])
+        .Input("mask", [mask])
+        .Output("out")
+        .Attr("axis", bias_add_axis)
+        .Attr("scale", float(1.0 / (1.0 - rate)))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

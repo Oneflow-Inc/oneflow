@@ -127,4 +127,88 @@ REGISTER_USER_OP_GRAD("fused_bias_add_gelu")
       }
     });
 
+REGISTER_USER_OP("fused_bias_add_mask_scale")
+    .Input("a")
+    .Input("b")
+    .Input("mask")
+    .OptionalInput("_add_to_output")
+    .Output("out")
+    .Attr<int32_t>("axis")
+    .Attr<float>("scale")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const auto* a_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);
+      const auto* mask_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("mask", 0);
+      const auto* b_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);
+      const auto bias_add_axis = ctx->Attr<int32_t>("axis");
+      CHECK_EQ_OR_RETURN(b_tensor_desc->shape().NumAxes(), 1);
+      CHECK_GE_OR_RETURN(bias_add_axis, 0);
+      CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc->shape().NumAxes());
+      CHECK_EQ_OR_RETURN(a_tensor_desc->shape().At(bias_add_axis), b_tensor_desc->shape().At(0));
+      CHECK_EQ_OR_RETURN(a_tensor_desc->shape(), mask_tensor_desc->shape());
+      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *a_tensor_desc;
+      return Maybe<void>::Ok();
+    })
+    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
+                            const user_op::UserOpConfWrapper&) {
+      user_op::InputArgModifier* mask_modifier = GetInputArgModifierFn("mask", 0);
+      CHECK(mask_modifier != nullptr);
+      mask_modifier->set_requires_grad(false);
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const auto axis = ctx->Attr<int32_t>("axis");
+
+      std::vector<user_op::OpArg> split_args;
+      split_args.emplace_back("a", 0);
+      split_args.emplace_back("mask", 0);
+      split_args.emplace_back("out", 0);
+      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+        split_args.emplace_back("_add_to_output", 0);
+      }
+      ctx->NewBuilder().Split(split_args, 0).Broadcast(user_op::OpArg("filter", 0)).Build();
+
+      for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape().NumAxes();
+           ++i) {
+        if (i == axis) { continue; }
+        ctx->NewBuilder().Split(split_args, i).Broadcast(user_op::OpArg("b", 0)).Build();
+      }
+      ctx->NewBuilder().Split(user_op::OpArg("b", 0), 0).Split(split_args, axis).Build();
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP_GRAD("fused_bias_add_mask_scale")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+      if (op.NeedGenGradTensor4OpInput("a", 0) || op.NeedGenGradTensor4OpInput("b", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_gelu_grad");
+        user_op::UserOpConfWrapper dropout_grad_op =
+            builder.Op("dropout_grad")
+                .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+                .Input("mask", op.input("mask", 0))
+                .Output("dx")
+                .Attr("scale", op.attr<float>("scale"))
+                .Build();
+        AddOp(dropout_grad_op);
+
+        if (op.NeedGenGradTensor4OpInput("a", 0)) {
+          op.BindGradTensorWithOpInput(dropout_grad_op.output("dx", 0), "a", 0);
+        }
+        if (op.NeedGenGradTensor4OpInput("b", 0)) {
+          const int64_t num_axes = op.TensorDesc4ArgNameAndIndex("a", 0).shape().NumAxes();
+          const int32_t bias_add_axis = op.attr<int32_t>("axis");
+          std::vector<int32_t> reduce_axes_vec;
+          FOR_RANGE(int64_t, i, 0, num_axes) {
+            if (i != bias_add_axis) { reduce_axes_vec.push_back(i); }
+          }
+          user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+          auto grad_op = builder.Op("reduce_sum")
+                             .Input("input_tensor", dropout_grad_op.output("dx", 0))
+                             .Output("output_tensor")
+                             .Attr("axis", reduce_axes_vec)
+                             .Attr("keepdims", false)
+                             .Build();
+          AddOp(grad_op);
+          op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "b", 0);
+        }
+      }
+    });
+
 }  // namespace oneflow
