@@ -120,9 +120,6 @@ jobs:
           echo "test_suite=${test_suite}" >> $GITHUB_ENV
           export ci_tmp_dir=$HOME/ci-cache/test_suite/${test_suite}
           # fix when build still uses old cache to run Custom op test
-          if [ "$test_suite" == "cpu" ]; then
-            export ci_tmp_dir=$HOME/ci-cache/test_suite/${test_suite}-gcc7
-          fi
           mkdir -p $ci_tmp_dir
           echo "ci_tmp_dir=${ci_tmp_dir}" >> $GITHUB_ENV
           echo "wheelhouse_dir=${ci_tmp_dir}/wheelhouse" >> $GITHUB_ENV
