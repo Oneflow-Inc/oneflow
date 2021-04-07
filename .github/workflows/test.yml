@@ -376,7 +376,7 @@ jobs:
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh || true"
       - name: Model test
-        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda'
+        if: contains(['cuda', 'mlir', 'cpu'], matrix.test_suite)
         run: |
           docker run \
             $extra_docker_args \
