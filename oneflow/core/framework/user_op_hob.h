@@ -50,23 +50,23 @@ template<typename ContextT>
 class HobStringContextGetter final {
  public:
   HobStringContextGetter(const DeviceType& device_type) {
-    auto str = std::make_shared<std::string>(ToString(device_type));
-    debug_str_ = *str;
-    context_getter_ = [str](const ContextT&) -> const std::string& { return *str; };
+    auto str = ToString(device_type);
+    debug_str_ = str;
+    context_getter_ = [str](const ContextT&) -> std::string { return str; };
   }
   HobStringContextGetter(const char* const_value) {
-    auto str = std::make_shared<std::string>(const_value);
-    debug_str_ = *str;
-    context_getter_ = [str](const ContextT&) -> const std::string& { return *str; };
+    auto str = std::string(const_value);
+    debug_str_ = str;
+    context_getter_ = [str](const ContextT&) -> std::string { return str; };
   }
   HobStringContextGetter(const std::string& const_value) {
-    auto str = std::make_shared<std::string>(const_value);
-    debug_str_ = *str;
-    context_getter_ = [str](const ContextT&) -> const std::string& { return *str; };
+    auto str = std::string(const_value);
+    debug_str_ = str;
+    context_getter_ = [str](const ContextT&) -> std::string { return str; };
   }
 
   HobStringContextGetter(const std::string& debug_str,
-                         const std::function<const std::string&(const ContextT&)>& context_getter)
+                         const std::function<std::string(const ContextT&)>& context_getter)
       : debug_str_(debug_str), context_getter_(context_getter) {}
 
   hob::BoolFunctorPtr<ContextT> operator==(const HobStringContextGetter& other) const {
@@ -83,7 +83,7 @@ class HobStringContextGetter final {
 
  private:
   std::string debug_str_;
-  std::function<const std::string&(const ContextT&)> context_getter_;
+  std::function<std::string(const ContextT&)> context_getter_;
 };
 
 HobStringContextGetter<KernelRegContext> HobDeviceTag();
