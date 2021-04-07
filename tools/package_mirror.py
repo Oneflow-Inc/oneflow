@@ -30,6 +30,7 @@ def glob_by_pattern(dir_path, pattern):
 def scan_urls(dir_path):
     cmakes = glob_by_pattern(dir_path, "**/*.cmake")
     cmakes += glob_by_pattern(dir_path, "**/*.bzl")
+    cmakes += glob_by_pattern(dir_path, "**/CMakeLists.txt")
     urls = []
     for cmake_path in cmakes:
         with open(cmake_path) as f:
