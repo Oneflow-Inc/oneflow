@@ -59,8 +59,7 @@ class HobStringContextGetter final {
     debug_str_ = str;
     context_getter_ = [str](const ContextT&) -> std::string { return str; };
   }
-  HobStringContextGetter(const std::string& const_value) {
-    auto str = std::string(const_value);
+  HobStringContextGetter(const std::string& str) {
     debug_str_ = str;
     context_getter_ = [str](const ContextT&) -> std::string { return str; };
   }
