@@ -145,7 +145,7 @@ class TestFusedBiasAdd(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [
-            (10, 10),
+            (2, 20, 1, 11),
         ]
         arg_dict["data_type"] = ["float16", "float32", "double"]
         arg_dict["data_format"] = ["NCHW"]
