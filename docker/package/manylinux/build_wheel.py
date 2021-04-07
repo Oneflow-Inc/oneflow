@@ -395,6 +395,13 @@ gcc --version
                 sub_dir = cuda_version
                 if args.xla:
                     sub_dir += "-xla"
+                if args.gcc7:
+                    sub_dir += "-gcc7"
+                if (
+                    "-DWITH_MLIR=ON" in args.extra_oneflow_cmake_args
+                    or "-DWITH_MLIR=1" in args.extra_oneflow_cmake_args
+                ):
+                    sub_dir += "-mlir"
                 if args.cpu:
                     assert len(cuda_versions) == 1
                     sub_dir = "cpu"
