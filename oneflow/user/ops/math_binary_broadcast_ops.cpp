@@ -60,7 +60,15 @@ Maybe<void> InferTensorDescBinaryBroadcastLogical(user_op::InferContext* ctx) {
   return InferTensorDescBinaryBroadcastNormal(ctx);
 }
 
-Maybe<void> InferDataTypeBinaryBroadcast(user_op::InferContext* ctx) {
+Maybe<void> InferDataTypeBinaryBroadcastNormal(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  CHECK_EQ_OR_RETURN(tensor_x->data_type(), tensor_y->data_type());
+  *ctx->Dtype4ArgNameAndIndex("z", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferDataTypeBinaryBroadcastLogical(user_op::InferContext* ctx) {
   const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   CHECK_EQ_OR_RETURN(tensor_x->data_type(), tensor_y->data_type());
@@ -181,7 +189,7 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
       .Output("z")                                                            \
       .SetTensorDescInferFn(InferTensorDescBinaryBroadcast##tensor_suffix)    \
       .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>)    \
-      .SetInferDataTypeFn(InferDataTypeBinaryBroadcast);
+      .SetInferDataTypeFn(InferDataTypeBinaryBroadcast##tensor_suffix);
 
 #define REGISTER_BINARY_BROADCAST_NORMAL_USER_OP(op_name, suffix) \
   REGISTER_BINARY_BROADCAST_USER_OP(op_name, suffix, Normal)
