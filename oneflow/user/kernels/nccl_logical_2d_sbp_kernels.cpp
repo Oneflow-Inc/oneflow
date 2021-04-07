@@ -126,6 +126,74 @@ class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
 };
 
 template<typename T>
+class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKernel {
+ public:
+  NcclLogical2DSameDim0AllGatherNoncontinuous() = default;
+  ~NcclLogical2DSameDim0AllGatherNoncontinuous() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<NcclLogical2DSameDim0KernelCommState>(ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* nccl_comm = dynamic_cast<NcclLogical2DSameDim0KernelCommState*>(state);
+    CHECK(nccl_comm != nullptr);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    const int64_t dtype_size = GetSizeOfDataType(in->data_type());
+    int64_t data_size = GetCudaAlignedSize(in->shape().elem_cnt() * dtype_size);
+    void* unpack_from_ptr = tmp_buffer->mut_dptr();
+    CHECK_EQ(tmp_buffer->shape().elem_cnt(), data_size);
+
+    CHECK_EQ(in->data_type(), out->data_type());
+    const int64_t num_ranks = nccl_comm->num_ranks();
+    const int64_t in_split_axis = ctx->Attr<int64_t>("in_dim1_split_axis");
+
+    DimVector logical_shape_dim_vec;
+    in->shape().ToDimVector(&logical_shape_dim_vec);
+    logical_shape_dim_vec[in_split_axis] = logical_shape_dim_vec.at(in_split_axis) * num_ranks;
+
+    // NOTE(chengcheng): Do AllGather
+    CHECK_EQ(in->shape().elem_cnt() * num_ranks, out->shape().elem_cnt());
+    OF_NCCL_CHECK(ncclAllGather(in->dptr(), unpack_from_ptr, in->shape().elem_cnt(),
+                                GetNcclDataType(in->data_type()), nccl_comm->comm(),
+                                ctx->device_ctx()->cuda_stream()));
+
+    CHECK_GT(in_split_axis, 0);
+    // NOTE(chengcheng): Do unpack.
+    DimVector unpack_from_dim_vec = logical_shape_dim_vec;
+    CHECK_EQ(unpack_from_dim_vec.at(in_split_axis) % num_ranks, 0);
+    unpack_from_dim_vec[in_split_axis] = unpack_from_dim_vec.at(in_split_axis) / num_ranks;
+    unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
+    const Shape unpack_from_shape(unpack_from_dim_vec);
+    DimVector transpose_out_dim_vec;
+    std::vector<int32_t> perm;
+    FOR_RANGE(int64_t, i, 1, unpack_from_shape.NumAxes()) {
+      perm.push_back(i);
+      transpose_out_dim_vec.push_back(unpack_from_shape.At(i));
+    }
+    perm.insert(perm.begin() + in_split_axis, 0);
+    transpose_out_dim_vec.insert(transpose_out_dim_vec.begin() + in_split_axis,
+                                 unpack_from_shape.At(0));
+    const Shape transpose_out_shape(transpose_out_dim_vec);
+    NewKernelUtil<DeviceType::kGPU>::Transpose(
+        ctx->device_ctx(), unpack_from_shape.NumAxes(), unpack_from_shape, transpose_out_shape,
+        perm, unpack_from_shape.elem_cnt(), reinterpret_cast<const T*>(unpack_from_ptr),
+        out->mut_dptr<T>());
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+size_t Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  return GetCudaAlignedSize(in_tensor->shape().elem_cnt()
+                            * GetSizeOfDataType(in_tensor->data_type()));
+}
+
+template<typename T>
 class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
  public:
   NcclLogical2DSameDim0All2All() = default;
@@ -330,6 +398,21 @@ REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_reduce")
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather")
     .SetCreateFn<NcclLogical2DSameDim0AllGather>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+
+#define REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                     \
+  REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")           \
+      .SetCreateFn<NcclLogical2DSameDim0AllGatherNoncontinuous<dtype>>()                \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                               \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn(Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize);
+
+REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(int8_t)
+REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(int32_t)
+REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(int64_t)
+REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(float)
+REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(double)
+REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(float16)
 
 #define REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(dtype)                                     \
   REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all2all")                            \
