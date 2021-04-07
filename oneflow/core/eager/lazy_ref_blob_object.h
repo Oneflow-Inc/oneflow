@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 namespace eager {
 
-class LazyRefBlobObject : public BlobObject {
+class LazyRefBlobObject final : public BlobObject {
  public:
   LazyRefBlobObject(const LazyRefBlobObject&) = delete;
   LazyRefBlobObject(LazyRefBlobObject&&) = delete;
@@ -32,18 +32,27 @@ class LazyRefBlobObject : public BlobObject {
     blob_desc_ = BlobDesc(rt_blob_desc.body(), rt_blob_desc.is_dynamic());
     ref_blob_ = blob;
   }
-  virtual ~LazyRefBlobObject() override = default;
+  ~LazyRefBlobObject() override = default;
 
-  virtual BlobDesc* mut_blob_desc() override { UNIMPLEMENTED(); }
+  BlobDesc* mut_blob_desc() override { UNIMPLEMENTED(); }
 
-  virtual const Blob& blob() const override { return *ref_blob_; }
-  virtual Blob* mut_blob() override { return ref_blob_; }
+  const Blob& blob() const override { return *ref_blob_; }
+  Blob* mut_blob() override { return ref_blob_; }
 
-  virtual void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override{
-      // do nothing
+  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override {
+    // do nothing
+    return Maybe<void>::Ok();
   };
 
-  virtual Maybe<void> TryInitBlob() override { return Maybe<void>::Ok(); }
+  Maybe<void> DeallocateBlobDataPtr() override {
+    // do nothing
+    return Maybe<void>::Ok();
+  };
+
+  Maybe<void> TryInitBlob() override {
+    // do nothing
+    return Maybe<void>::Ok();
+  }
 
  private:
   Blob* ref_blob_ = nullptr;

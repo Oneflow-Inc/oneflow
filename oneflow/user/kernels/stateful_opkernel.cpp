@@ -24,30 +24,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-using ArgVec = std::vector<std::pair<std::string, int32_t>>;
-
-class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
- public:
-  EagerBlobObjectTensorDescView(std::shared_ptr<eager::EagerBlobObject> blob_object) {
-    blob_object_ = blob_object;
-  }
-
-  const Shape& shape() const override { return blob_object_->blob_desc().shape(); }
-
-  Shape* mut_shape() override { return &blob_object_->mut_blob_desc()->mut_shape(); }
-
-  DataType data_type() const override { return blob_object_->blob_desc().data_type(); }
-
-  DataType* mut_data_type() override { return blob_object_->mut_blob_desc()->mut_data_type(); }
-
-  bool is_dynamic() const override { return blob_object_->blob_desc().is_dynamic(); }
-  bool* mut_is_dynamic() override { return blob_object_->mut_blob_desc()->mut_is_dynamic(); }
-  void set_is_dynamic(bool val) override { blob_object_->mut_blob_desc()->set_is_dynamic(val); }
-
- private:
-  std::shared_ptr<eager::EagerBlobObject> blob_object_;
-};
-
 template<class T>
 class TensorsPtrScope {
  public:
@@ -234,152 +210,93 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   LocalUserKernelBaseContext base_ctx_;
 };
 
-class LocalUserOpInferContext : public user_op::InferContext {
- public:
-  LocalUserOpInferContext(const OperatorConf& op_conf,
-                          const std::shared_ptr<const JobDesc> job_desc,
-                          TensorIndexMap bn_in_op2bn_index2input_tensor_index,
-                          TensorIndexMap bn_in_op2bn_index2output_tensor_index)
-      : user_op_conf_(op_conf),
-        job_desc_(job_desc),
-        bn_in_op2bn_index2input_tensor_index_(bn_in_op2bn_index2input_tensor_index),
-        bn_in_op2bn_index2output_tensor_index_(bn_in_op2bn_index2output_tensor_index) {
-    for (auto& pair : *bn_in_op2bn_index2input_tensor_index) {
-      const auto& bn_in_op = pair.first;
-      for (int64_t bn_index = 0; bn_index < pair.second.size(); bn_index++) {
-        inputs_.push_back({bn_in_op, bn_index});
-      }
-    }
-    for (auto& pair : *bn_in_op2bn_index2output_tensor_index) {
-      const auto& bn_in_op = pair.first;
-      for (int64_t bn_index = 0; bn_index < pair.second.size(); bn_index++) {
-        outputs_.push_back({bn_in_op, bn_index});
-      }
+LocalUserOpInferContext::LocalUserOpInferContext(
+    const OperatorConf& op_conf, const std::shared_ptr<const JobDesc> job_desc,
+    TensorIndexMap bn_in_op2bn_index2input_tensor_index,
+    TensorIndexMap bn_in_op2bn_index2output_tensor_index)
+    : user_op_conf_(op_conf),
+      job_desc_(job_desc),
+      bn_in_op2bn_index2input_tensor_index_(bn_in_op2bn_index2input_tensor_index),
+      bn_in_op2bn_index2output_tensor_index_(bn_in_op2bn_index2output_tensor_index) {
+  for (auto& pair : *bn_in_op2bn_index2input_tensor_index) {
+    const auto& bn_in_op = pair.first;
+    for (int64_t bn_index = 0; bn_index < pair.second.size(); bn_index++) {
+      inputs_.push_back({bn_in_op, bn_index});
     }
   }
-  ~LocalUserOpInferContext() override = default;
+  for (auto& pair : *bn_in_op2bn_index2output_tensor_index) {
+    const auto& bn_in_op = pair.first;
+    for (int64_t bn_index = 0; bn_index < pair.second.size(); bn_index++) {
+      outputs_.push_back({bn_in_op, bn_index});
+    }
+  }
+}
 
-  const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                               int32_t index) const override {
-    UNIMPLEMENTED();
-  }
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                  int32_t index) override {
-    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    CHECK(it != arg2tensor_desc_.end()) << "Arg (" << arg_name << "," << index << ") is not found";
-    return it->second.get();
-  }
-  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
-  }
-  DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
-  }
-  bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
-  }
+user_op::TensorDesc* LocalUserOpInferContext::TensorDesc4ArgNameAndIndex(
+    const std::string& arg_name, int32_t index) {
+  auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+  CHECK(it != arg2tensor_desc_.end()) << "Arg (" << arg_name << "," << index << ") is not found";
+  return it->second.get();
+}
 
-  const ArgVec& inputs() const override { return inputs_; }
-  const ArgVec& outputs() const override { return outputs_; }
-  const JobDesc* job_desc() const override {
-    CHECK_NOTNULL(job_desc_);
-    return job_desc_.get();
-  }
-  const ParallelContext& parallel_ctx() const override { UNIMPLEMENTED(); };
-  const ParallelDesc& parallel_desc() const override { UNIMPLEMENTED(); }
-  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                 int32_t index) const override {
-    UNIMPLEMENTED();
-  }
-  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
-                                                                   int32_t index) const override {
-    UNIMPLEMENTED();
-  }
+void LocalUserOpInferContext::Update(TensorsPtr inputs, TensorsPtr outputs) {
+  input_tensors_ = inputs;
+  output_tensors_ = outputs;
 
-  int64_t parallel_num() const override { return 1; }
-
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
-
-  void Update(TensorsPtr inputs, TensorsPtr outputs) {
-    input_tensors_ = inputs;
-    output_tensors_ = outputs;
-
-    arg2tensor_desc_.clear();
-    auto UpdateArg2TensorDesc = [this](TensorsPtr tensors_ptr, TensorIndexMap tensor_index_map) {
-      if (!tensors_ptr) { return; }
-      for (auto& pair : *tensor_index_map) {
-        const auto& bn_in_op = pair.first;
-        for (int64_t bn_index = 0; bn_index < pair.second.size(); bn_index++) {
-          const auto tensor_index = pair.second[bn_index];
-          const auto tensor = (*tensors_ptr)[tensor_index];
-          arg2tensor_desc_.emplace(std::make_pair(bn_in_op, bn_index),
-                                   std::make_shared<EagerBlobObjectTensorDescView>(tensor));
-        }
+  arg2tensor_desc_.clear();
+  auto UpdateArg2TensorDesc = [this](TensorsPtr tensors_ptr, TensorIndexMap tensor_index_map) {
+    if (!tensors_ptr) { return; }
+    for (auto& pair : *tensor_index_map) {
+      const auto& bn_in_op = pair.first;
+      for (int64_t bn_index = 0; bn_index < pair.second.size(); bn_index++) {
+        const auto tensor_index = pair.second[bn_index];
+        const auto tensor = (*tensors_ptr)[tensor_index];
+        arg2tensor_desc_.emplace(std::make_pair(bn_in_op, bn_index),
+                                 std::make_shared<EagerBlobObjectTensorDescView>(tensor));
       }
-    };
+    }
+  };
 
-    UpdateArg2TensorDesc(input_tensors_, bn_in_op2bn_index2input_tensor_index_);
-    UpdateArg2TensorDesc(output_tensors_, bn_in_op2bn_index2output_tensor_index_);
-  }
+  UpdateArg2TensorDesc(input_tensors_, bn_in_op2bn_index2input_tensor_index_);
+  UpdateArg2TensorDesc(output_tensors_, bn_in_op2bn_index2output_tensor_index_);
+}
 
- private:
-  user_op::UserOpConfWrapper user_op_conf_;
-  std::shared_ptr<const JobDesc> job_desc_;
-  ArgVec inputs_;
-  ArgVec outputs_;
-  TensorIndexMap bn_in_op2bn_index2input_tensor_index_;
-  TensorIndexMap bn_in_op2bn_index2output_tensor_index_;
-  TensorsPtr input_tensors_;
-  TensorsPtr output_tensors_;
-  HashMap<std::pair<std::string, int64_t>, std::shared_ptr<EagerBlobObjectTensorDescView>>
-      arg2tensor_desc_;
-};
+LocalUserKernelComputeContext::LocalUserKernelComputeContext(
+    DeviceCtx* device_ctx, const OperatorConf& op_conf,
+    const std::shared_ptr<const JobDesc> job_desc,
+    TensorIndexMap bn_in_op2bn_index2input_tensor_index,
+    TensorIndexMap bn_in_op2bn_index2output_tensor_index)
+    : user_op::KernelComputeContext(user_op::UserOpConfWrapper(op_conf)),
+      device_ctx_(device_ctx),
+      base_ctx_(std::unique_ptr<LocalUserKernelBaseContext>(new LocalUserKernelBaseContext(
+          op_conf.device_tag(), job_desc, bn_in_op2bn_index2input_tensor_index,
+          bn_in_op2bn_index2output_tensor_index))) {}
 
-class LocalUserKernelComputeContext final : public user_op::KernelComputeContext {
- public:
-  explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const OperatorConf& op_conf,
-                                         const std::shared_ptr<const JobDesc> job_desc,
-                                         TensorIndexMap bn_in_op2bn_index2input_tensor_index,
-                                         TensorIndexMap bn_in_op2bn_index2output_tensor_index)
-      : user_op::KernelComputeContext(user_op::UserOpConfWrapper(op_conf)),
-        device_ctx_(device_ctx),
-        base_ctx_(LocalUserKernelBaseContext(op_conf.device_tag(), job_desc,
-                                             bn_in_op2bn_index2input_tensor_index,
-                                             bn_in_op2bn_index2output_tensor_index)) {}
-  ~LocalUserKernelComputeContext() = default;
+const user_op::TensorDesc* LocalUserKernelComputeContext::TensorDesc4ArgNameAndIndex(
+    const std::string& arg_name, int32_t index) const {
+  return base_ctx_->TensorDesc4ArgNameAndIndex(arg_name, index);
+}
 
-  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                        int32_t index) const override {
-    return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
-  }
+user_op::Tensor* LocalUserKernelComputeContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
+                                                                       int32_t index) {
+  return base_ctx_->Tensor4ArgNameAndIndex(arg_name, index);
+}
+DeviceCtx* LocalUserKernelComputeContext::device_ctx() { return device_ctx_; }
 
-  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return base_ctx_.Tensor4ArgNameAndIndex(arg_name, index);
-  }
-  DeviceCtx* device_ctx() override { return device_ctx_; }
+DeviceType LocalUserKernelComputeContext::device_type() const { return base_ctx_->device_type(); }
+const ParallelContext& LocalUserKernelComputeContext::parallel_ctx() const { UNIMPLEMENTED(); }
+const JobDesc& LocalUserKernelComputeContext::job_desc() const { return base_ctx_->job_desc(); }
 
-  DeviceType device_type() const override { return base_ctx_.device_type(); }
-  const ParallelContext& parallel_ctx() const override { UNIMPLEMENTED(); }
-  const JobDesc& job_desc() const override { return base_ctx_.job_desc(); }
+const ArgVec& LocalUserKernelComputeContext::inputs() const { return base_ctx_->inputs(); }
+const ArgVec& LocalUserKernelComputeContext::outputs() const { return base_ctx_->outputs(); }
 
-  const ArgVec& inputs() const override { return base_ctx_.inputs(); }
-  const ArgVec& outputs() const override { return base_ctx_.outputs(); }
-
-  void Update(TensorsPtr inputs, TensorsPtr outputs, DeviceCtx* device_ctx) {
-    input_tensors_ = inputs;
-    output_tensors_ = outputs;
-    device_ctx_ = device_ctx;
-    base_ctx_.Update(inputs, outputs);
-  }
-
- private:
-  DeviceCtx* device_ctx_;
-  LocalUserKernelBaseContext base_ctx_;
-  TensorIndexMap bn_in_op2bn_index2input_tensor_index_;
-  TensorIndexMap bn_in_op2bn_index2output_tensor_index_;
-  TensorsPtr input_tensors_;
-  TensorsPtr output_tensors_;
-};
+void LocalUserKernelComputeContext::Update(TensorsPtr inputs, TensorsPtr outputs,
+                                           DeviceCtx* device_ctx) {
+  input_tensors_ = inputs;
+  output_tensors_ = outputs;
+  device_ctx_ = device_ctx;
+  base_ctx_->Update(inputs, outputs);
+}
 
 StatefulOpKernel::StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc,
                                    const OperatorConf& op_conf,
@@ -441,21 +358,43 @@ Maybe<const user_op::OpKernel*> StatefulOpKernel::GetOpKernel(TensorsPtr inputs,
   return kernel;
 }
 
-Maybe<user_op::OpKernelState> StatefulOpKernel::GetOpKernelState(user_op::OpKernel* op_kernel,
-                                                                 DeviceCtx* device_ctx) {
-  auto it = op_kernel_state_map_.find(op_kernel);
+void StatefulOpKernel::ChooseOpKernel(TensorsPtr inputs, TensorsPtr outputs) {
+  TensorsPtrScope<LocalUserKernelRegContext> reg_ctx_scope(reg_ctx_.get(), inputs, outputs);
+  const auto& op_type_name = op_conf_.user_conf().op_type_name();
+  const auto* kernel_reg_val = CHECK_JUST(
+      user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, *reg_ctx_));
+  CHECK_NOTNULL(kernel_reg_val);
+  auto it = op_kernel_map_.find(kernel_reg_val);
+  if (it != op_kernel_map_.end()) { current_op_kernel_ = it->second.get(); }
+
+  auto* kernel = kernel_reg_val->create_fn(create_ctx_.get());
+  op_kernel_map_.emplace(
+      std::make_pair(kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel)));
+  auto init_ctx = std::make_shared<LocalUserKernelInitContext>(
+      nullptr, op_conf_, job_desc_, bn_in_op2bn_index2input_tensor_index_,
+      bn_in_op2bn_index2output_tensor_index_);
+  init_ctx->Update(inputs, outputs);
+  init_ctx_map_.emplace(std::make_pair(kernel, init_ctx));
+
+  infer_tmp_size_fn_map_.emplace(std::make_pair(kernel, &kernel_reg_val->infer_tmp_size_fn));
+
+  current_op_kernel_ = kernel;
+}
+
+Maybe<user_op::OpKernelState> StatefulOpKernel::TryInitOpKernelState(DeviceCtx* device_ctx) {
+  auto it = op_kernel_state_map_.find(current_op_kernel_);
   if (it != op_kernel_state_map_.end()) { return it->second; }
 
-  auto init_ctx = init_ctx_map_.at(op_kernel);
+  auto init_ctx = init_ctx_map_.at(current_op_kernel_);
   init_ctx->set_device_ctx(device_ctx);
   auto state = kernel_->CreateOpKernelState(init_ctx.get());
-  op_kernel_state_map_.emplace(std::make_pair(op_kernel, state));
+  op_kernel_state_map_.emplace(std::make_pair(current_op_kernel_, state));
   init_ctx->set_device_ctx(nullptr);
   return state;
 }
 
-const user_op::InferTmpSizeFn& StatefulOpKernel::GetInferTmpSizeFn(user_op::OpKernel* op_kernel) {
-  return *infer_tmp_size_fn_map_.at(op_kernel);
+const user_op::InferTmpSizeFn& StatefulOpKernel::GetInferTmpSizeFn() const {
+  return *infer_tmp_size_fn_map_.at(current_op_kernel_);
 }
 
 eager::EagerBlobObject* StatefulOpKernel::mut_temp_blob_object() { return tmp_blob_object_.get(); }
