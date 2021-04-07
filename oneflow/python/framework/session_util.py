@@ -48,6 +48,7 @@ import inspect
 import oneflow
 import oneflow_api
 import traceback
+from google.protobuf import text_format
 
 
 class Session(object):
@@ -544,3 +545,10 @@ def _GetDefaultConfigProto():
 
 
 session_ctx.OpenDefaultSession(Session(oneflow_api.NewSessionId()))
+
+
+@oneflow_export("InitEagerGlobalSession")
+def TmpInitEagerGlobalSession():
+    config_pb = _GetDefaultConfigProto()
+    config_proto_str = text_format.MessageToString(config_pb)
+    oneflow_api.InitEagerGlobalSession(config_proto_str)

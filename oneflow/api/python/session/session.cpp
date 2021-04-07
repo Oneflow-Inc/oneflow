@@ -24,6 +24,7 @@ namespace py = pybind11;
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("IsSessionInited", &IsSessionInited);
   m.def("InitLazyGlobalSession", &InitLazyGlobalSession);
+  m.def("InitEagerGlobalSession", &InitEagerGlobalSession);
   m.def("DestroyLazyGlobalSession", &DestroyLazyGlobalSession);
 
   m.def("StartLazyGlobalSession", &StartLazyGlobalSession);
