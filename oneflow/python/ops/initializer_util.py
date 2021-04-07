@@ -1201,8 +1201,6 @@ def TruncatedNormalInitializerImpl(
 def GenInitialFan(initializer_conf, var_blob_shape: Sequence[int]):
     variance_norm = initializer_conf.variance_norm
     data_format = initializer_conf.data_format
-    # TODO(jianhao): remove tuple() when https://github.com/Oneflow-Inc/oneflow/pull/4437 is merged
-    var_blob_shape = tuple(var_blob_shape)
     fan_in = np.prod(var_blob_shape[1:]).astype(np.int).item()
     fan_out = var_blob_shape[0]
     if data_format == "channel_first":

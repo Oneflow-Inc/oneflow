@@ -22,6 +22,7 @@ import inspect
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.check_point_v2 as check_point_v2
+from oneflow.python.framework.function_util import global_function_or_identity
 import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow as flow
 from oneflow.python.nn.modules import *
@@ -208,99 +209,6 @@ class Tensor:
         return remote_blob_util.BlobObjectNumpy(
             self._local_or_consistent_tensor._blob_object
         )
-
-    def _get_slice_obj(self, key):
-        def get_or_default(x, default):
-            return x if x is not None else default
-
-        def get_canonical_index(index, length, *, start=0):
-            if index < 0:
-                index += length
-            return max(min(index, length), start)
-
-        def get_slice_if_int(x):
-            if isinstance(x, slice):
-                return x
-            return slice(x, x + 1)
-
-        if isinstance(key, tuple):
-            assert all(isinstance(x, (slice, int)) for x in key)
-        else:
-            assert isinstance(key, (slice, int))
-            key = (key,)
-
-        key = list(map(get_slice_if_int, key))
-
-        assert len(key) <= len(self.shape)
-        for i in range(len(key), len(self.shape)):
-            key += (slice(None, None, None),)
-
-        starts = [
-            get_canonical_index(get_or_default(x.start, 0), self.shape[i])
-            for i, x in enumerate(key)
-        ]
-        stops = [
-            get_canonical_index(
-                get_or_default(x.stop, self.shape[i]), self.shape[i], start=starts[i]
-            )
-            for i, x in enumerate(key)
-        ]
-        steps = [get_or_default(x.step, 1) for x in key]
-        assert all(x > 0 for x in steps)
-        # np.abs is for compatibility of negative steps in the future
-        shape = (np.abs(np.array(stops) - np.array(starts)) - 1) // np.abs(
-            np.array(steps)
-        ) + 1
-        shape = shape.tolist()
-        return starts, stops, steps, shape
-
-    @_auto_determine
-    def __setitem__(self, key, value):
-        starts, stops, steps, shape = self._get_slice_obj(key)
-        if isinstance(value, (int, float)):
-            scalar = value
-            value = flow.Tensor(*shape)
-            value.fill_(scalar)
-
-        @global_function_or_identity()
-        def job():
-            with self._placement_scope():
-                op = (
-                    flow.builtin_op("logical_slice_assign")
-                    .Input("ref")
-                    .Input("value")
-                    .Attr("start", starts)
-                    .Attr("stop", stops)
-                    .Attr("step", steps)
-                    .Build()
-                )
-                op(self, value)
-
-        job()
-        return self
-
-    @_auto_determine
-    def __getitem__(self, key):
-        starts, stops, steps, _ = self._get_slice_obj(key)
-        result = None
-
-        @global_function_or_identity()
-        def job():
-            with self._placement_scope():
-                op = (
-                    flow.builtin_op("logical_slice")
-                    .Input("x")
-                    .Output("y")
-                    .Attr("start", starts)
-                    .Attr("stop", stops)
-                    .Attr("step", steps)
-                    .Build()
-                )
-                nonlocal result
-                result = op(self)[0]
-
-        job()
-        return result
 
     def tolist(self):
         TODO()
@@ -630,16 +538,6 @@ def _default_initializer_for_determining(tensor):
     return determined_tensor
 
 
-def global_function_or_identity(*args, **kwargs):
-    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
-        assert flow.eager_execution_enabled()
-        return flow.global_function(*args, **kwargs)
-    else:
-        assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
-        identity_decorator = lambda func: func
-        return identity_decorator
-
-
 def _numpy_initializer_for_determining(tensor):
     assert not tensor.is_determined
     undetermined_tensor = tensor._undetermined_tensor
@@ -708,6 +606,8 @@ def _input_args_is_data(*args):
 
 def _input_args_is_shape(*args):
     return all(isinstance(x, int) for x in args)
+
+
 def register_tensor_op_by_module(op_name):
     def set_method(module):
         if is_unary_module(module):
