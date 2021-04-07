@@ -220,10 +220,8 @@ __global__ void FusedBiasAddGradColGpu(FUNCTOR grad_functor, const Index elem_cn
   }
 }
 
-}  // namespace
-
 template<typename FUNCTOR, typename T, typename Index>
-struct FusedBiasAddRowCalculation {
+struct FusedBiasAddRow {
   static void Invoke(DeviceCtx* ctx, FUNCTOR functor, Index elem_cnt, Index bias_size, const T* x,
                      const T* bias, T* y) {
     FusedBiasAddRowGpu<FUNCTOR, T, Index>
@@ -233,7 +231,7 @@ struct FusedBiasAddRowCalculation {
 };
 
 template<typename FUNCTOR, typename Index>
-struct FusedBiasAddRowCalculation<FUNCTOR, half, Index> {
+struct FusedBiasAddRow<FUNCTOR, half, Index> {
   static void Invoke(DeviceCtx* ctx, FUNCTOR functor, Index elem_cnt, Index bias_size,
                      const half* x, const half* bias, half* y) {
     if (bias_size % 2 == 0) {
@@ -249,24 +247,24 @@ struct FusedBiasAddRowCalculation<FUNCTOR, half, Index> {
 };
 
 template<typename FUNCTOR, typename T, typename Index>
-void FusedBiasAddCalculation(DeviceCtx* ctx, FUNCTOR functor, Index outer_size, Index bias_size,
+void FusedBiasAddForwardImpl(DeviceCtx* ctx, FUNCTOR functor, Index outer_size, Index bias_size,
                              Index inner_size, const T* x, const T* bias, T* y) {
   const Index elem_cnt = outer_size * bias_size * inner_size;
   if (inner_size == 1) {
-    FusedBiasAddRowCalculation<FUNCTOR, T, Index>::Invoke(ctx, functor, elem_cnt, bias_size, x,
-                                                          bias, y);
+    FusedBiasAddRow<FUNCTOR, T, Index>::Invoke(ctx, functor, elem_cnt, bias_size, x, bias, y);
   } else if (outer_size == 1) {
     FusedBiasAddColGpu<FUNCTOR, T, Index>
         <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             functor, elem_cnt, inner_size, x, bias, y);
   } else {
-    RUN_CUDA_KERNEL((FusedBiasAddGpu<FUNCTOR, T, Index>), ctx, elem_cnt, functor, elem_cnt,
-                    bias_size, inner_size, x, bias, y);
+    FusedBiasAddGpu<FUNCTOR, T, Index>
+        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            functor, elem_cnt, bias_size, inner_size, x, bias, y);
   }
 }
 
 template<typename FUNCTOR, typename T, typename Index>
-struct FusedBiasAddGradRowCalculation {
+struct FusedBiasAddGradRow {
   static void Invoke(DeviceCtx* ctx, FUNCTOR grad_functor, Index elem_cnt, Index bias_size,
                      const T* x, const T* bias, const T* dy, T* dx) {
     FusedBiasAddGradRowGpu<FUNCTOR, T, Index>
@@ -276,7 +274,7 @@ struct FusedBiasAddGradRowCalculation {
 };
 
 template<typename FUNCTOR, typename Index>
-struct FusedBiasAddGradRowCalculation<FUNCTOR, half, Index> {
+struct FusedBiasAddGradRow<FUNCTOR, half, Index> {
   static void Invoke(DeviceCtx* ctx, FUNCTOR grad_functor, Index elem_cnt, Index bias_size,
                      const half* x, const half* bias, const half* dy, half* dx) {
     if (bias_size % 2 == 0) {
@@ -292,35 +290,37 @@ struct FusedBiasAddGradRowCalculation<FUNCTOR, half, Index> {
 };
 
 template<typename FUNCTOR, typename T, typename Index>
-void FusedBiasAddGradCalculation(DeviceCtx* ctx, FUNCTOR grad_functor, Index outer_size,
-                                 Index bias_size, Index inner_size, const T* x, const T* bias,
-                                 const T* dy, T* dx) {
+void FusedBiasAddGradImpl(DeviceCtx* ctx, FUNCTOR grad_functor, Index outer_size, Index bias_size,
+                          Index inner_size, const T* x, const T* bias, const T* dy, T* dx) {
   const Index elem_cnt = outer_size * bias_size * inner_size;
   if (inner_size == 1) {
-    FusedBiasAddGradRowCalculation<FUNCTOR, T, Index>::Invoke(ctx, grad_functor, elem_cnt,
-                                                              bias_size, x, bias, dy, dx);
+    FusedBiasAddGradRow<FUNCTOR, T, Index>::Invoke(ctx, grad_functor, elem_cnt, bias_size, x, bias,
+                                                   dy, dx);
   } else if (outer_size == 1) {
     FusedBiasAddGradColGpu<FUNCTOR, T, Index>
         <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             grad_functor, elem_cnt, inner_size, x, bias, dy, dx);
   } else {
-    RUN_CUDA_KERNEL((FusedBiasAddGradGpu<FUNCTOR, T, Index>), ctx, elem_cnt, grad_functor, elem_cnt,
-                    bias_size, inner_size, x, bias, dy, dx);
+    FusedBiasAddGradGpu<FUNCTOR, T, Index>
+        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            grad_functor, elem_cnt, bias_size, inner_size, x, bias, dy, dx);
   }
 }
 
 template<typename FUNCTOR, typename T>
-void DispatchFusedBiasAddCalculation(DeviceCtx* ctx, FUNCTOR functor, int64_t n, int64_t outer_size,
+void DispatchFusedBiasAddForwardImpl(DeviceCtx* ctx, FUNCTOR functor, int64_t n, int64_t outer_size,
                                      int64_t bias_size, int64_t inner_size, const T* x,
                                      const T* bias, T* y) {
   if (IsKernelSafeInt32(n)) {
-    FusedBiasAddCalculation<FUNCTOR, T, int32_t>(ctx, functor, outer_size, bias_size, inner_size, x,
+    FusedBiasAddForwardImpl<FUNCTOR, T, int32_t>(ctx, functor, outer_size, bias_size, inner_size, x,
                                                  bias, y);
   } else {
-    FusedBiasAddCalculation<FUNCTOR, T, int64_t>(ctx, functor, outer_size, bias_size, inner_size, x,
+    FusedBiasAddForwardImpl<FUNCTOR, T, int64_t>(ctx, functor, outer_size, bias_size, inner_size, x,
                                                  bias, y);
   }
 }
+
+}  // namespace
 
 template<typename T>
 class FusedFusedBiasAddKernel final : public user_op::OpKernel {
@@ -339,7 +339,7 @@ class FusedFusedBiasAddKernel final : public user_op::OpKernel {
     const int64_t inner_size = a_tensor->shape().Count(bias_add_axis + 1);
     const auto n = a_tensor->shape().elem_cnt();
     GeluFunctor<T> gelu_functor;
-    DispatchFusedBiasAddCalculation<decltype(gelu_functor), T>(
+    DispatchFusedBiasAddForwardImpl<decltype(gelu_functor), T>(
         ctx->device_ctx(), gelu_functor, n, outer_size, bias_size, inner_size, a_tensor->dptr<T>(),
         b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
   };
@@ -379,12 +379,12 @@ class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       MaskAndScaleAddFunctor<T> mask_and_scale_add_functor(mask_tensor->dptr<int8_t>(),
                                                            addend->dptr<T>(), scale);
-      DispatchFusedBiasAddCalculation<decltype(mask_and_scale_add_functor), T>(
+      DispatchFusedBiasAddForwardImpl<decltype(mask_and_scale_add_functor), T>(
           ctx->device_ctx(), mask_and_scale_add_functor, n, outer_size, bias_size, inner_size,
           a_tensor->dptr<T>(), b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
     } else {
       MaskAndScaleFunctor<T> mask_and_scale_functor(mask_tensor->dptr<int8_t>(), scale);
-      DispatchFusedBiasAddCalculation<decltype(mask_and_scale_functor), T>(
+      DispatchFusedBiasAddForwardImpl<decltype(mask_and_scale_functor), T>(
           ctx->device_ctx(), mask_and_scale_functor, n, outer_size, bias_size, inner_size,
           a_tensor->dptr<T>(), b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
     }
@@ -422,11 +422,11 @@ class FusedFusedBiasAddGradKernel final : public user_op::OpKernel {
     const auto n = a_tensor->shape().elem_cnt();
     GeluGradFunctor<T> gelu_grad_functor;
     if (IsKernelSafeInt32(n)) {
-      FusedBiasAddGradCalculation<decltype(gelu_grad_functor), T, int32_t>(
+      FusedBiasAddGradImpl<decltype(gelu_grad_functor), T, int32_t>(
           ctx->device_ctx(), gelu_grad_functor, outer_size, bias_size, inner_size,
           a_tensor->dptr<T>(), b_tensor->dptr<T>(), dy_tensor->dptr<T>(), dx_tensor->mut_dptr<T>());
     } else {
-      FusedBiasAddGradCalculation<decltype(gelu_grad_functor), T, int64_t>(
+      FusedBiasAddGradImpl<decltype(gelu_grad_functor), T, int64_t>(
           ctx->device_ctx(), gelu_grad_functor, outer_size, bias_size, inner_size,
           a_tensor->dptr<T>(), b_tensor->dptr<T>(), dy_tensor->dptr<T>(), dx_tensor->mut_dptr<T>());
     }
