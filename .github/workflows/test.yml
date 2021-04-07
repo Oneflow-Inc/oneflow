@@ -203,7 +203,7 @@ jobs:
             $extra_docker_args \
             -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
             oneflow-manylinux2014-cuda10.2:0.1 \
-            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
+            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && source scl_source enable devtoolset-7 && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
       - name: Remove container
         if: always() && matrix.test_suite != 'mac'
         run: |
