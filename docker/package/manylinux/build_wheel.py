@@ -353,8 +353,8 @@ if __name__ == "__main__":
             user_img_tag = f"{img_prefix}:{user}"
             extra_docker_args = args.extra_docker_args
             is_with_mlir = (
-                "-DWITH_MLIR=ON" in args.extra_oneflow_cmake_args
-                or "-DWITH_MLIR=1" in args.extra_oneflow_cmake_args
+                "-DWITH_MLIR=ON" in extra_oneflow_cmake_args
+                or "-DWITH_MLIR=1" in extra_oneflow_cmake_args
             )
             if "--name" not in extra_docker_args:
                 extra_docker_args += (
