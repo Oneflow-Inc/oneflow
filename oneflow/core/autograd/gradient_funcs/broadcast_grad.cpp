@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/autograd/gradient_funcs/utility.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/op_dispatch.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter_util.h"
@@ -29,8 +30,8 @@ Maybe<Tensor> ReduceSumLike(const std::shared_ptr<Tensor>& input,
                             const std::shared_ptr<Tensor>& like, const std::string& op_name) {
   const auto& in_shape = *(input->shape());
   const auto& like_shape = *(like->shape());
+  TensorTuple inputs{input};
   std::shared_ptr<OpExpr> op(nullptr);
-  TensorTuple inputs{input}, outputs(1);
   if (in_shape == like_shape) {
     op = JUST(op_expr_helper::IdentityOp(op_name));
   } else {
@@ -45,18 +46,7 @@ Maybe<Tensor> ReduceSumLike(const std::shared_ptr<Tensor>& input,
     }
     inputs.push_back(like);
   }
-  const auto& interpreter = JUST(OpInterpUtil::GetInterpreter());
-  JUST(interpreter->Apply(*op, inputs, &outputs));
-  return outputs.at(0);
-}
-
-Maybe<Tensor> ScalarMul(const std::shared_ptr<Tensor>& input, const float& scalar,
-                        const std::string& op_name) {
-  const auto& op = JUST(op_expr_helper::ScalarMulOp(scalar, op_name));
-  const auto& interpreter = JUST(OpInterpUtil::GetInterpreter());
-  TensorTuple outputs(1);
-  JUST(interpreter->Apply(*op, {input}, &outputs));
-  return outputs.at(0);
+  return JUST(Dispatch<Tensor>(*op, inputs));
 }
 
 }  // namespace
@@ -77,11 +67,6 @@ class BroadcastBinary : public OpExprGradFunction {
                       const TensorTuple& outputs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    x_requires_grad_ = inputs.at(0)->requires_grad();
-    y_requires_grad_ = inputs.at(1)->requires_grad();
-    x_shape_ = inputs.at(0)->shape();
-    y_shape_ = inputs.at(1)->shape();
-    z_shape_ = outputs.at(0)->shape();
     ctx->SaveTensorForBackward(inputs.at(0));
     ctx->SaveTensorForBackward(inputs.at(1));
     return Maybe<void>::Ok();
@@ -89,12 +74,26 @@ class BroadcastBinary : public OpExprGradFunction {
 
  protected:
   std::string op_name_;
-  mutable bool x_requires_grad_;
-  mutable bool y_requires_grad_;
-  mutable std::shared_ptr<const Shape> x_shape_;
-  mutable std::shared_ptr<const Shape> y_shape_;
-  mutable std::shared_ptr<const Shape> z_shape_;
 };
+
+class BroadcastAdd : public BroadcastBinary {
+ public:
+  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    const auto& x = ctx->SavedTensors().at(0);
+    const auto& y = ctx->SavedTensors().at(1);
+    in_grads->resize(2);
+    if (x->requires_grad()) {
+      in_grads->at(0) = JUST(ReduceSumLike(out_grads.at(0), x, GradientOpName(op_name_ + "_x")));
+    }
+    if (y->requires_grad()) {
+      in_grads->at(1) = JUST(ReduceSumLike(out_grads.at(0), y, GradientOpName(op_name_ + "_y")));
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_add", BroadcastAdd);
 
 class BroadcastSub : public BroadcastBinary {
  public:
@@ -103,12 +102,13 @@ class BroadcastSub : public BroadcastBinary {
     const auto& x = ctx->SavedTensors().at(0);
     const auto& y = ctx->SavedTensors().at(1);
     in_grads->resize(2);
-    if (x_requires_grad_) {
+    if (x->requires_grad()) {
       in_grads->at(0) = JUST(ReduceSumLike(out_grads.at(0), x, GradientOpName(op_name_ + "_x")));
     }
-    if (y_requires_grad_) {
-      const auto& scalar_mul =
-          JUST(ScalarMul(out_grads.at(0), -1.f, GradientOpName(op_name_ + "_y_scalar_mul")));
+    if (y->requires_grad()) {
+      const auto& scalar_mul_op =
+          JUST(op_expr_helper::ScalarMulOp(-1.f, GradientOpName(op_name_ + "_y_scalar_mul")));
+      const auto& scalar_mul = JUST(Dispatch<Tensor>(*scalar_mul_op, {out_grads.at(0)}));
       in_grads->at(1) = JUST(ReduceSumLike(scalar_mul, y, GradientOpName(op_name_ + "_y")));
     }
     return Maybe<void>::Ok();
@@ -116,6 +116,62 @@ class BroadcastSub : public BroadcastBinary {
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_sub", BroadcastSub);
+
+class BroadcastMul : public BroadcastBinary {
+ public:
+  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    const auto& x = ctx->SavedTensors().at(0);
+    const auto& y = ctx->SavedTensors().at(1);
+    in_grads->resize(2);
+    if (x->requires_grad()) {
+      const auto& broadcast_mul_op =
+          JUST(op_expr_helper::BroadcastMulOp(GradientOpName(op_name_ + "x_broadcast_mul")));
+      const auto& broadcast_mul = JUST(Dispatch<Tensor>(*broadcast_mul_op, {out_grads.at(0), y}));
+      in_grads->at(0) = JUST(ReduceSumLike(broadcast_mul, x, GradientOpName(op_name_ + "_x")));
+    }
+    if (y->requires_grad()) {
+      const auto& broadcast_mul_op =
+          JUST(op_expr_helper::BroadcastMulOp(GradientOpName(op_name_ + "y_broadcast_mul")));
+      const auto& broadcast_mul = JUST(Dispatch<Tensor>(*broadcast_mul_op, {out_grads.at(0), x}));
+      in_grads->at(1) = JUST(ReduceSumLike(broadcast_mul, y, GradientOpName(op_name_ + "_y")));
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_mul", BroadcastMul);
+
+class BroadcastDiv : public BroadcastBinary {
+ public:
+  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs) const override {
+    JUST(BroadcastBinary::Capture(ctx, inputs, outputs));
+    ctx->SaveTensorForBackward(outputs.at(0));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    const auto& x = ctx->SavedTensors().at(0);
+    const auto& y = ctx->SavedTensors().at(1);
+    const auto& z = ctx->SavedTensors().at(2);
+    in_grads->resize(2);
+    if (x->requires_grad()) {
+      const auto& broadcast_div_op =
+          JUST(op_expr_helper::BroadcastDivOp(GradientOpName(op_name_ + "x_broadcast_div")));
+      const auto& broadcast_div = JUST(Dispatch<Tensor>(*broadcast_div_op, {out_grads.at(0), y}));
+      in_grads->at(0) = JUST(ReduceSumLike(broadcast_div, x, GradientOpName(op_name_ + "_x")));
+    }
+    if (y->requires_grad()) {
+      const auto& broadcast_div_grad_op = JUST(op_expr_helper::BroadcastDivGradOp());
+      in_grads->at(1) = JUST(Dispatch<Tensor>(*broadcast_div_grad_op, {out_grads.at(0), y, z}));
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_div", BroadcastDiv);
 
 }  // namespace one
 }  // namespace oneflow

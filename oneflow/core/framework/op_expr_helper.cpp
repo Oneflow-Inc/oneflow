@@ -167,9 +167,24 @@ Maybe<one::UserOpExpr> RsqrtOp(const std::string& name) {
   return one::OpBuilder("rsqrt", name).Input("x").Output("y").Build();
 }
 
+Maybe<one::UserOpExpr> BroadcastAddOp() { return BroadcastAddOp(UniqueOpName("broadcast_add")); }
+Maybe<one::UserOpExpr> BroadcastAddOp(const std::string& name) {
+  return one::OpBuilder("broadcast_add", name).Input("x").Input("y").Output("z").Build();
+}
+
+Maybe<one::UserOpExpr> BroadcastSubOp() { return BroadcastSubOp(UniqueOpName("broadcast_sub")); }
+Maybe<one::UserOpExpr> BroadcastSubOp(const std::string& name) {
+  return one::OpBuilder("broadcast_sub", name).Input("x").Input("y").Output("z").Build();
+}
+
 Maybe<one::UserOpExpr> BroadcastMulOp() { return BroadcastMulOp(UniqueOpName("broadcast_mul")); }
 Maybe<one::UserOpExpr> BroadcastMulOp(const std::string& name) {
   return one::OpBuilder("broadcast_mul", name).Input("x").Input("y").Output("z").Build();
+}
+
+Maybe<one::UserOpExpr> BroadcastDivOp() { return BroadcastDivOp(UniqueOpName("broadcast_div")); }
+Maybe<one::UserOpExpr> BroadcastDivOp(const std::string& name) {
+  return one::OpBuilder("broadcast_div", name).Input("x").Input("y").Output("z").Build();
 }
 
 Maybe<one::UserOpExpr> CastOp(const DataType& to_type) {
@@ -197,6 +212,54 @@ Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& eps
       .Attr("axis", axis)
       .Attr("epsilon", epsilon)
       .Build();
+}
+
+Maybe<one::UserOpExpr> BroadcastDivGradOp() {
+  return BroadcastDivGradOp(UniqueOpName("broadcast_div_grad"));
+}
+Maybe<one::UserOpExpr> BroadcastDivGradOp(const std::string& name) {
+  return one::OpBuilder("broadcast_div_grad", name)
+      .Input("dz")
+      .Input("y")
+      .Input("z")
+      .Output("dy")
+      .Build();
+}
+
+Maybe<one::UserOpExpr> LayerNormGradOp(const int64_t& begin_norm_axis, const double& epsilon) {
+  return LayerNormGradOp(begin_norm_axis, epsilon, UniqueOpName("layer_norm_grad"));
+}
+Maybe<one::UserOpExpr> LayerNormGradOp(const int64_t& begin_norm_axis, const double& epsilon,
+                                       const std::string& name) {
+  return one::OpBuilder("layer_norm_grad", name)
+      .Input("x")
+      .Input("mean")
+      .Input("inv_variance")
+      .Input("dy")
+      .Output("dx")
+      .Attr("begin_norm_axis", begin_norm_axis)
+      .Attr("epsilon", epsilon)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> LayerNormParamGradOp(const int64_t& begin_params_axis,
+                                            const bool& has_beta_diff, const bool& has_gamma_diff,
+                                            const bool& has_normalized_diff) {
+  return LayerNormParamGradOp(begin_params_axis, has_beta_diff, has_gamma_diff, has_normalized_diff,
+                              UniqueOpName("layer_norm_param_grad"));
+}
+Maybe<one::UserOpExpr> LayerNormParamGradOp(const int64_t& begin_params_axis,
+                                            const bool& has_beta_diff, const bool& has_gamma_diff,
+                                            const bool& has_normalized_diff,
+                                            const std::string& name) {
+  auto builder = one::OpBuilder("layer_norm_param_grad", name).Input("dy");
+  if (has_gamma_diff || has_normalized_diff) { builder.Input("gamma"); }
+  if (has_gamma_diff) { builder.Input("normalized"); }
+  if (has_beta_diff) { builder.Output("beta_diff"); }
+  if (has_gamma_diff) { builder.Output("gamma_diff"); }
+  if (has_normalized_diff) { builder.Output("normalized_diff"); }
+  if (has_beta_diff || has_gamma_diff) { builder.Output("reduce_buf"); }
+  return builder.Attr("begin_params_axis", begin_params_axis).Build();
 }
 
 }  // namespace op_expr_helper
