@@ -22,7 +22,6 @@ from oneflow.python.framework.tensor import register_op_by_module
 
 @oneflow_export("nn.Flatten")
 @register_tensor_op_by_module("flatten")
-@register_op_by_module("flatten")
 class Flatten(Module):
     r"""
     Flattens a contiguous range of dims into a tensor. For use with :class:`~nn.Sequential`.
