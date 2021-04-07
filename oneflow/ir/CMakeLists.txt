@@ -36,8 +36,7 @@ FetchContent_Declare(
   llvm_monorepo
   FETCHCONTENT_QUIET FALSE
   USES_TERMINAL_DOWNLOAD TRUE
-  URL "https://oneflow-static.oss-cn-beijing.aliyuncs.com/deps/llvm/a4e2a5145a29af678139f33e94ab3df0fc973e59.zip"
-  # URL "https://github.com/llvm/llvm-project/archive/a4e2a5145a29af678139f33e94ab3df0fc973e59.zip"
+  URL "https://github.com/llvm/llvm-project/archive/a4e2a5145a29af678139f33e94ab3df0fc973e59.zip"
   URL_HASH MD5=d501547c39d344c6f52b5c2e757c3953
 )
 FetchContent_GetProperties(llvm_monorepo)
