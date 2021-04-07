@@ -31,19 +31,30 @@ namespace vm {
 
 class Instruction;
 class MirroredObject;
+class RwMutexedObject;
+
+enum OperandAccessType {
+  kConstOperandAccess = 0,
+  kMutableOperandAccess,
+};
 
 // clang-format off
 OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   // methods
   OF_PUBLIC void __Init__(Instruction* instruction, MirroredObject* mirrored_object,
-                       bool is_const_operand);
+                       OperandAccessType access_type);
+
+  OF_PUBLIC bool is_const_operand() const;
+  OF_PUBLIC bool is_mut_operand() const;
 
   // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(bool, is_const_operand);
+  OBJECT_MSG_DEFINE_OPTIONAL(OperandAccessType, access_type);
   OBJECT_MSG_DEFINE_PTR(Instruction, instruction);
   OBJECT_MSG_DEFINE_PTR(MirroredObject, mirrored_object);
+  OBJECT_MSG_DEFINE_PTR(RwMutexedObject, rw_mutexed_object);
 
   // links
+  OBJECT_MSG_DEFINE_LIST_LINK(instruction_access_link);
   OBJECT_MSG_DEFINE_LIST_LINK(rw_mutexed_object_access_link);
   OBJECT_MSG_DEFINE_SKIPLIST_KEY(10, MirroredObjectId, mirrored_object_id);
   
@@ -96,6 +107,8 @@ OBJECT_MSG_BEGIN(MirroredObject);
   //fields
   OBJECT_MSG_DEFINE_FLAT_MSG(MirroredObjectId, mirrored_object_id);
   OBJECT_MSG_DEFINE_OPTIONAL(RwMutexedObject, rw_mutexed_object);
+  OBJECT_MSG_DEFINE_PTR(RwMutexedObjectAccess, deleting_access);
+
 
   // links
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, global_device_id);
@@ -117,8 +130,10 @@ OBJECT_MSG_BEGIN(LogicalObject);
   OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<ParallelDesc>, parallel_desc);
 
   // links
-  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, global_device_id, global_device_id2mirrored_object);
   OBJECT_MSG_DEFINE_MAP_KEY(ObjectId, logical_object_id);
+  OBJECT_MSG_DEFINE_LIST_LINK(delete_link);
+  // heads
+  OBJECT_MSG_DEFINE_MAP_HEAD(MirroredObject, global_device_id, global_device_id2mirrored_object);
 OBJECT_MSG_END(LogicalObject);
 // clang-format on
 
