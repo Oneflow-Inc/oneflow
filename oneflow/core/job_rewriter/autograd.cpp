@@ -514,9 +514,10 @@ std::string AddLbns(JobBuilder* job_builder, const std::vector<std::string>& lbn
 
 std::string AddCastToP(JobBuilder* job_builder, const std::string& in_lbn,
                        const ParallelConf& parallel_conf, const std::string& op_name_prefix) {
-  const int64_t scope_symbol_id = MakeScopeSymbolId(job_builder->job().job_conf(), parallel_conf);
   ParallelConf flat_parallel_conf = parallel_conf;
   flat_parallel_conf.mutable_hierarchy()->clear_dim();
+  const int64_t scope_symbol_id =
+      MakeScopeSymbolId(job_builder->job().job_conf(), flat_parallel_conf);
   std::vector<std::string> cast_parallel_distribution;
   cast_parallel_distribution.push_back("P");
   auto parallel_cast_op =
