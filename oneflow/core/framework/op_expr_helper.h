@@ -109,6 +109,24 @@ Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t
 Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size,
                                 const std::string& name);
 
+Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments);
+Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments, const std::string& name);
+
+Maybe<one::UserOpExpr> ScalarAddByTensorOp();
+Maybe<one::UserOpExpr> ScalarAddByTensorOp(const std::string& name);
+
+Maybe<one::UserOpExpr> ScalarSubByTensorOp();
+Maybe<one::UserOpExpr> ScalarSubByTensorOp(const std::string& name);
+
+Maybe<one::UserOpExpr> ScalarMulByTensorOp();
+Maybe<one::UserOpExpr> ScalarMulByTensorOp(const std::string& name);
+
+Maybe<one::UserOpExpr> ScalarDivByTensorOp();
+Maybe<one::UserOpExpr> ScalarDivByTensorOp(const std::string& name);
+
+Maybe<one::UserOpExpr> MultiplyOp();
+Maybe<one::UserOpExpr> MultiplyOp(const std::string& name);
+
 }  // namespace op_expr_helper
 
 }  // namespace oneflow
