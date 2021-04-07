@@ -22,7 +22,7 @@ namespace {
 
 template<typename T>
 struct GeluFunctor {
-  OF_DEVICE_FUNC T Compute(T x, int64_t i) const {
+  __device__ T Compute(T x, int64_t i) const {
     return static_cast<T>(0.5) * x * (static_cast<T>(1.0) + erf(static_cast<T>(M_SQRT1_2) * x));
   }
 };
@@ -44,20 +44,19 @@ struct GeluFunctor<half> {
 template<typename T>
 struct MaskAndScaleFunctor {
   MaskAndScaleFunctor(const int8_t* mask, float scale) : mask(mask), scale(scale) {}
-  OF_DEVICE_FUNC T Compute(T x, int64_t i) const { return x * static_cast<T>(mask[i]) * scale; }
+  __device__ T Compute(T x, int64_t i) const { return x * static_cast<T>(mask[i]) * scale; }
   const int8_t* mask;
   float scale;
 };
 
 template<>
 struct MaskAndScaleFunctor<half> {
-  MaskAndScaleFunctor(const int8_t* mask, float scale) : mask(mask), scale(scale) {
-    mask_c2 = reinterpret_cast<const char2*>(mask);
-  }
+  MaskAndScaleFunctor(const int8_t* mask, float scale) : mask(mask), scale(scale) {}
   __device__ half Compute(half x, int64_t i) const {
     return x * static_cast<half>(mask[i] * scale);
   }
   __device__ half2 ComputeHalf2(half2 x, int64_t i) const {
+    const char2* mask_c2 = reinterpret_cast<const char2*>(mask);
     char2 mask_val = mask_c2[i];
     half2 one_or_zero_h2;
     half2 h2_scale = __float2half2_rn(scale);
@@ -66,33 +65,31 @@ struct MaskAndScaleFunctor<half> {
     return __hmul2(__hmul2(x, one_or_zero_h2), h2_scale);
   }
   const int8_t* mask;
-  const char2* mask_c2;
   float scale;
 };
 
 template<typename T>
 struct MaskAndScaleAddFunctor {
-  MaskAndScaleAddFunctor(const int8_t* mask, const T* addend, T scale)
+  MaskAndScaleAddFunctor(const int8_t* mask, const T* addend, float scale)
       : mask(mask), addend(addend), scale(scale) {}
-  OF_DEVICE_FUNC T Compute(T x, int64_t i) const {
+  __device__ T Compute(T x, int64_t i) const {
     return x * static_cast<T>(mask[i]) * scale + addend[i];
   }
   const int8_t* mask;
   const T* addend;
-  T scale;
+  float scale;
 };
 
 template<>
 struct MaskAndScaleAddFunctor<half> {
   MaskAndScaleAddFunctor(const int8_t* mask, const half* addend, float scale)
-      : mask(mask), addend(addend), scale(scale) {
-    mask_c2 = reinterpret_cast<const char2*>(mask);
-    addend_h2 = reinterpret_cast<const half2*>(addend);
-  }
+      : mask(mask), addend(addend), scale(scale) {}
   __device__ half Compute(half x, int64_t i) const {
     return x * static_cast<half>(mask[i] * scale) + addend[i];
   }
   __device__ half2 ComputeHalf2(half2 x, int64_t i) const {
+    const char2* mask_c2 = reinterpret_cast<const char2*>(mask);
+    const half2* addend_h2 = reinterpret_cast<const half2*>(addend);
     char2 mask_val = mask_c2[i];
     half2 one_or_zero_h2;
     half2 h2_scale = __float2half2_rn(scale);
@@ -102,15 +99,13 @@ struct MaskAndScaleAddFunctor<half> {
   }
   const int8_t* mask;
   const half* addend;
-  const char2* mask_c2;
-  const half2* addend_h2;
   float scale;
 };
 
 template<typename T>
 struct GeluGradFunctor {
   const T coef = sqrt(static_cast<T>(2.0) / acos(static_cast<T>(-1.0)));
-  OF_DEVICE_FUNC T Compute(T x, T dy, int64_t i) const {
+  __device__ T Compute(T x, T dy, int64_t i) const {
     return static_cast<T>(0.5)
            * (static_cast<T>(1.0) + erf(static_cast<T>(M_SQRT1_2) * x)
               + x * coef * exp(static_cast<T>(-0.5) * x * x))
@@ -121,7 +116,7 @@ struct GeluGradFunctor {
 template<>
 struct GeluGradFunctor<half> {
   GeluGradFunctor<float> float_functor;
-  OF_DEVICE_FUNC half Compute(half x, half dy, int64_t i) const {
+  __device__ half Compute(half x, half dy, int64_t i) const {
     return __float2half(float_functor.Compute(__half2float(x), __half2float(dy), i));
   }
 };
