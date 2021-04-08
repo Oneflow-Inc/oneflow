@@ -821,6 +821,7 @@ Maybe<void> JobBuildAndInferCtx::CheckOpScope() const {
                    << " net. \n op_conf = " << op_conf.DebugString();
     }
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> JobBuildAndInferCtx::CheckLbnValidAndExist(const std::string& lbn) const {
@@ -999,6 +1000,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpBlobParallelConfPass"));
+  JUST(CheckJob());
   return Maybe<void>::Ok();
 }
 
