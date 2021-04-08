@@ -36,7 +36,6 @@ REGISTER_USER_OP("pad")
         y_dim_vec[i] = x_shape->At(i) + padding_before[i] + padding_after[i];
       }
       *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(y_dim_vec);
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -51,6 +50,10 @@ REGISTER_USER_OP("pad")
               .Build();
         }
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
       return Maybe<void>::Ok();
     });
 
@@ -72,7 +75,6 @@ REGISTER_USER_OP("pad_grad")
         dx_dim_vec[i] = dy_shape->At(i) - padding_before[i] - padding_after[i];
       }
       *ctx->Shape4ArgNameAndIndex("dx", 0) = Shape(dx_dim_vec);
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -87,6 +89,10 @@ REGISTER_USER_OP("pad_grad")
               .Build();
         }
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
       return Maybe<void>::Ok();
     });
 

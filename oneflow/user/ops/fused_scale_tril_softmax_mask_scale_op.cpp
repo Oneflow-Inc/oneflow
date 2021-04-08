@@ -30,8 +30,16 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale")
     .Attr<float>("mask_scale_value", 1.0)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      *ctx->TensorDesc4ArgNameAndIndex("y", 0) = *x_desc;
-      *ctx->TensorDesc4ArgNameAndIndex("softmax_y", 0) = *x_desc;
+      *ctx->Shape4ArgNameAndIndex("y", 0) = x_desc->shape();
+      *ctx->IsDynamic4ArgNameAndIndex("y", 0) = x_desc->is_dynamic();
+      *ctx->Shape4ArgNameAndIndex("softmax_y", 0) = x_desc->shape();
+      *ctx->IsDynamic4ArgNameAndIndex("softmax_y", 0) = x_desc->is_dynamic();
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      *ctx->Dtype4ArgNameAndIndex("y", 0) = x_desc->data_type();
+      *ctx->Dtype4ArgNameAndIndex("softmax_y", 0) = x_desc->data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -67,8 +75,16 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale_grad")
       const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
       CHECK(dy_desc->shape() == softmax_y_desc->shape());
+      *dx_desc->mut_shape() = dy_desc->shape();
+      *dx_desc->mut_is_dynamic() = dy_desc->is_dynamic();
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* softmax_y_desc = ctx->TensorDesc4ArgNameAndIndex("softmax_y", 0);
+      const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
       CHECK(dy_desc->data_type() == softmax_y_desc->data_type());
-      *dx_desc = *dy_desc;
+      *dx_desc->mut_data_type() = dy_desc->data_type();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
