@@ -30,6 +30,10 @@ namespace {
 
 const TrainConf& GetTrainConf() { return GlobalJobDesc().job_conf().train_conf(); }
 
+int64_t ScopeSymbolId4Lbi(const OpGraph& op_graph, const LogicalBlobId& lbi) {
+  return op_graph.OpNode4OpName(lbi.op_name())->op().op_conf().scope_symbol_id();
+}
+
 bool AnyLbiWithDiffLbi(const OpEdge* op_edge) {
   const Operator& src_op = op_edge->src_node()->op();
   const Operator& dst_op = op_edge->dst_node()->op();
@@ -144,6 +148,7 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
               .Input("in", dynamic_loss_scale_state.loss_scale_val_lbn())
               .Output("out")
               .Attr<DataType>("dtype", data_type)
+              .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, lbi))
               .Build();
       OpBlobArg cast_in_op_blob_arg;
       cast_in_op_blob_arg.set_op_name(cast_op.op_name());
@@ -165,6 +170,7 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
             .Input("x", GenLogicalBlobName(constant_like_op.name(), constant_like_conf->out()))
             .Input("scalar", loss_scale_val_lbn)
             .Output("y")
+            .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, lbi))
             .Build();
     op_confs->push_back(scalar_mul_op.op_conf());
     *out_diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
@@ -176,10 +182,6 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
 
 const ParallelConf& ProducerParallelConf4Lbi(const OpGraph& op_graph, const LogicalBlobId& lbi) {
   return op_graph.OpNode4OpName(lbi.op_name())->parallel_desc().parallel_conf();
-}
-
-int64_t ScopeSymbolId4Lbi(const OpGraph& op_graph, const LogicalBlobId& lbi) {
-  return op_graph.OpNode4OpName(lbi.op_name())->op().op_conf().scope_symbol_id();
 }
 
 void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,

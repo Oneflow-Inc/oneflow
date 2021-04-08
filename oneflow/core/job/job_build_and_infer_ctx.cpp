@@ -775,6 +775,7 @@ Maybe<const ParallelDesc*> JobBuildAndInferCtx::MirroredBlobGetParallelDescFromP
 Maybe<void> JobBuildAndInferCtx::CheckJob() const {
   JUST(CheckPlacement());
   JUST(CheckJobConf());
+  JUST(CheckOpScope());
   return Maybe<void>::Ok();
 }
 
@@ -809,6 +810,15 @@ Maybe<void> JobBuildAndInferCtx::CheckJobConf() const {
     return Error::JobTypeNotSetError() << "job_type not set, please set predict_conf or train_conf";
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<void> CheckOpScope() const {
+   for (const OperatorConf& op_conf : job_->net().op()) {
+    CHECK_OR_RETURN(op_conf.has_scope_symbol_id())
+        << " ERROR! op_name: " << op_conf.name()
+        << " has NOT set scope(scope_symbol_id) in job: " << job_->job_conf().job_name() << " net. \n op_conf = "
+        << op_conf.DebugString();
+  }
 }
 
 Maybe<void> JobBuildAndInferCtx::CheckLbnValidAndExist(const std::string& lbn) const {
