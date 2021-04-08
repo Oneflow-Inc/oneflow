@@ -37,6 +37,9 @@ class AccTickOp final : public Operator {
   Maybe<void> InferOpTimeShape(
       const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
       std::shared_ptr<const Shape>* time_shape) const override;
+  Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override;
 
  private:
 };
