@@ -17,8 +17,12 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
 
 #include <string>
+#include <unordered_set>
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
+
+class ParallelDesc;
 
 class Device final {
  public:
@@ -27,8 +31,13 @@ class Device final {
   Device(Device&&) = default;
   ~Device() = default;
   const std::string& type() const { return type_; }
+  std::string of_type() const;
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
+
+  static Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device);
+  static Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
+  static const std::unordered_set<std::string> type_supported;
 
  private:
   const std::string type_;

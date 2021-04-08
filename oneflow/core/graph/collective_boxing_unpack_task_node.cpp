@@ -23,9 +23,9 @@ void CollectiveBoxingUnpackTaskNode::Init(int64_t machine_id, int64_t thrd_id,
                                           const SbpParallel& src_sbp_parallel,
                                           const SbpParallel& dst_sbp_parallel,
                                           const int64_t parallel_num) {
-  lbi_ = lbi;
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
+  set_lbi(lbi);
   logical_shape_ = logical_shape;
   parallel_num_ = parallel_num;
   src_sbp_parallel_ = src_sbp_parallel;
@@ -46,9 +46,9 @@ void CollectiveBoxingUnpackTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf op_conf;
   op_conf.set_name("System-Collective-Boxing-Unpack-" + NewUniqueId());
-  op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
+  op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
   auto* collective_boxing_unpack_conf = op_conf.mutable_collective_boxing_unpack_conf();
-  *collective_boxing_unpack_conf->mutable_lbi() = lbi_;
+  *collective_boxing_unpack_conf->mutable_lbi() = lbi();
   logical_shape_.ToProto(collective_boxing_unpack_conf->mutable_logical_shape());
   *collective_boxing_unpack_conf->mutable_src_sbp_parallel() = src_sbp_parallel_;
   *collective_boxing_unpack_conf->mutable_dst_sbp_parallel() = dst_sbp_parallel_;

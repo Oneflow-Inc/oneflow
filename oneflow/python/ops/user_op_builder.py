@@ -374,8 +374,8 @@ class UserOpConfBuilder(object):
             attribute.at_list_int64.val[:] = list(attr_value)
         elif attr_type == attr_value_pb.kAtListFloat:
             assert isinstance(attr_value, (tuple, list))
-            assert all(isinstance(x, float) for x in attr_value)
-            attribute.at_list_float.val[:] = list(attr_value)
+            assert all(isinstance(x, (float, int)) for x in attr_value)
+            attribute.at_list_float.val[:] = list(map(lambda x: float(x), attr_value))
         elif attr_type == attr_value_pb.kAtListDataType:
             assert isinstance(attr_value, (tuple, list))
             assert all(

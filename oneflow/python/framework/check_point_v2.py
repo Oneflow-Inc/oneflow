@@ -24,6 +24,7 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.ops.initializer_util as initializer_util
+import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -194,7 +195,10 @@ def _ReadSlice(
     if isinstance(container, EagerBlobTrait):
 
         def ReadFromEagerBlob(eager_blob, start_nd_idx, stop_nd_idx):
-            return _LogicalSlice(eager_blob, start_nd_idx, stop_nd_idx)
+            scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(eager_blob)
+            return _LogicalSlice(
+                eager_blob.blob_object, start_nd_idx, stop_nd_idx, scope_symbol_id
+            )
 
         yield from _ForEachSlice(container, ReadFromEagerBlob)
     elif isinstance(container, FileBackendVariableBlob):
@@ -270,7 +274,10 @@ def SaveVarDict(
 
 
 def _LogicalSlice(
-    input_blob: EagerBlobTrait, start: Sequence[int], stop: Sequence[int]
+    input_blob_object: oneflow_api.BlobObject,
+    start: Sequence[int],
+    stop: Sequence[int],
+    scope_symbol_id: int,
 ) -> np.ndarray:
     """
     Construct a logical_slice op and run it by oneflow eager,
@@ -288,7 +295,6 @@ def _LogicalSlice(
             op_conf.user_conf.op_type_name = "logical_slice"
             op_conf.user_conf.input["x"].s.append("{}/x_0".format(op_name))
             op_conf.user_conf.output["y"].s.append("{}/y_0".format(op_name))
-            input_blob_object = input_blob.blob_object
             parallel_conf = input_blob_object.parallel_desc_symbol.parallel_conf
             op_conf.user_conf.attr["parallel_conf"].at_string = str(parallel_conf)
             op_conf.user_conf.attr["start"].at_list_int64.val[:] = start
@@ -296,7 +302,6 @@ def _LogicalSlice(
             op_conf.user_conf.attr["step"].at_list_int64.val[:] = [1] * len(start)
             bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
             bn_in_op2blob_object["x_0"] = input_blob_object
-            scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(input_blob)
             op_attribute = op_infer_util.Infer(
                 op_conf, bn_in_op2blob_object, scope_symbol_id
             )
@@ -364,16 +369,15 @@ def _GetCpu0VariableBlobFromNumpy(
 
 
 def _LogicalSliceAssign(
-    ref_blob: EagerBlobTrait,
-    value_blob: EagerBlobTrait,
+    ref_blob_object: oneflow_api.BlobObject,
+    value_blob_object: oneflow_api.BlobObject,
     start: Sequence[int],
     stop: Sequence[int],
+    scope_symbol_id: Optional[int],
 ) -> None:
     """
     Construct a logical_slice_assign op and run it by oneflow eager
     """
-    ref_blob_object = ref_blob.blob_object
-    value_blob_object = value_blob.blob_object
 
     def BuildAssignInstruction(builder):
         op_conf = op_conf_pb.OperatorConf()
@@ -393,7 +397,6 @@ def _LogicalSliceAssign(
         bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
         bn_in_op2blob_object["ref_0"] = ref_blob_object
         bn_in_op2blob_object["value_0"] = value_blob_object
-        scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(ref_blob)
         op_attribute = op_infer_util.Infer(
             op_conf, bn_in_op2blob_object, scope_symbol_id
         )
@@ -408,8 +411,10 @@ def _LogicalSliceAssign(
     oneflow_api.TryDisableBlobCache(ref_blob_object)
 
 
-def _FeedValueToVariable(
-    var_blob: oneflow_api.EagerConsistentBlob, value: ValueContainer
+def FeedValueToVariable(
+    var_blob: Union[oneflow_api.EagerConsistentBlob, "oneflow.Tensor"],
+    value: ValueContainer,
+    scope_symbol_id: Optional[int],
 ) -> None:
     """
     Feed the value of `value` to the variable `var_blob`
@@ -431,10 +436,17 @@ def _FeedValueToVariable(
     assert var_blob.dtype == value_flow_dtype, "{} vs {}".format(
         var_blob.dtype, value_flow_dtype
     )
+
+    if isinstance(var_blob, oneflow.Tensor):
+        var_blob_object = var_blob._blob_object
+    else:
+        assert isinstance(var_blob, EagerBlobTrait)
+        var_blob_object = var_blob.blob_object
+
     for start, stop, slice in _ReadSlice(value):
         slice_value_blob = _GetCpu0VariableBlobFromNumpy(slice, var_blob.dtype)
         _LogicalSliceAssign(
-            var_blob, slice_value_blob, start, stop,
+            var_blob_object, slice_value_blob.blob_object, start, stop, scope_symbol_id,
         )
 
 
@@ -456,7 +468,8 @@ def LoadVariables(
     for name, value in value_dict.items():
         if name in all_vars:
             var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(name)
-            _FeedValueToVariable(var_blob, value)
+            scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(var_blob)
+            FeedValueToVariable(var_blob, value, scope_symbol_id)
         else:
             if not ignore_mismatch:
                 raise RuntimeError('"{}" is not a variable name'.format(name))
@@ -476,7 +489,7 @@ def _ForEachSlice(
     yield start_nd_idx, stop_nd_idx and f(slice)
     """
     assert isinstance(
-        container, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray)
+        container, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray, oneflow.Tensor)
     ), "Unknown type: {}".format(type(container).__name__)
     assert container.shape is not None
     # For current implementation (transport data by grpc), SLICE_BYTES must be lower than 64M
@@ -495,7 +508,7 @@ def _ForEachSlice(
         cnt *= container.shape[axis]
         if cnt > SLICE_LEN:
             break
-    unit_size = _ElemCnt(container.shape[axis + 1 :])
+    unit_size = _ElemCnt(tuple(container.shape)[axis + 1 :])
     max_unit_num = SLICE_LEN // unit_size
     while start_idx < size:
         remainder = container.shape[axis]
@@ -509,6 +522,54 @@ def _ForEachSlice(
             stop_nd_idx = tuple([x + 1 for x in stop_nd_idx])
             yield start_nd_idx, stop_nd_idx, f(container, start_nd_idx, stop_nd_idx)
             start_idx = stop_idx
+
+
+def init_by_initializer_conf(
+    var_blob: Union[EagerBlobTrait, "oneflow.Tensor"],
+    initializer_conf: initializer_conf_util.InitializerConf,
+    sync_between_multi_machine: bool,
+    scope_symbol_id: Optional[int],
+    random_seed: int = 0,
+):
+    initializer = initializer_util.GetInitializer(
+        initializer_conf, random_seed, var_blob.shape
+    )
+    # initializer is None if and only if the initializer_conf is empty_initializer
+    if initializer is None:
+        return
+
+    def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx):
+        np_dtype = np.dtype(
+            dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
+        )
+        length = _ElemCnt(np.array(stop_nd_idx) - np.array(start_nd_idx))
+        vals = (
+            np.array(initializer(length))
+            .astype(np_dtype)
+            .reshape(np.array(stop_nd_idx) - np.array(start_nd_idx))
+        )
+
+        if isinstance(var_blob, oneflow.Tensor):
+            var_blob_object = var_blob._blob_object
+        else:
+            assert isinstance(var_blob, EagerBlobTrait)
+            var_blob_object = var_blob.blob_object
+
+        slice_value_blob = _GetCpu0VariableBlobFromNumpy(vals, var_blob.dtype)
+        _LogicalSliceAssign(
+            var_blob_object,
+            slice_value_blob.blob_object,
+            start_nd_idx,
+            stop_nd_idx,
+            scope_symbol_id,
+        )
+
+    # we just want to run f on every slice without caring about the return value
+    for _ in _ForEachSlice(var_blob, GenerateValueAndAssign):
+        pass
+
+    if sync_between_multi_machine:
+        oneflow_api.eager.Sync()
 
 
 def Init() -> None:
@@ -533,27 +594,10 @@ def Init() -> None:
             )
             LoadVariables({op_name: GetCheckpoint(var_dir)})
             continue
-        g = initializer_util.GetInitializer(
-            var_conf.initializer, var_conf.random_seed, var_blob.shape
+
+        scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(var_blob)
+        init_by_initializer_conf(
+            var_blob, var_conf.initializer, False, scope_symbol_id, var_conf.random_seed
         )
 
-        def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx):
-            np_dtype = np.dtype(
-                dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
-            )
-            length = _ElemCnt(np.array(stop_nd_idx) - np.array(start_nd_idx))
-            vals = (
-                np.array(g(length))
-                .astype(np_dtype)
-                .reshape(np.array(stop_nd_idx) - np.array(start_nd_idx))
-            )
-
-            slice_value_blob = _GetCpu0VariableBlobFromNumpy(vals, var_blob.dtype)
-            _LogicalSliceAssign(
-                var_blob, slice_value_blob, start_nd_idx, stop_nd_idx,
-            )
-
-        # we just want to run f on every slice without caring about the return value
-        for _ in _ForEachSlice(var_blob, GenerateValueAndAssign):
-            pass
     oneflow_api.eager.Sync()

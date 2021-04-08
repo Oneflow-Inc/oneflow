@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_OPERATOR_DEVICE_TICK_OP_H_
 
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -31,9 +30,9 @@ class DeviceTickOp final : public Operator {
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const override;
-  LogicalNode* NewProperLogicalNode() const override { return new DeviceTickLogicalNode; }
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 
  private:
   Maybe<void> GetSbpSignatures(

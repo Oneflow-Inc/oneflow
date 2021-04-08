@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
@@ -41,9 +40,9 @@ class DstSubsetTickOp final : public Operator {
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const override;
-  LogicalNode* NewProperLogicalNode() const override;
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 
  private:
   Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
@@ -55,10 +54,6 @@ void DstSubsetTickOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-LogicalNode* DstSubsetTickOp::NewProperLogicalNode() const {
-  return new DstSubsetTickLogicalNode();
-}
-
 Maybe<void> DstSubsetTickOp::InferLogicalOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
     const ParallelDesc& parallel_desc) const {
@@ -66,7 +61,7 @@ Maybe<void> DstSubsetTickOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> DstSubsetTickOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(GetBlobDesc4BnInOp);
 }

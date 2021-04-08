@@ -62,10 +62,14 @@ def api_system_assign(ref, value, validate_shape=None, use_locking=None, name=No
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def lazy_system_assign(ref, value, validate_shape=None, use_locking=None, name=None):
     op_conf = _SystemAssignOpConf(ref, value, name=name)
-    device_tag, machine_device_ids = oneflow_api.GetDeviceTagAndMachineDeviceIds(
-        ref.parallel_conf
-    )
-    with oneflow.scope.placement(device_tag, machine_device_ids):
+    (
+        device_tag,
+        machine_device_ids,
+        hierarchy,
+    ) = oneflow_api.GetDeviceTagAndMachineDeviceIdsAndHierarchy(ref.parallel_conf)
+    if hierarchy is not None:
+        hierarchy = tuple(hierarchy.dim())
+    with oneflow.scope.placement(device_tag, machine_device_ids, hierarchy):
         interpret_util.Forward(op_conf)
     return ref
 

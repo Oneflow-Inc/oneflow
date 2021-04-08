@@ -197,6 +197,7 @@ class TestNnConv3d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_padding_same(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]

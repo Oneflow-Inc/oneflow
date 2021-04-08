@@ -85,8 +85,6 @@ class FoldSubgraphBuilder {
     // 2.Replace control_in_op_name by the XrtLaunch operator name if
     //   the operator has been folded.
     FixupControlInOpNames();
-    // 3.Add time shape for XrtLaunch operators.
-    FixupTimeShapes();
     // 4.Add sbp parallel strategy for XrtLaunch operators.
     FixupSbpSignatures();
     // 6.Finally remove the folded operators.
@@ -101,8 +99,6 @@ class FoldSubgraphBuilder {
   void BuildXrtLaunchOps();
 
   void FixupControlInOpNames();
-
-  void FixupTimeShapes();
 
   void FixupSbpSignatures();
 
@@ -226,7 +222,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
     OperatorConf op_conf;
     op_conf.set_name(node->name());
     DeviceType device_type = XrtDeviceToDeviceType(node->device());
-    op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type)));
+    op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type)));
 
     XrtLaunchOpConf* launch_conf = op_conf.mutable_xrt_launch_conf();
     // Add inputs and outputs in launch_conf
@@ -382,15 +378,6 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
       Argument fixed_arg(fixed_blob_name, arg.shape(), arg.data_type(), metadata);
       edge->SetArgument(fixed_arg);
     }
-  }
-}
-
-void FoldSubgraphBuilder::FixupTimeShapes() {
-  for (int i = 0; i < launch_nodes_.size(); ++i) {
-    CHECK_GT(folded_nodes_[i].size(), 0);
-    const OpTimeShape& time_shape = builder_->TimeShape4OpName(folded_nodes_[i][0]->name());
-    // TODO(hjchen2) check time shape for all folded nodes
-    builder_->AddTimeShape4OpName(launch_nodes_[i]->name(), time_shape);
   }
 }
 

@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/operator/wait_and_send_ids_op.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
@@ -22,10 +21,6 @@ namespace oneflow {
 void WaitAndSendIdsOp::InitFromOpConf() {
   CHECK(op_conf().has_wait_and_send_ids_conf());
   EnrollOutputBn("out", false);
-}
-
-LogicalNode* WaitAndSendIdsOp::NewProperLogicalNode() const {
-  return new WaitAndSendIdsLogicalNode();
 }
 
 namespace {
@@ -47,7 +42,7 @@ Maybe<void> WaitAndSendIdsOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> WaitAndSendIdsOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);

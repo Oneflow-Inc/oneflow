@@ -42,7 +42,7 @@ def deprecated_placement(*args, **kwargs):
 
 @oneflow_export("scope.placement")
 def api_placement(
-    device_tag: str, machine_device_ids: str
+    device_tag: str, machine_device_ids: str, hierarchy=None
 ) -> placement_ctx.PlacementScope:
     r"""Create a scope. All ops within the scope will run on specified device that placed by  "device_tag" and "machine_device_ids".
 
@@ -78,6 +78,7 @@ def api_placement(
 
     if oneflow_api.flags.with_cuda() == False and device_tag == "gpu":
         device_tag = "cpu"
+    assert isinstance(hierarchy, (list, tuple, oneflow_api.Size)) or hierarchy is None
     func = enable_if.unique(
         [
             GetEmptyPlacementScope,
@@ -85,40 +86,44 @@ def api_placement(
             GetGlobalModePlacementScope,
         ]
     )
-    return func(device_tag, machine_device_ids)
+    return func(device_tag, machine_device_ids, hierarchy)
 
 
 @enable_if.condition(
     hob.in_normal_mode & hob.env_initialized & ~hob.session_initialized
 )
-def GetEmptyPlacementScope(device_tag, machine_device_ids):
-    return placement_ctx.EmptyPlacementScope(device_tag, machine_device_ids)
+def GetEmptyPlacementScope(device_tag, machine_device_ids, hierarchy=None):
+    return placement_ctx.EmptyPlacementScope(device_tag, machine_device_ids, hierarchy)
 
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
-def GetNormalModePlacementScope(device_tag, machine_device_ids):
+def GetNormalModePlacementScope(device_tag, machine_device_ids, hierarchy=None):
     if isinstance(machine_device_ids, tuple):
         machine_device_ids = list(machine_device_ids)
     if not isinstance(machine_device_ids, list):
         machine_device_ids = [machine_device_ids]
     sess = session_ctx.GetDefaultSession()
+    if hierarchy is not None:
+        hierarchy = oneflow_api.Size(tuple(hierarchy))
     scope = scope_util.MakeScope(
         lambda old_scope, builder: builder.BuildScopeWithNewParallelDesc(
-            old_scope, device_tag, machine_device_ids
+            old_scope, device_tag, machine_device_ids, hierarchy
         )
     )
     return scope_util.ScopeContext(scope)
 
 
 @enable_if.condition(hob.in_global_mode)
-def GetGlobalModePlacementScope(device_tag, machine_device_ids):
+def GetGlobalModePlacementScope(device_tag, machine_device_ids, hierarchy=None):
     if isinstance(machine_device_ids, (list, tuple)) == False:
         machine_device_ids = [machine_device_ids]
     sess = session_ctx.GetDefaultSession()
+    if hierarchy is not None:
+        hierarchy = oneflow_api.Size(tuple(hierarchy))
 
     def BuildScope(old_scope, builder):
         return builder.BuildScopeWithNewParallelDesc(
-            old_scope, device_tag, machine_device_ids
+            old_scope, device_tag, machine_device_ids, hierarchy
         )
 
     scope_ctx = scope_util.ScopeContext(scope_util.MakeScope(BuildScope))

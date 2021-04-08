@@ -17,6 +17,16 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp) {
+  *GetBlobDesc4BnInOp("acc") = *GetBlobDesc4BnInOp("one");
+  GetBlobDesc4BnInOp("acc")->mut_shape() = Shape({1LL});
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 void AccTickOp::InitFromOpConf() {
   CHECK(op_conf().has_acc_tick_conf());
 
@@ -24,20 +34,26 @@ void AccTickOp::InitFromOpConf() {
   EnrollOutputBn("acc", false);
 }
 
-Maybe<void> AccTickOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  *GetBlobDesc4BnInOp("acc") = *GetBlobDesc4BnInOp("one");
-  GetBlobDesc4BnInOp("acc")->mut_shape() = Shape({1LL});
-  return Maybe<void>::Ok();
+Maybe<void> AccTickOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(BlobDesc4BnInOp);
 }
 
-Maybe<void> AccTickOp::InferOutputBlobTimeShape(
-    std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
-    const ParallelContext* parallel_ctx, Shape* time_shape) const {
+Maybe<void> AccTickOp::InferOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  return InferBlobDescs(GetBlobDesc4BnInOp);
+}
+
+Maybe<void> AccTickOp::InferOpTimeShape(
+    const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
+    std::shared_ptr<const Shape>* time_shape) const {
   const int32_t max_acc_num = op_conf().acc_tick_conf().max_acc_num();
-  CHECK_EQ_OR_RETURN(GetTimeShape4BnInOp("one")->elem_cnt() % max_acc_num, 0);
-  *time_shape = Shape({GetTimeShape4BnInOp("one")->elem_cnt() / max_acc_num});
+  CHECK_EQ_OR_RETURN(JUST(GetTimeShape4BnInOp("one"))->elem_cnt() % max_acc_num, 0);
+  std::shared_ptr<Shape> op_time_shape(
+      new Shape({JUST(GetTimeShape4BnInOp("one"))->elem_cnt() / max_acc_num}));
+  *time_shape = op_time_shape;
   return Maybe<void>::Ok();
 }
 

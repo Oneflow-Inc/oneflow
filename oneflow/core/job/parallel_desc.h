@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/common/shape.h"
 
 namespace oneflow {
 
@@ -70,6 +71,7 @@ class ParallelDesc final {
 
   Maybe<void> GetParallelContext(ParallelContext* parallel_ctx, int64_t machine_id,
                                  int64_t device_id) const;
+  std::shared_ptr<Shape> hierarchy() const { return hierarchy_; }
 
   // Setters
   void set_device_type(DeviceType device_type);
@@ -96,6 +98,8 @@ class ParallelDesc final {
   ParallelDesc() : symbol_id_(Error::SymbolIdUninitialized()) {}
   ParallelDesc(int64_t symbol_id) : symbol_id_(symbol_id) {}
   void ClearUp();
+  Maybe<void> SetMachineIdAndDeviceIdsByParsingDeviceName(const std::string& device_name,
+                                                          size_t cols);
   Maybe<void> SanityCheck();
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
   bool EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const;
@@ -103,6 +107,7 @@ class ParallelDesc final {
   Maybe<int64_t> symbol_id_;
   DeviceType device_type_;
   ParallelConf parallel_conf_;
+  std::shared_ptr<Shape> hierarchy_;
   std::vector<int64_t> sorted_machine_ids_;
   std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>
       machine_id2sorted_dev_phy_ids_;
@@ -145,6 +150,8 @@ struct hash<oneflow::ParallelDesc> {
       ret ^= machine_id << shift_roundtrip << shift;
       ret ^= pr.sorted_dev_phy_ids(machine_id).size() << shift;
     }
+    const auto& shape_hash = std::hash<oneflow::Shape>();
+    ret ^= shape_hash(*pr.hierarchy());
     return hash<size_t>()(ret);
   }
 };
