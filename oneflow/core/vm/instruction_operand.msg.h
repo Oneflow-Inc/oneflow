@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/mirrored_object_id.msg.h"
+#include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
 namespace vm {
@@ -85,15 +86,6 @@ FLAT_MSG_BEGIN(InstructionOperand);
     FLAT_MSG_ONEOF_FIELD(bool, bool_operand));
 FLAT_MSG_END(InstructionOperand);
 // clang-format on
-
-// physical instruction operand
-class PhyInstrOperand {
- public:
-  virtual ~PhyInstrOperand() = default;
-
- protected:
-  PhyInstrOperand() = default;
-};
 
 }  // namespace vm
 }  // namespace oneflow
