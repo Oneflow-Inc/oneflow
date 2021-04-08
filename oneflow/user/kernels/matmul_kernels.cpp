@@ -65,8 +65,9 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
     } else {
       beta = GetZeroVal<T>();
     }
-    NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k, GetOneVal<T>(),
-                                       a->dptr<T>(), b->dptr<T>(), beta, out->mut_dptr<T>());
+    NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
+                                       static_cast<T>(ctx->Attr<double>("alpha")), a->dptr<T>(),
+                                       b->dptr<T>(), beta, out->mut_dptr<T>());
   }
 };
 
@@ -120,8 +121,9 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
     }
     const float16 beta = has_add_to_output ? GetOneVal<float16>() : GetZeroVal<float16>();
     NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
-                                            GetOneVal<float16>(), a->dptr<float16>(),
-                                            b->dptr<float16>(), beta, out->mut_dptr<float16>());
+                                            static_cast<float16>(ctx->Attr<double>("alpha")),
+                                            a->dptr<float16>(), b->dptr<float16>(), beta,
+                                            out->mut_dptr<float16>());
   }
 };
 
@@ -168,8 +170,9 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
     size_t batch_size = a->shape().Count(0, num_axes - 2);
     T** buf_dptr = reinterpret_cast<T**>(tmp_buf->mut_dptr<void>());
     NewKernelUtil<device_type>::OFBatchedGemm(ctx->device_ctx(), trans_a, trans_b, batch_size, m, n,
-                                              k, GetOneVal<T>(), a->dptr<T>(), b->dptr<T>(), beta,
-                                              out->mut_dptr<T>(), buf_dptr);
+                                              k, static_cast<T>(ctx->Attr<double>("alpha")),
+                                              a->dptr<T>(), b->dptr<T>(), beta, out->mut_dptr<T>(),
+                                              buf_dptr);
   }
 };
 
@@ -233,8 +236,9 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
     float16** buf_dptr = reinterpret_cast<float16**>(tmp_buf->mut_dptr<void>());
     const float16 beta = has_add_to_output ? GetOneVal<float16>() : GetZeroVal<float16>();
     NewKernelUtil<DeviceType::kGPU>::OFBatchedGemm(
-        ctx->device_ctx(), trans_a, trans_b, batch_size, m, n, k, GetOneVal<float16>(),
-        a->dptr<float16>(), b->dptr<float16>(), beta, out->mut_dptr<float16>(), buf_dptr);
+        ctx->device_ctx(), trans_a, trans_b, batch_size, m, n, k,
+        static_cast<float16>(ctx->Attr<double>("alpha")), a->dptr<float16>(), b->dptr<float16>(),
+        beta, out->mut_dptr<float16>(), buf_dptr);
   }
 };
 
