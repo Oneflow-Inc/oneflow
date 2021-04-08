@@ -55,7 +55,6 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_to_fixed")
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
       CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 && in_tensor->shape().elem_cnt() > 0);
       int64_t batch_size = in_tensor->shape().elem_cnt();
       int64_t target_width = ctx->Attr<int64_t>("target_width");
@@ -63,12 +62,10 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_to_fixed")
       int64_t channels = ctx->Attr<int64_t>("channels");
 
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_tensor->mut_data_type() = ctx->Attr<DataType>("data_type");
       *out_tensor->mut_shape() = Shape({batch_size, target_height, target_width, channels});
       out_tensor->set_is_dynamic(in_tensor->is_dynamic());
 
       user_op::TensorDesc* scale_tensor = ctx->TensorDesc4ArgNameAndIndex("scale", 0);
-      *scale_tensor->mut_data_type() = DataType::kFloat;
       *scale_tensor->mut_shape() = Shape({batch_size, 2});
       scale_tensor->set_is_dynamic(in_tensor->is_dynamic());
 
@@ -76,6 +73,15 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_to_fixed")
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_tensor->mut_data_type() = ctx->Attr<DataType>("data_type");
+      user_op::TensorDesc* scale_tensor = ctx->TensorDesc4ArgNameAndIndex("scale", 0);
+      *scale_tensor->mut_data_type() = DataType::kFloat;
       return Maybe<void>::Ok();
     });
 
@@ -112,21 +118,28 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_keep_aspect_ratio")
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      CHECK_OR_RETURN(in_desc->data_type() == DataType::kTensorBuffer);
       CHECK_OR_RETURN(in_desc->shape().NumAxes() == 1 && in_desc->shape().At(0) > 0);
       user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out_desc->mut_shape() = in_desc->shape();
-      *out_desc->mut_data_type() = DataType::kTensorBuffer;
       user_op::TensorDesc* size_desc = ctx->TensorDesc4ArgNameAndIndex("size", 0);
       *size_desc->mut_shape() = in_desc->shape();
-      *size_desc->mut_data_type() = DataType::kTensorBuffer;
       user_op::TensorDesc* scale_desc = ctx->TensorDesc4ArgNameAndIndex("scale", 0);
       *scale_desc->mut_shape() = in_desc->shape();
-      *scale_desc->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      CHECK_OR_RETURN(in_desc->data_type() == DataType::kTensorBuffer);
+      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_desc->mut_data_type() = DataType::kTensorBuffer;
+      user_op::TensorDesc* size_desc = ctx->TensorDesc4ArgNameAndIndex("size", 0);
+      *size_desc->mut_data_type() = DataType::kTensorBuffer;
+      user_op::TensorDesc* scale_desc = ctx->TensorDesc4ArgNameAndIndex("scale", 0);
+      *scale_desc->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     });
 
