@@ -182,6 +182,9 @@ jobs:
         run: |
           set -x
           cache_parent_dir=$(dirname ${ci_tmp_dir})
+          if [ "$cache_parent_dir" == "/" ] || [ -z "$cache_parent_dir" ]; then
+            exit 1
+          fi
           docker run --rm -v $cache_parent_dir:$cache_parent_dir busybox rm -rf ${ci_tmp_dir}
       - name: Upload wheel via SSH
         if: env.is_built != '1' && matrix.test_suite != 'mac'
