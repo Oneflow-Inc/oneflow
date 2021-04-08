@@ -18,6 +18,9 @@ from typing import List
 import collections.abc as container_abcs
 from itertools import repeat
 
+import oneflow as flow
+import oneflow.python.framework.runtime_mode as rt_mode
+
 
 def _ntuple(n):
     def parse(x):
@@ -53,3 +56,41 @@ def _list_with_default(out_size, defaults):
     return [
         v if v is not None else d for v, d in zip(out_size, defaults[-len(out_size) :])
     ]
+
+
+def _wrapper(func):
+    def wrapped_func(*args):
+        args = list(args)
+        for i in range(len(args)):
+            arg = args[i]
+            if isinstance(arg, flow.Tensor):
+                if not arg.is_determined:
+                    arg.determine()
+                args[i] = arg._local_or_consistent_tensor
+
+        out_list = func(*args)
+        for i, out in enumerate(out_list):
+            tensor = flow.Tensor(*out.shape)
+            tensor._local_or_consistent_tensor = out
+            tensor._undetermined_tensor = None
+            out_list[i] = tensor
+
+        return out_list
+
+    return wrapped_func
+
+
+@_wrapper
+def op_expr_call(self, *args):
+    # TODO(jianhao): remove hardcoded cpu here
+    with flow.scope.placement("gpu", "0:0"):
+        return self.apply(args)
+
+
+def global_function_or_identity(*args, **kwargs):
+    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        return flow.global_function(*args, **kwargs)
+    else:
+        assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
+        identity_decorator = lambda func: func
+        return identity_decorator
