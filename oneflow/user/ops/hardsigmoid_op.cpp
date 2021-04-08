@@ -26,7 +26,6 @@ REGISTER_USER_OP("hardsigmoid")
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       *out_shape = *in_shape;
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -37,6 +36,10 @@ REGISTER_USER_OP("hardsigmoid")
             .Split(user_op::OpArg("out", 0), i)
             .Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -61,6 +64,11 @@ REGISTER_USER_OP("hardsigmoid_grad")
             .Split(user_op::OpArg("dx", 0), i)
             .Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("x", 0), *ctx->Dtype4ArgNameAndIndex("dy", 0));
+      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
       return Maybe<void>::Ok();
     });
 
