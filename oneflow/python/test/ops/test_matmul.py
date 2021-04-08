@@ -37,6 +37,7 @@ def compare_with_tensorflow(
     data_type,
     fuse_add_to_output,
     enable_tf32,
+    alpha,
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -72,6 +73,7 @@ def compare_with_tensorflow(
                     flow.cast(b, dtype=flow.float16),
                     transpose_a,
                     transpose_b,
+                    alpha,
                 )
                 c = flow.get_variable(
                     "c",
@@ -84,7 +86,7 @@ def compare_with_tensorflow(
                     out + flow.cast(c, dtype=flow.float16), dtype=flow.float
                 )
             else:
-                out = flow.matmul(a, b, transpose_a, transpose_b)
+                out = flow.matmul(a, b, transpose_a, transpose_b, alpha)
                 c = flow.get_variable(
                     "c",
                     shape=out.shape,
@@ -121,6 +123,7 @@ def compare_with_tensorflow(
             b = tf.cast(b, tf.float16)
             c = tf.cast(c, tf.float16)
         tf_out = tf.matmul(a, b, transpose_a, transpose_b)
+        tf_out = tf_out * alpha
         tf_out = tf_out + c
         if data_type == "float16":
             tf_out = tf.cast(tf_out, tf.float32)
@@ -185,6 +188,7 @@ def gen_arg_list():
     arg_dict["data_type"] = ["float16", "float32", "double"]
     arg_dict["fuse_add_to_output"] = [True, False]
     arg_dict["enable_tf32"] = [True, False]
+    arg_dict["alpha"] = [1.5, 1]
     matmul_args = filter_args(GenArgList(arg_dict))
 
     arg_dict.clear()
@@ -196,6 +200,7 @@ def gen_arg_list():
     arg_dict["data_type"] = ["float16", "float32", "double"]
     arg_dict["fuse_add_to_output"] = [True, False]
     arg_dict["enable_tf32"] = [True, False]
+    arg_dict["alpha"] = [2.0]
     batch_matmul_args = filter_args(GenArgList(arg_dict))
     return matmul_args + batch_matmul_args
 
