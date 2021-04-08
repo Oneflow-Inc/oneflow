@@ -882,6 +882,11 @@ def set_secondary_lr(func_desc, value):
     func_desc.job_config_proto.mutable_train_conf().set_secondary_lr(value)
 
 
+@oneflow_function_config("train.num_gradient_accumulation_steps")
+def set_num_gradient_accumulation_steps(func_desc, value):
+    func_desc.job_config_proto.set_num_gradient_accumulation_steps(value)
+
+
 @oneflow_function_config("default_placement_scope")
 def set_default_placement(func_desc, value):
     r"""Set the default placement for job
