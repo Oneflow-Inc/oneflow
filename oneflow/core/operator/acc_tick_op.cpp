@@ -67,6 +67,16 @@ Maybe<void> AccTickOp::InferOpTimeShape(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> AccTickOp::GetSbpSignatures(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Broadcast(input_bns())
+      .Broadcast(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  return Maybe<void>::Ok();
+}
+
 REGISTER_OP(OperatorConf::kAccTickConf, AccTickOp);
 REGISTER_TICK_TOCK_OP(OperatorConf::kAccTickConf);
 
