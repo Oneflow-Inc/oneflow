@@ -32,7 +32,6 @@ if (WITH_TENSORRT)
 endif()
 
 if (BUILD_CUDA)
-  set(CUDA_SEPARABLE_COMPILATION ON)
   find_package(CUDA REQUIRED)
   add_definitions(-DWITH_CUDA)
   foreach(cuda_lib_path ${CUDA_LIBRARIES})

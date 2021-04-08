@@ -11,10 +11,19 @@ on:
         description: "python_version"
         default: "3.6,3.7,3.8"
         required: false
-      package_names:
-        description: "package names to build"
+      compute_platforms:
+        description: ""
         default: "cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"
         required: false
+      package_name:
+        description: ""
+        default: "oneflow"
+        required: false
+      release_version:
+        description: ""
+        default: ""
+        required: false
+
 jobs:
   staging_release:
     name: Staging Release
@@ -25,7 +34,7 @@ jobs:
       fail-fast: false
       max-parallel: 5
       matrix:
-        release_version:
+        compute_platform:
           [
             "cpu",
             "cu100",
@@ -51,52 +60,52 @@ jobs:
       - name: Set environment variables
         env:
           python_version: ${{ github.event.inputs.python_version }}
-          package_names: ${{ github.event.inputs.package_names }}
+          compute_platforms: ${{ github.event.inputs.compute_platforms }}
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
         run: |
           set -x
-          if [ "${{ matrix.release_version }}" == "cpu" ]; then
+          if [ "${{ matrix.compute_platform }}" == "cpu" ]; then
               cuda_version="10.2"
               extra_flags="--cpu"
               cache_dir_name="cpu"
-          elif [ "${{ matrix.release_version }}" == "cu100" ]; then
+          elif [ "${{ matrix.compute_platform }}" == "cu100" ]; then
               cuda_version="10.0"
               cache_dir_name="10.0"
-          elif [ "${{ matrix.release_version }}" == "cu101" ]; then
+          elif [ "${{ matrix.compute_platform }}" == "cu101" ]; then
               cuda_version="10.1"
               cache_dir_name="10.1"
-          elif [ "${{ matrix.release_version }}" == "cu102" ]; then
+          elif [ "${{ matrix.compute_platform }}" == "cu102" ]; then
               cuda_version="10.2"
               cache_dir_name="10.2"
-          elif [ "${{ matrix.release_version }}" == "cu110" ]; then
+          elif [ "${{ matrix.compute_platform }}" == "cu110" ]; then
               cuda_version="11.0"
               cache_dir_name="11.0"
-          elif [ "${{ matrix.release_version }}" == "cu111" ]; then
+          elif [ "${{ matrix.compute_platform }}" == "cu111" ]; then
               cuda_version="11.1"
               cache_dir_name="11.1"
-          elif [ "${{ matrix.release_version }}" == "cu100_xla" ]; then
+          elif [ "${{ matrix.compute_platform }}" == "cu100_xla" ]; then
               cuda_version="10.0"
               extra_flags="--xla"
               cache_dir_name="10.0-xla"
-          elif [ "${{ matrix.release_version }}" == "cu101_xla" ]; then
+          elif [ "${{ matrix.compute_platform }}" == "cu101_xla" ]; then
               cuda_version="10.1"
               extra_flags="--xla"
               cache_dir_name="10.1-xla"
-          elif [ "${{ matrix.release_version }}" == "cu102_xla" ]; then
+          elif [ "${{ matrix.compute_platform }}" == "cu102_xla" ]; then
               cuda_version="10.2"
               extra_flags="--xla"
               cache_dir_name="10.2-xla"
-          elif [ "${{ matrix.release_version }}" == "cu110_xla" ]; then
+          elif [ "${{ matrix.compute_platform }}" == "cu110_xla" ]; then
               cuda_version="11.0"
               extra_flags="--xla"
               cache_dir_name="11.0-xla"
-          elif [ "${{ matrix.release_version }}" == "cu111_xla" ]; then
+          elif [ "${{ matrix.compute_platform }}" == "cu111_xla" ]; then
               cuda_version="11.1"
               extra_flags="--xla"
               cache_dir_name="11.1-xla"
           else
-              echo "Release version: ${{ matrix.release_version }} not supported"
+              echo "Release version: ${{ matrix.compute_platform }} not supported"
               exit 1
           fi
 
@@ -108,10 +117,13 @@ jobs:
 
           python3 ci/build/ensure_img.py
           python_version=${python_version:-"3.6,3.7,3.8"}
-          package_names=${package_names:-"cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"}
+          compute_platforms=${compute_platforms:-"cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"}
+          if [ ! -z "${{ matrix.package_name }}"] && [ "${{ matrix.package_name }}" != "oneflow" ]; then
+              extra_flags+=" --package_name=${{ matrix.package_name }}"
+          fi
           echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
           echo "python_version=${python_version}" >> $GITHUB_ENV
-          echo "package_names=${package_names}" >> $GITHUB_ENV
+          echo "compute_platforms=${compute_platforms}" >> $GITHUB_ENV
           echo "extra_flags=${extra_flags}" >> $GITHUB_ENV
 
           tmp_dir=$HOME/ci-tmp-rel
@@ -122,24 +134,37 @@ jobs:
           echo "wheelhouse_dir=${tmp_dir}/wheelhouse" >> $GITHUB_ENV
 
           git_branch=${GITHUB_REF##*/}
-          oss_branch_dir=branch/${git_branch}
+          oss_branch_dir=branch/${git_branch}/${{ matrix.compute_platform }}
           oss_dir=${oss_branch_dir}/${GITHUB_SHA}
           echo "oss_branch_dir=${oss_branch_dir}" >> $GITHUB_ENV
           echo "oss_dir=${oss_dir}" >> $GITHUB_ENV
           echo "git_branch=${git_branch}" >> $GITHUB_ENV
 
-          $(python3 tools/oss_file_exist.py --bucket oneflow-staging --path ${oss_dir}/oneflow_${{ matrix.release_version }})
+          $(python3 tools/oss_file_exist.py --bucket oneflow-staging --path ${oss_dir}/oneflow)
           echo "is_built=${OSS_FILE_EXISTED}" >> $GITHUB_ENV
+
+          container_name=release-run-id-${{ github.run_id }}-${{ matrix.compute_platform }}
+          echo "container_name=${container_name}" >> $GITHUB_ENV
+          extra_docker_args+=" --name ${container_name}"
+          # if release_version not given, it is a nightly build
+          if [ -z "${{ github.event.inputs.release_version }}" ]; then
+            extra_docker_args+=" --env ONEFLOW_RELEASE_NIGHTLY=1"
+          else
+            extra_docker_args+=" --env ONEFLOW_RELEASE_VERSION=${{ github.event.inputs.release_version }}"
+          fi
+          echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
+
       - name: Build OneFlow
-        if: env.is_built != '1' && contains(env.package_names, matrix.release_version)
+        if: env.is_built != '1' && contains(env.compute_platforms, matrix.compute_platform)
         uses: ./.github/actions/whl
         with:
           tmp_dir: ${ci_tmp_dir}
           cuda_version: ${cuda_version}
           python_version: ${python_version}
           extra_flags: ${extra_flags}
+          extra_docker_args: $extra_docker_args
       - name: Upload wheel
-        if: env.is_built != '1' && contains(env.package_names, matrix.release_version)
+        if: env.is_built != '1' && contains(env.compute_platforms, matrix.compute_platform)
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${wheelhouse_dir}
@@ -147,7 +172,7 @@ jobs:
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update pip index
-        if: env.is_built != '1' && contains(env.package_names, matrix.release_version)
+        if: env.is_built != '1' && contains(env.compute_platforms, matrix.compute_platform)
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
@@ -156,15 +181,15 @@ jobs:
           python3 -m pip install oss2 beautifulsoup4 --user
           python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${oss_branch_dir}/index.html --index_key=${oss_dir}/index.html
       - name: Upload bin
-        if: env.is_built != '1' && contains(env.package_names, matrix.release_version)
+        if: env.is_built != '1' && contains(env.compute_platforms, matrix.compute_platform)
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${bin_dir}
-          oss_dst_path: oss://oneflow-staging/${oss_dir}/bin/${{ matrix.release_version }}
+          oss_dst_path: oss://oneflow-staging/${oss_dir}/bin/${{ matrix.compute_platform }}
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update API docs
-        if: github.ref == 'refs/heads/master' && matrix.release_version == 'cu102' && contains(env.package_names, matrix.release_version)
+        if: github.ref == 'refs/heads/master' && matrix.compute_platform == 'cu102' && contains(env.compute_platforms, matrix.compute_platform)
         env:
           READTHEDOCS_TOKEN: ${{ secrets.READTHEDOCS_TOKEN }}
         run: |

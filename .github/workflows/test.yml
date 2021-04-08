@@ -36,11 +36,15 @@ jobs:
     if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - uses: actions/checkout@v2
-      - name: Check license and format (please run 'make of_format' if failed)
+      - name: Check license (please run 'make of_format' if failed)
+        run: |
+          python3 ci/check/run_license_format.py -i oneflow -c
+      - name: Check license C++/CUDA format (please run 'make of_format' if failed)
+        run: |
+          python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
+      - name: Check Python format (please run 'make of_format' if failed)
         run: |
           python3 -m pip install black==19.10b0
-          python3 ci/check/run_license_format.py -i oneflow -c
-          python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
           python3 ci/check/run_py_format.py --source_dir $PWD
 
   wait_for_gpu_slot:
@@ -83,7 +87,7 @@ jobs:
             allow_fail: false
           - test_suite: cpu
             cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=ON --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu
+            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=ON --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu --gcc7
             os: [self-hosted, linux, release]
             allow_fail: false
           - test_suite: xla
@@ -125,7 +129,7 @@ jobs:
           fi
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
           extra_docker_args=""
-          container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
+          container_name=pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${test_suite}-build
           echo "container_name=${container_name}" >> $GITHUB_ENV
           extra_docker_args+=" --name ${container_name}"
           if [ "$test_suite" == "cpu" ]; then
@@ -140,6 +144,8 @@ jobs:
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
         if: env.is_built != '1'
       - name: Build OneFlow
         if: env.is_built != '1' && matrix.test_suite != 'mac'
@@ -164,6 +170,18 @@ jobs:
         uses: ./.github/actions/mac-build
         env:
           CPATH: /Applications/Xcode_12.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
+      - name: Custom Op test (run by oneflow build docker)
+        if: matrix.test_suite == 'cpu' && env.is_built != '1' && matrix.test_suite != 'mac'
+        run: |
+          docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+            $extra_docker_args \
+            -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
+            oneflow-manylinux2014-cuda10.2:0.1 \
+            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && source scl_source enable devtoolset-7 && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
+      - name: Remove cache
+        if: ${{ failure() }}
+        run: |
+          docker run --rm -v $PWD:/p -w /p busybox rm -rf ${ci_tmp_dir}
       - name: Upload wheel via SSH
         if: env.is_built != '1' && matrix.test_suite != 'mac'
         uses: ./.github/actions/upload_ssh
@@ -194,14 +212,6 @@ jobs:
           oss_dst_path: oss://oneflow-staging/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/bin
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-      - name: Custom Op test (run by oneflow build docker)
-        if: matrix.test_suite == 'cpu' && env.is_built != '1' && matrix.test_suite != 'mac'
-        run: |
-          docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
-            $extra_docker_args \
-            -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
-            oneflow-manylinux2014-cuda10.2:0.1 \
-            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
       - name: Remove container
         if: always() && matrix.test_suite != 'mac'
         run: |
@@ -262,6 +272,8 @@ jobs:
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Download shared env
         uses: actions/download-artifact@v2
         with:
@@ -301,7 +313,7 @@ jobs:
           fi
 
           # set container_name
-          container_name=pr-${{ github.event.pull_request.number }}-${test_suite}-build
+          container_name=pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${test_suite}-test
           extra_docker_args+=" --name ${container_name}"
           echo "container_name=${container_name}" >> $GITHUB_ENV
 
@@ -341,6 +353,12 @@ jobs:
           oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/oneflow_temp
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      - name: Dry run test (run without runtime)
+        if: matrix.test_suite == 'cuda'
+        run: |
+          docker run $extra_docker_args \
+            oneflow-test:$USER \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/dry_run_test.sh"
       - name: Op test
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
         run: |

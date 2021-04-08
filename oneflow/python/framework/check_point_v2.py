@@ -29,7 +29,6 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.async_util as async_util
-import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
@@ -408,7 +407,6 @@ def _LogicalSliceAssign(
         )
 
     oneflow_api.deprecated.LogicalRun(BuildAssignInstruction)
-    oneflow_api.TryDisableBlobCache(ref_blob_object)
 
 
 def FeedValueToVariable(
@@ -473,7 +471,7 @@ def LoadVariables(
         else:
             if not ignore_mismatch:
                 raise RuntimeError('"{}" is not a variable name'.format(name))
-    oneflow_api.eager.Sync()
+    oneflow_api.eager.single_client.Sync()
 
 
 def _ForEachSlice(
@@ -569,7 +567,7 @@ def init_by_initializer_conf(
         pass
 
     if sync_between_multi_machine:
-        oneflow_api.eager.Sync()
+        oneflow_api.eager.single_client.Sync()
 
 
 def Init() -> None:
@@ -600,4 +598,4 @@ def Init() -> None:
             var_blob, var_conf.initializer, False, scope_symbol_id, var_conf.random_seed
         )
 
-    oneflow_api.eager.Sync()
+    oneflow_api.eager.single_client.Sync()

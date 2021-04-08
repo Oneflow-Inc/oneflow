@@ -24,6 +24,8 @@ bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& r
 }
 
 BlobDesc::BlobDesc(const Shape& shape, DataType dtype) : body_(shape, dtype), is_dynamic_(false) {}
+BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype)
+    : body_(shape, dtype), is_dynamic_(false) {}
 
 BlobDesc::BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
 

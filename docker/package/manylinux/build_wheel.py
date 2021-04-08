@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 import getpass
+import uuid
 
 
 def get_arg_env(env_var_name: str, mode="run"):
@@ -98,13 +99,21 @@ def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, bash_args, bash_wrap, dry
             bash_cmd = "PATH=/opt/python/cp37-cp37m/bin:$PATH\n" + bash_cmd
             f.write(bash_cmd)
             f.flush()
-            wrapper_f.write(
-                f"""{bash_wrap}
+            wrapped = f"""
+{bash_wrap}
 bash {bash_args} {f_name}
 """
-            )
+            wrapper_f.write(wrapped)
             wrapper_f.flush()
+
+            print("=" * 5 + f"bash_cmd: {f_name}" + "=" * 5)
             print(bash_cmd)
+            print("=" * 5 + f"bash_cmd: {f_name}" + "=" * 5)
+
+            print("=" * 5 + f"wrapped: {w_name}" + "=" * 5)
+            print(wrapped)
+            print("=" * 5 + f"wrapped: {w_name}" + "=" * 5)
+
             docker_cmd = f"{docker_cmd} -v /tmp:/host/tmp {img}"
             cmd = f"{docker_cmd} bash {bash_args} {w_name}"
             print(cmd)
@@ -282,6 +291,9 @@ if __name__ == "__main__":
         "--cuda_version", type=str, required=False, default="10.2",
     )
     parser.add_argument(
+        "--package_name", type=str, required=False, default="oneflow",
+    )
+    parser.add_argument(
         "--extra_oneflow_cmake_args", action="append", nargs="+", default=[]
     )
     parser.add_argument(
@@ -307,6 +319,8 @@ if __name__ == "__main__":
         "--use_system_proxy", default=False, action="store_true", required=False
     )
     parser.add_argument("--xla", default=False, action="store_true", required=False)
+    parser.add_argument("--gcc7", default=False, action="store_true", required=False)
+    parser.add_argument("--gcc9", default=False, action="store_true", required=False)
     parser.add_argument(
         "--use_aliyun_mirror", default=False, action="store_true", required=False
     )
@@ -314,6 +328,7 @@ if __name__ == "__main__":
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
     print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
+    assert args.package_name
     extra_oneflow_cmake_args = " ".join(
         [" ".join(l) for l in args.extra_oneflow_cmake_args]
     )
@@ -345,6 +360,11 @@ if __name__ == "__main__":
             user = getpass.getuser()
             versioned_img_tag = f"{img_prefix}:0.1"
             user_img_tag = f"{img_prefix}:{user}"
+            extra_docker_args = args.extra_docker_args
+            if "--name" not in extra_docker_args:
+                extra_docker_args += (
+                    f" --name run-by-{getpass.getuser()}-{str(uuid.uuid4())}"
+                )
             if args.custom_img_tag:
                 img_tag = args.custom_img_tag
                 skip_img = True
@@ -368,9 +388,14 @@ if __name__ == "__main__":
             if args.xla:
                 bash_args = "-l"
             bash_wrap = ""
-            if args.xla:
+            if args.xla or args.gcc7:
                 bash_wrap = """
 source scl_source enable devtoolset-7
+gcc --version
+"""
+            elif args.gcc9:
+                bash_wrap = """
+source scl_source enable devtoolset-9
 gcc --version
 """
             else:
@@ -384,9 +409,13 @@ gcc --version
                 sub_dir = cuda_version
                 if args.xla:
                     sub_dir += "-xla"
+                if args.gcc7:
+                    sub_dir += "-gcc7"
+                if args.gcc9:
+                    sub_dir += "-gcc9"
                 if args.cpu:
                     assert len(cuda_versions) == 1
-                    sub_dir = "cpu"
+                    sub_dir += "-cpu"
                 cache_dir = os.path.join(cache_dir, sub_dir)
             if args.skip_third_party == False:
                 build_third_party(
@@ -394,7 +423,7 @@ gcc --version
                     args.oneflow_src_dir,
                     cache_dir,
                     extra_oneflow_cmake_args,
-                    args.extra_docker_args,
+                    extra_docker_args,
                     bash_args,
                     bash_wrap,
                     args.dry,
@@ -404,23 +433,17 @@ gcc --version
             assert len(cuda_version_literal) == 3
             python_versions = args.python_version.split(",")
             python_versions = [pv.strip() for pv in python_versions]
-            package_name = None
-            if args.cpu:
-                package_name = "oneflow_cpu"
-            else:
-                package_name = f"oneflow_cu{cuda_version_literal}"
-                if args.xla:
-                    package_name += "_xla"
             for python_version in python_versions:
+                print("building for python version:", python_version)
                 build_oneflow(
                     img_tag,
                     args.oneflow_src_dir,
                     cache_dir,
                     extra_oneflow_cmake_args,
-                    args.extra_docker_args,
+                    extra_docker_args,
                     python_version,
                     args.skip_wheel,
-                    package_name,
+                    args.package_name,
                     args.wheel_house_dir,
                     bash_args,
                     bash_wrap,
