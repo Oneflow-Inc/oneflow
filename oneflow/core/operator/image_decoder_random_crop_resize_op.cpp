@@ -18,6 +18,10 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/scope.h"
 
+#ifdef WITH_CUDA
+#include <cuda.h>
+#endif  // WITH_CUDA
+
 namespace oneflow {
 
 namespace {
