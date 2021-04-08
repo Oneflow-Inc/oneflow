@@ -100,7 +100,8 @@ def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, bash_args, bash_wrap, dry
             f.write(bash_cmd)
             f.flush()
             wrapper_f.write(
-                f"""{bash_wrap}
+                f"""set -ex
+{bash_wrap}
 bash {bash_args} {f_name}
 """
             )
