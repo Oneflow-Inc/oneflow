@@ -99,7 +99,7 @@ def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, bash_args, bash_wrap, dry
             bash_cmd = "PATH=/opt/python/cp37-cp37m/bin:$PATH\n" + bash_cmd
             f.write(bash_cmd)
             f.flush()
-            wrapped = f"""set -ex
+            wrapped = f"""
 {bash_wrap}
 bash {bash_args} {f_name}
 """
