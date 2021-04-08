@@ -32,8 +32,9 @@ REGISTER_USER_OP("combined_margin_loss")
       user_op::TensorDesc* theta = ctx->TensorDesc4ArgNameAndIndex("theta", 0);
       CHECK_EQ_OR_RETURN(label->shape().At(0), x->shape().At(0));
       CHECK_GE_OR_RETURN(x->shape().NumAxes(), 2);
-      *ctx->TensorDesc4ArgNameAndIndex("y", 0) = *x;
-      *theta = *x;
+      *ctx->Shape4ArgNameAndIndex("y", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("y", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
+      *theta->mut_is_dynamic() = x->is_dynamic();
       *theta->mut_shape() = label->shape();
       return Maybe<void>::Ok();
     })
@@ -56,6 +57,11 @@ REGISTER_USER_OP("combined_margin_loss")
           .PartialSum(user_op::OpArg("theta", 0))
           .Build();
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      *ctx->Dtype4ArgNameAndIndex("theta", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("combined_margin_loss_grad")
@@ -74,7 +80,12 @@ REGISTER_USER_OP("combined_margin_loss_grad")
       CHECK_EQ_OR_RETURN(label->shape().At(0), dy->shape().At(0));
       CHECK_EQ_OR_RETURN(label->shape().At(0), theta->shape().At(0));
       CHECK_GE_OR_RETURN(dy->shape().NumAxes(), 2);
-      *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *dy;
+      *ctx->Shape4ArgNameAndIndex("dx", 0) = *ctx->Shape4ArgNameAndIndex("dy", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = *ctx->IsDynamic4ArgNameAndIndex("dy", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

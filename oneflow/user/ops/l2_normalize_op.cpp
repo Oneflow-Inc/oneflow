@@ -50,6 +50,11 @@ REGISTER_USER_OP("l2_normalize")
         }
       }
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("square_x_sum", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("l2_normalize_grad")
@@ -93,6 +98,13 @@ REGISTER_USER_OP("l2_normalize_grad")
               .Build();
         }
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("y", 0), *ctx->Dtype4ArgNameAndIndex("dy", 0));
+      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("y", 0),
+                         *ctx->Dtype4ArgNameAndIndex("square_x_sum", 0));
+      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
       return Maybe<void>::Ok();
     });
 
