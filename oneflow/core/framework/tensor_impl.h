@@ -42,10 +42,6 @@ namespace eager {
 class EagerBlobObject;
 }
 
-namespace vm {
-class MirroredObject;
-}
-
 namespace one {
 
 class Tensor;
