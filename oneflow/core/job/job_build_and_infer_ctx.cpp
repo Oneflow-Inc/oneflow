@@ -812,12 +812,12 @@ Maybe<void> JobBuildAndInferCtx::CheckJobConf() const {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CheckOpScope() const {
-   for (const OperatorConf& op_conf : job_->net().op()) {
+Maybe<void> JobBuildAndInferCtx::CheckOpScope() const {
+  for (const OperatorConf& op_conf : job_->net().op()) {
     CHECK_OR_RETURN(op_conf.has_scope_symbol_id())
         << " ERROR! op_name: " << op_conf.name()
-        << " has NOT set scope(scope_symbol_id) in job: " << job_->job_conf().job_name() << " net. \n op_conf = "
-        << op_conf.DebugString();
+        << " has NOT set scope(scope_symbol_id) in job: " << job_->job_conf().job_name()
+        << " net. \n op_conf = " << op_conf.DebugString();
   }
 }
 
