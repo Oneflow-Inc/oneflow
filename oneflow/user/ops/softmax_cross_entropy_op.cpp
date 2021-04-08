@@ -33,15 +33,15 @@ REGISTER_USER_OP("softmax_cross_entropy")
       CHECK_EQ_OR_RETURN(prediction_desc->is_dynamic(), label_desc->is_dynamic());
       CHECK_GE_OR_RETURN(prediction_desc->shape().NumAxes(), 2);
       CHECK_EQ_OR_RETURN(label_desc->shape(), prediction_desc->shape());
-      CHECK_EQ_OR_RETURN(label_desc->data_type(), prediction_desc->data_type());
       const int64_t num_out_axes = prediction_desc->shape().NumAxes() - 1;
       DimVector out_dim_vector;
       FOR_RANGE(int64_t, i, 0, num_out_axes) {
         out_dim_vector.push_back(prediction_desc->shape().At(i));
       }
-      *ctx->TensorDesc4ArgNameAndIndex("prob", 0) = *prediction_desc;
+      *ctx->Shape4ArgNameAndIndex("prob", 0) = *ctx->Shape4ArgNameAndIndex("prediction", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("prob", 0) = *ctx->IsDynamic4ArgNameAndIndex("prediction", 0);
       user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_desc = *prediction_desc;
+      *out_desc->mut_is_dynamic() = prediction_desc->is_dynamic();
       *out_desc->mut_shape() = Shape(out_dim_vector);
       return Maybe<void>::Ok();
     })
@@ -57,6 +57,15 @@ REGISTER_USER_OP("softmax_cross_entropy")
             .Split(user_op::OpArg("out", 0), i)
             .Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
+      const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      CHECK_EQ_OR_RETURN(label_desc->data_type(), prediction_desc->data_type());
+      *ctx->Dtype4ArgNameAndIndex("prob", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
+      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_desc->mut_data_type() = prediction_desc->data_type();
       return Maybe<void>::Ok();
     });
 
@@ -76,9 +85,9 @@ REGISTER_USER_OP("softmax_cross_entropy_grad")
         CHECK_EQ_OR_RETURN(dy_desc->shape().At(i), label_desc->shape().At(i));
       }
       CHECK_EQ_OR_RETURN(label_desc->shape(), prob_desc->shape());
-      CHECK_EQ_OR_RETURN(label_desc->data_type(), prob_desc->data_type());
-      CHECK_EQ_OR_RETURN(dy_desc->data_type(), prob_desc->data_type());
-      *ctx->TensorDesc4ArgNameAndIndex("prediction_diff", 0) = *prob_desc;
+      *ctx->Shape4ArgNameAndIndex("prediction_diff", 0) = *ctx->Shape4ArgNameAndIndex("prob", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) =
+          *ctx->IsDynamic4ArgNameAndIndex("prob", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -92,6 +101,15 @@ REGISTER_USER_OP("softmax_cross_entropy_grad")
             .Split(user_op::OpArg("prediction_diff", 0), i)
             .Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* prob_desc = ctx->TensorDesc4ArgNameAndIndex("prob", 0);
+      const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      CHECK_EQ_OR_RETURN(label_desc->data_type(), prob_desc->data_type());
+      CHECK_EQ_OR_RETURN(dy_desc->data_type(), prob_desc->data_type());
+      *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = *ctx->Dtype4ArgNameAndIndex("prob", 0);
       return Maybe<void>::Ok();
     });
 

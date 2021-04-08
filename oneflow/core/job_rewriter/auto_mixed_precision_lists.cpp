@@ -51,12 +51,15 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "normalization",
                               "normalization_add_relu",
                               "sparse_softmax_cross_entropy",
-                              "fused_tril_scale_softmax_mask_scale"};
+                              "fused_tril_scale_softmax_mask_scale",
+                              "fused_bias_add_gelu",
+                              "fused_bias_add_mask_scale",
+                              "acc"};
   return gray_list;
 }
 
 const AMPList& AutoMixedPrecisionLists::ClearList() {
-  // TODO(niuchong): identity, tuple_identity?
+  // TODO(niuchong): tuple_identity
   static AMPList clear_list = {"gather",
                                "max_pool_1d",
                                "max_pool_2d",
@@ -78,7 +81,10 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "cast_to_static_shape",
                                "parallel_cast",
                                "hierarchical_parallel_cast",
-                               "hierarchical_parallel_cast_like"};
+                               "hierarchical_parallel_cast_like",
+                               "repeat",
+                               "unpack",
+                               "pack"};
 
   return clear_list;
 }
