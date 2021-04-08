@@ -24,11 +24,6 @@ Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(*cond_shape, *ctx->Shape4ArgNameAndIndex("x", 0));
   CHECK_EQ_OR_RETURN(*cond_shape, *ctx->Shape4ArgNameAndIndex("y", 0));
   *ctx->Shape4ArgNameAndIndex("out", 0) = *cond_shape;
-  DataType cond_dtype = *ctx->Dtype4ArgNameAndIndex("condition", 0);
-  CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
-  DataType x_dtype = *ctx->Dtype4ArgNameAndIndex("x", 0);
-  CHECK_EQ_OR_RETURN(x_dtype, *ctx->Dtype4ArgNameAndIndex("y", 0));
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = x_dtype;
   return Maybe<void>::Ok();
 }
 
@@ -64,6 +59,14 @@ REGISTER_USER_OP("where")
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("condition", 0);
       cond_arg_modifier->set_requires_grad(false);
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      DataType cond_dtype = *ctx->Dtype4ArgNameAndIndex("condition", 0);
+      CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
+      DataType x_dtype = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      CHECK_EQ_OR_RETURN(x_dtype, *ctx->Dtype4ArgNameAndIndex("y", 0));
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = x_dtype;
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetWhereSbpSignatures);
 

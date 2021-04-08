@@ -36,18 +36,20 @@ REGISTER_CPU_ONLY_USER_OP("OneRecReader")
       CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
       local_batch_size /= parallel_num;
       *out_tensor->mut_shape() = Shape({local_batch_size});
-      *out_tensor->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int32_t batch_size = ctx->Attr<int32_t>("batch_size");
       *out_tensor->mut_shape() = Shape({batch_size});
-      *out_tensor->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     });
 
