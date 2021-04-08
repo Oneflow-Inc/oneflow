@@ -234,6 +234,8 @@ jobs:
             ln -s build.cuda.env build.cuda_op.env
             rm -f build.cuda_eager.env
             ln -s build.cuda.env build.cuda_eager.env
+          fi
+          if [ "$test_suite" == "cuda" ]; then
             rm -f build.cpu_eager.env
             ln -s build.cpu.env build.cpu_eager.env
           fi
