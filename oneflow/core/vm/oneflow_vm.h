@@ -31,6 +31,7 @@ class OneflowVM final {
   ~OneflowVM();
 
   vm::VirtualMachine* mut_vm() { return vm_.Mutable(); }
+  const vm::VirtualMachine& vm() const { return *vm_; }
 
  private:
   void Loop();

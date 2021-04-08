@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/object.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_storage.h"
+#include "oneflow/core/framework/vm_local_dep_object.h"
 
 namespace oneflow {
 
@@ -39,6 +40,10 @@ class DType;
 
 namespace eager {
 class EagerBlobObject;
+}
+
+namespace vm {
+class MirroredObject;
 }
 
 namespace one {
@@ -194,19 +199,12 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
                           const std::shared_ptr<const DType>& dtype,
                           const std::shared_ptr<const Device>& device, bool requires_grad,
-                          bool is_leaf, bool retain_grad)
-      : EagerMirroredTensorImpl(shape, dtype, device, std::make_shared<TensorStorage>(),
-                                requires_grad, is_leaf, retain_grad) {}
+                          bool is_leaf, bool retain_grad);
   EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
                           const std::shared_ptr<const DType>& dtype,
                           const std::shared_ptr<const Device>& device,
                           const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad,
-                          bool is_leaf, bool retain_grad)
-      : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
-        shape_(shape),
-        dtype_(dtype),
-        tensor_storage_(tensor_storage),
-        blob_object_id_(Error::ValueError("blob_object_id is not initialized")) {}
+                          bool is_leaf, bool retain_grad);
   ~EagerMirroredTensorImpl() override = default;
 
   // Getters
@@ -216,12 +214,10 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object() const {
     return eager_blob_object_;
   }
-  Maybe<int64_t> blob_object_id() const { return blob_object_id_; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
-  void set_blob_object_id(int64_t blob_object_id) { blob_object_id_ = blob_object_id; }
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
   // Getters to be deprecated
@@ -242,7 +238,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   std::shared_ptr<compatible_py::BlobObject> blob_object_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;
-  Maybe<int64_t> blob_object_id_;
+  VmLocalDepObject vm_local_dep_object_;
 };
 
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
