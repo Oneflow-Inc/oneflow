@@ -332,7 +332,7 @@ jobs:
           if [ "$test_suite" == "cuda" ]; then
             echo "bin_dir=${PWD}/bin_tmp" >> $GITHUB_ENV
           fi
-          if [ "$test_suite" == "cpu" ]; then
+          if [ "$test_suite" == "cpu" ] || [ "$test_suite" == "cpu_eager" ]; then
             extra_docker_args+=" --env ONEFLOW_TEST_CPU_ONLY=1"
             extra_docker_args+=" --env ONEFLOW_TEST_RPC_BACKEND=local"
             extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=''"
@@ -395,6 +395,7 @@ jobs:
       - name: Op test (eager)
         if: matrix.test_suite == 'cpu_eager' || matrix.test_suite == 'cuda_eager'
         run: |
+          set -x
           docker run \
             $extra_docker_args \
             --env ONEFLOW_TEST_ENABLE_EAGER=1 \
