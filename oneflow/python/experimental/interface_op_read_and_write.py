@@ -34,7 +34,8 @@ def sync_default_session_if_normal():
     if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
         flow.sync_default_session()
     else:
-        raise NotImplementedError("non-normal modes are not supported now. ")
+        # do nothing
+        pass
 
 
 blob_register = oneflow_api.GetDefaultBlobRegister()

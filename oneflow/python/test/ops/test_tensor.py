@@ -56,6 +56,31 @@ class TestTensor(flow.unittest.TestCase):
         flow.nn.init.ones_(x)
         test_case.assertTrue(np.array_equal(x.numpy(), np.ones(x.shape)))
 
+        x1_np, x2_np = np.array([5]), np.array([6])
+        x1, x2 = flow.Tensor(x1_np), flow.Tensor(x2_np)
+        y_add = x1 + x2
+        y_radd = x2 + x1
+        y_sub = x1 - x2
+        y_rsub = x2 - x1
+        y_mul = x1 * x2
+        y_rmul = x2 * x1
+        y_truediv = x1 / x2
+        y_rtruediv = x2 / x1
+        test_case.assertTrue(np.array_equal(y_add.numpy(), x1_np + x2_np))
+        test_case.assertTrue(np.array_equal(y_radd.numpy(), x2_np + x1_np))
+        test_case.assertTrue(np.array_equal(y_sub.numpy(), x1_np - x2_np))
+        test_case.assertTrue(np.array_equal(y_rsub.numpy(), x2_np - x1_np))
+        test_case.assertTrue(np.array_equal(y_mul.numpy(), x1_np * x2_np))
+        test_case.assertTrue(np.array_equal(y_rmul.numpy(), x2_np * x1_np))
+        test_case.assertTrue(np.array_equal(y_truediv.numpy(), x1_np / x2_np))
+        test_case.assertTrue(np.array_equal(y_rtruediv.numpy(), x2_np / x1_np))
+
+        z = flow.Tensor(5, 5)
+        flow.nn.init.kaiming_normal_(z, a=0.1, mode="fan_out", nonlinearity="relu")
+        flow.nn.init.kaiming_uniform_(z)
+        flow.nn.init.xavier_normal_(z)
+        flow.nn.init.xavier_uniform_(z)
+
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
