@@ -52,7 +52,7 @@ class DataModule(Module):
     def __init__(self, *args, **kwargs):
         super().__init__()
 
-    def forward(self, *args):
+    def forward(self):
         # Do nothing, to be overrided by subclass.
         pass
 
@@ -236,7 +236,7 @@ class Model(
     def forward(self, *args, **kwargs):
         r"""Same as `nn.Module.forward()`, here is to define the operations you want to use for prediction.
         """
-        return super().forward(*args, **kwargs)
+        raise NotImplementedError
 
     def training_step(self, *args, **kwargs):
         r"""Operates on a single batch of data from the training set and return loss.
