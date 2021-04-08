@@ -554,7 +554,7 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
   } else if (initializer_conf.has_int_range_conf()) {
     IntSequenceInitializer<T>(initializer_conf.int_range_conf(), random_seed, blob);
   } else if (initializer_conf.has_empty_conf()) {
-      EmptyInitializer<T>();
+    EmptyInitializer<T>();
   } else {
     UNIMPLEMENTED();
   }
