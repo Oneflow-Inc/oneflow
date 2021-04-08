@@ -971,6 +971,8 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("ModelUpdateConfCompatiblePass"));
     JUST(DoPass("SetDefaultVariableConf"));
     JUST(DoPass("AddInputOutputOpsPass"));
+    JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
+    JUST(DoPass("GradientAccumulationRewritePass"));
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
 #endif

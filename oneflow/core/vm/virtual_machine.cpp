@@ -300,7 +300,7 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                             NewInstructionList* new_instruction_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(new_instruction_list, instruction) {
     int64_t global_device_id = instruction->stream().global_device_id();
-    InterpretType interpret_type = instruction->stream().stream_type_id().interpret_type();
+    const InterpretType interpret_type = instruction->stream().stream_type_id().interpret_type();
     auto ConsumeConstMirroredObject = [&](MirroredObject* mirrored_object) {
       ConsumeMirroredObject(kConstOperandAccess, mirrored_object, instruction);
     };
@@ -312,6 +312,16 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
       CHECK(!mirrored_object->has_deleting_access());
       mirrored_object->set_deleting_access(access);
     };
+    const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
+    if (phy_instr_operand) {
+      if (interpret_type == kInfer) {
+        phy_instr_operand->ForEachInferMutMirroredObject(ConsumeMutMirroredObject);
+      } else if (interpret_type == kCompute) {
+        phy_instr_operand->ForEachComputeMutMirroredObject(ConsumeMutMirroredObject);
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
     const auto& operands = instruction->instr_msg().operand();
     for (const auto& operand : operands) {
       if (operand->has_mut_operand()) {
@@ -334,6 +344,15 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
                                                             ConsumeMutMirroredObject);
       } else {
         // do nothing
+      }
+    }
+    if (phy_instr_operand) {
+      if (interpret_type == kInfer) {
+        phy_instr_operand->ForEachInferConstMirroredObject(ConsumeConstMirroredObject);
+      } else if (interpret_type == kCompute) {
+        phy_instr_operand->ForEachComputeConstMirroredObject(ConsumeConstMirroredObject);
+      } else {
+        UNIMPLEMENTED();
       }
     }
     for (const auto& operand : operands) {
