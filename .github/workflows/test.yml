@@ -181,6 +181,7 @@ jobs:
       - name: Remove cache
         if: ${{ failure() }}
         run: |
+          set -x
           cache_parent_dir=$(dirname ${ci_tmp_dir})
           docker run --rm -v $cache_parent_dir:$cache_parent_dir busybox rm -rf ${ci_tmp_dir}
       - name: Upload wheel via SSH
