@@ -401,7 +401,7 @@ jobs:
             $extra_docker_args \
             --env ONEFLOW_TEST_ENABLE_EAGER=1 \
             oneflow-test:$USER \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
       - name: Model test
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda'
         run: |
