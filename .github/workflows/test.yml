@@ -181,7 +181,8 @@ jobs:
       - name: Remove cache
         if: ${{ failure() }}
         run: |
-          docker run --rm -v $PWD:/p -w /p busybox rm -rf ${ci_tmp_dir}
+          cache_parent_dir=$(dirname ${ci_tmp_dir})
+          docker run --rm -v $cache_parent_dir:$cache_parent_dir busybox rm -rf ${ci_tmp_dir}
       - name: Upload wheel via SSH
         if: env.is_built != '1' && matrix.test_suite != 'mac'
         uses: ./.github/actions/upload_ssh
