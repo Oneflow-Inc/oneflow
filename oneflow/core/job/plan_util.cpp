@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/constant.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/str_util.h"
@@ -22,40 +23,6 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
-
-namespace {
-
-std::vector<std::vector<std::string>> GenNodeRank(const Plan& plan) {
-  std::vector<std::vector<std::string>> ret(7);
-  for (const TaskProto& task_proto : plan.task()) {
-    if (task_proto.machine_id() != 0) { continue; }
-    if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
-      continue;
-    }
-    if (task_proto.exec_sequence().exec_node_size() != 1) { continue; }
-    std::string op_name =
-        task_proto.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf().name();
-    std::string node_name = "task" + std::to_string(task_proto.task_id());
-    if (op_name.find("WaitAndSendIds") != std::string::npos) {
-      ret[0].push_back(node_name);
-    } else if (op_name.find("ReentrantLock") != std::string::npos) {
-      ret[1].push_back(node_name);
-    } else if (op_name.find("Case") != std::string::npos) {
-      ret[2].push_back(node_name);
-    } else if (op_name.find("CriticalSection") != std::string::npos) {
-      ret[3].push_back(node_name);
-    } else if (op_name.find("SinkTick") != std::string::npos) {
-      ret[4].push_back(node_name);
-    } else if (op_name.find("Esac") != std::string::npos) {
-      ret[5].push_back(node_name);
-    } else if (op_name.find("CallbackNotify") != std::string::npos) {
-      ret[6].push_back(node_name);
-    }
-  }
-  return ret;
-}
-
-}  // namespace
 
 RegstDescProto* PlanUtil::GetSoleProducedDataRegst(TaskProto* task_proto) {
   RegstDescProto* ret = nullptr;
@@ -77,6 +44,119 @@ std::function<const TaskProto*(int64_t)> PlanUtil::MakeGetterTaskProto4TaskId(co
     task_id2task_proto->emplace(task_proto.task_id(), &task_proto);
   }
   return [task_id2task_proto](int64_t task_id) { return task_id2task_proto->at(task_id); };
+}
+
+void PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    for (auto& pair : *task->mutable_produced_regst_desc()) {
+      RegstDescProto* regst_desc = &pair.second;
+      if (regst_desc->mem_block_id() == -1) {
+        CHECK_EQ(regst_desc->mem_block_offset(), -1);
+        regst_desc->set_mem_block_id(Global<IDMgr>::Get()->NewMemBlockId());
+        regst_desc->set_mem_block_offset(0);
+      }
+    }
+  }
+}
+
+void PlanUtil::GenMemBlockAndChunk4Plan(Plan* plan) {
+  HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
+  // mzuid = memory zone unique id
+  HashMap<int64_t, ChunkProto> mzuid2chunk;
+
+  auto GenMemBlock4RegstIfNeed = [&](RegstDescProto* regst_desc, const TaskProto* task) {
+    const int64_t job_id = task->job_id();
+    const int64_t machine_id = task->machine_id();
+    const int64_t thrd_id = task->thrd_id();
+    int64_t mem_block_id = regst_desc->mem_block_id();
+    int64_t mem_block_offset = regst_desc->mem_block_offset();
+    CHECK_NE(mem_block_id, -1);
+    CHECK_NE(mem_block_offset, -1);
+    CHECK_EQ(regst_desc->separated_header_mem_block_id(), -1);
+
+    RtRegstDesc rt_regst_desc(*regst_desc);
+    int64_t regst_main_size = rt_regst_desc.TotalMainByteSize4AllRegst();
+    int64_t regst_separated_size = rt_regst_desc.TotalSeparatedHeaderByteSize4AllRegst();
+
+    if (mem_block_id2mem_block.find(mem_block_id) == mem_block_id2mem_block.end()) {
+      MemBlockProto mem_block;
+      mem_block.set_mem_block_id(mem_block_id);
+      mem_block.add_job_id(job_id);
+      mem_block.set_machine_id(machine_id);
+      *(mem_block.mutable_mem_case()) = regst_desc->mem_case();
+      mem_block.set_enable_reuse_mem(regst_desc->enable_reuse_mem());
+      mem_block.set_mem_size(regst_main_size + mem_block_offset);
+      mem_block.set_thrd_id_hint(thrd_id);
+      CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
+    } else {
+      MemBlockProto* mem_block = &(mem_block_id2mem_block.at(mem_block_id));
+      CHECK_EQ(mem_block->job_id(0), job_id);
+      CHECK_EQ(mem_block->machine_id(), machine_id);
+      CHECK(mem_block->mem_case() == regst_desc->mem_case());
+      CHECK_EQ(mem_block->enable_reuse_mem(), regst_desc->enable_reuse_mem());
+      mem_block->set_mem_size(std::max(mem_block->mem_size(), regst_main_size + mem_block_offset));
+    }
+
+    if (regst_separated_size > 0) {
+      int64_t separated_mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
+      regst_desc->set_separated_header_mem_block_id(separated_mem_block_id);
+      MemBlockProto mem_block;
+      mem_block.set_mem_block_id(separated_mem_block_id);
+      mem_block.add_job_id(job_id);
+      mem_block.set_machine_id(machine_id);
+      *(mem_block.mutable_mem_case()) =
+          MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
+      mem_block.set_enable_reuse_mem(false);
+      mem_block.set_mem_size(regst_separated_size);
+      mem_block.set_thrd_id_hint(thrd_id);
+      CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
+    }
+  };
+
+  auto GenChunk4ReusedMemBlockIfNeed = [&](MemBlockProto* mem_block) {
+    int64_t mzuid =
+        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+    if (mzuid2chunk.find(mzuid) == mzuid2chunk.end()) {
+      ChunkProto chunk;
+      chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
+      chunk.add_job_id(mem_block->job_id(0));
+      chunk.set_machine_id(mem_block->machine_id());
+      *(chunk.mutable_mem_case()) = mem_block->mem_case();
+      chunk.set_mem_size(mem_block->mem_size());
+      CHECK(mzuid2chunk.emplace(mzuid, chunk).second);
+      mem_block->set_chunk_id(chunk.chunk_id());
+      mem_block->set_chunk_offset(0);
+    } else {
+      ChunkProto* chunk = &(mzuid2chunk.at(mzuid));
+      CHECK_EQ(chunk->job_id(0), mem_block->job_id(0));
+      mem_block->set_chunk_id(chunk->chunk_id());
+      mem_block->set_chunk_offset(chunk->mem_size());
+      chunk->set_mem_size(chunk->mem_size() + mem_block->mem_size());
+    }
+  };
+
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    for (auto& pair : *task->mutable_produced_regst_desc()) {
+      GenMemBlock4RegstIfNeed(&pair.second, task);
+    }
+  }
+
+  for (auto& pair : mem_block_id2mem_block) {
+    MemBlockProto* mem_block = &pair.second;
+    CHECK(mem_block->has_chunk_id() == false);
+    CHECK(mem_block->has_chunk_offset() == false);
+    if (mem_block->enable_reuse_mem()) { GenChunk4ReusedMemBlockIfNeed(mem_block); }
+  }
+
+  for (const auto& pair : mem_block_id2mem_block) {
+    *(plan->mutable_block_chunk_list()->add_mem_block()) = pair.second;
+  }
+
+  for (const auto& pair : mzuid2chunk) {
+    *(plan->mutable_block_chunk_list()->add_chunk()) = pair.second;
+  }
 }
 
 void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
@@ -171,23 +251,47 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
 }
 
 void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
-  size_t machine_num = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
+  const auto& process_ranks = Global<ResourceDesc, ForSession>::Get()->process_ranks();
   size_t gpu_device_num = Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
-  std::vector<std::vector<std::vector<std::string>>> machine_id2device_id2node_list(machine_num);
-  for (size_t i = 0; i < machine_num; ++i) {
-    machine_id2device_id2node_list[i].resize(gpu_device_num);
+  std::map<int64_t, std::map<int64_t, std::vector<std::vector<std::string>>>>
+      machine_id2job_id_device_id2node_list;
+  for (size_t i : process_ranks) {
+    for (const auto& pair : plan.job_confs().job_id2job_conf()) {
+      machine_id2job_id_device_id2node_list[i][pair.first].resize(gpu_device_num);
+    }
   }
-  std::vector<std::vector<std::string>> machine_id2host_node_list(machine_num);
+  std::map<int64_t, std::map<int64_t, std::vector<std::string>>> machine_id2job_id2host_node_list;
+  std::vector<std::string> main_node_list;
+  std::vector<std::string> copy_comm_net_node_list;
   HashSet<int64_t> ctrl_regst_desc_ids;
   HashMap<int64_t, HashMap<int64_t, std::string>> task_id2consumer_regst_id2name;
   HashMap<int64_t, std::string> task_id2op_name;
+  HashMap<int64_t, std::vector<int64_t>> task_id2producer_task_ids;
+  std::vector<std::set<int64_t>> machine_id2device_id2node_list_job_ids(process_ranks.size());
+  std::vector<std::set<int64_t>> machine_id2host_node_list_job_ids(process_ranks.size());
 
-  auto InsertNodeDefByTaskProto = [&](const TaskProto& task_proto, const std::string& node_def) {
-    if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
-      int64_t device_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_proto.thrd_id());
-      machine_id2device_id2node_list[task_proto.machine_id()][device_id].push_back(node_def);
+  auto InsertNodeDefByTaskProto = [&](const TaskProto& task_proto, const std::string& node_def,
+                                      const std::string& pass_tag) {
+    if (task_proto.task_type() == TaskType::kCopyCommNet) {
+      copy_comm_net_node_list.push_back(node_def);
+      return;
+    }
+    if (pass_tag == kNoPassTag) {
+      if (Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task_proto.thrd_id()) == DeviceType::kGPU) {
+        int64_t device_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_proto.thrd_id());
+        machine_id2job_id_device_id2node_list[task_proto.machine_id()][task_proto.job_id()]
+                                             [device_id]
+                                                 .push_back(node_def);
+        machine_id2device_id2node_list_job_ids[task_proto.machine_id()].insert(task_proto.job_id());
+      } else {
+        machine_id2job_id2host_node_list[task_proto.machine_id()][task_proto.job_id()].push_back(
+            node_def);
+        machine_id2host_node_list_job_ids[task_proto.machine_id()].insert(task_proto.job_id());
+      }
+    } else if (pass_tag == kMainOp) {
+      main_node_list.push_back(node_def);
     } else {
-      machine_id2host_node_list[task_proto.machine_id()].push_back(node_def);
+      UNIMPLEMENTED();
     }
   };
 
@@ -212,11 +316,38 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   auto log_stream = TeePersistentLogStream::Create(filepath);
   // task node
   for (const TaskProto& task_proto : plan.task()) {
-    std::string node_def = "task" + std::to_string(task_proto.task_id()) + "[label=\"{{";
-    // node_def += "<task_node_" + std::to_string(task_proto.task_id()) + ">";
+    for (const auto& pair : task_proto.produced_regst_desc()) {
+      const RegstDescProto& regst = pair.second;
+      for (int64_t consumer_task_id : regst.consumer_task_id()) {
+        task_id2producer_task_ids[consumer_task_id].push_back(task_proto.task_id());
+      }
+    }
+  }
+
+  for (const TaskProto& task_proto : plan.task()) {
+    std::string task_id_str = "task" + std::to_string(task_proto.task_id());
+    std::string task_class = task_id_str;
+    for (const auto& in_task_id : task_id2producer_task_ids[task_proto.task_id()]) {
+      task_class += " in" + std::to_string(in_task_id);
+    }
+    for (const auto& pair : task_proto.produced_regst_desc()) {
+      const RegstDescProto& regst = pair.second;
+      for (int64_t consumer_task_id : regst.consumer_task_id()) {
+        task_class += " out" + std::to_string(consumer_task_id);
+      }
+    }
+    task_class += " job_id" + std::to_string(task_proto.job_id());
+    task_class += " machine_id" + std::to_string(task_proto.machine_id());
+    std::string node_def = task_id_str + "[class=\"" + task_class + "\",label=\"{{";
+    node_def += std::to_string(task_proto.task_id()) + ":" + std::to_string(task_proto.machine_id())
+                + "\\n";
     std::string op_name = "";
+    std::string pass_tag = kNoPassTag;
     for (const ExecNodeProto& exec_node : task_proto.exec_sequence().exec_node()) {
-      op_name += (exec_node.kernel_conf().op_attribute().op_conf().name());
+      const auto& op_conf =
+          GeOpAttribute(&plan, task_proto.job_id(), exec_node.kernel_conf()).op_conf();
+      op_name += op_conf.name();
+      if (op_conf.has_pass_tag()) { pass_tag = op_conf.pass_tag(); }
     }
     task_id2op_name[task_proto.task_id()] = op_name;
     node_def += op_name;
@@ -242,7 +373,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
          + ",colorscheme=set312, fillcolor=" + std::to_string((task_proto.job_id() % 12) + 1));
     if (IsEsacNode(op_name)) { node_def += ",width=5,height=1.5"; }
     node_def += "];\n";
-    InsertNodeDefByTaskProto(task_proto, node_def);
+    InsertNodeDefByTaskProto(task_proto, node_def, pass_tag);
     for (const auto& pair : task_proto.consumed_regst_desc_id()) {
       for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
         task_id2consumer_regst_id2name[task_proto.task_id()][regst_desc_id] = pair.first;
@@ -256,37 +387,73 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   log_stream << "#nodesep=1.3;\n";
   log_stream << "#ranksep=1.3;\n";
   log_stream << "node[color=\"gray\"];\n";
+  // main_node and copy_comm_net_node graph
+  for (const std::string& main_node : main_node_list) { log_stream << main_node; }
+  for (const std::string& copy_comm_net_node : copy_comm_net_node_list) {
+    log_stream << copy_comm_net_node;
+  }
   // sub graph
-  for (size_t machine_id = 0; machine_id < machine_num; ++machine_id) {
+  for (size_t machine_id : process_ranks) {
     std::string machine_name = "machine_" + std::to_string(machine_id);
     log_stream << "subgraph cluster_" << machine_name << " { label = \"" << machine_name << "\";\n";
     log_stream << "style=\"rounded\";\n";
-    for (const std::string& host_node_def : machine_id2host_node_list[machine_id]) {
-      log_stream << host_node_def;
-    }
-    for (size_t device_id = 0; device_id < gpu_device_num; ++device_id) {
-      std::string device_name = machine_name + "_device_" + std::to_string(device_id);
-      log_stream << "#subgraph cluster_" << device_name << " { label = \"" << device_name
-                 << "\";\n";
-      log_stream << "#color=\"skyblue\";\n";
-      log_stream << "#fillcolor=\"azure\";\n";
-      log_stream << "#style=\"rounded,filled\";\n";
-      for (const auto& device_node_def : machine_id2device_id2node_list[machine_id][device_id]) {
-        log_stream << device_node_def;
+    {
+      for (const auto& job_id : machine_id2host_node_list_job_ids[machine_id]) {
+        std::string job_name = plan.job_confs().job_id2job_conf().at(job_id).job_name();
+        job_name += (std::string(":") + std::to_string(job_id));
+        if (job_id != plan.job_confs().job_id2job_conf().size() - 1) {
+          log_stream << "subgraph cluster_job_" << std::to_string(job_id) << " { label = \""
+                     << job_name << "\";\n";
+          log_stream << "style=\"rounded\";\n";
+        }
+        for (const std::string& host_node_def :
+             machine_id2job_id2host_node_list[machine_id][job_id]) {
+          log_stream << host_node_def;
+        }
+        if (machine_id2device_id2node_list_job_ids[machine_id].find(job_id)
+            != machine_id2device_id2node_list_job_ids[machine_id].end()) {
+          for (size_t device_id = 0; device_id < gpu_device_num; ++device_id) {
+            std::string device_name = machine_name + "_device_" + std::to_string(device_id);
+            log_stream << "#subgraph cluster_" << device_name << " { label = \"" << device_name
+                       << "\";\n";
+            log_stream << "#color=\"skyblue\";\n";
+            log_stream << "#fillcolor=\"azure\";\n";
+            log_stream << "#style=\"rounded,filled\";\n";
+            for (const auto& device_node_def :
+                 machine_id2job_id_device_id2node_list[machine_id][job_id][device_id]) {
+              log_stream << device_node_def;
+            }
+            log_stream << "#}\n";
+          }
+          machine_id2device_id2node_list_job_ids[machine_id].erase(job_id);
+        }
+
+        if (job_id != plan.job_confs().job_id2job_conf().size() - 1) { log_stream << "}\n"; }
       }
-      log_stream << "#}\n";
-    }
-    // rank for system task over job
-    /*
-    if (machine_id == 0) {
-      const auto& rank_list = GenNodeRank(plan);
-      for (const auto& current_list : rank_list) {
-        log_stream << "{ rank = same;";
-        for (const auto& node_name : current_list) { log_stream << node_name << "; "; }
-        log_stream << "}\n";
+      for (const auto& job_id : machine_id2device_id2node_list_job_ids[machine_id]) {
+        std::string job_name = plan.job_confs().job_id2job_conf().at(job_id).job_name();
+        job_name += (std::string(":") + std::to_string(job_id));
+        if (job_id != plan.job_confs().job_id2job_conf().size() - 1) {
+          log_stream << "subgraph cluster_job_" << std::to_string(job_id) << " { label = \""
+                     << job_name << "\";\n";
+          log_stream << "style=\"rounded\";\n";
+        }
+        for (size_t device_id = 0; device_id < gpu_device_num; ++device_id) {
+          std::string device_name = machine_name + "_device_" + std::to_string(device_id);
+          log_stream << "#subgraph cluster_" << device_name << " { label = \"" << device_name
+                     << "\";\n";
+          log_stream << "#color=\"skyblue\";\n";
+          log_stream << "#fillcolor=\"azure\";\n";
+          log_stream << "#style=\"rounded,filled\";\n";
+          for (const auto& device_node_def :
+               machine_id2job_id_device_id2node_list[machine_id][job_id][device_id]) {
+            log_stream << device_node_def;
+          }
+          log_stream << "#}\n";
+        }
+        if (job_id != plan.job_confs().job_id2job_conf().size() - 1) { log_stream << "}\n"; }
       }
     }
-    */
     log_stream << "}\n";
   }
 
@@ -319,13 +486,6 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
                    << "];\n";
       }
     }
-  }
-  // rank
-  const auto& rank_list = GenNodeRank(plan);
-  for (const auto& current_list : rank_list) {
-    log_stream << "{ rank = same;";
-    for (const auto& node_name : current_list) { log_stream << node_name << "; "; }
-    log_stream << "}\n";
   }
   log_stream << "}\n";
 }
@@ -363,6 +523,25 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
         regst_desc->set_inplace_consumed_regst_desc_id(force_id);
       }
     }
+  }
+}
+
+const oneflow::OpAttribute& PlanUtil::GeOpAttribute(const Plan* plan, int64_t job_id,
+                                                    const oneflow::KernelConf& kernel_conf) {
+  if (kernel_conf.has_op_attribute()) {
+    return kernel_conf.op_attribute();
+  } else if (kernel_conf.has_op_attribute_ref()) {
+    auto table_it = plan->job_id2op_attribute_ref_table().find(job_id);
+    CHECK(table_it != plan->job_id2op_attribute_ref_table().end())
+        << "op attribute ref table not found for job id: " << job_id;
+    ;
+    auto it = table_it->second.op_name2op_attribute().find(kernel_conf.op_attribute_ref());
+    CHECK(it != table_it->second.op_name2op_attribute().end())
+        << "op attribute ref: " << kernel_conf.op_attribute_ref() << " not found";
+    return it->second;
+  } else {
+    UNIMPLEMENTED() << "kernel_conf must has either op_attribute or op_attribute_ref. kernel_conf: "
+                    << kernel_conf.DebugString();
   }
 }
 

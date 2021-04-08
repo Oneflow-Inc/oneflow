@@ -188,11 +188,22 @@ OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
   return *this;
 }
 
+OpRegistry& OpRegistry::SetInferParallelDistributionFn(
+    InferParallelDistributionFn infer_parallel_distribution_fn) {
+  result_.infer_parallel_distribution_fn = std::move(infer_parallel_distribution_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetInferDataTypeFn(DataTypeInferFn data_type_infer_fn) {
+  result_.data_type_infer_fn = std::move(data_type_infer_fn);
+  return *this;
+}
+
 OpRegistry& OpRegistry::Finish() {
   CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
   if (!result_.physical_tensor_desc_infer_fn) {
-    auto logical_fn = result_.logical_tensor_desc_infer_fn;
+    const auto& logical_fn = result_.logical_tensor_desc_infer_fn;
     result_.physical_tensor_desc_infer_fn =
         [logical_fn](user_op::InferContext* ctx) -> Maybe<void> {
       if (ctx->parallel_num() == 1) {

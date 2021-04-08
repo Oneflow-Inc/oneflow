@@ -20,9 +20,10 @@ namespace oneflow {
 namespace {
 
 #define GRPC_CHECK(x) CHECK_EQ(x.error_code(), grpc::StatusCode::OK)
+
 }  // namespace
 
-CtrlClient::~CtrlClient() {
+GrpcCtrlClient::~GrpcCtrlClient() {
   {
     std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
     need_heartbeat_thread_stop_ = true;
@@ -30,12 +31,13 @@ CtrlClient::~CtrlClient() {
   heartbeat_thread_.join();
 }
 
-CtrlClient::CtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx) {
-  stubs_.reserve(process_ctx.ctrl_addr_size());
+GrpcCtrlClient::GrpcCtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx) {
+  rpc_client_.ReserveStubsOfSize(process_ctx.ctrl_addr_size());
   for (int64_t i = 0; i < process_ctx.ctrl_addr_size(); ++i) {
     const Address& address = process_ctx.ctrl_addr(i);
-    stubs_.push_back(CtrlService::NewStub(address.host() + ":" + std::to_string(address.port())));
-    LoadServer(address.host(), stubs_[i].get());
+    auto new_stub = CtrlService::NewStub(address.host() + ":" + std::to_string(address.port()));
+    rpc_client_.AddStub(std::move(new_stub));
+    rpc_client_.LoadServer(address.host(), rpc_client_.GetStubAt(i));
   }
   need_heartbeat_thread_stop_ = false;
   heartbeat_thread_ = std::thread([this]() {
@@ -48,15 +50,72 @@ CtrlClient::CtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx
         std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
         if (need_heartbeat_thread_stop_) { break; }
       }
-      for (size_t i = 0; i < stubs_.size(); ++i) {
+      for (size_t i = 0; i < rpc_client_.GetStubSize(); ++i) {
         grpc::ClientContext client_ctx;
         request.set_addr(this->process_ctx().ctrl_addr(i).host());
-        GRPC_CHECK(stubs_[i]->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response))
+        GRPC_CHECK(rpc_client_.GetStubAt(i)->CallMethod<CtrlMethod::kLoadServer>(
+            &client_ctx, request, &response))
             << "Machine " << i << " lost";
       }
       std::this_thread::sleep_for(std::chrono::seconds(sleep_second_dis(gen)));
     }
   });
 }
+
+void GrpcCtrlClient::Barrier(const std::string& barrier_name) { rpc_client_.Barrier(barrier_name); }
+
+void GrpcCtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
+  rpc_client_.Barrier(barrier_name, barrier_num);
+}
+
+TryLockResult GrpcCtrlClient::TryLock(const std::string& name) { return rpc_client_.TryLock(name); }
+
+void GrpcCtrlClient::NotifyDone(const std::string& name) { rpc_client_.NotifyDone(name); }
+
+void GrpcCtrlClient::WaitUntilDone(const std::string& name) { rpc_client_.WaitUntilDone(name); }
+
+void GrpcCtrlClient::PushKV(const std::string& k, const std::string& v) {
+  rpc_client_.PushKV(k, v);
+}
+
+void GrpcCtrlClient::PushKV(const std::string& k, const PbMessage& msg) {
+  rpc_client_.PushKV(k, msg);
+}
+
+void GrpcCtrlClient::PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {
+  rpc_client_.PushKV(k, VSetter);
+}
+
+void GrpcCtrlClient::PushMasterKV(const std::string& k, const PbMessage& msg) {
+  rpc_client_.PushMasterKV(k, msg);
+}
+
+void GrpcCtrlClient::ClearKV(const std::string& k) { rpc_client_.ClearKV(k); }
+
+void GrpcCtrlClient::ClearMasterKV(const std::string& k) { rpc_client_.ClearMasterKV(k); }
+
+void GrpcCtrlClient::PullKV(const std::string& k, std::string* v) { rpc_client_.PullKV(k, v); }
+
+void GrpcCtrlClient::PullKV(const std::string& k, PbMessage* msg) { rpc_client_.PullKV(k, msg); }
+
+void GrpcCtrlClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
+  rpc_client_.PullKV(k, VGetter);
+}
+
+void GrpcCtrlClient::PullMasterKV(const std::string& k, PbMessage* msg) {
+  rpc_client_.PullMasterKV(k, msg);
+}
+
+void GrpcCtrlClient::Clear() { rpc_client_.Clear(); }
+
+void GrpcCtrlClient::PushActEvent(const ActEvent& act_event) {
+  rpc_client_.PushActEvent(act_event);
+}
+
+int32_t GrpcCtrlClient::IncreaseCount(const std::string& k, int32_t v) {
+  return rpc_client_.IncreaseCount(k, v);
+}
+
+void GrpcCtrlClient::EraseCount(const std::string& k) { rpc_client_.EraseCount(k); }
 
 }  // namespace oneflow

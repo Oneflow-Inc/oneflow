@@ -33,7 +33,8 @@ void AsyncRunLazyJobSet(ThreadPool* lazy_runtime_thread) {
   lazy_runtime_thread->AddWork([] {
     ConfigProto config_proto;
     Global<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
-    int32_t machine_num = config_proto.resource().machine_num();
+    CHECK_NOTNULL(Global<EnvDesc>::Get());
+    int32_t machine_num = Global<EnvDesc>::Get()->TotalMachineNum();
     // do nothing if it's not my business
     if (GlobalProcessCtx::Rank() >= machine_num) { return; }
     Global<SessionGlobalObjectsScope>::New();
@@ -76,8 +77,6 @@ Maybe<void> Cluster::WorkerLoop() {
       } else if (mut_cluster_instruction->has_eager_instruction()) {
         Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(
             std::const_pointer_cast<const ClusterInstructionProto>(mut_cluster_instruction));
-      } else if (mut_cluster_instruction->has_cluster_ctrl_eager_sync()) {
-        ClusterInstruction::EagerSyncBarrier();
       } else {
         OF_UNIMPLEMENTED();
       }

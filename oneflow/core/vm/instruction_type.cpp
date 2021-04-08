@@ -30,6 +30,14 @@ HashMap<std::string, InstrTypeId>* InstrTypeId4InstructionName() {
 
 }  // namespace
 
+void InstructionType::Compute(VirtualMachine* vm, Instruction* instruction) const {
+  Compute(vm, instruction->mut_instr_msg());
+}
+
+void InstructionType::Infer(VirtualMachine* vm, Instruction* instruction) const {
+  Infer(vm, instruction->mut_instr_msg());
+}
+
 const InstrTypeId& LookupInstrTypeId(const std::string& name) {
   const auto& map = *InstrTypeId4InstructionName();
   const auto& iter = map.find(name);

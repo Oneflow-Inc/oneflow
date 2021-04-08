@@ -165,7 +165,7 @@ def RandomParallelIdPerMachine(parallel_desc_symbol, device_tag=None, builder=No
     parallel_conf.set_device_tag(device_tag)
     for machine_id, dev_ids in parallel_desc_symbol.machine_id2device_id_list.items():
         dev_id = dev_ids[random.randint(0, len(dev_ids) - 1)]
-        parallel_conf.add_device_name("%s:%s" % (machine_id, dev_id))
+        parallel_conf.add_device_name("@%s:%s" % (machine_id, dev_id))
     if builder is None:
         return oneflow_api.PlacementSymbol(
             parallel_desc_symbol.symbol_id, parallel_conf

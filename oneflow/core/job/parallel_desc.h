@@ -79,6 +79,8 @@ class ParallelDesc final {
   ParallelConf GetParallelIdOnlyParallelConf(int64_t parallel_id) const;
 
   bool EqualsIgnoringDeviceType(const ParallelDesc& rhs) const;
+  bool EqualsIgnoringHierarchy(const ParallelDesc& rhs) const;
+  bool EqualsOnlyForMachineAndDeviceIds(const ParallelDesc& rhs) const;
   bool Equals(const ParallelDesc& rhs) const;
   bool operator==(const ParallelDesc& rhs) const { return Equals(rhs); }
   bool operator!=(const ParallelDesc& rhs) const { return !(*this == rhs); }
@@ -98,6 +100,8 @@ class ParallelDesc final {
   ParallelDesc() : symbol_id_(Error::SymbolIdUninitialized()) {}
   ParallelDesc(int64_t symbol_id) : symbol_id_(symbol_id) {}
   void ClearUp();
+  Maybe<void> SetMachineIdAndDeviceIdsByParsingDeviceName(const std::string& device_name,
+                                                          size_t cols);
   Maybe<void> SanityCheck();
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
   bool EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const;

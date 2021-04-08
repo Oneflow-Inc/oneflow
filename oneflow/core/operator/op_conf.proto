@@ -50,6 +50,7 @@ message DistributeAddOpConf {
 }
 
 message CopyCommNetOpConf {
+  required LogicalBlobId lbi = 2;
 }
 
 message CopyHdOpConf {
@@ -58,7 +59,7 @@ message CopyHdOpConf {
     D2H = 1;
   }
   required Type type = 1;
-  optional LogicalBlobId lbi = 2;
+  required LogicalBlobId lbi = 2;
 }
 
 message BoxConcatConf {
@@ -147,10 +148,10 @@ message VariableOpConf {
     InitializeWithSnapshotConf initialize_with_snapshot = 6;
   }
   optional string model_name = 7 [default = "weight"];
-  required OptInt64 split_axis = 8;
   optional int64 random_seed = 9;
   optional RegularizerConf regularizer = 10;
   optional bool trainable = 11 [default = true];
+  repeated string parallel_distribution = 12;
 }
 
 message DecodeRandomOpConf {
@@ -170,6 +171,7 @@ message TickOpConf {
 message DeviceTickOpConf {
   repeated string tick = 1;
   required string out = 2;
+  optional ShapeProto time_shape = 3;
 }
 
 message WaitAndSendIdsOpConf {
@@ -355,8 +357,6 @@ message ModelInitV2OpConf {
   required string ref = 1;
   required string variable_op_name = 2;
   required VariableOpConf original_variable_conf = 3;
-  required string out = 4;
-  required string tick = 5;
 }
 
 message ModelLoadV2OpConf {
@@ -364,8 +364,6 @@ message ModelLoadV2OpConf {
   required string ref = 2;
   required string variable_op_name = 3;
   required VariableOpConf original_variable_conf = 4;
-  required string out = 5;
-  required string tick = 6;
 }
 
 message ModelSaveV2OpConf {
@@ -373,8 +371,6 @@ message ModelSaveV2OpConf {
   required string in = 2;
   required string variable_op_name = 3;
   required VariableOpConf original_variable_conf = 4;
-  required string out = 5;
-  required string tick = 6;
 }
 
 message ConstantLikeOpConf {
@@ -453,6 +449,7 @@ message OperatorConf {
   optional string device_tag = 4 [default = "invalid_device"];
   repeated string ctrl_in_op_name = 7;
   optional int64 scope_symbol_id = 8;
+  optional string pass_tag = 10;
   oneof op_type {
     // system op
     DecodeRandomOpConf decode_random_conf = 102;

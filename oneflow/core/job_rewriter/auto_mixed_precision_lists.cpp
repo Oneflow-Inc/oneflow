@@ -29,18 +29,37 @@ const AMPList& AutoMixedPrecisionLists::BlackList() {
 }
 
 const AMPList& AutoMixedPrecisionLists::GrayList() {
-  static AMPList gray_list = {"add_n",         "avg_pool_1d",   "avg_pool_2d",
-                              "avg_pool_3d",   "bias_add",      "multiply",
-                              "sigmoid",       "tanh",          "sqrt",
-                              "scalar_mul",    "scalar_add",    "broadcast_add",
-                              "broadcast_sub", "broadcast_mul", "broadcast_div",
-                              "layer_norm",    "dropout",       "softmax",
-                              "gelu",          "normalization", "normalization_add_relu"};
+  static AMPList gray_list = {"add_n",
+                              "avg_pool_1d",
+                              "avg_pool_2d",
+                              "avg_pool_3d",
+                              "bias_add",
+                              "multiply",
+                              "sigmoid",
+                              "tanh",
+                              "sqrt",
+                              "scalar_mul",
+                              "scalar_add",
+                              "broadcast_add",
+                              "broadcast_sub",
+                              "broadcast_mul",
+                              "broadcast_div",
+                              "layer_norm",
+                              "dropout",
+                              "softmax",
+                              "gelu",
+                              "normalization",
+                              "normalization_add_relu",
+                              "sparse_softmax_cross_entropy",
+                              "fused_tril_scale_softmax_mask_scale",
+                              "fused_bias_add_gelu",
+                              "fused_bias_add_mask_scale",
+                              "acc"};
   return gray_list;
 }
 
 const AMPList& AutoMixedPrecisionLists::ClearList() {
-  // TODO(niuchong): identity, tuple_identity?
+  // TODO(niuchong): tuple_identity
   static AMPList clear_list = {"gather",
                                "max_pool_1d",
                                "max_pool_2d",
@@ -60,7 +79,12 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "squeeze",
                                "expand_dims",
                                "cast_to_static_shape",
-                               "parallel_cast"};
+                               "parallel_cast",
+                               "hierarchical_parallel_cast",
+                               "hierarchical_parallel_cast_like",
+                               "repeat",
+                               "unpack",
+                               "pack"};
 
   return clear_list;
 }

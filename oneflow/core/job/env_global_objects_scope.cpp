@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
+#include "oneflow/core/rpc/include/manager.h"
 
 namespace oneflow {
 
@@ -77,22 +78,6 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
   return resource;
 }
 
-Maybe<CtrlBootstrap> MakeCtrlBootstrap(const EnvDesc& env_desc) {
-  std::shared_ptr<CtrlBootstrap> ctrl_bootstrap;
-  if (env_desc.has_ctrl_bootstrap_conf()) {
-    ctrl_bootstrap.reset(new RankInfoCtrlBootstrap(env_desc.bootstrap_conf()));
-  } else {
-    ctrl_bootstrap.reset(new HostListCtrlBootstrap(env_desc));
-  }
-  return ctrl_bootstrap;
-}
-
-Maybe<int> GetCtrlPort(const EnvDesc& env_desc) {
-  int port = 0;
-  if (env_desc.has_bootstrap_conf_ctrl_port()) { port = env_desc.bootstrap_conf_ctrl_port(); }
-  return port;
-}
-
 }  // namespace
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
@@ -101,15 +86,41 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitGlobalCudaDeviceProp();
 #endif
   Global<EnvDesc>::New(env_proto);
-  Global<CtrlServer>::New(JUST(GetCtrlPort(*Global<EnvDesc>::Get())));
   Global<ProcessCtx>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
-  CHECK_JUST(JUST(MakeCtrlBootstrap(*Global<EnvDesc>::Get()))
-                 ->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
-  Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
-  Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto));
-  Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto));
+  if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+#ifdef RPC_BACKEND_LOCAL
+    LOG(INFO) << "using rpc backend: dry-run";
+    Global<RpcManager>::SetAllocated(new DryRunRpcManager());
+#else
+    static_assert(false, "requires rpc backend dry-run to dry run oneflow");
+#endif  // RPC_BACKEND_LOCAL
+  } else if ((env_proto.machine_size() == 1 && env_proto.has_ctrl_bootstrap_conf() == false)
+             || (env_proto.has_ctrl_bootstrap_conf()
+                 && env_proto.ctrl_bootstrap_conf().world_size() == 1)) /*single process*/ {
+#ifdef RPC_BACKEND_LOCAL
+    LOG(INFO) << "using rpc backend: local";
+    Global<RpcManager>::SetAllocated(new LocalRpcManager());
+#else
+    static_assert(false, "requires rpc backend local to run oneflow in single processs");
+#endif  // RPC_BACKEND_LOCAL
+  } else /*multi process, multi machine*/ {
+#ifdef RPC_BACKEND_GRPC
+    LOG(INFO) << "using rpc backend: gRPC";
+    Global<RpcManager>::SetAllocated(new GrpcRpcManager());
+#else
+    UNIMPLEMENTED() << "to run distributed oneflow, you must enable at least one multi-node rpc "
+                       "backend by adding cmake argument, for instance: -DRPC_BACKEND=GRPC";
+#endif  // RPC_BACKEND_GRPC
+  }
+  CHECK_JUST(Global<RpcManager>::Get()->CreateServer());
+  CHECK_JUST(Global<RpcManager>::Get()->Bootstrap());
+  CHECK_JUST(Global<RpcManager>::Get()->CreateClient());
+  Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto),
+                                    GlobalProcessCtx::NumOfProcessPerNode());
+  Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto),
+                                        GlobalProcessCtx::NumOfProcessPerNode());
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
   Global<EagerJobBuildAndInferCtxMgr>::New();
@@ -133,11 +144,9 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   }
   Global<ResourceDesc, ForEnv>::Delete();
   CHECK_NOTNULL(Global<CtrlClient>::Get());
-  CHECK_NOTNULL(Global<CtrlServer>::Get());
   CHECK_NOTNULL(Global<EnvDesc>::Get());
-  Global<CtrlClient>::Delete();
+  Global<RpcManager>::Delete();
   Global<ProcessCtx>::Delete();
-  Global<CtrlServer>::Delete();
   Global<EnvDesc>::Delete();
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();

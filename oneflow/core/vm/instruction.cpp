@@ -25,6 +25,8 @@ namespace vm {
 
 namespace {
 
+static const int kReservedOperandVecSize = 64;
+
 template<InterpretType interpret_type>
 int64_t GetObjectId(int64_t);
 
@@ -38,6 +40,18 @@ int64_t GetObjectId<kInfer>(int64_t val) {
   return IdUtil::GetTypeId(val);
 }
 
+template<typename T>
+void InitFromProto(InstructionMsg* that, const T& proto) {
+  that->__Init__(proto.instr_type_name());
+  that->mutable_operand()->resize(proto.operand_size());
+  if (proto.has_parallel_desc_symbol_id()) {
+    that->set_parallel_desc_symbol_id(proto.parallel_desc_symbol_id());
+  }
+  for (int i = 0; i < proto.operand_size(); ++i) {
+    that->mutable_operand()->at(i)->__Init__(proto.operand(i));
+  }
+}
+
 }  // namespace
 
 InstructionOperand* InstructionMsg::add_instr_operand() {
@@ -46,29 +60,39 @@ InstructionOperand* InstructionMsg::add_instr_operand() {
   return operand_vec->back().Mutable();
 }
 
+void InstructionMsg::__Init__() {
+  *mutable_instr_type_name() = "";
+  mutable_operand_list()->mut_operand()->reserve(kReservedOperandVecSize);
+}
+
 void InstructionMsg::__Init__(const std::string& instr_type_name) {
   __Init__();
   mutable_instr_type_id()->CopyFrom(LookupInstrTypeId(instr_type_name));
+  *mutable_instr_type_name() = instr_type_name;
 }
 
-void InstructionMsg::__Init__(const InstructionProto& proto) {
-  __Init__(proto.instr_type_name());
-  mutable_operand()->resize(proto.operand_size());
-  if (proto.has_parallel_desc_symbol_id()) {
-    set_parallel_desc_symbol_id(proto.parallel_desc_symbol_id());
-  }
-  for (int i = 0; i < proto.operand_size(); ++i) {
-    mutable_operand()->at(i)->__Init__(proto.operand(i));
-  }
-}
+void InstructionMsg::__Init__(const InstructionProto& proto) { InitFromProto(this, proto); }
+void InstructionMsg::__Init__(const cfg::InstructionProto& proto) { InitFromProto(this, proto); }
 
 void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
   __Init__();
   mutable_instr_type_id()->CopyFrom(instr_msg.instr_type_id());
+  *mutable_instr_type_name() = instr_msg.instr_type_name();
   if (instr_msg.has_parallel_desc_symbol_id()) {
     set_parallel_desc_symbol_id(instr_msg.parallel_desc_symbol_id());
   }
   reset_operand_list(instr_msg.operand_list());
+}
+
+void InstructionMsg::ToProto(InstructionProto* proto) const {
+  proto->set_instr_type_name(instr_type_name());
+  if (has_parallel_desc_symbol_id()) {
+    proto->set_parallel_desc_symbol_id(parallel_desc_symbol_id());
+  }
+  proto->mutable_operand()->Clear();
+  for (const auto& operand : operand_list().operand()) {
+    operand->ToProto(proto->mutable_operand()->Add());
+  }
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::add_parallel_desc(int64_t symbol_id) {
@@ -181,11 +205,19 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_mut2_operand(
   return this;
 }
 
+ObjectMsgPtr<InstructionMsg> InstructionMsg::add_del_operand(ObjectId logical_object_id) {
+  CHECK(IdUtil::IsObjectId(logical_object_id));
+  auto* operand = add_instr_operand()->mutable_del_operand()->mutable_operand();
+  operand->__Init__(logical_object_id, AllMirroredObject());
+  return this;
+}
+
 ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
   auto infer_instr_msg = ObjectMsgPtr<InstructionMsg>::NewFrom(mut_allocator(), *this);
   auto* stream_type_id = infer_instr_msg->mut_instr_type_id()->mut_stream_type_id();
   CHECK_EQ(stream_type_id->interpret_type(), InterpretType::kCompute);
   stream_type_id->CopyFrom(LookupInferStreamTypeId(*stream_type_id));
+  *infer_instr_msg->mutable_phy_instr_operand() = phy_instr_operand();
   return infer_instr_msg;
 }
 

@@ -15,9 +15,12 @@ limitations under the License.
 */
 
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/scope.h"
+
+#ifdef WITH_CUDA
+#include <cuda.h>
+#endif  // WITH_CUDA
 
 namespace oneflow {
 
@@ -107,14 +110,6 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
         seeds.at(parallel_ctx->parallel_id()));
     kernel_conf->mutable_image_decoder_random_crop_resize_conf()->set_batch_size(
         GetBlobDesc4BnInOp("in")->shape().elem_cnt());
-  }
-
-  LogicalNode* NewProperLogicalNode() const override {
-    if (device_type() == DeviceType::kGPU) {
-      return new DecodeH2DLogicalNode();
-    } else {
-      return new NormalForwardLogicalNode();
-    }
   }
 
   Maybe<void> InferBlobParallelDesc() override {

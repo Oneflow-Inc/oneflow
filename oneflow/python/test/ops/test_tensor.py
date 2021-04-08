@@ -35,16 +35,12 @@ class TestTensor(flow.unittest.TestCase):
         "numpy doesn't work in lazy mode",
     )
     def test_numpy(test_case):
-        @flow.global_function()
-        def job():
-            shape = (2, 3)
-            test_case.assertTrue(
-                np.array_equal(
-                    fake_flow_ones(shape).numpy(), np.ones(shape, dtype=np.float32)
-                )
+        shape = (2, 3)
+        test_case.assertTrue(
+            np.array_equal(
+                fake_flow_ones(shape).numpy(), np.ones(shape, dtype=np.float32)
             )
-
-        job()
+        )
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
@@ -55,20 +51,38 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.Tensor(*shape)
 
         x.fill_(5)
-
-        @flow.global_function()
-        def job():
-            test_case.assertTrue(np.array_equal(x.numpy(), 5 * np.ones(x.shape)))
-
-        job()
+        test_case.assertTrue(np.array_equal(x.numpy(), 5 * np.ones(x.shape)))
 
         flow.nn.init.ones_(x)
+        test_case.assertTrue(np.array_equal(x.numpy(), np.ones(x.shape)))
 
-        @flow.global_function()
-        def job():
-            test_case.assertTrue(np.array_equal(x.numpy(), np.ones(x.shape)))
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_creating_consistent_tensor(test_case):
+        shape = (2, 3)
+        x = flow.Tensor(*shape, placement=flow.placement("gpu", ["0:0"], None))
+        x.set_placement(flow.placement("cpu", ["0:0"], None))
+        x.set_is_consistent(True)
+        test_case.assertTrue(not x.is_cuda)
+        x.determine()
 
-        job()
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_user_defined_data(test_case):
+        list_data = [5, 5]
+        tuple_data = (5, 5)
+        numpy_data = np.array((5, 5))
+        x = flow.Tensor(list_data)
+        y = flow.Tensor(tuple_data)
+        z = flow.Tensor(numpy_data)
+
+        test_case.assertTrue(np.array_equal(x.numpy(), 5 * np.ones(x.shape)))
+        test_case.assertTrue(np.array_equal(y.numpy(), 5 * np.ones(y.shape)))
+        test_case.assertTrue(np.array_equal(z.numpy(), 5 * np.ones(z.shape)))
 
 
 if __name__ == "__main__":

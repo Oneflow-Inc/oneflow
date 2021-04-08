@@ -14,10 +14,12 @@ include(cocoapi)
 include(half)
 include(re2)
 include(json)
-include(absl)
-include(cares)
-include(openssl)
-include(grpc)
+if (RPC_BACKEND MATCHES "GRPC")
+  include(absl)
+  include(cares)
+  include(openssl)
+  include(grpc)
+endif()
 include(flatbuffers)
 include(lz4)
 
@@ -30,7 +32,6 @@ if (WITH_TENSORRT)
 endif()
 
 if (BUILD_CUDA)
-  set(CUDA_SEPARABLE_COMPILATION ON)
   find_package(CUDA REQUIRED)
   add_definitions(-DWITH_CUDA)
   foreach(cuda_lib_path ${CUDA_LIBRARIES})
@@ -149,8 +150,6 @@ set(oneflow_third_party_dependencies
   googletest_copy_libs_to_destination
   googlemock_copy_headers_to_destination
   googlemock_copy_libs_to_destination
-  grpc_copy_headers_to_destination
-  grpc_copy_libs_to_destination
   opencv_copy_headers_to_destination
   libpng_copy_headers_to_destination
   opencv_copy_libs_to_destination
@@ -165,6 +164,10 @@ set(oneflow_third_party_dependencies
   lz4_copy_headers_to_destination
 )
 
+if (RPC_BACKEND MATCHES "GRPC")
+  list(APPEND oneflow_third_party_dependencies grpc_copy_headers_to_destination)
+  list(APPEND oneflow_third_party_dependencies grpc_copy_libs_to_destination)
+endif()
 
 list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${ZLIB_INCLUDE_DIR}

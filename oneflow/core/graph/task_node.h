@@ -84,7 +84,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void ForEachConsumedDataRegst(
       const std::function<void(const std::string&, const RegstDesc*)>& Handler) const;
   void Build();
-  virtual bool IsReadyForBuild() { return IsAllConsumedDataRegstLocked(); }
 
   void EraseZeroSizeProducedBlob();
   void EraseZeroSizeConsumedRegst();
@@ -130,13 +129,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void PinConsumedRegstMemCase(MemoryCase*);
   void ConsumeRegst(const std::string& name);
   void ConsumeRegst(const std::string& name, const std::shared_ptr<RegstDesc>&);
-  bool IsAllConsumedDataRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
-  void TryLockConsumedRegst(const std::string& name);
   void EraseConsumedRegstsByName(const std::string& name);
 
   virtual void BuildExecGphAndRegst() = 0;
-  virtual void LockRegsts();
 
   virtual void InferProducedDataRegstTimeShape() = 0;
   void NaiveInferProducedDataRegstTimeShape();
@@ -169,10 +165,16 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   std::shared_ptr<RegstDesc> GetRegst(const std::string& name_in_producer) const;
   std::shared_ptr<RegstDesc> GetSoleRegst() const;
   std::vector<std::shared_ptr<RegstDesc>> GetRegsts() const;
+  const HashSet<LogicalBlobId>& GetLbis() const { return lbis_; }
 
   void AddRegst(const std::string& name_in_producer, const std::shared_ptr<RegstDesc>& regst);
+  void AddLbi(const LogicalBlobId& lbi) { lbis_.insert(lbi); }
+  void AddLbis(const std::vector<LogicalBlobId>& lbis) { lbis_.insert(lbis.begin(), lbis.end()); }
+
+  void CheckRegstLbiValid() const;
 
  private:
+  HashSet<LogicalBlobId> lbis_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> name_in_producer2regst_;
 };
 

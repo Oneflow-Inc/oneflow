@@ -16,6 +16,7 @@ limitations under the License.
 #include <glog/logging.h>
 
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/op_builder.h"
 
 namespace oneflow {
@@ -25,25 +26,22 @@ static constexpr char _PositionalPlaceholderPrefix[] = "_/#^Placeholder_";
 
 OpBuilder::OpBuilder(const std::string& op_type_name) {
   *(proto_.mutable_op_type_name()) = op_type_name;
+  op_name_ = *CHECK_JUST(UniqueStr(op_type_name));
 }
 
-Maybe<OpBuilder&> OpBuilder::MaybeOp(const std::string& op_type_name) {
+OpBuilder::OpBuilder(const std::string& op_type_name, const std::string& op_name)
+    : op_name_(op_name) {
   *(proto_.mutable_op_type_name()) = op_type_name;
-  return *this;
-}
-
-OpBuilder& OpBuilder::Op(const std::string& op_type_name) {
-  return CHECK_JUST(MaybeOp(op_type_name));
 }
 
 Maybe<OpBuilder&> OpBuilder::MaybeInput(const std::string& input_name, const int count) {
   CHECK_GT_OR_RETURN(count, 0);
   CHECK_EQ_OR_RETURN(proto_.input().count(input_name), 0)
       << "The Input " << input_name << " has been specified more than once.";
-  auto& input_list = (*(proto_.mutable_input()))[input_name];
+  auto* input_list = &((*(proto_.mutable_input()))[input_name]);
   for (int i = 0; i < count; ++i) {
     const std::string& tensor_name = _PositionalPlaceholderPrefix + std::to_string(input_pos_++);
-    input_list.mutable_s()->Add()->assign(tensor_name);
+    input_list->mutable_s()->Add()->assign(tensor_name);
     indexed_ibns_.push_back(input_name + "_" + std::to_string(i));
   }
   return *this;
@@ -60,10 +58,10 @@ Maybe<OpBuilder&> OpBuilder::MaybeOutput(const std::string& output_name, const i
   CHECK_GT_OR_RETURN(count, 0);
   CHECK_EQ_OR_RETURN(proto_.output().count(output_name), 0)
       << "The output " << output_name << " has been specified more than once.";
-  auto& output_list = (*(proto_.mutable_output()))[output_name];
+  auto* output_list = &((*(proto_.mutable_output()))[output_name]);
   for (int i = 0; i < count; ++i) {
     const std::string& tensor_name = op_name_ + "/" + output_name + "_" + std::to_string(i);
-    output_list.mutable_s()->Add()->assign(tensor_name);
+    output_list->mutable_s()->Add()->assign(tensor_name);
     indexed_obns_.push_back(output_name + "_" + std::to_string(i));
   }
   return *this;
@@ -77,12 +75,15 @@ OpBuilder& OpBuilder::Output(const std::string& output_name, const int count) {
   return CHECK_JUST(MaybeOutput(output_name, count));
 }
 
-Maybe<OpBuilder&> OpBuilder::MaybeAttr(const std::string& attr_name, const AttrValue& attr_value) {
-  (*(proto_.mutable_attr()))[attr_name] = attr_value;
+Maybe<OpBuilder&> OpBuilder::MaybeAttr(const std::string& attr_name,
+                                       const cfg::AttrValue& attr_value) {
+  AttrValue pb_attr_value;
+  attr_value.ToProto(&pb_attr_value);
+  (*(proto_.mutable_attr()))[attr_name] = pb_attr_value;
   return *this;
 }
 
-OpBuilder& OpBuilder::Attr(const std::string& attr_name, const AttrValue& attr_value) {
+OpBuilder& OpBuilder::Attr(const std::string& attr_name, const cfg::AttrValue& attr_value) {
   return CHECK_JUST(MaybeAttr(attr_name, attr_value));
 }
 

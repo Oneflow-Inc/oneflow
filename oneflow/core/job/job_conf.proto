@@ -169,7 +169,7 @@ message IndexedSlicesOptimizerConf {
 message ParallelBlobConf {
   required BlobDescProto logical_blob_desc_conf = 1;
   required ParallelConf parallel_conf = 2;
-  required SbpParallel sbp_conf = 3;
+  required ParallelDistribution parallel_distribution = 3;
 }
 
 message JobInputDef {
@@ -222,6 +222,7 @@ message JobConfigProto {
   optional bool enable_cudnn_fused_normalization_add_relu = 207;
   optional bool enable_fuse_add_to_output = 208 [default = false];
   optional bool enable_fuse_cast_scale = 209 [default = false];
+  optional int64 num_gradient_accumulation_steps = 210;
 
   optional bool enable_reuse_mem = 300 [default = true];
   optional bool enable_inplace = 301 [default = true];

@@ -60,6 +60,7 @@ class InferStreamType<ControlStreamType> final : public StreamType {
   void Compute(VirtualMachine*, InstructionMsg*) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
 
   bool SharingVirtualMachineThread() const override { return true; }
+  bool IsControlStreamType() const override { return true; }
 
   ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                           int64_t this_machine_id) const override {
@@ -119,7 +120,9 @@ void ControlStreamType::Infer(VirtualMachine* vm, InstructionMsg* instr_msg) con
 }
 
 void ControlStreamType::Infer(VirtualMachine* vm, Instruction* instruction) const {
-  Infer(vm, instruction->mut_instr_msg());
+  const auto& instr_type_id = instruction->instr_msg().instr_type_id();
+  CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kInfer);
+  instr_type_id.instruction_type().Infer(vm, instruction);
   auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
@@ -131,7 +134,9 @@ void ControlStreamType::Compute(VirtualMachine* vm, InstructionMsg* instr_msg) c
 }
 
 void ControlStreamType::Compute(VirtualMachine* vm, Instruction* instruction) const {
-  Compute(vm, instruction->mut_instr_msg());
+  const auto& instr_type_id = instruction->instr_msg().instr_type_id();
+  CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
+  instr_type_id.instruction_type().Compute(vm, instruction);
   auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }

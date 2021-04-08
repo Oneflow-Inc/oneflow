@@ -34,7 +34,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class LogicalNode;
 class MirroredSigInferHint;
 class OpNodeSignature;
 class Scope;
@@ -49,8 +48,6 @@ class Operator {
   void Init(const OperatorConf& op_conf);
   void Init(std::shared_ptr<const OperatorConf> op_conf);
   virtual void InitFromOpConf() = 0;
-
-  virtual LogicalNode* NewProperLogicalNode() const;
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
@@ -132,17 +129,17 @@ class Operator {
       const ParallelContext* parallel_ctx) const;
 
   Maybe<void> FillInputBlobTimeShape(
-      const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4Ibn);
+      const std::function<Maybe<const Shape>(int32_t)>& GetTimeShape4InputIndex);
   Maybe<void> InferOpTimeShapeIf();
   virtual Maybe<void> InferOpTimeShape(
-      const std::function<const Shape*(const std::string&)>& GetTimeShape4BnInOp,
-      Shape* time_shape) const;
+      const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
+      std::shared_ptr<const Shape>* time_shape) const;
   Maybe<const Shape> GetOpTimeShape() const;
   Maybe<const Shape> GetInputBlobFastestTimeShape() const;
   Maybe<const Shape> GetInputOutputFastestTimeShape() const;
 
   Maybe<void> InferSbpSignature(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-                                const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint);
+                                const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint) const;
   Maybe<void> FillSbpSignature(const SbpSignature& sbp_signature);
   Maybe<void> FillParallelDistributionSignature(const ParallelDistributionSignature& signature);
   Maybe<void> InferSbpSignatureIf(
@@ -151,7 +148,7 @@ class Operator {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc);
   Maybe<void> InferParallelDistributionSignatureIf(
-      const ParallelDistributionSignature& parallel_distribution_sig_conf,
+      const ParallelDistributionSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn);
@@ -214,11 +211,11 @@ class Operator {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
   virtual Maybe<void> InferParallelDistributionSignature(
-      ParallelDistributionSignature* signature,
-      const ParallelDistributionSignature& parallel_distribution_sig_conf,
+      ParallelDistributionSignature* parallel_distribution_signature,
+      const ParallelDistributionSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-          ParallelDistributionInferHint4Ibn);
+          ParallelDistributionInferHint4Ibn) const;
   virtual Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
     UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
     return Maybe<void>::Ok();
@@ -237,6 +234,8 @@ class Operator {
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
       KernelConf*) const;
+
+  virtual void AddLbi2OutputIndex(const LogicalBlobId& lbi, int32_t output_index);
 
   virtual LogicalBlobId lbi4ibn(const std::string& input_bn) const;
   virtual LogicalBlobId lbi4obn(const std::string& output_bn) const;
@@ -296,7 +295,7 @@ class Operator {
   std::unique_ptr<HashMap<std::string, std::shared_ptr<const ParallelDesc>>> bn2parallel_desc_;
   std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>> input_index2logical_blob_desc_;
   std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>> output_index2logical_blob_desc_;
-  std::unique_ptr<HashMap<std::string, std::shared_ptr<const Shape>>> ibn2time_shape_;
+  std::unique_ptr<std::vector<std::shared_ptr<const Shape>>> input_index2time_shape_;
   std::shared_ptr<const Shape> input_blob_fastest_time_shape_;
   std::shared_ptr<const Shape> input_output_fastest_time_shape_;
   std::shared_ptr<const Shape> op_time_shape_;
@@ -384,12 +383,6 @@ struct IsTickTockOpTypeCase final {};
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type);
 
-inline LogicalBlobId GenPackedLbi() {
-  LogicalBlobId lbi;
-  lbi.set_is_packed_id(true);
-  return lbi;
-}
-
 inline OpBlobArg GenOpBlobArg(const std::string& op_name, const std::string& bn_in_op) {
   OpBlobArg oba;
   oba.set_op_name(op_name);
@@ -406,16 +399,11 @@ inline std::string GenLogicalBlobName(const std::string& op_name, const std::str
 inline std::string GenLogicalBlobName(const LogicalBlobId& lbi) {
   CHECK_EQ(lbi.has_op_name(), true);
   CHECK_EQ(lbi.has_blob_name(), true);
-  CHECK_EQ(lbi.is_packed_id(), false);
   return GenLogicalBlobName(lbi.op_name(), lbi.blob_name());
 }
 
 Maybe<bool> GetSbpParallelInLbnOrNothing(const std::string& lbn, SbpParallel* sbp);
 Maybe<bool> ParseDisableBoxingFlag(const std::string& lbn_with_hint, bool* disable_boxing);
-
-Maybe<void> InferOpSbpSignature(Operator* op, const SbpSignature& sbp_sig_conf,
-                                const ParallelDesc& parallel_desc,
-                                const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint);
 
 std::string GetInputLbnInOpCustomizedConf(const OperatorConf& op_conf,
                                           const std::string& fd_name_may_have_idx);

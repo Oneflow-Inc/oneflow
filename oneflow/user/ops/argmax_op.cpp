@@ -25,7 +25,6 @@ REGISTER_USER_OP("argmax")
       dim_vec.pop_back();
       *ctx->Shape4ArgNameAndIndex("out", 0) =
           dim_vec.empty() ? Shape({1}) : Shape(std::move(dim_vec));
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -33,6 +32,10 @@ REGISTER_USER_OP("argmax")
       FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes() - 1) {
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     });
 

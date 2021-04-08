@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -31,7 +30,8 @@ class AccCompTaskNode final : public CompTaskNode {
 };
 
 void AccCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  SoleOutDataEdge()->AddRegst("out", ProduceRegst("out", false));
+  std::shared_ptr<RegstDesc> regst = ProduceRegst("out", false);
+  ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", regst); });
 }
 
 void AccCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
@@ -39,12 +39,11 @@ void AccCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->
 void AccCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  std::shared_ptr<const Operator> op = logical_node()->SoleOp();
   ExecNode* exec_node = mut_exec_gph().NewNode();
-  exec_node->mut_op() = op;
-  exec_node->BindBnWithRegst(op->SoleIbn(), in_regst);
-  out_regst->AddLbi(op->BnInOp2Lbi(op->SoleObn()));
-  exec_node->BindBnWithRegst(op->SoleObn(), out_regst);
+  exec_node->mut_op() = op();
+  exec_node->BindBnWithRegst(op()->SoleIbn(), in_regst);
+  out_regst->AddLbi(op()->BnInOp2Lbi(op()->SoleObn()));
+  exec_node->BindBnWithRegst(op()->SoleObn(), out_regst);
   exec_node->InferBlobDescs(parallel_ctx());
   out_regst->ForEachLbi([out_regst](const LogicalBlobId& lbi) {
     const BlobDesc* blob_desc = out_regst->GetBlobDesc(lbi);

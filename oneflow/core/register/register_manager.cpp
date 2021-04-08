@@ -114,6 +114,9 @@ RegstMgr::RegstMgr(const Plan& plan) {
       CHECK(regst_desc_id2parallel_ctx_.emplace(regst_desc_id, task.parallel_ctx()).second);
     }
   }
+  for (const auto& pair : plan.ctrl_regst_desc_info().ctrl_regst_desc_id2producer_task_id()) {
+    CHECK(ctrl_regst_desc_id2producer_task_id_.emplace(pair.first, pair.second).second);
+  }
 }
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
@@ -167,7 +170,6 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
                                   const RtRegstDesc* rt_regst_desc, char* main_mem_ptr,
                                   char* separated_header_mem_ptr) {
   size_t separated_header_mem_size = rt_regst_desc->SeparatedHeaderByteSize4OneRegst();
-  const RtBlobDesc* packed_blob_desc = rt_regst_desc->packed_blob_desc();
   char* cur_body_pointer = nullptr;
   char* cur_header_pointer = nullptr;
   if (separated_header_mem_size > 0) {
@@ -177,19 +179,15 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
       separated_header_mem_ptr =
           Global<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);
     }
-    regst->packed_blob_.reset(new Blob(regst->regst_desc()->mem_case(), packed_blob_desc,
-                                       separated_header_mem_ptr, main_mem_ptr));
     cur_header_pointer = separated_header_mem_ptr;
     cur_body_pointer = main_mem_ptr;
   } else {
     CHECK(separated_header_mem_ptr == nullptr);
-    regst->packed_blob_.reset(
-        new Blob(regst->regst_desc()->mem_case(), packed_blob_desc, main_mem_ptr));
     cur_header_pointer = main_mem_ptr;
     if (main_mem_ptr == nullptr) {
       cur_body_pointer = nullptr;
     } else {
-      cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
+      cur_body_pointer = main_mem_ptr + rt_regst_desc->GetSoleRtBlobDesc()->ByteSizeOfBlobHeader();
     }
   }
   rt_regst_desc->ForEachBlobDescOffsetInOnRegst([&](int64_t ordinal, const LogicalBlobId& lbi,
@@ -225,6 +223,17 @@ const RtRegstDesc& RegstMgr::RegstDesc4RegstDescId(int64_t regst_desc_id) const 
 
 bool RegstMgr::HasRegstDescId(int64_t regst_desc_id) const {
   return regst_desc_id2rt_regst_desc_.find(regst_desc_id) != regst_desc_id2rt_regst_desc_.end();
+}
+
+int64_t RegstMgr::ProducerTaskId4RegstDescId(int64_t regst_desc_id) const {
+  const auto& it = ctrl_regst_desc_id2producer_task_id_.find(regst_desc_id);
+  CHECK(it != ctrl_regst_desc_id2producer_task_id_.end());
+  return it->second;
+}
+
+bool RegstMgr::HasProducerTaskId4RegstDescId(int64_t regst_desc_id) const {
+  return ctrl_regst_desc_id2producer_task_id_.find(regst_desc_id)
+         != ctrl_regst_desc_id2producer_task_id_.end();
 }
 
 Blob* RegstMgr::Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id) {

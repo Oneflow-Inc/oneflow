@@ -26,7 +26,6 @@ limitations under the License.
 namespace oneflow {
 
 class Shape;
-enum DataType;
 class JobDesc;
 
 namespace user_op {
@@ -71,6 +70,7 @@ class InferContext {
 
 struct TensorDescInferFnUtil {
   static Maybe<void> Unchanged(InferContext*);
+  static Maybe<void> UnchangedDataType(InferContext*);
   static Maybe<void> InOutCorrespond(InferContext*);
 };
 

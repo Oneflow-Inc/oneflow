@@ -35,6 +35,10 @@ REGISTER_USER_OP("user_sigmoid_forward")
         ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
       }
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("user_sigmoid_backward")
@@ -59,6 +63,10 @@ REGISTER_USER_OP("user_sigmoid_backward")
             .Split(user_op::OpArg("dx", 0), i)
             .Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("y", 0);
       return Maybe<void>::Ok();
     });
 
