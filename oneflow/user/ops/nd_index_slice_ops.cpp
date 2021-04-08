@@ -42,6 +42,10 @@ Maybe<void> InferScatterNdTensorDesc(user_op::InferContext* ctx) {
   const Shape& params_shape = ctx->Attr<Shape>("shape");
   JUST(CheckScatterNdShape(params_shape, *indices_shape, *updates_shape));
   *ctx->Shape4ArgNameAndIndex("out", 0) = params_shape;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferScatterNdDataType(user_op::InferContext* ctx) {
   *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
   return Maybe<void>::Ok();
 }
@@ -52,6 +56,10 @@ Maybe<void> InferScatterNdLikeTensorDesc(user_op::InferContext* ctx) {
   Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
   JUST(CheckScatterNdShape(*like_shape, *indices_shape, *updates_shape));
   *ctx->Shape4ArgNameAndIndex("out", 0) = *like_shape;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferScatterNdLikeDataType(user_op::InferContext* ctx) {
   *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
   return Maybe<void>::Ok();
 }
@@ -62,6 +70,10 @@ Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
   Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
   JUST(CheckScatterNdShape(*params_shape, *indices_shape, *updates_shape));
   *ctx->Shape4ArgNameAndIndex("out", 0) = *params_shape;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferTensorScatterNdOptDataType(user_op::InferContext* ctx) {
   *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
   return Maybe<void>::Ok();
 }
@@ -115,7 +127,6 @@ REGISTER_USER_OP("gather_nd")
         out_shape_vec.push_back(params_shape->At(i));
       }
       *ctx->Shape4ArgNameAndIndex("out", 0) = Shape(out_shape_vec);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -151,6 +162,10 @@ REGISTER_USER_OP("gather_nd")
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("scatter_nd")
@@ -159,6 +174,7 @@ REGISTER_USER_OP("scatter_nd")
     .Output("out")
     .Attr<Shape>("shape")
     .SetTensorDescInferFn(InferScatterNdTensorDesc)
+    .SetInferDataTypeFn(InferScatterNdDataType)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
@@ -200,6 +216,7 @@ REGISTER_USER_OP("scatter_nd_like")
     .Input("updates")
     .Output("out")
     .SetTensorDescInferFn(InferScatterNdLikeTensorDesc)
+    .SetInferDataTypeFn(InferScatterNdLikeDataType)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& indices_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
@@ -238,6 +255,7 @@ REGISTER_USER_OP("tensor_scatter_nd_update")
     .Input("indices")
     .Output("out")
     .SetTensorDescInferFn(InferTensorScatterNdOptTensorDesc)
+    .SetInferDataTypeFn(InferTensorScatterNdOptDataType)
     .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
@@ -252,6 +270,7 @@ REGISTER_USER_OP("tensor_scatter_nd_add")
     .Input("indices")
     .Output("out")
     .SetTensorDescInferFn(InferTensorScatterNdOptTensorDesc)
+    .SetInferDataTypeFn(InferTensorScatterNdOptDataType)
     .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
