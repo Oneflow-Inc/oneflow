@@ -29,7 +29,8 @@ class LazyRefBlobObject : public BlobObject {
       : BlobObject(std::make_shared<MemoryCase>(blob->mem_case()),
                    std::make_shared<Shape>(blob->static_shape()), blob->data_type()) {
     const auto& rt_blob_desc = blob->blob_desc();
-    blob_desc_ = BlobDesc(rt_blob_desc.body(), rt_blob_desc.is_dynamic());
+    blob_desc_ =
+        BlobDesc(rt_blob_desc.body_shape(), rt_blob_desc.data_type(), rt_blob_desc.is_dynamic());
     ref_blob_ = blob;
   }
   virtual ~LazyRefBlobObject() override = default;

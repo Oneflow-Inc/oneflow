@@ -23,7 +23,7 @@ OpArgBlobAttribute::OpArgBlobAttribute(const std::shared_ptr<cfg::BlobDescProto>
                                        const std::string& logical_blob_name)
     : blob_desc_(blob_desc), logical_blob_name_(logical_blob_name) {
   ShapeProto shape_proto;
-  blob_desc_->body().shape().ToProto(&shape_proto);
+  blob_desc_->shape().ToProto(&shape_proto);
   shape_ = std::make_shared<Shape>(shape_proto);
 }
 
@@ -33,7 +33,7 @@ std::shared_ptr<Shape> OpArgBlobAttribute::shape() const { return shape_; }
 
 std::string OpArgBlobAttribute::logical_blob_name() const { return logical_blob_name_; }
 
-cfg::DataType OpArgBlobAttribute::get_dtype() const { return blob_desc_->body().data_type(); }
+cfg::DataType OpArgBlobAttribute::get_dtype() const { return blob_desc_->data_type(); }
 
 bool OpArgBlobAttribute::is_dynamic() const { return blob_desc_->is_dynamic(); }
 
@@ -49,7 +49,7 @@ std::shared_ptr<OpArgBlobAttribute> OpArgBlobAttribute::GetPhysicalOpArgBlobAttr
   blob_desc->CopyFrom(*blob_desc_);
   int64_t physical_len =
       BalancedSplitter(shape_->At(split_axis), parallel_num).At(parallel_id).size();
-  blob_desc->mutable_body()->mutable_shape()->set_dim(split_axis, physical_len);
+  blob_desc->mutable_shape()->set_dim(split_axis, physical_len);
   return std::make_shared<OpArgBlobAttribute>(blob_desc, logical_blob_name_);
 }
 
@@ -58,7 +58,7 @@ void OpArgBlobAttribute::DumpToInterfaceBlobConf(
   for (int i = 0; i < shape_->NumAxes(); ++i) {
     interface_blob_conf->mutable_shape()->add_dim(shape_->At(i));
   }
-  interface_blob_conf->set_data_type(blob_desc_->body().data_type());
+  interface_blob_conf->set_data_type(blob_desc_->data_type());
   interface_blob_conf->set_is_dynamic(is_dynamic());
 }
 

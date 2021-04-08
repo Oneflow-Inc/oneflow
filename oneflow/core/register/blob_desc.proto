@@ -1,12 +1,13 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/register/pod.proto";
+import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/data_type.proto";
 
 message BlobDescProto {
-  required StructPodProto header = 1;
-  required TensorPodProto body = 2;
-  required bool is_dynamic = 5;
+  required ShapeProto shape = 1;
+  required DataType data_type = 2;
+  required bool is_dynamic = 3;
 }
 
 message BlobDescSignature {

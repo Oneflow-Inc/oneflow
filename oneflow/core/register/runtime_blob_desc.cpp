@@ -18,22 +18,20 @@ limitations under the License.
 namespace oneflow {
 
 RtBlobDesc::RtBlobDesc(const BlobDesc& blob_desc) {
-  BlobDescProto proto;
-  blob_desc.ToProto(&proto);
-  InitFromProto(proto);
+  shape_ = blob_desc.shape();
+  data_type_ = blob_desc.data_type();
+  is_dynamic_ = blob_desc.is_dynamic();
 }
 
-RtBlobDesc::RtBlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
-
-void RtBlobDesc::InitFromProto(const BlobDescProto& proto) {
-  body_.InitFromProto(proto.body());
-  header_.InitFromProto(proto.header());
+RtBlobDesc::RtBlobDesc(const BlobDescProto& proto) {
+  shape_ = Shape(proto.shape());
+  data_type_ = proto.data_type();
   is_dynamic_ = proto.is_dynamic();
 }
 
-size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return header_.ByteSize(); }
+size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return shape_.NumAxes() * sizeof(int64_t); }
 
-size_t RtBlobDesc::ByteSizeOfBlobBody() const { return body_.ByteSize(); }
+size_t RtBlobDesc::ByteSizeOfBlobBody() const { return Capacity(); }
 
 size_t RtBlobDesc::AlignedByteSizeOfBlobBody() const {
   return RoundUp(ByteSizeOfBlobBody(), BlobDesc::kAlignSize);
@@ -44,7 +42,8 @@ size_t RtBlobDesc::AlignedTotalByteSize() const {
 }
 
 bool RtBlobDesc::operator==(const RtBlobDesc& rhs) const {
-  return (body_ == rhs.body_) && (header_ == rhs.header_) && (is_dynamic_ == rhs.is_dynamic_);
+  return (shape_ == rhs.shape_) && (data_type_ == rhs.data_type_)
+         && (is_dynamic_ == rhs.is_dynamic_);
 }
 
 }  // namespace oneflow

@@ -34,19 +34,9 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
   mem_case_ = mem_case;
   blob_desc_ = blob_desc;
   dptr_ = body_ptr;
-  header_ptr_.reset(new PodPtr(blob_desc_->header_pod_desc(), header_ptr));
+  header_ptr_ = header_ptr;
   this->blob_access_checker_ = Global<BlobAccessCheckerIf<true, true>>::Get();
-  FOR_RANGE(int32_t, i, 0, FieldKey::kFieldKeySize) {
-    FieldKey key = static_cast<FieldKey>(i);
-    header_fields_[i] = header_ptr_->MutTensorPtr<int64_t>(key);
-    if (header_fields_[i] == nullptr) {
-      header_field_capacities_[i] = 0;
-    } else {
-      header_field_capacities_[i] =
-          blob_desc->header_pod_desc().Field(key).Cast<TensorPodDesc>().shape().elem_cnt();
-    }
-  }
-  int64_t* shape_ptr = mut_header_field<FieldKey::kTensorShape>();
+  int64_t* shape_ptr = reinterpret_cast<int64_t*>(header_ptr);
   shape_view_.reset(new ShapeView(shape_ptr, static_shape().NumAxes()));
   if (blob_desc->is_dynamic()) {
     mut_shape_view_.reset(new MutShapeView(shape_ptr, static_shape().NumAxes()));
@@ -70,17 +60,16 @@ void Blob::CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 }
 
 void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || blob_desc().ByteSizeOfBlobHeader() == 0) { return; }
-  CHECK_EQ(blob_desc().ByteSizeOfBlobHeader(), rhs->blob_desc().ByteSizeOfBlobHeader());
-  const size_t num_axes = static_shape().NumAxes();
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_header_field<FieldKey::kTensorShape>(),
-                           rhs->header_field<FieldKey::kTensorShape>(), num_axes * sizeof(int64_t));
+  size_t header_size = blob_desc().ByteSizeOfBlobHeader();
+  if (this == rhs || header_size == 0) { return; }
+  CHECK_EQ(header_size, rhs->blob_desc().ByteSizeOfBlobHeader());
+  Memcpy<DeviceType::kCPU>(device_ctx, header_ptr_, rhs->header_ptr(), header_size);
 }
 
 char* Blob::mut_contiguous_header_ptr() {
   // check header and body is continuous
   CHECK_EQ(header_ptr() + blob_desc_->ByteSizeOfBlobHeader(), dptr<char>());
-  return header_ptr_->ptr();
+  return header_ptr_;
 }
 
 }  // namespace oneflow
