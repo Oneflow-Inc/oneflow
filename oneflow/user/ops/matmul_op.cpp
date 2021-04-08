@@ -64,9 +64,9 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
 
 void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::UserOpWrapper& op,
                               user_op::AddOpFn AddOp) {
-  bool transpose_a = op.attr<bool>("transpose_a");
-  bool transpose_b = op.attr<bool>("transpose_b");
-  double alpha = op.attr<double>("alpha");
+  const bool transpose_a = op.attr<bool>("transpose_a");
+  const bool transpose_b = op.attr<bool>("transpose_b");
+  const double alpha = op.attr<double>("alpha");
   auto HandleGradOp = [&](user_op::UserOpConfWrapper&& grad_op,
                           std::string&& input_arg_name) -> void {
     op.BindGradTensorWithOpInput(grad_op.output("out", 0), input_arg_name, 0);

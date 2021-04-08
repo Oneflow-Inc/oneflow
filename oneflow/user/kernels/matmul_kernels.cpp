@@ -52,7 +52,7 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
 
     int32_t m = 0, n = 0, k = 0;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
-
+    const double alpha = ctx->Attr<double>("alpha");
     double beta;
     if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
@@ -61,13 +61,12 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
       Memcpy<device_type>(
           ctx->device_ctx(), out->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
-      beta = GetOneVal<double>();
+      beta = 1.0;
     } else {
-      beta = GetZeroVal<double>();
+      beta = 0.0;
     }
-    NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
-                                       ctx->Attr<double>("alpha"), a->dptr<T>(), b->dptr<T>(), beta,
-                                       out->mut_dptr<T>());
+    NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k, alpha,
+                                       a->dptr<T>(), b->dptr<T>(), beta, out->mut_dptr<T>());
   }
 };
 
@@ -119,10 +118,11 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
           ctx->device_ctx(), out->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
     }
-    const double beta = has_add_to_output ? GetOneVal<double>() : GetZeroVal<double>();
-    NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
-                                            ctx->Attr<double>("alpha"), a->dptr<float16>(),
-                                            b->dptr<float16>(), beta, out->mut_dptr<float16>());
+    const double alpha = ctx->Attr<double>("alpha");
+    const double beta = has_add_to_output ? 1.0 : 0.0;
+    NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k, alpha,
+                                            a->dptr<float16>(), b->dptr<float16>(), beta,
+                                            out->mut_dptr<float16>());
   }
 };
 
@@ -153,6 +153,7 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
 
     int32_t m = 0, n = 0, k = 0;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
+    const double alpha = ctx->Attr<double>("alpha");
     double beta;
     if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
@@ -161,14 +162,14 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
       Memcpy<device_type>(
           ctx->device_ctx(), out->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
-      beta = GetOneVal<double>();
+      beta = 1.0;
     } else {
-      beta = GetZeroVal<double>();
+      beta = 0.0;
     }
     size_t batch_size = a->shape().Count(0, num_axes - 2);
     NewKernelUtil<device_type>::OFBatchedGemm(ctx->device_ctx(), trans_a, trans_b, batch_size, m, n,
-                                              k, ctx->Attr<double>("alpha"), a->dptr<T>(),
-                                              b->dptr<T>(), beta, out->mut_dptr<T>());
+                                              k, alpha, a->dptr<T>(), b->dptr<T>(), beta,
+                                              out->mut_dptr<T>());
   }
 };
 
@@ -222,10 +223,11 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
           add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
     }
     size_t batch_size = a->shape().Count(0, num_axes - 2);
-    const double beta = has_add_to_output ? GetOneVal<double>() : GetZeroVal<double>();
+    const double alpha = ctx->Attr<double>("alpha");
+    const double beta = has_add_to_output ? 1.0 : 0.0;
     NewKernelUtil<DeviceType::kGPU>::OFBatchedGemm(
-        ctx->device_ctx(), trans_a, trans_b, batch_size, m, n, k, ctx->Attr<double>("alpha"),
-        a->dptr<float16>(), b->dptr<float16>(), beta, out->mut_dptr<float16>());
+        ctx->device_ctx(), trans_a, trans_b, batch_size, m, n, k, alpha, a->dptr<float16>(),
+        b->dptr<float16>(), beta, out->mut_dptr<float16>());
   }
 };
 

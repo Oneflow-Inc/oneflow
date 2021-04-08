@@ -132,8 +132,8 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                      const T* b, const double beta, T* c) {
   int a_stride, b_stride, c_stride;
   int lda, ldb, ldc;
-  T alpha_val = static_cast<T>(alpha);
-  T beta_val = static_cast<T>(beta);
+  const T alpha_val = static_cast<T>(alpha);
+  const T beta_val = static_cast<T>(beta);
   cublasOperation_t cublas_trans_a, cublas_trans_b;
   std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
@@ -168,8 +168,8 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
       PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
 
   if (GetCudaSmVersion() >= 500) {
-    float alpha_f = static_cast<float>(alpha);
-    float beta_f = static_cast<float>(beta);
+    const float alpha_f = static_cast<float>(alpha);
+    const float beta_f = static_cast<float>(beta);
 #if CUDA_VERSION >= 11000
     cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
 #else
@@ -181,8 +181,8 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
         reinterpret_cast<const void*>(a), CUDA_R_16F, lda, a_stride, &beta_f,
         reinterpret_cast<void*>(c), CUDA_R_16F, ldc, c_stride, batch_size, CUDA_R_32F, algo));
   } else {
-    half alpha_h = static_cast<half>(alpha);
-    half beta_h = static_cast<half>(beta);
+    const half alpha_h = static_cast<half>(alpha);
+    const half beta_h = static_cast<half>(beta);
     cublas_gemmStridedBatched<half>(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
                                     cublas_trans_a, n, m, k, &alpha_h, b, ldb, b_stride, a, lda,
                                     a_stride, &beta_h, c, ldc, c_stride, batch_size);
