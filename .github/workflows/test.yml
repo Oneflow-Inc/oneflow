@@ -251,21 +251,27 @@ jobs:
           - test_suite: "cuda"
             os: [self-hosted, linux, gpu]
             allow_fail: false
+            build_env: build.cuda.env
           - test_suite: "cuda_op"
             os: [self-hosted, linux, gpu]
             allow_fail: false
+            build_env: build.cuda.env
           - test_suite: "cuda_eager"
             os: [self-hosted, linux, gpu]
             allow_fail: true
+            build_env: build.cuda.env
           - test_suite: "cpu"
             os: [self-hosted, linux, cpu]
             allow_fail: false
+            build_env: build.cpu.env
           - test_suite: "cpu_eager"
             os: [self-hosted, linux, cpu]
             allow_fail: true
+            build_env: build.cpu.env
           - test_suite: "xla"
             os: [self-hosted, linux, gpu]
             allow_fail: true
+            build_env: build.xla.env
     steps:
       - name: Fix permissions
         run: |
@@ -273,28 +279,16 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - name: Set source file to use
-        env:
-          test_suite: ${{matrix.test_suite }}
-        run: |
-          set -x
-          test_suite_env=${{ matrix.test_suite }}
-          if [ "$test_suite" == "cuda_op" ] || [ "$test_suite" == "cuda_eager" ]; then
-            test_suite_env="cuda"
-          elif [ "$test_suite" == "cpu_eager" ]; then
-            test_suite_env="cpu"
-          fi
-          echo "test_suite_env=${test_suite_env}"  >> $GITHUB_ENV
       - name: Download shared env
         uses: actions/download-artifact@v2
         with:
-          name: build.${{ env.test_suite_env }}.env
+          name: ${{ matrix.build_env }}
       - name: Set environment variables
         env:
           test_suite: ${{matrix.test_suite }}
         run: |
           set -x
-          cat build.${test_suite_env}.env >> $GITHUB_ENV
+          cat ${{ matrix.build_env }} >> $GITHUB_ENV
           extra_docker_args=""
 
           # load shared environment variables and check directory sha_dir exists
