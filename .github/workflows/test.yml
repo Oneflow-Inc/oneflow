@@ -178,6 +178,10 @@ jobs:
             -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
             oneflow-manylinux2014-cuda10.2:0.1 \
             bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && source scl_source enable devtoolset-7 && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
+      - name: Remove cache
+        if: ${{ failure() }}
+        run: |
+          docker run --rm -v $PWD:/p -w /p busybox rm -rf ${ci_tmp_dir}
       - name: Upload wheel via SSH
         if: env.is_built != '1' && matrix.test_suite != 'mac'
         uses: ./.github/actions/upload_ssh
