@@ -230,41 +230,12 @@ jobs:
           if [ "$test_suite" == "cuda" ]; then
             echo "remote_bin_dir=${CI_STATIC_HOST}:$sha_dir/bin" >> build.${{ matrix.test_suite }}.env
           fi
-          # duplicate one for cuda_op
-          if [ "$test_suite" == "cuda" ]; then
-            rm -f build.cuda_op.env
-            ln -s build.cuda.env build.cuda_op.env
-            rm -f build.cuda_eager.env
-            ln -s build.cuda.env build.cuda_eager.env
-          fi
-          if [ "$test_suite" == "cpu" ]; then
-            rm -f build.cpu_eager.env
-            ln -s build.cpu.env build.cpu_eager.env
-          fi
       - name: Upload shared env
         if: matrix.test_suite != 'mac'
         uses: actions/upload-artifact@v2
         with:
           name: build.${{ matrix.test_suite }}.env
           path: build.${{ matrix.test_suite }}.env
-      - name: Upload shared env (cuda_op)
-        uses: actions/upload-artifact@v2
-        if: matrix.test_suite == 'cuda'
-        with:
-          name: build.cuda_op.env
-          path: build.cuda_op.env
-      - name: Upload shared env (cuda_eager)
-        uses: actions/upload-artifact@v2
-        if: matrix.test_suite == 'cuda'
-        with:
-          name: build.cuda_eager.env
-          path: build.cuda_eager.env
-      - name: Upload shared env (cpu_eager)
-        uses: actions/upload-artifact@v2
-        if: matrix.test_suite == 'cpu'
-        with:
-          name: build.cpu_eager.env
-          path: build.cpu_eager.env
 
   test:
     name: Test suite
@@ -302,16 +273,28 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set environment variables
+        env:
+          test_suite: ${{matrix.test_suite }}
+        run: |
+          test_suite_env=${{ matrix.test_suite }}
+          if [ "$test_suite" == "cuda_op" ] || [ "$test_suite" == "cuda_eager" ]; then
+            test_suite_env="cuda"
+          elif [ "$test_suite" == "cpu_eager" ]; then
+            test_suite_env="cpu"
+          fi
+          set -x
+          echo "test_suite_env=${test_suite_env}"  >> $GITHUB_ENV
       - name: Download shared env
         uses: actions/download-artifact@v2
         with:
-          name: build.${{ matrix.test_suite }}.env
+          name: build.${{ env.test_suite_env }}.env
       - name: Set environment variables
         env:
           test_suite: ${{matrix.test_suite }}
         run: |
           set -x
-          cat build.${{ matrix.test_suite }}.env >> $GITHUB_ENV
+          cat build.${test_suite_env}.env >> $GITHUB_ENV
           extra_docker_args=""
 
           # load shared environment variables and check directory sha_dir exists
