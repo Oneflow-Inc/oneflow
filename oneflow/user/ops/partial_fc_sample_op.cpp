@@ -29,13 +29,17 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
       const int64_t num_sample = ctx->Attr<int64_t>("num_sample");
       const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
       const user_op::TensorDesc* label = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      user_op::TensorDesc* mapped_label = ctx->TensorDesc4ArgNameAndIndex("mapped_label", 0);
       user_op::TensorDesc* sampled_weight = ctx->TensorDesc4ArgNameAndIndex("sampled_weight", 0);
       user_op::TensorDesc* sampled_label = ctx->TensorDesc4ArgNameAndIndex("sampled_label", 0);
-      *ctx->TensorDesc4ArgNameAndIndex("mapped_label", 0) = *label;
-      *sampled_weight = *weight;
+      *mapped_label->mut_shape() = label->shape();
+      *mapped_label->mut_is_dynamic() = label->is_dynamic();
+      *sampled_weight->mut_shape() = weight->shape();
       sampled_weight->mut_shape()->Set(0, num_sample);
-      *sampled_label = *label;
+      *sampled_weight->mut_is_dynamic() = weight->is_dynamic();
+      *sampled_label->mut_shape() = label->shape();
       sampled_label->mut_shape()->Set(0, num_sample);
+      *sampled_label->mut_is_dynamic() = label->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -45,13 +49,17 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
       const int64_t num_sample_per_rank = num_sample / parallel_num;
       const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
       const user_op::TensorDesc* label = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      user_op::TensorDesc* mapped_label = ctx->TensorDesc4ArgNameAndIndex("mapped_label", 0);
       user_op::TensorDesc* sampled_weight = ctx->TensorDesc4ArgNameAndIndex("sampled_weight", 0);
       user_op::TensorDesc* sampled_label = ctx->TensorDesc4ArgNameAndIndex("sampled_label", 0);
-      *ctx->TensorDesc4ArgNameAndIndex("mapped_label", 0) = *label;
-      *sampled_weight = *weight;
+      *mapped_label->mut_shape() = label->shape();
+      *mapped_label->mut_is_dynamic() = label->is_dynamic();
+      *sampled_weight->mut_shape() = weight->shape();
       sampled_weight->mut_shape()->Set(0, num_sample_per_rank);
-      *sampled_label = *label;
+      *sampled_weight->mut_is_dynamic() = weight->is_dynamic();
+      *sampled_label->mut_shape() = label->shape();
       sampled_label->mut_shape()->Set(0, num_sample_per_rank);
+      *sampled_label->mut_is_dynamic() = label->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -69,6 +77,12 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
           .Split(user_op::OpArg("sampled_weight", 0), 0)
           .Build();
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("mapped_label", 0) = *ctx->Dtype4ArgNameAndIndex("label", 0);
+      *ctx->Dtype4ArgNameAndIndex("sampled_weight", 0) = *ctx->Dtype4ArgNameAndIndex("weight", 0);
+      *ctx->Dtype4ArgNameAndIndex("sampled_label", 0) = *ctx->Dtype4ArgNameAndIndex("label", 0);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
@@ -79,25 +93,33 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* boxing_disabled_sampled_weight_diff =
           ctx->TensorDesc4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0);
-      *boxing_disabled_sampled_weight_diff =
-          *ctx->TensorDesc4ArgNameAndIndex("sampled_weight_diff", 0);
+      *boxing_disabled_sampled_weight_diff->mut_shape() =
+          *ctx->Shape4ArgNameAndIndex("sampled_weight_diff", 0);
       CHECK_EQ_OR_RETURN(boxing_disabled_sampled_weight_diff->shape().At(0) % ctx->parallel_num(),
                          0);
       boxing_disabled_sampled_weight_diff->mut_shape()->Set(
           0, boxing_disabled_sampled_weight_diff->shape().At(0) / ctx->parallel_num());
+      *boxing_disabled_sampled_weight_diff->mut_is_dynamic() =
+          *ctx->IsDynamic4ArgNameAndIndex("sampled_weight_diff", 0);
       user_op::TensorDesc* boxing_disabled_sampled_label =
           ctx->TensorDesc4ArgNameAndIndex("boxing_disabled_sampled_label", 0);
-      *boxing_disabled_sampled_label = *ctx->TensorDesc4ArgNameAndIndex("sampled_label", 0);
+      *boxing_disabled_sampled_label->mut_shape() = *ctx->Shape4ArgNameAndIndex("sampled_label", 0);
       CHECK_EQ_OR_RETURN(boxing_disabled_sampled_label->shape().At(0) % ctx->parallel_num(), 0);
       boxing_disabled_sampled_label->mut_shape()->Set(
           0, boxing_disabled_sampled_label->shape().At(0) / ctx->parallel_num());
+      *boxing_disabled_sampled_label->mut_is_dynamic() =
+          *ctx->IsDynamic4ArgNameAndIndex("sampled_label", 0);
       return Maybe<void>::Ok();
     })
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->TensorDesc4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0) =
-          *ctx->TensorDesc4ArgNameAndIndex("sampled_weight_diff", 0);
-      *ctx->TensorDesc4ArgNameAndIndex("boxing_disabled_sampled_label", 0) =
-          *ctx->TensorDesc4ArgNameAndIndex("sampled_label", 0);
+      *ctx->Shape4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0) =
+          *ctx->Shape4ArgNameAndIndex("sampled_weight_diff", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0) =
+          *ctx->IsDynamic4ArgNameAndIndex("sampled_weight_diff", 0);
+      *ctx->Shape4ArgNameAndIndex("boxing_disabled_sampled_label", 0) =
+          *ctx->Shape4ArgNameAndIndex("sampled_label", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("boxing_disabled_sampled_label", 0) =
+          *ctx->IsDynamic4ArgNameAndIndex("sampled_label", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -107,6 +129,13 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
           .Broadcast(user_op::OpArg("boxing_disabled_sampled_weight_diff", 0))
           .Broadcast(user_op::OpArg("boxing_disabled_sampled_label", 0))
           .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0) =
+          *ctx->Dtype4ArgNameAndIndex("sampled_weight_diff", 0);
+      *ctx->Dtype4ArgNameAndIndex("boxing_disabled_sampled_label", 0) =
+          *ctx->Dtype4ArgNameAndIndex("sampled_label", 0);
       return Maybe<void>::Ok();
     });
 

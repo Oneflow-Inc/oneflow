@@ -48,13 +48,21 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
       out_i_dim_vec.push_back(in_desc->shape().At(j));
     }
     *out_i_desc->mut_shape() = Shape(out_i_dim_vec);
-    *out_i_desc->mut_data_type() = in_desc->data_type();
     out_i_desc->set_is_dynamic(like_i_desc->is_dynamic());
   }
   if (dynamic_dim_size == 0) {
     CHECK_EQ_OR_RETURN(static_dim_size, in_desc->shape().At(axis));
   } else {
     CHECK_LE_OR_RETURN(static_dim_size, in_desc->shape().At(axis));
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
+    user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
+    *out_i_desc->mut_data_type() = in_desc->data_type();
   }
   return Maybe<void>::Ok();
 }
@@ -155,7 +163,8 @@ REGISTER_USER_OP("split_like")
     .Attr<int64_t>("axis")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn(SetLikeArgModifier)
-    .SetGetSbpFn(GetSbpSignature);
+    .SetGetSbpFn(GetSbpSignature)
+    .SetInferDataTypeFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("split_like").SetGenBackwardOpConfFn(GenGradOp);
 

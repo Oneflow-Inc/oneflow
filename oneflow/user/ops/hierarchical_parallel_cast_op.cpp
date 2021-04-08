@@ -25,7 +25,8 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
     .Attr<std::string>("grad_mode")
     .Attr<std::vector<std::string>>("grad_parallel_distribution")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
@@ -43,6 +44,10 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
         *out_distribution->add_sbp_parallel() = sbp_parallel;
       }
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("hierarchical_parallel_cast_like")
@@ -50,7 +55,8 @@ REGISTER_USER_OP("hierarchical_parallel_cast_like")
     .Input("like")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
@@ -64,6 +70,10 @@ REGISTER_USER_OP("hierarchical_parallel_cast_like")
       *in_distribution = hint_distribution;
       *out_distribution = hint_distribution;
       *like_distribution = hint_distribution;
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 
