@@ -273,7 +273,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - name: Set environment variables
+      - name: Set source file to use
         env:
           test_suite: ${{matrix.test_suite }}
         run: |
