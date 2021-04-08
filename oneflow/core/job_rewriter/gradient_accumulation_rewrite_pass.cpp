@@ -52,22 +52,31 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
       if (op_conf.has_variable_conf()) {  // repeat variable
         const LogicalBlobId variable_lbi = node->op().BnInOp2Lbi("out");
         const std::string variable_lbn = GenLogicalBlobName(variable_lbi);
-        user_op::UserOpConfWrapperBuilder repeat_builder("System-GradientAccumulation-Repeat-"
-                                                         + op_conf.name());
-        const auto repeat_op = repeat_builder.OpTypeName("repeat")
-                                   .Input("in", variable_lbn)
-                                   .Output("out")
-                                   .Attr<int32_t>("repeat_num", repeat_num)
-                                   .ScopeSymbolId(op_conf.scope_symbol_id())
-                                   .Build();
-        job_builder.AddOps(node->parallel_desc().parallel_conf(), {repeat_op.op_conf()});
-        node->ForEachNodeOnInOutEdge([&](const OpNode* dst) {
+        HashMap<ParallelConf, std::string> parallel_conf2repeat_lbn;
+        node->ForEachNodeOnOutEdge([&](const OpNode* dst) {
+          const ParallelConf& parallel_conf = dst->parallel_desc().parallel_conf();
+          if (parallel_conf2repeat_lbn.find(parallel_conf) == parallel_conf2repeat_lbn.end()) {
+            user_op::UserOpConfWrapperBuilder repeat_builder(
+                "System-GradientAccumulation-Repeat-" + op_conf.name() + "-" + NewUniqueId());
+            const auto repeat_op = repeat_builder.OpTypeName("repeat")
+                                       .Input("in", variable_lbn)
+                                       .Output("out")
+                                       .Attr<int32_t>("repeat_num", repeat_num)
+                                       .ScopeSymbolId(dst->op().op_conf().scope_symbol_id())
+                                       .Build();
+            job_builder.AddOps(parallel_conf, {repeat_op.op_conf()});
+            parallel_conf2repeat_lbn.emplace(parallel_conf, repeat_op.output("out", 0));
+          }
+        });
+        node->ForEachNodeOnOutEdge([&](const OpNode* dst) {
           const auto& dst_op = dst->op();
           OperatorConf* new_dst_op_conf = GetOperatorConf4Modify(dst_op.op_conf());
+          const std::string& repeat_lbn =
+              parallel_conf2repeat_lbn.at(dst->parallel_desc().parallel_conf());
           for (const auto& ibn : dst_op.input_bns()) {
             if (dst_op.BnInOp2Lbi(ibn) == variable_lbi) {
-              const auto& old_val = ReplaceInputLbnInOpCustomizedConf(new_dst_op_conf, ibn,
-                                                                      repeat_op.output("out", 0));
+              const auto& old_val =
+                  ReplaceInputLbnInOpCustomizedConf(new_dst_op_conf, ibn, repeat_lbn);
               CHECK_EQ(variable_lbn, old_val);
             }
           }
