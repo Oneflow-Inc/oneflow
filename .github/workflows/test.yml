@@ -277,13 +277,13 @@ jobs:
         env:
           test_suite: ${{matrix.test_suite }}
         run: |
+          set -x
           test_suite_env=${{ matrix.test_suite }}
           if [ "$test_suite" == "cuda_op" ] || [ "$test_suite" == "cuda_eager" ]; then
             test_suite_env="cuda"
           elif [ "$test_suite" == "cpu_eager" ]; then
             test_suite_env="cpu"
           fi
-          set -x
           echo "test_suite_env=${test_suite_env}"  >> $GITHUB_ENV
       - name: Download shared env
         uses: actions/download-artifact@v2
