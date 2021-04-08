@@ -70,10 +70,6 @@ Maybe<void> AccTickOp::InferOpTimeShape(
 Maybe<void> AccTickOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Broadcast(input_bns())
-      .Broadcast(output_bns())
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 
