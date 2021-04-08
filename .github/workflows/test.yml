@@ -245,10 +245,22 @@ jobs:
           path: build.${{ matrix.test_suite }}.env
       - name: Upload shared env (cuda_op)
         uses: actions/upload-artifact@v2
-        if: matrix.test_suite == 'cuda' && matrix.test_suite != 'mac'
+        if: matrix.test_suite == 'cuda'
         with:
           name: build.cuda_op.env
           path: build.cuda_op.env
+      - name: Upload shared env (cuda_eager)
+        uses: actions/upload-artifact@v2
+        if: matrix.test_suite == 'cuda'
+        with:
+          name: build.cuda_eager.env
+          path: build.cuda_eager.env
+      - name: Upload shared env (cpu_eager)
+        uses: actions/upload-artifact@v2
+        if: matrix.test_suite == 'cpu'
+        with:
+          name: build.cpu_eager.env
+          path: build.cpu_eager.env
 
   test:
     name: Test suite
