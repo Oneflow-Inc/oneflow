@@ -75,8 +75,9 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 
 void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::UserOpWrapper& op,
                               user_op::AddOpFn AddOp) {
-  bool transpose_a = op.attr<bool>("transpose_a");
-  bool transpose_b = op.attr<bool>("transpose_b");
+  const bool transpose_a = op.attr<bool>("transpose_a");
+  const bool transpose_b = op.attr<bool>("transpose_b");
+  const double alpha = op.attr<double>("alpha");
   auto HandleGradOp = [&](user_op::UserOpConfWrapper&& grad_op,
                           std::string&& input_arg_name) -> void {
     op.BindGradTensorWithOpInput(grad_op.output("out", 0), input_arg_name, 0);
@@ -93,6 +94,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
               .Output("out")
               .Attr<bool>("transpose_a", transpose_b)
               .Attr<bool>("transpose_b", true)
+              .Attr<double>("alpha", alpha)
               .Build();
       HandleGradOp(std::move(grad_a_op), "a");
     } else {
@@ -104,6 +106,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
               .Output("out")
               .Attr<bool>("transpose_a", false)
               .Attr<bool>("transpose_b", !transpose_b)
+              .Attr<double>("alpha", alpha)
               .Build();
       HandleGradOp(std::move(grad_a_op), "a");
     }
@@ -118,6 +121,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
               .Output("out")
               .Attr<bool>("transpose_a", true)
               .Attr<bool>("transpose_b", transpose_a)
+              .Attr<double>("alpha", alpha)
               .Build();
       HandleGradOp(std::move(grad_b_op), "b");
     } else {
@@ -129,6 +133,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
               .Output("out")
               .Attr<bool>("transpose_a", !transpose_a)
               .Attr<bool>("transpose_b", false)
+              .Attr<double>("alpha", alpha)
               .Build();
       HandleGradOp(std::move(grad_b_op), "b");
     }
@@ -144,6 +149,7 @@ REGISTER_USER_OP("matmul")
     .Output("out")
     .Attr<bool>("transpose_a", false)
     .Attr<bool>("transpose_b", false)
+    .Attr<double>("alpha", 1.0)
     .SetTensorDescInferFn(InferTensorDesc4Matmul)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       // (m, k_a) * (k_b, n) where k_a == k_b
@@ -211,6 +217,7 @@ REGISTER_USER_OP("batch_matmul")
     .Output("out")
     .Attr<bool>("transpose_a", false)
     .Attr<bool>("transpose_b", false)
+    .Attr<double>("alpha", 1.0)
     .SetTensorDescInferFn(InferTensorDesc4Matmul)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& a_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0);
