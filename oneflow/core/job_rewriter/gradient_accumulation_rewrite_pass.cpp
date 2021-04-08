@@ -54,25 +54,26 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
         const std::string variable_lbn = GenLogicalBlobName(variable_lbi);
         HashMap<ParallelConf, std::string> parallel_conf2repeat_lbn;
         node->ForEachNodeOnOutEdge([&](const OpNode* dst) {
+          const auto& dst_op = dst->op();
           const ParallelConf& parallel_conf = dst->parallel_desc().parallel_conf();
-          if (parallel_conf2repeat_lbn.find(parallel_conf) == parallel_conf2repeat_lbn.end()) {
+          std::string repeat_lbn;
+          const auto& it = parallel_conf2repeat_lbn.find(parallel_conf);
+          if (it == parallel_conf2repeat_lbn.end()) {
             user_op::UserOpConfWrapperBuilder repeat_builder(
                 "System-GradientAccumulation-Repeat-" + op_conf.name() + "-" + NewUniqueId());
             const auto repeat_op = repeat_builder.OpTypeName("repeat")
                                        .Input("in", variable_lbn)
                                        .Output("out")
                                        .Attr<int32_t>("repeat_num", repeat_num)
-                                       .ScopeSymbolId(dst->op().op_conf().scope_symbol_id())
+                                       .ScopeSymbolId(dst_op.op_conf().scope_symbol_id())
                                        .Build();
             job_builder.AddOps(parallel_conf, {repeat_op.op_conf()});
-            parallel_conf2repeat_lbn.emplace(parallel_conf, repeat_op.output("out", 0));
+            repeat_lbn = repeat_op.output("out", 0);
+            parallel_conf2repeat_lbn.emplace(parallel_conf, repeat_lbn);
+          } else {
+            repeat_lbn = it->second;
           }
-        });
-        node->ForEachNodeOnOutEdge([&](const OpNode* dst) {
-          const auto& dst_op = dst->op();
           OperatorConf* new_dst_op_conf = GetOperatorConf4Modify(dst_op.op_conf());
-          const std::string& repeat_lbn =
-              parallel_conf2repeat_lbn.at(dst->parallel_desc().parallel_conf());
           for (const auto& ibn : dst_op.input_bns()) {
             if (dst_op.BnInOp2Lbi(ibn) == variable_lbi) {
               const auto& old_val =
