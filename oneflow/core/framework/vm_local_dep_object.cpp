@@ -58,10 +58,10 @@ LocalDepObjectMutexedZombieList* StaticMutLocalDepObjectMutexedZombieList() {
 }
 
 void TryMoveFromZombieListToFreeList() {
-  LocalDepObjectZombieList zombie_list;
-  static const size_t kTryCnt = 2;
+  thread_local static LocalDepObjectZombieList zombie_list;
+  if (zombie_list.empty()) { StaticMutLocalDepObjectMutexedZombieList()->MoveTo(&zombie_list); }
+  static const size_t kTryCnt = 8;
   size_t try_cnt = kTryCnt;
-  StaticMutLocalDepObjectMutexedZombieList()->MoveTo(&zombie_list);
   OBJECT_MSG_LIST_FOR_EACH(&zombie_list, zombie_object) {
     zombie_list.Erase(zombie_object.Mutable());
     size_t ref_cnt = zombie_object->ref_cnt();
@@ -77,10 +77,7 @@ void TryMoveFromZombieListToFreeList() {
     }
     if (--try_cnt < 0) { break; }
   }
-  StaticMutLocalDepObjectMutexedZombieList()->MoveFrom(&zombie_list);
 }
-
-}  // namespace
 
 ObjectMsgPtr<LocalDepObject> GetRecycledLocalDepObject(const ParallelDesc& parallel_desc) {
   auto* thread_local_free_list = ThreadLocalMutFreeList4ParallelDesc(parallel_desc);
@@ -94,6 +91,16 @@ ObjectMsgPtr<LocalDepObject> GetRecycledLocalDepObject(const ParallelDesc& paral
   return std::move(object);
 }
 
+void MoveLocalDepObjectToZombieList(ObjectMsgPtr<LocalDepObject>&& local_dep_object) {
+  static const size_t kGroupSize = 16;
+  thread_local static LocalDepObjectZombieList zombie_list;
+  zombie_list.EmplaceBack(std::move(local_dep_object));
+  if (zombie_list.size() >= kGroupSize) {
+    StaticMutLocalDepObjectMutexedZombieList()->MoveFrom(&zombie_list);
+  }
+}
+
+}  // namespace
 }  // namespace vm
 
 VmLocalDepObject::VmLocalDepObject(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
@@ -104,7 +111,7 @@ VmLocalDepObject::VmLocalDepObject(const std::shared_ptr<const ParallelDesc>& pa
 }
 
 VmLocalDepObject::~VmLocalDepObject() {
-  vm::StaticMutLocalDepObjectMutexedZombieList()->EmplaceBack(std::move(local_dep_object_));
+  vm::MoveLocalDepObjectToZombieList(std::move(local_dep_object_));
 }
 
 }  // namespace oneflow
