@@ -67,6 +67,7 @@ void TryMoveFromZombieListToFreeList() {
     size_t ref_cnt = zombie_object->ref_cnt();
     if (ref_cnt == 1 /* hold by `zombie_object` only */) {
       CHECK_EQ(zombie_object->mirrored_object().rw_mutexed_object().ref_cnt(), 1);
+      CHECK(zombie_object->mirrored_object().rw_mutexed_object().access_list().empty());
       const auto& parallel_desc = *zombie_object->logical_object().parallel_desc();
       auto* thread_local_free_list = ThreadLocalMutFreeList4ParallelDesc(parallel_desc);
       thread_local_free_list->EmplaceBack(std::move(zombie_object));
