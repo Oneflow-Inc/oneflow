@@ -254,6 +254,7 @@ class InferenceSession(object):
         else:
             job_conf = job_conf_proto_cfg.JobConfigProto()
             job_conf.set_job_name(job_name)
+            job_conf.mutable_predict_conf()
             self.job_name2job_conf_[job_name] = job_conf
             return job_conf
 
