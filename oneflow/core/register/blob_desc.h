@@ -31,14 +31,14 @@ class BlobDesc final {
   BlobDesc() = delete;
   ~BlobDesc() = default;
 
-  BlobDesc(const Shape& shape, DataType dtype, bool is_dynamic)
-      : shape_(std::make_shared<Shape>(shape)), data_type_(dtype), is_dynamic_(is_dynamic) {}
-  BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype, bool is_dynamic)
-      : shape_(shape), data_type_(dtype), is_dynamic_(is_dynamic) {}
+  // NOTE(chengcheng): Cannot using std::make_shared in header file, because it will cause
+  //  Segmentation fault with unknown reason.
+  BlobDesc(const Shape& shape, DataType dtype, bool is_dynamic);
+  BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype, bool is_dynamic);
 
-  BlobDesc(const Shape& shape, DataType dtype) : BlobDesc(shape, dtype, false) {}
-  BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype) : BlobDesc(shape, dtype, false) {}
-  explicit BlobDesc(DataType dtype) : BlobDesc(Shape(), dtype, false) {}
+  BlobDesc(const Shape& shape, DataType dtype);
+  BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype);
+  explicit BlobDesc(DataType dtype);
   explicit BlobDesc(const BlobDescProto& proto);
   explicit BlobDesc(const BlobDesc&);
 

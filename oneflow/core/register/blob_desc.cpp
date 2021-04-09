@@ -21,6 +21,17 @@ bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& r
   return lhs.lbi() < rhs.lbi();
 }
 
+BlobDesc::BlobDesc(const Shape& shape, DataType dtype, bool is_dynamic)
+    : shape_(std::make_shared<Shape>(shape)), data_type_(dtype), is_dynamic_(is_dynamic) {}
+
+BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype, bool is_dynamic)
+    : shape_(shape), data_type_(dtype), is_dynamic_(is_dynamic) {}
+
+BlobDesc::BlobDesc(const Shape& shape, DataType dtype) : BlobDesc(shape, dtype, false) {}
+BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype)
+    : BlobDesc(shape, dtype, false) {}
+BlobDesc::BlobDesc(DataType dtype) : BlobDesc(Shape(), dtype, false) {}
+
 BlobDesc::BlobDesc(const BlobDescProto& proto) {
   shape_ = std::make_shared<Shape>(proto.shape());
   data_type_ = proto.data_type();
