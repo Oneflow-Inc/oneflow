@@ -31,6 +31,7 @@ import oneflow_api
 
 
 def sync_default_session_if_normal():
+    # TODO merge with same function in framework/check_point_v2.py
     if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
         flow.sync_default_session()
     else:

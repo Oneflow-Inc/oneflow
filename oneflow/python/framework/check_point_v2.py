@@ -55,9 +55,11 @@ blob_register = oneflow_api.GetDefaultBlobRegister()
 
 
 def sync_default_session_if_normal():
+    # TODO merge with same function in experimental/interface_op_read_and_write.py
     if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
         oneflow.sync_default_session()
     else:
+        # do nothing
         pass
 
 
