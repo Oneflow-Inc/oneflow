@@ -26,8 +26,8 @@ REGISTER_USER_OP("multiply")
       const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_OR_RETURN(x->shape() == y->shape());
-      CHECK_OR_RETURN(x->data_type() == y->data_type());
-      *out = *x;
+      *out->mut_shape() = x->shape();
+      *out->mut_is_dynamic() = x->is_dynamic();
       if (x->is_dynamic() || y->is_dynamic()) { *out->mut_is_dynamic() = true; }
       return Maybe<void>::Ok();
     })
@@ -46,6 +46,14 @@ REGISTER_USER_OP("multiply")
           .PartialSum(user_op::OpArg("y", 0))
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      CHECK_OR_RETURN(x->data_type() == y->data_type());
+      *out->mut_data_type() = x->data_type();
       return Maybe<void>::Ok();
     });
 

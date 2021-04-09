@@ -58,10 +58,10 @@ HobStringContextGetter<KernelRegContext> HobDeviceTag() {
 }
 
 HobStringContextGetter<KernelRegContext> HobDeviceSubTag() {
-  return HobStringContextGetter<KernelRegContext>(
-      "device_sub_tag", [](const KernelRegContext& ctx) -> const std::string& {
-        return ctx.Attr<std::string>("device_sub_tag");
-      });
+  return HobStringContextGetter<KernelRegContext>("device_sub_tag",
+                                                  [](const KernelRegContext& ctx) -> std::string {
+                                                    return ctx.Attr<std::string>("device_sub_tag");
+                                                  });
 }
 
 }  // namespace user_op
