@@ -28,6 +28,10 @@ REGISTER_USER_OP("cast_to_tick")
       *out_shape = Shape({1});
       return Maybe<void>::Ok();
     })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      return Maybe<void>::Ok();
+    })
     .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
       SbpSignature* signature = ctx->mutable_sbp_signature();
       auto* bn2sbp = signature->mutable_bn_in_op2sbp_parallel();
