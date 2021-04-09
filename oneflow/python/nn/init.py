@@ -14,6 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.ops.initializer_util import CalcGain
+
+
+@oneflow_export("nn.init.calculate_gain")
+def calculate_gain(nonlinearity, param=None):
+    return CalcGain(nonlinearity, param)
 
 
 @oneflow_export("nn.init.uniform_")
@@ -25,6 +31,30 @@ def uniform_(tensor, a=0.0, b=1.0):
 @oneflow_export("nn.init.normal_")
 def normal_(tensor, mean=0.0, std=1.0):
     tensor.normal_(mean, std)
+
+
+@oneflow_export("nn.init.xavier_uniform_")
+def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
+    tensor.xavier_uniform_(gain, data_format=data_format)
+
+
+@oneflow_export("nn.init.xavier_normal_")
+def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
+    tensor.xavier_normal_(gain, data_format=data_format)
+
+
+@oneflow_export("nn.init.kaiming_uniform_")
+def kaiming_uniform_(
+    tensor, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
+):
+    tensor.kaiming_uniform_(a, mode, nonlinearity, data_format=data_format)
+
+
+@oneflow_export("nn.init.kaiming_normal_")
+def kaiming_normal_(
+    tensor, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
+):
+    tensor.kaiming_normal_(a, mode, nonlinearity, data_format=data_format)
 
 
 @oneflow_export("nn.init.constant_")
