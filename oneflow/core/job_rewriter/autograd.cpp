@@ -112,7 +112,8 @@ std::function<bool(const LogicalBlobId&, const std::string&)> MakePredicatorHasD
 }
 
 void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
-                           const LogicalBlobId& lbi, std::vector<OperatorConf>* op_confs,
+                           const LogicalBlobId& lbi, const ParallelDesc& parallel_desc,
+                           const std::function<void(const OperatorConf& op_conf)>& AddOp,
                            LogicalBlobId* out_diff_lbi) {
   const TrainConf& train_conf = ctx->job_desc().job_conf().train_conf();
   OperatorConf constant_like_op{};
@@ -129,7 +130,11 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
     }
     constant_like_conf->set_float_operand(origin_grad);
   }
-  op_confs->push_back(constant_like_op);
+  AddOp(constant_like_op);
+  ParallelDistribution broadcast_parallel_distribution;
+  for (int32_t i = 0; i < parallel_desc.hierarchy()->NumAxes(); ++i) {
+    broadcast_parallel_distribution.add_sbp_parallel()->mutable_broadcast_parallel();
+  }
   if (train_conf.has_dynamic_loss_scale_policy()) {
     const auto& dynamic_loss_scale_state =
         CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
@@ -145,20 +150,45 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
               .Output("out")
               .Attr<DataType>("dtype", data_type)
               .Build();
+      AddOp(cast_op.op_conf());
       OpBlobArg cast_in_op_blob_arg;
       cast_in_op_blob_arg.set_op_name(cast_op.op_name());
       cast_in_op_blob_arg.set_bn_in_op(GenRepeatedBn("in", 0));
-      SbpParallel sbp_parallel;
-      sbp_parallel.mutable_broadcast_parallel();
-      job_builder->SetSbpParallel4Oba(cast_in_op_blob_arg, sbp_parallel);
+      job_builder->SetParallelDistribution4Oba(cast_in_op_blob_arg,
+                                               broadcast_parallel_distribution);
       OpBlobArg cast_out_op_blob_arg;
       cast_out_op_blob_arg.set_op_name(cast_op.op_name());
       cast_out_op_blob_arg.set_bn_in_op(GenRepeatedBn("out", 0));
-      job_builder->SetSbpParallel4Oba(cast_out_op_blob_arg, sbp_parallel);
-      op_confs->push_back(cast_op.op_conf());
+      job_builder->SetParallelDistribution4Oba(cast_out_op_blob_arg,
+                                               broadcast_parallel_distribution);
       loss_scale_val_lbn = cast_op.output("out", 0);
     }
-    // TODO(liujuncheng): The time shapes of loss and scale may be different.
+    {
+      const OpNode* loss_node = op_graph.OpNode4OpName(lbi.op_name());
+      const int64_t time_shape_elem_cnt =
+          CHECK_JUST(loss_node->op().GetInputBlobFastestTimeShape())->elem_cnt();
+      if (time_shape_elem_cnt != 1) {
+        const auto repeat_op = user_op::UserOpConfWrapperBuilder(lbi.op_name() + "_"
+                                                                 + lbi.blob_name() + "_grad_Repeat")
+                                   .OpTypeName("repeat")
+                                   .Input("in", loss_scale_val_lbn)
+                                   .Output("out")
+                                   .Attr<int32_t>("repeat_num", time_shape_elem_cnt)
+                                   .Build();
+        AddOp(repeat_op.op_conf());
+        OpBlobArg repeat_in_op_blob_arg;
+        repeat_in_op_blob_arg.set_op_name(repeat_op.op_name());
+        repeat_in_op_blob_arg.set_bn_in_op(GenRepeatedBn("in", 0));
+        job_builder->SetParallelDistribution4Oba(repeat_in_op_blob_arg,
+                                                 broadcast_parallel_distribution);
+        OpBlobArg repeat_out_op_blob_arg;
+        repeat_out_op_blob_arg.set_op_name(repeat_op.op_name());
+        repeat_out_op_blob_arg.set_bn_in_op(GenRepeatedBn("out", 0));
+        job_builder->SetParallelDistribution4Oba(repeat_out_op_blob_arg,
+                                                 broadcast_parallel_distribution);
+        loss_scale_val_lbn = repeat_op.output("out", 0);
+      }
+    }
     auto scalar_mul_op =
         user_op::UserOpConfWrapperBuilder(lbi.op_name() + "_" + lbi.blob_name() + "_grad_Scale")
             .Op("scalar_mul_by_tensor")
@@ -166,7 +196,7 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
             .Input("scalar", loss_scale_val_lbn)
             .Output("y")
             .Build();
-    op_confs->push_back(scalar_mul_op.op_conf());
+    AddOp(scalar_mul_op.op_conf());
     *out_diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
   } else {
     out_diff_lbi->set_op_name(constant_like_op.name());
@@ -440,11 +470,14 @@ void InitOutOba2OutDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph,
     CHECK(bn_it != loss_op_node->op().output_bns().cend());
     LogicalBlobId* out_diff_lbi =
         &(*out_oba2out_diff_lbi)[GenOpBlobArg(loss_op_node->op().op_name(), *bn_it)];
-    std::vector<OperatorConf> ops;
-    GenerateOriginDiffLbi(ctx, op_graph, job_builder, loss_lbi, &ops, out_diff_lbi);
     int64_t scope_symbol_id = loss_op_node->op().op_conf().scope_symbol_id();
-    for (auto& op : ops) { op.set_scope_symbol_id(scope_symbol_id); }
-    job_builder->AddOps(loss_op_node->parallel_desc().parallel_conf(), ops);
+    const auto AddOp = [&](const OperatorConf& op_conf) {
+      OperatorConf new_op_conf = op_conf;
+      new_op_conf.set_scope_symbol_id(scope_symbol_id);
+      job_builder->AddOps(loss_op_node->parallel_desc().parallel_conf(), {new_op_conf});
+    };
+    GenerateOriginDiffLbi(ctx, op_graph, job_builder, loss_lbi, loss_op_node->parallel_desc(),
+                          AddOp, out_diff_lbi);
   }
 }
 
