@@ -75,11 +75,11 @@ void AccCompActor::Act() {
   if (acc_cnt_ == 0) {
     Blob* out_blob = out_regst->GetMutSoleBlob();
     if (GetDeviceType() == DeviceType::kCPU) {
-      Memset<DeviceType::kCPU>(kernel_ctx.device_ctx, out_blob->mut_dptr(), 0,
+      Memset<DeviceType::kCPU>(kernel_ctx.device_ctx, out_blob->ForceMutDptr(), 0,
                                out_blob->ByteSizeOfBlobBody());
     } else if (GetDeviceType() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-      Memset<DeviceType::kGPU>(kernel_ctx.device_ctx, out_blob->mut_dptr(), 0,
+      Memset<DeviceType::kGPU>(kernel_ctx.device_ctx, out_blob->ForceMutDptr(), 0,
                                out_blob->ByteSizeOfBlobBody());
 #else
       UNIMPLEMENTED();

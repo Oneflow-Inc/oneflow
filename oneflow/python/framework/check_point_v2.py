@@ -471,7 +471,7 @@ def LoadVariables(
         else:
             if not ignore_mismatch:
                 raise RuntimeError('"{}" is not a variable name'.format(name))
-    oneflow_api.eager.Sync()
+    oneflow_api.eager.single_client.Sync()
 
 
 def _ForEachSlice(
@@ -567,7 +567,7 @@ def init_by_initializer_conf(
         pass
 
     if sync_between_multi_machine:
-        oneflow_api.eager.Sync()
+        oneflow_api.eager.single_client.Sync()
 
 
 def Init() -> None:
@@ -598,4 +598,4 @@ def Init() -> None:
             var_blob, var_conf.initializer, False, scope_symbol_id, var_conf.random_seed
         )
 
-    oneflow_api.eager.Sync()
+    oneflow_api.eager.single_client.Sync()

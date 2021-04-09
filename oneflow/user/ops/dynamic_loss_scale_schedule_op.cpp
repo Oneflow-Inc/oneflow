@@ -19,17 +19,28 @@ namespace oneflow {
 
 namespace {
 
-bool IsScalarTensorWithType(const user_op::TensorDesc* desc, DataType data_type) {
-  return desc->shape().NumAxes() == 1 && desc->shape().At(0) == 1 && desc->data_type() == data_type;
+bool IsScalarTensor(const user_op::TensorDesc* desc) {
+  return desc->shape().NumAxes() == 1 && desc->shape().At(0) == 1;
+}
+
+bool IsTensorWithType(const user_op::TensorDesc* desc, DataType data_type) {
+  return desc->data_type() == data_type;
 }
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  CHECK_OR_RETURN(IsScalarTensorWithType(ctx->TensorDesc4ArgNameAndIndex("count_not_finite", 0),
-                                         DataType::kInt64));
+  CHECK_OR_RETURN(IsScalarTensor(ctx->TensorDesc4ArgNameAndIndex("count_not_finite", 0)));
+  CHECK_OR_RETURN(IsScalarTensor(ctx->TensorDesc4ArgNameAndIndex("loss_scale", 0)));
+  CHECK_OR_RETURN(IsScalarTensor(ctx->TensorDesc4ArgNameAndIndex("good_step_counter", 0)));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(
-      IsScalarTensorWithType(ctx->TensorDesc4ArgNameAndIndex("loss_scale", 0), DataType::kFloat));
-  CHECK_OR_RETURN(IsScalarTensorWithType(ctx->TensorDesc4ArgNameAndIndex("good_step_counter", 0),
-                                         DataType::kInt64));
+      IsTensorWithType(ctx->TensorDesc4ArgNameAndIndex("count_not_finite", 0), DataType::kInt64));
+  CHECK_OR_RETURN(
+      IsTensorWithType(ctx->TensorDesc4ArgNameAndIndex("loss_scale", 0), DataType::kFloat));
+  CHECK_OR_RETURN(
+      IsTensorWithType(ctx->TensorDesc4ArgNameAndIndex("good_step_counter", 0), DataType::kInt64));
   return Maybe<void>::Ok();
 }
 
@@ -52,6 +63,7 @@ REGISTER_USER_OP("dynamic_loss_scale_schedule")
     .Attr<int64_t>("increment_period", 2000)
     .Attr<float>("multiplier", 2.0)
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetInputArgModifyFn(InputArgModifierFn);
+    .SetInputArgModifyFn(InputArgModifierFn)
+    .SetInferDataTypeFn(InferDataType);
 
 }  // namespace oneflow

@@ -117,7 +117,7 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
                                const int64_t scope_symbol_id, const BlobDesc& logical_blob_desc,
                                const int64_t parallel_num) {
   if (src_sbp.has_partial_sum_parallel() && dst_sbp.has_broadcast_parallel()) {
-    // P2B : AllReduce
+    // P->B : AllReduce
     *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2B-" + NewUniqueId())
                .Op("_nccl_logical_all_reduce")
                .Input("in", lbn)
@@ -129,7 +129,7 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
   } else if ((logical_blob_desc.shape().At(0) % parallel_num == 0)
              && (src_sbp.has_partial_sum_parallel() && dst_sbp.has_split_parallel())
              && (dst_sbp.split_parallel().axis() == 0)) {
-    // P2S : ReduceScatter
+    // P->S(0) : ReduceScatter
     *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2S-" + NewUniqueId())
                .Op("_nccl_logical_reduce_scatter")
                .Input("in", lbn)
@@ -141,7 +141,7 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
   } else if ((logical_blob_desc.shape().At(0) % parallel_num == 0)
              && (src_sbp.has_split_parallel() && dst_sbp.has_broadcast_parallel())
              && (src_sbp.split_parallel().axis() == 0)) {
-    // S2B : AllGather
+    // S(0)->B : AllGather
     *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2B-" + NewUniqueId())
                .Op("_nccl_logical_all_gather")
                .Input("in", lbn)
@@ -155,7 +155,7 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
              && (logical_blob_desc.shape().At(src_sbp.split_parallel().axis()) % parallel_num == 0)
              && (logical_blob_desc.shape().At(dst_sbp.split_parallel().axis()) % parallel_num
                  == 0)) {
-    // S2S : All2All
+    // S(in)->S(out) : All2All
     *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2S-" + NewUniqueId())
                .Op("_nccl_logical_s2s")
                .Input("in", lbn)
@@ -210,6 +210,20 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
             .Op("_nccl_logical_2D_same_dim0_all_gather")
             .Input("in", lbn)
             .Output("out")
+            .ScopeSymbolId(scope_symbol_id)
+            .Build()
+            .op_conf();
+    return true;
+  } else if (src_dim1_sbp.has_split_parallel() && dst_dim1_sbp.has_broadcast_parallel()
+             && (src_dim1_sbp.split_parallel().axis() > 0)
+             && (dim_vec.at(src_dim1_sbp.split_parallel().axis()) % num_ranks == 0)) {
+    // (*, S(1)) -> (*, B) : AllGather Noncontinuous
+    *ret =
+        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(*S1)2(*B)-" + NewUniqueId())
+            .Op("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")
+            .Input("in", lbn)
+            .Output("out")
+            .Attr<int64_t>("in_dim1_split_axis", src_dim1_sbp.split_parallel().axis())
             .ScopeSymbolId(scope_symbol_id)
             .Build()
             .op_conf();
@@ -362,7 +376,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          std::cout << "cc_debug_log: insert nccl op: " << nccl_op.name() << " from: ["
+          LOG(INFO) << "cc_debug_log: insert nccl op: " << nccl_op.name() << " from: ["
                     << src_op_name << "](order=" << src_order << ", sbp_parallel_dis="
                     << ParallelDistributionToString(src_node->ParallelDistribution4Lbi(lbi))
                     << ")->[" << dst_op_name << "](order=" << node2order.at(dst_node)
@@ -423,7 +437,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          std::cout << "cc_debug_log: insert nccl op: " << nccl_op.name() << " from: ["
+          LOG(INFO) << "cc_debug_log: insert nccl op: " << nccl_op.name() << " from: ["
                     << src_op_name << "](" << node2order.at(src_node) << ")->[" << dst_op_name
                     << "](" << dst_order << ") and after: [" << pre_op_name << "](" << dst_order - 1
                     << ")\n";
@@ -485,7 +499,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   }
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    std::cout << "cc_debug_log: Try insert nccl logical ops into job: "
+    LOG(INFO) << "cc_debug_log: Try insert nccl logical ops into job: "
               << job_builder->job().job_conf().job_name() << ". Begin...\n";
   }
 
@@ -502,7 +516,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   }
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    std::cout << "cc_debug_log: Try insert nccl logical ops into job: "
+    LOG(INFO) << "cc_debug_log: Try insert nccl logical ops into job: "
               << job_builder->job().job_conf().job_name() << ". ...End\n\n";
   }
 
