@@ -28,7 +28,8 @@ REGISTER_USER_OP("pack")
       const Shape& in_shape = in_desc->shape();
       CHECK_GT(in_shape.NumAxes(), 0);
       user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_desc = *in_desc;
+      *out_desc->mut_is_dynamic() = in_desc->is_dynamic();
+      *out_desc->mut_shape() = in_desc->shape();
       out_desc->mut_shape()->Set(0, in_shape.At(0) * ctx->Attr<int32_t>("pack_num"));
       return Maybe<void>::Ok();
     })
@@ -56,7 +57,11 @@ REGISTER_USER_OP("pack")
           if (time_shape_dim_vec.empty()) { time_shape_dim_vec.push_back(1); }
           *ctx->mut_output_blob_time_shape() = Shape(time_shape_dim_vec);
           return Maybe<void>::Ok();
-        });
+        })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_USER_OP_GRAD("pack").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
   const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
