@@ -36,6 +36,8 @@ class InstructionType {
   virtual void Compute(Instruction* instruction) const = 0;
   virtual void Infer(Instruction* instruction) const = 0;
 
+  virtual void Compute(VirtualMachine* vm, Instruction* instruction) const;
+  virtual void Infer(VirtualMachine* vm, Instruction* instruction) const;
   virtual void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }

@@ -30,6 +30,8 @@ limitations under the License.
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 
 namespace oneflow {
 
@@ -836,7 +838,7 @@ Maybe<void> InstructionsBuilder::InsertRemoveForeignCallbackInstruction(int64_t 
                                                                         int64_t callback_id) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New("RemoveForeignCallback");
-  instruction->add_del_object_operand(object_id);
+  instruction->add_mut_operand(object_id, vm::AllMirroredObject());
   instruction->add_int64_operand(callback_id);
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
@@ -867,6 +869,40 @@ Maybe<void> InstructionsBuilder::FeedBlob(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InstructionsBuilder::RankFrontSeqCallback(const std::string& instruction_name,
+                                                      const std::function<void()>& callback) {
+  ObjectMsgPtr<vm::InstructionMsg> instruction =
+      ObjectMsgPtr<vm::InstructionMsg>::New(instruction_name);
+  instruction->add_int64_operand(GlobalProcessCtx::Rank());
+  *instruction->mutable_phy_instr_operand() =
+      std::make_shared<vm::NoArgCbPhyInstrOperand>(callback);
+  instruction_list_->PushBack(instruction.Mutable());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::InferRankFrontSeqCallback(const std::function<void()>& callback) {
+  return RankFrontSeqCallback("InferRankFrontSeqCallback", callback);
+}
+
+Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
+    const std::function<void()>& callback) {
+  return RankFrontSeqCallback("ComputeRankFrontSeqCallback", callback);
+}
+
+Maybe<void> InstructionsBuilder::InferGlobalFrontSeqBarrier() {
+  ObjectMsgPtr<vm::InstructionMsg> instruction =
+      ObjectMsgPtr<vm::InstructionMsg>::New("InferGlobalFrontSeqBarrier");
+  instruction_list_->PushBack(instruction.Mutable());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::ComputeGlobalFrontSeqBarrier() {
+  ObjectMsgPtr<vm::InstructionMsg> instruction =
+      ObjectMsgPtr<vm::InstructionMsg>::New("ComputeGlobalFrontSeqBarrier");
+  instruction_list_->PushBack(instruction.Mutable());
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InstructionsBuilder::FetchBlobHeader(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
   JUST(_FetchBlob("FetchBlobHeader", blob_object, callback_id));
@@ -892,7 +928,7 @@ Maybe<void> InstructionsBuilder::_DeleteObject(compatible_py::Object* blob_objec
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New("DeleteObject");
   instruction->set_parallel_desc_symbol_id(JUST(blob_object->parallel_desc_symbol()->symbol_id()));
-  instruction->add_del_object_operand(blob_object->object_id());
+  instruction->add_del_operand(blob_object->object_id());
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }

@@ -800,7 +800,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D) {
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     CompTaskNode* src = sorted_src_comp_tasks.at(i);
     CompTaskNode* dst = sorted_dst_comp_tasks.at(i);
-    for (const LogicalBlobId& lbi : op_edge->lbis()) { BuildTaskPath(src, dst, lbi); }
+    for (const LogicalBlobId& lbi : op_edge->lbis()) { ConnectWithLbi(src, dst, lbi); }
   }
 }
 
