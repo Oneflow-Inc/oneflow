@@ -21,7 +21,7 @@ namespace oneflow {
 REGISTER_USER_OP("_nccl_logical_all_reduce")
     .Input("in")
     .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
@@ -30,15 +30,27 @@ REGISTER_USER_OP("_nccl_logical_all_reduce")
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
+    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      const ParallelDistribution& in_dis_hint =
+          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+      ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
+      for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
+        CHECK_OR_RETURN(sbp_hint.has_partial_sum_parallel());
+      }
+
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
+
       // P2B
-      auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
-      const SbpParallel& in_sbp_hint = ctx->SbpParallelHint4InputArgNameAndIndex("in", 0);
-      CHECK(in_sbp_hint.has_partial_sum_parallel());
-      const std::string& ibn = GenRepeatedBn("in", 0);
-      const std::string& obn = GenRepeatedBn("out", 0);
-      (*bn2sbp)[ibn].mutable_partial_sum_parallel();
-      (*bn2sbp)[obn].mutable_broadcast_parallel();
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      CHECK_GE_OR_RETURN(parallel_hierarchy.NumAxes(), 1);
+      for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+        in_distribution->add_sbp_parallel()->mutable_partial_sum_parallel();
+        out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
+      }
       return Maybe<void>::Ok();
     });
 
@@ -50,33 +62,31 @@ REGISTER_USER_OP("_nccl_logical_reduce_scatter")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
-      const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-      Shape* out_shape = out_tensor->mut_shape();
-      const Shape& in_shape = in_tensor->shape();
-      CHECK_GT(in_shape.NumAxes(), 0);
-      CHECK_GT(in_shape.elem_cnt(), 0);
-      CHECK_EQ(in_shape.At(0) % parallel_num, 0);
-      out_shape->Set(0, in_shape.At(0) / parallel_num);
-      return Maybe<void>::Ok();
-    })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
+    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      const ParallelDistribution& in_dis_hint =
+          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+      ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
+      for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
+        CHECK_OR_RETURN(sbp_hint.has_partial_sum_parallel());
+      }
+
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
+
       // P2S
-      auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
-      const SbpParallel& in_sbp_hint = ctx->SbpParallelHint4InputArgNameAndIndex("in", 0);
-      CHECK(in_sbp_hint.has_partial_sum_parallel());
-      const std::string& ibn = GenRepeatedBn("in", 0);
-      const std::string& obn = GenRepeatedBn("out", 0);
-      (*bn2sbp)[ibn].mutable_partial_sum_parallel();
-      (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0);
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      CHECK_GE_OR_RETURN(parallel_hierarchy.NumAxes(), 1);
+      for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+        in_distribution->add_sbp_parallel()->mutable_partial_sum_parallel();
+        out_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);
+      }
       return Maybe<void>::Ok();
     });
 
@@ -88,33 +98,32 @@ REGISTER_USER_OP("_nccl_logical_all_gather")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
-      const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-      Shape* out_shape = out_tensor->mut_shape();
-      const Shape& in_shape = in_tensor->shape();
-      CHECK_GT(in_shape.NumAxes(), 0);
-      CHECK_GT(in_shape.elem_cnt(), 0);
-      out_shape->Set(0, in_shape.At(0) * parallel_num);
-      return Maybe<void>::Ok();
-    })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
-      // S2B
-      auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
-      const SbpParallel& in_sbp_hint = ctx->SbpParallelHint4InputArgNameAndIndex("in", 0);
-      CHECK(in_sbp_hint.has_split_parallel());
-      CHECK_EQ(in_sbp_hint.split_parallel().axis(), 0);
-      const std::string& ibn = GenRepeatedBn("in", 0);
-      const std::string& obn = GenRepeatedBn("out", 0);
-      (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0);
-      (*bn2sbp)[obn].mutable_broadcast_parallel();
+    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      const ParallelDistribution& in_dis_hint =
+          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+      ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
+      for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
+        CHECK_OR_RETURN(sbp_hint.has_split_parallel());
+        CHECK_EQ_OR_RETURN(sbp_hint.split_parallel().axis(), 0);
+      }
+
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
+
+      // S(0)->B
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      CHECK_GE_OR_RETURN(parallel_hierarchy.NumAxes(), 1);
+      for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+        in_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);
+        out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
+      }
       return Maybe<void>::Ok();
     });
 
@@ -128,43 +137,34 @@ REGISTER_USER_OP("_nccl_logical_s2s")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
-      const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-      const int64_t in_split_axis = ctx->Attr<int64_t>("in_split_axis");
-      const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
-      CHECK_NE(in_split_axis, out_split_axis);
-      CHECK_NE(in_split_axis, -1);
-      CHECK_NE(out_split_axis, -1);
-      Shape* out_shape = out_tensor->mut_shape();
-      const Shape& in_shape = in_tensor->shape();
-      CHECK_GT(in_shape.NumAxes(), std::max(in_split_axis, out_split_axis));
-      CHECK_GT(in_shape.elem_cnt(), 0);
-      CHECK_EQ(in_shape.At(out_split_axis) % parallel_num, 0);
-      out_shape->Set(in_split_axis, in_shape.At(in_split_axis) * parallel_num);
-      out_shape->Set(out_split_axis, in_shape.At(out_split_axis) / parallel_num);
-      CHECK_EQ(out_shape->elem_cnt(), in_shape.elem_cnt());
-      return Maybe<void>::Ok();
-    })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
-      // S2S
-      auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
-      const SbpParallel& in_sbp_hint = ctx->SbpParallelHint4InputArgNameAndIndex("in", 0);
-      CHECK(in_sbp_hint.has_split_parallel());
-      const int64_t in_split_axis = ctx->Attr<int64_t>("in_split_axis");
-      const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
-      CHECK_EQ(in_sbp_hint.split_parallel().axis(), in_split_axis);
-      const std::string& ibn = GenRepeatedBn("in", 0);
-      const std::string& obn = GenRepeatedBn("out", 0);
-      (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(in_split_axis);
-      (*bn2sbp)[obn].mutable_split_parallel()->set_axis(out_split_axis);
+    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_split_axis");
+      const int64_t out_split_axis = ctx->user_op_conf().attr<int64_t>("out_split_axis");
+      const ParallelDistribution& in_dis_hint =
+          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+      ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
+      for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
+        CHECK_OR_RETURN(sbp_hint.has_split_parallel());
+        CHECK_EQ_OR_RETURN(sbp_hint.split_parallel().axis(), in_split_axis);
+      }
+
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
+
+      // S(in)->S(out)
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      CHECK_GE_OR_RETURN(parallel_hierarchy.NumAxes(), 1);
+      for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+        in_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(in_split_axis);
+        out_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(out_split_axis);
+      }
       return Maybe<void>::Ok();
     });
 
