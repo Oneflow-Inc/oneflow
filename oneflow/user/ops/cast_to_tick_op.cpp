@@ -14,31 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
-REGISTER_USER_OP("range")
+
+namespace {
+
+REGISTER_USER_OP("cast_to_tick")
+    .Input("in")
     .Output("out")
-    .Attr<int64_t>("start")
-    .Attr<int64_t>("delta")
-    .Attr<int64_t>("limit")
-    .Attr<DataType>("dtype")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      int64_t start = ctx->Attr<int64_t>("start");
-      int64_t delta = ctx->Attr<int64_t>("delta");
-      int64_t limit = ctx->Attr<int64_t>("limit");
-      int64_t range_elem_cnt = (((limit - start) + delta - 1)
-                                / delta);  // Do the ceil division, ceil((limit-start)/delta)
-      *out_shape = Shape({range_elem_cnt});
+      *out_shape = Shape({1});
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
-      return Maybe<void>::Ok();
-    })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->Attr<DataType>("dtype");
+    .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
+      SbpSignature* signature = ctx->mutable_sbp_signature();
+      auto* bn2sbp = signature->mutable_bn_in_op2sbp_parallel();
+      (*bn2sbp)[GenRepeatedBn("in", 0)] = ctx->SbpParallelHint4InputArgNameAndIndex("in", 0);
+      (*bn2sbp)[GenRepeatedBn("out", 0)].mutable_broadcast_parallel();
       return Maybe<void>::Ok();
     });
+
+}  // namespace
 
 }  // namespace oneflow

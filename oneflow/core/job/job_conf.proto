@@ -222,6 +222,7 @@ message JobConfigProto {
   optional bool enable_cudnn_fused_normalization_add_relu = 207;
   optional bool enable_fuse_add_to_output = 208 [default = false];
   optional bool enable_fuse_cast_scale = 209 [default = false];
+  optional int64 num_gradient_accumulation_steps = 210;
 
   optional bool enable_reuse_mem = 300 [default = true];
   optional bool enable_inplace = 301 [default = true];
