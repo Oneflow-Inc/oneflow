@@ -30,7 +30,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   for (const auto& in_arg_pair : ctx->inputs()) {
     const user_op::TensorDesc* in_desc =
         ctx->TensorDesc4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
-    CHECK_EQ_OR_RETURN(in_desc->data_type(), first_in_desc->data_type());
     CHECK_EQ_OR_RETURN(in_desc->shape().NumAxes(), first_in_desc->shape().NumAxes());
     FOR_RANGE(int64_t, i, 0, in_desc->shape().NumAxes()) {
       if (i == axis) {
@@ -55,7 +54,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     out_dim_vec.at(axis) = max_dim_size;
   }
   *out_desc->mut_shape() = Shape(out_dim_vec);
-  *out_desc->mut_data_type() = first_in_desc->data_type();
   return Maybe<void>::Ok();
 }
 
@@ -94,6 +92,18 @@ void GenGrapOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   }
 }
 
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* first_in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  for (const auto& in_arg_pair : ctx->inputs()) {
+    const user_op::TensorDesc* in_desc =
+        ctx->TensorDesc4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
+    CHECK_EQ_OR_RETURN(in_desc->data_type(), first_in_desc->data_type());
+  }
+  user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  *out_desc->mut_data_type() = first_in_desc->data_type();
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 REGISTER_USER_OP("concat")
@@ -102,7 +112,8 @@ REGISTER_USER_OP("concat")
     .Attr<int64_t>("axis")
     .Attr<int64_t>("max_dim_size")
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetGetSbpFn(GetSbpSignature);
+    .SetGetSbpFn(GetSbpSignature)
+    .SetInferDataTypeFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn(GenGrapOp);
 

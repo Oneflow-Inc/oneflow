@@ -29,10 +29,16 @@ REGISTER_CPU_ONLY_USER_OP("create_summary_writer")
     .Attr<std::string>("logdir")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
     });
 
 REGISTER_CPU_ONLY_USER_OP("flush_summary_writer")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
     });
 
@@ -45,6 +51,9 @@ REGISTER_CPU_ONLY_USER_OP("summary_write_scalar")
       const Shape* step_shape = ctx->Shape4ArgNameAndIndex("step", 0);
       CHECK_OR_RETURN(in_shape->elem_cnt() == 1 && step_shape->elem_cnt() == 1);
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
     });
 
 REGISTER_CPU_ONLY_USER_OP("summary_write_histogram")
@@ -54,6 +63,9 @@ REGISTER_CPU_ONLY_USER_OP("summary_write_histogram")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CheckStepShape(ctx->Shape4ArgNameAndIndex("step", 0));
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
     });
 
 REGISTER_CPU_ONLY_USER_OP("summary_write_pb")
@@ -61,6 +73,9 @@ REGISTER_CPU_ONLY_USER_OP("summary_write_pb")
     .Input("step")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CheckStepShape(ctx->Shape4ArgNameAndIndex("step", 0));
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
     });
 
@@ -71,8 +86,10 @@ REGISTER_CPU_ONLY_USER_OP("summary_write_image")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CheckStepShape(ctx->Shape4ArgNameAndIndex("step", 0));
       return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
     });
-
 }  // namespace summary
 
 }  // namespace oneflow
