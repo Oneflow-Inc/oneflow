@@ -17,7 +17,6 @@ import unittest
 
 import numpy as np
 import oneflow as flow
-import oneflow.typing as tp
 from test_util import Args, GenArgDict, GenArgList
 
 
@@ -126,7 +125,7 @@ class MaxPool2D:
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_maxpool2d(test_case):
+    def test_maxpool2d_1(test_case):
         input_arr = np.random.rand(2, 2, 3, 4)
         kernel_size, stride, padding = (3, 3), (2, 2), (1, 2)
 
@@ -137,7 +136,21 @@ class TestModule(flow.unittest.TestCase):
         x = flow.Tensor(input_arr)
         output = m(x)
 
-        assert np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4)
+        test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
+
+    
+    def test_maxpool2d_2(test_case):
+        input_arr = np.random.rand(6, 4, 7, 9)
+        kernel_size, stride, padding = (4, 4), (1, 1), (1, 2)
+
+        m_numpy = MaxPool2D(kernel_size, stride, padding)
+        numpy_output = m_numpy(input_arr)
+
+        m = flow.nn.MaxPool2d(kernel_size, stride, padding)
+        x = flow.Tensor(input_arr)
+        output = m(x)
+
+        test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
 
 
 if __name__ == "__main__":
