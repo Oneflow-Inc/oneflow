@@ -18,8 +18,11 @@ limitations under the License.
 
 #include <memory>
 #include <functional>
+#include "oneflow/core/framework/vm_local_dep_object.h"
 
 namespace oneflow {
+
+class ParallelDesc;
 
 namespace eager {
 
@@ -31,7 +34,7 @@ namespace one {
 
 class TensorStorage final {
  public:
-  TensorStorage();
+  explicit TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc);
   ~TensorStorage() {
     if (releaser_hook_) { (*releaser_hook_)(buffer_); }
   }
@@ -46,6 +49,7 @@ class TensorStorage final {
 
  private:
   std::shared_ptr<eager::TensorBuffer> buffer_;
+  VmLocalDepObject compute_local_dep_object_;
   std::shared_ptr<ReleaserHookT> releaser_hook_;
 };
 

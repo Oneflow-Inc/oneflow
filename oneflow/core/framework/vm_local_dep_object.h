@@ -23,35 +23,37 @@ namespace oneflow {
 
 class ParallelDesc;
 
-namespace one {
+namespace vm {
+
+// clang-format off
 
 // Helps VirtualMachine building instruction edges
+OBJECT_MSG_BEGIN(LocalDepObject);
+  // methods
+  OF_PUBLIC void __Init__(const std::shared_ptr<const ParallelDesc>& parallel_desc);
+
+  // fields
+  OBJECT_MSG_DEFINE_OPTIONAL(LogicalObject, logical_object);
+  OBJECT_MSG_DEFINE_OPTIONAL(MirroredObject, mirrored_object);
+
+  // links
+  OBJECT_MSG_DEFINE_LIST_LINK(free_link);
+  OBJECT_MSG_DEFINE_LIST_LINK(zombie_link);
+OBJECT_MSG_END(LocalDepObject);
+// clang-format on
+
+}  // namespace vm
+
 class VmLocalDepObject final {
  public:
   explicit VmLocalDepObject(const std::shared_ptr<const ParallelDesc>& parallel_desc);
-  ~VmLocalDepObject() = default;
+  ~VmLocalDepObject();
 
-  const ObjectMsgPtr<vm::LogicalObject>& infer_logical_object() const {
-    return infer_logical_object_;
-  }
-  const ObjectMsgPtr<vm::LogicalObject>& compute_logical_object() const {
-    return compute_logical_object_;
-  }
-  const ObjectMsgPtr<vm::MirroredObject>& infer_mirrored_object() const {
-    return infer_mirrored_object_;
-  }
-  const ObjectMsgPtr<vm::MirroredObject>& compute_mirrored_object() const {
-    return compute_mirrored_object_;
-  }
+  const ObjectMsgPtr<vm::LocalDepObject>& local_dep_object() const { return local_dep_object_; }
 
  private:
-  ObjectMsgPtr<vm::LogicalObject> infer_logical_object_;
-  ObjectMsgPtr<vm::LogicalObject> compute_logical_object_;
-  ObjectMsgPtr<vm::MirroredObject> infer_mirrored_object_;
-  ObjectMsgPtr<vm::MirroredObject> compute_mirrored_object_;
+  ObjectMsgPtr<vm::LocalDepObject> local_dep_object_;
 };
-
-}  // namespace one
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_VM_LOCAL_DEP_OBJECT_H_

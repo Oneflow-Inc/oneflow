@@ -22,21 +22,9 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
-namespace one {
+namespace vm {
 
-namespace {
-
-void InitLocalObject(int64_t global_device_id, const std::shared_ptr<ParallelDesc>& parallel_desc,
-                     const vm::ObjectId& object_id, ObjectMsgPtr<vm::LogicalObject>* logical_object,
-                     ObjectMsgPtr<vm::MirroredObject>* mirrored_object) {
-  *logical_object = ObjectMsgPtr<vm::LogicalObject>::New(object_id, parallel_desc);
-  *mirrored_object =
-      ObjectMsgPtr<vm::MirroredObject>::New(logical_object->Mutable(), global_device_id);
-}
-
-}  // namespace
-
-VmLocalDepObject::VmLocalDepObject(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+void LocalDepObject::__Init__(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   vm::ObjectId object_id = vm::IdUtil::NewPhysicalValueObjectId(GlobalProcessCtx::Rank());
   int64_t global_device_id = 0;
   {
@@ -48,13 +36,74 @@ VmLocalDepObject::VmLocalDepObject(const std::shared_ptr<const ParallelDesc>& pa
     CHECK_EQ(vm.this_machine_id(), machine_id);
     global_device_id = vm.this_start_global_device_id() + device_id;
   }
-  const auto& mut_parallel_desc = std::const_pointer_cast<ParallelDesc>(parallel_desc);
-  InitLocalObject(global_device_id, mut_parallel_desc, object_id, &compute_logical_object_,
-                  &compute_mirrored_object_);
-  vm::ObjectId type_object_id = vm::IdUtil::GetTypeId(object_id);
-  InitLocalObject(global_device_id, mut_parallel_desc, type_object_id, &infer_logical_object_,
-                  &infer_mirrored_object_);
+  mutable_logical_object()->__Init__(object_id,
+                                     std::const_pointer_cast<ParallelDesc>(parallel_desc));
+  mutable_mirrored_object()->__Init__(mutable_logical_object(), global_device_id);
 }
 
-}  // namespace one
+namespace {
+
+using LocalDepObjectFreeList = OBJECT_MSG_LIST(LocalDepObject, free_link);
+using LocalDepObjectZombieList = OBJECT_MSG_LIST(LocalDepObject, zombie_link);
+using LocalDepObjectMutexedZombieList = OBJECT_MSG_MUTEXED_LIST(LocalDepObject, zombie_link);
+
+LocalDepObjectFreeList* ThreadLocalMutFreeList4ParallelDesc(const ParallelDesc& parallel_desc) {
+  thread_local static HashMap<ParallelDesc, LocalDepObjectFreeList> pd2free_list;
+  return &pd2free_list[parallel_desc];
+}
+
+LocalDepObjectMutexedZombieList* StaticMutLocalDepObjectMutexedZombieList() {
+  static LocalDepObjectMutexedZombieList zombie_list;
+  return &zombie_list;
+}
+
+void TryMoveFromZombieListToFreeList() {
+  LocalDepObjectZombieList zombie_list;
+  static const size_t kTryCnt = 2;
+  size_t try_cnt = kTryCnt;
+  StaticMutLocalDepObjectMutexedZombieList()->MoveTo(&zombie_list);
+  OBJECT_MSG_LIST_FOR_EACH(&zombie_list, zombie_object) {
+    zombie_list.Erase(zombie_object.Mutable());
+    size_t ref_cnt = zombie_object->ref_cnt();
+    if (ref_cnt == 1 /* hold by `zombie_object` only */) {
+      CHECK_EQ(zombie_object->mirrored_object().rw_mutexed_object().ref_cnt(), 1);
+      const auto& parallel_desc = *zombie_object->logical_object().parallel_desc();
+      auto* thread_local_free_list = ThreadLocalMutFreeList4ParallelDesc(parallel_desc);
+      thread_local_free_list->EmplaceBack(std::move(zombie_object));
+    } else {
+      CHECK_GT(ref_cnt, 1);
+      zombie_list.EmplaceBack(std::move(zombie_object));
+    }
+    if (--try_cnt < 0) { break; }
+  }
+  StaticMutLocalDepObjectMutexedZombieList()->MoveFrom(&zombie_list);
+}
+
+}  // namespace
+
+ObjectMsgPtr<LocalDepObject> GetRecycledLocalDepObject(const ParallelDesc& parallel_desc) {
+  auto* thread_local_free_list = ThreadLocalMutFreeList4ParallelDesc(parallel_desc);
+  if (thread_local_free_list->empty()) {
+    TryMoveFromZombieListToFreeList();
+    if (thread_local_free_list->empty()) { return nullptr; }
+  }
+  ObjectMsgPtr<LocalDepObject> object = thread_local_free_list->Begin();
+  thread_local_free_list->Erase(object.Mutable());
+  CHECK_EQ(object->ref_cnt(), 1);  // hold by `object` only
+  return std::move(object);
+}
+
+}  // namespace vm
+
+VmLocalDepObject::VmLocalDepObject(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  local_dep_object_ = vm::GetRecycledLocalDepObject(*parallel_desc);
+  if (!local_dep_object_) {
+    local_dep_object_ = ObjectMsgPtr<vm::LocalDepObject>::New(parallel_desc);
+  }
+}
+
+VmLocalDepObject::~VmLocalDepObject() {
+  vm::StaticMutLocalDepObjectMutexedZombieList()->EmplaceBack(std::move(local_dep_object_));
+}
+
 }  // namespace oneflow
