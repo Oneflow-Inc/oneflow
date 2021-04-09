@@ -723,7 +723,7 @@ Maybe<void> Operator::InferParallelDistributionSignature(
       if (distribution.sbp_parallel_size() != parallel_hierarchy->NumAxes()) {
         CHECK_OR_RETURN(IsBroadcast(distribution,
                                     JUST(ParallelDistributionInferHint4Ibn(ibn))->parallel_desc()))
-            << Bn2ConfName(ibn) << "'s hierarchy is different from " << op_name()
+            << ibn << "'s hierarchy is different from " << op_name()
             << "'s, it should be broadcast but get " << distribution.DebugString();
         distribution.clear_sbp_parallel();
         for (int64_t i = 0; i < parallel_hierarchy->NumAxes(); ++i) {
