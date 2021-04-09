@@ -40,7 +40,7 @@ OpRegistry UserOpRegistryMgr::CheckAndGetOpRegistry(const std::string& op_type_n
 void UserOpRegistryMgr::Register(OpRegistryResult result) {
   CHECK(op_reg_result_.emplace(result.op_type_name, result).second);
   if (!result.data_type_infer_fn) { std::cout << result.op_type_name << std::endl; }
-  /* CHECK(result.data_type_infer_fn); */
+  CHECK(!result.data_type_infer_fn);
 }
 
 const OpRegistryResult* UserOpRegistryMgr::GetOpRegistryResult(const std::string& op_type_name) {
