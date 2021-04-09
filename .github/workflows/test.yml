@@ -288,11 +288,12 @@ jobs:
           test_suite: ${{matrix.test_suite }}
         run: |
           set -x
-          cat ${{ matrix.build_env }} >> $GITHUB_ENV
           extra_docker_args=""
 
-          # load shared environment variables and check directory sha_dir exists
-          source build.${{ matrix.test_suite }}.env
+          # load shared environment variables
+          cat ${{ matrix.build_env }} >> $GITHUB_ENV
+          source ${{ matrix.build_env }}
+          # check directory sha_dir exists
           ssh -o StrictHostKeyChecking=no ${builder_host} "[ -d ${sha_dir} ]"
 
           # dowload whl and bin
