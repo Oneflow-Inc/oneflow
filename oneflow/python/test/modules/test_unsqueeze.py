@@ -24,11 +24,26 @@ import oneflow as flow
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_identity(test_case):
-        m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
-        x = flow.Tensor(2, 3, 4, 5)
-        y = m(x)
-        test_case.assertTrue(np.allclose(x.numpy(), y.numpy()))
+    def test_unsqueeze(test_case):
+        m = flow.nn.Unsqueeze()
+        x = flow.Tensor(np.random.rand(16, 20))
+        y = m(x, 1)
+        test_case.assertTrue(np.allclose(flow.Size([16, 1, 20]), y.shape))
+    
+    def test_unsqueeze2(test_case):
+        x2 = flow.Tensor(np.random.rand(2, 3, 4))
+        y2 = x2.unsqueeze(2)
+        test_case.assertTrue(np.allclose(flow.Size([2, 3, 1, 4]), y2.shape))
+    
+    def test_unsqueeze3(test_case):
+        x3 = flow.Tensor(np.random.rand(2, 6, 9, 3))
+        y3 = x3.unsqueeze(4)
+        test_case.assertTrue(np.allclose(flow.Size([2, 6, 9, 3, 1]), y3.shape))
+
+    def test_unsqueeze4(test_case):
+        x3 = flow.Tensor(np.random.rand(2, 6, 9, 3))
+        y3 = flow.unsqueeze(x3, 4)
+        test_case.assertTrue(np.allclose(flow.Size([2, 6, 9, 3, 1]), y3.shape))
 
 
 if __name__ == "__main__":

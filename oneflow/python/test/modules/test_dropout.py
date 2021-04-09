@@ -16,9 +16,7 @@ limitations under the License.
 import unittest
 
 import numpy as np
-
 import oneflow as flow
-import oneflow.typing as tp
 
 
 @unittest.skipIf(
@@ -26,25 +24,24 @@ import oneflow.typing as tp
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_sigmoid(test_case):
-        m = flow.nn.Sigmoid()
-        x = flow.Tensor(
-            np.array(
-                [
-                    [0.81733328, 0.43621480, 0.10351428],
-                    [-1.15555191, -0.67776406, 0.27372134],
-                ]
-            )
+    def test_dropout(test_case):
+        m = flow.nn.Dropout(p=0.5)
+        input_arr = np.array(
+            [
+                [-0.7797, 0.2264, 0.2458, 0.4163],
+                [0.4299, 0.3626, -0.4892, 0.4141],
+                [-1.4115, 1.2183, -0.5503, 0.6520],
+            ]
         )
+        x = flow.Tensor(input_arr)
         y = m(x)
-        z = x.sigmoid(x)
-        k = flow.sigmoid(x)
-        torch_out = np.array(
-            [[0.69366997, 0.60735673, 0.52585548], [0.23947647, 0.33676055, 0.56800622]]
-        )
-        print(np.allclose(y.numpy(), torch_out, rtol=1e-04))
-        print(np.allclose(z.numpy(), torch_out, rtol=1e-04))
-        print(np.allclose(k.numpy(), torch_out, rtol=1e-04))
+        print(y.numpy())
+        test_case.assertTrue(True)
+ 
+        # test_dropout >> output:
+        # [[-0.      0.      0.4916  0.8326]
+        # [ 0.8598  0.     -0.      0.8282]
+        # [-2.823   2.4366 -0.      1.304 ]]
 
 
 if __name__ == "__main__":

@@ -29,11 +29,16 @@ class Identity(Module):
         args: any argument (unused)
         kwargs: any keyword argument (unused)
 
-    Examples::
+    For example: 
 
-        >>> m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
-        >>> input = flow.Tensor(np.random.rand(2, 3, 4, 5))
-        >>> output = m(input)
+    .. code-block:: python 
+
+        import numpy as np
+        import oneflow as flow
+
+        m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
+        input = flow.Tensor(2, 3, 4, 5)
+        output = m(input)
 
     """
 
