@@ -63,6 +63,30 @@ std::string ParallelDistributionToString(const ParallelDistribution& parallel_di
   return serialized_parallel_distribution;
 }
 
+bool IsBreakpointOpNode(const OpNode* node) {
+  // NOTE(chengcheng): breakpoint op is special which CANNOT through subgraph such as:
+  //   variable, tick, repeat/acc/pack/unpack change timeshape
+  const Operator& op = node->op();
+  const OperatorConf& op_conf = op.op_conf();
+  if (op_conf.has_variable_conf() || op_conf.has_tick_conf() || op_conf.has_device_tick_conf()
+      || op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf()
+      || op_conf.has_source_tick_conf() || op_conf.has_sink_tick_conf()
+      || op_conf.has_acc_tick_conf()) {
+    return true;
+  }
+  if (op_conf.has_user_conf()) {
+    const std::string user_type_name = op_conf.user_conf().op_type_name();
+    if (user_type_name == "repeat" || user_type_name == "acc" || user_type_name == "pack"
+        || user_type_name == "unpack") {
+      return true;
+    }
+  }
+}
+
+const Shape GetOpNodeTimeShape(const OpNode* op_node) {
+  return *(CHECK_JUST(op_node->op().GetOpTimeShape()).get());
+}
+
 void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const OpGraph& op_graph,
                                              const std::vector<const OpNode*>& order) {
   HashSet<const OpNode*> visited;
@@ -74,12 +98,12 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
     // NOTE(chengcheng): ONLY consider GPU op and parallel num > 1.
     if (seed_parallel_desc.device_type() != DeviceType::kGPU) { continue; }
     if (seed_parallel_desc.parallel_num() <= 1) { continue; }
-    // NODE(chengcheng): Exclude op that change the time shape.
-    //   like pack/unpack, repeat/acc, etc.
-    if (!seed_node->IsTimeShapeIdentity()) { continue; }
+    if (IsBreakpointOpNode(seed_node)) { continue; }
 
     HashSet<const OpNode*> this_subgraph;
     std::queue<const OpNode*> queued_nodes;
+
+    const Shape seed_time_shape = GetOpNodeTimeShape(seed_node);
     queued_nodes.push(seed_node);
     while (!queued_nodes.empty()) {
       const OpNode* cur_node = queued_nodes.front();
@@ -91,7 +115,7 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
       cur_node->ForEachNodeOnInOutEdge([&](const OpNode* next_node) {
         if (visited.find(next_node) == visited.end()
             && next_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc)
-            && next_node->IsTimeShapeIdentity()) {
+            && GetOpNodeTimeShape(next_node) == seed_time_shape) {
           CHECK(visited.insert(next_node).second);
           queued_nodes.push(next_node);
         }
