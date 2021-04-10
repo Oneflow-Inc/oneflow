@@ -873,7 +873,8 @@ LogicalResult Importer::TryToUpdateJob() {
   }
 }  // namespace
 
-LogicalResult applyRoundTripPatterns(MLIRContext* context, OwningModuleRef& module, bool debug) {
+LogicalResult applyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
+                                     MLIRContext* context, OwningModuleRef& module, bool debug) {
   if (debug) {
     std::cout << "import:\n";
     module->dump();
@@ -881,10 +882,14 @@ LogicalResult applyRoundTripPatterns(MLIRContext* context, OwningModuleRef& modu
 
   mlir::PassManager pm(context);
   pm.addNestedPass<mlir::FuncOp>(::mlir::createCanonicalizerPass());
+  std::string graphviz;
+  llvm::raw_string_ostream os(graphviz);
+  pm.addPass(createPrintOpGraphPass(os));
   if (mlir::failed(pm.run(*module))) {
     module->emitError("Failed to run canonicalizer pass");
     return failure();
   }
+  job_wrapper.DumpMLIR("ir/" + job_wrapper.job()->job_conf().job_name() + ".mlir.dot", graphviz);
 
   if (debug) {
     std::cout << "optimized:\n";
@@ -921,7 +926,7 @@ void RoundTripOneFlowJob(
   // TODO: Add flag in job desc
   const bool is_strict = true;
   if (succeeded(imp.ProcessJob())) {
-    if (failed(applyRoundTripPatterns(&context, module,
+    if (failed(applyRoundTripPatterns(job_wrapper, &context, module,
                                       std::getenv("ONEFLOW_DEBUG_MODE") != nullptr))) {
       exit(EXIT_FAILURE);
     }
