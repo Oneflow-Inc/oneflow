@@ -114,7 +114,6 @@ class Softmax(Module):
         self._op = flow.builtin_op("softmax", name).Input("in").Output("out").Build()
 
     def forward(self, x):
-        print(x.shape)
         need_transpose, permute = _softmax_need_transpose(x, self.axis)
         if need_transpose:
             logits = flow.transpose(logits, perm=permute)
