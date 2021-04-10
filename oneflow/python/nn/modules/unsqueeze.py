@@ -53,13 +53,9 @@ class Unsqueeze(Module):
 
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("expand_dims")
-            .Input("in")
-            .Output("out")
-        )
+        self._op = flow.builtin_op("expand_dims").Input("in").Output("out")
 
     def forward(self, input, axis=0):
-        assert axis<=len(input.size()), "axis should <= length of input tensor!"
+        assert axis <= len(input.size()), "axis should <= length of input tensor!"
         self._op = self._op.Attr("axis", axis).Build()
         return self._op(input)[0]

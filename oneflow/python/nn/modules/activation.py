@@ -67,6 +67,7 @@ class ReLU(Module):
 
 
 @oneflow_export("nn.Softmax")
+@register_tensor_op_by_module("softmax")
 class Softmax(Module):
     r"""Applies the element-wise function:
 
@@ -100,6 +101,7 @@ class Softmax(Module):
         # [0.23947646 0.33676052 0.5680063 ]]
 
     """
+
     def __init__(
         self, axis: Optional[int] = None, name: Optional[str] = None,
     ):
@@ -177,12 +179,13 @@ class LogSoftmax(Module):
         self.dim = dim
         self._softmax_op = flow.builtin_op("softmax").Input("in").Output("out").Build()
         self._log_op = flow.builtin_op("log").Input("x").Output("y").Build()
-        self._transpose_op = flow.builtin_op("transpose").Input("input").Output("output")
-    
+        self._transpose_op = (
+            flow.builtin_op("transpose").Input("input").Output("output")
+        )
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        if not hasattr(self, 'dim'):
+        if not hasattr(self, "dim"):
             self.dim = None
 
     def forward(self, x):
@@ -195,13 +198,12 @@ class LogSoftmax(Module):
         res = self._log_op(res)[0]
         if need_transpose:
             res = transpose(res, perm=permute)
-        
+
         return res
 
     def extra_repr(self):
-        return 'dim={dim}'.format(dim=self.dim)
+        return "dim={dim}".format(dim=self.dim)
 
-        
 
 if __name__ == "__main__":
     flow.enable_eager_execution(True)
