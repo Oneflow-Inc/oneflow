@@ -33,9 +33,9 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
       : job_(job), op_graph_(*job), job_builder_(job), is_updated_(false) {}
 
   const Job* job() const { return job_; }
-  void UpdateJob(const ::oneflow::Job* new_job) {
+  void UpdateJob(::oneflow::Job* new_job) {
     CHECK(is_updated_ == false);
-    job_->CopyFrom(*new_job);
+    job_->Swap(new_job);
     is_updated_ = true;
   }
   void DumpMLIR(const std::string& filename, const std::string& content) {
