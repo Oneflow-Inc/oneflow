@@ -810,8 +810,22 @@ LogicalResult Importer::TryToUpdateJob() {
   auto new_job = ::oneflow::Job();
   new_job.CopyFrom(*job_);
   new_job.clear_net();
+  new_job.mutable_placement()->clear_placement_group();
   auto convertOps = [&](Operation* op) {
-    if (llvm::dyn_cast<oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
+    const bool is_user_op = llvm::dyn_cast<oneflow::UserOp>(op) || op->hasAttr("op_type_name");
+    const bool is_sys_op = llvm::dyn_cast<oneflow::SystemOp>(op);
+    if (is_user_op || is_sys_op) {
+      auto* pg = new_job.mutable_placement()->add_placement_group();
+      pg->mutable_parallel_conf()->set_device_tag(
+          op->getAttrOfType<StringAttr>("device").getValue().str());
+      for (auto p : op->getAttrOfType<ArrayAttr>("placement")) {
+        pg->mutable_parallel_conf()->add_device_name(p.dyn_cast<StringAttr>().getValue().str());
+      }
+      // TODO: add hierarchy in .td
+      pg->mutable_parallel_conf()->mutable_hierarchy()->add_dim(1);
+      pg->mutable_op_set()->add_op_name(op->getAttrOfType<StringAttr>("op_name").getValue().str());
+    }
+    if (is_user_op) {
       ::oneflow::OperatorConf op_conf;
       const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       auto user_conf = op_conf.mutable_user_conf();
@@ -820,7 +834,7 @@ LogicalResult Importer::TryToUpdateJob() {
       ConvertUseropAttributes(op, op_conf, err_str);
       ConvertCtrlInputs(op, op_conf);
       *(new_job.mutable_net()->add_op()) = op_conf;
-    } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
+    } else if (is_sys_op) {
       auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
       ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
       for (auto ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
