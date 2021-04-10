@@ -824,6 +824,7 @@ LogicalResult Importer::TryToUpdateJob() {
       // TODO: add hierarchy in .td
       pg->mutable_parallel_conf()->mutable_hierarchy()->add_dim(1);
       pg->mutable_op_set()->add_op_name(op->getAttrOfType<StringAttr>("op_name").getValue().str());
+      // TODO: also generate blob_placement_group
     }
     if (is_user_op) {
       ::oneflow::OperatorConf op_conf;
