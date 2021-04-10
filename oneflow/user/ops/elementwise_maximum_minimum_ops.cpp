@@ -38,7 +38,6 @@ Maybe<void> GetSbpSignature(SbpContext* ctx) {
 Maybe<void> InferTensorDesc(InferContext* ctx) {
   const TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  const TensorDesc* tensor_dz = ctx->TensorDesc4ArgNameAndIndex("dz", 0);
 
   CHECK_EQ_OR_RETURN(tensor_x->shape().NumAxes(), tensor_y->shape().NumAxes())
       << "Shape of tensor x and y should be same";
@@ -50,15 +49,21 @@ Maybe<void> InferTensorDesc(InferContext* ctx) {
   TensorDesc* tensor_dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
   TensorDesc* tensor_dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
 
-  if (tensor_dx) {
-    *tensor_dx->mut_data_type() = tensor_dz->data_type();
-    *tensor_dx->mut_shape() = tensor_x->shape();
-  }
+  if (tensor_dx) { *tensor_dx->mut_shape() = tensor_x->shape(); }
 
-  if (tensor_dy) {
-    *tensor_dy->mut_data_type() = tensor_dz->data_type();
-    *tensor_dy->mut_shape() = tensor_y->shape();
-  }
+  if (tensor_dy) { *tensor_dy->mut_shape() = tensor_y->shape(); }
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferDataType(InferContext* ctx) {
+  const TensorDesc* tensor_dz = ctx->TensorDesc4ArgNameAndIndex("dz", 0);
+  TensorDesc* tensor_dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+  TensorDesc* tensor_dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+
+  if (tensor_dx) { *tensor_dx->mut_data_type() = tensor_dz->data_type(); }
+
+  if (tensor_dy) { *tensor_dy->mut_data_type() = tensor_dz->data_type(); }
 
   return Maybe<void>::Ok();
 }
@@ -101,7 +106,8 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
       .Input("y")                                                      \
       .Output("z")                                                     \
       .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged) \
-      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
+      .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)            \
+      .SetInferDataTypeFn(user_op::TensorDescInferFnUtil::UnchangedDataType)
 
 #define REGISTER_ELEMENTWISE_XIMUM_BW_OP(op_type_name) \
   REGISTER_USER_OP(op_type_name)                       \
@@ -111,7 +117,8 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
       .OptionalOutput("dx")                            \
       .OptionalOutput("dy")                            \
       .SetTensorDescInferFn(InferTensorDesc)           \
-      .SetGetSbpFn(GetSbpSignature)
+      .SetGetSbpFn(GetSbpSignature)                    \
+      .SetInferDataTypeFn(InferDataType)
 
 #define REGISTER_ELEMENTWISE_XIMUM_GRAD(op_type_name) \
   REGISTER_USER_OP_GRAD(op_type_name)                 \
