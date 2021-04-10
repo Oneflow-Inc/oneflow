@@ -19,6 +19,7 @@ from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
+import math
 
 
 @oneflow_export("nn.Identity")
@@ -53,14 +54,11 @@ class Identity(Module):
 class Linear(Module):
     def __init__(self, in_features: int, out_features: int, bias: bool = True) -> None:
         super().__init__()
-
         self.use_bias = bias
         self.weight = flow.nn.Parameter(flow.Tensor(out_features, in_features))
 
         if bias:
-
             self.bias = flow.nn.Parameter(flow.Tensor(out_features))
-
             self._bias_add_op = (
                 flow.builtin_op("bias_add")
                 .Input("a")
@@ -69,6 +67,8 @@ class Linear(Module):
                 .Attr("axis", 1)
                 .Build()
             )
+        else:
+            self.register_parameter("bias", None)
 
         self._op = (
             flow.builtin_op("matmul")
@@ -79,9 +79,14 @@ class Linear(Module):
             .Attr("transpose_b", True)
             .Build()
         )
+        self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        raise NotImplementedError()
+        flow.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        if self.bias is not None:
+            fan_in, _ = flow.nn.init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / math.sqrt(fan_in)
+            flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
         if self.use_bias:

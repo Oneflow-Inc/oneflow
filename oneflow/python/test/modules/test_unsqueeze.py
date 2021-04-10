@@ -29,12 +29,12 @@ class TestModule(flow.unittest.TestCase):
         x = flow.Tensor(np.random.rand(16, 20))
         y = m(x, 1)
         test_case.assertTrue(np.allclose(flow.Size([16, 1, 20]), y.shape))
-    
+
     def test_unsqueeze2(test_case):
         x2 = flow.Tensor(np.random.rand(2, 3, 4))
         y2 = x2.unsqueeze(2)
         test_case.assertTrue(np.allclose(flow.Size([2, 3, 1, 4]), y2.shape))
-    
+
     def test_unsqueeze3(test_case):
         x3 = flow.Tensor(np.random.rand(2, 6, 9, 3))
         y3 = x3.unsqueeze(4)

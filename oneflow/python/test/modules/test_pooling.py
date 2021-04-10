@@ -138,7 +138,6 @@ class TestModule(flow.unittest.TestCase):
 
         test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
 
-    
     def test_maxpool2d_2(test_case):
         input_arr = np.random.rand(6, 4, 7, 9)
         kernel_size, stride, padding = (4, 4), (1, 1), (1, 2)
