@@ -37,7 +37,7 @@ class TestModule(flow.unittest.TestCase):
         y = m(x)
         print(y.numpy())
         test_case.assertTrue(True)
- 
+
         # test_dropout >> output:
         # [[-0.      0.      0.4916  0.8326]
         # [ 0.8598  0.     -0.      0.8282]

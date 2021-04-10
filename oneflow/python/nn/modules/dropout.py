@@ -76,7 +76,7 @@ class Dropout(Module):
         _seed = random.randint(-sys.maxsize, sys.maxsize)
         assert self._rate is not None and self._rate >= 0.0 and self._rate < 1.0
         _scale = float(1.0 / (1.0 - self._rate))
-        assert inplace==False, "Not support inplace=True yet!"
+        assert inplace == False, "Not support inplace=True yet!"
         self._op = (
             flow.builtin_op("dropout")
             .Input("in")
@@ -100,4 +100,3 @@ class Dropout(Module):
         mask = self._mask_op(x)[0]
         res = self._op(x, mask)[0]
         return res
-

@@ -26,7 +26,7 @@ import oneflow as flow
 class TestModule(flow.unittest.TestCase):
     def test_ones(test_case):
         m = flow.Ones()
-        shape1 = (1,2,3,4)
+        shape1 = (1, 2, 3, 4)
         y1 = m(shape1)
         test_case.assertTrue(np.allclose(np.ones(shape1), y1.numpy()))
 
@@ -35,12 +35,12 @@ class TestModule(flow.unittest.TestCase):
         y2 = m2(shape2)
         test_case.assertTrue(np.allclose(np.ones(shape2), y2.numpy()))
 
-
     def test_zeros(test_case):
         m = flow.Zeros()
-        shape = (3,2,5,1)
+        shape = (3, 2, 5, 1)
         y = m(shape)
         test_case.assertTrue(np.allclose(np.zeros(shape), y.numpy()))
+
 
 if __name__ == "__main__":
     unittest.main()
