@@ -168,7 +168,6 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
   CHECK_EQ_OR_RETURN(op.input_num(), ibn_to_grad_lbi_map_.size())
       << "All inputs are considered to require gradients since the `requires_grad` "
          "has been unknown to us here.";
-  // if (bw_op_confs.empty()) { return Maybe<void>::Ok(); }
   backward_entries_.resize(bw_op_confs.size());
 
   HashMap<std::string, int> input_lbn_to_index_map;

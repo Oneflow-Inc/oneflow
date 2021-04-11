@@ -55,6 +55,7 @@ class LocalCtrlClient : public CtrlClient {
   void EraseCount(const std::string& k) override;
 
   HashSet<std::string> done_names_;
+  HashSet<std::string> doing_names_;
   std::mutex done_names_mtx_;
   std::condition_variable done_names_cv_;
   HashMap<std::string, std::string> kv_;

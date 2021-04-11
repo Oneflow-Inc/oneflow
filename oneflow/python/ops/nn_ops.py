@@ -1450,6 +1450,171 @@ def bias_add(
     )
 
 
+@oneflow_export("nn.fused_bias_add_gelu")
+def fused_bias_add_gelu(
+    value: oneflow_api.BlobDesc,
+    bias: oneflow_api.BlobDesc,
+    data_format: Optional[str] = None,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    r"""This operator fuse flow.nn.bias_add and flow.math.gelu operator.
+
+    Args:
+        value (oneflow_api.BlobDesc):  A `Blob`.
+        bias (oneflow_api.BlobDesc): A 1-D `Blob` with size matching the channel dimension of value. And has the same type as value unless value is a quantized type.
+        data_format (Optional[str], optional): A string. '`N...C'` or '`NC...'`. Defaults to None.
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
+    Raises:
+        ValueError: ValueError if data format is unrecognized, if value has less than two dimensions with '`N..C'`/None data_format or value has less than three dimensions with '`NC..'` data_format, if bias is a vector, or if the size of bias does not match the size of the channel dimension of value.
+
+    Returns:
+        oneflow_api.BlobDesc: A `Blob` with the same type as value.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def fused_bias_add_gelu_Job(x: tp.Numpy.Placeholder((1, 64, 128, 128))
+        ) -> tp.Numpy:
+            bias_initializer = flow.truncated_normal(0.1)
+            bias_regularizer = flow.regularizers.l2(0.0005)
+            bias = flow.get_variable(
+                    "Add_bias",
+                    shape=(64,),
+                    initializer=bias_initializer,
+                    regularizer=bias_regularizer,
+                )
+            out = flow.nn.fused_bias_add_gelu(x, bias)
+            return out
+
+
+        x = np.random.randn(1, 64, 128, 128).astype(np.float32)
+        out = fused_bias_add_gelu_Job(x)
+
+        # out.shape (1, 64, 128, 128)
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("FusedBiasAddGelu_")
+
+    if data_format is None:
+        bias_add_axis = 1
+    else:
+        if data_format.startswith("NC"):
+            bias_add_axis = 1
+        elif data_format.startswith("N") and data_format.endswith("C"):
+            bias_add_axis = len(value.shape) - 1
+        else:
+            raise ValueError("data_format must be of the form `N...C` or `NC...`")
+
+    return (
+        flow.user_op_builder(name)
+        .Op("fused_bias_add_gelu")
+        .Input("a", [value])
+        .Input("b", [bias])
+        .Output("out")
+        .Attr("axis", bias_add_axis)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
+@oneflow_export("nn.fused_bias_add_dropout")
+def fused_bias_add_dropout(
+    value: oneflow_api.BlobDesc,
+    bias: oneflow_api.BlobDesc,
+    data_format: Optional[str] = None,
+    rate: float = 0.0,
+    noise_shape: Optional[oneflow_api.BlobDesc] = None,
+    seed: Optional[int] = None,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    r"""This operator fuse flow.nn.bias_add and flow.nn.dropout operator.
+
+    Args:
+        value (oneflow_api.BlobDesc):  A `Blob`.
+        bias (oneflow_api.BlobDesc): A 1-D `Blob` with size matching the channel dimension of value. And has the same type as value unless value is a quantized type.
+        data_format (Optional[str], optional): A string. '`N...C'` or '`NC...'`. Defaults to None.
+        rate (float): A scalar `Blob` with the same type as x. The probability that each element is dropped.
+        noise_shape (Optional[oneflow_api.BlobDesc], optional):  optional: A 1-D `Blob`, representing the shape for randomly generated keep/drop flags. Defaults to None.Defaults to None.
+        seed (Optional[int], optional):  Optional int value. Defaults to None.
+        name (Optional[str], optional): This operator's name. Defaults to None.
+
+    Raises:
+        ValueError: ValueError if data format is unrecognized, if value has less than two dimensions with '`N..C'`/None data_format or value has less than three dimensions with '`NC..'` data_format, if bias is a vector, or if the size of bias does not match the size of the channel dimension of value.
+
+    Returns:
+        oneflow_api.BlobDesc: A `Blob` with the same type as value.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def fused_bias_add_dropout_Job(x: tp.Numpy.Placeholder((1, 64, 128, 128))
+        ) -> tp.Numpy:
+            bias_initializer = flow.truncated_normal(0.1)
+            bias_regularizer = flow.regularizers.l2(0.0005)
+            bias = flow.get_variable(
+                    "Add_bias",
+                    shape=(64,),
+                    initializer=bias_initializer,
+                    regularizer=bias_regularizer,
+                )
+            out = flow.nn.fused_bias_add_dropout(x, bias)
+            return out
+
+
+        x = np.random.randn(1, 64, 128, 128).astype(np.float32)
+        out = fused_bias_add_dropout_Job(x)
+
+        # out.shape (1, 64, 128, 128)
+
+    """
+    if name is None:
+        name = id_util.UniqueStr("BiasAddDropout_")
+    mask = flow.nn.random_mask_like(
+        value, rate, seed, noise_shape, "%s-dropout_random_mask_like" % name
+    )
+
+    if data_format is None:
+        bias_add_axis = 1
+    else:
+        if data_format.startswith("NC"):
+            bias_add_axis = 1
+        elif data_format.startswith("N") and data_format.endswith("C"):
+            bias_add_axis = len(value.shape) - 1
+        else:
+            raise ValueError("data_format must be of the form `N...C` or `NC...`")
+
+    return (
+        flow.user_op_builder(name)
+        .Op("fused_bias_add_mask_scale")
+        .Input("a", [value])
+        .Input("b", [bias])
+        .Input("mask", [mask])
+        .Output("out")
+        .Attr("axis", bias_add_axis)
+        .Attr("scale", float(1.0 / (1.0 - rate)))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("nn.max_pool1d")
 def max_pool1d(
     input: oneflow_api.BlobDesc,
@@ -2270,6 +2435,39 @@ def sparse_softmax_cross_entropy_with_logits(
             .InferAndTryRun()
             .RemoteBlobList()
         )
+    return out
+
+
+@oneflow_export("nn.distributed_sparse_softmax_cross_entropy_with_logits")
+def distributed_sparse_softmax_cross_entropy_with_logits(
+    labels: oneflow_api.BlobDesc,
+    logits: oneflow_api.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+    assert labels is not None
+    assert logits is not None
+    if len(labels.shape) == len(logits.shape):
+        assert labels.shape[-1] == 1
+        labels = flow.squeeze(labels, axis=[-1])
+    else:
+        assert len(labels.shape) == len(logits.shape) - 1
+
+    prob, out = (
+        flow.user_op_builder(
+            name
+            if name is not None
+            else id_util.UniqueStr("DistributedSparseSoftmaxCrossEntropy_")
+        )
+        .Op("sparse_softmax_cross_entropy_ms")
+        .Input("prediction", [logits])
+        .Input("label", [labels])
+        .Output("prob")
+        .Output("out")
+        .Attr("depth", int(logits.shape[-1]))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
     return out
 
 

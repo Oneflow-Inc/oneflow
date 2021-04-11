@@ -81,7 +81,7 @@ constexpr char MegatronGPTIndex::kMagicCode[];
 MegatronGPTIndex::MegatronGPTIndex(const std::string& index_file_path) {
   auto start = std::chrono::system_clock::now();
   std::ifstream stream(index_file_path, std::ios::binary);
-  CHECK(stream.is_open());
+  CHECK(stream.is_open()) << "can't open dataset index file " << index_file_path;
   // verify magic code
   char magic_code[kMagicCodeLen];
   stream.read(magic_code, kMagicCodeLen);
