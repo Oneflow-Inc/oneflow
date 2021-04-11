@@ -81,6 +81,7 @@ bool IsBreakpointOpNode(const OpNode* node) {
       return true;
     }
   }
+  return false;
 }
 
 bool IsAccOpNode(const OpNode* node) {
@@ -484,15 +485,112 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
   }
 }
 
+bool IsOpEdgeAllowInsertNccl(const OpEdge* edge, const Shape& seed_time_shape) {
+  const OpNode* src_node = edge->src_node();
+  const OpNode* dst_node = edge->dst_node();
+  const ParallelDesc& src_parallel_desc = src_node->parallel_desc();
+  return src_parallel_desc.device_type() == DeviceType::kGPU && src_parallel_desc.parallel_num() > 1
+         && src_parallel_desc.EqualsIgnoringHierarchy(dst_node->parallel_desc())
+         && GetOpNodeTimeShape(src_node) == seed_time_shape
+         && GetOpNodeTimeShape(dst_node) == seed_time_shape;
+}
+
+struct InsertedNcclInfo {
+  OperatorConf nccl_op_conf;
+  ParallelConf nccl_parallel_conf;
+  int64_t order;
+  std::string debug_str;
+};
+
 void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
+                                  const std::vector<const OpNode*>& ordered_op_nodes,
                                   const std::vector<const OpNode*>& ordered_acc_op_nodes,
                                   const OperatorConf& bw_sink_acc_tick_conf,
                                   HashMap<std::string, OperatorConf>* mut_consumer_name2op,
-                                  std::vector<OperatorConf>* acc_identity_op_confs,
-                                  std::vector<ParallelConf>* acc_identity_parallel_confs,
                                   std::vector<OperatorConf>* nccl_op_confs,
                                   std::vector<ParallelConf>* nccl_op_parallel_confs) {
-  TODO();
+  HashMap<const OpNode*, int64_t> op_node2global_order;
+  for (int64_t i = 0; i < ordered_op_nodes.size(); ++i) {
+    op_node2global_order.emplace(ordered_op_nodes.at(i), i);
+  }
+
+  HashSet<const OpEdge*> visited;
+  const Shape seed_time_shape = GetOpNodeTimeShape(ordered_acc_op_nodes.front());
+  const std::string& bw_sink_acc_tick_op_name = bw_sink_acc_tick_conf.name();
+  std::vector<InsertedNcclInfo> unordered_nccl_op_infos;
+
+  for (const OpNode* acc : ordered_acc_op_nodes) {
+    std::queue<const OpEdge*> queued_edges;
+    for (const OpEdge* op_edge : acc->out_edges()) {
+      if (IsOpEdgeAllowInsertNccl(op_edge, seed_time_shape)) {
+        queued_edges.push(op_edge);
+        CHECK(visited.insert(op_edge).second);
+      }
+    }
+
+    // bfs search each edge after acc allow insert nccl. try insert.
+    while (!queued_edges.empty()) {
+      const OpEdge* op_edge = queued_edges.front();
+      queued_edges.pop();
+
+      for (const LogicalBlobId& lbi : op_edge->lbis()) {
+        OperatorConf nccl_op;
+        if (!TryBuildNcclLogicalOpConf(&nccl_op, op_edge->src_node(), op_edge->dst_node(), lbi)) {
+          continue;
+        }
+        const OpNode* src_node = op_edge->src_node();
+        const OpNode* dst_node = op_edge->dst_node();
+        const std::string& src_op_name = src_node->op().op_name();
+        const std::string& dst_op_name = dst_node->op().op_name();
+        if (mut_consumer_name2op->find(dst_op_name) == mut_consumer_name2op->end()) {
+          mut_consumer_name2op->emplace(dst_op_name, dst_node->op().op_conf());
+        }
+        // insert nccl op
+        user_op::UserOpConfWrapper nccl_op_wrapper(nccl_op);
+        for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
+          std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
+              &mut_consumer_name2op->at(dst_op_name), ibn, nccl_op_wrapper.output("out", 0));
+        }
+
+        InsertedNcclInfo nccl_op_info;
+        nccl_op_info.nccl_op_conf = nccl_op;
+        nccl_op_info.nccl_parallel_conf = src_node->parallel_desc().parallel_conf();
+        nccl_op_info.order = op_node2global_order.at(src_node);
+        nccl_op_info.debug_str =
+            ("cc_debug_log: After ACC insert nccl op: " + nccl_op.name() + " from: [" + src_op_name
+             + "](" + ParallelDistributionToString(src_node->ParallelDistribution4Lbi(lbi)) + ")->["
+             + dst_op_name + "]("
+             + ParallelDistributionToString(dst_node->ParallelDistribution4Lbi(lbi))
+             + "), src_order = " + std::to_string(nccl_op_info.order) + "\n");
+        unordered_nccl_op_infos.push_back(nccl_op_info);
+      }
+
+      for (const OpEdge* dst_node_out_edge : op_edge->dst_node()->out_edges()) {
+        if (visited.find(dst_node_out_edge) == visited.end()
+            && IsOpEdgeAllowInsertNccl(dst_node_out_edge, seed_time_shape)) {
+          CHECK(visited.insert(dst_node_out_edge).second);
+          queued_edges.push(dst_node_out_edge);
+        }
+      }
+    }
+  }
+
+  std::sort(unordered_nccl_op_infos.begin(), unordered_nccl_op_infos.end(),
+            [](const InsertedNcclInfo& lhs, const InsertedNcclInfo& rhs) {
+              return lhs.order < rhs.order;
+            });
+
+  for (int32_t i = 0; i < unordered_nccl_op_infos.size(); ++i) {
+    auto& info = unordered_nccl_op_infos.at(i);
+    if (i == 0) {
+      info.nccl_op_conf.add_ctrl_in_op_name(bw_sink_acc_tick_op_name);
+    } else {
+      info.nccl_op_conf.add_ctrl_in_op_name(unordered_nccl_op_infos.at(i - 1).nccl_op_conf.name());
+    }
+    nccl_op_confs->push_back(info.nccl_op_conf);
+    nccl_op_parallel_confs->push_back(info.nccl_parallel_conf);
+    LOG(INFO) << info.debug_str;
+  }
 }
 
 Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
@@ -596,6 +694,8 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     acc_conf->set_acc("acc");
     acc_conf->set_max_acc_num(time_shape_before_acc.elem_cnt() / time_shape_after_acc.elem_cnt());
     job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_acc_tick_conf);
+    LOG(INFO) << "cc_debug_log: bw_sink_op : " << bw_sink_op->op().op_conf().DebugString();
+    LOG(INFO) << "cc_debug_log: bw_sink_acc_tick_op : " << bw_sink_acc_tick_conf.DebugString();
 
     // insert nccl ops after acc
     std::vector<OperatorConf> after_acc_nccl_op_confs;
@@ -604,10 +704,9 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     std::vector<ParallelConf> after_acc_identity_parallel_confs;
     HashMap<std::string, OperatorConf> mut_consumer_name2op;
 
-    InsertNcclLogicalOpsAfterAcc(op_graph, ordered_acc_op_nodes, bw_sink_acc_tick_conf,
-                                 &mut_consumer_name2op, &after_acc_identity_op_confs,
-                                 &after_acc_identity_parallel_confs, &after_acc_nccl_op_confs,
-                                 &after_acc_identity_parallel_confs);
+    InsertNcclLogicalOpsAfterAcc(op_graph, ordered_op_nodes, ordered_acc_op_nodes,
+                                 bw_sink_acc_tick_conf, &mut_consumer_name2op,
+                                 &after_acc_nccl_op_confs, &after_acc_nccl_parallel_confs);
 
     for (const auto& pair : mut_consumer_name2op) {
       LOG(INFO) << "cc_debug_log: after acc mut consumer op: " << pair.second.DebugString();
