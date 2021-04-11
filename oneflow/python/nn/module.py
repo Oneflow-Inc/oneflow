@@ -85,7 +85,10 @@ class Module(object):
 
         res = None
 
-        @global_function_or_identity()
+        func_config = flow.FunctionConfig()
+        func_config.default_logical_view(flow.scope.mirrored_view())
+
+        @global_function_or_identity(function_config=func_config)
         def job():
             nonlocal res
             res = self.forward(*args)

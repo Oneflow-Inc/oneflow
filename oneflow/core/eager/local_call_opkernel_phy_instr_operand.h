@@ -27,7 +27,7 @@ class TensorTuple;
 class StatefulOpKernel;
 
 using TensorsPtr = std::vector<std::shared_ptr<eager::EagerBlobObject>>*;
-using TensorIndexMap = std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>;
+using TensorIndexMap = std::vector<std::pair<std::string, int>>;
 
 }  // namespace one
 
@@ -55,7 +55,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
 
   one::StatefulOpKernel* mut_opkernel() { return opkernel_.get(); }
   const one::TensorsPtr mut_inputs() { return inputs_; }
-  const one::TensorsPtr mut_outputs() { return inputs_; }
+  const one::TensorsPtr mut_outputs() { return outputs_; }
 
   using OutputFn = std::function<Maybe<void>(eager::EagerBlobObject* tensor)>;
 

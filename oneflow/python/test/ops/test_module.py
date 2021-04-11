@@ -17,6 +17,7 @@ import collections.abc
 from itertools import repeat
 import unittest
 from typing import Tuple, Union
+import time
 
 import numpy as np
 
@@ -33,6 +34,34 @@ def np_relu(np_arr):
     ".numpy() doesn't work in lazy mode",
 )
 class TestModule(flow.unittest.TestCase):
+    def test_constant(test_case):
+        func_config = flow.FunctionConfig()
+        func_config.default_logical_view(flow.scope.mirrored_view())
+        func_config.default_placement_scope(flow.scope.placement("cpu", "0:0"))
+
+        @flow.global_function(function_config=func_config)
+        def job():
+            start = time.time()
+            op1 = (
+                flow.builtin_op("constant")
+                .Output("out")
+                .Attr("is_floating_value", True)
+                .Attr("floating_value", 3.1)
+                .Attr("dtype", flow.float32)
+                .Attr("shape", [2])
+                .Build()
+            )
+            op2 = (
+                flow.builtin_op("multiply").Input("x").Input("y").Output("out").Build()
+            )
+            for _ in range(100):
+                y = op1()[0]
+                y = op2(y, y)[0]
+            end = time.time()
+            print(end - start)
+
+        job()
+
     def test_nested_module(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):

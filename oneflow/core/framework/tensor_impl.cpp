@@ -72,5 +72,10 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
   return Maybe<void>::Ok();
 }
 
+void EagerMirroredTensorImpl::SetEagerBlobObject(
+    std::shared_ptr<eager::EagerBlobObject> eager_blob_object) {
+  eager_blob_object_ = eager_blob_object;
+}
+
 }  // namespace one
 }  // namespace oneflow

@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 #define ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 
+#include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/id_generator.h"
@@ -39,6 +40,11 @@ limitations under the License.
 #include "oneflow/core/job/parallel_signature.cfg.h"
 
 namespace oneflow {
+
+namespace one {
+class StatefulOpKernel;
+class TensorTuple;
+}  // namespace one
 
 namespace detail {
 
@@ -220,6 +226,10 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
     auto* id_cache = Global<symbol::IdCache<T>>::Get();
     return id_cache->FindOrCreate(conf, [&] { return CreateSymbolId<T>(conf); });
   }
+
+  Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
+                                const one::TensorTuple& inputs, const one::TensorTuple& outputs,
+                                one::TensorsPtr output_ptr);
 
  private:
   Maybe<std::vector<std::shared_ptr<compatible_py::OpArgBlobAttribute>>> GetPhysicalOpArgBlobAttrs(

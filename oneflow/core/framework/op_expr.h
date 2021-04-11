@@ -42,7 +42,15 @@ class BuiltinOpExpr : public OpExpr {
   explicit BuiltinOpExpr(const std::string& type, const std::string& op_name,
                          const std::vector<std::string>& indexed_ibns,
                          const std::vector<std::string>& indexed_obns)
-      : OpExpr(type), op_name_(op_name), indexed_ibns_(indexed_ibns), indexed_obns_(indexed_obns) {}
+      : OpExpr(type), op_name_(op_name), indexed_ibns_(indexed_ibns), indexed_obns_(indexed_obns) {
+    auto GetPair = [](const std::string& name) -> std::pair<std::string, int> {
+      size_t pos = name.find('_');
+      CHECK_NE(pos, std::string::npos) << "name: " << name;
+      return std::make_pair(name.substr(0, pos), std::stoi(name.substr(pos + 1)));
+    };
+    for (const auto& ibn : indexed_ibns) { indexed_input_pairs_.push_back(GetPair(ibn)); }
+    for (const auto& obn : indexed_obns) { indexed_output_pairs_.push_back(GetPair(obn)); }
+  }
 
   virtual ~BuiltinOpExpr() = default;
 
@@ -53,6 +61,12 @@ class BuiltinOpExpr : public OpExpr {
 
   const std::vector<std::string>& indexed_ibns() const { return indexed_ibns_; }
   const std::vector<std::string>& indexed_obns() const { return indexed_obns_; }
+  const std::vector<std::pair<std::string, int32_t>>& indexed_input_pairs() const {
+    return indexed_input_pairs_;
+  }
+  const std::vector<std::pair<std::string, int32_t>>& indexed_output_pairs() const {
+    return indexed_output_pairs_;
+  }
 
   virtual void BuildOpConf(OperatorConf* op_conf) const = 0;
 
@@ -62,6 +76,8 @@ class BuiltinOpExpr : public OpExpr {
   std::vector<std::string> indexed_ibns_;
   // The indexed output blob names.
   std::vector<std::string> indexed_obns_;
+  std::vector<std::pair<std::string, int>> indexed_input_pairs_;
+  std::vector<std::pair<std::string, int>> indexed_output_pairs_;
 };
 
 #define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name, _op_conf)                                  \

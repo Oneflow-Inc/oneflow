@@ -235,6 +235,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 
   // other methods
   Maybe<void> InitEagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case);
+  void SetEagerBlobObject(std::shared_ptr<eager::EagerBlobObject> eager_blob_object);
 
  private:
   std::shared_ptr<const Shape> shape_;

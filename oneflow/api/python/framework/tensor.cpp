@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/py_distribute.h"
@@ -81,6 +82,13 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("is_consistent", &T::is_consistent)
       .def_property_readonly("_blob_object", &T::blob_object)
       // OneFlow tensor methods other than pytorch tensor
+      .def("get_first_eager_data",
+           [](T& t) -> float {
+             auto& mt = dynamic_cast<MirroredTensor&>(t);
+             auto impl = std::dynamic_pointer_cast<EagerMirroredTensorImpl>(mt.impl_);
+             const float* dptr = impl->eager_blob_object()->blob().dptr<float>();
+             return *dptr;
+           })
       .def("_set_blob_object", [](T& t, std::shared_ptr<compatible_py::BlobObject>& blob_object) {
         t.set_blob_object(blob_object).GetOrThrow();
       });

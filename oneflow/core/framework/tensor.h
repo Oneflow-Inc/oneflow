@@ -219,7 +219,8 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
                                                     bool is_lazy, bool requires_grad, bool is_leaf,
                                                     bool retain_grad);
 
- private:
+  //  private:
+ public:
   std::shared_ptr<MirroredTensorImpl> impl_;
 };
 

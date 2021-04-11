@@ -41,26 +41,12 @@ class LocalUserKernelBaseContext {
  public:
   LocalUserKernelBaseContext(const std::string& device_tag,
                              const std::shared_ptr<const JobDesc> job_desc,
-                             TensorIndexMap bn_in_op2bn_index2input_tensor_index,
-                             TensorIndexMap bn_in_op2bn_index2output_tensor_index)
+                             const ArgVec* index_input_pairs, const ArgVec* indexed_output_pairs)
       : job_desc_(job_desc),
-        bn_in_op2bn_index2input_tensor_index_(bn_in_op2bn_index2input_tensor_index),
-        bn_in_op2bn_index2output_tensor_index_(bn_in_op2bn_index2output_tensor_index) {
+        indexed_input_pairs_(index_input_pairs),
+        indexed_output_pairs_(indexed_output_pairs) {
     device_tag_ = device_tag;
     device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
-
-    for (auto& pair : *bn_in_op2bn_index2input_tensor_index) {
-      const auto& bn_in_op = pair.first;
-      for (int64_t bn_index = 0; bn_index < pair.second.size(); bn_index++) {
-        inputs_.push_back({bn_in_op, bn_index});
-      }
-    }
-    for (auto& pair : *bn_in_op2bn_index2output_tensor_index) {
-      const auto& bn_in_op = pair.first;
-      for (int64_t bn_index = 0; bn_index < pair.second.size(); bn_index++) {
-        outputs_.push_back({bn_in_op, bn_index});
-      }
-    }
   }
   ~LocalUserKernelBaseContext() = default;
 
@@ -87,37 +73,33 @@ class LocalUserKernelBaseContext {
     arg2tensor_.clear();
     arg2tensor_desc_.clear();
 
-    auto UpdateArg2TensorAndTensorDesc = [this](TensorsPtr tensors_ptr,
-                                                TensorIndexMap tensor_index_map) {
+    auto UpdateArg2TensorAndTensorDesc = [this](TensorsPtr tensors_ptr, const ArgVec* pairs) {
       if (!tensors_ptr) { return; }
-      for (auto& pair : *tensor_index_map) {
+      for (int i = 0; i < pairs->size(); i++) {
+        const auto& pair = (*pairs)[i];
         const auto& bn_in_op = pair.first;
-        for (int64_t bn_index = 0; bn_index < pair.second.size(); bn_index++) {
-          const auto tensor_index = pair.second[bn_index];
-          const auto tensor = (*tensors_ptr)[tensor_index];
-          arg2tensor_.emplace(std::make_pair(bn_in_op, bn_index),
-                              std::make_shared<user_op::BlobTensorView>(tensor->mut_blob()));
-          arg2tensor_desc_.emplace(std::make_pair(bn_in_op, bn_index),
-                                   std::make_shared<EagerBlobObjectTensorDescView>(tensor));
-        }
+        const auto& bn_index = pair.second;
+        const auto tensor = (*tensors_ptr)[i];
+        arg2tensor_.emplace(std::make_pair(bn_in_op, bn_index),
+                            std::make_shared<user_op::BlobTensorView>(tensor->mut_blob()));
+        arg2tensor_desc_.emplace(std::make_pair(bn_in_op, bn_index),
+                                 std::make_shared<EagerBlobObjectTensorDescView>(tensor));
       }
     };
 
-    UpdateArg2TensorAndTensorDesc(input_tensors_, bn_in_op2bn_index2input_tensor_index_);
-    UpdateArg2TensorAndTensorDesc(output_tensors_, bn_in_op2bn_index2output_tensor_index_);
+    UpdateArg2TensorAndTensorDesc(input_tensors_, indexed_input_pairs_);
+    UpdateArg2TensorAndTensorDesc(output_tensors_, indexed_output_pairs_);
   }
 
-  const ArgVec& inputs() const { return inputs_; }
-  const ArgVec& outputs() const { return outputs_; }
+  const ArgVec& inputs() const { return *indexed_input_pairs_; }
+  const ArgVec& outputs() const { return *indexed_output_pairs_; }
 
  private:
-  ArgVec inputs_;
-  ArgVec outputs_;
+  std::shared_ptr<const JobDesc> job_desc_;
+  const ArgVec* indexed_input_pairs_;
+  const ArgVec* indexed_output_pairs_;
   DeviceType device_type_;
   std::string device_tag_;
-  std::shared_ptr<const JobDesc> job_desc_;
-  TensorIndexMap bn_in_op2bn_index2input_tensor_index_;
-  TensorIndexMap bn_in_op2bn_index2output_tensor_index_;
   HashMap<std::pair<std::string, int64_t>, std::shared_ptr<user_op::BlobTensorView>> arg2tensor_;
   HashMap<std::pair<std::string, int64_t>, std::shared_ptr<EagerBlobObjectTensorDescView>>
       arg2tensor_desc_;
@@ -129,12 +111,11 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
  public:
   explicit LocalUserKernelRegContext(const OperatorConf& op_conf,
                                      const std::shared_ptr<const JobDesc> job_desc,
-                                     TensorIndexMap bn_in_op2bn_index2input_tensor_index,
-                                     TensorIndexMap bn_in_op2bn_index2output_tensor_index)
+                                     const ArgVec* index_input_pairs,
+                                     const ArgVec* indexed_output_pairs)
       : user_op::KernelRegContext(user_op::UserOpConfWrapper(op_conf)),
-        base_ctx_(LocalUserKernelBaseContext(op_conf.device_tag(), job_desc,
-                                             bn_in_op2bn_index2input_tensor_index,
-                                             bn_in_op2bn_index2output_tensor_index)) {}
+        base_ctx_(LocalUserKernelBaseContext(op_conf.device_tag(), job_desc, index_input_pairs,
+                                             indexed_output_pairs)) {}
   ~LocalUserKernelRegContext() = default;
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
@@ -167,13 +148,12 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
  public:
   explicit LocalUserKernelInitContext(DeviceCtx* device_ctx, const OperatorConf& op_conf,
                                       const std::shared_ptr<const JobDesc> job_desc,
-                                      TensorIndexMap bn_in_op2bn_index2input_tensor_index,
-                                      TensorIndexMap bn_in_op2bn_index2output_tensor_index)
+                                      const ArgVec* index_input_pairs,
+                                      const ArgVec* indexed_output_pairs)
       : user_op::KernelInitContext(user_op::UserOpConfWrapper(op_conf)),
         device_ctx_(device_ctx),
-        base_ctx_(LocalUserKernelBaseContext(op_conf.device_tag(), job_desc,
-                                             bn_in_op2bn_index2input_tensor_index,
-                                             bn_in_op2bn_index2output_tensor_index)) {}
+        base_ctx_(LocalUserKernelBaseContext(op_conf.device_tag(), job_desc, index_input_pairs,
+                                             indexed_output_pairs)) {}
   ~LocalUserKernelInitContext() override = default;
 
   void set_device_ctx(DeviceCtx* device_ctx) { device_ctx_ = device_ctx; }
@@ -210,27 +190,14 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   LocalUserKernelBaseContext base_ctx_;
 };
 
-LocalUserOpInferContext::LocalUserOpInferContext(
-    const OperatorConf& op_conf, const std::shared_ptr<const JobDesc> job_desc,
-    TensorIndexMap bn_in_op2bn_index2input_tensor_index,
-    TensorIndexMap bn_in_op2bn_index2output_tensor_index)
+LocalUserOpInferContext::LocalUserOpInferContext(const OperatorConf& op_conf,
+                                                 const std::shared_ptr<const JobDesc> job_desc,
+                                                 const ArgVec* index_input_pairs,
+                                                 const ArgVec* indexed_output_pairs)
     : user_op_conf_(op_conf),
       job_desc_(job_desc),
-      bn_in_op2bn_index2input_tensor_index_(bn_in_op2bn_index2input_tensor_index),
-      bn_in_op2bn_index2output_tensor_index_(bn_in_op2bn_index2output_tensor_index) {
-  for (auto& pair : *bn_in_op2bn_index2input_tensor_index) {
-    const auto& bn_in_op = pair.first;
-    for (int64_t bn_index = 0; bn_index < pair.second.size(); bn_index++) {
-      inputs_.push_back({bn_in_op, bn_index});
-    }
-  }
-  for (auto& pair : *bn_in_op2bn_index2output_tensor_index) {
-    const auto& bn_in_op = pair.first;
-    for (int64_t bn_index = 0; bn_index < pair.second.size(); bn_index++) {
-      outputs_.push_back({bn_in_op, bn_index});
-    }
-  }
-}
+      indexed_input_pairs_(index_input_pairs),
+      indexed_output_pairs_(indexed_output_pairs) {}
 
 user_op::TensorDesc* LocalUserOpInferContext::TensorDesc4ArgNameAndIndex(
     const std::string& arg_name, int32_t index) {
@@ -238,39 +205,35 @@ user_op::TensorDesc* LocalUserOpInferContext::TensorDesc4ArgNameAndIndex(
   CHECK(it != arg2tensor_desc_.end()) << "Arg (" << arg_name << "," << index << ") is not found";
   return it->second.get();
 }
-
 void LocalUserOpInferContext::Update(TensorsPtr inputs, TensorsPtr outputs) {
   input_tensors_ = inputs;
   output_tensors_ = outputs;
 
   arg2tensor_desc_.clear();
-  auto UpdateArg2TensorDesc = [this](TensorsPtr tensors_ptr, TensorIndexMap tensor_index_map) {
+  auto UpdateArg2TensorDesc = [this](TensorsPtr tensors_ptr, const ArgVec* pairs) {
     if (!tensors_ptr) { return; }
-    for (auto& pair : *tensor_index_map) {
+    for (int i = 0; i < pairs->size(); i++) {
+      const auto& pair = (*pairs)[i];
       const auto& bn_in_op = pair.first;
-      for (int64_t bn_index = 0; bn_index < pair.second.size(); bn_index++) {
-        const auto tensor_index = pair.second[bn_index];
-        const auto tensor = (*tensors_ptr)[tensor_index];
-        arg2tensor_desc_.emplace(std::make_pair(bn_in_op, bn_index),
-                                 std::make_shared<EagerBlobObjectTensorDescView>(tensor));
-      }
+      const auto& bn_index = pair.second;
+      const auto tensor = (*tensors_ptr)[i];
+      arg2tensor_desc_.emplace(std::make_pair(bn_in_op, bn_index),
+                               std::make_shared<EagerBlobObjectTensorDescView>(tensor));
     }
   };
 
-  UpdateArg2TensorDesc(input_tensors_, bn_in_op2bn_index2input_tensor_index_);
-  UpdateArg2TensorDesc(output_tensors_, bn_in_op2bn_index2output_tensor_index_);
+  UpdateArg2TensorDesc(input_tensors_, indexed_input_pairs_);
+  UpdateArg2TensorDesc(output_tensors_, indexed_output_pairs_);
 }
 
 LocalUserKernelComputeContext::LocalUserKernelComputeContext(
     DeviceCtx* device_ctx, const OperatorConf& op_conf,
-    const std::shared_ptr<const JobDesc> job_desc,
-    TensorIndexMap bn_in_op2bn_index2input_tensor_index,
-    TensorIndexMap bn_in_op2bn_index2output_tensor_index)
+    const std::shared_ptr<const JobDesc> job_desc, const ArgVec* index_input_pairs,
+    const ArgVec* indexed_output_pairs)
     : user_op::KernelComputeContext(user_op::UserOpConfWrapper(op_conf)),
       device_ctx_(device_ctx),
       base_ctx_(std::unique_ptr<LocalUserKernelBaseContext>(new LocalUserKernelBaseContext(
-          op_conf.device_tag(), job_desc, bn_in_op2bn_index2input_tensor_index,
-          bn_in_op2bn_index2output_tensor_index))) {}
+          op_conf.device_tag(), job_desc, index_input_pairs, indexed_output_pairs))) {}
 
 const user_op::TensorDesc* LocalUserKernelComputeContext::TensorDesc4ArgNameAndIndex(
     const std::string& arg_name, int32_t index) const {
@@ -301,23 +264,20 @@ void LocalUserKernelComputeContext::Update(TensorsPtr inputs, TensorsPtr outputs
 StatefulOpKernel::StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc,
                                    const OperatorConf& op_conf,
                                    const std::shared_ptr<MemoryCase>& mem_case,
-                                   TensorIndexMap bn_in_op2bn_index2input_tensor_index,
-                                   TensorIndexMap bn_in_op2bn_index2output_tensor_index)
+                                   const ArgVec* index_input_pairs,
+                                   const ArgVec* indexed_output_pairs)
     : job_desc_(job_desc),
       op_conf_(op_conf),
       mem_case_(mem_case),
-      bn_in_op2bn_index2input_tensor_index_(bn_in_op2bn_index2input_tensor_index),
-      bn_in_op2bn_index2output_tensor_index_(bn_in_op2bn_index2output_tensor_index) {
-  op_infer_ctx_.reset(new LocalUserOpInferContext(op_conf, job_desc,
-                                                  bn_in_op2bn_index2input_tensor_index,
-                                                  bn_in_op2bn_index2output_tensor_index));
+      indexed_input_pairs_(index_input_pairs),
+      indexed_output_pairs_(indexed_output_pairs) {
+  op_infer_ctx_.reset(
+      new LocalUserOpInferContext(op_conf, job_desc, index_input_pairs, indexed_output_pairs));
   compute_ctx_.reset(new LocalUserKernelComputeContext(nullptr, op_conf, job_desc,
-                                                       bn_in_op2bn_index2input_tensor_index,
-                                                       bn_in_op2bn_index2output_tensor_index));
+                                                       index_input_pairs, indexed_output_pairs));
   create_ctx_.reset(new LocalUserKernelCreateContext(op_conf));
-  reg_ctx_.reset(new LocalUserKernelRegContext(op_conf, job_desc,
-                                               bn_in_op2bn_index2input_tensor_index_,
-                                               bn_in_op2bn_index2output_tensor_index_));
+  reg_ctx_.reset(new LocalUserKernelRegContext(op_conf, job_desc, indexed_input_pairs_,
+                                               indexed_output_pairs_));
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
   CHECK_NOTNULL(op_reg_val);
@@ -327,12 +287,12 @@ StatefulOpKernel::StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc
     UNIMPLEMENTED();
   }
 
-  DataType default_data_type = job_desc->DefaultDataType();
-  CHECK_NE(default_data_type, DataType::kInvalidDataType);
   tmp_blob_object_.reset(new eager::EagerBlobObject(mem_case_, std::make_shared<Shape>(),
-                                                    default_data_type,
+                                                    DataType::kChar,
                                                     std::make_shared<eager::TensorBuffer>()));
 }
+
+StatefulOpKernel::~StatefulOpKernel() = default;
 
 Maybe<const user_op::OpKernel*> StatefulOpKernel::GetOpKernel(TensorsPtr inputs,
                                                               TensorsPtr outputs) {
@@ -348,8 +308,7 @@ Maybe<const user_op::OpKernel*> StatefulOpKernel::GetOpKernel(TensorsPtr inputs,
   op_kernel_map_.emplace(
       std::make_pair(kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel)));
   auto init_ctx = std::make_shared<LocalUserKernelInitContext>(
-      nullptr, op_conf_, job_desc_, bn_in_op2bn_index2input_tensor_index_,
-      bn_in_op2bn_index2output_tensor_index_);
+      nullptr, op_conf_, job_desc_, indexed_input_pairs_, indexed_output_pairs_);
   init_ctx->Update(inputs, outputs);
   init_ctx_map_.emplace(std::make_pair(kernel, init_ctx));
 
@@ -365,31 +324,39 @@ void StatefulOpKernel::ChooseOpKernel(TensorsPtr inputs, TensorsPtr outputs) {
       user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, *reg_ctx_));
   CHECK_NOTNULL(kernel_reg_val);
   auto it = op_kernel_map_.find(kernel_reg_val);
-  if (it != op_kernel_map_.end()) { current_op_kernel_ = it->second.get(); }
+  if (it != op_kernel_map_.end()) {
+    current_op_kernel_ = it->second.get();
+    return;
+  }
 
   auto* kernel = kernel_reg_val->create_fn(create_ctx_.get());
   op_kernel_map_.emplace(
       std::make_pair(kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel)));
   auto init_ctx = std::make_shared<LocalUserKernelInitContext>(
-      nullptr, op_conf_, job_desc_, bn_in_op2bn_index2input_tensor_index_,
-      bn_in_op2bn_index2output_tensor_index_);
+      nullptr, op_conf_, job_desc_, indexed_input_pairs_, indexed_output_pairs_);
   init_ctx->Update(inputs, outputs);
   init_ctx_map_.emplace(std::make_pair(kernel, init_ctx));
 
   infer_tmp_size_fn_map_.emplace(std::make_pair(kernel, &kernel_reg_val->infer_tmp_size_fn));
 
   current_op_kernel_ = kernel;
+  // TODO:
+  current_state_ = nullptr;
 }
 
 Maybe<user_op::OpKernelState> StatefulOpKernel::TryInitOpKernelState(DeviceCtx* device_ctx) {
   auto it = op_kernel_state_map_.find(current_op_kernel_);
-  if (it != op_kernel_state_map_.end()) { return it->second; }
+  if (it != op_kernel_state_map_.end()) {
+    current_state_ = it->second.get();
+    return it->second;
+  }
 
   auto init_ctx = init_ctx_map_.at(current_op_kernel_);
   init_ctx->set_device_ctx(device_ctx);
-  auto state = kernel_->CreateOpKernelState(init_ctx.get());
+  auto state = current_op_kernel_->CreateOpKernelState(init_ctx.get());
   op_kernel_state_map_.emplace(std::make_pair(current_op_kernel_, state));
   init_ctx->set_device_ctx(nullptr);
+  current_state_ = state.get();
   return state;
 }
 

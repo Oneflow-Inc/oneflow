@@ -17,11 +17,14 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
+#include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/framework/object_storage.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/operator/op_node_signature.cfg.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/id_util.h"
@@ -30,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/user/kernels/stateful_opkernel.h"
 
 namespace oneflow {
 
@@ -654,6 +658,46 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
   for (uint64_t token_id : std::get<0>(token_ids)) { instruction->add_uint64_operand(token_id); }
   instruction->add_separator();
   for (uint64_t token_id : std::get<1>(token_ids)) { instruction->add_uint64_operand(token_id); }
+  instruction_list_->PushBack(instruction.Mutable());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::LocalCallOpKernel(
+    const std::shared_ptr<one::StatefulOpKernel>& opkernel, const one::TensorTuple& input_tuple,
+    const one::TensorTuple& output_tuple, one::TensorsPtr outputs) {
+  ObjectMsgPtr<vm::InstructionMsg> instruction =
+      ObjectMsgPtr<vm::InstructionMsg>::New("cpu.LocalCallOpKernel");
+  using TensorsPtr = std::vector<std::shared_ptr<eager::EagerBlobObject>>*;
+  // FIXME:
+  TensorsPtr inputs = new std::vector<std::shared_ptr<eager::EagerBlobObject>>();
+  auto GetImpl = [](const std::shared_ptr<one::Tensor>& tensor)
+      -> std::shared_ptr<one::EagerMirroredTensorImpl> {
+    auto mirrored_tensor = std::dynamic_pointer_cast<one::MirroredTensor>(tensor);
+    auto eager_mirrored_impl =
+        std::dynamic_pointer_cast<one::EagerMirroredTensorImpl>(mirrored_tensor->impl_);
+    return eager_mirrored_impl;
+  };
+  for (auto& input : input_tuple) {
+    auto impl = GetImpl(input);
+    const auto& eager_blob_object = impl->eager_blob_object();
+    inputs->push_back(eager_blob_object);
+  }
+  for (auto& output : output_tuple) {
+    auto mem_case = opkernel->mem_case();
+    // auto impl = GetImpl(output);
+    // impl->InitEagerBlobObject(mem_case);
+    // const auto& eager_blob_object = impl->eager_blob_object();
+
+    auto eager_blob_object = std::make_shared<eager::EagerBlobObject>(
+        mem_case, std::make_shared<Shape>(), DataType::kFloat,
+        std::make_shared<eager::TensorBuffer>());
+    outputs->push_back(eager_blob_object);
+  }
+  auto phy_instr_operand =
+      std::make_shared<eager::LocalCallOpKernelPhyInstrOperand>(opkernel, inputs, outputs);
+  const auto& scope = JUST(GetCurrentScope());
+  instruction->set_parallel_desc_symbol_id(JUST(scope->device_parallel_desc_symbol()->symbol_id()));
+  *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }

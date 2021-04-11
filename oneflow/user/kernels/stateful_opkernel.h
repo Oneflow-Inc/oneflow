@@ -39,7 +39,6 @@ class LocalUserOpInferContext;
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
 using TensorsPtr = std::vector<std::shared_ptr<eager::EagerBlobObject>>*;
-using TensorIndexMap = std::shared_ptr<HashMap<std::string, std::vector<int64_t>>>;
 using OpKernelMap =
     HashMap<const user_op::OpKernelRegistryResult*, std::shared_ptr<const user_op::OpKernel>>;
 using InitCtxMap = HashMap<const user_op::OpKernel*, std::shared_ptr<LocalUserKernelInitContext>>;
@@ -72,8 +71,7 @@ class LocalUserOpInferContext : public user_op::InferContext {
  public:
   LocalUserOpInferContext(const OperatorConf& op_conf,
                           const std::shared_ptr<const JobDesc> job_desc,
-                          TensorIndexMap bn_in_op2bn_index2input_tensor_index,
-                          TensorIndexMap bn_in_op2bn_index2output_tensor_index);
+                          const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs);
   ~LocalUserOpInferContext() override = default;
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -92,8 +90,8 @@ class LocalUserOpInferContext : public user_op::InferContext {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
   }
 
-  const ArgVec& inputs() const override { return inputs_; }
-  const ArgVec& outputs() const override { return outputs_; }
+  const ArgVec& inputs() const override { return *indexed_input_pairs_; }
+  const ArgVec& outputs() const override { return *indexed_output_pairs_; }
   const JobDesc* job_desc() const override {
     CHECK_NOTNULL(job_desc_);
     return job_desc_.get();
@@ -118,10 +116,8 @@ class LocalUserOpInferContext : public user_op::InferContext {
  private:
   user_op::UserOpConfWrapper user_op_conf_;
   std::shared_ptr<const JobDesc> job_desc_;
-  ArgVec inputs_;
-  ArgVec outputs_;
-  TensorIndexMap bn_in_op2bn_index2input_tensor_index_;
-  TensorIndexMap bn_in_op2bn_index2output_tensor_index_;
+  const ArgVec* indexed_input_pairs_;
+  const ArgVec* indexed_output_pairs_;
   TensorsPtr input_tensors_;
   TensorsPtr output_tensors_;
   HashMap<std::pair<std::string, int64_t>, std::shared_ptr<EagerBlobObjectTensorDescView>>
@@ -132,8 +128,8 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
  public:
   explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const OperatorConf& op_conf,
                                          const std::shared_ptr<const JobDesc> job_desc,
-                                         TensorIndexMap bn_in_op2bn_index2input_tensor_index,
-                                         TensorIndexMap bn_in_op2bn_index2output_tensor_index);
+                                         const ArgVec* indexed_input_pairs,
+                                         const ArgVec* indexed_output_pairs);
   ~LocalUserKernelComputeContext() = default;
 
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -154,8 +150,8 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
  private:
   DeviceCtx* device_ctx_;
   std::unique_ptr<LocalUserKernelBaseContext> base_ctx_;
-  TensorIndexMap bn_in_op2bn_index2input_tensor_index_;
-  TensorIndexMap bn_in_op2bn_index2output_tensor_index_;
+  const ArgVec* indexed_input_pairs_;
+  const ArgVec* indexed_output_pairs_;
   TensorsPtr input_tensors_;
   TensorsPtr output_tensors_;
 };
@@ -164,10 +160,9 @@ class StatefulOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulOpKernel);
   StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc, const OperatorConf& op_conf,
-                   const std::shared_ptr<MemoryCase>& mem_case,
-                   TensorIndexMap bn_in_op2bn_index2input_tensor_index,
-                   TensorIndexMap bn_in_op2bn_index2output_tensor_index);
-  ~StatefulOpKernel() = default;
+                   const std::shared_ptr<MemoryCase>& mem_case, const ArgVec* indexed_input_pairs,
+                   const ArgVec* indexed_output_pairs);
+  ~StatefulOpKernel();
 
   LocalUserOpInferContext* UpdateInferContext(TensorsPtr inputs, TensorsPtr outputs);
   LocalUserKernelComputeContext* UpdateComputeContext(TensorsPtr inputs, TensorsPtr outputs,
@@ -179,7 +174,7 @@ class StatefulOpKernel final {
 
   eager::EagerBlobObject* mut_temp_blob_object();
 
-  user_op::OpKernelState* mut_opkernel_state() { return state_.get(); }
+  user_op::OpKernelState* mut_opkernel_state() { return current_state_; }
 
   const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
   bool need_check_mem_case() const { return need_check_mem_case_; }
@@ -198,14 +193,12 @@ class StatefulOpKernel final {
   std::shared_ptr<const JobDesc> job_desc_;
   OperatorConf op_conf_;
   std::shared_ptr<MemoryCase> mem_case_;
-  std::unique_ptr<const user_op::OpKernel> kernel_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
-  std::shared_ptr<user_op::OpKernelState> state_;
-  TensorIndexMap bn_in_op2bn_index2input_tensor_index_;
-  TensorIndexMap bn_in_op2bn_index2output_tensor_index_;
+  const ArgVec* indexed_input_pairs_;
+  const ArgVec* indexed_output_pairs_;
   bool need_check_mem_case_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
   OpKernelMap op_kernel_map_;
@@ -214,6 +207,7 @@ class StatefulOpKernel final {
   InferTmpSizeFnMap infer_tmp_size_fn_map_;
   std::unique_ptr<eager::EagerBlobObject> tmp_blob_object_;
   const user_op::OpKernel* current_op_kernel_;
+  user_op::OpKernelState* current_state_;
 };
 
 }  // namespace one

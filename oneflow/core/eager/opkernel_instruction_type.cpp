@@ -103,18 +103,6 @@ COMMAND(vm::RegisterInstructionType<DeleteOpKernelObjectInstructionType>("Delete
 
 namespace {
 
-std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type, const int64_t device_id) {
-  const auto& mem_case = std::make_shared<MemoryCase>();
-  if (device_type == DeviceType::kCPU) {
-    mem_case->mutable_host_mem();
-  } else if (device_type == DeviceType::kGPU) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(device_id);
-  } else {
-    UNIMPLEMENTED();
-  }
-  return mem_case;
-}
-
 template<typename T, typename CallbackT>
 Maybe<void> ForEachConstInputBnAndBlobObject(vm::Instruction* instruction, const T& args,
                                              const CallbackT& Callback) {
@@ -455,6 +443,7 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 struct LocalCallOpKernelUtil final {
   static inline Maybe<void> Infer(vm::Instruction* instruction) {
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    operand->mut_opkernel()->ChooseOpKernel(operand->inputs(), operand->outputs());
     JUST(CheckOutputBlobObjectsMemCase(operand, instruction->stream()));
     JUST(InferOutputTensorDescs(operand));
     JUST(InitOutputBlobs(operand));
@@ -464,7 +453,9 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline Maybe<void> Compute(vm::Instruction* instruction) {
+    LOG(INFO) << "haha";
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    operand->mut_opkernel()->ChooseOpKernel(operand->inputs(), operand->outputs());
     DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
@@ -596,6 +587,7 @@ struct LocalCallOpKernelUtil final {
     JUST(WithComputeContext(
         operand, device_ctx, [&](user_op::KernelComputeContext* compute_ctx) -> Maybe<void> {
           opkernel->mut_user_opkernel()->Compute(compute_ctx, opkernel->mut_opkernel_state());
+          LOG(INFO) << "compute!";
           return Maybe<void>::Ok();
         }));
     return Maybe<void>::Ok();
@@ -621,7 +613,7 @@ Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction
   auto* opkernel_obj = JUST(instruction->mut_operand_type(args.opkernel())->Mut<OpKernelObject>());
   DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
   int64_t device_id = instruction->stream().device_id();
-  const auto& mem_case = MakeMemCase(device_type, device_id);
+  const auto& mem_case = MemoryCaseUtil::MakeMemCase(device_type, device_id);
   JUST(OpKernelInfer(opkernel_obj, instruction, args, mem_case));
   return Maybe<void>::Ok();
 }
@@ -663,7 +655,7 @@ Maybe<void> UserStatelessCallOpKernelInstructionType::Infer(
   DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
   int64_t device_id = instruction->stream().device_id();
   auto* opkernel = JUST(GetSharedOpKernel<OpKernelObject>(instruction, device_type, args));
-  const auto& mem_case = MakeMemCase(device_type, device_id);
+  const auto& mem_case = MemoryCaseUtil::MakeMemCase(device_type, device_id);
   JUST(OpKernelInfer(opkernel, instruction, args, mem_case));
   return Maybe<void>::Ok();
 }
@@ -700,7 +692,7 @@ void UserStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruct
 
 std::shared_ptr<MemoryCase> SystemStatelessCallOpKernelInstructionType::GetOutBlobMemCase(
     const DeviceType device_type, const int64_t device_id) const {
-  return MakeMemCase(device_type, device_id);
+  return MemoryCaseUtil::MakeMemCase(device_type, device_id);
 }
 
 Maybe<void> SystemStatelessCallOpKernelInstructionType::Infer(
