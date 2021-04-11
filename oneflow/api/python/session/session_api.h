@@ -20,10 +20,6 @@ limitations under the License.
 
 inline bool IsSessionInited() { return oneflow::IsSessionInited().GetOrThrow(); }
 
-inline void InitEagerGlobalSession(const std::string& config_proto_str) {
-  return oneflow::InitEagerGlobalSession(config_proto_str).GetOrThrow();
-}
-
 inline void InitLazyGlobalSession(const std::string& config_proto_str) {
   return oneflow::InitLazyGlobalSession(config_proto_str).GetOrThrow();
 }

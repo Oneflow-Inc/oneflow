@@ -29,7 +29,6 @@ class SessionGlobalObjectsScope final {
   ~SessionGlobalObjectsScope();
 
   Maybe<void> Init(const ConfigProto& config_proto);
-  Maybe<void> EagerInit(const ConfigProto& config_proto);
 
  private:
   int64_t session_id_;
