@@ -83,8 +83,17 @@ bool IsBreakpointOpNode(const OpNode* node) {
   }
 }
 
+bool IsAccOpNode(const OpNode* node) {
+  return node->op().op_conf().has_user_conf()
+         && node->op().op_conf().user_conf().op_type_name() == "acc";
+}
+
 const Shape GetOpNodeTimeShape(const OpNode* op_node) {
   return *(CHECK_JUST(op_node->op().GetOpTimeShape()).get());
+}
+
+const Shape GetOpNodeInputTimeShape(const OpNode* op_node) {
+  return *(CHECK_JUST(op_node->op().GetInputBlobFastestTimeShape()).get());
 }
 
 void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const OpGraph& op_graph,
@@ -475,6 +484,17 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
   }
 }
 
+void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
+                                  const std::vector<const OpNode*>& ordered_acc_op_nodes,
+                                  const OperatorConf& bw_sink_acc_tick_conf,
+                                  HashMap<std::string, OperatorConf>* mut_consumer_name2op,
+                                  std::vector<OperatorConf>* acc_identity_op_confs,
+                                  std::vector<ParallelConf>* acc_identity_parallel_confs,
+                                  std::vector<OperatorConf>* nccl_op_confs,
+                                  std::vector<ParallelConf>* nccl_op_parallel_confs) {
+  TODO();
+}
+
 Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   auto OpGraphForEachInDataAndCtrlNode = [&](OpNode* node,
                                              const std::function<void(OpNode*)>& Handler) {
@@ -496,12 +516,16 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
 
   std::vector<const OpNode*> subgraph_order;
   HashMap<const OpNode*, int64_t> node2order;
+  std::vector<const OpNode*> ordered_acc_op_nodes;
   for (const OpNode* this_node : ordered_op_nodes) {
     if (subgraph.find(this_node) != subgraph.end()) {
       subgraph_order.push_back(this_node);
       node2order.emplace(this_node, subgraph_order.size() - 1);
+    } else if (IsAccOpNode(this_node)) {
+      ordered_acc_op_nodes.push_back(this_node);
     }
   }
+
   CHECK_EQ(subgraph.size(), subgraph_order.size());
 
   HashSet<std::string> mut_op_names;
@@ -537,6 +561,71 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(&subgraph_op_name2conf, &mut_op_names,
                                                    &nccl_op_confs, &nccl_op_parallel_confs,
                                                    subgraph_order, node2order);
+  }
+
+  if (!ordered_acc_op_nodes.empty()
+      && Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    LOG(WARNING)
+        << "cc_debug_log: Find acc op in Job: " << job_builder->job().job_conf().job_name()
+        << ", we will try insert special identity and ctrl for "
+        << " UNSAFE handle ALL nccl ops between different time shape (n,) -> acc -> (1, )\n\n";
+    const OpNode* bw_sink_op = subgraph_order.back();
+    const OpNode* first_acc_op = ordered_acc_op_nodes.front();
+    const Shape time_shape_before_acc = GetOpNodeTimeShape(bw_sink_op);
+    const Shape time_shape_after_acc = GetOpNodeTimeShape(first_acc_op);
+    LOG(INFO) << "cc_debug_log: acc time shape from: " << time_shape_before_acc.DebugStr()
+              << " to: " << time_shape_after_acc.DebugStr();
+    CHECK_GT(time_shape_before_acc.elem_cnt(), time_shape_after_acc.elem_cnt());
+    CHECK_EQ(time_shape_before_acc.elem_cnt() % time_shape_after_acc.elem_cnt(), 0);
+
+    for (const OpNode* acc : ordered_acc_op_nodes) {
+      CHECK_EQ(time_shape_before_acc, GetOpNodeInputTimeShape(acc));
+      CHECK_EQ(time_shape_after_acc, GetOpNodeTimeShape(acc));
+    }
+
+    // NOTE(chengcheng): insert acc_tick after bw_sink_op, and this tick op conf will control
+    //  after_acc_nccl_ops start.
+    const auto& obns = bw_sink_op->op().output_bns();
+    CHECK(!obns.empty());
+    const std::string bw_sink_op_out_lbn =
+        GenLogicalBlobName(bw_sink_op->op().BnInOp2Lbi(obns.Get(0)));
+    OperatorConf bw_sink_acc_tick_conf;
+    bw_sink_acc_tick_conf.set_name(std::string("System-BwSinkTick-AccTick_") + NewUniqueId());
+    auto* acc_conf = bw_sink_acc_tick_conf.mutable_acc_tick_conf();
+    acc_conf->set_one(bw_sink_op_out_lbn);
+    acc_conf->set_acc("acc");
+    acc_conf->set_max_acc_num(time_shape_before_acc.elem_cnt() / time_shape_after_acc.elem_cnt());
+    job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_acc_tick_conf);
+
+    // insert nccl ops after acc
+    std::vector<OperatorConf> after_acc_nccl_op_confs;
+    std::vector<ParallelConf> after_acc_nccl_parallel_confs;
+    std::vector<OperatorConf> after_acc_identity_op_confs;
+    std::vector<ParallelConf> after_acc_identity_parallel_confs;
+    HashMap<std::string, OperatorConf> mut_consumer_name2op;
+
+    InsertNcclLogicalOpsAfterAcc(op_graph, ordered_acc_op_nodes, bw_sink_acc_tick_conf,
+                                 &mut_consumer_name2op, &after_acc_identity_op_confs,
+                                 &after_acc_identity_parallel_confs, &after_acc_nccl_op_confs,
+                                 &after_acc_identity_parallel_confs);
+
+    for (const auto& pair : mut_consumer_name2op) {
+      LOG(INFO) << "cc_debug_log: after acc mut consumer op: " << pair.second.DebugString();
+      JUST(job_builder->MutOpOnlyOnce(pair.second));
+    }
+    CHECK_EQ(after_acc_nccl_op_confs.size(), after_acc_nccl_parallel_confs.size());
+    CHECK_EQ(after_acc_identity_op_confs.size(), after_acc_identity_parallel_confs.size());
+    for (int64_t i = 0; i < after_acc_nccl_op_confs.size(); ++i) {
+      LOG(INFO) << "cc_debug_log: after acc insert nccl op: "
+                << after_acc_nccl_op_confs.at(i).DebugString();
+      job_builder->AddOp(after_acc_nccl_parallel_confs.at(i), after_acc_nccl_op_confs.at(i));
+    }
+    for (int64_t i = 0; i < after_acc_identity_op_confs.size(); ++i) {
+      LOG(INFO) << "cc_debug_log: after acc insert identity op: "
+                << after_acc_identity_op_confs.at(i).DebugString();
+      job_builder->AddOp(after_acc_identity_parallel_confs.at(i),
+                         after_acc_identity_op_confs.at(i));
+    }
   }
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
