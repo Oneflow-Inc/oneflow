@@ -20,7 +20,9 @@ class VirtualModule(object):
 
     def add_func_or_class(self, api_name_base, func_or_class):
         assert api_name_base not in self._func_or_class_dict
-        assert api_name_base not in self._submodule_dict
+        assert (
+            api_name_base not in self._submodule_dict
+        ), "{} is already in submodule_dict.".format(api_name_base)
         self._func_or_class_dict[api_name_base] = func_or_class
 
     def find_or_create_submodule(self, submodule_name):

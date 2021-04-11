@@ -73,23 +73,17 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("requires_grad", &T::requires_grad)
       .def_property_readonly("is_leaf", &T::is_leaf)
       // Methods of pytorch
-      .def("data_ptr", []() { TODO(); })
-      .def("numpy", []() { TODO(); })
-      .def("tolist", []() { TODO(); })
       .def("retain_grad", [](T& t) { t.set_retain_grad(true); })
-      .def("detach", &T::detach)
-      .def("__str__", []() { TODO(); })
-      .def("__repr__", []() { TODO(); })
+      .def("detach", [](const T& t) { return t.api_detach().GetPtrOrThrow(); })
       // OneFlow tensor properties other than pytorch tensor
       .def_property_readonly("placement", &T::parallel_desc)
       .def_property_readonly("is_lazy", &T::is_lazy)
       .def_property_readonly("is_consistent", &T::is_consistent)
       .def_property_readonly("_blob_object", &T::blob_object)
       // OneFlow tensor methods other than pytorch tensor
-      .def("_set_blob_object",
-           [](T& t, const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-             t.set_blob_object(blob_object).GetOrThrow();
-           });
+      .def("_set_blob_object", [](T& t, std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+        t.set_blob_object(blob_object).GetOrThrow();
+      });
 }
 
 }  // namespace

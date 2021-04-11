@@ -42,8 +42,6 @@ void InitNumProcessPerNode() {
 
 void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
 
-using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
-
 ObjectMsgPtr<VirtualMachine> NaiveNewVirtualMachine(const VmDesc& vm_desc) {
   return ObjectMsgPtr<VirtualMachine>::New(vm_desc);
 }

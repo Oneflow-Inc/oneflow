@@ -31,8 +31,9 @@ class TensorTuple final : public std::vector<std::shared_ptr<Tensor>>,
   TensorTuple(const TensorTuple&) = delete;
   TensorTuple(TensorTuple&) = delete;
   TensorTuple() = default;
-  ~TensorTuple() = default;
   TensorTuple(std::vector<std::shared_ptr<Tensor>>::size_type size);
+  TensorTuple(std::initializer_list<std::shared_ptr<Tensor>> init_list);
+  ~TensorTuple() = default;
 };
 
 }  // namespace one

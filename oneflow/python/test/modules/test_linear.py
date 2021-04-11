@@ -16,9 +16,9 @@ limitations under the License.
 import unittest
 
 import numpy as np
-
 import oneflow as flow
-import oneflow.typing as tp
+
+import torch
 
 
 @unittest.skipIf(
@@ -27,10 +27,26 @@ import oneflow.typing as tp
 )
 class TestModule(flow.unittest.TestCase):
     def test_identity(test_case):
-        m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
-        x = flow.Tensor(np.random.rand(2, 3, 4, 5))
+        torch_in = np.array(
+            [[0.6898692, 0.2402668, 0.10445952], [0.7910769, 0.7279353, 0.42036182]],
+            dtype=np.float32,
+        )
+
+        torch_out = np.array(
+            [
+                [2.0345955, 2.0345955, 2.0345955, 2.0345955],
+                [2.939374, 2.939374, 2.939374, 2.939374],
+            ],
+            dtype=np.float32,
+        )
+
+        m = flow.nn.Linear(3, 4)
+        x = flow.Tensor(torch_in)
+        flow.nn.init.ones_(m.weight)
+        flow.nn.init.ones_(m.bias)
         y = m(x)
-        print(np.allclose(x.numpy(), y.numpy()))
+        print(np.allclose(torch_out, y.numpy(), atol=1e-4))
+        test_case.assertTrue(np.allclose(torch_out, y.numpy(), atol=1e-4))
 
 
 if __name__ == "__main__":

@@ -17,4 +17,4 @@ limitations under the License.
 # Licensed under the MIT license.
 """oneflow.python.onnx.onnx_opset module"""
 
-from . import common, math, misc, nn, reduce, array
+from . import common, math, misc, nn, reduce, array, quantize

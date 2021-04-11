@@ -13,10 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/reentrant_lock_compute_task_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
+
+class ReentrantLockCompTaskNode final : public CompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ReentrantLockCompTaskNode);
+  ReentrantLockCompTaskNode() = default;
+  ~ReentrantLockCompTaskNode() = default;
+
+  bool IsMeaningLess() override { return false; }
+  TaskType GetTaskType() const override { return TaskType::kReentrantLock; }
+
+ private:
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void BuildExecGphAndRegst() override;
+  void InferProducedDataRegstTimeShape() override;
+  bool IsIndependent() const override { return true; }
+};
 
 void ReentrantLockCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", false, 1, 1);

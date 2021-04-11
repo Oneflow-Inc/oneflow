@@ -43,8 +43,6 @@ void InitNumProcessPerNode() {
 
 void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
 
-using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
-
 TEST(ControlStreamType, new_object) {
   InitNumProcessPerNode();
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());

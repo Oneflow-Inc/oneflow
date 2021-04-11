@@ -41,9 +41,7 @@ std::shared_ptr<one::OpBuilder> OpBuilder_Output(const std::shared_ptr<one::OpBu
 
 std::shared_ptr<one::OpBuilder> OpBuilder_Attr(const std::shared_ptr<one::OpBuilder>& builder,
                                                const std::string& attr_name,
-                                               const std::string& serialized_attr_value) {
-  AttrValue attr_value;
-  TxtString2PbMessage(serialized_attr_value, &attr_value);
+                                               const cfg::AttrValue& attr_value) {
   builder->MaybeAttr(attr_name, attr_value).GetOrThrow();
   return builder;
 }

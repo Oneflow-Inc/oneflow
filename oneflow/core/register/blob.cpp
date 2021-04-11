@@ -46,17 +46,12 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
           blob_desc->header_pod_desc().Field(key).Cast<TensorPodDesc>().shape().elem_cnt();
     }
   }
-  if (!blob_desc_->header_is_opaque()) {
-    int64_t* shape_ptr = mut_header_field<FieldKey::kTensorShape>();
-    shape_view_.reset(new ShapeView(shape_ptr, static_shape().NumAxes()));
-    if (blob_desc->is_dynamic()) {
-      mut_shape_view_.reset(new MutShapeView(shape_ptr, static_shape().NumAxes()));
-    }
-    MutShapeView(shape_ptr, static_shape().NumAxes()).set_shape(static_shape());
-  } else {
-    const DimVector& dim_vec = static_shape().dim_vec();
-    shape_view_.reset(new ShapeView(dim_vec.data(), dim_vec.size()));
+  int64_t* shape_ptr = mut_header_field<FieldKey::kTensorShape>();
+  shape_view_.reset(new ShapeView(shape_ptr, static_shape().NumAxes()));
+  if (blob_desc->is_dynamic()) {
+    mut_shape_view_.reset(new MutShapeView(shape_ptr, static_shape().NumAxes()));
   }
+  MutShapeView(shape_ptr, static_shape().NumAxes()).set_shape(static_shape());
 }
 
 void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
@@ -77,17 +72,9 @@ void Blob::CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || blob_desc().ByteSizeOfBlobHeader() == 0) { return; }
   CHECK_EQ(blob_desc().ByteSizeOfBlobHeader(), rhs->blob_desc().ByteSizeOfBlobHeader());
-  if (blob_desc().header_is_opaque()) {
-    Memcpy<DeviceType::kCPU>(device_ctx, header_ptr_->ptr(), rhs->header_ptr(),
-                             blob_desc().ByteSizeOfBlobHeader());
-    return;
-  }
-  {
-    const size_t num_axes = static_shape().NumAxes();
-    Memcpy<DeviceType::kCPU>(device_ctx, mut_header_field<FieldKey::kTensorShape>(),
-                             rhs->header_field<FieldKey::kTensorShape>(),
-                             num_axes * sizeof(int64_t));
-  }
+  const size_t num_axes = static_shape().NumAxes();
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_header_field<FieldKey::kTensorShape>(),
+                           rhs->header_field<FieldKey::kTensorShape>(), num_axes * sizeof(int64_t));
 }
 
 char* Blob::mut_contiguous_header_ptr() {

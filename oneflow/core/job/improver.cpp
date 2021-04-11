@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/graph/plan_task_graph.h"
-#include "oneflow/core/graph/regst_lifetime_graph.h"
 #include "oneflow/core/graph/sharable_mem_block_graph.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/thread/thread_pool.h"
@@ -204,23 +203,6 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
       TryConnectWithMemSafeGuardCtrlRegstDesc(header_task_proto, sink_task_proto);
     }
   };
-}
-
-void FixReliantCtrlRegstNum(const Plan& plan, const std::function<uint64_t(int64_t)>& GetRegstNum,
-                            const std::function<void(int64_t, uint64_t)>& SetRegstNum) {
-  for (const auto& task_proto : plan.task()) {
-    for (const auto& pair : task_proto.produced_regst_desc()) {
-      const RegstDescProto& regst = pair.second;
-      const RegstDescTypeProto& regst_type = regst.regst_desc_type();
-      if (regst_type.has_ctrl_regst_desc()
-          && regst_type.ctrl_regst_desc().has_reliant_regst_desc_id()) {
-        // set ctrl regst num between copyHd and MdUpdt
-        CHECK(task_proto.task_type() == kCopyHd);
-        uint64_t regst_num = GetRegstNum(regst_type.ctrl_regst_desc().reliant_regst_desc_id());
-        SetRegstNum(regst.regst_desc_id(), regst_num);
-      }
-    }
-  }
 }
 
 void SetInplaceConsumedRegstDescId(Plan* plan,

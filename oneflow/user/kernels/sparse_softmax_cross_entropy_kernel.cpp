@@ -83,13 +83,6 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
                                  ("sparse_softmax_cross_entropy"),
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
-#ifdef WITH_CUDA
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
-                                 (SparseSoftmaxCrossEntropyKernel),
-                                 ("sparse_softmax_cross_entropy"),
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
-                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
-#endif
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
                                  (SparseSoftmaxCrossEntropyMsKernel),
                                  ("sparse_softmax_cross_entropy_ms"),

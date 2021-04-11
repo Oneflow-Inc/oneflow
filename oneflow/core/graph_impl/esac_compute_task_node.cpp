@@ -13,10 +13,34 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/esac_compute_task_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
+
+class EsacCompTaskNode final : public CompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EsacCompTaskNode);
+  EsacCompTaskNode() = default;
+  ~EsacCompTaskNode() override = default;
+
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+
+  TaskType GetTaskType() const override { return TaskType::kEsac; }
+  CudaWorkType GetCudaWorkType() const override {
+#ifdef WITH_CUDA
+    return CudaWorkType::kCompute;
+#else
+    UNIMPLEMENTED();
+#endif
+  }
+
+ private:
+  void BuildExecGphAndRegst() override;
+  void InferProducedDataRegstTimeShape() override;
+  bool IsIndependent() const override { return true; }
+};
 
 void EsacCompTaskNode::ConsumeAllRegsts() {
   HashMap<LogicalBlobId, int64_t> lbi2ibn_id;

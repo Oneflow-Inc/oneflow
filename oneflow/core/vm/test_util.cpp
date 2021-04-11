@@ -22,21 +22,39 @@ limitations under the License.
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 
 namespace oneflow {
 namespace vm {
 
+EnvProto GetEnvProto(int64_t machine_num) {
+  EnvProto ret;
+  for (int64_t i = 0; i < machine_num; ++i) {
+    auto* machine = ret.add_machine();
+    machine->set_id(i);
+    machine->set_addr("127.0.0.1");
+  }
+  ret.set_ctrl_port(10000);
+  return ret;
+}
+
 TestResourceDescScope::TestResourceDescScope(int64_t gpu_device_num, int64_t cpu_device_num,
                                              int64_t machine_num) {
+  EnvProto env_proto = GetEnvProto(machine_num);
+  Global<EnvDesc>::New(env_proto);
   Resource resource;
   resource.set_machine_num(machine_num);
   resource.set_gpu_device_num(gpu_device_num);
   resource.set_cpu_device_num(cpu_device_num);
-  Global<ResourceDesc, ForSession>::New(resource);
+  Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
 }
 
-TestResourceDescScope::~TestResourceDescScope() { Global<ResourceDesc, ForSession>::Delete(); }
+TestResourceDescScope::~TestResourceDescScope() {
+  Global<ResourceDesc, ForSession>::Delete();
+  Global<NumProcessPerNode>::Delete();
+  Global<EnvDesc>::Delete();
+}
 
 ObjectMsgPtr<VmResourceDesc> TestUtil::NewVmResourceDesc(int64_t device_num, int64_t machine_num) {
   HashMap<std::string, int64_t> map{{"cpu", device_num}, {"gpu", device_num}};

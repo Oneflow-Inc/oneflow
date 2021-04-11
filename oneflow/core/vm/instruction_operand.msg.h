@@ -59,9 +59,15 @@ FLAT_MSG_END(OperandSeparator);
 
 class InstructionOperandProto;
 
+namespace cfg {
+  class InstructionOperandProto;
+}
+
 FLAT_MSG_BEGIN(InstructionOperand);
   // methods
   OF_PUBLIC void __Init__(const InstructionOperandProto& proto);
+  OF_PUBLIC void __Init__(const cfg::InstructionOperandProto& proto); 
+  OF_PUBLIC void ToProto(InstructionOperandProto* proto) const;
   // fields
   FLAT_MSG_DEFINE_STRICT_ONEOF(_,
     FLAT_MSG_ONEOF_FIELD(ConstOperand, const_operand)
@@ -76,6 +82,15 @@ FLAT_MSG_BEGIN(InstructionOperand);
     FLAT_MSG_ONEOF_FIELD(bool, bool_operand));
 FLAT_MSG_END(InstructionOperand);
 // clang-format on
+
+// physical instruction operand
+class PhyInstrOperand {
+ public:
+  virtual ~PhyInstrOperand() = default;
+
+ protected:
+  PhyInstrOperand() = default;
+};
 
 }  // namespace vm
 }  // namespace oneflow

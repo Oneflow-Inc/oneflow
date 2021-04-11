@@ -48,6 +48,7 @@ ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
     msg.regst_wrapper_.comm_net_token = regst_raw_ptr->comm_net_token();
   }
   msg.regst_wrapper_.regst_status = regst_raw_ptr->status();
+  msg.regst_wrapper_.regst_status.regst_desc_id = regst_raw_ptr->regst_desc_id();
   msg.regst_wrapper_.has_sole_empty_blob = IsSoleBlobAndDynamicEmpty(regst_raw_ptr);
   return msg;
 }
@@ -59,6 +60,7 @@ ActorMsg ActorMsg::BuildRegstMsgToProducer(int64_t consumer, int64_t producer,
   msg.dst_actor_id_ = producer;
   msg.msg_type_ = ActorMsgType::kRegstMsg;
   msg.regst_wrapper_.regst = regst_raw_ptr;
+  msg.regst_wrapper_.regst_status.regst_desc_id = -1;
   msg.regst_wrapper_.comm_net_token = nullptr;
   // you can NOT access the regst ptr when multi nodes, because the address is in another machine
   msg.regst_wrapper_.has_sole_empty_blob = false;

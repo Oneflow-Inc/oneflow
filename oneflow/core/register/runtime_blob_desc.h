@@ -33,7 +33,6 @@ class RtBlobDesc final {
 
   const StructPodDesc& header_pod_desc() const { return header_; }
   bool is_dynamic() const { return is_dynamic_; }
-  bool header_is_opaque() const { return header_is_opaque_; }
 
   DataType data_type() const { return body_.data_type(); }
   int64_t NumAxes() const { return body_.shape().NumAxes(); }
@@ -54,7 +53,6 @@ class RtBlobDesc final {
   TensorPodDesc body_;
   StructPodDesc header_;
   bool is_dynamic_;
-  bool header_is_opaque_;
 };
 
 }  // namespace oneflow

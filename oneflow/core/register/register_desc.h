@@ -51,8 +51,6 @@ class RegstDesc final {
   void UpdtMaxRegstNumIfNeed(int32_t val);
 
   // lbi2blob_desc_
-  bool IsLocked() const { return is_locked_; }
-  void Lock();
   void CopyBlobDescFrom(const RegstDesc*);
   void CopyBlobDescWithoutAddLbi(const RegstDesc*);
   BlobDesc* AddLbi(const LogicalBlobId&);
@@ -113,8 +111,6 @@ class RegstDesc final {
   int32_t max_register_num_;
 
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2blob_desc_;
-  std::unique_ptr<BlobDesc> packed_blob_desc_;
-  bool is_locked_;
 
   MemoryCase mem_case_;
   RegstDescTypeProto regst_desc_type_;

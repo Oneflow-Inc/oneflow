@@ -59,6 +59,8 @@ class KernelInitContext {
   virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
                                                               int32_t) const = 0;
   virtual const ParallelDesc& parallel_desc() const = 0;
+  virtual const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
+                                                                           int32_t) const = 0;
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;

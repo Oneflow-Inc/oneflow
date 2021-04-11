@@ -104,8 +104,7 @@ CommNet::CommNet(const Plan& plan) {
 
 CommNet::CommNet() {
   int64_t this_machine_id = GlobalProcessCtx::Rank();
-  int64_t total_machine_num = Global<ResourceDesc, ForSession>::Get()->TotalMachineNum();
-  for (int64_t i = 0; i < total_machine_num; ++i) {
+  for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
     if (i == this_machine_id) { continue; }
     peer_machine_id_.insert(i);
   }

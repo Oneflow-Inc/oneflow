@@ -35,7 +35,7 @@ def gen_quant_scale_for_min_max_affine(weight, quantization_bit):
     weight_min = np.min(weight)
     denominator = 2.0 ** (quantization_bit) - 1
     scale = (weight_max - weight_min) / denominator
-    zero_point = -weight_min / scale
+    zero_point = -np.round(weight_min / scale)
     return scale, zero_point
 
 
@@ -180,7 +180,7 @@ def gen_quant_scale_for_moving_average_min_max_affine(
         moving_min[0] = moving_min[0] * momentum + activation_min * (1 - momentum)
 
     scale = (moving_max[0] - moving_min[0]) / denominator
-    zero_point = -moving_min[0] / scale
+    zero_point = -np.round(moving_min[0] / scale)
 
     return scale, zero_point
 
@@ -276,7 +276,7 @@ def _run_test_moving_average_min_max_observer(
                 initializer=flow.zeros_initializer(activation.dtype),
                 trainable=True,
             )
-            scale, zero_point = flow.quantization.moving_average_min_maxObserver(
+            scale, zero_point = flow.quantization.moving_average_min_max_observer(
                 activation,
                 quantization_bit,
                 quantization_scheme,
@@ -485,13 +485,15 @@ class TestMinMaxObserver(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
-        arg_dict["weight_shape"] = [(89, 40, 20, 10)]
+        arg_dict["weight_shape"] = [(9, 40, 20, 10)]
         arg_dict["quantization_bit"] = [8, 2]
         arg_dict["quantization_scheme"] = ["symmetric", "affine"]
         arg_dict["quantization_formula"] = ["google", "cambricon"]
         arg_dict["per_layer_quantization"] = [True, False]
 
         for arg in GenArgList(arg_dict):
+            if arg[-2] == "cambricon" and arg[-1] == False:
+                continue
             _run_test_min_max_observer(*arg)
 
 
@@ -503,7 +505,7 @@ class TestMovingAverageMinMaxObserver(flow.unittest.TestCase):
         arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
-        arg_dict["activation_shape"] = [(89, 40, 20, 10)]
+        arg_dict["activation_shape"] = [(9, 40, 20, 10)]
         arg_dict["quantization_bit"] = [8, 2]
         arg_dict["quantization_scheme"] = ["symmetric", "affine"]
         arg_dict["quantization_formula"] = ["google", "cambricon"]
@@ -521,13 +523,15 @@ class TestFakeQuantize(flow.unittest.TestCase):
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["device_num"] = [1, 4]
         arg_dict["dtype"] = ["float32", "double"]
-        arg_dict["in_shape"] = [(89, 40, 20, 10)]
+        arg_dict["in_shape"] = [(9, 40, 20, 10)]
         arg_dict["quantization_bit"] = [8, 2]
         arg_dict["quantization_scheme"] = ["symmetric", "affine"]
         arg_dict["quantization_formula"] = ["google", "cambricon"]
         arg_dict["per_layer_quantization"] = [True, False]
 
         for arg in GenArgList(arg_dict):
+            if arg[-2] == "cambricon" and arg[-1] == False:
+                continue
             _run_test_fake_quantize(*arg)
 
 

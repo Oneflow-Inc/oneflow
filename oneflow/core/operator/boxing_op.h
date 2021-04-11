@@ -39,6 +39,8 @@ class BoxingOp final : public Operator {
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
 
+  void AddLbi2OutputIndex(const LogicalBlobId& lbi, int32_t output_index) override {}
+
  private:
   Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
                              bool is_logical) const;

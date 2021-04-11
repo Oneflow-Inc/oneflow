@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CONTROL_CTRL_SERVER_H_
 #define ONEFLOW_CORE_CONTROL_CTRL_SERVER_H_
 
+#ifdef RPC_BACKEND_GRPC
+
 #include "oneflow/core/control/rpc_server.h"
 
 namespace oneflow {
@@ -37,5 +39,7 @@ class CtrlServer final : public RpcServer {
 };
 
 }  // namespace oneflow
+
+#endif  // RPC_BACKEND_GRPC
 
 #endif  // ONEFLOW_CORE_CONTROL_CTRL_SERVER_H_

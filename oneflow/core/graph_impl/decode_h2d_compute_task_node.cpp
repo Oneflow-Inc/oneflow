@@ -13,11 +13,33 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/decode_h2d_compute_task_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
+
+class DecodeH2DCompTaskNode final : public CompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DecodeH2DCompTaskNode);
+  DecodeH2DCompTaskNode() = default;
+  ~DecodeH2DCompTaskNode() override = default;
+
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+
+  TaskType GetTaskType() const override { return TaskType::kDecodeH2D; }
+  CudaWorkType GetCudaWorkType() const override {
+#ifdef WITH_CUDA
+    return CudaWorkType::kDecodeH2D;
+#else
+    UNIMPLEMENTED();
+#endif
+  }
+
+ private:
+  void BuildExecGphAndRegst() override;
+};
 
 void DecodeH2DCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());

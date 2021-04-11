@@ -125,23 +125,23 @@ namespace oneflow {
  private:                                                      \
   EmbeddedListLink OF_PP_CAT(field_name, _);
 
-#define _OBJECT_MSG_LIST_FOR_EACH(list_type, list_ptr, elem)                         \
-  for (ObjectMsgPtr<list_type::value_type> elem, *end_if_not_null = nullptr;         \
-       end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)     \
-  EMBEDDED_LIST_FOR_EACH_WITH_EXPR(                                                  \
-      (StructField<list_type, EmbeddedListLink,                                      \
-                   list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
+#define _OBJECT_MSG_LIST_FOR_EACH(list_type, list_ptr, elem)                          \
+  for (ObjectMsgPtr<typename list_type::value_type> elem, *end_if_not_null = nullptr; \
+       end_if_not_null == nullptr; end_if_not_null = nullptr, ++end_if_not_null)      \
+  EMBEDDED_LIST_FOR_EACH_WITH_EXPR(                                                   \
+      (StructField<typename list_type, EmbeddedListLink,                              \
+                   list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)),  \
       list_type::value_link_struct_field, elem_ptr, (elem.Reset(elem_ptr), true))
 
 #define _OBJECT_MSG_LIST_FOR_EACH_PTR(list_type, list_ptr, elem)                     \
   EMBEDDED_LIST_FOR_EACH(                                                            \
-      (StructField<list_type, EmbeddedListLink,                                      \
+      (StructField<typename list_type, EmbeddedListLink,                             \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
       list_type::value_link_struct_field, elem)
 
 #define _OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(list_type, list_ptr, elem)              \
   EMBEDDED_LIST_UNSAFE_FOR_EACH(                                                     \
-      (StructField<list_type, EmbeddedListLink,                                      \
+      (StructField<typename list_type, EmbeddedListLink,                             \
                    list_type::ContainerLinkOffset()>::FieldPtr4StructPtr(list_ptr)), \
       list_type::value_link_struct_field, elem)
 

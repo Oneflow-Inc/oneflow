@@ -188,6 +188,12 @@ OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
   return *this;
 }
 
+OpRegistry& OpRegistry::SetInferParallelDistributionFn(
+    InferParallelDistributionFn infer_parallel_distribution_fn) {
+  result_.infer_parallel_distribution_fn = std::move(infer_parallel_distribution_fn);
+  return *this;
+}
+
 OpRegistry& OpRegistry::Finish() {
   CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;

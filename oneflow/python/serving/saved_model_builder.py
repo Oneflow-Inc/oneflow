@@ -26,6 +26,7 @@ import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_pb
 import oneflow.core.operator.interface_blob_conf_pb2 as interface_blob_conf_pb
+import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -315,7 +316,10 @@ def GetInterfaceBlobConf(job_name, lbn, blob_conf=None):
     blob_conf.shape.dim.extend(shape)
     blob_conf.data_type = dtype
     if split_axis is not None:
-        blob_conf.split_axis.value = split_axis
+        sbp_parallel = sbp_parallel_pb.SbpParallel()
+        sbp_parallel.split_parallel.axis = split_axis
+        blob_conf.parallel_distribution.sbp_parallel.extend([sbp_parallel])
+
     blob_conf.is_dynamic = is_dynamic
     return blob_conf
 

@@ -42,7 +42,7 @@ void GenQuantScaleAffine(const T* in_ptr, const int32_t quantization_bit,
   T denominator = static_cast<T>(pow(2.0, quantization_bit)) - 1;
 
   *scale = (in_max - in_min) / denominator;
-  *zero_point = -in_min / (*scale);
+  *zero_point = -std::round(in_min / (*scale));
 }
 
 template<typename T>
@@ -103,6 +103,9 @@ class CpuMinMaxObserverKernel final : public user_op::OpKernel {
         }
       }
     } else if (quantization_formula == "cambricon") {
+      if (!per_layer_quantization) {
+        UNIMPLEMENTED() << " per-channel mode is not supported in cambricon scheme";
+      }
       GenQuantScaleCambricon(in_ptr, quantization_bit, in->shape().elem_cnt(), scale_ptr,
                              zero_point_ptr);
     } else {

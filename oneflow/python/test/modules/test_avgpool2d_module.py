@@ -297,8 +297,8 @@ class TestModule(flow.unittest.TestCase):
             )
             x = flow.Tensor(sample["in"])
             of_y = of_avgpool2d(x)
-            assert of_y.numpy().shape == sample["out"].shape
-            assert np.allclose(of_y.numpy(), sample["out"], 1e-4, 1e-4)
+            test_case.assertTrue(of_y.numpy().shape == sample["out"].shape)
+            test_case.assertTrue(np.allclose(of_y.numpy(), sample["out"], 1e-4, 1e-4))
 
 
 if __name__ == "__main__":

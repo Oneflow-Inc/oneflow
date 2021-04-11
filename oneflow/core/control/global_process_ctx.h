@@ -16,20 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
 #define ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_
 
-#include <string>
-
-namespace oneflow {
-
-struct GlobalProcessCtx {
-  static int64_t Rank();
-  static int64_t NodeSize();
-  static int64_t ThisNodeId();
-  static int64_t NumOfProcessPerNode();
-  static bool IsThisProcessMaster();
-  static size_t WorldSize();
-  static std::string LogDirEntry();
-};
-
-}  // namespace oneflow
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 #endif  // ONEFLOW_CORE_CONTROL_GLOBAL_PROCESS_CTX_H_

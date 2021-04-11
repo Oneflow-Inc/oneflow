@@ -304,7 +304,6 @@ void OpGraph::InferOpNodeParallelDistributionSignature(
     const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
     const ParallelDistribution* parallel_distribution = &producer->ParallelDistribution4Lbi(lbi);
-    CHECK_EQ(parallel_distribution->sbp_parallel_size(), 1);
     ibn2parallel_distribution_infer_hint.emplace(
         ibn,
         ParallelDistributionInferHint(parallel_desc, logical_blob_desc, parallel_distribution));
@@ -383,7 +382,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
           CheckSbpSignatureAndParallelDistributionEquals(op_name2sbp_sig_conf_it->second,
                                                          iter->second);
         } else {
-          UNIMPLEMENTED();
+          // do nothing
         }
       }
     }
@@ -422,7 +421,6 @@ const BlobDesc& OpGraph::GetLogicalBlobDesc(const LogicalBlobId& lbi) const {
 }
 
 std::string OpGraph::GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const {
-  CHECK(!lbi.has_is_packed_id());
   if (op_name2op_node_.find(op_name) != op_name2op_node_.end()) {
     return op_name;
   } else {
@@ -432,7 +430,6 @@ std::string OpGraph::GetOpNameKey(const std::string& op_name, const LogicalBlobI
 
 LogicalBlobId OpGraph::GetLogicalBlobIdKey(const std::string& op_name,
                                            const LogicalBlobId& lbi) const {
-  CHECK(!lbi.has_is_packed_id());
   if (op_name2op_node_.find(op_name) != op_name2op_node_.end()) {
     return lbi;
   } else {

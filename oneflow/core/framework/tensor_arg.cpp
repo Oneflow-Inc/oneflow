@@ -15,11 +15,16 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/tensor_arg.h"
+#include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/framework/op_interpreter_util.h"
 
 namespace oneflow {
 namespace one {
 
-bool TensorArg::Empty() const { return partial_sum_tensors_.empty() && acc_tensor_; }
+bool TensorArg::Empty() const { return partial_sum_tensors_.empty() && !acc_tensor_; }
 
 void TensorArg::Release() {
   partial_sum_tensors_.clear();
@@ -28,6 +33,25 @@ void TensorArg::Release() {
 
 void TensorArg::PushPartialTensor(const std::shared_ptr<Tensor>& partial_tensor) {
   partial_sum_tensors_.push_back(partial_tensor);
+}
+
+Maybe<Tensor> TensorArg::GetAccTensor() {
+  CHECK_OR_RETURN(Empty() == false) << "Can not GetAccTensor because it is empty";
+  if (!acc_tensor_) {
+    size_t input_num = partial_sum_tensors_.size();
+    if (input_num == 1) {
+      acc_tensor_ = partial_sum_tensors_.at(0);
+    } else {
+      TensorTuple input(input_num);
+      for (size_t i = 0; i < input_num; ++i) { input.at(i) = partial_sum_tensors_.at(i); }
+      TensorTuple output(1);
+      const auto& add_n = JUST(op_expr_helper::AddNOp(input_num));
+      JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*add_n, input, &output));
+      acc_tensor_ = output.at(0);
+    }
+    partial_sum_tensors_.clear();
+  }
+  return acc_tensor_;
 }
 
 }  // namespace one

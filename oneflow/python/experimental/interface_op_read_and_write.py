@@ -22,12 +22,21 @@ import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.push_util as push_util
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.runtime_mode as rt_mode
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager.op_executor as op_executor
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
 import oneflow_api.oneflow.core.common.shape as shape_proto_cfg
 import oneflow_api
+
+
+def sync_default_session_if_normal():
+    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        flow.sync_default_session()
+    else:
+        pass
+
 
 blob_register = oneflow_api.GetDefaultBlobRegister()
 
@@ -62,7 +71,7 @@ def _GetInterfaceBlobObject(builder, op_name):
 
 
 def GetEagerInterfaceBlob(op_name):
-    flow.sync_default_session()
+    sync_default_session_if_normal()
 
     sess = session_ctx.GetDefaultSession()
 
@@ -98,7 +107,7 @@ def GetEagerInterfaceBlob(op_name):
 
 @oneflow_export("experimental.get_interface_blob_value")
 def GetInterfaceBlobValue(op_name):
-    flow.sync_default_session()
+    sync_default_session_if_normal()
 
     sess = session_ctx.GetDefaultSession()
     job_name = sess.JobName4InterfaceOpName(op_name)
@@ -133,7 +142,7 @@ def GetInterfaceBlobValue(op_name):
 
 
 def FeedValueToInterfaceBlobObject(blob_object, ndarray):
-    flow.sync_default_session()
+    sync_default_session_if_normal()
 
     def build(builder):
         if blob_object.op_arg_parallel_attr.is_mirrored():
@@ -153,7 +162,7 @@ def FeedValueToInterfaceBlobObject(blob_object, ndarray):
 
 @oneflow_export("experimental.set_interface_blob_value")
 def FeedValueToInterfaceBlob(op_name, ndarray):
-    flow.sync_default_session()
+    sync_default_session_if_normal()
 
     def AsyncFeedValueToInterfaceBlob(Yield):
         def build(builder):

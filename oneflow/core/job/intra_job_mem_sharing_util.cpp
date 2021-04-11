@@ -165,6 +165,24 @@ bool TryMergeMemChain2MergedChains(
   return false;
 }
 
+bool IsReachableToAnyOtherTask(const TaskProto* src_task, const HashSet<int64_t>& task_ids) {
+  for (const auto& pair : src_task->produced_regst_desc()) {
+    for (int64_t consumer : pair.second.consumer_task_id()) {
+      if (task_ids.find(consumer) != task_ids.end()) { return true; }
+    }
+  }
+  return false;
+}
+
+bool IsTaskConnectedL2R(const TaskProto* src, const TaskProto* dst) {
+  for (const auto& pair : src->produced_regst_desc()) {
+    for (int64_t consumer : pair.second.consumer_task_id()) {
+      if (consumer == dst->task_id()) { return true; }
+    }
+  }
+  return false;
+}
+
 void GenMemChainTasksAndRegsts(
     Plan* plan,
     const std::function<bool(const std::string&, const std::string&)>& IsOpNameDataOrCtrlReachable,
@@ -230,15 +248,42 @@ void GenMemChainTasksAndRegsts(
     }
   }
 
+  CHECK_EQ(mem_chain2sorted_tasks->size(), mem_chain2mem_reused_regsts->size());
+
   // NOTE(chengcheng): add ctrl safe guard for each mem chain
+  HashMap<int64_t, TaskProto*> task_id2proto;
+  for (int64_t i = 0; i < plan->task_size(); ++i) {
+    TaskProto* task = plan->mutable_task(i);
+    CHECK(task_id2proto.emplace(task->task_id(), task).second);
+  }
   for (auto& pair : *mem_chain2sorted_tasks) {
     std::vector<TaskProto*>* sorted_tasks = &(pair.second);
-    if (sorted_tasks->size() >= 2) {
-      TryConnectWithMemSafeGuardCtrlRegstDesc(sorted_tasks->front(), sorted_tasks->back());
+    // NOTE(chengcheng): We CANNOT only add ctrl safe guard between first and last task,
+    //  because of the sorted_tasks may connected as a graph, has multi-tail tasks(sink task).
+    const HashSet<RegstDescProto*>& mem_reused_regsts = mem_chain2mem_reused_regsts->at(pair.first);
+    if (mem_reused_regsts.size() <= 1) { continue; }
+
+    HashSet<int64_t> consumer_task_ids;
+    for (const RegstDescProto* regst : mem_reused_regsts) {
+      for (int64_t consumer : regst->consumer_task_id()) { consumer_task_ids.insert(consumer); }
+    }
+    std::vector<TaskProto*> sink_tasks;
+    for (int64_t src_task_id : consumer_task_ids) {
+      auto it = task_id2proto.find(src_task_id);
+      CHECK(it != task_id2proto.end());
+      if (!IsReachableToAnyOtherTask(it->second, consumer_task_ids)) {
+        sink_tasks.push_back(it->second);
+      }
+    }
+
+    TaskProto* first_task = sorted_tasks->front();
+    for (TaskProto* sink_task : sink_tasks) {
+      CHECK(first_task != sink_task);
+      if (!IsTaskConnectedL2R(first_task, sink_task)) {
+        TryConnectWithMemSafeGuardCtrlRegstDesc(first_task, sink_task);
+      }
     }
   }
-
-  CHECK_EQ(mem_chain2sorted_tasks->size(), mem_chain2mem_reused_regsts->size());
 }
 
 void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(

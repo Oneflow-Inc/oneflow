@@ -208,7 +208,7 @@ def _TryWrapTuple(ys):
 def _UnderSingleDevicePlacementScope(f, *args):
     parallel_desc_symbol = oneflow.current_scope().device_parallel_desc_symbol
     for machine_id, device_id in _EachMachineIdAndDeviceId(parallel_desc_symbol):
-        mch_dev_str = "%d:%d" % (machine_id, device_id)
+        mch_dev_str = "@%d:%d" % (machine_id, device_id)
         with oneflow.scope.placement(parallel_desc_symbol.device_tag, mch_dev_str):
             return f(*args)
 

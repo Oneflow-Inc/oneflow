@@ -31,7 +31,6 @@ TensorDesc& TensorDesc::operator=(const TensorDesc& rhs) {
 TensorDesc::TensorDesc(const BlobDescProto& proto) { *this = proto; }
 
 TensorDesc& TensorDesc::operator=(const BlobDescProto& proto) {
-  CHECK(proto.header_is_opaque() == false);
   data_type_ = proto.body().data_type();
   shape_ = Shape(proto.body().shape());
   is_dynamic_ = proto.is_dynamic();

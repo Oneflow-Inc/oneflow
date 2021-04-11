@@ -13,13 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/distribute_split_compute_task_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/operator/variable_op.h"
 
 namespace oneflow {
 
-bool DistributeSplitCompTaskNode::HasBackwardCompTaskNode() { return false; }
+class DistributeSplitCompTaskNode final : public CompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DistributeSplitCompTaskNode);
+  DistributeSplitCompTaskNode() = default;
+  ~DistributeSplitCompTaskNode() = default;
+
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+
+  TaskType GetTaskType() const override { return TaskType::kDistributeSplit; }
+
+ private:
+  void BuildExecGphAndRegst() override;
+  void BuildExecGphStructAndBindInRegst();
+  void BuildOutRegst();
+};
 
 void DistributeSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", true);
@@ -28,10 +43,6 @@ void DistributeSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void DistributeSplitCompTaskNode::ConsumeAllRegsts() {
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
-}
-
-bool DistributeSplitCompTaskNode::IsReadyForBuild() {
-  return GetSoleConsumedRegst("in")->IsLocked();
 }
 
 void DistributeSplitCompTaskNode::BuildExecGphAndRegst() {

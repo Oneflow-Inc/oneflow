@@ -298,9 +298,10 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   Global<ProcessCtx>::New();
   JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
            .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
-  Global<CtrlClient>::New(*Global<ProcessCtx>::Get());
-  Global<ResourceDesc, ForEnv>::New(GetResource());
-  Global<ResourceDesc, ForSession>::New(GetResource());
+  auto* client = new GrpcCtrlClient(*Global<ProcessCtx>::Get());
+  Global<CtrlClient>::SetAllocated(client);
+  Global<ResourceDesc, ForEnv>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
+  Global<ResourceDesc, ForSession>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
 
   // do transport test
   // The Global<EpollCommNet> must new first before Global<Transport> new.

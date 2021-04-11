@@ -13,10 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/acc_tick_compute_task_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/operator/acc_tick_op.h"
 
 namespace oneflow {
+
+class AccTickCompTaskNode final : public CompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AccTickCompTaskNode);
+  AccTickCompTaskNode() = default;
+  ~AccTickCompTaskNode() = default;
+  TaskType GetTaskType() const override { return TaskType::kAccTick; }
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+  void BuildExecGphAndRegst() override;
+};
 
 void AccTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
   SoleOutDataEdge()->AddRegst("out", ProduceRegst("out", false));

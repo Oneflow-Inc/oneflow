@@ -33,6 +33,30 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
     return false;
 #endif  // _GLIBCXX_USE_CXX11_ABI
   });
+
+  m.def("with_xla", []() {
+#ifdef WITH_XLA
+    return true;
+#else
+    return false;
+#endif  // WITH_XLA
+  });
+
+  m.def("has_rpc_backend_grpc", []() {
+#ifdef RPC_BACKEND_GRPC
+    return true;
+#else
+    return false;
+#endif  // RPC_BACKEND_GRPC
+  });
+
+  m.def("has_rpc_backend_local", []() {
+#ifdef RPC_BACKEND_LOCAL
+    return true;
+#else
+    return false;
+#endif  // RPC_BACKEND_LOCAL
+  });
 }
 
 }  // namespace oneflow

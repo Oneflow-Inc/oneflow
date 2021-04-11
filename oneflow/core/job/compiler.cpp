@@ -87,6 +87,8 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   }
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
 
+  task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
+
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
     task_node->ToProto(plan->mutable_task()->Add());

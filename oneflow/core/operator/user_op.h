@@ -63,6 +63,12 @@ class UserOp final : public Operator {
   Maybe<void> InferOpTimeShape(
       const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
       std::shared_ptr<const Shape>* time_shape) const override;
+  Maybe<void> InferParallelDistributionSignature(
+      ParallelDistributionSignature* parallel_distribution_signature,
+      const ParallelDistributionSignature& parallel_distribution_constraints,
+      const ParallelDesc& parallel_desc,
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+          ParallelDistributionInferHint4Ibn) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
