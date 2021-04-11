@@ -38,10 +38,11 @@ class OfrecordReader(Module):
         random_shuffle: bool = False,
         shuffle_buffer_size: int = 1024,
         shuffle_after_epoch: bool = False,
+        random_seed: int = -1,
         name: Optional[str] = None,
     ):
         super().__init__()
-
+        seed, has_seed = flow.random.gen_seed(random_seed)
         self._op = (
             flow.builtin_op("OFRecordReader", name)
             .Output("out")
@@ -53,6 +54,7 @@ class OfrecordReader(Module):
             .Attr("shuffle_buffer_size", shuffle_buffer_size)
             .Attr("shuffle_after_epoch", shuffle_after_epoch)
             .Attr("part_name_suffix_length", part_name_suffix_length)
+            .Attr("seed", seed)
             .Build()
         )
 
