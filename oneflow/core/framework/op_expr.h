@@ -69,7 +69,7 @@ class BuiltinOpExpr : public OpExpr {
   // The indexed output blob names.
   std::vector<std::string> indexed_obns_;
 
-  mutable std::shared_ptr<OpExprGradFunction> op_grad_closure_;
+  mutable std::shared_ptr<OpExprGradFunction> op_grad_func_;
 };
 
 #define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name, _op_conf)                                  \
