@@ -22,6 +22,7 @@ limitations under the License.
 namespace py = pybind11;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("InitEagerGlobalSession", &InitEagerGlobalSession);
   m.def("IsSessionInited", &IsSessionInited);
   m.def("InitLazyGlobalSession", &InitLazyGlobalSession);
   m.def("DestroyLazyGlobalSession", &DestroyLazyGlobalSession);
