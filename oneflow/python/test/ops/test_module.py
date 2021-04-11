@@ -29,31 +29,45 @@ def np_relu(np_arr):
     return np.where(np_arr > 0, np_arr, 0)
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestModule(flow.unittest.TestCase):
+    def test_constant_lazy(test_case):
+        func_config = flow.FunctionConfig()
+        func_config.default_logical_view(flow.scope.mirrored_view())
+        func_config.default_placement_scope(flow.scope.placement("gpu", "0:0"))
+        @flow.global_function(function_config=func_config)
+        def job() -> tp.Numpy:
+            x = flow.constant(3.1, flow.float32, [1000, 1000])
+            y = flow.matmul(x, x)
+            return y
+
+        # init session
+        job()
+        start = time.time()
+        for _ in range(100):
+            job()
+        end = time.time()
+        print(end - start)
+
     def test_constant(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
-        func_config.default_placement_scope(flow.scope.placement("cpu", "0:0"))
+        func_config.default_placement_scope(flow.scope.placement("gpu", "0:0"))
 
         @flow.global_function(function_config=func_config)
         def job():
-            start = time.time()
             op1 = (
                 flow.builtin_op("constant")
                 .Output("out")
                 .Attr("is_floating_value", True)
                 .Attr("floating_value", 3.1)
                 .Attr("dtype", flow.float32)
-                .Attr("shape", [2])
+                .Attr("shape", [1000, 1000])
                 .Build()
             )
             op2 = (
-                flow.builtin_op("multiply").Input("x").Input("y").Output("out").Build()
+                flow.builtin_op("matmul").Input("a").Input("b").Attr("transpose_a", False).Attr("transpose_b", False).Output("out").Build()
             )
+            start = time.time()
             for _ in range(100):
                 y = op1()[0]
                 y = op2(y, y)[0]

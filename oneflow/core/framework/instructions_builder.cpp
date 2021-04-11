@@ -664,9 +664,10 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
 
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const std::shared_ptr<one::StatefulOpKernel>& opkernel, const one::TensorTuple& input_tuple,
-    const one::TensorTuple& output_tuple, one::TensorsPtr outputs) {
+    const one::TensorTuple& output_tuple, one::TensorsPtr outputs,
+    std::shared_ptr<const ParallelDesc> parallel_desc_sym) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
-      ObjectMsgPtr<vm::InstructionMsg>::New("cpu.LocalCallOpKernel");
+      ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc_sym->device_tag() + ".LocalCallOpKernel");
   using TensorsPtr = std::vector<std::shared_ptr<eager::EagerBlobObject>>*;
   // FIXME:
   TensorsPtr inputs = new std::vector<std::shared_ptr<eager::EagerBlobObject>>();
@@ -695,8 +696,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   }
   auto phy_instr_operand =
       std::make_shared<eager::LocalCallOpKernelPhyInstrOperand>(opkernel, inputs, outputs);
-  const auto& scope = JUST(GetCurrentScope());
-  instruction->set_parallel_desc_symbol_id(JUST(scope->device_parallel_desc_symbol()->symbol_id()));
+  instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();

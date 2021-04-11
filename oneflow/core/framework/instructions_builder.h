@@ -229,7 +229,8 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
                                 const one::TensorTuple& inputs, const one::TensorTuple& outputs,
-                                one::TensorsPtr output_ptr);
+                                one::TensorsPtr output_ptr,
+                                std::shared_ptr<const ParallelDesc> parallel_desc_sym);
 
  private:
   Maybe<std::vector<std::shared_ptr<compatible_py::OpArgBlobAttribute>>> GetPhysicalOpArgBlobAttrs(

@@ -37,27 +37,27 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
                                   TensorTuple* outputs) {
   std::shared_ptr<const ParallelDesc> parallel_desc;
   std::shared_ptr<const Device> device;
-  if (inputs.size() > 0) {
-    device = inputs[0]->device();
-    // for (const auto& input : inputs) { CHECK_EQ(*input->device(), *device); }
-    parallel_desc = JUST(Device::MakeParallelDescByDevice(*device));
-  } else {
-    const auto& scope = JUST(GetCurrentScope());
-    parallel_desc = scope->device_parallel_desc_symbol();
-    device = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
-  }
+  // if (inputs.size() > 0) {
+  //   device = inputs[0]->device();
+  //   // for (const auto& input : inputs) { CHECK_EQ(*input->device(), *device); }
+  //   parallel_desc = JUST(Device::MakeParallelDescByDevice(*device));
+  // } else {
+  const auto& scope = JUST(GetCurrentScope());
+  parallel_desc = scope->device_parallel_desc_symbol();
+  device = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
+  // }
   OperatorConf op_conf;
   op_expr.BuildOpConf(&op_conf);
   op_conf.set_device_tag(parallel_desc->device_tag());
-  auto tmp_mem_case = MemoryCaseUtil::MakeMemCase(DeviceType::kCPU, 0);
+  auto tmp_mem_case = MemoryCaseUtil::MakeMemCase(parallel_desc->device_type(),
+                                                  JUST(parallel_desc->DeviceId4ParallelId(0)));
   auto kernel = std::make_shared<StatefulOpKernel>(
       std::shared_ptr<const JobDesc>(&GlobalJobDesc(), [](const JobDesc*) {}), op_conf,
       tmp_mem_case, &op_expr.indexed_input_pairs(), &op_expr.indexed_output_pairs());
 
   TensorsPtr output_ptr = new std::vector<std::shared_ptr<eager::EagerBlobObject>>();
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
-    // builder->LocalCallOpKernel(kernel, inputs, *outputs, output_ptr, parallel_desc);
-    builder->LocalCallOpKernel(kernel, inputs, *outputs, output_ptr);
+    builder->LocalCallOpKernel(kernel, inputs, *outputs, output_ptr, parallel_desc);
   };
   JUST(LogicalRun(build_instruction));
   for (int i = 0; i < outputs->size(); ++i) {
