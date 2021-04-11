@@ -24,11 +24,6 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
     .Output("out")
     .Attr<bool>("hash_precomputed")
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const DataType data_type = *ctx->Dtype4ArgNameAndIndex("in", 0);
-      CHECK_OR_RETURN(IsIndexDataType(data_type));
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("table", 0), data_type);
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("size", 0), data_type);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = data_type;
       CHECK_EQ_OR_RETURN(ctx->parallel_ctx().parallel_num(), 1);
       const Shape* table_shape = ctx->Shape4ArgNameAndIndex("table", 0);
       CHECK_EQ_OR_RETURN(table_shape->NumAxes(), 1);
@@ -40,11 +35,6 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const DataType data_type = *ctx->Dtype4ArgNameAndIndex("in", 0);
-      CHECK_OR_RETURN(IsIndexDataType(data_type));
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("table", 0), data_type);
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("size", 0), data_type);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = data_type;
       const Shape* table_shape = ctx->Shape4ArgNameAndIndex("table", 0);
       CHECK_EQ_OR_RETURN(table_shape->NumAxes(), 1);
       CHECK_EQ_OR_RETURN(table_shape->elem_cnt() % 2, 0);
@@ -72,6 +62,14 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
       CHECK_OR_RETURN(op_conf.attr<bool>("hash_precomputed"));
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const DataType data_type = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      CHECK_OR_RETURN(IsIndexDataType(data_type));
+      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("table", 0), data_type);
+      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("size", 0), data_type);
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = data_type;
       return Maybe<void>::Ok();
     });
 

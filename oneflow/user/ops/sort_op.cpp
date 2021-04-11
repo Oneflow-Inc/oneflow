@@ -23,7 +23,6 @@ REGISTER_USER_OP("sort")
     .Attr<std::string>("direction")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -39,6 +38,10 @@ REGISTER_USER_OP("sort")
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
       const std::string& direction = op_conf.attr<std::string>("direction");
       CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING");
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 

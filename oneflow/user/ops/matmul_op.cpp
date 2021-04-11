@@ -36,7 +36,10 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   }
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  *out = *a;
+
+  *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("a", 0);
+  *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("a", 0);
+
   int64_t m, n, k;  // tensor a (no trans): m*k, tensor b (no trans): k*n
   if (!transpose_a) {
     m = a->shape().At(num_axes - 2);
@@ -56,16 +59,25 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   out->mut_shape()->Set(num_axes - 1, n);
   if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
     const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
-    CHECK_EQ_OR_RETURN(add_to_output->data_type(), out->data_type());
     CHECK_EQ_OR_RETURN(add_to_output->shape(), out->shape());
+  }
+  return Maybe<void>::Ok();
+}
+Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("a", 0);
+  if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
+    user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+    CHECK_EQ_OR_RETURN(add_to_output->data_type(), out->data_type());
   }
   return Maybe<void>::Ok();
 }
 
 void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::UserOpWrapper& op,
                               user_op::AddOpFn AddOp) {
-  bool transpose_a = op.attr<bool>("transpose_a");
-  bool transpose_b = op.attr<bool>("transpose_b");
+  const bool transpose_a = op.attr<bool>("transpose_a");
+  const bool transpose_b = op.attr<bool>("transpose_b");
+  const double alpha = op.attr<double>("alpha");
   auto HandleGradOp = [&](user_op::UserOpConfWrapper&& grad_op,
                           std::string&& input_arg_name) -> void {
     op.BindGradTensorWithOpInput(grad_op.output("out", 0), input_arg_name, 0);
@@ -82,6 +94,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
               .Output("out")
               .Attr<bool>("transpose_a", transpose_b)
               .Attr<bool>("transpose_b", true)
+              .Attr<double>("alpha", alpha)
               .Build();
       HandleGradOp(std::move(grad_a_op), "a");
     } else {
@@ -93,6 +106,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
               .Output("out")
               .Attr<bool>("transpose_a", false)
               .Attr<bool>("transpose_b", !transpose_b)
+              .Attr<double>("alpha", alpha)
               .Build();
       HandleGradOp(std::move(grad_a_op), "a");
     }
@@ -107,6 +121,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
               .Output("out")
               .Attr<bool>("transpose_a", true)
               .Attr<bool>("transpose_b", transpose_a)
+              .Attr<double>("alpha", alpha)
               .Build();
       HandleGradOp(std::move(grad_b_op), "b");
     } else {
@@ -118,6 +133,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
               .Output("out")
               .Attr<bool>("transpose_a", !transpose_a)
               .Attr<bool>("transpose_b", false)
+              .Attr<double>("alpha", alpha)
               .Build();
       HandleGradOp(std::move(grad_b_op), "b");
     }
@@ -133,6 +149,7 @@ REGISTER_USER_OP("matmul")
     .Output("out")
     .Attr<bool>("transpose_a", false)
     .Attr<bool>("transpose_b", false)
+    .Attr<double>("alpha", 1.0)
     .SetTensorDescInferFn(InferTensorDesc4Matmul)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       // (m, k_a) * (k_b, n) where k_a == k_b
@@ -185,7 +202,8 @@ REGISTER_USER_OP("matmul")
           .PartialSum(out_and_add_to_output_args)
           .Build();
       return Maybe<void>::Ok();
-    });
+    })
+    .SetInferDataTypeFn(InferDataType4Matmul);
 
 REGISTER_USER_OP_GRAD("matmul").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                           user_op::AddOpFn AddOp) {
@@ -199,6 +217,7 @@ REGISTER_USER_OP("batch_matmul")
     .Output("out")
     .Attr<bool>("transpose_a", false)
     .Attr<bool>("transpose_b", false)
+    .Attr<double>("alpha", 1.0)
     .SetTensorDescInferFn(InferTensorDesc4Matmul)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& a_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0);
@@ -211,7 +230,8 @@ REGISTER_USER_OP("batch_matmul")
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(out_and_add_to_output_args, i).Build();
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetInferDataTypeFn(InferDataType4Matmul);
 
 REGISTER_USER_OP_GRAD("batch_matmul")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {

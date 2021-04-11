@@ -140,7 +140,8 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
       }
     }
     indexed_slices_op_builder.Input("model_diff_indices", indices_lbn)
-        .Input("model_diff_values", values_lbn);
+        .Input("model_diff_values", values_lbn)
+        .ScopeSymbolId(src_op_conf.scope_symbol_id());
     job_builder->DelOps({src_op_conf, user_op_conf.op_conf()});
     job_builder->AddOps(dst_node->parallel_desc().parallel_conf(),
                         {indexed_slices_op_builder.Build().op_conf()});
