@@ -30,6 +30,10 @@ namespace {
 
 const TrainConf& GetTrainConf() { return GlobalJobDesc().job_conf().train_conf(); }
 
+int64_t ScopeSymbolId4Lbi(const OpGraph& op_graph, const LogicalBlobId& lbi) {
+  return op_graph.OpNode4OpName(lbi.op_name())->op().op_conf().scope_symbol_id();
+}
+
 bool AnyLbiWithDiffLbi(const OpEdge* op_edge) {
   const Operator& src_op = op_edge->src_node()->op();
   const Operator& dst_op = op_edge->dst_node()->op();
@@ -149,6 +153,7 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
               .Input("in", dynamic_loss_scale_state.loss_scale_val_lbn())
               .Output("out")
               .Attr<DataType>("dtype", data_type)
+              .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, lbi))
               .Build();
       AddOp(cast_op.op_conf());
       OpBlobArg cast_in_op_blob_arg;
@@ -195,6 +200,7 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
             .Input("x", GenLogicalBlobName(constant_like_op.name(), constant_like_conf->out()))
             .Input("scalar", loss_scale_val_lbn)
             .Output("y")
+            .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, lbi))
             .Build();
     AddOp(scalar_mul_op.op_conf());
     *out_diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
@@ -206,10 +212,6 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
 
 const ParallelConf& ProducerParallelConf4Lbi(const OpGraph& op_graph, const LogicalBlobId& lbi) {
   return op_graph.OpNode4OpName(lbi.op_name())->parallel_desc().parallel_conf();
-}
-
-int64_t ScopeSymbolId4Lbi(const OpGraph& op_graph, const LogicalBlobId& lbi) {
-  return op_graph.OpNode4OpName(lbi.op_name())->op().op_conf().scope_symbol_id();
 }
 
 void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
@@ -569,7 +571,7 @@ std::string AddCastToP(JobBuilder* job_builder, const std::string& in_lbn,
 
 bool IsBroadcast(const ParallelDistribution& parallel_distribution,
                  const ParallelDesc& parallel_desc) {
-  if (parallel_desc.hierarchy()->NumAxes() == 1) { return true; }
+  if (parallel_desc.parallel_num() == 1) { return true; }
   for (int64_t i = 0; i < parallel_distribution.sbp_parallel_size(); ++i) {
     if (!parallel_distribution.sbp_parallel(i).has_broadcast_parallel()) { return false; }
   }
@@ -631,6 +633,9 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                                                     "System-ClipGradient-GlobalNorm-Add-"));
         }
       });
+  ParallelConf global_norm_parallel_conf = all_same_parallel_desc
+                                               ? any_parallel_desc.parallel_conf()
+                                               : GenParallelConfOfCpuZeroOnMaster();
   const bool all_group_broadcast =
       std::all_of(is_broadcast_parallel_distribution.begin(),
                   is_broadcast_parallel_distribution.end(), [](bool i) { return i; });
@@ -641,13 +646,11 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                                                    param_group_parallel_confs.at(i),
                                                    "System-ClipGradient-ParallelCast-"));
     }
+    global_norm_parallel_conf.mutable_hierarchy()->clear_dim();
   } else {
     square_sum_lbns_for_add = std::move(partial_square_sum_lbns);
   }
 
-  const ParallelConf global_norm_parallel_conf = all_same_parallel_desc
-                                                     ? any_parallel_desc.parallel_conf()
-                                                     : GenParallelConfOfCpuZeroOnMaster();
   const int64_t scope_symbol_id =
       MakeScopeSymbolId(job_builder->job().job_conf(), global_norm_parallel_conf);
   const std::string square_sum_lbn =
@@ -1144,23 +1147,42 @@ Maybe<void> CountNotFiniteIfNeeded(JobPassCtx* ctx, const OpGraph& op_graph,
       std::all_of(is_broadcast_parallel_distribution.begin(),
                   is_broadcast_parallel_distribution.end(), [](bool i) { return i; });
   std::vector<std::string> count_not_finite_lbns_for_add;
+  ParallelConf count_all_parallel_conf = all_same_parallel_desc
+                                             ? any_parallel_desc.parallel_conf()
+                                             : GenParallelConfOfCpuZeroOnMaster();
   if (!all_group_broadcast) {
     for (int64_t i = 0; i < partial_count_not_finite_lbns.size(); ++i) {
       count_not_finite_lbns_for_add.push_back(
           AddCastToP(job_builder, partial_count_not_finite_lbns.at(i),
                      param_group_parallel_confs.at(i), "System-DynamicLossScale-ParallelCast-"));
     }
+    count_all_parallel_conf.mutable_hierarchy()->clear_dim();
   } else {
     count_not_finite_lbns_for_add = std::move(partial_count_not_finite_lbns);
   }
-  const ParallelConf count_all_parallel_conf = all_same_parallel_desc
-                                                   ? any_parallel_desc.parallel_conf()
-                                                   : GenParallelConfOfCpuZeroOnMaster();
   const int64_t scope_symbol_id =
       MakeScopeSymbolId(job_builder->job().job_conf(), count_all_parallel_conf);
-  const std::string count_all_lbn =
+  std::string count_all_lbn =
       AddLbns(job_builder, count_not_finite_lbns_for_add, count_all_parallel_conf, scope_symbol_id,
               "System-DynamicLossScale-CountNotFinite-Add-");
+  if (!all_group_broadcast) {
+    std::vector<std::string> cast_parallel_distribution;
+    cast_parallel_distribution.push_back("B");
+    auto parallel_cast_op =
+        user_op::UserOpConfWrapperBuilder(
+            "System-DynamicLossScale-CountNotFinite-After-Add-ParallelCast-" + NewUniqueId())
+            .Op("hierarchical_parallel_cast")
+            .Input("in", count_all_lbn)
+            .Output("out")
+            .Attr<std::vector<std::string>>("parallel_distribution", cast_parallel_distribution)
+            .Attr<std::string>("grad_mode", "auto")
+            .Attr<std::vector<std::string>>("grad_parallel_distribution",
+                                            std::vector<std::string>())
+            .ScopeSymbolId(scope_symbol_id)
+            .Build();
+    job_builder->AddOps(count_all_parallel_conf, {parallel_cast_op.op_conf()});
+    count_all_lbn = parallel_cast_op.output("out", 0);
+  }
   const LogicalBlobId count_not_finite_lbi =
       GenLogicalBlobId(JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"))
                            .count_not_finite_lbn());
