@@ -869,6 +869,15 @@ Maybe<void> InstructionsBuilder::FeedBlob(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InstructionsBuilder::WriteBlobByCallback(const std::function<void()>& callback) {
+  ObjectMsgPtr<vm::InstructionMsg> instruction =
+      ObjectMsgPtr<vm::InstructionMsg>::New("WriteBlobByCallback");
+  *instruction->mutable_phy_instr_operand() =
+      std::make_shared<vm::NoArgCbPhyInstrOperand>(callback);
+  instruction_list_->PushBack(instruction.Mutable());
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InstructionsBuilder::RankFrontSeqCallback(const std::string& instruction_name,
                                                       const std::function<void()>& callback) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =

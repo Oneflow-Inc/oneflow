@@ -272,6 +272,11 @@ std::shared_ptr<compatible_py::BlobObject> Build121To(
   return x->Build121To(blob_object, parallel_desc_symbol).GetPtrOrThrow();
 }
 
+void WriteBlobByCallback(const std::shared_ptr<InstructionsBuilder>& x,
+                         const std::function<void()>& callback) {
+  return x->WriteBlobByCallback(callback).GetOrThrow();
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
