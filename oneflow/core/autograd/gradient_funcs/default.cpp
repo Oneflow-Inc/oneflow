@@ -157,7 +157,7 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const BuiltinOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   OperatorConf fw_op_conf;
-  fw_op_expr->BuildOpConf(&fw_op_conf);
+  fw_op_expr->BuildOpConf(&fw_op_conf, /*attrs=*/{});
 
   // Generate backward operator conf for each input. The `LogicalBlobId` for
   // backward output gradient is dummy due to inaccessibility.
