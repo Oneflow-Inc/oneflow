@@ -351,6 +351,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("GetSharedOpKernelObject4ParallelConfSymbol",
            &GetSharedOpKernelObject4ParallelConfSymbol)
       .def("DeleteObject", &DeleteObject)
+      .def("WriteBlobByCallback", &WriteBlobByCallback)
       .def("StatefulCall", &StatefulCall)
       .def("InsertRemoveForeignCallbackInstruction", &InsertRemoveForeignCallbackInstruction)
       .def("FetchBlobHeader", &FetchBlobHeader)
