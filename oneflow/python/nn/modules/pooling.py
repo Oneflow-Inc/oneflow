@@ -54,7 +54,7 @@ class AvgPool2d(Module):
         ceil_mode: bool = False,
         count_include_pad: bool = None,
         divisor_override: Optional[int] = None,
-        name = None
+        name=None,
     ):
         super().__init__()
         kernel_size = _pair(kernel_size)
