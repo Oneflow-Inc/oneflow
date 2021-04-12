@@ -17,7 +17,6 @@ import oneflow as flow
 
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
-
 from oneflow.python.framework.tensor import (
     register_tensor_op_by_module,
     register_op_by_module,
@@ -26,7 +25,6 @@ from oneflow.python.framework.tensor import (
 
 @oneflow_export("Sin")
 @register_op_by_module("sin")
-@register_tensor_op_by_module("sin")
 class Sin(Module):
     r"""
     Returns a new tensor with the sine of the elements of :attr:`input`.
@@ -52,7 +50,6 @@ class Sin(Module):
 
 @oneflow_export("Cos")
 @register_op_by_module("cos")
-@register_tensor_op_by_module("cos")
 class Cos(Module):
     r"""
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
@@ -78,7 +75,6 @@ class Cos(Module):
 
 @oneflow_export("Log")
 @register_op_by_module("log")
-@register_tensor_op_by_module("log")
 class Log(Module):
     r"""
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
