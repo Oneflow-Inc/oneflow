@@ -26,7 +26,7 @@ namespace one {
 class TensorTuple;
 class StatefulOpKernel;
 
-using TensorsPtr = std::vector<std::shared_ptr<eager::EagerBlobObject>>*;
+using TensorsPtr = std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
 using TensorIndexMap = std::vector<std::pair<std::string, int>>;
 
 }  // namespace one

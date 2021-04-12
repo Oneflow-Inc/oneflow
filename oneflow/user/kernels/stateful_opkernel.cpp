@@ -75,6 +75,8 @@ class LocalUserKernelBaseContext {
 
     auto UpdateArg2TensorAndTensorDesc = [this](TensorsPtr tensors_ptr, const ArgVec* pairs) {
       if (!tensors_ptr) { return; }
+      arg2tensor_.reserve(pairs->size());
+      arg2tensor_desc_.reserve(pairs->size());
       for (int i = 0; i < pairs->size(); i++) {
         const auto& pair = (*pairs)[i];
         const auto& bn_in_op = pair.first;
@@ -212,6 +214,7 @@ void LocalUserOpInferContext::Update(TensorsPtr inputs, TensorsPtr outputs) {
   arg2tensor_desc_.clear();
   auto UpdateArg2TensorDesc = [this](TensorsPtr tensors_ptr, const ArgVec* pairs) {
     if (!tensors_ptr) { return; }
+    arg2tensor_desc_.reserve(pairs->size());
     for (int i = 0; i < pairs->size(); i++) {
       const auto& pair = (*pairs)[i];
       const auto& bn_in_op = pair.first;

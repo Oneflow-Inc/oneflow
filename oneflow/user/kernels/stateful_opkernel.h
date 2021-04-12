@@ -38,7 +38,7 @@ class LocalUserOpInferContext;
 
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
-using TensorsPtr = std::vector<std::shared_ptr<eager::EagerBlobObject>>*;
+using TensorsPtr = std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
 using OpKernelMap =
     HashMap<const user_op::OpKernelRegistryResult*, std::shared_ptr<const user_op::OpKernel>>;
 using InitCtxMap = HashMap<const user_op::OpKernel*, std::shared_ptr<LocalUserKernelInitContext>>;
@@ -175,6 +175,11 @@ class StatefulOpKernel final {
   eager::EagerBlobObject* mut_temp_blob_object();
 
   user_op::OpKernelState* mut_opkernel_state() { return current_state_; }
+
+  void set_device(const DeviceType dev_type, const int64_t dev_id, const std::string& dev_tag) {
+    mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, dev_id);
+    op_conf_.set_device_tag(dev_tag);
+  };
 
   const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
   bool need_check_mem_case() const { return need_check_mem_case_; }

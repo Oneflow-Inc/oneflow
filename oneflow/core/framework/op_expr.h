@@ -80,6 +80,33 @@ class BuiltinOpExpr : public OpExpr {
   std::vector<std::pair<std::string, int>> indexed_output_pairs_;
 };
 
+class StatefulOpKernel;
+
+class UserOpExpr : public BuiltinOpExpr {
+ public:
+  UserOpExpr() = default;
+  virtual ~UserOpExpr() = default;
+  explicit UserOpExpr(const std::string& op_name, UserOpConf&& proto,
+                      const std::vector<std::string>& indexed_ibns,
+                      const std::vector<std::string>& indexed_obns);
+
+  const UserOpConf& proto() const { return proto_; }
+  UserOpConf* mutable_proto() { return &proto_; }
+
+  void BuildOpConf(OperatorConf* op_conf) const {
+    *(op_conf->mutable_name()) = this->op_name_;
+    *(op_conf->mutable_user_conf()) = proto_;
+  }
+
+  std::shared_ptr<const StatefulOpKernel> kernel() const { return kernel_; }
+
+  std::shared_ptr<StatefulOpKernel> mut_kernel() const { return kernel_; }
+
+ private:
+  UserOpConf proto_;
+  mutable std::shared_ptr<StatefulOpKernel> kernel_;
+};
+
 #define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name, _op_conf)                                  \
   class _op_name##Expr : public BuiltinOpExpr {                                          \
    public:                                                                               \
@@ -103,7 +130,6 @@ class BuiltinOpExpr : public OpExpr {
     _op_name##Conf proto_;                                                               \
   };
 
-DEFINE_BUILTIN_OPEXPR_CLASS(UserOp, user);
 DEFINE_BUILTIN_OPEXPR_CLASS(VariableOp, variable);
 DEFINE_BUILTIN_OPEXPR_CLASS(CastToMirroredOp, cast_to_mirrored);
 DEFINE_BUILTIN_OPEXPR_CLASS(CastFromMirroredOp, cast_from_mirrored);

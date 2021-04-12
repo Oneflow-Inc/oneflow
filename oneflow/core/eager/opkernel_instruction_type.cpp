@@ -587,7 +587,6 @@ struct LocalCallOpKernelUtil final {
     JUST(WithComputeContext(
         operand, device_ctx, [&](user_op::KernelComputeContext* compute_ctx) -> Maybe<void> {
           opkernel->mut_user_opkernel()->Compute(compute_ctx, opkernel->mut_opkernel_state());
-          LOG(INFO) << "compute!";
           return Maybe<void>::Ok();
         }));
     return Maybe<void>::Ok();

@@ -30,10 +30,11 @@ def np_relu(np_arr):
 
 
 class TestModule(flow.unittest.TestCase):
-    def test_constant_lazy(test_case):
+    def test_matmul_speed_lazy(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
         func_config.default_placement_scope(flow.scope.placement("gpu", "0:0"))
+
         @flow.global_function(function_config=func_config)
         def job() -> tp.Numpy:
             x = flow.constant(3.1, flow.float32, [1000, 1000])
@@ -43,12 +44,12 @@ class TestModule(flow.unittest.TestCase):
         # init session
         job()
         start = time.time()
-        for _ in range(100):
+        for _ in range(1000):
             job()
         end = time.time()
         print(end - start)
 
-    def test_constant(test_case):
+    def test_matmul_speed_eager(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
         func_config.default_placement_scope(flow.scope.placement("gpu", "0:0"))
@@ -65,10 +66,16 @@ class TestModule(flow.unittest.TestCase):
                 .Build()
             )
             op2 = (
-                flow.builtin_op("matmul").Input("a").Input("b").Attr("transpose_a", False).Attr("transpose_b", False).Output("out").Build()
+                flow.builtin_op("matmul")
+                .Input("a")
+                .Input("b")
+                .Attr("transpose_a", False)
+                .Attr("transpose_b", False)
+                .Output("out")
+                .Build()
             )
             start = time.time()
-            for _ in range(100):
+            for _ in range(1000):
                 y = op1()[0]
                 y = op2(y, y)[0]
             end = time.time()
