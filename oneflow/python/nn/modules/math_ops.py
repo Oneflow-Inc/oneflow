@@ -53,6 +53,7 @@ def _check_axis(axis, shape):
     return axis
 
 
+@oneflow_export("Sum")
 @register_op_by_module("sum")
 class Sum(Module):
     r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
@@ -218,25 +219,23 @@ class Mul(Module):
         else:
             return BroadcastMul()(x, y)
 
-
+@oneflow_export("Mean")
 @register_op_by_module("mean")
 class Mean(Module):
     r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
     For example:
     .. code-block:: python
 
-        mean = flow.Mean() # axis default to None
         input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = mean(input) # out: [3.5]
+        out = flow.mean(input) # out: [3.5]
         print(out.numpy())
         
-        mean = flow.Mean(axis=0)
         input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = mean(input) # out: [2.5 3.5 4.5]
+        out = flow.mean(input, axis=0) # out: [2.5 3.5 4.5]
         print(out.numpy())
-        mean = flow.Mean(axis=1)
+
         input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = mean(input) # out: [ 2. 5.]
+        out = flow.mean(input, axis=1) # out: [ 2. 5.]
         print(out.numpy())
 
     """
@@ -274,7 +273,7 @@ class Mean(Module):
         else:
             for i in axes:
                 reduce_count *= input_tensor.shape[i]
-        return flow.Mul()(reduce_sum, 1.0 / reduce_count)
+        return flow.mul(reduce_sum, 1.0 / reduce_count)
 
 
 class ScalarSubByTensor(Module):
