@@ -22,16 +22,16 @@ namespace oneflow {
 namespace one {
 
 Maybe<OpExprGradClosure> UserOpExpr::GetOrCreateOpGradClosure() const {
-  if (!op_grad_closure_.get()) {
+  if (!op_grad_func_.get()) {
     if (IsClassRegistered<std::string, OpExprGradFunction>(proto().op_type_name())) {
-      op_grad_closure_.reset(NewObj<std::string, OpExprGradFunction>(proto().op_type_name()));
+      op_grad_func_.reset(NewObj<std::string, OpExprGradFunction>(proto().op_type_name()));
     } else {
-      op_grad_closure_.reset(NewObj<std::string, OpExprGradFunction>("default"));
+      op_grad_func_.reset(NewObj<std::string, OpExprGradFunction>("default"));
     }
-    CHECK_NOTNULL_OR_RETURN(op_grad_closure_.get());
-    op_grad_closure_->Init(*this);
+    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
+    op_grad_func_->Init(*this);
   }
-  return std::make_shared<OpExprGradClosure>(op_grad_closure_);
+  return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
 Maybe<OpExprGradClosure> VariableOpExpr::GetOrCreateOpGradClosure() const { UNIMPLEMENTED(); }

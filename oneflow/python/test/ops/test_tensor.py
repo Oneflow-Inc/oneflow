@@ -56,6 +56,12 @@ class TestTensor(flow.unittest.TestCase):
         flow.nn.init.ones_(x)
         test_case.assertTrue(np.array_equal(x.numpy(), np.ones(x.shape)))
 
+        z = flow.Tensor(5, 5)
+        flow.nn.init.kaiming_normal_(z, a=0.1, mode="fan_out", nonlinearity="relu")
+        flow.nn.init.kaiming_uniform_(z)
+        flow.nn.init.xavier_normal_(z)
+        flow.nn.init.xavier_uniform_(z)
+
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",

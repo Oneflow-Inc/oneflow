@@ -60,7 +60,7 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
   CHECK_LE_OR_RETURN(start_dim, true_end_dim);
 
-  *out_tensor_desc = *in_tensor_desc;
+  *out_tensor_desc->mut_is_dynamic() = in_tensor_desc->is_dynamic();
 
   Shape* out_shape = out_tensor_desc->mut_shape();
 
@@ -77,13 +77,19 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> DataTypeInferFn(user_op::InferContext* ctx) {
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+  return Maybe<void>::Ok();
+}
+
 REGISTER_USER_OP("flatten")
     .Input("in")
     .Output("out")
     .Attr<int32_t>("start_dim", 0)
     .Attr<int32_t>("end_dim", -1)
     .SetTensorDescInferFn(TensorDescInferFn)
-    .SetGetSbpFn(GetSbpFn);
+    .SetGetSbpFn(GetSbpFn)
+    .SetInferDataTypeFn(DataTypeInferFn);
 
 REGISTER_USER_OP_GRAD("flatten").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) {

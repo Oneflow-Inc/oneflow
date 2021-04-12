@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_REGISTER_BLOB_DESC_H_
 #define ONEFLOW_CORE_REGISTER_BLOB_DESC_H_
 
+#include <memory>
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/maybe.h"
@@ -30,6 +31,7 @@ class BlobDesc final {
   BlobDesc() = delete;
   ~BlobDesc() = default;
   BlobDesc(const Shape&, DataType);
+  BlobDesc(const std::shared_ptr<Shape>&, DataType);
   explicit BlobDesc(DataType dtype) : BlobDesc(Shape(), dtype) {}
   explicit BlobDesc(const BlobDescProto& proto);
   explicit BlobDesc(const BlobDesc&);

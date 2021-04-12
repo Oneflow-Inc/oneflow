@@ -46,6 +46,7 @@ class ControlStreamType final : public StreamType {
   void Compute(Instruction* instruction) const override;
 
   bool SharingVirtualMachineThread() const override { return true; }
+  bool IsControlStreamType() const override { return true; }
   void Infer(VirtualMachine* vm, Instruction* instruction) const override;
   void Compute(VirtualMachine* vm, Instruction* instruction) const override;
   void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override;

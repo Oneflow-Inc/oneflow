@@ -72,6 +72,7 @@ class Linear(Module):
             .Output("out")
             .Attr("transpose_a", False)
             .Attr("transpose_b", True)
+            .Attr("alpha", 1.0)
             .Build()
         )
 

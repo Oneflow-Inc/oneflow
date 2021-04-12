@@ -123,6 +123,7 @@ class JobBuildAndInferCtx {
   Maybe<void> CheckOpBlobSplitability(Operator*, int64_t parallel_num);
   Maybe<void> CheckPlacement() const;
   Maybe<void> CheckJobConf() const;
+  Maybe<void> CheckOpScope() const;
   Maybe<LogicalBlobId> GetMirroredLbi(const std::string& lbn_with_hint) const;
   bool HasAnyMirroredBlobInput(const Operator& op) const;
   Maybe<void> CheckAllInputsConvertableToMirroredBlob(const Operator& op) const;

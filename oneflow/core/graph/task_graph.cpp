@@ -371,7 +371,7 @@ void ForEachOpGraphNecessaryCtrlEdge(
       const OpNode* src = op_graph->OpNode4OpName(ctrl_in_op_name);
       CHECK(!IsOpGraphDataReachable(dst, src));
       if (!IsOpGraphDataReachable(src, dst)) {
-        CHECK(src->parallel_desc().EqualsIgnoringDeviceType(dst->parallel_desc()));
+        CHECK(src->parallel_desc().EqualsOnlyForMachineAndDeviceIds(dst->parallel_desc()));
         const Shape* src_time_shape = CHECK_JUST(src->op().GetOpTimeShape()).get();
         const Shape* dst_time_shape = CHECK_JUST(dst->op().GetInputBlobFastestTimeShape()).get();
         if (dst_time_shape == nullptr) {
@@ -800,7 +800,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D) {
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     CompTaskNode* src = sorted_src_comp_tasks.at(i);
     CompTaskNode* dst = sorted_dst_comp_tasks.at(i);
-    for (const LogicalBlobId& lbi : op_edge->lbis()) { BuildTaskPath(src, dst, lbi); }
+    for (const LogicalBlobId& lbi : op_edge->lbis()) { ConnectWithLbi(src, dst, lbi); }
   }
 }
 

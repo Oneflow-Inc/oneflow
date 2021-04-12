@@ -36,6 +36,8 @@ class InferParallelDistributionFnContext {
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
   virtual int64_t parallel_num() const = 0;
   virtual const Shape& parallel_hierarchy() = 0;
+  virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
+  virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 };
 
 }  // namespace user_op

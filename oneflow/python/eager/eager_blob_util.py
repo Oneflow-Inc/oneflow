@@ -15,7 +15,6 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-import oneflow.python.eager.blob_cache as blob_cache_util
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 import oneflow.python.framework.blob_trait as blob_trait
 import oneflow.python.framework.python_callback as python_callback
@@ -61,13 +60,11 @@ def FetchTensorBlobAsNumpyList(parallel_size, blob_object):
 
 
 def _GetPhysicalBlobHeaderCache(blob_object):
-    blob_cache = oneflow_api.FindOrCreateBlobCache(blob_object)
-    return blob_cache.GetHeaderCache(_FetchBlobHeader)
+    return _FetchBlobHeader(blob_object)
 
 
 def _GetPhysicalBlobBodyCache(blob_object):
-    blob_cache = oneflow_api.FindOrCreateBlobCache(blob_object)
-    return blob_cache.GetBodyCache(_FetchPhysicalBlobBody)
+    return _FetchPhysicalBlobBody(blob_object)
 
 
 def _FetchBlobHeader(blob_object):

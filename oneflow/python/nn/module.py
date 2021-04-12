@@ -23,11 +23,9 @@ import numpy as np
 
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.ops import parallel_cast
-from oneflow.python.framework.tensor import Tensor
-from oneflow.python.nn.modules.utils import global_function_or_identity
-from oneflow.python.ops.get_variable import api_get_variable as get_variable
 from oneflow.python.framework.check_point_v2 import FeedValueToVariable
+from oneflow.python.framework.function_util import global_function_or_identity
+from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.parameter import Parameter
 
 
@@ -107,24 +105,10 @@ class Module(object):
         @global_function_or_identity()
         def job():
             nonlocal res
-            nonlocal args
-            if self.consistent:
-                is_force_mirrored_overloaded = (
-                    Module.__dict__["force_mirrored_forward"]
-                    != self.__class__.__dict__["force_mirrored_forward"]
-                )
-                if is_force_mirrored_overloaded:
-                    res = self.force_mirrored_forward(*args)
-                else:
-                    print(self.input_configs._to_dict())
-                    args = list(args)
-                    for key, value in self.input_configs._to_dict().items():
-                        args[key] = parallel_cast(args[key], distribute=value)
-                    res = self.consisten_forward(*args)
-            else:
-                res = self.forward(*args)
+            res = self.forward(*args)
 
         job()
+
         return res
 
     def add_module(self, name: str, module: Optional["Module"]) -> None:

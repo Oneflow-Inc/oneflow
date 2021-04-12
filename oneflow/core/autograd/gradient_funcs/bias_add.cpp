@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_dispatch.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
-#include "oneflow/core/framework/op_interpreter_util.h"
 
 namespace oneflow {
 namespace one {

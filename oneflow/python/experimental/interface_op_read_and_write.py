@@ -15,7 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.framework.input_blob_def as input_blob_def_util
 import oneflow.python.framework.dtype as dtype_util
@@ -32,9 +31,11 @@ import oneflow_api
 
 
 def sync_default_session_if_normal():
+    # TODO merge with same function in framework/check_point_v2.py
     if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
         flow.sync_default_session()
     else:
+        # do nothing
         pass
 
 
