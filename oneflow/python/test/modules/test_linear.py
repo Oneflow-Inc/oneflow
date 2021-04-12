@@ -48,6 +48,5 @@ class TestModule(flow.unittest.TestCase):
         print(np.allclose(torch_out, y.numpy(), atol=1e-4))
         test_case.assertTrue(np.allclose(torch_out, y.numpy(), atol=1e-4))
 
-
 if __name__ == "__main__":
     unittest.main()

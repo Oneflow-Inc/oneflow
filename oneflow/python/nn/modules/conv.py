@@ -25,7 +25,7 @@ from oneflow.python.nn.modules.utils import (
 )
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
-
+import math
 
 @oneflow_export("nn.Conv2d")
 class Conv2d(Module):
@@ -65,6 +65,28 @@ class Conv2d(Module):
             .Output("out")
             .Build()
         )
+
+        if bias:
+            self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
+            self._bias_add_op = (
+                flow.builtin_op("bias_add")
+                .Input("a")
+                .Input("b")
+                .Output("out")
+                .Attr("axis", 1)
+                .Build()
+            )
+        else:
+            self.register_parameter("bias", None)
+
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        flow.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        if self.bias is not None:
+            fan_in, _ = flow.nn.init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / math.sqrt(fan_in)
+            flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
         res = self._op(x, self.weight)[0]

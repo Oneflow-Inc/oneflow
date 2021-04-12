@@ -17,6 +17,7 @@ import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
+from oneflow.python.nn.modules.linalg import MatMul
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
 import math
@@ -70,15 +71,7 @@ class Linear(Module):
         else:
             self.register_parameter("bias", None)
 
-        self._op = (
-            flow.builtin_op("matmul")
-            .Input("a")
-            .Input("b")
-            .Output("out")
-            .Attr("transpose_a", False)
-            .Attr("transpose_b", True)
-            .Build()
-        )
+        self._op = MatMul(False, True)
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -90,7 +83,7 @@ class Linear(Module):
 
     def forward(self, x):
         if self.use_bias:
-            res = self._bias_add_op(self._op(x, self.weight)[0], self.bias)[0]
+            res = self._bias_add_op(self._op(x, self.weight), self.bias)[0]
         else:
-            res = self._op(x, self.weight)[0]
+            res = self._op(x, self.weight)
         return res
