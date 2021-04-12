@@ -56,17 +56,21 @@ class Ones(flow.nn.Module):
 class TestModule(flow.unittest.TestCase):
     def test_add_case1(test_case):
         print("test add case 1")
-        def fn()
-        x_ones = Ones(flow.float32)
-        x = x_ones((2, 3))
-        x.requires_grad = True
+        def fn():
+            x_ones = Ones(flow.float32)
+            x = x_ones((2, 3))
+            x.requires_grad = True
 
-        y_ones = Ones(flow.float32)
-        y = y_ones((2, 3))
-        y.requires_grad = True
+            y_ones = Ones(flow.float32)
+            y = y_ones((2, 3))
+            y.requires_grad = True
 
-        add = flow.Add()
-        of_out = add(x, y)
+            add = flow.Add()
+            of_out = add(x, y)
+
+        graph_fn = flow.compiler.trace(fn, type="predict")
+
+        graph_fn()
 
         #grad = flow.Tensor(np.ones((2, 3), dtype=np.float32))
         #of_out.backward(grad)
