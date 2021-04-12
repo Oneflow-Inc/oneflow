@@ -687,14 +687,24 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     CHECK(!obns.empty());
     const std::string bw_sink_op_out_lbn =
         GenLogicalBlobName(bw_sink_op->op().BnInOp2Lbi(obns.Get(0)));
+
+    LOG(INFO) << "cc_debug_log: bw_sink_op : " << bw_sink_op->op().op_conf().DebugString();
+    user_op::UserOpConfWrapper cast_to_tick_op =
+        user_op::UserOpConfWrapperBuilder("System-CastToTick-" + NewUniqueId())
+            .OpTypeName("cast_to_tick")
+            .Input("in", bw_sink_op_out_lbn)
+            .Output("out")
+            .Build();
+    job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), cast_to_tick_op.op_conf());
+    LOG(INFO) << "cc_debug_log: cast_to_tick_op : " << cast_to_tick_op.op_conf().DebugString();
+
     OperatorConf bw_sink_acc_tick_conf;
     bw_sink_acc_tick_conf.set_name(std::string("System-BwSinkTick-AccTick_") + NewUniqueId());
     auto* acc_conf = bw_sink_acc_tick_conf.mutable_acc_tick_conf();
-    acc_conf->set_one(bw_sink_op_out_lbn);
+    acc_conf->set_one(cast_to_tick_op.output("out", 0));
     acc_conf->set_acc("acc");
     acc_conf->set_max_acc_num(time_shape_before_acc.elem_cnt() / time_shape_after_acc.elem_cnt());
     job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_acc_tick_conf);
-    LOG(INFO) << "cc_debug_log: bw_sink_op : " << bw_sink_op->op().op_conf().DebugString();
     LOG(INFO) << "cc_debug_log: bw_sink_acc_tick_op : " << bw_sink_acc_tick_conf.DebugString();
 
     // insert nccl ops after acc
