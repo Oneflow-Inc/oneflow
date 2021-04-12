@@ -236,7 +236,7 @@ class Tensor:
 
     def __mul__(self, other):
         return self.mul(other)
-        
+
     def __rmul__(self, other):
         return self.mul(other)
 
@@ -250,13 +250,13 @@ class Tensor:
         return self.sub(other)
 
     def __rsub__(self, other):
-        return flow.Sub().forward(other, self)
+        return flow.sub(other, self)
 
     def __truediv__(self, other):
         return self.div(other)
 
     def __rtruediv__(self, other):
-        return flow.Div().forward(other, self)
+        return flow.div(other, self)
 
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:

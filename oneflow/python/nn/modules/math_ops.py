@@ -53,7 +53,7 @@ def _check_axis(axis, shape):
     return axis
 
 
-@oneflow_export("Sum")
+@register_op_by_module("sum")
 class Sum(Module):
     r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     For example:
@@ -219,7 +219,7 @@ class Mul(Module):
             return BroadcastMul()(x, y)
 
 
-@oneflow_export("Mean")
+@register_op_by_module("mean")
 class Mean(Module):
     r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
     For example:
@@ -452,7 +452,7 @@ class Div(Module):
 
     def forward(self, x, y):
         if isinstance(x, (int, float)):
-            return ScalarMul(x)(flow.Reciprocal()(y))
+            return ScalarMul(x)(flow.reciprocal(y))
         elif isinstance(y, (int, float)):
             if y == 0 or y == 0.0:
                 y = 0.0
