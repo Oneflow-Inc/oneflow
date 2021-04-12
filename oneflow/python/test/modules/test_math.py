@@ -25,23 +25,20 @@ import numpy as np
 class TestModule(flow.unittest.TestCase):
 
     def test_sin(test_case):
-        sin = flow.Sin()
-        input = flow.Tensor(np.random.randn(3, 4), dtype=flow.float32)
-        of_out = sin(input)
+        input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        of_out = flow.sin(input)
         np_out = np.sin(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
     
     def test_cos(test_case):
-        cos = flow.Cos()
         input = flow.Tensor(np.random.randn(1, 3, 6), dtype=flow.float32)
-        of_out = cos(input)
+        of_out = flow.cos(input)
         np_out = np.cos(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
     def test_log(test_case):
-        log = flow.Log()
         input = flow.Tensor(np.random.randn(2, 3, 4, 5), dtype=flow.float32)
-        of_out = log(input)
+        of_out = flow.log(input)
         np_out = np.log(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, equal_nan=True))
 
