@@ -109,7 +109,6 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
     //   The Global<CommNet> is set allocated by new Global<IBVerbsCommNet>
     // else,
     //   The Global<CommNet> is set allocated by Global<EpollCommNet>
-    Global<EpollCommNet>::New();
     if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
       // DEPRECATED
@@ -161,7 +160,6 @@ void Runtime::DeleteAllGlobal() {
       // so the Global<CommNet> and Global<EpollCommNet> are same global object
       // then only need delete once.
     }
-    Global<EpollCommNet>::Delete();
 #endif
   }
 

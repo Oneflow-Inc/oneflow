@@ -33,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/rpc/include/manager.h"
+#include "oneflow/core/transport/transport.h"
 
 namespace oneflow {
 
@@ -128,10 +129,14 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<EagerNcclCommMgr>::New();
   Global<CudnnConvAlgoCache>::New();
 #endif
+  Global<EpollCommNet>::New();
+  Global<Transport>::New();
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
+  Global<Transport>::Delete();
+  Global<EpollCommNet>::Delete();
 #ifdef WITH_CUDA
   Global<CudnnConvAlgoCache>::Delete();
   Global<EagerNcclCommMgr>::Delete();
