@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/framework/device.h"
@@ -27,22 +27,36 @@ namespace one {
 
 namespace {
 
-std::shared_ptr<AutogradInterpreter> BuildInterpreter(const bool& eager_mode) {
+std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirrored) {
   std::shared_ptr<OpExprInterpreter> internal;
-  if (eager_mode) {
-    internal = std::make_shared<EagerInterpreter>();
+  if (is_mirrored) {
+    internal = std::make_shared<EagerMirroredInterpreter>();
   } else {
-    internal = std::make_shared<LazyInterpreter>();
+    internal = std::make_shared<EagerConsistentInterpreter>();
   }
+  return std::make_shared<AutogradInterpreter>(internal);
+}
+
+std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
+  auto internal = std::make_shared<LazyInterpreter>();
   return std::make_shared<AutogradInterpreter>(internal);
 }
 
 }  // namespace
 
 /*static*/ Maybe<AutogradInterpreter> OpInterpUtil::GetInterpreter() {
-  static const auto& g_lazy_interpreter = BuildInterpreter(false);
-  static const auto& g_eager_interpreter = BuildInterpreter(true);
-  if (EagerExecutionEnabled()) { return g_eager_interpreter; }
+  static const auto& g_lazy_interpreter = BuildLazyInterpreter();
+  static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
+  static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
+  if (EagerExecutionEnabled()) {
+    const auto& session = JUST(GetDefaultSession());
+    bool is_mirrored_strategy_enabled = JUST(session->IsMirroredStrategyEnabled());
+    if (is_mirrored_strategy_enabled) {
+      return g_eager_mirrored_interpreter;
+    } else {
+      return g_eager_consistent_interpreter;
+    }
+  }
   return g_lazy_interpreter;
 }
 

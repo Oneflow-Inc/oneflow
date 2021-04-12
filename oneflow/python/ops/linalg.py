@@ -34,6 +34,7 @@ def matmul(
     b: oneflow_api.BlobDesc,
     transpose_a: bool = False,
     transpose_b: bool = False,
+    alpha: float = 1.0,
     name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
     r"""This operator applies matrix multiplication to two Blobs. 
@@ -90,6 +91,7 @@ def matmul(
             .Output("out")
             .Attr("transpose_a", transpose_a)
             .Attr("transpose_b", transpose_b)
+            .Attr("alpha", float(alpha))
             .Build()
         )
     else:
@@ -101,6 +103,7 @@ def matmul(
             .Output("out")
             .Attr("transpose_a", transpose_a)
             .Attr("transpose_b", transpose_b)
+            .Attr("alpha", float(alpha))
             .Build()
         )
     return op.InferAndTryRun().RemoteBlobList()[0]

@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/job/plan_util.h"
 
 namespace oneflow {
 
@@ -197,8 +198,10 @@ void GenMemChainTasksAndRegsts(
                                          std::string* op_name) -> bool {
     if (task_proto->task_type() == TaskType::kNormalForward
         && task_proto->exec_sequence().exec_node_size() == 1) {
-      *op_name =
-          task_proto->exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf().name();
+      *op_name = PlanUtil::GeOpAttribute(plan, task_proto->job_id(),
+                                         task_proto->exec_sequence().exec_node(0).kernel_conf())
+                     .op_conf()
+                     .name();
       return true;
     }
     return false;

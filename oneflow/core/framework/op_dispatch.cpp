@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/op_dispatch.h"
-#include "oneflow/core/framework/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
 namespace oneflow {
 namespace one {

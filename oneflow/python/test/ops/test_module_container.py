@@ -20,6 +20,10 @@ import oneflow as flow
 import oneflow.typing as tp
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    "module doesn't work in lazy mode now",
+)
 class TestContainer(flow.unittest.TestCase):
     def test_module_forward(test_case):
         class CustomModule(flow.nn.Module):

@@ -25,6 +25,10 @@ import oneflow as flow
 import oneflow.typing as tp
 
 
+def np_relu(np_arr):
+    return np.where(np_arr > 0, np_arr, 0)
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in eager mode",
@@ -40,23 +44,18 @@ class TestModule(flow.unittest.TestCase):
                 return self.relu(x)
 
         m = CustomModule()
-        x = flow.Tensor(1, 3, 4, 5)
+        x = flow.Tensor(2, 3)
+        flow.nn.init.uniform_(x, a=-1.0, b=1.0)
         y = m(x)
-        print(y.numpy())
-
-    def test_conv2d(test_case):
-        conv2d = flow.nn.Conv2d(3, 3, 3)
-        x = flow.Tensor(1, 3, 4, 5)
-        y = conv2d(x)
-        print(y.numpy())
-        print(conv2d.weight.numpy())
+        test_case.assertTrue(np.array_equal(np_relu(x.numpy()), y.numpy()))
 
     def test_relu(test_case):
         relu = flow.nn.ReLU()
 
         x = flow.Tensor(2, 3)
+        flow.nn.init.uniform_(x, a=-1.0, b=1.0)
         y = relu(x)
-        print(y.numpy())
+        test_case.assertTrue(np.array_equal(np_relu(x.numpy()), y.numpy()))
 
     def test_load_state_dict(test_case):
         class CustomModule(flow.nn.Module):

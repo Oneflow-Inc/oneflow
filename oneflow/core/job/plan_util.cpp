@@ -344,7 +344,8 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     std::string op_name = "";
     std::string pass_tag = kNoPassTag;
     for (const ExecNodeProto& exec_node : task_proto.exec_sequence().exec_node()) {
-      const auto& op_conf = exec_node.kernel_conf().op_attribute().op_conf();
+      const auto& op_conf =
+          GeOpAttribute(&plan, task_proto.job_id(), exec_node.kernel_conf()).op_conf();
       op_name += op_conf.name();
       if (op_conf.has_pass_tag()) { pass_tag = op_conf.pass_tag(); }
     }
@@ -522,6 +523,25 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
         regst_desc->set_inplace_consumed_regst_desc_id(force_id);
       }
     }
+  }
+}
+
+const oneflow::OpAttribute& PlanUtil::GeOpAttribute(const Plan* plan, int64_t job_id,
+                                                    const oneflow::KernelConf& kernel_conf) {
+  if (kernel_conf.has_op_attribute()) {
+    return kernel_conf.op_attribute();
+  } else if (kernel_conf.has_op_attribute_ref()) {
+    auto table_it = plan->job_id2op_attribute_ref_table().find(job_id);
+    CHECK(table_it != plan->job_id2op_attribute_ref_table().end())
+        << "op attribute ref table not found for job id: " << job_id;
+    ;
+    auto it = table_it->second.op_name2op_attribute().find(kernel_conf.op_attribute_ref());
+    CHECK(it != table_it->second.op_name2op_attribute().end())
+        << "op attribute ref: " << kernel_conf.op_attribute_ref() << " not found";
+    return it->second;
+  } else {
+    UNIMPLEMENTED() << "kernel_conf must has either op_attribute or op_attribute_ref. kernel_conf: "
+                    << kernel_conf.DebugString();
   }
 }
 

@@ -22,6 +22,7 @@ import inspect
 import oneflow_api.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.check_point_v2 as check_point_v2
+from oneflow.python.framework.function_util import global_function_or_identity
 import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow as flow
 from oneflow.python.nn.modules import *
@@ -339,30 +340,6 @@ class Tensor:
     def __deepcopy__(self, memo):
         TODO()
 
-    def __mul__(self, other):
-        return self.mul(other)
-
-    def __rmul__(self, other):
-        return self.mul(other)
-
-    def __add__(self, other):
-        return self.add(other)
-
-    def __radd__(self, other):
-        return self.add(other)
-
-    def __sub__(self, other):
-        return self.sub(other)
-
-    def __rsub__(self, other):
-        return flow.Sub().forward(other, self)
-
-    def __truediv__(self, other):
-        return self.div(other)
-
-    def __rtruediv__(self, other):
-        return flow.Div().forward(other, self)
-
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:
             self.determine(determining_initializer)
@@ -643,16 +620,6 @@ def _default_initializer_for_determining(tensor):
     return determined_tensor
 
 
-def global_function_or_identity(*args, **kwargs):
-    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
-        assert flow.eager_execution_enabled()
-        return flow.global_function(*args, **kwargs)
-    else:
-        assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
-        identity_decorator = lambda func: func
-        return identity_decorator
-
-
 def _numpy_initializer_for_determining(tensor):
     assert not tensor.is_determined
     undetermined_tensor = tensor._undetermined_tensor
@@ -756,18 +723,22 @@ def register_op_by_module(op_name):
         return module
 
     def _get_unary_module_impl(module):
-        global unary_module_impl
-
         def unary_module_impl(x, *args, **kwargs):
             return module(*args, **kwargs).forward(x)
+
+        name = module.__name__ + "_op"
+        unary_module_impl.__name__ = name
+        globals()[name] = unary_module_impl
 
         return unary_module_impl
 
     def _get_binary_module_impl(module):
-        global binary_module_impl
-
         def binary_module_impl(x, y, *args, **kwargs):
             return module(*args, **kwargs).forward(x, y)
+
+        name = module.__name__ + "_op"
+        binary_module_impl.__name__ = name
+        globals()[name] = binary_module_impl
 
         return binary_module_impl
 
