@@ -114,8 +114,7 @@ def _compare_expand_op_with_np(
         @flow.global_function(type="train", function_config=func_config)
         def expandJob(
             of_input: tp.Numpy.Placeholder(shape=input.shape, dtype=data_type),
-            multipler: tp.Numpy.Placeholder(
-                shape=gout.shape, dtype=data_type),
+            multipler: tp.Numpy.Placeholder(shape=gout.shape, dtype=data_type),
         ) -> tp.Numpy:
             with flow.scope.placement(device_type, "0:0"):
                 v = flow.get_variable(
