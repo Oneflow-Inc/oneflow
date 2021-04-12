@@ -13,7 +13,7 @@ include(FindPackageHandleStandardArgs)
 
 set(CUDNN_ROOT_DIR "" CACHE PATH "Folder contains NVIDIA cuDNN")
 
-option(CUDNN_STATIC "Look for static cuDNN" ON)
+option(CUDNN_STATIC "Look for static cuDNN" OFF)
 if (CUDNN_STATIC)
 	set(__cudnn_libname "libcudnn_static.a")
 else()
