@@ -516,7 +516,7 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
 
   HashSet<const OpEdge*> visited;
   const Shape seed_time_shape = GetOpNodeTimeShape(ordered_acc_op_nodes.front());
-  const std::string& bw_sink_acc_tick_op_name = bw_sink_acc_tick_conf.name();
+  // const std::string& bw_sink_acc_tick_op_name = bw_sink_acc_tick_conf.name();
   std::vector<InsertedNcclInfo> unordered_nccl_op_infos;
 
   for (const OpNode* acc : ordered_acc_op_nodes) {
@@ -583,7 +583,7 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
   for (int32_t i = 0; i < unordered_nccl_op_infos.size(); ++i) {
     auto& info = unordered_nccl_op_infos.at(i);
     if (i == 0) {
-      info.nccl_op_conf.add_ctrl_in_op_name(bw_sink_acc_tick_op_name);
+      // info.nccl_op_conf.add_ctrl_in_op_name(bw_sink_acc_tick_op_name);
     } else {
       info.nccl_op_conf.add_ctrl_in_op_name(unordered_nccl_op_infos.at(i - 1).nccl_op_conf.name());
     }
@@ -683,6 +683,8 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
 
     // NOTE(chengcheng): insert acc_tick after bw_sink_op, and this tick op conf will control
     //  after_acc_nccl_ops start.
+
+    /*
     const auto& obns = bw_sink_op->op().output_bns();
     CHECK(!obns.empty());
     const std::string bw_sink_op_out_lbn =
@@ -706,6 +708,8 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     acc_conf->set_max_acc_num(time_shape_before_acc.elem_cnt() / time_shape_after_acc.elem_cnt());
     job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_acc_tick_conf);
     LOG(INFO) << "cc_debug_log: bw_sink_acc_tick_op : " << bw_sink_acc_tick_conf.DebugString();
+    */
+    OperatorConf bw_sink_acc_tick_conf;
 
     // insert nccl ops after acc
     std::vector<OperatorConf> after_acc_nccl_op_confs;
