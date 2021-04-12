@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/framework/vm_local_dep_object.h"
 
 namespace oneflow {
 namespace one {
@@ -57,6 +58,8 @@ Maybe<void> EagerMirroredTensorImpl::set_blob_object(
   return SyncBlobObject2Attributes(blob_object);
 }
 
+EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
+
 Maybe<void> EagerConsistentTensorImpl::set_blob_object(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   blob_object_ = blob_object;
@@ -80,7 +83,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
       shape_(shape),
       dtype_(dtype),
       tensor_storage_(tensor_storage),
-      infer_local_dep_object_(parallel_desc()) {}
+      infer_local_dep_object_(new VmLocalDepObject(parallel_desc())) {}
 
 Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
     const std::shared_ptr<MemoryCase>& mem_case) {

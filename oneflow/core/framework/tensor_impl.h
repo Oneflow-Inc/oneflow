@@ -24,11 +24,11 @@ limitations under the License.
 #include "oneflow/core/framework/object.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_storage.h"
-#include "oneflow/core/framework/vm_local_dep_object.h"
 
 namespace oneflow {
 
 class MemoryCase;
+class VmLocalDepObject;
 
 namespace compatible_py {
 
@@ -201,7 +201,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
                           const std::shared_ptr<const Device>& device,
                           const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad,
                           bool is_leaf, bool retain_grad);
-  ~EagerMirroredTensorImpl() override = default;
+  ~EagerMirroredTensorImpl() override;
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
@@ -234,7 +234,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   std::shared_ptr<compatible_py::BlobObject> blob_object_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;
-  VmLocalDepObject infer_local_dep_object_;
+  std::unique_ptr<VmLocalDepObject> infer_local_dep_object_;
 };
 
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
