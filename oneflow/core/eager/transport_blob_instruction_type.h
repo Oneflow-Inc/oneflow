@@ -49,8 +49,8 @@ class ReceiveBlobInstructionType : public vm::InstructionType {
   ReceiveBlobInstructionType() = default;
   virtual ~ReceiveBlobInstructionType() override = default;
 
-  using stream_type = vm::TransportSenderStreamType;
-  using RefCntType = vm::TransportSenderStreamType::RefCntType;
+  using stream_type = vm::TransportReceiverStreamType;
+  using RefCntType = vm::TransportReceiverStreamType::RefCntType;
 
   void Infer(vm::Instruction* instruction) const override {
     // do nothing
