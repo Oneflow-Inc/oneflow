@@ -27,14 +27,14 @@ class CpuExpandKernel final : public user_op::OpKernel {
   ~CpuExpandKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext *ctx) const override {
-    const user_op::Tensor *in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor *out = ctx->Tensor4ArgNameAndIndex("out", 0);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     const std::vector<int32_t> expand_stride = ctx->Attr<std::vector<int32_t>>("stride");
 
-    const T *in_ptr = in->dptr<T>();
-    T *out_ptr = out->mut_dptr<T>();
+    const T* in_ptr = in->dptr<T>();
+    T* out_ptr = out->mut_dptr<T>();
     const int32_t out_dims = out->shape().NumAxes();
     const int32_t out_size = out->shape().elem_cnt();
 
@@ -67,14 +67,14 @@ class CpuExpandGradKernel final : public user_op::OpKernel {
   ~CpuExpandGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext *ctx) const override {
-    const user_op::Tensor *in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor *out = ctx->Tensor4ArgNameAndIndex("out", 0);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     const std::vector<int32_t> expand_stride = ctx->Attr<std::vector<int32_t>>("stride");
 
-    const T *in_ptr = in->dptr<T>();
-    T *out_ptr = out->mut_dptr<T>();
+    const T* in_ptr = in->dptr<T>();
+    T* out_ptr = out->mut_dptr<T>();
 
     const int32_t in_dims = in->shape().NumAxes();
     const int32_t in_size = in->shape().elem_cnt();

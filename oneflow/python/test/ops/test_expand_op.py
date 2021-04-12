@@ -87,7 +87,7 @@ def _compare_expand_op_with_np(
     assert device_type in ["cpu", "gpu"]
 
     if device_type == "cpu" and data_type == flow.float16:
-        return 
+        return
 
     flow.clear_default_session()
 
@@ -104,7 +104,7 @@ def _compare_expand_op_with_np(
     func_config.default_placement_scope(flow.scope.placement(device_type, machine_ids))
 
     input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
-    diff = len(gout.shape) - len(input.shape)
+    # diff = len(gout.shape) - len(input.shape)
 
     def assert_prediction_grad(gin_of: tp.Numpy):
         assert np.allclose(gin_of, gin_np, atol=1e-5)
@@ -115,8 +115,7 @@ def _compare_expand_op_with_np(
         def expandJob(
             of_input: tp.Numpy.Placeholder(shape=input.shape, dtype=data_type),
             multipler: tp.Numpy.Placeholder(
-                shape=gout.shape, dtype=data_type, batch_axis=diff
-            ),
+                shape=gout.shape, dtype=data_type),
         ) -> tp.Numpy:
             with flow.scope.placement(device_type, "0:0"):
                 v = flow.get_variable(
@@ -204,6 +203,7 @@ class TestExpandOp1n2d(flow.unittest.TestCase):
         arg_dict["device_counts"] = [2]
         for arg in GenArgList(arg_dict):
             _compare_expand_op_with_np(*arg)
+
 
 if __name__ == "__main__":
     unittest.main()

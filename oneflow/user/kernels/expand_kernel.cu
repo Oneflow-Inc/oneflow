@@ -27,9 +27,9 @@ struct STRIDES {
 };
 
 template<typename T>
-__global__ void ExpandCudaKernel(const T *in_ptr, const STRIDES in_stride,
+__global__ void ExpandCudaKernel(const T* in_ptr, const STRIDES in_stride,
                                  const STRIDES expand_stride, const int32_t dims,
-                                 const int32_t elements, T *out_ptr) {
+                                 const int32_t elements, T* out_ptr) {
   int32_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int32_t step = gridDim.x * blockDim.x;
   while (gid < elements) {
@@ -40,9 +40,9 @@ __global__ void ExpandCudaKernel(const T *in_ptr, const STRIDES in_stride,
 }
 
 template<typename T>
-__global__ void ExpandGradCudaKernel(const T *out_diff_ptr, const STRIDES out_stride,
+__global__ void ExpandGradCudaKernel(const T* out_diff_ptr, const STRIDES out_stride,
                                      const STRIDES expand_stride, const int32_t dims,
-                                     const int32_t elements, T *in_diff_ptr) {
+                                     const int32_t elements, T* in_diff_ptr) {
   int32_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int32_t step = gridDim.x * blockDim.x;
   while (gid < elements) {
@@ -53,7 +53,7 @@ __global__ void ExpandGradCudaKernel(const T *out_diff_ptr, const STRIDES out_st
 }
 
 template<typename T>
-__global__ void InitPtr(const int32_t elements, T *ptr) {
+__global__ void InitPtr(const int32_t elements, T* ptr) {
   int32_t gid = (blockDim.x * blockIdx.x) + threadIdx.x;
   int32_t step = gridDim.x * blockDim.x;
   while (gid < elements) {
@@ -64,28 +64,28 @@ __global__ void InitPtr(const int32_t elements, T *ptr) {
 
 template<typename T>
 struct GpuExpandFunctor final {
-  void operator()(DeviceCtx *ctx, const T *in_ptr, const STRIDES in_stride,
+  void operator()(DeviceCtx* ctx, const T* in_ptr, const STRIDES in_stride,
                   const STRIDES expand_stride, const int32_t dims, const int32_t elements,
-                  T *out_ptr) {
+                  T* out_ptr) {
     RUN_CUDA_KERNEL((ExpandCudaKernel<T>), ctx, elements, in_ptr, in_stride, expand_stride, dims,
                     elements, out_ptr);
   }
 };
 
 template<>
-void GpuExpandFunctor<float16>::operator()(DeviceCtx *ctx, const float16 *in_ptr,
+void GpuExpandFunctor<float16>::operator()(DeviceCtx* ctx, const float16* in_ptr,
                                            const STRIDES in_stride, const STRIDES expand_stride,
                                            const int32_t dims, const int32_t elements,
-                                           float16 *out_ptr) {
-  RUN_CUDA_KERNEL((ExpandCudaKernel<half>), ctx, elements, reinterpret_cast<const half *>(in_ptr),
-                  in_stride, expand_stride, dims, elements, reinterpret_cast<half *>(out_ptr));
+                                           float16* out_ptr) {
+  RUN_CUDA_KERNEL((ExpandCudaKernel<half>), ctx, elements, reinterpret_cast<const half*>(in_ptr),
+                  in_stride, expand_stride, dims, elements, reinterpret_cast<half*>(out_ptr));
 }
 
 template<typename T>
 struct GpuExpandGradFunctor final {
-  void operator()(DeviceCtx *ctx, const T *in_ptr, const STRIDES in_stride,
+  void operator()(DeviceCtx* ctx, const T* in_ptr, const STRIDES in_stride,
                   const STRIDES expand_stride, const int32_t dims, const int32_t elements,
-                  const int32_t out_elements, T *out_ptr) {
+                  const int32_t out_elements, T* out_ptr) {
     RUN_CUDA_KERNEL((InitPtr<T>), ctx, out_elements, out_elements, out_ptr);
     RUN_CUDA_KERNEL((ExpandGradCudaKernel<T>), ctx, elements, in_ptr, in_stride, expand_stride,
                     dims, elements, out_ptr);
@@ -93,15 +93,15 @@ struct GpuExpandGradFunctor final {
 };
 
 template<>
-void GpuExpandGradFunctor<float16>::operator()(DeviceCtx *ctx, const float16 *in_ptr,
+void GpuExpandGradFunctor<float16>::operator()(DeviceCtx* ctx, const float16* in_ptr,
                                                const STRIDES in_stride, const STRIDES expand_stride,
                                                const int32_t dims, const int32_t elements,
-                                               const int32_t out_elements, float16 *out_ptr) {
+                                               const int32_t out_elements, float16* out_ptr) {
   RUN_CUDA_KERNEL((InitPtr<half>), ctx, out_elements, out_elements,
-                  reinterpret_cast<half *>(out_ptr));
+                  reinterpret_cast<half*>(out_ptr));
   RUN_CUDA_KERNEL((ExpandGradCudaKernel<half>), ctx, elements,
-                  reinterpret_cast<const half *>(in_ptr), in_stride, expand_stride, dims, elements,
-                  reinterpret_cast<half *>(out_ptr));
+                  reinterpret_cast<const half*>(in_ptr), in_stride, expand_stride, dims, elements,
+                  reinterpret_cast<half*>(out_ptr));
 }
 
 }  // namespace
@@ -113,14 +113,14 @@ class GpuExpandKernel final : public user_op::OpKernel {
   ~GpuExpandKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext *ctx) const override {
-    const user_op::Tensor *in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor *out = ctx->Tensor4ArgNameAndIndex("out", 0);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     const std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("stride");
 
-    const T *in_ptr = in->dptr<T>();
-    T *out_ptr = out->mut_dptr<T>();
+    const T* in_ptr = in->dptr<T>();
+    T* out_ptr = out->mut_dptr<T>();
     const int32_t out_dims = out->shape().NumAxes();
     const int32_t out_size = out->shape().elem_cnt();
 
@@ -153,14 +153,14 @@ class GpuExpandGradKernel final : public user_op::OpKernel {
   ~GpuExpandGradKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext *ctx) const override {
-    const user_op::Tensor *in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor *out = ctx->Tensor4ArgNameAndIndex("out", 0);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     const std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("stride");
 
-    const T *in_ptr = in->dptr<T>();
-    T *out_ptr = out->mut_dptr<T>();
+    const T* in_ptr = in->dptr<T>();
+    T* out_ptr = out->mut_dptr<T>();
 
     const int32_t in_dims = in->shape().NumAxes();
     const int32_t in_size = in->shape().elem_cnt();

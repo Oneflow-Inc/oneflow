@@ -20,8 +20,8 @@ limitations under the License.
 
 namespace oneflow {
 
-OF_DEVICE_FUNC int32_t OffsetToNdIndexToOffset(const int32_t offset, const int32_t *in_stride,
-                                               const int32_t *out_stride, const int32_t n) {
+OF_DEVICE_FUNC int32_t OffsetToNdIndexToOffset(const int32_t offset, const int32_t* in_stride,
+                                               const int32_t* out_stride, const int32_t n) {
   int32_t remaining = offset;
   int32_t out_offset = 0;
 #ifdef __CUDA_ARCH__
@@ -35,7 +35,7 @@ OF_DEVICE_FUNC int32_t OffsetToNdIndexToOffset(const int32_t offset, const int32
   return out_offset;
 }
 
-static void InitStride(int32_t *stride, const int64_t *dim_vec, const int32_t dims) {
+static void InitStride(int32_t* stride, const int64_t* dim_vec, const int32_t dims) {
   stride[dims - 1] = 1;
   for (int i = dims - 2; i >= 0; --i) { stride[i] = dim_vec[i + 1] * stride[i + 1]; }
 }

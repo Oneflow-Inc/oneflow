@@ -28,21 +28,10 @@ REGISTER_USER_OP("expand")
       const auto& out_shape_attr = ctx->Attr<std::vector<int32_t>>("out_shape");
       DimVector dim_vec(out_shape_attr.begin(), out_shape_attr.end());
       *out_shape = Shape(dim_vec);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      const auto& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
-      const auto& out_shape_attr = ctx->Attr<std::vector<int32_t>>("out_shape");
-      const int32_t out_dims = out_shape_attr.size();
-      const int32_t diff = out_dims - in_desc.shape().NumAxes();
-      if (in_batch_axis->has_value()) {
-        out_batch_axis->set_value(in_batch_axis->value() + diff);
-      } else {
-        out_batch_axis->clear_value();
-      }
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -63,21 +52,10 @@ REGISTER_USER_OP("expand_grad")
       const auto& out_shape_attr = ctx->Attr<std::vector<int32_t>>("out_shape");
       DimVector dim_vec(out_shape_attr.begin(), out_shape_attr.end());
       *out_shape = Shape(dim_vec);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      const auto& in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      const auto* in_batch_axis = ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      auto* out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
-      const auto& out_shape_attr = ctx->Attr<std::vector<int32_t>>("out_shape");
-      const int32_t out_dims = out_shape_attr.size();
-      const int32_t diff = in_desc.shape().NumAxes() - out_dims;
-      if (in_batch_axis->has_value()) {
-        out_batch_axis->set_value(in_batch_axis->value() - diff);
-      } else {
-        out_batch_axis->clear_value();
-      }
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
