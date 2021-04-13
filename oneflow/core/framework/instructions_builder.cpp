@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/ofblob_arg_cb_phy_instr_operand.h"
 
 namespace oneflow {
 
@@ -869,11 +870,12 @@ Maybe<void> InstructionsBuilder::FeedBlob(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::WriteBlobByCallback(const std::function<void()>& callback) {
+Maybe<void> InstructionsBuilder::WriteBlobByCallback(int64_t ofblob_ptr,
+                                                     const std::function<void(int64_t)>& callback) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New("WriteBlobByCallback");
   *instruction->mutable_phy_instr_operand() =
-      std::make_shared<vm::NoArgCbPhyInstrOperand>(callback);
+      std::make_shared<vm::OfBlobArgCbPhyInstrOperand>(ofblob_ptr, callback);
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }

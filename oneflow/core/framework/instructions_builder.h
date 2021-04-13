@@ -108,7 +108,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<compatible_py::BlobObject>& blob_object,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr);
 
-  Maybe<void> WriteBlobByCallback(const std::function<void()>& callback);
+  Maybe<void> WriteBlobByCallback(int64_t ofblob_ptr, const std::function<void(int64_t)>& callback);
 
   Maybe<void> InferRankFrontSeqCallback(const std::function<void()>& callback);
   Maybe<void> ComputeRankFrontSeqCallback(const std::function<void()>& callback);

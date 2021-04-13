@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/ofblob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/host_stream_type.h"
 
 namespace oneflow {
@@ -32,9 +32,9 @@ class WriteBlobByCallback final : public InstructionType {
     const InstructionMsg& instr_msg = instruction->instr_msg();
     const auto& phy_instr_operand = instr_msg.phy_instr_operand();
     CHECK(static_cast<bool>(phy_instr_operand));
-    const auto* ptr = dynamic_cast<const NoArgCbPhyInstrOperand*>(phy_instr_operand.get());
+    const auto* ptr = dynamic_cast<const OfBlobArgCbPhyInstrOperand*>(phy_instr_operand.get());
     CHECK_NOTNULL(ptr);
-    ptr->callback()();
+    ptr->callback()(ptr->ofblob_ptr());
   }
 
   void Infer(Instruction* instruction) const override { /* do nothing */

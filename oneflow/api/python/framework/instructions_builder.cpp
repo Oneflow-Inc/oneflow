@@ -272,9 +272,9 @@ std::shared_ptr<compatible_py::BlobObject> Build121To(
   return x->Build121To(blob_object, parallel_desc_symbol).GetPtrOrThrow();
 }
 
-void WriteBlobByCallback(const std::shared_ptr<InstructionsBuilder>& x,
-                         const std::function<void()>& callback) {
-  return x->WriteBlobByCallback(callback).GetOrThrow();
+void WriteBlobByCallback(const std::shared_ptr<InstructionsBuilder>& x, int64_t ofblob_ptr,
+                         const std::function<void(int64_t)>& callback) {
+  return x->WriteBlobByCallback(ofblob_ptr, callback).GetOrThrow();
 }
 
 }  // namespace
