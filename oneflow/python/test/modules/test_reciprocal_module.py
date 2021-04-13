@@ -24,9 +24,8 @@ import numpy as np
 )
 class TestModule(flow.unittest.TestCase):
     def test_reciprocal(test_case):
-        reciprocal = flow.Reciprocal()
         x = flow.Tensor(np.random.randn(2, 3))
-        of_out = reciprocal(x)
+        of_out = flow.reciprocal(x)
         np_out = np.reciprocal(x.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
