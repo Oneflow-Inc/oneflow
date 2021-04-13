@@ -32,6 +32,10 @@ class OpExprGradFunction {
   OpExprGradFunction() = default;
   virtual ~OpExprGradFunction() = default;
 
+  virtual std::shared_ptr<OpExprInterpState> MakeCustomState() const {
+    return std::make_shared<OpExprInterpState>();
+  }
+
   virtual Maybe<void> Init(const OpExpr& op) = 0;
 
   // Capture forward inputs and outputs for backward.
@@ -47,12 +51,39 @@ class OpExprGradFunction {
   }
 };
 
+template<typename StateT>
+class OpExprGradFunctionIf : public OpExprGradFunction {
+ public:
+  std::shared_ptr<OpExprInterpState> MakeCustomState() const override {
+    return std::make_shared<StateT>();
+  }
+
+  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrValueMap& attrs) const override {
+    StateT* state = dynamic_cast<StateT*>(ctx);
+    CHECK_NOTNULL_OR_RETURN(state);
+    return CaptureIf(state, inputs, outputs, attrs);
+  }
+
+  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    const StateT* state = dynamic_cast<const StateT*>(ctx);
+    CHECK_NOTNULL_OR_RETURN(state);
+    return ApplyIf(state, out_grads, in_grads);
+  };
+
+  virtual Maybe<void> CaptureIf(StateT* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                                const AttrValueMap& attrs) const = 0;
+  virtual Maybe<void> ApplyIf(const StateT* ctx, const TensorTuple& out_grads,
+                              TensorTuple* in_grads) const = 0;
+};
+
 // Stateful wrapper of the `OpExprGradFunction`.
 class OpExprGradClosure {
  public:
   // Use `shared_ptr` in order to keep `impl` alive even if the forward op has been released.
   explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunction>& impl)
-      : impl_(impl), state_(new OpExprInterpState) {}
+      : impl_(impl), state_(impl->MakeCustomState()) {}
   explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunction>& impl,
                              const std::shared_ptr<OpExprInterpState>& state)
       : impl_(impl), state_(state) {}
