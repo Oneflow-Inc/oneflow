@@ -53,7 +53,6 @@ def _check_axis(axis, shape):
     return axis
 
 
-@oneflow_export("Sum")
 @register_op_by_module("sum")
 class Sum(Module):
     r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
@@ -223,7 +222,6 @@ class Mul(Module):
             return BroadcastMul()(x, y)
 
 
-@oneflow_export("Mean")
 @register_op_by_module("mean")
 class Mean(Module):
     r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
@@ -256,8 +254,8 @@ class Mean(Module):
         self.name = name
 
     def forward(self, input_tensor):
-        reduce_sum = flow.Sum(axis=self.axis, keepdims=self.keepdims, name=self.name)(
-            input_tensor
+        reduce_sum = flow.sum(
+            input_tensor, axis=self.axis, keepdims=self.keepdims, name=self.name
         )
 
         # TODO: add if input.is_dynamic branch like flow.math.reduce_mean
