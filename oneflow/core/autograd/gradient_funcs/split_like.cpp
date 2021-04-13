@@ -73,12 +73,13 @@ Maybe<void> SplitLike::Apply(const OpExprInterpState* ctx, const TensorTuple& ou
     } else {
       const auto& zero_like_op = JUST(
           op_expr_helper::ZeroLikeOp(GradientOpName(op_name_ + "_zero_grad_" + std::to_string(i))));
-      const auto& zero_grad = JUST(Dispatch<Tensor>(*zero_like_op, {saved_tensors.at(i)}));
+      const auto& zero_grad =
+          JUST(Dispatch<Tensor>(*zero_like_op, {saved_tensors.at(i)}, /*attrs=*/{}));
       inputs.push_back(zero_grad);
     }
   }
   const auto& grad_op = JUST(op_expr_helper::ConcatOp(out_grads.size(), axis_, max_dim_size_));
-  in_grads->at(0) = JUST(Dispatch<Tensor>(*grad_op, inputs));
+  in_grads->at(0) = JUST(Dispatch<Tensor>(*grad_op, inputs, /*attrs=*/{}));
   return Maybe<void>::Ok();
 }
 
