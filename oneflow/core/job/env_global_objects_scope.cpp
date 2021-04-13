@@ -70,10 +70,7 @@ int32_t GetDefaultGpuDeviceNum() {
 Resource GetDefaultResource(const EnvProto& env_proto) {
   Resource resource;
   if (env_proto.has_ctrl_bootstrap_conf()) {
-    CHECK_EQ(env_proto.ctrl_bootstrap_conf().world_size() % GlobalProcessCtx::NumOfProcessPerNode(),
-             0);
-    resource.set_machine_num(env_proto.ctrl_bootstrap_conf().world_size()
-                             / GlobalProcessCtx::NumOfProcessPerNode());
+    resource.set_machine_num(GlobalProcessCtx::NodeSize());
   } else {
     resource.set_machine_num(env_proto.machine_size());
   }
