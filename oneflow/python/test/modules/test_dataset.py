@@ -27,17 +27,20 @@ import oneflow.typing as tp
 )
 class TestModule(flow.unittest.TestCase):
     def test_dataset(test_case):
-        flow.env.init()
         flow.InitEagerGlobalSession()
-        record_handle = flow.tmp.OfrecordReader(
-            "/dataset/lenet_mnist/data/ofrecord/train"
-        )
-        i = flow.tmp.RawDecoder(
-            record_handle, "image_raw", shape=(784,), dtype=flow.float32
-        )
-        assert type(record_handle) == flow.Tensor
-        assert type(i.numpy()) == np.ndarray
 
+        @flow.global_function()
+        def job():
+            record_handle = flow.tmp.OfrecordReader(
+                "/dataset/lenet_mnist/data/ofrecord/train"
+            )
+            i = flow.tmp.RawDecoder(
+                record_handle, "image_raw", shape=(784,), dtype=flow.float32
+            )
+            assert type(record_handle) == flow.Tensor
+            assert type(i.numpy()) == np.ndarray
+
+        job()
 
 if __name__ == "__main__":
     unittest.main()
