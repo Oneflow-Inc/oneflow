@@ -39,6 +39,7 @@ from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _siz
 from typing import Optional, List, Tuple, Sequence
 
 
+@oneflow_export("nn.OfrecordReader")
 class OfrecordReader(Module):
     def __init__(
         self,
@@ -75,6 +76,7 @@ class OfrecordReader(Module):
         return res
 
 
+@oneflow_export("nn.OfrecordRawDecoder")
 class OfrecordRawDecoder(Module):
     def __init__(
         self,
@@ -101,6 +103,68 @@ class OfrecordRawDecoder(Module):
 
     def forward(self, input):
         res = self._op(input)[0]
+        return res
+
+
+@oneflow_export("nn.CoinFlip")
+class CoinFlip(Module):
+    def __init__(
+        self,
+        batch_size: int = 1,
+        random_seed: Optional[int] = None,
+        probability: float = 0.5,
+    ):
+        super().__init__()
+        seed, has_seed = flow.random.gen_seed(random_seed)
+        self._op = (
+            flow.builtin_op("coin_flip")
+            .Output("out")
+            .Attr("batch_size", batch_size)
+            .Attr("probability", probability)
+            .Attr("has_seed", has_seed)
+            .Attr("seed", seed)
+            .Build()
+        )
+
+    def forward(self):
+        res = self._op()[0]
+        return res
+
+
+@oneflow_export("nn.CropMirrorNormalize")
+class CropMirrorNormalize(Module):
+    def __init__(
+        self,
+        color_space: str = "BGR",
+        output_layout: str = "NCHW",
+        crop_h: int = 0,
+        crop_w: int = 0,
+        crop_pos_y: float = 0.5,
+        crop_pos_x: float = 0.5,
+        mean: Sequence[float] = [0.0],
+        std: Sequence[float] = [1.0],
+        output_dtype: flow.dtype = flow.float,
+    ):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("crop_mirror_normalize_from_uint8")
+            .Input("in")
+            .Input("mirror")
+            .Output("out")
+            .Attr("color_space", color_space)
+            .Attr("output_layout", output_layout)
+            .Attr("mean", mean)
+            .Attr("std", std)
+            .Attr("crop_h", crop_h)
+            .Attr("crop_w", crop_w)
+            .Attr("crop_pos_y", crop_pos_y)
+            .Attr("crop_pos_x", crop_pos_x)
+            .Attr("output_dtype", output_dtype)
+            .Build()
+        )
+
+    def forward(self, input, mirror):
+        res = self._op(input, mirror)[0]
         return res
 
 
