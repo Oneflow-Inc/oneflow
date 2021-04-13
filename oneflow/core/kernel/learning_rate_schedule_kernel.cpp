@@ -27,9 +27,9 @@ class LearningRateScheduleKernel final : public KernelIf<DeviceType::kCPU> {
 
  private:
   void VirtualKernelInit() override {
-    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode() {
+    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       log_stream_ = TeePersistentLogStream::Create("train_step2lr.csv");
-      log_stream_ << "train_step, lr\n";
+      (*log_stream_) << "train_step, lr\n";
     }
   }
   void ForwardDataContent(const KernelCtx&,
@@ -210,8 +210,8 @@ void LearningRateScheduleKernel::ForwardDataContent(
   }
   *BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
 
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode() {
-    log_stream_ << std::to_string(train_step) << ", " << std::to_string(learning_rate) << "\n";
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    (*log_stream_) << std::to_string(train_step) << ", " << std::to_string(learning_rate) << "\n";
     log_stream_->Flush();
   }
 }
