@@ -453,7 +453,6 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline Maybe<void> Compute(vm::Instruction* instruction) {
-    LOG(INFO) << "haha";
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
     operand->mut_opkernel()->ChooseOpKernel(operand->inputs(), operand->outputs());
     DeviceCtx* device_ctx = instruction->stream().device_ctx().get();

@@ -45,26 +45,87 @@ using InitCtxMap = HashMap<const user_op::OpKernel*, std::shared_ptr<LocalUserKe
 using OpKernelStateMap = HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>>;
 using InferTmpSizeFnMap = HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*>;
 
-class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
+class LocalUserOpArgContext {
  public:
-  EagerBlobObjectTensorDescView(std::shared_ptr<eager::EagerBlobObject> blob_object) {
-    blob_object_ = blob_object;
-  }
-
-  const Shape& shape() const override { return blob_object_->blob_desc().shape(); }
-
-  Shape* mut_shape() override { return &blob_object_->mut_blob_desc()->mut_shape(); }
-
-  DataType data_type() const override { return blob_object_->blob_desc().data_type(); }
-
-  DataType* mut_data_type() override { return blob_object_->mut_blob_desc()->mut_data_type(); }
-
-  bool is_dynamic() const override { return blob_object_->blob_desc().is_dynamic(); }
-  bool* mut_is_dynamic() override { return blob_object_->mut_blob_desc()->mut_is_dynamic(); }
-  void set_is_dynamic(bool val) override { blob_object_->mut_blob_desc()->set_is_dynamic(val); }
+  LocalUserOpArgContext(std::function<eager::EagerBlobObject*(int64_t)> getter) : getter_(getter){};
+  eager::EagerBlobObject* MutEagerBlobObject(int64_t index) const { return getter_(index); }
 
  private:
-  std::shared_ptr<eager::EagerBlobObject> blob_object_;
+  std::function<eager::EagerBlobObject*(int64_t)> getter_;
+};
+
+// template<typename T>
+// class LocalUserOpInferInputContext : public LocalUserOpArgContext<T> {
+//
+// };
+//
+// template<typename T>
+// class LocalUserOpInferOutputContext : public LocalUserOpArgContext<T> {};
+//
+
+class EagerBlobObjectTensorView final : public user_op::Tensor {
+ public:
+  EagerBlobObjectTensorView(LocalUserOpArgContext* ctx, int64_t index) : ctx_(ctx), index_(index) {}
+
+  const ShapeView& shape() const override {
+    return ctx_->MutEagerBlobObject(index_)->blob().shape();
+  }
+
+  MutShapeView* mut_shape() override {
+    return ctx_->MutEagerBlobObject(index_)->mut_blob()->mut_shape_view();
+  }
+
+  DataType data_type() const override {
+    return ctx_->MutEagerBlobObject(index_)->blob().data_type();
+  }
+
+  const MemoryCase& mem_case() const override {
+    return ctx_->MutEagerBlobObject(index_)->blob().mem_case();
+  }
+
+  const void* raw_dptr() const override { return ctx_->MutEagerBlobObject(index_)->blob().dptr(); }
+
+  void* mut_raw_dptr() override { return ctx_->MutEagerBlobObject(index_)->mut_blob()->mut_dptr(); }
+
+ private:
+  LocalUserOpArgContext* ctx_;
+  int64_t index_;
+};
+
+class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
+ public:
+  EagerBlobObjectTensorDescView(LocalUserOpArgContext* ctx, int64_t index)
+      : ctx_(ctx), index_(index) {}
+
+  const Shape& shape() const override {
+    return ctx_->MutEagerBlobObject(index_)->blob_desc().shape();
+  }
+
+  Shape* mut_shape() override {
+    return &ctx_->MutEagerBlobObject(index_)->mut_blob_desc()->mut_shape();
+  }
+
+  DataType data_type() const override {
+    return ctx_->MutEagerBlobObject(index_)->blob_desc().data_type();
+  }
+
+  DataType* mut_data_type() override {
+    return ctx_->MutEagerBlobObject(index_)->mut_blob_desc()->mut_data_type();
+  }
+
+  bool is_dynamic() const override {
+    return ctx_->MutEagerBlobObject(index_)->blob_desc().is_dynamic();
+  }
+  bool* mut_is_dynamic() override {
+    return ctx_->MutEagerBlobObject(index_)->mut_blob_desc()->mut_is_dynamic();
+  }
+  void set_is_dynamic(bool val) override {
+    ctx_->MutEagerBlobObject(index_)->mut_blob_desc()->set_is_dynamic(val);
+  }
+
+ private:
+  LocalUserOpArgContext* ctx_;
+  int64_t index_;
 };
 
 class LocalUserOpInferContext : public user_op::InferContext {
@@ -120,8 +181,10 @@ class LocalUserOpInferContext : public user_op::InferContext {
   const ArgVec* indexed_output_pairs_;
   TensorsPtr input_tensors_;
   TensorsPtr output_tensors_;
-  HashMap<std::pair<std::string, int64_t>, std::shared_ptr<EagerBlobObjectTensorDescView>>
-      arg2tensor_desc_;
+  LocalUserOpArgContext input_arg_context_;
+  LocalUserOpArgContext output_arg_context_;
+  mutable std::vector<EagerBlobObjectTensorDescView> input_tensor_desc_views_;
+  mutable std::vector<EagerBlobObjectTensorDescView> output_tensor_desc_views_;
 };
 
 class LocalUserKernelComputeContext final : public user_op::KernelComputeContext {
@@ -163,7 +226,14 @@ class StatefulOpKernel final {
                    const std::shared_ptr<MemoryCase>& mem_case, const ArgVec* indexed_input_pairs,
                    const ArgVec* indexed_output_pairs);
   ~StatefulOpKernel();
+  const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
+  void set_device(const DeviceType dev_type, const int64_t dev_id, const std::string& dev_tag) {
+    mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, dev_id);
+    op_conf_.set_device_tag(dev_tag);
+  };
 
+ private:
+  friend struct eager::LocalCallOpKernelUtil;
   LocalUserOpInferContext* UpdateInferContext(TensorsPtr inputs, TensorsPtr outputs);
   LocalUserKernelComputeContext* UpdateComputeContext(TensorsPtr inputs, TensorsPtr outputs,
                                                       DeviceCtx* device_ctx);
@@ -176,12 +246,6 @@ class StatefulOpKernel final {
 
   user_op::OpKernelState* mut_opkernel_state() { return current_state_; }
 
-  void set_device(const DeviceType dev_type, const int64_t dev_id, const std::string& dev_tag) {
-    mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, dev_id);
-    op_conf_.set_device_tag(dev_tag);
-  };
-
-  const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
   bool need_check_mem_case() const { return need_check_mem_case_; }
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
@@ -193,8 +257,6 @@ class StatefulOpKernel final {
 
   const user_op::OpKernel* mut_user_opkernel() { return current_op_kernel_; }
 
- private:
-  friend class eager::LocalCallOpKernelUtil;
   std::shared_ptr<const JobDesc> job_desc_;
   OperatorConf op_conf_;
   std::shared_ptr<MemoryCase> mem_case_;

@@ -38,13 +38,14 @@ class TestModule(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def job() -> tp.Numpy:
             x = flow.constant(3.1, flow.float32, [1000, 1000])
-            y = flow.matmul(x, x)
-            return y
+            for _ in range(10):
+                x = flow.matmul(x, x)
+            return x
 
         # init session
         job()
         start = time.time()
-        for _ in range(1000):
+        for _ in range(100):
             job()
         end = time.time()
         print(end - start)
@@ -75,9 +76,10 @@ class TestModule(flow.unittest.TestCase):
                 .Build()
             )
             start = time.time()
-            for _ in range(1000):
-                y = op1()[0]
-                y = op2(y, y)[0]
+            for _ in range(100):
+                x = op1()[0]
+                for _ in range(10):
+                    x = op2(x, x)[0]
             end = time.time()
             print(end - start)
 

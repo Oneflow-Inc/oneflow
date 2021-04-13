@@ -37,16 +37,39 @@ class TensorsPtrScope {
   T* ctx_;
 };
 
+int32_t GetIndex(const ArgVec* arg_pairs, const std::pair<std::string, int32_t>& pair) {
+  auto it = std::find(arg_pairs->begin(), arg_pairs->end(), pair);
+  if (it != arg_pairs->end()) {
+    int32_t i = it - arg_pairs->begin();
+    return i;
+  }
+  return -1;
+};
+
 class LocalUserKernelBaseContext {
  public:
   LocalUserKernelBaseContext(const std::string& device_tag,
                              const std::shared_ptr<const JobDesc> job_desc,
-                             const ArgVec* index_input_pairs, const ArgVec* indexed_output_pairs)
+                             const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs)
       : job_desc_(job_desc),
-        indexed_input_pairs_(index_input_pairs),
-        indexed_output_pairs_(indexed_output_pairs) {
+        indexed_input_pairs_(indexed_input_pairs),
+        indexed_output_pairs_(indexed_output_pairs),
+        input_arg_context_([this](int64_t index) -> eager::EagerBlobObject* {
+          return (*this->input_tensors_)[index].get();
+        }),
+        output_arg_context_([this](int64_t index) -> eager::EagerBlobObject* {
+          return (*this->output_tensors_)[index].get();
+        }) {
     device_tag_ = device_tag;
     device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
+    for (int i = 0; i < indexed_input_pairs->size(); i++) {
+      input_tensor_views_.push_back(EagerBlobObjectTensorView(&input_arg_context_, i));
+      input_tensor_desc_views_.push_back(EagerBlobObjectTensorDescView(&input_arg_context_, i));
+    }
+    for (int i = 0; i < indexed_output_pairs->size(); i++) {
+      output_tensor_views_.push_back(EagerBlobObjectTensorView(&output_arg_context_, i));
+      output_tensor_desc_views_.push_back(EagerBlobObjectTensorDescView(&output_arg_context_, i));
+    }
   }
   ~LocalUserKernelBaseContext() = default;
 
@@ -55,42 +78,26 @@ class LocalUserKernelBaseContext {
   const JobDesc& job_desc() const { return *job_desc_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const {
-    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    CHECK(it != arg2tensor_desc_.end()) << "Arg (" << arg_name << "," << index << ") is not found";
-    return it->second.get();
+    std::pair<std::string, int32_t> pair{arg_name, index};
+    int32_t i = GetIndex(indexed_input_pairs_, pair);
+    if (i >= 0) { return &input_tensor_desc_views_[i]; }
+    i = GetIndex(indexed_output_pairs_, pair);
+    if (i >= 0) { return &output_tensor_desc_views_[i]; }
+    LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found";
   }
 
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) const {
-    auto it = arg2tensor_.find(std::make_pair(arg_name, index));
-    CHECK(it != arg2tensor_.end()) << "Arg (" << arg_name << "," << index << ") is not found";
-    return it->second.get();
+    std::pair<std::string, int32_t> pair{arg_name, index};
+    int32_t i = GetIndex(indexed_input_pairs_, pair);
+    if (i >= 0) { return &input_tensor_views_[i]; }
+    i = GetIndex(indexed_output_pairs_, pair);
+    if (i >= 0) { return &output_tensor_views_[i]; }
+    LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found";
   }
 
   void Update(TensorsPtr inputs, TensorsPtr outputs) {
     input_tensors_ = inputs;
     output_tensors_ = outputs;
-
-    arg2tensor_.clear();
-    arg2tensor_desc_.clear();
-
-    auto UpdateArg2TensorAndTensorDesc = [this](TensorsPtr tensors_ptr, const ArgVec* pairs) {
-      if (!tensors_ptr) { return; }
-      arg2tensor_.reserve(pairs->size());
-      arg2tensor_desc_.reserve(pairs->size());
-      for (int i = 0; i < pairs->size(); i++) {
-        const auto& pair = (*pairs)[i];
-        const auto& bn_in_op = pair.first;
-        const auto& bn_index = pair.second;
-        const auto tensor = (*tensors_ptr)[i];
-        arg2tensor_.emplace(std::make_pair(bn_in_op, bn_index),
-                            std::make_shared<user_op::BlobTensorView>(tensor->mut_blob()));
-        arg2tensor_desc_.emplace(std::make_pair(bn_in_op, bn_index),
-                                 std::make_shared<EagerBlobObjectTensorDescView>(tensor));
-      }
-    };
-
-    UpdateArg2TensorAndTensorDesc(input_tensors_, indexed_input_pairs_);
-    UpdateArg2TensorAndTensorDesc(output_tensors_, indexed_output_pairs_);
   }
 
   const ArgVec& inputs() const { return *indexed_input_pairs_; }
@@ -102,11 +109,14 @@ class LocalUserKernelBaseContext {
   const ArgVec* indexed_output_pairs_;
   DeviceType device_type_;
   std::string device_tag_;
-  HashMap<std::pair<std::string, int64_t>, std::shared_ptr<user_op::BlobTensorView>> arg2tensor_;
-  HashMap<std::pair<std::string, int64_t>, std::shared_ptr<EagerBlobObjectTensorDescView>>
-      arg2tensor_desc_;
   TensorsPtr input_tensors_;
   TensorsPtr output_tensors_;
+  LocalUserOpArgContext input_arg_context_;
+  LocalUserOpArgContext output_arg_context_;
+  mutable std::vector<EagerBlobObjectTensorView> input_tensor_views_;
+  mutable std::vector<EagerBlobObjectTensorView> output_tensor_views_;
+  std::vector<EagerBlobObjectTensorDescView> input_tensor_desc_views_;
+  std::vector<EagerBlobObjectTensorDescView> output_tensor_desc_views_;
 };
 
 class LocalUserKernelRegContext final : public user_op::KernelRegContext {
@@ -199,34 +209,34 @@ LocalUserOpInferContext::LocalUserOpInferContext(const OperatorConf& op_conf,
     : user_op_conf_(op_conf),
       job_desc_(job_desc),
       indexed_input_pairs_(index_input_pairs),
-      indexed_output_pairs_(indexed_output_pairs) {}
+      indexed_output_pairs_(indexed_output_pairs),
+      input_arg_context_([this](int64_t index) -> eager::EagerBlobObject* {
+        return (*this->input_tensors_)[index].get();
+      }),
+      output_arg_context_([this](int64_t index) -> eager::EagerBlobObject* {
+        return (*this->output_tensors_)[index].get();
+      }) {
+  for (int i = 0; i < index_input_pairs->size(); i++) {
+    input_tensor_desc_views_.push_back(EagerBlobObjectTensorDescView(&input_arg_context_, i));
+  }
+  for (int i = 0; i < indexed_output_pairs->size(); i++) {
+    output_tensor_desc_views_.push_back(EagerBlobObjectTensorDescView(&output_arg_context_, i));
+  }
+}
 
 user_op::TensorDesc* LocalUserOpInferContext::TensorDesc4ArgNameAndIndex(
     const std::string& arg_name, int32_t index) {
-  auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-  CHECK(it != arg2tensor_desc_.end()) << "Arg (" << arg_name << "," << index << ") is not found";
-  return it->second.get();
+  std::pair<std::string, int32_t> pair{arg_name, index};
+  int32_t i = GetIndex(indexed_input_pairs_, pair);
+  if (i >= 0) { return &input_tensor_desc_views_[i]; }
+  i = GetIndex(indexed_output_pairs_, pair);
+  if (i >= 0) { return &output_tensor_desc_views_[i]; }
+  LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found";
 }
+
 void LocalUserOpInferContext::Update(TensorsPtr inputs, TensorsPtr outputs) {
   input_tensors_ = inputs;
   output_tensors_ = outputs;
-
-  arg2tensor_desc_.clear();
-  auto UpdateArg2TensorDesc = [this](TensorsPtr tensors_ptr, const ArgVec* pairs) {
-    if (!tensors_ptr) { return; }
-    arg2tensor_desc_.reserve(pairs->size());
-    for (int i = 0; i < pairs->size(); i++) {
-      const auto& pair = (*pairs)[i];
-      const auto& bn_in_op = pair.first;
-      const auto& bn_index = pair.second;
-      const auto tensor = (*tensors_ptr)[i];
-      arg2tensor_desc_.emplace(std::make_pair(bn_in_op, bn_index),
-                               std::make_shared<EagerBlobObjectTensorDescView>(tensor));
-    }
-  };
-
-  UpdateArg2TensorDesc(input_tensors_, indexed_input_pairs_);
-  UpdateArg2TensorDesc(output_tensors_, indexed_output_pairs_);
 }
 
 LocalUserKernelComputeContext::LocalUserKernelComputeContext(
