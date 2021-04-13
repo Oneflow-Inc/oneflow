@@ -38,37 +38,36 @@ class DefaultOpExprGradFunction : public OpExprGradFunction {
                     TensorTuple* in_grads) const override;
 
  private:
-  Maybe<void> GenerateOpGradConf(const Operator& op, std::vector<OperatorConf>* bw_op_confs);
+  Maybe<void> GenerateOpGradConf(const Operator& op, std::vector<OperatorConf>* bw_op_confs,
+                                 HashMap<std::string, LogicalBlobId>* ibn2grad_lbi,
+                                 HashMap<std::string, LogicalBlobId>* obn2grad_lbi);
 
-  struct {
-    std::vector<int64_t> fw_input_index2lbi_symbol_;
-    std::vector<int64_t> fw_input_index2grad_lbi_symbol_;
-    std::vector<int64_t> fw_output_index2lbi_symbol_;
-    std::vector<int64_t> fw_output_index2grad_lbi_symbol_;
-  };
+  std::vector<int64_t> fw_input_index2lbi_symbol_;
+  std::vector<int64_t> fw_input_index2grad_lbi_symbol_;
+  std::vector<int64_t> fw_output_index2lbi_symbol_;
+  std::vector<int64_t> fw_output_index2grad_lbi_symbol_;
 
   struct BackwardEntry {
-    std::shared_ptr<OpExpr> bw_op_exr;
+    std::shared_ptr<OpExpr> bw_op_expr;
     std::vector<int64_t> bw_input_index2lbi_symbol;
     std::vector<int64_t> bw_output_index2lbi_symbol;
   };
   std::vector<BackwardEntry> backward_entries_;
 
   // captured inputs
-  std::vector<std::string, int64_t> fw_ibn_index_and_saved_index_pairs_;
+  std::vector<std::pair<int64_t, int64_t>> fw_ibn_index_and_saved_index_pairs_;
 
   // captured outputs
-  std::vector<std::string, int64_t> fw_obn_index_and_saved_index_pairs_;
+  std::vector<std::pair<int64_t, int64_t>> fw_obn_index_and_saved_index_pairs_;
 
   // lbi symbol table
   std::vector<LogicalBlobId> lbi_symbol2lbi_;
 };
 
-namespace {
-
-Maybe<void> DefaultOpExprGradFunction::GenerateOpGradConf(const Operator& op,
-                                                          std::vector<OperatorConf>* bw_op_confs,
-                                                          HashMap<std::string, LogicalBlobId>* ibn2grad_lbi, HashMap<std::string, LogicalBlobId>* obn2grad_lbi) {
+Maybe<void> DefaultOpExprGradFunction::GenerateOpGradConf(
+    const Operator& op, std::vector<OperatorConf>* bw_op_confs,
+    HashMap<std::string, LogicalBlobId>* ibn2grad_lbi,
+    HashMap<std::string, LogicalBlobId>* obn2grad_lbi) {
   auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
     const auto& input_bns = op.input_bns();
     const auto& output_bns = op.output_bns();
@@ -108,7 +107,6 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
   std::shared_ptr<Operator> fw_adapter_op = ConstructOp(fw_op_conf, DeviceType::kCPU);
   std::vector<OperatorConf> bw_op_confs;
 
-
   // The input gradient logical blob id for each forward input blob name
   HashMap<std::string, LogicalBlobId> ibn2grad_lbi;
   // The output gradient logical blob id for each forward output blob name.
@@ -125,7 +123,7 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
     bw_adapter_ops.at(i) = ConstructOp(op_conf, DeviceType::kCPU);
   }
 
-  // Updates lbi symbol table  
+  // Updates lbi symbol table
   HashMap<LogicalBlobId, int64_t> lbi2lbi_symbol;
   {
     HashSet<LogicalBlobId> lbis;
@@ -144,8 +142,10 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
       }
     }
     for (const auto& pair : obn2grad_lbi) { lbis.insert(pair.second); }
-    lbi_symbol2lbi_ = { lbis.begin(), lbis.end() };
-    for (int i = 0; i < lbi_symbol2lbi_.size(); ++i) { lbi2lbi_symbol[lbi] = i; }
+    lbi_symbol2lbi_ = {lbis.begin(), lbis.end()};
+    for (int i = 0; i < lbi_symbol2lbi_.size(); ++i) {
+      CHECK(lbi2lbi_symbol.emplace(lbi_symbol2lbi_.at(i), i).second);
+    }
   }
 
   // Initiates backward_entries_
@@ -168,19 +168,19 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
     CHECK(op_conf.has_user_conf());
     UserOpConf user_conf(op_conf.user_conf());
     // Sets backward op_expr
-    entry->bw_op_exr = std::make_shared<UserOpExpr>(op_conf.name(), std::move(user_conf),
-                                                      bw_indexed_ibns, bw_indexed_obns);
+    entry->bw_op_expr = std::make_shared<UserOpExpr>(op_conf.name(), std::move(user_conf),
+                                                     bw_indexed_ibns, bw_indexed_obns);
     // Sets bw_input_index2lbi_symbol
     entry->bw_input_index2lbi_symbol.resize(bw_indexed_ibns.size());
     for (int i = 0; i < bw_indexed_ibns.size(); ++i) {
       const auto& lbi = bw_adapter_op->BnInOp2Lbi(bw_indexed_ibns.at(i));
-      entry->bw_input_index2lbi_symbol.at(i) = lbi2lbi_symbol.at(i);
+      entry->bw_input_index2lbi_symbol.at(i) = lbi2lbi_symbol.at(lbi);
     }
     // Sets bw_output_index2lbi_symbol
     entry->bw_output_index2lbi_symbol.resize(bw_indexed_obns.size());
     for (int i = 0; i < bw_indexed_obns.size(); ++i) {
       const auto& lbi = bw_adapter_op->BnInOp2Lbi(bw_indexed_obns.at(i));
-      entry->bw_output_index2lbi_symbol.at(i) = lbi2lbi_symbol.at(i);
+      entry->bw_output_index2lbi_symbol.at(i) = lbi2lbi_symbol.at(lbi);
     }
   }
   // Updates fw_xxx_lbi_symbol_
@@ -229,22 +229,21 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
       if (fw_output_lbis.count(lbi) > 0) { captured_fw_output_lbis.insert(lbi); }
     };
     for (const auto& pair : ibn2grad_lbi) { UpdateCapturedLbis(pair.second); }
-    for (const auto& entry : backward_entries_) {
-      const auto& bw_op = *entry.bw_adapter_op;
-      for (const auto& ibn : bw_op.input_bns()) { UpdateCapturedLbis(bw_op.BnInOp2Lbi(ibn)); }
-      for (const auto& obn : bw_op.output_bns()) { UpdateCapturedLbis(bw_op.BnInOp2Lbi(obn)); }
+    for (const auto& bw_op : bw_adapter_ops) {
+      for (const auto& ibn : bw_op->input_bns()) { UpdateCapturedLbis(bw_op->BnInOp2Lbi(ibn)); }
+      for (const auto& obn : bw_op->output_bns()) { UpdateCapturedLbis(bw_op->BnInOp2Lbi(obn)); }
     }
     int captured_index = 0;
     for (int input_index = 0; input_index < fw_op_expr->indexed_ibns().size(); ++input_index) {
       const auto& ibn = fw_op_expr->indexed_ibns().at(input_index);
-      if (captured_fw_input_lbis.count(fw_adapter_op_.BnInOp2Lbi(ibn)) > 0) {
+      if (captured_fw_input_lbis.count(fw_adapter_op->BnInOp2Lbi(ibn)) > 0) {
         fw_ibn_index_and_saved_index_pairs_.push_back(
             std::make_pair(input_index, captured_index++));
       }
     }
     for (int output_index = 0; output_index < fw_op_expr->indexed_obns().size(); ++output_index) {
       const auto& obn = fw_op_expr->indexed_obns().at(output_index);
-      if (captured_fw_output_lbis.count(fw_adapter_op_.BnInOp2Lbi(obn)) > 0) {
+      if (captured_fw_output_lbis.count(fw_adapter_op->BnInOp2Lbi(obn)) > 0) {
         fw_obn_index_and_saved_index_pairs_.push_back(
             std::make_pair(output_index, captured_index++));
       }
@@ -285,20 +284,20 @@ Maybe<void> DefaultOpExprGradFunction::Apply(const OpExprInterpState* ctx,
   }
   // Fills lbi_symbol2tensor by backward out_grads
   for (int i = 0; i < fw_output_index2grad_lbi_symbol_.size(); ++i) {
-    int lbi_symbol = fw_output_index2grad_lbi_symbol_.at(pair.first);
+    int lbi_symbol = fw_output_index2grad_lbi_symbol_.at(i);
     CHECK(!static_cast<bool>(lbi_symbol2tensor.at(lbi_symbol)));
-    lbi_symbol2tensor.at(lbi_symbol) = saved_tensors.at(pair.second);
+    lbi_symbol2tensor.at(lbi_symbol) = out_grads.at(i);
   }
   for (const auto& entry : backward_entries_) {
-    const auto& bw_input_index2lbi_symbol = entry->bw_input_index2lbi_symbol;
+    const auto& bw_input_index2lbi_symbol = entry.bw_input_index2lbi_symbol;
     // Initiates inputs
     TensorTuple inputs(bw_input_index2lbi_symbol.size());
     for (int i = 0; i < bw_input_index2lbi_symbol.size(); ++i) {
       inputs.at(i) = lbi_symbol2tensor.at(bw_input_index2lbi_symbol.at(i));
       CHECK(static_cast<bool>(inputs.at(i)));
     }
-    const auto& bw_op_expr = entry->bw_op_expr;
-    const auto& bw_output_index2lbi_symbol = entry->bw_output_index2lbi_symbol;
+    const auto& bw_op_expr = entry.bw_op_expr;
+    const auto& bw_output_index2lbi_symbol = entry.bw_output_index2lbi_symbol;
     TensorTuple outputs(bw_output_index2lbi_symbol.size());
     const auto& interpreter = JUST(OpInterpUtil::GetInterpreter());
     JUST(interpreter->Apply(*bw_op_expr, inputs, &outputs));
