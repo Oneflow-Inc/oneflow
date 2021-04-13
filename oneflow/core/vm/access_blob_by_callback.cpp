@@ -15,8 +15,11 @@ limitations under the License.
 */
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
-#include "oneflow/core/vm/ofblob_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/host_stream_type.h"
+#include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/vm/stream.msg.h"
 
 namespace oneflow {
 namespace vm {
@@ -32,9 +35,11 @@ class WriteBlobByCallback final : public InstructionType {
     const InstructionMsg& instr_msg = instruction->instr_msg();
     const auto& phy_instr_operand = instr_msg.phy_instr_operand();
     CHECK(static_cast<bool>(phy_instr_operand));
-    const auto* ptr = dynamic_cast<const OfBlobArgCbPhyInstrOperand*>(phy_instr_operand.get());
+    const auto* ptr = dynamic_cast<const WriteBlobArgCbPhyInstrOperand*>(phy_instr_operand.get());
     CHECK_NOTNULL(ptr);
-    ptr->callback()(ptr->ofblob_ptr());
+    DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+    OfBlob ofblob(device_ctx, ptr->eager_blob_object()->mut_blob());
+    ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
   }
 
   void Infer(Instruction* instruction) const override { /* do nothing */

@@ -870,12 +870,13 @@ Maybe<void> InstructionsBuilder::FeedBlob(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::WriteBlobByCallback(int64_t ofblob_ptr,
-                                                     const std::function<void(int64_t)>& callback) {
+Maybe<void> InstructionsBuilder::WriteBlobByCallback(
+    const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+    const std::function<void(uint64_t)>& callback) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New("WriteBlobByCallback");
   *instruction->mutable_phy_instr_operand() =
-      std::make_shared<vm::OfBlobArgCbPhyInstrOperand>(ofblob_ptr, callback);
+      std::make_shared<vm::OfBlobArgCbPhyInstrOperand>(eager_blob_object, callback);
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }

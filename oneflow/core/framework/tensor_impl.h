@@ -55,6 +55,7 @@ class TensorImpl {
   virtual const std::shared_ptr<const DType>& dtype() const = 0;
   virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
   virtual bool is_lazy() const = 0;
+  virtual Maybe<eager::EagerBlobObject> eager_blob_object() const = 0;
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }
@@ -167,6 +168,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
   const std::shared_ptr<const Device>& device() const { return device_; }
   bool is_lazy() const override { return true; }
+  Maybe<eager::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
@@ -213,9 +215,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
   bool is_lazy() const override { return false; }
-  const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object() const {
-    return eager_blob_object_;
-  }
+  Maybe<eager::EagerBlobObject> eager_blob_object() const override { return eager_blob_object_; }
   Maybe<int64_t> blob_object_id() const { return blob_object_id_; }
 
   // Setters
@@ -266,6 +266,7 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
     return distribute_;
   }
   bool is_lazy() const override { return true; }
+  Maybe<eager::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
@@ -312,6 +313,7 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
     return distribute_;
   }
   bool is_lazy() const override { return false; }
+  Maybe<eager::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }

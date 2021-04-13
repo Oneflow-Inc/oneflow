@@ -71,6 +71,7 @@ class Tensor {
   virtual const std::shared_ptr<const Device>& device() const = 0;
   virtual bool is_consistent() const = 0;
   virtual bool is_lazy() const = 0;
+  virtual Maybe<eager::EagerBlobObject> eager_blob_object() const = 0;
 
   // Setters
   virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
@@ -175,6 +176,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
   std::shared_ptr<MirroredTensor> data() const;
+  Maybe<eager::EagerBlobObject> eager_blob_object() const override {
+    return impl_->eager_blob_object();
+  }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
@@ -247,6 +251,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
   std::shared_ptr<ConsistentTensor> data() const;
+  Maybe<eager::EagerBlobObject> eager_blob_object() const override {
+    return impl_->eager_blob_object();
+  }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }

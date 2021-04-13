@@ -19,6 +19,7 @@ limitations under the License.
 #include <functional>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/tensor.h"
 
 namespace py = pybind11;
 
@@ -272,9 +273,12 @@ std::shared_ptr<compatible_py::BlobObject> Build121To(
   return x->Build121To(blob_object, parallel_desc_symbol).GetPtrOrThrow();
 }
 
-void WriteBlobByCallback(const std::shared_ptr<InstructionsBuilder>& x, int64_t ofblob_ptr,
-                         const std::function<void(int64_t)>& callback) {
-  return x->WriteBlobByCallback(ofblob_ptr, callback).GetOrThrow();
+void WriteBlobByCallback(const std::shared_ptr<InstructionsBuilder>& x,
+                         const std::shared_ptr<one::MirroredTensor>& tensor,
+                         const std::function<void(uint64_t)>& callback) {
+  std::shared_ptr<eager::EagerBlobObject> eager_blob_object =
+      tensor->eager_blob_object().GetPtrOrThrow();
+  return x->WriteBlobByCallback(eager_blob_object, callback).GetOrThrow();
 }
 
 }  // namespace
