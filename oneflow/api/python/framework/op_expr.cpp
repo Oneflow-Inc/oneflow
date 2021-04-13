@@ -75,14 +75,6 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def_property_readonly("input_num", &one::OpExpr::input_num)
       .def_property_readonly("output_num", &one::OpExpr::output_num)
       .def("apply",
-           [](const one::OpExpr& op_expr, const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
-             return Interpret(op_expr, inputs, AttrValueMap{}).GetPtrOrThrow();
-           })
-      .def("apply",
-           [](const one::OpExpr& op_expr, const one::TensorTuple& inputs) {
-             return Interpret(op_expr, inputs, AttrValueMap{}).GetPtrOrThrow();
-           })
-      .def("apply",
            [](const one::OpExpr& op_expr, const std::vector<std::shared_ptr<one::Tensor>>& inputs,
               const AttrValueMap& attrs) {
              return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
