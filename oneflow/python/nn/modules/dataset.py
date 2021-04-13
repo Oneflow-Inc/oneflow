@@ -55,7 +55,8 @@ class OfrecordReader(Module):
         name: Optional[str] = None,
     ):
         super().__init__()
-        seed, has_seed = flow.random.gen_seed(random_seed)
+        # seed, has_seed = flow.random.gen_seed(random_seed)
+        seed, has_seed = 1, True
         self._op = (
             flow.builtin_op("OFRecordReader", name)
             .Output("out")
@@ -115,7 +116,8 @@ class CoinFlip(Module):
         probability: float = 0.5,
     ):
         super().__init__()
-        seed, has_seed = flow.random.gen_seed(random_seed)
+        # seed, has_seed = flow.random.gen_seed(random_seed)
+        seed, has_seed = 1, True
         self._op = (
             flow.builtin_op("coin_flip")
             .Output("out")
