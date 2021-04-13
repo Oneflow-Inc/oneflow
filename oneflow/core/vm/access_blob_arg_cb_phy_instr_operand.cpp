@@ -46,8 +46,7 @@ void WriteBlobArgCbPhyInstrOperand::ForEachComputeMutMirroredObject(
 
 void WriteBlobArgCbPhyInstrOperand::ForEachComputeConstMirroredObject(
     const std::function<void(MirroredObject*)>& DoEach) const {
-  auto* compute_dep_object = compute_local_dep_object_->mut_local_dep_object();
-  DoEach(compute_dep_object->mut_mirrored_object());
+  // Do nothing
 }
 
 }  // namespace vm
