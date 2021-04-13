@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
 
@@ -24,8 +27,16 @@ class LearningRateScheduleKernel final : public KernelIf<DeviceType::kCPU> {
   ~LearningRateScheduleKernel() override = default;
 
  private:
+  void VirtualKernelInit() override {
+    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+      log_stream_ = TeePersistentLogStream::Create("train_step2lr.csv");
+      (*log_stream_) << "train_step, lr\n";
+    }
+  }
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
+
+  std::unique_ptr<TeePersistentLogStream> log_stream_;
 };
 
 namespace {
@@ -228,6 +239,11 @@ void LearningRateScheduleKernel::ForwardDataContent(
                                            excluded_warmup_batches);
   }
   *BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
+
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    (*log_stream_) << std::to_string(train_step) << ", " << std::to_string(learning_rate) << "\n";
+    log_stream_->Flush();
+  }
 }
 
 REGISTER_KERNEL(OperatorConf::kLearningRateScheduleConf, LearningRateScheduleKernel);
