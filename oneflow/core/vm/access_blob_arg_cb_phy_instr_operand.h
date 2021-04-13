@@ -63,7 +63,6 @@ class WriteBlobArgCbPhyInstrOperand : public PhyInstrOperand {
  private:
   std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;
   std::function<void(uint64_t)> callback_;
-  std::shared_ptr<one::TensorStorage> tensor_storage_;
   std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
   std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
   const bool write_shape_;
