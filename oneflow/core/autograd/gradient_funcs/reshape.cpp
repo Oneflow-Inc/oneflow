@@ -43,7 +43,8 @@ class ReshapeOpExprGrad : public OpExprGradFunction {
                     TensorTuple* in_grads) const override {
     const auto& saved_tensors = ctx->SavedTensors();
     in_grads->resize(1);
-    in_grads->at(0) = JUST(Dispatch<Tensor>(*backward_op_, {out_grads.at(0), saved_tensors.at(0)}));
+    in_grads->at(0) =
+        JUST(Dispatch<Tensor>(*backward_op_, {out_grads.at(0), saved_tensors.at(0)}, /*attrs=*/{}));
     return Maybe<void>::Ok();
   }
 

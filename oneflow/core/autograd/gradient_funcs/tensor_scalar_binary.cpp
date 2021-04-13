@@ -61,7 +61,7 @@ class TensorScalarAdd : public TensorScalarAddOrSub {
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
     if (x_requires_grad_) {
-      in_grads->at(0) = JUST(Dispatch<Tensor>(*identity_op_, {out_grads.at(0)}));
+      in_grads->at(0) = JUST(Dispatch<Tensor>(*identity_op_, {out_grads.at(0)}, /*attrs=*/{}));
     }
     if (scalar_requires_grad_) {
       int32_t num_axes = out_grads.at(0)->shape()->NumAxes();
@@ -69,7 +69,7 @@ class TensorScalarAdd : public TensorScalarAddOrSub {
       std::iota(axes_vec.begin(), axes_vec.end(), 0);
       const auto& reduce_sum_op = JUST(op_expr_helper::ReduceSumOp(
           axes_vec, /*keepdims=*/false, GradientOpName(op_name_ + "_scalar")));
-      in_grads->at(1) = JUST(Dispatch<Tensor>(*reduce_sum_op, {out_grads.at(0)}));
+      in_grads->at(1) = JUST(Dispatch<Tensor>(*reduce_sum_op, {out_grads.at(0)}, /*attrs=*/{}));
     }
     return Maybe<void>::Ok();
   }
@@ -81,7 +81,7 @@ class TensorScalarSub : public TensorScalarAddOrSub {
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
     if (x_requires_grad_) {
-      in_grads->at(0) = JUST(Dispatch<Tensor>(*identity_op_, {out_grads.at(0)}));
+      in_grads->at(0) = JUST(Dispatch<Tensor>(*identity_op_, {out_grads.at(0)}, /*attrs=*/{}));
     }
     if (scalar_requires_grad_) {
       int32_t num_axes = out_grads.at(0)->shape()->NumAxes();
@@ -89,10 +89,11 @@ class TensorScalarSub : public TensorScalarAddOrSub {
       std::iota(axes_vec.begin(), axes_vec.end(), 0);
       const auto& reduce_sum_op = JUST(op_expr_helper::ReduceSumOp(
           axes_vec, /*keepdims=*/false, GradientOpName(op_name_ + "_scalar_reduce_sum")));
-      const auto& reduce_sum = JUST(Dispatch<Tensor>(*reduce_sum_op, {out_grads.at(0)}));
+      const auto& reduce_sum =
+          JUST(Dispatch<Tensor>(*reduce_sum_op, {out_grads.at(0)}, /*attrs=*/{}));
       const auto& scalar_mul_op =
           JUST(op_expr_helper::ScalarMulOp<float>(-1.f, GradientOpName(op_name_ + "_scalar")));
-      in_grads->at(1) = JUST(Dispatch<Tensor>(*scalar_mul_op, {reduce_sum}));
+      in_grads->at(1) = JUST(Dispatch<Tensor>(*scalar_mul_op, {reduce_sum}, /*attrs=*/{}));
     }
     return Maybe<void>::Ok();
   }

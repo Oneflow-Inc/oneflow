@@ -23,13 +23,18 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class DeConvolutionNd : public OpExprGradFunction {
+struct DeConvolutionNdInterpState : public OpExprInterpState {
+  bool weight_requires_grad = false;
+  bool activation_requires_grad = false;
+};
+
+class DeConvolutionNd : public OpExprGradFunctionIf<DeConvolutionNdInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrValueMap& attrs) const override;
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override;
+  Maybe<void> CaptureIf(DeConvolutionNdInterpState* ctx, const TensorTuple& inputs,
+                        const TensorTuple& outputs, const AttrValueMap& attrs) const override;
+  Maybe<void> ApplyIf(const DeConvolutionNdInterpState* ctx, const TensorTuple& out_grads,
+                      TensorTuple* in_grads) const override;
 
  private:
   std::string op_name_;
@@ -38,8 +43,6 @@ class DeConvolutionNd : public OpExprGradFunction {
   std::vector<int32_t> kernel_size_;
   std::vector<int32_t> strides_;
   std::vector<int32_t> dilation_rate_;
-  mutable bool activation_requires_grad_;
-  mutable bool weight_requires_grad_;
 
   std::shared_ptr<OpExpr> activation_grad_op_;
   std::shared_ptr<OpExpr> weight_grad_op_;
@@ -66,29 +69,32 @@ Maybe<void> DeConvolutionNd::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DeConvolutionNd::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                                     const TensorTuple& outputs, const AttrValueMap& attrs) const {
-  activation_requires_grad_ = inputs.at(0)->requires_grad();
-  weight_requires_grad_ = inputs.at(1)->requires_grad();
-  if (activation_requires_grad_) {
+Maybe<void> DeConvolutionNd::CaptureIf(DeConvolutionNdInterpState* ctx, const TensorTuple& inputs,
+                                       const TensorTuple& outputs,
+                                       const AttrValueMap& attrs) const {
+  ctx->activation_requires_grad = inputs.at(0)->requires_grad();
+  ctx->weight_requires_grad = inputs.at(1)->requires_grad();
+  if (ctx->activation_requires_grad) {
     ctx->SaveTensorForBackward(inputs.at(1));  // weight
   }
-  if (weight_requires_grad_) {
+  if (ctx->weight_requires_grad) {
     ctx->SaveTensorForBackward(inputs.at(0));  // x
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DeConvolutionNd::Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
-                                   TensorTuple* in_grads) const {
+Maybe<void> DeConvolutionNd::ApplyIf(const DeConvolutionNdInterpState* ctx,
+                                     const TensorTuple& out_grads, TensorTuple* in_grads) const {
   in_grads->resize(2);
-  if (activation_requires_grad_) {
+  if (ctx->activation_requires_grad) {
     const auto& weight = ctx->SavedTensors().at(0);
-    in_grads->at(0) = JUST(Dispatch<Tensor>(*activation_grad_op_, {out_grads.at(0), weight}));
+    in_grads->at(0) =
+        JUST(Dispatch<Tensor>(*activation_grad_op_, {out_grads.at(0), weight}, /*attrs=*/{}));
   }
-  if (weight_requires_grad_) {
-    const auto& x = ctx->SavedTensors().at(activation_requires_grad_);
-    in_grads->at(1) = JUST(Dispatch<Tensor>(*weight_grad_op_, {x, out_grads.at(0)}));
+  if (ctx->weight_requires_grad) {
+    int idx = ctx->activation_requires_grad;
+    const auto& x = ctx->SavedTensors().at(idx);
+    in_grads->at(1) = JUST(Dispatch<Tensor>(*weight_grad_op_, {x, out_grads.at(0)}, /*attrs=*/{}));
   }
   return Maybe<void>::Ok();
 }
