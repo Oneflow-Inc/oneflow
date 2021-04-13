@@ -21,15 +21,17 @@ namespace oneflow {
 namespace one {
 
 template<>
-Maybe<TensorTuple> Dispatch<TensorTuple>(const OpExpr& op_expr, const TensorTuple& inputs) {
+Maybe<TensorTuple> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                            const AttrValueMap& attrs) {
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_num());
-  JUST(OpInterpUtil::GetInterpreter())->Apply(op_expr, inputs, outputs.get());
+  JUST(OpInterpUtil::GetInterpreter())->Apply(op_expr, inputs, outputs.get(), attrs);
   return outputs;
 }
 
 template<>
-Maybe<Tensor> Dispatch<Tensor>(const OpExpr& op_expr, const TensorTuple& inputs) {
-  return JUST(Dispatch<TensorTuple>(op_expr, inputs))->at(0);
+Maybe<Tensor> Dispatch<Tensor>(const OpExpr& op_expr, const TensorTuple& inputs,
+                               const AttrValueMap& attrs) {
+  return JUST(Dispatch<TensorTuple>(op_expr, inputs, attrs))->at(0);
 }
 
 }  // namespace one
