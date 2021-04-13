@@ -505,7 +505,7 @@ struct InsertedNcclInfo {
 void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
                                   const std::vector<const OpNode*>& ordered_op_nodes,
                                   const std::vector<const OpNode*>& ordered_acc_op_nodes,
-                                  const OperatorConf& bw_sink_acc_tick_conf,
+                                  const std::string& bw_sink_tick_op_name,
                                   HashMap<std::string, OperatorConf>* mut_consumer_name2op,
                                   std::vector<OperatorConf>* nccl_op_confs,
                                   std::vector<ParallelConf>* nccl_op_parallel_confs) {
@@ -516,7 +516,6 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
 
   HashSet<const OpEdge*> visited;
   const Shape seed_time_shape = GetOpNodeTimeShape(ordered_acc_op_nodes.front());
-  // const std::string& bw_sink_acc_tick_op_name = bw_sink_acc_tick_conf.name();
   std::vector<InsertedNcclInfo> unordered_nccl_op_infos;
 
   for (const OpNode* acc : ordered_acc_op_nodes) {
@@ -580,10 +579,10 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
               return lhs.order < rhs.order;
             });
 
-  for (int32_t i = 0; i < unordered_nccl_op_infos.size(); ++i) {
+  for (int64_t i = 0; i < unordered_nccl_op_infos.size(); ++i) {
     auto& info = unordered_nccl_op_infos.at(i);
     if (i == 0) {
-      // info.nccl_op_conf.add_ctrl_in_op_name(bw_sink_acc_tick_op_name);
+      info.nccl_op_conf.add_ctrl_in_op_name(bw_sink_tick_op_name);
     } else {
       info.nccl_op_conf.add_ctrl_in_op_name(unordered_nccl_op_infos.at(i - 1).nccl_op_conf.name());
     }
@@ -631,7 +630,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   HashMap<std::string, OperatorConf> subgraph_op_name2conf;
   subgraph_op_name2conf.emplace(first_node->op().op_name(), first_node->op().op_conf());
   auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
-  for (int32_t i = 1; i < subgraph_order.size(); ++i) {
+  for (int64_t i = 1; i < subgraph_order.size(); ++i) {
     const OpNode* this_node = subgraph_order.at(i);
     const OpNode* pre_node = subgraph_order.at(i - 1);
     const std::string& this_op_name = this_node->op().op_name();
@@ -684,7 +683,6 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     // NOTE(chengcheng): insert acc_tick after bw_sink_op, and this tick op conf will control
     //  after_acc_nccl_ops start.
 
-    /*
     const auto& obns = bw_sink_op->op().output_bns();
     CHECK(!obns.empty());
     const std::string bw_sink_op_out_lbn =
@@ -708,18 +706,22 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     acc_conf->set_max_acc_num(time_shape_before_acc.elem_cnt() / time_shape_after_acc.elem_cnt());
     job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_acc_tick_conf);
     LOG(INFO) << "cc_debug_log: bw_sink_acc_tick_op : " << bw_sink_acc_tick_conf.DebugString();
-    */
-    OperatorConf bw_sink_acc_tick_conf;
+
+    OperatorConf bw_sink_final_tick_conf;
+    bw_sink_final_tick_conf.set_name(std::string("System-BwSinkFinalTick-Tick_") + NewUniqueId());
+    auto* tick_conf = bw_sink_final_tick_conf.mutable_tick_conf();
+    tick_conf->add_tick(GenLogicalBlobName(bw_sink_acc_tick_conf.name(), "acc"));
+    tick_conf->set_out("out");
+    job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_final_tick_conf);
+    LOG(INFO) << "cc_debug_log: bw_sink_final_tick_op : " << bw_sink_final_tick_conf.DebugString();
 
     // insert nccl ops after acc
     std::vector<OperatorConf> after_acc_nccl_op_confs;
     std::vector<ParallelConf> after_acc_nccl_parallel_confs;
-    std::vector<OperatorConf> after_acc_identity_op_confs;
-    std::vector<ParallelConf> after_acc_identity_parallel_confs;
     HashMap<std::string, OperatorConf> mut_consumer_name2op;
 
     InsertNcclLogicalOpsAfterAcc(op_graph, ordered_op_nodes, ordered_acc_op_nodes,
-                                 bw_sink_acc_tick_conf, &mut_consumer_name2op,
+                                 bw_sink_final_tick_conf.name(), &mut_consumer_name2op,
                                  &after_acc_nccl_op_confs, &after_acc_nccl_parallel_confs);
 
     for (const auto& pair : mut_consumer_name2op) {
@@ -727,17 +729,10 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
       JUST(job_builder->MutOpOnlyOnce(pair.second));
     }
     CHECK_EQ(after_acc_nccl_op_confs.size(), after_acc_nccl_parallel_confs.size());
-    CHECK_EQ(after_acc_identity_op_confs.size(), after_acc_identity_parallel_confs.size());
     for (int64_t i = 0; i < after_acc_nccl_op_confs.size(); ++i) {
       LOG(INFO) << "cc_debug_log: after acc insert nccl op: "
                 << after_acc_nccl_op_confs.at(i).DebugString();
       job_builder->AddOp(after_acc_nccl_parallel_confs.at(i), after_acc_nccl_op_confs.at(i));
-    }
-    for (int64_t i = 0; i < after_acc_identity_op_confs.size(); ++i) {
-      LOG(INFO) << "cc_debug_log: after acc insert identity op: "
-                << after_acc_identity_op_confs.at(i).DebugString();
-      job_builder->AddOp(after_acc_identity_parallel_confs.at(i),
-                         after_acc_identity_op_confs.at(i));
     }
   }
 

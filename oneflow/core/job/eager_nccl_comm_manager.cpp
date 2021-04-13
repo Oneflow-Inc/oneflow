@@ -32,6 +32,14 @@ std::string GetNcclUniqueIdRpcKey(const std::vector<std::pair<int64_t, int64_t>>
   return oss.str();
 }
 
+std::string NcclUniqueId2String(ncclUniqueId id) {
+  std::stringstream ss;
+  for (int i = 0; i < NCCL_UNIQUE_ID_BYTES; ++i) {
+    ss << std::hex << std::setfill('0') << std::setw(2) << (int)id.internal[i];
+  }
+  return ss.str();
+}
+
 }  // namespace
 
 EagerNcclCommMgr::~EagerNcclCommMgr() {
@@ -78,6 +86,8 @@ ncclComm_t EagerNcclCommMgr::GetCommForDevice(
         });
   }
   ncclComm_t comm;
+  LOG(INFO) << "cclog: EagerNcclCommMgr::ncclCommInitRank device_vec.size() = " << device_vec.size()
+            << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id) << ", rank = " << rank;
   OF_NCCL_CHECK(ncclCommInitRank(&comm, device_vec.size(), nccl_unique_id, rank));
   {
     std::lock_guard<std::mutex> lock(mutex_);
