@@ -876,7 +876,7 @@ Maybe<void> InstructionsBuilder::WriteBlobByCallback(
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New("WriteBlobByCallback");
   *instruction->mutable_phy_instr_operand() =
-      std::make_shared<vm::OfBlobArgCbPhyInstrOperand>(eager_blob_object, callback);
+      std::make_shared<vm::WriteBlobArgCbPhyInstrOperand>(eager_blob_object, callback);
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
