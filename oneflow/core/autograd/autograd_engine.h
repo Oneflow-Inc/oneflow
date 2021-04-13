@@ -142,6 +142,8 @@ class StackAutogradEngine final : public AutogradEngine {
 
 AutogradEngine* GetThreadLocalAutogradEngine();
 
+Maybe<void> AddAccumulateFunctionNode(TensorTuple* outputs);
+
 }  // namespace one
 
 }  // namespace oneflow

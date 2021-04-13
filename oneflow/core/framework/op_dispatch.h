@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,20 +12,21 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import Tensor
+*/
+#ifndef ONEFLOW_CORE_FRAMEWORK_OP_DISPATCH_H_
+#define ONEFLOW_CORE_FRAMEWORK_OP_DISPATCH_H_
 
+#include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 
-@oneflow_export("nn.Parameter")
-class Parameter(Tensor):
-    def __init__(self, data, requires_grad=True):
-        data.requires_grad = True
-        data.set_is_consistent(True)
-        # TODO: set a proper placement
-        data.set_placement(flow.placement("cpu", ["0:0"], None))
-        self._data = data
+namespace oneflow {
+namespace one {
 
-    def __getattr__(self, name):
-        return getattr(self._data, name)
+template<typename T>
+Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs);
+
+}  // namespace one
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_FRAMEWORK_OP_DISPATCH_H_
