@@ -17,6 +17,7 @@ import collections.abc
 from itertools import repeat
 import unittest
 from typing import Tuple, Union
+import tempfile
 
 import numpy as np
 
@@ -30,7 +31,7 @@ def np_relu(np_arr):
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
+    ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
     def test_nested_module(test_case):
@@ -62,22 +63,20 @@ class TestModule(flow.unittest.TestCase):
                 super().__init__()
                 self.w = flow.nn.Parameter(flow.Tensor(2, 3))
 
-            def forward(self, x):
+            def forward(self):
                 return self.w
 
         m = CustomModule()
 
-        @flow.global_function()
-        def job() -> None:
-            x = flow.Tensor(2, 3)
-            global y
-            y = m(x).numpy()
-
-        job()
         ones = np.ones((2, 3), dtype=np.float32)
         m.load_state_dict({"w": ones})
-        job()
-        test_case.assertTrue(np.array_equal(y, ones))
+        y = m()
+        test_case.assertTrue(np.array_equal(y.numpy(), ones))
+
+        twos_tensor = flow.Tensor(ones * 2)
+        m.load_state_dict({"w": twos_tensor})
+        y = m()
+        test_case.assertTrue(np.array_equal(y.numpy(), twos_tensor.numpy()))
 
     def test_state_dict(test_case):
         class CustomModule(flow.nn.Module):
@@ -97,12 +96,33 @@ class TestModule(flow.unittest.TestCase):
             {"param2.param1": tensor0, "param2.param2": tensor1, "param1": tensor1},
         )
 
+    def test_save_load(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.param = flow.nn.Parameter(flow.Tensor(2, 3))
+
+            def forward(self):
+                return self.param
+
+        m1 = CustomModule()
+
+        res1 = m1()
+
+        with tempfile.TemporaryDirectory() as save_dir:
+            flow.save(m1.state_dict(), save_dir)
+            m2 = CustomModule()
+            m2.load_state_dict(flow.load(save_dir))
+            res2 = m2()
+
+            test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
+
     def test_parameter(test_case):
         shape = (3, 4)
         t = flow.Tensor(*shape)
         p = flow.nn.Parameter(t)
         test_case.assertEqual(type(p), flow.nn.Parameter)
-        test_case.assertEqual(p.shape, shape)
+        test_case.assertEqual(tuple(p.shape), shape)
 
     def test_module_forward(test_case):
         class CustomModule(flow.nn.Module):
@@ -173,6 +193,8 @@ class TestModule(flow.unittest.TestCase):
         net.apply(get_module_num)
 
         test_case.assertEqual(module_num, 2)
+
+    # TODO: add more tests about module api
 
 
 if __name__ == "__main__":

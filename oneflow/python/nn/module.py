@@ -46,6 +46,23 @@ class _IncompatibleKeys(
 T = TypeVar("T", bound="Module")
 
 
+class InputConfigs:
+    def __init__(self):
+        self._configs = {}
+
+    def __delitem__(self, key):
+        del self._configs[key]
+
+    def __getitem__(self, key):
+        return self._configs[key]
+
+    def __setitem__(self, key, value):
+        self._configs[key] = value
+
+    def _to_dict(self):
+        return self._configs
+
+
 @oneflow_export("nn.Module")
 class Module(object):
     def __init__(self):
@@ -480,6 +497,8 @@ class Module(object):
         if destination is None:
             destination = OrderedDict()
             destination._metadata = OrderedDict()
+        # TODO:
+        # destination._metadata[prefix[:-1]] = local_metadata = dict(version=self._version)
 
         self._save_to_state_dict(destination, prefix, keep_vars)
         for name, module in self._modules.items():

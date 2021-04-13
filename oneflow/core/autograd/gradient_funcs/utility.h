@@ -13,28 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_ENVIRONMENT_OBJECTS_SCOPE_H_
-#define ONEFLOW_CORE_JOB_ENVIRONMENT_OBJECTS_SCOPE_H_
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/common/maybe.h"
+#ifndef ONEFLOW_CORE_AUTOGRAD_GRADIENT_FUNCS_UTILITY_H_
+#define ONEFLOW_CORE_AUTOGRAD_GRADIENT_FUNCS_UTILITY_H_
+
+#include <string>
+
+#include "oneflow/core/framework/attr_value_accessor.h"
+#include "oneflow/core/framework/user_op_conf.pb.h"
 
 namespace oneflow {
 
-class SessionGlobalObjectsScope final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(SessionGlobalObjectsScope);
-  SessionGlobalObjectsScope();
-  ~SessionGlobalObjectsScope();
-
-  Maybe<void> Init(const ConfigProto& config_proto);
-  Maybe<void> EagerInit(const ConfigProto& config_proto);
-
- private:
-  int64_t session_id_;
-};
+template<typename T>
+inline T GetAttr(const UserOpConf& conf, const std::string& attr_name) {
+  const auto& it = conf.attr().find(attr_name);
+  CHECK(it != conf.attr().end());
+  return user_op::AttrValueAccessor<T>::Attr(it->second);
+}
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_ENVIRONMENT_OBJECTS_SCOPE_H_
+#endif  // ONEFLOW_CORE_AUTOGRAD_GRADIENT_FUNCS_UTILITY_H_

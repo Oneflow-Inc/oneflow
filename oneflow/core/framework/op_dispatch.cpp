@@ -13,28 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_ENVIRONMENT_OBJECTS_SCOPE_H_
-#define ONEFLOW_CORE_JOB_ENVIRONMENT_OBJECTS_SCOPE_H_
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/op_dispatch.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
 namespace oneflow {
+namespace one {
 
-class SessionGlobalObjectsScope final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(SessionGlobalObjectsScope);
-  SessionGlobalObjectsScope();
-  ~SessionGlobalObjectsScope();
+template<>
+Maybe<TensorTuple> Dispatch<TensorTuple>(const OpExpr& op_expr, const TensorTuple& inputs) {
+  auto outputs = std::make_shared<TensorTuple>(op_expr.output_num());
+  JUST(OpInterpUtil::GetInterpreter())->Apply(op_expr, inputs, outputs.get());
+  return outputs;
+}
 
-  Maybe<void> Init(const ConfigProto& config_proto);
-  Maybe<void> EagerInit(const ConfigProto& config_proto);
+template<>
+Maybe<Tensor> Dispatch<Tensor>(const OpExpr& op_expr, const TensorTuple& inputs) {
+  return JUST(Dispatch<TensorTuple>(op_expr, inputs))->at(0);
+}
 
- private:
-  int64_t session_id_;
-};
-
+}  // namespace one
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_JOB_ENVIRONMENT_OBJECTS_SCOPE_H_

@@ -46,7 +46,7 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
         std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util.get(), _1, _2, _3)));
     for (int i = 0; i < outputs->size(); ++i) {
       const std::string& obn = op_expr.indexed_obns().at(i);
-      (*outputs)[i] = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(bn2blob_object->at(obn)));
+      outputs->at(i) = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(bn2blob_object->at(obn)));
     }
   };
   return LogicalRun(build_instruction);
@@ -83,7 +83,7 @@ static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_ex
     const auto& out_blob_object = CHECK_JUST(builder->MakeReferenceBlobObject(
         in_blob_object,
         std::make_shared<compatible_py::OpArgParallelAttribute>(*op_arg_parallel_attr)));
-    (*outputs)[0] = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(out_blob_object));
+    outputs->at(0) = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(out_blob_object));
   };
   return LogicalRun(build_instruction);
 }
@@ -129,7 +129,7 @@ static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpE
     const auto& physical_out_blob_objects =
         CHECK_JUST(builder->UnpackLogicalBlobToPhysicalBlobs(logical_in_blob_object));
     for (int i = 0; i < physical_out_blob_objects->size(); ++i) {
-      (*outputs)[i] =
+      outputs->at(i) =
           CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(physical_out_blob_objects->at(i)));
     }
   };
@@ -172,7 +172,7 @@ static Maybe<void> BuildAndRunDistributeConcatAndAddInstruction(const BuiltinOpE
     }
     const auto& physical_out_blob_object = CHECK_JUST(builder->PackPhysicalBlobsToLogicalBlob(
         in_blob_objects, op_arg_parallel_attr, op_arg_blob_attr));
-    (*outputs)[0] = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(physical_out_blob_object));
+    outputs->at(0) = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(physical_out_blob_object));
   };
   return LogicalRun(build_instruction);
 }

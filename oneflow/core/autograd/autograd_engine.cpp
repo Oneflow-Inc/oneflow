@@ -215,5 +215,14 @@ AutogradEngine* GetThreadLocalAutogradEngine() {
   return &autograd_engine;
 }
 
+Maybe<void> AddAccumulateFunctionNode(TensorTuple* outputs) {
+  auto backward_fn =
+      std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
+          [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+              bool create_graph) -> Maybe<void> { return Maybe<void>::Ok(); });
+  GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(backward_fn, TensorTuple(), outputs);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace one
 }  // namespace oneflow

@@ -93,6 +93,7 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
     cfg_upstream_signature->ToProto(&upstream_signature);
   }
   const auto& op = JUST(ConstructAndInferOp(*op_conf, upstream_signature, *scope));
+  JUST(op->InferParallelSignatureIf());
   const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
   return std::make_shared<cfg::OpAttribute>(*op_attribute);
 }
