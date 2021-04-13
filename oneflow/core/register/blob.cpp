@@ -61,8 +61,8 @@ void Blob::CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 
 void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   size_t header_size = blob_desc().ByteSizeOfBlobHeader();
-  if (this == rhs || header_size == 0) { return; }
   CHECK_EQ(header_size, rhs->blob_desc().ByteSizeOfBlobHeader());
+  if (this == rhs || header_size == 0) { return; }
   Memcpy<DeviceType::kCPU>(device_ctx, header_ptr_, rhs->header_ptr(), header_size);
 }
 
