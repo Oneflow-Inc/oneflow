@@ -277,13 +277,7 @@ std::shared_ptr<compatible_py::BlobObject> Build121To(
 void WriteBlobByCallback(const std::shared_ptr<InstructionsBuilder>& x,
                          const std::shared_ptr<one::MirroredTensor>& tensor,
                          const std::function<void(uint64_t)>& callback, bool write_shape) {
-  const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object =
-      tensor->eager_blob_object().GetPtrOrThrow();
-  const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object =
-      tensor->infer_local_dep_object().GetPtrOrThrow();
-  const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object = tensor->compute_local_dep_object().GetPtrOrThrow();
-  return x->WriteBlobByCallback(eager_blob_object, infer_local_dep_object, compute_local_dep_object, callback, write_shape)
-      .GetOrThrow();
+  return x->WriteBlobByCallback(tensor, callback, write_shape).GetPtrOrThrow();
 }
 
 }  // namespace

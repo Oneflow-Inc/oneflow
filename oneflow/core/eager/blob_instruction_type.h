@@ -41,5 +41,17 @@ class LazyReferenceInstructionType : public vm::InstructionType {
   Maybe<void> Run(vm::Instruction* instruction) const;
 };
 
+class WriteBlobByCallbackInstructionType : public vm::InstructionType {
+ public:
+  WriteBlobByCallbackInstructionType() = default;
+  ~WriteBlobByCallbackInstructionType() override = default;
+
+  void Compute(vm::Instruction* instruction) const override;
+
+  void Infer(vm::Instruction* instruction) const override {
+    // do nothing
+  }
+};
+
 }  // namespace eager
 }  // namespace oneflow
