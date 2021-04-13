@@ -86,7 +86,7 @@ ncclComm_t EagerNcclCommMgr::GetCommForDevice(
         });
   }
   ncclComm_t comm;
-  LOG(INFO) << "cclog: EagerNcclCommMgr::ncclCommInitRank device_vec.size() = " << device_vec.size()
+  LOG(INFO) << " EagerNcclCommMgr::ncclCommInitRank device_vec.size() = " << device_vec.size()
             << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id) << ", rank = " << rank;
   OF_NCCL_CHECK(ncclCommInitRank(&comm, device_vec.size(), nccl_unique_id, rank));
   {

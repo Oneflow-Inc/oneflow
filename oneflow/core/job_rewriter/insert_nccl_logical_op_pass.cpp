@@ -410,8 +410,8 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          LOG(INFO) << "cc_debug_log: insert nccl op: " << nccl_op.name() << " from: ["
-                    << src_op_name << "](order=" << src_order << ", sbp_parallel_dis="
+          LOG(INFO) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name
+                    << "](order=" << src_order << ", sbp_parallel_dis="
                     << ParallelDistributionToString(src_node->ParallelDistribution4Lbi(lbi))
                     << ")->[" << dst_op_name << "](order=" << node2order.at(dst_node)
                     << ", sbp_parallel_dis="
@@ -471,10 +471,9 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          LOG(INFO) << "cc_debug_log: insert nccl op: " << nccl_op.name() << " from: ["
-                    << src_op_name << "](" << node2order.at(src_node) << ")->[" << dst_op_name
-                    << "](" << dst_order << ") and after: [" << pre_op_name << "](" << dst_order - 1
-                    << ")\n";
+          LOG(INFO) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name << "]("
+                    << node2order.at(src_node) << ")->[" << dst_op_name << "](" << dst_order
+                    << ") and after: [" << pre_op_name << "](" << dst_order - 1 << ")\n";
         }
         nccl_op_confs->push_back(nccl_op);
         // NOTE(chengcheng, guoran): set nccl op as src_node parallel_conf (hierarchy) may check
@@ -556,8 +555,8 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
         nccl_op_info.nccl_parallel_conf = src_node->parallel_desc().parallel_conf();
         nccl_op_info.order = op_node2global_order.at(src_node);
         nccl_op_info.debug_str =
-            ("cc_debug_log: After ACC insert nccl op: " + nccl_op.name() + " from: [" + src_op_name
-             + "](" + ParallelDistributionToString(src_node->ParallelDistribution4Lbi(lbi)) + ")->["
+            (" After ACC insert nccl op: " + nccl_op.name() + " from: [" + src_op_name + "]("
+             + ParallelDistributionToString(src_node->ParallelDistribution4Lbi(lbi)) + ")->["
              + dst_op_name + "]("
              + ParallelDistributionToString(dst_node->ParallelDistribution4Lbi(lbi))
              + "), src_order = " + std::to_string(nccl_op_info.order) + "\n");
@@ -644,7 +643,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   }
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    LOG(INFO) << "cc_debug_log: Try insert nccl logical ops into job: "
+    LOG(INFO) << " Try insert nccl logical ops into job: "
               << job_builder->job().job_conf().job_name() << ". Begin...\n";
   }
 
@@ -662,16 +661,15 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
 
   if (!ordered_acc_op_nodes.empty()
       && Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    LOG(WARNING)
-        << "cc_debug_log: Find acc op in Job: " << job_builder->job().job_conf().job_name()
-        << ", we will try insert special identity and ctrl for "
-        << " UNSAFE handle ALL nccl ops between different time shape (n,) -> acc -> (1, )\n\n";
     const OpNode* bw_sink_op = subgraph_order.back();
     const OpNode* first_acc_op = ordered_acc_op_nodes.front();
     const Shape time_shape_before_acc = GetOpNodeTimeShape(bw_sink_op);
     const Shape time_shape_after_acc = GetOpNodeTimeShape(first_acc_op);
-    LOG(INFO) << "cc_debug_log: acc time shape from: " << time_shape_before_acc.DebugStr()
-              << " to: " << time_shape_after_acc.DebugStr();
+    LOG(WARNING) << " Find acc op in Job: " << job_builder->job().job_conf().job_name()
+                 << ", we will try insert special identity and ctrl for "
+                 << " UNSAFE handle ALL nccl ops between different time shape: "
+                 << time_shape_before_acc.DebugStr() << "->acc->" << time_shape_after_acc.DebugStr()
+                 << "\n\n";
     CHECK_GT(time_shape_before_acc.elem_cnt(), time_shape_after_acc.elem_cnt());
     CHECK_EQ(time_shape_before_acc.elem_cnt() % time_shape_after_acc.elem_cnt(), 0);
 
@@ -682,13 +680,12 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
 
     // NOTE(chengcheng): insert acc_tick after bw_sink_op, and this tick op conf will control
     //  after_acc_nccl_ops start.
-
     const auto& obns = bw_sink_op->op().output_bns();
     CHECK(!obns.empty());
     const std::string bw_sink_op_out_lbn =
         GenLogicalBlobName(bw_sink_op->op().BnInOp2Lbi(obns.Get(0)));
+    LOG(INFO) << " bw_sink_op : " << bw_sink_op->op().op_conf().DebugString();
 
-    LOG(INFO) << "cc_debug_log: bw_sink_op : " << bw_sink_op->op().op_conf().DebugString();
     user_op::UserOpConfWrapper cast_to_tick_op =
         user_op::UserOpConfWrapperBuilder("System-CastToTick-" + NewUniqueId())
             .OpTypeName("cast_to_tick")
@@ -696,7 +693,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
             .Output("out")
             .Build();
     job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), cast_to_tick_op.op_conf());
-    LOG(INFO) << "cc_debug_log: cast_to_tick_op : " << cast_to_tick_op.op_conf().DebugString();
+    LOG(INFO) << " Insert cast_to_tick_op : " << cast_to_tick_op.op_conf().DebugString();
 
     OperatorConf bw_sink_acc_tick_conf;
     bw_sink_acc_tick_conf.set_name(std::string("System-BwSinkTick-AccTick_") + NewUniqueId());
@@ -705,7 +702,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     acc_conf->set_acc("acc");
     acc_conf->set_max_acc_num(time_shape_before_acc.elem_cnt() / time_shape_after_acc.elem_cnt());
     job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_acc_tick_conf);
-    LOG(INFO) << "cc_debug_log: bw_sink_acc_tick_op : " << bw_sink_acc_tick_conf.DebugString();
+    LOG(INFO) << " Insert bw_sink_acc_tick_op : " << bw_sink_acc_tick_conf.DebugString();
 
     OperatorConf bw_sink_final_tick_conf;
     bw_sink_final_tick_conf.set_name(std::string("System-BwSinkFinalTick-Tick_") + NewUniqueId());
@@ -713,7 +710,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     tick_conf->add_tick(GenLogicalBlobName(bw_sink_acc_tick_conf.name(), "acc"));
     tick_conf->set_out("out");
     job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_final_tick_conf);
-    LOG(INFO) << "cc_debug_log: bw_sink_final_tick_op : " << bw_sink_final_tick_conf.DebugString();
+    LOG(INFO) << " Insert bw_sink_final_tick_op : " << bw_sink_final_tick_conf.DebugString();
 
     // insert nccl ops after acc
     std::vector<OperatorConf> after_acc_nccl_op_confs;
@@ -724,20 +721,15 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
                                  bw_sink_final_tick_conf.name(), &mut_consumer_name2op,
                                  &after_acc_nccl_op_confs, &after_acc_nccl_parallel_confs);
 
-    for (const auto& pair : mut_consumer_name2op) {
-      LOG(INFO) << "cc_debug_log: after acc mut consumer op: " << pair.second.DebugString();
-      JUST(job_builder->MutOpOnlyOnce(pair.second));
-    }
+    for (const auto& pair : mut_consumer_name2op) { JUST(job_builder->MutOpOnlyOnce(pair.second)); }
     CHECK_EQ(after_acc_nccl_op_confs.size(), after_acc_nccl_parallel_confs.size());
     for (int64_t i = 0; i < after_acc_nccl_op_confs.size(); ++i) {
-      LOG(INFO) << "cc_debug_log: after acc insert nccl op: "
-                << after_acc_nccl_op_confs.at(i).DebugString();
       job_builder->AddOp(after_acc_nccl_parallel_confs.at(i), after_acc_nccl_op_confs.at(i));
     }
   }
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    LOG(INFO) << "cc_debug_log: Try insert nccl logical ops into job: "
+    LOG(INFO) << " Try insert nccl logical ops into job: "
               << job_builder->job().job_conf().job_name() << ". ...End\n\n";
   }
 
