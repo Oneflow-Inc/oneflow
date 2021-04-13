@@ -33,6 +33,9 @@ class TestModule(flow.unittest.TestCase):
         of_out = flow.mean(input, axis=0)
         np_out = np.mean(input.numpy(), axis=0)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), input.mean(axis=0).numpy(), 1e-4, 1e-4)
+        )
 
 
 if __name__ == "__main__":

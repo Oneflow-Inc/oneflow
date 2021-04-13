@@ -53,6 +53,8 @@ def _check_axis(axis, shape):
     return axis
 
 
+@oneflow_export("Sum")
+@register_tensor_op_by_module("sum")
 @register_op_by_module("sum")
 class Sum(Module):
     r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
@@ -222,6 +224,7 @@ class Mul(Module):
             return BroadcastMul()(x, y)
 
 
+@register_tensor_op_by_module("mean")
 @register_op_by_module("mean")
 class Mean(Module):
     r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
