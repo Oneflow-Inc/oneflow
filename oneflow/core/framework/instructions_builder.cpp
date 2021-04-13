@@ -694,8 +694,8 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
         std::make_shared<eager::TensorBuffer>());
     eager_blob_objects->push_back(eager_blob_object);
   }
-  auto phy_instr_operand =
-      std::make_shared<eager::LocalCallOpKernelPhyInstrOperand>(opkernel, inputs, eager_blob_objects);
+  auto phy_instr_operand = std::make_shared<eager::LocalCallOpKernelPhyInstrOperand>(
+      opkernel, inputs, eager_blob_objects);
   instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->PushBack(instruction.Mutable());

@@ -42,7 +42,8 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
   device = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
   int64_t device_id = JUST(parallel_desc->DeviceId4ParallelId(0));
   // TODO: async
-  TensorsPtr eager_blob_objects = std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>();
+  TensorsPtr eager_blob_objects =
+      std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>();
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
     auto& user_op_expr = dynamic_cast<const UserOpExpr&>(op_expr);
     // TODO:
@@ -51,10 +52,10 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
     builder->LocalCallOpKernel(user_op_expr.mut_kernel(), inputs, *outputs, eager_blob_objects,
                                parallel_desc);
   };
-  JUST(LogicalRun(build_instruction));
+  JUST(PhysicalRun(build_instruction));
   for (int i = 0; i < outputs->size(); ++i) {
-    (*outputs)[i] = CHECK_JUST(
-        OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject((*eager_blob_objects)[i], device));
+    (*outputs)[i] = CHECK_JUST(OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
+        (*eager_blob_objects)[i], device));
   }
   return Maybe<void>::Ok();
 }
