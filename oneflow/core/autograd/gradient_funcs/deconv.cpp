@@ -26,8 +26,8 @@ namespace one {
 class DeConvolutionNd : public OpExprGradFunction {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs) const override;
+  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrValueMap& attrs) const override;
   Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
@@ -67,7 +67,7 @@ Maybe<void> DeConvolutionNd::Init(const OpExpr& op) {
 }
 
 Maybe<void> DeConvolutionNd::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                                     const TensorTuple& outputs) const {
+                                     const TensorTuple& outputs, const AttrValueMap& attrs) const {
   activation_requires_grad_ = inputs.at(0)->requires_grad();
   weight_requires_grad_ = inputs.at(1)->requires_grad();
   if (activation_requires_grad_) {

@@ -54,8 +54,8 @@ class NormalizationGrad : public OpExprGradFunction {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs) const override {
+  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrValueMap& attrs) const override {
     ctx->SaveTensorForBackward(inputs.at(0));  // x
     ctx->SaveTensorForBackward(inputs.at(3));  // gamma
     if (is_training_) {

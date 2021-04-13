@@ -62,8 +62,8 @@ class BroadcastBinary : public OpExprGradFunction {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs) const override {
+  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrValueMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->SaveTensorForBackward(inputs.at(0));
@@ -143,9 +143,9 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_mul", BroadcastMul);
 
 class BroadcastDiv : public BroadcastBinary {
  public:
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs) const override {
-    JUST(BroadcastBinary::Capture(ctx, inputs, outputs));
+  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrValueMap& attrs) const override {
+    JUST(BroadcastBinary::Capture(ctx, inputs, outputs, attrs));
     ctx->SaveTensorForBackward(outputs.at(0));
     return Maybe<void>::Ok();
   }

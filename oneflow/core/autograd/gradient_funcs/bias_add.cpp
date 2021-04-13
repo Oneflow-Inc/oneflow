@@ -34,8 +34,8 @@ class BiasAdd : public OpExprGradFunction {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs) const override {
+  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrValueMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     input_requires_grad_ = inputs.at(0)->requires_grad();
     bias_requires_grad_ = inputs.at(1)->requires_grad();

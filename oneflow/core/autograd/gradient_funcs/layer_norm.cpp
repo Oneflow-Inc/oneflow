@@ -30,8 +30,8 @@ class LayerNorm : public OpExprGradFunction {
  public:
   Maybe<void> Init(const OpExpr& op) override;
 
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs) const override;
+  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrValueMap& attrs) const override;
 
   Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
@@ -62,7 +62,7 @@ Maybe<void> LayerNorm::Init(const OpExpr& op) {
 }
 
 Maybe<void> LayerNorm::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                               const TensorTuple& outputs) const {
+                               const TensorTuple& outputs, const AttrValueMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), center_ + scale_ + 1);
   CHECK_EQ_OR_RETURN(inputs.size(), scale_ + 3);
   has_beta_diff_ = center_ && inputs.at(1)->requires_grad();
