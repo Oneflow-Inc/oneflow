@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor_name_scope.h"
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/register/logical_blob_id.cfg.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
 
 namespace oneflow {
 namespace one {
@@ -39,6 +42,12 @@ void TensorNameScope::Record(const std::shared_ptr<Tensor>& tensor, const std::s
   uint64_t key = reinterpret_cast<uint64_t>(tensor.get());
   // We assume that the name of the tensor will be update more than once.
   tensor_names_[key] = name;
+}
+
+Maybe<cfg::LogicalBlobId> GetTensorLbi(const std::shared_ptr<Tensor>& tensor) {
+  const std::string& tensor_lbn = TensorNameScope::Global()->Lookup(tensor);
+  const LogicalBlobId& lbi = GenLogicalBlobId(tensor_lbn);
+  return std::make_shared<cfg::LogicalBlobId>(lbi);
 }
 
 }  // namespace one

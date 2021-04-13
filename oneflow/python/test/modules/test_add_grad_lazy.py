@@ -53,9 +53,9 @@ class Ones(flow.nn.Module):
         self._op = self._op.Attr("shape", shape).Build()
         return self._op()[0]
 
+
 class TestModule(flow.unittest.TestCase):
     def test_add_case1(test_case):
-        print("test add case 1")
         def fn():
             x_ones = Ones(flow.float32)
             x = x_ones((2, 3))
@@ -68,14 +68,19 @@ class TestModule(flow.unittest.TestCase):
             add = flow.Add()
             of_out = add(x, y)
 
+            of_out2 = add(x, 4)
+            return (of_out, of_out2)
+
         graph_fn = flow.compiler.trace(fn, type="predict")
 
-        graph_fn()
+        of_out = graph_fn().get()
+        print(of_out[0].numpy())
+        print(of_out[1].numpy())
 
-        #grad = flow.Tensor(np.ones((2, 3), dtype=np.float32))
-        #of_out.backward(grad)
-        #test_case.assertTrue(np.allclose(x.grad.numpy(), grad.numpy(), 1e-4, 1e-4))
-        #test_case.assertTrue(np.allclose(y.grad.numpy(), grad.numpy(), 1e-4, 1e-4))
+        # grad = flow.Tensor(np.ones((2, 3), dtype=np.float32))
+        # of_out.backward(grad)
+        # test_case.assertTrue(np.allclose(x.grad.numpy(), grad.numpy(), 1e-4, 1e-4))
+        # test_case.assertTrue(np.allclose(y.grad.numpy(), grad.numpy(), 1e-4, 1e-4))
 
 
 if __name__ == "__main__":

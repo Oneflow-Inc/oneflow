@@ -19,6 +19,7 @@ limitations under the License.
 #include <string>
 
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/register/logical_blob_id.cfg.h"
 
 namespace oneflow {
 namespace one {
@@ -42,6 +43,8 @@ class TensorNameScope {
   // uint64_t(Tensor*) -> the name of the tensor.
   std::unordered_map<uint64_t, std::string> tensor_names_;
 };
+
+Maybe<cfg::LogicalBlobId> GetTensorLbi(const std::shared_ptr<Tensor>& tensor);
 
 }  // namespace one
 }  // namespace oneflow
