@@ -32,7 +32,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
-#include "oneflow/core/vm/ofblob_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 
 namespace oneflow {
 

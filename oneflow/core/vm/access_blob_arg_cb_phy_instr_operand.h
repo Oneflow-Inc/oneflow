@@ -28,7 +28,7 @@ class EagerBlobObject;
 
 namespace vm {
 
-// ofblob arg callback physical instruction operand
+// access blob arg callback physical instruction operand
 class WriteBlobArgCbPhyInstrOperand : public PhyInstrOperand {
  public:
   WriteBlobArgCbPhyInstrOperand(const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
