@@ -33,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/framework/vm_local_dep_object.h"
 
 namespace oneflow {
 
@@ -872,11 +873,13 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 
 Maybe<void> InstructionsBuilder::WriteBlobByCallback(
     const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
-    const std::function<void(uint64_t)>& callback) {
+    const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object,
+    const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object,
+    const std::function<void(uint64_t)>& callback, bool write_shape) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New("WriteBlobByCallback");
   *instruction->mutable_phy_instr_operand() =
-      std::make_shared<vm::WriteBlobArgCbPhyInstrOperand>(eager_blob_object, callback);
+      std::make_shared<vm::WriteBlobArgCbPhyInstrOperand>(eager_blob_object, infer_local_dep_object, compute_local_dep_object, callback, write_shape);
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }

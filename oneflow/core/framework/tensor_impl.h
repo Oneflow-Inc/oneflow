@@ -57,6 +57,8 @@ class TensorImpl {
   virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
   virtual bool is_lazy() const = 0;
   virtual Maybe<eager::EagerBlobObject> eager_blob_object() const = 0;
+  virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
+  virtual Maybe<VmLocalDepObject> infer_local_dep_object() const = 0;
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }
@@ -170,6 +172,8 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   const std::shared_ptr<const Device>& device() const { return device_; }
   bool is_lazy() const override { return true; }
   Maybe<eager::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> infer_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
@@ -210,6 +214,10 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
   bool is_lazy() const override { return false; }
   Maybe<eager::EagerBlobObject> eager_blob_object() const override { return eager_blob_object_; }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override { return tensor_storage_->compute_local_dep_object(); }
+  Maybe<VmLocalDepObject> infer_local_dep_object() const override {
+    return infer_local_dep_object_;
+  }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
@@ -234,7 +242,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   std::shared_ptr<compatible_py::BlobObject> blob_object_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;
-  std::unique_ptr<VmLocalDepObject> infer_local_dep_object_;
+  std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
 };
 
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
@@ -259,6 +267,8 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
   }
   bool is_lazy() const override { return true; }
   Maybe<eager::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> infer_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
@@ -306,6 +316,8 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   }
   bool is_lazy() const override { return false; }
   Maybe<eager::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> infer_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }

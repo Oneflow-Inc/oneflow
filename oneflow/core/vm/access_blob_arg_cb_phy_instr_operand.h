@@ -21,9 +21,16 @@ limitations under the License.
 
 namespace oneflow {
 
+class VmLocalDepObject;
+
 namespace eager {
 
 class EagerBlobObject;
+}
+
+namespace one {
+
+class TensorStorage;
 }
 
 namespace vm {
@@ -32,8 +39,15 @@ namespace vm {
 class WriteBlobArgCbPhyInstrOperand : public PhyInstrOperand {
  public:
   WriteBlobArgCbPhyInstrOperand(const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
-                                const std::function<void(uint64_t)>& callback)
-      : eager_blob_object_(eager_blob_object), callback_(callback) {}
+                                const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object,
+                                const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object, 
+                                const std::function<void(uint64_t)>& callback,
+                                bool write_shape)
+      : eager_blob_object_(eager_blob_object),
+        callback_(callback),
+        infer_local_dep_object_(infer_local_dep_object), 
+        compute_local_dep_object_(compute_local_dep_object),
+        write_shape_(write_shape) {}
   ~WriteBlobArgCbPhyInstrOperand() = default;
 
   const std::function<void(uint64_t)>& callback() const { return callback_; }
@@ -41,23 +55,19 @@ class WriteBlobArgCbPhyInstrOperand : public PhyInstrOperand {
     return eager_blob_object_;
   }
 
-  void ForEachInferMutMirroredObject(const std::function<void(MirroredObject*)>&) const override {
-    // do nothing
-  }
-  void ForEachInferConstMirroredObject(const std::function<void(MirroredObject*)>&) const override {
-    // do nothing
-  }
-  void ForEachComputeMutMirroredObject(const std::function<void(MirroredObject*)>&) const override {
-    // do nothing
-  }
+  void ForEachInferMutMirroredObject(const std::function<void(MirroredObject*)>&) const override;
+  void ForEachInferConstMirroredObject(const std::function<void(MirroredObject*)>&) const override;
+  void ForEachComputeMutMirroredObject(const std::function<void(MirroredObject*)>&) const override;
   void ForEachComputeConstMirroredObject(
-      const std::function<void(MirroredObject*)>&) const override {
-    // do nothing
-  }
+      const std::function<void(MirroredObject*)>&) const override;
 
  private:
   std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;
   std::function<void(uint64_t)> callback_;
+  std::shared_ptr<one::TensorStorage> tensor_storage_;
+  std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
+  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
+  const bool write_shape_;
 };
 
 }  // namespace vm
