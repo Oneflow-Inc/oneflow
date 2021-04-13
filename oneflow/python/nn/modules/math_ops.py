@@ -219,6 +219,7 @@ class Mul(Module):
         else:
             return BroadcastMul()(x, y)
 
+
 @oneflow_export("Mean")
 @register_op_by_module("mean")
 class Mean(Module):

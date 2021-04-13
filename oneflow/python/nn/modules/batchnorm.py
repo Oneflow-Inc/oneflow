@@ -41,6 +41,7 @@ from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 
 import oneflow_api
 
+
 class _NormBase(Module):
     """Common base of _InstanceNorm and _BatchNorm"""
 
@@ -59,24 +60,30 @@ class _NormBase(Module):
         self.affine = affine
         self.track_running_stats = track_running_stats
         if self.affine:
-            self.weight = flow.nn.Parameter(flow.Tensor(num_features, device=oneflow_api.device('cuda')))
-            self.bias = flow.nn.Parameter(flow.Tensor(num_features, device=oneflow_api.device('cuda')))
+            self.weight = flow.nn.Parameter(
+                flow.Tensor(num_features, device=oneflow_api.device("cuda"))
+            )
+            self.bias = flow.nn.Parameter(
+                flow.Tensor(num_features, device=oneflow_api.device("cuda"))
+            )
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
         if self.track_running_stats:
             self.register_buffer(
-                "running_mean", flow.Tensor(num_features, device=oneflow_api.device('cuda')),
+                "running_mean",
+                flow.Tensor(num_features, device=oneflow_api.device("cuda")),
             )
             self.register_buffer(
-                "running_var", flow.Tensor(num_features, device=oneflow_api.device('cuda')),
+                "running_var",
+                flow.Tensor(num_features, device=oneflow_api.device("cuda")),
             )
         else:
             self.register_parameter("running_mean", None)
             self.register_parameter("running_var", None)
 
         self.reset_parameters()
-    
+
     def reset_running_stats(self) -> None:
         if self.track_running_stats:
             # running_mean/running_var/num_batches... are registered at runtime depending
