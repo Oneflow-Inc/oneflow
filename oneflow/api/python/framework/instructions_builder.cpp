@@ -276,7 +276,7 @@ std::shared_ptr<compatible_py::BlobObject> Build121To(
 void WriteBlobByCallback(const std::shared_ptr<InstructionsBuilder>& x,
                          const std::shared_ptr<one::MirroredTensor>& tensor,
                          const std::function<void(uint64_t)>& callback) {
-  std::shared_ptr<eager::EagerBlobObject> eager_blob_object =
+  const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object =
       tensor->eager_blob_object().GetPtrOrThrow();
   return x->WriteBlobByCallback(eager_blob_object, callback).GetOrThrow();
 }
