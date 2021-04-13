@@ -81,12 +81,8 @@ class Sum(Module):
     ) -> None:
         super().__init__()
         self.axis = axis
-        self._op = (
-            flow.builtin_op("reduce_sum", name)
-            .Input("input_tensor")
-            .Output("output_tensor")
-            .Attr("keepdims", keepdims)
-        )
+        self.keepdims = keepdims
+        self.name = name
 
     def forward(self, input):
         axis = _check_axis(self.axis, input.shape)
@@ -94,7 +90,14 @@ class Sum(Module):
         if len(axis) == 0:
             return input
 
-        self._op = self._op.Attr("axis", axis).Build()
+        self._op = self._op = (
+            flow.builtin_op("reduce_sum", self.name)
+            .Input("input_tensor")
+            .Output("output_tensor")
+            .Attr("keepdims", self.keepdims)
+            .Attr("axis", axis)
+            .Build()
+        )
 
         return self._op(input)[0]
 
@@ -218,6 +221,7 @@ class Mul(Module):
             return ScalarMulByTensor()(x, y)
         else:
             return BroadcastMul()(x, y)
+
 
 @oneflow_export("Mean")
 @register_op_by_module("mean")
