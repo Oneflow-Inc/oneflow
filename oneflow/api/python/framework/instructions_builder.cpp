@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/vm_local_dep_object.h"
 
 namespace py = pybind11;
 
@@ -277,7 +276,7 @@ std::shared_ptr<compatible_py::BlobObject> Build121To(
 void WriteBlobByCallback(const std::shared_ptr<InstructionsBuilder>& x,
                          const std::shared_ptr<one::MirroredTensor>& tensor,
                          const std::function<void(uint64_t)>& callback, bool write_shape) {
-  return x->WriteBlobByCallback(tensor, callback, write_shape).GetPtrOrThrow();
+  return x->WriteBlobByCallback(tensor, callback, write_shape).GetOrThrow();
 }
 
 }  // namespace
