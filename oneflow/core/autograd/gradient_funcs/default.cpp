@@ -143,6 +143,7 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
         lbis.insert(bw_adapter_op->BnInOp2Lbi(obn));
       }
     }
+    for (const auto& pair : obn2grad_lbi) { lbis.insert(pair.second); }
     lbi_symbol2lbi_ = { lbis.begin(), lbis.end() };
     for (int i = 0; i < lbi_symbol2lbi_.size(); ++i) { lbi2lbi_symbol[lbi] = i; }
   }
@@ -227,6 +228,7 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
       if (fw_input_lbis.count(lbi) > 0) { captured_fw_input_lbis.insert(lbi); }
       if (fw_output_lbis.count(lbi) > 0) { captured_fw_output_lbis.insert(lbi); }
     };
+    for (const auto& pair : ibn2grad_lbi) { UpdateCapturedLbis(pair.second); }
     for (const auto& entry : backward_entries_) {
       const auto& bw_op = *entry.bw_adapter_op;
       for (const auto& ibn : bw_op.input_bns()) { UpdateCapturedLbis(bw_op.BnInOp2Lbi(ibn)); }
