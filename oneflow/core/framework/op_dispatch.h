@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_DISPATCH_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_DISPATCH_H_
 
+#include "oneflow/core/framework/attr_value_map.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -24,7 +25,12 @@ namespace oneflow {
 namespace one {
 
 template<typename T>
-Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs);
+Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, const AttrValueMap& attrs);
+
+template<typename T>
+Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs) {
+  return Dispatch<T>(op_expr, inputs, AttrValueMap{});
+}
 
 }  // namespace one
 }  // namespace oneflow
