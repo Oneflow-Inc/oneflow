@@ -28,14 +28,14 @@ class GpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
 };
 COMMAND(vm::RegisterInstructionType<GpuLazyReferenceInstructionType>("gpu.LazyReference"));
 
-class GpuWriteBlobByCallbackInstructionType final : public WriteBlobByCallbackInstructionType {
+class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallbackInstructionType {
  public:
-  GpuWriteBlobByCallbackInstructionType() = default;
-  ~GpuWriteBlobByCallbackInstructionType() override = default;
+  GpuAccessBlobByCallbackInstructionType() = default;
+  ~GpuAccessBlobByCallbackInstructionType() override = default;
   using stream_type = vm::CudaStreamType;
 };
-COMMAND(
-    vm::RegisterInstructionType<GpuWriteBlobByCallbackInstructionType>("gpu.WriteBlobByCallback"));
+COMMAND(vm::RegisterInstructionType<GpuAccessBlobByCallbackInstructionType>(
+    "gpu.AccessBlobByCallback"));
 
 }  // namespace eager
 }  // namespace oneflow

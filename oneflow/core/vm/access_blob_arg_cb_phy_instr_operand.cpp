@@ -22,7 +22,7 @@ namespace oneflow {
 
 namespace vm {
 
-void WriteBlobArgCbPhyInstrOperand::ForEachConstMirroredObject(
+void AccessBlobArgCbPhyInstrOperand::ForEachConstMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
   if (modifier_ == "const") {
     auto* infer_local_dep_object = infer_local_dep_object_->mut_local_dep_object();
@@ -32,7 +32,7 @@ void WriteBlobArgCbPhyInstrOperand::ForEachConstMirroredObject(
   }
 }
 
-void WriteBlobArgCbPhyInstrOperand::ForEachMutMirroredObject(
+void AccessBlobArgCbPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
   if (modifier_ == "mut") {
     auto* infer_local_dep_object = infer_local_dep_object_->mut_local_dep_object();
@@ -42,7 +42,7 @@ void WriteBlobArgCbPhyInstrOperand::ForEachMutMirroredObject(
   }
 }
 
-void WriteBlobArgCbPhyInstrOperand::ForEachMut2MirroredObject(
+void AccessBlobArgCbPhyInstrOperand::ForEachMut2MirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
   if (modifier_ == "mut2") {
     auto* infer_local_dep_object = infer_local_dep_object_->mut_local_dep_object();

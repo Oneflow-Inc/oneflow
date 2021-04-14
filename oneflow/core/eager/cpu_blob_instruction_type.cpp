@@ -28,15 +28,15 @@ class CpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
 
 COMMAND(vm::RegisterInstructionType<CpuLazyReferenceInstructionType>("cpu.LazyReference"));
 
-class CpuWriteBlobByCallbackInstructionType final : public WriteBlobByCallbackInstructionType {
+class CpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallbackInstructionType {
  public:
-  CpuWriteBlobByCallbackInstructionType() = default;
-  ~CpuWriteBlobByCallbackInstructionType() override = default;
+  CpuAccessBlobByCallbackInstructionType() = default;
+  ~CpuAccessBlobByCallbackInstructionType() override = default;
 
   using stream_type = vm::CpuStreamType;
 };
-COMMAND(
-    vm::RegisterInstructionType<CpuWriteBlobByCallbackInstructionType>("cpu.WriteBlobByCallback"));
+COMMAND(vm::RegisterInstructionType<CpuAccessBlobByCallbackInstructionType>(
+    "cpu.AccessBlobByCallback"));
 
 }  // namespace eager
 }  // namespace oneflow

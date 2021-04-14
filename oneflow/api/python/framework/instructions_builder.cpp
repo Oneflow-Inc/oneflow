@@ -273,11 +273,11 @@ std::shared_ptr<compatible_py::BlobObject> Build121To(
   return x->Build121To(blob_object, parallel_desc_symbol).GetPtrOrThrow();
 }
 
-void WriteBlobByCallback(const std::shared_ptr<InstructionsBuilder>& x,
-                         const std::shared_ptr<one::MirroredTensor>& tensor,
-                         const std::function<void(uint64_t)>& callback,
-                         const std::string& modifier) {
-  return x->WriteBlobByCallback(tensor, callback, modifier).GetOrThrow();
+void AccessBlobByCallback(const std::shared_ptr<InstructionsBuilder>& x,
+                          const std::shared_ptr<one::MirroredTensor>& tensor,
+                          const std::function<void(uint64_t)>& callback,
+                          const std::string& modifier) {
+  return x->AccessBlobByCallback(tensor, callback, modifier).GetOrThrow();
 }
 
 }  // namespace
@@ -354,7 +354,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("GetSharedOpKernelObject4ParallelConfSymbol",
            &GetSharedOpKernelObject4ParallelConfSymbol)
       .def("DeleteObject", &DeleteObject)
-      .def("WriteBlobByCallback", &WriteBlobByCallback)
+      .def("AccessBlobByCallback", &AccessBlobByCallback)
       .def("StatefulCall", &StatefulCall)
       .def("InsertRemoveForeignCallbackInstruction", &InsertRemoveForeignCallbackInstruction)
       .def("FetchBlobHeader", &FetchBlobHeader)

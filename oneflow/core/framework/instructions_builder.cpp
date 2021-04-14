@@ -872,18 +872,18 @@ Maybe<void> InstructionsBuilder::FeedBlob(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::WriteBlobByCallback(
+Maybe<void> InstructionsBuilder::AccessBlobByCallback(
     const std::shared_ptr<one::MirroredTensor>& tensor,
     const std::function<void(uint64_t)>& callback, const std::string& modifier) {
-  ObjectMsgPtr<vm::InstructionMsg> instruction =
-      ObjectMsgPtr<vm::InstructionMsg>::New("WriteBlobByCallback");
+  std::string instr_name = tensor->parallel_desc()->device_tag() + "AccessBlobByCallback";
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object =
       JUST(tensor->eager_blob_object());
   const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object =
       JUST(tensor->infer_local_dep_object());
   const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object =
       JUST(tensor->compute_local_dep_object());
-  *instruction->mutable_phy_instr_operand() = std::make_shared<vm::WriteBlobArgCbPhyInstrOperand>(
+  *instruction->mutable_phy_instr_operand() = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
       eager_blob_object, infer_local_dep_object, compute_local_dep_object, callback, modifier);
   instruction->set_parallel_desc_symbol_id(JUST(tensor->parallel_desc()->symbol_id()));
   instruction_list_->PushBack(instruction.Mutable());

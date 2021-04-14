@@ -36,19 +36,19 @@ class TensorStorage;
 namespace vm {
 
 // access blob arg callback physical instruction operand
-class WriteBlobArgCbPhyInstrOperand : public PhyInstrOperand {
+class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
  public:
-  WriteBlobArgCbPhyInstrOperand(const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
-                                const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object,
-                                const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object,
-                                const std::function<void(uint64_t)>& callback,
-                                const std::string& modifier)
+  AccessBlobArgCbPhyInstrOperand(const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+                                 const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object,
+                                 const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object,
+                                 const std::function<void(uint64_t)>& callback,
+                                 const std::string& modifier)
       : eager_blob_object_(eager_blob_object),
         callback_(callback),
         infer_local_dep_object_(infer_local_dep_object),
         compute_local_dep_object_(compute_local_dep_object),
         modifier_(modifier) {}
-  ~WriteBlobArgCbPhyInstrOperand() = default;
+  ~AccessBlobArgCbPhyInstrOperand() = default;
 
   const std::function<void(uint64_t)>& callback() const { return callback_; }
   const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object() const {

@@ -41,10 +41,10 @@ class LazyReferenceInstructionType : public vm::InstructionType {
   Maybe<void> Run(vm::Instruction* instruction) const;
 };
 
-class WriteBlobByCallbackInstructionType : public vm::InstructionType {
+class AccessBlobByCallbackInstructionType : public vm::InstructionType {
  public:
-  WriteBlobByCallbackInstructionType() = default;
-  ~WriteBlobByCallbackInstructionType() override = default;
+  AccessBlobByCallbackInstructionType() = default;
+  ~AccessBlobByCallbackInstructionType() override = default;
 
   void Compute(vm::Instruction* instruction) const override;
 
