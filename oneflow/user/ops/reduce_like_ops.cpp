@@ -28,9 +28,9 @@ REGISTER_USER_OP("reduce_sum_like")
       const user_op::TensorDesc* like_tensor = ctx->TensorDesc4ArgNameAndIndex("like", 0);
       const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
       if (axis.empty()) { CHECK_EQ_OR_RETURN(x_tensor->shape(), like_tensor->shape()); }
-      CHECK_EQ_OR_RETURN(x_tensor->data_type(), like_tensor->data_type());
       user_op::TensorDesc* y_tensor = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      *y_tensor = *like_tensor;
+      *y_tensor->mut_shape() = like_tensor->shape();
+      *y_tensor->mut_is_dynamic() = like_tensor->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -75,6 +75,13 @@ REGISTER_USER_OP("reduce_sum_like")
           .PartialSum(user_op::OpArg("like", 0))
           .Broadcast(user_op::OpArg("y", 0))
           .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* x_tensor = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc* like_tensor = ctx->TensorDesc4ArgNameAndIndex("like", 0);
+      CHECK_EQ_OR_RETURN(x_tensor->data_type(), like_tensor->data_type());
+      *ctx->Dtype4ArgNameAndIndex("y", 0) = like_tensor->data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
