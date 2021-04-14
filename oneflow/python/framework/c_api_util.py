@@ -234,7 +234,7 @@ def GetOpAttributes():
     op_attributes = oneflow_api.GetSerializedOpAttributes()
     return text_format.Parse(op_attributes, op_attribute_pb.OpAttributeList())
 
-@oneflow_export("get_job_set")
+@oneflow_export("experimental.get_job_set")
 def GetJobSet():
     job_set = oneflow_api.GetSerializedJobSet()
     return text_format.Parse(job_set, job_set_pb.JobSet())
