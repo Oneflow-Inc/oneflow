@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/user/ops/nn_util.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 namespace {
@@ -34,12 +36,20 @@ struct CudnnDeConvArgsAndAlgo final {
                          const user_op::Tensor* y, user_op::Tensor* buf, const JobDesc& job_desc,
                          const user_op::UserOpConfWrapper& user_op_conf, DeviceCtx* device_ctx,
                          bool has_forced_algo, int32_t forced_algo)
-      : args(
-          user_op_conf, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
-          y->shape(), user_op_conf.attr<std::string>("data_format"), buf->shape().elem_cnt(),
-          Global<ResourceDesc, ForEnv>::Get()->resource().cudnn_conv_heuristic_search_algo(),
-          Global<ResourceDesc, ForEnv>::Get()->resource().cudnn_conv_use_deterministic_algo_only(),
-          Global<ResourceDesc, ForEnv>::Get()->resource().cudnn_conv_enable_pseudo_half()) {
+      : args(user_op_conf, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
+             y->shape(), user_op_conf.attr<std::string>("data_format"), buf->shape().elem_cnt(),
+             Global<ResourceDesc, ForEnv>::Get()
+                 ->resource()
+                 .cudnn_conf()
+                 .cudnn_conv_heuristic_search_algo(),
+             Global<ResourceDesc, ForEnv>::Get()
+                 ->resource()
+                 .cudnn_conf()
+                 .cudnn_conv_use_deterministic_algo_only(),
+             Global<ResourceDesc, ForEnv>::Get()
+                 ->resource()
+                 .cudnn_conf()
+                 .cudnn_conv_enable_pseudo_half()) {
     size_t byte_size_of_buf = buf->shape().elem_cnt();
     AllocatedCudnnConvResource res(device_ctx->cudnn_handle(), const_cast<void*>(x->dptr()),
                                    const_cast<void*>(w->dptr()), const_cast<void*>(y->dptr()),
@@ -74,9 +84,18 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
     CudnnConvArgs args(user_op_conf, x->data_type(), ShapeView(x->shape()), w->data_type(),
                        ShapeView(w->shape()), y->data_type(), ShapeView(y->shape()),
                        user_op_conf.attr<std::string>("data_format"), workspace_size,
-                       Global<ResourceDesc, ForEnv>::Get()->resource()).cudnn_conv_heuristic_search_algo(),
-                       Global<ResourceDesc, ForEnv>::Get()->resource().cudnn_conv_use_deterministic_algo_only(),
-                       Global<ResourceDesc, ForEnv>::Get()->resource().cudnn_conv_enable_pseudo_half());
+                       Global<ResourceDesc, ForEnv>::Get()
+                           ->resource()
+                           .cudnn_conf()
+                           .cudnn_conv_heuristic_search_algo(),
+                       Global<ResourceDesc, ForEnv>::Get()
+                           ->resource()
+                           .cudnn_conf()
+                           .cudnn_conv_use_deterministic_algo_only(),
+                       Global<ResourceDesc, ForEnv>::Get()
+                           ->resource()
+                           .cudnn_conf()
+                           .cudnn_conv_enable_pseudo_half());
     PerfT algo_perf;
     if (has_forced_algo) {
       algo_perf = GetCudnnConvAlgorithmPerference<PerfT>(&args, static_cast<AlgoT>(forced_algo));
@@ -117,8 +136,14 @@ class DeConvGpuKernel final : public user_op::OpKernel {
 
     CudnnDeConvArgsAndAlgo<cudnnConvolutionBwdDataAlgoPerf_t> args_and_algo(
         out, weight, in, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
-        Global<ResourceDesc, ForEnv>::Get()->resource().has_cudnn_conv_force_bwd_data_algo(),
-        Global<ResourceDesc, ForEnv>::Get()->resource().cudnn_conv_force_bwd_data_algo());
+        Global<ResourceDesc, ForEnv>::Get()
+            ->resource()
+            .cudnn_conf()
+            .has_cudnn_conv_force_bwd_data_algo(),
+        Global<ResourceDesc, ForEnv>::Get()
+            ->resource()
+            .cudnn_conf()
+            .cudnn_conv_force_bwd_data_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionBwdDataAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
 
@@ -129,20 +154,26 @@ class DeConvGpuKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_DECONV_KERNEL(op_name, dtype, ndims)                                             \
-  REGISTER_USER_KERNEL(#op_name)                                                                  \
-      .SetCreateFn<DeConvGpuKernel<dtype, ndims>>()                                               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                         \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))            \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                               \
-        const JobDesc& job_desc = *ctx->job_desc();                                               \
-        const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);                                \
-        const auto* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);                        \
-        const auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);                              \
-        return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t>(                          \
-            out, weight, in, job_desc, ctx->user_op_conf(),                                       \
-            Global<ResourceDesc, ForEnv>::Get()->resource().has_cudnn_conv_force_bwd_data_algo(), \
-            Global<ResourceDesc, ForEnv>::Get()->resource().cudnn_conv_force_bwd_data_algo());    \
+#define REGISTER_DECONV_KERNEL(op_name, dtype, ndims)                                  \
+  REGISTER_USER_KERNEL(#op_name)                                                       \
+      .SetCreateFn<DeConvGpuKernel<dtype, ndims>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                    \
+        const JobDesc& job_desc = *ctx->job_desc();                                    \
+        const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);                     \
+        const auto* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);             \
+        const auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);                   \
+        return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t>(               \
+            out, weight, in, job_desc, ctx->user_op_conf(),                            \
+            Global<ResourceDesc, ForEnv>::Get()                                        \
+                ->resource()                                                           \
+                .cudnn_conf()                                                          \
+                .has_cudnn_conv_force_bwd_data_algo(),                                 \
+            Global<ResourceDesc, ForEnv>::Get()                                        \
+                ->resource()                                                           \
+                .cudnn_conf()                                                          \
+                .cudnn_conv_force_bwd_data_algo());                                    \
       })
 
 REGISTER_DECONV_KERNEL(deconv1d, float, 1);

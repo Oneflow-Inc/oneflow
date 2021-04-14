@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_RESOURCE_DESC_H_
 
 #include <set>
+#include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/env_desc.h"
 
@@ -63,7 +64,7 @@ class ResourceDesc final {
   void SetCpuDeviceNum(int32_t val) { resource_.set_cpu_device_num(val); }
   bool enable_tensor_float_32_compute() const { return resource_.enable_tensor_float_32_compute(); }
   const Resource& resource() const { return resource_; }
-  void DumpCudnnConf();
+  void DumpCudnnConf(const JobConfigProto& job_conf);
 
  private:
   Resource resource_;
