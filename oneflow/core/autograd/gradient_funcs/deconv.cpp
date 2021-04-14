@@ -28,13 +28,13 @@ struct DeConvolutionNdInterpState : public OpExprInterpState {
   bool activation_requires_grad = false;
 };
 
-class DeConvolutionNd : public OpExprGradFunctionIf<DeConvolutionNdInterpState> {
+class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> CaptureIf(DeConvolutionNdInterpState* ctx, const TensorTuple& inputs,
-                        const TensorTuple& outputs, const AttrValueMap& attrs) const override;
-  Maybe<void> ApplyIf(const DeConvolutionNdInterpState* ctx, const TensorTuple& out_grads,
-                      TensorTuple* in_grads) const override;
+  Maybe<void> Capture(DeConvolutionNdInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
+  Maybe<void> Apply(const DeConvolutionNdInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override;
 
  private:
   std::string op_name_;
@@ -69,9 +69,8 @@ Maybe<void> DeConvolutionNd::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DeConvolutionNd::CaptureIf(DeConvolutionNdInterpState* ctx, const TensorTuple& inputs,
-                                       const TensorTuple& outputs,
-                                       const AttrValueMap& attrs) const {
+Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdInterpState* ctx, const TensorTuple& inputs,
+                                     const TensorTuple& outputs, const AttrValueMap& attrs) const {
   ctx->activation_requires_grad = inputs.at(0)->requires_grad();
   ctx->weight_requires_grad = inputs.at(1)->requires_grad();
   if (ctx->activation_requires_grad) {
@@ -83,8 +82,8 @@ Maybe<void> DeConvolutionNd::CaptureIf(DeConvolutionNdInterpState* ctx, const Te
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DeConvolutionNd::ApplyIf(const DeConvolutionNdInterpState* ctx,
-                                     const TensorTuple& out_grads, TensorTuple* in_grads) const {
+Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdInterpState* ctx,
+                                   const TensorTuple& out_grads, TensorTuple* in_grads) const {
   in_grads->resize(2);
   if (ctx->activation_requires_grad) {
     const auto& weight = ctx->SavedTensors().at(0);

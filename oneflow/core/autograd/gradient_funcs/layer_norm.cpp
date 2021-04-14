@@ -33,15 +33,15 @@ struct LayerNormInterpState : public OpExprInterpState {
 // y, mean, inv_variance, [normalized] =
 //   layer_norm(x, [beta], [gamma], center=False, scale=False, begin_norm_axis=1,
 //              begin_params_axis=-1, epsilon=1e-5)
-class LayerNorm : public OpExprGradFunctionIf<LayerNormInterpState> {
+class LayerNorm : public OpExprGradFunction<LayerNormInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
 
-  Maybe<void> CaptureIf(LayerNormInterpState* ctx, const TensorTuple& inputs,
-                        const TensorTuple& outputs, const AttrValueMap& attrs) const override;
+  Maybe<void> Capture(LayerNormInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
 
-  Maybe<void> ApplyIf(const LayerNormInterpState* ctx, const TensorTuple& out_grads,
-                      TensorTuple* in_grads) const override;
+  Maybe<void> Apply(const LayerNormInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override;
 
  private:
   std::string op_name_;
@@ -66,8 +66,8 @@ Maybe<void> LayerNorm::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LayerNorm::CaptureIf(LayerNormInterpState* ctx, const TensorTuple& inputs,
-                                 const TensorTuple& outputs, const AttrValueMap& attrs) const {
+Maybe<void> LayerNorm::Capture(LayerNormInterpState* ctx, const TensorTuple& inputs,
+                               const TensorTuple& outputs, const AttrValueMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), center_ + scale_ + 1);
   CHECK_EQ_OR_RETURN(inputs.size(), scale_ + 3);
   ctx->has_beta_diff = center_ && inputs.at(1)->requires_grad();
@@ -87,8 +87,8 @@ Maybe<void> LayerNorm::CaptureIf(LayerNormInterpState* ctx, const TensorTuple& i
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LayerNorm::ApplyIf(const LayerNormInterpState* ctx, const TensorTuple& out_grads,
-                               TensorTuple* in_grads) const {
+Maybe<void> LayerNorm::Apply(const LayerNormInterpState* ctx, const TensorTuple& out_grads,
+                             TensorTuple* in_grads) const {
   const auto& saved_tensors = ctx->SavedTensors();
   in_grads->resize(center_ + scale_ + 1);
   std::shared_ptr<Tensor> dy = out_grads.at(0);

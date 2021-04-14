@@ -64,7 +64,7 @@ class ReduceSumLikeModule {
 
 }  // namespace
 
-class BroadcastBinary : public OpExprGradFunction {
+class BroadcastBinary : public OpExprGradFunction<OpExprInterpState> {
  public:
   BroadcastBinary() = default;
   virtual ~BroadcastBinary() = default;
