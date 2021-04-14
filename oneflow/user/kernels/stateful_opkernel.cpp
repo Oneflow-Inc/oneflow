@@ -78,7 +78,8 @@ class LocalUserKernelBaseContext {
   const JobDesc& job_desc() const { return *job_desc_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const {
-    std::pair<std::string, int32_t> pair{arg_name, index};
+    // const_cast to align with ArgVec and avoid copy
+    std::pair<std::string&, int32_t> pair{const_cast<std::string&>(arg_name), index};
     int32_t i = GetIndex(indexed_input_pairs_, pair);
     if (i >= 0) { return &input_tensor_desc_views_[i]; }
     i = GetIndex(indexed_output_pairs_, pair);
@@ -87,7 +88,8 @@ class LocalUserKernelBaseContext {
   }
 
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) const {
-    std::pair<std::string, int32_t> pair{arg_name, index};
+    // const_cast to align with ArgVec and avoid copy
+    std::pair<std::string&, int32_t> pair{const_cast<std::string&>(arg_name), index};
     int32_t i = GetIndex(indexed_input_pairs_, pair);
     if (i >= 0) { return &input_tensor_views_[i]; }
     i = GetIndex(indexed_output_pairs_, pair);
@@ -241,7 +243,8 @@ LocalUserOpInferContext::LocalUserOpInferContext(const OperatorConf& op_conf,
 
 user_op::TensorDesc* LocalUserOpInferContext::TensorDesc4ArgNameAndIndex(
     const std::string& arg_name, int32_t index) {
-  std::pair<std::string, int32_t> pair{arg_name, index};
+  // const_cast to align with ArgVec and avoid copy
+  std::pair<std::string&, int32_t> pair{const_cast<std::string&>(arg_name), index};
   int32_t i = GetIndex(indexed_input_pairs_, pair);
   if (i >= 0) { return &input_tensor_desc_views_[i]; }
   i = GetIndex(indexed_output_pairs_, pair);
@@ -298,7 +301,8 @@ StatefulOpKernel::StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc
       op_conf_(op_conf),
       mem_case_(mem_case),
       indexed_input_pairs_(index_input_pairs),
-      indexed_output_pairs_(indexed_output_pairs) {
+      indexed_output_pairs_(indexed_output_pairs),
+      need_check_mem_case_(true) {
   op_infer_ctx_.reset(
       new LocalUserOpInferContext(op_conf, job_desc, index_input_pairs, indexed_output_pairs));
   compute_ctx_.reset(new LocalUserKernelComputeContext(nullptr, op_conf, job_desc,
