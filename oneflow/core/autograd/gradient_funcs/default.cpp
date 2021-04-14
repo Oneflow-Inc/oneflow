@@ -29,14 +29,6 @@ namespace one {
 
 class DefaultOpExprGradFunction : public OpExprGradFunction {
  public:
-  // The snapshot indicates the indices of the required forward inputs and outputs
-  // by each backward operator.
-  struct Snapshot {
-    std::vector<int> input_indices;
-    std::vector<int> output_indices;
-    int count = 0;
-  };
-
   Maybe<void> Init(const OpExpr& op) override;
 
   Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
@@ -46,97 +38,48 @@ class DefaultOpExprGradFunction : public OpExprGradFunction {
                     TensorTuple* in_grads) const override;
 
  private:
-  Maybe<void> GenerateOpGradConf(const Operator& op, std::vector<OperatorConf>* bw_op_confs);
+  Maybe<void> GenerateOpGradConf(const Operator& op, std::vector<OperatorConf>* bw_op_confs,
+                                 HashMap<std::string, LogicalBlobId>* ibn2grad_lbi,
+                                 HashMap<std::string, LogicalBlobId>* obn2grad_lbi);
 
-  Maybe<void> UpdateRequiresBackward(const TensorTuple& inputs) const;
+  std::vector<int64_t> fw_input_index2lbi_symbol_;
+  std::vector<int64_t> fw_input_index2grad_lbi_symbol_;
+  std::vector<int64_t> fw_output_index2lbi_symbol_;
+  std::vector<int64_t> fw_output_index2grad_lbi_symbol_;
 
- private:
   struct BackwardEntry {
-    std::shared_ptr<OpExpr> backward_op;
-    // Each output of the backward op maybe related to multiple input gradients.
-    std::vector<std::vector<int>> in_grad_indices_for_each_output;
-    std::vector<int> out_grad_indices;
-
-    // Snapshot information for each backward op.
-    Snapshot snapshot;
-
-    // Whether each backward operator needs to do backward or not.
-    mutable bool requires_backward;
+    std::shared_ptr<OpExpr> bw_op_expr;
+    std::vector<int64_t> bw_input_index2lbi_symbol;
+    std::vector<int64_t> bw_output_index2lbi_symbol;
   };
   std::vector<BackwardEntry> backward_entries_;
 
-  // The input gradient logical blob id for each forward input blob name which
-  // needs backward.
-  HashMap<std::string, LogicalBlobId> ibn_to_grad_lbi_map_;
-  // The output gradient logical blob id for each forward output blob name.
-  HashMap<std::string, LogicalBlobId> obn_to_grad_lbi_map_;
+  // captured inputs
+  std::vector<std::pair<int64_t, int64_t>> fw_ibn_index_and_saved_index_pairs_;
+
+  // captured outputs
+  std::vector<std::pair<int64_t, int64_t>> fw_obn_index_and_saved_index_pairs_;
+
+  // lbi symbol table
+  std::vector<LogicalBlobId> lbi_symbol2lbi_;
 };
 
-namespace {
-
-Maybe<void> ProcessInput(const std::string& bn, const std::string& lbn,
-                         const HashMap<std::string, int>& input_lbn_to_index_map,
-                         const HashMap<std::string, int>& output_lbn_to_index_map,
-                         const HashMap<std::string, std::string>& out_grad_lbn_to_obn_map,
-                         const HashMap<std::string, int>& obn_to_index_map,
-                         DefaultOpExprGradFunction::Snapshot* snapshot,
-                         std::vector<int>* out_grad_indices,
-                         std::vector<std::vector<std::string>>* typed_ibns) {
-  CHECK_EQ_OR_RETURN(typed_ibns->size(), 3);
-  if (input_lbn_to_index_map.count(lbn)) {
-    snapshot->input_indices.emplace_back(input_lbn_to_index_map.at(lbn));
-    snapshot->count += 1;
-    (*typed_ibns)[0].emplace_back(bn);
-  } else if (output_lbn_to_index_map.count(lbn)) {
-    snapshot->output_indices.emplace_back(output_lbn_to_index_map.at(lbn));
-    snapshot->count += 1;
-    (*typed_ibns)[1].emplace_back(bn);
-  } else {
-    const auto& it = out_grad_lbn_to_obn_map.find(lbn);
-    // Otherwise this input should be output gradient.
-    CHECK_OR_RETURN(it != out_grad_lbn_to_obn_map.end());
-    // The output gradient index is equal to the forward output index.
-    out_grad_indices->emplace_back(obn_to_index_map.at(it->second));
-    (*typed_ibns)[2].emplace_back(bn);
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> ProcessOutput(
-    const std::string& bn, const std::string& lbn,
-    const HashMap<std::string, std::vector<std::string>>& in_grad_lbn_to_ibns_map,
-    const HashMap<std::string, int>& ibn_to_index_map,
-    std::vector<std::vector<int>>* in_grad_indices_for_each_output,
-    std::vector<std::string>* indexed_obns, HashSet<int>* reached_in_grad_indices_for_each_output) {
-  indexed_obns->emplace_back(bn);
-  const auto& it = in_grad_lbn_to_ibns_map.find(lbn);
-  CHECK_OR_RETURN(it != in_grad_lbn_to_ibns_map.end());
-  // The input gradient index is equal to the foward input index.
-  in_grad_indices_for_each_output->emplace_back();
-  for (const std::string& ibn : it->second) {
-    int idx = ibn_to_index_map.at(ibn);
-    in_grad_indices_for_each_output->back().emplace_back(idx);
-    reached_in_grad_indices_for_each_output->emplace(idx);
-  }
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
-
-Maybe<void> DefaultOpExprGradFunction::GenerateOpGradConf(const Operator& op,
-                                                          std::vector<OperatorConf>* bw_op_confs) {
+Maybe<void> DefaultOpExprGradFunction::GenerateOpGradConf(
+    const Operator& op, std::vector<OperatorConf>* bw_op_confs,
+    HashMap<std::string, LogicalBlobId>* ibn2grad_lbi,
+    HashMap<std::string, LogicalBlobId>* obn2grad_lbi) {
   auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
     const auto& input_bns = op.input_bns();
     const auto& output_bns = op.output_bns();
     if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
-      return &ibn_to_grad_lbi_map_[bn];
+      return &(*ibn2grad_lbi)[bn];
     } else if (std::find(output_bns.begin(), output_bns.end(), bn) != output_bns.end()) {
-      auto it = obn_to_grad_lbi_map_.find(bn);
-      if (it == obn_to_grad_lbi_map_.end()) {
+      auto it = obn2grad_lbi->find(bn);
+      if (it == obn2grad_lbi->end()) {
         LogicalBlobId lbi;
         lbi.set_op_name(GradientOpName(op.op_name()));
         lbi.set_blob_name(bn);
-        it = obn_to_grad_lbi_map_.emplace(bn, lbi).first;
+        it = obn2grad_lbi->emplace(bn, lbi).first;
       }
       return &(it->second);
     } else {
@@ -161,111 +104,148 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
 
   // Generate backward operator conf for each input. The `LogicalBlobId` for
   // backward output gradient is dummy due to inaccessibility.
+  std::shared_ptr<Operator> fw_adapter_op = ConstructOp(fw_op_conf, DeviceType::kCPU);
   std::vector<OperatorConf> bw_op_confs;
-  std::shared_ptr<Operator> op_adapter = ConstructOp(fw_op_conf, DeviceType::kCPU);
-  JUST(GenerateOpGradConf(*op_adapter, &bw_op_confs));
 
-  CHECK_EQ_OR_RETURN(op.input_num(), ibn_to_grad_lbi_map_.size())
+  // The input gradient logical blob id for each forward input blob name
+  HashMap<std::string, LogicalBlobId> ibn2grad_lbi;
+  // The output gradient logical blob id for each forward output blob name.
+  HashMap<std::string, LogicalBlobId> obn2grad_lbi;
+  JUST(GenerateOpGradConf(*fw_adapter_op, &bw_op_confs, &ibn2grad_lbi, &obn2grad_lbi));
+
+  CHECK_EQ_OR_RETURN(op.input_num(), ibn2grad_lbi.size())
       << "All inputs are considered to require gradients since the `requires_grad` "
          "has been unknown to us here.";
-  backward_entries_.resize(bw_op_confs.size());
 
-  HashMap<std::string, int> input_lbn_to_index_map;
-  HashMap<std::string, int> output_lbn_to_index_map;
-  HashMap<std::string, int> ibn_to_index_map;
-  HashMap<std::string, int> obn_to_index_map;
-  for (int i = 0; i < fw_op_expr->indexed_ibns().size(); ++i) {
-    const auto& bn = fw_op_expr->indexed_ibns().at(i);
-    ibn_to_index_map.emplace(bn, i);
-    std::string lbn = GenLogicalBlobName(op_adapter->BnInOp2Lbi(bn));
-    input_lbn_to_index_map.emplace(lbn, i);
-  }
-  for (int i = 0; i < fw_op_expr->indexed_obns().size(); ++i) {
-    const auto& bn = fw_op_expr->indexed_obns().at(i);
-    obn_to_index_map.emplace(bn, i);
-    std::string lbn = GenLogicalBlobName(op_adapter->BnInOp2Lbi(bn));
-    output_lbn_to_index_map.emplace(lbn, i);
-  }
-
-  HashMap<std::string, std::string> out_grad_lbn_to_obn_map;
-  HashMap<std::string, std::vector<std::string>> in_grad_lbn_to_ibns_map;
-  for (const auto& it : obn_to_grad_lbi_map_) {
-    std::string lbn = GenLogicalBlobName(it.second);
-    out_grad_lbn_to_obn_map[lbn] = it.first;
-  }
-  for (const auto& it : ibn_to_grad_lbi_map_) {
-    std::string lbn = GenLogicalBlobName(it.second);
-    in_grad_lbn_to_ibns_map[lbn].emplace_back(it.first);
-  }
-  HashSet<int> reached_in_grad_indices_for_each_output;
+  std::vector<std::shared_ptr<Operator>> bw_adapter_ops(bw_op_confs.size());
   for (int i = 0; i < bw_op_confs.size(); ++i) {
     const auto& op_conf = bw_op_confs.at(i);
-    VLOG(3) << op_conf.DebugString() << std::endl;
-    std::shared_ptr<Operator> bw_op_adapter = ConstructOp(op_conf, DeviceType::kCPU);
-    std::vector<std::string> bw_indexed_ibns, bw_indexed_obns;
+    bw_adapter_ops.at(i) = ConstructOp(op_conf, DeviceType::kCPU);
+  }
 
-    BackwardEntry* entry = &(backward_entries_[i]);
-    // Input blob names in the backward op will be divided into 3 types which
-    // means the input comes from either forward inputs, or forward outputs, or
-    // backward output gradients.
-    std::vector<std::vector<std::string>> typed_ibns(3);
-    entry->snapshot.count = 0;
-    for (const auto& bn : bw_op_adapter->input_bns()) {
-      std::string lbn = GenLogicalBlobName(bw_op_adapter->BnInOp2Lbi(bn));
-      JUST(ProcessInput(bn, lbn, input_lbn_to_index_map, output_lbn_to_index_map,
-                        out_grad_lbn_to_obn_map, obn_to_index_map, &entry->snapshot,
-                        &entry->out_grad_indices, &typed_ibns));
+  // Updates lbi symbol table
+  HashMap<LogicalBlobId, int64_t> lbi2lbi_symbol;
+  {
+    HashSet<LogicalBlobId> lbis;
+    for (const auto& ibn : fw_adapter_op->input_bns()) {
+      CHECK(lbis.emplace(fw_adapter_op->BnInOp2Lbi(ibn)).second);
     }
-    for (const auto& ibns : typed_ibns) {
-      for (const auto& v : ibns) { bw_indexed_ibns.emplace_back(v); }
+    for (const auto& obn : fw_adapter_op->output_bns()) {
+      CHECK(lbis.emplace(fw_adapter_op->BnInOp2Lbi(obn)).second);
     }
-    for (const auto& bn : bw_op_adapter->output_bns()) {
-      std::string lbn = GenLogicalBlobName(bw_op_adapter->BnInOp2Lbi(bn));
-      JUST(ProcessOutput(bn, lbn, in_grad_lbn_to_ibns_map, ibn_to_index_map,
-                         &entry->in_grad_indices_for_each_output, &bw_indexed_obns,
-                         &reached_in_grad_indices_for_each_output));
+    for (const auto& bw_adapter_op : bw_adapter_ops) {
+      for (const auto& ibn : bw_adapter_op->input_bns()) {
+        lbis.insert(bw_adapter_op->BnInOp2Lbi(ibn));
+      }
+      for (const auto& obn : bw_adapter_op->output_bns()) {
+        lbis.insert(bw_adapter_op->BnInOp2Lbi(obn));
+      }
     }
+    for (const auto& pair : obn2grad_lbi) { lbis.insert(pair.second); }
+    lbi_symbol2lbi_ = {lbis.begin(), lbis.end()};
+    for (int i = 0; i < lbi_symbol2lbi_.size(); ++i) {
+      CHECK(lbi2lbi_symbol.emplace(lbi_symbol2lbi_.at(i), i).second);
+    }
+  }
 
+  // Initiates backward_entries_
+  backward_entries_.resize(bw_adapter_ops.size());
+  for (int i = 0; i < bw_adapter_ops.size(); ++i) {
+    BackwardEntry* entry = &backward_entries_[i];
+    const auto& bw_adapter_op = bw_adapter_ops.at(i);
+    const auto& op_conf = bw_adapter_op->op_conf();
+    std::vector<std::string> bw_indexed_ibns;
+    {
+      const auto& input_bns = bw_adapter_op->input_bns();
+      bw_indexed_ibns = {input_bns.begin(), input_bns.end()};
+    }
+    std::vector<std::string> bw_indexed_obns;
+    {
+      const auto& output_bns = bw_adapter_op->output_bns();
+      bw_indexed_obns = {output_bns.begin(), output_bns.end()};
+    }
     // Currently only user op is considered.
-    if (op_conf.has_user_conf()) {
-      UserOpConf user_conf(op_conf.user_conf());
-      entry->backward_op = std::make_shared<UserOpExpr>(op_conf.name(), std::move(user_conf),
-                                                        bw_indexed_ibns, bw_indexed_obns);
-    } else {
-      // TODO()
-      UNIMPLEMENTED();
+    CHECK(op_conf.has_user_conf());
+    UserOpConf user_conf(op_conf.user_conf());
+    // Sets backward op_expr
+    entry->bw_op_expr = std::make_shared<UserOpExpr>(op_conf.name(), std::move(user_conf),
+                                                     bw_indexed_ibns, bw_indexed_obns);
+    // Sets bw_input_index2lbi_symbol
+    entry->bw_input_index2lbi_symbol.resize(bw_indexed_ibns.size());
+    for (int i = 0; i < bw_indexed_ibns.size(); ++i) {
+      const auto& lbi = bw_adapter_op->BnInOp2Lbi(bw_indexed_ibns.at(i));
+      entry->bw_input_index2lbi_symbol.at(i) = lbi2lbi_symbol.at(lbi);
+    }
+    // Sets bw_output_index2lbi_symbol
+    entry->bw_output_index2lbi_symbol.resize(bw_indexed_obns.size());
+    for (int i = 0; i < bw_indexed_obns.size(); ++i) {
+      const auto& lbi = bw_adapter_op->BnInOp2Lbi(bw_indexed_obns.at(i));
+      entry->bw_output_index2lbi_symbol.at(i) = lbi2lbi_symbol.at(lbi);
     }
   }
-
-  // Create identity ops for the inplaced outputs.
-  for (const auto& it : ibn_to_index_map) {
-    const int& in_grad_idx = it.second;
-    if (reached_in_grad_indices_for_each_output.count(in_grad_idx)) { continue; }
-    std::string lbn = GenLogicalBlobName(ibn_to_grad_lbi_map_.at(/*in_grad_bn=*/it.first));
-    std::vector<std::vector<std::string>> typed_ibns(3);
-    backward_entries_.emplace_back();
-    BackwardEntry* entry = &(backward_entries_.back());
-    entry->requires_backward = false;
-    entry->snapshot.count = 0;
-    JUST(ProcessInput(it.first, lbn, input_lbn_to_index_map, output_lbn_to_index_map,
-                      out_grad_lbn_to_obn_map, obn_to_index_map, &entry->snapshot,
-                      &entry->out_grad_indices, &typed_ibns));
-    entry->in_grad_indices_for_each_output.emplace_back(std::vector<int>{in_grad_idx});
-    entry->backward_op = JUST(OpBuilder("identity").Input("in").Output("out").Build());
+  // Updates fw_xxx_lbi_symbol_
+  {
+    fw_input_index2lbi_symbol_.resize(fw_op_expr->indexed_ibns().size());
+    for (int i = 0; i < fw_op_expr->indexed_ibns().size(); ++i) {
+      const auto& ibn = fw_op_expr->indexed_ibns().at(i);
+      const auto& lbi = fw_adapter_op->BnInOp2Lbi(ibn);
+      fw_input_index2lbi_symbol_.at(i) = lbi2lbi_symbol.at(lbi);
+    }
+    fw_input_index2grad_lbi_symbol_.resize(fw_op_expr->indexed_ibns().size());
+    for (int i = 0; i < fw_op_expr->indexed_ibns().size(); ++i) {
+      const auto& ibn = fw_op_expr->indexed_ibns().at(i);
+      const auto& grad_lbi = ibn2grad_lbi.at(ibn);
+      CHECK(grad_lbi.has_op_name());
+      CHECK(grad_lbi.has_blob_name());
+      fw_input_index2grad_lbi_symbol_.at(i) = lbi2lbi_symbol.at(grad_lbi);
+    }
+    fw_output_index2lbi_symbol_.resize(fw_op_expr->indexed_obns().size());
+    for (int i = 0; i < fw_op_expr->indexed_obns().size(); ++i) {
+      const auto& obn = fw_op_expr->indexed_obns().at(i);
+      const auto& lbi = fw_adapter_op->BnInOp2Lbi(obn);
+      fw_output_index2lbi_symbol_.at(i) = lbi2lbi_symbol.at(lbi);
+    }
+    fw_output_index2grad_lbi_symbol_.resize(fw_op_expr->indexed_obns().size());
+    for (int i = 0; i < fw_op_expr->indexed_obns().size(); ++i) {
+      const auto& obn = fw_op_expr->indexed_obns().at(i);
+      const auto& grad_lbi = obn2grad_lbi.at(obn);
+      fw_output_index2grad_lbi_symbol_.at(i) = lbi2lbi_symbol.at(grad_lbi);
+    }
   }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> DefaultOpExprGradFunction::UpdateRequiresBackward(const TensorTuple& inputs) const {
-  for (int i = 0; i < backward_entries_.size(); ++i) {
-    const auto& entry = backward_entries_.at(i);
-    entry.requires_backward = false;
-    for (const auto& indices : entry.in_grad_indices_for_each_output) {
-      for (const int& j : indices) {
-        if (inputs.at(j)->requires_grad()) {
-          entry.requires_backward = true;
-          break;
-        }
+  // Updates fw_ibn_index_and_saved_index_pairs_ and fw_obn_index_and_saved_index_pairs_
+  {
+    HashSet<LogicalBlobId> fw_input_lbis;
+    for (const auto& ibn : fw_adapter_op->input_bns()) {
+      fw_input_lbis.insert(fw_adapter_op->BnInOp2Lbi(ibn));
+    }
+    HashSet<LogicalBlobId> fw_output_lbis;
+    for (const auto& obn : fw_adapter_op->output_bns()) {
+      fw_output_lbis.insert(fw_adapter_op->BnInOp2Lbi(obn));
+    }
+    HashSet<LogicalBlobId> captured_fw_input_lbis;
+    HashSet<LogicalBlobId> captured_fw_output_lbis;
+    const auto& UpdateCapturedLbis = [&](const LogicalBlobId& lbi) {
+      if (fw_input_lbis.count(lbi) > 0) { captured_fw_input_lbis.insert(lbi); }
+      if (fw_output_lbis.count(lbi) > 0) { captured_fw_output_lbis.insert(lbi); }
+    };
+    for (const auto& pair : ibn2grad_lbi) { UpdateCapturedLbis(pair.second); }
+    for (const auto& bw_op : bw_adapter_ops) {
+      for (const auto& ibn : bw_op->input_bns()) { UpdateCapturedLbis(bw_op->BnInOp2Lbi(ibn)); }
+      for (const auto& obn : bw_op->output_bns()) { UpdateCapturedLbis(bw_op->BnInOp2Lbi(obn)); }
+    }
+    int captured_index = 0;
+    for (int input_index = 0; input_index < fw_op_expr->indexed_ibns().size(); ++input_index) {
+      const auto& ibn = fw_op_expr->indexed_ibns().at(input_index);
+      if (captured_fw_input_lbis.count(fw_adapter_op->BnInOp2Lbi(ibn)) > 0) {
+        fw_ibn_index_and_saved_index_pairs_.push_back(
+            std::make_pair(input_index, captured_index++));
+      }
+    }
+    for (int output_index = 0; output_index < fw_op_expr->indexed_obns().size(); ++output_index) {
+      const auto& obn = fw_op_expr->indexed_obns().at(output_index);
+      if (captured_fw_output_lbis.count(fw_adapter_op->BnInOp2Lbi(obn)) > 0) {
+        fw_obn_index_and_saved_index_pairs_.push_back(
+            std::make_pair(output_index, captured_index++));
       }
     }
   }
@@ -275,17 +255,13 @@ Maybe<void> DefaultOpExprGradFunction::UpdateRequiresBackward(const TensorTuple&
 Maybe<void> DefaultOpExprGradFunction::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
                                                const TensorTuple& outputs,
                                                const AttrValueMap& attrs) const {
-  CHECK_OR_RETURN(attrs.empty())
-      << "The default op expr gradient func does not support dynamic attributes.";
-  JUST(UpdateRequiresBackward(inputs));
-  for (const auto& entry : backward_entries_) {
-    if (!entry.requires_backward) { continue; }
-    for (const int& idx : entry.snapshot.input_indices) {
-      ctx->SaveTensorForBackward(inputs.at(idx));
-    }
-    for (const int& idx : entry.snapshot.output_indices) {
-      ctx->SaveTensorForBackward(outputs.at(idx));
-    }
+  for (const auto& pair : fw_ibn_index_and_saved_index_pairs_) {
+    CHECK_EQ(ctx->SavedTensors().size(), pair.second);
+    ctx->SaveTensorForBackward(inputs.at(pair.first));
+  }
+  for (const auto& pair : fw_obn_index_and_saved_index_pairs_) {
+    CHECK_EQ(ctx->SavedTensors().size(), pair.second);
+    ctx->SaveTensorForBackward(outputs.at(pair.first));
   }
   return Maybe<void>::Ok();
 }
@@ -293,27 +269,49 @@ Maybe<void> DefaultOpExprGradFunction::Capture(OpExprInterpState* ctx, const Ten
 Maybe<void> DefaultOpExprGradFunction::Apply(const OpExprInterpState* ctx,
                                              const TensorTuple& out_grads,
                                              TensorTuple* in_grads) const {
-  int input_size = ibn_to_grad_lbi_map_.size();
-  in_grads->resize(input_size);
+  std::vector<std::shared_ptr<one::Tensor>> lbi_symbol2tensor(lbi_symbol2lbi_.size());
   const auto& saved_tensors = ctx->SavedTensors();
-  int offset = 0;
+  // Fills lbi_symbol2tensor by captured forward inputs
+  for (const auto& pair : fw_ibn_index_and_saved_index_pairs_) {
+    int lbi_symbol = fw_input_index2lbi_symbol_.at(pair.first);
+    CHECK(!static_cast<bool>(lbi_symbol2tensor.at(lbi_symbol)));
+    lbi_symbol2tensor.at(lbi_symbol) = saved_tensors.at(pair.second);
+  }
+  // Fills lbi_symbol2tensor by captured forward outputs
+  for (const auto& pair : fw_obn_index_and_saved_index_pairs_) {
+    int lbi_symbol = fw_output_index2lbi_symbol_.at(pair.first);
+    CHECK(!static_cast<bool>(lbi_symbol2tensor.at(lbi_symbol)));
+    lbi_symbol2tensor.at(lbi_symbol) = saved_tensors.at(pair.second);
+  }
+  // Fills lbi_symbol2tensor by backward out_grads
+  for (int i = 0; i < fw_output_index2grad_lbi_symbol_.size(); ++i) {
+    int lbi_symbol = fw_output_index2grad_lbi_symbol_.at(i);
+    CHECK(!static_cast<bool>(lbi_symbol2tensor.at(lbi_symbol)));
+    lbi_symbol2tensor.at(lbi_symbol) = out_grads.at(i);
+  }
   for (const auto& entry : backward_entries_) {
-    if (!entry.requires_backward) { continue; }
-    TensorTuple inputs;
-    for (int j = 0; j < entry.snapshot.count; ++j) {
-      inputs.emplace_back(saved_tensors.at(offset + j));
+    const auto& bw_input_index2lbi_symbol = entry.bw_input_index2lbi_symbol;
+    // Initiates inputs
+    TensorTuple inputs(bw_input_index2lbi_symbol.size());
+    for (int i = 0; i < bw_input_index2lbi_symbol.size(); ++i) {
+      inputs.at(i) = lbi_symbol2tensor.at(bw_input_index2lbi_symbol.at(i));
+      CHECK(static_cast<bool>(inputs.at(i)));
     }
-    for (const int& idx : entry.out_grad_indices) { inputs.emplace_back(out_grads.at(idx)); }
-    TensorTuple outputs(entry.in_grad_indices_for_each_output.size());
+    const auto& bw_op_expr = entry.bw_op_expr;
+    const auto& bw_output_index2lbi_symbol = entry.bw_output_index2lbi_symbol;
+    TensorTuple outputs(bw_output_index2lbi_symbol.size());
     const auto& interpreter = JUST(OpInterpUtil::GetInterpreter());
-    JUST(interpreter->Apply(*(entry.backward_op), inputs, &outputs));
-
-    for (int j = 0; j < entry.in_grad_indices_for_each_output.size(); ++j) {
-      for (const int& idx : entry.in_grad_indices_for_each_output.at(j)) {
-        in_grads->at(idx) = outputs.at(j);
-      }
+    JUST(interpreter->Apply(*bw_op_expr, inputs, &outputs));
+    // Update lbi_symbol2tensor by results
+    for (int i = 0; i < bw_output_index2lbi_symbol.size(); ++i) {
+      CHECK(static_cast<bool>(outputs.at(i)));
+      lbi_symbol2tensor.at(bw_output_index2lbi_symbol.at(i)) = outputs.at(i);
     }
-    offset += entry.snapshot.count;
+  }
+  // Updates the result in_grads
+  in_grads->resize(fw_input_index2grad_lbi_symbol_.size());
+  for (int i = 0; i < fw_input_index2grad_lbi_symbol_.size(); ++i) {
+    in_grads->at(i) = lbi_symbol2tensor.at(fw_input_index2grad_lbi_symbol_.at(i));
   }
   return Maybe<void>::Ok();
 }
