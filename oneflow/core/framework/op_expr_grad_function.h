@@ -36,7 +36,7 @@ class OpExprGradFunction {
 
   // Capture forward inputs and outputs for backward.
   virtual Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                              const TensorTuple& outputs) const = 0;
+                              const TensorTuple& outputs, const AttrValueMap& attrs) const = 0;
 
   virtual Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
                             TensorTuple* in_grads) const = 0;
@@ -59,8 +59,9 @@ class OpExprGradClosure {
 
   virtual ~OpExprGradClosure() = default;
 
-  Maybe<void> Capture(const TensorTuple& inputs, const TensorTuple& outputs) const {
-    return impl_->Capture(state_.get(), inputs, outputs);
+  Maybe<void> Capture(const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrValueMap& attrs) const {
+    return impl_->Capture(state_.get(), inputs, outputs, attrs);
   }
 
   Maybe<void> Apply(const TensorTuple& out_grads, TensorTuple* in_grads) const {
