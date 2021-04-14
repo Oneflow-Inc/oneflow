@@ -40,15 +40,15 @@ struct CudnnConvArgsAndAlgo final {
                        bool has_forced_algo, int32_t forced_algo)
       : args(user_op_conf, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
              y->shape(), user_op_conf.attr<std::string>("data_format"), buf->shape().elem_cnt(),
-             Global<ResourceDesc, ForEnv>::Get()
+             Global<ResourceDesc, ForSession>::Get()
                  ->resource()
                  .cudnn_conf()
                  .cudnn_conv_heuristic_search_algo(),
-             Global<ResourceDesc, ForEnv>::Get()
+             Global<ResourceDesc, ForSession>::Get()
                  ->resource()
                  .cudnn_conf()
                  .cudnn_conv_use_deterministic_algo_only(),
-             Global<ResourceDesc, ForEnv>::Get()
+             Global<ResourceDesc, ForSession>::Get()
                      ->resource()
                      .cudnn_conf()
                      .cudnn_conv_enable_pseudo_half()
@@ -86,21 +86,23 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
 
   size_t workspace_size = job_desc.cudnn_buf_limit_mbyte() * 1024 * 1024;
   if (!x->is_dynamic()) {
-    CudnnConvArgs args(
-        user_op_conf, x->data_type(), ShapeView(x->shape()), w->data_type(), ShapeView(w->shape()),
-        y->data_type(), ShapeView(y->shape()), user_op_conf.attr<std::string>("data_format"),
-        workspace_size,
-        Global<ResourceDesc, ForEnv>::Get()
-            ->resource()
-            .cudnn_conf()
-            .cudnn_conv_heuristic_search_algo(),
-        Global<ResourceDesc, ForEnv>::Get()
-            ->resource()
-            .cudnn_conf()
-            .cudnn_conv_use_deterministic_algo_only(),
-        Global<ResourceDesc, ForEnv>::Get()->resource().cudnn_conf().cudnn_conv_enable_pseudo_half()
-            || (user_op_conf.attr<std::string>("data_format") == "channels_last"
-                && std::is_same<PerfT, cudnnConvolutionBwdFilterAlgoPerf_t>::value));
+    CudnnConvArgs args(user_op_conf, x->data_type(), ShapeView(x->shape()), w->data_type(),
+                       ShapeView(w->shape()), y->data_type(), ShapeView(y->shape()),
+                       user_op_conf.attr<std::string>("data_format"), workspace_size,
+                       Global<ResourceDesc, ForSession>::Get()
+                           ->resource()
+                           .cudnn_conf()
+                           .cudnn_conv_heuristic_search_algo(),
+                       Global<ResourceDesc, ForSession>::Get()
+                           ->resource()
+                           .cudnn_conf()
+                           .cudnn_conv_use_deterministic_algo_only(),
+                       Global<ResourceDesc, ForSession>::Get()
+                               ->resource()
+                               .cudnn_conf()
+                               .cudnn_conv_enable_pseudo_half()
+                           || (user_op_conf.attr<std::string>("data_format") == "channels_last"
+                               && std::is_same<PerfT, cudnnConvolutionBwdFilterAlgoPerf_t>::value));
     PerfT algo_perf;
     if (has_forced_algo) {
       algo_perf = GetCudnnConvAlgorithmPerference<PerfT>(&args, static_cast<AlgoT>(forced_algo));
@@ -185,11 +187,14 @@ class ConvGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CudnnConvArgsAndAlgo<cudnnConvolutionFwdAlgoPerf_t> args_and_algo(
         in, weight, out, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
-        Global<ResourceDesc, ForEnv>::Get()
+        Global<ResourceDesc, ForSession>::Get()
             ->resource()
             .cudnn_conf()
             .has_cudnn_conv_force_fwd_algo(),
-        Global<ResourceDesc, ForEnv>::Get()->resource().cudnn_conf().cudnn_conv_force_fwd_algo());
+        Global<ResourceDesc, ForSession>::Get()
+            ->resource()
+            .cudnn_conf()
+            .cudnn_conv_force_fwd_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionFwdAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
 
@@ -221,11 +226,11 @@ class ConvGpuKernel final : public user_op::OpKernel {
         const auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);                   \
         return InferTmpSizeWithCudnn<cudnnConvolutionFwdAlgoPerf_t>(                   \
             in, weight, out, job_desc, ctx->user_op_conf(),                            \
-            Global<ResourceDesc, ForEnv>::Get()                                        \
+            Global<ResourceDesc, ForSession>::Get()                                    \
                 ->resource()                                                           \
                 .cudnn_conf()                                                          \
                 .has_cudnn_conv_force_fwd_algo(),                                      \
-            Global<ResourceDesc, ForEnv>::Get()                                        \
+            Global<ResourceDesc, ForSession>::Get()                                    \
                 ->resource()                                                           \
                 .cudnn_conf()                                                          \
                 .cudnn_conv_force_fwd_algo());                                         \
@@ -261,11 +266,11 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
 
     CudnnConvArgsAndAlgo<cudnnConvolutionBwdDataAlgoPerf_t> args_and_algo(
         dx, filter, dy, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
-        Global<ResourceDesc, ForEnv>::Get()
+        Global<ResourceDesc, ForSession>::Get()
             ->resource()
             .cudnn_conf()
             .has_cudnn_conv_force_bwd_data_algo(),
-        Global<ResourceDesc, ForEnv>::Get()
+        Global<ResourceDesc, ForSession>::Get()
             ->resource()
             .cudnn_conf()
             .cudnn_conv_force_bwd_data_algo());
@@ -305,11 +310,11 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
         const auto* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);                              \
         return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t>(                        \
             dx, filter, dy, job_desc, ctx->user_op_conf(),                                      \
-            Global<ResourceDesc, ForEnv>::Get()                                                 \
+            Global<ResourceDesc, ForSession>::Get()                                             \
                 ->resource()                                                                    \
                 .cudnn_conf()                                                                   \
                 .has_cudnn_conv_force_bwd_data_algo(),                                          \
-            Global<ResourceDesc, ForEnv>::Get()                                                 \
+            Global<ResourceDesc, ForSession>::Get()                                             \
                 ->resource()                                                                    \
                 .cudnn_conf()                                                                   \
                 .cudnn_conv_force_bwd_data_algo());                                             \
@@ -346,11 +351,11 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
 
     CudnnConvArgsAndAlgo<cudnnConvolutionBwdFilterAlgoPerf_t> args_and_algo(
         x, filter_diff, dy, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
-        Global<ResourceDesc, ForEnv>::Get()
+        Global<ResourceDesc, ForSession>::Get()
             ->resource()
             .cudnn_conf()
             .has_cudnn_conv_force_bwd_filter_algo(),
-        Global<ResourceDesc, ForEnv>::Get()
+        Global<ResourceDesc, ForSession>::Get()
             ->resource()
             .cudnn_conf()
             .cudnn_conv_force_bwd_filter_algo());
@@ -376,11 +381,11 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
         const auto* filter_diff = ctx->TensorDesc4ArgNameAndIndex("filter_diff", 0);   \
         return InferTmpSizeWithCudnn<cudnnConvolutionBwdFilterAlgoPerf_t>(             \
             x, filter_diff, dy, job_desc, ctx->user_op_conf(),                         \
-            Global<ResourceDesc, ForEnv>::Get()                                        \
+            Global<ResourceDesc, ForSession>::Get()                                    \
                 ->resource()                                                           \
                 .cudnn_conf()                                                          \
                 .has_cudnn_conv_force_bwd_filter_algo(),                               \
-            Global<ResourceDesc, ForEnv>::Get()                                        \
+            Global<ResourceDesc, ForSession>::Get()                                    \
                 ->resource()                                                           \
                 .cudnn_conf()                                                          \
                 .cudnn_conv_force_bwd_filter_algo());                                  \

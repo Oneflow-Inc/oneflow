@@ -38,15 +38,15 @@ struct CudnnDeConvArgsAndAlgo final {
                          bool has_forced_algo, int32_t forced_algo)
       : args(user_op_conf, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
              y->shape(), user_op_conf.attr<std::string>("data_format"), buf->shape().elem_cnt(),
-             Global<ResourceDesc, ForEnv>::Get()
+             Global<ResourceDesc, ForSession>::Get()
                  ->resource()
                  .cudnn_conf()
                  .cudnn_conv_heuristic_search_algo(),
-             Global<ResourceDesc, ForEnv>::Get()
+             Global<ResourceDesc, ForSession>::Get()
                  ->resource()
                  .cudnn_conf()
                  .cudnn_conv_use_deterministic_algo_only(),
-             Global<ResourceDesc, ForEnv>::Get()
+             Global<ResourceDesc, ForSession>::Get()
                  ->resource()
                  .cudnn_conf()
                  .cudnn_conv_enable_pseudo_half()) {
@@ -84,15 +84,15 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
     CudnnConvArgs args(user_op_conf, x->data_type(), ShapeView(x->shape()), w->data_type(),
                        ShapeView(w->shape()), y->data_type(), ShapeView(y->shape()),
                        user_op_conf.attr<std::string>("data_format"), workspace_size,
-                       Global<ResourceDesc, ForEnv>::Get()
+                       Global<ResourceDesc, ForSession>::Get()
                            ->resource()
                            .cudnn_conf()
                            .cudnn_conv_heuristic_search_algo(),
-                       Global<ResourceDesc, ForEnv>::Get()
+                       Global<ResourceDesc, ForSession>::Get()
                            ->resource()
                            .cudnn_conf()
                            .cudnn_conv_use_deterministic_algo_only(),
-                       Global<ResourceDesc, ForEnv>::Get()
+                       Global<ResourceDesc, ForSession>::Get()
                            ->resource()
                            .cudnn_conf()
                            .cudnn_conv_enable_pseudo_half());
@@ -136,11 +136,11 @@ class DeConvGpuKernel final : public user_op::OpKernel {
 
     CudnnDeConvArgsAndAlgo<cudnnConvolutionBwdDataAlgoPerf_t> args_and_algo(
         out, weight, in, buf, job_desc, ctx->user_op_conf(), ctx->device_ctx(),
-        Global<ResourceDesc, ForEnv>::Get()
+        Global<ResourceDesc, ForSession>::Get()
             ->resource()
             .cudnn_conf()
             .has_cudnn_conv_force_bwd_data_algo(),
-        Global<ResourceDesc, ForEnv>::Get()
+        Global<ResourceDesc, ForSession>::Get()
             ->resource()
             .cudnn_conf()
             .cudnn_conv_force_bwd_data_algo());
@@ -166,11 +166,11 @@ class DeConvGpuKernel final : public user_op::OpKernel {
         const auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);                   \
         return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t>(               \
             out, weight, in, job_desc, ctx->user_op_conf(),                            \
-            Global<ResourceDesc, ForEnv>::Get()                                        \
+            Global<ResourceDesc, ForSession>::Get()                                    \
                 ->resource()                                                           \
                 .cudnn_conf()                                                          \
                 .has_cudnn_conv_force_bwd_data_algo(),                                 \
-            Global<ResourceDesc, ForEnv>::Get()                                        \
+            Global<ResourceDesc, ForSession>::Get()                                    \
                 ->resource()                                                           \
                 .cudnn_conf()                                                          \
                 .cudnn_conv_force_bwd_data_algo());                                    \
