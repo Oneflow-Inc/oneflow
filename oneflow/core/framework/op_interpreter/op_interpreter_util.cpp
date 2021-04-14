@@ -156,11 +156,9 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
 /*static*/ Maybe<Tensor> OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
     const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const Device>& device) {
-  // const auto& dtype = JUST(DType::GetDTypeByDataType(eager_blob_object->blob().data_type()));
-  const auto& dtype = JUST(DType::Float());
-  // TODO:
-  // auto shape = std::make_shared<Shape>(eager_blob_object->blob_desc().shape());
-  auto shape = std::shared_ptr<Shape>(new Shape({1000, 1000}));
+  // TODO: fill dtype and shape async
+  const auto& dtype = JUST(DType::GetDTypeByDataType(eager_blob_object->blob().data_type()));
+  auto shape = std::make_shared<Shape>(eager_blob_object->blob_desc().shape());
   auto tensor = MirroredTensor::MakeTensor(shape, dtype, device, false, false, false, false);
   tensor->set_eager_blob_object(eager_blob_object);
   return std::static_pointer_cast<Tensor>(tensor);

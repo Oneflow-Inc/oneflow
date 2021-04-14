@@ -26,7 +26,7 @@ namespace one {
 class TensorTuple;
 class StatefulOpKernel;
 
-using TensorsPtr = std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
+using EagerBlobObjectList = std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
 using TensorIndexMap = std::vector<std::pair<std::string, int>>;
 
 }  // namespace one
@@ -46,16 +46,17 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   ~LocalCallOpKernelPhyInstrOperand() override = default;
 
   LocalCallOpKernelPhyInstrOperand(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-                                   const one::TensorsPtr inputs, const one::TensorsPtr outputs)
+                                   const one::EagerBlobObjectList inputs,
+                                   const one::EagerBlobObjectList outputs)
       : opkernel_(opkernel), inputs_(inputs), outputs_(outputs) {}
 
   const one::StatefulOpKernel& opkernel() const { return *opkernel_; }
-  const one::TensorsPtr inputs() const { return inputs_; }
-  const one::TensorsPtr outputs() const { return outputs_; }
+  const one::EagerBlobObjectList inputs() const { return inputs_; }
+  const one::EagerBlobObjectList outputs() const { return outputs_; }
 
   one::StatefulOpKernel* mut_opkernel() { return opkernel_.get(); }
-  const one::TensorsPtr mut_inputs() { return inputs_; }
-  const one::TensorsPtr mut_outputs() { return outputs_; }
+  const one::EagerBlobObjectList mut_inputs() { return inputs_; }
+  const one::EagerBlobObjectList mut_outputs() { return outputs_; }
 
   using OutputFn = std::function<Maybe<void>(eager::EagerBlobObject* tensor)>;
 
@@ -83,8 +84,8 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
 
  private:
   std::shared_ptr<one::StatefulOpKernel> opkernel_;
-  one::TensorsPtr inputs_;
-  one::TensorsPtr outputs_;
+  one::EagerBlobObjectList inputs_;
+  one::EagerBlobObjectList outputs_;
 };
 
 }  // namespace eager

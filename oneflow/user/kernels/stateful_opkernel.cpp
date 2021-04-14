@@ -27,7 +27,7 @@ namespace one {
 template<class T>
 class TensorsPtrScope {
  public:
-  TensorsPtrScope(T* ctx, TensorsPtr inputs, TensorsPtr outputs) {
+  TensorsPtrScope(T* ctx, EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
     ctx_ = ctx;
     ctx_->Update(inputs, outputs);
   }
@@ -95,7 +95,7 @@ class LocalUserKernelBaseContext {
     LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found";
   }
 
-  void Update(TensorsPtr inputs, TensorsPtr outputs) {
+  void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
     input_tensors_ = inputs;
     output_tensors_ = outputs;
   }
@@ -115,8 +115,8 @@ class LocalUserKernelBaseContext {
   const ArgVec* indexed_output_pairs_;
   DeviceType device_type_;
   std::string device_tag_;
-  TensorsPtr input_tensors_;
-  TensorsPtr output_tensors_;
+  EagerBlobObjectList input_tensors_;
+  EagerBlobObjectList output_tensors_;
   LocalUserOpArgContext input_arg_context_;
   LocalUserOpArgContext output_arg_context_;
   mutable std::vector<EagerBlobObjectTensorView> input_tensor_views_;
@@ -146,7 +146,9 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
-  void Update(TensorsPtr inputs, TensorsPtr outputs) { base_ctx_.Update(inputs, outputs); }
+  void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
+    base_ctx_.Update(inputs, outputs);
+  }
   Maybe<void> set_device_tag(const std::string& device_tag) {
     // TODO: update op_conf
     TODO();
@@ -206,7 +208,9 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
   const ParallelDesc& parallel_desc() const override { UNIMPLEMENTED(); }
 
-  void Update(TensorsPtr inputs, TensorsPtr outputs) { base_ctx_.Update(inputs, outputs); }
+  void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
+    base_ctx_.Update(inputs, outputs);
+  }
 
  private:
   DeviceCtx* device_ctx_;
@@ -245,7 +249,7 @@ user_op::TensorDesc* LocalUserOpInferContext::TensorDesc4ArgNameAndIndex(
   LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found";
 }
 
-void LocalUserOpInferContext::Update(TensorsPtr inputs, TensorsPtr outputs) {
+void LocalUserOpInferContext::Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
   input_tensors_ = inputs;
   output_tensors_ = outputs;
 }
@@ -277,7 +281,7 @@ const JobDesc& LocalUserKernelComputeContext::job_desc() const { return base_ctx
 const ArgVec& LocalUserKernelComputeContext::inputs() const { return base_ctx_->inputs(); }
 const ArgVec& LocalUserKernelComputeContext::outputs() const { return base_ctx_->outputs(); }
 
-void LocalUserKernelComputeContext::Update(TensorsPtr inputs, TensorsPtr outputs,
+void LocalUserKernelComputeContext::Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs,
                                            DeviceCtx* device_ctx) {
   input_tensors_ = inputs;
   output_tensors_ = outputs;
@@ -319,30 +323,7 @@ StatefulOpKernel::StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc
 
 StatefulOpKernel::~StatefulOpKernel() = default;
 
-Maybe<const user_op::OpKernel*> StatefulOpKernel::GetOpKernel(TensorsPtr inputs,
-                                                              TensorsPtr outputs) {
-  TensorsPtrScope<LocalUserKernelRegContext> reg_ctx_scope(reg_ctx_.get(), inputs, outputs);
-  const auto& op_type_name = op_conf_.user_conf().op_type_name();
-  const auto* kernel_reg_val = CHECK_JUST(
-      user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, *reg_ctx_));
-  CHECK_NOTNULL(kernel_reg_val);
-  auto it = op_kernel_map_.find(kernel_reg_val);
-  if (it != op_kernel_map_.end()) { return it->second.get(); }
-
-  auto* kernel = kernel_reg_val->create_fn(create_ctx_.get());
-  op_kernel_map_.emplace(
-      std::make_pair(kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel)));
-  auto init_ctx = std::make_shared<LocalUserKernelInitContext>(
-      nullptr, op_conf_, job_desc_, indexed_input_pairs_, indexed_output_pairs_);
-  init_ctx->Update(inputs, outputs);
-  init_ctx_map_.emplace(std::make_pair(kernel, init_ctx));
-
-  infer_tmp_size_fn_map_.emplace(std::make_pair(kernel, &kernel_reg_val->infer_tmp_size_fn));
-
-  return kernel;
-}
-
-void StatefulOpKernel::ChooseOpKernel(TensorsPtr inputs, TensorsPtr outputs) {
+void StatefulOpKernel::ChooseOpKernel(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
   TensorsPtrScope<LocalUserKernelRegContext> reg_ctx_scope(reg_ctx_.get(), inputs, outputs);
   const auto& op_type_name = op_conf_.user_conf().op_type_name();
   const auto* kernel_reg_val = CHECK_JUST(
@@ -365,7 +346,6 @@ void StatefulOpKernel::ChooseOpKernel(TensorsPtr inputs, TensorsPtr outputs) {
   infer_tmp_size_fn_map_.emplace(std::make_pair(kernel, &kernel_reg_val->infer_tmp_size_fn));
 
   current_op_kernel_ = kernel;
-  // TODO:
   current_state_ = nullptr;
 }
 
@@ -397,14 +377,14 @@ user_op::TensorDescInferFn StatefulOpKernel::TensorDescInferFn() const {
 
 user_op::DataTypeInferFn StatefulOpKernel::DataTypeInferFn() const { return data_type_infer_fn_; }
 
-LocalUserOpInferContext* StatefulOpKernel::UpdateInferContext(TensorsPtr inputs,
-                                                              TensorsPtr outputs) {
+LocalUserOpInferContext* StatefulOpKernel::UpdateInferContext(EagerBlobObjectList inputs,
+                                                              EagerBlobObjectList outputs) {
   op_infer_ctx_->Update(inputs, outputs);
   return op_infer_ctx_.get();
 }
 
-LocalUserKernelComputeContext* StatefulOpKernel::UpdateComputeContext(TensorsPtr inputs,
-                                                                      TensorsPtr outputs,
+LocalUserKernelComputeContext* StatefulOpKernel::UpdateComputeContext(EagerBlobObjectList inputs,
+                                                                      EagerBlobObjectList outputs,
                                                                       DeviceCtx* device_ctx) {
   compute_ctx_->Update(inputs, outputs, device_ctx);
   return compute_ctx_.get();
@@ -415,6 +395,7 @@ Maybe<void> StatefulOpKernel::set_device(const DeviceType dev_type, const int64_
   mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, dev_id);
   op_conf_.set_device_tag(dev_tag);
   // TODO: update contexts
+  return Maybe<void>::Ok();
 };
 }  // namespace one
 }  // namespace oneflow

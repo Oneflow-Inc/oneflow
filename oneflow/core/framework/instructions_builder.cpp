@@ -665,30 +665,14 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
 }
 
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(
-    const std::shared_ptr<one::StatefulOpKernel>& opkernel, const one::TensorTuple& input_tuple,
-    const one::TensorTuple& output_tuple, one::TensorsPtr eager_blob_objects,
+    const std::shared_ptr<one::StatefulOpKernel>& opkernel,
+    one::EagerBlobObjectList input_eager_blob_objects,
+    one::EagerBlobObjectList output_eager_blob_objects,
     std::shared_ptr<const ParallelDesc> parallel_desc_sym) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc_sym->device_tag() + ".LocalCallOpKernel");
-  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> inputs =
-      std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(input_tuple.size());
-  for (int i = 0; i < input_tuple.size(); i++) {
-    (*inputs)[i] = JUST(input_tuple[i]->eager_blob_object());
-  }
-  eager_blob_objects->reserve(output_tuple.size());
-  for (auto& output : output_tuple) {
-    auto mem_case = opkernel->mem_case();
-    // auto impl = GetImpl(output);
-    // impl->InitEagerBlobObject(mem_case);
-    // const auto& eager_blob_object = impl->eager_blob_object();
-
-    auto eager_blob_object = std::make_shared<eager::EagerBlobObject>(
-        mem_case, std::make_shared<Shape>(), DataType::kInvalidDataType,
-        std::make_shared<eager::TensorBuffer>());
-    eager_blob_objects->push_back(eager_blob_object);
-  }
   auto phy_instr_operand = std::make_shared<eager::LocalCallOpKernelPhyInstrOperand>(
-      opkernel, inputs, eager_blob_objects);
+      opkernel, input_eager_blob_objects, output_eager_blob_objects);
   instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->PushBack(instruction.Mutable());
