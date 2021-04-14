@@ -48,11 +48,9 @@ int32_t GetIndex(const ArgVec* arg_pairs, const std::pair<std::string, int32_t>&
 
 class LocalUserKernelBaseContext {
  public:
-  LocalUserKernelBaseContext(const std::string& device_tag,
-                             const std::shared_ptr<const JobDesc> job_desc,
-                             const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs)
-      : job_desc_(job_desc),
-        indexed_input_pairs_(indexed_input_pairs),
+  LocalUserKernelBaseContext(const std::string& device_tag, const ArgVec* indexed_input_pairs,
+                             const ArgVec* indexed_output_pairs)
+      : indexed_input_pairs_(indexed_input_pairs),
         indexed_output_pairs_(indexed_output_pairs),
         input_arg_context_([this](int64_t index) -> eager::EagerBlobObject* {
           return (*this->input_tensors_)[index].get();
@@ -75,7 +73,7 @@ class LocalUserKernelBaseContext {
 
   DeviceType device_type() const { return device_type_; }
   const std::string& device_tag() const { return device_tag_; }
-  const JobDesc& job_desc() const { return *job_desc_; }
+  const JobDesc& job_desc() const { UNIMPLEMENTED(); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const {
     // const_cast to align with ArgVec and avoid copy
@@ -112,7 +110,6 @@ class LocalUserKernelBaseContext {
   const ArgVec& outputs() const { return *indexed_output_pairs_; }
 
  private:
-  std::shared_ptr<const JobDesc> job_desc_;
   const ArgVec* indexed_input_pairs_;
   const ArgVec* indexed_output_pairs_;
   DeviceType device_type_;
@@ -129,12 +126,10 @@ class LocalUserKernelBaseContext {
 
 class LocalUserKernelRegContext final : public user_op::KernelRegContext {
  public:
-  explicit LocalUserKernelRegContext(const OperatorConf& op_conf,
-                                     const std::shared_ptr<const JobDesc> job_desc,
-                                     const ArgVec* index_input_pairs,
+  explicit LocalUserKernelRegContext(const OperatorConf& op_conf, const ArgVec* index_input_pairs,
                                      const ArgVec* indexed_output_pairs)
       : user_op::KernelRegContext(user_op::UserOpConfWrapper(op_conf)),
-        base_ctx_(LocalUserKernelBaseContext(op_conf.device_tag(), job_desc, index_input_pairs,
+        base_ctx_(LocalUserKernelBaseContext(op_conf.device_tag(), index_input_pairs,
                                              indexed_output_pairs)) {}
   ~LocalUserKernelRegContext() = default;
 
@@ -174,12 +169,11 @@ class LocalUserKernelCreateContext final : public user_op::KernelCreateContext {
 class LocalUserKernelInitContext final : public user_op::KernelInitContext {
  public:
   explicit LocalUserKernelInitContext(DeviceCtx* device_ctx, const OperatorConf& op_conf,
-                                      const std::shared_ptr<const JobDesc> job_desc,
                                       const ArgVec* index_input_pairs,
                                       const ArgVec* indexed_output_pairs)
       : user_op::KernelInitContext(user_op::UserOpConfWrapper(op_conf)),
         device_ctx_(device_ctx),
-        base_ctx_(LocalUserKernelBaseContext(op_conf.device_tag(), job_desc, index_input_pairs,
+        base_ctx_(LocalUserKernelBaseContext(op_conf.device_tag(), index_input_pairs,
                                              indexed_output_pairs)) {}
   ~LocalUserKernelInitContext() override = default;
 
@@ -220,11 +214,9 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
 };
 
 LocalUserOpInferContext::LocalUserOpInferContext(const OperatorConf& op_conf,
-                                                 const std::shared_ptr<const JobDesc> job_desc,
                                                  const ArgVec* index_input_pairs,
                                                  const ArgVec* indexed_output_pairs)
     : user_op_conf_(op_conf),
-      job_desc_(job_desc),
       indexed_input_pairs_(index_input_pairs),
       indexed_output_pairs_(indexed_output_pairs),
       input_arg_context_([this](int64_t index) -> eager::EagerBlobObject* {
@@ -257,14 +249,14 @@ void LocalUserOpInferContext::Update(EagerBlobObjectList inputs, EagerBlobObject
   output_tensors_ = outputs;
 }
 
-LocalUserKernelComputeContext::LocalUserKernelComputeContext(
-    DeviceCtx* device_ctx, const OperatorConf& op_conf,
-    const std::shared_ptr<const JobDesc> job_desc, const ArgVec* index_input_pairs,
-    const ArgVec* indexed_output_pairs)
+LocalUserKernelComputeContext::LocalUserKernelComputeContext(DeviceCtx* device_ctx,
+                                                             const OperatorConf& op_conf,
+                                                             const ArgVec* index_input_pairs,
+                                                             const ArgVec* indexed_output_pairs)
     : user_op::KernelComputeContext(user_op::UserOpConfWrapper(op_conf)),
       device_ctx_(device_ctx),
       base_ctx_(std::unique_ptr<LocalUserKernelBaseContext>(new LocalUserKernelBaseContext(
-          op_conf.device_tag(), job_desc, index_input_pairs, indexed_output_pairs))) {}
+          op_conf.device_tag(), index_input_pairs, indexed_output_pairs))) {}
 
 const user_op::TensorDesc* LocalUserKernelComputeContext::TensorDesc4ArgNameAndIndex(
     const std::string& arg_name, int32_t index) const {
@@ -279,7 +271,7 @@ DeviceCtx* LocalUserKernelComputeContext::device_ctx() { return device_ctx_; }
 
 DeviceType LocalUserKernelComputeContext::device_type() const { return base_ctx_->device_type(); }
 const ParallelContext& LocalUserKernelComputeContext::parallel_ctx() const { UNIMPLEMENTED(); }
-const JobDesc& LocalUserKernelComputeContext::job_desc() const { return base_ctx_->job_desc(); }
+const JobDesc& LocalUserKernelComputeContext::job_desc() const { UNIMPLEMENTED(); }
 
 const ArgVec& LocalUserKernelComputeContext::inputs() const { return base_ctx_->inputs(); }
 const ArgVec& LocalUserKernelComputeContext::outputs() const { return base_ctx_->outputs(); }
@@ -292,24 +284,22 @@ void LocalUserKernelComputeContext::Update(EagerBlobObjectList inputs, EagerBlob
   base_ctx_->Update(inputs, outputs);
 }
 
-StatefulOpKernel::StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc,
-                                   const OperatorConf& op_conf,
+StatefulOpKernel::StatefulOpKernel(const OperatorConf& op_conf,
                                    const std::shared_ptr<MemoryCase>& mem_case,
                                    const ArgVec* index_input_pairs,
                                    const ArgVec* indexed_output_pairs)
-    : job_desc_(job_desc),
-      op_conf_(op_conf),
+    : op_conf_(op_conf),
       mem_case_(mem_case),
       indexed_input_pairs_(index_input_pairs),
       indexed_output_pairs_(indexed_output_pairs),
       need_check_mem_case_(true) {
   op_infer_ctx_.reset(
-      new LocalUserOpInferContext(op_conf, job_desc, index_input_pairs, indexed_output_pairs));
-  compute_ctx_.reset(new LocalUserKernelComputeContext(nullptr, op_conf, job_desc,
-                                                       index_input_pairs, indexed_output_pairs));
+      new LocalUserOpInferContext(op_conf, index_input_pairs, indexed_output_pairs));
+  compute_ctx_.reset(
+      new LocalUserKernelComputeContext(nullptr, op_conf, index_input_pairs, indexed_output_pairs));
   create_ctx_.reset(new LocalUserKernelCreateContext(op_conf));
-  reg_ctx_.reset(new LocalUserKernelRegContext(op_conf, job_desc, indexed_input_pairs_,
-                                               indexed_output_pairs_));
+  reg_ctx_.reset(
+      new LocalUserKernelRegContext(op_conf, indexed_input_pairs_, indexed_output_pairs_));
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
   CHECK_NOTNULL(op_reg_val);
@@ -343,7 +333,7 @@ void StatefulOpKernel::ChooseOpKernel(EagerBlobObjectList inputs, EagerBlobObjec
   op_kernel_map_.emplace(
       std::make_pair(kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel)));
   auto init_ctx = std::make_shared<LocalUserKernelInitContext>(
-      nullptr, op_conf_, job_desc_, indexed_input_pairs_, indexed_output_pairs_);
+      nullptr, op_conf_, indexed_input_pairs_, indexed_output_pairs_);
   init_ctx->Update(inputs, outputs);
   init_ctx_map_.emplace(std::make_pair(kernel, init_ctx));
 

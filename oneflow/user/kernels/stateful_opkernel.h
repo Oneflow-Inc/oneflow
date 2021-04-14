@@ -75,7 +75,7 @@ class EagerBlobObjectTensorView final : public user_op::Tensor {
 
  private:
   LocalUserOpArgContext* ctx_;
-  int64_t index_;
+  const int64_t index_;
 };
 
 class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
@@ -113,14 +113,13 @@ class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
 
  private:
   LocalUserOpArgContext* ctx_;
-  int64_t index_;
+  const int64_t index_;
 };
 
 class LocalUserOpInferContext : public user_op::InferContext {
  public:
-  LocalUserOpInferContext(const OperatorConf& op_conf,
-                          const std::shared_ptr<const JobDesc> job_desc,
-                          const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs);
+  LocalUserOpInferContext(const OperatorConf& op_conf, const ArgVec* indexed_input_pairs,
+                          const ArgVec* indexed_output_pairs);
   ~LocalUserOpInferContext() override = default;
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -142,8 +141,8 @@ class LocalUserOpInferContext : public user_op::InferContext {
   const ArgVec& inputs() const override { return *indexed_input_pairs_; }
   const ArgVec& outputs() const override { return *indexed_output_pairs_; }
   const JobDesc* job_desc() const override {
-    CHECK_NOTNULL(job_desc_);
-    return job_desc_.get();
+    UNIMPLEMENTED();
+    return nullptr;
   }
   const ParallelContext& parallel_ctx() const override { UNIMPLEMENTED(); };
   const ParallelDesc& parallel_desc() const override { UNIMPLEMENTED(); }
@@ -164,7 +163,6 @@ class LocalUserOpInferContext : public user_op::InferContext {
 
  private:
   user_op::UserOpConfWrapper user_op_conf_;
-  std::shared_ptr<const JobDesc> job_desc_;
   const ArgVec* indexed_input_pairs_;
   const ArgVec* indexed_output_pairs_;
   EagerBlobObjectList input_tensors_;
@@ -178,7 +176,6 @@ class LocalUserOpInferContext : public user_op::InferContext {
 class LocalUserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
   explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const OperatorConf& op_conf,
-                                         const std::shared_ptr<const JobDesc> job_desc,
                                          const ArgVec* indexed_input_pairs,
                                          const ArgVec* indexed_output_pairs);
   ~LocalUserKernelComputeContext() = default;
@@ -210,9 +207,8 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
 class StatefulOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulOpKernel);
-  StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc, const OperatorConf& op_conf,
-                   const std::shared_ptr<MemoryCase>& mem_case, const ArgVec* indexed_input_pairs,
-                   const ArgVec* indexed_output_pairs);
+  StatefulOpKernel(const OperatorConf& op_conf, const std::shared_ptr<MemoryCase>& mem_case,
+                   const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs);
   ~StatefulOpKernel();
   const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
   Maybe<void> set_device(const DeviceType dev_type, const int64_t dev_id,
@@ -244,7 +240,6 @@ class StatefulOpKernel final {
 
   const user_op::OpKernel* mut_user_opkernel() { return current_op_kernel_; }
 
-  std::shared_ptr<const JobDesc> job_desc_;
   OperatorConf op_conf_;
   std::shared_ptr<MemoryCase> mem_case_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
