@@ -63,6 +63,7 @@ class ResourceDesc final {
   void SetCpuDeviceNum(int32_t val) { resource_.set_cpu_device_num(val); }
   bool enable_tensor_float_32_compute() const { return resource_.enable_tensor_float_32_compute(); }
   const Resource& resource() const { return resource_; }
+  void DumpCudnnConf();
 
  private:
   Resource resource_;
