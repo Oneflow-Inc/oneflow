@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/common/shape_view.h"
-#include "oneflow/core/register/pod_ptr.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/symbol.h"
 
@@ -55,8 +54,8 @@ class Blob final {
   virtual ~Blob() = default;
 
   DataType data_type() const { return blob_desc_->data_type(); }
-  const char* header_ptr() const { return header_ptr_->ptr(); }
-  char* mut_header_ptr() { return header_ptr_->ptr(); }
+  const char* header_ptr() const { return header_ptr_; }
+  char* mut_header_ptr() { return header_ptr_; }
   char* mut_contiguous_header_ptr();
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
@@ -112,28 +111,14 @@ class Blob final {
  private:
   void Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr,
             char* body_ptr);
-  template<FieldKey key>
-  const int64_t* header_field() const {
-    return header_fields_[key];
-  }
-  template<FieldKey key>
-  int64_t* mut_header_field() {
-    return header_fields_[key];
-  }
-  template<FieldKey key>
-  size_t header_field_capacity() const {
-    return header_field_capacities_[key];
-  }
 
   const BlobAccessChecker* blob_access_checker_;
   MemoryCase mem_case_;
   const RtBlobDesc* blob_desc_;
   void* dptr_;
-  int64_t* header_fields_[FieldKey::kFieldKeySize];
-  size_t header_field_capacities_[FieldKey::kFieldKeySize];
+  char* header_ptr_;
   std::unique_ptr<ShapeView> shape_view_;
   std::unique_ptr<MutShapeView> mut_shape_view_;
-  std::unique_ptr<PodPtr> header_ptr_;
   // TODO(chengcheng); remove record num and record_blob
   int32_t record_num_;
 };

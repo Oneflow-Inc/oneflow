@@ -44,7 +44,6 @@ REGISTER_USER_OP("fake_quantization")
       }
 
       *ctx->Shape4ArgNameAndIndex("out", 0) = *in_shape;
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -106,6 +105,10 @@ REGISTER_USER_OP("fake_quantization")
 
       std::string quantization_formula = op_conf.attr<std::string>("quantization_formula");
       CHECK_OR_RETURN(quantization_formula == "google" || quantization_formula == "cambricon");
+      return Maybe<void>::Ok();
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 
