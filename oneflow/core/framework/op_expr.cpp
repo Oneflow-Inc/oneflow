@@ -13,7 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
 
 namespace oneflow {
@@ -24,7 +26,7 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto,
                        const std::vector<std::string>& indexed_obns)
     : BuiltinOpExpr("user", op_name, indexed_ibns, indexed_obns), proto_(std::move(proto)) {
   OperatorConf op_conf;
-  BuildOpConf(&op_conf);
+  BuildOpConf(&op_conf, {});
   // TODO: set current device tag
   op_conf.set_device_tag("gpu");
   auto mem_case = MemoryCaseUtil::MakeMemCase(DeviceType::kGPU, 0);
@@ -32,5 +34,114 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto,
       std::shared_ptr<const JobDesc>(&GlobalJobDesc(), [](const JobDesc*) {}), op_conf, mem_case,
       &indexed_input_pairs(), &indexed_output_pairs());
 }
+
+Maybe<void> UserOpExpr::BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const {
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_user_conf()) = proto_;
+  auto* user_op_conf = op_conf->mutable_user_conf();
+  for (const auto& it : attrs) {
+    AttrValue attr_val;
+    it.second->ToProto(&attr_val);
+    (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<OpExprGradClosure> UserOpExpr::GetOrCreateOpGradClosure() const {
+  if (!op_grad_func_.get()) {
+    if (IsClassRegistered<std::string, OpExprGradFunction>(proto().op_type_name())) {
+      op_grad_func_.reset(NewObj<std::string, OpExprGradFunction>(proto().op_type_name()));
+    } else {
+      op_grad_func_.reset(NewObj<std::string, OpExprGradFunction>("default"));
+    }
+    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
+    op_grad_func_->Init(*this);
+  }
+  return std::make_shared<OpExprGradClosure>(op_grad_func_);
+}
+
+Maybe<void> VariableOpExpr::BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_variable_conf()) = proto_;
+  return Maybe<void>::Ok();
+}
+
+Maybe<OpExprGradClosure> VariableOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+Maybe<void> CastToMirroredOpExpr::BuildOpConf(OperatorConf* op_conf,
+                                              const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_cast_to_mirrored_conf()) = proto_;
+  return Maybe<void>::Ok();
+}
+
+Maybe<OpExprGradClosure> CastToMirroredOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+Maybe<void> CastFromMirroredOpExpr::BuildOpConf(OperatorConf* op_conf,
+                                                const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_cast_from_mirrored_conf()) = proto_;
+  return Maybe<void>::Ok();
+}
+
+Maybe<OpExprGradClosure> CastFromMirroredOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+Maybe<void> DistributeSplitOpExpr::BuildOpConf(OperatorConf* op_conf,
+                                               const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_distribute_split_conf()) = proto_;
+  return Maybe<void>::Ok();
+}
+
+Maybe<OpExprGradClosure> DistributeSplitOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+Maybe<void> DistributeCloneOpExpr::BuildOpConf(OperatorConf* op_conf,
+                                               const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_distribute_clone_conf()) = proto_;
+  return Maybe<void>::Ok();
+}
+
+Maybe<OpExprGradClosure> DistributeCloneOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+Maybe<void> DistributeConcatOpExpr::BuildOpConf(OperatorConf* op_conf,
+                                                const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_distribute_concat_conf()) = proto_;
+  return Maybe<void>::Ok();
+}
+
+Maybe<OpExprGradClosure> DistributeConcatOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+Maybe<void> DistributeAddOpExpr::BuildOpConf(OperatorConf* op_conf,
+                                             const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_distribute_add_conf()) = proto_;
+  return Maybe<void>::Ok();
+}
+
+Maybe<OpExprGradClosure> DistributeAddOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
 }  // namespace one
 }  // namespace oneflow

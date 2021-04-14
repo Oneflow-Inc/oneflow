@@ -76,9 +76,10 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
 }
 
 /*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::InferOpAttribute(const BuiltinOpExpr& op_expr,
-                                                                  const TensorTuple& inputs) {
+                                                                  const TensorTuple& inputs,
+                                                                  const AttrValueMap& attrs) {
   const auto& scope = JUST(GetCurrentScope());
-  auto op_conf = JUST(GenBuiltinOpConf(op_expr));
+  auto op_conf = JUST(GenBuiltinOpConf(op_expr, attrs));
   int64_t symbol_id = JUST(scope->symbol_id());
   op_conf->set_scope_symbol_id(symbol_id);
   if (!op_conf->has_device_tag()) {
@@ -113,9 +114,10 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   return bn2blob_object;
 }
 
-/*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr) {
+/*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
+                                                              const AttrValueMap& attrs) {
   auto op_conf = std::make_shared<OperatorConf>();
-  op_expr.BuildOpConf(op_conf.get());
+  op_expr.BuildOpConf(op_conf.get(), attrs);
   return op_conf;
 }
 
@@ -154,9 +156,11 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
 /*static*/ Maybe<Tensor> OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
     const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const Device>& device) {
-  const auto& dtype = JUST(DType::GetDTypeByDataType(eager_blob_object->blob().data_type()));
+  // const auto& dtype = JUST(DType::GetDTypeByDataType(eager_blob_object->blob().data_type()));
+  const auto& dtype = JUST(DType::Float());
   // TODO:
-  auto shape = std::make_shared<Shape>(eager_blob_object->blob_desc().shape());
+  // auto shape = std::make_shared<Shape>(eager_blob_object->blob_desc().shape());
+  auto shape = std::shared_ptr<Shape>(new Shape({1000, 1000}));
   auto tensor = MirroredTensor::MakeTensor(shape, dtype, device, false, false, false, false);
   // TODO:
   auto impl = std::dynamic_pointer_cast<EagerMirroredTensorImpl>(tensor->impl_);

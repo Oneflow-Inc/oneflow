@@ -64,6 +64,23 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
     return Maybe<void>::Ok();
   }
 
+  void ForEachInferMutMirroredObject(
+      const std::function<void(vm::MirroredObject*)>&) const override {
+    // do nothing
+  }
+  void ForEachInferConstMirroredObject(
+      const std::function<void(vm::MirroredObject*)>&) const override {
+    // do nothing
+  }
+  void ForEachComputeMutMirroredObject(
+      const std::function<void(vm::MirroredObject*)>&) const override {
+    // do nothing
+  }
+  void ForEachComputeConstMirroredObject(
+      const std::function<void(vm::MirroredObject*)>&) const override {
+    // do nothing
+  }
+
  private:
   std::shared_ptr<one::StatefulOpKernel> opkernel_;
   one::TensorsPtr inputs_;

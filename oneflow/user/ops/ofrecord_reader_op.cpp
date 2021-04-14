@@ -38,14 +38,12 @@ REGISTER_CPU_ONLY_USER_OP("OFRecordReader")
         local_batch_size /= parallel_num;
       }
       *out_tensor->mut_shape() = Shape({local_batch_size});
-      *out_tensor->mut_data_type() = DataType::kOFRecord;
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int32_t batch_size = ctx->Attr<int32_t>("batch_size");
       *out_tensor->mut_shape() = Shape({batch_size});
-      *out_tensor->mut_data_type() = DataType::kOFRecord;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -57,6 +55,10 @@ REGISTER_CPU_ONLY_USER_OP("OFRecordReader")
       user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
       CHECK(out_modifier != nullptr);
       out_modifier->set_header_infered_before_compute(false);
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kOFRecord;
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

@@ -23,6 +23,7 @@ import oneflow_api
 import oneflow.core.operator.op_conf_pb2 as op_conf_pb
 import oneflow.python.framework.config_util as config_util
 import oneflow.python.framework.dtype as dtype_util
+import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.ops.initializer_util as initializer_util
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.python.framework.id_util as id_util
@@ -51,6 +52,15 @@ OP_PREFIX = "system_checkpoint"
 
 
 blob_register = oneflow_api.GetDefaultBlobRegister()
+
+
+def sync_default_session_if_normal():
+    # TODO merge with same function in experimental/interface_op_read_and_write.py
+    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        oneflow.sync_default_session()
+    else:
+        # do nothing
+        pass
 
 
 class FileBackendVariableBlob:
@@ -119,7 +129,9 @@ class FileBackendVariableBlob:
         ).reshape(self.shape)
 
 
-ValueContainer = Union[EagerBlobTrait, FileBackendVariableBlob, np.ndarray]
+ValueContainer = Union[
+    EagerBlobTrait, FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"
+]
 
 
 def _ElemCnt(shape):
@@ -132,7 +144,7 @@ def GetAllVariables() -> Dict[str, oneflow_api.EagerConsistentBlob]:
     """
     Get all variables of all jobs as a dict.
     """
-    oneflow.sync_default_session()
+    sync_default_session_if_normal()
 
     sess = session_ctx.GetDefaultSession()
     interface_ops = sess.interface_ops
@@ -151,7 +163,7 @@ def _LoadSingleVariable(path: str) -> Optional[FileBackendVariableBlob]:
     return None
 
 
-@oneflow_export("checkpoint.get")
+@oneflow_export("checkpoint.get", "load")
 @session_ctx.try_init_default_session
 def GetCheckpoint(
     path: str,
@@ -191,7 +203,16 @@ def _ReadSlice(
     Return a generator which iterates over the input blob or array and yields
     (start_nd_idx, stop_nd_idx, slice_np_array)
     """
-    if isinstance(container, EagerBlobTrait):
+    if isinstance(container, oneflow.Tensor):
+
+        def ReadFromTensor(tensor, start_nd_idx, stop_nd_idx):
+            with tensor._placement_scope():
+                return _LogicalSlice(
+                    tensor._blob_object, start_nd_idx, stop_nd_idx, None
+                )
+
+        yield from _ForEachSlice(container, ReadFromTensor)
+    elif isinstance(container, EagerBlobTrait):
 
         def ReadFromEagerBlob(eager_blob, start_nd_idx, stop_nd_idx):
             scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(eager_blob)
@@ -238,7 +259,7 @@ def SaveVarDict(
     """
     Save `var_dict` to `path`
     """
-    oneflow.sync_default_session()
+    sync_default_session_if_normal()
 
     if var_dict is None:
         var_dict = GetAllVariables()
@@ -252,7 +273,9 @@ def SaveVarDict(
 
     assert not IsFileOrNonEmptyDir(
         path
-    ), "Non-empty directory {} already exists!".format(path)
+    ), "{} is a file or non-empty directory! Note that flow.save is different from torch.save. It saves each weight as a separated file so that a directory instead of a file should be given.".format(
+        path
+    )
     os.makedirs(path, exist_ok=True)
     for name, var in var_dict.items():
         meta_info = variable_meta_info_pb.VariableMetaInfo()
@@ -270,6 +293,11 @@ def SaveVarDict(
     # the save process finishes normally
     with open(os.path.join(path, "snapshot_done"), "w"):
         pass
+
+
+@oneflow_export("save")
+def save(obj, save_dir):
+    return SaveVarDict(save_dir, obj)
 
 
 def _LogicalSlice(
@@ -418,7 +446,7 @@ def FeedValueToVariable(
     Feed the value of `value` to the variable `var_blob`
     """
     assert isinstance(
-        value, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray)
+        value, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray, oneflow.Tensor)
     ), "Unknown value type: {}".format(type(value).__name__)
 
     if isinstance(value, FileBackendVariableBlob):
@@ -460,7 +488,7 @@ def LoadVariables(
     If `ignore_mismatch` is False, an exception will be raised when
     there is a name in `value_dict` not belonging to any variable.
     """
-    oneflow.sync_default_session()
+    sync_default_session_if_normal()
 
     all_vars = GetAllVariables()
     for name, value in value_dict.items():
@@ -471,7 +499,7 @@ def LoadVariables(
         else:
             if not ignore_mismatch:
                 raise RuntimeError('"{}" is not a variable name'.format(name))
-    oneflow_api.eager.Sync()
+    oneflow_api.eager.single_client.Sync()
 
 
 def _ForEachSlice(
@@ -567,11 +595,11 @@ def init_by_initializer_conf(
         pass
 
     if sync_between_multi_machine:
-        oneflow_api.eager.Sync()
+        oneflow_api.eager.single_client.Sync()
 
 
 def Init() -> None:
-    oneflow.sync_default_session()
+    sync_default_session_if_normal()
 
     sess = session_ctx.GetDefaultSession()
     for op_name, var_blob in GetAllVariables().items():
@@ -598,4 +626,4 @@ def Init() -> None:
             var_blob, var_conf.initializer, False, scope_symbol_id, var_conf.random_seed
         )
 
-    oneflow_api.eager.Sync()
+    oneflow_api.eager.single_client.Sync()

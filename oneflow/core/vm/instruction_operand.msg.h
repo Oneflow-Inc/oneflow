@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/mirrored_object_id.msg.h"
+#include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
 namespace vm {
@@ -28,6 +29,7 @@ enum OperandAccessModifier {
   kConstModifier,
   kDataMutableModifier,
   kTypeAndDataMutableModifier,
+  kDeleteModifier,
 };
 
 enum OperandMemZoneModifier {
@@ -50,6 +52,7 @@ FLAT_MSG_END(ModifiedOperand);
 using ConstOperand = ModifiedOperand<kConstModifier, kDeviceMemZoneModifier>;
 using MutOperand = ModifiedOperand<kDataMutableModifier, kDeviceMemZoneModifier>;
 using Mut2Operand = ModifiedOperand<kTypeAndDataMutableModifier, kDeviceMemZoneModifier>;
+using DelOperand = ModifiedOperand<kDeleteModifier, kDeviceMemZoneModifier>;
 
 using SymbolOperand = ModifiedOperand<kConstModifier, kHostConstMemZoneModifier>;
 using InitSymbolOperand = ModifiedOperand<kDataMutableModifier, kHostConstMemZoneModifier>;
@@ -73,6 +76,7 @@ FLAT_MSG_BEGIN(InstructionOperand);
     FLAT_MSG_ONEOF_FIELD(ConstOperand, const_operand)
     FLAT_MSG_ONEOF_FIELD(MutOperand, mut_operand)
     FLAT_MSG_ONEOF_FIELD(Mut2Operand, mut2_operand)
+    FLAT_MSG_ONEOF_FIELD(DelOperand, del_operand)
     FLAT_MSG_ONEOF_FIELD(SymbolOperand, symbol_operand)
     FLAT_MSG_ONEOF_FIELD(InitSymbolOperand, init_symbol_operand)
     FLAT_MSG_ONEOF_FIELD(OperandSeparator, separator)
@@ -82,15 +86,6 @@ FLAT_MSG_BEGIN(InstructionOperand);
     FLAT_MSG_ONEOF_FIELD(bool, bool_operand));
 FLAT_MSG_END(InstructionOperand);
 // clang-format on
-
-// physical instruction operand
-class PhyInstrOperand {
- public:
-  virtual ~PhyInstrOperand() = default;
-
- protected:
-  PhyInstrOperand() = default;
-};
 
 }  // namespace vm
 }  // namespace oneflow

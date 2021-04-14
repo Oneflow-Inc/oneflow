@@ -15,11 +15,18 @@ limitations under the License.
 */
 #include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/framework/vm_local_dep_object.h"
 
 namespace oneflow {
 namespace one {
 
-TensorStorage::TensorStorage() : buffer_(std::make_shared<eager::TensorBuffer>()) {}
+TensorStorage::TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc)
+    : buffer_(std::make_shared<eager::TensorBuffer>()),
+      compute_local_dep_object_(new VmLocalDepObject(parallel_desc)) {}
+
+TensorStorage::~TensorStorage() {
+  if (releaser_hook_) { (*releaser_hook_)(buffer_); }
+}
 
 }  // namespace one
 }  // namespace oneflow

@@ -99,13 +99,21 @@ def create_tmp_bash_and_run(docker_cmd, img, bash_cmd, bash_args, bash_wrap, dry
             bash_cmd = "PATH=/opt/python/cp37-cp37m/bin:$PATH\n" + bash_cmd
             f.write(bash_cmd)
             f.flush()
-            wrapper_f.write(
-                f"""{bash_wrap}
+            wrapped = f"""
+{bash_wrap}
 bash {bash_args} {f_name}
 """
-            )
+            wrapper_f.write(wrapped)
             wrapper_f.flush()
+
+            print("=" * 5 + f"bash_cmd: {f_name}" + "=" * 5)
             print(bash_cmd)
+            print("=" * 5 + f"bash_cmd: {f_name}" + "=" * 5)
+
+            print("=" * 5 + f"wrapped: {w_name}" + "=" * 5)
+            print(wrapped)
+            print("=" * 5 + f"wrapped: {w_name}" + "=" * 5)
+
             docker_cmd = f"{docker_cmd} -v /tmp:/host/tmp {img}"
             cmd = f"{docker_cmd} bash {bash_args} {w_name}"
             print(cmd)
@@ -312,6 +320,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--xla", default=False, action="store_true", required=False)
     parser.add_argument("--gcc7", default=False, action="store_true", required=False)
+    parser.add_argument("--gcc9", default=False, action="store_true", required=False)
     parser.add_argument(
         "--use_aliyun_mirror", default=False, action="store_true", required=False
     )
@@ -384,6 +393,11 @@ if __name__ == "__main__":
 source scl_source enable devtoolset-7
 gcc --version
 """
+            elif args.gcc9:
+                bash_wrap = """
+source scl_source enable devtoolset-9
+gcc --version
+"""
             else:
                 bash_wrap = "gcc --version"
 
@@ -395,9 +409,13 @@ gcc --version
                 sub_dir = cuda_version
                 if args.xla:
                     sub_dir += "-xla"
+                if args.gcc7:
+                    sub_dir += "-gcc7"
+                if args.gcc9:
+                    sub_dir += "-gcc9"
                 if args.cpu:
                     assert len(cuda_versions) == 1
-                    sub_dir = "cpu"
+                    sub_dir += "-cpu"
                 cache_dir = os.path.join(cache_dir, sub_dir)
             if args.skip_third_party == False:
                 build_third_party(

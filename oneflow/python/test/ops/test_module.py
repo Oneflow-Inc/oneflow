@@ -72,6 +72,7 @@ class TestModule(flow.unittest.TestCase):
                 .Input("b")
                 .Attr("transpose_a", False)
                 .Attr("transpose_b", False)
+                .Attr("alpha", float(1.0))
                 .Output("out")
                 .Build()
             )
@@ -80,6 +81,8 @@ class TestModule(flow.unittest.TestCase):
                 x = op1()[0]
                 for _ in range(10):
                     x = op2(x, x)[0]
+                # flow.eager_sync()
+
             end = time.time()
             print(end - start)
 

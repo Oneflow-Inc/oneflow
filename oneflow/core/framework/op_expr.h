@@ -17,11 +17,17 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/attr_value_map.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 namespace one {
+
+class OpExprInterpState;
+class OpExprGradFunction;
+class OpExprGradClosure;
 
 class OpExpr {
  public:
@@ -32,6 +38,7 @@ class OpExpr {
 
   virtual int input_num() const = 0;
   virtual int output_num() const = 0;
+  virtual Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const = 0;
 
  private:
   std::string type_;
@@ -68,7 +75,7 @@ class BuiltinOpExpr : public OpExpr {
     return indexed_output_pairs_;
   }
 
-  virtual void BuildOpConf(OperatorConf* op_conf) const = 0;
+  virtual Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const = 0;
 
  protected:
   std::string op_name_;
@@ -76,6 +83,7 @@ class BuiltinOpExpr : public OpExpr {
   std::vector<std::string> indexed_ibns_;
   // The indexed output blob names.
   std::vector<std::string> indexed_obns_;
+  mutable std::shared_ptr<OpExprGradFunction> op_grad_func_;
   std::vector<std::pair<std::string, int>> indexed_input_pairs_;
   std::vector<std::pair<std::string, int>> indexed_output_pairs_;
 };
@@ -93,11 +101,9 @@ class UserOpExpr : public BuiltinOpExpr {
   const UserOpConf& proto() const { return proto_; }
   UserOpConf* mutable_proto() { return &proto_; }
 
-  void BuildOpConf(OperatorConf* op_conf) const {
-    *(op_conf->mutable_name()) = this->op_name_;
-    *(op_conf->mutable_user_conf()) = proto_;
-  }
+  Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const override;
 
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
   std::shared_ptr<const StatefulOpKernel> kernel() const { return kernel_; }
 
   std::shared_ptr<StatefulOpKernel> mut_kernel() const { return kernel_; }
@@ -107,47 +113,63 @@ class UserOpExpr : public BuiltinOpExpr {
   mutable std::shared_ptr<StatefulOpKernel> kernel_;
 };
 
-#define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name, _op_conf)                                  \
-  class _op_name##Expr : public BuiltinOpExpr {                                          \
-   public:                                                                               \
-    _op_name##Expr() = default;                                                          \
-    virtual ~_op_name##Expr() = default;                                                 \
-    explicit _op_name##Expr(const std::string& op_name, _op_name##Conf&& proto,          \
-                            const std::vector<std::string>& indexed_ibns,                \
-                            const std::vector<std::string>& indexed_obns)                \
-        : BuiltinOpExpr(OF_PP_STRINGIZE(_op_name), op_name, indexed_ibns, indexed_obns), \
-          proto_(std::move(proto)) {}                                                    \
-                                                                                         \
-    const _op_name##Conf& proto() const { return proto_; }                               \
-    _op_name##Conf* mutable_proto() { return &proto_; }                                  \
-                                                                                         \
-    void BuildOpConf(OperatorConf* op_conf) const {                                      \
-      *(op_conf->mutable_name()) = this->op_name_;                                       \
-      *(op_conf->mutable_##_op_conf##_conf()) = proto_;                                  \
-    }                                                                                    \
-                                                                                         \
-   private:                                                                              \
-    _op_name##Conf proto_;                                                               \
+#define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name)                                                 \
+  class _op_name##Expr : public BuiltinOpExpr {                                               \
+   public:                                                                                    \
+    virtual ~_op_name##Expr() = default;                                                      \
+    explicit _op_name##Expr(const std::string& op_name, _op_name##Conf&& proto,               \
+                            const std::vector<std::string>& indexed_ibns,                     \
+                            const std::vector<std::string>& indexed_obns)                     \
+        : BuiltinOpExpr(OF_PP_STRINGIZE(_op_name), op_name, indexed_ibns, indexed_obns),      \
+          proto_(std::move(proto)) {}                                                         \
+                                                                                              \
+    const _op_name##Conf& proto() const { return proto_; }                                    \
+    _op_name##Conf* mutable_proto() { return &proto_; }                                       \
+                                                                                              \
+    Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const override; \
+                                                                                              \
+    Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;                       \
+                                                                                              \
+   private:                                                                                   \
+    _op_name##Conf proto_;                                                                    \
   };
 
-DEFINE_BUILTIN_OPEXPR_CLASS(VariableOp, variable);
-DEFINE_BUILTIN_OPEXPR_CLASS(CastToMirroredOp, cast_to_mirrored);
-DEFINE_BUILTIN_OPEXPR_CLASS(CastFromMirroredOp, cast_from_mirrored);
-DEFINE_BUILTIN_OPEXPR_CLASS(DistributeSplitOp, distribute_split);
-DEFINE_BUILTIN_OPEXPR_CLASS(DistributeCloneOp, distribute_clone);
-DEFINE_BUILTIN_OPEXPR_CLASS(DistributeConcatOp, distribute_concat);
-DEFINE_BUILTIN_OPEXPR_CLASS(DistributeAddOp, distribute_add);
+DEFINE_BUILTIN_OPEXPR_CLASS(VariableOp);
+DEFINE_BUILTIN_OPEXPR_CLASS(CastToMirroredOp);
+DEFINE_BUILTIN_OPEXPR_CLASS(CastFromMirroredOp);
+DEFINE_BUILTIN_OPEXPR_CLASS(DistributeSplitOp);
+DEFINE_BUILTIN_OPEXPR_CLASS(DistributeCloneOp);
+DEFINE_BUILTIN_OPEXPR_CLASS(DistributeConcatOp);
+DEFINE_BUILTIN_OPEXPR_CLASS(DistributeAddOp);
 
 #undef DEFINE_BUILTIN_OPEXPR_CLASS
 
 // TODO(): Finish the class definition of `FunctionOpExpr`.
 class FunctionOpExpr : public OpExpr {
  public:
-  FunctionOpExpr() : OpExpr("FunctionOp") {}
+  using FType = std::function<Maybe<void>(const std::shared_ptr<OpExprInterpState>& /*ctx*/,
+                                          const TensorTuple& /*inputs or out_grads*/,
+                                          TensorTuple* /*outputs or in_grads*/)>;
+
+  FunctionOpExpr(const FType& forward, const FType& backward)
+      : OpExpr("FunctionOp"), forward_(forward), backward_(backward) {}
   virtual ~FunctionOpExpr() = default;
 
   int input_num() const override { UNIMPLEMENTED(); }
   int output_num() const override { UNIMPLEMENTED(); }
+
+  FType forward() const { return forward_; }
+  FType backward() const { return backward_; }
+
+  std::shared_ptr<const OpExprInterpState> state() const { return state_; }
+  std::shared_ptr<OpExprInterpState> mutable_state() { return state_; }
+
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override { UNIMPLEMENTED(); }
+
+ private:
+  FType forward_;
+  FType backward_;
+  std::shared_ptr<OpExprInterpState> state_;
 };
 
 }  // namespace one

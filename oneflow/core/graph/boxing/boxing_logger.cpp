@@ -25,6 +25,18 @@ namespace {
   "src_parallel_distribution,"                                   \
   "dst_parallel_distribution,lbi,dtype,shape,builder,comment\n"
 
+std::string ShapeToString(const Shape& shape) {
+  std::stringstream shape_ss;
+  auto dim_vec = shape.dim_vec();
+  shape_ss << "(";
+  for (int32_t i = 0; i < dim_vec.size(); ++i) {
+    shape_ss << dim_vec.at(i);
+    if (i != dim_vec.size() - 1) { shape_ss << " "; }
+  }
+  shape_ss << ")";
+  return shape_ss.str();
+}
+
 std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   std::string serialized_parallel_desc;
   std::string device_type;
@@ -39,7 +51,7 @@ std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
     serialized_parallel_desc += std::to_string(min_id) + "-" + std::to_string(max_id);
     serialized_parallel_desc += " ";
   }
-  serialized_parallel_desc += parallel_desc.hierarchy()->DebugStr();
+  serialized_parallel_desc += ShapeToString(*parallel_desc.hierarchy());
   serialized_parallel_desc += "}";
   return serialized_parallel_desc;
 }
@@ -73,7 +85,7 @@ std::string MakeBoxingLoggerCsvRow(const SubTskGphBuilderStatus& status,
   serialized_status += ParallelDistributionToString(dst_parallel_distribution) + ",";
   serialized_status += GenLogicalBlobName(lbi) + ",";
   serialized_status += DataType_Name(logical_blob_desc.data_type()) + ",";
-  serialized_status += logical_blob_desc.shape().DebugStr() + ",";
+  serialized_status += ShapeToString(logical_blob_desc.shape()) + ",";
   serialized_status += status.builder_name() + ",";
   if (status.comment().empty()) {
     serialized_status += "-";
