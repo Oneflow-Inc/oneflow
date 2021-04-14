@@ -131,7 +131,6 @@ class _BatchNorm(_NormBase):
         track_running_stats=True,
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
-        self.training = False
         self._training_op = (
             flow.builtin_op("normalization")
             .Input("x")

@@ -86,7 +86,6 @@ class TestModule(flow.unittest.TestCase):
         )
 
         m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1)
-        m.training = True
         x = flow.Tensor(input_arr)
         y = m(x)
         print(np.allclose(y.numpy(), torch_out, atol=1e-04))
