@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/common/shape_view.h"
-#include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
@@ -99,9 +98,6 @@ class Blob final {
   size_t ByteSizeOfBlobBody() const { return blob_desc_->ByteSizeOfBlobBody(); }
   size_t AlignedByteSizeOfBlobBody() const { return blob_desc_->AlignedByteSizeOfBlobBody(); }
 
-  int32_t record_num() const { return record_num_; }
-  void set_record_num(int32_t val) { record_num_ = val; }
-
   void set_blob_access_checker(const BlobAccessChecker* blob_access_checker) {
     this->blob_access_checker_ = blob_access_checker;
   }
@@ -119,34 +115,6 @@ class Blob final {
   char* header_ptr_;
   std::unique_ptr<ShapeView> shape_view_;
   std::unique_ptr<MutShapeView> mut_shape_view_;
-  // TODO(chengcheng); remove record num and record_blob
-  int32_t record_num_;
-};
-
-template<typename RecordType>
-class RecordBlob final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(RecordBlob);
-  RecordBlob(Blob* records) : records_(records), record_num_(0) {
-    CHECK_EQ(records->blob_desc().data_type(), GetDataType<RecordType>::value);
-    record_num_ = records_->record_num();
-  }
-  ~RecordBlob() = default;
-
-  void ForEachRecord(std::function<void(const RecordType&)> Handler) {
-    FOR_RANGE(int32_t, i, 0, record_num_) { Handler(*(records_->mut_dptr<RecordType>() + i)); }
-  }
-
-  const RecordType& GetRecord(size_t i) {
-    CHECK_LT(i, record_num_);
-    return *(records_->mut_dptr<RecordType>() + i);
-  }
-
-  int32_t record_num() { return record_num_; }
-
- private:
-  Blob* records_;
-  int32_t record_num_;
 };
 
 #define INIT_GLOBAL_BLOB_MUTABLE_CHECKER(is_header_mutable, is_body_mutable)             \
