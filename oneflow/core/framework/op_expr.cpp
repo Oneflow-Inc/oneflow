@@ -27,7 +27,7 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto,
     : BuiltinOpExpr("user", op_name, indexed_ibns, indexed_obns), proto_(std::move(proto)) {
   OperatorConf op_conf;
   BuildOpConf(&op_conf, {});
-  // TODO: set current device tag
+  // TODO: align with pytorch: set default device tag to cpu and update it in module.to()
   op_conf.set_device_tag("gpu");
   auto mem_case = MemoryCaseUtil::MakeMemCase(DeviceType::kGPU, 0);
   kernel_ = std::make_shared<StatefulOpKernel>(

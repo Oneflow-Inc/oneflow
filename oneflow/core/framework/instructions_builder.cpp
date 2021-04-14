@@ -670,22 +670,10 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     std::shared_ptr<const ParallelDesc> parallel_desc_sym) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc_sym->device_tag() + ".LocalCallOpKernel");
-  // TODO: remove duplicated using
-  using TensorsPtr = std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
-  TensorsPtr inputs =
+  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> inputs =
       std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(input_tuple.size());
-  auto GetImpl = [](const std::shared_ptr<one::Tensor>& tensor)
-      -> std::shared_ptr<one::EagerMirroredTensorImpl> {
-    auto mirrored_tensor = std::dynamic_pointer_cast<one::MirroredTensor>(tensor);
-    auto eager_mirrored_impl =
-        std::dynamic_pointer_cast<one::EagerMirroredTensorImpl>(mirrored_tensor->impl_);
-    return eager_mirrored_impl;
-  };
   for (int i = 0; i < input_tuple.size(); i++) {
-    auto& input = input_tuple[i];
-    auto impl = GetImpl(input);
-    const auto& eager_blob_object = impl->eager_blob_object();
-    (*inputs)[i] = eager_blob_object;
+    (*inputs)[i] = JUST(input_tuple[i]->eager_blob_object());
   }
   eager_blob_objects->reserve(output_tuple.size());
   for (auto& output : output_tuple) {
@@ -695,7 +683,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     // const auto& eager_blob_object = impl->eager_blob_object();
 
     auto eager_blob_object = std::make_shared<eager::EagerBlobObject>(
-        mem_case, std::make_shared<Shape>(), DataType::kFloat,
+        mem_case, std::make_shared<Shape>(), DataType::kInvalidDataType,
         std::make_shared<eager::TensorBuffer>());
     eager_blob_objects->push_back(eager_blob_object);
   }

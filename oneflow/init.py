@@ -46,7 +46,6 @@ oneflow_api = import_oneflow_internal2()
 Size = oneflow_api.Size
 device = oneflow_api.device
 placement = oneflow_api.PlacementSymbol
-eager_sync = oneflow_api.eager.single_client.Sync
 
 # define dtype at the begining of oneflow init
 

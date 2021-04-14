@@ -66,19 +66,19 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
 
   void ForEachInferMutMirroredObject(
       const std::function<void(vm::MirroredObject*)>&) const override {
-    // do nothing
+    // TODO:
   }
   void ForEachInferConstMirroredObject(
       const std::function<void(vm::MirroredObject*)>&) const override {
-    // do nothing
+    // TODO:
   }
   void ForEachComputeMutMirroredObject(
       const std::function<void(vm::MirroredObject*)>&) const override {
-    // do nothing
+    // TODO:
   }
   void ForEachComputeConstMirroredObject(
       const std::function<void(vm::MirroredObject*)>&) const override {
-    // do nothing
+    // TODO:
   }
 
  private:

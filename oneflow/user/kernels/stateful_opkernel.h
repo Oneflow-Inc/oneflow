@@ -227,10 +227,8 @@ class StatefulOpKernel final {
                    const ArgVec* indexed_output_pairs);
   ~StatefulOpKernel();
   const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
-  void set_device(const DeviceType dev_type, const int64_t dev_id, const std::string& dev_tag) {
-    mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, dev_id);
-    op_conf_.set_device_tag(dev_tag);
-  };
+  Maybe<void> set_device(const DeviceType dev_type, const int64_t dev_id,
+                         const std::string& dev_tag);
 
  private:
   friend struct eager::LocalCallOpKernelUtil;
@@ -239,6 +237,7 @@ class StatefulOpKernel final {
                                                       DeviceCtx* device_ctx);
 
   user_op::TensorDescInferFn TensorDescInferFn() const;
+  user_op::DataTypeInferFn DataTypeInferFn() const;
 
   Maybe<user_op::OpKernelState> TryInitOpKernelState(DeviceCtx* device_ctx);
 
@@ -268,6 +267,7 @@ class StatefulOpKernel final {
   const ArgVec* indexed_output_pairs_;
   bool need_check_mem_case_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
+  user_op::DataTypeInferFn data_type_infer_fn_;
   OpKernelMap op_kernel_map_;
   OpKernelStateMap op_kernel_state_map_;
   InitCtxMap init_ctx_map_;

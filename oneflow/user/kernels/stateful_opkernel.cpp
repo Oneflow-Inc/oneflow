@@ -100,6 +100,12 @@ class LocalUserKernelBaseContext {
     output_tensors_ = outputs;
   }
 
+  Maybe<void> set_device_tag(const std::string& device_tag) {
+    device_tag_ = device_tag;
+    device_type_ = JUST(DeviceType4DeviceTag(device_tag));
+    return Maybe<void>::Ok();
+  }
+
   const ArgVec& inputs() const { return *indexed_input_pairs_; }
   const ArgVec& outputs() const { return *indexed_output_pairs_; }
 
@@ -141,6 +147,11 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
   void Update(TensorsPtr inputs, TensorsPtr outputs) { base_ctx_.Update(inputs, outputs); }
+  Maybe<void> set_device_tag(const std::string& device_tag) {
+    // TODO: update op_conf
+    TODO();
+    return base_ctx_.set_device_tag(device_tag);
+  }
 
  private:
   LocalUserKernelBaseContext base_ctx_;
@@ -299,6 +310,7 @@ StatefulOpKernel::StatefulOpKernel(const std::shared_ptr<const JobDesc> job_desc
   } else {
     UNIMPLEMENTED();
   }
+  data_type_infer_fn_ = op_reg_val->data_type_infer_fn;
 
   tmp_blob_object_.reset(new eager::EagerBlobObject(mem_case_, std::make_shared<Shape>(),
                                                     DataType::kChar,
@@ -383,6 +395,8 @@ user_op::TensorDescInferFn StatefulOpKernel::TensorDescInferFn() const {
   return tensor_desc_infer_fn_;
 }
 
+user_op::DataTypeInferFn StatefulOpKernel::DataTypeInferFn() const { return data_type_infer_fn_; }
+
 LocalUserOpInferContext* StatefulOpKernel::UpdateInferContext(TensorsPtr inputs,
                                                               TensorsPtr outputs) {
   op_infer_ctx_->Update(inputs, outputs);
@@ -396,5 +410,11 @@ LocalUserKernelComputeContext* StatefulOpKernel::UpdateComputeContext(TensorsPtr
   return compute_ctx_.get();
 }
 
+Maybe<void> StatefulOpKernel::set_device(const DeviceType dev_type, const int64_t dev_id,
+                                         const std::string& dev_tag) {
+  mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, dev_id);
+  op_conf_.set_device_tag(dev_tag);
+  // TODO: update contexts
+};
 }  // namespace one
 }  // namespace oneflow

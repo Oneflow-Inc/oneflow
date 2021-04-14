@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 namespace one {
@@ -37,22 +38,34 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
                                   TensorTuple* outputs, const AttrValueMap& attrs) {
   std::shared_ptr<const ParallelDesc> parallel_desc;
   std::shared_ptr<const Device> device;
-  const auto& scope = JUST(GetCurrentScope());
-  parallel_desc = scope->device_parallel_desc_symbol();
-  device = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
+  if (inputs.empty()) {
+    // TODO: align with pytorch: default cpu
+    const auto& scope = JUST(GetCurrentScope());
+    parallel_desc = scope->device_parallel_desc_symbol();
+    device = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
+  } else {
+    device = inputs[0]->device();
+    for (int i = 1; i < inputs.size(); i++) { CHECK_EQ(device, inputs[i]->device()); }
+    parallel_desc = JUST(Device::MakeParallelDescByDevice(*device));
+  }
+  if (parallel_desc->device_tag() != "gpu") {
+    // TODO: update device in module.to()
+    return Error::Unimplemented();
+  }
   int64_t device_id = JUST(parallel_desc->DeviceId4ParallelId(0));
-  // TODO: async
   TensorsPtr eager_blob_objects =
       std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>();
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) {
     auto& user_op_expr = dynamic_cast<const UserOpExpr&>(op_expr);
-    // TODO:
+    // TODO: update device in module.to()
     user_op_expr.mut_kernel()->set_device(parallel_desc->device_type(), device_id,
                                           parallel_desc->device_tag());
     builder->LocalCallOpKernel(user_op_expr.mut_kernel(), inputs, *outputs, eager_blob_objects,
                                parallel_desc);
   };
   JUST(PhysicalRun(build_instruction));
+  // TODO: remove sync when tensor is ready
+  JUST(vm::SingleClientSync());
   for (int i = 0; i < outputs->size(); ++i) {
     (*outputs)[i] = JUST(OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
         (*eager_blob_objects)[i], device));
