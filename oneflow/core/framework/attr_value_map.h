@@ -13,20 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/tensor_storage.h"
-#include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/framework/vm_local_dep_object.h"
+#ifndef ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_MAP_H_
+#define ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_MAP_H_
+
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/user_op_attr.cfg.h"
 
 namespace oneflow {
-namespace one {
 
-TensorStorage::TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc)
-    : buffer_(std::make_shared<eager::TensorBuffer>()),
-      compute_local_dep_object_(new VmLocalDepObject(parallel_desc)) {}
+class AttrValueMap : public HashMap<std::string, std::shared_ptr<cfg::AttrValue>> {
+ public:
+  using HashMap<std::string, std::shared_ptr<cfg::AttrValue>>::HashMap;
 
-TensorStorage::~TensorStorage() {
-  if (releaser_hook_) { (*releaser_hook_)(buffer_); }
-}
+  template<typename T>
+  Maybe<T> GetAttr(const std::string& attr_name) const;
 
-}  // namespace one
+  template<typename T>
+  Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
+};
+
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_MAP_H_
