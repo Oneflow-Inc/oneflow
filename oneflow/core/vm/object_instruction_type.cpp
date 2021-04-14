@@ -227,23 +227,24 @@ class DeleteObjectInstructionType final : public InstructionType {
 
   // clang-format off
   FLAT_MSG_VIEW_BEGIN(DeleteObjectInstruction);
-    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(MutOperand, object);
+    FLAT_MSG_VIEW_DEFINE_REPEATED_PATTERN(DelOperand, object);
   FLAT_MSG_VIEW_END(DeleteObjectInstruction);
   // clang-format on
 
-  void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
+  void Infer(VirtualMachine* vm, Instruction* instruction) const override {
     // do nothing, delete objects in Compute method
-    Run<&IdUtil::GetTypeId>(vm, instr_msg);
+    Run<&IdUtil::GetTypeId>(vm, instruction);
   }
-  void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const override {
-    Run<&IdUtil::GetValueId>(vm, instr_msg);
+  void Compute(VirtualMachine* vm, Instruction* instruction) const override {
+    Run<&IdUtil::GetValueId>(vm, instruction);
   }
   void Infer(Instruction*) const override { UNIMPLEMENTED(); }
   void Compute(Instruction*) const override { UNIMPLEMENTED(); }
 
  private:
   template<int64_t (*GetLogicalObjectId)(int64_t)>
-  void Run(VirtualMachine* vm, InstructionMsg* instr_msg) const {
+  void Run(VirtualMachine* vm, Instruction* instruction) const {
+    auto* instr_msg = instruction->mut_instr_msg();
     const auto* parallel_desc = CHECK_JUST(vm->GetInstructionParallelDesc(*instr_msg)).get();
     if (parallel_desc && !parallel_desc->ContainingMachineId(vm->this_machine_id())) { return; }
     FlatMsgView<DeleteObjectInstruction> view(instr_msg->operand());
@@ -253,16 +254,8 @@ class DeleteObjectInstructionType final : public InstructionType {
       logical_object_id = GetLogicalObjectId(logical_object_id);
       auto* logical_object = vm->mut_id2logical_object()->FindPtr(logical_object_id);
       CHECK_NOTNULL(logical_object);
-      auto* global_device_id2mirrored_object =
-          logical_object->mut_global_device_id2mirrored_object();
-      OBJECT_MSG_MAP_FOR_EACH_PTR(global_device_id2mirrored_object, mirrored_object) {
-        if (mirrored_object->rw_mutexed_object().ref_cnt() == 1) {
-          // TODO(lixinqi) fix the bug occured when uncommenting the next line
-          // CHECK(!mirrored_object->rw_mutexed_object().has_object());
-        }
-        global_device_id2mirrored_object->Erase(mirrored_object);
-      }
-      vm->mut_id2logical_object()->Erase(logical_object);
+      CHECK(logical_object->is_delete_link_empty());
+      vm->mut_delete_logical_object_list()->PushBack(logical_object);
     }
   }
 };

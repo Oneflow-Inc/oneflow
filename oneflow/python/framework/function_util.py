@@ -31,6 +31,7 @@ import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.typing_util as oft_util
+import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.lib.core.pb_util as pb_util
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.oneflow_export import oneflow_export
@@ -167,6 +168,15 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
         return Func
 
     return Decorator
+
+
+def global_function_or_identity(*args, **kwargs):
+    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        return api_oneflow_function(*args, **kwargs)
+    else:
+        assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
+        identity_decorator = lambda func: func
+        return identity_decorator
 
 
 def _CloneFunctionDesc(func_desc, job_func):
@@ -870,6 +880,11 @@ def set_secondary_lr(func_desc, value):
     )
     print(traceback.format_stack()[-3])
     func_desc.job_config_proto.mutable_train_conf().set_secondary_lr(value)
+
+
+@oneflow_function_config("train.num_gradient_accumulation_steps")
+def set_num_gradient_accumulation_steps(func_desc, value):
+    func_desc.job_config_proto.set_num_gradient_accumulation_steps(value)
 
 
 @oneflow_function_config("default_placement_scope")

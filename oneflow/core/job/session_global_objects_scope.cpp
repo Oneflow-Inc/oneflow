@@ -64,6 +64,23 @@ AvailableMemDesc PullAvailableMemDesc() {
   return ret;
 }
 
+AvailableMemDesc GetDryRunAvailableMemDesc() {
+  AvailableMemDescOfMachine this_machine_mem_desc;
+#ifdef WITH_CUDA
+  FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
+    this_machine_mem_desc.add_zone_size(std::numeric_limits<size_t>::max());
+  }
+#endif
+  this_machine_mem_desc.add_zone_size(std::numeric_limits<size_t>::max());
+
+  AvailableMemDesc ret;
+  AvailableMemDescOfMachine machine_amd_i;
+  for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
+    *ret.add_machine_amd() = this_machine_mem_desc;
+  }
+  return ret;
+}
+
 }  // namespace
 
 SessionGlobalObjectsScope::SessionGlobalObjectsScope() {}
@@ -85,7 +102,11 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   PushAvailableMemDescOfThisMachine();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<AvailableMemDesc>::New();
-    *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
+    if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+      *Global<AvailableMemDesc>::Get() = GetDryRunAvailableMemDesc();
+    } else {
+      *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
+    }
     Global<JobName2JobId>::New();
     Global<CriticalSectionDesc>::New();
     Global<InterUserJobInfo>::New();
@@ -93,7 +114,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<JobSetCompileCtx>::New();
     Global<RuntimeBufferManagersScope>::New();
   }
-  for (const std::string lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
+  for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
   return Maybe<void>::Ok();
 }
 

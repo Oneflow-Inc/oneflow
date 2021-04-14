@@ -677,7 +677,7 @@ Maybe<void> Operator::InferParallelDistributionSignature(
         ParallelDistributionInferHint4Ibn) const {
   const auto IsBroadcast = [](const ParallelDistribution& parallel_distribution,
                               const ParallelDesc& parallel_desc) -> bool {
-    if (parallel_desc.hierarchy()->NumAxes() == 1) { return true; }
+    if (parallel_desc.parallel_num() == 1) { return true; }
     for (int64_t i = 0; i < parallel_distribution.sbp_parallel_size(); ++i) {
       if (!parallel_distribution.sbp_parallel(i).has_broadcast_parallel()) { return false; }
     }
@@ -722,7 +722,9 @@ Maybe<void> Operator::InferParallelDistributionSignature(
       }
       if (distribution.sbp_parallel_size() != parallel_hierarchy->NumAxes()) {
         CHECK_OR_RETURN(IsBroadcast(distribution,
-                                    JUST(ParallelDistributionInferHint4Ibn(ibn))->parallel_desc()));
+                                    JUST(ParallelDistributionInferHint4Ibn(ibn))->parallel_desc()))
+            << ibn << "'s hierarchy is different from " << op_name()
+            << "'s, it should be broadcast but get " << distribution.DebugString();
         distribution.clear_sbp_parallel();
         for (int64_t i = 0; i < parallel_hierarchy->NumAxes(); ++i) {
           distribution.add_sbp_parallel()->mutable_broadcast_parallel();
@@ -898,15 +900,9 @@ void Operator::GenKernelConf(
     (*dtype_signature->mutable_name2dtype())[ibn] = blob_desc->data_type();
   }
   CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), [](const BlobDesc* blob_desc) {
-        return blob_desc->header_is_opaque();
-      })) {
-    kernel_conf->set_need_do_opaque_header(true);
-  } else {
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
-                             [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); })) {
-      kernel_conf->set_need_do_shape(true);
-    }
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
+                           [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); })) {
+    kernel_conf->set_need_do_shape(true);
   }
 
   {

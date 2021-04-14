@@ -77,14 +77,13 @@ Maybe<void> Cluster::WorkerLoop() {
       } else if (mut_cluster_instruction->has_eager_instruction()) {
         Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(
             std::const_pointer_cast<const ClusterInstructionProto>(mut_cluster_instruction));
-      } else if (mut_cluster_instruction->has_cluster_ctrl_eager_sync()) {
-        ClusterInstruction::EagerSyncBarrier();
       } else {
         OF_UNIMPLEMENTED();
       }
     }
   }
   ClusterInstruction::HaltBarrier();
+  Global<EnvGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
 

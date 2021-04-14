@@ -83,6 +83,10 @@ class Scope final {
   std::shared_ptr<Scope> parent_scope_symbol_;
 };
 
+Maybe<int64_t> NewScopeSymbolId(
+    int64_t old_scope_symbol_id,
+    const std::function<void(std::shared_ptr<cfg::ScopeProto> new_scope)>& InitNewScopeProto);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_SCOPE_H_

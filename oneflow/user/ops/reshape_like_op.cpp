@@ -27,7 +27,6 @@ REGISTER_USER_OP("reshape_like")
       const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
       CHECK_EQ_OR_RETURN(in_shape->elem_cnt(), like_shape->elem_cnt());
       *ctx->Shape4ArgNameAndIndex("out", 0) = *like_shape;
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -51,6 +50,10 @@ REGISTER_USER_OP("reshape_like")
           .Build();
       return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(in_shape, like_shape, {{"in", 0}},
                                                               {{"like", 0}, {"out", 0}}, ctx);
+    })
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

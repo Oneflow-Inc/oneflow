@@ -49,8 +49,8 @@ std::tuple<int, int, int, cublasOperation_t, cublasOperation_t> PrepareToCallCub
 
 template<typename T>
 void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE trans_a,
-          enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k, const T* alpha,
-          const T* a, const T* b, const T* beta, T* c) {
+          enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k, const double alpha,
+          const T* a, const T* b, const double beta, T* c) {
   int lda, ldb, ldc;
   cublasOperation_t cublas_trans_a, cublas_trans_b;
   std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
@@ -62,16 +62,18 @@ void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE tra
   } else {
     handle = ctx->cublas_pmh_handle();
   }
-  cublas_gemm<T>(handle, cublas_trans_b, cublas_trans_a, n, m, k, alpha, b, ldb, a, lda, beta, c,
-                 ldc);
+  const T alpha_val = static_cast<T>(alpha);
+  const T beta_val = static_cast<T>(beta);
+  cublas_gemm<T>(handle, cublas_trans_b, cublas_trans_a, n, m, k, &alpha_val, b, ldb, a, lda,
+                 &beta_val, c, ldc);
 }
 
 template<>
 void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE trans_a,
-          enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k, const half* alpha,
-          const half* a, const half* b, const half* beta, half* c) {
-  const float alpha_f = __half2float(*alpha);
-  const float beta_f = __half2float(*beta);
+          enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k, const double alpha,
+          const half* a, const half* b, const double beta, half* c) {
+  const float alpha_f = static_cast<float>(alpha);
+  const float beta_f = static_cast<float>(beta);
   int lda, ldb, ldc;
   cublasOperation_t cublas_trans_a, cublas_trans_b;
   std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
@@ -96,15 +98,6 @@ std::tuple<int, int, int> CalcMNKForGemm(enum CBLAS_TRANSPOSE trans_a, const Blo
   int n = c_shape.Count(1);
   int k = (trans_a == CblasNoTrans) ? a_shape.Count(1) : a_shape.At(0);
   return std::make_tuple(m, n, k);
-}
-
-template<typename T>
-void BlobGemmImpl(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                  T alpha, T beta, const Blob* a, const Blob* b, Blob* c) {
-  int m, n, k;
-  std::tie(m, n, k) = CalcMNKForGemm(trans_a, a, c);
-  BlasIf<DeviceType::kGPU>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(),
-                                   b->dptr<T>(), beta, c->mut_dptr<T>());
 }
 
 std::tuple<int, int, int, int, int, int, cublasOperation_t, cublasOperation_t>
@@ -135,10 +128,12 @@ cudaDataType_t GetCudaDataType4BatchedGemm<half>() {
 template<typename T>
 void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                      const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
-                     int batch_size, int m, int n, int k, const T* alpha, const T* a, const T* b,
-                     const T* beta, T* c, T** buf) {
+                     int batch_size, int m, int n, int k, const double alpha, const T* a,
+                     const T* b, const double beta, T* c) {
   int a_stride, b_stride, c_stride;
   int lda, ldb, ldc;
+  const T alpha_val = static_cast<T>(alpha);
+  const T beta_val = static_cast<T>(beta);
   cublasOperation_t cublas_trans_a, cublas_trans_b;
   std::tie(a_stride, b_stride, c_stride, lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
@@ -148,15 +143,15 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
     cudaDataType_t data_type = GetCudaDataType4BatchedGemm<T>();
     OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
         ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-        reinterpret_cast<const void*>(alpha), reinterpret_cast<const void*>(b), data_type, ldb,
+        reinterpret_cast<const void*>(&alpha_val), reinterpret_cast<const void*>(b), data_type, ldb,
         b_stride, reinterpret_cast<const void*>(a), data_type, lda, a_stride,
-        reinterpret_cast<const void*>(beta), reinterpret_cast<void*>(c), data_type, ldc, c_stride,
-        batch_size, data_type, CUBLAS_GEMM_DEFAULT));
+        reinterpret_cast<const void*>(&beta_val), reinterpret_cast<void*>(c), data_type, ldc,
+        c_stride, batch_size, data_type, CUBLAS_GEMM_DEFAULT));
 #endif
   } else {
     cublas_gemmStridedBatched<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-                                 alpha, b, ldb, b_stride, a, lda, a_stride, beta, c, ldc, c_stride,
-                                 batch_size);
+                                 &alpha_val, b, ldb, b_stride, a, lda, a_stride, &beta_val, c, ldc,
+                                 c_stride, batch_size);
   }
 }
 
@@ -164,11 +159,8 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
 template<>
 void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                      const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
-                     int batch_size, int m, int n, int k, const half* alpha, const half* a,
-                     const half* b, const half* beta, half* c, half** buf) {
-  float alpha_f = __half2float(*alpha);
-  float beta_f = __half2float(*beta);
-
+                     int batch_size, int m, int n, int k, const double alpha, const half* a,
+                     const half* b, const double beta, half* c) {
   int a_stride, b_stride, c_stride;
   int lda, ldb, ldc;
   cublasOperation_t cublas_trans_a, cublas_trans_b;
@@ -176,6 +168,8 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
       PrepareToCallBatchedGemm(trans_a, trans_b, batch_size, m, n, k);
 
   if (GetCudaSmVersion() >= 500) {
+    const float alpha_f = static_cast<float>(alpha);
+    const float beta_f = static_cast<float>(beta);
 #if CUDA_VERSION >= 11000
     cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
 #else
@@ -187,9 +181,11 @@ void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
         reinterpret_cast<const void*>(a), CUDA_R_16F, lda, a_stride, &beta_f,
         reinterpret_cast<void*>(c), CUDA_R_16F, ldc, c_stride, batch_size, CUDA_R_32F, algo));
   } else {
+    const half alpha_h = static_cast<half>(alpha);
+    const half beta_h = static_cast<half>(beta);
     cublas_gemmStridedBatched<half>(ctx->cublas_tensor_op_math_handle(), cublas_trans_b,
-                                    cublas_trans_a, n, m, k, alpha, b, ldb, b_stride, a, lda,
-                                    a_stride, beta, c, ldc, c_stride, batch_size);
+                                    cublas_trans_a, n, m, k, &alpha_h, b, ldb, b_stride, a, lda,
+                                    a_stride, &beta_h, c, ldc, c_stride, batch_size);
   }
 }
 #endif
@@ -205,68 +201,50 @@ __global__ void AxpyHalfGpu(const int n, const half alpha, const half* x, const 
 
 }  // namespace
 
-void BlasIf<DeviceType::kGPU>::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                        enum CBLAS_TRANSPOSE trans_b, float alpha, float beta,
-                                        const Blob* a, const Blob* b, Blob* c) {
-  BlobGemmImpl<float>(ctx, trans_a, trans_b, alpha, beta, a, b, c);
-}
-void BlasIf<DeviceType::kGPU>::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                        enum CBLAS_TRANSPOSE trans_b, double alpha, double beta,
-                                        const Blob* a, const Blob* b, Blob* c) {
-  BlobGemmImpl<double>(ctx, trans_a, trans_b, alpha, beta, a, b, c);
-}
-void BlasIf<DeviceType::kGPU>::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                        enum CBLAS_TRANSPOSE trans_b, float16 alpha, float16 beta,
-                                        const Blob* a, const Blob* b, Blob* c) {
-  BlobGemmImpl<float16>(ctx, trans_a, trans_b, alpha, beta, a, b, c);
-}
 void BlasIf<DeviceType::kGPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                                      const int k, const float alpha, const float* a,
-                                      const float* b, const float beta, float* c) {
-  Gemm<float>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, &alpha, a, b, &beta, c);
+                                      const int k, const double alpha, const float* a,
+                                      const float* b, const double beta, float* c) {
+  Gemm<float>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 void BlasIf<DeviceType::kGPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
                                       const int k, const double alpha, const double* a,
                                       const double* b, const double beta, double* c) {
-  Gemm<double>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, &alpha, a, b, &beta, c);
+  Gemm<double>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 void BlasIf<DeviceType::kGPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                                      const int k, const float16 alpha, const float16* a,
-                                      const float16* b, const float16 beta, float16* c) {
-  Gemm<half>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, reinterpret_cast<const half*>(&alpha),
-             reinterpret_cast<const half*>(a), reinterpret_cast<const half*>(b),
-             reinterpret_cast<const half*>(&beta), reinterpret_cast<half*>(c));
+                                      const int k, const double alpha, const float16* a,
+                                      const float16* b, const double beta, float16* c) {
+  Gemm<half>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, reinterpret_cast<const half*>(a),
+             reinterpret_cast<const half*>(b), beta, reinterpret_cast<half*>(c));
 }
 
 void BlasIf<DeviceType::kGPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                                              enum CBLAS_TRANSPOSE trans_b, const int batch_size,
                                              const int m, const int n, const int k,
-                                             const float alpha, const float* a, const float* b,
-                                             const float beta, float* c, float** buf) {
-  BatchedGemmImpl<float>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, &alpha, a, b,
-                         &beta, c, buf);
+                                             const double alpha, const float* a, const float* b,
+                                             const double beta, float* c) {
+  BatchedGemmImpl<float>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
+                         beta, c);
 }
 void BlasIf<DeviceType::kGPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                                              enum CBLAS_TRANSPOSE trans_b, const int batch_size,
                                              const int m, const int n, const int k,
                                              const double alpha, const double* a, const double* b,
-                                             const double beta, double* c, double** buf) {
-  BatchedGemmImpl<double>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, &alpha, a, b,
-                          &beta, c, buf);
+                                             const double beta, double* c) {
+  BatchedGemmImpl<double>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
+                          beta, c);
 }
 void BlasIf<DeviceType::kGPU>::OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                                              enum CBLAS_TRANSPOSE trans_b, const int batch_size,
                                              const int m, const int n, const int k,
-                                             const float16 alpha, const float16* a,
-                                             const float16* b, const float16 beta, float16* c,
-                                             float16** buf) {
-  BatchedGemmImpl<half>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k,
-                        reinterpret_cast<const half*>(&alpha), reinterpret_cast<const half*>(a),
-                        reinterpret_cast<const half*>(b), reinterpret_cast<const half*>(&beta),
-                        reinterpret_cast<half*>(c), reinterpret_cast<half**>(buf));
+                                             const double alpha, const float16* a, const float16* b,
+                                             const double beta, float16* c) {
+  BatchedGemmImpl<half>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha,
+                        reinterpret_cast<const half*>(a), reinterpret_cast<const half*>(b), beta,
+                        reinterpret_cast<half*>(c));
 }
 
 void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x,

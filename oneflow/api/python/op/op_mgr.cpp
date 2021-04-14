@@ -16,13 +16,16 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/op/op_mgr_api.h"
+#include "oneflow/core/framework/user_op_attr.cfg.h"
 
 namespace py = pybind11;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("IsOpTypeCaseCpuSupportOnly", &IsOpTypeCaseCpuSupportOnly);
   m.def("IsOpTypeNameCpuSupportOnly", &IsOpTypeNameCpuSupportOnly);
-  m.def("GetUserOpAttrType", &GetUserOpAttrType);
+  m.def("GetUserOpAttrType", [](const std::string& op_type_name, const std::string& attr_name) {
+    return static_cast<oneflow::cfg::AttrType>(GetUserOpAttrType(op_type_name, attr_name));
+  });
 
   m.def("InferOpConf", &InferOpConf);
   m.def("GetSerializedOpAttributes", &GetSerializedOpAttributes);

@@ -206,22 +206,26 @@ OperatorConf MakeDeviceTickOpConf(const std::string& tick_name) {
 }
 
 OperatorConf AppendTick(const std::string tick_name, const std::vector<std::string>& op_names,
-                        ParallelConf parallel_conf, JobBuilder* job_builder) {
+                        const std::shared_ptr<const Shape>& time_shape, ParallelConf parallel_conf,
+                        JobBuilder* job_builder) {
   OperatorConf device_tick_op_conf = MakeDeviceTickOpConf(tick_name);
+  if (time_shape) {
+    time_shape->ToProto(device_tick_op_conf.mutable_device_tick_conf()->mutable_time_shape());
+  }
   for (const auto& op_name : op_names) { device_tick_op_conf.add_ctrl_in_op_name(op_name); }
   job_builder->AddOps(parallel_conf, {device_tick_op_conf});
   return device_tick_op_conf;
 }
 
 OperatorConf AppendTick(const std::string tick_name, const std::list<const OpNode*>& op_nodes,
-                        JobBuilder* job_builder) {
+                        const std::shared_ptr<const Shape>& time_shape, JobBuilder* job_builder) {
   std::vector<std::string> op_names;
   for (const auto* op_node : op_nodes) {
     CHECK(op_nodes.front()->parallel_desc() == op_node->parallel_desc());
     op_names.push_back(op_node->op().op_name());
   }
-  return AppendTick(tick_name, op_names, op_nodes.front()->parallel_desc().parallel_conf(),
-                    job_builder);
+  return AppendTick(tick_name, op_names, time_shape,
+                    op_nodes.front()->parallel_desc().parallel_conf(), job_builder);
 }
 
 OperatorConf PrependTick(const HashSet<const OpNode*>& op_nodes, JobBuilder* job_builder) {
@@ -244,7 +248,7 @@ OperatorConf AppendAccTick(const Shape& src_shape, const std::list<const OpNode*
                            JobBuilder* job_builder) {
   std::shared_ptr<const Shape> tick_shape = CHECK_JUST(op_nodes.front()->op().GetOpTimeShape());
   CHECK_EQ(tick_shape->elem_cnt() % src_shape.elem_cnt(), 0);
-  const OperatorConf& tick_op_conf = AppendTick("AppendAcc", op_nodes, job_builder);
+  const OperatorConf& tick_op_conf = AppendTick("AppendAcc", op_nodes, tick_shape, job_builder);
   OperatorConf acc_op_conf;
   {
     acc_op_conf.set_name(std::string("System-AutoTick-AccTick_") + NewUniqueId());
@@ -329,7 +333,8 @@ std::vector<OperatorConf> AddTickForTimeShape(const Shape& src_time_shape,
     const std::pair<Shape, Shape>& ts = pair.first.second;
     if (ts.second.elem_cnt() == src_time_shape.elem_cnt()) {
       CHECK_GE(ts.first.elem_cnt(), ts.second.elem_cnt());
-      op_confs.push_back(AppendTick("Append", pair.second, job_builder));
+      op_confs.push_back(
+          AppendTick("Append", pair.second, std::make_shared<const Shape>(ts.second), job_builder));
     } else if (ts.second.elem_cnt() > src_time_shape.elem_cnt()) {
       op_confs.push_back(AppendAccTick(src_time_shape, pair.second, job_builder));
     } else {
@@ -419,7 +424,7 @@ void AutoSourceAndSinkTick(const OpGraph& op_graph, JobBuilder* job_builder) {
     op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
     if (out_cnt > 0) { return; }
     CHECK(op_node->op().op_conf().has_device_tick_conf());
-    CHECK(*CHECK_JUST(op_node->op().GetOpTimeShape()) == src_time_shape);
+    CHECK(CHECK_JUST(op_node->op().GetOpTimeShape())->elem_cnt() == src_time_shape.elem_cnt());
     CHECK(tick_lbis.emplace(op_node->op().BnInOp2Lbi(op_node->op().SoleObn())).second);
   });
   OperatorConf src_subset_tick = CHECK_JUST(FindSrcSubsetTickOpConf(job_builder->job()));
