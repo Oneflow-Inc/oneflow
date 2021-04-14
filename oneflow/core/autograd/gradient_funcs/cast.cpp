@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class Cast : public OpExprGradFunction {
+class Cast : public OpExprGradFunction<OpExprInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);

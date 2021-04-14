@@ -23,47 +23,60 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class SplitLike : public OpExprGradFunction {
+struct SplitLikeInterpState : public OpExprInterpState {
+  int64_t max_dim_size;
+  bool requires_grad;
+};
+
+class SplitLike : public OpExprGradFunction<SplitLikeInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrValueMap& attrs) const override;
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Capture(SplitLikeInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
+  Maybe<void> Apply(const SplitLikeInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
-  std::string op_name_;
   int64_t axis_;
-  mutable int64_t max_dim_size_;
-  mutable bool requires_grad_;
+  std::vector<std::shared_ptr<OpExpr>> zero_like_ops_;
+  std::shared_ptr<OpExpr> concat_op_;
 };
 
 Maybe<void> SplitLike::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  op_name_ = fw_op_expr->op_name();
+  const std::string& op_name = fw_op_expr->op_name();
   axis_ = GetAttr<int64_t>(fw_op_expr->proto(), "axis");
+  int32_t output_num = fw_op_expr->proto().output().at("out").s().size();
+  concat_op_ = JUST(
+      op_expr_helper::ConcatOp(output_num, axis_, /*max_dim_size=*/-1, GradientOpName(op_name)));
+  zero_like_ops_.resize(output_num);
+  for (int i = 0; i < output_num; ++i) {
+    zero_like_ops_[i] = JUST(
+        op_expr_helper::ZeroLikeOp(GradientOpName(op_name + "_zero_like" + std::to_string(i))));
+  }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SplitLike::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> SplitLike::Capture(SplitLikeInterpState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrValueMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), outputs.size() + 1);
-  requires_grad_ = inputs.at(0)->requires_grad();
-  if (!requires_grad_) { return Maybe<void>::Ok(); }
-  max_dim_size_ = 0;
+  ctx->requires_grad = inputs.at(0)->requires_grad();
+  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+  ctx->max_dim_size = 0;
   for (int i = 0; i < outputs.size(); ++i) {
-    max_dim_size_ += inputs.at(i + 1)->shape()->At(axis_);
+    ctx->max_dim_size += inputs.at(i + 1)->shape()->At(axis_);
     ctx->SaveTensorForBackward(outputs.at(i));
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SplitLike::Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> SplitLike::Apply(const SplitLikeInterpState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   in_grads->resize(1);
-  if (!requires_grad_) { return Maybe<void>::Ok(); }
+  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
+  CHECK_EQ_OR_RETURN(out_grads.size(), zero_like_ops_.size());
   const auto& saved_tensors = ctx->SavedTensors();
   TensorTuple inputs;
   for (int i = 0; i < out_grads.size(); ++i) {
@@ -71,15 +84,14 @@ Maybe<void> SplitLike::Apply(const OpExprInterpState* ctx, const TensorTuple& ou
     if (out_grad_i.get()) {
       inputs.push_back(out_grad_i);
     } else {
-      const auto& zero_like_op = JUST(
-          op_expr_helper::ZeroLikeOp(GradientOpName(op_name_ + "_zero_grad_" + std::to_string(i))));
-      const auto& zero_grad =
-          JUST(Dispatch<Tensor>(*zero_like_op, {saved_tensors.at(i)}, /*attrs=*/{}));
+      const auto& zero_grad = JUST(Dispatch<Tensor>(*zero_like_ops_.at(i), {saved_tensors.at(i)}));
       inputs.push_back(zero_grad);
     }
   }
-  const auto& grad_op = JUST(op_expr_helper::ConcatOp(out_grads.size(), axis_, max_dim_size_));
-  in_grads->at(0) = JUST(Dispatch<Tensor>(*grad_op, inputs, /*attrs=*/{}));
+  AttrValueMap concat_attrs;
+  concat_attrs.SetAttr<int>("axis", axis_);
+  concat_attrs.SetAttr<int>("max_dim_size", ctx->max_dim_size);
+  in_grads->at(0) = JUST(Dispatch<Tensor>(*concat_op_, inputs, concat_attrs));
   return Maybe<void>::Ok();
 }
 

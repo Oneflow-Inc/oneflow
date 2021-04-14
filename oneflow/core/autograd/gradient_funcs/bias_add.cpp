@@ -28,7 +28,7 @@ struct BiasAddInterpState : public OpExprInterpState {
   bool bias_requires_grad;
 };
 
-class BiasAdd : public OpExprGradFunctionIf<BiasAddInterpState> {
+class BiasAdd : public OpExprGradFunction<BiasAddInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -41,16 +41,16 @@ class BiasAdd : public OpExprGradFunctionIf<BiasAddInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> CaptureIf(BiasAddInterpState* ctx, const TensorTuple& inputs,
-                        const TensorTuple& outputs, const AttrValueMap& attrs) const override {
+  Maybe<void> Capture(BiasAddInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrValueMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     ctx->input_requires_grad = inputs.at(0)->requires_grad();
     ctx->bias_requires_grad = inputs.at(1)->requires_grad();
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> ApplyIf(const BiasAddInterpState* ctx, const TensorTuple& out_grads,
-                      TensorTuple* in_grads) const override {
+  Maybe<void> Apply(const BiasAddInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
     const int64_t num_axes = out_grads.at(0)->shape()->NumAxes();
     in_grads->resize(2);
     if (ctx->bias_requires_grad) {

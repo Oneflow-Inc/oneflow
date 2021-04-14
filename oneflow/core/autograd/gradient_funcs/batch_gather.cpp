@@ -28,13 +28,13 @@ struct BatchGatherInterpState : public OpExprInterpState {
   bool requires_grad;
 };
 
-class BatchGather : public OpExprGradFunctionIf<BatchGatherInterpState> {
+class BatchGather : public OpExprGradFunction<BatchGatherInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> CaptureIf(BatchGatherInterpState* ctx, const TensorTuple& inputs,
-                        const TensorTuple& outputs, const AttrValueMap& attrs) const override;
-  Maybe<void> ApplyIf(const BatchGatherInterpState* ctx, const TensorTuple& out_grads,
-                      TensorTuple* in_grads) const override;
+  Maybe<void> Capture(BatchGatherInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
+  Maybe<void> Apply(const BatchGatherInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override;
 
  private:
   std::shared_ptr<OpExpr> bw_unsorted_batch_segment_sum_op_;
@@ -49,8 +49,8 @@ Maybe<void> BatchGather::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BatchGather::CaptureIf(BatchGatherInterpState* ctx, const TensorTuple& inputs,
-                                   const TensorTuple& outputs, const AttrValueMap& attrs) const {
+Maybe<void> BatchGather::Capture(BatchGatherInterpState* ctx, const TensorTuple& inputs,
+                                 const TensorTuple& outputs, const AttrValueMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& in_shape = inputs.at(0)->shape();
@@ -60,8 +60,8 @@ Maybe<void> BatchGather::CaptureIf(BatchGatherInterpState* ctx, const TensorTupl
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BatchGather::ApplyIf(const BatchGatherInterpState* ctx, const TensorTuple& out_grads,
-                                 TensorTuple* in_grads) const {
+Maybe<void> BatchGather::Apply(const BatchGatherInterpState* ctx, const TensorTuple& out_grads,
+                               TensorTuple* in_grads) const {
   in_grads->resize(2);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& indices = ctx->SavedTensors().at(0);
