@@ -41,7 +41,8 @@ class WriteBlobArgCbPhyInstrOperand : public PhyInstrOperand {
   WriteBlobArgCbPhyInstrOperand(const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
                                 const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object,
                                 const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object,
-                                const std::function<void(uint64_t)>& callback, const std::string& modifier)
+                                const std::function<void(uint64_t)>& callback,
+                                const std::string& modifier)
       : eager_blob_object_(eager_blob_object),
         callback_(callback),
         infer_local_dep_object_(infer_local_dep_object),
@@ -54,11 +55,14 @@ class WriteBlobArgCbPhyInstrOperand : public PhyInstrOperand {
     return eager_blob_object_;
   }
 
-  void ForEachInferMutMirroredObject(const std::function<void(MirroredObject*)>&) const override;
-  void ForEachInferConstMirroredObject(const std::function<void(MirroredObject*)>&) const override;
-  void ForEachComputeMutMirroredObject(const std::function<void(MirroredObject*)>&) const override;
-  void ForEachComputeConstMirroredObject(
-      const std::function<void(MirroredObject*)>&) const override;
+  void ForEachConstMirroredObject(
+      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
+
+  void ForEachMutMirroredObject(
+      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
+
+  void ForEachMut2MirroredObject(
+      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
 
  private:
   std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;

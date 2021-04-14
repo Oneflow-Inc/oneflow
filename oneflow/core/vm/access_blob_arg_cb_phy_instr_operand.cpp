@@ -22,31 +22,34 @@ namespace oneflow {
 
 namespace vm {
 
-void WriteBlobArgCbPhyInstrOperand::ForEachInferMutMirroredObject(
-    const std::function<void(MirroredObject*)>& DoEach) const {
-  if (write_shape_) {
-    auto* local_dep_object = infer_local_dep_object_->mut_local_dep_object();
-    DoEach(local_dep_object->mut_mirrored_object());
+void WriteBlobArgCbPhyInstrOperand::ForEachConstMirroredObject(
+    const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
+  if (modifier_ == "const") {
+    auto* infer_local_dep_object = infer_local_dep_object_->mut_local_dep_object();
+    auto* compute_local_dep_object = compute_local_dep_object_->mut_local_dep_object();
+    DoEach(infer_local_dep_object->mut_mirrored_object(),
+           compute_local_dep_object->mut_mirrored_object());
   }
 }
 
-void WriteBlobArgCbPhyInstrOperand::ForEachInferConstMirroredObject(
-    const std::function<void(MirroredObject*)>& DoEach) const {
-  if (!write_shape_) {
-    auto* local_dep_object = infer_local_dep_object_->mut_local_dep_object();
-    DoEach(local_dep_object->mut_mirrored_object());
+void WriteBlobArgCbPhyInstrOperand::ForEachMutMirroredObject(
+    const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
+  if (modifier_ == "mut") {
+    auto* infer_local_dep_object = infer_local_dep_object_->mut_local_dep_object();
+    auto* compute_local_dep_object = compute_local_dep_object_->mut_local_dep_object();
+    DoEach(infer_local_dep_object->mut_mirrored_object(),
+           compute_local_dep_object->mut_mirrored_object());
   }
 }
 
-void WriteBlobArgCbPhyInstrOperand::ForEachComputeMutMirroredObject(
-    const std::function<void(MirroredObject*)>& DoEach) const {
-  auto* compute_dep_object = compute_local_dep_object_->mut_local_dep_object();
-  DoEach(compute_dep_object->mut_mirrored_object());
-}
-
-void WriteBlobArgCbPhyInstrOperand::ForEachComputeConstMirroredObject(
-    const std::function<void(MirroredObject*)>& DoEach) const {
-  // Do nothing
+void WriteBlobArgCbPhyInstrOperand::ForEachMut2MirroredObject(
+    const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
+  if (modifier_ == "mut2") {
+    auto* infer_local_dep_object = infer_local_dep_object_->mut_local_dep_object();
+    auto* compute_local_dep_object = compute_local_dep_object_->mut_local_dep_object();
+    DoEach(infer_local_dep_object->mut_mirrored_object(),
+           compute_local_dep_object->mut_mirrored_object());
+  }
 }
 
 }  // namespace vm
