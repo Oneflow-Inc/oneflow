@@ -874,7 +874,7 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 
 Maybe<void> InstructionsBuilder::WriteBlobByCallback(
     const std::shared_ptr<one::MirroredTensor>& tensor,
-    const std::function<void(uint64_t)>& callback, bool write_shape) {
+    const std::function<void(uint64_t)>& callback, const std::string& modifier) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New("WriteBlobByCallback");
   const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object =
@@ -884,7 +884,7 @@ Maybe<void> InstructionsBuilder::WriteBlobByCallback(
   const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object =
       JUST(tensor->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::WriteBlobArgCbPhyInstrOperand>(
-      eager_blob_object, infer_local_dep_object, compute_local_dep_object, callback, write_shape);
+      eager_blob_object, infer_local_dep_object, compute_local_dep_object, callback, modifier);
   instruction->set_parallel_desc_symbol_id(JUST(tensor->parallel_desc()->symbol_id()));
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();

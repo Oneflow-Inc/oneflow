@@ -41,12 +41,12 @@ class WriteBlobArgCbPhyInstrOperand : public PhyInstrOperand {
   WriteBlobArgCbPhyInstrOperand(const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
                                 const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object,
                                 const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object,
-                                const std::function<void(uint64_t)>& callback, bool write_shape)
+                                const std::function<void(uint64_t)>& callback, const std::string& modifier)
       : eager_blob_object_(eager_blob_object),
         callback_(callback),
         infer_local_dep_object_(infer_local_dep_object),
         compute_local_dep_object_(compute_local_dep_object),
-        write_shape_(write_shape) {}
+        modifier_(modifier) {}
   ~WriteBlobArgCbPhyInstrOperand() = default;
 
   const std::function<void(uint64_t)>& callback() const { return callback_; }
@@ -65,7 +65,7 @@ class WriteBlobArgCbPhyInstrOperand : public PhyInstrOperand {
   std::function<void(uint64_t)> callback_;
   std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
   std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
-  const bool write_shape_;
+  const std::string modifier_;
 };
 
 }  // namespace vm

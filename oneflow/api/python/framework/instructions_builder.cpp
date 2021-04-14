@@ -275,8 +275,8 @@ std::shared_ptr<compatible_py::BlobObject> Build121To(
 
 void WriteBlobByCallback(const std::shared_ptr<InstructionsBuilder>& x,
                          const std::shared_ptr<one::MirroredTensor>& tensor,
-                         const std::function<void(uint64_t)>& callback, bool write_shape) {
-  return x->WriteBlobByCallback(tensor, callback, write_shape).GetOrThrow();
+                         const std::function<void(uint64_t)>& callback, const std::string& modifier) {
+  return x->WriteBlobByCallback(tensor, callback, modifier).GetOrThrow();
 }
 
 }  // namespace
