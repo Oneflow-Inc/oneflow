@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_H_
 
+#include "oneflow/core/framework/attr_value_map.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -40,8 +41,12 @@ class OpExprInterpreter {
   OpExprInterpreter() = default;
   virtual ~OpExprInterpreter() = default;
 
-  virtual Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs,
-                            TensorTuple* outputs) const = 0;
+  virtual Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs,
+                            const AttrValueMap& attrs) const = 0;
+
+  Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs) const {
+    return Apply(op, inputs, outputs, AttrValueMap{});
+  }
 };
 
 #define FOR_EACH_BUILTIN_OPS(_macro) \
@@ -56,21 +61,21 @@ class OpExprInterpreter {
 
 #define DECLARE_NORMAL_APPLY_FUNC(op_type)                                               \
   virtual Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs, \
-                                TensorTuple* outputs) const
+                                TensorTuple* outputs, const AttrValueMap& attrs) const
 
 #define DECLARE_PURE_VIRTUAL_APPLY_FUNC(op_type) DECLARE_NORMAL_APPLY_FUNC(op_type) = 0;
 
 #define DECLARE_OVERRIDE_APPLY_FUNC(op_type)                                     \
   Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs, \
-                        TensorTuple* outputs) const override;
+                        TensorTuple* outputs, const AttrValueMap& attrs) const override;
 
 class LazyInterpreter : public OpExprInterpreter {
  public:
   LazyInterpreter() : OpExprInterpreter() {}
   virtual ~LazyInterpreter() = default;
 
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
-                    TensorTuple* outputs) const override;
+  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
+                    const AttrValueMap& attrs) const override;
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(BuiltinOp);
@@ -82,8 +87,8 @@ class EagerInterpreter : public OpExprInterpreter {
   EagerInterpreter() : OpExprInterpreter() {}
   virtual ~EagerInterpreter() = default;
 
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
-                    TensorTuple* outputs) const override;
+  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
+                    const AttrValueMap& attrs) const override;
 
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_PURE_VIRTUAL_APPLY_FUNC);
@@ -120,7 +125,12 @@ class AutogradInterpreter {
 
   virtual ~AutogradInterpreter() = default;
 
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs) const;
+  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
+                    const AttrValueMap& attrs) const;
+
+  Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs) const {
+    return Apply(op, inputs, outputs, AttrValueMap{});
+  }
 
  private:
   std::shared_ptr<OpExprInterpreter> internal_;
