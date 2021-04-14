@@ -39,6 +39,10 @@ class Device final {
   static Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;
 
+  bool operator==(const Device& rhs) const {
+    return type_ == rhs.type_ && device_id_ == rhs.device_id_;
+  }
+
  private:
   const std::string type_;
   const int64_t device_id_;

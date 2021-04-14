@@ -45,7 +45,7 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
     device = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
   } else {
     device = inputs[0]->device();
-    for (int i = 1; i < inputs.size(); i++) { CHECK_EQ(device, inputs[i]->device()); }
+    for (int i = 1; i < inputs.size(); i++) { CHECK(*device == *inputs[i]->device()); }
     parallel_desc = JUST(Device::MakeParallelDescByDevice(*device));
   }
   if (parallel_desc->device_tag() != "gpu") {
