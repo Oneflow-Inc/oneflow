@@ -29,6 +29,7 @@ set(LLVM_TARGETS_TO_BUILD "X86;NVPTX")
 set(LLVM_ENABLE_ASSERTIONS ON)
 set(LLVM_ENABLE_PROJECTS "mlir")
 set(LLVM_APPEND_VC_REV OFF)
+set(LLVM_ENABLE_ZLIB OFF) # to prevent cmake fail
 
 set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/a4e2a5145a29af678139f33e94ab3df0fc973e59.zip" CACHE STRING "")
 set(LLVM_MONO_REPO_MD5 "d501547c39d344c6f52b5c2e757c3953" CACHE STRING "")
