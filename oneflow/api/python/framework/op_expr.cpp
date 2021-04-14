@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_conf.cfg.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace py = pybind11;
 

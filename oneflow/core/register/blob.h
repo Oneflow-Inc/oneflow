@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 

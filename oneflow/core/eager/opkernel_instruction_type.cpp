@@ -40,6 +40,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace eager {
@@ -442,25 +443,69 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 
 struct LocalCallOpKernelUtil final {
   static inline Maybe<void> Infer(vm::Instruction* instruction) {
+    OF_PROFILER_RANGE_PUSH("Infer:GetLocalCallOpKernelPhyInstrOperand");
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("Infer:ChooseOpKernel");
     operand->mut_opkernel()->ChooseOpKernel(operand->inputs(), operand->outputs());
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("Infer:CheckOutputBlobObjectsMemCase");
     JUST(CheckOutputBlobObjectsMemCase(operand, instruction->stream()));
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("Infer:InferOutputTensorDescs");
     JUST(InferOutputTensorDescs(operand));
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("Infer:InitOutputBlobs");
     JUST(InitOutputBlobs(operand));
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("Infer:InferTempStorageBlobDesc");
     JUST(InferTempStorageBlobDesc(operand));
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("Infer:ResetTempStorageBlob");
     JUST(ResetTempStorageBlob(operand));
+    OF_PROFILER_RANGE_POP();
+
     return Maybe<void>::Ok();
   }
 
   static inline Maybe<void> Compute(vm::Instruction* instruction) {
+    OF_PROFILER_RANGE_PUSH("Compute:GetLocalCallOpKernelPhyInstrOperand");
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("Compute:ChooseOpKernel");
     operand->mut_opkernel()->ChooseOpKernel(operand->inputs(), operand->outputs());
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("Compute:stream");
     DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("Compute:AllocateOutputBlobsMemory");
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("Compute:TryAllocateTempStorageBlobMemory");
     JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("Compute:TryInitOpKernelState");
     JUST(TryInitOpKernelState(operand, device_ctx));
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("Compute:OpKernelCompute");
     JUST(OpKernelCompute(operand, device_ctx));
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("Compute:DeallocateTempStorageBlobMemory");
     JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
+    OF_PROFILER_RANGE_POP();
     return Maybe<void>::Ok();
   }
 
@@ -599,11 +644,15 @@ struct LocalCallOpKernelUtil final {
 };
 
 void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
+  OF_PROFILER_RANGE_PUSH("OpInfer");
   CHECK_OK(LocalCallOpKernelUtil::Infer(instruction));
+  OF_PROFILER_RANGE_POP();
 }
 
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
+  OF_PROFILER_RANGE_PUSH("OpInfer");
   CHECK_OK(LocalCallOpKernelUtil::Compute(instruction));
+  OF_PROFILER_RANGE_POP();
 }
 
 Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction,

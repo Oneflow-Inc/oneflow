@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/register/register.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -31,17 +32,34 @@ Blob::Blob(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header
 
 void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr,
                 char* body_ptr) {
+  OF_PROFILER_RANGE_PUSH("BlobInit::Assign");
   mem_case_ = mem_case;
   blob_desc_ = blob_desc;
   dptr_ = body_ptr;
   header_ptr_ = header_ptr;
+  OF_PROFILER_RANGE_POP();
+
+  OF_PROFILER_RANGE_PUSH("BlobInit::GlobalChecker");
   this->blob_access_checker_ = Global<BlobAccessCheckerIf<true, true>>::Get();
+  OF_PROFILER_RANGE_POP();
+
+  OF_PROFILER_RANGE_PUSH("BlobInit::reinCast");
   int64_t* shape_ptr = reinterpret_cast<int64_t*>(header_ptr);
+  OF_PROFILER_RANGE_POP();
+
+  OF_PROFILER_RANGE_PUSH("BlobInit::NewShapeView");
   shape_view_.reset(new ShapeView(shape_ptr, static_shape().NumAxes()));
+  OF_PROFILER_RANGE_POP();
+
   if (blob_desc->is_dynamic()) {
+    OF_PROFILER_RANGE_PUSH("BlobInit::NewMutShapeView");
     mut_shape_view_.reset(new MutShapeView(shape_ptr, static_shape().NumAxes()));
+    OF_PROFILER_RANGE_POP();
   }
+
+  OF_PROFILER_RANGE_PUSH("BlobInit::SetShape");
   MutShapeView(shape_ptr, static_shape().NumAxes()).set_shape(static_shape());
+  OF_PROFILER_RANGE_POP();
 }
 
 void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {

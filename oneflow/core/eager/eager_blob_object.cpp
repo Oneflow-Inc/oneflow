@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace eager {
@@ -27,16 +28,39 @@ Maybe<void> EagerBlobObject::TryInitBlob() {
 }
 
 Maybe<void> EagerBlobObject::InitBlob() {
+  OF_PROFILER_RANGE_PUSH("InitBlob:CHECK_NE");
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
+  OF_PROFILER_RANGE_POP();
+
+  OF_PROFILER_RANGE_PUSH("InitBlob:NewRtBlobDesc");
   rt_blob_desc_.reset(new RtBlobDesc(blob_desc_));
+  OF_PROFILER_RANGE_POP();
+
   {
+    OF_PROFILER_RANGE_PUSH("InitBlob:headerBufferReset");
     header_buffer_.reset();
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("InitBlob:ByteSizeOfBlobHeader");
     int64_t header_byte_size = rt_blob_desc_->ByteSizeOfBlobHeader();
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("InitBlob:free");
     const auto& FreeHeader = [header_byte_size](char* dptr) { std::free(dptr); };
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("InitBlob:malloc");
     char* ptr = reinterpret_cast<char*>(std::malloc(header_byte_size));
+    OF_PROFILER_RANGE_POP();
+
+    OF_PROFILER_RANGE_PUSH("InitBlob:unique_ptr");
     header_buffer_ = std::unique_ptr<char, std::function<void(char*)>>(ptr, FreeHeader);
+    OF_PROFILER_RANGE_POP();
   }
+
+  OF_PROFILER_RANGE_PUSH("InitBlob:NewBlob");
   blob_.reset(new Blob(*mem_case_, rt_blob_desc_.get(), header_buffer_.get(), nullptr));
+  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
 
