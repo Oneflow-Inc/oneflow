@@ -253,7 +253,8 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
 }
 
 Maybe<void> DefaultOpExprGradFunction::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                                               const TensorTuple& outputs) const {
+                                               const TensorTuple& outputs,
+                                               const AttrValueMap& attrs) const {
   for (const auto& pair : fw_ibn_index_and_saved_index_pairs_) {
     CHECK_EQ(ctx->SavedTensors().size(), pair.second);
     ctx->SaveTensorForBackward(inputs.at(pair.first));
