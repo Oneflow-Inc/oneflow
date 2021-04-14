@@ -81,8 +81,6 @@ if(NOT llvm_monorepo_POPULATED)
 
   list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
   list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
-  # set MLIR_TABLEGEN_EXE for functions in AddMLIR
-  # set(MLIR_TABLEGEN_EXE mlir-tblgen)
   # set LLVM_TOOLS_BINARY_DIR for function `configure_lit_site_cfg`
   set(LLVM_TOOLS_BINARY_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
   include(TableGen)
