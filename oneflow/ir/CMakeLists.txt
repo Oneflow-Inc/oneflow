@@ -20,17 +20,6 @@ project(oneflow-dialect LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
 
-# llvm build options
-set(LLVM_ENABLE_RTTI ON) # turn this on to make it compatible with protobuf
-set(LLVM_INCLUDE_EXAMPLES OFF)
-set(LLVM_INCLUDE_TESTS OFF)
-set(LLVM_INCLUDE_BENCHMARKS OFF)
-set(LLVM_TARGETS_TO_BUILD "X86;NVPTX")
-set(LLVM_ENABLE_ASSERTIONS ON)
-set(LLVM_ENABLE_PROJECTS "mlir")
-set(LLVM_APPEND_VC_REV OFF)
-set(LLVM_ENABLE_ZLIB OFF) # to prevent cmake fail
-
 set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/a4e2a5145a29af678139f33e94ab3df0fc973e59.zip" CACHE STRING "")
 set(LLVM_MONO_REPO_MD5 "d501547c39d344c6f52b5c2e757c3953" CACHE STRING "")
 message("-- LLVM_MONO_REPO_URL: " ${LLVM_MONO_REPO_URL})
@@ -49,15 +38,51 @@ if(NOT llvm_monorepo_POPULATED)
   set(LLVM_BINARY_DIR ${llvm_monorepo_BINARY_DIR})
   set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_BINARY_DIR}/bin)
   set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_BINARY_DIR}/lib)
+  set(LLVM_INSTALL_DIR ${LLVM_BINARY_DIR}/install)
   set(LLVM_EXTERNAL_LIT=${LLVM_BINARY_DIR}/bin/llvm-lit)
-  add_subdirectory(${LLVM_ROOT}/llvm ${LLVM_BINARY_DIR})
-  set(LLVM_CMAKE_DIR ${LLVM_ROOT}/llvm/cmake/modules)
-  set(MLIR_CMAKE_DIR ${LLVM_ROOT}/mlir/cmake/modules)
+
+  execute_process(COMMAND "${CMAKE_COMMAND}" ${llvm_monorepo_SOURCE_DIR}/llvm
+    -DCMAKE_INSTALL_PREFIX=${LLVM_INSTALL_DIR}
+    -DLLVM_ENABLE_RTTI=ON # turn this on to make it compatible with protobuf
+    -DLLVM_INCLUDE_EXAMPLES=OFF
+    -DLLVM_INCLUDE_TESTS=OFF
+    -DLLVM_INCLUDE_BENCHMARKS=OFF
+    -DLLVM_TARGETS_TO_BUILD=X86\;NVPTX
+    -DLLVM_ENABLE_ASSERTIONS=ON
+    -DLLVM_ENABLE_PROJECTS=mlir
+    -DLLVM_APPEND_VC_REV=OFF
+    -DLLVM_ENABLE_ZLIB=OFF
+    -DLLVM_INSTALL_UTILS=ON
+    -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}
+    WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}
+    RESULT_VARIABLE ret)
+  if(ret EQUAL "1")
+      message( FATAL_ERROR "Bad exit status")
+  endif()
+  include(ProcessorCount)
+  ProcessorCount(PROC_NUM)
+  execute_process(COMMAND "${CMAKE_COMMAND}" --build . -j${PROC_NUM}
+    WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}
+    RESULT_VARIABLE ret
+  )
+  if(ret EQUAL "1")
+      message( FATAL_ERROR "Bad exit status")
+  endif()
+  execute_process(COMMAND "${CMAKE_COMMAND}" --build . -j${PROC_NUM} --target install
+    WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}
+    RESULT_VARIABLE ret
+  )
+  if(ret EQUAL "1")
+      message( FATAL_ERROR "Bad exit status")
+  endif()
+  set(LLVM_DIR ${LLVM_INSTALL_DIR}/lib/cmake/llvm)
+  set(MLIR_DIR ${LLVM_INSTALL_DIR}/lib/cmake/mlir)
+  find_package(MLIR REQUIRED CONFIG)
 
   list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
   list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
   # set MLIR_TABLEGEN_EXE for functions in AddMLIR
-  set(MLIR_TABLEGEN_EXE mlir-tblgen)
+  # set(MLIR_TABLEGEN_EXE mlir-tblgen)
   # set LLVM_TOOLS_BINARY_DIR for function `configure_lit_site_cfg`
   set(LLVM_TOOLS_BINARY_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
   include(TableGen)
@@ -75,6 +100,7 @@ if(NOT llvm_monorepo_POPULATED)
       )
   include_directories(${LLVM_INCLUDE_DIRS})
   include_directories(${MLIR_INCLUDE_DIRS})
+  set(LLVM_EXTERNAL_LIT=${llvm_monorepo_BINARY_DIR}/bin/llvm-lit)
 endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
