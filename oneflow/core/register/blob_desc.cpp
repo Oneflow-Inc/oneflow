@@ -68,4 +68,18 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
          && (is_dynamic() == rhs.is_dynamic());
 }
 
+size_t BlobDesc::ByteSizeOfBlobHeader() const { return shape().NumAxes() * sizeof(int64_t); }
+
+size_t BlobDesc::ByteSizeOfBlobBody() const {
+  return shape().elem_cnt() * GetSizeOfDataType(data_type());
+}
+
+size_t BlobDesc::AlignedByteSizeOfBlobBody() const {
+  return RoundUp(ByteSizeOfBlobBody(), BlobDesc::kAlignSize);
+}
+
+size_t BlobDesc::AlignedTotalByteSize() const {
+  return ByteSizeOfBlobHeader() + AlignedByteSizeOfBlobBody();
+}
+
 }  // namespace oneflow
