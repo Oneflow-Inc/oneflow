@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/autograd/gradient_funcs/utility.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -21,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_dispatch.h"
 #include "oneflow/core/framework/op_interpreter.h"
+#include "oneflow/core/framework/user_op_conf_trait.h"
 
 namespace oneflow {
 namespace one {
@@ -41,8 +41,9 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     const std::string& op_name = fw_op_expr->op_name();
-    const float epsilon = GetAttr<float>(fw_op_expr->proto(), "epsilon");
-    axis_ = GetAttr<int32_t>(fw_op_expr->proto(), "axis");
+    op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
+    const float epsilon = JUST(op_trait_->GetAttr<float>("epsilon"));
+    axis_ = JUST(op_trait_->GetAttr<int32_t>("axis"));
     // v1 = variance + eps
     add_eps_op_ = JUST(op_expr_helper::ScalarAddOp(epsilon, GradientOpName(op_name + "_add_eps")));
     // v2 = rsqrt(v1)
@@ -67,8 +68,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
 
   Maybe<void> Capture(NormalizationGradInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrValueMap& attrs) const override {
-    // TODO()
-    // ctx->is_training = attrs.GetAttr<bool>("training");
+    ctx->is_training = JUST(op_trait_->GetAttr<bool>("training", attrs));
     ctx->SaveTensorForBackward(inputs.at(0));  // x
     ctx->SaveTensorForBackward(inputs.at(3));  // gamma
     if (ctx->is_training) {
@@ -140,6 +140,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
   }
 
  private:
+  std::shared_ptr<user_op::UserOpConfTrait> op_trait_;
   int32_t axis_;
   std::shared_ptr<OpExpr> add_eps_op_;
   std::shared_ptr<OpExpr> rsqrt_op_;

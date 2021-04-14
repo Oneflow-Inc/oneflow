@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/autograd/gradient_funcs/utility.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_dispatch.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/framework/user_op_conf_trait.h"
 
 namespace oneflow {
 namespace one {
@@ -33,8 +33,9 @@ class BiasAdd : public OpExprGradFunction<BiasAddInterpState> {
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    axis_ = GetAttr<int32_t>(fw_op_expr->proto(), "axis");
     const std::string& op_name = fw_op_expr->op_name();
+    op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
+    axis_ = JUST(op_trait_->GetAttr<int32_t>("axis"));
     backward_input_op_ = JUST(op_expr_helper::IdentityOp(GradientOpName(op_name + "_input")));
     backward_bias_op_ = JUST(
         op_expr_helper::ReduceSumOp({0}, /*keepdims=*/false, GradientOpName(op_name + "_bias")));
@@ -70,6 +71,7 @@ class BiasAdd : public OpExprGradFunction<BiasAddInterpState> {
   }
 
  private:
+  std::shared_ptr<user_op::UserOpConfTrait> op_trait_;
   int32_t axis_;
   std::shared_ptr<OpExpr> backward_input_op_;
   std::shared_ptr<OpExpr> backward_bias_op_;

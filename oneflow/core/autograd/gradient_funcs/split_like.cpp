@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/autograd/gradient_funcs/utility.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_dispatch.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/framework/user_op_conf_trait.h"
 
 namespace oneflow {
 namespace one {
@@ -37,6 +37,7 @@ class SplitLike : public OpExprGradFunction<SplitLikeInterpState> {
                     TensorTuple* in_grads) const override;
 
  private:
+  std::shared_ptr<user_op::UserOpConfTrait> op_trait_;
   int64_t axis_;
   std::vector<std::shared_ptr<OpExpr>> zero_like_ops_;
   std::shared_ptr<OpExpr> concat_op_;
@@ -46,8 +47,9 @@ Maybe<void> SplitLike::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   const std::string& op_name = fw_op_expr->op_name();
-  axis_ = GetAttr<int64_t>(fw_op_expr->proto(), "axis");
-  int32_t output_num = fw_op_expr->proto().output().at("out").s().size();
+  op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
+  axis_ = JUST(op_trait_->GetAttr<int64_t>("axis"));
+  int32_t output_num = JUST(op_trait_->output_size("out"));
   concat_op_ = JUST(
       op_expr_helper::ConcatOp(output_num, axis_, /*max_dim_size=*/-1, GradientOpName(op_name)));
   zero_like_ops_.resize(output_num);

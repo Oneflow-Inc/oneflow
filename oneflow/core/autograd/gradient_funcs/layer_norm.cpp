@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/autograd/gradient_funcs/utility.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_dispatch.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/framework/user_op_conf_trait.h"
 
 namespace oneflow {
 namespace one {
@@ -44,7 +44,7 @@ class LayerNorm : public OpExprGradFunction<LayerNormInterpState> {
                     TensorTuple* in_grads) const override;
 
  private:
-  std::string op_name_;
+  std::shared_ptr<user_op::UserOpConfTrait> op_trait_;
   bool center_;
   bool scale_;
   int64_t begin_norm_axis_;
@@ -55,14 +55,15 @@ class LayerNorm : public OpExprGradFunction<LayerNormInterpState> {
 Maybe<void> LayerNorm::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  op_name_ = fw_op_expr->op_name();
-  center_ = GetAttr<bool>(fw_op_expr->proto(), "center");
-  scale_ = GetAttr<bool>(fw_op_expr->proto(), "scale");
-  begin_norm_axis_ = GetAttr<int64_t>(fw_op_expr->proto(), "begin_norm_axis");
-  begin_params_axis_ = GetAttr<int64_t>(fw_op_expr->proto(), "begin_params_axis");
-  double epsilon = GetAttr<double>(fw_op_expr->proto(), "epsilon");
+  const std::string& op_name = fw_op_expr->op_name();
+  op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
+  center_ = JUST(op_trait_->GetAttr<bool>("center"));
+  scale_ = JUST(op_trait_->GetAttr<bool>("scale"));
+  begin_norm_axis_ = JUST(op_trait_->GetAttr<int64_t>("begin_norm_axis"));
+  begin_params_axis_ = JUST(op_trait_->GetAttr<int64_t>("begin_params_axis"));
+  double epsilon = JUST(op_trait_->GetAttr<double>("epsilon"));
   x_grad_op_ =
-      JUST(op_expr_helper::LayerNormGradOp(begin_norm_axis_, epsilon, GradientOpName(op_name_)));
+      JUST(op_expr_helper::LayerNormGradOp(begin_norm_axis_, epsilon, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -100,7 +101,7 @@ Maybe<void> LayerNorm::Apply(const LayerNormInterpState* ctx, const TensorTuple&
   if (ctx->has_beta_diff || ctx->has_gamma_diff || ctx->has_normalized_diff) {
     const auto& param_grad_op = JUST(op_expr_helper::LayerNormParamGradOp(
         begin_params_axis, ctx->has_beta_diff, ctx->has_gamma_diff, ctx->has_normalized_diff,
-        GradientOpName(op_name_ + "_param")));
+        GradientOpName(op_trait_->op_name() + "_param")));
     TensorTuple inputs{dy};
     if (ctx->has_gamma_diff || ctx->has_normalized_diff) {
       inputs.push_back(saved_tensors.at(offset++));  // gamma
