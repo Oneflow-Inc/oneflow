@@ -76,6 +76,7 @@ class TestModule(flow.unittest.TestCase):
                 .Output("out")
                 .Build()
             )
+            x = op1()[0]
             start = time.time()
             for _ in range(100):
                 x = op1()[0]

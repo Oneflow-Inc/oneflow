@@ -54,7 +54,7 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
   };
   JUST(PhysicalRun(build_instruction));
   for (int i = 0; i < outputs->size(); ++i) {
-    (*outputs)[i] = CHECK_JUST(OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
+    (*outputs)[i] = JUST(OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
         (*eager_blob_objects)[i], device));
   }
   return Maybe<void>::Ok();
