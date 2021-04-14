@@ -59,8 +59,8 @@ def FlowToOnnxNaive(graph, shape_override):
     for lbn in graph.helper.lbn2logical_blob_desc:
         lbd = graph.helper.lbn2logical_blob_desc[lbn]
         if lbn not in shape_override:
-            shape_override[lbn] = list(lbd.body.shape.dim)
-        dtypes[lbn] = util.Flow2OnnxDtype(lbd.body.data_type)
+            shape_override[lbn] = list(lbd.shape.dim)
+        dtypes[lbn] = util.Flow2OnnxDtype(lbd.data_type)
 
     # some stats
     op_cnt = collections.Counter()

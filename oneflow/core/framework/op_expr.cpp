@@ -21,6 +21,18 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+Maybe<void> UserOpExpr::BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const {
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_user_conf()) = proto_;
+  auto* user_op_conf = op_conf->mutable_user_conf();
+  for (const auto& it : attrs) {
+    AttrValue attr_val;
+    it.second->ToProto(&attr_val);
+    (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<OpExprGradClosure> UserOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
     if (IsClassRegistered<std::string, OpExprGradFunction>(proto().op_type_name())) {
@@ -34,27 +46,88 @@ Maybe<OpExprGradClosure> UserOpExpr::GetOrCreateOpGradClosure() const {
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
-Maybe<OpExprGradClosure> VariableOpExpr::GetOrCreateOpGradClosure() const { UNIMPLEMENTED(); }
+Maybe<void> VariableOpExpr::BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_variable_conf()) = proto_;
+  return Maybe<void>::Ok();
+}
 
-Maybe<OpExprGradClosure> CastToMirroredOpExpr::GetOrCreateOpGradClosure() const { UNIMPLEMENTED(); }
+Maybe<OpExprGradClosure> VariableOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+Maybe<void> CastToMirroredOpExpr::BuildOpConf(OperatorConf* op_conf,
+                                              const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_cast_to_mirrored_conf()) = proto_;
+  return Maybe<void>::Ok();
+}
+
+Maybe<OpExprGradClosure> CastToMirroredOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+Maybe<void> CastFromMirroredOpExpr::BuildOpConf(OperatorConf* op_conf,
+                                                const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_cast_from_mirrored_conf()) = proto_;
+  return Maybe<void>::Ok();
+}
 
 Maybe<OpExprGradClosure> CastFromMirroredOpExpr::GetOrCreateOpGradClosure() const {
-  UNIMPLEMENTED();
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+Maybe<void> DistributeSplitOpExpr::BuildOpConf(OperatorConf* op_conf,
+                                               const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_distribute_split_conf()) = proto_;
+  return Maybe<void>::Ok();
 }
 
 Maybe<OpExprGradClosure> DistributeSplitOpExpr::GetOrCreateOpGradClosure() const {
-  UNIMPLEMENTED();
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+Maybe<void> DistributeCloneOpExpr::BuildOpConf(OperatorConf* op_conf,
+                                               const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_distribute_clone_conf()) = proto_;
+  return Maybe<void>::Ok();
 }
 
 Maybe<OpExprGradClosure> DistributeCloneOpExpr::GetOrCreateOpGradClosure() const {
-  UNIMPLEMENTED();
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+Maybe<void> DistributeConcatOpExpr::BuildOpConf(OperatorConf* op_conf,
+                                                const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_distribute_concat_conf()) = proto_;
+  return Maybe<void>::Ok();
 }
 
 Maybe<OpExprGradClosure> DistributeConcatOpExpr::GetOrCreateOpGradClosure() const {
-  UNIMPLEMENTED();
+  UNIMPLEMENTED_THEN_RETURN();
 }
 
-Maybe<OpExprGradClosure> DistributeAddOpExpr::GetOrCreateOpGradClosure() const { UNIMPLEMENTED(); }
+Maybe<void> DistributeAddOpExpr::BuildOpConf(OperatorConf* op_conf,
+                                             const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_distribute_add_conf()) = proto_;
+  return Maybe<void>::Ok();
+}
+
+Maybe<OpExprGradClosure> DistributeAddOpExpr::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
 
 }  // namespace one
 }  // namespace oneflow

@@ -31,8 +31,8 @@ class DefaultOpExprGradFunction : public OpExprGradFunction {
  public:
   Maybe<void> Init(const OpExpr& op) override;
 
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs) const override;
+  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrValueMap& attrs) const override;
 
   Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
@@ -100,7 +100,7 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const BuiltinOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   OperatorConf fw_op_conf;
-  fw_op_expr->BuildOpConf(&fw_op_conf);
+  fw_op_expr->BuildOpConf(&fw_op_conf, /*attrs=*/{});
 
   // Generate backward operator conf for each input. The `LogicalBlobId` for
   // backward output gradient is dummy due to inaccessibility.
