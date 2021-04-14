@@ -33,7 +33,6 @@ struct CudnnConvArgsAndAlgo final {
 
   CudnnConvArgs args;
   PerfT algo_perf;
-  const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get() -> resource().cudnn_conf();
 
   CudnnConvArgsAndAlgo(const user_op::Tensor* x, const user_op::Tensor* w, const user_op::Tensor* y,
                        user_op::Tensor* buf, const JobDesc& job_desc,
@@ -41,9 +40,18 @@ struct CudnnConvArgsAndAlgo final {
                        bool has_forced_algo, int32_t forced_algo)
       : args(user_op_conf, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
              y->shape(), user_op_conf.attr<std::string>("data_format"), buf->shape().elem_cnt(),
-             cudnn_conf.cudnn_conv_heuristic_search_algo(),
-             cudnn_conf.cudnn_conv_use_deterministic_algo_only(),
-             cudnn_conf.cudnn_conv_enable_pseudo_half()
+             Global<ResourceDesc, ForSession>::Get()
+                 ->resource()
+                 .cudnn_conf()
+                 .cudnn_conv_heuristic_search_algo(),
+             Global<ResourceDesc, ForSession>::Get()
+                 ->resource()
+                 .cudnn_conf()
+                 .cudnn_conv_use_deterministic_algo_only(),
+             Global<ResourceDesc, ForSession>::Get()
+                     ->resource()
+                     .cudnn_conf()
+                     .cudnn_conv_enable_pseudo_half()
                  || (user_op_conf.attr<std::string>("data_format") == "channels_last"
                      && std::is_same<PerfT, cudnnConvolutionBwdFilterAlgoPerf_t>::value)) {
     size_t byte_size_of_buf = buf->shape().elem_cnt();
