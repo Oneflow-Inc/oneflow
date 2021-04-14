@@ -875,7 +875,7 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 Maybe<void> InstructionsBuilder::AccessBlobByCallback(
     const std::shared_ptr<one::MirroredTensor>& tensor,
     const std::function<void(uint64_t)>& callback, const std::string& modifier) {
-  std::string instr_name = tensor->parallel_desc()->device_tag() + "AccessBlobByCallback";
+  std::string instr_name = tensor->parallel_desc()->device_tag() + ".AccessBlobByCallback";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object =
       JUST(tensor->eager_blob_object());
