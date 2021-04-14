@@ -34,6 +34,7 @@ struct CudnnConvArgsAndAlgo final {
   CudnnConvArgs args;
   PerfT algo_perf;
 
+  // TODO(hanbinbin): remove arg job_desc and set cudnn_conv config as args of CudnnConvArgsAndAlgo
   CudnnConvArgsAndAlgo(const user_op::Tensor* x, const user_op::Tensor* w, const user_op::Tensor* y,
                        user_op::Tensor* buf, const JobDesc& job_desc,
                        const user_op::UserOpConfWrapper& user_op_conf, DeviceCtx* device_ctx,
