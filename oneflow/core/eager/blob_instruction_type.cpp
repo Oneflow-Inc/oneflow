@@ -126,9 +126,9 @@ class CpuCopyBlobToGpuInstructionType final : public vm::InstructionType {
     Blob* src_blob = ptr->src_eager_blob_object()->mut_blob();
     Blob* dst_blob = ptr->dst_eager_blob_object()->mut_blob();
     void* src_dptr = src_blob->mut_dptr();
+    CHECK_NOTNULL(src_dptr);
     CHECK_EQ(src_blob->ByteSizeOfBlobBody(), dst_blob->ByteSizeOfBlobBody());
     if (src_blob->mem_case().host_mem().has_cuda_pinned_mem()) {
-      CHECK_NOTNULL(src_dptr);
       size_t size = src_blob->AlignedByteSizeOfBlobBody();
       cudaError_t cuda_error = cudaHostRegister(src_dptr, size, cudaHostRegisterDefault);
       if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) {
@@ -173,9 +173,9 @@ class GpuCopyBlobToCpuInstructionType final : public vm::InstructionType {
     Blob* src_blob = ptr->src_eager_blob_object()->mut_blob();
     Blob* dst_blob = ptr->dst_eager_blob_object()->mut_blob();
     void* dst_dptr = dst_blob->mut_dptr();
+    CHECK_NOTNULL(dst_dptr);
     CHECK_EQ(src_blob->ByteSizeOfBlobBody(), dst_blob->ByteSizeOfBlobBody());
     if (dst_blob->mem_case().host_mem().has_cuda_pinned_mem()) {
-      CHECK_NOTNULL(dst_dptr);
       size_t size = dst_blob->AlignedByteSizeOfBlobBody();
       cudaError_t cuda_error = cudaHostRegister(dst_dptr, size, cudaHostRegisterDefault);
       if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) {
