@@ -40,6 +40,8 @@ limitations under the License.
 
 namespace oneflow {
 
+class Device;
+
 namespace one {
 
 class MirroredTensor;
@@ -116,6 +118,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> AccessBlobByCallback(const std::shared_ptr<one::MirroredTensor>& tensor,
                                    const std::function<void(uint64_t)>& callback,
                                    const std::string& modifier);
+
+  Maybe<one::MirroredTensor> CopyBlobToOtherDevice(
+      const std::shared_ptr<one::MirroredTensor>& tensor, const std::shared_ptr<Device>& device);
 
   Maybe<void> InferRankFrontSeqCallback(const std::function<void()>& callback);
   Maybe<void> ComputeRankFrontSeqCallback(const std::function<void()>& callback);

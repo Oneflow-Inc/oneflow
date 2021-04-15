@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/vm/copy_blob_to_other_device_phy_instr_operand.h"
 
 namespace oneflow {
 
@@ -888,6 +889,36 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
   instruction->set_parallel_desc_symbol_id(JUST(tensor->parallel_desc()->symbol_id()));
   instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
   return Maybe<void>::Ok();
+}
+
+Maybe<one::MirroredTensor> InstructionsBuilder::CopyBlobToOtherDevice(
+    const std::shared_ptr<one::MirroredTensor>& tensor, const std::shared_ptr<Device>& device) {
+  CHECK_OR_RETURN(!tensor->is_lazy());
+  std::shared_ptr<one::MirroredTensor> dest_tensor = one::MirroredTensor::MakeTensor(
+      tensor->shape(), tensor->dtype(), device, tensor->is_lazy(), tensor->requires_grad(),
+      /* is_leaf */ false, tensor->retain_grad());
+  std::string instr_name = tensor->parallel_desc()->device_tag() + "."
+                           + dest_tensor->parallel_desc()->device_tag() + ".CopyBlobToOtherDevice";
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+  const std::shared_ptr<eager::EagerBlobObject>& src_eager_blob_object =
+      JUST(tensor->eager_blob_object());
+  const std::shared_ptr<eager::EagerBlobObject>& dst_eager_blob_object =
+      JUST(dest_tensor->eager_blob_object());
+  const std::shared_ptr<VmLocalDepObject>& src_infer_local_dep_object =
+      JUST(tensor->infer_local_dep_object());
+  const std::shared_ptr<VmLocalDepObject>& dst_infer_local_dep_object =
+      JUST(dest_tensor->infer_local_dep_object());
+  const std::shared_ptr<VmLocalDepObject>& src_compute_local_dep_object =
+      JUST(tensor->compute_local_dep_object());
+  const std::shared_ptr<VmLocalDepObject>& dst_compute_local_dep_object =
+      JUST(dest_tensor->compute_local_dep_object());
+  *instruction->mutable_phy_instr_operand() =
+      std::make_shared<vm::CopyBlobToOtherDevicePhyInstrOperand>(
+          src_eager_blob_object, dst_eager_blob_object, src_infer_local_dep_object,
+          dst_infer_local_dep_object, src_compute_local_dep_object, dst_compute_local_dep_object);
+  instruction->set_parallel_desc_symbol_id(JUST(tensor->parallel_desc()->symbol_id()));
+  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  return dest_tensor;
 }
 
 Maybe<void> InstructionsBuilder::RankFrontSeqCallback(const std::string& instruction_name,

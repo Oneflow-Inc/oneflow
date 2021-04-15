@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
-#include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/object_msg/object_msg_list.h"
 
 namespace oneflow {

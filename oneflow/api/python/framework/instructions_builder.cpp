@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/device.h"
 
 namespace py = pybind11;
 
@@ -280,6 +281,12 @@ void AccessBlobByCallback(const std::shared_ptr<InstructionsBuilder>& x,
   return x->AccessBlobByCallback(tensor, callback, modifier).GetOrThrow();
 }
 
+std::shared_ptr<one::MirroredTensor> CopyBlobToOtherDevice(
+    const std::shared_ptr<InstructionsBuilder>& x,
+    const std::shared_ptr<one::MirroredTensor>& tensor, const std::shared_ptr<Device>& device) {
+  return x->CopyBlobToOtherDevice(tensor, device).GetPtrOrThrow();
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
@@ -355,6 +362,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
            &GetSharedOpKernelObject4ParallelConfSymbol)
       .def("DeleteObject", &DeleteObject)
       .def("AccessBlobByCallback", &AccessBlobByCallback)
+      .def("CopyBlobToOtherDevice", &CopyBlobToOtherDevice)
       .def("StatefulCall", &StatefulCall)
       .def("InsertRemoveForeignCallbackInstruction", &InsertRemoveForeignCallbackInstruction)
       .def("FetchBlobHeader", &FetchBlobHeader)
