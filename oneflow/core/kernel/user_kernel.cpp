@@ -36,8 +36,8 @@ namespace {
 
 void FillTensorDescWithBlob(const Blob* blob, user_op::NaiveTensorDesc* tensor_desc) {
   BlobDescProto proto;
-  blob->blob_desc().header_pod_desc().ToProto(proto.mutable_header());
-  blob->blob_desc().body().ToProto(proto.mutable_body());
+  blob->blob_desc().body_shape().ToProto(proto.mutable_shape());
+  proto.set_data_type(blob->blob_desc().data_type());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   *tensor_desc = proto;
   tensor_desc->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
