@@ -63,7 +63,7 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
     const StateT* state = dynamic_cast<const StateT*>(ctx);
     CHECK_NOTNULL_OR_RETURN(state);
     return Apply(state, out_grads, in_grads);
-  };
+  }
 
   virtual Maybe<void> Capture(StateT* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                               const AttrValueMap& attrs) const = 0;

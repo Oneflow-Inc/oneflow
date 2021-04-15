@@ -32,6 +32,7 @@ from oneflow.core.framework.config_def_pb2 import ConfigDef
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 import oneflow
 import oneflow_api.oneflow.core.job.placement as placement_cfg
+from oneflow.python.oneflow_export import oneflow_export
 
 oneflow_api = oneflow.oneflow_api
 
@@ -234,6 +235,7 @@ def GetOpAttributes():
     return text_format.Parse(op_attributes, op_attribute_pb.OpAttributeList())
 
 
+@oneflow_export("experimental.get_job_set")
 def GetJobSet():
     job_set = oneflow_api.GetSerializedJobSet()
     return text_format.Parse(job_set, job_set_pb.JobSet())
