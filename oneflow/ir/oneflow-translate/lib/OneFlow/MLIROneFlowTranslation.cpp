@@ -461,7 +461,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
   for (auto kv : op.user_conf().input()) {
     for (int i = 0; i < kv.second.s_size(); i++) {
-      const std::string& lbn = kv.second.s(i);
+      const std::string lbn = kv.second.s(i);
       if (failed(AppendDataInOperand(lbn, operand_vec))) { return failure(); }
     }
   }
