@@ -34,7 +34,7 @@ class NvtxOpKernelState final : public user_op::OpKernelState {
  public:
   NvtxOpKernelState() : counter_(0) {
 #ifndef OF_ENABLE_PROFILER
-    LOG(WARNING)<<"To use NVTX, run cmake with -DBUILD_PROFILER=ON";
+    LOG(WARNING) << "To use NVTX, run cmake with -DBUILD_PROFILER=ON";
 #endif
   }
   ~NvtxOpKernelState() override = default;
