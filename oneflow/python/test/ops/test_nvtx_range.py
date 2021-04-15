@@ -23,8 +23,8 @@ func_config.default_data_type(flow.float)
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestIdentityN(flow.unittest.TestCase):
-    def test_identity_n(test_case):
+class TestProfilerNvtxRange(flow.unittest.TestCase):
+    def test_profiler_nvtx_range(test_case):
         @flow.global_function(type="train", function_config=func_config)
         def nvtx_range_job(x: oft.Numpy.Placeholder((4, 4, 1024, 1024))):
             x += flow.get_variable(
@@ -34,22 +34,22 @@ class TestIdentityN(flow.unittest.TestCase):
                 initializer=flow.zeros_initializer(),
             )
             x = flow.math.relu(x)
-            x = flow.nvtx_start(x, mark_prefix="range1")
+            x = flow.profiler.nvtx_start(x, mark_prefix="softmax")
             x = flow.nn.softmax(x)
             x = flow.nn.softmax(x)
             x = flow.nn.softmax(x)
             x = flow.nn.softmax(x)
             x = flow.nn.softmax(x)
-            x = flow.nvtx_end(x, mark_prefix="range1")
+            x = flow.profiler.nvtx_end(x, mark_prefix="softmax")
             x = flow.math.relu(x)
-            x = flow.nvtx_start(x, mark_prefix="range2")
+            x = flow.profiler.nvtx_start(x, mark_prefix="gelu")
             x = flow.math.gelu(x)
             x = flow.math.gelu(x)
             x = flow.math.gelu(x)
             x = flow.math.gelu(x)
             x = flow.math.gelu(x)
             x = flow.math.gelu(x)
-            x = flow.nvtx_end(x, mark_prefix="range2")
+            x = flow.profiler.nvtx_end(x, mark_prefix="gelu")
             flow.optimizer.SGD(
                 flow.optimizer.PiecewiseConstantScheduler([], [0]), momentum=0
             ).minimize(x)
@@ -58,7 +58,6 @@ class TestIdentityN(flow.unittest.TestCase):
         input = np.random.rand(4, 4, 1024, 1024).astype(np.float32)
         for i in range(3):
             res = nvtx_range_job(input).get()
-            # test_case.assertTrue(np.array_equal(res.numpy(), input))
 
 
 if __name__ == "__main__":

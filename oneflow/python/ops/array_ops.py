@@ -2466,7 +2466,7 @@ def ones(
     return flow.constant(value=1.0, shape=shape, dtype=dtype, name=name + "constant")
 
 
-@oneflow_export("nvtx_start")
+@oneflow_export("profiler.nvtx_start")
 def nvtx_start(
     x: oneflow_api.BlobDesc, mark_prefix: str, name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
@@ -2485,7 +2485,7 @@ def nvtx_start(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-@oneflow_export("nvtx_end")
+@oneflow_export("profiler.nvtx_end")
 def nvtx_end(
     x: oneflow_api.BlobDesc, mark_prefix: str, name: Optional[str] = None,
 ) -> oneflow_api.BlobDesc:
