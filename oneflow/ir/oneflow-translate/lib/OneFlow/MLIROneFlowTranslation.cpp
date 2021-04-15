@@ -305,13 +305,13 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
 
 LogicalResult Importer::AppendCtrlInOperand(const ::oneflow::OperatorConf& op,
                                             std::vector<::mlir::Value>& operand_vec) {
-  for (auto ctrl_in_op_name : op.ctrl_in_op_name()) {
-    if (op_name2ctrl_result_.find(ctrl_in_op_name) == op_name2ctrl_result_.end()) {
+  for (auto& ctrl_in_op_name : op.ctrl_in_op_name()) {
+    auto it = op_name2ctrl_result_.find(ctrl_in_op_name);
+    if (it == op_name2ctrl_result_.end()) {
       module_.emitError("IR result not found for ctrl in op: " + ctrl_in_op_name);
       return failure();
     } else {
-      auto v = op_name2ctrl_result_.at(ctrl_in_op_name);
-      operand_vec.push_back(v);
+      operand_vec.push_back(it->second);
     }
   }
   return success();
@@ -319,12 +319,12 @@ LogicalResult Importer::AppendCtrlInOperand(const ::oneflow::OperatorConf& op,
 
 LogicalResult Importer::AppendDataInOperand(const std::string& lbn,
                                             std::vector<::mlir::Value>& operand_vec) {
-  if (lbn2result_.find(lbn) == lbn2result_.end()) {
+  auto it = lbn2result_.find(lbn);
+  if (it == lbn2result_.end()) {
     module_.emitError("IR result not found for: " + lbn);
     return failure();
   } else {
-    auto v = lbn2result_.at(lbn);
-    operand_vec.push_back(v);
+    operand_vec.push_back(it->second);
     return success();
   }
 }
@@ -496,6 +496,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
     auto out_types = llvm::SmallVector<Type, 8>();
     for (auto kv : op.user_conf().output()) {
       for (int i = 0; i < kv.second.s_size(); i++) {
+        // TODO: add real types
         out_types.append({RankedTensorType::get({}, builder_.getF32Type())});
       }
     }
