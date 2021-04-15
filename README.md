@@ -110,7 +110,7 @@
         python3 docker/package/manylinux/build_wheel.py
         ```
 
-        This should produces `.whl` files in the directory `wheelhouse`
+        This should produce `.whl` files in the directory `wheelhouse`
 
       - If you are in China, you might need to add these flags:
 
@@ -127,10 +127,11 @@
       - For more useful flags, plese run the script with flag `--help` or refer to the source code of the script.
 
     - #### Option 2: Build on bare metal
-      - Install dependencies. For instance, on Ubuntu 20.04:
+      - Install dependencies. For instance, on Ubuntu 20.04, run:
         ```
         sudo apt install -y libmkl-full-dev nasm libc++-11-dev libncurses5 g++ gcc cmake gdb python3-pip
         ```
+        If there is a prompt, it is recommended to select the option to make mkl the default BLAS library.
       - In the root directory of OneFlow source code, run:
 
         ```
