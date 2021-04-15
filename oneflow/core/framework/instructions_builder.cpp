@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/vm/copy_blob_to_other_device_phy_instr_operand.h"
 
 namespace oneflow {
@@ -894,6 +895,10 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
 Maybe<one::MirroredTensor> InstructionsBuilder::CopyBlobToOtherDevice(
     const std::shared_ptr<one::MirroredTensor>& tensor, const std::shared_ptr<Device>& device) {
   CHECK_OR_RETURN(!tensor->is_lazy());
+  // Copy between device with different device id is not supported
+  if (tensor->is_cuda() && device->type() == "cuda") {
+    CHECK_EQ_OR_RETURN(tensor->device()->device_id(), device->device_id());
+  }
   std::shared_ptr<one::MirroredTensor> dest_tensor = one::MirroredTensor::MakeTensor(
       tensor->shape(), tensor->dtype(), device, tensor->is_lazy(), tensor->requires_grad(),
       /* is_leaf */ false, tensor->retain_grad());
