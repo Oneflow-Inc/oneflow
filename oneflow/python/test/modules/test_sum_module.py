@@ -24,21 +24,18 @@ import numpy as np
 )
 class TestModule(flow.unittest.TestCase):
     def test_sum(test_case):
-        sum = flow.Sum()
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = sum(input)
+        of_out = flow.sum(input)
         np_out = np.sum(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-        sum = flow.Sum(axis=0)
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = sum(input)
+        of_out = flow.sum(input, axis=0)
         np_out = np.sum(input.numpy(), axis=0)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-        sum = flow.Sum(axis=1)
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = sum(input)
+        of_out = flow.sum(input, axis=1)
         np_out = np.sum(input.numpy(), axis=1)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 

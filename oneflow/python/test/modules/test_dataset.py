@@ -13,9 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
 import unittest
+
 import numpy as np
+
+import oneflow as flow
+import oneflow.typing as tp
 
 
 @unittest.skipIf(
@@ -23,16 +26,21 @@ import numpy as np
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_sum(test_case):
-        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = flow.mean(input, axis=1)
-        np_out = np.mean(input.numpy(), axis=1)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    def test_dataset(test_case):
+        flow.InitEagerGlobalSession()
 
-        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = flow.mean(input, axis=0)
-        np_out = np.mean(input.numpy(), axis=0)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+        @flow.global_function()
+        def job():
+            record_handle = flow.tmp.OfrecordReader(
+                "/dataset/lenet_mnist/data/ofrecord/train"
+            )
+            i = flow.tmp.RawDecoder(
+                record_handle, "image_raw", shape=(784,), dtype=flow.float32
+            )
+            assert type(record_handle) == flow.Tensor
+            assert type(i.numpy()) == np.ndarray
+
+        job()
 
 
 if __name__ == "__main__":
