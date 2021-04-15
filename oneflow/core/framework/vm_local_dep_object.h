@@ -50,6 +50,7 @@ class VmLocalDepObject final {
   ~VmLocalDepObject();
 
   const ObjectMsgPtr<vm::LocalDepObject>& local_dep_object() const { return local_dep_object_; }
+  vm::LocalDepObject* mut_local_dep_object() { return local_dep_object_.Mutable(); }
 
  private:
   ObjectMsgPtr<vm::LocalDepObject> local_dep_object_;
