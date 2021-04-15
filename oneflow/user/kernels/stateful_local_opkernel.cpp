@@ -16,9 +16,7 @@ limitations under the License.
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/kernel/blob_tensor_view.h"
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_helper.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 
 namespace oneflow {

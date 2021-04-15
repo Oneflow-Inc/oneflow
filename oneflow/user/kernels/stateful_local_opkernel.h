@@ -17,15 +17,14 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_STATEFUL_LOCAL_OPKERNEL_H_
 
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/framework/user_op_kernel_registry.h"
 
 namespace oneflow {
 
 namespace eager {
 struct LocalCallOpKernelUtil;
-class EagerBlobObject;
 }  // namespace eager
 
 namespace one {
@@ -99,8 +98,7 @@ class ZeroCopyBaseContext {
  public:
   ZeroCopyBaseContext(const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs);
 
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                  const int32_t index) const;
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
 
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
 
