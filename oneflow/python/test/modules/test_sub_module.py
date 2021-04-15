@@ -24,28 +24,27 @@ import numpy as np
 )
 class TestModule(flow.unittest.TestCase):
     def test_sub(test_case):
-        sub = flow.Sub()
         x = flow.Tensor(np.random.randn(2, 3))
         y = flow.Tensor(np.random.randn(2, 3))
-        of_out = sub(x, y)
+        of_out = flow.sub(x, y)
         np_out = np.subtract(x.numpy(), y.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
         x = 5
         y = flow.Tensor(np.random.randn(2, 3))
-        of_out = sub(x, y)
+        of_out = flow.sub(x, y)
         np_out = np.subtract(x, y.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
         x = flow.Tensor(np.random.randn(2, 3))
         y = 5
-        of_out = sub(x, y)
+        of_out = flow.sub(x, y)
         np_out = np.subtract(x.numpy(), y)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
         x = flow.Tensor(np.random.randn(2, 3))
         y = flow.Tensor(np.random.randn(1, 1))
-        of_out = sub(x, y)
+        of_out = flow.sub(x, y)
         np_out = np.subtract(x.numpy(), y.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
