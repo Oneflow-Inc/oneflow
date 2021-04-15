@@ -62,7 +62,7 @@ class EagerBlobObjectTensorView final : public user_op::Tensor {
   void* mut_raw_dptr() override { return mut_eager_blob_object_()->mut_blob()->mut_dptr(); }
 
  private:
-  std::function<eager::EagerBlobObject*()> mut_eager_blob_object_;
+  const std::function<eager::EagerBlobObject*()> mut_eager_blob_object_;
 };
 
 class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
@@ -92,7 +92,7 @@ class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
   }
 
  private:
-  std::function<eager::EagerBlobObject*()> mut_eager_blob_object_;
+  const std::function<eager::EagerBlobObject*()> mut_eager_blob_object_;
 };
 
 class ZeroCopyBaseContext {
@@ -114,12 +114,27 @@ class ZeroCopyBaseContext {
   const ArgVec* indexed_output_pairs_;
   std::map<std::string, std::vector<int32_t>> arg_name2bn_index2input_tensor_tuple_index_;
   std::map<std::string, std::vector<int32_t>> arg_name2bn_index2output_tensor_tuple_index_;
-  mutable std::vector<EagerBlobObjectTensorView> input_tensor_views_;
-  mutable std::vector<EagerBlobObjectTensorView> output_tensor_views_;
-  mutable std::vector<EagerBlobObjectTensorDescView> input_tensor_desc_views_;
-  mutable std::vector<EagerBlobObjectTensorDescView> output_tensor_desc_views_;
+  std::vector<std::unique_ptr<EagerBlobObjectTensorView>> input_tensor_views_;
+  std::vector<std::unique_ptr<EagerBlobObjectTensorView>> output_tensor_views_;
+  std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> input_tensor_desc_views_;
+  std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> output_tensor_desc_views_;
   EagerBlobObjectList input_tensors_;
   EagerBlobObjectList output_tensors_;
+};
+
+class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
+ public:
+  LocalUserKernelBaseContext(const std::string& device_tag, const ArgVec* indexed_input_pairs,
+                             const ArgVec* indexed_output_pairs);
+  ~LocalUserKernelBaseContext() = default;
+
+  DeviceType device_type() const { return device_type_; }
+  const std::string& device_tag() const { return device_tag_; }
+  const JobDesc& job_desc() const { UNIMPLEMENTED(); }
+
+ private:
+  const std::string device_tag_;
+  const DeviceType device_type_;
 };
 
 class LocalUserOpInferContext : public user_op::InferContext {
@@ -168,7 +183,7 @@ class LocalUserOpInferContext : public user_op::InferContext {
   void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs);
 
  private:
-  user_op::UserOpConfWrapper user_op_conf_;
+  const user_op::UserOpConfWrapper user_op_conf_;
   ZeroCopyBaseContext zero_copy_base_ctx_;
 };
 
@@ -180,23 +195,27 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   ~LocalUserKernelComputeContext() = default;
 
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                        int32_t index) const override;
+                                                        int32_t index) const override {
+    return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
 
-  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override;
-  DeviceCtx* device_ctx() override;
+  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return base_ctx_.Tensor4ArgNameAndIndex(arg_name, index);
+  }
+  DeviceCtx* device_ctx() override { return device_ctx_; }
 
-  DeviceType device_type() const override;
-  const ParallelContext& parallel_ctx() const override;
-  const JobDesc& job_desc() const override;
+  DeviceType device_type() const override { return base_ctx_.device_type(); }
+  const ParallelContext& parallel_ctx() const override { UNIMPLEMENTED(); };
+  const JobDesc& job_desc() const override { UNIMPLEMENTED(); };
 
-  const ArgVec& inputs() const override;
-  const ArgVec& outputs() const override;
+  const ArgVec& inputs() const override { return base_ctx_.inputs(); };
+  const ArgVec& outputs() const override { return base_ctx_.outputs(); };
 
   void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs, DeviceCtx* device_ctx);
 
  private:
   DeviceCtx* device_ctx_;
-  std::unique_ptr<LocalUserKernelBaseContext> base_ctx_;
+  LocalUserKernelBaseContext base_ctx_;
 };
 
 class StatefulOpKernel final {
@@ -206,8 +225,6 @@ class StatefulOpKernel final {
                    const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs);
   ~StatefulOpKernel();
   const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
-  Maybe<void> set_device(const DeviceType dev_type, const int64_t dev_id,
-                         const std::string& dev_tag);
 
  private:
   friend struct eager::LocalCallOpKernelUtil;
@@ -220,22 +237,25 @@ class StatefulOpKernel final {
   user_op::TensorDescInferFn TensorDescInferFn() const;
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
-  Maybe<user_op::OpKernelState> TryInitOpKernelState(DeviceCtx* device_ctx);
+  void TryInitOpKernelState(const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
+                            EagerBlobObjectList inputs, EagerBlobObjectList outputs,
+                            user_op::OpKernelState** state);
 
   eager::EagerBlobObject* mut_temp_blob_object();
 
-  user_op::OpKernelState* mut_opkernel_state() { return current_state_; }
+  user_op::OpKernelState* mut_opkernel_state(const user_op::OpKernel* opkernel) {
+    return op_kernel_state_map_.at(opkernel).get();
+  }
 
   bool need_check_mem_case() const { return need_check_mem_case_; }
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
-  Maybe<void> ChooseOpKernel(EagerBlobObjectList inputs, EagerBlobObjectList outputs);
+  Maybe<const user_op::OpKernel*> ChooseOpKernel(EagerBlobObjectList inputs,
+                                                 EagerBlobObjectList outputs);
 
-  const user_op::InferTmpSizeFn& GetInferTmpSizeFn() const;
+  const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
-  const user_op::OpKernel* mut_user_opkernel() { return current_op_kernel_; }
-
-  OperatorConf op_conf_;
+  const OperatorConf op_conf_;
   std::shared_ptr<MemoryCase> mem_case_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
@@ -249,11 +269,8 @@ class StatefulOpKernel final {
   HashMap<const user_op::OpKernelRegistryResult*, std::shared_ptr<const user_op::OpKernel>>
       op_kernel_map_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
-  HashMap<const user_op::OpKernel*, std::shared_ptr<LocalUserKernelInitContext>> init_ctx_map_;
   HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*> infer_tmp_size_fn_map_;
   std::unique_ptr<eager::EagerBlobObject> tmp_blob_object_;
-  const user_op::OpKernel* current_op_kernel_;
-  user_op::OpKernelState* current_state_;
 };
 
 }  // namespace one

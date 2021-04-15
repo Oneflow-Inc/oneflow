@@ -37,49 +37,46 @@ class InputAndOutputListScope {
   T* ctx_;
 };
 
-int32_t GetTensorTupleIndex(
+int32_t TryGetTensorTupleIndex(
     const std::map<std::string, std::vector<int32_t>>& arg_name2bn_index2tensor_tuple_index_,
     const std::string& arg_name, const int32_t arg_index) {
   auto it = arg_name2bn_index2tensor_tuple_index_.find(arg_name);
-  if (it != arg_name2bn_index2tensor_tuple_index_.end()) { return it->second[arg_index]; }
+  if (it != arg_name2bn_index2tensor_tuple_index_.end()) { return it->second.at(arg_index); }
   return -1;
+};
+
+void InitArgName2BnIndex2TensorTupleIndex(
+    const ArgVec* indexed_arg_pairs,
+    std::map<std::string, std::vector<int32_t>>* arg_name2bn_index2tensor_tuple_index) {
+  for (int i = 0; i < indexed_arg_pairs->size(); i++) {
+    const auto& pair = indexed_arg_pairs->at(i);
+    const std::string& arg_name = pair.first;
+    const int32_t bn_index = pair.second;
+    // vector is auto created by [] if arg_name doesn't exist in map
+    auto& bn_index2tensor_tuple_index = (*arg_name2bn_index2tensor_tuple_index)[arg_name];
+    CHECK_EQ(bn_index2tensor_tuple_index.size(), bn_index);
+    bn_index2tensor_tuple_index.push_back(i);
+  }
 };
 
 ZeroCopyBaseContext::ZeroCopyBaseContext(const ArgVec* indexed_input_pairs,
                                          const ArgVec* indexed_output_pairs)
     : indexed_input_pairs_(indexed_input_pairs), indexed_output_pairs_(indexed_output_pairs) {
-  auto InitArgName2BnIndex2TensorTupleIndex =
-      [](const ArgVec* indexed_arg_pairs,
-         std::map<std::string, std::vector<int32_t>>* arg_name2bn_index2tensor_tuple_index) {
-        for (int i = 0; i < indexed_arg_pairs->size(); i++) {
-          const auto& pair = (*indexed_arg_pairs).at(i);
-          const std::string& arg_name = pair.first;
-          const int32_t bn_index = pair.second;
-          auto it = arg_name2bn_index2tensor_tuple_index->find(arg_name);
-          if (it != arg_name2bn_index2tensor_tuple_index->end()) {
-            CHECK_EQ(it->second.size(), bn_index);
-            it->second.push_back(i);
-          } else {
-            std::vector<int32_t> bn_index2tensor_tuple_index{i};
-            arg_name2bn_index2tensor_tuple_index->emplace(arg_name, bn_index2tensor_tuple_index);
-          }
-        }
-      };
   InitArgName2BnIndex2TensorTupleIndex(indexed_input_pairs,
                                        &arg_name2bn_index2input_tensor_tuple_index_);
   InitArgName2BnIndex2TensorTupleIndex(indexed_output_pairs,
                                        &arg_name2bn_index2output_tensor_tuple_index_);
   for (int i = 0; i < indexed_input_pairs->size(); i++) {
-    input_tensor_views_.push_back(EagerBlobObjectTensorView(
-        [this, i]() -> eager::EagerBlobObject* { return (*this->input_tensors_).at(i).get(); }));
-    input_tensor_desc_views_.push_back(EagerBlobObjectTensorDescView(
-        [this, i]() -> eager::EagerBlobObject* { return (*this->input_tensors_).at(i).get(); }));
+    input_tensor_views_.push_back(std::make_unique<EagerBlobObjectTensorView>(
+        [this, i]() -> eager::EagerBlobObject* { return input_tensors_->at(i).get(); }));
+    input_tensor_desc_views_.push_back(std::make_unique<EagerBlobObjectTensorDescView>(
+        [this, i]() -> eager::EagerBlobObject* { return input_tensors_->at(i).get(); }));
   }
   for (int i = 0; i < indexed_output_pairs->size(); i++) {
-    output_tensor_views_.push_back(EagerBlobObjectTensorView(
-        [this, i]() -> eager::EagerBlobObject* { return (*this->output_tensors_).at(i).get(); }));
-    output_tensor_desc_views_.push_back(EagerBlobObjectTensorDescView(
-        [this, i]() -> eager::EagerBlobObject* { return (*this->output_tensors_).at(i).get(); }));
+    output_tensor_views_.push_back(std::make_unique<EagerBlobObjectTensorView>(
+        [this, i]() -> eager::EagerBlobObject* { return output_tensors_->at(i).get(); }));
+    output_tensor_desc_views_.push_back(std::make_unique<EagerBlobObjectTensorDescView>(
+        [this, i]() -> eager::EagerBlobObject* { return output_tensors_->at(i).get(); }));
   }
 }
 
@@ -90,54 +87,35 @@ void ZeroCopyBaseContext::Update(EagerBlobObjectList inputs, EagerBlobObjectList
 
 user_op::TensorDesc* ZeroCopyBaseContext::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                      const int32_t index) const {
-  int32_t i = GetTensorTupleIndex(arg_name2bn_index2input_tensor_tuple_index_, arg_name, index);
-  if (i >= 0) { return &input_tensor_desc_views_.at(i); }
-  i = GetTensorTupleIndex(arg_name2bn_index2output_tensor_tuple_index_, arg_name, index);
-  if (i >= 0) { return &output_tensor_desc_views_.at(i); }
+  int32_t i = TryGetTensorTupleIndex(arg_name2bn_index2input_tensor_tuple_index_, arg_name, index);
+  if (i >= 0) { return input_tensor_desc_views_.at(i).get(); }
+  i = TryGetTensorTupleIndex(arg_name2bn_index2output_tensor_tuple_index_, arg_name, index);
+  if (i >= 0) { return output_tensor_desc_views_.at(i).get(); }
   LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found";
 }
 
 user_op::Tensor* ZeroCopyBaseContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
                                                              const int32_t index) const {
-  int32_t i = GetTensorTupleIndex(arg_name2bn_index2input_tensor_tuple_index_, arg_name, index);
-  if (i >= 0) { return &input_tensor_views_.at(i); }
-  i = GetTensorTupleIndex(arg_name2bn_index2output_tensor_tuple_index_, arg_name, index);
-  if (i >= 0) { return &output_tensor_views_.at(i); }
+  int32_t i = TryGetTensorTupleIndex(arg_name2bn_index2input_tensor_tuple_index_, arg_name, index);
+  if (i >= 0) { return input_tensor_views_.at(i).get(); }
+  i = TryGetTensorTupleIndex(arg_name2bn_index2output_tensor_tuple_index_, arg_name, index);
+  if (i >= 0) { return output_tensor_views_.at(i).get(); }
   LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found";
 }
 
-class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
- public:
-  LocalUserKernelBaseContext(const std::string& device_tag, const ArgVec* indexed_input_pairs,
-                             const ArgVec* indexed_output_pairs)
-      : ZeroCopyBaseContext(indexed_input_pairs, indexed_output_pairs) {
-    device_tag_ = device_tag;
-    device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
-  }
-  ~LocalUserKernelBaseContext() = default;
-
-  DeviceType device_type() const { return device_type_; }
-  const std::string& device_tag() const { return device_tag_; }
-  const JobDesc& job_desc() const { UNIMPLEMENTED(); }
-
-  Maybe<void> set_device_tag(const std::string& device_tag) {
-    device_tag_ = device_tag;
-    device_type_ = JUST(DeviceType4DeviceTag(device_tag));
-    return Maybe<void>::Ok();
-  }
-
- private:
-  DeviceType device_type_;
-  std::string device_tag_;
-};
+LocalUserKernelBaseContext::LocalUserKernelBaseContext(const std::string& device_tag,
+                                                       const ArgVec* indexed_input_pairs,
+                                                       const ArgVec* indexed_output_pairs)
+    : ZeroCopyBaseContext(indexed_input_pairs, indexed_output_pairs),
+      device_tag_(device_tag),
+      device_type_(CHECK_JUST(DeviceType4DeviceTag(device_tag_))) {}
 
 class LocalUserKernelRegContext final : public user_op::KernelRegContext {
  public:
   explicit LocalUserKernelRegContext(const OperatorConf& op_conf, const ArgVec* index_input_pairs,
                                      const ArgVec* indexed_output_pairs)
       : user_op::KernelRegContext(user_op::UserOpConfWrapper(op_conf)),
-        base_ctx_(LocalUserKernelBaseContext(op_conf.device_tag(), index_input_pairs,
-                                             indexed_output_pairs)) {}
+        base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs) {}
   ~LocalUserKernelRegContext() = default;
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
@@ -153,11 +131,6 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
     base_ctx_.Update(inputs, outputs);
   }
-  Maybe<void> set_device_tag(const std::string& device_tag) {
-    // TODO: update op_conf
-    TODO();
-    return base_ctx_.set_device_tag(device_tag);
-  }
 
  private:
   LocalUserKernelBaseContext base_ctx_;
@@ -170,21 +143,22 @@ class LocalUserKernelCreateContext final : public user_op::KernelCreateContext {
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
 
  private:
-  user_op::UserOpConfWrapper user_op_conf_;
+  const user_op::UserOpConfWrapper user_op_conf_;
 };
 
 class LocalUserKernelInitContext final : public user_op::KernelInitContext {
  public:
   explicit LocalUserKernelInitContext(DeviceCtx* device_ctx, const OperatorConf& op_conf,
                                       const ArgVec* index_input_pairs,
-                                      const ArgVec* indexed_output_pairs)
+                                      const ArgVec* indexed_output_pairs,
+                                      EagerBlobObjectList inputs, EagerBlobObjectList outputs)
       : user_op::KernelInitContext(user_op::UserOpConfWrapper(op_conf)),
         device_ctx_(device_ctx),
-        base_ctx_(LocalUserKernelBaseContext(op_conf.device_tag(), index_input_pairs,
-                                             indexed_output_pairs)) {}
+        base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs) {
+    base_ctx_.Update(inputs, outputs);
+  }
   ~LocalUserKernelInitContext() override = default;
 
-  void set_device_ctx(DeviceCtx* device_ctx) { device_ctx_ = device_ctx; }
   DeviceCtx* device_ctx() override { return device_ctx_; }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
@@ -211,10 +185,6 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
   const ParallelDesc& parallel_desc() const override { UNIMPLEMENTED(); }
 
-  void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
-    base_ctx_.Update(inputs, outputs);
-  }
-
  private:
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
@@ -240,31 +210,12 @@ LocalUserKernelComputeContext::LocalUserKernelComputeContext(DeviceCtx* device_c
                                                              const ArgVec* indexed_output_pairs)
     : user_op::KernelComputeContext(user_op::UserOpConfWrapper(op_conf)),
       device_ctx_(device_ctx),
-      base_ctx_(std::unique_ptr<LocalUserKernelBaseContext>(new LocalUserKernelBaseContext(
-          op_conf.device_tag(), index_input_pairs, indexed_output_pairs))) {}
-
-const user_op::TensorDesc* LocalUserKernelComputeContext::TensorDesc4ArgNameAndIndex(
-    const std::string& arg_name, int32_t index) const {
-  return base_ctx_->TensorDesc4ArgNameAndIndex(arg_name, index);
-}
-
-user_op::Tensor* LocalUserKernelComputeContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
-                                                                       int32_t index) {
-  return base_ctx_->Tensor4ArgNameAndIndex(arg_name, index);
-}
-DeviceCtx* LocalUserKernelComputeContext::device_ctx() { return device_ctx_; }
-
-DeviceType LocalUserKernelComputeContext::device_type() const { return base_ctx_->device_type(); }
-const ParallelContext& LocalUserKernelComputeContext::parallel_ctx() const { UNIMPLEMENTED(); }
-const JobDesc& LocalUserKernelComputeContext::job_desc() const { UNIMPLEMENTED(); }
-
-const ArgVec& LocalUserKernelComputeContext::inputs() const { return base_ctx_->inputs(); }
-const ArgVec& LocalUserKernelComputeContext::outputs() const { return base_ctx_->outputs(); }
+      base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs) {}
 
 void LocalUserKernelComputeContext::Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs,
                                            DeviceCtx* device_ctx) {
   device_ctx_ = device_ctx;
-  base_ctx_->Update(inputs, outputs);
+  base_ctx_.Update(inputs, outputs);
 }
 
 StatefulOpKernel::StatefulOpKernel(const OperatorConf& op_conf,
@@ -300,8 +251,8 @@ StatefulOpKernel::StatefulOpKernel(const OperatorConf& op_conf,
 
 StatefulOpKernel::~StatefulOpKernel() = default;
 
-Maybe<void> StatefulOpKernel::ChooseOpKernel(EagerBlobObjectList inputs,
-                                             EagerBlobObjectList outputs) {
+Maybe<const user_op::OpKernel*> StatefulOpKernel::ChooseOpKernel(EagerBlobObjectList inputs,
+                                                                 EagerBlobObjectList outputs) {
   InputAndOutputListScope<LocalUserKernelRegContext> reg_ctx_scope(reg_ctx_.get(), inputs, outputs);
   const auto& op_type_name = op_conf_.user_conf().op_type_name();
   const auto* kernel_reg_val =
@@ -309,44 +260,33 @@ Maybe<void> StatefulOpKernel::ChooseOpKernel(EagerBlobObjectList inputs,
   CHECK_NOTNULL(kernel_reg_val);
   // find cached kernel by registry result
   auto it = op_kernel_map_.find(kernel_reg_val);
-  if (it != op_kernel_map_.end()) {
-    current_op_kernel_ = it->second.get();
-    return Maybe<void>::Ok();
-  }
+  if (it != op_kernel_map_.end()) { return it->second.get(); }
 
   auto* kernel = kernel_reg_val->create_fn(create_ctx_.get());
-  op_kernel_map_.emplace(
-      std::make_pair(kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel)));
+  op_kernel_map_.emplace(kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel));
+
+  infer_tmp_size_fn_map_.emplace(kernel, &kernel_reg_val->infer_tmp_size_fn);
+
+  return kernel;
+}
+
+void StatefulOpKernel::TryInitOpKernelState(const user_op::OpKernel* op_kernel,
+                                            DeviceCtx* device_ctx, EagerBlobObjectList inputs,
+                                            EagerBlobObjectList outputs,
+                                            user_op::OpKernelState** state) {
+  auto it = op_kernel_state_map_.find(op_kernel);
+  if (it != op_kernel_state_map_.end()) { *state = it->second.get(); }
+
   auto init_ctx = std::make_shared<LocalUserKernelInitContext>(
-      nullptr, op_conf_, indexed_input_pairs_, indexed_output_pairs_);
-  init_ctx->Update(inputs, outputs);
-  init_ctx_map_.emplace(std::make_pair(kernel, init_ctx));
-
-  infer_tmp_size_fn_map_.emplace(std::make_pair(kernel, &kernel_reg_val->infer_tmp_size_fn));
-
-  current_op_kernel_ = kernel;
-  current_state_ = nullptr;
-  return Maybe<void>::Ok();
+      device_ctx, op_conf_, indexed_input_pairs_, indexed_output_pairs_, inputs, outputs);
+  auto created_state = op_kernel->CreateOpKernelState(init_ctx.get());
+  op_kernel_state_map_.emplace(op_kernel, created_state);
+  *state = created_state.get();
 }
 
-Maybe<user_op::OpKernelState> StatefulOpKernel::TryInitOpKernelState(DeviceCtx* device_ctx) {
-  auto it = op_kernel_state_map_.find(current_op_kernel_);
-  if (it != op_kernel_state_map_.end()) {
-    current_state_ = it->second.get();
-    return it->second;
-  }
-
-  auto init_ctx = init_ctx_map_.at(current_op_kernel_);
-  init_ctx->set_device_ctx(device_ctx);
-  auto state = current_op_kernel_->CreateOpKernelState(init_ctx.get());
-  op_kernel_state_map_.emplace(std::make_pair(current_op_kernel_, state));
-  init_ctx->set_device_ctx(nullptr);
-  current_state_ = state.get();
-  return state;
-}
-
-const user_op::InferTmpSizeFn& StatefulOpKernel::GetInferTmpSizeFn() const {
-  return *infer_tmp_size_fn_map_.at(current_op_kernel_);
+const user_op::InferTmpSizeFn& StatefulOpKernel::GetInferTmpSizeFn(
+    const user_op::OpKernel* op_kernel) const {
+  return *infer_tmp_size_fn_map_.at(op_kernel);
 }
 
 eager::EagerBlobObject* StatefulOpKernel::mut_temp_blob_object() { return tmp_blob_object_.get(); }
@@ -370,12 +310,5 @@ LocalUserKernelComputeContext* StatefulOpKernel::UpdateComputeContext(EagerBlobO
   return compute_ctx_.get();
 }
 
-Maybe<void> StatefulOpKernel::set_device(const DeviceType dev_type, const int64_t dev_id,
-                                         const std::string& dev_tag) {
-  mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, dev_id);
-  op_conf_.set_device_tag(dev_tag);
-  // TODO: update contexts
-  return Maybe<void>::Ok();
-};
 }  // namespace one
 }  // namespace oneflow
