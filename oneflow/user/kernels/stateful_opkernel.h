@@ -40,80 +40,78 @@ using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
 using EagerBlobObjectList = std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
 
-class LocalUserOpArgContext {
- public:
-  LocalUserOpArgContext(std::function<eager::EagerBlobObject*(int64_t)> getter) : getter_(getter){};
-  eager::EagerBlobObject* MutEagerBlobObject(int64_t index) const { return getter_(index); }
-
- private:
-  std::function<eager::EagerBlobObject*(int64_t)> getter_;
-};
-
 class EagerBlobObjectTensorView final : public user_op::Tensor {
  public:
-  EagerBlobObjectTensorView(LocalUserOpArgContext* ctx, int64_t index) : ctx_(ctx), index_(index) {}
+  EagerBlobObjectTensorView(const std::function<eager::EagerBlobObject*()>& getter)
+      : getter_(getter) {}
 
-  const ShapeView& shape() const override {
-    return ctx_->MutEagerBlobObject(index_)->blob().shape();
-  }
+  const ShapeView& shape() const override { return getter_()->blob().shape(); }
 
-  MutShapeView* mut_shape() override {
-    return ctx_->MutEagerBlobObject(index_)->mut_blob()->mut_shape_view();
-  }
+  MutShapeView* mut_shape() override { return getter_()->mut_blob()->mut_shape_view(); }
 
-  DataType data_type() const override {
-    return ctx_->MutEagerBlobObject(index_)->blob().data_type();
-  }
+  DataType data_type() const override { return getter_()->blob().data_type(); }
 
-  const MemoryCase& mem_case() const override {
-    return ctx_->MutEagerBlobObject(index_)->blob().mem_case();
-  }
+  const MemoryCase& mem_case() const override { return getter_()->blob().mem_case(); }
 
-  const void* raw_dptr() const override { return ctx_->MutEagerBlobObject(index_)->blob().dptr(); }
+  const void* raw_dptr() const override { return getter_()->blob().dptr(); }
 
-  void* mut_raw_dptr() override { return ctx_->MutEagerBlobObject(index_)->mut_blob()->mut_dptr(); }
+  void* mut_raw_dptr() override { return getter_()->mut_blob()->mut_dptr(); }
 
  private:
-  LocalUserOpArgContext* ctx_;
-  const int64_t index_;
+  std::function<eager::EagerBlobObject*()> getter_;
 };
 
 class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
  public:
-  EagerBlobObjectTensorDescView(LocalUserOpArgContext* ctx, int64_t index)
-      : ctx_(ctx), index_(index) {}
+  EagerBlobObjectTensorDescView(const std::function<eager::EagerBlobObject*()>& getter)
+      : getter_(getter) {}
 
-  const Shape& shape() const override {
-    return ctx_->MutEagerBlobObject(index_)->blob_desc().shape();
-  }
+  const Shape& shape() const override { return getter_()->blob_desc().shape(); }
 
-  Shape* mut_shape() override {
-    return &ctx_->MutEagerBlobObject(index_)->mut_blob_desc()->mut_shape();
-  }
+  Shape* mut_shape() override { return &getter_()->mut_blob_desc()->mut_shape(); }
 
-  DataType data_type() const override {
-    return ctx_->MutEagerBlobObject(index_)->blob_desc().data_type();
-  }
+  DataType data_type() const override { return getter_()->blob_desc().data_type(); }
 
-  DataType* mut_data_type() override {
-    return ctx_->MutEagerBlobObject(index_)->mut_blob_desc()->mut_data_type();
-  }
+  DataType* mut_data_type() override { return getter_()->mut_blob_desc()->mut_data_type(); }
 
-  bool is_dynamic() const override {
-    return ctx_->MutEagerBlobObject(index_)->blob_desc().is_dynamic();
-  }
+  bool is_dynamic() const override { return getter_()->blob_desc().is_dynamic(); }
 
-  bool* mut_is_dynamic() override {
-    return ctx_->MutEagerBlobObject(index_)->mut_blob_desc()->mut_is_dynamic();
-  }
+  bool* mut_is_dynamic() override { return getter_()->mut_blob_desc()->mut_is_dynamic(); }
 
-  void set_is_dynamic(bool val) override {
-    ctx_->MutEagerBlobObject(index_)->mut_blob_desc()->set_is_dynamic(val);
+  void set_is_dynamic(bool val) override { getter_()->mut_blob_desc()->set_is_dynamic(val); }
+
+ private:
+  std::function<eager::EagerBlobObject*()> getter_;
+};
+
+class ZeroCopyBaseContext {
+ public:
+  ZeroCopyBaseContext(const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs);
+
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                  const int32_t index) const;
+
+  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
+
+  const ArgVec& inputs() const { return *indexed_input_pairs_; }
+  const ArgVec& outputs() const { return *indexed_output_pairs_; }
+
+  void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
+    input_tensors_ = inputs;
+    output_tensors_ = outputs;
   }
 
  private:
-  LocalUserOpArgContext* ctx_;
-  const int64_t index_;
+  const ArgVec* indexed_input_pairs_;
+  const ArgVec* indexed_output_pairs_;
+  std::map<std::string, std::vector<int32_t>> arg_name2bn_index2input_tensor_tuple_index_;
+  std::map<std::string, std::vector<int32_t>> arg_name2bn_index2output_tensor_tuple_index_;
+  mutable std::vector<EagerBlobObjectTensorView> input_tensor_views_;
+  mutable std::vector<EagerBlobObjectTensorView> output_tensor_views_;
+  mutable std::vector<EagerBlobObjectTensorDescView> input_tensor_desc_views_;
+  mutable std::vector<EagerBlobObjectTensorDescView> output_tensor_desc_views_;
+  EagerBlobObjectList input_tensors_;
+  EagerBlobObjectList output_tensors_;
 };
 
 class LocalUserOpInferContext : public user_op::InferContext {
@@ -138,8 +136,8 @@ class LocalUserOpInferContext : public user_op::InferContext {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
   }
 
-  const ArgVec& inputs() const override { return *indexed_input_pairs_; }
-  const ArgVec& outputs() const override { return *indexed_output_pairs_; }
+  const ArgVec& inputs() const override { return zero_copy_base_ctx_.inputs(); }
+  const ArgVec& outputs() const override { return zero_copy_base_ctx_.outputs(); }
   const JobDesc* job_desc() const override {
     UNIMPLEMENTED();
     return nullptr;
@@ -163,14 +161,7 @@ class LocalUserOpInferContext : public user_op::InferContext {
 
  private:
   user_op::UserOpConfWrapper user_op_conf_;
-  const ArgVec* indexed_input_pairs_;
-  const ArgVec* indexed_output_pairs_;
-  EagerBlobObjectList input_tensors_;
-  EagerBlobObjectList output_tensors_;
-  LocalUserOpArgContext input_arg_context_;
-  LocalUserOpArgContext output_arg_context_;
-  mutable std::vector<EagerBlobObjectTensorDescView> input_tensor_desc_views_;
-  mutable std::vector<EagerBlobObjectTensorDescView> output_tensor_desc_views_;
+  ZeroCopyBaseContext zero_copy_base_ctx_;
 };
 
 class LocalUserKernelComputeContext final : public user_op::KernelComputeContext {
@@ -198,10 +189,6 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
  private:
   DeviceCtx* device_ctx_;
   std::unique_ptr<LocalUserKernelBaseContext> base_ctx_;
-  const ArgVec* indexed_input_pairs_;
-  const ArgVec* indexed_output_pairs_;
-  EagerBlobObjectList input_tensors_;
-  EagerBlobObjectList output_tensors_;
 };
 
 class StatefulOpKernel final {
