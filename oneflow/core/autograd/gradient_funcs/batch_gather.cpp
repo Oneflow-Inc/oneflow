@@ -44,7 +44,7 @@ Maybe<void> BatchGather::Init(const OpExpr& op) {
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   const std::string& op_name = fw_op_expr->op_name();
   bw_unsorted_batch_segment_sum_op_ =
-      JUST(op_expr_helper::UnsortedBatchSegmentSumOp(1, GradientOpName(op_name)));
+      JUST(op_expr_helper::UnsortedBatchSegmentSumOp(/*num_segments=*/1, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
