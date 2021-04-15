@@ -152,7 +152,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     requires_grad =
         std::any_of(inputs.begin(), inputs.end(),
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
-    JUST(DetermineIsLeaf(outputs, inputs.size() > 0, requires_grad));
+    JUST(DetermineIsLeaf(outputs, inputs.size() == 0, requires_grad));
     JUST(DetermineRequiresGrad(outputs, requires_grad));
   }
   // Although current op `requires_grad` is false, we still need to add a
