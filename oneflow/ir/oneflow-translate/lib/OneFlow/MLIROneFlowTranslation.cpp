@@ -460,8 +460,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
   for (auto kv : op.user_conf().input()) {
-    for (int i = 0; i < kv.second.s_size(); i++) {
-      const std::string lbn = kv.second.s(i);
+    for (std::string lbn : kv.second.s()) {
       if (failed(AppendDataInOperand(lbn, operand_vec))) { return failure(); }
     }
   }
