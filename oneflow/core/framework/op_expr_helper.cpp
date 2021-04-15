@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/operator/op_attribute.cfg.h"
 
 namespace oneflow {
 namespace op_expr_helper {
@@ -41,13 +40,57 @@ Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name) {
   return one::OpBuilder("zero_like", name).Input("like").Output("out").Build();
 }
 
-Maybe<one::UserOpExpr> OnesLikeOp() { return OnesLikeOp(UniqueOpName("constant_like")); }
-Maybe<one::UserOpExpr> OnesLikeOp(const std::string& name) {
-  return one::OpBuilder("constant_like", name)
-      .Input("like")
-      .Output("out")
-      .Attr<float>("value", 1.0)
-      .Build();
+#define DEFINE_FLOATING_CONSTATNT_OP(cpp_type, data_type)                        \
+  template<>                                                                     \
+  Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const cpp_type& value,   \
+                                    const std::string& name) {                   \
+    return one::OpBuilder("constant", name)                                      \
+        .Output("out")                                                           \
+        .Attr<double>("floating_value", value)                                   \
+        .Attr<int64_t>("integer_value", 0)                                       \
+        .Attr<bool>("is_floating_value", true)                                   \
+        .Attr<DataType>("dtype", data_type)                                      \
+        .Attr<Shape>("shape", shape)                                             \
+        .Build();                                                                \
+  }                                                                              \
+  template<>                                                                     \
+  Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const cpp_type& value) { \
+    return ConstantOp(shape, value, UniqueOpName("constant"));                   \
+  }
+OF_PP_FOR_EACH_TUPLE(DEFINE_FLOATING_CONSTATNT_OP, FLOATING_DATA_TYPE_SEQ);
+#undef DEFINE_FLOATING_CONSTATNT_OP
+
+#define DEFINE_INTEGER_CONSTATNT_OP(cpp_type, data_type)                         \
+  template<>                                                                     \
+  Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const cpp_type& value,   \
+                                    const std::string& name) {                   \
+    return one::OpBuilder("constant", name)                                      \
+        .Output("out")                                                           \
+        .Attr<double>("floating_value", 0.f)                                     \
+        .Attr<int64_t>("integer_value", value)                                   \
+        .Attr<bool>("is_floating_value", false)                                  \
+        .Attr<DataType>("dtype", data_type)                                      \
+        .Attr<Shape>("shape", shape)                                             \
+        .Build();                                                                \
+  }                                                                              \
+  template<>                                                                     \
+  Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const cpp_type& value) { \
+    return ConstantOp(shape, value, UniqueOpName("constant"));                   \
+  }
+OF_PP_FOR_EACH_TUPLE(DEFINE_INTEGER_CONSTATNT_OP, INT_DATA_TYPE_SEQ)
+#undef DEFINE_INTEGER_CONSTATNT_OP
+
+Maybe<one::UserOpExpr> OnesOp(const Shape& shape, const DataType& dtype) {
+  return OnesOp(shape, dtype, UniqueOpName("constant"));
+}
+Maybe<one::UserOpExpr> OnesOp(const Shape& shape, const DataType& dtype, const std::string& name) {
+  switch (dtype) {
+#define CONSTANT_DATA_TYPE_CASE(cpp_type, data_type) \
+  case data_type: return ConstantOp(shape, (cpp_type)1, name);
+    OF_PP_FOR_EACH_TUPLE(CONSTANT_DATA_TYPE_CASE, FLOATING_DATA_TYPE_SEQ INT_DATA_TYPE_SEQ);
+#undef CONSTANT_DATA_TYPE_CASE
+    default: UNIMPLEMENTED_THEN_RETURN();
+  }
 }
 
 Maybe<one::UserOpExpr> IdentityOp() { return IdentityOp(UniqueOpName("identity")); }
