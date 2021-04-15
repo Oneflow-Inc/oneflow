@@ -29,7 +29,6 @@ static constexpr char kGradientOpSuffix[] = ".grad";
 // The backward op exprs should be contained in the derived class.
 class OpExprGradFunctionIf {
  public:
-  OpExprGradFunctionIf() = default;
   virtual ~OpExprGradFunctionIf() = default;
 
   virtual std::shared_ptr<OpExprInterpState> MakeCustomState() const = 0;
