@@ -38,7 +38,7 @@ Maybe<one::UserOpExpr> AddOp(const std::string& name) { return AddNOp(2, name); 
 
 Maybe<one::UserOpExpr> ZeroLikeOp() { return ZeroLikeOp(UniqueOpName("zero_like")); }
 Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name) {
-  return one::OpBuilder("zero_like", name).Input("in").Output("out").Build();
+  return one::OpBuilder("zero_like", name).Input("like").Output("out").Build();
 }
 
 Maybe<one::UserOpExpr> OnesLikeOp() { return OnesLikeOp(UniqueOpName("constant_like")); }
