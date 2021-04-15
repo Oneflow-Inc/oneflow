@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
 
 namespace oneflow {
@@ -37,8 +37,13 @@ Maybe<one::UserOpExpr> AddOp(const std::string& name);
 Maybe<one::UserOpExpr> ZeroLikeOp();
 Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name);
 
-Maybe<one::UserOpExpr> OnesLikeOp();
-Maybe<one::UserOpExpr> OnesLikeOp(const std::string& name);
+template<typename T>
+Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const T& value);
+template<typename T>
+Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const T& value, const std::string& name);
+
+Maybe<one::UserOpExpr> OnesOp(const Shape& shape, const DataType& dtype);
+Maybe<one::UserOpExpr> OnesOp(const Shape& shape, const DataType& dtype, const std::string& name);
 
 Maybe<one::UserOpExpr> IdentityOp();
 Maybe<one::UserOpExpr> IdentityOp(const std::string& name);
