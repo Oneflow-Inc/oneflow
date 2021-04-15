@@ -221,10 +221,11 @@ std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
   for (const std::shared_ptr<Tensor>& in_tensor : inputs) {
     if (in_tensor->is_leaf() && in_tensor->requires_grad()) {
       if (!in_tensor->grad_fn_node()) { AddAccumulateFunctionNode(in_tensor); }
-      const auto& stack_function_node =
-          dynamic_cast<const StackFunctionNode*>(in_tensor->grad_fn_node().get());
+      StackFunctionNode* stack_function_node =
+          dynamic_cast<StackFunctionNode*>(in_tensor->mut_grad_fn_node().get());
       if (!stack_function_node->is_in_stack()) {
         node_list_.push_front(in_tensor->mut_grad_fn_node());
+        stack_function_node->set_is_in_stack(true);
       }
     }
   }
