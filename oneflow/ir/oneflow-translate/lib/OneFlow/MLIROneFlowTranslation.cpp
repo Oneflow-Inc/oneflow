@@ -295,7 +295,10 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
     }
   }
 
-  AddUserOpInputOutputSegments(op, attr_vec);
+  if (failed(AddUserOpInputOutputSegments(op, attr_vec))) {
+    module_.emitError("fail to add input output segments: " + op.name());
+    return failure();
+  }
 
   return success();
 }
@@ -473,7 +476,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
       if (failed(AppendDataInOperand(lbn, operand_vec))) { return failure(); }
     }
   }
-  AppendCtrlInOperand(op, operand_vec);
+  if (failed(AppendCtrlInOperand(op, operand_vec))) { return failure(); }
   ::mlir::ValueRange operands(operand_vec);
 
   Operation* created_op = nullptr;
@@ -483,7 +486,9 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
                  : RankedTensorType::get({}, builder_.getI32Type());
     auto out_types = llvm::SmallVector<Type, 8>();
     out_types.append({t});
-    AddOperandSegmentSizes(0, op.ctrl_in_op_name_size(), attr_vec);
+    if (failed(AddOperandSegmentSizes(0, op.ctrl_in_op_name_size(), attr_vec))) {
+      return failure();
+    }
     ArrayRef<NamedAttribute> named_attributes(attr_vec);
     created_op = builder_.create<oneflow::ConstantOp>(
         FileLineColLoc::get(context_, op.name(), 0, 0), out_types, operands, named_attributes);
@@ -494,7 +499,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
         out_types.append({RankedTensorType::get({}, builder_.getF32Type())});
       }
     }
-    AppendCtrlOutType(out_types);
+    if (failed(AppendCtrlOutType(out_types))) { return failure(); }
     // OperationState state(unknownLoc, "oneflow." + op_type_name);
     OperationState state(FileLineColLoc::get(context_, op.name(), 0, 0), "oneflow.user");
     for (auto na : attr_vec) {
@@ -503,10 +508,14 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
         for (auto segment_size : na.second.dyn_cast<ArrayAttr>()) {
           data_input_size += segment_size.dyn_cast<IntegerAttr>().getInt();
         }
-        AddOperandSegmentSizes(data_input_size, op.ctrl_in_op_name_size(), attr_vec);
+        if (failed(AddOperandSegmentSizes(data_input_size, op.ctrl_in_op_name_size(), attr_vec))) {
+          return failure();
+        }
       }
       if (na.first.str() == "output_lbns") {
-        AddResultSegmentSizes(na.second.dyn_cast<ArrayAttr>().size(), attr_vec);
+        if (failed(AddResultSegmentSizes(na.second.dyn_cast<ArrayAttr>().size(), attr_vec))) {
+          return failure();
+        }
         if (na.second.dyn_cast<ArrayAttr>().size() != out_types.size() - 1) {
           module_->emitError("len(out_types) - 1 != len(output_lbns), op: " + op.name());
           return failure();
@@ -525,7 +534,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
                        + " op, name: " + op.name());
     return failure();
   }
-  InsertOpResults(created_op);
+  if (failed(InsertOpResults(created_op))) { return failure(); }
 
   return success();
 }  // namespace
@@ -552,23 +561,26 @@ LogicalResult Importer::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   OperationState state(FileLineColLoc::get(context_, op.name(), 0, 0), "oneflow.system");
   attr_vec.push_back(
       builder_.getNamedAttr("op_type_case", builder_.getI32IntegerAttr(op.op_type_case())));
-  AddOperandSegmentSizes(static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size(), attr_vec);
-  AddResultSegmentSizes(output_lbns.size(), attr_vec);
+  if (failed(AddOperandSegmentSizes(static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size(),
+                                    attr_vec))) {
+    return failure();
+  }
+  if (failed(AddResultSegmentSizes(output_lbns.size(), attr_vec))) { return failure(); }
   state.addAttributes(attr_vec);
   std::vector<::mlir::Value> operand_vec;
   for (auto input_lbn : input_lbns) {
     if (failed(AppendDataInOperand(input_lbn, operand_vec))) { return failure(); }
   }
-  AppendCtrlInOperand(op, operand_vec);
+  if (failed(AppendCtrlInOperand(op, operand_vec))) { return failure(); }
   auto out_types = llvm::SmallVector<Type, 8>();
   for (auto output_lbn : output_lbns) {
     out_types.append({RankedTensorType::get({}, builder_.getF32Type())});
   }
-  AppendCtrlOutType(out_types);
+  if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   state.addOperands(operand_vec);
   state.addTypes(out_types);
   auto created_op = builder_.createOperation(state);
-  InsertOpResults(created_op);
+  if (failed(InsertOpResults(created_op))) { return failure(); }
 
   if (!created_op) {
     module_->emitError("fail to create op, name: " + op.name());
