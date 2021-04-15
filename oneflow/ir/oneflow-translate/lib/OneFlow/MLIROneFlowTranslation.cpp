@@ -939,7 +939,7 @@ void RoundTripOneFlowJob(
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
   Importer imp(job_wrapper, &context, module.get());
-  // TODO: Add flag in job desc
+  // TODO: Add flag in job desc to decide whether to run mlir optimizer
   const bool is_strict = true;
   if (succeeded(imp.ProcessJob())) {
     if (failed(applyRoundTripPatterns(job_wrapper, &context, module,
