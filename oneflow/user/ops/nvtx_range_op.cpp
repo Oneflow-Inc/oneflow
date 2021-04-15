@@ -83,7 +83,7 @@ REGISTER_USER_OP_GRAD("nvtx_start")
             builder.Op("nvtx_end")
                 .Input("in", op.GetGradTensorWithOpOutput("out", 0))
                 .Output("out")
-                .Attr("mark_prefix", op.attr<std::string>("mark_prefix") + "-backward")
+                .Attr("mark_prefix", op.attr<std::string>("mark_prefix") + "-bw")
                 .Build();
         op.BindGradTensorWithOpInput(nvtx_end_op.output("out", 0), "in", 0);
         AddOp(nvtx_end_op);
@@ -98,7 +98,7 @@ REGISTER_USER_OP_GRAD("nvtx_end")
             builder.Op("nvtx_start")
                 .Input("in", op.GetGradTensorWithOpOutput("out", 0))
                 .Output("out")
-                .Attr("mark_prefix", op.attr<std::string>("mark_prefix") + "-backward")
+                .Attr("mark_prefix", op.attr<std::string>("mark_prefix") + "-bw")
                 .Build();
         op.BindGradTensorWithOpInput(nvtx_start_op.output("out", 0), "in", 0);
         AddOp(nvtx_start_op);
