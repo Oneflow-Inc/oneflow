@@ -120,11 +120,13 @@ void StackFunctionNode::ReleaseOutTensorArgs() {
 }
 
 void StackFunctionNode::ReleaseData() {
-  inputs_.reset();
-  outputs_.reset();
-  in_grads_.clear();
-  out_grads_.clear();
-  backward_fn_.reset();
+  if (!inputs_->empty()) {
+    inputs_.reset();
+    outputs_.reset();
+    in_grads_.clear();
+    out_grads_.clear();
+    backward_fn_.reset();
+  }
   is_in_stack_ = false;
 }
 
@@ -154,14 +156,11 @@ void StackAutogradEngine::ClearEngine() {
 }
 
 void StackAutogradEngine::ClearNullPointer() {
-  auto it = node_list_.begin();
-  while (it != node_list_.end()) {
-    if (it->lock()) {
-      it++;
-    } else {
-      node_list_.erase(it);
-    }
-  }
+  node_list_.erase(std::remove_if(node_list_.begin(), node_list_.end(),
+                                  [](const std::weak_ptr<FunctionNode>& node) {
+                                    return node.lock() == nullptr;
+                                  }),
+                   node_list_.end());
 }
 
 Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
@@ -175,7 +174,8 @@ Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
   // Runs each FunctionNode
   for (const auto& weak_func_node : node_list_) {
     const auto& func_node = weak_func_node.lock();
-    CHECK_NOTNULL_OR_RETURN(func_node);
+    if (!func_node) { continue; }
+    // CHECK_NOTNULL_OR_RETURN(func_node);
     if (JUST(func_node->Apply(create_graph))) {
       JUST(func_node->AccGrad4LeafTensor(create_graph));
       JUST(func_node->AccGrad4RetainGradTensor());
@@ -201,7 +201,8 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   // Runs each FunctionNode
   for (const auto& weak_func_node : node_list_) {
     const auto& func_node = weak_func_node.lock();
-    CHECK_NOTNULL_OR_RETURN(func_node);
+    if (!func_node) { continue; }
+    // CHECK_NOTNULL_OR_RETURN(func_node);
     if (JUST(func_node->Apply(create_graph))) {
       JUST(func_node->GetNowGrad(input_now_grads.get(), tensor_arg2idx));
       JUST(func_node->AccGrad4RetainGradTensor());
