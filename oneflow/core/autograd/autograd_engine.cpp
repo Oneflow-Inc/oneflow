@@ -235,8 +235,8 @@ std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
   for (const std::shared_ptr<Tensor>& out_tensor : outputs) {
     out_tensor->set_grad_fn_node(func_node);
   }
-  node_list_.push_front(func_node);
   func_node->set_is_in_stack(true);
+  node_list_.push_front(func_node);
   return func_node;
 }
 
